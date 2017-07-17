@@ -1870,7 +1870,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                    {'device_name': '/dev/vdb', 'source_type': 'volume',
                     'destination_type': 'volume',
                     'instance_uuid': uuids.instance,
-                    'connection_info': '{"foo": "bar"}'})
+                    'connection_info': '{"foo": "bar"}',
+                    'volume_id': uuids.old_volume,
+                    'attachment_id': None})
 
         def fake_vol_api_roll_detaching(context, volume_id):
             self.assertTrue(uuidutils.is_uuid_like(volume_id))
@@ -2014,7 +2016,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                     'destination_type': 'volume',
                     'instance_uuid': uuids.instance,
                     'delete_on_termination': True,
-                    'connection_info': '{"foo": "bar"}'})
+                    'connection_info': '{"foo": "bar"}',
+                    'attachment_id': None})
         comp_ret = {'save_volume_id': old_volume_id}
         new_info = {"foo": "bar", "serial": old_volume_id}
         swap_volume_mock.return_value = (comp_ret, new_info)
@@ -2033,6 +2036,261 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                          'destination_type': u'volume'}
         update_bdm_mock.assert_called_once_with(mock.ANY, mock.ANY,
                                                 update_values, legacy=False)
+
+    @mock.patch.object(compute_utils, 'notify_about_volume_swap')
+    @mock.patch.object(objects.BlockDeviceMapping,
+                       'get_by_volume_and_instance')
+    @mock.patch('nova.volume.cinder.API.get')
+    @mock.patch('nova.volume.cinder.API.attachment_update',
+                return_value=mock.Mock(connection_info={}))
+    @mock.patch('nova.volume.cinder.API.attachment_delete')
+    @mock.patch('nova.volume.cinder.API.migrate_volume_completion',
+                return_value={'save_volume_id': uuids.old_volume_id})
+    def test_swap_volume_with_new_attachment_id_cinder_migrate_true(
+            self, migrate_volume_completion, attachment_delete,
+            attachment_update, get_volume, get_bdm, notify_about_volume_swap):
+        """Tests a swap volume operation with a new style volume attachment
+        passed in from the compute API, and the case that Cinder initiated
+        the swap volume because of a volume retype situation. This is a happy
+        path test. Since it is a retype there is no volume size change.
+        """
+        bdm = objects.BlockDeviceMapping(
+            volume_id=uuids.old_volume_id, device_name='/dev/vda',
+            attachment_id=uuids.old_attachment_id,
+            connection_info='{"data": {}}', volume_size=1)
+        old_volume = {
+            'id': uuids.old_volume_id, 'size': 1, 'status': 'retyping'
+        }
+        new_volume = {
+            'id': uuids.new_volume_id, 'size': 1, 'status': 'reserved'
+        }
+        get_bdm.return_value = bdm
+        get_volume.side_effect = (old_volume, new_volume)
+        instance = fake_instance.fake_instance_obj(self.context)
+        with test.nested(
+            mock.patch.object(self.context, 'elevated',
+                              return_value=self.context),
+            mock.patch.object(self.compute.driver, 'get_volume_connector',
+                              return_value=mock.sentinel.connector),
+            mock.patch.object(bdm, 'save')
+        ) as (
+            mock_elevated, mock_get_volume_connector, mock_save
+        ):
+            self.compute.swap_volume(
+                self.context, uuids.old_volume_id, uuids.new_volume_id,
+                instance, uuids.new_attachment_id)
+            # Assert the expected calls.
+            get_bdm.assert_called_once_with(
+                self.context, uuids.old_volume_id, instance.uuid)
+            # We updated the new attachment with the host connector.
+            attachment_update.assert_called_once_with(
+                self.context, uuids.new_attachment_id, mock.sentinel.connector)
+            # After a successful swap volume, we deleted the old attachment.
+            attachment_delete.assert_called_once_with(
+                self.context, uuids.old_attachment_id)
+            # After a successful swap volume, we tell Cinder so it can complete
+            # the retype operation.
+            migrate_volume_completion.assert_called_once_with(
+                self.context, uuids.old_volume_id, uuids.new_volume_id,
+                error=False)
+            # The BDM should have been updated. Since it's a retype, the old
+            # volume ID is returned from Cinder so that's what goes into the
+            # BDM but the new attachment ID is saved.
+            mock_save.assert_called_once_with()
+            self.assertEqual(uuids.old_volume_id, bdm.volume_id)
+            self.assertEqual(uuids.new_attachment_id, bdm.attachment_id)
+            self.assertEqual(1, bdm.volume_size)
+            self.assertEqual(uuids.old_volume_id,
+                             jsonutils.loads(bdm.connection_info)['serial'])
+
+    @mock.patch.object(compute_utils, 'notify_about_volume_swap')
+    @mock.patch.object(objects.BlockDeviceMapping,
+                       'get_by_volume_and_instance')
+    @mock.patch('nova.volume.cinder.API.get')
+    @mock.patch('nova.volume.cinder.API.attachment_update',
+                return_value=mock.Mock(connection_info={}))
+    @mock.patch('nova.volume.cinder.API.attachment_delete')
+    @mock.patch('nova.volume.cinder.API.migrate_volume_completion')
+    def test_swap_volume_with_new_attachment_id_cinder_migrate_false(
+            self, migrate_volume_completion, attachment_delete,
+            attachment_update, get_volume, get_bdm, notify_about_volume_swap):
+        """Tests a swap volume operation with a new style volume attachment
+        passed in from the compute API, and the case that Cinder did not
+        initiate the swap volume. This is a happy path test. Since it is not a
+        retype we also change the size.
+        """
+        bdm = objects.BlockDeviceMapping(
+            volume_id=uuids.old_volume_id, device_name='/dev/vda',
+            attachment_id=uuids.old_attachment_id,
+            connection_info='{"data": {}}')
+        old_volume = {
+            'id': uuids.old_volume_id, 'size': 1, 'status': 'detaching'
+        }
+        new_volume = {
+            'id': uuids.new_volume_id, 'size': 2, 'status': 'reserved'
+        }
+        get_bdm.return_value = bdm
+        get_volume.side_effect = (old_volume, new_volume)
+        instance = fake_instance.fake_instance_obj(self.context)
+        with test.nested(
+            mock.patch.object(self.context, 'elevated',
+                              return_value=self.context),
+            mock.patch.object(self.compute.driver, 'get_volume_connector',
+                              return_value=mock.sentinel.connector),
+            mock.patch.object(bdm, 'save')
+        ) as (
+            mock_elevated, mock_get_volume_connector, mock_save
+        ):
+            self.compute.swap_volume(
+                self.context, uuids.old_volume_id, uuids.new_volume_id,
+                instance, uuids.new_attachment_id)
+            # Assert the expected calls.
+            get_bdm.assert_called_once_with(
+                self.context, uuids.old_volume_id, instance.uuid)
+            # We updated the new attachment with the host connector.
+            attachment_update.assert_called_once_with(
+                self.context, uuids.new_attachment_id, mock.sentinel.connector)
+            # After a successful swap volume, we deleted the old attachment.
+            attachment_delete.assert_called_once_with(
+                self.context, uuids.old_attachment_id)
+            # After a successful swap volume, since it was not a
+            # Cinder-initiated call, we don't call migrate_volume_completion.
+            migrate_volume_completion.assert_not_called()
+            # The BDM should have been updated. Since it's a not a retype, the
+            # volume_id is now the new volume ID.
+            mock_save.assert_called_once_with()
+            self.assertEqual(uuids.new_volume_id, bdm.volume_id)
+            self.assertEqual(uuids.new_attachment_id, bdm.attachment_id)
+            self.assertEqual(2, bdm.volume_size)
+            self.assertEqual(uuids.new_volume_id,
+                             jsonutils.loads(bdm.connection_info)['serial'])
+
+    @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
+    @mock.patch.object(compute_utils, 'notify_about_volume_swap')
+    @mock.patch.object(objects.BlockDeviceMapping,
+                       'get_by_volume_and_instance')
+    @mock.patch('nova.volume.cinder.API.get')
+    @mock.patch('nova.volume.cinder.API.attachment_update',
+                side_effect=exception.VolumeAttachmentNotFound(
+                    attachment_id=uuids.new_attachment_id))
+    @mock.patch('nova.volume.cinder.API.roll_detaching')
+    @mock.patch('nova.volume.cinder.API.attachment_delete')
+    @mock.patch('nova.volume.cinder.API.migrate_volume_completion')
+    def test_swap_volume_with_new_attachment_id_attachment_update_fails(
+            self, migrate_volume_completion, attachment_delete, roll_detaching,
+            attachment_update, get_volume, get_bdm, notify_about_volume_swap,
+            add_instance_fault_from_exc):
+        """Tests a swap volume operation with a new style volume attachment
+        passed in from the compute API, and the case that Cinder initiated
+        the swap volume because of a volume migrate situation. This is a
+        negative test where attachment_update fails.
+        """
+        bdm = objects.BlockDeviceMapping(
+            volume_id=uuids.old_volume_id, device_name='/dev/vda',
+            attachment_id=uuids.old_attachment_id,
+            connection_info='{"data": {}}')
+        old_volume = {
+            'id': uuids.old_volume_id, 'size': 1, 'status': 'migrating'
+        }
+        new_volume = {
+            'id': uuids.new_volume_id, 'size': 1, 'status': 'reserved'
+        }
+        get_bdm.return_value = bdm
+        get_volume.side_effect = (old_volume, new_volume)
+        instance = fake_instance.fake_instance_obj(self.context)
+        with test.nested(
+            mock.patch.object(self.context, 'elevated',
+                              return_value=self.context),
+            mock.patch.object(self.compute.driver, 'get_volume_connector',
+                              return_value=mock.sentinel.connector)
+        ) as (
+            mock_elevated, mock_get_volume_connector
+        ):
+            self.assertRaises(
+                exception.VolumeAttachmentNotFound, self.compute.swap_volume,
+                self.context, uuids.old_volume_id, uuids.new_volume_id,
+                instance, uuids.new_attachment_id)
+            # Assert the expected calls.
+            get_bdm.assert_called_once_with(
+                self.context, uuids.old_volume_id, instance.uuid)
+            # We tried to update the new attachment with the host connector.
+            attachment_update.assert_called_once_with(
+                self.context, uuids.new_attachment_id, mock.sentinel.connector)
+            # After a failure, we rollback the detaching status of the old
+            # volume.
+            roll_detaching.assert_called_once_with(
+                self.context, uuids.old_volume_id)
+            # After a failure, we deleted the new attachment.
+            attachment_delete.assert_called_once_with(
+                self.context, uuids.new_attachment_id)
+            # After a failure for a Cinder-initiated swap volume, we called
+            # migrate_volume_completion to let Cinder know things blew up.
+            migrate_volume_completion.assert_called_once_with(
+                self.context, uuids.old_volume_id, uuids.new_volume_id,
+                error=True)
+
+    @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
+    @mock.patch.object(compute_utils, 'notify_about_volume_swap')
+    @mock.patch.object(objects.BlockDeviceMapping,
+                       'get_by_volume_and_instance')
+    @mock.patch('nova.volume.cinder.API.get')
+    @mock.patch('nova.volume.cinder.API.attachment_update',
+                return_value=mock.Mock(connection_info={}))
+    @mock.patch('nova.volume.cinder.API.roll_detaching')
+    @mock.patch('nova.volume.cinder.API.attachment_delete')
+    @mock.patch('nova.volume.cinder.API.migrate_volume_completion')
+    def test_swap_volume_with_new_attachment_id_driver_swap_fails(
+            self, migrate_volume_completion, attachment_delete, roll_detaching,
+            attachment_update, get_volume, get_bdm, notify_about_volume_swap,
+            add_instance_fault_from_exc):
+        """Tests a swap volume operation with a new style volume attachment
+        passed in from the compute API, and the case that Cinder did not
+        initiate the swap volume. This is a negative test where the compute
+        driver swap_volume method fails.
+        """
+        bdm = objects.BlockDeviceMapping(
+            volume_id=uuids.old_volume_id, device_name='/dev/vda',
+            attachment_id=uuids.old_attachment_id,
+            connection_info='{"data": {}}')
+        old_volume = {
+            'id': uuids.old_volume_id, 'size': 1, 'status': 'detaching'
+        }
+        new_volume = {
+            'id': uuids.new_volume_id, 'size': 2, 'status': 'reserved'
+        }
+        get_bdm.return_value = bdm
+        get_volume.side_effect = (old_volume, new_volume)
+        instance = fake_instance.fake_instance_obj(self.context)
+        with test.nested(
+            mock.patch.object(self.context, 'elevated',
+                              return_value=self.context),
+            mock.patch.object(self.compute.driver, 'get_volume_connector',
+                              return_value=mock.sentinel.connector),
+            mock.patch.object(self.compute.driver, 'swap_volume',
+                              side_effect=test.TestingException('yikes'))
+        ) as (
+            mock_elevated, mock_get_volume_connector, mock_save
+        ):
+            self.assertRaises(
+                test.TestingException, self.compute.swap_volume,
+                self.context, uuids.old_volume_id, uuids.new_volume_id,
+                instance, uuids.new_attachment_id)
+            # Assert the expected calls.
+            get_bdm.assert_called_once_with(
+                self.context, uuids.old_volume_id, instance.uuid)
+            # We updated the new attachment with the host connector.
+            attachment_update.assert_called_once_with(
+                self.context, uuids.new_attachment_id, mock.sentinel.connector)
+            # After a failure, we rollback the detaching status of the old
+            # volume.
+            roll_detaching.assert_called_once_with(
+                self.context, uuids.old_volume_id)
+            # After a failed swap volume, we deleted the new attachment.
+            attachment_delete.assert_called_once_with(
+                self.context, uuids.new_attachment_id)
+            # After a failed swap volume, since it was not a
+            # Cinder-initiated call, we don't call migrate_volume_completion.
+            migrate_volume_completion.assert_not_called()
 
     @mock.patch.object(fake_driver.FakeDriver,
                        'check_can_live_migrate_source')

@@ -3901,16 +3901,36 @@ class API(base.Base):
         self.volume_api.check_availability_zone(context, new_volume,
                                                 instance=instance)
         self.volume_api.begin_detaching(context, old_volume['id'])
-        self.volume_api.reserve_volume(context, new_volume['id'])
+
+        # Get the BDM for the attached (old) volume so we can tell if it was
+        # attached with the new-style Cinder 3.27 API.
+        bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
+            context, old_volume['id'], instance.uuid)
+        new_attachment_id = None
+        if bdm.attachment_id is None:
+            # This is an old-style attachment so reserve the new volume before
+            # we cast to the compute host.
+            self.volume_api.reserve_volume(context, new_volume['id'])
+        else:
+            # This is a new-style attachment so for the volume that we are
+            # going to swap to, create a new volume attachment.
+            new_attachment_id = self.volume_api.attachment_create(
+                context, new_volume['id'], instance.uuid)['id']
+
         try:
             self.compute_rpcapi.swap_volume(
                     context, instance=instance,
                     old_volume_id=old_volume['id'],
-                    new_volume_id=new_volume['id'])
+                    new_volume_id=new_volume['id'],
+                    new_attachment_id=new_attachment_id)
         except Exception:
             with excutils.save_and_reraise_exception():
                 self.volume_api.roll_detaching(context, old_volume['id'])
-                self.volume_api.unreserve_volume(context, new_volume['id'])
+                if new_attachment_id is None:
+                    self.volume_api.unreserve_volume(context, new_volume['id'])
+                else:
+                    self.volume_api.attachment_delete(
+                        context, new_attachment_id)
 
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,

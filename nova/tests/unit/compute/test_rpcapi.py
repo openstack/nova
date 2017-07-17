@@ -30,6 +30,7 @@ from nova import test
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
+from nova.tests import uuidsentinel as uuids
 
 CONF = nova.conf.CONF
 
@@ -445,7 +446,29 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
     def test_swap_volume(self):
         self._test_compute_api('swap_volume', 'cast',
                 instance=self.fake_instance_obj, old_volume_id='oldid',
-                new_volume_id='newid')
+                new_volume_id='newid', new_attachment_id=uuids.attachment_id,
+                version='4.17')
+
+    def test_swap_volume_cannot_send_version_4_17(self):
+        """Tests that if the RPC client cannot send version 4.17 we drop back
+        to version 4.0 and don't send the new_attachment_id kwarg.
+        """
+        rpcapi = compute_rpcapi.ComputeAPI()
+        fake_context = mock.Mock()
+        fake_client = mock.Mock()
+        fake_client.can_send_version.return_value = False
+        fake_client.prepare.return_value = fake_context
+        with mock.patch.object(rpcapi.router, 'client',
+                               return_value=fake_client):
+            rpcapi.swap_volume(self.context, self.fake_instance_obj,
+                               uuids.old_volume_id, uuids.new_volume_id,
+                               uuids.new_attachment_id)
+            fake_client.prepare.assert_called_once_with(
+                server=self.fake_instance_obj.host, version='4.0')
+            fake_context.cast.assert_called_once_with(
+                self.context, 'swap_volume', instance=self.fake_instance_obj,
+                old_volume_id=uuids.old_volume_id,
+                new_volume_id=uuids.new_volume_id)
 
     def test_restore_instance(self):
         self._test_compute_api('restore_instance', 'cast',

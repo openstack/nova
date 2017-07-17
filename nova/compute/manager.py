@@ -481,7 +481,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='4.16')
+    target = messaging.Target(version='4.17')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to an instance during power off.  The overall
@@ -5008,11 +5008,24 @@ class ComputeManager(manager.Manager):
                             attachment_id=attachment_id)
 
     def _init_volume_connection(self, context, new_volume_id,
-                                old_volume_id, connector, instance, bdm):
+                                old_volume_id, connector, bdm,
+                                new_attachment_id):
 
-        new_cinfo = self.volume_api.initialize_connection(context,
-                                                          new_volume_id,
-                                                          connector)
+        if new_attachment_id is None:
+            # We're dealing with an old-style attachment so initialize the
+            # connection so we can get the connection_info.
+            new_cinfo = self.volume_api.initialize_connection(context,
+                                                              new_volume_id,
+                                                              connector)
+        else:
+            # This is a new style attachment and the API created the new
+            # volume attachment and passed the id to the compute over RPC.
+            # At this point we need to update the new volume attachment with
+            # the host connector, which will give us back the new attachment
+            # connection_info.
+            new_cinfo = self.volume_api.attachment_update(
+                context, new_attachment_id, connector).connection_info
+
         old_cinfo = jsonutils.loads(bdm['connection_info'])
         if old_cinfo and 'serial' not in old_cinfo:
             old_cinfo['serial'] = old_volume_id
@@ -5024,17 +5037,15 @@ class ComputeManager(manager.Manager):
         return (old_cinfo, new_cinfo)
 
     def _swap_volume(self, context, instance, bdm, connector,
-                     old_volume_id, new_volume_id, resize_to):
+                     old_volume_id, new_volume_id, resize_to,
+                     new_attachment_id, is_cinder_migration):
         mountpoint = bdm['device_name']
         failed = False
         new_cinfo = None
         try:
-            old_cinfo, new_cinfo = self._init_volume_connection(context,
-                                                                new_volume_id,
-                                                                old_volume_id,
-                                                                connector,
-                                                                instance,
-                                                                bdm)
+            old_cinfo, new_cinfo = self._init_volume_connection(
+                context, new_volume_id, old_volume_id, connector,
+                bdm, new_attachment_id)
             # NOTE(lyarwood): The Libvirt driver, the only virt driver
             # currently implementing swap_volume, will modify the contents of
             # new_cinfo when connect_volume is called. This is then saved to
@@ -5069,39 +5080,85 @@ class ComputeManager(manager.Manager):
                     LOG.exception(msg, {'volume_id': new_volume_id,
                                         'mountpoint': bdm['device_name']},
                                   instance=instance)
+
+                # The API marked the volume as 'detaching' for the old volume
+                # so we need to roll that back so the volume goes back to
+                # 'in-use' state.
                 self.volume_api.roll_detaching(context, old_volume_id)
-                self.volume_api.unreserve_volume(context, new_volume_id)
+
+                if new_attachment_id is None:
+                    # The API reserved the new volume so it would be in
+                    # 'attaching' status, so we need to unreserve it so it
+                    # goes back to 'available' status.
+                    self.volume_api.unreserve_volume(context, new_volume_id)
+                else:
+                    # This is a new style attachment for the new volume, which
+                    # was created in the API. We just need to delete it here
+                    # to put the new volume back into 'available' status.
+                    self.volume_api.attachment_delete(
+                        context, new_attachment_id)
         finally:
+            # TODO(mriedem): This finally block is terribly confusing and is
+            # trying to do too much. We should consider removing the finally
+            # block and move whatever needs to happen on success and failure
+            # into the blocks above for clarity, even if it means a bit of
+            # redundant code.
             conn_volume = new_volume_id if failed else old_volume_id
             if new_cinfo:
-                LOG.debug("swap_volume: calling Cinder terminate_connection "
-                          "for %(volume)s", {'volume': conn_volume},
+                LOG.debug("swap_volume: removing Cinder connection "
+                          "for volume %(volume)s", {'volume': conn_volume},
                           instance=instance)
-                self.volume_api.terminate_connection(context,
-                                                     conn_volume,
-                                                     connector)
-            # NOTE(lyarwood): The following call to
-            # os-migrate-volume-completion returns a dict containing
-            # save_volume_id, this volume id has two possible values :
-            # 1. old_volume_id if we are migrating (retyping) volumes
-            # 2. new_volume_id if we are swapping between two existing volumes
-            # This volume id is later used to update the volume_id and
-            # connection_info['serial'] of the BDM.
-            comp_ret = self.volume_api.migrate_volume_completion(
-                                                      context,
-                                                      old_volume_id,
-                                                      new_volume_id,
-                                                      error=failed)
-            LOG.debug("swap_volume: Cinder migrate_volume_completion "
-                      "returned: %(comp_ret)s", {'comp_ret': comp_ret},
-                      instance=instance)
+                if bdm.attachment_id is None:
+                    # This is the pre-3.27 flow for new-style volume
+                    # attachments so just terminate the connection.
+                    self.volume_api.terminate_connection(context,
+                                                         conn_volume,
+                                                         connector)
+                else:
+                    # This is a new style volume attachment. If we failed, then
+                    # the new attachment was already deleted above in the
+                    # exception block and we have nothing more to do here. If
+                    # swap_volume was successful in the driver, then we need to
+                    # "detach" the original attachment by deleting it.
+                    if not failed:
+                        self.volume_api.attachment_delete(
+                            context, bdm.attachment_id)
+
+            # Need to make some decisions based on whether this was
+            # a Cinder initiated migration or not. The callback to
+            # migration completion isn't needed in the case of a
+            # nova initiated simple swap of two volume
+            # "volume-update" call so skip that. The new attachment
+            # scenarios will give us a new attachment record and
+            # that's what we want.
+            if bdm.attachment_id and not is_cinder_migration:
+                # we don't callback to cinder
+                comp_ret = {'save_volume_id': new_volume_id}
+            else:
+                # NOTE(lyarwood): The following call to
+                # os-migrate-volume-completion returns a dict containing
+                # save_volume_id, this volume id has two possible values :
+                # 1. old_volume_id if we are migrating (retyping) volumes
+                # 2. new_volume_id if we are swapping between two existing
+                #    volumes
+                # This volume id is later used to update the volume_id and
+                # connection_info['serial'] of the BDM.
+                comp_ret = self.volume_api.migrate_volume_completion(
+                                                          context,
+                                                          old_volume_id,
+                                                          new_volume_id,
+                                                          error=failed)
+                LOG.debug("swap_volume: Cinder migrate_volume_completion "
+                          "returned: %(comp_ret)s", {'comp_ret': comp_ret},
+                          instance=instance)
 
         return (comp_ret, new_cinfo)
 
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_fault
-    def swap_volume(self, context, old_volume_id, new_volume_id, instance):
+    def swap_volume(self, context, old_volume_id, new_volume_id, instance,
+                    new_attachment_id=None):
         """Swap volume for an instance."""
         context = context.elevated()
 
@@ -5116,7 +5173,16 @@ class ComputeManager(manager.Manager):
         connector = self.driver.get_volume_connector(instance)
 
         resize_to = 0
-        old_vol_size = self.volume_api.get(context, old_volume_id)['size']
+        old_volume = self.volume_api.get(context, old_volume_id)
+        # Yes this is a tightly-coupled state check of what's going on inside
+        # cinder, but we need this while we still support old (v1/v2) and
+        # new style attachments (v3.27). Once we drop support for old style
+        # attachments we could think about cleaning up the cinder-initiated
+        # swap volume API flows.
+        is_cinder_migration = (
+            True if old_volume['status'] in ('retyping',
+                                             'migrating') else False)
+        old_vol_size = old_volume['size']
         new_vol_size = self.volume_api.get(context, new_volume_id)['size']
         if new_vol_size > old_vol_size:
             resize_to = new_vol_size
@@ -5124,12 +5190,15 @@ class ComputeManager(manager.Manager):
         LOG.info('Swapping volume %(old_volume)s for %(new_volume)s',
                  {'old_volume': old_volume_id, 'new_volume': new_volume_id},
                  instance=instance)
-        comp_ret, new_cinfo = self._swap_volume(context, instance,
-                                                         bdm,
-                                                         connector,
-                                                         old_volume_id,
-                                                         new_volume_id,
-                                                         resize_to)
+        comp_ret, new_cinfo = self._swap_volume(context,
+                                                instance,
+                                                bdm,
+                                                connector,
+                                                old_volume_id,
+                                                new_volume_id,
+                                                resize_to,
+                                                new_attachment_id,
+                                                is_cinder_migration)
 
         # NOTE(lyarwood): Update the BDM with the modified new_cinfo and
         # correct volume_id returned by Cinder.
@@ -5145,6 +5214,11 @@ class ComputeManager(manager.Manager):
 
         if resize_to:
             values['volume_size'] = resize_to
+
+        if new_attachment_id is not None:
+            # This was a volume swap for a new-style attachment so we
+            # need to update the BDM attachment_id for the new attachment.
+            values['attachment_id'] = new_attachment_id
 
         LOG.debug("swap_volume: Updating volume %(volume_id)s BDM record with "
                   "%(updates)s", {'volume_id': bdm.volume_id,

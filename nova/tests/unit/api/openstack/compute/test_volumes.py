@@ -688,6 +688,16 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
                           self.attachments,
                           body=body)
 
+    def test_swap_volume_for_bdm_not_found(self):
+
+        def fake_swap_volume_for_bdm_not_found(self, context, instance,
+                                           old_volume, new_volume):
+            raise exception.VolumeBDMNotFound(volume_id=FAKE_UUID_C)
+
+        self.assertRaises(webob.exc.HTTPNotFound, self._test_swap,
+                          self.attachments,
+                          fake_func=fake_swap_volume_for_bdm_not_found)
+
 
 class VolumeAttachTestsV249(test.NoDBTestCase):
     validation_error = exception.ValidationError
