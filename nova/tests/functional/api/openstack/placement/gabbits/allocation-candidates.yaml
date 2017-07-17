@@ -11,15 +11,6 @@ defaults:
 
 tests:
 
-# NOTE(jaypipes): The following static UUIDs are used in this file. We use
-# static UUIDs because JSONPath's parser cannot understand $ subtitution if we
-# refer to them with $ENVIRON[]
-#
-#  os.environ['CN1_UUID'] = 'c1c1c1c1-2894-4df1-aa6b-c61fa72ed22d'
-#  os.environ['CN2_UUID'] = 'c2c2c2c2-beef-49a0-98a0-b998b88debfd'
-#  os.environ['SS_UUID'] = 'dddddddd-61a6-472e-b8c1-74796e803066'
-#  os.environ['AGG_UUID'] = 'aaaaaaaa-04b3-458c-9e9f-361aad56f41c'
-
 - name: list traits
   GET: /traits
   status: 200
@@ -57,29 +48,31 @@ tests:
       # shared storage provider
       $.allocation_requests.`len`: 2
       # Verify that compute node #1 only has VCPU and MEMORY_MB listed in the
-      # resource requests
-      $.allocation_requests..allocations[?(@.resource_provider.uuid='c1c1c1c1-2894-4df1-aa6b-c61fa72ed22d')].resources[VCPU]: 1
-      $.allocation_requests..allocations[?(@.resource_provider.uuid='c1c1c1c1-2894-4df1-aa6b-c61fa72ed22d')].resources[MEMORY_MB]: 1024
+      # resource requests. This validates the entire resources key.
+      $.allocation_requests..allocations[?resource_provider.uuid="$ENVIRON['CN1_UUID']"].resources:
+          VCPU: 1
+          MEMORY_MB: 1024
       # Verify that compute node #2 only has VCPU and MEMORY_MB listed in the
       # resource requests
-      $.allocation_requests..allocations[?(@.resource_provider.uuid='c2c2c2c2-beef-49a0-98a0-b998b88debfd')].resources[VCPU]: 1
-      $.allocation_requests..allocations[?(@.resource_provider.uuid='c2c2c2c2-beef-49a0-98a0-b998b88debfd')].resources[MEMORY_MB]: 1024
+      $.allocation_requests..allocations[?resource_provider.uuid="$ENVIRON['CN2_UUID']"].resources:
+          VCPU: 1
+          MEMORY_MB: 1024
       # Verify that shared storage provider only has DISK_GB listed in the
       # resource requests, but is listed twice
-      $.allocation_requests..allocations[?(@.resource_provider.uuid='dddddddd-61a6-472e-b8c1-74796e803066')].resources[DISK_GB]: [100, 100]
+      $.allocation_requests..allocations[?resource_provider.uuid="$ENVIRON['SS_UUID']"].resources[DISK_GB]: [100, 100]
       # Verify that the resources listed in the provider summary for compute
       # node #1 show correct capacity and usage
-      $.provider_summaries['c1c1c1c1-2894-4df1-aa6b-c61fa72ed22d'].resources[VCPU].capacity: 384 # 16.0 * 24
-      $.provider_summaries['c1c1c1c1-2894-4df1-aa6b-c61fa72ed22d'].resources[VCPU].used: 0
-      $.provider_summaries['c1c1c1c1-2894-4df1-aa6b-c61fa72ed22d'].resources[MEMORY_MB].capacity: 196608 # 1.5 * 128G
-      $.provider_summaries['c1c1c1c1-2894-4df1-aa6b-c61fa72ed22d'].resources[MEMORY_MB].used: 0
+      $.provider_summaries["$ENVIRON['CN1_UUID']"].resources[VCPU].capacity: 384 # 16.0 * 24
+      $.provider_summaries["$ENVIRON['CN1_UUID']"].resources[VCPU].used: 0
+      $.provider_summaries["$ENVIRON['CN1_UUID']"].resources[MEMORY_MB].capacity: 196608 # 1.5 * 128G
+      $.provider_summaries["$ENVIRON['CN1_UUID']"].resources[MEMORY_MB].used: 0
       # Verify that the resources listed in the provider summary for compute
       # node #2 show correct capacity and usage
-      $.provider_summaries['c2c2c2c2-beef-49a0-98a0-b998b88debfd'].resources[VCPU].capacity: 384 # 16.0 * 24
-      $.provider_summaries['c2c2c2c2-beef-49a0-98a0-b998b88debfd'].resources[VCPU].used: 0
-      $.provider_summaries['c2c2c2c2-beef-49a0-98a0-b998b88debfd'].resources[MEMORY_MB].capacity: 196608 # 1.5 * 128G
-      $.provider_summaries['c2c2c2c2-beef-49a0-98a0-b998b88debfd'].resources[MEMORY_MB].used: 0
+      $.provider_summaries["$ENVIRON['CN2_UUID']"].resources[VCPU].capacity: 384 # 16.0 * 24
+      $.provider_summaries["$ENVIRON['CN2_UUID']"].resources[VCPU].used: 0
+      $.provider_summaries["$ENVIRON['CN2_UUID']"].resources[MEMORY_MB].capacity: 196608 # 1.5 * 128G
+      $.provider_summaries["$ENVIRON['CN2_UUID']"].resources[MEMORY_MB].used: 0
       # Verify that the resources listed in the provider summary for shared
       # storage show correct capacity and usage
-      $.provider_summaries['dddddddd-61a6-472e-b8c1-74796e803066'].resources[DISK_GB].capacity: 1900 # 1.0 * 2000 - 100G
-      $.provider_summaries['dddddddd-61a6-472e-b8c1-74796e803066'].resources[DISK_GB].used: 0
+      $.provider_summaries["$ENVIRON['SS_UUID']"].resources[DISK_GB].capacity: 1900 # 1.0 * 2000 - 100G
+      $.provider_summaries["$ENVIRON['SS_UUID']"].resources[DISK_GB].used: 0
