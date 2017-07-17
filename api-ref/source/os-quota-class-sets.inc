@@ -26,7 +26,7 @@ Nova supports implicit 'default' Quota Class only.
     for more details.
 
 .. warning::
-    There is a bug in the v2.1 API till microversion 2.49 and
+    There is a bug in the v2.1 API until microversion 2.49 and
     the legacy v2 compatible API which does not return the
     ``server_groups`` and ``server_group_members`` quotas in
     GET and PUT ``os-quota-class-sets`` API response, whereas the v2 API

@@ -2227,6 +2227,7 @@ fixed_ips_quota_class: &fixed_ips_quota_class
   in: body
   required: true
   type: integer
+  max_version: 2.50
 fixed_ips_quota_class_optional:
   <<: *fixed_ips_quota_class
   required: false
@@ -2573,6 +2574,7 @@ floating_ips_quota_class: &floating_ips_quota_class
   in: body
   required: true
   type: integer
+  max_version: 2.50
 floating_ips_quota_class_optional:
   <<: *floating_ips_quota_class
   required: false
@@ -4731,6 +4733,7 @@ security_group_rules_quota_class: &security_group_rules_quota_class
   in: body
   required: true
   type: integer
+  max_version: 2.50
 security_group_rules_quota_class_optional:
   <<: *security_group_rules_quota_class
   required: false
@@ -4769,6 +4772,7 @@ security_groups_quota_class: &security_groups_quota_class
   in: body
   required: true
   type: integer
+  max_version: 2.50
 security_groups_quota_class_optional:
   <<: *security_groups_quota_class
   required: false
