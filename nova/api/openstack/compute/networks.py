@@ -31,8 +31,6 @@ from nova.objects import base as base_obj
 from nova.objects import fields as obj_fields
 from nova.policies import networks as net_policies
 
-ALIAS = 'os-networks'
-
 
 def network_dict(context, network):
     fields = ('id', 'cidr', 'netmask', 'gateway', 'broadcast', 'dns1', 'dns2',
@@ -182,23 +180,3 @@ class NetworkController(wsgi.Controller):
         except (exception.NoMoreNetworks,
                 exception.NetworkNotFoundForUUID) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
-
-
-class Networks(extensions.V21APIExtensionBase):
-    """Admin-only Network Management Extension."""
-
-    name = "Networks"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        member_actions = {'action': 'POST'}
-        collection_actions = {'add': 'POST'}
-        res = extensions.ResourceExtension(
-            ALIAS, NetworkController(),
-            member_actions=member_actions,
-            collection_actions=collection_actions)
-        return [res]
-
-    def get_controller_extensions(self):
-        return []

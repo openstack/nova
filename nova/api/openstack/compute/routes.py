@@ -62,6 +62,8 @@ from nova.api.openstack.compute import lock_server
 from nova.api.openstack.compute import migrate_server
 from nova.api.openstack.compute import migrations
 from nova.api.openstack.compute import multinic
+from nova.api.openstack.compute import networks
+from nova.api.openstack.compute import networks_associate
 from nova.api.openstack.compute import pause_server
 from nova.api.openstack.compute import quota_classes
 from nova.api.openstack.compute import quota_sets
@@ -219,6 +221,11 @@ limits_controller = functools.partial(
 
 migrations_controller = functools.partial(_create_controller,
     migrations.MigrationsController, [], [])
+
+
+networks_controller = functools.partial(_create_controller,
+    networks.NetworkController, [],
+    [networks_associate.NetworkAssociateActionController])
 
 
 quota_classes_controller = functools.partial(_create_controller,
@@ -538,6 +545,20 @@ ROUTE_LIST = (
     }),
     ('/os-migrations', {
         'GET': [migrations_controller, 'index']
+    }),
+    ('/os-networks', {
+        'GET': [networks_controller, 'index'],
+        'POST': [networks_controller, 'create']
+    }),
+    ('/os-networks/add', {
+        'POST': [networks_controller, 'add']
+    }),
+    ('/os-networks/{id}', {
+        'GET': [networks_controller, 'show'],
+        'DELETE': [networks_controller, 'delete']
+    }),
+    ('/os-networks/{id}/action', {
+        'POST': [networks_controller, 'action'],
     }),
     ('/os-quota-class-sets/{id}', {
         'GET': [quota_classes_controller, 'show'],
