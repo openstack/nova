@@ -44,3 +44,24 @@ service_update_v211 = {
     'required': ['host', 'binary'],
     'additionalProperties': False
 }
+
+# The 2.53 body is for updating a service's status and/or forced_down fields.
+# There are no required attributes since the service is identified using a
+# unique service_id on the request path, and status and/or forced_down can
+# be specified in the body. If status=='disabled', then 'disabled_reason' is
+# also checked in the body but is not required. Requesting status='enabled' and
+# including a 'disabled_reason' results in a 400, but this is checked in code.
+service_update_v2_53 = {
+    'type': 'object',
+    'properties': {
+        'status': {
+            'type': 'string',
+            'enum': ['enabled', 'disabled'],
+        },
+        'disabled_reason': {
+            'type': 'string', 'minLength': 1, 'maxLength': 255,
+        },
+        'forced_down': parameter_types.boolean
+    },
+    'additionalProperties': False
+}

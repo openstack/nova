@@ -627,3 +627,33 @@ user documentation.
 
   Adds support for applying tags when creating a server. The tag schema is
   the same as in the `2.26`_ microversion.
+
+2.53
+----
+
+  **os-services**
+
+  Services are now identified by uuid instead of database id to ensure
+  uniqueness across cells. This microversion brings the following changes:
+
+  * ``GET /os-services`` returns a uuid in the ``id`` field of the response
+  * ``DELETE /os-services/{service_uuid}`` requires a service uuid in the path
+  * The following APIs have been superseded by
+    ``PUT /os-services/{service_uuid}/``:
+
+    * ``PUT /os-services/disable``
+    * ``PUT /os-services/disable-log-reason``
+    * ``PUT /os-services/enable``
+    * ``PUT /os-services/force-down``
+
+    ``PUT /os-services/{service_uuid}`` takes the following fields in the body:
+
+    * ``status`` - can be either "enabled" or "disabled" to enable or disable
+      the given service
+    * ``disabled_reason`` - specify with status="disabled" to log a reason for
+      why the service is disabled
+    * ``forced_down`` - boolean indicating if the service was forced down by
+      an external service
+
+  * ``PUT /os-services/{service_uuid}`` will now return a full service resource
+    representation like in a ``GET`` response

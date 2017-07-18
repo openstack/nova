@@ -125,6 +125,8 @@ console_token:
   in: path
   required: true
   type: string
+# Used in the request path for PUT /os-services/disable-log-reason before
+# microversion 2.53.
 disabled_reason:
   description: |
     The reason for disabling a service.
@@ -283,12 +285,31 @@ server_id_path:
   in: path
   required: true
   type: string
-service_id_path:
+service_id_path_2_52:
   description: |
     The id of the service.
+
+    .. note:: This may not uniquely identify a service in a multi-cell
+              deployment.
   in: path
   required: true
   type: integer
+  max_version: 2.52
+service_id_path_2_53:
+  description: |
+    The id of the service as a uuid. This uniquely identifies the service in a
+    multi-cell deployment.
+  in: path
+  required: true
+  type: string
+  min_version: 2.53
+service_id_path_2_53_no_version:
+  description: |
+    The id of the service as a uuid. This uniquely identifies the service in a
+    multi-cell deployment.
+  in: path
+  required: true
+  type: string
 snapshot_id_path:
   description: |
     The UUID of the snapshot.
@@ -1898,6 +1919,15 @@ device_tag_nic_attachment:
   required: false
   type: string
   min_version: 2.49
+# Optional input parameter in the body for PUT /os-services/{service_id} added
+# in microversion 2.53.
+disabled_reason_2_53_in:
+  description: |
+    The reason for disabling a service. The minimum length is 1 and the
+    maximum length is 255. This may only be requested with ``status=disabled``.
+  in: body
+  required: false
+  type: string
 disabled_reason_body:
   description: |
     The reason for disabling a service.
@@ -2633,7 +2663,9 @@ force_snapshot:
   in: body
   required: false
   type: boolean
-forced_down:
+# This is both the request and response parameter for
+# PUT /os-services/force-down which was added in 2.11.
+forced_down_2_11:
   description: |
     Whether or not this service was forced down manually by an
     administrator. This value is useful to know that some 3rd party has
@@ -2642,6 +2674,26 @@ forced_down:
   required: true
   type: boolean
   min_version: 2.11
+# This is the optional request input parameter for
+# PUT /os-services/{service_id} added in 2.53.
+forced_down_2_53_in:
+  description: |
+    Whether or not this service was forced down manually by an
+    administrator. This value is useful to know that some 3rd party has
+    verified the service should be marked down.
+  in: body
+  required: false
+  type: boolean
+# This is the response output parameter for
+# PUT /os-services/{service_id} added in 2.53.
+forced_down_2_53_out:
+  description: |
+    Whether or not this service was forced down manually by an
+    administrator. This value is useful to know that some 3rd party has
+    verified the service should be marked down.
+  in: body
+  required: true
+  type: boolean
 forceDelete:
   description: |
     The action.
@@ -5064,6 +5116,26 @@ service_id_body:
   in: body
   required: true
   type: integer
+service_id_body_2_52:
+  description: |
+    The id of the service.
+  in: body
+  required: true
+  type: integer
+  max_version: 2.52
+service_id_body_2_53:
+  description: |
+    The id of the service as a uuid.
+  in: body
+  required: true
+  type: string
+  min_version: 2.53
+service_id_body_2_53_no_version:
+  description: |
+    The id of the service as a uuid.
+  in: body
+  required: true
+  type: string
 service_state:
   description: |
     The state of the service. One of ``up`` or ``down``.
@@ -5075,6 +5147,14 @@ service_status:
     The status of the service. One of ``enabled`` or ``disabled``.
   in: body
   required: true
+  type: string
+# This is an optional input parameter to PUT /os-services/{service_id} added
+# in microversion 2.53.
+service_status_2_53_in:
+  description: |
+    The status of the service. One of ``enabled`` or ``disabled``.
+  in: body
+  required: false
   type: string
 services:
   description: |

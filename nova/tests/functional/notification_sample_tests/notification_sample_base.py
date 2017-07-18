@@ -54,6 +54,13 @@ class NotificationSampleTestBase(test.TestCase,
 
     REQUIRES_LOCKING = True
 
+    # NOTE(gibi): Notification payloads always reflect the data needed
+    # for every supported API microversion so we can safe to use the latest
+    # API version in the tests. This helps the test to use the new API
+    # features too. This can be overridden by subclasses that need to cap
+    # at a specific microversion for older APIs.
+    MAX_MICROVERSION = 'latest'
+
     def setUp(self):
         super(NotificationSampleTestBase, self).setUp()
 
@@ -63,11 +70,7 @@ class NotificationSampleTestBase(test.TestCase,
         self.api = api_fixture.api
         self.admin_api = api_fixture.admin_api
 
-        # NOTE(gibi): Notification payloads always reflect the data needed
-        # for every supported API microversion so we can safe to use the latest
-        # API version in the tests. This helps the test to use the new API
-        # features too.
-        max_version = 'latest'
+        max_version = self.MAX_MICROVERSION
         self.api.microversion = max_version
         self.admin_api.microversion = max_version
 

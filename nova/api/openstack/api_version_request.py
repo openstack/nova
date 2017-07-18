@@ -124,6 +124,9 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              non-admins can see instance action event details except for the
              traceback field.
     * 2.52 - Adds support for applying tags when creating a server.
+    * 2.53 - Service database ids are hidden. The os-services API now returns
+             a uuid in the id field, and takes a uuid in
+             DELETE /services/{service_uuid}.
 """
 
 # The minimum and maximum versions of the API supported
@@ -132,7 +135,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.52"
+_MAX_API_VERSION = "2.53"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which related to network, images and baremetal

@@ -13,6 +13,7 @@
 #    under the License.
 
 from oslo_utils import strutils
+from oslo_utils import uuidutils
 import webob.exc
 
 from nova.api.openstack import api_version_request
@@ -20,12 +21,15 @@ from nova.api.openstack.compute.schemas import services
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
+from nova import availability_zones
 from nova import compute
 from nova import exception
 from nova.i18n import _
 from nova.policies import services as services_policies
 from nova import servicegroup
 from nova import utils
+
+UUID_FOR_ID_MIN_VERSION = '2.53'
 
 
 class ServiceController(wsgi.Controller):
@@ -67,7 +71,7 @@ class ServiceController(wsgi.Controller):
 
         return _services
 
-    def _get_service_detail(self, svc, additional_fields):
+    def _get_service_detail(self, svc, additional_fields, req):
         alive = self.servicegroup_api.service_is_up(svc)
         state = (alive and "up") or "down"
         active = 'enabled'
@@ -75,9 +79,22 @@ class ServiceController(wsgi.Controller):
             active = 'disabled'
         updated_time = self.servicegroup_api.get_updated_time(svc)
 
+        uuid_for_id = api_version_request.is_supported(
+            req, min_version=UUID_FOR_ID_MIN_VERSION)
+
+        if 'availability_zone' not in svc:
+            # The service wasn't loaded with the AZ so we need to do it here.
+            # Yes this looks weird, but set_availability_zones makes a copy of
+            # the list passed in and mutates the objects within it, so we have
+            # to pull it back out from the resulting copied list.
+            svc.availability_zone = (
+                availability_zones.set_availability_zones(
+                    req.environ['nova.context'],
+                    [svc])[0]['availability_zone'])
+
         service_detail = {'binary': svc['binary'],
                           'host': svc['host'],
-                          'id': svc['id'],
+                          'id': svc['uuid' if uuid_for_id else 'id'],
                           'zone': svc['availability_zone'],
                           'status': active,
                           'state': state,
@@ -91,7 +108,7 @@ class ServiceController(wsgi.Controller):
 
     def _get_services_list(self, req, additional_fields=()):
         _services = self._get_services(req)
-        return [self._get_service_detail(svc, additional_fields)
+        return [self._get_service_detail(svc, additional_fields, req)
                 for svc in _services]
 
     def _enable(self, body, context):
@@ -179,10 +196,17 @@ class ServiceController(wsgi.Controller):
         context = req.environ['nova.context']
         context.can(services_policies.BASE_POLICY_NAME)
 
-        try:
-            utils.validate_integer(id, 'id')
-        except exception.InvalidInput as exc:
-            raise webob.exc.HTTPBadRequest(explanation=exc.format_message())
+        if api_version_request.is_supported(
+                req, min_version=UUID_FOR_ID_MIN_VERSION):
+            if not uuidutils.is_uuid_like(id):
+                msg = _('Invalid uuid %s') % id
+                raise webob.exc.HTTPBadRequest(explanation=msg)
+        else:
+            try:
+                utils.validate_integer(id, 'id')
+            except exception.InvalidInput as exc:
+                raise webob.exc.HTTPBadRequest(
+                    explanation=exc.format_message())
 
         try:
             service = self.host_api.service_get_by_id(context, id)
@@ -215,11 +239,18 @@ class ServiceController(wsgi.Controller):
 
         return {'services': _services}
 
+    @wsgi.Controller.api_version('2.1', '2.52')
     @extensions.expected_errors((400, 404))
     @validation.schema(services.service_update, '2.0', '2.10')
-    @validation.schema(services.service_update_v211, '2.11')
+    @validation.schema(services.service_update_v211, '2.11', '2.52')
     def update(self, req, id, body):
-        """Perform service update"""
+        """Perform service update
+
+        Before microversion 2.53, the body contains a host and binary value
+        to identify the service on which to perform the action. There is no
+        service ID passed on the path, just the action, for example
+        PUT /os-services/disable.
+        """
         if api_version_request.is_supported(req, min_version='2.11'):
             actions = self.actions.copy()
             actions["force-down"] = self._forced_down
@@ -227,3 +258,89 @@ class ServiceController(wsgi.Controller):
             actions = self.actions
 
         return self._perform_action(req, id, body, actions)
+
+    @wsgi.Controller.api_version(UUID_FOR_ID_MIN_VERSION)  # noqa F811
+    @extensions.expected_errors((400, 404))
+    @validation.schema(services.service_update_v2_53, UUID_FOR_ID_MIN_VERSION)
+    def update(self, req, id, body):
+        """Perform service update
+
+        Starting with microversion 2.53, the service uuid is passed in on the
+        path of the request to uniquely identify the service record on which to
+        perform a given update, which is defined in the body of the request.
+        """
+        service_id = id
+        # Validate that the service ID is a UUID.
+        if not uuidutils.is_uuid_like(service_id):
+            msg = _('Invalid uuid %s') % service_id
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        # Validate the request context against the policy.
+        context = req.environ['nova.context']
+        context.can(services_policies.BASE_POLICY_NAME)
+
+        # Get the service by uuid.
+        try:
+            service = self.host_api.service_get_by_id(context, service_id)
+            # At this point the context is targeted to the cell that the
+            # service was found in so we don't need to do any explicit cell
+            # targeting below.
+        except exception.ServiceNotFound as e:
+            raise webob.exc.HTTPNotFound(explanation=e.format_message())
+
+        # Return 400 if service.binary is not nova-compute.
+        # Before the earlier PUT handlers were made cells-aware, you could
+        # technically disable a nova-scheduler service, although that doesn't
+        # really do anything within Nova and is just confusing. Now trying to
+        # do that will fail as a nova-scheduler service won't have a host
+        # mapping so you'll get a 404. In this new microversion, we close that
+        # old gap and make sure you can only enable/disable and set forced_down
+        # on nova-compute services since those are the only ones that make
+        # sense to update for those operations.
+        if service.binary != 'nova-compute':
+            msg = (_('Updating a %(binary)s service is not supported. Only '
+                     'nova-compute services can be updated.') %
+                   {'binary': service.binary})
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        # Now determine the update to perform based on the body. We are
+        # intentionally not using _perform_action or the other old-style
+        # action functions.
+        if 'status' in body:
+            # This is a status update for either enabled or disabled.
+            if body['status'] == 'enabled':
+
+                # Fail if 'disabled_reason' was requested when enabling the
+                # service since those two combined don't make sense.
+                if body.get('disabled_reason'):
+                    msg = _("Specifying 'disabled_reason' with status "
+                            "'enabled' is invalid.")
+                    raise webob.exc.HTTPBadRequest(explanation=msg)
+
+                service.disabled = False
+                service.disabled_reason = None
+            elif body['status'] == 'disabled':
+                service.disabled = True
+                # The disabled reason is optional.
+                service.disabled_reason = body.get('disabled_reason')
+
+        # This is intentionally not an elif, i.e. it's in addition to the
+        # status update.
+        if 'forced_down' in body:
+            service.forced_down = strutils.bool_from_string(
+                body['forced_down'], strict=True)
+
+        # Check to see if anything was actually updated since the schema does
+        # not define any required fields.
+        if not service.obj_what_changed():
+            msg = _("No updates were requested. Fields 'status' or "
+                    "'forced_down' should be specified.")
+            raise webob.exc.HTTPBadRequest(explanation=msg)
+
+        # Now save our updates to the service record in the database.
+        service.save()
+
+        # Return the full service record details.
+        additional_fields = ['forced_down']
+        return {'service': self._get_service_detail(
+            service, additional_fields, req)}

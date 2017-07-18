@@ -15,6 +15,7 @@
 
 from oslo_utils import fixture as utils_fixture
 
+from nova import exception
 from nova.tests.functional.api_sample_tests import api_sample_base
 from nova.tests.unit.api.openstack.compute import test_services
 
@@ -102,5 +103,59 @@ class ServicesV211JsonTest(ServicesJsonTest):
                 'forced_down': 'true'}
         response = self._do_put('os-services/force-down',
                                 'service-force-down-put-req', subs)
+        self._verify_response('service-force-down-put-resp', subs,
+                              response, 200)
+
+
+class ServicesV253JsonTest(ServicesV211JsonTest):
+    microversion = '2.53'
+    scenarios = [('v2_53', {'api_major_version': 'v2.1'})]
+
+    def setUp(self):
+        super(ServicesV253JsonTest, self).setUp()
+
+        def db_service_get_by_uuid(ctxt, service_uuid):
+            for svc in test_services.fake_services_list:
+                if svc['uuid'] == service_uuid:
+                    return svc
+            raise exception.ServiceNotFound(service_id=service_uuid)
+        self.stub_out('nova.db.service_get_by_uuid', db_service_get_by_uuid)
+
+    def test_service_enable(self):
+        """Enable an existing service."""
+        response = self._do_put(
+            'os-services/%s' % test_services.FAKE_UUID_COMPUTE_HOST1,
+            'service-enable-put-req', subs={})
+        self._verify_response('service-enable-put-resp', {}, response, 200)
+
+    def test_service_disable(self):
+        """Disable an existing service."""
+        response = self._do_put(
+            'os-services/%s' % test_services.FAKE_UUID_COMPUTE_HOST1,
+            'service-disable-put-req', subs={})
+        self._verify_response('service-disable-put-resp', {}, response, 200)
+
+    def test_service_disable_log_reason(self):
+        """Disable an existing service and log the reason."""
+        subs = {'disabled_reason': 'maintenance'}
+        response = self._do_put(
+            'os-services/%s' % test_services.FAKE_UUID_COMPUTE_HOST1,
+            'service-disable-log-put-req', subs)
+        self._verify_response('service-disable-log-put-resp',
+                              subs, response, 200)
+
+    def test_service_delete(self):
+        """Delete an existing service."""
+        response = self._do_delete(
+            'os-services/%s' % test_services.FAKE_UUID_COMPUTE_HOST1)
+        self.assertEqual(204, response.status_code)
+        self.assertEqual("", response.text)
+
+    def test_force_down(self):
+        """Set forced_down flag"""
+        subs = {'forced_down': 'true'}
+        response = self._do_put(
+            'os-services/%s' % test_services.FAKE_UUID_COMPUTE_HOST1,
+            'service-force-down-put-req', subs)
         self._verify_response('service-force-down-put-resp', subs,
                               response, 200)
