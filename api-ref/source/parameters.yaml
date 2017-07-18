@@ -2496,7 +2496,10 @@ flavorRef:
   type: string
 flavorRef_resize:
   description: |
-    The flavor ID for resizing the server.
+    The flavor ID for resizing the server. The size of the disk in the flavor
+    being resized to must be greater than or equal to the size of the disk in
+    the current flavor.
+
     If a specified flavor ID is the same as the current one of the server,
     the request returns a ``Bad Request (400)`` response code.
   in: body
