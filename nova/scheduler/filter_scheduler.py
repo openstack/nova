@@ -61,7 +61,7 @@ class FilterScheduler(driver.Scheduler):
             # the resource consumed by instance in the process of selecting
             # host.
             for host in selected_hosts:
-                host.obj.updated = None
+                host.updated = None
 
             # Log the details but don't put those into the reason since
             # we don't want to give away too much information about our
@@ -77,7 +77,7 @@ class FilterScheduler(driver.Scheduler):
         self.notifier.info(
             context, 'scheduler.select_destinations.end',
             dict(request_spec=spec_obj.to_legacy_request_spec_dict()))
-        return [host.obj for host in selected_hosts]
+        return selected_hosts
 
     def _schedule(self, context, spec_obj, instance_uuids, provider_summaries):
         """Returns a list of hosts that meet the required specs,
@@ -99,36 +99,55 @@ class FilterScheduler(driver.Scheduler):
         selected_hosts = []
         num_instances = spec_obj.num_instances
         for num in range(num_instances):
-            # Filter local hosts based on requirements ...
-            hosts = self.host_manager.get_filtered_hosts(hosts,
-                    spec_obj, index=num)
+            hosts = self._get_sorted_hosts(spec_obj, hosts, num)
             if not hosts:
-                # Can't get any more locally.
                 break
 
-            LOG.debug("Filtered %(hosts)s", {'hosts': hosts})
-
-            weighed_hosts = self.host_manager.get_weighed_hosts(hosts,
-                    spec_obj)
-
-            LOG.debug("Weighed %(hosts)s", {'hosts': weighed_hosts})
-
-            host_subset_size = CONF.filter_scheduler.host_subset_size
-            if host_subset_size < len(weighed_hosts):
-                weighed_hosts = weighed_hosts[0:host_subset_size]
-            chosen_host = random.choice(weighed_hosts)
+            chosen_host = hosts[0]
 
             LOG.debug("Selected host: %(host)s", {'host': chosen_host})
             selected_hosts.append(chosen_host)
 
             # Now consume the resources so the filter/weights
             # will change for the next instance.
-            chosen_host.obj.consume_from_request(spec_obj)
+            chosen_host.consume_from_request(spec_obj)
             if spec_obj.instance_group is not None:
-                spec_obj.instance_group.hosts.append(chosen_host.obj.host)
+                spec_obj.instance_group.hosts.append(chosen_host.host)
                 # hosts has to be not part of the updates when saving
                 spec_obj.instance_group.obj_reset_changes(['hosts'])
         return selected_hosts
+
+    def _get_sorted_hosts(self, spec_obj, host_states, index):
+        """Returns a list of HostState objects that match the required
+        scheduling constraints for the request spec object and have been sorted
+        according to the weighers.
+        """
+        filtered_hosts = self.host_manager.get_filtered_hosts(host_states,
+            spec_obj, index)
+
+        LOG.debug("Filtered %(hosts)s", {'hosts': filtered_hosts})
+
+        if not filtered_hosts:
+            return []
+
+        weighed_hosts = self.host_manager.get_weighed_hosts(filtered_hosts,
+            spec_obj)
+        # Strip off the WeighedHost wrapper class...
+        weighed_hosts = [h.obj for h in weighed_hosts]
+
+        LOG.debug("Weighed %(hosts)s", {'hosts': weighed_hosts})
+
+        # We randomize the first element in the returned list to alleviate
+        # congestion where the same host is consistently selected among
+        # numerous potential hosts for similar request specs.
+        host_subset_size = CONF.filter_scheduler.host_subset_size
+        if host_subset_size < len(weighed_hosts):
+            weighed_subset = weighed_hosts[0:host_subset_size]
+        else:
+            weighed_subset = weighed_hosts
+        chosen_host = random.choice(weighed_subset)
+        weighed_hosts.remove(chosen_host)
+        return [chosen_host] + weighed_hosts
 
     def _get_all_host_states(self, context, spec_obj, provider_summaries):
         """Template method, so a subclass can implement caching."""

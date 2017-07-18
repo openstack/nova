@@ -25,13 +25,8 @@ from nova.scheduler import host_manager
 from nova.scheduler import utils as scheduler_utils
 from nova.scheduler import weights
 from nova import test  # noqa
-from nova.tests.unit.scheduler import fakes
 from nova.tests.unit.scheduler import test_scheduler
 from nova.tests import uuidsentinel as uuids
-
-
-def fake_get_filtered_hosts(hosts, filter_properties, index):
-    return list(hosts)
 
 
 class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
@@ -39,57 +34,187 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     driver_cls = filter_scheduler.FilterScheduler
 
-    @mock.patch('nova.objects.ServiceList.get_by_binary',
-                return_value=fakes.SERVICES)
-    @mock.patch('nova.objects.InstanceList.get_by_host')
-    @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids',
-                return_value=fakes.COMPUTE_NODES)
-    @mock.patch('nova.objects.Service.get_minimum_version',
-                return_value=objects.service.SERVICE_VERSION)
-    @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
-                return_value={'numa_topology': None,
-                              'pci_requests': None})
-    def test_schedule_happy_day(self, mock_get_extra, mock_get_mv,
-                                mock_get_all,
-                                mock_by_host, mock_get_by_binary):
-        """Make sure there's nothing glaringly wrong with _schedule()
-        by doing a happy day pass through.
-        """
-
-        self.next_weight = 1.0
-
-        def _fake_weigh_objects(_self, functions, hosts, options):
-            self.next_weight += 2.0
-            host_state = hosts[0]
-            return [weights.WeighedHost(host_state, self.next_weight)]
-
-        self.stub_out('nova.scheduler.weights.HostWeightHandler.'
-                'get_weighed_objects', _fake_weigh_objects)
-
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_get_all_host_states')
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_get_sorted_hosts')
+    def test_schedule(self, mock_get_hosts, mock_get_all_states):
         spec_obj = objects.RequestSpec(
-            num_instances=10,
+            num_instances=1,
             flavor=objects.Flavor(memory_mb=512,
                                   root_gb=512,
                                   ephemeral_gb=0,
                                   swap=0,
                                   vcpus=1),
-            project_id=1,
-            os_type='Linux',
-            uuid=uuids.instance,
-            pci_requests=None,
-            numa_topology=None,
+            project_id=uuids.project_id,
             instance_group=None)
 
-        with mock.patch.object(self.driver.host_manager,
-                               'get_filtered_hosts') as mock_get_hosts:
-            mock_get_hosts.side_effect = fake_get_filtered_hosts
-            provider_uuids = {cn.uuid: cn for cn in fakes.COMPUTE_NODES}
-            weighed_hosts = self.driver._schedule(self.context, spec_obj,
-                    [uuids.instance], provider_uuids)
+        host_state = mock.Mock(spec=host_manager.HostState,
+            host=mock.sentinel.host)
+        all_host_states = [host_state]
+        mock_get_all_states.return_value = all_host_states
+        mock_get_hosts.return_value = all_host_states
+        instance_uuids = [uuids.instance]
+        ctx = mock.Mock()
+        selected_hosts = self.driver._schedule(ctx, spec_obj,
+            instance_uuids, mock.sentinel.provider_summaries)
 
-        self.assertEqual(len(weighed_hosts), 10)
-        for weighed_host in weighed_hosts:
-            self.assertIsNotNone(weighed_host.obj)
+        mock_get_all_states.assert_called_once_with(
+            ctx.elevated.return_value, spec_obj,
+            mock.sentinel.provider_summaries)
+        mock_get_hosts.assert_called_once_with(spec_obj, all_host_states, 0)
+
+        self.assertEqual(len(selected_hosts), 1)
+        self.assertEqual([host_state], selected_hosts)
+
+        # Ensure that we have consumed the resources on the chosen host states
+        host_state.consume_from_request.assert_called_once_with(spec_obj)
+
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_get_all_host_states')
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_get_sorted_hosts')
+    def test_schedule_instance_group(self, mock_get_hosts,
+            mock_get_all_states):
+        """Test that since the request spec object contains an instance group
+        object, that upon choosing a host in the primary schedule loop,
+        that we update the request spec's instance group information
+        """
+        num_instances = 2
+        ig = objects.InstanceGroup(hosts=[])
+        spec_obj = objects.RequestSpec(
+            num_instances=num_instances,
+            flavor=objects.Flavor(memory_mb=512,
+                                  root_gb=512,
+                                  ephemeral_gb=0,
+                                  swap=0,
+                                  vcpus=1),
+            project_id=uuids.project_id,
+            instance_group=ig)
+
+        hs1 = mock.Mock(spec=host_manager.HostState, host='host1')
+        hs2 = mock.Mock(spec=host_manager.HostState, host='host2')
+        all_host_states = [hs1, hs2]
+        mock_get_all_states.return_value = all_host_states
+
+        # Simulate host 1 and host 2 being randomly returned first by
+        # _get_sorted_hosts() in the two iterations for each instance in
+        # num_instances
+        mock_get_hosts.side_effect = ([hs2, hs1], [hs1, hs2])
+        instance_uuids = [
+            getattr(uuids, 'instance%d' % x) for x in range(num_instances)
+        ]
+        ctx = mock.Mock()
+        self.driver._schedule(ctx, spec_obj,
+            instance_uuids, mock.sentinel.provider_summaries)
+
+        # Check that _get_sorted_hosts() is called twice and that the
+        # second time, we pass it the hosts that were returned from
+        # _get_sorted_hosts() the first time
+        sorted_host_calls = [
+            mock.call(spec_obj, all_host_states, 0),
+            mock.call(spec_obj, [hs2, hs1], 1),
+        ]
+        mock_get_hosts.assert_has_calls(sorted_host_calls)
+
+        # The instance group object should have both host1 and host2 in its
+        # instance group hosts list and there should not be any "changes" to
+        # save in the instance group object
+        self.assertEqual(['host2', 'host1'], ig.hosts)
+        self.assertEqual({}, ig.obj_get_changes())
+
+    @mock.patch('random.choice', side_effect=lambda x: x[1])
+    @mock.patch('nova.scheduler.host_manager.HostManager.get_weighed_hosts')
+    @mock.patch('nova.scheduler.host_manager.HostManager.get_filtered_hosts')
+    def test_get_sorted_hosts(self, mock_filt, mock_weighed, mock_rand):
+        """Tests the call that returns a sorted list of hosts by calling the
+        host manager's filtering and weighing routines
+        """
+        self.flags(host_subset_size=2, group='filter_scheduler')
+        hs1 = mock.Mock(spec=host_manager.HostState, host='host1')
+        hs2 = mock.Mock(spec=host_manager.HostState, host='host2')
+        all_host_states = [hs1, hs2]
+
+        mock_weighed.return_value = [
+            weights.WeighedHost(hs1, 1.0), weights.WeighedHost(hs2, 1.0),
+        ]
+
+        results = self.driver._get_sorted_hosts(mock.sentinel.spec,
+            all_host_states, mock.sentinel.index)
+
+        mock_filt.assert_called_once_with(all_host_states, mock.sentinel.spec,
+            mock.sentinel.index)
+
+        mock_weighed.assert_called_once_with(mock_filt.return_value,
+            mock.sentinel.spec)
+
+        # We override random.choice() to pick the **second** element of the
+        # returned weighed hosts list, which is the host state #2. This tests
+        # the code path that combines the randomly-chosen host with the
+        # remaining list of weighed host state objects
+        self.assertEqual([hs2, hs1], results)
+
+    @mock.patch('random.choice', side_effect=lambda x: x[0])
+    @mock.patch('nova.scheduler.host_manager.HostManager.get_weighed_hosts')
+    @mock.patch('nova.scheduler.host_manager.HostManager.get_filtered_hosts')
+    def test_get_sorted_hosts_subset_less_than_num_weighed(self, mock_filt,
+            mock_weighed, mock_rand):
+        """Tests that when we have >1 weighed hosts but a host subset size of
+        1, that we always pick the first host in the weighed host
+        """
+        self.flags(host_subset_size=1, group='filter_scheduler')
+        hs1 = mock.Mock(spec=host_manager.HostState, host='host1')
+        hs2 = mock.Mock(spec=host_manager.HostState, host='host2')
+        all_host_states = [hs1, hs2]
+
+        mock_weighed.return_value = [
+            weights.WeighedHost(hs1, 1.0), weights.WeighedHost(hs2, 1.0),
+        ]
+
+        results = self.driver._get_sorted_hosts(mock.sentinel.spec,
+            all_host_states, mock.sentinel.index)
+
+        mock_filt.assert_called_once_with(all_host_states, mock.sentinel.spec,
+            mock.sentinel.index)
+
+        mock_weighed.assert_called_once_with(mock_filt.return_value,
+            mock.sentinel.spec)
+
+        # We should be randomly selecting only from a list of one host state
+        mock_rand.assert_called_once_with([hs1])
+        self.assertEqual([hs1, hs2], results)
+
+    @mock.patch('random.choice', side_effect=lambda x: x[0])
+    @mock.patch('nova.scheduler.host_manager.HostManager.get_weighed_hosts')
+    @mock.patch('nova.scheduler.host_manager.HostManager.get_filtered_hosts')
+    def test_get_sorted_hosts_subset_greater_than_num_weighed(self, mock_filt,
+            mock_weighed, mock_rand):
+        """Hosts should still be chosen if host subset size is larger than
+        number of weighed hosts.
+        """
+        self.flags(host_subset_size=20, group='filter_scheduler')
+        hs1 = mock.Mock(spec=host_manager.HostState, host='host1')
+        hs2 = mock.Mock(spec=host_manager.HostState, host='host2')
+        all_host_states = [hs1, hs2]
+
+        mock_weighed.return_value = [
+            weights.WeighedHost(hs1, 1.0), weights.WeighedHost(hs2, 1.0),
+        ]
+
+        results = self.driver._get_sorted_hosts(mock.sentinel.spec,
+            all_host_states, mock.sentinel.index)
+
+        mock_filt.assert_called_once_with(all_host_states, mock.sentinel.spec,
+            mock.sentinel.index)
+
+        mock_weighed.assert_called_once_with(mock_filt.return_value,
+            mock.sentinel.spec)
+
+        # We overrode random.choice() to return the first element in the list,
+        # so even though we had a host_subset_size greater than the number of
+        # weighed hosts (2), we just random.choice() on the entire set of
+        # weighed hosts and thus return [hs1, hs2]
+        self.assertEqual([hs1, hs2], results)
 
     def test_add_retry_host(self):
         retry = dict(num_attempts=1, hosts=[])
@@ -118,206 +243,58 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.assertEqual({'vcpu': 5}, host_state.limits)
 
-    @mock.patch('nova.objects.ServiceList.get_by_binary',
-                return_value=fakes.SERVICES)
-    @mock.patch('nova.objects.InstanceList.get_by_host')
-    @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids',
-                return_value=fakes.COMPUTE_NODES)
-    @mock.patch('nova.objects.Service.get_minimum_version',
-                return_value=objects.service.SERVICE_VERSION)
-    @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
-                return_value={'numa_topology': None,
-                              'pci_requests': None})
-    def test_schedule_host_pool(self, mock_get_extra, mock_get_mv,
-                                mock_get_all,
-                                mock_by_host, mock_get_by_binary):
-        """Make sure the host_subset_size property works properly."""
-
-        self.flags(host_subset_size=2, group='filter_scheduler')
-
-        spec_obj = objects.RequestSpec(
-            num_instances=1,
-            project_id=1,
-            os_type='Linux',
-            uuid=uuids.instance,
-            flavor=objects.Flavor(root_gb=512,
-                                  memory_mb=512,
-                                  ephemeral_gb=0,
-                                  swap=0,
-                                  vcpus=1),
-            pci_requests=None,
-            numa_topology=None,
-            instance_group=None)
-
-        with mock.patch.object(self.driver.host_manager,
-                               'get_filtered_hosts') as mock_get_hosts:
-            mock_get_hosts.side_effect = fake_get_filtered_hosts
-            provider_uuids = {cn.uuid: cn for cn in fakes.COMPUTE_NODES}
-            hosts = self.driver._schedule(self.context, spec_obj,
-                    [uuids.instance], provider_uuids)
-
-        # one host should be chosen
-        self.assertEqual(len(hosts), 1)
-
-    @mock.patch('nova.objects.ServiceList.get_by_binary',
-                return_value=fakes.SERVICES)
-    @mock.patch('nova.objects.InstanceList.get_by_host')
-    @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids',
-                return_value=fakes.COMPUTE_NODES)
-    @mock.patch('nova.objects.Service.get_minimum_version',
-                return_value=objects.service.SERVICE_VERSION)
-    @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
-                return_value={'numa_topology': None,
-                              'pci_requests': None})
-    def test_schedule_large_host_pool(self, mock_get_extra, mock_get_mv,
-                                      mock_get_all,
-                                      mock_by_host, mock_get_by_binary):
-        """Hosts should still be chosen if pool size
-        is larger than number of filtered hosts.
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_schedule')
+    def test_select_destinations_match_num_instances(self, mock_schedule):
+        """Tests that the select_destinations() method returns the list of
+        hosts from the _schedule() method when the number of returned hosts
+        equals the num_instances on the spec object
         """
-
-        self.flags(host_subset_size=20, group='filter_scheduler')
-
-        spec_obj = objects.RequestSpec(
-            num_instances=1,
-            project_id=1,
-            os_type='Linux',
-            uuid=uuids.instance,
-            flavor=objects.Flavor(root_gb=512,
-                                  memory_mb=512,
-                                  ephemeral_gb=0,
-                                  swap=0,
-                                  vcpus=1),
-            pci_requests=None,
-            numa_topology=None,
-            instance_group=None)
-
-        with mock.patch.object(self.driver.host_manager,
-                               'get_filtered_hosts') as mock_get_hosts:
-            mock_get_hosts.side_effect = fake_get_filtered_hosts
-            provider_uuids = {cn.uuid: cn for cn in fakes.COMPUTE_NODES}
-            hosts = self.driver._schedule(self.context, spec_obj,
-                    [uuids.instance], provider_uuids)
-
-        # one host should be chosen
-        self.assertEqual(len(hosts), 1)
-
-    @mock.patch('nova.scheduler.host_manager.HostManager._get_instance_info')
-    @mock.patch('nova.objects.ServiceList.get_by_binary',
-                return_value=fakes.SERVICES)
-    @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids',
-                return_value=fakes.COMPUTE_NODES)
-    @mock.patch('nova.objects.Service.get_minimum_version',
-                return_value=objects.service.SERVICE_VERSION)
-    @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
-                return_value={'numa_topology': None,
-                              'pci_requests': None})
-    def test_schedule_chooses_best_host(self, mock_get_extra, mock_get_mv,
-                                        mock_cn_get_all,
-                                        mock_get_by_binary,
-                                        mock_get_inst_info):
-        """If host_subset_size is 1, the largest host with greatest weight
-        should be returned.
-        """
-
-        self.flags(host_subset_size=1, group='filter_scheduler')
-        self.next_weight = 50
-
-        def _fake_weigh_objects(_self, functions, hosts, options):
-            this_weight = self.next_weight
-            self.next_weight = 0
-            host_state = hosts[0]
-            return [weights.WeighedHost(host_state, this_weight)]
-
-        self.stub_out('nova.scheduler.weights.HostWeightHandler.'
-                'get_weighed_objects', _fake_weigh_objects)
-
-        spec_obj = objects.RequestSpec(
-            num_instances=1,
-            project_id=1,
-            os_type='Linux',
-            uuid=uuids.instance,
-            flavor=objects.Flavor(root_gb=512,
-                                  memory_mb=512,
-                                  ephemeral_gb=0,
-                                  swap=0,
-                                  vcpus=1),
-            pci_requests=None,
-            numa_topology=None,
-            instance_group=None)
-
-        with mock.patch.object(self.driver.host_manager,
-                               'get_filtered_hosts') as mock_get_hosts:
-            mock_get_hosts.side_effect = fake_get_filtered_hosts
-            provider_uuids = {cn.uuid: cn for cn in fakes.COMPUTE_NODES}
-            hosts = self.driver._schedule(self.context, spec_obj,
-                    [uuids.instance], provider_uuids)
-
-        # one host should be chosen
-        self.assertEqual(1, len(hosts))
-
-        self.assertEqual(50, hosts[0].weight)
-
-    @mock.patch('nova.objects.ServiceList.get_by_binary',
-                return_value=fakes.SERVICES)
-    @mock.patch('nova.objects.InstanceList.get_by_host')
-    @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids',
-                return_value=fakes.COMPUTE_NODES)
-    @mock.patch('nova.db.instance_extra_get_by_instance_uuid',
-                return_value={'numa_topology': None,
-                              'pci_requests': None})
-    def test_select_destinations(self, mock_get_extra,
-                                 mock_get_all,
-                                 mock_by_host, mock_get_by_binary):
-        """select_destinations is basically a wrapper around _schedule().
-
-        Similar to the _schedule tests, this just does a happy path test to
-        ensure there is nothing glaringly wrong.
-        """
-
-        self.next_weight = 1.0
-
-        selected_hosts = []
-        selected_nodes = []
-
-        def _fake_weigh_objects(_self, functions, hosts, options):
-            self.next_weight += 2.0
-            host_state = hosts[0]
-            selected_hosts.append(host_state.host)
-            selected_nodes.append(host_state.nodename)
-            return [weights.WeighedHost(host_state, self.next_weight)]
-
-        self.stub_out('nova.scheduler.weights.HostWeightHandler.'
-                'get_weighed_objects', _fake_weigh_objects)
-
         spec_obj = objects.RequestSpec(
             flavor=objects.Flavor(memory_mb=512,
                                   root_gb=512,
                                   ephemeral_gb=0,
                                   swap=0,
                                   vcpus=1),
-            project_id=1,
-            os_type='Linux',
-            instance_uuid=uuids.instance,
-            num_instances=1,
-            pci_requests=None,
-            numa_topology=None,
-            instance_group=None)
+            project_id=uuids.project_id,
+            num_instances=1)
 
-        instance_uuids = [uuids.instance]
-        with mock.patch.object(self.driver.host_manager,
-                               'get_filtered_hosts') as mock_get_hosts:
-            mock_get_hosts.side_effect = fake_get_filtered_hosts
-            p_sums = {
-                cn.uuid: cn
-                for cn in fakes.COMPUTE_NODES
-            }
-            dests = self.driver.select_destinations(self.context, spec_obj,
-                    instance_uuids, p_sums)
+        mock_schedule.return_value = [mock.sentinel.hs1]
 
-        (host, node) = (dests[0].host, dests[0].nodename)
-        self.assertEqual(host, selected_hosts[0])
-        self.assertEqual(node, selected_nodes[0])
+        dests = self.driver.select_destinations(self.context, spec_obj,
+                mock.sentinel.instance_uuids, mock.sentinel.p_sums)
+
+        mock_schedule.assert_called_once_with(self.context, spec_obj,
+            mock.sentinel.instance_uuids, mock.sentinel.p_sums)
+
+        self.assertEqual([mock.sentinel.hs1], dests)
+
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_schedule')
+    def test_select_destinations_fewer_num_instances(self, mock_schedule):
+        """Tests that the select_destinations() method properly handles
+        resetting host state objects and raising NoValidHost when the
+        _schedule() method returns no host matches.
+        """
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(memory_mb=512,
+                                  root_gb=512,
+                                  ephemeral_gb=0,
+                                  swap=0,
+                                  vcpus=1),
+            project_id=uuids.project_id,
+            num_instances=2)
+
+        host_state = mock.Mock(spec=host_manager.HostState)
+        mock_schedule.return_value = [host_state]
+
+        self.assertRaises(exception.NoValidHost,
+            self.driver.select_destinations, self.context, spec_obj,
+            mock.sentinel.instance_uuids, mock.sentinel.p_sums)
+
+        # Verify that the host state object has been marked as not updated so
+        # it's picked up in the next pull from the DB for compute node objects
+        self.assertIsNone(host_state.updated)
 
     @mock.patch.object(filter_scheduler.FilterScheduler, '_schedule')
     def test_select_destinations_notifications(self, mock_schedule):
@@ -340,29 +317,3 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 mock.call(self.context, 'scheduler.select_destinations.end',
                  dict(request_spec=expected))]
             self.assertEqual(expected, mock_info.call_args_list)
-
-    @mock.patch.object(filter_scheduler.FilterScheduler, '_schedule')
-    def test_select_destinations_no_valid_host(self, mock_schedule):
-        mock_schedule.return_value = []
-        self.assertRaises(exception.NoValidHost,
-                self.driver.select_destinations, self.context,
-                objects.RequestSpec(num_instances=1), [uuids.instance], {})
-
-    def test_select_destinations_no_valid_host_not_enough(self):
-        # Tests that we have fewer hosts available than number of instances
-        # requested to build.
-        consumed_hosts = [mock.MagicMock(), mock.MagicMock()]
-        with mock.patch.object(self.driver, '_schedule',
-                               return_value=consumed_hosts):
-            try:
-                self.driver.select_destinations(
-                        self.context, objects.RequestSpec(num_instances=3),
-                        [uuids.instance], {})
-                self.fail('Expected NoValidHost to be raised.')
-            except exception.NoValidHost as e:
-                # Make sure that we provided a reason why NoValidHost.
-                self.assertIn('reason', e.kwargs)
-                self.assertGreater(len(e.kwargs['reason']), 0)
-                # Make sure that the consumed hosts have chance to be reverted.
-                for host in consumed_hosts:
-                    self.assertIsNone(host.obj.updated)
