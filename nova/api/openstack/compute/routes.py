@@ -362,6 +362,10 @@ simple_tenant_usage_controller = functools.partial(_create_controller,
     simple_tenant_usage.SimpleTenantUsageController, [], [])
 
 
+snapshots_controller = functools.partial(_create_controller,
+    volumes.SnapshotController, [], [])
+
+
 tenant_networks_controller = functools.partial(_create_controller,
     tenant_networks.TenantNetworkController, [], [])
 
@@ -696,6 +700,17 @@ ROUTE_LIST = (
     }),
     ('/os-simple-tenant-usage/{id}', {
         'GET': [simple_tenant_usage_controller, 'show']
+    }),
+    ('/os-snapshots', {
+        'GET': [snapshots_controller, 'index'],
+        'POST': [snapshots_controller, 'create']
+    }),
+    ('/os-snapshots/detail', {
+        'GET': [snapshots_controller, 'detail']
+    }),
+    ('/os-snapshots/{id}', {
+        'GET': [snapshots_controller, 'show'],
+        'DELETE': [snapshots_controller, 'delete']
     }),
     ('/os-tenant-networks', {
         'GET': [tenant_networks_controller, 'index'],
