@@ -20,13 +20,17 @@ from nova.policies import base
 
 
 BASE_POLICY_NAME = 'os_compute_api:os-flavor-manage'
+POLICY_ROOT = 'os_compute_api:os-flavor-manage:%s'
+BASE_POLICY_RULE = 'rule:%s' % BASE_POLICY_NAME
 
 
 flavor_manage_policies = [
+    # TODO(rb560u): remove this rule in future release
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_API,
-        "Create and delete Flavors",
+        "Create and delete Flavors. Deprecated in Pike and will be "
+        "removed in future release",
         [
             {
                 'method': 'POST',
@@ -37,6 +41,26 @@ flavor_manage_policies = [
                 'path': '/flavors/{flavor_id}'
             },
 
+        ]),
+    policy.DocumentedRuleDefault(
+        POLICY_ROOT % 'create',
+        BASE_POLICY_RULE,
+        "Create a flavor",
+        [
+            {
+                'method': 'POST',
+                'path': '/flavors'
+            }
+        ]),
+    policy.DocumentedRuleDefault(
+        POLICY_ROOT % 'delete',
+        BASE_POLICY_RULE,
+        "Delete a flavor",
+        [
+            {
+                'method': 'DELETE',
+                'path': '/flavors/{flavor_id}'
+            }
         ]),
 ]
 

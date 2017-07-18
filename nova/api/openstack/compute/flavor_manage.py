@@ -12,6 +12,8 @@
 
 import webob
 
+from oslo_log import log as logging
+
 from nova.api.openstack.compute.schemas import flavor_manage
 from nova.api.openstack.compute.views import flavors as flavors_view
 from nova.api.openstack import extensions
@@ -21,8 +23,12 @@ from nova.compute import flavors
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.policies import base
 from nova.policies import flavor_manage as fm_policies
+from nova import policy
 
+
+LOG = logging.getLogger(__name__)
 ALIAS = "os-flavor-manage"
 
 
@@ -41,7 +47,15 @@ class FlavorManageController(wsgi.Controller):
     @wsgi.action("delete")
     def _delete(self, req, id):
         context = req.environ['nova.context']
-        context.can(fm_policies.BASE_POLICY_NAME)
+        # TODO(rb560u): remove this check in future release
+        using_old_action = \
+            policy.verify_deprecated_policy(fm_policies.BASE_POLICY_NAME,
+                fm_policies.POLICY_ROOT % 'delete',
+                base.RULE_ADMIN_API,
+                context)
+
+        if not using_old_action:
+            context.can(fm_policies.POLICY_ROOT % 'delete')
 
         flavor = objects.Flavor(context=context, flavorid=id)
         try:
@@ -57,7 +71,15 @@ class FlavorManageController(wsgi.Controller):
     @validation.schema(flavor_manage.create, '2.1')
     def _create(self, req, body):
         context = req.environ['nova.context']
-        context.can(fm_policies.BASE_POLICY_NAME)
+        # TODO(rb560u): remove this check in future release
+        using_old_action = \
+            policy.verify_deprecated_policy(fm_policies.BASE_POLICY_NAME,
+                fm_policies.POLICY_ROOT % 'create',
+                base.RULE_ADMIN_API,
+                context)
+
+        if not using_old_action:
+            context.can(fm_policies.POLICY_ROOT % 'create')
 
         vals = body['flavor']
 

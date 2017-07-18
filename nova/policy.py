@@ -225,3 +225,33 @@ def get_enforcer():
     cfg.CONF(conf_args, project='nova')
     init()
     return _ENFORCER
+
+
+def verify_deprecated_policy(old_policy, new_policy, default_rule, context):
+    """Check the rule of the deprecated policy action
+
+    If the current rule of the deprecated policy action is set to a non-default
+    value, then a warning message is logged stating that the new policy
+    action should be used to dictate permissions as the old policy action is
+    being deprecated.
+
+    :param old_policy: policy action that is being deprecated
+    :param new_policy: policy action that is replacing old_policy
+    :param default_rule: the old_policy action default rule value
+    :param context: the nova context
+    """
+
+    if _ENFORCER:
+        current_rule = str(_ENFORCER.rules[old_policy])
+    else:
+        current_rule = None
+
+    if current_rule != default_rule:
+        LOG.warning("Start using the new action '{0}'. The existing "
+                    "action '{1}' is being deprecated and will be "
+                    "removed in future release.".format(new_policy,
+                                                        old_policy))
+        context.can(old_policy)
+        return True
+    else:
+        return False
