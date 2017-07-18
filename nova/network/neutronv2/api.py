@@ -38,7 +38,7 @@ from nova.pci import manager as pci_manager
 from nova.pci import request as pci_request
 from nova.pci import utils as pci_utils
 from nova.pci import whitelist as pci_whitelist
-from nova.policies import base as base_policies
+from nova.policies import servers as servers_policies
 from nova import profiler
 from nova import service_auth
 
@@ -463,7 +463,7 @@ class API(base_api.NetworkAPI):
 
     def _check_external_network_attach(self, context, nets):
         """Check if attaching to external network is permitted."""
-        if not context.can(base_policies.NETWORK_ATTACH_EXTERNAL,
+        if not context.can(servers_policies.NETWORK_ATTACH_EXTERNAL,
                            fatal=False):
             for net in nets:
                 # Perform this check here rather than in validate_networks to

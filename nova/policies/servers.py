@@ -18,6 +18,7 @@ from nova.policies import base
 
 RULE_AOO = base.RULE_ADMIN_OR_OWNER
 SERVERS = 'os_compute_api:servers:%s'
+NETWORK_ATTACH_EXTERNAL = 'network:attach_external_network'
 
 rules = [
     policy.DocumentedRuleDefault(
@@ -124,6 +125,22 @@ rules = [
             {
                 'method': 'POST',
                 'path': '/servers'
+            }
+        ]),
+    policy.DocumentedRuleDefault(
+        NETWORK_ATTACH_EXTERNAL,
+        'is_admin:True',
+        "Attach an unshared external network to a server",
+        [
+            # Create a server with a requested network or port.
+            {
+                'method': 'POST',
+                'path': '/servers'
+            },
+            # Attach a network or port to an existing server.
+            {
+                'method': 'POST',
+                'path': '/servers/{server_id}/os-interface'
             }
         ]),
     policy.DocumentedRuleDefault(
