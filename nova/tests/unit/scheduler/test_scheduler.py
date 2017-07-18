@@ -67,6 +67,16 @@ class SchedulerManagerInitTestCase(test.NoDBTestCase):
         driver = self.manager_cls().driver
         self.assertIsInstance(driver, caching_scheduler.CachingScheduler)
 
+    @mock.patch.object(host_manager.HostManager, '_init_instance_info')
+    @mock.patch.object(host_manager.HostManager, '_init_aggregates')
+    def test_init_nonexist_schedulerdriver(self,
+                                           mock_init_agg,
+                                           mock_init_inst):
+        self.flags(driver='nonexist_scheduler', group='scheduler')
+        # The entry point has to be defined in setup.cfg and nova-scheduler has
+        # to be deployed again before using a custom value.
+        self.assertRaises(RuntimeError, self.manager_cls)
+
 
 class SchedulerManagerTestCase(test.NoDBTestCase):
     """Test case for scheduler manager."""
