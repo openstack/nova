@@ -123,7 +123,7 @@ _man_pages = [
 ]
 
 man_pages = [
-    ('man/%s' % name, name, description, [u'OpenStack'], 1)
+    ('cli/%s' % name, name, description, [u'OpenStack'], 1)
     for name, description in _man_pages]
 
 # -- Options for HTML output --------------------------------------------------

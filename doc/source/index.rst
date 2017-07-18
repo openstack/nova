@@ -215,7 +215,7 @@ Man Pages
 .. toctree::
    :maxdepth: 1
 
-   man/index
+   cli/index
 
 Module Reference
 ----------------
