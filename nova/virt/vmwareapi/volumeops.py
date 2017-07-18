@@ -490,8 +490,12 @@ class VMwareVolumeOps(object):
         # Volume's backing is relocated now; detach the old vmdk if not done
         # already.
         if not detached:
-            self.detach_disk_from_vm(volume_ref, instance, original_device,
-                                     destroy_disk=True)
+            try:
+                self.detach_disk_from_vm(volume_ref, instance,
+                                         original_device, destroy_disk=True)
+            except oslo_vmw_exceptions.FileNotFoundException:
+                LOG.debug("Original volume backing %s is missing, no need "
+                          "to detach it", original_device.backing.fileName)
 
         # Attach the current volume to the volume_ref
         self.attach_disk_to_vm(volume_ref, instance,
