@@ -327,6 +327,10 @@ server_remote_consoles_controller = functools.partial(_create_controller,
     remote_consoles.RemoteConsolesController, [], [])
 
 
+server_security_groups_controller = functools.partial(_create_controller,
+    security_groups.ServerSecurityGroupController, [], [])
+
+
 server_tags_controller = functools.partial(_create_controller,
     server_tags.ServerTagsController, [], [])
 
@@ -743,6 +747,9 @@ ROUTE_LIST = (
     }),
     ('/servers/{server_id}/remote-consoles', {
         'POST': [server_remote_consoles_controller, 'create']
+    }),
+    ('/servers/{server_id}/os-security-groups', {
+        'GET': [server_security_groups_controller, 'index']
     }),
     ('/servers/{server_id}/tags', {
         'GET': [server_tags_controller, 'index'],
