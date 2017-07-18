@@ -2561,6 +2561,14 @@ class AllocationCandidates(base.NovaObject):
                 sharing_resource_requests[shared_rc_id].append(sharing_res_req)
 
         for root_rp_id in roots:
+            if root_rp_id not in summaries:
+                # This resource provider is not providing any resources that
+                # have been requested. This means that this resource provider
+                # has some requested resources shared *with* it but the
+                # allocation of the requested resource will not be made against
+                # it. Since this provider won't actually have an allocation
+                # request written for it, we just ignore it and continue
+                continue
             root_summary = summaries[root_rp_id]
             root_rp_uuid = root_summary['uuid']
             local_resources = set(
@@ -2592,6 +2600,14 @@ class AllocationCandidates(base.NovaObject):
                     resource_requests=resource_requests,
                 )
                 alloc_request_objs.append(req_obj)
+
+            has_none = len(local_resources) == 0
+            if has_none:
+                # This resource provider doesn't actually provide any requested
+                # resource. It only has requested resources shared *with* it.
+                # We do not list this provider in allocation_requests but do
+                # list it in provider_summaries.
+                continue
 
             # If there are no resource providers sharing resources involved in
             # this request, there's no point building a set of allocation

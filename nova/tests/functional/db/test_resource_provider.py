@@ -2681,3 +2681,43 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         ss_req_disk = self._find_request_for_resource(ss_reqs, 'DISK_GB')
         self.assertIsNotNone(ss_req_disk)
         self.assertEqual(requested_resources['DISK_GB'], ss_req_disk.amount)
+
+        # Test for bug #1705071. We query for allocation candidates with a
+        # request for ONLY the DISK_GB (the resource that is shared with
+        # compute nodes) and no VCPU/MEMORY_MB. Before the fix for bug
+        # #1705071, this resulted in a KeyError
+
+        p_alts = rp_obj.AllocationCandidates.get_by_filters(
+            self.context,
+            filters={
+                'resources': {
+                    'DISK_GB': 10,
+                }
+            },
+        )
+
+        # We should only have provider summary information for the sharing
+        # storage provider, since that's the only provider that can be
+        # allocated against for this request.  In the future, we may look into
+        # returning the shared-with providers in the provider summaries, but
+        # that's a distant possibility.
+        p_sums = p_alts.provider_summaries
+        self.assertEqual(1, len(p_sums))
+
+        p_sum_rps = set([ps.resource_provider.uuid for ps in p_sums])
+
+        self.assertEqual(set([ss_uuid]), p_sum_rps)
+
+        # The allocation_requests will only include the shared storage
+        # provider because the only thing we're requesting to allocate is
+        # against the provider of DISK_GB, which happens to be the shared
+        # storage provider.
+        a_reqs = p_alts.allocation_requests
+        self.assertEqual(1, len(a_reqs))
+
+        a_req_rps = set()
+        for ar in a_reqs:
+            for rr in ar.resource_requests:
+                a_req_rps.add(rr.resource_provider.uuid)
+
+        self.assertEqual(set([ss_uuid]), a_req_rps)
