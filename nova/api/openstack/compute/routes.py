@@ -148,6 +148,10 @@ cloudpipe_controller = functools.partial(
     _create_controller, cloudpipe.CloudpipeController, [], [])
 
 
+extensions_controller = functools.partial(
+    _create_controller, extension_info.ExtensionInfoController, [], [])
+
+
 fixed_ips_controller = functools.partial(_create_controller,
     fixed_ips.FixedIPController, [], [])
 
@@ -396,6 +400,12 @@ volumes_controller = functools.partial(_create_controller,
 ROUTE_LIST = (
     # NOTE: '/os-volumes_boot' is a clone of '/servers'. We may want to
     # deprecate it in the future.
+    ('/extensions', {
+        'GET': [extensions_controller, 'index'],
+    }),
+    ('/extensions/{id}', {
+        'GET': [extensions_controller, 'show'],
+    }),
     ('/flavors', {
         'GET': [flavor_controller, 'index'],
         'POST': [flavor_controller, 'create']

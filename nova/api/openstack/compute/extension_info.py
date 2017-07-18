@@ -21,7 +21,6 @@ from nova.api.openstack import wsgi
 from nova import exception
 from nova.policies import extensions as ext_policies
 
-ALIAS = 'extensions'
 LOG = logging.getLogger(__name__)
 
 
@@ -894,24 +893,6 @@ class ExtensionInfoController(wsgi.Controller):
                 return dict(extension=ext)
 
         raise webob.exc.HTTPNotFound()
-
-
-class ExtensionInfo(extensions.V21APIExtensionBase):
-    """Extension information."""
-
-    name = "Extensions"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        resources = [
-            extensions.ResourceExtension(
-                ALIAS, ExtensionInfoController(self.extension_info),
-                member_name='extension')]
-        return resources
-
-    def get_controller_extensions(self):
-        return []
 
 
 class LoadedExtensionInfo(object):
