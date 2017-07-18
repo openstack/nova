@@ -843,6 +843,10 @@ class TestInstanceNotificationSample(
         self._volume_swap_server(server, self.cinder.SWAP_OLD_VOL,
                                  self.cinder.SWAP_NEW_VOL)
         self._wait_until_swap_volume(server, self.cinder.SWAP_NEW_VOL)
+        # NOTE(gibi): the new volume id can appear on the API earlier than the
+        # volume_swap.end notification emitted. So to make the test stable
+        # we have to wait for the volume_swap.end notification directly.
+        self._wait_for_notification('instance.volume_swap.end')
 
         self.assertEqual(7, len(fake_notifier.VERSIONED_NOTIFICATIONS),
                          'Unexpected number of versioned notifications. '
