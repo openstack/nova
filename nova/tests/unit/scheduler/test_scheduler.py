@@ -18,7 +18,6 @@ Tests For Scheduler
 """
 
 import mock
-import testtools
 
 from nova import context
 from nova import objects
@@ -69,8 +68,10 @@ class SchedulerManagerInitTestCase(test.NoDBTestCase):
     def test_init_nonexist_schedulerdriver(self,
                                            mock_init_agg,
                                            mock_init_inst):
-        with testtools.ExpectedException(ValueError):
-            self.flags(driver='nonexist_scheduler', group='scheduler')
+        self.flags(driver='nonexist_scheduler', group='scheduler')
+        # The entry point has to be defined in setup.cfg and nova-scheduler has
+        # to be deployed again before using a custom value.
+        self.assertRaises(RuntimeError, self.manager_cls)
 
 
 class SchedulerManagerTestCase(test.NoDBTestCase):
