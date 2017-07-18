@@ -25,7 +25,7 @@ pause_server_policies = [
     policy.DocumentedRuleDefault(
         POLICY_ROOT % 'pause',
         base.RULE_ADMIN_OR_OWNER,
-        "Pause a server.",
+        "Pause a server",
         [
             {
                 'path': '/servers/{server_id}/action (pause)',
@@ -36,7 +36,7 @@ pause_server_policies = [
     policy.DocumentedRuleDefault(
         POLICY_ROOT % 'unpause',
         base.RULE_ADMIN_OR_OWNER,
-        "Unpause a paused server.",
+        "Unpause a paused server",
         [
             {
                 'path': '/servers/{server_id}/action (unpause)',

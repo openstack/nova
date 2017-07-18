@@ -25,7 +25,7 @@ server_external_events_policies = [
     policy.DocumentedRuleDefault(
         POLICY_ROOT % 'create',
         base.RULE_ADMIN_API,
-        "Creates one or more external events",
+        "Create one or more external events",
         [
             {
                 'method': 'POST',

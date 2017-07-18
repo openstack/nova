@@ -25,8 +25,8 @@ deferred_delete_policies = [
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_OR_OWNER,
-        'Restore a soft deleted server or force delete a server before \
-deferred cleanup',
+        "Restore a soft deleted server or force delete a server before "
+        "deferred cleanup",
         [
             {
                 'method': 'POST',

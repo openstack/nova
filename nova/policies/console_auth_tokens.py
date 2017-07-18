@@ -25,8 +25,8 @@ console_auth_tokens_policies = [
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_API,
-        'Show console connection information for a given console \
-authentication token',
+        "Show console connection information for a given console "
+        "authentication token",
         [
             {
                 'method': 'GET',

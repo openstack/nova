@@ -26,8 +26,8 @@ attach_interfaces_policies = [
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_OR_OWNER,
-        "List port interfaces or show details of a port \
-interface attached to a server",
+        "List port interfaces or show details of a port interface attached "
+        "to a server",
         [
             {
                 'method': 'GET',
@@ -41,7 +41,7 @@ interface attached to a server",
     policy.DocumentedRuleDefault(
         POLICY_ROOT % 'create',
         base.RULE_ADMIN_OR_OWNER,
-        'Attach an interface to a server',
+        "Attach an interface to a server",
         [
             {
                 'method': 'POST',
@@ -51,7 +51,7 @@ interface attached to a server",
     policy.DocumentedRuleDefault(
         POLICY_ROOT % 'delete',
         base.RULE_ADMIN_OR_OWNER,
-        'Detach an interface from a server',
+        "Detach an interface from a server",
         [
             {
                 'method': 'DELETE',

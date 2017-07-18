@@ -25,7 +25,7 @@ networks_associate_policies = [
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_API,
-        """Associates and Disassociates a network from a host or project.
+        """Associate or disassociate a network from a host or project.
 
 These APIs are only available with nova-network which is deprecated.""",
         [

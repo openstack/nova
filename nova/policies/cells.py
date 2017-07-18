@@ -46,7 +46,7 @@ cells_policies = [
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_API,
-        'List and get detailed info of a given cell or all cells',
+        'List and show detailed info for a given cell or all cells',
         [
             {
                 'method': 'GET',

@@ -25,7 +25,7 @@ shelve_policies = [
     policy.DocumentedRuleDefault(
         POLICY_ROOT % 'shelve',
         base.RULE_ADMIN_OR_OWNER,
-        "Shelve Server",
+        "Shelve server",
         [
             {
                 'method': 'POST',
@@ -35,7 +35,7 @@ shelve_policies = [
     policy.DocumentedRuleDefault(
         POLICY_ROOT % 'unshelve',
         base.RULE_ADMIN_OR_OWNER,
-        "Unshelve (Restore) Shelved Server",
+        "Unshelve (restore) shelved server",
         [
             {
                 'method': 'POST',
@@ -45,7 +45,7 @@ shelve_policies = [
     policy.DocumentedRuleDefault(
         POLICY_ROOT % 'shelve_offload',
         base.RULE_ADMIN_API,
-        "Shelf-Offload (Remove) Server",
+        "Shelf-offload (remove) server",
         [
             {
                 'method': 'POST',

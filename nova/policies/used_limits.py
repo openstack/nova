@@ -27,7 +27,7 @@ used_limits_policies = [
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_API,
-        """Shows rate and absolute limits for the project.
+        """Show rate and absolute limits for the project.
 
 This policy only checks if the user has access to the requested
 project limits. And this check is performed only after the check

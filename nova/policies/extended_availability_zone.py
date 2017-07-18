@@ -25,7 +25,7 @@ extended_availability_zone_policies = [
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_OR_OWNER,
-        "Add `OS-EXT-AZ:availability_zone` into the server response.",
+        "Add `OS-EXT-AZ:availability_zone` into the server response",
         [
             {
                 'method': 'GET',

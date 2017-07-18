@@ -25,12 +25,12 @@ security_groups_policies = [
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_OR_OWNER,
-        """This policy checks permission on security groups related APIs.
+        """List, show, add, or remove security groups.
 
 APIs which are directly related to security groups resource are deprecated:
 Lists, shows information for, creates, updates and deletes
 security groups. Creates and deletes security group rules. All these
-API's are deprecated.
+APIs are deprecated.
 
 APIs which are related to server resource are not deprecated:
 Lists Security Groups for a server. Add Security Group to a server

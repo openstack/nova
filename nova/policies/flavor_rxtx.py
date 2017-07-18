@@ -26,7 +26,7 @@ flavor_rxtx_policies = [
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_OR_OWNER,
-        "Adds the rxtx_factor key into some Flavor APIs",
+        "Add the rxtx_factor key into some Flavor APIs",
         [
             {
                 'method': 'GET',

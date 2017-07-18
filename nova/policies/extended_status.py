@@ -28,9 +28,10 @@ extended_status_policies = [
         """Return extended status in the response of server.
 
 This policy will control the visibility for a set of attributes:
-    OS-EXT-STS:task_state
-    OS-EXT-STS:vm_state
-    OS-EXT-STS:power_state
+
+- OS-EXT-STS:task_state
+- OS-EXT-STS:vm_state
+- OS-EXT-STS:power_state
 """,
         [
             {

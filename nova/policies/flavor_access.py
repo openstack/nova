@@ -47,7 +47,7 @@ flavor_access_policies = [
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_OR_OWNER,
-        """Allow the listing of flavor access information
+        """List flavor access information
 
 Adds the os-flavor-access:is_public key into several flavor APIs.
 

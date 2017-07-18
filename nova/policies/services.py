@@ -25,10 +25,10 @@ services_policies = [
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_API,
-        """Lists all running Compute services in a region, enables \
-or disables scheduling for a Compute service, logs disabled Compute service \
-information, set or unset forced_down flag for the compute service and \
-deletes a Compute service.""",
+        "List all running Compute services in a region, enables or disable "
+        "scheduling for a Compute service, logs disabled Compute service "
+        "information, set or unset forced_down flag for the compute service "
+        "and delete a Compute service",
         [
             {
                 'method': 'GET',

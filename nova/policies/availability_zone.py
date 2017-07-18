@@ -25,7 +25,7 @@ availability_zone_policies = [
     policy.DocumentedRuleDefault(
         POLICY_ROOT % 'list',
         base.RULE_ADMIN_OR_OWNER,
-        "Lists availability zone information without host information",
+        "List availability zone information without host information",
         [
             {
                 'method': 'GET',
@@ -35,7 +35,7 @@ availability_zone_policies = [
     policy.DocumentedRuleDefault(
         POLICY_ROOT % 'detail',
         base.RULE_ADMIN_API,
-        "Lists detailed availability zone information with host information",
+        "List detailed availability zone information with host information",
         [
             {
                 'method': 'GET',

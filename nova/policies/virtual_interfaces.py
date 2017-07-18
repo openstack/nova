@@ -25,7 +25,7 @@ virtual_interfaces_policies = [
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_OR_OWNER,
-        """List Virtual Interfaces.
+        """List virtual interfaces.
 
 This works only with the nova-network service, which is now deprecated""",
         [

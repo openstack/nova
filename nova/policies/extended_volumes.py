@@ -26,7 +26,7 @@ extended_volumes_policies = [
         BASE_POLICY_NAME,
         base.RULE_ADMIN_OR_OWNER,
         "Return 'os-extended-volumes:volumes_attached' in the response of "
-        "server.",
+        "server",
         [
             {
                 'method': 'GET',

@@ -25,7 +25,7 @@ ips_policies = [
     policy.DocumentedRuleDefault(
         POLICY_ROOT % 'show',
         base.RULE_ADMIN_OR_OWNER,
-        """Shows IP addresses details for a network label of a server.""",
+        "Show IP addresses details for a network label of a server",
         [
             {
                 'method': 'GET',
@@ -35,7 +35,7 @@ ips_policies = [
     policy.DocumentedRuleDefault(
         POLICY_ROOT % 'index',
         base.RULE_ADMIN_OR_OWNER,
-        """Lists IP addresses that are assigned to a server.""",
+        "List IP addresses that are assigned to a server",
         [
             {
                 'method': 'GET',

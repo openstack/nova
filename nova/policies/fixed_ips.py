@@ -25,7 +25,7 @@ fixed_ips_policies = [
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_API,
-        """Shows details for, reserve and unreserve a fixed IP address.
+        """Show details for, reserve and unreserve a fixed IP address.
 
 These APIs are only available with nova-network which is deprecated.""",
         [

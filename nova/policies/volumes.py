@@ -25,7 +25,7 @@ volumes_policies = [
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_OR_OWNER,
-        """Manages volumes for use with the Compute API.
+        """Manage volumes for use with the Compute API.
 
 Lists, shows details, creates, and deletes volumes and snapshots. These APIs
 are proxy calls to the Volume service. These are all deprecated.

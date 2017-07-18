@@ -25,8 +25,9 @@ instance_usage_audit_log_policies = [
     policy.DocumentedRuleDefault(
         BASE_POLICY_NAME,
         base.RULE_ADMIN_API,
-        """Lists all usage audits and that occurred before a specified time
-for all servers on all compute hosts where usage auditing is configured.""",
+        "List all usage audits and that occurred before a specified time "
+        "for all servers on all compute hosts where usage auditing is "
+        "configured",
         [
             {
                 'method': 'GET',
