@@ -333,6 +333,7 @@ Request
   - os:scheduler_hints: os:scheduler_hints
   - OS-DCF:diskConfig: OS-DCF:diskConfig
   - description: server_description
+  - tags: server_tags_create
 
 **Example Create Server**
 

@@ -1,0 +1,4 @@
+---
+features:
+  - Adds support for applying tags when creating a server.
+    The tag schema is the same as in the 2.26 microversion.
