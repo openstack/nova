@@ -1,0 +1,10 @@
+{
+    "hypervisors": [
+        {
+            "hypervisor_hostname": "fake-mini",
+            "id": "b1e43b5f-eec1-44e0-9f10-7b4945c0226d",
+            "state": "up",
+            "status": "enabled"
+        }
+    ]
+}

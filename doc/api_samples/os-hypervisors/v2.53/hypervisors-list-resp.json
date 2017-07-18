@@ -1,0 +1,16 @@
+{
+    "hypervisors": [
+        {
+            "hypervisor_hostname": "fake-mini",
+            "id": "1bb62a04-c576-402c-8147-9e89757a09e3",
+            "state": "up",
+            "status": "enabled"
+        }
+    ],
+    "hypervisors_links": [
+        {
+            "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/hypervisors?limit=1&marker=1bb62a04-c576-402c-8147-9e89757a09e3",
+            "rel": "next"
+        }
+    ]
+}

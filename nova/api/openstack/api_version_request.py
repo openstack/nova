@@ -124,9 +124,10 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              non-admins can see instance action event details except for the
              traceback field.
     * 2.52 - Adds support for applying tags when creating a server.
-    * 2.53 - Service database ids are hidden. The os-services API now returns
-             a uuid in the id field, and takes a uuid in
-             DELETE /services/{service_uuid}.
+    * 2.53 - Service and compute node (hypervisor) database ids are hidden.
+             The os-services and os-hypervisors APIs now return a uuid in the
+             id field, and takes a uuid in requests. PUT and GET requests
+             and responses are also changed.
 """
 
 # The minimum and maximum versions of the API supported

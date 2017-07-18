@@ -34,7 +34,7 @@ PATH_CELL_SEP = '!'
 # meaningful PATH_CELL_SEP in an invalid way will need to suffice.
 BLOCK_SYNC_FLAG = '!!'
 # Separator used between cell name and item
-_CELL_ITEM_SEP = '@'
+CELL_ITEM_SEP = '@'
 
 CONF = nova.conf.CONF
 
@@ -192,12 +192,12 @@ def cell_with_item(cell_name, item):
     """Turn cell_name and item into <cell_name>@<item>."""
     if cell_name is None:
         return item
-    return cell_name + _CELL_ITEM_SEP + str(item)
+    return cell_name + CELL_ITEM_SEP + str(item)
 
 
 def split_cell_and_item(cell_and_item):
     """Split a combined cell@item and return them."""
-    result = cell_and_item.rsplit(_CELL_ITEM_SEP, 1)
+    result = cell_and_item.rsplit(CELL_ITEM_SEP, 1)
     if len(result) == 1:
         return (None, cell_and_item)
     else:

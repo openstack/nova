@@ -25,7 +25,7 @@ the ``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: unauthorized(401), forbidden(403)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403)
 
 Request
 -------
@@ -34,6 +34,9 @@ Request
 
   - limit: hypervisor_limit
   - marker: hypervisor_marker
+  - marker: hypervisor_marker_uuid
+  - hypervisor_hostname_pattern: hypervisor_hostname_pattern_query
+  - with_servers: hypervisor_with_servers_query
 
 Response
 --------
@@ -43,13 +46,22 @@ Response
   - hypervisors: hypervisors
   - hypervisor_hostname: hypervisor_hostname
   - id: hypervisor_id_body
+  - id: hypervisor_id_body_uuid
   - state: hypervisor_state
   - status: hypervisor_status
   - hypervisor_links: hypervisor_links
+  - servers: hypervisor_servers
+  - servers.uuid: hypervisor_servers_uuid
+  - servers.name: hypervisor_servers_name
 
 **Example List Hypervisors (v2.33): JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-hypervisors/v2.33/hypervisors-list-resp.json
+   :language: javascript
+
+**Example List Hypervisors With Servers (v2.53): JSON response**
+
+.. literalinclude:: ../../doc/api_samples/os-hypervisors/v2.53/hypervisors-with-servers-resp.json
    :language: javascript
 
 List Hypervisors Details
@@ -65,7 +77,7 @@ the ``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: unauthorized(401), forbidden(403)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403)
 
 Request
 -------
@@ -74,6 +86,9 @@ Request
 
   - limit: hypervisor_limit
   - marker: hypervisor_marker
+  - marker: hypervisor_marker_uuid
+  - hypervisor_hostname_pattern: hypervisor_hostname_pattern_query
+  - with_servers: hypervisor_with_servers_query
 
 Response
 --------
@@ -93,14 +108,19 @@ Response
   - hypervisor_type: hypervisor_type_body
   - hypervisor_version: hypervisor_version
   - id: hypervisor_id_body
+  - id: hypervisor_id_body_uuid
   - local_gb: local_gb
   - local_gb_used: local_gb_used
   - memory_mb: memory_mb
   - memory_mb_used: memory_mb_used
   - running_vms: running_vms
+  - servers: hypervisor_servers
+  - servers.uuid: hypervisor_servers_uuid
+  - servers.name: hypervisor_servers_name
   - service: hypervisor_service
   - service.host: host_name_body
-  - service.id: service_id_body
+  - service.id: service_id_body_2_52
+  - service.id: service_id_body_2_53
   - service.disable_reason: service_disable_reason
   - vcpus: hypervisor_vcpus
   - vcpus_used: hypervisor_vcpus_used
@@ -109,6 +129,11 @@ Response
 **Example List Hypervisors Details (v2.33): JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-hypervisors/v2.33/hypervisors-detail-resp.json
+   :language: javascript
+
+**Example List Hypervisors Details (v2.53): JSON response**
+
+.. literalinclude:: ../../doc/api_samples/os-hypervisors/v2.53/hypervisors-detail-resp.json
    :language: javascript
 
 Show Hypervisor Statistics
@@ -163,7 +188,7 @@ the ``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -171,6 +196,8 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - hypervisor_id: hypervisor_id
+  - hypervisor_id: hypervisor_id_uuid
+  - with_servers: hypervisor_with_servers_query
 
 Response
 --------
@@ -190,14 +217,19 @@ Response
   - hypervisor_type: hypervisor_type_body
   - hypervisor_version: hypervisor_version
   - id: hypervisor_id_body
+  - id: hypervisor_id_body_uuid
   - local_gb: local_gb
   - local_gb_used: local_gb_used
   - memory_mb: memory_mb
   - memory_mb_used: memory_mb_used
   - running_vms: running_vms
+  - servers: hypervisor_servers
+  - servers.uuid: hypervisor_servers_uuid
+  - servers.name: hypervisor_servers_name
   - service: hypervisor_service
   - service.host: host_name_body
-  - service.id: service_id_body
+  - service.id: service_id_body_2_52
+  - service.id: service_id_body_2_53
   - service.disable_reason: service_disable_reason
   - vcpus: hypervisor_vcpus
   - vcpus_used: hypervisor_vcpus_used
@@ -205,6 +237,11 @@ Response
 **Example Show Hypervisor Details (v2.28): JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-hypervisors/v2.28/hypervisors-show-resp.json
+   :language: javascript
+
+**Example Show Hypervisor Details With Servers (v2.53): JSON response**
+
+.. literalinclude:: ../../doc/api_samples/os-hypervisors/v2.53/hypervisors-show-with-servers-resp.json
    :language: javascript
 
 Show Hypervisor Uptime
@@ -220,7 +257,7 @@ the ``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: unauthorized(401), forbidden(403), itemNotFound(404), NotImplemented(501)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404), NotImplemented(501)
 
 Request
 -------
@@ -228,6 +265,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - hypervisor_id: hypervisor_id
+  - hypervisor_id: hypervisor_id_uuid
 
 Response
 --------
@@ -237,6 +275,7 @@ Response
   - hypervisor: hypervisor
   - hypervisor_hostname: hypervisor_hostname
   - id: hypervisor_id_body
+  - id: hypervisor_id_body_uuid
   - state: hypervisor_state
   - status: hypervisor_status
   - uptime: uptime
@@ -246,12 +285,22 @@ Response
 .. literalinclude:: ../../doc/api_samples/os-hypervisors/hypervisors-uptime-resp.json
    :language: javascript
 
+**Example Show Hypervisor Uptime (v2.53): JSON response**
+
+.. literalinclude:: ../../doc/api_samples/os-hypervisors/v2.53/hypervisors-uptime-resp.json
+   :language: javascript
+
 Search Hypervisor
 =================
 
 .. rest_method:: GET /os-hypervisors/{hypervisor_hostname_pattern}/search
+   max_version: 2.52
 
 Search hypervisor by a given hypervisor host name or portion of it.
+
+.. warning:: This API is deprecated starting with microversion 2.53. Use
+    `List Hypervisors`_ with the ``hypervisor_hostname_pattern`` query
+    parameter with microversion 2.53 and later.
 
 Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through
@@ -275,7 +324,7 @@ Response
 
   - hypervisors: hypervisors
   - hypervisor_hostname: hypervisor_hostname
-  - id: hypervisor_id_body
+  - id: hypervisor_id_body_no_version
   - state: hypervisor_state
   - status: hypervisor_status
 
@@ -288,9 +337,14 @@ List Hypervisor Servers
 =======================
 
 .. rest_method:: GET /os-hypervisors/{hypervisor_hostname_pattern}/servers
+   max_version: 2.52
 
 List all servers belong to each hypervisor whose host name is matching
 a given hypervisor host name or portion of it.
+
+.. warning:: This API is deprecated starting with microversion 2.53. Use
+    `List Hypervisors`_ with the ``hypervisor_hostname_pattern`` and
+    ``with_servers`` query parameters with microversion 2.53 and later.
 
 Policy defaults enable only users with the administrative role to perform
 this operation. Cloud providers can change these permissions through
@@ -314,7 +368,7 @@ Response
 
   - hypervisors: hypervisors
   - hypervisor_hostname: hypervisor_hostname
-  - id: hypervisor_id_body
+  - id: hypervisor_id_body_no_version
   - state: hypervisor_state
   - status: hypervisor_status
   - servers: servers

@@ -147,7 +147,7 @@ class CellsUtilsTestCase(test.NoDBTestCase):
         cell = cells_utils.PATH_CELL_SEP.join(path)
         item = 'host_5'
         together = cells_utils.cell_with_item(cell, item)
-        self.assertEqual(cells_utils._CELL_ITEM_SEP.join([cell, item]),
+        self.assertEqual(cells_utils.CELL_ITEM_SEP.join([cell, item]),
                          together)
 
         # Test normal usage

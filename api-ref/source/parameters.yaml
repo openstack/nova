@@ -182,6 +182,14 @@ hypervisor_id:
   in: path
   required: true
   type: integer
+  max_version: 2.52
+hypervisor_id_uuid:
+  description: |
+    The ID of the hypervisor as a UUID.
+  in: path
+  required: true
+  type: string
+  min_version: 2.53
 image_id:
   description: |
     The UUID of the image.
@@ -565,6 +573,19 @@ hostname_query_server:
   in: query
   required: false
   type: string
+hypervisor_hostname_pattern_query:
+  description: |
+    The hypervisor host name or a portion of it. The hypervisor hosts are
+    selected with the host name matching this pattern.
+
+    .. note:: ``limit`` and ``marker`` query parameters for paging are
+      not supported when listing hypervisors using a hostname pattern.
+      Also, ``links`` will not be returned in the response when using this
+      query parameter.
+  in: query
+  required: false
+  type: string
+  min_version: 2.53
 hypervisor_limit:
   description: |
     Requests a page size of items. Returns a number of items up to a limit value.
@@ -584,12 +605,29 @@ hypervisor_marker:
   required: false
   type: integer
   min_version: 2.33
+  max_version: 2.52
+hypervisor_marker_uuid:
+  description: |
+    The ID of the last-seen item as a UUID. Use the ``limit`` parameter to make
+    an initial limited request and use the ID of the last-seen item from the
+    response as the ``marker`` parameter value in a subsequent limited request.
+  in: query
+  required: false
+  type: string
+  min_version: 2.53
 hypervisor_query:
   description: |
     Filters the response by a hypervisor type.
   in: query
   required: false
   type: string
+hypervisor_with_servers_query:
+  description: |
+    Include all servers which belong to each hypervisor in the response output.
+  in: query
+  required: false
+  type: boolean
+  min_version: 2.53
 image_name_query:
   description: |
     Filters the response by an image name, as a string.
@@ -2965,6 +3003,20 @@ hypervisor_id_body:
   in: body
   required: true
   type: integer
+  max_version: 2.52
+hypervisor_id_body_no_version:
+  description: |
+    The id of the hypervisor.
+  in: body
+  required: true
+  type: integer
+hypervisor_id_body_uuid:
+  description: |
+    The id of the hypervisor as a UUID.
+  in: body
+  required: true
+  type: string
+  min_version: 2.53
 hypervisor_links:
   description: |
     Links to the hypervisors resource. See `API Guide / Links and
@@ -2982,6 +3034,27 @@ hypervisor_os_diagnostics:
   type: string
   required: true
   min_version: 2.48
+hypervisor_servers:
+  description: |
+    A list of ``server`` objects.
+  in: body
+  required: false
+  type: array
+  min_version: 2.53
+hypervisor_servers_name:
+  description: |
+    The server name.
+  in: body
+  required: false
+  type: string
+  min_version: 2.53
+hypervisor_servers_uuid:
+  description: |
+    The server ID.
+  in: body
+  required: false
+  type: string
+  min_version: 2.53
 hypervisor_service:
   description: |
     The hypervisor service object.
