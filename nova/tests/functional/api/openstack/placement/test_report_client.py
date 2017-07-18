@@ -82,7 +82,8 @@ class SchedulerReportClientTests(test.TestCase):
                                   swap=1,
                                   ephemeral_gb=100,
                                   memory_mb=1024,
-                                  vcpus=2))
+                                  vcpus=2,
+                                  extra_specs={}))
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)

@@ -158,6 +158,25 @@ def _instance_to_allocations_dict(instance):
         VCPU: instance.flavor.vcpus,
         DISK_GB: disk,
     }
+
+    # Pull out any resource overrides, which are in the format
+    # "resources:FOO" and generate a dict of FOO=value candidates
+    # for overriding the resources in the allocation.
+    overrides = {k.split(':', 1)[1]: v for k, v in
+                 instance.flavor.extra_specs.items()
+                 if k.startswith('resources:')}
+
+    # Any resource overrides which are properly namespaced as custom,
+    # or are standard resource class values override the alloc_dict
+    # already constructed from the base flavor values above. Since
+    # extra_specs are string values and resource counts are always
+    # integers, we convert them here too for any that we find.
+    overrides = {k: int(v) for k, v in overrides.items()
+            if (k.startswith(objects.ResourceClass.CUSTOM_NAMESPACE) or
+                k in fields.ResourceClass.STANDARD)}
+
+    alloc_dict.update(overrides)
+
     # Remove any zero allocations.
     return {key: val for key, val in alloc_dict.items() if val}
 

@@ -21,6 +21,7 @@ import nova.conf
 from nova import context
 from nova import exception
 from nova import objects
+from nova.objects import fields
 from nova.scheduler.client import report
 from nova import test
 from nova.tests import uuidsentinel as uuids
@@ -1599,12 +1600,46 @@ class TestAllocations(SchedulerReportClientTestCase):
                                   swap=1023,
                                   ephemeral_gb=100,
                                   memory_mb=1024,
-                                  vcpus=2))
+                                  vcpus=2,
+                                  extra_specs={}))
         result = report._instance_to_allocations_dict(inst)
         expected = {
             'MEMORY_MB': 1024,
             'VCPU': 2,
             'DISK_GB': 111,
+        }
+        self.assertEqual(expected, result)
+
+    @mock.patch('nova.compute.utils.is_volume_backed_instance')
+    def test_instance_to_allocations_dict_overrides(self, mock_vbi):
+        """Test that resource overrides in an instance's flavor extra_specs
+        are reported to placement.
+        """
+
+        mock_vbi.return_value = False
+        specs = {
+            'resources:CUSTOM_DAN': '123',
+            'resources:%s' % fields.ResourceClass.VCPU: '4',
+            'resources:NOTATHING': '456',
+            'resources:NOTEVENANUMBER': 'catfood',
+            'resources:': '7',
+            'resources:ferret:weasel': 'smelly',
+            'foo': 'bar',
+        }
+        inst = objects.Instance(
+            uuid=uuids.inst,
+            flavor=objects.Flavor(root_gb=10,
+                                  swap=1023,
+                                  ephemeral_gb=100,
+                                  memory_mb=1024,
+                                  vcpus=2,
+                                  extra_specs=specs))
+        result = report._instance_to_allocations_dict(inst)
+        expected = {
+            'MEMORY_MB': 1024,
+            'VCPU': 4,
+            'DISK_GB': 111,
+            'CUSTOM_DAN': 123,
         }
         self.assertEqual(expected, result)
 
@@ -1617,7 +1652,8 @@ class TestAllocations(SchedulerReportClientTestCase):
                                   swap=1,
                                   ephemeral_gb=100,
                                   memory_mb=1024,
-                                  vcpus=2))
+                                  vcpus=2,
+                                  extra_specs={}))
         result = report._instance_to_allocations_dict(inst)
         expected = {
             'MEMORY_MB': 1024,
@@ -1635,7 +1671,8 @@ class TestAllocations(SchedulerReportClientTestCase):
                                   swap=0,
                                   ephemeral_gb=0,
                                   memory_mb=1024,
-                                  vcpus=2))
+                                  vcpus=2,
+                                  extra_specs={}))
         result = report._instance_to_allocations_dict(inst)
         expected = {
             'MEMORY_MB': 1024,
