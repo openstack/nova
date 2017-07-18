@@ -60,18 +60,6 @@ class UrlmapTest(test.NoDBTestCase):
         body = jsonutils.loads(res.body)
         self.assertEqual('v2.0', body['version']['id'])
 
-    def test_path_content_type(self):
-        # Test URL path specifying JSON returns JSON content.
-        url = '/v2/fake/images/cedef40a-ed67-4d10-800e-17455edce175.json'
-        req = fakes.HTTPRequest.blank(url)
-        req.accept = "application/xml"
-        res = req.get_response(fakes.wsgi_app_v21())
-        self.assertEqual(200, res.status_int)
-        self.assertEqual("application/json", res.content_type)
-        body = jsonutils.loads(res.body)
-        self.assertEqual('cedef40a-ed67-4d10-800e-17455edce175',
-                         body['image']['id'])
-
     def test_accept_content_type(self):
         # Test Accept header specifying JSON returns JSON content.
         url = '/v2/fake/images/cedef40a-ed67-4d10-800e-17455edce175'
