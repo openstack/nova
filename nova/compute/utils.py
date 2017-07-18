@@ -40,6 +40,7 @@ from nova.notifications.objects import exception as notification_exception
 from nova.notifications.objects import flavor as flavor_notification
 from nova.notifications.objects import instance as instance_notification
 from nova.notifications.objects import keypair as keypair_notification
+from nova.notifications.objects import libvirt as libvirt_notification
 from nova.notifications.objects import metrics as metrics_notification
 from nova.notifications.objects import server_group as sg_notification
 from nova import objects
@@ -807,6 +808,29 @@ def notify_about_metrics_update(context, host, host_ip, nodename,
                 object='metrics',
                 action=fields.NotificationAction.UPDATE),
             payload=payload)
+    notification.emit(context)
+
+
+@rpc.if_notifications_enabled
+def notify_about_libvirt_connect_error(context, ip, exception, tb):
+    """Send a versioned notification about libvirt connect error.
+
+    :param context: the request context
+    :param ip: the IP address of the host
+    :param exception: the thrown exception
+    :param tb: the traceback
+    """
+    fault, _ = _get_fault_and_priority_from_exc_and_tb(exception, tb)
+    payload = libvirt_notification.LibvirtErrorPayload(ip=ip, reason=fault)
+    notification = libvirt_notification.LibvirtErrorNotification(
+        priority=fields.NotificationPriority.ERROR,
+        publisher=notification_base.NotificationPublisher(
+            host=CONF.host, source=fields.NotificationSource.COMPUTE),
+        event_type=notification_base.EventType(
+            object='libvirt',
+            action=fields.NotificationAction.CONNECT,
+            phase=fields.NotificationPhase.ERROR),
+        payload=payload)
     notification.emit(context)
 
 

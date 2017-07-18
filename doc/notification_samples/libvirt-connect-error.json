@@ -1,0 +1,25 @@
+{
+    "event_type": "libvirt.connect.error",
+    "payload": {
+        "nova_object.data": {
+            "reason": {
+                "nova_object.data": {
+                    "exception": "libvirtError",
+                    "exception_message": "Sample exception for versioned notification test.",
+                    "function_name": "_get_connection",
+                    "module_name": "nova.virt.libvirt.host",
+                    "traceback": "Traceback (most recent call last):\n  File \"nova/virt/libvirt/host.py\", line ..."
+                },
+                "nova_object.name": "ExceptionPayload",
+                "nova_object.namespace": "nova",
+                "nova_object.version": "1.1"
+            },
+            "ip": "10.0.2.15"
+        },
+        "nova_object.name": "LibvirtErrorPayload",
+        "nova_object.namespace": "nova",
+        "nova_object.version": "1.0"
+    },
+    "priority": "ERROR",
+    "publisher_id": "nova-compute:fake-mini"
+}

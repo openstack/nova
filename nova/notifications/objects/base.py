@@ -65,7 +65,8 @@ class EventType(NotificationObject):
     #               enum
     # Version 1.15: LIVE_MIGRATION_FORCE_COMPLETE is added to the
     #               NotificationActionField enum
-    VERSION = '1.15'
+    # Version 1.16: CONNECT is added to NotificationActionField enum
+    VERSION = '1.16'
 
     fields = {
         'object': fields.StringField(nullable=False),
