@@ -27,8 +27,9 @@ volumes_policies = [
         base.RULE_ADMIN_OR_OWNER,
         """Manage volumes for use with the Compute API.
 
-Lists, shows details, creates, and deletes volumes and snapshots. These APIs
-are proxy calls to the Volume service. These are all deprecated.
+Lists, shows details, creates, and deletes volumes and
+snapshots. These APIs are proxy calls to the Volume service.
+These are all deprecated.
 """,
        [
            {

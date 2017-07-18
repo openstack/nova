@@ -24,11 +24,11 @@ hide_server_addresses_policies = [
         'is_admin:False',
         """Hide server's 'addresses' key in the server response.
 
-This set the 'addresses' key in the server response to an empty dictionary
-when the server is in a specific set of states as defined in
-CONF.api.hide_server_address_states.
-By default 'addresses' is hidden only when the server is in 'BUILDING'
-state.""",
+This set the 'addresses' key in the server response to an empty
+dictionary when the server is in a specific set of states as
+defined in CONF.api.hide_server_address_states.
+By default 'addresses' is hidden only when the server is in
+'BUILDING' state.""",
         [
             {
                 'method': 'GET',
