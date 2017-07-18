@@ -35,6 +35,7 @@ from nova import objects
 from nova.objects import fields
 from nova import servicegroup
 from nova import test
+from nova.tests import fixtures
 from nova.tests.unit import fake_instance
 from nova.tests.unit import matchers as nova_matchers
 from nova.tests.unit import utils
@@ -1862,6 +1863,175 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_get.return_value = node
         host_id = self.driver.network_binding_host_id(self.ctx, instance)
         self.assertIsNone(host_id)
+
+
+class IronicDriverSyncTestCase(IronicDriverTestCase):
+
+    def setUp(self):
+        super(IronicDriverSyncTestCase, self).setUp()
+        # Since the init_host code we're testing runs in a spawn_n green
+        # thread, ensure that the thread completes.
+        self.useFixture(fixtures.SpawnIsSynchronousFixture())
+
+    @mock.patch.object(ironic_driver.IronicDriver, '_refresh_cache')
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    @mock.patch.object(objects.Instance, 'save')
+    def test_pike_flavor_migration(self, mock_save, mock_get_by_uuid,
+            mock_refresh_cache):
+        node1_uuid = uuidutils.generate_uuid()
+        node2_uuid = uuidutils.generate_uuid()
+        hostname = "ironic-compute"
+        fake_flavor1 = objects.Flavor()
+        fake_flavor1.extra_specs = {}
+        fake_flavor2 = objects.Flavor()
+        fake_flavor2.extra_specs = {}
+        inst1 = fake_instance.fake_instance_obj(self.ctx,
+                node=node1_uuid,
+                host=hostname,
+                flavor=fake_flavor1)
+        inst2 = fake_instance.fake_instance_obj(self.ctx,
+                node=node2_uuid,
+                host=hostname,
+                flavor=fake_flavor2)
+        node1 = ironic_utils.get_test_node(uuid=node1_uuid,
+                instance_uuid=inst1.uuid,
+                instance_type_id=1,
+                resource_class="first",
+                network_interface="flat")
+        node2 = ironic_utils.get_test_node(uuid=node2_uuid,
+                instance_uuid=inst2.uuid,
+                instance_type_id=2,
+                resource_class="second",
+                network_interface="flat")
+        inst_dict = {inst1.uuid: inst1, inst2.uuid: inst2}
+
+        def fake_inst_by_uuid(ctx, uuid, expected_attrs=None):
+            return inst_dict.get(uuid)
+
+        mock_get_by_uuid.side_effect = fake_inst_by_uuid
+
+        def fake_refresh():
+            self.driver.node_cache = {node1_uuid: node1, node2_uuid: node2}
+
+        mock_refresh_cache.side_effect = fake_refresh
+
+        self.assertEqual({}, inst1.flavor.extra_specs)
+        self.assertEqual({}, inst2.flavor.extra_specs)
+
+        self.driver.init_host(hostname)
+        self.assertEqual(2, mock_save.call_count)
+        expected_specs = {"resources:CUSTOM_FIRST": "1"}
+        self.assertEqual(expected_specs, inst1.flavor.extra_specs)
+        expected_specs = {"resources:CUSTOM_SECOND": "1"}
+        self.assertEqual(expected_specs, inst2.flavor.extra_specs)
+
+    @mock.patch.object(ironic_driver.IronicDriver, '_refresh_cache')
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    @mock.patch.object(objects.Instance, 'save')
+    def test_pike_flavor_migration_dupe(self, mock_save, mock_get_by_uuid,
+            mock_refresh_cache):
+        node1_uuid = uuidutils.generate_uuid()
+        node2_uuid = uuidutils.generate_uuid()
+        hostname = "ironic-compute"
+        fake_flavor1 = objects.Flavor()
+        fake_flavor1.extra_specs = {"resources:CUSTOM_FIRST": "1"}
+        fake_flavor2 = objects.Flavor()
+        fake_flavor2.extra_specs = {}
+        inst1 = fake_instance.fake_instance_obj(self.ctx,
+                node=node1_uuid,
+                host=hostname,
+                flavor=fake_flavor1)
+        inst2 = fake_instance.fake_instance_obj(self.ctx,
+                node=node2_uuid,
+                host=hostname,
+                flavor=fake_flavor2)
+        node1 = ironic_utils.get_test_node(uuid=node1_uuid,
+                instance_uuid=inst1.uuid,
+                instance_type_id=1,
+                resource_class="first",
+                network_interface="flat")
+        node2 = ironic_utils.get_test_node(uuid=node2_uuid,
+                instance_uuid=inst2.uuid,
+                instance_type_id=2,
+                resource_class="second",
+                network_interface="flat")
+        inst_dict = {inst1.uuid: inst1, inst2.uuid: inst2}
+
+        def fake_inst_by_uuid(ctx, uuid, expected_attrs=None):
+            return inst_dict.get(uuid)
+
+        mock_get_by_uuid.side_effect = fake_inst_by_uuid
+
+        def fake_refresh():
+            self.driver.node_cache = {node1_uuid: node1, node2_uuid: node2}
+
+        mock_refresh_cache.side_effect = fake_refresh
+
+        self.driver.init_host(hostname)
+        # Since one instance already had its extra_specs updated with the
+        # custom resource_class, only the other one should be updated and
+        # saved.
+        self.assertEqual(1, mock_save.call_count)
+        expected_specs = {"resources:CUSTOM_FIRST": "1"}
+        self.assertEqual(expected_specs, inst1.flavor.extra_specs)
+        expected_specs = {"resources:CUSTOM_SECOND": "1"}
+        self.assertEqual(expected_specs, inst2.flavor.extra_specs)
+
+    @mock.patch.object(ironic_driver.LOG, 'warning')
+    @mock.patch.object(ironic_driver.IronicDriver, '_refresh_cache')
+    @mock.patch.object(objects.Instance, 'get_by_uuid')
+    @mock.patch.object(objects.Instance, 'save')
+    def test_pike_flavor_migration_missing_rc(self, mock_save,
+            mock_get_by_uuid, mock_refresh_cache, mock_warning):
+        node1_uuid = uuidutils.generate_uuid()
+        node2_uuid = uuidutils.generate_uuid()
+        hostname = "ironic-compute"
+        fake_flavor1 = objects.Flavor()
+        fake_flavor1.extra_specs = {}
+        fake_flavor2 = objects.Flavor()
+        fake_flavor2.extra_specs = {}
+        inst1 = fake_instance.fake_instance_obj(self.ctx,
+                node=node1_uuid,
+                host=hostname,
+                flavor=fake_flavor1)
+        inst2 = fake_instance.fake_instance_obj(self.ctx,
+                node=node2_uuid,
+                host=hostname,
+                flavor=fake_flavor2)
+        node1 = ironic_utils.get_test_node(uuid=node1_uuid,
+                instance_uuid=inst1.uuid,
+                instance_type_id=1,
+                resource_class=None,
+                network_interface="flat")
+        node2 = ironic_utils.get_test_node(uuid=node2_uuid,
+                instance_uuid=inst2.uuid,
+                instance_type_id=2,
+                resource_class="second",
+                network_interface="flat")
+        inst_dict = {inst1.uuid: inst1, inst2.uuid: inst2}
+
+        def fake_inst_by_uuid(ctx, uuid, expected_attrs=None):
+            return inst_dict.get(uuid)
+
+        mock_get_by_uuid.side_effect = fake_inst_by_uuid
+
+        def fake_refresh():
+            self.driver.node_cache = {node1_uuid: node1, node2_uuid: node2}
+
+        mock_refresh_cache.side_effect = fake_refresh
+
+        self.driver.init_host(hostname)
+        # Since one instance was on a node with no resource class set,
+        # only the other one should be updated and saved.
+        self.assertEqual(1, mock_save.call_count)
+        expected_specs = {}
+        self.assertEqual(expected_specs, inst1.flavor.extra_specs)
+        expected_specs = {"resources:CUSTOM_SECOND": "1"}
+        self.assertEqual(expected_specs, inst2.flavor.extra_specs)
+        self.assertEqual(1, mock_warning.call_count)
+        self.assertIn("does not have its resource_class set.",
+                mock_warning.call_args[0][0])
+        self.assertEqual({"node": node1.uuid}, mock_warning.call_args[0][1])
 
 
 @mock.patch.object(instance_metadata, 'InstanceMetadata')
