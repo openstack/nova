@@ -53,6 +53,8 @@ from nova.api.openstack.compute import fping
 from nova.api.openstack.compute import hide_server_addresses
 from nova.api.openstack.compute import hosts
 from nova.api.openstack.compute import hypervisors
+from nova.api.openstack.compute import image_size
+from nova.api.openstack.compute import images
 from nova.api.openstack.compute import instance_actions
 from nova.api.openstack.compute import instance_usage_audit_log
 from nova.api.openstack.compute import ips
@@ -193,6 +195,11 @@ hosts_controller = functools.partial(
 
 hypervisors_controller = functools.partial(
     _create_controller, hypervisors.HypervisorsController, [], [])
+
+
+images_controller = functools.partial(
+    _create_controller, images.ImagesController,
+    [image_size.ImageSizeController], [])
 
 
 instance_actions_controller = functools.partial(_create_controller,
@@ -373,6 +380,16 @@ ROUTE_LIST = (
     }),
     ('/flavors/{flavor_id}/os-flavor-access', {
         'GET': [flavor_access_controller, 'index']
+    }),
+    ('/images', {
+        'GET': [images_controller, 'index']
+    }),
+    ('/images/detail', {
+        'GET': [images_controller, 'detail'],
+    }),
+    ('/images/{id}', {
+        'GET': [images_controller, 'show'],
+        'DELETE': [images_controller, 'delete']
     }),
     ('/limits', {
         'GET': [limits_controller, 'index']

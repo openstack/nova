@@ -13,11 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.policies import image_size as is_policies
-
-ALIAS = "image-size"
 
 
 class ImageSizeController(wsgi.Controller):
@@ -49,19 +46,3 @@ class ImageSizeController(wsgi.Controller):
             for image in images_resp:
                 image_cached = req.get_db_item('images', image['id'])
                 self._extend_image(image, image_cached)
-
-
-class ImageSize(extensions.V21APIExtensionBase):
-    """Adds image size to image listings."""
-
-    name = "ImageSize"
-    alias = ALIAS
-    version = 1
-
-    def get_controller_extensions(self):
-        controller = ImageSizeController()
-        extension = extensions.ControllerExtension(self, 'images', controller)
-        return [extension]
-
-    def get_resources(self):
-        return []
