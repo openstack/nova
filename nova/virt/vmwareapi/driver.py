@@ -183,16 +183,23 @@ class VMwareVCDriver(driver.ComputeDriver):
 
     def _register_openstack_extension(self):
         # Register an 'OpenStack' extension in vCenter
-        LOG.debug('Registering extension %s with vCenter',
-                  constants.EXTENSION_KEY)
         os_extension = self._session._call_method(vim_util, 'find_extension',
                                                   constants.EXTENSION_KEY)
         if os_extension is None:
-            LOG.debug('Extension does not exist. Registering type %s.',
-                      constants.EXTENSION_TYPE_INSTANCE)
-            self._session._call_method(vim_util, 'register_extension',
-                                       constants.EXTENSION_KEY,
-                                       constants.EXTENSION_TYPE_INSTANCE)
+            try:
+                self._session._call_method(vim_util, 'register_extension',
+                                           constants.EXTENSION_KEY,
+                                           constants.EXTENSION_TYPE_INSTANCE)
+                LOG.info('Registered extension %s with vCenter',
+                         constants.EXTENSION_KEY)
+            except vexc.VimFaultException as e:
+                with excutils.save_and_reraise_exception() as ctx:
+                    if 'InvalidArgument' in e.fault_list:
+                        LOG.debug('Extension %s already exists.',
+                                  constants.EXTENSION_KEY)
+                        ctx.reraise = False
+        else:
+            LOG.debug('Extension %s already exists.', constants.EXTENSION_KEY)
 
     def cleanup(self, context, instance, network_info, block_device_info=None,
                 destroy_disks=True, migrate_data=None, destroy_vifs=True):
