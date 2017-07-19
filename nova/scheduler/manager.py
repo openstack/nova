@@ -44,10 +44,18 @@ QUOTAS = quota.QUOTAS
 
 
 def _host_state_obj_to_dict(host_state):
+    limits = dict(host_state.limits)
+    # The NUMATopologyFilter can set 'numa_topology' in the limits dict
+    # to a NUMATopologyLimits object which we need to convert to a primitive
+    # before this hits jsonutils.to_primitive(). We only check for that known
+    # case specifically as we don't care about handling out of tree filters
+    # or drivers injecting non-serializable things in the limits dict.
+    if 'numa_topology' in limits:
+        limits['numa_topology'] = limits['numa_topology'].obj_to_primitive()
     return {
         'host': host_state.host,
         'nodename': host_state.nodename,
-        'limits': host_state.limits,
+        'limits': limits
     }
 
 
