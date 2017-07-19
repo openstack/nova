@@ -1,0 +1,19 @@
+{
+    "event_type":"instance.resize_confirm.start",
+    "payload": {
+        "$ref": "common_payloads/InstanceActionPayload.json#",
+        "nova_object.data": {
+            "flavor": {
+                "nova_object.data": {
+                    "flavorid": "2",
+                    "memory_mb": 2048,
+                    "name": "m1.small",
+                    "root_gb":20
+                }
+            },
+            "state": "resized"
+        }
+    },
+    "priority":"INFO",
+    "publisher_id":"nova-compute:compute"
+}

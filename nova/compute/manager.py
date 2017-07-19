@@ -3685,6 +3685,9 @@ class ComputeManager(manager.Manager):
         """Destroys the source instance."""
         self._notify_about_instance_usage(context, instance,
                                           "resize.confirm.start")
+        compute_utils.notify_about_instance_action(context, instance,
+            self.host, action=fields.NotificationAction.RESIZE_CONFIRM,
+            phase=fields.NotificationPhase.START)
 
         with self._error_out_instance_on_exception(context, instance):
             # NOTE(danms): delete stashed migration information
@@ -3739,6 +3742,9 @@ class ComputeManager(manager.Manager):
             self._notify_about_instance_usage(
                 context, instance, "resize.confirm.end",
                 network_info=network_info)
+            compute_utils.notify_about_instance_action(context, instance,
+                   self.host, action=fields.NotificationAction.RESIZE_CONFIRM,
+                   phase=fields.NotificationPhase.END)
 
     def _delete_allocation_after_move(self, context, instance, migration,
                                       flavor, nodename):

@@ -257,7 +257,6 @@ class TestInstanceNotificationSample(
             self._test_shelve_and_shelve_offload_server,
             self._test_unshelve_server,
             self._test_resize_and_revert_server,
-            self._test_resize_confirm_server,
             self._test_snapshot_server,
             self._test_reboot_server,
             self._test_reboot_server_error,
@@ -1155,8 +1154,35 @@ class TestInstanceNotificationSample(
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[6])
 
-    def _test_resize_confirm_server(self, server):
-        pass
+    def test_resize_confirm_server(self):
+        server = self._boot_a_server(
+            extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
+        self._attach_volume_to_server(server, self.cinder.SWAP_OLD_VOL)
+        self.admin_api.post_extra_spec(
+            '2', {"extra_specs": {"hw:watchdog_action": "disabled"}})
+        self.flags(allow_resize_to_same_host=True)
+        post = {'resize': {'flavorRef': '2'}}
+        self.api.post_server_action(server['id'], post)
+        self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+        fake_notifier.reset()
+
+        post = {'confirmResize': None}
+        self.api.post_server_action(server['id'], post)
+        self._wait_for_state_change(self.api, server, 'ACTIVE')
+
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-resize_confirm-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'instance-resize_confirm-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
     def _test_trigger_crash_dump(self, server):
         post = {'trigger_crash_dump': None}

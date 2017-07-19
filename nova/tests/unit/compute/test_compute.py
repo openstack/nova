@@ -5473,7 +5473,10 @@ class ComputeTestCase(BaseTestCase,
     def test_resize_instance_forced_shutdown(self):
         self._test_resize_instance(clean_shutdown=False)
 
-    def _test_confirm_resize(self, power_on, numa_topology=None):
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    @mock.patch.object(nova.compute.utils, 'notify_about_instance_action')
+    def _test_confirm_resize(self, mock_notify, mock_get_by_instance_uuid,
+                             power_on, numa_topology=None):
         # Common test case method for confirm_resize
         def fake(*args, **kwargs):
             pass
@@ -5481,6 +5484,9 @@ class ComputeTestCase(BaseTestCase,
         def fake_confirm_migration_driver(*args, **kwargs):
             # Confirm the instance uses the new type in finish_resize
             self.assertEqual('3', instance.flavor.flavorid)
+
+        expected_bdm = objects.BlockDeviceMappingList(objects=[])
+        mock_get_by_instance_uuid.return_value = expected_bdm
 
         old_vm_state = None
         p_state = None
@@ -5573,15 +5579,38 @@ class ComputeTestCase(BaseTestCase,
         # Finally, confirm the resize and verify the new flavor is applied
         instance.task_state = None
         instance.save()
-        self.compute.confirm_resize(self.context, instance=instance,
-                                    reservations=[],
-                                    migration=migration)
+
+        with mock.patch.object(objects.Instance, 'get_by_uuid',
+                               return_value=instance) as mock_get_by_uuid:
+            self.compute.confirm_resize(self.context, instance=instance,
+                                        reservations=[],
+                                        migration=migration)
+            mock_get_by_uuid.assert_called_once_with(
+                self.context, instance.uuid,
+                expected_attrs=['metadata', 'system_metadata', 'flavor'])
 
         # Resources from the migration (based on initial flavor) should
         # be freed now
         self.assertEqual(self.rt.compute_nodes[NODENAME].memory_mb_used,
                          memory_mb_used + new_instance_type_ref.memory_mb)
 
+        mock_notify.assert_has_calls([
+            mock.call(self.context, instance,
+                      'fake-mini', action='resize', bdms=expected_bdm,
+                      phase='start'),
+            mock.call(self.context, instance,
+                      'fake-mini', action='resize', bdms=expected_bdm,
+                      phase='end'),
+            mock.call(self.context, instance,
+                      'fake-mini', action='resize_finish', bdms=expected_bdm,
+                      phase='start'),
+            mock.call(self.context, instance,
+                      'fake-mini', action='resize_finish', bdms=expected_bdm,
+                      phase='end'),
+            mock.call(self.context, instance,
+                      'fake-mini', action='resize_confirm', phase='start'),
+            mock.call(self.context, instance,
+                      'fake-mini', action='resize_confirm', phase='end')])
         instance.refresh()
 
         flavor = objects.Flavor.get_by_id(self.context,
