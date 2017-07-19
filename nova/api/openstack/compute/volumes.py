@@ -608,10 +608,6 @@ class Volumes(extensions.V21APIExtensionBase):
     def get_resources(self):
         resources = []
 
-        res = extensions.ResourceExtension(
-            ALIAS, VolumeController(), collection_actions={'detail': 'GET'})
-        resources.append(res)
-
         res = extensions.ResourceExtension('os-volume_attachments',
                                            VolumeAttachmentController(),
                                            parent=dict(
