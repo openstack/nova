@@ -111,7 +111,10 @@ class SchedulerManager(manager.Manager):
         alloc_reqs, p_sums = None, None
         if self.driver.USES_ALLOCATION_CANDIDATES:
             res = self.placement_client.get_allocation_candidates(resources)
-            alloc_reqs, p_sums = res
+            # We have to handle the case that we failed to connect to the
+            # Placement service and the safe_connect decorator on
+            # get_allocation_candidates returns None.
+            alloc_reqs, p_sums = res if res is not None else (None, None)
             if not alloc_reqs:
                 LOG.debug("Got no allocation candidates from the Placement "
                           "API. This may be a temporary occurrence as compute "
