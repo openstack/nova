@@ -35,7 +35,6 @@ from nova.virt import netutils
 
 
 LOG = logging.getLogger(__name__)
-ALIAS = 'os-security-groups'
 ATTRIBUTE_NAME = 'security_groups'
 
 
@@ -495,22 +494,6 @@ class SecurityGroupsOutputController(wsgi.Controller):
     @wsgi.extends
     def detail(self, req, resp_obj):
         self._extend_servers(req, list(resp_obj.obj['servers']))
-
-
-class SecurityGroups(extensions.V21APIExtensionBase):
-    """Security group support."""
-    name = "SecurityGroups"
-    alias = ALIAS
-    version = 1
-
-    def get_controller_extensions(self):
-        return []
-
-    def get_resources(self):
-        secgrp_rules_ext = extensions.ResourceExtension(
-            'os-security-group-rules',
-            controller=SecurityGroupRulesController())
-        return [secgrp_rules_ext]
 
 
 # NOTE(gmann): This function is not supposed to use 'body_deprecated_param'
