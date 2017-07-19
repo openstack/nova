@@ -2721,3 +2721,181 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
                 a_req_rps.add(rr.resource_provider.uuid)
 
         self.assertEqual(set([ss_uuid]), a_req_rps)
+
+    def test_local_with_shared_custom_resource(self):
+        """Create some resource providers that can satisfy the request for
+        resources with local VCPU and MEMORY_MB but rely on a shared resource
+        provider to satisfy a custom resource requirement and verify that the
+        allocation requests returned by AllocationCandidates have the custom
+        resource served up by the shared custom resource provider and
+        VCPU/MEMORY_MB by the compute node providers
+        """
+        # The aggregate that will be associated to everything...
+        agg_uuid = uuidsentinel.agg
+
+        # Create two compute node providers with VCPU, RAM and NO local
+        # CUSTOM_MAGIC resources
+        cn1_uuid = uuidsentinel.cn1
+        cn1 = objects.ResourceProvider(
+            self.context,
+            name='cn1',
+            uuid=cn1_uuid,
+        )
+        cn1.create()
+
+        cn2_uuid = uuidsentinel.cn2
+        cn2 = objects.ResourceProvider(
+            self.context,
+            name='cn2',
+            uuid=cn2_uuid,
+        )
+        cn2.create()
+
+        # Populate the two compute node providers with inventory
+        for cn in (cn1, cn2):
+            vcpu = objects.Inventory(
+                resource_provider=cn,
+                resource_class=fields.ResourceClass.VCPU,
+                total=24,
+                reserved=0,
+                min_unit=1,
+                max_unit=24,
+                step_size=1,
+                allocation_ratio=16.0,
+            )
+            memory_mb = objects.Inventory(
+                resource_provider=cn,
+                resource_class=fields.ResourceClass.MEMORY_MB,
+                total=1024,
+                reserved=0,
+                min_unit=64,
+                max_unit=1024,
+                step_size=1,
+                allocation_ratio=1.5,
+            )
+            inv_list = objects.InventoryList(objects=[vcpu, memory_mb])
+            cn.set_inventory(inv_list)
+
+        # Create a custom resource called MAGIC
+        magic_rc = objects.ResourceClass(
+            self.context,
+            name='CUSTOM_MAGIC',
+        )
+        magic_rc.create()
+
+        # Create the shared provider that servers MAGIC
+        magic_p_uuid = uuidsentinel.magic_p
+        magic_p = objects.ResourceProvider(
+            self.context,
+            name='shared custom resource provider',
+            uuid=magic_p_uuid,
+        )
+        magic_p.create()
+
+        # Give the provider some MAGIC
+        magic = objects.Inventory(
+            resource_provider=magic_p,
+            resource_class=magic_rc.name,
+            total=2048,
+            reserved=1024,
+            min_unit=10,
+            max_unit=2048,
+            step_size=1,
+            allocation_ratio=1.0,
+        )
+        inv_list = objects.InventoryList(objects=[magic])
+        magic_p.set_inventory(inv_list)
+
+        # Mark the magic provider as having inventory shared among any provider
+        # associated via aggregate
+        t = objects.Trait(
+            self.context,
+            name="MISC_SHARES_VIA_AGGREGATE",
+        )
+        # TODO(jaypipes): Once MISC_SHARES_VIA_AGGREGATE is a standard
+        # os-traits trait, we won't need to create() here. Instead, we will
+        # just do:
+        # t = objects.Trait.get_by_name(
+        #    self.context,
+        #    "MISC_SHARES_VIA_AGGREGATE",
+        # )
+        t.create()
+        magic_p.set_traits(objects.TraitList(objects=[t]))
+
+        # Now associate the shared custom resource provider and both compute
+        # nodes with the same aggregate
+        cn1.set_aggregates([agg_uuid])
+        cn2.set_aggregates([agg_uuid])
+        magic_p.set_aggregates([agg_uuid])
+
+        # The resources we will request
+        requested_resources = {
+            fields.ResourceClass.VCPU: 1,
+            fields.ResourceClass.MEMORY_MB: 64,
+            magic_rc.name: 512,
+        }
+
+        p_alts = rp_obj.AllocationCandidates.get_by_filters(
+            self.context,
+            filters={
+                'resources': requested_resources,
+            },
+        )
+
+        # Verify the allocation requests that are returned. There should be 2
+        # allocation requests, one for each compute node, containing 3
+        # resources in each allocation request, one each for VCPU, RAM, and
+        # MAGIC. The amounts of the requests should correspond to the requested
+        # resource amounts in the filter:resources dict passed to
+        # AllocationCandidates.get_by_filters(). The providers for VCPU and
+        # MEMORY_MB should be the compute nodes while the provider for the
+        # MAGIC should be the shared custom resource provider.
+        a_reqs = p_alts.allocation_requests
+        self.assertEqual(2, len(a_reqs))
+
+        a_req_rps = set()
+        for ar in a_reqs:
+            for rr in ar.resource_requests:
+                a_req_rps.add(rr.resource_provider.uuid)
+
+        self.assertEqual(set([cn1_uuid, cn2_uuid, magic_p_uuid]), a_req_rps)
+
+        cn1_reqs = self._find_requests_for_provider(a_reqs, cn1_uuid)
+        # There should be a req object for only VCPU and MEMORY_MB
+        self.assertEqual(2, len(cn1_reqs))
+
+        cn1_req_vcpu = self._find_request_for_resource(cn1_reqs, 'VCPU')
+        self.assertIsNotNone(cn1_req_vcpu)
+        self.assertEqual(requested_resources['VCPU'], cn1_req_vcpu.amount)
+
+        cn2_reqs = self._find_requests_for_provider(a_reqs, cn2_uuid)
+
+        # There should NOT be an allocation resource request that lists a
+        # compute node provider UUID for MAGIC, since the shared
+        # custom provider is the thing that is providing the disk
+        cn1_req_disk = self._find_request_for_resource(cn1_reqs, magic_rc.name)
+        self.assertIsNone(cn1_req_disk)
+        cn2_req_disk = self._find_request_for_resource(cn2_reqs, magic_rc.name)
+        self.assertIsNone(cn2_req_disk)
+
+        # Let's check the second compute node for MEMORY_MB
+        cn2_req_ram = self._find_request_for_resource(cn2_reqs, 'MEMORY_MB')
+        self.assertIsNotNone(cn2_req_ram)
+        self.assertEqual(requested_resources['MEMORY_MB'], cn2_req_ram.amount)
+
+        # We should find the shared custom resource provider providing the
+        # MAGIC for each of the allocation requests
+        magic_p_reqs = self._find_requests_for_provider(a_reqs, magic_p_uuid)
+        self.assertEqual(2, len(magic_p_reqs))
+
+        # Shared custom resource provider shouldn't be listed as providing
+        # anything but MAGIC...
+        magic_p_req_ram = self._find_request_for_resource(
+            magic_p_reqs, 'MEMORY_MB')
+        self.assertIsNone(magic_p_req_ram)
+
+        magic_p_req_magic = self._find_request_for_resource(
+            magic_p_reqs, magic_rc.name)
+        self.assertIsNotNone(magic_p_req_magic)
+        self.assertEqual(
+            requested_resources[magic_rc.name], magic_p_req_magic.amount)
