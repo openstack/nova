@@ -72,6 +72,7 @@ from nova.api.openstack.compute import quota_classes
 from nova.api.openstack.compute import quota_sets
 from nova.api.openstack.compute import remote_consoles
 from nova.api.openstack.compute import rescue
+from nova.api.openstack.compute import security_group_default_rules
 from nova.api.openstack.compute import security_groups
 from nova.api.openstack.compute import server_diagnostics
 from nova.api.openstack.compute import server_external_events
@@ -251,6 +252,10 @@ quota_set_controller = functools.partial(_create_controller,
 
 security_group_controller = functools.partial(_create_controller,
     security_groups.SecurityGroupController, [], [])
+
+
+security_group_default_rules_controller = functools.partial(_create_controller,
+    security_group_default_rules.SecurityGroupDefaultRulesController, [], [])
 
 
 security_group_rules_controller = functools.partial(_create_controller,
@@ -619,6 +624,14 @@ ROUTE_LIST = (
     }),
     ('/os-quota-sets/{id}/defaults', {
         'GET': [quota_set_controller, 'defaults']
+    }),
+    ('/os-security-group-default-rules', {
+        'GET': [security_group_default_rules_controller, 'index'],
+        'POST': [security_group_default_rules_controller, 'create']
+    }),
+    ('/os-security-group-default-rules/{id}', {
+        'GET': [security_group_default_rules_controller, 'show'],
+        'DELETE': [security_group_default_rules_controller, 'delete']
     }),
     ('/os-security-group-rules', {
         'POST': [security_group_rules_controller, 'create']
