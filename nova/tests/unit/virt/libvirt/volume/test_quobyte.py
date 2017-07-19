@@ -15,12 +15,15 @@
 """Unit tests for the Quobyte volume driver module."""
 
 import os
+import traceback
 
 import mock
 from oslo_concurrency import processutils
 from oslo_utils import fileutils
+import psutil
+import six
 
-from nova import exception
+from nova import exception as nova_exception
 from nova import test
 from nova.tests.unit.virt.libvirt.volume import test_volume
 from nova import utils
@@ -30,6 +33,31 @@ from nova.virt.libvirt.volume import quobyte
 
 class QuobyteTestCase(test.NoDBTestCase):
     """Tests the nova.virt.libvirt.volume.quobyte module utilities."""
+
+    TEST_MNT_POINT = mock.sentinel.TEST_MNT_POINT
+
+    def assertRaisesAndMessageMatches(
+            self, excClass, msg, callableObj, *args, **kwargs):
+        """Ensure that the specified exception was raised. """
+
+        caught = False
+        try:
+            callableObj(*args, **kwargs)
+        except Exception as exc:
+            caught = True
+            self.assertIsInstance(exc, excClass,
+                                  'Wrong exception caught: %s Stacktrace: %s' %
+                                  (exc, traceback.format_exc()))
+            self.assertIn(msg, six.text_type(exc))
+
+        if not caught:
+            self.fail('Expected raised exception but nothing caught.')
+
+    def get_mock_partitions(self):
+        mypart = mock.Mock()
+        mypart.device = "quobyte@"
+        mypart.mountpoint = self.TEST_MNT_POINT
+        return [mypart]
 
     @mock.patch.object(os.path, "exists", return_value=False)
     @mock.patch.object(fileutils, "ensure_tree")
@@ -46,6 +74,7 @@ class QuobyteTestCase(test.NoDBTestCase):
 
         mock_ensure_tree.assert_called_once_with(export_mnt_base)
         expected_commands = [mock.call('mount.quobyte',
+                                       '--disable-xattrs',
                                        quobyte_volume,
                                        export_mnt_base)
                              ]
@@ -70,6 +99,7 @@ class QuobyteTestCase(test.NoDBTestCase):
                                        '--scope',
                                        '--user',
                                        'mount.quobyte',
+                                       '--disable-xattrs',
                                        quobyte_volume,
                                        export_mnt_base)
                              ]
@@ -95,6 +125,7 @@ class QuobyteTestCase(test.NoDBTestCase):
 
         mock_ensure_tree.assert_called_once_with(export_mnt_base)
         expected_commands = [mock.call('mount.quobyte',
+                                       '--disable-xattrs',
                                        quobyte_volume,
                                        export_mnt_base,
                                        '-c',
@@ -170,49 +201,91 @@ class QuobyteTestCase(test.NoDBTestCase):
                                  "the Quobyte Volume at %s",
                                  export_mnt_base))
 
-    @mock.patch.object(os, "access", return_value=True)
-    @mock.patch.object(utils, "execute")
-    def test_quobyte_is_valid_volume(self, mock_execute, mock_access):
-        mnt_base = '/mnt'
-        quobyte_volume = '192.168.1.1/volume-00001'
-        export_mnt_base = os.path.join(mnt_base,
-                                       utils.get_hash_str(quobyte_volume))
+    @mock.patch.object(psutil, "disk_partitions")
+    @mock.patch.object(os, "stat")
+    def test_validate_volume_all_good(self, stat_mock, part_mock):
+        part_mock.return_value = self.get_mock_partitions()
+        drv = quobyte
 
-        quobyte.validate_volume(export_mnt_base)
+        def statMockCall(*args):
+            if args[0] == self.TEST_MNT_POINT:
+                stat_result = mock.Mock()
+                stat_result.st_size = 0
+                return stat_result
+            return os.stat(args)
+        stat_mock.side_effect = statMockCall
 
-        mock_execute.assert_called_once_with('getfattr',
-                                             '-n',
-                                             'quobyte.info',
-                                             export_mnt_base)
+        drv.validate_volume(self.TEST_MNT_POINT)
 
-    @mock.patch.object(utils, "execute",
-                       side_effect=(processutils.
-                                    ProcessExecutionError))
-    def test_quobyte_is_valid_volume_vol_not_valid_volume(self, mock_execute):
-        mnt_base = '/mnt'
-        quobyte_volume = '192.168.1.1/volume-00001'
-        export_mnt_base = os.path.join(mnt_base,
-                                       utils.get_hash_str(quobyte_volume))
+        stat_mock.assert_called_once_with(self.TEST_MNT_POINT)
+        part_mock.assert_called_once_with(all=True)
 
-        self.assertRaises(exception.NovaException,
-                          quobyte.validate_volume,
-                          export_mnt_base)
+    @mock.patch.object(psutil, "disk_partitions")
+    @mock.patch.object(os, "stat")
+    def test_validate_volume_mount_not_working(self, stat_mock, part_mock):
+        part_mock.return_value = self.get_mock_partitions()
+        drv = quobyte
 
-    @mock.patch.object(os, "access", return_value=False)
-    @mock.patch.object(utils, "execute",
-                       side_effect=(processutils.
-                                    ProcessExecutionError))
-    def test_quobyte_is_valid_volume_vol_no_valid_access(self,
-                                                         mock_execute,
-                                                         mock_access):
-        mnt_base = '/mnt'
-        quobyte_volume = '192.168.1.1/volume-00001'
-        export_mnt_base = os.path.join(mnt_base,
-                                       utils.get_hash_str(quobyte_volume))
+        def statMockCall(*args):
+            print (args)
+            if args[0] == self.TEST_MNT_POINT:
+                raise nova_exception.InvalidVolume()
+        stat_mock.side_effect = [os.stat, statMockCall]
 
-        self.assertRaises(exception.NovaException,
-                          quobyte.validate_volume,
-                          export_mnt_base)
+        self.assertRaises(
+            excClass=nova_exception.InvalidVolume,
+            callableObj=drv.validate_volume,
+            mount_path=self.TEST_MNT_POINT)
+        stat_mock.assert_called_with(self.TEST_MNT_POINT)
+        part_mock.assert_called_once_with(all=True)
+
+    def test_validate_volume_no_mtab_entry(self):
+        msg = ("No matching Quobyte mount entry for %(mpt)s"
+               " could be found for validation in partition list."
+               % {'mpt': self.TEST_MNT_POINT})
+
+        self.assertRaisesAndMessageMatches(
+            nova_exception.InvalidVolume,
+            msg,
+            quobyte.validate_volume,
+            self.TEST_MNT_POINT)
+
+    @mock.patch.object(psutil, "disk_partitions")
+    def test_validate_volume_wrong_mount_type(self, part_mock):
+        mypart = mock.Mock()
+        mypart.device = "not-quobyte"
+        mypart.mountpoint = self.TEST_MNT_POINT
+        part_mock.return_value = [mypart]
+        msg = ("The mount %(mpt)s is not a valid"
+               " Quobyte volume according to partition list."
+               % {'mpt': self.TEST_MNT_POINT})
+
+        self.assertRaisesAndMessageMatches(
+            nova_exception.InvalidVolume,
+            msg,
+            quobyte.validate_volume,
+            self.TEST_MNT_POINT)
+        part_mock.assert_called_once_with(all=True)
+
+    @mock.patch.object(os, "stat")
+    @mock.patch.object(psutil, "disk_partitions")
+    def test_validate_volume_stale_mount(self, part_mock, stat_mock):
+        part_mock.return_value = self.get_mock_partitions()
+
+        def statMockCall(*args):
+            if args[0] == self.TEST_MNT_POINT:
+                stat_result = mock.Mock()
+                stat_result.st_size = 1
+                return stat_result
+            return os.stat(args)
+        stat_mock.side_effect = statMockCall
+
+        # As this uses a dir size >0, it raises an exception
+        self.assertRaises(
+            nova_exception.InvalidVolume,
+            quobyte.validate_volume,
+            self.TEST_MNT_POINT)
+        part_mock.assert_called_once_with(all=True)
 
 
 class LibvirtQuobyteVolumeDriverTestCase(
@@ -368,12 +441,12 @@ class LibvirtQuobyteVolumeDriverTestCase(
 
         def exe_side_effect(*cmd, **kwargs):
             if cmd == mock.ANY:
-                raise exception.NovaException()
+                raise nova_exception.NovaException()
 
         with mock.patch.object(quobyte,
                                'validate_volume') as mock_execute:
             mock_execute.side_effect = exe_side_effect
-            self.assertRaises(exception.NovaException,
+            self.assertRaises(nova_exception.NovaException,
                               libvirt_driver.connect_volume,
                               connection_info,
                               self.disk_info,
