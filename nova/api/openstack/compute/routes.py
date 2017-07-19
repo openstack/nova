@@ -90,6 +90,7 @@ from nova.api.openstack.compute import simple_tenant_usage
 from nova.api.openstack.compute import suspend_server
 from nova.api.openstack.compute import tenant_networks
 from nova.api.openstack.compute import used_limits
+from nova.api.openstack.compute import versionsV21
 from nova.api.openstack.compute import virtual_interfaces
 from nova.api.openstack.compute import volumes
 from nova.api.openstack import wsgi
@@ -374,6 +375,10 @@ tenant_networks_controller = functools.partial(_create_controller,
     tenant_networks.TenantNetworkController, [], [])
 
 
+version_controller = functools.partial(_create_controller,
+    versionsV21.VersionsController, [], [])
+
+
 virtual_interfaces_controller = functools.partial(_create_controller,
     virtual_interfaces.ServerVirtualInterfaceController, [], [])
 
@@ -400,6 +405,16 @@ volumes_controller = functools.partial(_create_controller,
 ROUTE_LIST = (
     # NOTE: '/os-volumes_boot' is a clone of '/servers'. We may want to
     # deprecate it in the future.
+    # NOTE: This is a redirection from '' to '/'. The request to the '/v2.1'
+    # or '/2.0' without the ending '/' will get a response with status code
+    # '302' returned.
+    ('', '/'),
+    ('/', {
+        'GET': [version_controller, 'show']
+    }),
+    ('/versions/{id}', {
+        'GET': [version_controller, 'show']
+    }),
     ('/extensions', {
         'GET': [extensions_controller, 'index'],
     }),
@@ -867,6 +882,16 @@ class APIRouterV21(nova.api.openstack.APIRouterV21):
         super(APIRouterV21, self).__init__()
 
         for path, methods in ROUTE_LIST:
+            # NOTE(alex_xu): The variable 'methods' is a dict in normal, since
+            # the dict includes all the methods supported in the path. But
+            # if the variable 'method' is a string, it means a redirection.
+            # For example, the request to the '' will be redirect to the '/' in
+            # the Nova API. To indicate that, using the target path instead of
+            # a dict. The route entry just writes as "('', '/)".
+            if isinstance(methods, str):
+                self.map.redirect(path, methods)
+                continue
+
             for method, controller_info in methods.items():
                 # TODO(alex_xu): In the end, I want to create single controller
                 # instance instead of create controller instance for each
