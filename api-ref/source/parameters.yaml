@@ -721,9 +721,13 @@ marker:
 migration_hidden:
   description: |
     The 'hidden' setting of migration to filter.
+    The 'hidden' flag is set if the value is 1.
+    The 'hidden' flag is not set if the value is 0.
+    But the 'hidden' setting of migration is always 0,
+    so this parameter is useless to filter migrations.
   in: query
   required: false
-  type: string
+  type: integer
 migration_host:
   description: |
     The source/destination compute node of migration to filter.
@@ -3764,6 +3768,40 @@ migration_id:
   in: body
   required: true
   type: integer
+migration_links_2_23:
+  description: |
+    Links to the migration.
+    This parameter is returned if the migration type is ``live-migration`` and
+    the migration status is one of ``queued``, ``preparing``, ``running``
+    and ``post-migrating``. See `API Guide / Links and References
+    <http://developer.openstack.org/api-guide/compute/links_and_references.html>`_
+    for more info.
+  in: body
+  required: false
+  type: array
+  min_version: 2.23
+migration_new_flavor_id:
+  description: |
+    In ``resize`` case, the flavor ID for resizing the server.
+    In the other cases, this parameter is same as the flavor ID
+    of the server when the migration was started.
+  in: body
+  required: true
+  type: string
+migration_old_flavor_id:
+  description: |
+    The flavor ID of the server when the migration was started.
+  in: body
+  required: true
+  type: string
+migration_type_2_23:
+  description: |
+    The type of the server migration. This is one of ``live-migration``,
+    ``migration``, ``resize`` and ``evacuation``.
+  in: body
+  required: true
+  type: string
+  min_version: 2.23
 migrations:
   description: |
     The list of server migration objects.
