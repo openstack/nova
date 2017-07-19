@@ -23,6 +23,7 @@ from nova import profiler
 from nova import rpc
 
 CONF = nova.conf.CONF
+RPC_TOPIC = 'consoleauth'
 
 
 @profiler.trace_cls("rpc")
@@ -68,7 +69,7 @@ class ConsoleAuthAPI(object):
 
     def __init__(self):
         super(ConsoleAuthAPI, self).__init__()
-        target = messaging.Target(topic=CONF.consoleauth_topic, version='2.1')
+        target = messaging.Target(topic=RPC_TOPIC, version='2.1')
         version_cap = self.VERSION_ALIASES.get(CONF.upgrade_levels.consoleauth,
                                                CONF.upgrade_levels.consoleauth)
         self.client = rpc.get_client(target, version_cap=version_cap)

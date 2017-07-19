@@ -35,7 +35,8 @@ class SchedulerRpcAPITestCase(test.NoDBTestCase):
 
         rpcapi = scheduler_rpcapi.SchedulerAPI()
         self.assertIsNotNone(rpcapi.client)
-        self.assertEqual(rpcapi.client.target.topic, CONF.scheduler_topic)
+        self.assertEqual(rpcapi.client.target.topic,
+                         scheduler_rpcapi.RPC_TOPIC)
 
         expected_retval = 'foo' if rpc_method == 'call' else None
         expected_version = kwargs.pop('version', None)

@@ -23,6 +23,7 @@ from nova import profiler
 from nova import rpc
 
 CONF = nova.conf.CONF
+RPC_TOPIC = "console"
 
 
 @profiler.trace_cls("rpc")
@@ -61,7 +62,7 @@ class ConsoleAPI(object):
 
     def __init__(self, topic=None, server=None):
         super(ConsoleAPI, self).__init__()
-        topic = topic if topic else CONF.console_topic
+        topic = topic if topic else RPC_TOPIC
         target = messaging.Target(topic=topic, server=server, version='2.0')
         version_cap = self.VERSION_ALIASES.get(CONF.upgrade_levels.console,
                                                CONF.upgrade_levels.console)

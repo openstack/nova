@@ -25,6 +25,7 @@ from oslo_privsep import priv_context
 from oslo_reports import guru_meditation_report as gmr
 
 from nova.cmd import common as cmd_common
+from nova.compute import rpcapi as compute_rpcapi
 from nova.conductor import rpcapi as conductor_rpcapi
 import nova.conf
 from nova import config
@@ -53,6 +54,6 @@ def main():
     objects_base.NovaObject.indirection_api = conductor_rpcapi.ConductorAPI()
 
     server = service.Service.create(binary='nova-compute',
-                                    topic=CONF.compute_topic)
+                                    topic=compute_rpcapi.RPC_TOPIC)
     service.serve(server)
     service.wait()

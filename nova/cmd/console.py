@@ -22,6 +22,7 @@ from oslo_log import log as logging
 from oslo_reports import guru_meditation_report as gmr
 
 from nova import config
+from nova.console import rpcapi as console_rpcapi
 from nova import objects
 from nova import service
 from nova import version
@@ -37,6 +38,6 @@ def main():
     gmr.TextGuruMeditation.setup_autorun(version)
 
     server = service.Service.create(binary='nova-console',
-                                    topic=CONF.console_topic)
+                                    topic=console_rpcapi.RPC_TOPIC)
     service.serve(server)
     service.wait()

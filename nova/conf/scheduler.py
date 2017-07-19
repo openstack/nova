@@ -15,29 +15,6 @@
 
 from oslo_config import cfg
 
-default_opts = [
-    cfg.StrOpt("scheduler_topic",
-        default="scheduler",
-        deprecated_for_removal=True,
-        deprecated_since="15.0.0",
-        deprecated_reason="""
-There is no need to let users choose the RPC topic for all services - there
-is little gain from this. Furthermore, it makes it really easy to break Nova
-by using this option.
-""",
-        help="""
-Scheduler message queue topic.
-
-This is the message queue topic that the scheduler 'listens' on. It is used
-when the scheduler service is started up to configure the queue, and whenever
-an RPC call to the scheduler is made. There is almost never any reason to ever
-change this value.
-
-Possible values:
-
-* A valid AMQP topic name
-"""),
-]
 
 scheduler_group = cfg.OptGroup(name="scheduler",
                                title="Scheduler configuration")
@@ -922,8 +899,6 @@ Related options:
 
 
 def register_opts(conf):
-    conf.register_opts(default_opts)
-
     conf.register_group(scheduler_group)
     conf.register_opts(scheduler_opts, group=scheduler_group)
 

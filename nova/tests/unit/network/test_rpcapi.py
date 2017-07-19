@@ -45,7 +45,8 @@ class NetworkRpcAPITestCase(test.NoDBTestCase):
 
         rpcapi = network_rpcapi.NetworkAPI()
         self.assertIsNotNone(rpcapi.client)
-        self.assertEqual(CONF.network_topic, rpcapi.client.target.topic)
+        self.assertEqual(network_rpcapi.RPC_TOPIC,
+                         rpcapi.client.target.topic)
 
         expected_retval = 'foo' if rpc_method == 'call' else None
         expected_version = kwargs.pop('version', None)

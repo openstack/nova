@@ -67,6 +67,7 @@ from nova.compute.utils import wrap_instance_event
 from nova.compute import vm_states
 from nova import conductor
 import nova.conf
+from nova.console import rpcapi as console_rpcapi
 import nova.context
 from nova import exception
 from nova import exception_wrapper
@@ -1178,7 +1179,7 @@ class ComputeManager(manager.Manager):
 
         """
         # TODO(mdragon): perhaps make this variable by console_type?
-        return '%s.%s' % (CONF.console_topic, CONF.console_host)
+        return '%s.%s' % (console_rpcapi.RPC_TOPIC, CONF.console_host)
 
     @wrap_exception()
     def get_console_pool_info(self, context, console_type):

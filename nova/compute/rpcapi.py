@@ -31,6 +31,7 @@ from nova import profiler
 from nova import rpc
 
 CONF = nova.conf.CONF
+RPC_TOPIC = "compute"
 
 LOG = logging.getLogger(__name__)
 LAST_VERSION = None
@@ -341,7 +342,7 @@ class ComputeAPI(object):
 
     def __init__(self):
         super(ComputeAPI, self).__init__()
-        target = messaging.Target(topic=CONF.compute_topic, version='4.0')
+        target = messaging.Target(topic=RPC_TOPIC, version='4.0')
         upgrade_level = CONF.upgrade_levels.compute
         if upgrade_level == 'auto':
             version_cap = self._determine_version_cap(target)

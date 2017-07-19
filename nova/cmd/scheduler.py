@@ -24,6 +24,7 @@ from oslo_reports import guru_meditation_report as gmr
 import nova.conf
 from nova import config
 from nova import objects
+from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import service
 from nova import utils
 from nova import version
@@ -41,6 +42,6 @@ def main():
     gmr.TextGuruMeditation.setup_autorun(version)
 
     server = service.Service.create(binary='nova-scheduler',
-                                    topic=CONF.scheduler_topic)
+                                    topic=scheduler_rpcapi.RPC_TOPIC)
     service.serve(server)
     service.wait()

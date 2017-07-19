@@ -1,0 +1,16 @@
+---
+upgrade:
+  - |
+    Configuration options related to RPC topics were deprecated in the past
+    releases and are now completly removed from nova. There was no need to
+    let users choose the RPC topics for all services. There was little
+    benefit from this and it made it really easy to break Nova by changing
+    the value of topic options.
+
+    The following options are removed:
+
+    - ``compute_topic``
+    - ``console_topic``
+    - ``consoleauth_topic``
+    - ``scheduler_topic``
+    - ``network_topic``

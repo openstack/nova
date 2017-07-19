@@ -24,6 +24,7 @@ from nova import profiler
 from nova import rpc
 
 CONF = nova.conf.CONF
+RPC_TOPIC = "scheduler"
 
 
 @profiler.trace_cls("rpc")
@@ -112,7 +113,7 @@ class SchedulerAPI(object):
 
     def __init__(self):
         super(SchedulerAPI, self).__init__()
-        target = messaging.Target(topic=CONF.scheduler_topic, version='4.0')
+        target = messaging.Target(topic=RPC_TOPIC, version='4.0')
         version_cap = self.VERSION_ALIASES.get(CONF.upgrade_levels.scheduler,
                                                CONF.upgrade_levels.scheduler)
         serializer = objects_base.NovaObjectSerializer()
