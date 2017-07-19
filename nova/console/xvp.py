@@ -87,7 +87,8 @@ class XVPConsoleProxy(object):
         conf_data = {'multiplex_port': CONF.xvp.console_xvp_multiplex_port,
                      'pools': pools}
         tmpl_path, tmpl_file = os.path.split(CONF.injected_network_template)
-        env = jinja2.Environment(loader=jinja2.FileSystemLoader(tmpl_path))
+        env = jinja2.Environment(  # nosec
+            loader=jinja2.FileSystemLoader(tmpl_path))  # nosec
         env.filters['pass_encode'] = self.fix_console_password
         template = env.get_template(tmpl_file)
         self._write_conf(template.render(conf_data))
