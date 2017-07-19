@@ -31,8 +31,6 @@ from nova.policies import baremetal_nodes as bn_policies
 ironic_client = importutils.try_import('ironicclient.client')
 ironic_exc = importutils.try_import('ironicclient.exc')
 
-ALIAS = "os-baremetal-nodes"
-
 node_fields = ['id', 'cpus', 'local_gb', 'memory_mb', 'pm_address',
                'pm_user', 'service_host', 'terminal_port', 'instance_uuid']
 
@@ -154,23 +152,3 @@ class BareMetalNodeController(wsgi.Controller):
     @extensions.expected_errors(400)
     def _remove_interface(self, req, id, body):
         _no_ironic_proxy("port-delete")
-
-
-class BareMetalNodes(extensions.V21APIExtensionBase):
-    """Admin-only bare-metal node administration."""
-
-    name = "BareMetalNodes"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        resource = [extensions.ResourceExtension(ALIAS,
-                BareMetalNodeController(),
-                member_actions={"action": "POST"})]
-        return resource
-
-    def get_controller_extensions(self):
-        """It's an abstract function V21APIExtensionBase and the extension
-        will not be loaded without it.
-        """
-        return []

@@ -24,6 +24,7 @@ from nova.api.openstack.compute import aggregates
 from nova.api.openstack.compute import assisted_volume_snapshots
 from nova.api.openstack.compute import attach_interfaces
 from nova.api.openstack.compute import availability_zone
+from nova.api.openstack.compute import baremetal_nodes
 from nova.api.openstack.compute import cells
 from nova.api.openstack.compute import certificates
 from nova.api.openstack.compute import cloudpipe
@@ -128,6 +129,10 @@ assisted_volume_snapshots_controller = functools.partial(
 
 availability_zone_controller = functools.partial(
     _create_controller, availability_zone.AvailabilityZoneController, [], [])
+
+
+baremetal_nodes_controller = functools.partial(
+    _create_controller, baremetal_nodes.BareMetalNodeController, [], [])
 
 
 cells_controller = functools.partial(
@@ -458,6 +463,17 @@ ROUTE_LIST = (
     }),
     ('/os-availability-zone/detail', {
         'GET': [availability_zone_controller, 'detail'],
+    }),
+    ('/os-baremetal-nodes', {
+        'GET': [baremetal_nodes_controller, 'index'],
+        'POST': [baremetal_nodes_controller, 'create']
+    }),
+    ('/os-baremetal-nodes/{id}', {
+        'GET': [baremetal_nodes_controller, 'show'],
+        'DELETE': [baremetal_nodes_controller, 'delete']
+    }),
+    ('/os-baremetal-nodes/{id}/action', {
+        'POST': [baremetal_nodes_controller, 'action']
     }),
     ('/os-cells', {
         'POST': [cells_controller, 'create'],
