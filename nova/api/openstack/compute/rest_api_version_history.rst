@@ -231,7 +231,6 @@ user documentation.
 
   * Tag is a Unicode bytestring no longer than 60 characters.
   * Tag is a non-empty string.
-  * Tags are case sensitive.
   * '/' is not allowed to be in a tag name
   * Comma is not allowed to be in a tag name in order to simplify requests that
     specify lists of tags

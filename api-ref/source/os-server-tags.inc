@@ -15,8 +15,6 @@ Tags have the following restrictions:
 
 -  Tag is a non-empty string.
 
--  Tags are case sensitive.
-
 -  '/' is not allowed to be in a tag name
 
 -  Comma is not allowed to be in a tag name in order to simplify requests that
