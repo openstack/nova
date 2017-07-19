@@ -29,7 +29,9 @@ instance_actions_policies = [
         """Add events details in action details for a server.
 
 This check is performed only after the check
-os_compute_api:os-instance-actions passes""",
+os_compute_api:os-instance-actions passes. Beginning with
+Microversion 2.51, events details are always included; traceback
+information is provided per event if policy enforcement passes.""",
         [
             {
                 'method': 'GET',
