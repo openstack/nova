@@ -20,6 +20,7 @@ import sys
 
 from oslo_log import log as logging
 from oslo_reports import guru_meditation_report as gmr
+from oslo_reports import opts as gmr_opts
 
 import nova.conf
 from nova import config
@@ -37,11 +38,12 @@ def main():
     logging.setup(CONF, "nova")
     utils.monkey_patch()
     objects.register_all()
+    gmr_opts.set_defaults(CONF)
     # NOTE(mriedem): This is needed for caching the nova-compute service
     # version.
     objects.Service.enable_min_version_cache()
 
-    gmr.TextGuruMeditation.setup_autorun(version)
+    gmr.TextGuruMeditation.setup_autorun(version, conf=CONF)
 
     should_use_ssl = 'osapi_compute' in CONF.enabled_ssl_apis
     server = service.WSGIService('osapi_compute', use_ssl=should_use_ssl)

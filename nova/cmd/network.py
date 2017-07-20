@@ -20,6 +20,7 @@ import sys
 
 from oslo_log import log as logging
 from oslo_reports import guru_meditation_report as gmr
+from oslo_reports import opts as gmr_opts
 
 from nova.cmd import common as cmd_common
 from nova.conductor import rpcapi as conductor_rpcapi
@@ -47,8 +48,9 @@ def main():
 
     utils.monkey_patch()
     objects.register_all()
+    gmr_opts.set_defaults(CONF)
 
-    gmr.TextGuruMeditation.setup_autorun(version)
+    gmr.TextGuruMeditation.setup_autorun(version, conf=CONF)
 
     cmd_common.block_db_access('nova-network')
     objects_base.NovaObject.indirection_api = conductor_rpcapi.ConductorAPI()

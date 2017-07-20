@@ -23,6 +23,7 @@ import os_vif
 from oslo_log import log as logging
 from oslo_privsep import priv_context
 from oslo_reports import guru_meditation_report as gmr
+from oslo_reports import opts as gmr_opts
 
 from nova.cmd import common as cmd_common
 from nova.compute import rpcapi as compute_rpcapi
@@ -45,10 +46,11 @@ def main():
     priv_context.init(root_helper=shlex.split(utils.get_root_helper()))
     utils.monkey_patch()
     objects.register_all()
+    gmr_opts.set_defaults(CONF)
     # Ensure os-vif objects are registered and plugins loaded
     os_vif.initialize()
 
-    gmr.TextGuruMeditation.setup_autorun(version)
+    gmr.TextGuruMeditation.setup_autorun(version, conf=CONF)
 
     cmd_common.block_db_access('nova-compute')
     objects_base.NovaObject.indirection_api = conductor_rpcapi.ConductorAPI()

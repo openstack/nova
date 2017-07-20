@@ -19,6 +19,7 @@ import sys
 
 from oslo_log import log as logging
 from oslo_reports import guru_meditation_report as gmr
+from oslo_reports import opts as gmr_opts
 
 from nova import cells
 import nova.conf
@@ -36,8 +37,9 @@ def main():
     logging.setup(CONF, 'nova')
     utils.monkey_patch()
     objects.register_all()
+    gmr_opts.set_defaults(CONF)
 
-    gmr.TextGuruMeditation.setup_autorun(version)
+    gmr.TextGuruMeditation.setup_autorun(version, conf=CONF)
 
     server = service.Service.create(binary='nova-cells',
                                     topic=cells.TOPIC,
