@@ -154,7 +154,11 @@ class IronicDriver(virt_driver.ComputeDriver):
         self.ironicclient = client_wrapper.IronicClientWrapper()
 
     def _get_node(self, node_uuid):
-        """Get a node by its UUID."""
+        """Get a node by its UUID.
+
+           Some methods pass in variables named nodename, but are
+           actually UUID's.
+        """
         return self.ironicclient.call('node.get', node_uuid,
                                       fields=_NODE_FIELDS)
 
@@ -512,7 +516,9 @@ class IronicDriver(virt_driver.ComputeDriver):
     def node_is_available(self, nodename):
         """Confirms a Nova hypervisor node exists in the Ironic inventory.
 
-        :param nodename: The UUID of the node.
+        :param nodename: The UUID of the node. Parameter is called nodename
+                         even though it is a UUID to keep method signature
+                         the same as inherited class.
         :returns: True if the node exists, False if not.
 
         """
@@ -525,12 +531,15 @@ class IronicDriver(virt_driver.ComputeDriver):
         if not self.node_cache:
             # Empty cache, try to populate it.
             self._refresh_cache()
+
+        # nodename is the ironic node's UUID.
         if nodename in self.node_cache:
             return True
 
         # NOTE(comstud): Fallback and check Ironic. This case should be
         # rare.
         try:
+            # nodename is the ironic node's UUID.
             self._get_node(nodename)
             return True
         except ironic.exc.NotFound:
@@ -616,6 +625,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         """Return a dict, keyed by resource class, of inventory information for
         the supplied node.
         """
+        # nodename is the ironic node's UUID.
         node = self._node_from_cache(nodename)
         info = self._node_resource(node)
         # TODO(jaypipes): Completely remove the reporting of VCPU, MEMORY_MB,
@@ -690,23 +700,24 @@ class IronicDriver(virt_driver.ComputeDriver):
             # cache, let's try to populate it.
             self._refresh_cache()
 
+        # nodename is the ironic node's UUID.
         node = self._node_from_cache(nodename)
         return self._node_resource(node)
 
-    def _node_from_cache(self, nodename):
+    def _node_from_cache(self, node_uuid):
         """Returns a node from the cache, retrieving the node from Ironic API
         if the node doesn't yet exist in the cache.
         """
         cache_age = time.time() - self.node_cache_time
-        if nodename in self.node_cache:
+        if node_uuid in self.node_cache:
             LOG.debug("Using cache for node %(node)s, age: %(age)s",
-                      {'node': nodename, 'age': cache_age})
-            return self.node_cache[nodename]
+                      {'node': node_uuid, 'age': cache_age})
+            return self.node_cache[node_uuid]
         else:
             LOG.debug("Node %(node)s not found in cache, age: %(age)s",
-                      {'node': nodename, 'age': cache_age})
-            node = self._get_node(nodename)
-            self.node_cache[nodename] = node
+                      {'node': node_uuid, 'age': cache_age})
+            node = self._get_node(node_uuid)
+            self.node_cache[node_uuid] = node
             return node
 
     def get_info(self, instance):
@@ -1289,6 +1300,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param network_info: Instance network information.
 
         """
+        # instance.node is the ironic node's UUID.
         node = self._get_node(instance.node)
         self._plug_vifs(node, instance, network_info)
 
@@ -1299,6 +1311,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param network_info: Instance network information.
 
         """
+        # instance.node is the ironic node's UUID.
         node = self._get_node(instance.node)
         self._unplug_vifs(node, instance, network_info)
 
