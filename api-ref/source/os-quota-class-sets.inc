@@ -33,8 +33,8 @@ Nova supports implicit 'default' Quota Class only.
     used to return those keys in the API response.
     There is workaround to get the ``server_groups`` and
     ``server_group_members`` quotas using
-    :ref:`list-default-quotas-for-tenant`
-    API but that is per project quota.
+    "List Default Quotas For Tenant" API in :ref:`os-quota-sets`
+    but that is per project quota.
     This issue is fixed in microversion 2.50, here onwards
     ``server_groups`` and ``server_group_members`` keys are
     returned in API response body.

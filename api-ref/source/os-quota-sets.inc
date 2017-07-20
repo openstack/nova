@@ -1,5 +1,7 @@
 .. -*- rst -*-
 
+.. _os-quota-sets:
+
 ============================
  Quota sets (os-quota-sets)
 ============================
@@ -164,8 +166,6 @@ Response
 --------
 
 There is no body content for the response of a successful DELETE operation.
-
-.. _list-default-quotas-for-tenant:
 
 List Default Quotas For Tenant
 ==============================
