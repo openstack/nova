@@ -1163,7 +1163,9 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _get_volume_config(self, connection_info, disk_info):
         vol_driver = self._get_volume_driver(connection_info)
-        return vol_driver.get_config(connection_info, disk_info)
+        conf = vol_driver.get_config(connection_info, disk_info)
+        self._set_cache_mode(conf)
+        return conf
 
     def _get_volume_encryptor(self, connection_info, encryption):
         encryptor = encryptors.get_volume_encryptor(connection_info,
@@ -1216,7 +1218,6 @@ class LibvirtDriver(driver.ComputeDriver):
             instance, CONF.libvirt.virt_type, instance.image_meta, bdm)
         self._connect_volume(connection_info, disk_info)
         conf = self._get_volume_config(connection_info, disk_info)
-        self._set_cache_mode(conf)
 
         self._check_discard_for_attach_volume(conf, instance)
 
@@ -3693,9 +3694,6 @@ class LibvirtDriver(driver.ComputeDriver):
             devices.append(cfg)
             vol['connection_info'] = connection_info
             vol.save()
-
-        for d in devices:
-            self._set_cache_mode(d)
 
         if scsi_controller:
             devices.append(scsi_controller)
