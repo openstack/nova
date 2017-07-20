@@ -18,6 +18,7 @@ import time
 
 from cinderclient import exceptions as cinder_exception
 from cursive import exception as cursive_exception
+import ddt
 from eventlet import event as eventlet_event
 import mock
 import netaddr
@@ -5331,6 +5332,73 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             self.assertEqual(expected_call, create_error_call)
 
 
+@ddt.ddt
+class ComputeManagerErrorsOutMigrationTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super(ComputeManagerErrorsOutMigrationTestCase, self).setUp()
+        self.context = context.RequestContext(fakes.FAKE_USER_ID,
+                                              fakes.FAKE_PROJECT_ID)
+
+        self.instance = fake_instance.fake_instance_obj(self.context)
+
+        self.migration = objects.Migration()
+        self.migration.instance_uuid = self.instance.uuid
+        self.migration.status = 'migrating'
+        self.migration.id = 0
+
+    @mock.patch.object(objects.Migration, 'save')
+    @mock.patch.object(objects.Migration, 'obj_as_admin')
+    def test_decorator(self, mock_save, mock_obj_as_admin):
+        # Tests that errors_out_migration decorator in compute manager sets
+        # migration status to 'error' when an exception is raised from
+        # decorated method
+
+        @manager.errors_out_migration
+        def fake_function(self, context, instance, migration):
+            raise test.TestingException()
+
+        mock_obj_as_admin.return_value = mock.MagicMock()
+
+        self.assertRaises(test.TestingException, fake_function,
+                          self, self.context, self.instance, self.migration)
+        self.assertEqual('error', self.migration.status)
+        mock_save.assert_called_once_with()
+        mock_obj_as_admin.assert_called_once_with()
+
+    @mock.patch.object(objects.Migration, 'save')
+    @mock.patch.object(objects.Migration, 'obj_as_admin')
+    def test_contextmanager(self, mock_save, mock_obj_as_admin):
+        # Tests that errors_out_migration_ctxt context manager in compute
+        # manager sets migration status to 'error' when an exception is raised
+        # from decorated method
+
+        def test_function():
+            with manager.errors_out_migration_ctxt(self.migration):
+                raise test.TestingException()
+
+        mock_obj_as_admin.return_value = mock.MagicMock()
+
+        self.assertRaises(test.TestingException, test_function)
+        self.assertEqual('error', self.migration.status)
+        mock_save.assert_called_once_with()
+        mock_obj_as_admin.assert_called_once_with()
+
+    @ddt.data('completed', 'finished')
+    @mock.patch.object(objects.Migration, 'save')
+    def test_status_exclusion(self, status, mock_save):
+        # Tests that errors_out_migration doesn't error out migration if the
+        # status is anything other than 'migrating' or 'post-migrating'
+        self.migration.status = status
+
+        def test_function():
+            with manager.errors_out_migration_ctxt(self.migration):
+                raise test.TestingException()
+
+        self.assertRaises(test.TestingException, test_function)
+        self.assertEqual(status, self.migration.status)
+        mock_save.assert_not_called()
+
+
 class ComputeManagerMigrationTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ComputeManagerMigrationTestCase, self).setUp()
@@ -5346,32 +5414,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         self.migration.status = 'migrating'
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
         self.useFixture(fixtures.EventReporterStub())
-
-    @mock.patch.object(objects.Migration, 'save')
-    @mock.patch.object(objects.Migration, 'obj_as_admin')
-    def test_errors_out_migration_decorator(self, mock_save,
-                                            mock_obj_as_admin):
-        # Tests that errors_out_migration decorator in compute manager
-        # sets migration status to 'error' when an exception is raised
-        # from decorated method
-        instance = fake_instance.fake_instance_obj(self.context)
-
-        migration = objects.Migration()
-        migration.instance_uuid = instance.uuid
-        migration.status = 'migrating'
-        migration.id = 0
-
-        @manager.errors_out_migration
-        def fake_function(self, context, instance, migration):
-            raise test.TestingException()
-
-        mock_obj_as_admin.return_value = mock.MagicMock()
-
-        self.assertRaises(test.TestingException, fake_function,
-                          self, self.context, instance, migration)
-        self.assertEqual('error', migration.status)
-        mock_save.assert_called_once_with()
-        mock_obj_as_admin.assert_called_once_with()
 
     def test_finish_resize_failure(self):
         with test.nested(
