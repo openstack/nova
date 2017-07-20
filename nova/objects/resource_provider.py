@@ -737,9 +737,7 @@ def _get_providers_with_shared_capacity(ctx, rc_id, amount):
         rp_to_rpt_join, t_tbl,
         sa.and_(
             rpt_tbl.c.trait_id == t_tbl.c.id,
-            # TODO(jaypipes): Replace with os_traits.MISC_SHARE_VIA_AGGREGATE
-            # once os-traits released with that trait.
-            t_tbl.c.name == six.text_type('MISC_SHARES_VIA_AGGREGATE'),
+            t_tbl.c.name == os_traits.MISC_SHARES_VIA_AGGREGATE,
         ),
     )
 
