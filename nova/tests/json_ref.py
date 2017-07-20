@@ -40,9 +40,11 @@ def resolve_refs(obj_with_refs, base_path):
         if '$ref' in obj_with_refs.keys():
             ref = obj_with_refs.pop('$ref')
             resolved_ref = _resolve_ref(ref, base_path)
-            # the rest of the ref dict contains overrides for the ref. Apply
-            # those overrides recursively here.
-            _update_dict_recursively(resolved_ref, obj_with_refs)
+            # the rest of the ref dict contains overrides for the ref. Resolve
+            # refs in the overrides then apply those overrides recursively
+            # here.
+            resolved_overrides = resolve_refs(obj_with_refs, base_path)
+            _update_dict_recursively(resolved_ref, resolved_overrides)
             return resolved_ref
         else:
             for key, value in obj_with_refs.items():

@@ -425,7 +425,7 @@ class UsageInfoTestCase(test.TestCase):
         instance.system_metadata.update(sys_metadata)
         instance.save()
         compute_utils.notify_usage_exists(
-            rpc.get_notifier('compute'), self.context, instance)
+            rpc.get_notifier('compute'), self.context, instance, 'fake-host')
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 1)
         msg = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual(msg.priority, 'INFO')
@@ -446,10 +446,37 @@ class UsageInfoTestCase(test.TestCase):
             self.assertIn(attr, payload,
                           "Key %s not in payload" % attr)
         self.assertEqual(payload['image_meta'],
-                {'md_key1': 'val1', 'md_key2': 'val2'})
+                         {'md_key1': 'val1', 'md_key2': 'val2'})
         image_ref_url = "%s/images/%s" % (
             glance.generate_glance_url(self.context), uuids.fake_image_ref)
         self.assertEqual(payload['image_ref_url'], image_ref_url)
+        self.compute.terminate_instance(self.context, instance, [])
+
+    def test_notify_usage_exists_emits_versioned(self):
+        # Ensure 'exists' notification generates appropriate usage data.
+        instance = create_instance(self.context)
+
+        compute_utils.notify_usage_exists(
+            rpc.get_notifier('compute'), self.context, instance, 'fake-host')
+        self.assertEqual(len(fake_notifier.VERSIONED_NOTIFICATIONS), 1)
+        msg = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+        self.assertEqual(msg['priority'], 'INFO')
+        self.assertEqual(msg['event_type'], 'instance.exists')
+        payload = msg['payload']['nova_object.data']
+        self.assertEqual(payload['tenant_id'], self.project_id)
+        self.assertEqual(payload['user_id'], self.user_id)
+        self.assertEqual(payload['uuid'], instance['uuid'])
+        flavor = payload['flavor']['nova_object.data']
+        self.assertEqual(flavor['name'], 'm1.tiny')
+        flavorid = flavors.get_flavor_by_name('m1.tiny')['flavorid']
+        self.assertEqual(str(flavor['flavorid']), str(flavorid))
+
+        for attr in ('display_name', 'created_at', 'launched_at',
+                     'state', 'bandwidth', 'audit_period'):
+            self.assertIn(attr, payload,
+                          "Key %s not in payload" % attr)
+
+        self.assertEqual(payload['image_uuid'], uuids.fake_image_ref)
         self.compute.terminate_instance(self.context, instance, [])
 
     def test_notify_usage_exists_deleted_instance(self):
@@ -463,7 +490,7 @@ class UsageInfoTestCase(test.TestCase):
         instance.save()
         self.compute.terminate_instance(self.context, instance, [])
         compute_utils.notify_usage_exists(
-            rpc.get_notifier('compute'), self.context, instance)
+            rpc.get_notifier('compute'), self.context, instance, 'fake-host')
         msg = fake_notifier.NOTIFICATIONS[-1]
         self.assertEqual(msg.priority, 'INFO')
         self.assertEqual(msg.event_type, 'compute.instance.exists')
@@ -825,7 +852,7 @@ class UsageInfoTestCase(test.TestCase):
         instance = create_instance(self.context)
         self.compute.terminate_instance(self.context, instance, [])
         compute_utils.notify_usage_exists(
-            rpc.get_notifier('compute'), self.context, instance)
+            rpc.get_notifier('compute'), self.context, instance, 'fake-host')
         msg = fake_notifier.NOTIFICATIONS[-1]
         self.assertEqual(msg.priority, 'INFO')
         self.assertEqual(msg.event_type, 'compute.instance.exists')

@@ -261,16 +261,17 @@ def get_value_from_system_metadata(instance, key, type, default):
         return default
 
 
-def notify_usage_exists(notifier, context, instance_ref, current_period=False,
-                        ignore_missing_network_data=True,
+def notify_usage_exists(notifier, context, instance_ref, host,
+                        current_period=False, ignore_missing_network_data=True,
                         system_metadata=None, extra_usage_info=None):
-    """Generates 'exists' unversioned legacy notification for an instance for
-    usage auditing purposes.
+    """Generates 'exists' unversioned legacy and transformed notification
+    for an instance for usage auditing purposes.
 
     :param notifier: a messaging.Notifier
     :param context: request context for the current operation
     :param instance_ref: nova.objects.Instance object from which to report
         usage
+    :param host: the host emitting the notification
     :param current_period: if True, this will generate a usage for the
         current usage period; if False, this will generate a usage for the
         previous audit period.
@@ -302,6 +303,33 @@ def notify_usage_exists(notifier, context, instance_ref, current_period=False,
 
     notify_about_instance_usage(notifier, context, instance_ref, 'exists',
                                 extra_usage_info=extra_info)
+
+    audit_period = instance_notification.AuditPeriodPayload(
+            audit_period_beginning=audit_start,
+            audit_period_ending=audit_end)
+
+    bandwidth = [instance_notification.BandwidthPayload(
+                    network_name=label,
+                    in_bytes=b['bw_in'],
+                    out_bytes=b['bw_out'])
+                 for label, b in bw.items()]
+
+    payload = instance_notification.InstanceExistsPayload(
+        context=context,
+        instance=instance_ref,
+        audit_period=audit_period,
+        bandwidth=bandwidth)
+
+    notification = instance_notification.InstanceExistsNotification(
+        context=context,
+        priority=fields.NotificationPriority.INFO,
+        publisher=notification_base.NotificationPublisher(
+            host=host, source=fields.NotificationSource.COMPUTE),
+        event_type=notification_base.EventType(
+            object='instance',
+            action=fields.NotificationAction.EXISTS),
+        payload=payload)
+    notification.emit(context)
 
 
 def notify_about_instance_usage(notifier, context, instance, event_suffix,

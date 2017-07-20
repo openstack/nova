@@ -1,0 +1,10 @@
+{
+    "nova_object.data": {
+        "network_name": "private-network",
+        "out_bytes": 0,
+        "in_bytes": 0
+    },
+    "nova_object.name": "BandwidthPayload",
+    "nova_object.namespace": "nova",
+    "nova_object.version": "1.0"
+}

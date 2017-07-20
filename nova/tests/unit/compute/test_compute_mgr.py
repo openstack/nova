@@ -1580,7 +1580,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         mock_instance_list.assert_called_with(self.context, expected_filters,
                                               use_slave=True)
 
-    def test_instance_usage_audit(self):
+    @mock.patch.object(compute_utils, 'notify_usage_exists')
+    @mock.patch.object(objects.TaskLog, 'end_task')
+    @mock.patch.object(objects.TaskLog, 'begin_task')
+    @mock.patch.object(objects.InstanceList, 'get_active_by_window_joined')
+    @mock.patch.object(objects.TaskLog, 'get')
+    def test_instance_usage_audit(self, mock_get, mock_get_active, mock_begin,
+                                  mock_end, mock_notify):
         instances = [objects.Instance(uuid=uuids.instance)]
 
         def fake_task_log(*a, **k):
@@ -1589,26 +1595,19 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         def fake_get(*a, **k):
             return instances
 
+        mock_get.side_effect = fake_task_log
+        mock_get_active.side_effect = fake_get
+        mock_begin.side_effect = fake_task_log
+        mock_end.side_effect = fake_task_log
         self.flags(instance_usage_audit=True)
-        with test.nested(
-            mock.patch.object(objects.TaskLog, 'get',
-                              side_effect=fake_task_log),
-            mock.patch.object(objects.InstanceList,
-                              'get_active_by_window_joined',
-                              side_effect=fake_get),
-            mock.patch.object(objects.TaskLog, 'begin_task',
-                              side_effect=fake_task_log),
-            mock.patch.object(objects.TaskLog, 'end_task',
-                              side_effect=fake_task_log),
-            mock.patch.object(compute_utils, 'notify_usage_exists')
-        ) as (mock_get, mock_get_active, mock_begin, mock_end, mock_notify):
-            self.compute._instance_usage_audit(self.context)
-            mock_notify.assert_called_once_with(self.compute.notifier,
-                self.context, instances[0], ignore_missing_network_data=False)
-            self.assertTrue(mock_get.called)
-            self.assertTrue(mock_get_active.called)
-            self.assertTrue(mock_begin.called)
-            self.assertTrue(mock_end.called)
+        self.compute._instance_usage_audit(self.context)
+        mock_notify.assert_called_once_with(
+            self.compute.notifier, self.context, instances[0], 'fake-mini',
+            ignore_missing_network_data=False)
+        self.assertTrue(mock_get.called)
+        self.assertTrue(mock_get_active.called)
+        self.assertTrue(mock_begin.called)
+        self.assertTrue(mock_end.called)
 
     @mock.patch.object(objects.InstanceList, 'get_by_host')
     def test_sync_power_states(self, mock_get):
@@ -3416,7 +3415,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 'verybadpass')
 
             notify_usage_exists.assert_called_once_with(self.compute.notifier,
-                self.context, instance, current_period=True)
+                self.context, instance, 'fake-mini', current_period=True)
             mock_notify.assert_has_calls([
                 mock.call(self.context, instance, 'fake-mini', None,
                           phase='start'),
