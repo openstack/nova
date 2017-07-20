@@ -45,7 +45,6 @@ from nova.objects import block_device as block_device_obj
 from nova.objects import fields as fields_obj
 from nova.objects import quotas as quotas_obj
 from nova.objects import security_group as secgroup_obj
-from nova import quota
 from nova import test
 from nova.tests import fixtures
 from nova.tests.unit import fake_block_device
@@ -168,17 +167,19 @@ class _ComputeAPIUnitTestMixIn(object):
         list_obj.obj_reset_changes()
         return list_obj
 
+    @mock.patch('nova.objects.Quotas.check_deltas')
     @mock.patch('nova.conductor.conductor_api.ComputeTaskAPI.build_instances')
     @mock.patch('nova.compute.api.API._record_action_start')
     @mock.patch('nova.compute.api.API._check_requested_networks')
-    @mock.patch('nova.quota.QUOTAS.limit_check')
+    @mock.patch('nova.objects.Quotas.limit_check')
     @mock.patch('nova.compute.api.API._get_image')
     @mock.patch('nova.compute.api.API._provision_instances')
     def test_create_with_networks_max_count_none(self, provision_instances,
                                                  get_image, check_limit,
                                                  check_requested_networks,
                                                  record_action_start,
-                                                 build_instances):
+                                                 build_instances,
+                                                 check_deltas):
         # Make sure max_count is checked for None, as Python3 doesn't allow
         # comparison between NoneType and Integer, something that's allowed in
         # Python 2.
@@ -200,21 +201,25 @@ class _ComputeAPIUnitTestMixIn(object):
                                     requested_networks=requested_networks,
                                     max_count=None)
 
-    @mock.patch('nova.quota.QUOTAS.reserve')
-    @mock.patch('nova.quota.QUOTAS.limit_check')
-    def test_create_quota_exceeded_messages(self, mock_limit_check,
-                                            mock_reserve):
+    @mock.patch('nova.objects.Quotas.count_as_dict')
+    @mock.patch('nova.objects.Quotas.limit_check')
+    @mock.patch('nova.objects.Quotas.limit_check_project_and_user')
+    def test_create_quota_exceeded_messages(self, mock_limit_check_pu,
+                                            mock_limit_check, mock_count):
         image_href = "image_href"
         image_id = 0
         instance_type = self._create_flavor()
 
         quotas = {'instances': 1, 'cores': 1, 'ram': 1}
-        usages = {r: {'in_use': 1, 'reserved': 1} for r in
-                  ['instances', 'cores', 'ram']}
         quota_exception = exception.OverQuota(quotas=quotas,
-            usages=usages, overs=['instances'])
+            usages={'instances': 1, 'cores': 1, 'ram': 1},
+            overs=['instances'])
 
-        mock_reserve.side_effect = quota_exception
+        proj_count = {'instances': 1, 'cores': 1, 'ram': 1}
+        user_count = proj_count.copy()
+        mock_count.return_value = {'project': proj_count, 'user': user_count}
+        # instances/cores/ram quota
+        mock_limit_check_pu.side_effect = quota_exception
 
         # We don't care about network validation in this test.
         self.compute_api.network_api.validate_networks = (
@@ -232,8 +237,7 @@ class _ComputeAPIUnitTestMixIn(object):
                     self.fail("Exception not raised")
             mock_get_image.assert_called_with(self.context, image_href)
             self.assertEqual(2, mock_get_image.call_count)
-            self.assertEqual(2, mock_reserve.call_count)
-            self.assertEqual(2, mock_limit_check.call_count)
+            self.assertEqual(2, mock_limit_check_pu.call_count)
 
     def _test_create_max_net_count(self, max_net_count, min_count, max_count):
         with test.nested(
@@ -825,17 +829,11 @@ class _ComputeAPIUnitTestMixIn(object):
         self.context.elevated().AndReturn(self.context)
         objects.Migration.get_by_instance_and_status(
             self.context, inst.uuid, 'finished').AndReturn(migration)
-        compute_utils.downsize_quota_delta(self.context,
-                                           inst).AndReturn('deltas')
-        fake_quotas = objects.Quotas.from_reservations(self.context,
-                                                          ['rsvs'])
-        compute_utils.reserve_quota_delta(self.context, 'deltas',
-                                          inst).AndReturn(fake_quotas)
         self.compute_api._record_action_start(
             self.context, inst, instance_actions.CONFIRM_RESIZE)
         self.compute_api.compute_rpcapi.confirm_resize(
             self.context, inst, migration,
-            migration['source_compute'], fake_quotas.reservations, cast=False)
+            migration['source_compute'], cast=False)
 
     def _test_delete_shelved_part(self, inst):
         image_api = self.compute_api.image_api
@@ -886,7 +884,6 @@ class _ComputeAPIUnitTestMixIn(object):
             self.context, inst.uuid).AndReturn(im)
 
     def _test_delete(self, delete_type, **attrs):
-        reservations = ['fake-resv']
         inst = self._create_instance_obj()
         inst.update(attrs)
         inst._context = self.context
@@ -904,13 +901,10 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(inst, 'save')
         self.mox.StubOutWithMock(objects.BlockDeviceMappingList,
                                  'get_by_instance_uuid')
-        self.mox.StubOutWithMock(quota.QUOTAS, 'reserve')
         self.mox.StubOutWithMock(self.context, 'elevated')
         self.mox.StubOutWithMock(objects.Service, 'get_by_compute_host')
         self.mox.StubOutWithMock(self.compute_api.servicegroup_api,
                                  'service_is_up')
-        self.mox.StubOutWithMock(compute_utils, 'downsize_quota_delta')
-        self.mox.StubOutWithMock(compute_utils, 'reserve_quota_delta')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(db, 'instance_update_and_get_original')
         self.mox.StubOutWithMock(self.compute_api.network_api,
@@ -919,8 +913,6 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(db, 'instance_destroy')
         self.mox.StubOutWithMock(compute_utils,
                                  'notify_about_instance_usage')
-        self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
-        self.mox.StubOutWithMock(quota.QUOTAS, 'rollback')
         rpcapi = self.compute_api.compute_rpcapi
         self.mox.StubOutWithMock(rpcapi, 'confirm_resize')
         self.mox.StubOutWithMock(self.compute_api.consoleauth_rpcapi,
@@ -942,34 +934,24 @@ class _ComputeAPIUnitTestMixIn(object):
         inst.save()
         if inst.task_state == task_states.RESIZE_FINISH:
             self._test_delete_resizing_part(inst, deltas)
-        quota.QUOTAS.reserve(self.context, project_id=inst.project_id,
-                             user_id=inst.user_id,
-                             expire=mox.IgnoreArg(),
-                             **deltas).AndReturn(reservations)
 
         # NOTE(comstud): This is getting messy.  But what we are wanting
         # to test is:
         # If cells is enabled and we're the API cell:
-        #   * Cast to cells_rpcapi.<method> with reservations=None
-        #   * Commit reservations
+        #   * Cast to cells_rpcapi.<method>
         # Otherwise:
         #   * Check for downed host
         #   * If downed host:
         #     * Clean up instance, destroying it, sending notifications.
         #       (Tested in _test_downed_host_part())
-        #     * Commit reservations
         #   * If not downed host:
         #     * Record the action start.
-        #     * Cast to compute_rpcapi.<method> with the reservations
+        #     * Cast to compute_rpcapi.<method>
 
         cast = True
-        commit_quotas = True
-        soft_delete = False
         if self.cell_type != 'api':
             if inst.vm_state == vm_states.RESIZED:
                 self._test_delete_resized_part(inst)
-            if inst.vm_state == vm_states.SOFT_DELETED:
-                soft_delete = True
             if inst.vm_state != vm_states.SHELVED_OFFLOADED:
                 self.context.elevated().AndReturn(self.context)
                 objects.Service.get_by_compute_host(self.context,
@@ -984,36 +966,16 @@ class _ComputeAPIUnitTestMixIn(object):
                 self._test_downed_host_part(inst, updates, delete_time,
                                             delete_type)
                 cast = False
-            else:
-                # Happens on the manager side
-                commit_quotas = False
 
         if cast:
             if self.cell_type != 'api':
                 self.compute_api._record_action_start(self.context, inst,
                                                       instance_actions.DELETE)
-            if commit_quotas or soft_delete:
-                cast_reservations = None
-            else:
-                cast_reservations = reservations
             if delete_type == 'soft_delete':
-                rpcapi.soft_delete_instance(self.context, inst,
-                                            reservations=cast_reservations)
+                rpcapi.soft_delete_instance(self.context, inst)
             elif delete_type in ['delete', 'force_delete']:
                 rpcapi.terminate_instance(self.context, inst, [],
-                                          reservations=cast_reservations,
                                           delete_type=delete_type)
-
-        if soft_delete:
-            quota.QUOTAS.rollback(self.context, reservations,
-                                  project_id=inst.project_id,
-                                  user_id=inst.user_id)
-
-        if commit_quotas:
-            # Local delete or when we're testing API cell.
-            quota.QUOTAS.commit(self.context, reservations,
-                                project_id=inst.project_id,
-                                user_id=inst.user_id)
 
         if self.cell_type is None or self.cell_type == 'api':
             self.compute_api.consoleauth_rpcapi.delete_tokens_for_instance(
@@ -1094,7 +1056,6 @@ class _ComputeAPIUnitTestMixIn(object):
         self.useFixture(fixtures.AllServicesCurrent())
         inst = self._create_instance_obj()
         inst.host = ''
-        quotas = quotas_obj.Quotas(self.context)
         updates = {'progress': 0, 'task_state': task_states.DELETING}
 
         self.mox.StubOutWithMock(objects.BuildRequest,
@@ -1105,7 +1066,6 @@ class _ComputeAPIUnitTestMixIn(object):
 
         self.mox.StubOutWithMock(db, 'constraint')
         self.mox.StubOutWithMock(db, 'instance_destroy')
-        self.mox.StubOutWithMock(self.compute_api, '_create_reservations')
         self.mox.StubOutWithMock(self.compute_api, '_lookup_instance')
         self.mox.StubOutWithMock(compute_utils,
                                  'notify_about_instance_usage')
@@ -1124,16 +1084,12 @@ class _ComputeAPIUnitTestMixIn(object):
             self.context, inst.uuid).AndRaise(
                 exception.BuildRequestNotFound(uuid=inst.uuid))
         inst.save()
-        self.compute_api._create_reservations(self.context,
-                                              inst, inst.task_state,
-                                              inst.project_id, inst.user_id
-                                              ).AndReturn(quotas)
 
         if self.cell_type == 'api':
             rpcapi.terminate_instance(
                     self.context, inst,
                     mox.IsA(objects.BlockDeviceMappingList),
-                    reservations=None, delete_type='delete')
+                    delete_type='delete')
         else:
             compute_utils.notify_about_instance_usage(
                     self.compute_api.notifier, self.context,
@@ -1418,81 +1374,51 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_delete_while_booting_buildreq_deleted_instance_none(self):
         self.useFixture(fixtures.AllServicesCurrent())
         inst = self._create_instance_obj()
-        quota_mock = mock.MagicMock()
 
         @mock.patch.object(self.compute_api, '_attempt_delete_of_buildrequest',
                            return_value=True)
         @mock.patch.object(self.compute_api, '_lookup_instance',
                            return_value=(None, None))
-        @mock.patch.object(self.compute_api, '_create_reservations',
-                           return_value=quota_mock)
-        def test(mock_create_res, mock_lookup, mock_attempt):
+        def test(mock_lookup, mock_attempt):
             self.assertTrue(
                 self.compute_api._delete_while_booting(self.context,
                                                        inst))
-            self.assertFalse(quota_mock.commit.called)
-            quota_mock.rollback.assert_called_once_with()
 
         test()
 
     def test_delete_while_booting_buildreq_deleted_instance_not_found(self):
         self.useFixture(fixtures.AllServicesCurrent())
         inst = self._create_instance_obj()
-        quota_mock = mock.MagicMock()
 
         @mock.patch.object(self.compute_api, '_attempt_delete_of_buildrequest',
                            return_value=True)
         @mock.patch.object(self.compute_api, '_lookup_instance',
                            side_effect=exception.InstanceNotFound(
                                instance_id='fake'))
-        @mock.patch.object(self.compute_api, '_create_reservations',
-                           return_value=quota_mock)
-        def test(mock_create_res, mock_lookup, mock_attempt):
+        def test(mock_lookup, mock_attempt):
             self.assertTrue(
                 self.compute_api._delete_while_booting(self.context,
                                                        inst))
-            self.assertFalse(quota_mock.commit.called)
-            self.assertTrue(quota_mock.rollback.called)
 
         test()
 
-    @ddt.data((task_states.RESIZE_MIGRATED, True),
-              (task_states.RESIZE_FINISH, True),
-              (None, False))
-    @ddt.unpack
-    def test_get_flavor_for_reservation(self, task_state, is_old):
-        instance = self._create_instance_obj({'task_state': task_state})
-        flavor = self.compute_api._get_flavor_for_reservation(instance)
-        expected_flavor = instance.old_flavor if is_old else instance.flavor
-        self.assertEqual(expected_flavor, flavor)
-
-    @mock.patch('nova.context.target_cell')
     @mock.patch('nova.compute.utils.notify_about_instance_delete')
     @mock.patch('nova.objects.Instance.destroy')
-    def test_delete_instance_from_cell0(self, destroy_mock, notify_mock,
-                                        target_cell_mock):
+    def test_delete_instance_from_cell0(self, destroy_mock, notify_mock):
         """Tests the case that the instance does not have a host and was not
         deleted while building, so conductor put it into cell0 so the API has
-        to delete the instance from cell0 and decrement the quota from the
-        main cell.
+        to delete the instance from cell0.
         """
         instance = self._create_instance_obj({'host': None})
         cell0 = objects.CellMapping(uuid=objects.CellMapping.CELL0_UUID)
-        quota_mock = mock.MagicMock()
-        target_cell_mock().__enter__.return_value = mock.sentinel.cctxt
 
         with test.nested(
             mock.patch.object(self.compute_api, '_delete_while_booting',
                               return_value=False),
             mock.patch.object(self.compute_api, '_lookup_instance',
                               return_value=(cell0, instance)),
-            mock.patch.object(self.compute_api, '_get_flavor_for_reservation',
-                              return_value=instance.flavor),
-            mock.patch.object(self.compute_api, '_create_reservations',
-                              return_value=quota_mock)
         ) as (
             _delete_while_booting, _lookup_instance,
-            _get_flavor_for_reservation, _create_reservations
         ):
             self.compute_api._delete(
                 self.context, instance, 'delete', mock.NonCallableMock())
@@ -1500,80 +1426,9 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, instance)
             _lookup_instance.assert_called_once_with(
                 self.context, instance.uuid)
-            _get_flavor_for_reservation.assert_called_once_with(instance)
-            _create_reservations.assert_called_once_with(
-                mock.sentinel.cctxt, instance, instance.task_state,
-                self.context.project_id, instance.user_id,
-                flavor=instance.flavor)
-            quota_mock.commit.assert_called_once_with()
-            expected_target_cell_calls = [
-                # Create the quota reservation.
-                mock.call(self.context, None),
-                mock.call().__enter__(),
-                mock.call().__exit__(None, None, None),
-            ]
-            target_cell_mock.assert_has_calls(expected_target_cell_calls)
             notify_mock.assert_called_once_with(
                 self.compute_api.notifier, self.context, instance)
             destroy_mock.assert_called_once_with()
-
-    @mock.patch('nova.context.target_cell')
-    @mock.patch('nova.compute.utils.notify_about_instance_delete')
-    @mock.patch('nova.objects.Instance.destroy')
-    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
-    def test_delete_instance_from_cell0_rollback_quota(
-            self, bdms_get_by_instance_uuid, destroy_mock, notify_mock,
-            target_cell_mock):
-        """Tests the case that the instance does not have a host and was not
-        deleted while building, so conductor put it into cell0 so the API has
-        to delete the instance from cell0 and decrement the quota from the
-        main cell. When we go to delete the instance, it's already gone so we
-        rollback the quota change.
-        """
-        instance = self._create_instance_obj({'host': None})
-        cell0 = objects.CellMapping(uuid=objects.CellMapping.CELL0_UUID)
-        quota_mock = mock.MagicMock()
-        destroy_mock.side_effect = exception.InstanceNotFound(
-            instance_id=instance.uuid)
-        target_cell_mock().__enter__.return_value = mock.sentinel.cctxt
-
-        with test.nested(
-            mock.patch.object(self.compute_api, '_delete_while_booting',
-                              return_value=False),
-            mock.patch.object(self.compute_api, '_lookup_instance',
-                              return_value=(cell0, instance)),
-            mock.patch.object(self.compute_api, '_get_flavor_for_reservation',
-                              return_value=instance.flavor),
-            mock.patch.object(self.compute_api, '_create_reservations',
-                              return_value=quota_mock)
-        ) as (
-            _delete_while_booting, _lookup_instance,
-            _get_flavor_for_reservation, _create_reservations
-        ):
-            self.compute_api._delete(
-                self.context, instance, 'delete', mock.NonCallableMock())
-            _delete_while_booting.assert_called_once_with(
-                self.context, instance)
-            _lookup_instance.assert_called_once_with(
-                self.context, instance.uuid)
-            _get_flavor_for_reservation.assert_called_once_with(instance)
-            _create_reservations.assert_called_once_with(
-                mock.sentinel.cctxt, instance, instance.task_state,
-                self.context.project_id, instance.user_id,
-                flavor=instance.flavor)
-            notify_mock.assert_called_once_with(
-                self.compute_api.notifier, self.context, instance)
-            destroy_mock.assert_called_once_with()
-            expected_target_cell_calls = [
-                # Create the quota reservation.
-                mock.call(self.context, None),
-                mock.call().__enter__(),
-                mock.call().__exit__(None, None, None),
-            ]
-            target_cell_mock.assert_has_calls(expected_target_cell_calls)
-            quota_mock.rollback.assert_called_once_with()
-            # Make sure we short-circuited and returned.
-            bdms_get_by_instance_uuid.assert_not_called()
 
     @mock.patch.object(context, 'target_cell')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid',
@@ -1645,10 +1500,7 @@ class _ComputeAPIUnitTestMixIn(object):
         self.mox.StubOutWithMock(self.context, 'elevated')
         self.mox.StubOutWithMock(objects.Migration,
                                  'get_by_instance_and_status')
-        self.mox.StubOutWithMock(compute_utils, 'downsize_quota_delta')
-        self.mox.StubOutWithMock(compute_utils, 'reserve_quota_delta')
         self.mox.StubOutWithMock(fake_mig, 'save')
-        self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
                                  'confirm_resize')
@@ -1658,30 +1510,17 @@ class _ComputeAPIUnitTestMixIn(object):
             objects.Migration.get_by_instance_and_status(
                     self.context, fake_inst['uuid'], 'finished').AndReturn(
                             fake_mig)
-        compute_utils.downsize_quota_delta(self.context,
-                                           fake_inst).AndReturn('deltas')
-
-        resvs = ['resvs']
-        fake_quotas = objects.Quotas.from_reservations(self.context, resvs)
-
-        compute_utils.reserve_quota_delta(self.context, 'deltas',
-                                          fake_inst).AndReturn(fake_quotas)
 
         def _check_mig(expected_task_state=None):
             self.assertEqual('confirming', fake_mig.status)
 
         fake_mig.save().WithSideEffects(_check_mig)
 
-        if self.cell_type:
-            quota.QUOTAS.commit(self.context, resvs, project_id=None,
-                                user_id=None)
-
         self.compute_api._record_action_start(self.context, fake_inst,
                                               'confirmResize')
 
         self.compute_api.compute_rpcapi.confirm_resize(
-                self.context, fake_inst, fake_mig, 'compute-source',
-                [] if self.cell_type else fake_quotas.reservations)
+                self.context, fake_inst, fake_mig, 'compute-source')
 
         self.mox.ReplayAll()
 
@@ -1697,28 +1536,20 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_confirm_resize_with_migration_ref(self):
         self._test_confirm_resize(mig_ref_passed=True)
 
-    @mock.patch('nova.quota.QUOTAS.commit')
-    @mock.patch.object(compute_utils, 'reserve_quota_delta')
-    @mock.patch.object(compute_utils, 'reverse_upsize_quota_delta')
+    @mock.patch('nova.objects.Quotas.check_deltas')
     @mock.patch('nova.objects.Migration.get_by_instance_and_status')
     @mock.patch('nova.context.RequestContext.elevated')
     def _test_revert_resize(self, mock_elevated, mock_get_migration,
-                            mock_reverse_upsize_quota_delta,
-                            mock_reserve_quota_delta,
-                            mock_quota_commit):
+                            mock_check):
         params = dict(vm_state=vm_states.RESIZED)
         fake_inst = self._create_instance_obj(params=params)
+        fake_inst.old_flavor = fake_inst.flavor
         fake_mig = objects.Migration._from_db_object(
                 self.context, objects.Migration(),
                 test_migration.fake_db_migration())
 
-        resvs = ['resvs']
-        fake_quotas = objects.Quotas.from_reservations(self.context, resvs)
-
         mock_elevated.return_value = self.context
         mock_get_migration.return_value = fake_mig
-        mock_reverse_upsize_quota_delta.return_value = 'deltas'
-        mock_reserve_quota_delta.return_value = fake_quotas
 
         def _check_state(expected_task_state=None):
             self.assertEqual(task_states.RESIZE_REVERTING,
@@ -1739,47 +1570,30 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_elevated.assert_called_once_with()
             mock_get_migration.assert_called_once_with(
                 self.context, fake_inst['uuid'], 'finished')
-            mock_reverse_upsize_quota_delta.assert_called_once_with(
-                self.context, fake_inst)
-            mock_reserve_quota_delta.assert_called_once_with(
-                self.context, 'deltas', fake_inst)
             mock_inst_save.assert_called_once_with(expected_task_state=[None])
             mock_mig_save.assert_called_once_with()
-            if self.cell_type:
-                mock_quota_commit.assert_called_once_with(
-                    self.context, resvs, project_id=None, user_id=None)
             mock_record_action.assert_called_once_with(self.context, fake_inst,
                                                        'revertResize')
             mock_revert_resize.assert_called_once_with(
-                self.context, fake_inst, fake_mig, 'compute-dest',
-                [] if self.cell_type else fake_quotas.reservations)
+                self.context, fake_inst, fake_mig, 'compute-dest')
 
     def test_revert_resize(self):
         self._test_revert_resize()
 
-    @mock.patch('nova.quota.QUOTAS.rollback')
-    @mock.patch.object(compute_utils, 'reserve_quota_delta')
-    @mock.patch.object(compute_utils, 'reverse_upsize_quota_delta')
+    @mock.patch('nova.objects.Quotas.check_deltas')
     @mock.patch('nova.objects.Migration.get_by_instance_and_status')
     @mock.patch('nova.context.RequestContext.elevated')
     def test_revert_resize_concurrent_fail(self, mock_elevated,
-                                           mock_get_migration,
-                                           mock_reverse_upsize_quota_delta,
-                                           mock_reserve_quota_delta,
-                                           mock_quota_rollback):
+                                           mock_get_migration, mock_check):
         params = dict(vm_state=vm_states.RESIZED)
         fake_inst = self._create_instance_obj(params=params)
+        fake_inst.old_flavor = fake_inst.flavor
         fake_mig = objects.Migration._from_db_object(
                 self.context, objects.Migration(),
                 test_migration.fake_db_migration())
 
         mock_elevated.return_value = self.context
         mock_get_migration.return_value = fake_mig
-        delta = ['delta']
-        mock_reverse_upsize_quota_delta.return_value = delta
-        resvs = ['resvs']
-        fake_quotas = objects.Quotas.from_reservations(self.context, resvs)
-        mock_reserve_quota_delta.return_value = fake_quotas
 
         exc = exception.UnexpectedTaskStateError(
             instance_uuid=fake_inst['uuid'],
@@ -1796,13 +1610,7 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_elevated.assert_called_once_with()
             mock_get_migration.assert_called_once_with(
                 self.context, fake_inst['uuid'], 'finished')
-            mock_reverse_upsize_quota_delta.assert_called_once_with(
-                self.context, fake_inst)
-            mock_reserve_quota_delta.assert_called_once_with(
-                self.context, delta, fake_inst)
             mock_inst_save.assert_called_once_with(expected_task_state=[None])
-            mock_quota_rollback.assert_called_once_with(
-                    self.context, resvs, project_id=None, user_id=None)
 
     def _test_resize(self, flavor_id_passed=True,
                      same_host=False, allow_same_host=False,
@@ -1823,9 +1631,10 @@ class _ComputeAPIUnitTestMixIn(object):
 
         self.mox.StubOutWithMock(flavors, 'get_flavor_by_flavor_id')
         self.mox.StubOutWithMock(compute_utils, 'upsize_quota_delta')
-        self.mox.StubOutWithMock(compute_utils, 'reserve_quota_delta')
         self.mox.StubOutWithMock(fake_inst, 'save')
-        self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
+        self.mox.StubOutWithMock(quotas_obj.Quotas, 'count_as_dict')
+        self.mox.StubOutWithMock(quotas_obj.Quotas,
+                                 'limit_check_project_and_user')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(objects.RequestSpec, 'get_by_instance_uuid')
         self.mox.StubOutWithMock(self.compute_api.compute_task_api,
@@ -1845,17 +1654,30 @@ class _ComputeAPIUnitTestMixIn(object):
 
         if (self.cell_type == 'compute' or
                 not (flavor_id_passed and same_flavor)):
-            resvs = ['resvs']
             project_id, user_id = quotas_obj.ids_from_instance(self.context,
                                                                fake_inst)
-            fake_quotas = objects.Quotas.from_reservations(self.context,
-                                                           resvs)
             if flavor_id_passed:
                 compute_utils.upsize_quota_delta(
                     self.context, mox.IsA(objects.Flavor),
-                    mox.IsA(objects.Flavor)).AndReturn('deltas')
-                compute_utils.reserve_quota_delta(
-                    self.context, 'deltas', fake_inst).AndReturn(fake_quotas)
+                    mox.IsA(objects.Flavor)).AndReturn({'cores': 0, 'ram': 0})
+
+                proj_count = {'instances': 1, 'cores': current_flavor.vcpus,
+                              'ram': current_flavor.memory_mb}
+                user_count = proj_count.copy()
+                # mox.IgnoreArg() might be 'instances', 'cores', or 'ram'
+                # depending on how the deltas dict is iterated in check_deltas
+                quotas_obj.Quotas.count_as_dict(self.context, mox.IgnoreArg(),
+                                                project_id,
+                                                user_id=user_id).AndReturn(
+                                                    {'project': proj_count,
+                                                     'user': user_count})
+                # The current and new flavor have the same cores/ram
+                req_cores = current_flavor.vcpus
+                req_ram = current_flavor.memory_mb
+                values = {'cores': req_cores, 'ram': req_ram}
+                quotas_obj.Quotas.limit_check_project_and_user(
+                    self.context, user_values=values, project_values=values,
+                    project_id=project_id, user_id=user_id)
 
             def _check_state(expected_task_state=None):
                 self.assertEqual(task_states.RESIZE_PREP,
@@ -1872,15 +1694,7 @@ class _ComputeAPIUnitTestMixIn(object):
             else:
                 filter_properties = {'ignore_hosts': [fake_inst['host']]}
 
-            if flavor_id_passed:
-                expected_reservations = fake_quotas.reservations
-            else:
-                expected_reservations = []
             if self.cell_type == 'api':
-                if flavor_id_passed:
-                    quota.QUOTAS.commit(self.context, resvs, project_id=None,
-                                        user_id=None)
-                expected_reservations = []
                 mig = objects.Migration()
 
                 def _get_migration(context=None):
@@ -1922,7 +1736,6 @@ class _ComputeAPIUnitTestMixIn(object):
                     self.context, fake_inst, extra_kwargs,
                     scheduler_hint=scheduler_hint,
                     flavor=mox.IsA(objects.Flavor),
-                    reservations=expected_reservations,
                     clean_shutdown=clean_shutdown,
                     request_spec=fake_spec)
 
@@ -1964,6 +1777,37 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_resize_forced_shutdown(self):
         self._test_resize(clean_shutdown=False)
 
+    @mock.patch('nova.compute.flavors.get_flavor_by_flavor_id')
+    @mock.patch('nova.objects.Quotas.count_as_dict')
+    @mock.patch('nova.objects.Quotas.limit_check_project_and_user')
+    def test_resize_quota_check(self, mock_check, mock_count, mock_get):
+        self.flags(cores=1, group='quota')
+        self.flags(ram=2048, group='quota')
+        proj_count = {'instances': 1, 'cores': 1, 'ram': 1024}
+        user_count = proj_count.copy()
+        mock_count.return_value = {'project': proj_count,
+                                   'user': user_count}
+
+        cur_flavor = objects.Flavor(id=1, name='foo', vcpus=1, memory_mb=512,
+                                    root_gb=10, disabled=False)
+        fake_inst = self._create_instance_obj()
+        fake_inst.flavor = cur_flavor
+        new_flavor = objects.Flavor(id=2, name='bar', vcpus=1, memory_mb=2048,
+                                    root_gb=10, disabled=False)
+        mock_get.return_value = new_flavor
+        mock_check.side_effect = exception.OverQuota(
+                overs=['ram'], quotas={'cores': 1, 'ram': 2048},
+                usages={'instances': 1, 'cores': 1, 'ram': 2048},
+                headroom={'ram': 2048})
+
+        self.assertRaises(exception.TooManyInstances, self.compute_api.resize,
+                          self.context, fake_inst, flavor_id='new')
+        mock_check.assert_called_once_with(
+                self.context,
+                user_values={'cores': 1, 'ram': 2560},
+                project_values={'cores': 1, 'ram': 2560},
+                project_id=fake_inst.project_id, user_id=fake_inst.user_id)
+
     def test_migrate(self):
         self._test_migrate()
 
@@ -1982,8 +1826,9 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_resize_invalid_flavor_fails(self):
         self.mox.StubOutWithMock(flavors, 'get_flavor_by_flavor_id')
         # Should never reach these.
-        self.mox.StubOutWithMock(compute_utils, 'reserve_quota_delta')
-        self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
+        self.mox.StubOutWithMock(quotas_obj.Quotas, 'count_as_dict')
+        self.mox.StubOutWithMock(quotas_obj.Quotas,
+                                 'limit_check_project_and_user')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api.compute_task_api,
                                  'resize_instance')
@@ -2005,8 +1850,9 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_resize_disabled_flavor_fails(self):
         self.mox.StubOutWithMock(flavors, 'get_flavor_by_flavor_id')
         # Should never reach these.
-        self.mox.StubOutWithMock(compute_utils, 'reserve_quota_delta')
-        self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
+        self.mox.StubOutWithMock(quotas_obj.Quotas, 'count_as_dict')
+        self.mox.StubOutWithMock(quotas_obj.Quotas,
+                                 'limit_check_project_and_user')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api.compute_task_api,
                                  'resize_instance')
@@ -2072,9 +1918,10 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_resize_quota_exceeds_fails(self):
         self.mox.StubOutWithMock(flavors, 'get_flavor_by_flavor_id')
         self.mox.StubOutWithMock(compute_utils, 'upsize_quota_delta')
-        self.mox.StubOutWithMock(compute_utils, 'reserve_quota_delta')
+        self.mox.StubOutWithMock(quotas_obj.Quotas, 'count_as_dict')
+        self.mox.StubOutWithMock(quotas_obj.Quotas,
+                                 'limit_check_project_and_user')
         # Should never reach these.
-        self.mox.StubOutWithMock(quota.QUOTAS, 'commit')
         self.mox.StubOutWithMock(self.compute_api, '_record_action_start')
         self.mox.StubOutWithMock(self.compute_api.compute_task_api,
                                  'resize_instance')
@@ -2084,21 +1931,34 @@ class _ComputeAPIUnitTestMixIn(object):
                             name='foo', disabled=False)
         flavors.get_flavor_by_flavor_id(
                 'flavor-id', read_deleted='no').AndReturn(fake_flavor)
-        deltas = dict(resource=0)
+        deltas = dict(cores=0)
         compute_utils.upsize_quota_delta(
             self.context, mox.IsA(objects.Flavor),
             mox.IsA(objects.Flavor)).AndReturn(deltas)
-        usage = dict(in_use=0, reserved=0)
-        quotas = {'resource': 0}
-        usages = {'resource': usage}
-        overs = ['resource']
+        quotas = {'cores': 0}
+        overs = ['cores']
         over_quota_args = dict(quotas=quotas,
-                               usages=usages,
+                               usages={'instances': 1, 'cores': 1, 'ram': 512},
                                overs=overs)
 
-        compute_utils.reserve_quota_delta(self.context, deltas,
-                                          fake_inst).AndRaise(
-            exception.OverQuota(**over_quota_args))
+        proj_count = {'instances': 1, 'cores': fake_inst.flavor.vcpus,
+                      'ram': fake_inst.flavor.memory_mb}
+        user_count = proj_count.copy()
+        # mox.IgnoreArg() might be 'instances', 'cores', or 'ram'
+        # depending on how the deltas dict is iterated in check_deltas
+        quotas_obj.Quotas.count_as_dict(self.context, mox.IgnoreArg(),
+                                        fake_inst.project_id,
+                                        user_id=fake_inst.user_id).AndReturn(
+                                            {'project': proj_count,
+                                             'user': user_count})
+        req_cores = fake_inst.flavor.vcpus
+        req_ram = fake_inst.flavor.memory_mb
+        values = {'cores': req_cores, 'ram': req_ram}
+        quotas_obj.Quotas.limit_check_project_and_user(
+            self.context, user_values=values, project_values=values,
+            project_id=fake_inst.project_id,
+            user_id=fake_inst.user_id).AndRaise(
+                exception.OverQuota(**over_quota_args))
 
         self.mox.ReplayAll()
 
@@ -2110,8 +1970,9 @@ class _ComputeAPIUnitTestMixIn(object):
 
     @mock.patch.object(flavors, 'get_flavor_by_flavor_id')
     @mock.patch.object(compute_utils, 'upsize_quota_delta')
-    @mock.patch.object(compute_utils, 'reserve_quota_delta')
-    def test_resize_quota_exceeds_fails_instance(self, mock_reserve,
+    @mock.patch.object(quotas_obj.Quotas, 'count_as_dict')
+    @mock.patch.object(quotas_obj.Quotas, 'limit_check_project_and_user')
+    def test_resize_quota_exceeds_fails_instance(self, mock_check, mock_count,
                                                  mock_upsize, mock_flavor):
         fake_inst = self._create_instance_obj()
         fake_flavor = self._create_flavor(id=200, flavorid='flavor-id',
@@ -2119,14 +1980,12 @@ class _ComputeAPIUnitTestMixIn(object):
         mock_flavor.return_value = fake_flavor
         deltas = dict(cores=1, ram=1)
         mock_upsize.return_value = deltas
-        usage = dict(in_use=0, reserved=0)
         quotas = {'instances': 1, 'cores': -1, 'ram': -1}
-        usages = {'instances': usage, 'cores': usage, 'ram': usage}
         overs = ['ram']
         over_quota_args = dict(quotas=quotas,
-                               usages=usages,
+                               usages={'instances': 1, 'cores': 1, 'ram': 512},
                                overs=overs)
-        mock_reserve.side_effect = exception.OverQuota(**over_quota_args)
+        mock_check.side_effect = exception.OverQuota(**over_quota_args)
 
         with mock.patch.object(fake_inst, 'save') as mock_save:
             self.assertRaises(exception.TooManyInstances,
@@ -2134,45 +1993,21 @@ class _ComputeAPIUnitTestMixIn(object):
                               fake_inst, flavor_id='flavor-id')
             self.assertFalse(mock_save.called)
 
-    def test_check_instance_quota_exceeds_with_multiple_resources(self):
-        quotas = {'cores': 1, 'instances': 1, 'ram': 512}
-        usages = {'cores': dict(in_use=1, reserved=0),
-                  'instances': dict(in_use=1, reserved=0),
-                  'ram': dict(in_use=512, reserved=0)}
-        overs = ['cores', 'instances', 'ram']
-        over_quota_args = dict(quotas=quotas,
-                               usages=usages,
-                               overs=overs)
-        e = exception.OverQuota(**over_quota_args)
-        fake_flavor = self._create_flavor()
-        instance_num = 1
-        with mock.patch.object(objects.Quotas, 'reserve', side_effect=e):
-            try:
-                self.compute_api._check_num_instances_quota(self.context,
-                                                            fake_flavor,
-                                                            instance_num,
-                                                            instance_num)
-            except exception.TooManyInstances as e:
-                self.assertEqual('cores, instances, ram', e.kwargs['overs'])
-                self.assertEqual('1, 1, 512', e.kwargs['req'])
-                self.assertEqual('1, 1, 512', e.kwargs['used'])
-                self.assertEqual('1, 1, 512', e.kwargs['allowed'])
-            else:
-                self.fail("Exception not raised")
-
     @mock.patch.object(flavors, 'get_flavor_by_flavor_id')
-    @mock.patch.object(objects.Quotas, 'reserve')
+    @mock.patch.object(objects.Quotas, 'count_as_dict')
+    @mock.patch.object(objects.Quotas, 'limit_check_project_and_user')
     def test_resize_instance_quota_exceeds_with_multiple_resources(
-            self, mock_reserve, mock_get_flavor):
+            self, mock_check, mock_count, mock_get_flavor):
         quotas = {'cores': 1, 'ram': 512}
-        usages = {'cores': dict(in_use=1, reserved=0),
-                  'ram': dict(in_use=512, reserved=0)}
         overs = ['cores', 'ram']
         over_quota_args = dict(quotas=quotas,
-                               usages=usages,
+                               usages={'instances': 1, 'cores': 1, 'ram': 512},
                                overs=overs)
 
-        mock_reserve.side_effect = exception.OverQuota(**over_quota_args)
+        proj_count = {'instances': 1, 'cores': 1, 'ram': 512}
+        user_count = proj_count.copy()
+        mock_count.return_value = {'project': proj_count, 'user': user_count}
+        mock_check.side_effect = exception.OverQuota(**over_quota_args)
         mock_get_flavor.return_value = self._create_flavor(id=333,
                                                            vcpus=3,
                                                            memory_mb=1536)
@@ -3365,8 +3200,8 @@ class _ComputeAPIUnitTestMixIn(object):
                 "contents": "foo"
             }
         ]
-        with mock.patch.object(quota.QUOTAS, 'limit_check',
-                               side_effect=side_effect):
+        with mock.patch('nova.objects.Quotas.limit_check',
+                        side_effect=side_effect):
             self.compute_api._check_injected_file_quota(
                 self.context, injected_files)
 
@@ -3393,15 +3228,18 @@ class _ComputeAPIUnitTestMixIn(object):
             self._test_check_injected_file_quota_onset_file_limit_exceeded,
             side_effect)
 
-    @mock.patch('nova.objects.Quotas.commit')
-    @mock.patch('nova.objects.Quotas.reserve')
+    @mock.patch('nova.objects.Quotas.count_as_dict')
+    @mock.patch('nova.objects.Quotas.limit_check_project_and_user')
     @mock.patch('nova.objects.Instance.save')
     @mock.patch('nova.objects.InstanceAction.action_start')
     def test_restore_by_admin(self, action_start, instance_save,
-                              quota_reserve, quota_commit):
+                              quota_check, quota_count):
         admin_context = context.RequestContext('admin_user',
                                                'admin_project',
                                                True)
+        proj_count = {'instances': 1, 'cores': 1, 'ram': 512}
+        user_count = proj_count.copy()
+        quota_count.return_value = {'project': proj_count, 'user': user_count}
         instance = self._create_instance_obj()
         instance.vm_state = vm_states.SOFT_DELETED
         instance.task_state = None
@@ -3411,17 +3249,30 @@ class _ComputeAPIUnitTestMixIn(object):
             rpc.restore_instance.assert_called_once_with(admin_context,
                                                          instance)
         self.assertEqual(instance.task_state, task_states.RESTORING)
-        self.assertEqual(1, quota_commit.call_count)
-        quota_reserve.assert_called_once_with(instances=1,
-            cores=instance.flavor.vcpus, ram=instance.flavor.memory_mb,
+        # mock.ANY might be 'instances', 'cores', or 'ram' depending on how the
+        # deltas dict is iterated in check_deltas
+        quota_count.assert_called_once_with(admin_context, mock.ANY,
+                                            instance.project_id,
+                                            user_id=instance.user_id)
+        quota_check.assert_called_once_with(
+            admin_context,
+            user_values={'instances': 2,
+                         'cores': 1 + instance.flavor.vcpus,
+                         'ram': 512 + instance.flavor.memory_mb},
+            project_values={'instances': 2,
+                            'cores': 1 + instance.flavor.vcpus,
+                            'ram': 512 + instance.flavor.memory_mb},
             project_id=instance.project_id, user_id=instance.user_id)
 
-    @mock.patch('nova.objects.Quotas.commit')
-    @mock.patch('nova.objects.Quotas.reserve')
+    @mock.patch('nova.objects.Quotas.count_as_dict')
+    @mock.patch('nova.objects.Quotas.limit_check_project_and_user')
     @mock.patch('nova.objects.Instance.save')
     @mock.patch('nova.objects.InstanceAction.action_start')
     def test_restore_by_instance_owner(self, action_start, instance_save,
-                                       quota_reserve, quota_commit):
+                                       quota_check, quota_count):
+        proj_count = {'instances': 1, 'cores': 1, 'ram': 512}
+        user_count = proj_count.copy()
+        quota_count.return_value = {'project': proj_count, 'user': user_count}
         instance = self._create_instance_obj()
         instance.vm_state = vm_states.SOFT_DELETED
         instance.task_state = None
@@ -3432,9 +3283,19 @@ class _ComputeAPIUnitTestMixIn(object):
                                                          instance)
         self.assertEqual(instance.project_id, self.context.project_id)
         self.assertEqual(instance.task_state, task_states.RESTORING)
-        self.assertEqual(1, quota_commit.call_count)
-        quota_reserve.assert_called_once_with(instances=1,
-            cores=instance.flavor.vcpus, ram=instance.flavor.memory_mb,
+        # mock.ANY might be 'instances', 'cores', or 'ram' depending on how the
+        # deltas dict is iterated in check_deltas
+        quota_count.assert_called_once_with(self.context, mock.ANY,
+                                            instance.project_id,
+                                            user_id=instance.user_id)
+        quota_check.assert_called_once_with(
+            self.context,
+            user_values={'instances': 2,
+                         'cores': 1 + instance.flavor.vcpus,
+                         'ram': 512 + instance.flavor.memory_mb},
+            project_values={'instances': 2,
+                            'cores': 1 + instance.flavor.vcpus,
+                            'ram': 512 + instance.flavor.memory_mb},
             project_id=instance.project_id, user_id=instance.user_id)
 
     @mock.patch.object(objects.InstanceAction, 'action_start')
@@ -3649,7 +3510,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def _test_provision_instances_with_cinder_error(self,
                                                     expected_exception):
-        @mock.patch.object(self.compute_api, '_check_num_instances_quota')
+        @mock.patch('nova.compute.utils.check_num_instances_quota')
         @mock.patch.object(objects.Instance, 'create')
         @mock.patch.object(self.compute_api.security_group_api,
                 'ensure_default')
@@ -3658,10 +3519,9 @@ class _ComputeAPIUnitTestMixIn(object):
         def do_test(
                 mock_req_spec_from_components, _mock_create_bdm,
                 _mock_ensure_default, _mock_create, mock_check_num_inst_quota):
-            quota_mock = mock.MagicMock()
             req_spec_mock = mock.MagicMock()
 
-            mock_check_num_inst_quota.return_value = (1, quota_mock)
+            mock_check_num_inst_quota.return_value = 1
             mock_req_spec_from_components.return_value = req_spec_mock
 
             ctxt = context.RequestContext('fake-user', 'fake-project')
@@ -3746,7 +3606,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                               mock_br, mock_rs):
         fake_keypair = objects.KeyPair(name='test')
 
-        @mock.patch.object(self.compute_api, '_check_num_instances_quota')
+        @mock.patch('nova.compute.utils.check_num_instances_quota')
         @mock.patch.object(self.compute_api, 'security_group_api')
         @mock.patch.object(self.compute_api,
                            'create_db_entry_for_new_instance')
@@ -3754,7 +3614,7 @@ class _ComputeAPIUnitTestMixIn(object):
                            '_bdm_validate_set_size_and_instance')
         @mock.patch.object(self.compute_api, '_create_block_device_mapping')
         def do_test(mock_cbdm, mock_bdm_v, mock_cdb, mock_sg, mock_cniq):
-            mock_cniq.return_value = 1, mock.MagicMock()
+            mock_cniq.return_value = 1
             self.compute_api._provision_instances(self.context,
                                                   mock.sentinel.flavor,
                                                   1, 1, mock.MagicMock(),
@@ -3780,7 +3640,7 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_provision_instances_creates_build_request(self):
         @mock.patch.object(objects.Instance, 'create')
         @mock.patch.object(self.compute_api, 'volume_api')
-        @mock.patch.object(self.compute_api, '_check_num_instances_quota')
+        @mock.patch('nova.compute.utils.check_num_instances_quota')
         @mock.patch.object(self.compute_api.security_group_api,
                 'ensure_default')
         @mock.patch.object(objects.RequestSpec, 'from_components')
@@ -3795,8 +3655,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
             min_count = 1
             max_count = 2
-            quota_mock = mock.MagicMock()
-            mock_check_num_inst_quota.return_value = (2, quota_mock)
+            mock_check_num_inst_quota.return_value = 2
 
             ctxt = context.RequestContext('fake-user', 'fake-project')
             flavor = self._create_flavor()
@@ -3859,7 +3718,7 @@ class _ComputeAPIUnitTestMixIn(object):
         do_test()
 
     def test_provision_instances_creates_instance_mapping(self):
-        @mock.patch.object(self.compute_api, '_check_num_instances_quota')
+        @mock.patch('nova.compute.utils.check_num_instances_quota')
         @mock.patch.object(objects.Instance, 'create', new=mock.MagicMock())
         @mock.patch.object(self.compute_api.security_group_api,
                 'ensure_default', new=mock.MagicMock())
@@ -3873,10 +3732,9 @@ class _ComputeAPIUnitTestMixIn(object):
                 new=mock.MagicMock())
         @mock.patch('nova.objects.InstanceMapping')
         def do_test(mock_inst_mapping, mock_check_num_inst_quota):
-            quota_mock = mock.MagicMock()
             inst_mapping_mock = mock.MagicMock()
 
-            mock_check_num_inst_quota.return_value = (1, quota_mock)
+            mock_check_num_inst_quota.return_value = 1
             mock_inst_mapping.return_value = inst_mapping_mock
 
             ctxt = context.RequestContext('fake-user', 'fake-project')
@@ -3947,7 +3805,7 @@ class _ComputeAPIUnitTestMixIn(object):
             _mock_cinder_reserve_volume,
             _mock_cinder_check_availability_zone, _mock_cinder_get,
             _mock_get_min_ver):
-        @mock.patch.object(self.compute_api, '_check_num_instances_quota')
+        @mock.patch('nova.compute.utils.check_num_instances_quota')
         @mock.patch.object(objects, 'Instance')
         @mock.patch.object(self.compute_api.security_group_api,
                 'ensure_default')
@@ -3958,11 +3816,10 @@ class _ComputeAPIUnitTestMixIn(object):
         def do_test(mock_inst_mapping, mock_build_req,
                 mock_req_spec_from_components, _mock_create_bdm,
                 _mock_ensure_default, mock_inst, mock_check_num_inst_quota):
-            quota_mock = mock.MagicMock()
 
             min_count = 1
             max_count = 2
-            mock_check_num_inst_quota.return_value = (2, quota_mock)
+            mock_check_num_inst_quota.return_value = 2
             req_spec_mock = mock.MagicMock()
             mock_req_spec_from_components.return_value = req_spec_mock
             inst_mocks = [mock.MagicMock() for i in range(max_count)]
@@ -4036,7 +3893,7 @@ class _ComputeAPIUnitTestMixIn(object):
         do_test()
 
     def test_provision_instances_creates_reqspec_with_secgroups(self):
-        @mock.patch.object(self.compute_api, '_check_num_instances_quota')
+        @mock.patch('nova.compute.utils.check_num_instances_quota')
         @mock.patch.object(self.compute_api, 'security_group_api')
         @mock.patch.object(compute_api, 'objects')
         @mock.patch.object(self.compute_api, '_create_block_device_mapping',
@@ -4049,7 +3906,7 @@ class _ComputeAPIUnitTestMixIn(object):
                            new=mock.MagicMock())
         def test(mock_objects, mock_secgroup, mock_cniq):
             ctxt = context.RequestContext('fake-user', 'fake-project')
-            mock_cniq.return_value = (1, mock.MagicMock())
+            mock_cniq.return_value = 1
             self.compute_api._provision_instances(ctxt, None, None, None,
                                                   mock.MagicMock(), None, None,
                                                   [], None, None, None, None,

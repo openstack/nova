@@ -315,111 +315,6 @@ class API(base.Base):
             else:
                 raise exception.OnsetFileContentLimitExceeded()
 
-    def _get_headroom(self, quotas, usages, deltas):
-        headroom = {res: quotas[res] -
-                         (usages[res]['in_use'] + usages[res]['reserved'])
-                    for res in quotas.keys()}
-        # If quota_cores is unlimited [-1]:
-        # - set cores headroom based on instances headroom:
-        if quotas.get('cores') == -1:
-            if deltas.get('cores'):
-                hc = headroom.get('instances', 1) * deltas['cores']
-                headroom['cores'] = hc / deltas.get('instances', 1)
-            else:
-                headroom['cores'] = headroom.get('instances', 1)
-
-        # If quota_ram is unlimited [-1]:
-        # - set ram headroom based on instances headroom:
-        if quotas.get('ram') == -1:
-            if deltas.get('ram'):
-                hr = headroom.get('instances', 1) * deltas['ram']
-                headroom['ram'] = hr / deltas.get('instances', 1)
-            else:
-                headroom['ram'] = headroom.get('instances', 1)
-
-        return headroom
-
-    def _check_num_instances_quota(self, context, instance_type, min_count,
-                                   max_count, project_id=None, user_id=None):
-        """Enforce quota limits on number of instances created."""
-
-        # Determine requested cores and ram
-        req_cores = max_count * instance_type['vcpus']
-        req_ram = max_count * instance_type['memory_mb']
-
-        # Check the quota
-        try:
-            quotas = objects.Quotas(context=context)
-            quotas.reserve(instances=max_count,
-                           cores=req_cores, ram=req_ram,
-                           project_id=project_id, user_id=user_id)
-        except exception.OverQuota as exc:
-            # OK, we exceeded quota; let's figure out why...
-            quotas = exc.kwargs['quotas']
-            overs = exc.kwargs['overs']
-            usages = exc.kwargs['usages']
-            deltas = {'instances': max_count,
-                      'cores': req_cores, 'ram': req_ram}
-            headroom = self._get_headroom(quotas, usages, deltas)
-
-            allowed = headroom.get('instances', 1)
-            # Reduce 'allowed' instances in line with the cores & ram headroom
-            if instance_type['vcpus']:
-                allowed = min(allowed,
-                              headroom['cores'] // instance_type['vcpus'])
-            if instance_type['memory_mb']:
-                allowed = min(allowed,
-                              headroom['ram'] // instance_type['memory_mb'])
-
-            # Convert to the appropriate exception message
-            if allowed <= 0:
-                msg = _("Cannot run any more instances of this type.")
-            elif min_count <= allowed <= max_count:
-                # We're actually OK, but still need reservations
-                return self._check_num_instances_quota(context, instance_type,
-                                                       min_count, allowed)
-            else:
-                msg = (_("Can only run %s more instances of this type.") %
-                       allowed)
-
-            num_instances = (str(min_count) if min_count == max_count else
-                "%s-%s" % (min_count, max_count))
-            requested = dict(instances=num_instances, cores=req_cores,
-                             ram=req_ram)
-            (overs, reqs, total_alloweds, useds) = self._get_over_quota_detail(
-                headroom, overs, quotas, requested)
-            params = {'overs': overs, 'pid': context.project_id,
-                      'min_count': min_count, 'max_count': max_count,
-                      'msg': msg}
-
-            if min_count == max_count:
-                LOG.debug(("%(overs)s quota exceeded for %(pid)s,"
-                           " tried to run %(min_count)d instances. "
-                           "%(msg)s"), params)
-            else:
-                LOG.debug(("%(overs)s quota exceeded for %(pid)s,"
-                           " tried to run between %(min_count)d and"
-                           " %(max_count)d instances. %(msg)s"),
-                          params)
-            raise exception.TooManyInstances(overs=overs,
-                                             req=reqs,
-                                             used=useds,
-                                             allowed=total_alloweds)
-
-        return max_count, quotas
-
-    def _get_over_quota_detail(self, headroom, overs, quotas, requested):
-        reqs = []
-        useds = []
-        total_alloweds = []
-        for resource in overs:
-            reqs.append(str(requested[resource]))
-            useds.append(str(quotas[resource] - headroom[resource]))
-            total_alloweds.append(str(quotas[resource]))
-        (overs, reqs, useds, total_alloweds) = map(', '.join, (
-            overs, reqs, useds, total_alloweds))
-        return overs, reqs, total_alloweds, useds
-
     def _check_metadata_properties_quota(self, context, metadata=None):
         """Enforce quota limits on metadata properties."""
         if not metadata:
@@ -987,8 +882,8 @@ class API(base.Base):
             block_device_mapping, shutdown_terminate,
             instance_group, check_server_group_quota, filter_properties,
             key_pair, tags):
-        # Reserve quotas
-        num_instances, quotas = self._check_num_instances_quota(
+        # Check quotas
+        num_instances = compute_utils.check_num_instances_quota(
                 context, instance_type, min_count, max_count)
         security_groups = self.security_group_api.populate_security_groups(
                 security_groups)
@@ -1086,29 +981,10 @@ class API(base.Base):
                     # instance
                     instance_group.members.extend(members)
 
-        # In the case of any exceptions, attempt DB cleanup and rollback the
-        # quota reservations.
+        # In the case of any exceptions, attempt DB cleanup
         except Exception:
             with excutils.save_and_reraise_exception():
-                try:
-                    for rs, br, im in instances_to_build:
-                        try:
-                            rs.destroy()
-                        except exception.RequestSpecNotFound:
-                            pass
-                        try:
-                            im.destroy()
-                        except exception.InstanceMappingNotFound:
-                            pass
-                        try:
-                            br.destroy()
-                        except exception.BuildRequestNotFound:
-                            pass
-                finally:
-                    quotas.rollback()
-
-        # Commit the reservations
-        quotas.commit()
+                self._cleanup_build_artifacts(None, instances_to_build)
 
         return instances_to_build
 
@@ -1263,6 +1139,24 @@ class API(base.Base):
             # we stop supporting v1.
             for instance in instances:
                 instance.create()
+            # NOTE(melwitt): We recheck the quota after creating the objects
+            # to prevent users from allocating more resources than their
+            # allowed quota in the event of a race. This is configurable
+            # because it can be expensive if strict quota limits are not
+            # required in a deployment.
+            if CONF.quota.recheck_quota:
+                try:
+                    compute_utils.check_num_instances_quota(
+                        context, instance_type, 0, 0,
+                        orig_num_req=len(instances))
+                except exception.TooManyInstances:
+                    with excutils.save_and_reraise_exception():
+                        # Need to clean up all the instances we created
+                        # along with the build requests, request specs,
+                        # and instance mappings.
+                        self._cleanup_build_artifacts(instances,
+                                                      instances_to_build)
+
             self.compute_task_api.build_instances(context,
                 instances=instances, image=boot_meta,
                 filter_properties=filter_properties,
@@ -1285,6 +1179,31 @@ class API(base.Base):
                 tags=tags)
 
         return (instances, reservation_id)
+
+    @staticmethod
+    def _cleanup_build_artifacts(instances, instances_to_build):
+        # instances_to_build is a list of tuples:
+        # (RequestSpec, BuildRequest, InstanceMapping)
+
+        # Be paranoid about artifacts being deleted underneath us.
+        for instance in instances or []:
+            try:
+                instance.destroy()
+            except exception.InstanceNotFound:
+                pass
+        for rs, build_request, im in instances_to_build or []:
+            try:
+                rs.destroy()
+            except exception.RequestSpecNotFound:
+                pass
+            try:
+                build_request.destroy()
+            except exception.BuildRequestNotFound:
+                pass
+            try:
+                im.destroy()
+            except exception.InstanceMappingNotFound:
+                pass
 
     @staticmethod
     def _volume_size(instance_type, bdm):
@@ -1815,26 +1734,17 @@ class API(base.Base):
             # buildrequest indicates that the build process should be halted by
             # the conductor.
 
-            # Since conductor has halted the build process no cleanup of the
-            # instance is necessary, but quotas must still be decremented.
-            project_id, user_id = quotas_obj.ids_from_instance(
-                context, instance)
-            # This is confusing but actually decrements quota.
-            quotas = self._create_reservations(context,
-                                               instance,
-                                               instance.task_state,
-                                               project_id, user_id)
+            # NOTE(alaski): Though the conductor halts the build process it
+            # does not currently delete the instance record. This is
+            # because in the near future the instance record will not be
+            # created if the buildrequest has been deleted here. For now we
+            # ensure the instance has been set to deleted at this point.
+            # Yes this directly contradicts the comment earlier in this
+            # method, but this is a temporary measure.
+            # Look up the instance because the current instance object was
+            # stashed on the buildrequest and therefore not complete enough
+            # to run .destroy().
             try:
-                # NOTE(alaski): Though the conductor halts the build process it
-                # does not currently delete the instance record. This is
-                # because in the near future the instance record will not be
-                # created if the buildrequest has been deleted here. For now we
-                # ensure the instance has been set to deleted at this point.
-                # Yes this directly contradicts the comment earlier in this
-                # method, but this is a temporary measure.
-                # Look up the instance because the current instance object was
-                # stashed on the buildrequest and therefore not complete enough
-                # to run .destroy().
                 instance_uuid = instance.uuid
                 cell, instance = self._lookup_instance(context, instance_uuid)
                 if instance is not None:
@@ -1848,13 +1758,8 @@ class API(base.Base):
                                 instance.destroy()
                     else:
                         instance.destroy()
-                    quotas.commit()
-                else:
-                    # The instance is already deleted so rollback the quota
-                    # usage decrement reservation in the not found block below.
-                    raise exception.InstanceNotFound(instance_id=instance_uuid)
             except exception.InstanceNotFound:
-                quotas.rollback()
+                pass
 
             return True
         return False
@@ -1898,41 +1803,13 @@ class API(base.Base):
                 # acceptable to skip the rest of the delete processing.
                 cell, instance = self._lookup_instance(context, instance.uuid)
                 if cell and instance:
-                    # Conductor may have buried the instance in cell0 but
-                    # quotas must still be decremented in the main cell DB.
-                    project_id, user_id = quotas_obj.ids_from_instance(
-                        context, instance)
-
-                    # TODO(mriedem): This is a hack until we have quotas in the
-                    # API database. When we looked up the instance in
-                    # _get_instance if the instance has a mapping then the
-                    # context is modified to set the target cell permanently.
-                    # However, if the instance is in cell0 then the context
-                    # is targeting cell0 and the quotas would be decremented
-                    # from cell0 and we actually need them decremented from
-                    # the cell database. So we temporarily untarget the
-                    # context while we do the quota stuff and re-target after
-                    # we're done.
-
-                    # We have to get the flavor from the instance while the
-                    # context is still targeted to where the instance lives.
-                    quota_flavor = self._get_flavor_for_reservation(instance)
-
-                    with nova_context.target_cell(context, None) as cctxt:
-                        # This is confusing but actually decrements quota usage
-                        quotas = self._create_reservations(
-                            cctxt, instance, instance.task_state,
-                            project_id, user_id, flavor=quota_flavor)
-
                     try:
                         # Now destroy the instance from the cell it lives in.
                         with compute_utils.notify_about_instance_delete(
                                 self.notifier, context, instance):
                             instance.destroy()
-                        # Now commit the quota reservation to decrement usage.
-                        quotas.commit()
                     except exception.InstanceNotFound:
-                        quotas.rollback()
+                        pass
                     # The instance was deleted or is already gone.
                     return
                 if not instance:
@@ -1954,8 +1831,6 @@ class API(base.Base):
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
 
-        project_id, user_id = quotas_obj.ids_from_instance(context, instance)
-
         # At these states an instance has a snapshot associate.
         if instance.vm_state in (vm_states.SHELVED,
                                  vm_states.SHELVED_OFFLOADED):
@@ -1976,20 +1851,11 @@ class API(base.Base):
                               instance=instance)
 
         original_task_state = instance.task_state
-        quotas = None
         try:
             # NOTE(maoy): no expected_task_state needs to be set
             instance.update(instance_attrs)
             instance.progress = 0
             instance.save()
-
-            # NOTE(comstud): If we delete the instance locally, we'll
-            # commit the reservations here.  Otherwise, the manager side
-            # will commit or rollback the reservations based on success.
-            quotas = self._create_reservations(context,
-                                               instance,
-                                               original_task_state,
-                                               project_id, user_id)
 
             # NOTE(dtp): cells.enable = False means "use cells v2".
             # Run everywhere except v1 compute cells.
@@ -2000,11 +1866,8 @@ class API(base.Base):
             if self.cell_type == 'api':
                 # NOTE(comstud): If we're in the API cell, we need to
                 # skip all remaining logic and just call the callback,
-                # which will cause a cast to the child cell.  Also,
-                # commit reservations here early until we have a better
-                # way to deal with quotas with cells.
-                cb(context, instance, bdms, reservations=None)
-                quotas.commit()
+                # which will cause a cast to the child cell.
+                cb(context, instance, bdms)
                 return
             shelved_offloaded = (instance.vm_state
                                  == vm_states.SHELVED_OFFLOADED)
@@ -2018,7 +1881,6 @@ class API(base.Base):
                             self.notifier, context, instance,
                             "%s.end" % delete_type,
                             system_metadata=instance.system_metadata)
-                    quotas.commit()
                     LOG.info('Instance deleted and does not have host '
                              'field, its vm_state is %(state)s.',
                              {'state': instance.vm_state},
@@ -2043,21 +1905,11 @@ class API(base.Base):
                         LOG.info('Instance is already in deleting state, '
                                  'ignoring this request',
                                  instance=instance)
-                        quotas.rollback()
                         return
                     self._record_action_start(context, instance,
                                               instance_actions.DELETE)
 
-                    # NOTE(snikitin): If instance's vm_state is 'soft-delete',
-                    # we should not count reservations here, because instance
-                    # in soft-delete vm_state have already had quotas
-                    # decremented. More details:
-                    # https://bugs.launchpad.net/nova/+bug/1333145
-                    if instance.vm_state == vm_states.SOFT_DELETED:
-                        quotas.rollback()
-
-                    cb(context, instance, bdms,
-                       reservations=quotas.reservations)
+                    cb(context, instance, bdms)
             except exception.ComputeHostNotFound:
                 pass
 
@@ -2081,16 +1933,10 @@ class API(base.Base):
                           instance=instance)
                 with nova_context.target_cell(context, cell) as cctxt:
                     self._local_delete(cctxt, instance, bdms, delete_type, cb)
-                    quotas.commit()
 
         except exception.InstanceNotFound:
             # NOTE(comstud): Race condition. Instance already gone.
-            if quotas:
-                quotas.rollback()
-        except Exception:
-            with excutils.save_and_reraise_exception():
-                if quotas:
-                    quotas.rollback()
+            pass
 
     def _confirm_resize_on_deleting(self, context, instance):
         # If in the middle of a resize, use confirm_resize to
@@ -2115,65 +1961,12 @@ class API(base.Base):
             return
 
         src_host = migration.source_compute
-        # Call since this can race with the terminate_instance.
-        # The resize is done but awaiting confirmation/reversion,
-        # so there are two cases:
-        # 1. up-resize: here -instance['vcpus'/'memory_mb'] match
-        #    the quota usages accounted for this instance,
-        #    so no further quota adjustment is needed
-        # 2. down-resize: here -instance['vcpus'/'memory_mb'] are
-        #    shy by delta(old, new) from the quota usages accounted
-        #    for this instance, so we must adjust
-        try:
-            deltas = compute_utils.downsize_quota_delta(context, instance)
-        except KeyError:
-            LOG.info('Migration %s may have been confirmed during delete',
-                     migration.id, instance=instance)
-            return
-        quotas = compute_utils.reserve_quota_delta(context, deltas, instance)
 
         self._record_action_start(context, instance,
                                   instance_actions.CONFIRM_RESIZE)
 
         self.compute_rpcapi.confirm_resize(context,
-                instance, migration,
-                src_host, quotas.reservations,
-                cast=False)
-
-    def _get_flavor_for_reservation(self, instance):
-        """Returns the flavor needed for _create_reservations.
-
-        This is used when the context is targeted to a cell that is
-        different from the one that the instance lives in.
-        """
-        if instance.task_state in (task_states.RESIZE_MIGRATED,
-                                   task_states.RESIZE_FINISH):
-            return instance.old_flavor
-        return instance.flavor
-
-    def _create_reservations(self, context, instance, original_task_state,
-                             project_id, user_id, flavor=None):
-        # NOTE(wangpan): if the instance is resizing, and the resources
-        #                are updated to new instance type, we should use
-        #                the old instance type to create reservation.
-        # see https://bugs.launchpad.net/nova/+bug/1099729 for more details
-        if original_task_state in (task_states.RESIZE_MIGRATED,
-                                   task_states.RESIZE_FINISH):
-            old_flavor = flavor or instance.old_flavor
-            instance_vcpus = old_flavor.vcpus
-            instance_memory_mb = old_flavor.memory_mb
-        else:
-            flavor = flavor or instance.flavor
-            instance_vcpus = flavor.vcpus
-            instance_memory_mb = flavor.memory_mb
-
-        quotas = objects.Quotas(context=context)
-        quotas.reserve(project_id=project_id,
-                       user_id=user_id,
-                       instances=-1,
-                       cores=-instance_vcpus,
-                       ram=-instance_memory_mb)
-        return quotas
+                instance, migration, src_host, cast=False)
 
     def _get_stashed_volume_connector(self, bdm, instance):
         """Lookup a connector dict from the bdm.connection_info if set
@@ -2277,8 +2070,7 @@ class API(base.Base):
             self.notifier, context, instance, "%s.end" % delete_type,
             system_metadata=sys_meta)
 
-    def _do_delete(self, context, instance, bdms, reservations=None,
-                   local=False):
+    def _do_delete(self, context, instance, bdms, local=False):
         if local:
             instance.vm_state = vm_states.DELETED
             instance.task_state = None
@@ -2286,11 +2078,9 @@ class API(base.Base):
             instance.save()
         else:
             self.compute_rpcapi.terminate_instance(context, instance, bdms,
-                                                   reservations=reservations,
                                                    delete_type='delete')
 
-    def _do_force_delete(self, context, instance, bdms, reservations=None,
-                         local=False):
+    def _do_force_delete(self, context, instance, bdms, local=False):
         if local:
             instance.vm_state = vm_states.DELETED
             instance.task_state = None
@@ -2298,19 +2088,16 @@ class API(base.Base):
             instance.save()
         else:
             self.compute_rpcapi.terminate_instance(context, instance, bdms,
-                                                   reservations=reservations,
                                                    delete_type='force_delete')
 
-    def _do_soft_delete(self, context, instance, bdms, reservations=None,
-                        local=False):
+    def _do_soft_delete(self, context, instance, bdms, local=False):
         if local:
             instance.vm_state = vm_states.SOFT_DELETED
             instance.task_state = None
             instance.terminated_at = timeutils.utcnow()
             instance.save()
         else:
-            self.compute_rpcapi.soft_delete_instance(context, instance,
-                                                     reservations=reservations)
+            self.compute_rpcapi.soft_delete_instance(context, instance)
 
     # NOTE(maoy): we allow delete to be called no matter what vm_state says.
     @check_instance_lock
@@ -2343,31 +2130,28 @@ class API(base.Base):
     @check_instance_state(vm_state=[vm_states.SOFT_DELETED])
     def restore(self, context, instance):
         """Restore a previously deleted (but not reclaimed) instance."""
-        # Reserve quotas
+        # Check quotas
         flavor = instance.get_flavor()
         project_id, user_id = quotas_obj.ids_from_instance(context, instance)
-        num_instances, quotas = self._check_num_instances_quota(
-                context, flavor, 1, 1,
+        compute_utils.check_num_instances_quota(context, flavor, 1, 1,
                 project_id=project_id, user_id=user_id)
 
         self._record_action_start(context, instance, instance_actions.RESTORE)
 
-        try:
-            if instance.host:
-                instance.task_state = task_states.RESTORING
-                instance.deleted_at = None
-                instance.save(expected_task_state=[None])
-                self.compute_rpcapi.restore_instance(context, instance)
-            else:
-                instance.vm_state = vm_states.ACTIVE
-                instance.task_state = None
-                instance.deleted_at = None
-                instance.save(expected_task_state=[None])
-
-            quotas.commit()
-        except Exception:
-            with excutils.save_and_reraise_exception():
-                quotas.rollback()
+        if instance.host:
+            instance.task_state = task_states.RESTORING
+            instance.deleted_at = None
+            instance.save(expected_task_state=[None])
+            # TODO(melwitt): We're not rechecking for strict quota here to
+            # guard against going over quota during a race at this time because
+            # the resource consumption for this operation is written to the
+            # database by compute.
+            self.compute_rpcapi.restore_instance(context, instance)
+        else:
+            instance.vm_state = vm_states.ACTIVE
+            instance.task_state = None
+            instance.deleted_at = None
+            instance.save(expected_task_state=[None])
 
     @check_instance_lock
     @check_instance_state(must_have_launched=False)
@@ -3210,6 +2994,40 @@ class API(base.Base):
                 request_spec=request_spec,
                 kwargs=kwargs)
 
+    @staticmethod
+    def _check_quota_for_upsize(context, instance, current_flavor, new_flavor):
+        project_id, user_id = quotas_obj.ids_from_instance(context,
+                                                           instance)
+        # Deltas will be empty if the resize is not an upsize.
+        deltas = compute_utils.upsize_quota_delta(context, new_flavor,
+                                                  current_flavor)
+        if deltas:
+            try:
+                res_deltas = {'cores': deltas.get('cores', 0),
+                              'ram': deltas.get('ram', 0)}
+                objects.Quotas.check_deltas(context, res_deltas,
+                                            project_id, user_id=user_id,
+                                            check_project_id=project_id,
+                                            check_user_id=user_id)
+            except exception.OverQuota as exc:
+                quotas = exc.kwargs['quotas']
+                overs = exc.kwargs['overs']
+                usages = exc.kwargs['usages']
+                headroom = compute_utils.get_headroom(quotas, usages,
+                                                      deltas)
+                (overs, reqs, total_alloweds,
+                 useds) = compute_utils.get_over_quota_detail(headroom,
+                                                              overs,
+                                                              quotas,
+                                                              deltas)
+                LOG.warning("%(overs)s quota exceeded for %(pid)s,"
+                            " tried to resize instance.",
+                            {'overs': overs, 'pid': context.project_id})
+                raise exception.TooManyInstances(overs=overs,
+                                                 req=reqs,
+                                                 used=useds,
+                                                 allowed=total_alloweds)
+
     @check_instance_lock
     @check_instance_cell
     @check_instance_state(vm_state=[vm_states.RESIZED])
@@ -3219,31 +3037,26 @@ class API(base.Base):
         migration = objects.Migration.get_by_instance_and_status(
             elevated, instance.uuid, 'finished')
 
-        # reverse quota reservation for increased resource usage
-        deltas = compute_utils.reverse_upsize_quota_delta(context, instance)
-        quotas = compute_utils.reserve_quota_delta(context, deltas, instance)
+        # If this is a resize down, a revert might go over quota.
+        self._check_quota_for_upsize(context, instance, instance.flavor,
+                                     instance.old_flavor)
 
         instance.task_state = task_states.RESIZE_REVERTING
-        try:
-            instance.save(expected_task_state=[None])
-        except Exception:
-            with excutils.save_and_reraise_exception():
-                quotas.rollback()
+        instance.save(expected_task_state=[None])
 
         migration.status = 'reverting'
         migration.save()
-        # With cells, the best we can do right now is commit the reservations
-        # immediately...
-        if CONF.cells.enable:
-            quotas.commit()
 
         self._record_action_start(context, instance,
                                   instance_actions.REVERT_RESIZE)
 
+        # TODO(melwitt): We're not rechecking for strict quota here to guard
+        # against going over quota during a race at this time because the
+        # resource consumption for this operation is written to the database
+        # by compute.
         self.compute_rpcapi.revert_resize(context, instance,
                                           migration,
-                                          migration.dest_compute,
-                                          quotas.reservations or [])
+                                          migration.dest_compute)
 
     @check_instance_lock
     @check_instance_cell
@@ -3251,20 +3064,17 @@ class API(base.Base):
     def confirm_resize(self, context, instance, migration=None):
         """Confirms a migration/resize and deletes the 'old' instance."""
         elevated = context.elevated()
+        # NOTE(melwitt): We're not checking quota here because there isn't a
+        # change in resource usage when confirming a resize. Resource
+        # consumption for resizes are written to the database by compute, so
+        # a confirm resize is just a clean up of the migration objects and a
+        # state change in compute.
         if migration is None:
             migration = objects.Migration.get_by_instance_and_status(
                 elevated, instance.uuid, 'finished')
 
-        # reserve quota only for any decrease in resource usage
-        deltas = compute_utils.downsize_quota_delta(context, instance)
-        quotas = compute_utils.reserve_quota_delta(context, deltas, instance)
-
         migration.status = 'confirming'
         migration.save()
-        # With cells, the best we can do right now is commit the reservations
-        # immediately...
-        if CONF.cells.enable:
-            quotas.commit()
 
         self._record_action_start(context, instance,
                                   instance_actions.CONFIRM_RESIZE)
@@ -3272,19 +3082,15 @@ class API(base.Base):
         self.compute_rpcapi.confirm_resize(context,
                                            instance,
                                            migration,
-                                           migration.source_compute,
-                                           quotas.reservations or [])
+                                           migration.source_compute)
 
     @staticmethod
-    def _resize_cells_support(context, quotas, instance,
+    def _resize_cells_support(context, instance,
                               current_instance_type, new_instance_type):
         """Special API cell logic for resize."""
-        # With cells, the best we can do right now is commit the
-        # reservations immediately...
-        quotas.commit()
         # NOTE(johannes/comstud): The API cell needs a local migration
-        # record for later resize_confirm and resize_reverts to deal
-        # with quotas.  We don't need source and/or destination
+        # record for later resize_confirm and resize_reverts.
+        # We don't need source and/or destination
         # information, just the old and new flavors. Status is set to
         # 'finished' since nothing else will update the status along
         # the way.
@@ -3352,29 +3158,9 @@ class API(base.Base):
 
         # ensure there is sufficient headroom for upsizes
         if flavor_id:
-            deltas = compute_utils.upsize_quota_delta(context,
-                                                      new_instance_type,
-                                                      current_instance_type)
-            try:
-                quotas = compute_utils.reserve_quota_delta(context, deltas,
-                                                           instance)
-            except exception.OverQuota as exc:
-                quotas = exc.kwargs['quotas']
-                overs = exc.kwargs['overs']
-                usages = exc.kwargs['usages']
-                headroom = self._get_headroom(quotas, usages, deltas)
-                (overs, reqs, total_alloweds,
-                 useds) = self._get_over_quota_detail(headroom, overs, quotas,
-                                                      deltas)
-                LOG.warning("%(overs)s quota exceeded for %(pid)s,"
-                            " tried to resize instance.",
-                            {'overs': overs, 'pid': context.project_id})
-                raise exception.TooManyInstances(overs=overs,
-                                                 req=reqs,
-                                                 used=useds,
-                                                 allowed=total_alloweds)
-        else:
-            quotas = objects.Quotas(context=context)
+            self._check_quota_for_upsize(context, instance,
+                                         current_instance_type,
+                                         new_instance_type)
 
         instance.task_state = task_states.RESIZE_PREP
         instance.progress = 0
@@ -3387,8 +3173,8 @@ class API(base.Base):
             filter_properties['ignore_hosts'].append(instance.host)
 
         if self.cell_type == 'api':
-            # Commit reservations early and create migration record.
-            self._resize_cells_support(context, quotas, instance,
+            # Create migration record.
+            self._resize_cells_support(context, instance,
                                        current_instance_type,
                                        new_instance_type)
 
@@ -3412,11 +3198,14 @@ class API(base.Base):
             # to them, we need to support the old way
             request_spec = None
 
+        # TODO(melwitt): We're not rechecking for strict quota here to guard
+        # against going over quota during a race at this time because the
+        # resource consumption for this operation is written to the database
+        # by compute.
         scheduler_hint = {'filter_properties': filter_properties}
         self.compute_task_api.resize_instance(context, instance,
                 extra_instance_updates, scheduler_hint=scheduler_hint,
                 flavor=new_instance_type,
-                reservations=quotas.reservations or [],
                 clean_shutdown=clean_shutdown,
                 request_spec=request_spec)
 

@@ -51,6 +51,7 @@ from nova.compute import vm_states
 import nova.conf
 from nova import context
 from nova import db
+from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import models
 from nova import exception
 from nova.image import glance
@@ -3231,8 +3232,27 @@ class ServersControllerCreateTest(test.TestCase):
 
         self.assertEqual(encodeutils.safe_decode(robj['Location']), selfhref)
 
-    def _do_test_create_instance_above_quota(self, resource, allowed, quota,
-                                             expected_msg):
+    @mock.patch('nova.db.quota_get_all_by_project')
+    @mock.patch('nova.db.quota_get_all_by_project_and_user')
+    @mock.patch('nova.objects.Quotas.count_as_dict')
+    def _do_test_create_instance_above_quota(self, resource, allowed,
+                quota, expected_msg, mock_count, mock_get_all_pu,
+                mock_get_all_p):
+        count = {'project': {}, 'user': {}}
+        for res in ('instances', 'ram', 'cores'):
+            if res == resource:
+                value = quota - allowed
+                count['project'][res] = count['user'][res] = value
+            else:
+                count['project'][res] = count['user'][res] = 0
+        mock_count.return_value = count
+        mock_get_all_p.return_value = {'project_id': 'fake'}
+        mock_get_all_pu.return_value = {'project_id': 'fake',
+                                        'user_id': 'fake_user'}
+        if resource in db_api.PER_PROJECT_QUOTAS:
+            mock_get_all_p.return_value[resource] = quota
+        else:
+            mock_get_all_pu.return_value[resource] = quota
         fakes.stub_out_instance_quota(self, allowed, quota, resource)
         self.body['server']['flavorRef'] = 3
         self.req.body = jsonutils.dump_as_bytes(self.body)
@@ -3264,12 +3284,16 @@ class ServersControllerCreateTest(test.TestCase):
         fake_group.user_id = ctxt.user_id
         fake_group.create()
 
+        real_count = fakes.QUOTAS.count_as_dict
+
         def fake_count(context, name, group, user_id):
-            self.assertEqual(name, "server_group_members")
-            self.assertEqual(group.uuid, fake_group.uuid)
-            self.assertEqual(user_id,
-                             self.req.environ['nova.context'].user_id)
-            return {'user': {'server_group_members': 10}}
+            if name == 'server_group_members':
+                self.assertEqual(group.uuid, fake_group.uuid)
+                self.assertEqual(user_id,
+                                 self.req.environ['nova.context'].user_id)
+                return {'user': {'server_group_members': 10}}
+            else:
+                return real_count(context, name, group, user_id)
 
         def fake_limit_check(context, **kwargs):
             if 'server_group_members' in kwargs:

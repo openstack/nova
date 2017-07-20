@@ -698,23 +698,13 @@ class ComputeManager(manager.Manager):
         instance.destroy()
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
-        quotas = objects.Quotas(context=context)
-        project_id, user_id = objects.quotas.ids_from_instance(context,
-                                                               instance)
-        quotas.reserve(project_id=project_id, user_id=user_id, instances=-1,
-                       cores=-instance.flavor.vcpus,
-                       ram=-instance.flavor.memory_mb)
         self._complete_deletion(context,
                                 instance,
                                 bdms,
-                                quotas,
                                 system_meta)
 
     def _complete_deletion(self, context, instance, bdms,
-                           quotas, system_meta):
-        if quotas:
-            quotas.commit()
-
+                           system_meta):
         # ensure block device mappings are not leaked
         for bdm in bdms:
             bdm.destroy()
@@ -726,18 +716,6 @@ class ComputeManager(manager.Manager):
                 self.host, action=fields.NotificationAction.DELETE,
                 phase=fields.NotificationPhase.END)
         self._delete_scheduler_instance_info(context, instance.uuid)
-
-    def _create_reservations(self, context, instance, project_id, user_id):
-        vcpus = instance.flavor.vcpus
-        mem_mb = instance.flavor.memory_mb
-
-        quotas = objects.Quotas(context=context)
-        quotas.reserve(project_id=project_id,
-                       user_id=user_id,
-                       instances=-1,
-                       cores=-vcpus,
-                       ram=-mem_mb)
-        return quotas
 
     def _init_instance(self, context, instance):
         '''Initialize this instance during service init.'''
@@ -839,12 +817,7 @@ class ComputeManager(manager.Manager):
                 instance.obj_load_attr('system_metadata')
                 bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                         context, instance.uuid)
-                project_id, user_id = objects.quotas.ids_from_instance(
-                    context, instance)
-                quotas = self._create_reservations(context, instance,
-                                                   project_id, user_id)
-
-                self._delete_instance(context, instance, bdms, quotas)
+                self._delete_instance(context, instance, bdms)
             except Exception:
                 # we don't want that an exception blocks the init_host
                 LOG.exception('Failed to complete a deletion',
@@ -2352,78 +2325,62 @@ class ComputeManager(manager.Manager):
             six.reraise(exc_info[0], exc_info[1], exc_info[2])
 
     @hooks.add_hook("delete_instance")
-    def _delete_instance(self, context, instance, bdms, quotas):
-        """Delete an instance on this host.  Commit or rollback quotas
-        as necessary.
+    def _delete_instance(self, context, instance, bdms):
+        """Delete an instance on this host.
 
         :param context: nova request context
         :param instance: nova.objects.instance.Instance object
         :param bdms: nova.objects.block_device.BlockDeviceMappingList object
-        :param quotas: nova.objects.quotas.Quotas object
         """
-        was_soft_deleted = instance.vm_state == vm_states.SOFT_DELETED
-        if was_soft_deleted:
-            # Instances in SOFT_DELETED vm_state have already had quotas
-            # decremented.
-            try:
-                quotas.rollback()
-            except Exception:
-                pass
+        events = self.instance_events.clear_events_for_instance(instance)
+        if events:
+            LOG.debug('Events pending at deletion: %(events)s',
+                      {'events': ','.join(events.keys())},
+                      instance=instance)
+        self._notify_about_instance_usage(context, instance,
+                                          "delete.start")
+        compute_utils.notify_about_instance_action(context, instance,
+                self.host, action=fields.NotificationAction.DELETE,
+                phase=fields.NotificationPhase.START)
 
-        try:
-            events = self.instance_events.clear_events_for_instance(instance)
-            if events:
-                LOG.debug('Events pending at deletion: %(events)s',
-                          {'events': ','.join(events.keys())},
-                          instance=instance)
-            self._notify_about_instance_usage(context, instance,
-                                              "delete.start")
-            compute_utils.notify_about_instance_action(context, instance,
-                    self.host, action=fields.NotificationAction.DELETE,
-                    phase=fields.NotificationPhase.START)
+        self._shutdown_instance(context, instance, bdms)
+        # NOTE(dims): instance.info_cache.delete() should be called after
+        # _shutdown_instance in the compute manager as shutdown calls
+        # deallocate_for_instance so the info_cache is still needed
+        # at this point.
+        if instance.info_cache is not None:
+            instance.info_cache.delete()
+        else:
+            # NOTE(yoshimatsu): Avoid AttributeError if instance.info_cache
+            # is None. When the root cause that instance.info_cache becomes
+            # None is fixed, the log level should be reconsidered.
+            LOG.warning("Info cache for instance could not be found. "
+                        "Ignore.", instance=instance)
 
-            self._shutdown_instance(context, instance, bdms)
-            # NOTE(dims): instance.info_cache.delete() should be called after
-            # _shutdown_instance in the compute manager as shutdown calls
-            # deallocate_for_instance so the info_cache is still needed
-            # at this point.
-            if instance.info_cache is not None:
-                instance.info_cache.delete()
-            else:
-                # NOTE(yoshimatsu): Avoid AttributeError if instance.info_cache
-                # is None. When the root cause that instance.info_cache becomes
-                # None is fixed, the log level should be reconsidered.
-                LOG.warning("Info cache for instance could not be found. "
-                            "Ignore.", instance=instance)
-
-            # NOTE(vish): We have already deleted the instance, so we have
-            #             to ignore problems cleaning up the volumes. It
-            #             would be nice to let the user know somehow that
-            #             the volume deletion failed, but it is not
-            #             acceptable to have an instance that can not be
-            #             deleted. Perhaps this could be reworked in the
-            #             future to set an instance fault the first time
-            #             and to only ignore the failure if the instance
-            #             is already in ERROR.
-            self._cleanup_volumes(context, instance.uuid, bdms,
-                    raise_exc=False)
-            # if a delete task succeeded, always update vm state and task
-            # state without expecting task state to be DELETING
-            instance.vm_state = vm_states.DELETED
-            instance.task_state = None
-            instance.power_state = power_state.NOSTATE
-            instance.terminated_at = timeutils.utcnow()
-            instance.save()
-            system_meta = instance.system_metadata
-            instance.destroy()
-        except Exception:
-            with excutils.save_and_reraise_exception():
-                quotas.rollback()
+        # NOTE(vish): We have already deleted the instance, so we have
+        #             to ignore problems cleaning up the volumes. It
+        #             would be nice to let the user know somehow that
+        #             the volume deletion failed, but it is not
+        #             acceptable to have an instance that can not be
+        #             deleted. Perhaps this could be reworked in the
+        #             future to set an instance fault the first time
+        #             and to only ignore the failure if the instance
+        #             is already in ERROR.
+        self._cleanup_volumes(context, instance.uuid, bdms,
+                raise_exc=False)
+        # if a delete task succeeded, always update vm state and task
+        # state without expecting task state to be DELETING
+        instance.vm_state = vm_states.DELETED
+        instance.task_state = None
+        instance.power_state = power_state.NOSTATE
+        instance.terminated_at = timeutils.utcnow()
+        instance.save()
+        system_meta = instance.system_metadata
+        instance.destroy()
 
         self._complete_deletion(context,
                                 instance,
                                 bdms,
-                                quotas,
                                 system_meta)
 
     @wrap_exception()
@@ -2432,10 +2389,6 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def terminate_instance(self, context, instance, bdms, reservations):
         """Terminate an instance on this host."""
-        quotas = objects.Quotas.from_reservations(context,
-                                                  reservations,
-                                                  instance=instance)
-
         @utils.synchronized(instance.uuid)
         def do_terminate_instance(instance, bdms):
             # NOTE(mriedem): If we are deleting the instance while it was
@@ -2455,7 +2408,7 @@ class ComputeManager(manager.Manager):
                         context, instance.uuid)
                     break
             try:
-                self._delete_instance(context, instance, bdms, quotas)
+                self._delete_instance(context, instance, bdms)
             except exception.InstanceNotFound:
                 LOG.info("Instance disappeared during terminate",
                          instance=instance)
@@ -2608,30 +2561,21 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def soft_delete_instance(self, context, instance, reservations):
         """Soft delete an instance on this host."""
-
-        quotas = objects.Quotas.from_reservations(context,
-                                                  reservations,
-                                                  instance=instance)
+        self._notify_about_instance_usage(context, instance,
+                                          "soft_delete.start")
+        compute_utils.notify_about_instance_action(context, instance,
+            self.host, action=fields.NotificationAction.SOFT_DELETE,
+            phase=fields.NotificationPhase.START)
         try:
-            self._notify_about_instance_usage(context, instance,
-                                              "soft_delete.start")
-            compute_utils.notify_about_instance_action(context, instance,
-                self.host, action=fields.NotificationAction.SOFT_DELETE,
-                phase=fields.NotificationPhase.START)
-            try:
-                self.driver.soft_delete(instance)
-            except NotImplementedError:
-                # Fallback to just powering off the instance if the
-                # hypervisor doesn't implement the soft_delete method
-                self.driver.power_off(instance)
-            instance.power_state = self._get_power_state(context, instance)
-            instance.vm_state = vm_states.SOFT_DELETED
-            instance.task_state = None
-            instance.save(expected_task_state=[task_states.SOFT_DELETING])
-        except Exception:
-            with excutils.save_and_reraise_exception():
-                quotas.rollback()
-        quotas.commit()
+            self.driver.soft_delete(instance)
+        except NotImplementedError:
+            # Fallback to just powering off the instance if the
+            # hypervisor doesn't implement the soft_delete method
+            self.driver.power_off(instance)
+        instance.power_state = self._get_power_state(context, instance)
+        instance.vm_state = vm_states.SOFT_DELETED
+        instance.task_state = None
+        instance.save(expected_task_state=[task_states.SOFT_DELETING])
         self._notify_about_instance_usage(context, instance, "soft_delete.end")
         compute_utils.notify_about_instance_action(context, instance,
             self.host, action=fields.NotificationAction.SOFT_DELETE,
@@ -3505,11 +3449,6 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def confirm_resize(self, context, instance, reservations, migration):
-
-        quotas = objects.Quotas.from_reservations(context,
-                                                  reservations,
-                                                  instance=instance)
-
         @utils.synchronized(instance.uuid)
         def do_confirm_resize(context, instance, migration_id):
             # NOTE(wangpan): Get the migration status from db, if it has been
@@ -3524,20 +3463,17 @@ class ComputeManager(manager.Manager):
             except exception.MigrationNotFound:
                 LOG.error("Migration %s is not found during confirmation",
                           migration_id, instance=instance)
-                quotas.rollback()
                 return
 
             if migration.status == 'confirmed':
                 LOG.info("Migration %s is already confirmed",
                          migration_id, instance=instance)
-                quotas.rollback()
                 return
             elif migration.status not in ('finished', 'confirming'):
                 LOG.warning("Unexpected confirmation status '%(status)s' "
                             "of migration %(id)s, exit confirmation process",
                             {"status": migration.status, "id": migration_id},
                             instance=instance)
-                quotas.rollback()
                 return
 
             # NOTE(wangpan): Get the instance from db, if it has been
@@ -3550,22 +3486,18 @@ class ComputeManager(manager.Manager):
             except exception.InstanceNotFound:
                 LOG.info("Instance is not found during confirmation",
                          instance=instance)
-                quotas.rollback()
                 return
 
-            self._confirm_resize(context, instance, quotas,
-                                 migration=migration)
+            self._confirm_resize(context, instance, migration=migration)
 
         do_confirm_resize(context, instance, migration.id)
 
-    def _confirm_resize(self, context, instance, quotas,
-                        migration=None):
+    def _confirm_resize(self, context, instance, migration=None):
         """Destroys the source instance."""
         self._notify_about_instance_usage(context, instance,
                                           "resize.confirm.start")
 
-        with self._error_out_instance_on_exception(context, instance,
-                                                   quotas=quotas):
+        with self._error_out_instance_on_exception(context, instance):
             # NOTE(danms): delete stashed migration information
             old_instance_type = instance.old_flavor
             instance.old_flavor = None
@@ -3615,8 +3547,6 @@ class ComputeManager(manager.Manager):
                 context, instance, "resize.confirm.end",
                 network_info=network_info)
 
-            quotas.commit()
-
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event(prefix='compute')
@@ -3629,18 +3559,12 @@ class ComputeManager(manager.Manager):
         source machine.
 
         """
-
-        quotas = objects.Quotas.from_reservations(context,
-                                                  reservations,
-                                                  instance=instance)
-
         # NOTE(comstud): A revert_resize is essentially a resize back to
         # the old size, so we need to send a usage event here.
         compute_utils.notify_usage_exists(self.notifier, context, instance,
                                           current_period=True)
 
-        with self._error_out_instance_on_exception(context, instance,
-                                                   quotas=quotas):
+        with self._error_out_instance_on_exception(context, instance):
             # NOTE(tr3buchet): tear down networks on destination host
             self.network_api.setup_networks_on_host(context, instance,
                                                     teardown=True)
@@ -3682,8 +3606,7 @@ class ComputeManager(manager.Manager):
             rt.drop_move_claim(context, instance, instance.node)
 
             self.compute_rpcapi.finish_revert_resize(context, instance,
-                    migration, migration.source_compute,
-                    quotas.reservations)
+                    migration, migration.source_compute)
 
     @wrap_exception()
     @reverts_task_state
@@ -3697,13 +3620,7 @@ class ComputeManager(manager.Manager):
         revert the resized attributes in the database.
 
         """
-
-        quotas = objects.Quotas.from_reservations(context,
-                                                  reservations,
-                                                  instance=instance)
-
-        with self._error_out_instance_on_exception(context, instance,
-                                                   quotas=quotas):
+        with self._error_out_instance_on_exception(context, instance):
             self._notify_about_instance_usage(
                     context, instance, "resize.revert.start")
 
@@ -3763,11 +3680,9 @@ class ComputeManager(manager.Manager):
 
             self._notify_about_instance_usage(
                     context, instance, "resize.revert.end")
-            quotas.commit()
 
     def _prep_resize(self, context, image, instance, instance_type,
-            quotas, request_spec, filter_properties, node,
-            clean_shutdown=True):
+            request_spec, filter_properties, node, clean_shutdown=True):
 
         if not filter_properties:
             filter_properties = {}
@@ -3802,8 +3717,7 @@ class ComputeManager(manager.Manager):
             LOG.info('Migrating', instance=instance)
             self.compute_rpcapi.resize_instance(
                     context, instance, claim.migration, image,
-                    instance_type, quotas.reservations,
-                    clean_shutdown)
+                    instance_type, clean_shutdown)
 
     @wrap_exception()
     @reverts_task_state
@@ -3828,21 +3742,15 @@ class ComputeManager(manager.Manager):
         if not isinstance(instance_type, objects.Flavor):
             instance_type = objects.Flavor.get_by_id(context,
                                                      instance_type['id'])
-
-        quotas = objects.Quotas.from_reservations(context,
-                                                  reservations,
-                                                  instance=instance)
-        with self._error_out_instance_on_exception(context, instance,
-                                                   quotas=quotas):
+        with self._error_out_instance_on_exception(context, instance):
             compute_utils.notify_usage_exists(self.notifier, context, instance,
                                               current_period=True)
             self._notify_about_instance_usage(
                     context, instance, "resize.prep.start")
             try:
                 self._prep_resize(context, image, instance,
-                                  instance_type, quotas,
-                                  request_spec, filter_properties,
-                                  node, clean_shutdown)
+                                  instance_type, request_spec,
+                                  filter_properties, node, clean_shutdown)
             # NOTE(dgenin): This is thrown in LibvirtDriver when the
             #               instance to be migrated is backed by LVM.
             #               Remove when LVM migration is implemented.
@@ -3852,7 +3760,7 @@ class ComputeManager(manager.Manager):
                 # try to re-schedule the resize elsewhere:
                 exc_info = sys.exc_info()
                 self._reschedule_resize_or_reraise(context, image, instance,
-                        exc_info, instance_type, quotas, request_spec,
+                        exc_info, instance_type, request_spec,
                         filter_properties)
             finally:
                 extra_usage_info = dict(
@@ -3864,7 +3772,7 @@ class ComputeManager(manager.Manager):
                     extra_usage_info=extra_usage_info)
 
     def _reschedule_resize_or_reraise(self, context, image, instance, exc_info,
-            instance_type, quotas, request_spec, filter_properties):
+            instance_type, request_spec, filter_properties):
         """Try to re-schedule the resize or re-raise the original error to
         error out the instance.
         """
@@ -3879,8 +3787,7 @@ class ComputeManager(manager.Manager):
         try:
             reschedule_method = self.compute_task_api.resize_instance
             scheduler_hint = dict(filter_properties=filter_properties)
-            method_args = (instance, None, scheduler_hint, instance_type,
-                           quotas.reservations)
+            method_args = (instance, None, scheduler_hint, instance_type)
             task_state = task_states.RESIZE_PREP
 
             rescheduled = self._reschedule(context, request_spec,
@@ -3915,12 +3822,7 @@ class ComputeManager(manager.Manager):
                         reservations, migration, instance_type,
                         clean_shutdown):
         """Starts the migration of a running instance to another host."""
-
-        quotas = objects.Quotas.from_reservations(context,
-                                                  reservations,
-                                                  instance=instance)
-        with self._error_out_instance_on_exception(context, instance,
-                                                   quotas=quotas):
+        with self._error_out_instance_on_exception(context, instance):
             # TODO(chaochin) Remove this until v5 RPC API
             # Code downstream may expect extra_specs to be populated since it
             # is receiving an object, so lookup the flavor to ensure this.
@@ -3976,8 +3878,7 @@ class ComputeManager(manager.Manager):
             instance.save(expected_task_state=task_states.RESIZE_MIGRATING)
 
             self.compute_rpcapi.finish_resize(context, instance,
-                    migration, image, disk_info,
-                    migration.dest_compute, reservations=quotas.reservations)
+                    migration, image, disk_info, migration.dest_compute)
 
             self._notify_about_instance_usage(context, instance, "resize.end",
                                               network_info=network_info)
@@ -4004,8 +3905,6 @@ class ComputeManager(manager.Manager):
     @staticmethod
     def _set_instance_info(instance, instance_type):
         instance.instance_type_id = instance_type.id
-        # NOTE(danms): These are purely for any legacy code that still
-        # looks at them.
         instance.memory_mb = instance_type.memory_mb
         instance.vcpus = instance_type.vcpus
         instance.root_gb = instance_type.root_gb
@@ -4104,24 +4003,14 @@ class ComputeManager(manager.Manager):
         new host machine.
 
         """
-        quotas = objects.Quotas.from_reservations(context,
-                                                  reservations,
-                                                  instance=instance)
         try:
             image_meta = objects.ImageMeta.from_dict(image)
             self._finish_resize(context, instance, migration,
                                 disk_info, image_meta)
-            quotas.commit()
         except Exception:
             LOG.exception('Setting instance vm_state to ERROR',
                           instance=instance)
             with excutils.save_and_reraise_exception():
-                try:
-                    quotas.rollback()
-                except Exception:
-                    LOG.exception("Failed to rollback quota for failed "
-                                  "finish_resize",
-                                  instance=instance)
                 self._set_instance_obj_error_state(context, instance)
 
     @wrap_exception()
@@ -6652,14 +6541,6 @@ class ComputeManager(manager.Manager):
             LOG.debug("CONF.reclaim_instance_interval <= 0, skipping...")
             return
 
-        # TODO(comstud, jichenjc): Dummy quota object for now See bug 1296414.
-        # The only case that the quota might be inconsistent is
-        # the compute node died between set instance state to SOFT_DELETED
-        # and quota commit to DB. When compute node starts again
-        # it will have no idea the reservation is committed or not or even
-        # expired, since it's a rare case, so marked as todo.
-        quotas = objects.Quotas.from_reservations(context, None)
-
         filters = {'vm_state': vm_states.SOFT_DELETED,
                    'task_state': None,
                    'host': self.host}
@@ -6673,7 +6554,7 @@ class ComputeManager(manager.Manager):
                         context, instance.uuid)
                 LOG.info('Reclaiming deleted instance', instance=instance)
                 try:
-                    self._delete_instance(context, instance, bdms, quotas)
+                    self._delete_instance(context, instance, bdms)
                 except Exception as e:
                     LOG.warning("Periodic reclaim failed to delete "
                                 "instance: %s",
@@ -6849,15 +6730,12 @@ class ComputeManager(manager.Manager):
 
     @contextlib.contextmanager
     def _error_out_instance_on_exception(self, context, instance,
-                                         quotas=None,
                                          instance_state=vm_states.ACTIVE):
         instance_uuid = instance.uuid
         try:
             yield
         except NotImplementedError as error:
             with excutils.save_and_reraise_exception():
-                if quotas:
-                    quotas.rollback()
                 LOG.info("Setting instance back to %(state)s after: "
                          "%(error)s",
                          {'state': instance_state, 'error': error},
@@ -6866,8 +6744,6 @@ class ComputeManager(manager.Manager):
                                       vm_state=instance_state,
                                       task_state=None)
         except exception.InstanceFaultRollback as error:
-            if quotas:
-                quotas.rollback()
             LOG.info("Setting instance back to ACTIVE after: %s",
                      error, instance_uuid=instance_uuid)
             self._instance_update(context, instance,
@@ -6878,8 +6754,6 @@ class ComputeManager(manager.Manager):
             LOG.exception('Setting instance vm_state to ERROR',
                           instance_uuid=instance_uuid)
             with excutils.save_and_reraise_exception():
-                if quotas:
-                    quotas.rollback()
                 self._set_instance_obj_error_state(context, instance)
 
     @wrap_exception()

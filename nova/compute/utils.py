@@ -687,6 +687,132 @@ def reserve_quota_delta(context, deltas, instance):
     return quotas
 
 
+def get_headroom(quotas, usages, deltas):
+    headroom = {res: quotas[res] - usages[res]
+                for res in quotas.keys()}
+    # If quota_cores is unlimited [-1]:
+    # - set cores headroom based on instances headroom:
+    if quotas.get('cores') == -1:
+        if deltas.get('cores'):
+            hc = headroom.get('instances', 1) * deltas['cores']
+            headroom['cores'] = hc / deltas.get('instances', 1)
+        else:
+            headroom['cores'] = headroom.get('instances', 1)
+
+    # If quota_ram is unlimited [-1]:
+    # - set ram headroom based on instances headroom:
+    if quotas.get('ram') == -1:
+        if deltas.get('ram'):
+            hr = headroom.get('instances', 1) * deltas['ram']
+            headroom['ram'] = hr / deltas.get('instances', 1)
+        else:
+            headroom['ram'] = headroom.get('instances', 1)
+
+    return headroom
+
+
+def check_num_instances_quota(context, instance_type, min_count,
+                              max_count, project_id=None, user_id=None,
+                              orig_num_req=None):
+    """Enforce quota limits on number of instances created."""
+    # project_id is used for the TooManyInstances error message
+    if project_id is None:
+        project_id = context.project_id
+    # Determine requested cores and ram
+    req_cores = max_count * instance_type.vcpus
+    req_ram = max_count * instance_type.memory_mb
+    deltas = {'instances': max_count, 'cores': req_cores, 'ram': req_ram}
+
+    try:
+        objects.Quotas.check_deltas(context, deltas,
+                                    project_id, user_id=user_id,
+                                    check_project_id=project_id,
+                                    check_user_id=user_id)
+    except exception.OverQuota as exc:
+        quotas = exc.kwargs['quotas']
+        overs = exc.kwargs['overs']
+        usages = exc.kwargs['usages']
+        # This is for the recheck quota case where we used a delta of zero.
+        if min_count == max_count == 0:
+            # orig_num_req is the original number of instances requested in the
+            # case of a recheck quota, for use in the over quota exception.
+            req_cores = orig_num_req * instance_type.vcpus
+            req_ram = orig_num_req * instance_type.memory_mb
+            requested = {'instances': orig_num_req, 'cores': req_cores,
+                         'ram': req_ram}
+            (overs, reqs, total_alloweds, useds) = get_over_quota_detail(
+                deltas, overs, quotas, requested)
+            msg = "Cannot run any more instances of this type."
+            params = {'overs': overs, 'pid': project_id, 'msg': msg}
+            LOG.debug("%(overs)s quota exceeded for %(pid)s. %(msg)s",
+                      params)
+            raise exception.TooManyInstances(overs=overs,
+                                             req=reqs,
+                                             used=useds,
+                                             allowed=total_alloweds)
+        # OK, we exceeded quota; let's figure out why...
+        headroom = get_headroom(quotas, usages, deltas)
+
+        allowed = headroom.get('instances', 1)
+        # Reduce 'allowed' instances in line with the cores & ram headroom
+        if instance_type.vcpus:
+            allowed = min(allowed,
+                          headroom['cores'] // instance_type.vcpus)
+        if instance_type.memory_mb:
+            allowed = min(allowed,
+                          headroom['ram'] // instance_type.memory_mb)
+
+        # Convert to the appropriate exception message
+        if allowed <= 0:
+            msg = "Cannot run any more instances of this type."
+        elif min_count <= allowed <= max_count:
+            # We're actually OK, but still need to check against allowed
+            return check_num_instances_quota(context, instance_type, min_count,
+                                             allowed, project_id=project_id,
+                                             user_id=user_id)
+        else:
+            msg = "Can only run %s more instances of this type." % allowed
+
+        num_instances = (str(min_count) if min_count == max_count else
+            "%s-%s" % (min_count, max_count))
+        requested = dict(instances=num_instances, cores=req_cores,
+                         ram=req_ram)
+        (overs, reqs, total_alloweds, useds) = get_over_quota_detail(
+            headroom, overs, quotas, requested)
+        params = {'overs': overs, 'pid': project_id,
+                  'min_count': min_count, 'max_count': max_count,
+                  'msg': msg}
+
+        if min_count == max_count:
+            LOG.debug("%(overs)s quota exceeded for %(pid)s,"
+                      " tried to run %(min_count)d instances. "
+                      "%(msg)s", params)
+        else:
+            LOG.debug("%(overs)s quota exceeded for %(pid)s,"
+                      " tried to run between %(min_count)d and"
+                      " %(max_count)d instances. %(msg)s",
+                      params)
+        raise exception.TooManyInstances(overs=overs,
+                                         req=reqs,
+                                         used=useds,
+                                         allowed=total_alloweds)
+
+    return max_count
+
+
+def get_over_quota_detail(headroom, overs, quotas, requested):
+    reqs = []
+    useds = []
+    total_alloweds = []
+    for resource in overs:
+        reqs.append(str(requested[resource]))
+        useds.append(str(quotas[resource] - headroom[resource]))
+        total_alloweds.append(str(quotas[resource]))
+    (overs, reqs, useds, total_alloweds) = map(', '.join, (
+        overs, reqs, useds, total_alloweds))
+    return overs, reqs, total_alloweds, useds
+
+
 def remove_shelved_keys_from_system_metadata(instance):
     # Delete system_metadata for a shelved instance
     for key in ['shelved_at', 'shelved_image_id', 'shelved_host']:

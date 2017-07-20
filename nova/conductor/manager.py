@@ -925,15 +925,11 @@ class ComputeTaskManager(base.Base):
             return
 
         host_mapping_cache = {}
+        instances = []
 
         for (build_request, request_spec, host) in six.moves.zip(
                 build_requests, request_specs, hosts):
-            filter_props = request_spec.to_legacy_filter_properties_dict()
             instance = build_request.get_new_instance(context)
-            scheduler_utils.populate_retry(filter_props, instance.uuid)
-            scheduler_utils.populate_filter_properties(filter_props,
-                                                       host)
-
             # Convert host from the scheduler into a cell record
             if host['host'] not in host_mapping_cache:
                 try:
@@ -947,6 +943,8 @@ class ComputeTaskManager(base.Base):
                     self._bury_in_cell0(context, request_spec, exc,
                                         build_requests=[build_request],
                                         instances=[instance])
+                    # This is a placeholder in case the quota recheck fails.
+                    instances.append(None)
                     continue
             else:
                 host_mapping = host_mapping_cache[host['host']]
@@ -963,6 +961,8 @@ class ComputeTaskManager(base.Base):
                 # the build request is gone so we're done for this instance
                 LOG.debug('While scheduling instance, the build request '
                           'was already deleted.', instance=instance)
+                # This is a placeholder in case the quota recheck fails.
+                instances.append(None)
                 continue
             else:
                 instance.availability_zone = (
@@ -970,7 +970,34 @@ class ComputeTaskManager(base.Base):
                         context, host['host']))
                 with obj_target_cell(instance, cell):
                     instance.create()
+                    instances.append(instance)
 
+        # NOTE(melwitt): We recheck the quota after creating the
+        # objects to prevent users from allocating more resources
+        # than their allowed quota in the event of a race. This is
+        # configurable because it can be expensive if strict quota
+        # limits are not required in a deployment.
+        if CONF.quota.recheck_quota:
+            try:
+                compute_utils.check_num_instances_quota(
+                    context, instance.flavor, 0, 0,
+                    orig_num_req=len(build_requests))
+            except exception.TooManyInstances as exc:
+                with excutils.save_and_reraise_exception():
+                    self._cleanup_build_artifacts(context, exc, instances,
+                                                  build_requests,
+                                                  request_specs)
+
+        for (build_request, request_spec, host, instance) in six.moves.zip(
+                build_requests, request_specs, hosts, instances):
+            if instance is None:
+                # Skip placeholders that were buried in cell0 or had their
+                # build requests deleted by the user before instance create.
+                continue
+            filter_props = request_spec.to_legacy_filter_properties_dict()
+            scheduler_utils.populate_retry(filter_props, instance.uuid)
+            scheduler_utils.populate_filter_properties(filter_props,
+                                                       host)
             # send a state update notification for the initial create to
             # show it going from non-existent to BUILDING
             notifications.send_update_with_states(context, instance, None,
@@ -1018,6 +1045,29 @@ class ComputeTaskManager(base.Base):
                     block_device_mapping=instance_bdms,
                     host=host['host'], node=host['nodename'],
                     limits=host['limits'])
+
+    def _cleanup_build_artifacts(self, context, exc, instances, build_requests,
+                                 request_specs):
+        for (instance, build_request, request_spec) in six.moves.zip(
+                instances, build_requests, request_specs):
+            # Skip placeholders that were buried in cell0 or had their
+            # build requests deleted by the user before instance create.
+            if instance is None:
+                continue
+            updates = {'vm_state': vm_states.ERROR, 'task_state': None}
+            legacy_spec = request_spec.to_legacy_request_spec_dict()
+            self._set_vm_state_and_notify(context, instance.uuid,
+                                          'build_instances', updates, exc,
+                                          legacy_spec)
+            # Be paranoid about artifacts being deleted underneath us.
+            try:
+                build_request.destroy()
+            except exception.BuildRequestNotFound:
+                pass
+            try:
+                request_spec.destroy()
+            except exception.RequestSpecNotFound:
+                pass
 
     def _delete_build_request(self, context, build_request, instance, cell,
                               instance_bdms, instance_tags):

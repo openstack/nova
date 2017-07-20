@@ -274,6 +274,53 @@ class ServersTest(ServersTestBase):
         found_server = self._wait_for_state_change(found_server, 'DELETED')
         self.assertEqual('ACTIVE', found_server['status'])
 
+    def test_deferred_delete_restore_overquota(self):
+        # Test that a restore that would put the user over quota fails
+        self.flags(instances=1, group='quota')
+        # Creates, deletes and restores a server.
+        self.flags(reclaim_instance_interval=3600)
+
+        # Create server
+        server = self._build_minimal_create_server_request()
+
+        created_server1 = self.api.post_server({'server': server})
+        LOG.debug("created_server: %s", created_server1)
+        self.assertTrue(created_server1['id'])
+        created_server_id1 = created_server1['id']
+
+        # Wait for it to finish being created
+        found_server1 = self._wait_for_state_change(created_server1, 'BUILD')
+
+        # It should be available...
+        self.assertEqual('ACTIVE', found_server1['status'])
+
+        # Delete the server
+        self.api.delete_server(created_server_id1)
+
+        # Wait for queued deletion
+        found_server1 = self._wait_for_state_change(found_server1, 'ACTIVE')
+        self.assertEqual('SOFT_DELETED', found_server1['status'])
+
+        # Create a second server
+        server = self._build_minimal_create_server_request()
+
+        created_server2 = self.api.post_server({'server': server})
+        LOG.debug("created_server: %s", created_server2)
+        self.assertTrue(created_server2['id'])
+
+        # Wait for it to finish being created
+        found_server2 = self._wait_for_state_change(created_server2, 'BUILD')
+
+        # It should be available...
+        self.assertEqual('ACTIVE', found_server2['status'])
+
+        # Try to restore the first server, it should fail
+        ex = self.assertRaises(client.OpenStackApiException,
+                               self.api.post_server_action,
+                               created_server_id1, {'restore': {}})
+        self.assertEqual(403, ex.response.status_code)
+        self.assertEqual('SOFT_DELETED', found_server1['status'])
+
     def test_deferred_delete_force(self):
         # Creates, deletes and force deletes a server.
         self.flags(reclaim_instance_interval=3600)
@@ -667,6 +714,24 @@ class ServersTest(ServersTestBase):
 
         # Cleanup
         self._delete_server(created_server_id)
+
+    def test_resize_server_overquota(self):
+        self.flags(cores=1, group='quota')
+        self.flags(ram=512, group='quota')
+        # Create server with default flavor, 1 core, 512 ram
+        server = self._build_minimal_create_server_request()
+        created_server = self.api.post_server({"server": server})
+        created_server_id = created_server['id']
+
+        found_server = self._wait_for_state_change(created_server, 'BUILD')
+        self.assertEqual('ACTIVE', found_server['status'])
+
+        # Try to resize to flavorid 2, 1 core, 2048 ram
+        post = {'resize': {'flavorRef': '2'}}
+        ex = self.assertRaises(client.OpenStackApiException,
+                               self.api.post_server_action,
+                               created_server_id, post)
+        self.assertEqual(403, ex.response.status_code)
 
 
 class ServersTestV21(ServersTest):
