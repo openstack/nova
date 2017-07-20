@@ -48,6 +48,8 @@ class ExtendedHypervisorsTestV21(test.NoDBTestCase):
     del DETAIL_HYPERS_DICTS[1]['service_id']
     del DETAIL_HYPERS_DICTS[0]['host']
     del DETAIL_HYPERS_DICTS[1]['host']
+    del DETAIL_HYPERS_DICTS[0]['uuid']
+    del DETAIL_HYPERS_DICTS[1]['uuid']
     DETAIL_HYPERS_DICTS[0].update({'state': 'up',
                            'status': 'enabled',
                            'service': dict(id=1, host='compute1',

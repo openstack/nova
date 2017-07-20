@@ -1,9 +1,9 @@
 ---
 features:
   - |
-    Microversion 2.53 changes service IDs to UUIDs to ensure uniqueness across
-    cells. Prior to this, ID collisions were possible in multi-cell
-    deployments. See the `REST API Version History`_ and
+    Microversion 2.53 changes service and hypervisor IDs to UUIDs to ensure
+    uniqueness across cells. Prior to this, ID collisions were possible in
+    multi-cell deployments. See the `REST API Version History`_ and
     `Compute API reference`_ for details.
 
     .. _REST API Version History: https://docs.openstack.org/developer/nova/api_microversion_history.html

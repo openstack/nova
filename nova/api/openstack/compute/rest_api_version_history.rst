@@ -656,3 +656,30 @@ user documentation.
 
   * ``PUT /os-services/{service_uuid}`` will now return a full service resource
     representation like in a ``GET`` response
+
+  **os-hypervisors**
+
+  Hypervisors are now identified by uuid instead of database id to ensure
+  uniqueness across cells. This microversion brings the following changes:
+
+  * ``GET /os-hypervisors/{hypervisor_hostname_pattern}/search`` is deprecated
+    and replaced with the ``hypervisor_hostname_pattern`` query parameter on
+    the ``GET /os-hypervisors`` and ``GET /os-hypervisors/detail`` APIs.
+    Paging with ``hypervisor_hostname_pattern`` is not supported.
+  * ``GET /os-hypervisors/{hypervisor_hostname_pattern}/servers`` is deprecated
+    and replaced with the ``with_servers`` query parameter on the
+    ``GET /os-hypervisors`` and ``GET /os-hypervisors/detail`` APIs.
+  * ``GET /os-hypervisors/{hypervisor_id}`` supports the ``with_servers`` query
+    parameter to include hosted server details in the response.
+  * ``GET /os-hypervisors/{hypervisor_id}`` and
+    ``GET /os-hypervisors/{hypervisor_id}/uptime`` APIs now take a uuid value
+    for the ``{hypervisor_id}`` path parameter.
+  * The ``GET /os-hypervisors`` and ``GET /os-hypervisors/detail`` APIs will
+    now use a uuid marker for paging across cells.
+  * The following APIs will now return a uuid value for the hypervisor id and
+    optionally service id fields in the response:
+
+    * ``GET /os-hypervisors``
+    * ``GET /os-hypervisors/detail``
+    * ``GET /os-hypervisors/{hypervisor_id}``
+    * ``GET /os-hypervisors/{hypervisor_id}/uptime``
