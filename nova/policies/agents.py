@@ -27,8 +27,8 @@ agents_policies = [
         base.RULE_ADMIN_API,
         """Create, list, update, and delete guest agent builds
 
-This is XenAPI driver specific. It is used to force the upgrade of the
-XenAPI guest agent on instance boot.
+This is XenAPI driver specific.
+It is used to force the upgrade of the XenAPI guest agent on instance boot.
 """,
         [
             {
