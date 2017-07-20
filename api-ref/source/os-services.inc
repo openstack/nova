@@ -39,7 +39,8 @@ Response
 .. rest_parameters:: parameters.yaml
 
   - services: services
-  - id: service_id_body
+  - id: service_id_body_2_52
+  - id: service_id_body_2_53
   - binary: binary
   - disabled_reason: disabled_reason_body
   - host: host_name_body
@@ -47,7 +48,7 @@ Response
   - status: service_status
   - updated_at: updated
   - zone: OS-EXT-AZ:availability_zone
-  - forced_down: forced_down
+  - forced_down: forced_down_2_11
 
 **Example List Compute Services**
 
@@ -62,6 +63,9 @@ Disable Scheduling For A Compute Service
 Disables scheduling for a Compute service.
 
 Specify the service by its host name and binary name.
+
+.. note:: Starting with microversion 2.53 this API is superseded by
+          ``PUT /os-services/{service_id}``.
 
 Normal response codes: 200
 
@@ -104,6 +108,9 @@ Disables scheduling for a Compute service and logs information to the Compute
 service table about why a Compute service was disabled.
 
 Specify the service by its host name and binary name.
+
+.. note:: Starting with microversion 2.53 this API is superseded by
+          ``PUT /os-services/{service_id}``.
 
 Normal response codes: 200
 
@@ -148,6 +155,9 @@ Enables scheduling for a Compute service.
 
 Specify the service by its host name and binary name.
 
+.. note:: Starting with microversion 2.53 this API is superseded by
+          ``PUT /os-services/{service_id}``.
+
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
@@ -191,6 +201,9 @@ Action ``force-down`` available as of microversion 2.11.
 
 Specify the service by its host name and binary name.
 
+.. note:: Starting with microversion 2.53 this API is superseded by
+          ``PUT /os-services/{service_id}``.
+
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
@@ -202,7 +215,7 @@ Request
 
   - host: host_name_body
   - binary: binary
-  - forced_down: forced_down
+  - forced_down: forced_down_2_11
 
 **Example Update Forced Down**
 
@@ -217,13 +230,84 @@ Response
   - service: service
   - binary: binary
   - host: host_name_body
-  - forced_down: forced_down
+  - forced_down: forced_down_2_11
 
 |
 
 **Example Update Forced Down**
 
 .. literalinclude:: ../../doc/api_samples/os-services/v2.11/service-force-down-put-resp.json
+   :language: javascript
+
+Update Compute Service
+======================
+
+.. rest_method:: PUT /os-services/{service_id}
+
+Update a compute service to enable or disable scheduling, including recording a
+reason why a compute service was disabled from scheduling. Set or unset the
+``forced_down`` flag for the service.
+
+This API is available starting with microversion 2.53.
+
+Normal response codes: 200
+
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+  - service_id: service_id_path_2_53_no_version
+  - status: service_status_2_53_in
+  - disabled_reason: disabled_reason_2_53_in
+  - forced_down: forced_down_2_53_in
+
+**Example Disable Scheduling For A Compute Service (v2.53)**
+
+.. literalinclude:: ../../doc/api_samples/os-services/v2.53/service-disable-log-put-req.json
+   :language: javascript
+
+**Example Enable Scheduling For A Compute Service (v2.53)**
+
+.. literalinclude:: ../../doc/api_samples/os-services/v2.53/service-enable-put-req.json
+   :language: javascript
+
+**Example Update Forced Down (v2.53)**
+
+.. literalinclude:: ../../doc/api_samples/os-services/v2.53/service-force-down-put-req.json
+   :language: javascript
+
+Response
+--------
+
+.. rest_parameters:: parameters.yaml
+
+  - service: service
+  - id: service_id_body_2_53_no_version
+  - binary: binary
+  - disabled_reason: disabled_reason_body
+  - host: host_name_body
+  - state: service_state
+  - status: service_status
+  - updated_at: updated
+  - zone: OS-EXT-AZ:availability_zone
+  - forced_down: forced_down_2_53_out
+
+**Example Disable Scheduling For A Compute Service (v2.53)**
+
+.. literalinclude:: ../../doc/api_samples/os-services/v2.53/service-disable-log-put-resp.json
+   :language: javascript
+
+**Example Enable Scheduling For A Compute Service (v2.53)**
+
+.. literalinclude:: ../../doc/api_samples/os-services/v2.53/service-enable-put-resp.json
+   :language: javascript
+
+**Example Update Forced Down (v2.53)**
+
+.. literalinclude:: ../../doc/api_samples/os-services/v2.53/service-force-down-put-resp.json
    :language: javascript
 
 Delete Compute Service
@@ -243,7 +327,8 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - service_id: service_id_path
+  - service_id: service_id_path_2_52
+  - service_id: service_id_path_2_53
 
 Response
 --------

@@ -51,6 +51,11 @@ services_policies = [
                 'path': '/os-services/force-down'
             },
             {
+                # Added in microversion 2.53.
+                'method': 'PUT',
+                'path': '/os-services/{service_id}'
+            },
+            {
                 'method': 'DELETE',
                 'path': '/os-services/{service_id}'
             }

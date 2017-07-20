@@ -69,6 +69,20 @@ class _CellProxy(object):
 
         return getattr(self._obj, key)
 
+    def __contains__(self, key):
+        """Pass-through "in" check to the wrapped object.
+
+        This is needed to proxy any types of checks in the calling code
+        like::
+
+          if 'availability_zone' in service:
+              ...
+
+        :param key: They key to look for in the wrapped object.
+        :returns: True if key is in the wrapped object, False otherwise.
+        """
+        return key in self._obj
+
     def obj_to_primitive(self):
         obj_p = self._obj.obj_to_primitive()
         obj_p['cell_proxy.class_name'] = self.__class__.__name__
