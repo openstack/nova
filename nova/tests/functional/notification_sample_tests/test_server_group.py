@@ -17,7 +17,7 @@ from nova.tests.unit import fake_notifier
 class TestServerGroupNotificationSample(
         notification_sample_base.NotificationSampleTestBase):
 
-    def test_server_group_create(self):
+    def test_server_group_create_delete(self):
         group_req = {
             "name": "test-server-group",
             "policies": ["anti-affinity"]}
@@ -26,5 +26,14 @@ class TestServerGroupNotificationSample(
         self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
             'server_group-create',
+            replacements={'uuid': group['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+
+        fake_notifier.reset()
+        self.api.delete_server_group(group['id'])
+
+        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'server_group-delete',
             replacements={'uuid': group['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])

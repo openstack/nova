@@ -50,6 +50,7 @@ class ServerGroupPayload(base.NotificationPayloadBase):
 
 
 @base.notification_sample('server_group-create.json')
+@base.notification_sample('server_group-delete.json')
 @nova_base.NovaObjectRegistry.register_notification
 class ServerGroupNotification(base.NotificationBase):
     # Version 1.0: Initial version
