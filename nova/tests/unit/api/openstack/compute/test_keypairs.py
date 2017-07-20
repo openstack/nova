@@ -181,13 +181,10 @@ class KeypairsTestV21(test.TestCase):
         self.assertNotIn('private_key', res_dict['keypair'])
         self._assert_keypair_type(res_dict)
 
-    def test_keypair_import_quota_limit(self):
-
-        def fake_quotas_count(self, context, resource, *args, **kwargs):
-            return {'user': {'key_pairs': 100}}
-
-        self.stubs.Set(QUOTAS, "count_as_dict", fake_quotas_count)
-
+    @mock.patch('nova.objects.Quotas.check_deltas')
+    def test_keypair_import_quota_limit(self, mock_check):
+        mock_check.side_effect = exception.OverQuota(overs='key_pairs',
+                                                     usages={'key_pairs': 100})
         body = {
             'keypair': {
                 'name': 'create_test',
@@ -207,13 +204,10 @@ class KeypairsTestV21(test.TestCase):
                                self.controller.create, self.req, body=body)
         self.assertIn('Quota exceeded, too many key pairs.', ex.explanation)
 
-    def test_keypair_create_quota_limit(self):
-
-        def fake_quotas_count(self, context, resource, *args, **kwargs):
-            return {'user': {'key_pairs': 100}}
-
-        self.stubs.Set(QUOTAS, "count_as_dict", fake_quotas_count)
-
+    @mock.patch('nova.objects.Quotas.check_deltas')
+    def test_keypair_create_quota_limit(self, mock_check):
+        mock_check.side_effect = exception.OverQuota(overs='key_pairs',
+                                                     usages={'key_pairs': 100})
         body = {
             'keypair': {
                 'name': 'create_test',
@@ -223,6 +217,50 @@ class KeypairsTestV21(test.TestCase):
         ex = self.assertRaises(webob.exc.HTTPForbidden,
                                self.controller.create, self.req, body=body)
         self.assertIn('Quota exceeded, too many key pairs.', ex.explanation)
+
+    @mock.patch('nova.objects.Quotas.check_deltas')
+    def test_keypair_create_over_quota_during_recheck(self, mock_check):
+        # Simulate a race where the first check passes and the recheck fails.
+        # First check occurs in compute/api.
+        exc = exception.OverQuota(overs='key_pairs', usages={'key_pairs': 100})
+        mock_check.side_effect = [None, exc]
+        body = {
+            'keypair': {
+                'name': 'create_test',
+            },
+        }
+
+        self.assertRaises(webob.exc.HTTPForbidden,
+                          self.controller.create, self.req, body=body)
+
+        ctxt = self.req.environ['nova.context']
+        self.assertEqual(2, mock_check.call_count)
+        call1 = mock.call(ctxt, {'key_pairs': 1}, ctxt.user_id)
+        call2 = mock.call(ctxt, {'key_pairs': 0}, ctxt.user_id)
+        mock_check.assert_has_calls([call1, call2])
+
+        # Verify we removed the key pair that was added after the first
+        # quota check passed.
+        key_pairs = objects.KeyPairList.get_by_user(ctxt, ctxt.user_id)
+        names = [key_pair.name for key_pair in key_pairs]
+        self.assertNotIn('create_test', names)
+
+    @mock.patch('nova.objects.Quotas.check_deltas')
+    def test_keypair_create_no_quota_recheck(self, mock_check):
+        # Disable recheck_quota.
+        self.flags(recheck_quota=False, group='quota')
+
+        body = {
+            'keypair': {
+                'name': 'create_test',
+            },
+        }
+        self.controller.create(self.req, body=body)
+
+        ctxt = self.req.environ['nova.context']
+        # check_deltas should have been called only once.
+        mock_check.assert_called_once_with(ctxt, {'key_pairs': 1},
+                                           ctxt.user_id)
 
     def test_keypair_create_duplicate(self):
         self.stub_out("nova.objects.KeyPair.create",
