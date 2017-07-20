@@ -57,7 +57,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         instance_uuids = [uuids.instance]
         ctx = mock.Mock()
         selected_hosts = self.driver._schedule(ctx, spec_obj,
-            instance_uuids, mock.sentinel.provider_summaries)
+            instance_uuids, mock.sentinel.alloc_reqs_by_rp_uuid,
+            mock.sentinel.provider_summaries)
 
         mock_get_all_states.assert_called_once_with(
             ctx.elevated.return_value, spec_obj,
@@ -105,8 +106,9 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             getattr(uuids, 'instance%d' % x) for x in range(num_instances)
         ]
         ctx = mock.Mock()
-        self.driver._schedule(ctx, spec_obj,
-            instance_uuids, mock.sentinel.provider_summaries)
+        self.driver._schedule(ctx, spec_obj, instance_uuids,
+            mock.sentinel.alloc_reqs_by_rp_uuid,
+            mock.sentinel.provider_summaries)
 
         # Check that _get_sorted_hosts() is called twice and that the
         # second time, we pass it the hosts that were returned from
@@ -262,10 +264,12 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         mock_schedule.return_value = [mock.sentinel.hs1]
 
         dests = self.driver.select_destinations(self.context, spec_obj,
-                mock.sentinel.instance_uuids, mock.sentinel.p_sums)
+            mock.sentinel.instance_uuids, mock.sentinel.alloc_reqs_by_rp_uuid,
+            mock.sentinel.p_sums)
 
         mock_schedule.assert_called_once_with(self.context, spec_obj,
-            mock.sentinel.instance_uuids, mock.sentinel.p_sums)
+            mock.sentinel.instance_uuids, mock.sentinel.alloc_reqs_by_rp_uuid,
+            mock.sentinel.p_sums)
 
         self.assertEqual([mock.sentinel.hs1], dests)
 
@@ -290,7 +294,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.assertRaises(exception.NoValidHost,
             self.driver.select_destinations, self.context, spec_obj,
-            mock.sentinel.instance_uuids, mock.sentinel.p_sums)
+            mock.sentinel.instance_uuids, mock.sentinel.alloc_reqs_by_rp_uuid,
+            mock.sentinel.p_sums)
 
         # Verify that the host state object has been marked as not updated so
         # it's picked up in the next pull from the DB for compute node objects
@@ -309,7 +314,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                            instance_uuid=uuids.instance)
 
             self.driver.select_destinations(self.context, spec_obj,
-                    [uuids.instance], {})
+                    [uuids.instance], {}, None)
 
             expected = [
                 mock.call(self.context, 'scheduler.select_destinations.start',

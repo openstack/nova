@@ -19,6 +19,8 @@
 Scheduler Service
 """
 
+import collections
+
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
@@ -116,28 +118,40 @@ class SchedulerManager(manager.Manager):
                                                            request_spec,
                                                            filter_properties)
         resources = utils.resources_from_request_spec(spec_obj)
-        alloc_reqs, p_sums = None, None
+        alloc_reqs_by_rp_uuid, provider_summaries = None, None
         if self.driver.USES_ALLOCATION_CANDIDATES:
             res = self.placement_client.get_allocation_candidates(resources)
-            # We have to handle the case that we failed to connect to the
-            # Placement service and the safe_connect decorator on
-            # get_allocation_candidates returns None.
-            alloc_reqs, p_sums = res if res is not None else (None, None)
+            if res is None:
+                # We have to handle the case that we failed to connect to the
+                # Placement service and the safe_connect decorator on
+                # get_allocation_candidates returns None.
+                alloc_reqs, provider_summaries = None, None
+            else:
+                alloc_reqs, provider_summaries = res
             if not alloc_reqs:
                 LOG.debug("Got no allocation candidates from the Placement "
                           "API. This may be a temporary occurrence as compute "
                           "nodes start up and begin reporting inventory to "
                           "the Placement service.")
-                # TODO(jaypipes): Setting p_sums to None triggers the scheduler
-                # to load all compute nodes to do scheduling "the old way".
-                # Really, we should raise NoValidHosts here, but all functional
-                # tests will fall over if we do that without changing the
-                # PlacementFixture to load compute node inventory into the
-                # placement database before starting functional tests.
-                p_sums = None
+                # TODO(jaypipes): Setting provider_summaries to None triggers
+                # the scheduler to load all compute nodes to do scheduling "the
+                # old way".  Really, we should raise NoValidHosts here, but all
+                # functional tests will fall over if we do that without
+                # changing the PlacementFixture to load compute node inventory
+                # into the placement database before starting functional tests.
+                provider_summaries = None
+            else:
+                # Build a dict of lists of allocation requests, keyed by
+                # provider UUID, so that when we attempt to claim resources for
+                # a host, we can grab an allocation request easily
+                alloc_reqs_by_rp_uuid = collections.defaultdict(list)
+                for ar in alloc_reqs:
+                    for rr in ar['allocations']:
+                        rp_uuid = rr['resource_provider']['uuid']
+                        alloc_reqs_by_rp_uuid[rp_uuid].append(ar)
 
         dests = self.driver.select_destinations(ctxt, spec_obj, instance_uuids,
-            p_sums)
+            alloc_reqs_by_rp_uuid, provider_summaries)
         dest_dicts = [_host_state_obj_to_dict(d) for d in dests]
         return jsonutils.to_primitive(dest_dicts)
 
