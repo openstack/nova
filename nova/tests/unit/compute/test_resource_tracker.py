@@ -1067,7 +1067,8 @@ class TestInitComputeNode(BaseTestCase):
             cpu_allocation_ratio=1.0,
             disk_allocation_ratio=1.0,
             stats={},
-            pci_device_pools=objects.PciDevicePoolList(objects=[])
+            pci_device_pools=objects.PciDevicePoolList(objects=[]),
+            uuid=uuids.compute_node_uuid
         )
 
         def set_cn_id():
@@ -1076,6 +1077,7 @@ class TestInitComputeNode(BaseTestCase):
             # 'id' in base class error
             cn = self.rt.compute_nodes[_NODENAME]
             cn.id = 42  # Has to be a number, not a mock
+            cn.uuid = uuids.compute_node_uuid
 
         create_mock.side_effect = set_cn_id
         self.rt._init_compute_node(mock.sentinel.ctx, resources)
