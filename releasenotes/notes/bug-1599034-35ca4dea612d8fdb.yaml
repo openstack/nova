@@ -1,0 +1,11 @@
+---
+upgrade:
+  - |
+    The type of following config options have been changed
+    from string to URI. They are checked whether they follow
+    the URI format or not and its scheme.
+
+    - ``api_endpoint`` in the ``ironic`` group
+    - ``mksproxy_base_url`` in the ``mks`` group
+    - ``html5_proxy_base_url`` in the ``rdp`` group
+    - ``serial_port_proxy_uri`` in the ``vmware`` group
