@@ -5045,7 +5045,6 @@ class ComputeManager(manager.Manager):
         return (comp_ret, new_cinfo)
 
     @wrap_exception()
-    @reverts_task_state
     @wrap_instance_fault
     def swap_volume(self, context, old_volume_id, new_volume_id, instance,
                     new_attachment_id=None):
