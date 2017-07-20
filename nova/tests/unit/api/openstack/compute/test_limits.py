@@ -45,8 +45,12 @@ class BaseLimitTestSuite(test.NoDBTestCase):
             return {k: dict(limit=v)
                     for k, v in self.absolute_limits.items()}
 
-        self.stubs.Set(nova.quota.QUOTAS, "get_project_quotas",
-                       stub_get_project_quotas)
+        mock_get_project_quotas = mock.patch.object(
+            nova.quota.QUOTAS,
+            "get_project_quotas",
+            side_effect = stub_get_project_quotas)
+        mock_get_project_quotas.start()
+        self.addCleanup(mock_get_project_quotas.stop)
 
     def _get_time(self):
         """Return the "time" according to this test suite."""
