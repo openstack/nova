@@ -24,11 +24,6 @@ from nova.i18n import _LW
 LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
 
-
-# NOTE(kfarr): This line can be removed when a value is assigned in DevStack
-CONF.set_default('api_class', 'nova.keymgr.conf_key_mgr.ConfKeyManager',
-                 group='key_manager')
-
 # NOTE(kfarr): For backwards compatibility, everything below this comment
 # is deprecated for removal
 api_class = None
