@@ -33,7 +33,6 @@ import socket
 import struct
 import sys
 import tempfile
-import textwrap
 import time
 
 import eventlet
@@ -1385,7 +1384,7 @@ def strtime(at):
     return at.strftime("%Y-%m-%dT%H:%M:%S.%f")
 
 
-def print_dict(dct, dict_property="Property", wrap=0, dict_value='Value'):
+def print_dict(dct, dict_property="Property", dict_value='Value'):
     """Print a `dict` as a table of two columns.
 
     :param dct: `dict` to print
@@ -1399,8 +1398,6 @@ def print_dict(dct, dict_property="Property", wrap=0, dict_value='Value'):
         # convert dict to str to check length
         if isinstance(v, dict):
             v = six.text_type(v)
-        if wrap > 0:
-            v = textwrap.fill(six.text_type(v), wrap)
         # if value has a newline, add in multiple rows
         # e.g. fault with stacktrace
         if v and isinstance(v, six.string_types) and r'\n' in v:
