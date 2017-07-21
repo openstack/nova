@@ -66,6 +66,41 @@ class FakeSnapshot(object):
         self.project_id = 'fake_project'
 
 
+class FakeAttachment(object):
+
+    def __init__(self):
+        self.id = uuids.attachment_id
+        self.status = 'attached'
+        self.instance = uuids.instance_uuid
+        self.volume_id = uuids.volume_id
+        self.attached_at = timeutils.utcnow()
+        self.detached_at = None
+        self.attach_mode = 'rw'
+        self.connection_info = {'driver_volume_type': 'fake_type',
+                                'target_lun': '1',
+                                'foo': 'bar'}
+        self.att = {'id': self.id,
+                    'status': self.status,
+                    'instance': self.instance,
+                    'volume_id': self.volume_id,
+                    'attached_at': self.attached_at,
+                    'detached_at': self.detached_at,
+                    'attach_mode': self.attach_mode,
+                    'connection_info': self.connection_info}
+
+    def get(self, key, default=None):
+        return self.att.get(key, default)
+
+    def __setitem__(self, key, value):
+        self.att[key] = value
+
+    def __getitem__(self, key):
+        return self.att[key]
+
+    def to_dict(self):
+        return self.att
+
+
 class CinderApiTestCase(test.NoDBTestCase):
     def setUp(self):
         super(CinderApiTestCase, self).setUp()
@@ -265,23 +300,15 @@ class CinderApiTestCase(test.NoDBTestCase):
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_attachment_create(self, mock_cinderclient):
         """Tests the happy path for creating a volume attachment."""
-        values = {
-            'id': uuids.attachment_id,
-            'status': 'reserved',
-            'instance': uuids.instance_id,
-            'volume_id': uuids.volume_id,
-            'attached_at': timeutils.utcnow(),
-            'detached_at': None,
-            'attach_mode': 'rw',
-            'connection_info': None
-        }
-        fake_attachment = mock.Mock(
-            autospec='cinderclient.v3.attachments.VolumeAttachment', **values)
+        attachment_ref = {'id': uuids.attachment_id,
+                          'connection_info': {}}
+        expected_attachment_ref = {'id': uuids.attachment_id,
+                                   'connection_info': {'data': {}}}
         mock_cinderclient.return_value.attachments.create.return_value = (
-            fake_attachment)
+            attachment_ref)
         result = self.api.attachment_create(
             self.ctx, uuids.volume_id, uuids.instance_id)
-        self.assertEqual(fake_attachment, result)
+        self.assertEqual(expected_attachment_ref, result)
         mock_cinderclient.return_value.attachments.create.\
             assert_called_once_with(uuids.volume_id, None, uuids.instance_id)
 
@@ -310,23 +337,23 @@ class CinderApiTestCase(test.NoDBTestCase):
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_attachment_update(self, mock_cinderclient):
         """Tests the happy path for updating a volume attachment."""
-        values = {
+        fake_attachment = FakeAttachment()
+        expected_attachment_ref = {
             'id': uuids.attachment_id,
             'status': 'attached',
-            'instance': uuids.instance_id,
-            'volume_id': uuids.volume_id,
-            'attached_at': timeutils.utcnow(),
+            'instance': fake_attachment.instance,
+            'volume_id': fake_attachment.volume_id,
+            'attached_at': fake_attachment.attached_at,
             'detached_at': None,
             'attach_mode': 'rw',
-            'connection_info': {'data': {'foo': 'bar'}}
-        }
-        fake_attachment = mock.Mock(
-            autospec='cinderclient.v3.attachments.VolumeAttachment', **values)
+            'connection_info': {'driver_volume_type': 'fake_type',
+                                'data': {'foo': 'bar',
+                                         'target_lun': '1'}}}
         mock_cinderclient.return_value.attachments.update.return_value = (
             fake_attachment)
         result = self.api.attachment_update(
             self.ctx, uuids.attachment_id, connector={'host': 'fake-host'})
-        self.assertEqual(fake_attachment, result)
+        self.assertEqual(expected_attachment_ref, result)
 
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_attachment_update_attachment_not_found(self, mock_cinderclient):

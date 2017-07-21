@@ -2007,8 +2007,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.BlockDeviceMapping,
                        'get_by_volume_and_instance')
     @mock.patch('nova.volume.cinder.API.get')
-    @mock.patch('nova.volume.cinder.API.attachment_update',
-                return_value=mock.Mock(connection_info={}))
+    @mock.patch('nova.volume.cinder.API.attachment_update')
     @mock.patch('nova.volume.cinder.API.attachment_delete')
     @mock.patch('nova.volume.cinder.API.migrate_volume_completion',
                 return_value={'save_volume_id': uuids.old_volume_id})
@@ -2030,6 +2029,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         new_volume = {
             'id': uuids.new_volume_id, 'size': 1, 'status': 'reserved'
         }
+        attachment_update.return_value = {"connection_info": {"data": {}}}
         get_bdm.return_value = bdm
         get_volume.side_effect = (old_volume, new_volume)
         instance = fake_instance.fake_instance_obj(self.context)
@@ -2073,8 +2073,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.BlockDeviceMapping,
                        'get_by_volume_and_instance')
     @mock.patch('nova.volume.cinder.API.get')
-    @mock.patch('nova.volume.cinder.API.attachment_update',
-                return_value=mock.Mock(connection_info={}))
+    @mock.patch('nova.volume.cinder.API.attachment_update')
     @mock.patch('nova.volume.cinder.API.attachment_delete')
     @mock.patch('nova.volume.cinder.API.migrate_volume_completion')
     def test_swap_volume_with_new_attachment_id_cinder_migrate_false(
@@ -2095,6 +2094,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         new_volume = {
             'id': uuids.new_volume_id, 'size': 2, 'status': 'reserved'
         }
+        attachment_update.return_value = {"connection_info": {"data": {}}}
         get_bdm.return_value = bdm
         get_volume.side_effect = (old_volume, new_volume)
         instance = fake_instance.fake_instance_obj(self.context)
@@ -2200,8 +2200,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.BlockDeviceMapping,
                        'get_by_volume_and_instance')
     @mock.patch('nova.volume.cinder.API.get')
-    @mock.patch('nova.volume.cinder.API.attachment_update',
-                return_value=mock.Mock(connection_info={}))
+    @mock.patch('nova.volume.cinder.API.attachment_update')
     @mock.patch('nova.volume.cinder.API.roll_detaching')
     @mock.patch('nova.volume.cinder.API.attachment_delete')
     @mock.patch('nova.volume.cinder.API.migrate_volume_completion')
@@ -2224,6 +2223,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         new_volume = {
             'id': uuids.new_volume_id, 'size': 2, 'status': 'reserved'
         }
+        attachment_update.return_value = {"connection_info": {"data": {}}}
         get_bdm.return_value = bdm
         get_volume.side_effect = (old_volume, new_volume)
         instance = fake_instance.fake_instance_obj(self.context)
@@ -2235,13 +2235,17 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock.patch.object(self.compute.driver, 'swap_volume',
                               side_effect=test.TestingException('yikes'))
         ) as (
-            mock_elevated, mock_get_volume_connector, mock_save
+            mock_elevated, mock_get_volume_connector, mock_driver_swap
         ):
             self.assertRaises(
                 test.TestingException, self.compute.swap_volume,
                 self.context, uuids.old_volume_id, uuids.new_volume_id,
                 instance, uuids.new_attachment_id)
             # Assert the expected calls.
+            # The new connection_info has the new_volume_id as the serial.
+            new_cinfo = mock_driver_swap.call_args[0][1]
+            self.assertIn('serial', new_cinfo)
+            self.assertEqual(uuids.new_volume_id, new_cinfo['serial'])
             get_bdm.assert_called_once_with(
                 self.context, uuids.old_volume_id, instance.uuid)
             # We updated the new attachment with the host connector.

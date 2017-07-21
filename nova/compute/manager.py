@@ -4912,7 +4912,7 @@ class ComputeManager(manager.Manager):
             # the host connector, which will give us back the new attachment
             # connection_info.
             new_cinfo = self.volume_api.attachment_update(
-                context, new_attachment_id, connector).connection_info
+                context, new_attachment_id, connector)['connection_info']
 
         old_cinfo = jsonutils.loads(bdm['connection_info'])
         if old_cinfo and 'serial' not in old_cinfo:
