@@ -64,7 +64,7 @@ quota_sets_policies = [
         ]),
     policy.DocumentedRuleDefault(
         POLICY_ROOT % 'detail',
-        base.RULE_ADMIN_API,
+        base.RULE_ADMIN_OR_OWNER,
         "Show the detail of quota",
         [
             {
