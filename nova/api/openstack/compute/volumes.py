@@ -596,24 +596,3 @@ class SnapshotController(wsgi.Controller):
 
         retval = _translate_snapshot_detail_view(context, new_snapshot)
         return {'snapshot': retval}
-
-
-class Volumes(extensions.V21APIExtensionBase):
-    """Volumes support."""
-
-    name = "Volumes"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        resources = []
-
-        res = extensions.ResourceExtension(
-            'os-snapshots', SnapshotController(),
-            collection_actions={'detail': 'GET'})
-        resources.append(res)
-
-        return resources
-
-    def get_controller_extensions(self):
-        return []
