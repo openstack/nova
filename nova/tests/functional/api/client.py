@@ -134,7 +134,7 @@ class TestOpenStackClient(object):
         response = requests.request(method, url, data=body, headers=_headers)
         return response
 
-    def _authenticate(self):
+    def _authenticate(self, retry_count=0):
         if self.auth_result:
             return self.auth_result
 
@@ -149,8 +149,15 @@ class TestOpenStackClient(object):
         LOG.debug("%(auth_uri)s => code %(http_status)s",
                   {'auth_uri': auth_uri, 'http_status': http_status})
 
+        # NOTE(cdent): This is a workaround for an issue where the placement
+        # API fixture may respond when a request was supposed to go to the
+        # compute API fixture. Retry a few times, hoping to hit the right
+        # fixture.
         if http_status == 401:
-            raise OpenStackApiAuthenticationException(response=response)
+            if retry_count <= 3:
+                return self._authenticate(retry_count=retry_count + 1)
+            else:
+                raise OpenStackApiAuthenticationException(response=response)
 
         self.auth_result = response.headers
         return self.auth_result
