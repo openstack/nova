@@ -268,6 +268,54 @@ class TestPutAllocations(SchedulerReportClientTestCase):
 
         self.assertTrue(res)
 
+    def test_claim_resources_fail_retry_success(self):
+        resp_mocks = [
+            mock.Mock(
+                status_code=409,
+                text='Inventory changed while attempting to allocate: '
+                     'Another thread concurrently updated the data. '
+                     'Please retry your update'),
+            mock.Mock(status_code=204),
+        ]
+        self.ks_sess_mock.put.side_effect = resp_mocks
+        consumer_uuid = uuids.consumer_uuid
+        alloc_req = {
+            'allocations': {
+                'resource_provider': {
+                    'uuid': uuids.cn1,
+                },
+                'resources': {
+                    'VCPU': 1,
+                    'MEMORY_MB': 1024,
+                },
+            },
+        }
+
+        project_id = uuids.project_id
+        user_id = uuids.user_id
+        res = self.client.claim_resources(consumer_uuid, alloc_req, project_id,
+            user_id)
+
+        expected_url = "/allocations/%s" % consumer_uuid
+        expected_payload = copy.deepcopy(alloc_req)
+        expected_payload['project_id'] = project_id
+        expected_payload['user_id'] = user_id
+        # We should have exactly two calls to the placement API that look
+        # identical since we're retrying the same HTTP request
+        expected_calls = [
+            mock.call(expected_url, endpoint_filter=mock.ANY,
+                headers={'OpenStack-API-Version': 'placement 1.10'},
+                json=expected_payload, raise_exc=False),
+            mock.call(expected_url, endpoint_filter=mock.ANY,
+                headers={'OpenStack-API-Version': 'placement 1.10'},
+                json=expected_payload, raise_exc=False),
+        ]
+        self.assertEqual(len(expected_calls),
+                         self.ks_sess_mock.put.call_count)
+        self.ks_sess_mock.put.assert_has_calls(expected_calls)
+
+        self.assertTrue(res)
+
     @mock.patch.object(report.LOG, 'warning')
     def test_claim_resources_failure(self, mock_log):
         resp_mock = mock.Mock(status_code=409)
@@ -288,7 +336,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         project_id = uuids.project_id
         user_id = uuids.user_id
         res = self.client.claim_resources(consumer_uuid, alloc_req, project_id,
-            user_id)
+            user_id, attempt=3)  # attempt=3 prevents falling into retry loop
 
         expected_url = "/allocations/%s" % consumer_uuid
         expected_payload = copy.deepcopy(alloc_req)
