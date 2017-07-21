@@ -820,7 +820,7 @@ class CinderClientTestCase(test.NoDBTestCase):
             self.mock_session.get_endpoint.return_value)
 
     @mock.patch('cinderclient.client.get_highest_client_server_version',
-                return_value=float(cinder_api_versions.MAX_VERSION))
+                return_value=cinder_api_versions.MAX_VERSION)
     @mock.patch('cinderclient.client.get_volume_api_from_url',
                 return_value='3')
     def test_create_v3_client_with_microversion_available(self,
