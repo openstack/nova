@@ -21,9 +21,6 @@ from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 
 
-ALIAS = "versions"
-
-
 class VersionsController(wsgi.Controller):
     @extensions.expected_errors(404)
     def show(self, req, id='v2.1'):
@@ -34,26 +31,3 @@ class VersionsController(wsgi.Controller):
             raise webob.exc.HTTPNotFound()
 
         return builder.build_version(versions.VERSIONS[id])
-
-
-class Versions(extensions.V21APIExtensionBase):
-    """API Version information."""
-
-    name = "Versions"
-    alias = ALIAS
-    version = 1
-
-    def get_resources(self):
-        resources = [
-            extensions.ResourceExtension(ALIAS, VersionsController(),
-                                         custom_routes_fn=self.version_map)]
-        return resources
-
-    def get_controller_extensions(self):
-        return []
-
-    def version_map(self, mapper, wsgi_resource):
-        mapper.connect("versions", "/",
-                       controller=wsgi_resource,
-                       action='show', conditions={"method": ['GET']})
-        mapper.redirect("", "/")
