@@ -1,0 +1,25 @@
+---
+other:
+  - |
+    Nova will now internally use a new flow for new volume attachments when:
+
+    * All *nova-compute* services are upgraded
+    * The *block-storage* 3.44 API microversion is available
+
+    This change should be transparent to end users and does not affect existing
+    volume attachments. Also, this does not affect how new volumes are created
+    and attached during boot-from-volume when the
+    ``block_device_mapping_v2.source_type`` is ``blank``, ``image`` or
+    ``snapshot`` and the ``block_device_mapping_v2.destination_type`` is
+    ``volume``.
+
+    The motivation behind these changes are:
+
+    * Track volume attachment state in the block storage service rather than
+      the compute service (separation of duties, simplicity, etc)
+    * Removal of technical debt from the compute service long-term
+    * Enable a foundation on which to build support for multi-attach volumes
+
+    More details can be found in the spec:
+
+    https://specs.openstack.org/openstack/nova-specs/specs/queens/approved/cinder-new-attach-apis.html

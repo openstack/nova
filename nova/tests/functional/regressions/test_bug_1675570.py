@@ -14,8 +14,10 @@
 
 import time
 
+import mock
 from oslo_log import log as logging
 
+from nova.compute import api as compute_api
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
@@ -24,6 +26,9 @@ import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
 
 LOG = logging.getLogger(__name__)
+
+COMPUTE_VERSION_OLD_ATTACH_FLOW = \
+    compute_api.CINDER_V3_ATTACH_MIN_COMPUTE_VERSION - 1
 
 
 class TestLocalDeleteAttachedVolumes(test.TestCase):
@@ -44,7 +49,8 @@ class TestLocalDeleteAttachedVolumes(test.TestCase):
         super(TestLocalDeleteAttachedVolumes, self).setUp()
         self.useFixture(policy_fixture.RealPolicyFixture())
         # We need the CinderFixture to stub out the volume API.
-        self.cinder = self.useFixture(nova_fixtures.CinderFixture(self))
+        self.cinder = self.useFixture(
+            nova_fixtures.CinderFixtureNewAttachFlow(self))
         # The NeutronFixture is needed to stub out validate_networks in API.
         self.useFixture(nova_fixtures.NeutronFixture(self))
         # Use the PlacementFixture to avoid annoying warnings in the logs.
@@ -124,7 +130,7 @@ class TestLocalDeleteAttachedVolumes(test.TestCase):
                       'server %s. Currently attached volumes: %s' %
                       (volume_id, server_id, attached_vols))
 
-    def test_local_delete_with_volume_attached(self):
+    def test_local_delete_with_volume_attached(self, mock_version_get=None):
         LOG.info('Creating server and waiting for it to be ACTIVE.')
         server = dict(
             name='local-delete-volume-attach-test',
@@ -167,3 +173,12 @@ class TestLocalDeleteAttachedVolumes(test.TestCase):
                  volume_id, server_id)
         # Now that the bug is fixed, assert the volume was detached.
         self.assertNotIn(volume_id, self.cinder.attachments[server_id])
+
+
+@mock.patch('nova.objects.Service.get_minimum_version',
+            return_value=COMPUTE_VERSION_OLD_ATTACH_FLOW)
+class TestLocalDeleteAttachedVolumesOldFlow(TestLocalDeleteAttachedVolumes):
+
+    def setUp(self):
+        super(TestLocalDeleteAttachedVolumesOldFlow, self).setUp()
+        self.cinder = self.useFixture(nova_fixtures.CinderFixture(self))

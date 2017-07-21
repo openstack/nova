@@ -104,6 +104,11 @@ FAKE_IMAGE_REF = uuids.image_ref
 NODENAME = 'fakenode1'
 NODENAME2 = 'fakenode2'
 
+COMPUTE_VERSION_NEW_ATTACH_FLOW = \
+    compute_api.CINDER_V3_ATTACH_MIN_COMPUTE_VERSION
+COMPUTE_VERSION_OLD_ATTACH_FLOW = \
+    compute_api.CINDER_V3_ATTACH_MIN_COMPUTE_VERSION - 1
+
 
 def fake_not_implemented(*args, **kwargs):
     raise NotImplementedError()
@@ -446,6 +451,43 @@ class ComputeVolumeTestCase(BaseTestCase):
             mock_event.assert_called_once_with(
                 self.context, 'compute_attach_volume', instance.uuid)
 
+    @mock.patch('nova.context.RequestContext.elevated')
+    @mock.patch('nova.compute.utils.notify_about_volume_attach_detach')
+    def test_attach_volume_raises_new_flow(self, mock_notify, mock_elevate):
+        mock_elevate.return_value = self.context
+
+        attachment_id = uuids.attachment_id
+        fake_bdm = objects.BlockDeviceMapping(**self.fake_volume)
+        fake_bdm.attachment_id = attachment_id
+        instance = self._create_fake_instance_obj()
+        expected_exception = test.TestingException()
+
+        def fake_attach(*args, **kwargs):
+            raise expected_exception
+
+        with test.nested(
+            mock.patch.object(driver_block_device.DriverVolumeBlockDevice,
+                              'attach'),
+            mock.patch.object(cinder.API, 'attachment_delete'),
+            mock.patch.object(objects.BlockDeviceMapping,
+                              'destroy')
+        ) as (mock_attach, mock_attachment_delete, mock_destroy):
+            mock_attach.side_effect = fake_attach
+            self.assertRaises(
+                    test.TestingException, self.compute.attach_volume,
+                    self.context, instance, fake_bdm)
+            self.assertTrue(mock_attachment_delete.called)
+            self.assertTrue(mock_destroy.called)
+            mock_notify.assert_has_calls([
+                mock.call(self.context, instance, 'fake-mini',
+                          action='volume_attach', phase='start',
+                          volume_id=uuids.volume_id),
+                mock.call(self.context, instance, 'fake-mini',
+                          action='volume_attach', phase='error',
+                          volume_id=uuids.volume_id,
+                          exception=expected_exception),
+            ])
+
     @mock.patch.object(compute_utils, 'EventReporter')
     def test_detach_volume_api_raises(self, mock_event):
         fake_bdm = objects.BlockDeviceMapping(**self.fake_volume)
@@ -569,8 +611,6 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.assertEqual(1, attempts)
 
     def test_boot_volume_serial(self):
-        self.stub_out('nova.volume.cinder.API.check_attach',
-                       lambda *a, **kw: None)
         with (
             mock.patch.object(objects.BlockDeviceMapping, 'save')
         ) as mock_save:
@@ -585,6 +625,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                 'device_name': '/dev/vdb',
                 'volume_size': 55,
                 'delete_on_termination': False,
+                'attachment_id': None,
             })]
             bdms = block_device_obj.block_device_make_list_from_dicts(
                 self.context, block_device_mapping)
@@ -10062,14 +10103,16 @@ class ComputeAPITestCase(BaseTestCase):
         fake_volume = {'id': 'fake-volume-id'}
 
         with test.nested(
+            mock.patch.object(objects.Service, 'get_minimum_version',
+                              return_value=COMPUTE_VERSION_OLD_ATTACH_FLOW),
             mock.patch.object(cinder.API, 'get', return_value=fake_volume),
             mock.patch.object(cinder.API, 'check_availability_zone'),
             mock.patch.object(cinder.API, 'reserve_volume'),
             mock.patch.object(compute_rpcapi.ComputeAPI,
                 'reserve_block_device_name', return_value=bdm),
             mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume')
-        ) as (mock_get, mock_check_availability_zone, mock_reserve_vol,
-                mock_reserve_bdm, mock_attach):
+        ) as (mock_get_version, mock_get, mock_check_availability_zone,
+              mock_reserve_vol, mock_reserve_bdm, mock_attach):
 
             self.compute_api.attach_volume(
                     self.context, instance, 'fake-volume-id',
@@ -10089,20 +10132,185 @@ class ComputeAPITestCase(BaseTestCase):
             self.assertEqual(a[2].device_name, '/dev/vdb')
             self.assertEqual(a[2].volume_id, uuids.volume_id)
 
+    def test_attach_volume_new_flow(self):
+        fake_bdm = fake_block_device.FakeDbBlockDeviceDict(
+                {'source_type': 'volume', 'destination_type': 'volume',
+                 'volume_id': uuids.volume_id, 'device_name': '/dev/vdb'})
+        bdm = block_device_obj.BlockDeviceMapping()._from_db_object(
+                self.context,
+                block_device_obj.BlockDeviceMapping(),
+                fake_bdm)
+        instance = self._create_fake_instance_obj()
+        instance.id = 42
+        fake_volume = {'id': 'fake-volume-id'}
+
+        with test.nested(
+            mock.patch.object(objects.Service, 'get_minimum_version',
+                              return_value=COMPUTE_VERSION_NEW_ATTACH_FLOW),
+            mock.patch.object(cinder.API, 'get', return_value=fake_volume),
+            mock.patch.object(cinder, 'is_microversion_supported'),
+            mock.patch.object(objects.BlockDeviceMapping,
+                              'get_by_volume_and_instance'),
+            mock.patch.object(cinder.API, 'check_availability_zone'),
+            mock.patch.object(cinder.API, 'attachment_create',
+                              return_value={'id': uuids.attachment_id}),
+            mock.patch.object(objects.BlockDeviceMapping, 'save'),
+            mock.patch.object(compute_rpcapi.ComputeAPI,
+                'reserve_block_device_name', return_value=bdm),
+            mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume')
+        ) as (mock_get_version, mock_get, mock_mv_supported, mock_no_bdm,
+              mock_check_availability_zone, mock_attachment_create,
+              mock_bdm_save, mock_reserve_bdm, mock_attach):
+            mock_no_bdm.side_effect = exception.VolumeBDMNotFound(
+                                          volume_id='fake-volume-id')
+            self.compute_api.attach_volume(
+                    self.context, instance, 'fake-volume-id',
+                    '/dev/vdb', 'ide', 'cdrom')
+
+            mock_reserve_bdm.assert_called_once_with(
+                    self.context, instance, '/dev/vdb', 'fake-volume-id',
+                    disk_bus='ide', device_type='cdrom', tag=None)
+            self.assertEqual(mock_get.call_args,
+                             mock.call(self.context, 'fake-volume-id'))
+            self.assertEqual(mock_check_availability_zone.call_args,
+                             mock.call(
+                                 self.context, fake_volume, instance=instance))
+            mock_attachment_create.assert_called_once_with(self.context,
+                                                           'fake-volume-id',
+                                                           instance.uuid)
+            a, kw = mock_attach.call_args
+            self.assertEqual(a[2].device_name, '/dev/vdb')
+            self.assertEqual(a[2].volume_id, uuids.volume_id)
+
+    def test_attach_volume_new_flow_microversion_not_available(self):
+        fake_bdm = fake_block_device.FakeDbBlockDeviceDict(
+                {'source_type': 'volume', 'destination_type': 'volume',
+                 'volume_id': uuids.volume_id, 'device_name': '/dev/vdb'})
+        bdm = block_device_obj.BlockDeviceMapping()._from_db_object(
+                self.context,
+                block_device_obj.BlockDeviceMapping(),
+                fake_bdm)
+        instance = self._create_fake_instance_obj()
+        instance.id = 42
+        fake_volume = {'id': 'fake-volume-id'}
+
+        with test.nested(
+            mock.patch.object(objects.Service, 'get_minimum_version',
+                              return_value=COMPUTE_VERSION_NEW_ATTACH_FLOW),
+            mock.patch.object(cinder.API, 'get', return_value=fake_volume),
+            mock.patch.object(cinder, 'is_microversion_supported'),
+            mock.patch.object(cinder.API, 'check_availability_zone'),
+            mock.patch.object(cinder.API, 'attachment_create'),
+            mock.patch.object(cinder.API, 'reserve_volume'),
+            mock.patch.object(compute_rpcapi.ComputeAPI,
+                'reserve_block_device_name', return_value=bdm),
+            mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume')
+        ) as (mock_get_version, mock_get, mock_mv_supported,
+              mock_check_availability_zone, mock_attachment_create,
+              mock_reserve_vol, mock_reserve_bdm, mock_attach):
+            mock_mv_supported.side_effect = \
+                exception.CinderAPIVersionNotAvailable(version='3.44')
+            mock_attachment_create.side_effect = \
+                exception.CinderAPIVersionNotAvailable(version='3.44')
+            self.compute_api.attach_volume(
+                    self.context, instance, 'fake-volume-id',
+                    '/dev/vdb', 'ide', 'cdrom')
+
+            mock_reserve_bdm.assert_called_once_with(
+                    self.context, instance, '/dev/vdb', 'fake-volume-id',
+                    disk_bus='ide', device_type='cdrom', tag=None)
+            self.assertEqual(mock_get.call_args,
+                             mock.call(self.context, 'fake-volume-id'))
+            self.assertEqual(mock_check_availability_zone.call_args,
+                             mock.call(
+                                 self.context, fake_volume, instance=instance))
+            mock_attachment_create.assert_called_once_with(self.context,
+                                                           'fake-volume-id',
+                                                           instance.uuid)
+            mock_reserve_vol.assert_called_once_with(
+                    self.context, 'fake-volume-id')
+            a, kw = mock_attach.call_args
+            self.assertEqual(a[2].device_name, '/dev/vdb')
+            self.assertEqual(a[2].volume_id, uuids.volume_id)
+
+    def test_attach_volume_no_device_new_flow(self):
+        fake_bdm = fake_block_device.FakeDbBlockDeviceDict(
+                {'source_type': 'volume', 'destination_type': 'volume',
+                 'device_name': '/dev/vdb', 'volume_id': uuids.volume_id})
+        bdm = block_device_obj.BlockDeviceMapping()._from_db_object(
+                self.context,
+                block_device_obj.BlockDeviceMapping(),
+                fake_bdm)
+        instance = self._create_fake_instance_obj()
+        instance.id = 42
+        fake_volume = {'id': 'fake-volume-id'}
+
+        with test.nested(
+            mock.patch.object(objects.Service, 'get_minimum_version',
+                              return_value=COMPUTE_VERSION_NEW_ATTACH_FLOW),
+            mock.patch.object(cinder.API, 'get', return_value=fake_volume),
+            mock.patch.object(cinder, 'is_microversion_supported'),
+            mock.patch.object(objects.BlockDeviceMapping,
+                              'get_by_volume_and_instance',
+                              side_effect=exception.VolumeBDMNotFound),
+            mock.patch.object(cinder.API, 'check_availability_zone'),
+            mock.patch.object(cinder.API, 'attachment_create',
+                              return_value={'id': uuids.attachment_id}),
+            mock.patch.object(objects.BlockDeviceMapping, 'save'),
+            mock.patch.object(compute_rpcapi.ComputeAPI,
+                'reserve_block_device_name', return_value=bdm),
+            mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume')
+        ) as (mock_get_version, mock_get, mock_mv_supported, mock_no_bdm,
+              mock_check_availability_zone, mock_attachment_create,
+              mock_bdm_save, mock_reserve_bdm, mock_attach):
+            mock_no_bdm.side_effect = exception.VolumeBDMNotFound(
+                                          volume_id='fake-volume-id')
+
+            self.compute_api.attach_volume(
+                    self.context, instance, 'fake-volume-id',
+                    device=None)
+
+            mock_reserve_bdm.assert_called_once_with(
+                    self.context, instance, None, 'fake-volume-id',
+                    disk_bus=None, device_type=None, tag=None)
+            self.assertEqual(mock_get.call_args,
+                             mock.call(self.context, 'fake-volume-id'))
+            self.assertEqual(mock_check_availability_zone.call_args,
+                             mock.call(
+                                 self.context, fake_volume, instance=instance))
+            mock_attachment_create.assert_called_once_with(self.context,
+                                                           'fake-volume-id',
+                                                           instance.uuid)
+            a, kw = mock_attach.call_args
+            self.assertEqual(a[2].volume_id, uuids.volume_id)
+
     def test_attach_volume_shelved_offloaded(self):
         instance = self._create_fake_instance_obj()
+        fake_bdm = objects.BlockDeviceMapping(
+            **fake_block_device.FakeDbBlockDeviceDict(
+                {'volume_id': 'fake-volume-id',
+                 'source_type': 'volume',
+                 'destination_type': 'volume',
+                 'device_type': 'cdrom',
+                 'disk_bus': 'ide',
+                 'instance_uuid': instance.uuid}))
         with test.nested(
+             mock.patch.object(compute_api.API,
+                               '_create_volume_bdm',
+                               return_value=fake_bdm),
              mock.patch.object(compute_api.API,
                                '_check_attach_and_reserve_volume'),
              mock.patch.object(cinder.API, 'attach'),
              mock.patch.object(compute_utils, 'EventReporter')
-        ) as (mock_attach_and_reserve, mock_attach, mock_event):
+        ) as (mock_bdm_create, mock_attach_and_reserve, mock_attach,
+              mock_event):
             self.compute_api._attach_volume_shelved_offloaded(
                     self.context, instance, 'fake-volume-id',
                     '/dev/vdb', 'ide', 'cdrom')
             mock_attach_and_reserve.assert_called_once_with(self.context,
                                                             'fake-volume-id',
-                                                            instance)
+                                                            instance,
+                                                            fake_bdm)
             mock_attach.assert_called_once_with(self.context,
                                                 'fake-volume-id',
                                                 instance.uuid,
@@ -10112,9 +10320,45 @@ class ComputeAPITestCase(BaseTestCase):
             )
             self.assertTrue(mock_attach.called)
 
+    def test_attach_volume_shelved_offloaded_new_flow(self):
+        instance = self._create_fake_instance_obj()
+        fake_bdm = objects.BlockDeviceMapping(
+            **fake_block_device.FakeDbBlockDeviceDict(
+                {'volume_id': 'fake-volume-id',
+                 'source_type': 'volume',
+                 'destination_type': 'volume',
+                 'device_type': 'cdrom',
+                 'disk_bus': 'ide',
+                 'instance_uuid': instance.uuid}))
+
+        def fake_check_attach_and_reserve(*args, **kwargs):
+            fake_bdm.attachment_id = uuids.attachment_id
+
+        with test.nested(
+             mock.patch.object(compute_api.API,
+                               '_create_volume_bdm',
+                               return_value=fake_bdm),
+             mock.patch.object(compute_api.API,
+                               '_check_attach_and_reserve_volume',
+                               side_effect=fake_check_attach_and_reserve),
+             mock.patch.object(cinder.API, 'attachment_complete')
+        ) as (mock_bdm_create, mock_attach_and_reserve, mock_attach_complete):
+            self.compute_api._attach_volume_shelved_offloaded(
+                    self.context, instance, 'fake-volume-id',
+                    '/dev/vdb', 'ide', 'cdrom')
+            mock_attach_and_reserve.assert_called_once_with(self.context,
+                                                            'fake-volume-id',
+                                                            instance,
+                                                            fake_bdm)
+            mock_attach_complete.assert_called_once_with(
+                self.context, uuids.attachment_id)
+
     def test_attach_volume_no_device(self):
 
         called = {}
+
+        def fake_mv_supported(*args, **kwargs):
+            raise exception.CinderAPIVersionNotAvailable(version='3.44')
 
         def fake_check_availability_zone(*args, **kwargs):
             called['fake_check_availability_zone'] = True
@@ -10137,6 +10381,8 @@ class ComputeAPITestCase(BaseTestCase):
             return bdm
 
         self.stub_out('nova.volume.cinder.API.get', fake_volume_get)
+        self.stub_out('nova.volume.cinder.is_microversion_supported',
+                      fake_mv_supported)
         self.stub_out('nova.volume.cinder.API.check_availability_zone',
                       fake_check_availability_zone)
         self.stub_out('nova.volume.cinder.API.reserve_volume',
@@ -10192,8 +10438,9 @@ class ComputeAPITestCase(BaseTestCase):
                                              mock_begin_detaching,
                                              mock_event, mock_record):
 
-        mock_block_dev.return_value = [block_device_obj.BlockDeviceMapping(
-                                      context=context)]
+        fake_bdm = block_device_obj.BlockDeviceMapping(context=context)
+        fake_bdm.attachment_id = None
+        mock_block_dev.return_value = fake_bdm
         instance = self._create_fake_instance_obj()
         volume = {'id': 1, 'attach_status': 'fake'}
         self.compute_api._detach_volume_shelved_offloaded(self.context,
@@ -10206,6 +10453,27 @@ class ComputeAPITestCase(BaseTestCase):
         mock_event.assert_called_once_with(self.context,
                                            'api_detach_volume',
                                            instance.uuid)
+        self.assertTrue(mock_local_cleanup.called)
+
+    @mock.patch.object(nova.volume.cinder.API, 'begin_detaching')
+    @mock.patch.object(compute_api.API, '_local_cleanup_bdm_volumes')
+    @mock.patch.object(objects.BlockDeviceMapping, 'get_by_volume_id')
+    def test_detach_volume_shelved_offloaded_new_flow(self,
+                                                      mock_block_dev,
+                                                      mock_local_cleanup,
+                                                      mock_begin_detaching):
+
+        fake_bdm = block_device_obj.BlockDeviceMapping(context=context)
+        fake_bdm.attachment_id = uuids.attachment_id
+        fake_bdm.volume_id = 1
+        mock_block_dev.return_value = fake_bdm
+        instance = self._create_fake_instance_obj()
+        volume = {'id': 1, 'attach_status': 'fake'}
+        self.compute_api._detach_volume_shelved_offloaded(self.context,
+                                                          instance,
+                                                          volume)
+        mock_begin_detaching.assert_called_once_with(self.context,
+                                                     volume['id'])
         self.assertTrue(mock_local_cleanup.called)
 
     @mock.patch.object(nova.volume.cinder.API, 'begin_detaching',

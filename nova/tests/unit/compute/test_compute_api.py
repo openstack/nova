@@ -65,6 +65,10 @@ SHELVED_IMAGE = 'fake-shelved-image'
 SHELVED_IMAGE_NOT_FOUND = 'fake-shelved-image-notfound'
 SHELVED_IMAGE_NOT_AUTHORIZED = 'fake-shelved-image-not-authorized'
 SHELVED_IMAGE_EXCEPTION = 'fake-shelved-image-exception'
+COMPUTE_VERSION_NEW_ATTACH_FLOW = \
+    compute_api.CINDER_V3_ATTACH_MIN_COMPUTE_VERSION
+COMPUTE_VERSION_OLD_ATTACH_FLOW = \
+    compute_api.CINDER_V3_ATTACH_MIN_COMPUTE_VERSION - 1
 
 
 @ddt.ddt
@@ -383,8 +387,11 @@ class _ComputeAPIUnitTestMixIn(object):
 
     @mock.patch.object(compute_api.API, '_record_action_start')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'reserve_block_device_name')
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                       return_value=COMPUTE_VERSION_OLD_ATTACH_FLOW)
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume')
-    def test_attach_volume(self, mock_attach, mock_reserve, mock_record):
+    def test_attach_volume(self, mock_attach, mock_get_min_ver, mock_reserve,
+                           mock_record):
         instance = self._create_instance_obj()
         volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
                                          None, None, None, None, None)
@@ -410,9 +417,11 @@ class _ComputeAPIUnitTestMixIn(object):
 
     @mock.patch.object(compute_api.API, '_record_action_start')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'reserve_block_device_name')
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                       return_value=COMPUTE_VERSION_OLD_ATTACH_FLOW)
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume')
-    def test_tagged_volume_attach(self, mock_attach, mock_reserve,
-                                  mock_record):
+    def test_tagged_volume_attach(self, mock_attach, mock_get_min_ver,
+                                  mock_reserve, mock_record):
         instance = self._create_instance_obj()
         volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
                                          None, None, None, None, None)
@@ -440,7 +449,87 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_record.assert_called_once_with(
                 self.context, instance, instance_actions.ATTACH_VOLUME)
 
-    def test_attach_volume_shelved_instance(self):
+    @mock.patch.object(compute_api.API, '_record_action_start')
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'reserve_block_device_name')
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                       return_value=COMPUTE_VERSION_NEW_ATTACH_FLOW)
+    @mock.patch('nova.volume.cinder.is_microversion_supported')
+    @mock.patch.object(objects.BlockDeviceMapping,
+                       'get_by_volume_and_instance')
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume')
+    def test_attach_volume_new_flow(self, mock_attach, mock_bdm,
+                                    mock_cinder_mv_supported, mock_get_min_ver,
+                                    mock_reserve, mock_record):
+        mock_bdm.side_effect = exception.VolumeBDMNotFound(
+                                          volume_id='fake-volume-id')
+        instance = self._create_instance_obj()
+        volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
+                                         None, None, None, None, None)
+
+        fake_bdm = mock.MagicMock(spec=objects.BlockDeviceMapping)
+        mock_reserve.return_value = fake_bdm
+
+        mock_volume_api = mock.patch.object(self.compute_api, 'volume_api',
+                                            mock.MagicMock(spec=cinder.API))
+
+        with mock_volume_api as mock_v_api:
+            mock_v_api.get.return_value = volume
+            mock_v_api.attachment_create.return_value = \
+                {'id': uuids.attachment_id}
+            self.compute_api.attach_volume(
+                self.context, instance, volume['id'])
+            mock_v_api.check_availability_zone.assert_called_once_with(
+                self.context, volume, instance=instance)
+            mock_v_api.attachment_create.assert_called_once_with(self.context,
+                                                                 volume['id'],
+                                                                 instance.uuid)
+            mock_attach.assert_called_once_with(self.context,
+                                                instance, fake_bdm)
+
+    @mock.patch.object(compute_api.API, '_record_action_start')
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'reserve_block_device_name')
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                       return_value=COMPUTE_VERSION_NEW_ATTACH_FLOW)
+    @mock.patch('nova.volume.cinder.is_microversion_supported')
+    @mock.patch.object(objects.BlockDeviceMapping,
+                       'get_by_volume_and_instance')
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume')
+    def test_tagged_volume_attach_new_flow(self, mock_attach, mock_bdm,
+                                           mock_cinder_mv_supported,
+                                           mock_get_min_ver,
+                                           mock_reserve, mock_record):
+        mock_bdm.side_effect = exception.VolumeBDMNotFound(
+                                          volume_id='fake-volume-id')
+        instance = self._create_instance_obj()
+        volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
+                                         None, None, None, None, None)
+
+        fake_bdm = mock.MagicMock(spec=objects.BlockDeviceMapping)
+        mock_reserve.return_value = fake_bdm
+
+        mock_volume_api = mock.patch.object(self.compute_api, 'volume_api',
+                                            mock.MagicMock(spec=cinder.API))
+
+        with mock_volume_api as mock_v_api:
+            mock_v_api.get.return_value = volume
+            mock_v_api.attachment_create.return_value = \
+                {'id': uuids.attachment_id}
+            self.compute_api.attach_volume(
+                self.context, instance, volume['id'], tag='foo')
+            mock_reserve.assert_called_once_with(self.context, instance, None,
+                                                 volume['id'],
+                                                 device_type=None,
+                                                 disk_bus=None, tag='foo')
+            mock_v_api.check_availability_zone.assert_called_once_with(
+                self.context, volume, instance=instance)
+            mock_v_api.attachment_create.assert_called_once_with(
+                self.context, volume['id'], instance.uuid)
+            mock_attach.assert_called_once_with(self.context,
+                                                instance, fake_bdm)
+
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                       return_value=COMPUTE_VERSION_OLD_ATTACH_FLOW)
+    def test_attach_volume_shelved_instance(self, mock_get_min_ver):
         instance = self._create_instance_obj()
         instance.vm_state = vm_states.SHELVED_OFFLOADED
         volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
@@ -450,8 +539,11 @@ class _ComputeAPIUnitTestMixIn(object):
                           instance, volume['id'], tag='foo')
 
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'reserve_block_device_name')
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                       return_value=COMPUTE_VERSION_OLD_ATTACH_FLOW)
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume')
-    def test_attach_volume_reserve_fails(self, mock_attach, mock_reserve):
+    def test_attach_volume_reserve_fails(self, mock_attach,
+                                         mock_get_min_ver, mock_reserve):
         instance = self._create_instance_obj()
         volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
                                          None, None, None, None, None)
@@ -472,6 +564,42 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, volume, instance=instance)
             mock_v_api.reserve_volume.assert_called_once_with(self.context,
                                                               volume['id'])
+            self.assertEqual(0, mock_attach.call_count)
+            fake_bdm.destroy.assert_called_once_with()
+
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'reserve_block_device_name')
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                       return_value=COMPUTE_VERSION_NEW_ATTACH_FLOW)
+    @mock.patch('nova.volume.cinder.is_microversion_supported')
+    @mock.patch.object(objects.BlockDeviceMapping,
+                       'get_by_volume_and_instance')
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume')
+    def test_attach_volume_attachment_create_fails(self, mock_attach, mock_bdm,
+                                                   mock_cinder_mv_supported,
+                                                   mock_get_min_ver,
+                                                   mock_reserve):
+        mock_bdm.side_effect = exception.VolumeBDMNotFound(
+                                          volume_id='fake-volume-id')
+        instance = self._create_instance_obj()
+        volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
+                                         None, None, None, None, None)
+
+        fake_bdm = mock.MagicMock(spec=objects.BlockDeviceMapping)
+        mock_reserve.return_value = fake_bdm
+
+        mock_volume_api = mock.patch.object(self.compute_api, 'volume_api',
+                                            mock.MagicMock(spec=cinder.API))
+
+        with mock_volume_api as mock_v_api:
+            mock_v_api.get.return_value = volume
+            mock_v_api.attachment_create.side_effect = test.TestingException()
+            self.assertRaises(test.TestingException,
+                              self.compute_api.attach_volume,
+                              self.context, instance, volume['id'])
+            mock_v_api.check_availability_zone.assert_called_once_with(
+                self.context, volume, instance=instance)
+            mock_v_api.attachment_create.assert_called_once_with(
+                self.context, volume['id'], instance.uuid)
             self.assertEqual(0, mock_attach.call_count)
             fake_bdm.destroy.assert_called_once_with()
 
@@ -3786,6 +3914,43 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.context,
                           instance, instance_type, bdms)
 
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                       return_value=COMPUTE_VERSION_NEW_ATTACH_FLOW)
+    @mock.patch.object(cinder.API, 'get')
+    @mock.patch.object(cinder.API, 'attachment_create',
+                       side_effect=exception.InvalidInput(reason='error'))
+    def test_validate_bdm_with_error_volume_new_flow(self, mock_attach_create,
+                                                     mock_get,
+                                                     mock_get_min_ver):
+        # Tests that an InvalidInput exception raised from
+        # volume_api.attachment_create due to the volume status not being
+        # 'available' results in _validate_bdm re-raising InvalidVolume.
+        instance = self._create_instance_obj()
+        instance_type = self._create_flavor()
+        volume_id = 'e856840e-9f5b-4894-8bde-58c6e29ac1e8'
+        volume_info = {'status': 'error',
+                       'attach_status': 'detached',
+                       'id': volume_id}
+        mock_get.return_value = volume_info
+        bdms = [objects.BlockDeviceMapping(
+                **fake_block_device.FakeDbBlockDeviceDict(
+                {
+                 'boot_index': 0,
+                 'volume_id': volume_id,
+                 'source_type': 'volume',
+                 'destination_type': 'volume',
+                 'device_name': 'vda',
+                }))]
+
+        self.assertRaises(exception.InvalidVolume,
+                          self.compute_api._validate_bdm,
+                          self.context,
+                          instance, instance_type, bdms)
+
+        mock_get.assert_called_once_with(self.context, volume_id)
+        mock_attach_create.assert_called_once_with(
+            self.context, volume_id, instance.uuid)
+
     def _test_provision_instances_with_cinder_error(self,
                                                     expected_exception):
         @mock.patch('nova.compute.utils.check_num_instances_quota')
@@ -3864,6 +4029,8 @@ class _ComputeAPIUnitTestMixIn(object):
 
     @mock.patch.object(objects.Service, 'get_minimum_version',
                        return_value=17)
+    @mock.patch.object(objects.service, 'get_minimum_version_all_cells',
+                       return_value=17)
     @mock.patch.object(cinder.API, 'get')
     @mock.patch.object(cinder.API, 'check_availability_zone')
     @mock.patch.object(cinder.API, 'reserve_volume',
@@ -3872,7 +4039,22 @@ class _ComputeAPIUnitTestMixIn(object):
                                                    mock_cinder_check_av_zone,
                                                    mock_reserve_volume,
                                                    mock_get,
+                                                   mock_get_min_ver_cells,
                                                    mock_get_min_ver):
+        self._test_provision_instances_with_cinder_error(
+            expected_exception=exception.InvalidVolume)
+
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                       return_value=COMPUTE_VERSION_NEW_ATTACH_FLOW)
+    @mock.patch.object(objects.service, 'get_minimum_version_all_cells',
+                       return_value=COMPUTE_VERSION_NEW_ATTACH_FLOW)
+    @mock.patch.object(cinder.API, 'get')
+    @mock.patch.object(cinder.API, 'check_availability_zone')
+    @mock.patch.object(cinder.API, 'attachment_create',
+                       side_effect=exception.InvalidInput(reason='error'))
+    def test_provision_instances_with_error_volume_new_flow(self,
+        mock_cinder_check_av_zone, mock_attach_create, mock_get,
+        mock_get_min_ver_cells, mock_get_min_ver):
         self._test_provision_instances_with_cinder_error(
             expected_exception=exception.InvalidVolume)
 
@@ -3924,12 +4106,14 @@ class _ComputeAPIUnitTestMixIn(object):
         @mock.patch.object(objects.RequestSpec, 'from_components')
         @mock.patch.object(objects.BuildRequest, 'create')
         @mock.patch.object(objects.InstanceMapping, 'create')
+        @mock.patch.object(objects.service, 'get_minimum_version_all_cells',
+                return_value=17)
         @mock.patch.object(objects.Service, 'get_minimum_version',
                 return_value=17)
-        def do_test(mock_get_min_ver, _mock_inst_mapping_create,
-                    mock_build_req, mock_req_spec_from_components,
-                    _mock_ensure_default, mock_check_num_inst_quota,
-                    mock_volume, mock_inst_create):
+        def do_test(mock_get_min_ver, mock_get_min_ver_cells,
+                    _mock_inst_mapping_create, mock_build_req,
+                    mock_req_spec_from_components, _mock_ensure_default,
+                    mock_check_num_inst_quota, mock_volume, mock_inst_create):
 
             min_count = 1
             max_count = 2
@@ -4075,6 +4259,8 @@ class _ComputeAPIUnitTestMixIn(object):
 
     @mock.patch.object(objects.Service, 'get_minimum_version',
                        return_value=17)
+    @mock.patch.object(objects.service, 'get_minimum_version_all_cells',
+                       return_value=17)
     @mock.patch.object(cinder.API, 'get')
     @mock.patch.object(cinder.API, 'check_availability_zone',)
     @mock.patch.object(cinder.API, 'reserve_volume',
@@ -4082,7 +4268,108 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_provision_instances_cleans_up_when_volume_invalid(self,
             _mock_cinder_reserve_volume,
             _mock_cinder_check_availability_zone, _mock_cinder_get,
-            _mock_get_min_ver):
+            _mock_get_min_ver_cells, _mock_get_min_ver):
+        @mock.patch('nova.compute.utils.check_num_instances_quota')
+        @mock.patch.object(objects, 'Instance')
+        @mock.patch.object(self.compute_api.security_group_api,
+                'ensure_default')
+        @mock.patch.object(self.compute_api, '_create_block_device_mapping')
+        @mock.patch.object(objects.RequestSpec, 'from_components')
+        @mock.patch.object(objects, 'BuildRequest')
+        @mock.patch.object(objects, 'InstanceMapping')
+        def do_test(mock_inst_mapping, mock_build_req,
+                mock_req_spec_from_components, _mock_create_bdm,
+                _mock_ensure_default, mock_inst, mock_check_num_inst_quota):
+
+            min_count = 1
+            max_count = 2
+            mock_check_num_inst_quota.return_value = 2
+            req_spec_mock = mock.MagicMock()
+            mock_req_spec_from_components.return_value = req_spec_mock
+            inst_mocks = [mock.MagicMock() for i in range(max_count)]
+            for inst_mock in inst_mocks:
+                inst_mock.project_id = 'fake-project'
+            mock_inst.side_effect = inst_mocks
+            build_req_mocks = [mock.MagicMock() for i in range(max_count)]
+            mock_build_req.side_effect = build_req_mocks
+            inst_map_mocks = [mock.MagicMock() for i in range(max_count)]
+            mock_inst_mapping.side_effect = inst_map_mocks
+
+            ctxt = context.RequestContext('fake-user', 'fake-project')
+            flavor = self._create_flavor()
+            boot_meta = {
+                'id': 'fake-image-id',
+                'properties': {'mappings': []},
+                'status': 'fake-status',
+                'location': 'far-away'}
+            base_options = {'image_ref': 'fake-ref',
+                            'display_name': 'fake-name',
+                            'project_id': 'fake-project',
+                            'availability_zone': None,
+                            'metadata': {},
+                            'access_ip_v4': None,
+                            'access_ip_v6': None,
+                            'config_drive': None,
+                            'key_name': None,
+                            'reservation_id': None,
+                            'kernel_id': None,
+                            'ramdisk_id': None,
+                            'root_device_name': None,
+                            'user_data': None,
+                            'numa_topology': None,
+                            'pci_requests': None}
+            security_groups = {}
+            block_device_mapping = objects.BlockDeviceMappingList(
+                objects=[objects.BlockDeviceMapping(
+                    **fake_block_device.FakeDbBlockDeviceDict(
+                    {
+                     'id': 1,
+                     'volume_id': 1,
+                     'source_type': 'volume',
+                     'destination_type': 'volume',
+                     'device_name': 'vda',
+                     'boot_index': 0,
+                     }))])
+            shutdown_terminate = True
+            instance_group = None
+            check_server_group_quota = False
+            filter_properties = {'scheduler_hints': None,
+                    'instance_type': flavor}
+            tags = objects.TagList()
+            self.assertRaises(exception.InvalidVolume,
+                              self.compute_api._provision_instances, ctxt,
+                              flavor, min_count, max_count, base_options,
+                              boot_meta, security_groups, block_device_mapping,
+                              shutdown_terminate, instance_group,
+                              check_server_group_quota, filter_properties,
+                              None, tags)
+            # First instance, build_req, mapping is created and destroyed
+            self.assertTrue(build_req_mocks[0].create.called)
+            self.assertTrue(build_req_mocks[0].destroy.called)
+            self.assertTrue(inst_map_mocks[0].create.called)
+            self.assertTrue(inst_map_mocks[0].destroy.called)
+            # Second instance, build_req, mapping is not created nor destroyed
+            self.assertFalse(inst_mocks[1].create.called)
+            self.assertFalse(inst_mocks[1].destroy.called)
+            self.assertFalse(build_req_mocks[1].destroy.called)
+            self.assertFalse(inst_map_mocks[1].destroy.called)
+
+        do_test()
+
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                       return_value=COMPUTE_VERSION_NEW_ATTACH_FLOW)
+    @mock.patch.object(objects.service, 'get_minimum_version_all_cells',
+                       return_value=COMPUTE_VERSION_NEW_ATTACH_FLOW)
+    @mock.patch.object(cinder.API, 'get')
+    @mock.patch.object(cinder.API, 'check_availability_zone',)
+    @mock.patch.object(cinder.API, 'attachment_create',
+                       side_effect=[{'id': uuids.attachment_id},
+                                    exception.InvalidInput(reason='error')])
+    @mock.patch.object(objects.BlockDeviceMapping, 'save')
+    def test_provision_instances_cleans_up_when_volume_invalid_new_flow(self,
+            _mock_bdm, _mock_cinder_attach_create,
+            _mock_cinder_check_availability_zone, _mock_cinder_get,
+            _mock_get_min_ver_cells, _mock_get_min_ver):
         @mock.patch('nova.compute.utils.check_num_instances_quota')
         @mock.patch.object(objects, 'Instance')
         @mock.patch.object(self.compute_api.security_group_api,
@@ -5496,7 +5783,9 @@ class ComputeAPIAPICellUnitTestCase(Cellsv1DeprecatedTestMixIn,
         self.assertIsNone(result, None)
 
     @mock.patch.object(compute_cells_api.ComputeCellsAPI, '_call_to_cells')
-    def test_attach_volume(self, mock_attach):
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                       return_value=COMPUTE_VERSION_OLD_ATTACH_FLOW)
+    def test_attach_volume(self, mock_get_min_ver, mock_attach):
         instance = self._create_instance_obj()
         volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
                                          None, None, None, None, None)
@@ -5513,7 +5802,54 @@ class ComputeAPIAPICellUnitTestCase(Cellsv1DeprecatedTestMixIn,
                                                 'attach_volume', volume['id'],
                                                 None, None, None)
 
-    def test_tagged_volume_attach(self):
+    @mock.patch.object(compute_cells_api.ComputeCellsAPI, '_call_to_cells')
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                       return_value=COMPUTE_VERSION_NEW_ATTACH_FLOW)
+    @mock.patch.object(cinder, 'is_microversion_supported')
+    @mock.patch.object(objects.BlockDeviceMapping,
+                              'get_by_volume_and_instance')
+    def test_attach_volume_new_flow(self, mock_no_bdm,
+                                    mock_cinder_mv_supported,
+                                    mock_get_min_ver, mock_attach):
+        mock_no_bdm.side_effect = exception.VolumeBDMNotFound(
+                                        volume_id='test-vol')
+        instance = self._create_instance_obj()
+        volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
+                                         None, None, None, None, None)
+
+        mock_volume_api = mock.patch.object(self.compute_api, 'volume_api',
+                                            mock.MagicMock(spec=cinder.API))
+
+        with mock_volume_api as mock_v_api:
+            mock_v_api.get.return_value = volume
+            self.compute_api.attach_volume(
+                self.context, instance, volume['id'])
+            mock_v_api.check_availability_zone.assert_called_once_with(
+                self.context, volume, instance=instance)
+            mock_attach.assert_called_once_with(self.context, instance,
+                                                'attach_volume', volume['id'],
+                                                None, None, None)
+
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                       return_value=COMPUTE_VERSION_OLD_ATTACH_FLOW)
+    def test_tagged_volume_attach(self, mock_get_min_ver):
+        instance = self._create_instance_obj()
+        volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
+                                         None, None, None, None, None)
+        self.assertRaises(exception.VolumeTaggedAttachNotSupported,
+                          self.compute_api.attach_volume, self.context,
+                          instance, volume['id'], tag='foo')
+
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                       return_value=COMPUTE_VERSION_NEW_ATTACH_FLOW)
+    @mock.patch.object(cinder, 'is_microversion_supported')
+    @mock.patch.object(objects.BlockDeviceMapping,
+                              'get_by_volume_and_instance')
+    def test_tagged_volume_attach_new_flow(self, mock_no_bdm,
+                                           mock_cinder_mv_supported,
+                                           mock_get_min_ver):
+        mock_no_bdm.side_effect = exception.VolumeBDMNotFound(
+                                        volume_id='test-vol')
         instance = self._create_instance_obj()
         volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
                                          None, None, None, None, None)
@@ -5525,6 +5861,9 @@ class ComputeAPIAPICellUnitTestCase(Cellsv1DeprecatedTestMixIn,
         self.skipTest("This test does not test any rpcapi.")
 
     def test_attach_volume_reserve_fails(self):
+        self.skipTest("Reserve is never done in the API cell.")
+
+    def test_attach_volume_attachment_create_fails(self):
         self.skipTest("Reserve is never done in the API cell.")
 
     def test_check_requested_networks_no_requested_networks(self):

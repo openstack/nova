@@ -3024,8 +3024,23 @@ class ComputeManager(manager.Manager):
         def detach_block_devices(context, bdms):
             for bdm in bdms:
                 if bdm.is_volume:
+                    # NOTE (ildikov): Having the attachment_id set in the BDM
+                    # means that it's the new Cinder attach/detach flow
+                    # (available from v3.44). In that case we explicitly
+                    # attach and detach the volumes through attachment level
+                    # operations. In this scenario _detach_volume will delete
+                    # the existing attachment which would make the volume
+                    # status change to 'in-use' if we don't pre-create another
+                    # empty attachment before deleting the old one.
+                    attachment_id = None
+                    if bdm.attachment_id:
+                        attachment_id = self.volume_api.attachment_create(
+                            context, bdm['volume_id'], instance.uuid)['id']
                     self._detach_volume(context, bdm, instance,
                                         destroy_bdm=False)
+                    if attachment_id:
+                        bdm.attachment_id = attachment_id
+                        bdm.save()
 
         files = self._decode_files(injected_files)
 
@@ -4216,8 +4231,22 @@ class ComputeManager(manager.Manager):
         for bdm in bdms:
             if bdm.is_volume:
                 if bdm.attachment_id:
+                    # NOTE(jdg): So here's the thing, the idea behind the new
+                    # attach API's was to have a new code fork/path that we
+                    # followed, we're not going to do that so we have to do
+                    # some extra work in here to make it *behave* just like the
+                    # old code. Cinder doesn't allow disconnect/reconnect (you
+                    # just delete the attachment and get a new one)
+                    # attachments in the new attach code so we have to do
+                    # a delete and create without a connector (reserve),
+                    # in other words, beware
+                    attachment_id = self.volume_api.attachment_create(
+                        context, bdm.volume_id, instance.uuid)['id']
                     self.volume_api.attachment_delete(context,
                                                       bdm.attachment_id)
+                    bdm.attachment_id = attachment_id
+                    bdm.save()
+
                 else:
                     if connector is None:
                         connector = self.driver.get_volume_connector(instance)
@@ -5136,7 +5165,11 @@ class ComputeManager(manager.Manager):
                               {'volume_id': bdm.volume_id,
                                'mountpoint': bdm['mount_device']},
                               instance=instance)
-                self.volume_api.unreserve_volume(context, bdm.volume_id)
+                if bdm['attachment_id']:
+                    self.volume_api.attachment_delete(context,
+                                                      bdm['attachment_id'])
+                else:
+                    self.volume_api.unreserve_volume(context, bdm.volume_id)
                 compute_utils.notify_about_volume_attach_detach(
                     context, instance, self.host,
                     action=fields.NotificationAction.VOLUME_ATTACH,
@@ -5309,6 +5342,8 @@ class ComputeManager(manager.Manager):
                       instance=instance)
             self.driver.swap_volume(old_cinfo, new_cinfo, instance, mountpoint,
                                     resize_to)
+            if new_attachment_id:
+                self.volume_api.attachment_complete(context, new_attachment_id)
             LOG.debug("swap_volume: Driver volume swap returned, new "
                       "connection_info is now : %(new_cinfo)s",
                       {'new_cinfo': new_cinfo})

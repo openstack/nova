@@ -15,6 +15,7 @@
 
 import datetime
 
+from nova.compute import api as compute_api
 from nova import context
 from nova import objects
 from nova.tests import fixtures
@@ -23,6 +24,9 @@ from nova.tests.functional.api_sample_tests import test_servers
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
+
+COMPUTE_VERSION_OLD_ATTACH_FLOW = \
+    compute_api.CINDER_V3_ATTACH_MIN_COMPUTE_VERSION - 1
 
 
 class SnapshotsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
@@ -238,6 +242,8 @@ class VolumeAttachmentsSample(test_servers.ServersSampleBase):
         self.stub_out('nova.compute.api.API.get', fake_compute_api_get)
 
     def test_attach_volume_to_server(self):
+        self.stub_out('nova.objects.Service.get_minimum_version',
+                      lambda *a, **k: COMPUTE_VERSION_OLD_ATTACH_FLOW)
         self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
         self.stub_out('nova.volume.cinder.API.reserve_volume',
                       lambda *a, **k: None)
@@ -253,6 +259,38 @@ class VolumeAttachmentsSample(test_servers.ServersSampleBase):
 
         volume = fakes.stub_volume_get(None, context.get_admin_context(),
                                        self.OLD_VOLUME_ID)
+        subs = {
+            'volume_id': volume['id'],
+            'device': device_name
+        }
+        server_id = self._post_server()
+        response = self._do_post('servers/%s/os-volume_attachments'
+                                 % server_id,
+                                 'attach-volume-to-server-req', subs)
+
+        self._verify_response('attach-volume-to-server-resp', subs,
+                              response, 200)
+
+    def test_attach_volume_to_server_new_flow(self):
+        self.stub_out('nova.volume.cinder.is_microversion_supported',
+                      lambda *a, **k: None)
+        self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
+        self.stub_out('nova.volume.cinder.API.attachment_create',
+                      lambda *a, **k: {'id': 'fake_id'})
+        self.stub_out('nova.objects.BlockDeviceMapping.save',
+                      lambda *a, **k: None)
+        device_name = '/dev/vdd'
+        bdm = objects.BlockDeviceMapping()
+        bdm['device_name'] = device_name
+        self.stub_out(
+            'nova.compute.manager.ComputeManager.reserve_block_device_name',
+            lambda *a, **k: bdm)
+        self.stub_out(
+            'nova.compute.manager.ComputeManager.attach_volume',
+            lambda *a, **k: None)
+
+        volume = fakes.stub_volume_get(None, context.get_admin_context(),
+                                       'a26887c6-c47b-4654-abb5-dfadf7d3f803')
         subs = {
             'volume_id': volume['id'],
             'device': device_name
@@ -327,6 +365,36 @@ class VolumeAttachmentsSampleV249(test_servers.ServersSampleBase):
 
     def setUp(self):
         super(VolumeAttachmentsSampleV249, self).setUp()
+        self.useFixture(fixtures.CinderFixtureNewAttachFlow(self))
+
+    def test_attach_volume_to_server(self):
+        device_name = '/dev/sdb'
+        bdm = objects.BlockDeviceMapping()
+        bdm['device_name'] = device_name
+        volume = fakes.stub_volume_get(None, context.get_admin_context(),
+                                       'a26887c6-c47b-4654-abb5-dfadf7d3f803')
+        subs = {
+            'volume_id': volume['id'],
+            'device': device_name,
+            'tag': 'foo',
+        }
+        server_id = self._post_server()
+        response = self._do_post('servers/%s/os-volume_attachments'
+                                 % server_id,
+                                 'attach-volume-to-server-req', subs)
+
+        self._verify_response('attach-volume-to-server-resp', subs,
+                              response, 200)
+
+
+class VolumeAttachmentsSampleV249OldCinderFlow(test_servers.ServersSampleBase):
+
+    sample_dir = "os-volumes"
+    microversion = '2.49'
+    scenarios = [('v2_49', {'api_major_version': 'v2.1'})]
+
+    def setUp(self):
+        super(VolumeAttachmentsSampleV249OldCinderFlow, self).setUp()
         self.useFixture(fixtures.CinderFixture(self))
 
     def test_attach_volume_to_server(self):
@@ -335,6 +403,8 @@ class VolumeAttachmentsSampleV249(test_servers.ServersSampleBase):
         bdm['device_name'] = device_name
         volume = fakes.stub_volume_get(None, context.get_admin_context(),
                                        'a26887c6-c47b-4654-abb5-dfadf7d3f803')
+        self.stub_out('nova.objects.Service.get_minimum_version',
+                      lambda *a, **k: COMPUTE_VERSION_OLD_ATTACH_FLOW)
         subs = {
             'volume_id': volume['id'],
             'device': device_name,
