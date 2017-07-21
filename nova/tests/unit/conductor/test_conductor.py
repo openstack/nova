@@ -928,6 +928,7 @@ class _BaseTaskTestCase(object):
         # unshelve_instance() is a cast, we need to wait for it to complete
         self.useFixture(cast_as_call.CastAsCall(self.stubs))
 
+        @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
         @mock.patch.object(self.conductor_manager.compute_rpcapi,
                            'unshelve_instance')
         @mock.patch.object(scheduler_utils, 'populate_filter_properties')
@@ -941,7 +942,11 @@ class _BaseTaskTestCase(object):
         def do_test(reset_forced_destinations,
                     to_filtprops, to_reqspec, from_primitives, sched_instances,
                     populate_retry, populate_filter_properties,
-                    unshelve_instance):
+                    unshelve_instance, get_by_instance_uuid):
+            cell_mapping = objects.CellMapping.get_by_uuid(self.context,
+                                                           uuids.cell1)
+            get_by_instance_uuid.return_value = objects.InstanceMapping(
+                cell_mapping=cell_mapping)
             to_filtprops.return_value = filter_properties
             to_reqspec.return_value = request_spec
             from_primitives.return_value = fake_spec
@@ -952,6 +957,8 @@ class _BaseTaskTestCase(object):
                     filter_properties)
             sched_instances.assert_called_once_with(self.context, fake_spec,
                     [instance.uuid])
+            self.assertEqual(cell_mapping,
+                             fake_spec.requested_destination.cell)
             # NOTE(sbauza): Since the instance is dehydrated when passing
             # through the RPC API, we can only assert mock.ANY for it
             unshelve_instance.assert_called_once_with(
@@ -1000,17 +1007,31 @@ class _BaseTaskTestCase(object):
                               '_schedule_instances'),
             mock.patch.object(self.conductor_manager.compute_rpcapi,
                               'unshelve_instance'),
-        ) as (schedule_mock, unshelve_mock):
+            mock.patch.object(objects.InstanceMapping,
+                              'get_by_instance_uuid'),
+        ) as (schedule_mock, unshelve_mock, get_by_instance_uuid):
             schedule_mock.return_value = [{'host': 'fake_host',
                                            'nodename': 'fake_node',
                                            'limits': {}}]
+            get_by_instance_uuid.return_value = objects.InstanceMapping(
+                cell_mapping=objects.CellMapping.get_by_uuid(
+                    self.context, uuids.cell1))
             self.conductor_manager.unshelve_instance(self.context, instance)
             self.assertEqual(1, unshelve_mock.call_count)
 
+    @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(objects.RequestSpec, 'from_primitives')
-    def test_unshelve_instance_schedule_and_rebuild(self, fp):
+    def test_unshelve_instance_schedule_and_rebuild(self, fp, mock_im):
         fake_spec = objects.RequestSpec()
+        # Set requested_destination to test setting cell_mapping in
+        # existing object.
+        fake_spec.requested_destination = objects.Destination(
+            host="dummy", cell=None)
         fp.return_value = fake_spec
+        cell_mapping = objects.CellMapping.get_by_uuid(self.context,
+                                                       uuids.cell1)
+        mock_im.return_value = objects.InstanceMapping(
+            cell_mapping=cell_mapping)
         instance = self._create_fake_instance_obj()
         instance.vm_state = vm_states.SHELVED_OFFLOADED
         instance.save()
@@ -1045,6 +1066,7 @@ class _BaseTaskTestCase(object):
         system_metadata['shelved_host'] = 'fake-mini'
         self.conductor_manager.unshelve_instance(self.context, instance)
         fp.assert_called_once_with(self.context, 'req_spec', mock.ANY)
+        self.assertEqual(cell_mapping, fake_spec.requested_destination.cell)
 
     def test_unshelve_instance_schedule_and_rebuild_novalid_host(self):
         instance = self._create_fake_instance_obj()
@@ -1059,8 +1081,12 @@ class _BaseTaskTestCase(object):
             mock.patch.object(self.conductor_manager.image_api, 'get',
                               return_value='fake_image'),
             mock.patch.object(self.conductor_manager, '_schedule_instances',
-                              fake_schedule_instances)
-        ) as (_get_image, _schedule_instances):
+                              fake_schedule_instances),
+            mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
+        ) as (_get_image, _schedule_instances, get_by_instance_uuid):
+            get_by_instance_uuid.return_value = objects.InstanceMapping(
+                cell_mapping=objects.CellMapping.get_by_uuid(
+                    self.context, uuids.cell1))
             system_metadata['shelved_at'] = timeutils.utcnow()
             system_metadata['shelved_image_id'] = 'fake_image_id'
             system_metadata['shelved_host'] = 'fake-mini'
@@ -1070,12 +1096,16 @@ class _BaseTaskTestCase(object):
                                       show_deleted=False)])
             self.assertEqual(vm_states.SHELVED_OFFLOADED, instance.vm_state)
 
+    @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(conductor_manager.ComputeTaskManager,
                        '_schedule_instances',
                        side_effect=messaging.MessagingTimeout())
     @mock.patch.object(image_api.API, 'get', return_value='fake_image')
     def test_unshelve_instance_schedule_and_rebuild_messaging_exception(
-            self, mock_get_image, mock_schedule_instances):
+            self, mock_get_image, mock_schedule_instances, mock_im):
+        mock_im.return_value = objects.InstanceMapping(
+            cell_mapping=objects.CellMapping.get_by_uuid(self.context,
+                                                         uuids.cell1))
         instance = self._create_fake_instance_obj()
         instance.vm_state = vm_states.SHELVED_OFFLOADED
         instance.task_state = task_states.UNSHELVING
@@ -1094,10 +1124,15 @@ class _BaseTaskTestCase(object):
         self.assertEqual(vm_states.SHELVED_OFFLOADED, instance.vm_state)
         self.assertIsNone(instance.task_state)
 
+    @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(objects.RequestSpec, 'from_primitives')
-    def test_unshelve_instance_schedule_and_rebuild_volume_backed(self, fp):
+    def test_unshelve_instance_schedule_and_rebuild_volume_backed(
+            self, fp, mock_im):
         fake_spec = objects.RequestSpec()
         fp.return_value = fake_spec
+        mock_im.return_value = objects.InstanceMapping(
+            cell_mapping=objects.CellMapping.get_by_uuid(self.context,
+                                                         uuids.cell1))
         instance = self._create_fake_instance_obj()
         instance.vm_state = vm_states.SHELVED_OFFLOADED
         instance.save()

@@ -686,6 +686,23 @@ class ComputeTaskManager(base.Base):
                                                    instance.uuid)
                     request_spec = objects.RequestSpec.from_primitives(
                         context, request_spec, filter_properties)
+                    # NOTE(cfriesen): Ensure that we restrict the scheduler to
+                    # the cell specified by the instance mapping.
+                    instance_mapping = \
+                        objects.InstanceMapping.get_by_instance_uuid(
+                            context, instance.uuid)
+                    LOG.debug('Requesting cell %(cell)s while unshelving',
+                              {'cell': instance_mapping.cell_mapping.identity},
+                              instance=instance)
+                    if ('requested_destination' in request_spec and
+                            request_spec.requested_destination):
+                        request_spec.requested_destination.cell = (
+                            instance_mapping.cell_mapping)
+                    else:
+                        request_spec.requested_destination = (
+                            objects.Destination(
+                                cell=instance_mapping.cell_mapping))
+
                     hosts = self._schedule_instances(context, request_spec,
                                                      [instance.uuid])
                     host_state = hosts[0]
