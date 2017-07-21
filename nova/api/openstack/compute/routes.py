@@ -404,8 +404,6 @@ volumes_controller = functools.partial(_create_controller,
 # should be in the front of '/servers/{id}', otherwise the request to
 # '/servers/detail' always matches to '/servers/{id}' as the id is 'detail'.
 ROUTE_LIST = (
-    # NOTE: '/os-volumes_boot' is a clone of '/servers'. We may want to
-    # deprecate it in the future.
     # NOTE: This is a redirection from '' to '/'. The request to the '/v2.1'
     # or '/2.0' without the ending '/' will get a response with status code
     # '302' returned.
@@ -757,6 +755,8 @@ ROUTE_LIST = (
         'GET': [volumes_controller, 'show'],
         'DELETE': [volumes_controller, 'delete']
     }),
+    # NOTE: '/os-volumes_boot' is a clone of '/servers'. We may want to
+    # deprecate it in the future.
     ('/os-volumes_boot', {
         'GET': [server_controller, 'index'],
         'POST': [server_controller, 'create']
