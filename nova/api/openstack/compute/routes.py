@@ -350,6 +350,10 @@ server_tags_controller = functools.partial(_create_controller,
     server_tags.ServerTagsController, [], [])
 
 
+server_volume_attachments_controller = functools.partial(_create_controller,
+    volumes.VolumeAttachmentController, [], [])
+
+
 services_controller = functools.partial(_create_controller,
     services.ServiceController, [], [])
 
@@ -799,6 +803,15 @@ ROUTE_LIST = (
     }),
     ('/servers/{server_id}/os-virtual-interfaces', {
         'GET': [virtual_interfaces_controller, 'index']
+    }),
+    ('/servers/{server_id}/os-volume_attachments', {
+        'GET': [server_volume_attachments_controller, 'index'],
+        'POST': [server_volume_attachments_controller, 'create'],
+    }),
+    ('/servers/{server_id}/os-volume_attachments/{id}', {
+        'GET': [server_volume_attachments_controller, 'show'],
+        'PUT': [server_volume_attachments_controller, 'update'],
+        'DELETE': [server_volume_attachments_controller, 'delete']
     }),
     ('/servers/{server_id}/remote-consoles', {
         'POST': [server_remote_consoles_controller, 'create']

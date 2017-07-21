@@ -608,13 +608,6 @@ class Volumes(extensions.V21APIExtensionBase):
     def get_resources(self):
         resources = []
 
-        res = extensions.ResourceExtension('os-volume_attachments',
-                                           VolumeAttachmentController(),
-                                           parent=dict(
-                                                member_name='server',
-                                                collection_name='servers'))
-        resources.append(res)
-
         res = extensions.ResourceExtension(
             'os-snapshots', SnapshotController(),
             collection_actions={'detail': 'GET'})
