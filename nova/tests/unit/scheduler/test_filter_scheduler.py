@@ -17,6 +17,7 @@ Tests For Filter Scheduler.
 """
 
 import mock
+from oslo_serialization import jsonutils
 
 from nova import exception
 from nova import objects
@@ -29,6 +30,26 @@ from nova.scheduler import weights
 from nova import test  # noqa
 from nova.tests.unit.scheduler import test_scheduler
 from nova.tests import uuidsentinel as uuids
+
+
+fake_numa_limit = objects.NUMATopologyLimits(cpu_allocation_ratio=1.0,
+        ram_allocation_ratio=1.0)
+fake_limit = {"memory_mb": 1024, "disk_gb": 100, "vcpus": 2,
+        "numa_topology": fake_numa_limit}
+fake_limit_obj = objects.SchedulerLimits.from_dict(fake_limit)
+fake_alloc = {"allocations": [
+        {"resource_provider": {"uuid": uuids.compute_node},
+         "resources": {"VCPU": 1,
+                       "MEMORY_MB": 1024,
+                       "DISK_GB": 100}
+        }]}
+fake_alloc_version = "1.23"
+json_alloc = jsonutils.dumps(fake_alloc)
+fake_selection = objects.Selection(service_host="fake_host",
+        nodename="fake_node", compute_node_uuid=uuids.compute_node,
+        cell_uuid=uuids.cell, limits=fake_limit_obj,
+        allocation_request=json_alloc,
+        allocation_request_version=fake_alloc_version)
 
 
 class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
@@ -67,24 +88,26 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             project_id=uuids.project_id,
             instance_group=None)
 
-        host_state = mock.Mock(spec=host_manager.HostState,
-                host=mock.sentinel.host, uuid=uuids.cn1, cell_uuid=uuids.cell)
+        host_state = mock.Mock(spec=host_manager.HostState, host="fake_host",
+                uuid=uuids.cn1, cell_uuid=uuids.cell, nodename="fake_node",
+                limits={})
         all_host_states = [host_state]
         mock_get_all_states.return_value = all_host_states
         mock_get_hosts.return_value = all_host_states
 
-        instance_uuids = None
+        instance_uuids = [uuids.instance]
         ctx = mock.Mock()
-        selected_hosts = self.driver._schedule(ctx, spec_obj,
-            instance_uuids, None, mock.sentinel.provider_summaries)
+        selected_hosts = self.driver._schedule(ctx, spec_obj, instance_uuids,
+                None, mock.sentinel.provider_summaries)
 
+        expected_hosts = [[objects.Selection.from_host_state(host_state)]]
         mock_get_all_states.assert_called_once_with(
             ctx.elevated.return_value, spec_obj,
             mock.sentinel.provider_summaries)
         mock_get_hosts.assert_called_once_with(spec_obj, all_host_states, 0)
 
         self.assertEqual(len(selected_hosts), 1)
-        self.assertEqual([[host_state]], selected_hosts)
+        self.assertEqual(expected_hosts, selected_hosts)
 
         # Ensure that we have consumed the resources on the chosen host states
         host_state.consume_from_request.assert_called_once_with(spec_obj)
@@ -116,7 +139,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             instance_group=None)
 
         host_state = mock.Mock(spec=host_manager.HostState,
-            host=mock.sentinel.host, uuid=uuids.cn1)
+                host="fake_host", nodename="fake_node", uuid=uuids.cn1,
+                limits={}, cell_uuid=uuids.cell)
         all_host_states = [host_state]
         mock_get_all_states.return_value = all_host_states
         mock_get_hosts.return_value = all_host_states
@@ -133,7 +157,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         mock_get_hosts.assert_called_once_with(spec_obj, all_host_states, 0)
 
         self.assertEqual(len(selected_hosts), 1)
-        self.assertEqual([[host_state]], selected_hosts)
+        expected_host = objects.Selection.from_host_state(host_state)
+        self.assertEqual([[expected_host]], selected_hosts)
 
         # Ensure that we have consumed the resources on the chosen host states
         host_state.consume_from_request.assert_called_once_with(spec_obj)
@@ -159,33 +184,64 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             project_id=uuids.project_id,
             instance_group=None)
 
-        host_state = mock.Mock(spec=host_manager.HostState,
-            host=mock.sentinel.host, uuid=uuids.cn1, cell_uuid=uuids.cell1)
-        all_host_states = [host_state]
+        host_state1 = mock.Mock(spec=host_manager.HostState,
+                host="fake_host1", nodename="fake_node1", uuid=uuids.cn1,
+                cell_uuid=uuids.cell, limits={})
+        host_state2 = mock.Mock(spec=host_manager.HostState,
+                host="fake_host2", nodename="fake_node2", uuid=uuids.cn2,
+                cell_uuid=uuids.cell, limits={})
+        host_state3 = mock.Mock(spec=host_manager.HostState,
+                host="fake_host3", nodename="fake_node3", uuid=uuids.cn3,
+                cell_uuid=uuids.cell, limits={})
+        all_host_states = [host_state1, host_state2, host_state3]
         mock_get_all_states.return_value = all_host_states
         mock_get_hosts.return_value = all_host_states
         mock_claim.return_value = True
 
         instance_uuids = [uuids.instance]
-        alloc_reqs_by_rp_uuid = {
-            uuids.cn1: [mock.sentinel.alloc_req],
-        }
+        fake_alloc1 = {"allocations": [
+                {"resource_provider": {"uuid": uuids.cn1},
+                 "resources": {"VCPU": 1,
+                               "MEMORY_MB": 1024,
+                               "DISK_GB": 100}
+                }]}
+        fake_alloc2 = {"allocations": [
+                {"resource_provider": {"uuid": uuids.cn2},
+                 "resources": {"VCPU": 1,
+                               "MEMORY_MB": 1024,
+                               "DISK_GB": 100}
+                }]}
+        fake_alloc3 = {"allocations": [
+                {"resource_provider": {"uuid": uuids.cn3},
+                 "resources": {"VCPU": 1,
+                               "MEMORY_MB": 1024,
+                               "DISK_GB": 100}
+                }]}
+        alloc_reqs_by_rp_uuid = {uuids.cn1: [fake_alloc1],
+                uuids.cn2: [fake_alloc2], uuids.cn3: [fake_alloc3]}
         ctx = mock.Mock()
         selected_hosts = self.driver._schedule(ctx, spec_obj, instance_uuids,
                 alloc_reqs_by_rp_uuid, mock.sentinel.provider_summaries)
 
+        sel1 = objects.Selection.from_host_state(host_state1)
+        sel2 = objects.Selection.from_host_state(host_state2,
+                allocation_request=fake_alloc2)
+        sel3 = objects.Selection.from_host_state(host_state3,
+                allocation_request=fake_alloc3)
+        expected_selection = [[sel1, sel2, sel3]]
         mock_get_all_states.assert_called_once_with(
             ctx.elevated.return_value, spec_obj,
             mock.sentinel.provider_summaries)
         mock_get_hosts.assert_called()
         mock_claim.assert_called_once_with(ctx.elevated.return_value, spec_obj,
-            uuids.instance, [mock.sentinel.alloc_req])
+                uuids.instance, alloc_reqs_by_rp_uuid[uuids.cn1],
+                allocation_request_version=None)
 
         self.assertEqual(len(selected_hosts), 1)
-        self.assertEqual([[host_state]], selected_hosts)
+        self.assertEqual(expected_selection, selected_hosts)
 
         # Ensure that we have consumed the resources on the chosen host states
-        host_state.consume_from_request.assert_called_once_with(spec_obj)
+        host_state1.consume_from_request.assert_called_once_with(spec_obj)
 
     def test_schedule_successful_claim(self):
         self._test_schedule_successful_claim()
@@ -229,22 +285,24 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         instance_uuids = [uuids.instance]
         alloc_reqs_by_rp_uuid = {
-            uuids.cn1: [mock.sentinel.alloc_req],
+            uuids.cn1: {"allocations": [mock.sentinel.alloc_req]},
         }
         ctx = mock.Mock()
+        fake_version = "1.99"
         self.assertRaises(exception.NoValidHost, self.driver._schedule, ctx,
                 spec_obj, instance_uuids, alloc_reqs_by_rp_uuid,
-                mock.sentinel.provider_summaries)
+                mock.sentinel.provider_summaries,
+                allocation_request_version=fake_version)
 
         mock_get_all_states.assert_called_once_with(
             ctx.elevated.return_value, spec_obj,
             mock.sentinel.provider_summaries)
         mock_get_hosts.assert_called_once_with(spec_obj, all_host_states, 0)
         mock_claim.assert_called_once_with(ctx.elevated.return_value, spec_obj,
-            uuids.instance, [mock.sentinel.alloc_req])
+            uuids.instance, alloc_reqs_by_rp_uuid[uuids.cn1],
+            allocation_request_version=fake_version)
 
         mock_cleanup.assert_not_called()
-
         # Ensure that we have consumed the resources on the chosen host states
         self.assertFalse(host_state.consume_from_request.called)
 
@@ -272,7 +330,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             instance_group=None)
 
         host_state = mock.Mock(spec=host_manager.HostState,
-            host=mock.sentinel.host, uuid=uuids.cn1, cell_uuid=uuids.cell1)
+                host="fake_host", nodename="fake_node", uuid=uuids.cn1,
+                cell_uuid=uuids.cell1, limits={}, updated='fake')
         all_host_states = [host_state]
         mock_get_all_states.return_value = all_host_states
         mock_get_hosts.side_effect = [
@@ -283,9 +342,13 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         mock_claim.return_value = True
 
         instance_uuids = [uuids.instance1, uuids.instance2]
-        alloc_reqs_by_rp_uuid = {
-            uuids.cn1: [mock.sentinel.alloc_req],
-        }
+        fake_alloc = {"allocations": [
+                {"resource_provider": {"uuid": uuids.cn1},
+                 "resources": {"VCPU": 1,
+                               "MEMORY_MB": 1024,
+                               "DISK_GB": 100}
+                }]}
+        alloc_reqs_by_rp_uuid = {uuids.cn1: [fake_alloc]}
         ctx = mock.Mock()
         self.assertRaises(exception.NoValidHost, self.driver._schedule, ctx,
                 spec_obj, instance_uuids, alloc_reqs_by_rp_uuid,
@@ -319,16 +382,18 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             instance_group=ig)
 
         hs1 = mock.Mock(spec=host_manager.HostState, host='host1',
-            uuid=uuids.cn1, cell_uuid=uuids.cell1)
+                nodename="node1", limits={}, uuid=uuids.cn1,
+                cell_uuid=uuids.cell1)
         hs2 = mock.Mock(spec=host_manager.HostState, host='host2',
-            uuid=uuids.cn2, cell_uuid=uuids.cell2)
+                nodename="node2", limits={}, uuid=uuids.cn2,
+                cell_uuid=uuids.cell2)
         all_host_states = [hs1, hs2]
         mock_get_all_states.return_value = all_host_states
         mock_claim.return_value = True
 
         alloc_reqs_by_rp_uuid = {
-            uuids.cn1: [mock.sentinel.alloc_req_cn1],
-            uuids.cn2: [mock.sentinel.alloc_req_cn2],
+            uuids.cn1: {"allocations": ["fake_cn1_alloc"]},
+            uuids.cn2: {"allocations": ["fake_cn2_alloc"]},
         }
 
         # Simulate host 1 and host 2 being randomly returned first by
@@ -346,10 +411,12 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # Check that we called _claim_resources() for both the first and second
         # host state
         claim_calls = [
-            mock.call(ctx.elevated.return_value, spec_obj,
-                uuids.instance0, [mock.sentinel.alloc_req_cn2]),
-            mock.call(ctx.elevated.return_value, spec_obj,
-                uuids.instance1, [mock.sentinel.alloc_req_cn1]),
+            mock.call(ctx.elevated.return_value, spec_obj, uuids.instance0,
+                    alloc_reqs_by_rp_uuid[uuids.cn2],
+                    allocation_request_version=None),
+            mock.call(ctx.elevated.return_value, spec_obj, uuids.instance1,
+                    alloc_reqs_by_rp_uuid[uuids.cn1],
+                    allocation_request_version=None),
         ]
         mock_claim.assert_has_calls(claim_calls)
 
@@ -535,7 +602,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         pc = self.placement_client
         pc.claim_resources.return_value = True
         pc.claim_resources.assert_called_once_with(uuids.instance,
-            mock.sentinel.alloc_req, uuids.project_id, uuids.user_id)
+            mock.sentinel.alloc_req, uuids.project_id, uuids.user_id,
+            allocation_request_version=None)
         self.assertTrue(res)
 
     @mock.patch('nova.scheduler.utils.request_is_rebuild')
@@ -591,17 +659,15 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             project_id=uuids.project_id,
             num_instances=1)
 
-        mock_schedule.return_value = [[mock.sentinel.hs1]]
-
+        mock_schedule.return_value = [[fake_selection]]
         dests = self.driver.select_destinations(self.context, spec_obj,
             [mock.sentinel.instance_uuid], mock.sentinel.alloc_reqs_by_rp_uuid,
-            mock.sentinel.p_sums)
+            mock.sentinel.p_sums, mock.sentinel.ar_version)
 
         mock_schedule.assert_called_once_with(self.context, spec_obj,
             [mock.sentinel.instance_uuid], mock.sentinel.alloc_reqs_by_rp_uuid,
-            mock.sentinel.p_sums)
-
-        self.assertEqual([mock.sentinel.hs1], dests)
+            mock.sentinel.p_sums, mock.sentinel.ar_version)
+        self.assertEqual([[fake_selection]], dests)
 
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
                 '_schedule')
@@ -621,19 +687,15 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             project_id=uuids.project_id,
             num_instances=2)
 
-        host_state = mock.Mock(spec=host_manager.HostState,
-                cell_uuid=uuids.cell)
-        mock_schedule.return_value = [[host_state]]
-
+        mock_schedule.return_value = [[fake_selection]]
         dests = self.driver.select_destinations(self.context, spec_obj,
             [mock.sentinel.instance_uuid], mock.sentinel.alloc_reqs_by_rp_uuid,
-            mock.sentinel.p_sums)
+            mock.sentinel.p_sums, mock.sentinel.ar_version)
 
         mock_schedule.assert_called_once_with(self.context, spec_obj,
             [mock.sentinel.instance_uuid], mock.sentinel.alloc_reqs_by_rp_uuid,
-            mock.sentinel.p_sums)
-
-        self.assertEqual([host_state], dests)
+            mock.sentinel.p_sums, mock.sentinel.ar_version)
+        self.assertEqual([[fake_selection]], dests)
 
     @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
                 "_claim_resources", return_value=True)
@@ -689,7 +751,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                     uuids.cell)
             hs.uuid = getattr(uuids, host_name)
             all_host_states.append(hs)
-            alloc_reqs[hs.uuid] = {}
+            alloc_reqs[hs.uuid] = [{}]
 
         mock_get_all_hosts.return_value = all_host_states
         mock_sorted.return_value = all_host_states
@@ -755,7 +817,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                     cell_uuid)
             hs.uuid = getattr(uuids, host_name)
             all_host_states.append(hs)
-            alloc_reqs[hs.uuid] = {}
+            alloc_reqs[hs.uuid] = [{}]
 
         mock_get_all_hosts.return_value = all_host_states
         # There are two instances so _get_sorted_hosts is called once per
@@ -809,7 +871,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                     uuids.cell)
             hs.uuid = getattr(uuids, host_name)
             all_host_states.append(hs)
-            alloc_reqs[hs.uuid] = {}
+            alloc_reqs[hs.uuid] = [{}]
 
         mock_get_all_hosts.return_value = all_host_states
         mock_sorted.return_value = all_host_states
@@ -852,7 +914,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     @mock.patch.object(filter_scheduler.FilterScheduler, '_schedule')
     def test_select_destinations_notifications(self, mock_schedule):
-        mock_schedule.return_value = [[mock.Mock()]]
+        mock_schedule.return_value = ([[mock.Mock()]], [[mock.Mock()]])
 
         with mock.patch.object(self.driver.notifier, 'info') as mock_info:
             expected = {'num_instances': 1,

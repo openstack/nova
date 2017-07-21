@@ -20,8 +20,20 @@ import mock
 from nova import exception
 from nova import objects
 from nova.scheduler import chance
+from nova.scheduler import host_manager
 from nova.tests.unit.scheduler import test_scheduler
 from nova.tests import uuidsentinel as uuids
+
+
+def _generate_fake_hosts(num):
+    hosts = []
+    for i in range(num):
+        fake_host_state = host_manager.HostState("host%s" % i, "fake_node",
+                uuids.cell)
+        fake_host_state.uuid = getattr(uuids, "host%s" % i)
+        fake_host_state.limits = {}
+        hosts.append(fake_host_state)
+    return hosts
 
 
 class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
@@ -53,7 +65,7 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     @mock.patch("nova.scheduler.chance.ChanceScheduler.hosts_up")
     def test_select_destinations(self, mock_hosts_up):
-        mock_hosts_up.return_value = ['host1', 'host2', 'host3', 'host4']
+        mock_hosts_up.return_value = _generate_fake_hosts(4)
         spec_obj = objects.RequestSpec(num_instances=2, ignore_hosts=None)
         dests = self.driver.select_destinations(self.context, spec_obj,
                 [uuids.instance1, uuids.instance2], {},
@@ -67,7 +79,7 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
     @mock.patch("nova.scheduler.chance.ChanceScheduler.hosts_up")
     def test_select_destinations_no_valid_host(self, mock_hosts_up,
             mock_filter):
-        mock_hosts_up.return_value = ['host1', 'host2', 'host3', 'host4']
+        mock_hosts_up.return_value = _generate_fake_hosts(4)
         mock_filter.return_value = []
 
         spec_obj = objects.RequestSpec(num_instances=1)
@@ -79,7 +91,7 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     @mock.patch("nova.scheduler.chance.ChanceScheduler.hosts_up")
     def test_schedule_success_single_instance(self, mock_hosts_up):
-        hosts = ["host%s" % i for i in range(20)]
+        hosts = _generate_fake_hosts(20)
         mock_hosts_up.return_value = hosts
         spec_obj = objects.RequestSpec(num_instances=1, ignore_hosts=None)
         spec_obj.instance_uuid = uuids.instance
@@ -87,10 +99,10 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         attempts = 2
         expected = attempts
         self.flags(max_attempts=attempts, group="scheduler")
-        result = self.driver._schedule(self.context, "compute", spec_obj,
-                [spec_obj.instance_uuid])
-        self.assertEqual(1, len(result))
-        for host_list in result:
+        selected_hosts = self.driver._schedule(self.context, "compute",
+                spec_obj, [spec_obj.instance_uuid])
+        self.assertEqual(1, len(selected_hosts))
+        for host_list in selected_hosts:
             self.assertEqual(expected, len(host_list))
 
         # Now set max_attempts to a number larger than the available hosts. It
@@ -99,15 +111,15 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         attempts = len(hosts) + 1
         expected = len(hosts)
         self.flags(max_attempts=attempts, group="scheduler")
-        result = self.driver._schedule(self.context, "compute", spec_obj,
-                [spec_obj.instance_uuid])
-        self.assertEqual(1, len(result))
-        for host_list in result:
+        selected_hosts = self.driver._schedule(self.context, "compute",
+                spec_obj, [spec_obj.instance_uuid])
+        self.assertEqual(1, len(selected_hosts))
+        for host_list in selected_hosts:
             self.assertEqual(expected, len(host_list))
 
     @mock.patch("nova.scheduler.chance.ChanceScheduler.hosts_up")
     def test_schedule_success_multiple_instances(self, mock_hosts_up):
-        hosts = ["host%s" % i for i in range(20)]
+        hosts = _generate_fake_hosts(20)
         mock_hosts_up.return_value = hosts
         num_instances = 4
         spec_obj = objects.RequestSpec(num_instances=num_instances,
@@ -118,10 +130,10 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # Set the max_attempts to 2
         attempts = 2
         self.flags(max_attempts=attempts, group="scheduler")
-        result = self.driver._schedule(self.context, "compute", spec_obj,
-                instance_uuids)
-        self.assertEqual(num_instances, len(result))
-        for host_list in result:
+        selected_hosts = self.driver._schedule(self.context, "compute",
+                spec_obj, instance_uuids)
+        self.assertEqual(num_instances, len(selected_hosts))
+        for host_list in selected_hosts:
             self.assertEqual(attempts, len(host_list))
         # Verify that none of the selected hosts appear as alternates
         # Set the max_attempts to 5 to get 4 alternates per instance

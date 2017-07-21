@@ -100,7 +100,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
         result = self._test_select_destinations(spec_obj)
 
         self.assertEqual(1, len(result))
-        self.assertEqual(result[0].host, fake_host.host)
+        self.assertEqual(result[0][0].service_host, fake_host.host)
 
     def _test_select_destinations(self, spec_obj):
         provider_summaries = {}
@@ -239,7 +239,8 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         d = self.driver.select_destinations(self.context, spec_obj,
                 [spec_obj.instance_uuid], {}, provider_summaries)
-        self.assertIn(d[0].host, [hs.host for hs in host_states_cell2])
+        self.assertIn(d[0][0].service_host,
+                [hs.host for hs in host_states_cell2])
 
     @mock.patch("nova.scheduler.host_manager.HostState.consume_from_request")
     @mock.patch("nova.scheduler.caching_scheduler.CachingScheduler."
