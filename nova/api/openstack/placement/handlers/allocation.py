@@ -257,11 +257,9 @@ def _set_allocations(req, schema):
                   "%(rp_uuid)s: %(error)s") %
             {'rp_uuid': resource_provider_uuid, 'error': exc})
     except exception.InvalidInventory as exc:
-        LOG.exception("Bad inventory")
         raise webob.exc.HTTPConflict(
             _('Unable to allocate inventory: %(error)s') % {'error': exc})
     except exception.ConcurrentUpdateDetected as exc:
-        LOG.exception("Concurrent Update")
         raise webob.exc.HTTPConflict(
             _('Inventory changed while attempting to allocate: %(error)s') %
             {'error': exc})
