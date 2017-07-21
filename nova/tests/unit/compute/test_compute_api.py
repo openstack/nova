@@ -3310,9 +3310,14 @@ class _ComputeAPIUnitTestMixIn(object):
             objects.Instance(uuid=uuids.instance_4, host='host2',
                              migration_context=None),
             ]
-        mappings = {inst.uuid: objects.InstanceMapping.get_by_instance_uuid(
-            self.context, inst.uuid)
-                    for inst in instances}
+        # Create a single cell context and associate it with all instances
+        mapping = objects.InstanceMapping.get_by_instance_uuid(
+                self.context, instances[0].uuid)
+        with context.target_cell(self.context, mapping.cell_mapping) as cc:
+            cell_context = cc
+        for instance in instances:
+                instance._context = cell_context
+
         volume_id = uuidutils.generate_uuid()
         events = [
             objects.InstanceExternalEvent(
@@ -3331,11 +3336,11 @@ class _ComputeAPIUnitTestMixIn(object):
             ]
         self.compute_api.compute_rpcapi = mock.MagicMock()
         self.compute_api.external_instance_event(self.context,
-                                                 instances, mappings, events)
+                                                 instances, events)
         method = self.compute_api.compute_rpcapi.external_instance_event
-        method.assert_any_call(self.context, instances[0:2], events[0:2],
+        method.assert_any_call(cell_context, instances[0:2], events[0:2],
                                host='host1')
-        method.assert_any_call(self.context, instances[2:], events[2:],
+        method.assert_any_call(cell_context, instances[2:], events[2:],
                                host='host2')
         mock_action_start.assert_called_once_with(
             self.context, uuids.instance_4, instance_actions.EXTEND_VOLUME,
@@ -3371,8 +3376,15 @@ class _ComputeAPIUnitTestMixIn(object):
             objects.Instance(uuid=uuids.instance_3, host='host2',
                              migration_context=None)
             ]
-        mappings = {inst.uuid: objects.InstanceMapping.get_by_instance_uuid(
-            self.context, inst.uuid) for inst in instances}
+
+        # Create a single cell context and associate it with all instances
+        mapping = objects.InstanceMapping.get_by_instance_uuid(
+                self.context, instances[0].uuid)
+        with context.target_cell(self.context, mapping.cell_mapping) as cc:
+            cell_context = cc
+        for instance in instances:
+                instance._context = cell_context
+
         events = [
             objects.InstanceExternalEvent(
                 instance_uuid=uuids.instance_1,
@@ -3388,12 +3400,11 @@ class _ComputeAPIUnitTestMixIn(object):
         with mock.patch('nova.db.sqlalchemy.api.migration_get', migration_get):
             self.compute_api.compute_rpcapi = mock.MagicMock()
             self.compute_api.external_instance_event(self.context,
-                                                     instances, mappings,
-                                                     events)
+                                                     instances, events)
             method = self.compute_api.compute_rpcapi.external_instance_event
-            method.assert_any_call(self.context, instances[0:2], events[0:2],
+            method.assert_any_call(cell_context, instances[0:2], events[0:2],
                                    host='host1')
-            method.assert_any_call(self.context, instances[1:], events[1:],
+            method.assert_any_call(cell_context, instances[1:], events[1:],
                                    host='host2')
             self.assertEqual(2, method.call_count)
 
