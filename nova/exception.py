@@ -27,13 +27,9 @@ from oslo_log import log as logging
 import webob.exc
 from webob import util as woutil
 
-import nova.conf
 from nova.i18n import _, _LE
 
 LOG = logging.getLogger(__name__)
-
-
-CONF = nova.conf.CONF
 
 
 class ConvertedException(webob.exc.WSGIHTTPException):
