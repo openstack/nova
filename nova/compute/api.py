@@ -5158,12 +5158,10 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         this function is written to support both.
         """
 
-        count = objects.Quotas.count_as_dict(context,
-                                             'security_group_rules', id)
-        count_value = count['user']['security_group_rules']
         try:
-            projected = count_value + len(vals)
-            objects.Quotas.limit_check(context, security_group_rules=projected)
+            objects.Quotas.check_deltas(context,
+                                        {'security_group_rules': len(vals)},
+                                        id)
         except exception.OverQuota:
             msg = _("Quota exceeded, too many security group rules.")
             self.raise_over_quota(msg)
@@ -5173,6 +5171,22 @@ class SecurityGroupAPI(base.Base, security_group_base.SecurityGroupBase):
         rules = []
         for v in vals:
             rule = self.db.security_group_rule_create(context, v)
+
+            # NOTE(melwitt): We recheck the quota after creating the object to
+            # prevent users from allocating more resources than their allowed
+            # quota in the event of a race. This is configurable because it can
+            # be expensive if strict quota limits are not required in a
+            # deployment.
+            if CONF.quota.recheck_quota:
+                try:
+                    objects.Quotas.check_deltas(context,
+                                                {'security_group_rules': 0},
+                                                id)
+                except exception.OverQuota:
+                    self.db.security_group_rule_destroy(context, rule['id'])
+                    msg = _("Quota exceeded, too many security group rules.")
+                    self.raise_over_quota(msg)
+
             rules.append(rule)
             LOG.info(msg, {'name': name,
                            'protocol': rule.protocol,

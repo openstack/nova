@@ -491,6 +491,14 @@ class _TestNeutronSecurityGroupRulesBase(object):
         # Enforced by neutron
         pass
 
+    def test_create_rule_over_quota_during_recheck(self):
+        # Enforced by neutron
+        pass
+
+    def test_create_rule_no_quota_recheck(self):
+        # Enforced by neutron
+        pass
+
 
 class TestNeutronSecurityGroupRulesV21(
         _TestNeutronSecurityGroupRulesBase,
