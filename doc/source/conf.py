@@ -17,9 +17,7 @@
 #   http://www.sphinx-doc.org/en/stable/config.html
 
 import os
-import subprocess
 import sys
-import warnings
 
 from nova.version import version_info
 
@@ -37,15 +35,20 @@ sys.path.insert(0, os.path.abspath('./'))
 
 extensions = ['sphinx.ext.autodoc',
               'sphinx.ext.todo',
+              'openstackdocstheme',
               'sphinx.ext.coverage',
               'sphinx.ext.graphviz',
-              'oslosphinx',
               'ext.support_matrix',
               'oslo_config.sphinxconfiggen',
               'oslo_policy.sphinxpolicygen',
               'ext.versioned_notifications',
               'ext.feature_matrix',
               ]
+
+# openstackdocstheme options
+repository_name = 'openstack/nova'
+bug_project = 'nova'
+bug_tag = ''
 
 config_generator_config_file = '../../etc/nova/nova-config-generator.conf'
 sample_config_basename = '_static/nova'
@@ -128,6 +131,10 @@ man_pages = [
 
 # -- Options for HTML output --------------------------------------------------
 
+# The theme to use for HTML and HTML Help pages.  Major themes that come with
+# Sphinx are currently 'default' and 'sphinxdoc'.
+html_theme = 'openstackdocs'
+
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
@@ -135,13 +142,7 @@ html_static_path = ['_static']
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
-git_cmd = ["git", "log", "--pretty=format:'%ad, commit %h'", "--date=local",
-           "-n1"]
-try:
-    html_last_updated_fmt = subprocess.check_output(git_cmd).decode('utf-8')
-except Exception:
-    warnings.warn('Cannot get last updated time from git repository. '
-                  'Not setting "html_last_updated_fmt".')
+html_last_updated_fmt = '%Y-%m-%d %H:%M'
 
 # -- Options for LaTeX output -------------------------------------------------
 
