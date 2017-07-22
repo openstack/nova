@@ -73,7 +73,7 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
         for display_name, q in quota_map.items():
             limits[q] = {'limit': len(display_name),
                          'in_use': len(display_name) / 2,
-                         'reserved': len(display_name) / 3}
+                         'reserved': 0}
             if (self.include_server_group_quotas or
                 display_name != 'totalServerGroupsUsed'):
                 expected_abs_limits.append(display_name)
