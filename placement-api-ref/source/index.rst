@@ -20,3 +20,4 @@ Openstack Placement API concepts, please refer to the
 .. include:: inventories.inc
 .. include:: inventory.inc
 .. include:: aggregates.inc
+.. include:: traits.inc
