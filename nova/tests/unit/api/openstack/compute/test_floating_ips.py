@@ -19,7 +19,6 @@ import six
 import webob
 
 from nova.api.openstack.compute import floating_ips as fips_v21
-from nova.api.openstack import extensions
 from nova import compute
 from nova import context
 from nova import db
@@ -245,11 +244,9 @@ class FloatingIpTestV21(test.TestCase):
         self.context = context.get_admin_context()
         self._create_floating_ips()
 
-        self.ext_mgr = extensions.ExtensionManager()
-        self.ext_mgr.extensions = {}
         self.controller = self.floating_ips.FloatingIPController()
         self.manager = self.floating_ips.\
-                            FloatingIPActionController(self.ext_mgr)
+                            FloatingIPActionController()
         self.fake_req = fakes.HTTPRequest.blank('')
 
     def tearDown(self):
@@ -951,13 +948,9 @@ class ExtendedFloatingIpTestV21(test.TestCase):
         self.context = context.get_admin_context()
         self._create_floating_ips()
 
-        self.ext_mgr = extensions.ExtensionManager()
-        self.ext_mgr.extensions = {}
-        self.ext_mgr.extensions['os-floating-ips'] = True
-        self.ext_mgr.extensions['os-extended-floating-ips'] = True
         self.controller = self.floating_ips.FloatingIPController()
         self.manager = self.floating_ips.\
-                       FloatingIPActionController(self.ext_mgr)
+                       FloatingIPActionController()
         self.fake_req = fakes.HTTPRequest.blank('')
 
     def tearDown(self):
