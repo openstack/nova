@@ -230,9 +230,14 @@ Nova Shell
 Nova Quota
 ~~~~~~~~~~
 
+.. deprecated:: 16.0.0
+
+    This will be removed in 17.0.0 (Queens)
+
 ``nova-manage quota refresh``
 
-    Refresh the quota usage for a project or user.
+    This command has been deprecated and is now a no-op since quota usage is
+    counted from resources instead of being tracked separately.
 
 Nova Project
 ~~~~~~~~~~~~
@@ -243,9 +248,10 @@ Nova Project
     the ``quota_usage_refresh`` command. Operators should use the `API`_ for
     all other operations.
 
-    This command group will be removed in 17.0.0 (Queens). Users of the
-    ``quota_usage_refresh`` subcommand should instead use :ref:`nova-manage
-    quota refresh <nova-manage-quota>`
+    This command group will be removed in 17.0.0 (Queens). The
+    ``quota_usage_refresh`` subcommand has been deprecated and is now a no-op
+    since quota usage is counted from resources instead of being tracked
+    separately.
 
 .. _API: https://developer.openstack.org/api-ref/compute/#quota-sets-os-quota-sets
 
@@ -256,15 +262,8 @@ Nova Project
 
 ``nova-manage project quota_usage_refresh <project_id> [--user <user_id>] [--key <key>]``
 
-    Refresh the quota usages for the project/user so that the
-    usage record matches the actual used.  If a key is not specified
-    then all quota usages relevant to the project/user are refreshed.
-
-    .. seealso::
-
-        The :ref:`nova-manage quota refresh <nova-manage-quota>` command
-        performs the same actions and is not deprecated. That command should be
-        used instead.
+    This command has been deprecated and is now a no-op since quota usage is
+    counted from resources instead of being tracked separately.
 
 SEE ALSO
 ========

@@ -209,29 +209,21 @@ def _db_error(caught_exception):
 class QuotaCommands(object):
     """Class for managing quotas."""
 
+    # TODO(melwitt): Remove this during the Queens cycle
+    description = ('DEPRECATED: The quota commands are deprecated since '
+                   'Pike as quota usage is counted from resources instead '
+                   'of being tracked separately. They will be removed in an '
+                   'upcoming release.')
+
     @args('--project', dest='project_id', metavar='<Project Id>',
             help='Project Id', required=True)
     @args('--user', dest='user_id', metavar='<User Id>',
             help='User Id')
     @args('--key', metavar='<key>', help='Key')
     def refresh(self, project_id, user_id=None, key=None):
-        """Refresh the quotas for a project or user.
-
-        If no quota key is provided, all the quota usages will be refreshed.
-        If a valid quota key is provided and it does not exist, it will be
-        created. Otherwise, it will be refreshed.
+        """DEPRECATED: This command is deprecated and no longer does anything.
         """
-        ctxt = context.get_admin_context()
-
-        keys = None
-        if key:
-            keys = [key]
-
-        try:
-            QUOTAS.usage_refresh(ctxt, project_id, user_id, keys)
-        except exception.QuotaUsageRefreshNotAllowed as e:
-            print(e.format_message())
-            return 2
+        pass
 
 
 class ProjectCommands(object):
@@ -317,26 +309,10 @@ class ProjectCommands(object):
             help='User Id')
     @args('--key', metavar='<key>', help='Key')
     def quota_usage_refresh(self, project_id, user_id=None, key=None):
-        """Refresh the quotas for project/user
-
-        If no quota key is provided, all the quota usages will be refreshed.
-        If a valid quota key is provided and it does not exist, it will be
-        created. Otherwise, it will be refreshed.
-
-        DEPRECATED: This command is deprecated. Use ``nova-manage quota
-        refresh`` instead.
+        """DEPRECATED: This command is deprecated and no longer does anything.
         """
-        ctxt = context.get_admin_context()
-
-        keys = None
-        if key:
-            keys = [key]
-
-        try:
-            QUOTAS.usage_refresh(ctxt, project_id, user_id, keys)
-        except exception.QuotaUsageRefreshNotAllowed as e:
-            print(e.format_message())
-            return 2
+        # TODO(melwitt): Remove this during the Queens cycle
+        pass
 
 
 class AccountCommands(ProjectCommands):

@@ -1,0 +1,6 @@
+---
+deprecations:
+  - |
+    The ``nova-manage quota refresh`` command has been deprecated and is now a
+    no-op since quota usage is counted from resources instead of being tracked
+    separately. The command will be removed during the Queens cycle.
