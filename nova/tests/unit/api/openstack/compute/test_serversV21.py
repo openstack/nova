@@ -41,7 +41,6 @@ from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute import ips
 from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import views
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi as os_wsgi
 from nova import availability_zones
 from nova.compute import api as compute_api
@@ -4635,32 +4634,6 @@ class ServersInvalidRequestTestCase(test.TestCase):
     def test_create_update_malformed_entity(self):
         body = {'server': 'string'}
         self._invalid_server_create(body=body)
-
-
-class FakeExt(extensions.V21APIExtensionBase):
-    name = "DiskConfig"
-    alias = 'os-disk-config'
-    version = 1
-    fake_schema = {'fake_ext_attr': {'type': 'string'}}
-
-    def fake_extension_point(self, *args, **kwargs):
-        pass
-
-    def fake_schema_extension_point(self, version):
-        if version in ('2.1', '2.19', '2.32', '2.37'):
-            return self.fake_schema
-        elif version == '2.0':
-            return {}
-        # This fake method should return the schema for expected version
-        # Return None will make the tests failed, that means there is something
-        # in the code.
-        return None
-
-    def get_controller_extensions(self):
-        return []
-
-    def get_resources(self):
-        return []
 
 
 # TODO(alex_xu): There isn't specified file for ips extension. Most of
