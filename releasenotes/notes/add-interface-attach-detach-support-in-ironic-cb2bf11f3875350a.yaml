@@ -1,0 +1,18 @@
+---
+features:
+  - |
+    Adds interface attach/detach support to baremetal nodes using ironic virt
+    driver. Note that the instance info cache update relies on getting a
+    ``network-changed`` event from neutron, or on the periodic task healing
+    the instance info cache, both of which are asynchronous. This means that
+    nova's cached network information (which is what is sent e.g. in the
+    ``GET /servers`` responses) may not be up to date immediately after the
+    attachment or detachment.
+upgrade:
+  - |
+    Interface attachment/detachment for ironic virt driver was implemented in
+    in-tree network interfaces in ironic version 8.0, and this release is
+    required for nova's interface attachment feature to work. Prior to that
+    release, calling VIF attach on an active ironic node using in-tree network
+    interfaces would be basically a noop. It should not be an issue during the
+    upgrade though, as it is required to upgrade ironic before nova.
