@@ -3549,6 +3549,10 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(context, instance,
                 "rescue.start", extra_usage_info=extra_usage_info,
                 network_info=network_info)
+        compute_utils.notify_about_instance_rescue_action(
+            context, instance, self.host, rescue_image_ref,
+            action=fields.NotificationAction.RESCUE,
+            phase=fields.NotificationPhase.START)
 
         try:
             self._power_off_instance(context, instance, clean_shutdown)
@@ -3576,6 +3580,10 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(context, instance,
                 "rescue.end", extra_usage_info=extra_usage_info,
                 network_info=network_info)
+        compute_utils.notify_about_instance_rescue_action(
+            context, instance, self.host, rescue_image_ref,
+            action=fields.NotificationAction.RESCUE,
+            phase=fields.NotificationPhase.END)
 
     @wrap_exception()
     @reverts_task_state
@@ -3588,6 +3596,10 @@ class ComputeManager(manager.Manager):
         network_info = self.network_api.get_instance_nw_info(context, instance)
         self._notify_about_instance_usage(context, instance,
                 "unrescue.start", network_info=network_info)
+        compute_utils.notify_about_instance_action(context, instance,
+            self.host, action=fields.NotificationAction.UNRESCUE,
+            phase=fields.NotificationPhase.START)
+
         with self._error_out_instance_on_exception(context, instance):
             self.driver.unrescue(instance,
                                  network_info)
@@ -3601,6 +3613,9 @@ class ComputeManager(manager.Manager):
                                           instance,
                                           "unrescue.end",
                                           network_info=network_info)
+        compute_utils.notify_about_instance_action(context, instance,
+            self.host, action=fields.NotificationAction.UNRESCUE,
+            phase=fields.NotificationPhase.END)
 
     @wrap_exception()
     @wrap_instance_fault

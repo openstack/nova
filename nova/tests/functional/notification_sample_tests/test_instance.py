@@ -263,8 +263,7 @@ class TestInstanceNotificationSample(
             self._test_reboot_server_error,
             self._test_trigger_crash_dump,
             self._test_volume_detach_attach_server,
-            self._test_rescue_server,
-            self._test_unrescue_server,
+            self._test_rescue_unrescue_server,
             self._test_soft_delete_server,
             self._test_attach_volume_error,
             self._test_interface_attach_and_detach,
@@ -1217,11 +1216,52 @@ class TestInstanceNotificationSample(
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
-    def _test_rescue_server(self, server):
-        pass
+    def _test_rescue_unrescue_server(self, server):
+        # Both "rescue" and "unrescue" notification asserts are made here
+        # rescue notification asserts
+        post = {
+            "rescue": {
+                "rescue_image_ref": 'a2459075-d96c-40d5-893e-577ff92e721c'
+            }
+        }
+        self.api.post_server_action(server['id'], post)
+        self._wait_for_state_change(self.admin_api, server, 'RESCUE')
 
-    def _test_unrescue_server(self, server):
-        pass
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-rescue-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'instance-rescue-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+        fake_notifier.reset()
+
+        # unrescue notification asserts
+        post = {
+            'unrescue': None
+        }
+        self.api.post_server_action(server['id'], post)
+        self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-unrescue-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'instance-unrescue-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
     def _test_soft_delete_server(self, server):
         self.flags(reclaim_instance_interval=30)

@@ -3166,7 +3166,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                           volume_id=volume_id),
                 ])
 
-    def _test_rescue(self, clean_shutdown=True):
+    @mock.patch('nova.compute.utils.notify_about_instance_rescue_action')
+    def _test_rescue(self, mock_notify, clean_shutdown=True):
         instance = fake_instance.fake_instance_obj(
             self.context, vm_state=vm_states.ACTIVE)
         fake_nw_info = network_model.NetworkInfo()
@@ -3226,6 +3227,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
             notify_usage_exists.assert_called_once_with(self.compute.notifier,
                 self.context, instance, current_period=True)
+            mock_notify.assert_has_calls([
+                mock.call(self.context, instance, 'fake-mini', None,
+                      action='rescue', phase='start'),
+                mock.call(self.context, instance, 'fake-mini', None,
+                      action='rescue', phase='end')])
 
             instance_save.assert_called_once_with(
                 expected_task_state=task_states.RESCUING)
@@ -3236,7 +3242,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     def test_rescue_forced_shutdown(self):
         self._test_rescue(clean_shutdown=False)
 
-    def test_unrescue(self):
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    def test_unrescue(self, mock_notify):
         instance = fake_instance.fake_instance_obj(
             self.context, vm_state=vm_states.RESCUED)
         fake_nw_info = network_model.NetworkInfo()
@@ -3273,6 +3280,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             notify_instance_usage.assert_has_calls(notify_calls)
 
             driver_unrescue.assert_called_once_with(instance, fake_nw_info)
+            mock_notify.assert_has_calls([
+                mock.call(self.context, instance, 'fake-mini',
+                      action='unrescue', phase='start'),
+                mock.call(self.context, instance, 'fake-mini',
+                      action='unrescue', phase='end')])
 
             instance_save.assert_called_once_with(
                 expected_task_state=task_states.UNRESCUING)

@@ -1464,6 +1464,8 @@ class CinderFixture(fixtures.Fixture):
                            lambda *args, **kwargs: None)
         self.test.stub_out('nova.volume.cinder.API.unreserve_volume',
                            fake_unreserve_volume)
+        self.test.stub_out('nova.volume.cinder.API.check_attached',
+                           lambda *args, **kwargs: None)
 
 
 # TODO(mriedem): We can probably pull some of the common parts from the
@@ -1637,6 +1639,8 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
         self.test.stub_out('nova.volume.cinder.API.roll_detaching',
                            lambda *args, **kwargs: None)
         self.test.stub_out('nova.volume.cinder.is_microversion_supported',
+                           lambda *args, **kwargs: None)
+        self.test.stub_out('nova.volume.cinder.API.check_attached',
                            lambda *args, **kwargs: None)
 
 

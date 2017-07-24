@@ -1,0 +1,6 @@
+{
+    "event_type": "instance.unrescue.end",
+    "payload":{"$ref": "common_payloads/InstanceActionPayload.json#"},
+    "priority": "INFO",
+    "publisher_id": "nova-compute:compute"
+}

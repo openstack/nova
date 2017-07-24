@@ -1,0 +1,11 @@
+{
+    "event_type": "instance.rescue.start",
+    "payload": {
+        "$ref": "common_payloads/InstanceActionRescuePayload.json#",
+        "nova_object.data": {
+            "task_state": "rescuing"
+        }
+    },
+    "priority": "INFO",
+    "publisher_id": "nova-compute:compute"
+}

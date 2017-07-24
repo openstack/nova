@@ -59,7 +59,7 @@
         "OS-EXT-SRV-ATTR:host": "%(compute_host)s",
         "OS-EXT-SRV-ATTR:hypervisor_hostname": "%(hypervisor_hostname)s",
         "OS-EXT-SRV-ATTR:instance_name": "%(instance_name)s",
-        "OS-EXT-STS:power_state": 4,
+        "OS-EXT-STS:power_state": 1,
         "OS-EXT-STS:task_state": null,
         "OS-EXT-STS:vm_state": "active",
         "os-extended-volumes:volumes_attached": [],
