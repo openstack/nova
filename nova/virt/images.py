@@ -39,7 +39,7 @@ CONF = nova.conf.CONF
 IMAGE_API = image.API()
 
 QEMU_IMG_LIMITS = processutils.ProcessLimits(
-    cpu_time=8,
+    cpu_time=30,
     address_space=1 * units.Gi)
 
 
