@@ -1,5 +1,9 @@
-API Plugins
-===========
+Extending the API
+=================
+
+.. TODO::
+
+   Update this to reflect the removal of the legacy v2 API code
 
 Background
 ----------
@@ -15,10 +19,9 @@ change should be made to the V2 API code. API changes should only be
 made through V2.1 microversions.
 
 This document covers how to write plugins for the v2.1 framework. A
-`microversions specific document
-<http://docs.openstack.org/developer/nova/api_microversion_dev.html>`_
-covers the details around what is required for the microversions
-part. It does not cover V2 plugins which should no longer be developed.
+:doc:`microversions specific document <microversions>` covers the details
+around what is required for the microversions part. It does not cover V2
+plugins which should no longer be developed.
 
 There may still be references to a v3 API both in comments and in the
 directory path of relevant files. This is because v2.1 first started

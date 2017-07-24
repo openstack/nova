@@ -27,7 +27,7 @@ Reporting Test Coverage
 =======================
 
 For details on plans to report the current test coverage, please see:
-:doc:`feature_classification`
+:doc:`/feature_classification`
 
 Running tests and reporting results
 ===================================

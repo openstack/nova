@@ -14,6 +14,10 @@
       License for the specific language governing permissions and limitations
       under the License.
 
+.. TODO::
+
+   This should be merged into contributor/api
+
 Adding a Method to the OpenStack API
 ====================================
 
