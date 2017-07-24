@@ -160,7 +160,8 @@ class TestInstanceNotificationSample(
         self._attach_volume_to_server(server, self.cinder.SWAP_OLD_VOL)
         self.api.delete_server(server['id'])
         self._wait_until_deleted(server)
-        self.assertEqual(9, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(9, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
 
         # This list needs to be in order.
         expected_notifications = [
