@@ -3682,7 +3682,7 @@ class ComputeManager(manager.Manager):
                     context, instance, "resize.revert.end")
 
     def _prep_resize(self, context, image, instance, instance_type,
-            request_spec, filter_properties, node, clean_shutdown=True):
+                     filter_properties, node, clean_shutdown=True):
 
         if not filter_properties:
             filter_properties = {}
@@ -3749,8 +3749,8 @@ class ComputeManager(manager.Manager):
                     context, instance, "resize.prep.start")
             try:
                 self._prep_resize(context, image, instance,
-                                  instance_type, request_spec,
-                                  filter_properties, node, clean_shutdown)
+                                  instance_type, filter_properties,
+                                  node, clean_shutdown)
             # NOTE(dgenin): This is thrown in LibvirtDriver when the
             #               instance to be migrated is backed by LVM.
             #               Remove when LVM migration is implemented.
