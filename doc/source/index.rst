@@ -199,7 +199,7 @@ Sample Configuration File
 .. toctree::
     :maxdepth: 1
 
-    sample_config
+    configuration/sample-config
 
 Sample Policy file
 ------------------
@@ -207,7 +207,7 @@ Sample Policy file
 .. toctree::
     :maxdepth: 1
 
-    sample_policy
+    configuration/sample-policy
 
 Man Pages
 ----------
