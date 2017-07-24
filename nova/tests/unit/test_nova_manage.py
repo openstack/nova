@@ -558,6 +558,27 @@ Archiving.....stopped
             ]
             mock_db_sync.assert_has_calls(db_sync_calls)
 
+    @mock.patch.object(objects.CellMapping, 'get_by_uuid',
+                       side_effect=test.TestingException('invalid connection'))
+    def test_sync_cell0_unknown_error(self, mock_get_by_uuid):
+        """Asserts that a detailed error message is given when an unknown
+        error occurs trying to get the cell0 cell mapping.
+        """
+        self.commands.sync()
+        mock_get_by_uuid.assert_called_once_with(
+            test.MatchType(context.RequestContext),
+            objects.CellMapping.CELL0_UUID)
+        expected = """ERROR: Could not access cell0.
+Has the nova_api database been created?
+Has the nova_cell0 database been created?
+Has "nova-manage api_db sync" been run?
+Has "nova-manage cell_v2 map_cell0" been run?
+Is [api_database]/connection set in nova.conf?
+Is the cell0 database connection URL correct?
+Error: invalid connection
+"""
+        self.assertEqual(expected, self.output.getvalue())
+
     def _fake_db_command(self, migrations=None):
         if migrations is None:
             mock_mig_1 = mock.MagicMock(__name__="mock_mig_1")
