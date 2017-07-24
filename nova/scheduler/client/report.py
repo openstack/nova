@@ -907,15 +907,20 @@ class SchedulerReportClient(object):
                      instance=instance)
 
     def claim_resources(self, consumer_uuid, alloc_request, project_id,
-                        user_id):
+                        user_id, attempt=0):
         """Creates allocation records for the supplied instance UUID against
         the supplied resource providers.
+
+        :note: This method will attempt to retry a claim that fails with a
+        concurrent update up to 3 times
 
         :param consumer_uuid: The instance's UUID.
         :param alloc_request: The JSON body of the request to make to the
                               placement's PUT /allocations API
         :param project_id: The project_id associated with the allocations.
         :param user_id: The user_id associated with the allocations.
+        :param attempt: The attempt at claiming this allocation request (used
+                        in recursive retries)
         :returns: True if the allocations were created, False otherwise.
         """
         url = '/allocations/%s' % consumer_uuid
@@ -924,6 +929,16 @@ class SchedulerReportClient(object):
         payload['user_id'] = user_id
         r = self.put(url, payload, version='1.10')
         if r.status_code != 204:
+            # NOTE(jaypipes): Yes, it sucks doing string comparison like this
+            # but we have no error codes, only error messages.
+            if attempt < 3 and 'concurrently updated' in r.text:
+                # Another thread updated one or more of the resource providers
+                # involved in the claim. It's safe to retry the claim
+                # transaction.
+                LOG.debug("Another process changed the resource providers "
+                          "involved in our claim attempt. Retrying claim.")
+                return self.claim_resources(consumer_uuid, alloc_request,
+                    project_id, user_id, attempt=(attempt + 1))
             LOG.warning(
                 'Unable to submit allocation for instance '
                 '%(uuid)s (%(code)i %(text)s)',
