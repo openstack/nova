@@ -1,0 +1,6 @@
+---
+fixes:
+  - prevent swap_volume action if the instance is in state SUSPENDED,
+    STOPPED or SOFT_DELETED. A conflict (409) will be raised now as
+    previously it used to fail silently.
+
