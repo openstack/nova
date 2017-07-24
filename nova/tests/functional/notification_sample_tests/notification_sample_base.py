@@ -255,3 +255,23 @@ class NotificationSampleTestBase(test.TestCase,
         self.api.post_server_volume(
             server['id'], {"volumeAttachment": {"volumeId": volume_id}})
         self._wait_for_notification('instance.volume_attach.end')
+
+    def _wait_and_get_migrations(self, server, max_retries=20):
+        """Simple method to wait for the migrations
+
+        Here we wait for the moment where active migration is in progress so
+        we can get them and use them in the migration-related tests.
+
+        :param server: server we'd like to use
+        :param max_retries: maximum number of retries
+        :returns: the migrations
+        """
+        retries = 0
+        while retries < max_retries:
+            retries += 1
+            migrations = self.admin_api.get_active_migrations(server['id'])
+            if (len(migrations) > 0 and
+                        migrations[0]['status'] != 'preparing'):
+                return migrations
+            if retries == max_retries:
+                self.fail('The migration table left empty.')
