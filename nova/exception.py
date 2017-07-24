@@ -1035,6 +1035,10 @@ class QuotaClassNotFound(QuotaNotFound):
     msg_fmt = _("Quota class %(class_name)s could not be found.")
 
 
+class QuotaClassExists(NovaException):
+    msg_fmt = _("Quota class %(class_name)s exists for resource %(resource)s")
+
+
 class QuotaUsageNotFound(QuotaNotFound):
     msg_fmt = _("Quota usage for project %(project_id)s could not be found.")
 

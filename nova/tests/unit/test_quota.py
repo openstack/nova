@@ -908,7 +908,7 @@ class DbQuotaDriverTestCase(test.TestCase):
 
     def _stub_quota_class_get_default(self):
         # Stub out quota_class_get_default
-        def fake_qcgd(context):
+        def fake_qcgd(cls, context):
             self.calls.append('quota_class_get_default')
             return dict(
                 instances=5,
@@ -916,11 +916,11 @@ class DbQuotaDriverTestCase(test.TestCase):
                 metadata_items=64,
                 injected_file_content_bytes=5 * 1024,
                 )
-        self.stub_out('nova.db.quota_class_get_default', fake_qcgd)
+        self.stub_out('nova.objects.Quotas.get_default_class', fake_qcgd)
 
     def _stub_quota_class_get_all_by_name(self):
         # Stub out quota_class_get_all_by_name
-        def fake_qcgabn(context, quota_class):
+        def fake_qcgabn(cls, context, quota_class):
             self.calls.append('quota_class_get_all_by_name')
             self.assertEqual(quota_class, 'test_class')
             return dict(
@@ -929,7 +929,7 @@ class DbQuotaDriverTestCase(test.TestCase):
                 metadata_items=64,
                 injected_file_content_bytes=5 * 1024,
                 )
-        self.stub_out('nova.db.quota_class_get_all_by_name', fake_qcgabn)
+        self.stub_out('nova.objects.Quotas.get_all_class_by_name', fake_qcgabn)
 
     def test_get_class_quotas(self):
         self._stub_quota_class_get_all_by_name()

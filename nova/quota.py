@@ -48,17 +48,18 @@ class DbQuotaDriver(object):
     def get_by_project_and_user(self, context, project_id, user_id, resource):
         """Get a specific quota by project and user."""
 
-        return db.quota_get(context, project_id, resource, user_id=user_id)
+        return objects.Quotas.get(context, project_id, resource,
+                                  user_id=user_id)
 
     def get_by_project(self, context, project_id, resource):
         """Get a specific quota by project."""
 
-        return db.quota_get(context, project_id, resource)
+        return objects.Quotas.get(context, project_id, resource)
 
     def get_by_class(self, context, quota_class, resource):
         """Get a specific quota by quota class."""
 
-        return db.quota_class_get(context, quota_class, resource)
+        return objects.Quotas.get_class(context, quota_class, resource)
 
     def get_defaults(self, context, resources):
         """Given a list of resources, retrieve the default quotas.
@@ -70,7 +71,7 @@ class DbQuotaDriver(object):
         """
 
         quotas = {}
-        default_quotas = db.quota_class_get_default(context)
+        default_quotas = objects.Quotas.get_default_class(context)
         for resource in resources.values():
             # resource.default returns the config options. So if there's not
             # an entry for the resource in the default class, it uses the
@@ -95,7 +96,8 @@ class DbQuotaDriver(object):
         """
 
         quotas = {}
-        class_quotas = db.quota_class_get_all_by_name(context, quota_class)
+        class_quotas = objects.Quotas.get_all_class_by_name(context,
+                                                            quota_class)
         for resource in resources.values():
             if defaults or resource.name in class_quotas:
                 quotas[resource.name] = class_quotas.get(resource.name,
@@ -114,7 +116,8 @@ class DbQuotaDriver(object):
         if project_id == context.project_id:
             quota_class = context.quota_class
         if quota_class:
-            class_quotas = db.quota_class_get_all_by_name(context, quota_class)
+            class_quotas = objects.Quotas.get_all_class_by_name(context,
+                                                                quota_class)
         else:
             class_quotas = {}
 
@@ -148,7 +151,7 @@ class DbQuotaDriver(object):
             # from the class limits to get the remains. For example, if the
             # class/default is 20 and there are two users each with quota of 5,
             # then there is quota of 10 left to give out.
-            all_quotas = db.quota_get_all(context, project_id)
+            all_quotas = objects.Quotas.get_all(context, project_id)
             for quota in all_quotas:
                 if quota.resource in modified_quotas:
                     modified_quotas[quota.resource]['remains'] -= \
@@ -246,11 +249,10 @@ class DbQuotaDriver(object):
         if user_quotas:
             user_quotas = user_quotas.copy()
         else:
-            user_quotas = db.quota_get_all_by_project_and_user(context,
-                                                               project_id,
-                                                               user_id)
+            user_quotas = objects.Quotas.get_all_by_project_and_user(
+                context, project_id, user_id)
         # Use the project quota for default user quota.
-        proj_quotas = project_quotas or db.quota_get_all_by_project(
+        proj_quotas = project_quotas or objects.Quotas.get_all_by_project(
             context, project_id)
         for key, value in proj_quotas.items():
             if key not in user_quotas.keys():
@@ -286,7 +288,7 @@ class DbQuotaDriver(object):
                         will be returned.
         :param project_quotas: Quotas dictionary for the specified project.
         """
-        project_quotas = project_quotas or db.quota_get_all_by_project(
+        project_quotas = project_quotas or objects.Quotas.get_all_by_project(
             context, project_id)
         project_usages = {}
         if usages:
@@ -332,14 +334,13 @@ class DbQuotaDriver(object):
         """
 
         settable_quotas = {}
-        db_proj_quotas = db.quota_get_all_by_project(context, project_id)
+        db_proj_quotas = objects.Quotas.get_all_by_project(context, project_id)
         project_quotas = self.get_project_quotas(context, resources,
                                                  project_id, remains=True,
                                                  project_quotas=db_proj_quotas)
         if user_id:
-            setted_quotas = db.quota_get_all_by_project_and_user(context,
-                                                     project_id,
-                                                     user_id)
+            setted_quotas = objects.Quotas.get_all_by_project_and_user(
+                context, project_id, user_id)
             user_quotas = self.get_user_quotas(context, resources,
                                                project_id, user_id,
                                                project_quotas=db_proj_quotas,
@@ -491,7 +492,7 @@ class DbQuotaDriver(object):
             user_id = context.user_id
 
         # Get the applicable quotas
-        project_quotas = db.quota_get_all_by_project(context, project_id)
+        project_quotas = objects.Quotas.get_all_by_project(context, project_id)
         quotas = self._get_quotas(context, resources, values.keys(),
                                   project_id=project_id,
                                   project_quotas=project_quotas)
@@ -598,7 +599,7 @@ class DbQuotaDriver(object):
 
         # per project quota limits (quotas that have no concept of
         # user-scoping: fixed_ips, networks, floating_ips)
-        project_quotas = db.quota_get_all_by_project(context, project_id)
+        project_quotas = objects.Quotas.get_all_by_project(context, project_id)
         # per user quotas, project quota limits (for quotas that have
         # user-scoping, limits for the project)
         quotas = self._get_quotas(context, resources, all_keys,
@@ -731,7 +732,7 @@ class DbQuotaDriver(object):
         # NOTE(Vek): We're not worried about races at this point.
         #            Yes, the admin may be in the process of reducing
         #            quotas, but that's a pretty rare thing.
-        project_quotas = db.quota_get_all_by_project(context, project_id)
+        project_quotas = objects.Quotas.get_all_by_project(context, project_id)
         LOG.debug('Quota limits for project %(project_id)s: '
                   '%(project_quotas)s', {'project_id': project_id,
                                          'project_quotas': project_quotas})
@@ -883,25 +884,24 @@ class DbQuotaDriver(object):
                                       project_id=project_id, user_id=user_id)
 
     def destroy_all_by_project_and_user(self, context, project_id, user_id):
-        """Destroy all quotas, usages, and reservations associated with a
-        project and user.
+        """Destroy all quotas associated with a project and user.
 
         :param context: The request context, for access checks.
         :param project_id: The ID of the project being deleted.
         :param user_id: The ID of the user being deleted.
         """
 
-        db.quota_destroy_all_by_project_and_user(context, project_id, user_id)
+        objects.Quotas.destroy_all_by_project_and_user(context, project_id,
+                                                       user_id)
 
     def destroy_all_by_project(self, context, project_id):
-        """Destroy all quotas, usages, and reservations associated with a
-        project.
+        """Destroy all quotas associated with a project.
 
         :param context: The request context, for access checks.
         :param project_id: The ID of the project being deleted.
         """
 
-        db.quota_destroy_all_by_project(context, project_id)
+        objects.Quotas.destroy_all_by_project(context, project_id)
 
     def expire(self, context):
         """Expire reservations.
@@ -1215,8 +1215,7 @@ class NoopQuotaDriver(object):
         pass
 
     def destroy_all_by_project_and_user(self, context, project_id, user_id):
-        """Destroy all quotas, usages, and reservations associated with a
-        project and user.
+        """Destroy all quotas associated with a project and user.
 
         :param context: The request context, for access checks.
         :param project_id: The ID of the project being deleted.
@@ -1225,8 +1224,7 @@ class NoopQuotaDriver(object):
         pass
 
     def destroy_all_by_project(self, context, project_id):
-        """Destroy all quotas, usages, and reservations associated with a
-        project.
+        """Destroy all quotas associated with a project.
 
         :param context: The request context, for access checks.
         :param project_id: The ID of the project being deleted.
@@ -1356,7 +1354,7 @@ class ReservableResource(BaseResource):
 
 
 class AbsoluteResource(BaseResource):
-    """Describe a non-reservable resource."""
+    """Describe a resource that does not correspond to database objects."""
     valid_method = 'check'
 
 

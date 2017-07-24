@@ -276,11 +276,11 @@ class ProjectCommands(object):
                     print(_('Quota limit must be less than %s.') % maximum)
                     return 2
                 try:
-                    db.quota_create(ctxt, project_id, key, value,
-                                    user_id=user_id)
+                    objects.Quotas.create_limit(ctxt, project_id, key, value,
+                                                user_id=user_id)
                 except exception.QuotaExists:
-                    db.quota_update(ctxt, project_id, key, value,
-                                    user_id=user_id)
+                    objects.Quotas.update_limit(ctxt, project_id, key, value,
+                                                user_id=user_id)
             else:
                 print(_('%(key)s is not a valid quota key. Valid options are: '
                         '%(options)s.') % {'key': key,
