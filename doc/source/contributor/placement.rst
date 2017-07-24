@@ -18,16 +18,17 @@
 Overview
 ========
 
-The Nova project introduced the :doc:`placement service </placement>` as part
-of the Newton release. The service provides an HTTP API to manage inventories
-of different classes of resources, such as disk or virtual cpus, made available
-by entities called resource providers. Information provided through the
-placement API is intended to enable more effective accounting of resources in
-an OpenStack deployment and better scheduling of various entities in the cloud.
+The Nova project introduced the :doc:`placement service </user/placement>` as
+part of the Newton release. The service provides an HTTP API to manage
+inventories of different classes of resources, such as disk or virtual cpus,
+made available by entities called resource providers. Information provided
+through the placement API is intended to enable more effective accounting of
+resources in an OpenStack deployment and better scheduling of various entities
+in the cloud.
 
 The document serves to explain the architecture of the system and to provide
 some guidance on how to maintain and extend the code. For more detail on why
-the system was created and how it does its job see :doc:`/placement`.
+the system was created and how it does its job see :doc:`/user/placement`.
 
 Big Picture
 ===========
@@ -132,8 +133,8 @@ Microversions
 =============
 
 The placement API makes use of `microversions`_ to allow the release of new
-features on an opt in basis. See :doc:`/placement` for an up to date history of
-the available microversions.
+features on an opt in basis. See :doc:`/user/placement` for an up to date
+history of the available microversions.
 
 The rules around when a microversion is needed are the same as for the
 :doc:`compute API </contributor/microversions>`. When adding a new microversion
