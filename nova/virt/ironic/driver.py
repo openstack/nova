@@ -44,6 +44,7 @@ from nova.i18n import _
 from nova import objects
 from nova.objects import fields as obj_fields
 from nova import servicegroup
+from nova import utils
 from nova.virt import configdrive
 from nova.virt import driver as virt_driver
 from nova.virt import firewall
@@ -444,6 +445,50 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param host: the hostname of the compute host.
 
         """
+        if not self.node_cache:
+            self._refresh_cache()
+        # Since there could be many, many instances controlled by this host,
+        # spawn this asynchronously so as not to stall the startup of the
+        # compute service.
+        utils.spawn_n(self._pike_flavor_migration, host)
+
+    def _pike_flavor_migration(self, host):
+        """This code is needed in Pike to prevent problems where an operator
+        has already adjusted their flavors to add the custom resource class to
+        extra_specs. Since existing ironic instances will not have this in
+        their extra_specs, they will only have allocations against
+        VCPU/RAM/disk. By adding just the custom RC to the existing flavor
+        extra_specs, the periodic call to update_available_resources() will add
+        an allocation against the custom resource class, and prevent placement
+        from thinking that that node is available. This code can be removed in
+        Queens, and will need to be updated to also alter extra_specs to
+        zero-out the old-style standard resource classes of VCPU, MEMORY_MB,
+        and DISK_GB.
+        """
+        ctx = nova_context.get_admin_context()
+
+        # Using itervalues here as the number of nodes can be very high
+        for node in six.itervalues(self.node_cache):
+            if not node.instance_uuid:
+                continue
+
+            if not node.resource_class:
+                LOG.warning("Node %(node)s does not have its resource_class "
+                        "set.", {"node": node.uuid})
+                continue
+            rc = obj_fields.ResourceClass.normalize_name(node.resource_class)
+            instance = objects.Instance.get_by_uuid(ctx, node.instance_uuid,
+                    expected_attrs=["flavor"])
+            specs = instance.flavor.extra_specs
+            res_key = "resources:%s" % rc
+            if res_key in specs:
+                # Flavor has already been updated
+                continue
+            specs[res_key] = 1
+            instance.save()
+            LOG.debug("The flavor extra_specs for Ironic instance %(inst)s "
+                      "have been updated for custom resource class '%(rc)s'.",
+                      {"inst": instance.uuid, "rc": rc})
         return
 
     def _get_hypervisor_type(self):
