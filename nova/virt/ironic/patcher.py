@@ -41,7 +41,7 @@ class GenericDriverFields(object):
         self.node = node
 
     def get_deploy_patch(self, instance, image_meta, flavor,
-                         preserve_ephemeral=None):
+                         preserve_ephemeral=None, boot_from_volume=False):
         """Build a patch to add the required fields to deploy a node.
 
         :param instance: the instance object.
@@ -49,12 +49,15 @@ class GenericDriverFields(object):
         :param flavor: the flavor object.
         :param preserve_ephemeral: preserve_ephemeral status (bool) to be
                                    specified during rebuild.
+        :param boot_from_volume: True if node boots from volume. Then,
+                                 image_source is not passed to ironic.
         :returns: a json-patch with the fields that needs to be updated.
 
         """
         patch = []
-        patch.append({'path': '/instance_info/image_source', 'op': 'add',
-                      'value': image_meta.id})
+        if not boot_from_volume:
+            patch.append({'path': '/instance_info/image_source', 'op': 'add',
+                          'value': image_meta.id})
         patch.append({'path': '/instance_info/root_gb', 'op': 'add',
                       'value': str(instance.flavor.root_gb)})
         patch.append({'path': '/instance_info/swap_mb', 'op': 'add',

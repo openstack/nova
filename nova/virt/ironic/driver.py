@@ -25,6 +25,7 @@ import tempfile
 import time
 
 from oslo_log import log as logging
+from oslo_serialization import jsonutils
 from oslo_service import loopingcall
 from oslo_utils import excutils
 from oslo_utils import importutils
@@ -33,6 +34,7 @@ import six.moves.urllib.parse as urlparse
 from tooz import hashring as hash_ring
 
 from nova.api.metadata import base as instance_metadata
+from nova import block_device
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import vm_states
@@ -358,11 +360,17 @@ class IronicDriver(virt_driver.ComputeDriver):
         self.firewall_driver.unfilter_instance(instance, network_info)
 
     def _add_instance_info_to_node(self, node, instance, image_meta, flavor,
-                                   preserve_ephemeral=None):
+                                   preserve_ephemeral=None,
+                                   block_device_info=None):
+
+        root_bdm = block_device.get_root_bdm(
+            virt_driver.block_device_info_get_mapping(block_device_info))
+        boot_from_volume = root_bdm is not None
         patch = patcher.create(node).get_deploy_patch(instance,
                                                       image_meta,
                                                       flavor,
-                                                      preserve_ephemeral)
+                                                      preserve_ephemeral,
+                                                      boot_from_volume)
 
         # Associate the node with an instance
         patch.append({'path': '/instance_uuid', 'op': 'add',
@@ -393,7 +401,65 @@ class IronicDriver(virt_driver.ComputeDriver):
                         {'node': node.uuid, 'instance': instance.uuid,
                          'reason': six.text_type(e)})
 
+    def _add_volume_target_info(self, context, instance, block_device_info):
+        bdms = virt_driver.block_device_info_get_mapping(block_device_info)
+
+        for bdm in bdms:
+            # TODO(TheJulia): In Queens, we should refactor the check below
+            # to something more elegent, as is_volume is not proxied through
+            # to the DriverVolumeBlockDevice object. Until then, we are
+            # checking the underlying object's status.
+            if not bdm._bdm_obj.is_volume:
+                continue
+
+            connection_info = jsonutils.loads(bdm._bdm_obj.connection_info)
+            target_properties = connection_info['data']
+            driver_volume_type = connection_info['driver_volume_type']
+
+            try:
+                self.ironicclient.call('volume_target.create',
+                                       node_uuid=instance.node,
+                                       volume_type=driver_volume_type,
+                                       properties=target_properties,
+                                       boot_index=bdm._bdm_obj.boot_index,
+                                       volume_id=bdm._bdm_obj.volume_id)
+            except (ironic.exc.BadRequest, ironic.exc.Conflict):
+                msg = (_("Failed to add volume target information of "
+                         "volume %(volume)s on node %(node)s when "
+                         "provisioning the instance")
+                       % {'volume': bdm._bdm_obj.volume_id,
+                          'node': instance.node})
+                LOG.error(msg, instance=instance)
+                raise exception.InstanceDeployFailure(msg)
+
+    def _cleanup_volume_target_info(self, instance):
+        targets = self.ironicclient.call('node.list_volume_targets',
+                                         instance.node, detail=True)
+        for target in targets:
+            volume_target_id = target.uuid
+            try:
+                self.ironicclient.call('volume_target.delete',
+                                       volume_target_id)
+            except ironic.exc.NotFound:
+                LOG.debug("Volume target information %(target)s of volume "
+                          "%(volume)s is already removed from node %(node)s",
+                          {'target': volume_target_id,
+                           'volume': target.volume_id,
+                           'node': instance.node},
+                          instance=instance)
+            except ironic.exc.ClientException as e:
+                LOG.warning("Failed to remove volume target information "
+                            "%(target)s of volume %(volume)s from node "
+                            "%(node)s when unprovisioning the instance: "
+                            "%(reason)s",
+                            {'target': volume_target_id,
+                             'volume': target.volume_id,
+                             'node': instance.node,
+                             'reason': e},
+                            instance=instance)
+
     def _cleanup_deploy(self, node, instance, network_info):
+        self._cleanup_volume_target_info(instance)
         self._unplug_vifs(node, instance, network_info)
         self._stop_firewall(instance, network_info)
 
@@ -911,7 +977,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             instance.
         :param network_info: Instance network information.
         :param block_device_info: Instance block device
-            information. Ignored by this driver.
+            information.
         """
         LOG.debug('Spawn called for instance', instance=instance)
 
@@ -926,7 +992,18 @@ class IronicDriver(virt_driver.ComputeDriver):
         node = self._get_node(node_uuid)
         flavor = instance.flavor
 
-        self._add_instance_info_to_node(node, instance, image_meta, flavor)
+        self._add_instance_info_to_node(node, instance, image_meta, flavor,
+                                        block_device_info=block_device_info)
+
+        try:
+            self._add_volume_target_info(context, instance, block_device_info)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                LOG.error("Error preparing deploy for instance "
+                          "on baremetal node %(node)s.",
+                          {'node': node_uuid},
+                          instance=instance)
+                self._cleanup_deploy(node, instance, network_info)
 
         # NOTE(Shrews): The default ephemeral device needs to be set for
         # services (like cloud-init) that depend on it being returned by the
@@ -938,15 +1015,18 @@ class IronicDriver(virt_driver.ComputeDriver):
         # validate we are ready to do the deploy
         validate_chk = self.ironicclient.call("node.validate", node_uuid)
         if (not validate_chk.deploy.get('result')
-                or not validate_chk.power.get('result')):
+                or not validate_chk.power.get('result')
+                or not validate_chk.storage.get('result')):
             # something is wrong. undo what we have done
             self._cleanup_deploy(node, instance, network_info)
             raise exception.ValidationError(_(
                 "Ironic node: %(id)s failed to validate."
-                " (deploy: %(deploy)s, power: %(power)s)")
+                " (deploy: %(deploy)s, power: %(power)s,"
+                " storage: %(storage)s)")
                 % {'id': node.uuid,
                    'deploy': validate_chk.deploy,
-                   'power': validate_chk.power})
+                   'power': validate_chk.power,
+                   'storage': validate_chk.storage})
 
         # prepare for the deploy
         try:
@@ -1637,3 +1717,50 @@ class IronicDriver(virt_driver.ComputeDriver):
                          'node': node.uuid},
                         instance=instance)
             raise exception.ConsoleTypeUnavailable(console_type='serial')
+
+    @property
+    def need_legacy_block_device_info(self):
+        return False
+
+    def get_volume_connector(self, instance):
+        """Get connector information for the instance for attaching to volumes.
+
+        Connector information is a dictionary representing the hardware
+        information that will be making the connection. This information
+        consists of properties for protocols supported by the hardware.
+        If the hardware supports iSCSI protocol, iSCSI initiator IQN is
+        included as follows::
+
+            {
+                'ip': ip,
+                'initiator': initiator,
+                'host': hostname
+            }
+
+        :param instance: nova instance
+        :returns: A connector information dictionary
+        """
+        node = self.ironicclient.call("node.get", instance.node)
+        properties = self._parse_node_properties(node)
+        connectors = self.ironicclient.call("node.list_volume_connectors",
+                                            instance.node, detail=True)
+        values = {}
+        for conn in connectors:
+            values.setdefault(conn.type, []).append(conn.connector_id)
+        props = {}
+
+        if values.get('ip'):
+            props['ip'] = props['host'] = values['ip'][0]
+        if values.get('iqn'):
+            props['initiator'] = values['iqn'][0]
+        if values.get('wwpn'):
+            props['wwpns'] = values['wwpn']
+        if values.get('wwnn'):
+            props['wwnns'] = values['wwnn']
+        props['platform'] = properties.get('cpu_arch')
+        props['os_type'] = 'baremetal'
+
+        # Eventually it would be nice to be able to do multipath, but for now
+        # we should at least set the value to False.
+        props['multipath'] = False
+        return props

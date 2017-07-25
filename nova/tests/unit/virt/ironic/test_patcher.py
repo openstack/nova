@@ -143,3 +143,12 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
                          'value': str(preserve), 'op': 'add', }]
             expected += self._expected_deploy_patch
             self.assertPatchEqual(expected, patch)
+
+    def test_generic_get_deploy_patch_boot_from_volume(self):
+        node = ironic_utils.get_test_node(driver='fake')
+        expected = [patch for patch in self._expected_deploy_patch
+                    if patch['path'] != '/instance_info/image_source']
+        patch = patcher.create(node).get_deploy_patch(
+                self.instance, self.image_meta, self.flavor,
+                boot_from_volume=True)
+        self.assertPatchEqual(expected, patch)

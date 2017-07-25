@@ -1,0 +1,12 @@
+---
+features:
+  - |
+    Enables to launch an instance from an iscsi volume with ironic virt
+    driver. This feature requires an ironic service supporting API
+    version 1.32 or later, which is present in ironic releases > 8.0.
+    It also requires python-ironicclient >= 1.14.0.
+upgrade:
+  - |
+    The required ironic API version is updated to 1.32. The ironic service
+    must be upgraded to an ironic release > 8.0 before nova is upgraded,
+    otherwise all ironic intergration will fail.

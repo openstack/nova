@@ -22,7 +22,8 @@ def get_test_validation(**kw):
                {'power': kw.get('power', {'result': True}),
                 'deploy': kw.get('deploy', {'result': True}),
                 'console': kw.get('console', True),
-                'rescue': kw.get('rescue', True)})()
+                'rescue': kw.get('rescue', True),
+                'storage': kw.get('storage', {'result': True})})()
 
 
 def get_test_node(**kw):
@@ -98,6 +99,31 @@ def get_test_vif(**kw):
         'qbg_params': kw.get('qbg_params')}
 
 
+def get_test_volume_connector(**kw):
+    return type('volume_connector', (object,),
+               {'uuid': kw.get('uuid', 'hhhhhhhh-qqqq-uuuu-mmmm-bbbbbbbbbbbb'),
+                'node_uuid': kw.get('node_uuid', get_test_node().uuid),
+                'type': kw.get('type', 'iqn'),
+                'connector_id': kw.get('connector_id', 'iqn.test'),
+                'extra': kw.get('extra', {}),
+                'created_at': kw.get('created_at'),
+                'updated_at': kw.get('updated_at')})()
+
+
+def get_test_volume_target(**kw):
+    return type('volume_target', (object,),
+                {'uuid': kw.get('uuid', 'aaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'),
+                 'node_uuid': kw.get('node_uuid', get_test_node().uuid),
+                 'volume_type': kw.get('volume_type', 'iscsi'),
+                 'properties': kw.get('properties', {}),
+                 'boot_index': kw.get('boot_index', 0),
+                 'volume_id': kw.get('volume_id',
+                                     'fffffff-gggg-hhhh-iiii-jjjjjjjjjjjj'),
+                 'extra': kw.get('extra', {}),
+                 'created_at': kw.get('created_at'),
+                 'updated_at': kw.get('updated_at')})()
+
+
 def get_test_flavor(**kw):
     default_extra_specs = {'baremetal:deploy_kernel_id':
                                        'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
@@ -116,6 +142,16 @@ def get_test_flavor(**kw):
 def get_test_image_meta(**kw):
     return objects.ImageMeta.from_dict(
         {'id': kw.get('id', 'cccccccc-cccc-cccc-cccc-cccccccccccc')})
+
+
+class FakeVolumeTargetClient(object):
+
+    def create(self, node_uuid, driver_volume_type, target_properties,
+               boot_index):
+        pass
+
+    def delete(self, volume_target_id):
+        pass
 
 
 class FakePortClient(object):
@@ -168,9 +204,13 @@ class FakeNodeClient(object):
     def inject_nmi(self, node_uuid):
         pass
 
+    def list_volume_targets(self, node_uuid, detail=False):
+        pass
+
 
 class FakeClient(object):
 
     node = FakeNodeClient()
     port = FakePortClient()
     portgroup = FakePortgroupClient()
+    volume_target = FakeVolumeTargetClient()
