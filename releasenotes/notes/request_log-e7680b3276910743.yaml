@@ -1,0 +1,11 @@
+---
+upgrade:
+  - |
+    A new request_log middleware is created to log REST HTTP requests
+    even if Nova API is not running under eventlet.wsgi. Because this
+    is an api-paste.ini change, you will need to manually update your
+    api-paste.ini with the one from the release to get this
+    functionality. The new request logs will only emit when it is
+    detected that nova-api is not running under eventlet, and will
+    include the microversion of the request in addition to all the
+    previously logged information.
