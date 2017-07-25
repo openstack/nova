@@ -255,7 +255,7 @@ def send_instance_update_notification(context, instance, old_vm_state=None,
 @rpc.if_notifications_enabled
 def _send_versioned_instance_update(context, instance, payload, host, service):
 
-    def _map_legacy_service_to_binary(legacy_service):
+    def _map_legacy_service_to_source(legacy_service):
         if not legacy_service.startswith('nova-'):
             return 'nova-' + service
         else:
@@ -291,7 +291,7 @@ def _send_versioned_instance_update(context, instance, payload, host, service):
             action=fields.NotificationAction.UPDATE),
         publisher=notification_base.NotificationPublisher(
                 host=host or CONF.host,
-                binary=_map_legacy_service_to_binary(service)),
+                source=_map_legacy_service_to_source(service)),
         payload=versioned_payload)
     notification.emit(context)
 
