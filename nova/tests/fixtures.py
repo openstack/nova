@@ -30,6 +30,8 @@ from oslo_concurrency import lockutils
 from oslo_config import cfg
 import oslo_messaging as messaging
 from oslo_messaging import conffixture as messaging_conffixture
+from requests import adapters
+from wsgi_intercept import interceptor
 
 from nova.api.openstack.compute import tenant_networks
 from nova.api.openstack.placement import deploy as placement_deploy
@@ -47,7 +49,6 @@ from nova import rpc
 from nova import service
 from nova.tests.functional.api import client
 from nova.tests import uuidsentinel
-from nova import wsgi
 
 _TRUE_VALUES = ('True', 'true', '1', 'yes')
 
@@ -1394,12 +1395,20 @@ class PlacementFixture(fixtures.Fixture):
         super(PlacementFixture, self).setUp()
 
         self.useFixture(ConfPatcher(group='api', auth_strategy='noauth2'))
-        app = placement_deploy.loadapp(CONF)
-        # in order to run these in tests we need to bind only to local
-        # host, and dynamically allocate ports
-        self.service = wsgi.Server('placement', app, host='127.0.0.1')
-        self.service.start()
-        self.addCleanup(self.service.stop)
+        loader = placement_deploy.loadapp(CONF)
+        app = lambda: loader
+        host = uuidsentinel.placement_host
+        self.endpoint = 'http://%s/placement' % host
+        intercept = interceptor.RequestsInterceptor(app, url=self.endpoint)
+        intercept.install_intercept()
+        self.addCleanup(intercept.uninstall_intercept)
+
+        # Turn off manipulation of socket_options in TCPKeepAliveAdapter
+        # to keep wsgi-intercept happy. Replace it with the method
+        # from its superclass.
+        self.useFixture(fixtures.MonkeyPatch(
+            'keystoneauth1.session.TCPKeepAliveAdapter.init_poolmanager',
+            adapters.HTTPAdapter.init_poolmanager))
 
         self._client = ks.Session(auth=None)
         # NOTE(sbauza): We need to mock the scheduler report client because
@@ -1436,7 +1445,7 @@ class PlacementFixture(fixtures.Fixture):
         self._update_headers_with_version(headers, **kwargs)
         return self._client.get(
             url,
-            endpoint_override="http://127.0.0.1:%s" % self.service.port,
+            endpoint_override=self.endpoint,
             headers=headers,
             raise_exc=False)
 
@@ -1453,7 +1462,7 @@ class PlacementFixture(fixtures.Fixture):
         self._update_headers_with_version(headers, **kwargs)
         return self._client.post(
             url, json=data,
-            endpoint_override="http://127.0.0.1:%s" % self.service.port,
+            endpoint_override=self.endpoint,
             headers=headers,
             raise_exc=False)
 
@@ -1470,7 +1479,7 @@ class PlacementFixture(fixtures.Fixture):
         self._update_headers_with_version(headers, **kwargs)
         return self._client.put(
             url, json=data,
-            endpoint_override="http://127.0.0.1:%s" % self.service.port,
+            endpoint_override=self.endpoint,
             headers=headers,
             raise_exc=False)
 
@@ -1481,6 +1490,6 @@ class PlacementFixture(fixtures.Fixture):
         # a fake token so we could remove adding the header below.
         return self._client.delete(
             url,
-            endpoint_override="http://127.0.0.1:%s" % self.service.port,
+            endpoint_override=self.endpoint,
             headers={'x-auth-token': self.token},
             raise_exc=False)
