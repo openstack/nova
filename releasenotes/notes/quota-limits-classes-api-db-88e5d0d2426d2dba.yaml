@@ -1,0 +1,13 @@
+---
+upgrade:
+  - |
+    Quota limits and classes are being moved to the API database for Cells v2.
+    In this release, the online data migrations will move any quota limits and
+    classes you have in your main database to the API database, retaining all
+    attributes.
+
+    .. note:: Quota limits and classes can no longer be soft-deleted as the API
+      database does not replicate the legacy soft-delete functionality from the
+      main database. As such, deleted quota limits and classes are not migrated
+      and the behavior users will experience will be the same as if a purge of
+      deleted records was performed.

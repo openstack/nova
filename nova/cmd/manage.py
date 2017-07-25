@@ -90,6 +90,7 @@ from nova.objects import host_mapping as host_mapping_obj
 from nova.objects import instance as instance_obj
 from nova.objects import instance_group as instance_group_obj
 from nova.objects import keypair as keypair_obj
+from nova.objects import quotas as quotas_obj
 from nova.objects import request_spec
 from nova import quota
 from nova import rpc
@@ -646,6 +647,10 @@ class DbCommands(object):
         build_request_obj.delete_build_requests_with_no_instance_uuid,
         # Added in Pike
         db.service_uuids_online_data_migration,
+        # Added in Pike
+        quotas_obj.migrate_quota_limits_to_api_db,
+        # Added in Pike
+        quotas_obj.migrate_quota_classes_to_api_db,
     )
 
     def __init__(self):

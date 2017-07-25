@@ -11,6 +11,7 @@
 #    under the License.
 
 from nova import context
+from nova.db.sqlalchemy import api as db_api
 from nova import exception
 from nova.objects import quotas
 from nova import test
@@ -206,3 +207,113 @@ class QuotasObjectTestCase(test.TestCase,
         self.assertEqual('foo', limits_dict['class_name'])
         self.assertEqual(5, limits_dict['instances'])
         self.assertEqual(10, limits_dict['cores'])
+
+    def test_migrate_quota_limits(self):
+        # Create a limit in api db
+        quotas.Quotas._create_limit_in_db(self.context, 'fake-project',
+                                          'instances', 5, user_id='fake-user')
+        # Create 4 limits in main db
+        db_api.quota_create(self.context, 'fake-project', 'cores', 10,
+                            user_id='fake-user')
+        db_api.quota_create(self.context, 'fake-project', 'ram', 8192,
+                            user_id='fake-user')
+        db_api.quota_create(self.context, 'fake-project', 'fixed_ips', 10)
+        db_api.quota_create(self.context, 'fake-project', 'floating_ips', 10)
+
+        # Migrate with a count/limit of 3
+        total, done = quotas.migrate_quota_limits_to_api_db(self.context, 3)
+        self.assertEqual(3, total)
+        self.assertEqual(3, done)
+
+        # This only fetches from the api db. There should now be 4 limits.
+        api_user_limits = quotas.Quotas._get_all_from_db(self.context,
+                                                         'fake-project')
+        api_proj_limits_dict = quotas.Quotas._get_all_from_db_by_project(
+                self.context, 'fake-project')
+        api_proj_limits_dict.pop('project_id', None)
+        self.assertEqual(4,
+                         len(api_user_limits) + len(api_proj_limits_dict))
+
+        # This only fetches from the main db. There should be one left.
+        main_user_limits = db_api.quota_get_all(self.context, 'fake-project')
+        main_proj_limits_dict = db_api.quota_get_all_by_project(self.context,
+                                                                'fake-project')
+        main_proj_limits_dict.pop('project_id', None)
+        self.assertEqual(1, len(main_user_limits) + len(main_proj_limits_dict))
+
+        self.assertEqual((1, 1),
+                         quotas.migrate_quota_limits_to_api_db(
+                                self.context, 100))
+        self.assertEqual((0, 0),
+                         quotas.migrate_quota_limits_to_api_db(
+                                self.context, 100))
+
+    def test_migrate_quota_limits_skips_existing(self):
+        quotas.Quotas._create_limit_in_db(self.context, 'fake-project',
+                                          'instances', 5, user_id='fake-user')
+        db_api.quota_create(self.context, 'fake-project', 'instances', 5,
+                            user_id='fake-user')
+        total, done = quotas.migrate_quota_limits_to_api_db(
+                        self.context, 100)
+        self.assertEqual(1, total)
+        self.assertEqual(1, done)
+        total, done = quotas.migrate_quota_limits_to_api_db(
+                        self.context, 100)
+        self.assertEqual(0, total)
+        self.assertEqual(0, done)
+        self.assertEqual(1, len(quotas.Quotas._get_all_from_db(
+                        self.context, 'fake-project')))
+
+    def test_migrate_quota_classes(self):
+        # Create a class in api db
+        quotas.Quotas._create_class_in_db(self.context, 'foo', 'instances', 5)
+        # Create 3 classes in main db
+        db_api.quota_class_create(self.context, 'foo', 'cores', 10)
+        db_api.quota_class_create(self.context, db_api._DEFAULT_QUOTA_NAME,
+                                  'instances', 10)
+        db_api.quota_class_create(self.context, 'foo', 'ram', 8192)
+
+        total, done = quotas.migrate_quota_classes_to_api_db(self.context, 2)
+        self.assertEqual(2, total)
+        self.assertEqual(2, done)
+
+        # This only fetches from the api db
+        api_foo_dict = quotas.Quotas._get_all_class_from_db_by_name(
+                self.context, 'foo')
+        api_foo_dict.pop('class_name', None)
+        api_default_dict = quotas.Quotas._get_all_class_from_db_by_name(
+                self.context, db_api._DEFAULT_QUOTA_NAME)
+        api_default_dict.pop('class_name', None)
+        self.assertEqual(3,
+                         len(api_foo_dict) + len(api_default_dict))
+
+        # This only fetches from the main db
+        main_foo_dict = db_api.quota_class_get_all_by_name(self.context, 'foo')
+        main_foo_dict.pop('class_name', None)
+        main_default_dict = db_api.quota_class_get_default(self.context)
+        main_default_dict.pop('class_name', None)
+        self.assertEqual(1, len(main_foo_dict) + len(main_default_dict))
+
+        self.assertEqual((1, 1),
+                         quotas.migrate_quota_classes_to_api_db(
+                                self.context, 100))
+        self.assertEqual((0, 0),
+                         quotas.migrate_quota_classes_to_api_db(
+                                self.context, 100))
+
+    def test_migrate_quota_classes_skips_existing(self):
+        quotas.Quotas._create_class_in_db(self.context, 'foo-class',
+                                          'instances', 5)
+        db_api.quota_class_create(self.context, 'foo-class', 'instances', 7)
+        total, done = quotas.migrate_quota_classes_to_api_db(
+                        self.context, 100)
+        self.assertEqual(1, total)
+        self.assertEqual(1, done)
+        total, done = quotas.migrate_quota_classes_to_api_db(
+                        self.context, 100)
+        self.assertEqual(0, total)
+        self.assertEqual(0, done)
+        # Existing class should not be overwritten in the result
+        db_class = quotas.Quotas._get_all_class_from_db_by_name(
+                        self.context, 'foo-class')
+        self.assertEqual(5, db_class['instances'])
