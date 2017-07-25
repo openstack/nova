@@ -122,6 +122,7 @@ def fake_instance_obj(context, obj_instance_class=None, **updates):
                obj_instance_class(), fake_db_instance(**updates),
                expected_attrs=expected_attrs)
     inst.keypairs = objects.KeyPairList(objects=[])
+    inst.tags = objects.TagList()
     if flavor:
         inst.flavor = flavor
         # This is needed for instance quota counting until we have the

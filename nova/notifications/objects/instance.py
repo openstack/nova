@@ -187,10 +187,12 @@ class InstanceCreatePayload(InstanceActionPayload):
     #         1.3: Add keypairs field
     #         1.4: Add key_name field to InstancePayload
     #         1.5: Add BDM related data to InstancePayload
-    VERSION = '1.5'
+    #         1.6: Add tags field to InstanceCreatePayload
+    VERSION = '1.6'
 
     fields = {
-        'keypairs': fields.ListOfObjectsField('KeypairPayload')
+        'keypairs': fields.ListOfObjectsField('KeypairPayload'),
+        'tags': fields.ListOfStringsField(),
     }
 
     def __init__(self, instance, fault):
@@ -199,6 +201,8 @@ class InstanceCreatePayload(InstanceActionPayload):
                 fault=fault)
         self.keypairs = [keypair_payload.KeypairPayload(keypair=keypair)
                          for keypair in instance.keypairs]
+        self.tags = [instance_tag.tag
+                     for instance_tag in instance.tags]
 
 
 @nova_base.NovaObjectRegistry.register_notification

@@ -603,6 +603,47 @@ class UsageInfoTestCase(test.TestCase):
 
         self.assertEqual(uuids.fake_image_ref, payload['image_uuid'])
 
+    def test_notify_about_instance_create_with_tags(self):
+        instance = create_instance(self.context)
+
+        # TODO(Kevin Zheng): clean this up to pass tags as params to
+        # create_instance() once instance.create() handles tags.
+        instance.tags = objects.TagList(
+            objects=[objects.Tag(self.context, tag='tag1')])
+
+        compute_utils.notify_about_instance_create(
+            self.context,
+            instance,
+            host='fake-compute',
+            phase='start')
+
+        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+
+        self.assertEqual('INFO', notification['priority'])
+        self.assertEqual('instance.create.start', notification['event_type'])
+        self.assertEqual('nova-compute:fake-compute',
+                         notification['publisher_id'])
+
+        payload = notification['payload']['nova_object.data']
+        self.assertEqual('fake', payload['tenant_id'])
+        self.assertEqual('fake', payload['user_id'])
+        self.assertEqual(instance.uuid, payload['uuid'])
+
+        flavorid = flavors.get_flavor_by_name('m1.tiny')['flavorid']
+        flavor = payload['flavor']['nova_object.data']
+        self.assertEqual(flavorid, str(flavor['flavorid']))
+
+        self.assertEqual(0, len(payload['keypairs']))
+        for attr in ('display_name', 'created_at', 'launched_at',
+                     'state', 'task_state', 'display_description', 'locked',
+                     'auto_disk_config', 'tags'):
+            self.assertIn(attr, payload, "Key %s not in payload" % attr)
+
+        self.assertEqual(1, len(payload['tags']))
+        self.assertEqual('tag1', payload['tags'][0])
+        self.assertEqual(uuids.fake_image_ref, payload['image_uuid'])
+
     def test_notify_about_volume_swap(self):
         instance = create_instance(self.context)
 
