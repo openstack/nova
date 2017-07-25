@@ -129,7 +129,8 @@ class MigrationOps(object):
         if disk_files:
             self._migrate_disk_files(instance.name, disk_files, dest)
 
-        self._vmops.destroy(instance, destroy_disks=False)
+        self._vmops.destroy(instance, network_info,
+                            block_device_info, destroy_disks=False)
 
         # disk_info is not used
         return ""
