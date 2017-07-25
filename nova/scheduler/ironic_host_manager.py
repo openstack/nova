@@ -58,6 +58,7 @@ class IronicNodeState(host_manager.HostState):
         self.free_disk_mb = compute.free_disk_gb * 1024
 
         self.stats = compute.stats or {}
+        self.uuid = compute.uuid
 
         self.total_usable_disk_gb = compute.local_gb
         self.hypervisor_type = compute.hypervisor_type

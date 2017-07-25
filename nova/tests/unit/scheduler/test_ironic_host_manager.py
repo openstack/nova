@@ -277,6 +277,9 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
         self.assertEqual('ironic', host.hypervisor_type)
         self.assertEqual(1, host.hypervisor_version)
         self.assertEqual('fake_host', host.hypervisor_hostname)
+        # Make sure the uuid is set since that's needed for the allocation
+        # requests (claims to Placement) made in the FilterScheduler.
+        self.assertEqual(self.compute_node.uuid, host.uuid)
 
     def test_update_from_compute_node_not_ready(self):
         """Tests that we ignore a compute node that does not have its
