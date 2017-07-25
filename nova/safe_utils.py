@@ -36,4 +36,6 @@ def get_wrapped_function(function):
             elif hasattr(closure.cell_contents, '__call__'):
                 return closure.cell_contents
 
+        return function
+
     return _get_wrapped_function(function)
