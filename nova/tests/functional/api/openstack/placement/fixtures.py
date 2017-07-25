@@ -84,10 +84,12 @@ class APIFixture(fixture.GabbiFixture):
         self.api_db_fixture.cleanup()
         self.main_db_fixture.cleanup()
 
-        # NOTE(sbauza): Since we clean up the DB, we need to also reset the
-        # traits sync flag for making sure that next run will recreate the
-        # traits.
+        # Since we clean up the DB, we need to reset the traits sync
+        # flag to make sure the next run will recreate the traits and
+        # reset the _RC_CACHE so that any cached resource classes
+        # are flushed.
         objects.resource_provider._TRAITS_SYNCED = False
+        objects.resource_provider._RC_CACHE = None
 
         self.output_stream_fixture.cleanUp()
         self.standard_logging_fixture.cleanUp()
