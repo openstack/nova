@@ -52,7 +52,7 @@ optional ``fixed_address`` parameter.
 
 The server must exist.
 
-You can only add a floating IP address to the server when its status is ``available``.
+You can only add a floating IP address to the server when its status is ``ACTIVE`` or ``STOPPED``
 
 Normal response codes: 202
 
