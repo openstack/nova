@@ -727,10 +727,8 @@ class ResourceTracker(object):
         vcpus = resources['vcpus']
         if vcpus:
             free_vcpus = vcpus - resources['vcpus_used']
-            LOG.debug("Hypervisor: free VCPUs: %s", free_vcpus)
         else:
             free_vcpus = 'unknown'
-            LOG.debug("Hypervisor: VCPU information unavailable")
 
         pci_devices = resources.get('pci_passthrough_devices')
 
