@@ -35,6 +35,7 @@ from wsgi_intercept import interceptor
 
 from nova.api.openstack.compute import tenant_networks
 from nova.api.openstack.placement import deploy as placement_deploy
+from nova.api.openstack import wsgi_app
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
 from nova.db import migration
@@ -49,6 +50,7 @@ from nova import rpc
 from nova import service
 from nova.tests.functional.api import client
 from nova.tests import uuidsentinel
+from nova import wsgi
 
 _TRUE_VALUES = ('True', 'true', '1', 'yes')
 
@@ -792,26 +794,44 @@ class OSAPIFixture(fixtures.Fixture):
 
     def setUp(self):
         super(OSAPIFixture, self).setUp()
-        # in order to run these in tests we need to bind only to local
-        # host, and dynamically allocate ports
+        # A unique hostname for the wsgi-intercept.
+        hostname = uuidsentinel.osapi_host
+        port = 80
+        service_name = 'osapi_compute'
+        endpoint = 'http://%s:%s/' % (hostname, port)
         conf_overrides = {
-            'osapi_compute_listen': '127.0.0.1',
-            'osapi_compute_listen_port': 0,
+            'osapi_compute_listen': hostname,
+            'osapi_compute_listen_port': port,
             'debug': True,
         }
         self.useFixture(ConfPatcher(**conf_overrides))
 
-        self.osapi = service.WSGIService("osapi_compute")
-        self.osapi.start()
-        self.addCleanup(self.osapi.stop)
+        # Turn off manipulation of socket_options in TCPKeepAliveAdapter
+        # to keep wsgi-intercept happy. Replace it with the method
+        # from its superclass.
+        self.useFixture(fixtures.MonkeyPatch(
+                'keystoneauth1.session.TCPKeepAliveAdapter.init_poolmanager',
+                adapters.HTTPAdapter.init_poolmanager))
+
+        loader = wsgi.Loader().load_app(service_name)
+        app = lambda: loader
+
+        # re-use service setup code from wsgi_app to register
+        # service, which is looked for in some tests
+        wsgi_app._setup_service(CONF.host, service_name)
+        intercept = interceptor.RequestsInterceptor(app, url=endpoint)
+        intercept.install_intercept()
+        self.addCleanup(intercept.uninstall_intercept)
 
         self.auth_url = 'http://%(host)s:%(port)s/%(api_version)s' % ({
-            'host': self.osapi.host, 'port': self.osapi.port,
-            'api_version': self.api_version})
+            'host': hostname, 'port': port, 'api_version': self.api_version})
         self.api = client.TestOpenStackClient('fake', 'fake', self.auth_url,
                                               self.project_id)
         self.admin_api = client.TestOpenStackClient(
             'admin', 'admin', self.auth_url, self.project_id)
+        # Provide a way to access the wsgi application to tests using
+        # the fixture.
+        self.app = app
 
 
 class OSMetadataServer(fixtures.Fixture):

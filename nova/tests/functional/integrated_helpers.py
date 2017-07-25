@@ -201,7 +201,7 @@ class _IntegratedTestBase(test.TestCase):
         return server
 
     def _check_api_endpoint(self, endpoint, expected_middleware):
-        app = self.api_fixture.osapi.app.get((None, '/v2'))
+        app = self.api_fixture.app().get((None, '/v2'))
 
         while getattr(app, 'application', False):
             for middleware in expected_middleware:
