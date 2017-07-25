@@ -411,8 +411,7 @@ class VolumeAttachmentController(wsgi.Controller):
                                                  new_volume)
                     found = True
                     break
-                except (exception.VolumeUnattached,
-                        exception.VolumeBDMNotFound):
+                except (exception.VolumeBDMNotFound):
                     # The volume is not attached.  Treat it as NotFound
                     # by falling through.
                     pass
@@ -467,10 +466,6 @@ class VolumeAttachmentController(wsgi.Controller):
                     self.compute_api.detach_volume(context, instance, volume)
                     found = True
                     break
-                except exception.VolumeUnattached:
-                    # The volume is not attached.  Treat it as NotFound
-                    # by falling through.
-                    pass
                 except exception.InvalidVolume as e:
                     raise exc.HTTPBadRequest(explanation=e.format_message())
                 except exception.InstanceUnknownCell as e:

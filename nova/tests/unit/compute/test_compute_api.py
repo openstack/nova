@@ -2214,13 +2214,6 @@ class _ComputeAPIUnitTestMixIn(object):
             exception.InstanceInvalidState,
             instance_update={'vm_state': vm_states.BUILDING})
 
-    def test_swap_volume_with_old_volume_not_attached(self):
-        # Should fail if old volume is not attached
-        self._test_swap_volume_for_precheck_with_exception(
-            exception.VolumeUnattached,
-            volume_update={'target': uuids.old_volume,
-                           'value': {'attach_status': 'detached'}})
-
     def test_swap_volume_with_another_server_volume(self):
         # Should fail if old volume's instance_uuid is not that of the instance
         self._test_swap_volume_for_precheck_with_exception(

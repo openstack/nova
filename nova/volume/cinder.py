@@ -337,24 +337,6 @@ class API(object):
                             'vol_zone': volume['availability_zone']}
                 raise exception.InvalidVolume(reason=msg)
 
-    def check_detach(self, context, volume, instance=None):
-        # TODO(vish): abstract status checking?
-        if volume['status'] == "available":
-            msg = _("volume %s already detached") % volume['id']
-            raise exception.InvalidVolume(reason=msg)
-
-        if volume['attach_status'] == 'detached':
-            msg = _("Volume must be attached in order to detach.")
-            raise exception.InvalidVolume(reason=msg)
-
-        # NOTE(ildikov):Preparation for multiattach support, when a volume
-        # can be attached to multiple hosts and/or instances,
-        # so just check the attachment specific to this instance
-        if instance is not None and instance.uuid not in volume['attachments']:
-            # TODO(ildikov): change it to a better exception, when enable
-            # multi-attach.
-            raise exception.VolumeUnattached(volume_id=volume['id'])
-
     @translate_volume_exception
     def reserve_volume(self, context, volume_id):
         cinderclient(context).volumes.reserve(volume_id)

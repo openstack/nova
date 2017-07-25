@@ -3657,17 +3657,16 @@ class API(base.Base):
         return self._attach_volume(context, instance, volume_id, device,
                                    disk_bus, device_type, tag=tag)
 
-    def _check_and_begin_detach(self, context, volume, instance):
-        self.volume_api.check_detach(context, volume, instance=instance)
-        self.volume_api.begin_detaching(context, volume['id'])
-
     def _detach_volume(self, context, instance, volume):
         """Detach volume from instance.
 
         This method is separated to make it easier for cells version
         to override.
         """
-        self._check_and_begin_detach(context, volume, instance)
+        try:
+            self.volume_api.begin_detaching(context, volume['id'])
+        except exception.InvalidInput as exc:
+            raise exception.InvalidVolume(reason=exc.format_message())
         attachments = volume.get('attachments', {})
         attachment_id = None
         if attachments and instance.uuid in attachments:
@@ -3684,7 +3683,10 @@ class API(base.Base):
         If the volume has delete_on_termination option set then we call the
         volume api delete as well.
         """
-        self._check_and_begin_detach(context, volume, instance)
+        try:
+            self.volume_api.begin_detaching(context, volume['id'])
+        except exception.InvalidInput as exc:
+            raise exception.InvalidVolume(reason=exc.format_message())
         bdms = [objects.BlockDeviceMapping.get_by_volume_id(
                 context, volume['id'], instance.uuid)]
         self._local_cleanup_bdm_volumes(bdms, instance, context)
@@ -3707,8 +3709,6 @@ class API(base.Base):
                                     vm_states.RESIZED, vm_states.SOFT_DELETED])
     def swap_volume(self, context, instance, old_volume, new_volume):
         """Swap volume attached to an instance."""
-        if old_volume['attach_status'] == 'detached':
-            raise exception.VolumeUnattached(volume_id=old_volume['id'])
         # The caller likely got the instance from volume['attachments']
         # in the first place, but let's sanity check.
         if not old_volume.get('attachments', {}).get(instance.uuid):
@@ -3720,10 +3720,12 @@ class API(base.Base):
         if int(new_volume['size']) < int(old_volume['size']):
             msg = _("New volume must be the same size or larger.")
             raise exception.InvalidVolume(reason=msg)
-        self.volume_api.check_detach(context, old_volume)
         self.volume_api.check_availability_zone(context, new_volume,
                                                 instance=instance)
-        self.volume_api.begin_detaching(context, old_volume['id'])
+        try:
+            self.volume_api.begin_detaching(context, old_volume['id'])
+        except exception.InvalidInput as exc:
+            raise exception.InvalidVolume(reason=exc.format_message())
 
         # Get the BDM for the attached (old) volume so we can tell if it was
         # attached with the new-style Cinder 3.27 API.
