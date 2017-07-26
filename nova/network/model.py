@@ -42,6 +42,7 @@ VIF_TYPE_VROUTER = 'vrouter'
 VIF_TYPE_OTHER = 'other'
 VIF_TYPE_TAP = 'tap'
 VIF_TYPE_MACVTAP = 'macvtap'
+VIF_TYPE_AGILIO_OVS = 'agilio_ovs'
 VIF_TYPE_BINDING_FAILED = 'binding_failed'
 VIF_TYPE_VIF = 'vif'
 
@@ -97,12 +98,15 @@ VNIC_TYPE_DIRECT = 'direct'
 VNIC_TYPE_MACVTAP = 'macvtap'
 VNIC_TYPE_DIRECT_PHYSICAL = 'direct-physical'
 VNIC_TYPE_BAREMETAL = 'baremetal'
+VNIC_TYPE_VIRTIO_FORWARDER = 'virtio-forwarder'
 
 # Define list of ports which needs pci request.
 # Note: The macvtap port needs a PCI request as it is a tap interface
 # with VF as the lower physical interface.
+# Note: Currently, VNIC_TYPE_VIRTIO_FORWARDER assumes a 1:1
+# relationship with a VF. This is expected to change in the future.
 VNIC_TYPES_SRIOV = (VNIC_TYPE_DIRECT, VNIC_TYPE_MACVTAP,
-                    VNIC_TYPE_DIRECT_PHYSICAL)
+                    VNIC_TYPE_DIRECT_PHYSICAL, VNIC_TYPE_VIRTIO_FORWARDER)
 
 # Define list of ports which are passthrough to the guest
 # and need a special treatment on snapshot and suspend/resume

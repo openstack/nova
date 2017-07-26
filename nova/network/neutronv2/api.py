@@ -2159,7 +2159,8 @@ class API(base_api.NetworkAPI):
         should_create_bridge = None
         vif_type = port.get('binding:vif_type')
         port_details = port.get('binding:vif_details', {})
-        if vif_type == network_model.VIF_TYPE_OVS:
+        if vif_type in [network_model.VIF_TYPE_OVS,
+                        network_model.VIF_TYPE_AGILIO_OVS]:
             bridge = port_details.get(network_model.VIF_DETAILS_BRIDGE_NAME,
                                       CONF.neutron.ovs_bridge)
             ovs_interfaceid = port['id']
