@@ -24,7 +24,6 @@ import webob.exc
 
 from nova.api.openstack import api_version_request as api_version
 from nova.api.openstack.compute import services as services_v21
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi as os_wsgi
 from nova import availability_zones
 from nova.cells import utils as cells_utils
@@ -210,9 +209,6 @@ class ServicesTestV21(test.TestCase):
     def setUp(self):
         super(ServicesTestV21, self).setUp()
 
-        self.ext_mgr = extensions.ExtensionManager()
-        self.ext_mgr.extensions = {}
-
         self.ctxt = context.get_admin_context()
         self.host_api = compute.HostAPI()
         self._set_up_controller()
@@ -336,7 +332,6 @@ class ServicesTestV21(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_services_detail(self):
-        self.ext_mgr.extensions['os-extended-services'] = True
         req = FakeRequest()
         res_dict = self.controller.index(req)
 
@@ -377,7 +372,6 @@ class ServicesTestV21(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_service_detail_with_host(self):
-        self.ext_mgr.extensions['os-extended-services'] = True
         req = FakeRequestWithHost()
         res_dict = self.controller.index(req)
 
@@ -402,7 +396,6 @@ class ServicesTestV21(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_service_detail_with_service(self):
-        self.ext_mgr.extensions['os-extended-services'] = True
         req = FakeRequestWithService()
         res_dict = self.controller.index(req)
 
@@ -427,7 +420,6 @@ class ServicesTestV21(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_service_detail_with_host_service(self):
-        self.ext_mgr.extensions['os-extended-services'] = True
         req = FakeRequestWithHostService()
         res_dict = self.controller.index(req)
 
@@ -444,7 +436,6 @@ class ServicesTestV21(test.TestCase):
         self.assertEqual(res_dict, response)
 
     def test_services_detail_with_delete_extension(self):
-        self.ext_mgr.extensions['os-extended-services-delete'] = True
         req = FakeRequest()
         res_dict = self.controller.index(req)
 
@@ -547,7 +538,6 @@ class ServicesTestV21(test.TestCase):
                           body=body)
 
     def test_services_disable_log_reason(self):
-        self.ext_mgr.extensions['os-extended-services'] = True
         body = {'host': 'host1',
                 'binary': 'nova-compute',
                 'disabled_reason': 'test-reason',
@@ -560,7 +550,6 @@ class ServicesTestV21(test.TestCase):
         self.assertEqual(res_dict['service']['disabled_reason'], 'test-reason')
 
     def test_mandatory_reason_field(self):
-        self.ext_mgr.extensions['os-extended-services'] = True
         body = {'host': 'host1',
                 'binary': 'nova-compute',
                }
@@ -569,7 +558,6 @@ class ServicesTestV21(test.TestCase):
                 body=body)
 
     def test_invalid_reason_field(self):
-        self.ext_mgr.extensions['os-extended-services'] = True
         reason = 'a' * 256
         body = {'host': 'host1',
                 'binary': 'nova-compute',
@@ -580,7 +568,6 @@ class ServicesTestV21(test.TestCase):
                 body=body)
 
     def test_services_delete(self):
-        self.ext_mgr.extensions['os-extended-services-delete'] = True
 
         compute = self.host_api.db.service_create(self.ctxt,
             {'host': 'fake-compute-host',
@@ -596,13 +583,11 @@ class ServicesTestV21(test.TestCase):
             self.assertEqual(self.controller.delete.wsgi_code, 204)
 
     def test_services_delete_not_found(self):
-        self.ext_mgr.extensions['os-extended-services-delete'] = True
 
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.delete, self.req, 1234)
 
     def test_services_delete_invalid_id(self):
-        self.ext_mgr.extensions['os-extended-services-delete'] = True
 
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.delete, self.req, 'abc')
@@ -739,7 +724,6 @@ class ServicesTestV211(ServicesTestV21):
         self.assertEqual(res_dict, response)
 
     def test_services_detail(self):
-        self.ext_mgr.extensions['os-extended-services'] = True
         req = FakeRequest(self.wsgi_api_version)
         res_dict = self.controller.index(req)
 
@@ -784,7 +768,6 @@ class ServicesTestV211(ServicesTestV21):
         self.assertEqual(res_dict, response)
 
     def test_service_detail_with_host(self):
-        self.ext_mgr.extensions['os-extended-services'] = True
         req = FakeRequestWithHost(self.wsgi_api_version)
         res_dict = self.controller.index(req)
 
@@ -811,7 +794,6 @@ class ServicesTestV211(ServicesTestV21):
         self.assertEqual(res_dict, response)
 
     def test_service_detail_with_service(self):
-        self.ext_mgr.extensions['os-extended-services'] = True
         req = FakeRequestWithService(self.wsgi_api_version)
         res_dict = self.controller.index(req)
 
@@ -838,7 +820,6 @@ class ServicesTestV211(ServicesTestV21):
         self.assertEqual(res_dict, response)
 
     def test_service_detail_with_host_service(self):
-        self.ext_mgr.extensions['os-extended-services'] = True
         req = FakeRequestWithHostService(self.wsgi_api_version)
         res_dict = self.controller.index(req)
 
@@ -856,7 +837,6 @@ class ServicesTestV211(ServicesTestV21):
         self.assertEqual(res_dict, response)
 
     def test_services_detail_with_delete_extension(self):
-        self.ext_mgr.extensions['os-extended-services-delete'] = True
         req = FakeRequest(self.wsgi_api_version)
         res_dict = self.controller.index(req)
 
@@ -1174,8 +1154,6 @@ class ServicesCellsTestV21(test.TestCase):
 
         host_api = compute.cells_api.HostAPI()
 
-        self.ext_mgr = extensions.ExtensionManager()
-        self.ext_mgr.extensions = {}
         self._set_up_controller()
         self.controller.host_api = host_api
 
@@ -1200,7 +1178,6 @@ class ServicesCellsTestV21(test.TestCase):
             res.pop('disabled_reason')
 
     def test_services_detail(self):
-        self.ext_mgr.extensions['os-extended-services-delete'] = True
         req = FakeRequest()
         res_dict = self.controller.index(req)
         utc = iso8601.iso8601.Utc()
