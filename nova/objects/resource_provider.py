@@ -18,6 +18,7 @@ import copy
 
 import os_traits
 from oslo_concurrency import lockutils
+from oslo_db import api as oslo_db_api
 from oslo_db import exception as db_exc
 from oslo_log import log as logging
 from oslo_utils import versionutils
@@ -1791,6 +1792,7 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
                     # if the consumer already exists.
                     pass
 
+    @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
     @db_api.api_context_manager.writer
     def _set_allocations(self, context, allocs):
         """Write a set of allocations.
