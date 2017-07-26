@@ -1812,8 +1812,9 @@ class ImageNUMATopologyForbidden(Forbidden):
 
 
 class ImageNUMATopologyAsymmetric(Invalid):
-    msg_fmt = _("Asymmetric NUMA topologies require explicit assignment "
-                "of CPUs and memory to nodes in image or flavor")
+    msg_fmt = _("Instance CPUs and/or memory cannot be evenly distributed "
+                "across instance NUMA nodes. Explicit assignment of CPUs "
+                "and memory to nodes is required")
 
 
 class ImageNUMATopologyCPUOutOfRange(Invalid):
