@@ -4001,15 +4001,10 @@ class ComputeManager(manager.Manager):
         new host machine.
 
         """
-        try:
+        with self._error_out_instance_on_exception(context, instance):
             image_meta = objects.ImageMeta.from_dict(image)
             self._finish_resize(context, instance, migration,
                                 disk_info, image_meta)
-        except Exception:
-            LOG.exception('Setting instance vm_state to ERROR',
-                          instance=instance)
-            with excutils.save_and_reraise_exception():
-                self._set_instance_obj_error_state(context, instance)
 
     @wrap_exception()
     @wrap_instance_fault
