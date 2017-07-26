@@ -691,7 +691,8 @@ class FakeLiveMigrateDriver(FakeDriver):
             time.sleep(0.1)
 
         if self._abort_migration:
-            recover_method(context, instance, dest)
+            recover_method(context, instance, dest, migrate_data,
+                           migration_status='cancelled')
         else:
             post_method(context, instance, dest, block_migration,
                         migrate_data)
