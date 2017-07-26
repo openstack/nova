@@ -23,6 +23,7 @@ import os
 
 import os_vif
 from os_vif import exception as osv_exception
+from os_vif.objects import fields as osv_fields
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 
@@ -467,6 +468,22 @@ class LibvirtGenericVIFDriver(object):
             LOG.debug('Queues are not a vhostuser supported feature.')
             conf.driver_name = None
             conf.vhost_queues = None
+
+    def _set_config_VIFHostDevice(self, instance, vif, conf, host=None):
+        if vif.dev_type == osv_fields.VIFHostDeviceDevType.ETHERNET:
+            # This sets the required fields for an <interface type='hostdev'>
+            # section in a libvirt domain (by using a subset of hw_veb's
+            # options).
+            designer.set_vif_host_backend_hw_veb(
+                conf, 'hostdev', vif.dev_address, None)
+        else:
+            # TODO(jangutter): dev_type == VIFHostDeviceDevType.GENERIC
+            # is currently unsupported under os-vif. The corresponding conf
+            # class would be: LibvirtConfigGuestHostdevPCI
+            # but os-vif only returns a LibvirtConfigGuestInterface object
+            raise exception.InternalError(
+                _("Unsupported os-vif VIFHostDevice dev_type %(type)s") %
+                {'type': vif.dev_type})
 
     def _set_config_VIFPortProfileOpenVSwitch(self, profile, conf):
         conf.vporttype = "openvswitch"

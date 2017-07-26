@@ -20,6 +20,7 @@ import mock
 import os_vif
 from os_vif import exception as osv_exception
 from os_vif import objects as osv_objects
+from os_vif.objects import fields as osv_fields
 from oslo_concurrency import processutils
 from oslo_config import cfg
 import six
@@ -396,6 +397,24 @@ class LibvirtVifTestCase(test.NoDBTestCase):
             path='/var/run/openvswitch/vhudc065497-3c',
             mode='client',
             port_profile=self.os_vif_ovs_prof,
+            network=self.os_vif_network)
+
+        self.os_vif_hostdevice_ethernet = osv_objects.vif.VIFHostDevice(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            address="22:52:25:62:e2:aa",
+            plugin="linux_bridge",
+            vif_name="nicdc065497-3c",
+            dev_type=osv_fields.VIFHostDeviceDevType.ETHERNET,
+            dev_address='0000:0a:00.1',
+            network=self.os_vif_network)
+
+        self.os_vif_hostdevice_generic = osv_objects.vif.VIFHostDevice(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            address="22:52:25:62:e2:aa",
+            plugin="linux_bridge",
+            vif_name="nicdc065497-3c",
+            dev_type=osv_fields.VIFHostDeviceDevType.GENERIC,
+            dev_address='0000:0a:00.1',
             network=self.os_vif_network)
 
         self.os_vif_inst_info = osv_objects.instance_info.InstanceInfo(
@@ -1556,3 +1575,45 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                 <filterref
                  filter="nova-instance-instance-00000001-22522562e2aa"/>
             </interface>""", cfg.to_xml())
+
+    @mock.patch("nova.network.os_vif_util.nova_to_osvif_instance")
+    @mock.patch("nova.network.os_vif_util.nova_to_osvif_vif")
+    def test_config_os_vif_hostdevice_ethernet(self, mock_convert_vif,
+                                               mock_convert_inst):
+        mock_convert_vif.return_value = self.os_vif_hostdevice_ethernet
+        mock_convert_inst.return_value = self.os_vif_inst_info
+
+        hostimpl = host.Host("qemu:///system")
+        flavor = objects.Flavor(name='m1.small')
+        image_meta = objects.ImageMeta.from_dict({})
+        d = vif.LibvirtGenericVIFDriver()
+        cfg = d.get_config(self.instance, self.vif_bridge,
+                           image_meta, flavor,
+                           CONF.libvirt.virt_type,
+                           hostimpl)
+
+        self._assertXmlEqual("""
+            <interface type="hostdev" managed="yes">
+              <mac address="22:52:25:62:e2:aa"/>
+              <source>
+                <address type="pci" domain="0x0000"
+                 bus="0x0a" slot="0x00" function="0x1"/>
+              </source>
+            </interface>""", cfg.to_xml())
+
+    @mock.patch("nova.network.os_vif_util.nova_to_osvif_instance")
+    @mock.patch("nova.network.os_vif_util.nova_to_osvif_vif")
+    def test_config_os_vif_hostdevice_generic(self, mock_convert_vif,
+                                              mock_convert_inst):
+        mock_convert_vif.return_value = self.os_vif_hostdevice_generic
+        mock_convert_inst.return_value = self.os_vif_inst_info
+
+        hostimpl = host.Host("qemu:///system")
+        flavor = objects.Flavor(name='m1.small')
+        image_meta = objects.ImageMeta.from_dict({})
+        d = vif.LibvirtGenericVIFDriver()
+
+        self.assertRaises(exception.InternalError,
+                          d.get_config, self.instance, self.vif_bridge,
+                          image_meta, flavor, CONF.libvirt.virt_type,
+                          hostimpl)
