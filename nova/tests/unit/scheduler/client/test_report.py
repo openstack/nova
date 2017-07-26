@@ -237,6 +237,11 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         self.assertIn("Unable to submit allocation for instance", log_msg)
 
     def test_claim_resources_success(self):
+        get_resp_mock = mock.Mock(status_code=200)
+        get_resp_mock.json.return_value = {
+            'allocations': [],  # build instance, not move
+        }
+        self.ks_sess_mock.get.return_value = get_resp_mock
         resp_mock = mock.Mock(status_code=204)
         self.ks_sess_mock.put.return_value = resp_mock
         consumer_uuid = uuids.consumer_uuid
@@ -268,7 +273,209 @@ class TestPutAllocations(SchedulerReportClientTestCase):
 
         self.assertTrue(res)
 
+    def test_claim_resources_success_move_operation_no_shared(self):
+        """Tests that when a move operation is detected (existing allocations
+        for the same instance UUID) that we end up constructing an appropriate
+        allocation that contains the original resources on the source host
+        as well as the resources on the destination host.
+        """
+        get_resp_mock = mock.Mock(status_code=200)
+        get_resp_mock.json.return_value = {
+            'allocations': {
+                uuids.source: {
+                    'resource_provider_generation': 42,
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
+                },
+            },
+        }
+
+        self.ks_sess_mock.get.return_value = get_resp_mock
+        resp_mock = mock.Mock(status_code=204)
+        self.ks_sess_mock.put.return_value = resp_mock
+        consumer_uuid = uuids.consumer_uuid
+        alloc_req = {
+            'allocations': [
+                {
+                    'resource_provider': {
+                        'uuid': uuids.destination,
+                    },
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
+                },
+            ],
+        }
+
+        project_id = uuids.project_id
+        user_id = uuids.user_id
+        res = self.client.claim_resources(consumer_uuid, alloc_req, project_id,
+            user_id)
+
+        expected_url = "/allocations/%s" % consumer_uuid
+        # New allocation should include resources claimed on both the source
+        # and destination hosts
+        expected_payload = {
+            'allocations': [
+                {
+                    'resource_provider': {
+                        'uuid': uuids.source,
+                    },
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
+                },
+                {
+                    'resource_provider': {
+                        'uuid': uuids.destination,
+                    },
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
+                },
+            ],
+        }
+        expected_payload['project_id'] = project_id
+        expected_payload['user_id'] = user_id
+        self.ks_sess_mock.put.assert_called_once_with(
+            expected_url, endpoint_filter=mock.ANY,
+            headers={'OpenStack-API-Version': 'placement 1.10'},
+            json=mock.ANY, raise_exc=False)
+        # We have to pull the json body from the mock call_args to validate
+        # it separately otherwise hash seed issues get in the way.
+        actual_payload = self.ks_sess_mock.put.call_args[1]['json']
+        sort_by_uuid = lambda x: x['resource_provider']['uuid']
+        expected_allocations = sorted(expected_payload['allocations'],
+                                      key=sort_by_uuid)
+        actual_allocations = sorted(actual_payload['allocations'],
+                                    key=sort_by_uuid)
+        self.assertEqual(expected_allocations, actual_allocations)
+
+        self.assertTrue(res)
+
+    def test_claim_resources_success_move_operation_with_shared(self):
+        """Tests that when a move operation is detected (existing allocations
+        for the same instance UUID) that we end up constructing an appropriate
+        allocation that contains the original resources on the source host
+        as well as the resources on the destination host but that when a shared
+        storage provider is claimed against in both the original allocation as
+        well as the new allocation request, we don't double that allocation
+        resource request up.
+        """
+        get_resp_mock = mock.Mock(status_code=200)
+        get_resp_mock.json.return_value = {
+            'allocations': {
+                uuids.source: {
+                    'resource_provider_generation': 42,
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
+                },
+                uuids.shared_storage: {
+                    'resource_provider_generation': 42,
+                    'resources': {
+                        'DISK_GB': 100,
+                    },
+                },
+            },
+        }
+
+        self.ks_sess_mock.get.return_value = get_resp_mock
+        resp_mock = mock.Mock(status_code=204)
+        self.ks_sess_mock.put.return_value = resp_mock
+        consumer_uuid = uuids.consumer_uuid
+        alloc_req = {
+            'allocations': [
+                {
+                    'resource_provider': {
+                        'uuid': uuids.destination,
+                    },
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
+                },
+                {
+                    'resource_provider': {
+                        'uuid': uuids.shared_storage,
+                    },
+                    'resources': {
+                        'DISK_GB': 100,
+                    },
+                },
+            ],
+        }
+
+        project_id = uuids.project_id
+        user_id = uuids.user_id
+        res = self.client.claim_resources(consumer_uuid, alloc_req, project_id,
+            user_id)
+
+        expected_url = "/allocations/%s" % consumer_uuid
+        # New allocation should include resources claimed on both the source
+        # and destination hosts but not have a doubled-up request for the disk
+        # resources on the shared provider
+        expected_payload = {
+            'allocations': [
+                {
+                    'resource_provider': {
+                        'uuid': uuids.source,
+                    },
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
+                },
+                {
+                    'resource_provider': {
+                        'uuid': uuids.shared_storage,
+                    },
+                    'resources': {
+                        'DISK_GB': 100,
+                    },
+                },
+                {
+                    'resource_provider': {
+                        'uuid': uuids.destination,
+                    },
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
+                },
+            ],
+        }
+        expected_payload['project_id'] = project_id
+        expected_payload['user_id'] = user_id
+        self.ks_sess_mock.put.assert_called_once_with(
+            expected_url, endpoint_filter=mock.ANY,
+            headers={'OpenStack-API-Version': 'placement 1.10'},
+            json=mock.ANY, raise_exc=False)
+        # We have to pull the allocations from the json body from the
+        # mock call_args to validate it separately otherwise hash seed
+        # issues get in the way.
+        actual_payload = self.ks_sess_mock.put.call_args[1]['json']
+        sort_by_uuid = lambda x: x['resource_provider']['uuid']
+        expected_allocations = sorted(expected_payload['allocations'],
+                                      key=sort_by_uuid)
+        actual_allocations = sorted(actual_payload['allocations'],
+                                    key=sort_by_uuid)
+        self.assertEqual(expected_allocations, actual_allocations)
+
+        self.assertTrue(res)
+
     def test_claim_resources_fail_retry_success(self):
+        get_resp_mock = mock.Mock(status_code=200)
+        get_resp_mock.json.return_value = {
+            'allocations': [],  # build instance, not move
+        }
+        self.ks_sess_mock.get.return_value = get_resp_mock
         resp_mocks = [
             mock.Mock(
                 status_code=409,
@@ -280,15 +487,17 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         self.ks_sess_mock.put.side_effect = resp_mocks
         consumer_uuid = uuids.consumer_uuid
         alloc_req = {
-            'allocations': {
-                'resource_provider': {
-                    'uuid': uuids.cn1,
+            'allocations': [
+                {
+                    'resource_provider': {
+                        'uuid': uuids.cn1,
+                    },
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
                 },
-                'resources': {
-                    'VCPU': 1,
-                    'MEMORY_MB': 1024,
-                },
-            },
+            ],
         }
 
         project_id = uuids.project_id
@@ -318,19 +527,26 @@ class TestPutAllocations(SchedulerReportClientTestCase):
 
     @mock.patch.object(report.LOG, 'warning')
     def test_claim_resources_failure(self, mock_log):
+        get_resp_mock = mock.Mock(status_code=200)
+        get_resp_mock.json.return_value = {
+            'allocations': [],  # build instance, not move
+        }
+        self.ks_sess_mock.get.return_value = get_resp_mock
         resp_mock = mock.Mock(status_code=409)
         self.ks_sess_mock.put.return_value = resp_mock
         consumer_uuid = uuids.consumer_uuid
         alloc_req = {
-            'allocations': {
-                'resource_provider': {
-                    'uuid': uuids.cn1,
+            'allocations': [
+                {
+                    'resource_provider': {
+                        'uuid': uuids.cn1,
+                    },
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
                 },
-                'resources': {
-                    'VCPU': 1,
-                    'MEMORY_MB': 1024,
-                },
-            },
+            ],
         }
 
         project_id = uuids.project_id

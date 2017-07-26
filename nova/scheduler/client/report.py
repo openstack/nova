@@ -181,6 +181,42 @@ def _instance_to_allocations_dict(instance):
     return {key: val for key, val in alloc_dict.items() if val}
 
 
+def _move_operation_alloc_request(source_allocs, dest_alloc_req):
+    """Given existing allocations for a source host and a new allocation
+    request for a destination host, return a new allocation request that
+    contains resources claimed against both source and destination, accounting
+    for shared providers.
+
+    :param source_allocs: Dict, keyed by resource provider UUID, of resources
+                          allocated on the source host
+    :param dest_alloc_request: The allocation request for resources against the
+                               destination host
+    """
+    LOG.debug("Doubling-up allocation request for move operation.")
+    # Remove any allocations against resource providers that are
+    # already allocated against on the source host (like shared storage
+    # providers)
+    cur_rp_uuids = set(source_allocs.keys())
+    new_rp_uuids = set(a['resource_provider']['uuid']
+                       for a in dest_alloc_req['allocations']) - cur_rp_uuids
+
+    current_allocs = [
+        {
+            'resource_provider': {
+                'uuid': cur_rp_uuid,
+            },
+            'resources': alloc['resources'],
+        } for cur_rp_uuid, alloc in source_allocs.items()
+    ]
+    new_alloc_req = {'allocations': current_allocs}
+    for alloc in dest_alloc_req['allocations']:
+        if alloc['resource_provider']['uuid'] in new_rp_uuids:
+            new_alloc_req['allocations'].append(alloc)
+    LOG.debug("New allocation request containing both source and "
+              "destination hosts in move operation: %s", new_alloc_req)
+    return new_alloc_req
+
+
 def _extract_inventory_in_use(body):
     """Given an HTTP response body, extract the resource classes that were
     still in use when we tried to delete inventory.
@@ -906,10 +942,27 @@ class SchedulerReportClient(object):
             LOG.info(_LI('Submitted allocation for instance'),
                      instance=instance)
 
+    # NOTE(jaypipes): Currently, this method is ONLY used by the scheduler to
+    # allocate resources on the selected destination hosts. This method should
+    # not be called by the resource tracker; instead, the
+    # _allocate_for_instance() method is used which does not perform any
+    # checking that a move operation is in place.
+    @safe_connect
     def claim_resources(self, consumer_uuid, alloc_request, project_id,
                         user_id, attempt=0):
         """Creates allocation records for the supplied instance UUID against
         the supplied resource providers.
+
+        We check to see if resources have already been claimed for this
+        consumer. If so, we assume that a move operation is underway and the
+        scheduler is attempting to claim resources against the new (destination
+        host). In order to prevent compute nodes currently performing move
+        operations from being scheduled to improperly, we create a "doubled-up"
+        allocation that consumes resources on *both* the source and the
+        destination host during the move operation. When the move operation
+        completes, the destination host (via _allocate_for_instance()) will
+        end up setting allocations for the instance only on the destination
+        host thereby freeing up resources on the source host appropriately.
 
         :note: This method will attempt to retry a claim that fails with a
         concurrent update up to 3 times
@@ -923,8 +976,22 @@ class SchedulerReportClient(object):
                         in recursive retries)
         :returns: True if the allocations were created, False otherwise.
         """
+        # Ensure we don't change the supplied alloc request since it's used in
+        # a loop within the scheduler against multiple instance claims
+        ar = copy.deepcopy(alloc_request)
         url = '/allocations/%s' % consumer_uuid
-        payload = copy.deepcopy(alloc_request)
+
+        payload = ar
+
+        # We first need to determine if this is a move operation and if so
+        # create the "doubled-up" allocation that exists for the duration of
+        # the move operation against both the source and destination hosts
+        r = self.get(url)
+        if r.status_code == 200:
+            current_allocs = r.json()['allocations']
+            if current_allocs:
+                payload = _move_operation_alloc_request(current_allocs, ar)
+
         payload['project_id'] = project_id
         payload['user_id'] = user_id
         r = self.put(url, payload, version='1.10')
