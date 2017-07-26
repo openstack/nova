@@ -5419,29 +5419,51 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
         self.useFixture(fixtures.EventReporterStub())
 
-    def test_finish_resize_failure(self):
+    @contextlib.contextmanager
+    def _mock_finish_resize(self):
         with test.nested(
-            mock.patch.object(self.compute, '_finish_resize',
-                              side_effect=exception.ResizeError(reason='')),
+            mock.patch.object(self.compute, '_finish_resize'),
             mock.patch.object(db, 'instance_fault_create'),
-            mock.patch.object(self.compute, '_instance_update'),
+            mock.patch.object(self.compute, '_update_resource_tracker'),
             mock.patch.object(self.instance, 'save'),
-            mock.patch.object(self.migration, 'save'),
-            mock.patch.object(self.migration, 'obj_as_admin',
-                              return_value=mock.MagicMock())
-        ) as (meth, fault_create, instance_update, instance_save,
-              migration_save, migration_obj_as_admin):
+        ) as (_finish_resize, fault_create, instance_update, instance_save):
             fault_create.return_value = (
                 test_instance_fault.fake_faults['fake-uuid'][0])
+            yield _finish_resize
+
+    def test_finish_resize_failure(self):
+        migration = mock.NonCallableMagicMock()
+        migration.status = 'post-migrating'
+
+        with self._mock_finish_resize() as _finish_resize:
+            _finish_resize.side_effect = self.TestResizeError
             self.assertRaises(
-                exception.ResizeError, self.compute.finish_resize,
+                self.TestResizeError, self.compute.finish_resize,
                 context=self.context, disk_info=[], image=self.image,
                 instance=self.instance, reservations=[],
-                migration=self.migration
+                migration=migration
             )
-            self.assertEqual("error", self.migration.status)
-            migration_save.assert_called_once_with()
-            migration_obj_as_admin.assert_called_once_with()
+
+        # Assert that we set the migration to an error state
+        self.assertEqual("error", migration.status)
+
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_notify_about_instance_usage')
+    def test_finish_resize_notify_failure(self, notify):
+        migration = mock.NonCallableMagicMock()
+        migration.status = 'post-migrating'
+
+        with self._mock_finish_resize():
+            notify.side_effect = self.TestResizeError
+            self.assertRaises(
+                self.TestResizeError, self.compute.finish_resize,
+                context=self.context, disk_info=[], image=self.image,
+                instance=self.instance, reservations=[],
+                migration=migration
+            )
+
+        # Assert that we did not set the migration to an error state
+        self.assertEqual('post-migrating', migration.status)
 
     @contextlib.contextmanager
     def _mock_resize_instance(self):
