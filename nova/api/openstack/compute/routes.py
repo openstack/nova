@@ -95,6 +95,7 @@ from nova.api.openstack.compute import virtual_interfaces
 from nova.api.openstack.compute import volumes
 from nova.api.openstack import wsgi
 import nova.conf
+from nova import wsgi as base_wsgi
 
 
 CONF = nova.conf.CONF
@@ -872,18 +873,17 @@ ROUTE_LIST = (
 )
 
 
-class APIRouterV21(nova.api.openstack.APIRouterV21):
+class APIRouterV21(base_wsgi.Router):
     """Routes requests on the OpenStack API to the appropriate controller
     and method. The URL mapping based on the plain list `ROUTE_LIST` is built
-    at here. The stevedore based API loading will be replaced by this.
+    at here.
     """
     def __init__(self, custom_routes=None):
         """:param custom_routes: the additional routes can be added by this
                parameter. This parameter is used to test on some fake routes
                primarily.
         """
-        self._loaded_extension_info = extension_info.LoadedExtensionInfo()
-        super(APIRouterV21, self).__init__()
+        super(APIRouterV21, self).__init__(nova.api.openstack.ProjectMapper())
 
         if custom_routes is None:
             custom_routes = tuple()
@@ -907,9 +907,7 @@ class APIRouterV21(nova.api.openstack.APIRouterV21):
                 action = controller_info[1]
                 self.map.create_route(path, method, controller, action)
 
-    def _register_extension(self, ext):
-        return self.loaded_extension_info.register_extension(ext.obj)
-
-    @property
-    def loaded_extension_info(self):
-        return self._loaded_extension_info
+    @classmethod
+    def factory(cls, global_config, **local_config):
+        """Simple paste factory, :class:`nova.wsgi.Router` doesn't have one."""
+        return cls()
