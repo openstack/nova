@@ -429,3 +429,7 @@ class TestOpenStackClient(object):
 
     def post_keypair(self, keypair):
         return self.api_post('/os-keypairs', keypair).body['keypair']
+
+    def get_active_migrations(self, server_id):
+        return self.api_get('/servers/%s/migrations' %
+                            server_id).body['migrations']
