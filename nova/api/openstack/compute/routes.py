@@ -877,11 +877,18 @@ class APIRouterV21(nova.api.openstack.APIRouterV21):
     and method. The URL mapping based on the plain list `ROUTE_LIST` is built
     at here. The stevedore based API loading will be replaced by this.
     """
-    def __init__(self):
+    def __init__(self, custom_routes=None):
+        """:param custom_routes: the additional routes can be added by this
+               parameter. This parameter is used to test on some fake routes
+               primarily.
+        """
         self._loaded_extension_info = extension_info.LoadedExtensionInfo()
         super(APIRouterV21, self).__init__()
 
-        for path, methods in ROUTE_LIST:
+        if custom_routes is None:
+            custom_routes = tuple()
+
+        for path, methods in ROUTE_LIST + custom_routes:
             # NOTE(alex_xu): The variable 'methods' is a dict in normal, since
             # the dict includes all the methods supported in the path. But
             # if the variable 'method' is a string, it means a redirection.

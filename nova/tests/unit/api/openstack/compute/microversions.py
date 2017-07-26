@@ -13,15 +13,14 @@
 #    under the License.
 
 """Microversions Test Extension"""
+import functools
 
 import webob
 
-from nova.api.openstack import extensions
+from nova.api.openstack.compute import routes
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.tests.unit.api.openstack.compute import dummy_schema
-
-ALIAS = 'test-microversions'
 
 
 class MicroversionsController(wsgi.Controller):
@@ -124,32 +123,51 @@ class MicroversionsExtendsController3(wsgi.Controller):
         resp_obj.obj['extend_ctrlr3'] = 'val_3'
 
 
-class Microversions(extensions.V21APIExtensionBase):
-    """Basic Microversions Extension."""
+mv_controller = functools.partial(routes._create_controller,
+    MicroversionsController, [], [])
 
-    name = "Microversions"
-    alias = ALIAS
-    version = 1
 
-    def get_resources(self):
-        res1 = extensions.ResourceExtension('microversions',
-                                            MicroversionsController())
-        res2 = extensions.ResourceExtension('microversions2',
-                                            MicroversionsController2())
-        res3 = extensions.ResourceExtension('microversions3',
-                                            MicroversionsController3(),
-                                            member_actions={"action": "POST"})
-        res4 = extensions.ResourceExtension('microversions4',
-                                            MicroversionsController4())
-        res5 = extensions.ResourceExtension(
-            'microversions5', MicroversionsExtendsBaseController())
-        return [res1, res2, res3, res4, res5]
+mv2_controller = functools.partial(routes._create_controller,
+    MicroversionsController2, [], [])
 
-    def get_controller_extensions(self):
-        extension1 = extensions.ControllerExtension(
-            self, 'microversions5', MicroversionsExtendsController1())
-        extension2 = extensions.ControllerExtension(
-            self, 'microversions5', MicroversionsExtendsController2())
-        extension3 = extensions.ControllerExtension(
-            self, 'microversions5', MicroversionsExtendsController3())
-        return [extension1, extension2, extension3]
+
+mv3_controller = functools.partial(routes._create_controller,
+    MicroversionsController3, [], [])
+
+
+mv4_controller = functools.partial(routes._create_controller,
+    MicroversionsController4, [], [])
+
+
+mv5_controller = functools.partial(routes._create_controller,
+    MicroversionsExtendsBaseController,
+    [
+        MicroversionsExtendsController1,
+        MicroversionsExtendsController2,
+        MicroversionsExtendsController3
+    ], [])
+
+
+ROUTES = (
+    ('/microversions', {
+        'GET': [mv_controller, 'index']
+    }),
+    ('/microversions2', {
+        'GET': [mv2_controller, 'index']
+    }),
+    ('/microversions3', {
+        'POST': [mv3_controller, 'create']
+    }),
+    ('/microversions3/{id}', {
+        'PUT': [mv3_controller, 'update']
+    }),
+    ('/microversions3/{id}/action', {
+        'POST': [mv3_controller, 'action']
+    }),
+    ('/microversions4', {
+        'POST': [mv4_controller, 'create']
+    }),
+    ('/microversions5/{id}', {
+        'GET': [mv5_controller, 'show']
+    }),
+)
