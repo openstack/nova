@@ -1801,6 +1801,11 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
         :raises `exception.ResourceClassNotFound` if any resource class in any
                 allocation in allocs cannot be found in either the standard
                 classes or the DB.
+        :raises `exception.InvalidAllocationCapacityExceeded` if any inventory
+                would be exhausted by the allocation.
+        :raises `InvalidAllocationConstraintsViolated` if any of the
+                `step_size`, `min_unit` or `max_unit` constraints in an
+                inventory will be violated by any one of the allocations.
         """
         _ensure_rc_cache(context)
         conn = context.session.connection()
@@ -1812,7 +1817,6 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
             if 'id' in alloc:
                 raise exception.ObjectActionError(action='create',
                                                   reason='already created')
-            _RC_CACHE.id_from_string(alloc.resource_class)
 
         # Before writing any allocation records, we check that the submitted
         # allocations do not cause any inventory capacity to be exceeded for
