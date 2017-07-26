@@ -3824,13 +3824,13 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event(prefix='compute')
-    @errors_out_migration
     @wrap_instance_fault
     def resize_instance(self, context, instance, image,
                         reservations, migration, instance_type,
                         clean_shutdown):
         """Starts the migration of a running instance to another host."""
-        with self._error_out_instance_on_exception(context, instance):
+        with self._error_out_instance_on_exception(context, instance), \
+             errors_out_migration_ctxt(migration):
             # TODO(chaochin) Remove this until v5 RPC API
             # Code downstream may expect extra_specs to be populated since it
             # is receiving an object, so lookup the flavor to ensure this.
@@ -3888,13 +3888,13 @@ class ComputeManager(manager.Manager):
             self.compute_rpcapi.finish_resize(context, instance,
                     migration, image, disk_info, migration.dest_compute)
 
-            self._notify_about_instance_usage(context, instance, "resize.end",
-                                              network_info=network_info)
+        self._notify_about_instance_usage(context, instance, "resize.end",
+                                          network_info=network_info)
 
-            compute_utils.notify_about_instance_action(context, instance,
-                   self.host, action=fields.NotificationAction.RESIZE,
-                   phase=fields.NotificationPhase.END)
-            self.instance_events.clear_events_for_instance(instance)
+        compute_utils.notify_about_instance_action(context, instance,
+               self.host, action=fields.NotificationAction.RESIZE,
+               phase=fields.NotificationPhase.END)
+        self.instance_events.clear_events_for_instance(instance)
 
     def _terminate_volume_connections(self, context, instance, bdms):
         connector = None

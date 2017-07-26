@@ -12,6 +12,7 @@
 
 """Unit tests for ComputeManager()."""
 
+import contextlib
 import copy
 import datetime
 import time
@@ -5400,6 +5401,9 @@ class ComputeManagerErrorsOutMigrationTestCase(test.NoDBTestCase):
 
 
 class ComputeManagerMigrationTestCase(test.NoDBTestCase):
+    class TestResizeError(Exception):
+        pass
+
     def setUp(self):
         super(ComputeManagerMigrationTestCase, self).setUp()
         self.compute = manager.ComputeManager()
@@ -5439,45 +5443,69 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             migration_save.assert_called_once_with()
             migration_obj_as_admin.assert_called_once_with()
 
-    def test_resize_instance_failure(self):
-        self.migration.dest_host = None
+    @contextlib.contextmanager
+    def _mock_resize_instance(self):
         with test.nested(
             mock.patch.object(self.compute.driver,
-                              'migrate_disk_and_power_off',
-                              side_effect=exception.ResizeError(reason='')),
+                              'migrate_disk_and_power_off'),
             mock.patch.object(db, 'instance_fault_create'),
-            mock.patch.object(self.compute, '_instance_update'),
-            mock.patch.object(self.migration, 'save'),
-            mock.patch.object(self.migration, 'obj_as_admin',
-                              return_value=mock.MagicMock()),
-            mock.patch.object(self.compute.network_api, 'get_instance_nw_info',
-                              return_value=None),
+            mock.patch.object(self.compute, '_update_resource_tracker'),
+            mock.patch.object(self.compute, 'network_api'),
             mock.patch.object(self.instance, 'save'),
             mock.patch.object(self.compute, '_notify_about_instance_usage'),
             mock.patch.object(self.compute,
-                              '_get_instance_block_device_info',
-                              return_value=None),
+                              '_get_instance_block_device_info'),
             mock.patch.object(objects.BlockDeviceMappingList,
-                              'get_by_instance_uuid',
-                              return_value=None),
-            mock.patch.object(objects.Flavor,
-                              'get_by_id',
-                              return_value=None)
-        ) as (meth, fault_create, instance_update,
-              migration_save, migration_obj_as_admin, nw_info, save_inst,
-              notify, vol_block_info, bdm, flavor):
+                              'get_by_instance_uuid'),
+            mock.patch.object(objects.Flavor, 'get_by_id'),
+            mock.patch.object(self.compute, '_terminate_volume_connections'),
+            mock.patch.object(self.compute, 'compute_rpcapi'),
+        ) as (
+            migrate_disk_and_power_off, fault_create, instance_update,
+            network_api, save_inst, notify, vol_block_info, bdm, flavor,
+            terminate_volume_connections, compute_rpcapi
+        ):
             fault_create.return_value = (
                 test_instance_fault.fake_faults['fake-uuid'][0])
+            yield (migrate_disk_and_power_off, notify)
+
+    def test_resize_instance_failure(self):
+        migration = mock.NonCallableMagicMock()
+
+        with self._mock_resize_instance() as (
+                migrate_disk_and_power_off, notify):
+            migrate_disk_and_power_off.side_effect = self.TestResizeError
             self.assertRaises(
-                exception.ResizeError, self.compute.resize_instance,
+                self.TestResizeError, self.compute.resize_instance,
                 context=self.context, instance=self.instance, image=self.image,
-                reservations=[], migration=self.migration,
+                reservations=[], migration=migration,
                 instance_type='type', clean_shutdown=True)
-            self.assertEqual("error", self.migration.status)
-            self.assertEqual([mock.call(), mock.call()],
-                             migration_save.mock_calls)
-            self.assertEqual([mock.call(), mock.call()],
-                             migration_obj_as_admin.mock_calls)
+
+        # Assert that we set the migration to an error state
+        self.assertEqual("error", migration.status)
+
+    def test_resize_instance_notify_failure(self):
+        migration = mock.NonCallableMagicMock()
+        migration.dest_compute = None
+        migration.dest_node = None
+
+        # Raise an exception sending the end notification, which is after we
+        # cast the migration to the destination host
+        def fake_notify(context, instance, event, network_info=None):
+            if event == 'resize.end':
+                raise self.TestResizeError()
+
+        with self._mock_resize_instance() as (
+                migrate_disk_and_power_off, notify_about_instance_action):
+            notify_about_instance_action.side_effect = fake_notify
+            self.assertRaises(
+                self.TestResizeError, self.compute.resize_instance,
+                context=self.context, instance=self.instance, image=self.image,
+                reservations=[], migration=migration,
+                instance_type='type', clean_shutdown=True)
+
+        # Assert that we did not set the migration to an error state
+        self.assertEqual('post-migrating', migration.status)
 
     def _test_revert_resize_instance_destroy_disks(self, is_shared=False):
 
