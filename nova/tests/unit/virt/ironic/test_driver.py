@@ -2077,6 +2077,17 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_node.list_volume_connectors.assert_called_once_with(
             node_uuid, detail=True)
 
+    @mock.patch.object(FAKE_CLIENT, 'node')
+    @mock.patch.object(ironic_driver.LOG, 'error')
+    def test_ironicclient_bad_response(self, mock_error, mock_node):
+        mock_node.list.side_effect = [["node1", "node2"], Exception()]
+        result = self.driver._get_node_list()
+        mock_error.assert_not_called()
+        self.assertEqual(["node1", "node2"], result)
+        result = self.driver._get_node_list()
+        mock_error.assert_called_once()
+        self.assertEqual([], result)
+
 
 class IronicDriverSyncTestCase(IronicDriverTestCase):
 
