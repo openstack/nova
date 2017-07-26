@@ -1943,18 +1943,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
 
         # Mark the shared storage pool as having inventory shared among any
         # provider associated via aggregate
-        t = objects.Trait(
-            self.ctx,
-            name="MISC_SHARES_VIA_AGGREGATE",
-        )
-        # TODO(jaypipes): Once MISC_SHARES_VIA_AGGREGATE is a standard
-        # os-traits trait, we won't need to create() here. Instead, we will
-        # just do:
-        # t = objects.Trait.get_by_name(
-        #    self.ctx,
-        #    "MISC_SHARES_VIA_AGGREGATE",
-        # )
-        t.create()
+        t = objects.Trait.get_by_name(self.ctx, "MISC_SHARES_VIA_AGGREGATE")
         ss.set_traits(objects.TraitList(objects=[t]))
 
         # OK, now that has all been set up, let's verify that we get the ID of
@@ -2042,18 +2031,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
 
         # Mark the shared storage pool as having inventory shared among any
         # provider associated via aggregate
-        t = objects.Trait(
-            self.ctx,
-            name="MISC_SHARES_VIA_AGGREGATE",
-        )
-        # TODO(jaypipes): Once MISC_SHARES_VIA_AGGREGATE is a standard
-        # os-traits trait, we won't need to create() here. Instead, we will
-        # just do:
-        # t = objects.Trait.get_by_name(
-        #    self.ctx,
-        #    "MISC_SHARES_VIA_AGGREGATE",
-        # )
-        t.create()
+        t = objects.Trait.get_by_name(self.ctx, "MISC_SHARES_VIA_AGGREGATE")
         ss.set_traits(objects.TraitList(objects=[t]))
 
         resources = self._requested_resources()
@@ -2552,18 +2530,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
 
         # Mark the shared storage pool as having inventory shared among any
         # provider associated via aggregate
-        t = objects.Trait(
-            self.ctx,
-            name="MISC_SHARES_VIA_AGGREGATE",
-        )
-        # TODO(jaypipes): Once MISC_SHARES_VIA_AGGREGATE is a standard
-        # os-traits trait, we won't need to create() here. Instead, we will
-        # just do:
-        # t = objects.Trait.get_by_name(
-        #    self.ctx,
-        #    "MISC_SHARES_VIA_AGGREGATE",
-        # )
-        t.create()
+        t = objects.Trait.get_by_name(self.ctx, "MISC_SHARES_VIA_AGGREGATE")
         ss.set_traits(objects.TraitList(objects=[t]))
 
         # Now associate the shared storage pool and both compute nodes with the
