@@ -51,24 +51,24 @@ class ResourceProviderBaseCase(test.NoDBTestCase):
         super(ResourceProviderBaseCase, self).setUp()
         self.useFixture(fixtures.Database())
         self.api_db = self.useFixture(fixtures.Database(database='api'))
-        self.context = context.RequestContext('fake-user', 'fake-project')
+        self.ctx = context.RequestContext('fake-user', 'fake-project')
 
     def _make_allocation(self, rp_uuid=None, inv_dict=None):
         rp_uuid = rp_uuid or uuidsentinel.allocation_resource_provider
         rp = objects.ResourceProvider(
-            context=self.context,
+            context=self.ctx,
             uuid=rp_uuid,
             name=rp_uuid)
         rp.create()
         inv_dict = inv_dict or DISK_INVENTORY
-        disk_inv = objects.Inventory(context=self.context,
+        disk_inv = objects.Inventory(context=self.ctx,
                 resource_provider=rp, **inv_dict)
         disk_inv.create()
         inv_list = objects.InventoryList(objects=[disk_inv])
         rp.set_inventory(inv_list)
-        alloc = objects.Allocation(self.context, resource_provider=rp,
+        alloc = objects.Allocation(self.ctx, resource_provider=rp,
                 **DISK_ALLOCATION)
-        alloc_list = objects.AllocationList(self.context, objects=[alloc])
+        alloc_list = objects.AllocationList(self.ctx, objects=[alloc])
         alloc_list.create_all()
         return rp, alloc
 
@@ -78,13 +78,13 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
 
     def test_create_resource_provider_requires_uuid(self):
         resource_provider = objects.ResourceProvider(
-            context = self.context)
+            context = self.ctx)
         self.assertRaises(exception.ObjectActionError,
                           resource_provider.create)
 
     def test_create_resource_provider(self):
         created_resource_provider = objects.ResourceProvider(
-            context=self.context,
+            context=self.ctx,
             uuid=uuidsentinel.fake_resource_provider,
             name=uuidsentinel.fake_resource_name,
         )
@@ -92,7 +92,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         self.assertIsInstance(created_resource_provider.id, int)
 
         retrieved_resource_provider = objects.ResourceProvider.get_by_uuid(
-            self.context,
+            self.ctx,
             uuidsentinel.fake_resource_provider
         )
         self.assertEqual(retrieved_resource_provider.id,
@@ -106,7 +106,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
 
     def test_save_resource_provider(self):
         created_resource_provider = objects.ResourceProvider(
-            context=self.context,
+            context=self.ctx,
             uuid=uuidsentinel.fake_resource_provider,
             name=uuidsentinel.fake_resource_name,
         )
@@ -114,14 +114,14 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         created_resource_provider.name = 'new-name'
         created_resource_provider.save()
         retrieved_resource_provider = objects.ResourceProvider.get_by_uuid(
-            self.context,
+            self.ctx,
             uuidsentinel.fake_resource_provider
         )
         self.assertEqual('new-name', retrieved_resource_provider.name)
 
     def test_destroy_resource_provider(self):
         created_resource_provider = objects.ResourceProvider(
-            context=self.context,
+            context=self.ctx,
             uuid=uuidsentinel.fake_resource_provider,
             name=uuidsentinel.fake_resource_name,
         )
@@ -129,7 +129,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         created_resource_provider.destroy()
         self.assertRaises(exception.NotFound,
                           objects.ResourceProvider.get_by_uuid,
-                          self.context,
+                          self.ctx,
                           uuidsentinel.fake_resource_provider)
         self.assertRaises(exception.NotFound,
                           created_resource_provider.destroy)
@@ -141,32 +141,32 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
 
     def test_destroy_resource_provider_destroy_inventory(self):
         resource_provider = objects.ResourceProvider(
-            context=self.context,
+            context=self.ctx,
             uuid=uuidsentinel.fake_resource_provider,
             name=uuidsentinel.fake_resource_name,
         )
         resource_provider.create()
         disk_inventory = objects.Inventory(
-            context=self.context,
+            context=self.ctx,
             resource_provider=resource_provider,
             **DISK_INVENTORY
         )
         disk_inventory.create()
         inventories = objects.InventoryList.get_all_by_resource_provider_uuid(
-            self.context, resource_provider.uuid)
+            self.ctx, resource_provider.uuid)
         self.assertEqual(1, len(inventories))
         resource_provider.destroy()
         inventories = objects.InventoryList.get_all_by_resource_provider_uuid(
-            self.context, resource_provider.uuid)
+            self.ctx, resource_provider.uuid)
         self.assertEqual(0, len(inventories))
 
     def test_create_inventory_with_uncreated_provider(self):
         resource_provider = objects.ResourceProvider(
-            context=self.context,
+            context=self.ctx,
             uuid=uuidsentinel.inventory_resource_provider
         )
         disk_inventory = objects.Inventory(
-            context=self.context,
+            context=self.ctx,
             resource_provider=resource_provider,
             **DISK_INVENTORY
         )
@@ -175,14 +175,14 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
 
     def test_create_and_update_inventory(self):
         resource_provider = objects.ResourceProvider(
-            context=self.context,
+            context=self.ctx,
             uuid=uuidsentinel.inventory_resource_provider,
             name='foo',
         )
         resource_provider.create()
         resource_class = fields.ResourceClass.DISK_GB
         disk_inventory = objects.Inventory(
-            context=self.context,
+            context=self.ctx,
             resource_provider=resource_provider,
             **DISK_INVENTORY
         )
@@ -200,7 +200,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         disk_inventory.save()
 
         inventories = objects.InventoryList.get_all_by_resource_provider_uuid(
-            self.context, resource_provider.uuid)
+            self.ctx, resource_provider.uuid)
 
         self.assertEqual(1, len(inventories))
         self.assertEqual(32, inventories[0].total)
@@ -209,7 +209,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         inventories[0].save()
         reloaded_inventories = (
             objects.InventoryList.get_all_by_resource_provider_uuid(
-            self.context, resource_provider.uuid))
+            self.ctx, resource_provider.uuid))
         self.assertEqual(33, reloaded_inventories[0].total)
 
     def test_set_inventory_unknown_resource_class(self):
@@ -217,7 +217,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         an exception.
         """
         rp = objects.ResourceProvider(
-            context=self.context,
+            context=self.ctx,
             uuid=uuidsentinel.rp_uuid,
             name='compute-host',
         )
@@ -244,7 +244,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         against it.
         """
         rp = objects.ResourceProvider(
-            context=self.context,
+            context=self.ctx,
             uuid=uuidsentinel.rp_uuid,
             name='compute-host',
         )
@@ -272,7 +272,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         )
 
         alloc_list = objects.AllocationList(
-            self.context,
+            self.ctx,
             objects=[alloc]
         )
         alloc_list.create_all()
@@ -295,7 +295,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
 
     @mock.patch('nova.objects.resource_provider.LOG')
     def test_set_inventory_over_capacity(self, mock_log):
-        rp = objects.ResourceProvider(context=self.context,
+        rp = objects.ResourceProvider(context=self.ctx,
                                       uuid=uuidsentinel.rp_uuid,
                                       name=uuidsentinel.rp_name)
         rp.create()
@@ -325,12 +325,12 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
 
         # Allocate something reasonable for the above inventory
         alloc = objects.Allocation(
-            context=self.context,
+            context=self.ctx,
             resource_provider=rp,
             consumer_id=uuidsentinel.consumer,
             resource_class='DISK_GB',
             used=500)
-        alloc_list = objects.AllocationList(self.context, objects=[alloc])
+        alloc_list = objects.AllocationList(self.ctx, objects=[alloc])
         alloc_list.create_all()
 
         # Update our inventory to over-subscribe us after the above allocation
@@ -342,7 +342,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
             mock.ANY, {'uuid': rp.uuid, 'resource': 'DISK_GB'})
 
     def test_provider_modify_inventory(self):
-        rp = objects.ResourceProvider(context=self.context,
+        rp = objects.ResourceProvider(context=self.ctx,
                                       uuid=uuidsentinel.rp_uuid,
                                       name=uuidsentinel.rp_name)
         rp.create()
@@ -377,7 +377,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         saved_generation = rp.generation
 
         new_inv_list = objects.InventoryList.get_all_by_resource_provider_uuid(
-                self.context, uuidsentinel.rp_uuid)
+                self.ctx, uuidsentinel.rp_uuid)
         self.assertEqual(2, len(new_inv_list))
         resource_classes = [inv.resource_class for inv in new_inv_list]
         self.assertIn(fields.ResourceClass.VCPU, resource_classes)
@@ -392,7 +392,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         saved_generation = rp.generation
 
         new_inv_list = objects.InventoryList.get_all_by_resource_provider_uuid(
-                self.context, uuidsentinel.rp_uuid)
+                self.ctx, uuidsentinel.rp_uuid)
         self.assertEqual(1, len(new_inv_list))
         resource_classes = [inv.resource_class for inv in new_inv_list]
         self.assertNotIn(fields.ResourceClass.VCPU, resource_classes)
@@ -416,7 +416,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         saved_generation = rp.generation
 
         new_inv_list = objects.InventoryList.get_all_by_resource_provider_uuid(
-                self.context, uuidsentinel.rp_uuid)
+                self.ctx, uuidsentinel.rp_uuid)
         self.assertEqual(1, len(new_inv_list))
         self.assertEqual(2048, new_inv_list[0].total)
 
@@ -444,7 +444,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         saved_generation = rp.generation
 
         new_inv_list = objects.InventoryList.get_all_by_resource_provider_uuid(
-                self.context, uuidsentinel.rp_uuid)
+                self.ctx, uuidsentinel.rp_uuid)
         result = new_inv_list.find(fields.ResourceClass.DISK_GB)
         self.assertIsNone(result)
         self.assertRaises(exception.NotFound, rp.delete_inventory,
@@ -452,13 +452,13 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
 
         # check inventory list is empty
         inv_list = objects.InventoryList.get_all_by_resource_provider_uuid(
-                self.context, uuidsentinel.rp_uuid)
+                self.ctx, uuidsentinel.rp_uuid)
         self.assertEqual(0, len(inv_list))
 
         # add some inventory
         rp.add_inventory(vcpu_inv)
         inv_list = objects.InventoryList.get_all_by_resource_provider_uuid(
-                self.context, uuidsentinel.rp_uuid)
+                self.ctx, uuidsentinel.rp_uuid)
         self.assertEqual(1, len(inv_list))
 
         # generation has bumped
@@ -478,7 +478,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
                           rp.set_inventory, inv_list)
 
     def test_delete_inventory_not_found(self):
-        rp = objects.ResourceProvider(context=self.context,
+        rp = objects.ResourceProvider(context=self.ctx,
                                       uuid=uuidsentinel.rp_uuid,
                                       name=uuidsentinel.rp_name)
         rp.create()
@@ -497,7 +497,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
             % rp.uuid, str(error))
 
     def test_update_inventory_not_found(self):
-        rp = objects.ResourceProvider(context=self.context,
+        rp = objects.ResourceProvider(context=self.ctx,
                                       uuid=uuidsentinel.rp_uuid,
                                       name=uuidsentinel.rp_name)
         rp.create()
@@ -526,17 +526,17 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         rp.update_inventory(disk_inv)
 
         usages = objects.UsageList.get_all_by_resource_provider_uuid(
-            self.context, rp.uuid)
+            self.ctx, rp.uuid)
         self.assertEqual(allocation.used, usages[0].usage)
 
         inv_list = objects.InventoryList.get_all_by_resource_provider_uuid(
-            self.context, rp.uuid)
+            self.ctx, rp.uuid)
         self.assertEqual(new_total, inv_list[0].total)
         mock_log.warning.assert_called_once_with(
             mock.ANY, {'uuid': rp.uuid, 'resource': 'DISK_GB'})
 
     def test_add_invalid_inventory(self):
-        rp = objects.ResourceProvider(context=self.context,
+        rp = objects.ResourceProvider(context=self.ctx,
                                       uuid=uuidsentinel.rp_uuid,
                                       name=uuidsentinel.rp_name)
         rp.create()
@@ -554,16 +554,16 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
                       % rp.uuid, str(error))
 
     def test_add_allocation_increments_generation(self):
-        rp = objects.ResourceProvider(context=self.context,
+        rp = objects.ResourceProvider(context=self.ctx,
                 uuid=uuidsentinel.inventory_resource_provider, name='foo')
         rp.create()
-        inv = objects.Inventory(context=self.context, resource_provider=rp,
+        inv = objects.Inventory(context=self.ctx, resource_provider=rp,
                 **DISK_INVENTORY)
         inv.create()
         expected_gen = rp.generation + 1
-        alloc = objects.Allocation(context=self.context, resource_provider=rp,
+        alloc = objects.Allocation(context=self.ctx, resource_provider=rp,
                 **DISK_ALLOCATION)
-        alloc_list = objects.AllocationList(self.context, objects=[alloc])
+        alloc_list = objects.AllocationList(self.ctx, objects=[alloc])
         alloc_list.create_all()
         self.assertEqual(expected_gen, rp.generation)
 
@@ -573,23 +573,23 @@ class ResourceProviderListTestCase(ResourceProviderBaseCase):
         super(ResourceProviderListTestCase, self).setUp()
         self.useFixture(fixtures.Database())
         self.useFixture(fixtures.Database(database='api'))
-        self.context = context.RequestContext('fake-user', 'fake-project')
+        self.ctx = context.RequestContext('fake-user', 'fake-project')
 
     def test_get_all_by_filters(self):
         for rp_i in ['1', '2']:
             uuid = getattr(uuidsentinel, 'rp_uuid_' + rp_i)
             name = 'rp_name_' + rp_i
-            rp = objects.ResourceProvider(self.context, name=name, uuid=uuid)
+            rp = objects.ResourceProvider(self.ctx, name=name, uuid=uuid)
             rp.create()
 
         resource_providers = objects.ResourceProviderList.get_all_by_filters(
-            self.context)
+            self.ctx)
         self.assertEqual(2, len(resource_providers))
         resource_providers = objects.ResourceProviderList.get_all_by_filters(
-            self.context, filters={'name': u'rp_name_1'})
+            self.ctx, filters={'name': u'rp_name_1'})
         self.assertEqual(1, len(resource_providers))
         resource_providers = objects.ResourceProviderList.get_all_by_filters(
-            self.context, filters={'uuid': getattr(uuidsentinel, 'rp_uuid_2')})
+            self.ctx, filters={'uuid': getattr(uuidsentinel, 'rp_uuid_2')})
         self.assertEqual(1, len(resource_providers))
         self.assertEqual('rp_name_2', resource_providers[0].name)
 
@@ -597,7 +597,7 @@ class ResourceProviderListTestCase(ResourceProviderBaseCase):
         for rp_i in ['1', '2']:
             uuid = getattr(uuidsentinel, 'rp_uuid_' + rp_i)
             name = 'rp_name_' + rp_i
-            rp = objects.ResourceProvider(self.context, name=name, uuid=uuid)
+            rp = objects.ResourceProvider(self.ctx, name=name, uuid=uuid)
             rp.create()
             inv = objects.Inventory(
                 resource_provider=rp,
@@ -640,76 +640,76 @@ class ResourceProviderListTestCase(ResourceProviderBaseCase):
                 resource_class=fields.ResourceClass.VCPU,
                 used=1)
             allocation_list = objects.AllocationList(
-                self.context, objects=[allocation_1])
+                self.ctx, objects=[allocation_1])
             allocation_list.create_all()
 
         # Both RPs should accept that request given the only current allocation
         # for the first RP is leaving one VCPU
         resource_providers = objects.ResourceProviderList.get_all_by_filters(
-            self.context, {'resources': {fields.ResourceClass.VCPU: 1}})
+            self.ctx, {'resources': {fields.ResourceClass.VCPU: 1}})
         self.assertEqual(2, len(resource_providers))
         # Now, when asking for 2 VCPUs, only the second RP should accept that
         # given the current allocation for the first RP
         resource_providers = objects.ResourceProviderList.get_all_by_filters(
-            self.context, {'resources': {fields.ResourceClass.VCPU: 2}})
+            self.ctx, {'resources': {fields.ResourceClass.VCPU: 2}})
         self.assertEqual(1, len(resource_providers))
         # Adding a second resource request should be okay for the 2nd RP
         # given it has enough disk but we also need to make sure that the
         # first RP is not acceptable because of the VCPU request
         resource_providers = objects.ResourceProviderList.get_all_by_filters(
-            self.context, {'resources': {fields.ResourceClass.VCPU: 2,
+            self.ctx, {'resources': {fields.ResourceClass.VCPU: 2,
                                          fields.ResourceClass.DISK_GB: 1022}})
         self.assertEqual(1, len(resource_providers))
         # Now, we are asking for both disk and VCPU resources that all the RPs
         # can't accept (as the 2nd RP is having a reserved size)
         resource_providers = objects.ResourceProviderList.get_all_by_filters(
-            self.context, {'resources': {fields.ResourceClass.VCPU: 2,
+            self.ctx, {'resources': {fields.ResourceClass.VCPU: 2,
                                          fields.ResourceClass.DISK_GB: 1024}})
         self.assertEqual(0, len(resource_providers))
 
         # We also want to verify that asking for a specific RP can also be
         # checking the resource usage.
         resource_providers = objects.ResourceProviderList.get_all_by_filters(
-            self.context, {'name': u'rp_name_1',
+            self.ctx, {'name': u'rp_name_1',
                            'resources': {fields.ResourceClass.VCPU: 1}})
         self.assertEqual(1, len(resource_providers))
 
         # Let's verify that the min and max units are checked too
         # Case 1: amount is in between min and max and modulo step_size
         resource_providers = objects.ResourceProviderList.get_all_by_filters(
-            self.context, {'resources': {fields.ResourceClass.MEMORY_MB: 2}})
+            self.ctx, {'resources': {fields.ResourceClass.MEMORY_MB: 2}})
         self.assertEqual(2, len(resource_providers))
         # Case 2: amount is less than min_unit
         resource_providers = objects.ResourceProviderList.get_all_by_filters(
-            self.context, {'resources': {fields.ResourceClass.MEMORY_MB: 1}})
+            self.ctx, {'resources': {fields.ResourceClass.MEMORY_MB: 1}})
         self.assertEqual(0, len(resource_providers))
         # Case 3: amount is more than min_unit
         resource_providers = objects.ResourceProviderList.get_all_by_filters(
-            self.context, {'resources': {fields.ResourceClass.MEMORY_MB: 5}})
+            self.ctx, {'resources': {fields.ResourceClass.MEMORY_MB: 5}})
         self.assertEqual(0, len(resource_providers))
         # Case 4: amount is not modulo step_size
         resource_providers = objects.ResourceProviderList.get_all_by_filters(
-            self.context, {'resources': {fields.ResourceClass.MEMORY_MB: 3}})
+            self.ctx, {'resources': {fields.ResourceClass.MEMORY_MB: 3}})
         self.assertEqual(0, len(resource_providers))
 
     def test_get_all_by_filters_with_resources_not_existing(self):
         self.assertRaises(
             exception.ResourceClassNotFound,
             objects.ResourceProviderList.get_all_by_filters,
-            self.context, {'resources': {'FOOBAR': 3}})
+            self.ctx, {'resources': {'FOOBAR': 3}})
 
     def test_get_all_by_filters_aggregate(self):
         for rp_i in [1, 2, 3, 4]:
             uuid = getattr(uuidsentinel, 'rp_uuid_' + str(rp_i))
             name = 'rp_name_' + str(rp_i)
-            rp = objects.ResourceProvider(self.context, name=name, uuid=uuid)
+            rp = objects.ResourceProvider(self.ctx, name=name, uuid=uuid)
             rp.create()
             if rp_i % 2:
                 aggregate_uuids = [uuidsentinel.agg_a, uuidsentinel.agg_b]
                 rp.set_aggregates(aggregate_uuids)
 
         resource_providers = objects.ResourceProviderList.get_all_by_filters(
-            self.context, filters={'member_of': [uuidsentinel.agg_a]})
+            self.ctx, filters={'member_of': [uuidsentinel.agg_a]})
 
         self.assertEqual(2, len(resource_providers))
         names = [_rp.name for _rp in resource_providers]
@@ -719,24 +719,24 @@ class ResourceProviderListTestCase(ResourceProviderBaseCase):
         self.assertNotIn('rp_name_4', names)
 
         resource_providers = objects.ResourceProviderList.get_all_by_filters(
-            self.context, filters={'member_of':
+            self.ctx, filters={'member_of':
                                    [uuidsentinel.agg_a, uuidsentinel.agg_b]})
         self.assertEqual(2, len(resource_providers))
 
         resource_providers = objects.ResourceProviderList.get_all_by_filters(
-            self.context, filters={'member_of':
+            self.ctx, filters={'member_of':
                                    [uuidsentinel.agg_a, uuidsentinel.agg_b],
                                    'name': u'rp_name_1'})
         self.assertEqual(1, len(resource_providers))
 
         resource_providers = objects.ResourceProviderList.get_all_by_filters(
-            self.context, filters={'member_of':
+            self.ctx, filters={'member_of':
                                    [uuidsentinel.agg_a, uuidsentinel.agg_b],
                                    'name': u'barnabas'})
         self.assertEqual(0, len(resource_providers))
 
         resource_providers = objects.ResourceProviderList.get_all_by_filters(
-            self.context, filters={'member_of':
+            self.ctx, filters={'member_of':
                                    [uuidsentinel.agg_1, uuidsentinel.agg_2]})
         self.assertEqual(0, len(resource_providers))
 
@@ -749,11 +749,11 @@ class TestResourceProviderAggregates(test.NoDBTestCase):
         super(TestResourceProviderAggregates, self).setUp()
         self.useFixture(fixtures.Database(database='main'))
         self.useFixture(fixtures.Database(database='api'))
-        self.context = context.RequestContext('fake-user', 'fake-project')
+        self.ctx = context.RequestContext('fake-user', 'fake-project')
 
     def test_set_and_get_new_aggregates(self):
         rp = objects.ResourceProvider(
-            context=self.context,
+            context=self.ctx,
             uuid=uuidsentinel.rp_uuid,
             name=uuidsentinel.rp_name
         )
@@ -768,13 +768,13 @@ class TestResourceProviderAggregates(test.NoDBTestCase):
         # Since get_aggregates always does a new query this is
         # mostly nonsense but is here for completeness.
         read_rp = objects.ResourceProvider.get_by_uuid(
-            self.context, uuidsentinel.rp_uuid)
+            self.ctx, uuidsentinel.rp_uuid)
         re_read_aggregate_uuids = read_rp.get_aggregates()
         self.assertItemsEqual(aggregate_uuids, re_read_aggregate_uuids)
 
     def test_set_aggregates_is_replace(self):
         rp = objects.ResourceProvider(
-            context=self.context,
+            context=self.ctx,
             uuid=uuidsentinel.rp_uuid,
             name=uuidsentinel.rp_name
         )
@@ -797,7 +797,7 @@ class TestResourceProviderAggregates(test.NoDBTestCase):
 
     def test_delete_rp_clears_aggs(self):
         rp = objects.ResourceProvider(
-            context=self.context,
+            context=self.ctx,
             uuid=uuidsentinel.rp_uuid,
             name=uuidsentinel.rp_name
         )
@@ -805,10 +805,10 @@ class TestResourceProviderAggregates(test.NoDBTestCase):
         rp_id = rp.id
         start_aggregate_uuids = [uuidsentinel.agg_a, uuidsentinel.agg_b]
         rp.set_aggregates(start_aggregate_uuids)
-        aggs = objects.ResourceProvider._get_aggregates(self.context, rp_id)
+        aggs = objects.ResourceProvider._get_aggregates(self.ctx, rp_id)
         self.assertEqual(2, len(aggs))
         rp.destroy()
-        aggs = objects.ResourceProvider._get_aggregates(self.context, rp_id)
+        aggs = objects.ResourceProvider._get_aggregates(self.ctx, rp_id)
         self.assertEqual(0, len(aggs))
 
 
@@ -816,21 +816,21 @@ class TestAllocation(ResourceProviderBaseCase):
 
     def test_create_list_and_delete_allocation(self):
         resource_provider = objects.ResourceProvider(
-            context=self.context,
+            context=self.ctx,
             uuid=uuidsentinel.allocation_resource_provider,
             name=uuidsentinel.allocation_resource_name
         )
         resource_provider.create()
         resource_class = fields.ResourceClass.DISK_GB
-        inv = objects.Inventory(context=self.context,
+        inv = objects.Inventory(context=self.ctx,
                 resource_provider=resource_provider, **DISK_INVENTORY)
         inv.create()
         disk_allocation = objects.Allocation(
-            context=self.context,
+            context=self.ctx,
             resource_provider=resource_provider,
             **DISK_ALLOCATION
         )
-        alloc_list = objects.AllocationList(self.context,
+        alloc_list = objects.AllocationList(self.ctx,
                 objects=[disk_allocation])
         alloc_list.create_all()
 
@@ -844,7 +844,7 @@ class TestAllocation(ResourceProviderBaseCase):
         self.assertIsInstance(disk_allocation.id, int)
 
         allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
-            self.context, resource_provider.uuid)
+            self.ctx, resource_provider.uuid)
 
         self.assertEqual(1, len(allocations))
 
@@ -854,39 +854,39 @@ class TestAllocation(ResourceProviderBaseCase):
         allocations[0].destroy()
 
         allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
-            self.context, resource_provider.uuid)
+            self.ctx, resource_provider.uuid)
 
         self.assertEqual(0, len(allocations))
 
     def test_destroy(self):
         rp, allocation = self._make_allocation()
         allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
-            self.context, rp.uuid)
+            self.ctx, rp.uuid)
         self.assertEqual(1, len(allocations))
-        objects.Allocation._destroy(self.context, allocation.id)
+        objects.Allocation._destroy(self.ctx, allocation.id)
         allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
-            self.context, rp.uuid)
+            self.ctx, rp.uuid)
         self.assertEqual(0, len(allocations))
         self.assertRaises(exception.NotFound, objects.Allocation._destroy,
-                          self.context, allocation.id)
+                          self.ctx, allocation.id)
 
     def test_get_allocations_from_db(self):
         rp, allocation = self._make_allocation()
         allocations = objects.AllocationList._get_allocations_from_db(
-            self.context, rp.uuid)
+            self.ctx, rp.uuid)
         self.assertEqual(1, len(allocations))
         self.assertEqual(rp.id, allocations[0].resource_provider_id)
         self.assertEqual(allocation.resource_provider.id,
                          allocations[0].resource_provider_id)
 
         allocations = objects.AllocationList._get_allocations_from_db(
-            self.context, uuidsentinel.bad_rp_uuid)
+            self.ctx, uuidsentinel.bad_rp_uuid)
         self.assertEqual(0, len(allocations))
 
     def test_get_all_by_resource_provider(self):
         rp, allocation = self._make_allocation()
         allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
-            self.context, rp.uuid)
+            self.ctx, rp.uuid)
         self.assertEqual(1, len(allocations))
         self.assertEqual(rp.id, allocations[0].resource_provider.id)
         self.assertEqual(allocation.resource_provider.id,
@@ -898,7 +898,7 @@ class TestAllocation(ResourceProviderBaseCase):
         rp1, allocation1 = self._make_allocation(uuidsentinel.rp1)
         rp2, allocation2 = self._make_allocation(uuidsentinel.rp2)
         allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
-            self.context, rp1.uuid)
+            self.ctx, rp1.uuid)
         self.assertEqual(1, len(allocations))
         self.assertEqual(rp1.id, allocations[0].resource_provider.id)
         self.assertEqual(allocation1.resource_provider.id,
@@ -907,43 +907,43 @@ class TestAllocation(ResourceProviderBaseCase):
         # add more allocations for the first resource provider
         # of the same class
         alloc3 = objects.Allocation(
-            self.context,
+            self.ctx,
             consumer_id=uuidsentinel.consumer1,
             resource_class=fields.ResourceClass.DISK_GB,
             resource_provider=rp1,
             used=2,
         )
-        alloc_list = objects.AllocationList(self.context, objects=[alloc3])
+        alloc_list = objects.AllocationList(self.ctx, objects=[alloc3])
         alloc_list.create_all()
         allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
-            self.context, rp1.uuid)
+            self.ctx, rp1.uuid)
         self.assertEqual(2, len(allocations))
 
         # add more allocations for the first resource provider
         # of a different class
         # First we need to add sufficient inventory
         res_cls = fields.ResourceClass.IPV4_ADDRESS
-        inv = objects.Inventory(self.context, resource_provider=rp1,
+        inv = objects.Inventory(self.ctx, resource_provider=rp1,
                 resource_class=res_cls, total=256, max_unit=10)
         inv.obj_set_defaults()
         inv.create()
         # Now allocate 4 of them.
         alloc4 = objects.Allocation(
-            self.context,
+            self.ctx,
             consumer_id=uuidsentinel.consumer2,
             resource_class=res_cls,
             resource_provider=rp1,
             used=4,
         )
-        alloc_list = objects.AllocationList(self.context, objects=[alloc4])
+        alloc_list = objects.AllocationList(self.ctx, objects=[alloc4])
         alloc_list.create_all()
         allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
-            self.context, rp1.uuid)
+            self.ctx, rp1.uuid)
         self.assertEqual(3, len(allocations))
         self.assertEqual(rp1.uuid, allocations[0].resource_provider.uuid)
 
         allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
-            self.context, rp2.uuid)
+            self.ctx, rp2.uuid)
         self.assertEqual(1, len(allocations))
         self.assertEqual(rp2.uuid, allocations[0].resource_provider.uuid)
         self.assertIn(fields.ResourceClass.DISK_GB,
@@ -977,7 +977,7 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
         rp2_used = 2
 
         rp1 = objects.ResourceProvider(
-            self.context, name=rp1_name, uuid=rp1_uuid)
+            self.ctx, name=rp1_name, uuid=rp1_uuid)
         rp1.create()
 
         inv = objects.Inventory(resource_provider=rp1,
@@ -1003,7 +1003,7 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
                                           resource_class=rp2_class,
                                           used=rp2_used)
         allocation_list = objects.AllocationList(
-            self.context, objects=[allocation_1, allocation_2])
+            self.ctx, objects=[allocation_1, allocation_2])
         allocation_list.create_all()
 
         # create the allocations for a second consumer, until we have
@@ -1019,7 +1019,7 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
                                           resource_class=rp2_class,
                                           used=rp2_used)
         allocation_list = objects.AllocationList(
-            self.context, objects=[allocation_1, allocation_2])
+            self.ctx, objects=[allocation_1, allocation_2])
         # If we are joining wrong, this will be a KeyError
         allocation_list.create_all()
 
@@ -1039,10 +1039,10 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
         rp2_used = 2
 
         rp1 = objects.ResourceProvider(
-            self.context, name=rp1_name, uuid=rp1_uuid)
+            self.ctx, name=rp1_name, uuid=rp1_uuid)
         rp1.create()
         rp2 = objects.ResourceProvider(
-            self.context, name=rp2_name, uuid=rp2_uuid)
+            self.ctx, name=rp2_name, uuid=rp2_uuid)
         rp2.create()
 
         # Two allocations, one for each resource provider.
@@ -1055,7 +1055,7 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
                                           resource_class=rp2_class,
                                           used=rp2_used)
         allocation_list = objects.AllocationList(
-            self.context, objects=[allocation_1, allocation_2])
+            self.ctx, objects=[allocation_1, allocation_2])
 
         # There's no inventory, we have a failure.
         error = self.assertRaises(exception.InvalidInventory,
@@ -1106,9 +1106,9 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
         # Check that those allocations changed usage on each
         # resource provider.
         rp1_usage = objects.UsageList.get_all_by_resource_provider_uuid(
-            self.context, rp1_uuid)
+            self.ctx, rp1_uuid)
         rp2_usage = objects.UsageList.get_all_by_resource_provider_uuid(
-            self.context, rp2_uuid)
+            self.ctx, rp2_uuid)
         self.assertEqual(rp1_used, rp1_usage[0].usage)
         self.assertEqual(rp2_used, rp2_usage[0].usage)
 
@@ -1122,11 +1122,11 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
                                           resource_class=rp1_class,
                                           used=rp1_used)
         allocation_list = objects.AllocationList(
-            self.context, objects=[allocation_1])
+            self.ctx, objects=[allocation_1])
         allocation_list.create_all()
 
         rp1_usage = objects.UsageList.get_all_by_resource_provider_uuid(
-            self.context, rp1_uuid)
+            self.ctx, rp1_uuid)
         self.assertEqual(rp1_used, rp1_usage[0].usage)
 
         # delete the allocations for the consumer
@@ -1134,13 +1134,13 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
         # column, presumably because some ids might not be uuids, at
         # some point in the future.
         consumer_allocations = objects.AllocationList.get_all_by_consumer_id(
-            self.context, consumer_uuid)
+            self.ctx, consumer_uuid)
         consumer_allocations.delete_all()
 
         rp1_usage = objects.UsageList.get_all_by_resource_provider_uuid(
-            self.context, rp1_uuid)
+            self.ctx, rp1_uuid)
         rp2_usage = objects.UsageList.get_all_by_resource_provider_uuid(
-            self.context, rp2_uuid)
+            self.ctx, rp2_uuid)
         self.assertEqual(0, rp1_usage[0].usage)
         self.assertEqual(0, rp2_usage[0].usage)
 
@@ -1149,7 +1149,7 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
         rp_name = uuidsentinel.rp_name
         rp_uuid = uuidsentinel.rp_uuid
         rp = objects.ResourceProvider(
-            self.context, name=rp_name, uuid=rp_uuid)
+            self.ctx, name=rp_name, uuid=rp_uuid)
         rp.create()
         inv = objects.Inventory(resource_provider=rp,
                                 total=1024, allocation_ratio=1,
@@ -1160,7 +1160,7 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
 
     def _validate_usage(self, rp, usage):
         rp_usage = objects.UsageList.get_all_by_resource_provider_uuid(
-            self.context, rp.uuid)
+            self.ctx, rp.uuid)
         self.assertEqual(usage, rp_usage[0].usage)
 
     def _check_create_allocations(self, inventory_kwargs,
@@ -1175,14 +1175,14 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
                                         consumer_id=consumer_uuid,
                                         resource_class=rp_class,
                                         used=bad_used)
-        allocation_list = objects.AllocationList(self.context,
+        allocation_list = objects.AllocationList(self.ctx,
                                                  objects=[allocation])
         self.assertRaises(exception.InvalidAllocationConstraintsViolated,
                           allocation_list.create_all)
 
         # correct for step size
         allocation.used = good_used
-        allocation_list = objects.AllocationList(self.context,
+        allocation_list = objects.AllocationList(self.ctx,
                                                  objects=[allocation])
         allocation_list.create_all()
 
@@ -1227,10 +1227,10 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
                                          resource_class=rp_class,
                                          used=200)
         allocation_list = objects.AllocationList(
-            self.context,
+            self.ctx,
             objects=[allocation1, allocation2],
-            project_id=self.context.project_id,
-            user_id=self.context.user_id,
+            project_id=self.ctx.project_id,
+            user_id=self.ctx.user_id,
         )
         allocation_list.create_all()
 
@@ -1239,14 +1239,14 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
         with self.api_db.get_engine().connect() as conn:
             tbl = rp_obj._PROJECT_TBL
             sel = sa.select([tbl.c.id]).where(
-                tbl.c.external_id == self.context.project_id,
+                tbl.c.external_id == self.ctx.project_id,
             )
             res = conn.execute(sel).fetchall()
             self.assertEqual(1, len(res), "project lookup not created.")
 
             tbl = rp_obj._USER_TBL
             sel = sa.select([tbl.c.id]).where(
-                tbl.c.external_id == self.context.user_id,
+                tbl.c.external_id == self.ctx.user_id,
             )
             res = conn.execute(sel).fetchall()
             self.assertEqual(1, len(res), "user lookup not created.")
@@ -1265,22 +1265,22 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
                                          resource_class=rp_class,
                                          used=200)
         allocation_list = objects.AllocationList(
-            self.context,
+            self.ctx,
             objects=[allocation3],
-            project_id=self.context.project_id,
+            project_id=self.ctx.project_id,
             user_id=uuidsentinel.other_user,
         )
         allocation_list.create_all()
 
         # Get usages back by project
         usage_list = objects.UsageList.get_all_by_project_user(
-            self.context, self.context.project_id)
+            self.ctx, self.ctx.project_id)
         self.assertEqual(1, len(usage_list))
         self.assertEqual(500, usage_list[0].usage)
 
         # Get usages back by project and user
         usage_list = objects.UsageList.get_all_by_project_user(
-            self.context, self.context.project_id,
+            self.ctx, self.ctx.project_id,
             user_id=uuidsentinel.other_user)
         self.assertEqual(1, len(usage_list))
         self.assertEqual(200, usage_list[0].usage)
@@ -1290,11 +1290,11 @@ class UsageListTestCase(ResourceProviderBaseCase):
 
     def test_get_all_null(self):
         for uuid in [uuidsentinel.rp_uuid_1, uuidsentinel.rp_uuid_2]:
-            rp = objects.ResourceProvider(self.context, name=uuid, uuid=uuid)
+            rp = objects.ResourceProvider(self.ctx, name=uuid, uuid=uuid)
             rp.create()
 
         usage_list = objects.UsageList.get_all_by_resource_provider_uuid(
-            self.context, uuidsentinel.rp_uuid_1)
+            self.ctx, uuidsentinel.rp_uuid_1)
         self.assertEqual(0, len(usage_list))
 
     def test_get_all_one_allocation(self):
@@ -1307,14 +1307,14 @@ class UsageListTestCase(ResourceProviderBaseCase):
         db_rp.set_inventory(inv_list)
 
         usage_list = objects.UsageList.get_all_by_resource_provider_uuid(
-            self.context, db_rp.uuid)
+            self.ctx, db_rp.uuid)
         self.assertEqual(1, len(usage_list))
         self.assertEqual(2, usage_list[0].usage)
         self.assertEqual(fields.ResourceClass.DISK_GB,
                          usage_list[0].resource_class)
 
     def test_get_inventory_no_allocation(self):
-        db_rp = objects.ResourceProvider(self.context,
+        db_rp = objects.ResourceProvider(self.ctx,
                                          name=uuidsentinel.rp_no_inv,
                                          uuid=uuidsentinel.rp_no_inv)
         db_rp.create()
@@ -1326,14 +1326,14 @@ class UsageListTestCase(ResourceProviderBaseCase):
         db_rp.set_inventory(inv_list)
 
         usage_list = objects.UsageList.get_all_by_resource_provider_uuid(
-            self.context, db_rp.uuid)
+            self.ctx, db_rp.uuid)
         self.assertEqual(1, len(usage_list))
         self.assertEqual(0, usage_list[0].usage)
         self.assertEqual(fields.ResourceClass.DISK_GB,
                          usage_list[0].resource_class)
 
     def test_get_all_multiple_inv(self):
-        db_rp = objects.ResourceProvider(self.context,
+        db_rp = objects.ResourceProvider(self.ctx,
                                          name=uuidsentinel.rp_no_inv,
                                          uuid=uuidsentinel.rp_no_inv)
         db_rp.create()
@@ -1349,7 +1349,7 @@ class UsageListTestCase(ResourceProviderBaseCase):
         db_rp.set_inventory(inv_list)
 
         usage_list = objects.UsageList.get_all_by_resource_provider_uuid(
-            self.context, db_rp.uuid)
+            self.ctx, db_rp.uuid)
         self.assertEqual(2, len(usage_list))
 
 
@@ -1360,7 +1360,7 @@ class ResourceClassListTestCase(ResourceProviderBaseCase):
         we only get a list of ResourceClass objects representing the standard
         classes.
         """
-        rcs = objects.ResourceClassList.get_all(self.context)
+        rcs = objects.ResourceClassList.get_all(self.ctx)
         self.assertEqual(len(fields.ResourceClass.STANDARD), len(rcs))
 
     def test_get_all_with_custom(self):
@@ -1378,7 +1378,7 @@ class ResourceClassListTestCase(ResourceProviderBaseCase):
                 ins = rp_obj._RC_TBL.insert().values(id=c_id, name=c_name)
                 conn.execute(ins)
 
-        rcs = objects.ResourceClassList.get_all(self.context)
+        rcs = objects.ResourceClassList.get_all(self.ctx)
         expected_count = len(fields.ResourceClass.STANDARD) + len(customs)
         self.assertEqual(expected_count, len(rcs))
 
@@ -1387,7 +1387,7 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
 
     def test_get_by_name(self):
         rc = objects.ResourceClass.get_by_name(
-            self.context,
+            self.ctx,
             fields.ResourceClass.VCPU
         )
         vcpu_id = fields.ResourceClass.STANDARD.index(
@@ -1399,17 +1399,17 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
     def test_get_by_name_not_found(self):
         self.assertRaises(exception.ResourceClassNotFound,
                           objects.ResourceClass.get_by_name,
-                          self.context,
+                          self.ctx,
                           'CUSTOM_NO_EXISTS')
 
     def test_get_by_name_custom(self):
         rc = objects.ResourceClass(
-            self.context,
+            self.ctx,
             name='CUSTOM_IRON_NFV',
         )
         rc.create()
         get_rc = objects.ResourceClass.get_by_name(
-            self.context,
+            self.ctx,
             'CUSTOM_IRON_NFV',
         )
         self.assertEqual(rc.id, get_rc.id)
@@ -1417,7 +1417,7 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
 
     def test_create_fail_not_using_namespace(self):
         rc = objects.ResourceClass(
-            context=self.context,
+            context=self.ctx,
             name='IRON_NFV',
         )
         exc = self.assertRaises(exception.ObjectActionError, rc.create)
@@ -1425,14 +1425,14 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
 
     def test_create_duplicate_standard(self):
         rc = objects.ResourceClass(
-            context=self.context,
+            context=self.ctx,
             name=fields.ResourceClass.VCPU,
         )
         self.assertRaises(exception.ResourceClassExists, rc.create)
 
     def test_create(self):
         rc = objects.ResourceClass(
-            self.context,
+            self.ctx,
             name='CUSTOM_IRON_NFV',
         )
         rc.create()
@@ -1440,7 +1440,7 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
         self.assertEqual(min_id, rc.id)
 
         rc = objects.ResourceClass(
-            self.context,
+            self.ctx,
             name='CUSTOM_IRON_ENTERPRISE',
         )
         rc.create()
@@ -1452,12 +1452,12 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
         # create rc2 with the same ID, and then return 43 in the retry loop.
         mock_get.side_effect = (42, 42, 43)
         rc1 = objects.ResourceClass(
-            self.context,
+            self.ctx,
             name='CUSTOM_IRON_NFV',
         )
         rc1.create()
         rc2 = objects.ResourceClass(
-            self.context,
+            self.ctx,
             name='CUSTOM_TWO',
         )
         rc2.create()
@@ -1471,12 +1471,12 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
         # create rc2 with the same ID, and then return 45 in the retry loop.
         mock_get.side_effect = (44, 44, 44, 44)
         rc1 = objects.ResourceClass(
-            self.context,
+            self.ctx,
             name='CUSTOM_IRON_NFV',
         )
         rc1.create()
         rc2 = objects.ResourceClass(
-            self.context,
+            self.ctx,
             name='CUSTOM_TWO',
         )
         rc2.RESOURCE_CREATE_RETRY_COUNT = 3
@@ -1484,28 +1484,28 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
 
     def test_create_duplicate_custom(self):
         rc = objects.ResourceClass(
-            self.context,
+            self.ctx,
             name='CUSTOM_IRON_NFV',
         )
         rc.create()
         self.assertEqual(objects.ResourceClass.MIN_CUSTOM_RESOURCE_CLASS_ID,
                          rc.id)
         rc = objects.ResourceClass(
-            self.context,
+            self.ctx,
             name='CUSTOM_IRON_NFV',
         )
         self.assertRaises(exception.ResourceClassExists, rc.create)
 
     def test_destroy_fail_no_id(self):
         rc = objects.ResourceClass(
-            self.context,
+            self.ctx,
             name='CUSTOM_IRON_NFV',
         )
         self.assertRaises(exception.ObjectActionError, rc.destroy)
 
     def test_destroy_fail_standard(self):
         rc = objects.ResourceClass.get_by_name(
-            self.context,
+            self.ctx,
             'VCPU',
         )
         self.assertRaises(exception.ResourceClassCannotDeleteStandard,
@@ -1513,28 +1513,28 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
 
     def test_destroy(self):
         rc = objects.ResourceClass(
-            self.context,
+            self.ctx,
             name='CUSTOM_IRON_NFV',
         )
         rc.create()
-        rc_list = objects.ResourceClassList.get_all(self.context)
+        rc_list = objects.ResourceClassList.get_all(self.ctx)
         rc_ids = (r.id for r in rc_list)
         self.assertIn(rc.id, rc_ids)
 
         rc = objects.ResourceClass.get_by_name(
-            self.context,
+            self.ctx,
             'CUSTOM_IRON_NFV',
         )
 
         rc.destroy()
-        rc_list = objects.ResourceClassList.get_all(self.context)
+        rc_list = objects.ResourceClassList.get_all(self.ctx)
         rc_ids = (r.id for r in rc_list)
         self.assertNotIn(rc.id, rc_ids)
 
         # Verify rc cache was purged of the old entry
         self.assertRaises(exception.ResourceClassNotFound,
                           objects.ResourceClass.get_by_name,
-                          self.context,
+                          self.ctx,
                           'CUSTOM_IRON_NFV')
 
     def test_destroy_fail_with_inventory(self):
@@ -1542,12 +1542,12 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
         class that is referenced in an inventory record.
         """
         rc = objects.ResourceClass(
-            self.context,
+            self.ctx,
             name='CUSTOM_IRON_NFV',
         )
         rc.create()
         rp = objects.ResourceProvider(
-            self.context,
+            self.ctx,
             name='my rp',
             uuid=uuidsentinel.rp,
         )
@@ -1566,20 +1566,20 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
 
         rp.set_inventory(objects.InventoryList(objects=[]))
         rc.destroy()
-        rc_list = objects.ResourceClassList.get_all(self.context)
+        rc_list = objects.ResourceClassList.get_all(self.ctx)
         rc_ids = (r.id for r in rc_list)
         self.assertNotIn(rc.id, rc_ids)
 
     def test_save_fail_no_id(self):
         rc = objects.ResourceClass(
-            self.context,
+            self.ctx,
             name='CUSTOM_IRON_NFV',
         )
         self.assertRaises(exception.ObjectActionError, rc.save)
 
     def test_save_fail_standard(self):
         rc = objects.ResourceClass.get_by_name(
-            self.context,
+            self.ctx,
             'VCPU',
         )
         self.assertRaises(exception.ResourceClassCannotUpdateStandard,
@@ -1587,13 +1587,13 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
 
     def test_save(self):
         rc = objects.ResourceClass(
-            self.context,
+            self.ctx,
             name='CUSTOM_IRON_NFV',
         )
         rc.create()
 
         rc = objects.ResourceClass.get_by_name(
-            self.context,
+            self.ctx,
             'CUSTOM_IRON_NFV',
         )
         rc.name = 'CUSTOM_IRON_SILVER'
@@ -1602,7 +1602,7 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
         # Verify rc cache was purged of the old entry
         self.assertRaises(exception.NotFound,
                           objects.ResourceClass.get_by_name,
-                          self.context,
+                          self.ctx,
                           'CUSTOM_IRON_NFV')
 
 
@@ -1635,55 +1635,55 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
             self.assertIn(expected, traits)
 
     def test_trait_create(self):
-        t = objects.Trait(self.context)
+        t = objects.Trait(self.ctx)
         t.name = 'CUSTOM_TRAIT_A'
         t.create()
         self.assertIn('id', t)
         self.assertEqual(t.name, 'CUSTOM_TRAIT_A')
 
     def test_trait_create_with_id_set(self):
-        t = objects.Trait(self.context)
+        t = objects.Trait(self.ctx)
         t.name = 'CUSTOM_TRAIT_A'
         t.id = 1
         self.assertRaises(exception.ObjectActionError, t.create)
 
     def test_trait_create_without_name_set(self):
-        t = objects.Trait(self.context)
+        t = objects.Trait(self.ctx)
         self.assertRaises(exception.ObjectActionError, t.create)
 
     def test_trait_create_duplicated_trait(self):
-        trait = objects.Trait(self.context)
+        trait = objects.Trait(self.ctx)
         trait.name = 'CUSTOM_TRAIT_A'
         trait.create()
-        tmp_trait = objects.Trait.get_by_name(self.context, 'CUSTOM_TRAIT_A')
+        tmp_trait = objects.Trait.get_by_name(self.ctx, 'CUSTOM_TRAIT_A')
         self.assertEqual('CUSTOM_TRAIT_A', tmp_trait.name)
-        duplicated_trait = objects.Trait(self.context)
+        duplicated_trait = objects.Trait(self.ctx)
         duplicated_trait.name = 'CUSTOM_TRAIT_A'
         self.assertRaises(exception.TraitExists, duplicated_trait.create)
 
     def test_trait_get(self):
-        t = objects.Trait(self.context)
+        t = objects.Trait(self.ctx)
         t.name = 'CUSTOM_TRAIT_A'
         t.create()
-        t = objects.Trait.get_by_name(self.context, 'CUSTOM_TRAIT_A')
+        t = objects.Trait.get_by_name(self.ctx, 'CUSTOM_TRAIT_A')
         self.assertEqual(t.name, 'CUSTOM_TRAIT_A')
 
     def test_trait_get_non_existed_trait(self):
         self.assertRaises(exception.TraitNotFound,
-            objects.Trait.get_by_name, self.context, 'CUSTOM_TRAIT_A')
+            objects.Trait.get_by_name, self.ctx, 'CUSTOM_TRAIT_A')
 
     def test_trait_destroy(self):
-        t = objects.Trait(self.context)
+        t = objects.Trait(self.ctx)
         t.name = 'CUSTOM_TRAIT_A'
         t.create()
-        t = objects.Trait.get_by_name(self.context, 'CUSTOM_TRAIT_A')
+        t = objects.Trait.get_by_name(self.ctx, 'CUSTOM_TRAIT_A')
         self.assertEqual(t.name, 'CUSTOM_TRAIT_A')
         t.destroy()
         self.assertRaises(exception.TraitNotFound, objects.Trait.get_by_name,
-                          self.context, 'CUSTOM_TRAIT_A')
+                          self.ctx, 'CUSTOM_TRAIT_A')
 
     def test_trait_destroy_with_standard_trait(self):
-        t = objects.Trait(self.context)
+        t = objects.Trait(self.ctx)
         t.id = 1
         t.name = 'HW_CPU_X86_AVX'
         self.assertRaises(exception.TraitCannotDeleteStandard, t.destroy)
@@ -1691,50 +1691,50 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
     def test_traits_get_all(self):
         trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
         for name in trait_names:
-            t = objects.Trait(self.context)
+            t = objects.Trait(self.ctx)
             t.name = name
             t.create()
 
         self._assert_traits_in(trait_names,
-                               objects.TraitList.get_all(self.context))
+                               objects.TraitList.get_all(self.ctx))
 
     def test_traits_get_all_with_name_in_filter(self):
         trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
         for name in trait_names:
-            t = objects.Trait(self.context)
+            t = objects.Trait(self.ctx)
             t.name = name
             t.create()
 
-        traits = objects.TraitList.get_all(self.context,
+        traits = objects.TraitList.get_all(self.ctx,
             filters={'name_in': ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B']})
         self._assert_traits(['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B'], traits)
 
     def test_traits_get_all_with_non_existed_name(self):
-        traits = objects.TraitList.get_all(self.context,
+        traits = objects.TraitList.get_all(self.ctx,
             filters={'name_in': ['CUSTOM_TRAIT_X', 'CUSTOM_TRAIT_Y']})
         self.assertEqual(0, len(traits))
 
     def test_traits_get_all_with_prefix_filter(self):
         trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
         for name in trait_names:
-            t = objects.Trait(self.context)
+            t = objects.Trait(self.ctx)
             t.name = name
             t.create()
 
-        traits = objects.TraitList.get_all(self.context,
+        traits = objects.TraitList.get_all(self.ctx,
                                            filters={'prefix': 'CUSTOM'})
         self._assert_traits(
             ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C'],
             traits)
 
     def test_traits_get_all_with_non_existed_prefix(self):
-        traits = objects.TraitList.get_all(self.context,
+        traits = objects.TraitList.get_all(self.ctx,
             filters={"prefix": "NOT_EXISTED"})
         self.assertEqual(0, len(traits))
 
     def test_set_traits_for_resource_provider(self):
         rp = objects.ResourceProvider(
-            context=self.context,
+            context=self.ctx,
             uuid=uuidsentinel.fake_resource_provider,
             name=uuidsentinel.fake_resource_name,
         )
@@ -1745,7 +1745,7 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
         trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
         trait_objs = []
         for name in trait_names:
-            t = objects.Trait(self.context)
+            t = objects.Trait(self.ctx)
             t.name = name
             t.create()
             trait_objs.append(t)
@@ -1756,7 +1756,7 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
         generation = rp.generation
 
         trait_names.remove('CUSTOM_TRAIT_A')
-        updated_traits = objects.TraitList.get_all(self.context,
+        updated_traits = objects.TraitList.get_all(self.ctx,
             filters={'name_in': trait_names})
         self._assert_traits(trait_names, updated_traits)
         rp.set_traits(updated_traits)
@@ -1765,12 +1765,12 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
 
     def test_trait_delete_in_use(self):
         rp = objects.ResourceProvider(
-            context=self.context,
+            context=self.ctx,
             uuid=uuidsentinel.fake_resource_provider,
             name=uuidsentinel.fake_resource_name,
         )
         rp.create()
-        t = objects.Trait(self.context)
+        t = objects.Trait(self.ctx)
         t.name = 'CUSTOM_TRAIT_A'
         t.create()
         rp.set_traits([t])
@@ -1778,56 +1778,56 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
 
     def test_traits_get_all_with_associated_true(self):
         rp1 = objects.ResourceProvider(
-            context=self.context,
+            context=self.ctx,
             uuid=uuidsentinel.fake_resource_provider1,
             name=uuidsentinel.fake_resource_name1,
         )
         rp1.create()
         rp2 = objects.ResourceProvider(
-            context=self.context,
+            context=self.ctx,
             uuid=uuidsentinel.fake_resource_provider2,
             name=uuidsentinel.fake_resource_name2,
         )
         rp2.create()
         trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
         for name in trait_names:
-            t = objects.Trait(self.context)
+            t = objects.Trait(self.ctx)
             t.name = name
             t.create()
 
-        associated_traits = objects.TraitList.get_all(self.context,
+        associated_traits = objects.TraitList.get_all(self.ctx,
             filters={'name_in': ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B']})
         rp1.set_traits(associated_traits)
         rp2.set_traits(associated_traits)
         self._assert_traits(['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B'],
-            objects.TraitList.get_all(self.context,
+            objects.TraitList.get_all(self.ctx,
                 filters={'associated': True}))
 
     def test_traits_get_all_with_associated_false(self):
         rp1 = objects.ResourceProvider(
-            context=self.context,
+            context=self.ctx,
             uuid=uuidsentinel.fake_resource_provider1,
             name=uuidsentinel.fake_resource_name1,
         )
         rp1.create()
         rp2 = objects.ResourceProvider(
-            context=self.context,
+            context=self.ctx,
             uuid=uuidsentinel.fake_resource_provider2,
             name=uuidsentinel.fake_resource_name2,
         )
         rp2.create()
         trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
         for name in trait_names:
-            t = objects.Trait(self.context)
+            t = objects.Trait(self.ctx)
             t.name = name
             t.create()
 
-        associated_traits = objects.TraitList.get_all(self.context,
+        associated_traits = objects.TraitList.get_all(self.ctx,
             filters={'name_in': ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B']})
         rp1.set_traits(associated_traits)
         rp2.set_traits(associated_traits)
         self._assert_traits_in(['CUSTOM_TRAIT_C'],
-            objects.TraitList.get_all(self.context,
+            objects.TraitList.get_all(self.ctx,
                 filters={'associated': False}))
 
     def test_sync_standard_traits(self):
@@ -1844,7 +1844,7 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
         self.assertEqual([], _db_traits(conn))
 
         all_traits = [trait.name for trait in
-                      objects.TraitList.get_all(self.context)]
+                      objects.TraitList.get_all(self.ctx)]
         self.assertEqual(set(std_traits), set(all_traits))
         # confirm with a raw request
         self.assertEqual(set(std_traits), set(_db_traits(conn)))
@@ -1878,7 +1878,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         # Create the two "local disk" compute node providers
         cn1_uuid = uuidsentinel.cn1
         cn1 = objects.ResourceProvider(
-            self.context,
+            self.ctx,
             name='cn1',
             uuid=cn1_uuid,
         )
@@ -1886,7 +1886,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
 
         cn2_uuid = uuidsentinel.cn2
         cn2 = objects.ResourceProvider(
-            self.context,
+            self.ctx,
             name='cn2',
             uuid=cn2_uuid,
         )
@@ -1920,7 +1920,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         # Create the shared storage pool
         ss_uuid = uuidsentinel.ss
         ss = objects.ResourceProvider(
-            self.context,
+            self.ctx,
             name='shared storage',
             uuid=ss_uuid,
         )
@@ -1944,14 +1944,14 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         # Mark the shared storage pool as having inventory shared among any
         # provider associated via aggregate
         t = objects.Trait(
-            self.context,
+            self.ctx,
             name="MISC_SHARES_VIA_AGGREGATE",
         )
         # TODO(jaypipes): Once MISC_SHARES_VIA_AGGREGATE is a standard
         # os-traits trait, we won't need to create() here. Instead, we will
         # just do:
         # t = objects.Trait.get_by_name(
-        #    self.context,
+        #    self.ctx,
         #    "MISC_SHARES_VIA_AGGREGATE",
         # )
         t.create()
@@ -1960,7 +1960,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         # OK, now that has all been set up, let's verify that we get the ID of
         # the shared storage pool when we ask for DISK_GB
         got_ids = rp_obj._get_providers_with_shared_capacity(
-            self.context,
+            self.ctx,
             fields.ResourceClass.STANDARD.index(fields.ResourceClass.DISK_GB),
             100,
         )
@@ -1978,7 +1978,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         # Create the two compute node providers
         cn1_uuid = uuidsentinel.cn1
         cn1 = objects.ResourceProvider(
-            self.context,
+            self.ctx,
             name='cn1',
             uuid=cn1_uuid,
         )
@@ -1986,7 +1986,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
 
         cn2_uuid = uuidsentinel.cn2
         cn2 = objects.ResourceProvider(
-            self.context,
+            self.ctx,
             name='cn2',
             uuid=cn2_uuid,
         )
@@ -2020,7 +2020,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         # Create the shared storage pool
         ss_uuid = uuidsentinel.ss
         ss = objects.ResourceProvider(
-            self.context,
+            self.ctx,
             name='shared storage',
             uuid=ss_uuid,
         )
@@ -2043,14 +2043,14 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         # Mark the shared storage pool as having inventory shared among any
         # provider associated via aggregate
         t = objects.Trait(
-            self.context,
+            self.ctx,
             name="MISC_SHARES_VIA_AGGREGATE",
         )
         # TODO(jaypipes): Once MISC_SHARES_VIA_AGGREGATE is a standard
         # os-traits trait, we won't need to create() here. Instead, we will
         # just do:
         # t = objects.Trait.get_by_name(
-        #    self.context,
+        #    self.ctx,
         #    "MISC_SHARES_VIA_AGGREGATE",
         # )
         t.create()
@@ -2062,7 +2062,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         # with the same aggregate, verify that no resource providers are found
         # that meet the requested set of resource amounts
         got_rps = rp_obj._get_all_with_shared(
-            self.context,
+            self.ctx,
             resources,
         )
         got_ids = [rp.id for rp in got_rps]
@@ -2077,7 +2077,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         # OK, now that has all been set up, let's verify that we get the ID of
         # the shared storage pool when we ask for some DISK_GB
         got_rps = rp_obj._get_all_with_shared(
-            self.context,
+            self.ctx,
             resources,
         )
         got_ids = [rp.id for rp in got_rps]
@@ -2090,7 +2090,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         # compute nodes that are associated with the shared storage pool.
         cn3_uuid = uuidsentinel.cn3
         cn3 = objects.ResourceProvider(
-            self.context,
+            self.ctx,
             name='cn3',
             uuid=cn3_uuid,
         )
@@ -2129,7 +2129,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         cn3.set_inventory(inv_list)
 
         got_rps = rp_obj._get_all_with_shared(
-            self.context,
+            self.ctx,
             resources,
         )
         got_ids = [rp.id for rp in got_rps]
@@ -2152,13 +2152,13 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         )
 
         alloc_list = objects.AllocationList(
-            self.context,
+            self.ctx,
             objects=[vcpu_alloc, memory_mb_alloc]
         )
         alloc_list.create_all()
 
         got_rps = rp_obj._get_all_with_shared(
-            self.context,
+            self.ctx,
             resources,
         )
         got_ids = [rp.id for rp in got_rps]
@@ -2177,13 +2177,13 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
                 used=512,
             )
             alloc_list = objects.AllocationList(
-                self.context,
+                self.ctx,
                 objects=[memory_mb_alloc]
             )
             alloc_list.create_all()
 
         got_rps = rp_obj._get_all_with_shared(
-            self.context,
+            self.ctx,
             resources,
         )
         got_ids = [rp.id for rp in got_rps]
@@ -2197,7 +2197,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
 
         cn4_uuid = uuidsentinel.cn4
         cn4 = objects.ResourceProvider(
-            self.context,
+            self.ctx,
             name='cn4',
             uuid=cn4_uuid,
         )
@@ -2205,7 +2205,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
 
         cn5_uuid = uuidsentinel.cn5
         cn5 = objects.ResourceProvider(
-            self.context,
+            self.ctx,
             name='cn5',
             uuid=cn5_uuid,
         )
@@ -2240,7 +2240,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         # with other providers
         ns_uuid = uuidsentinel.ns
         ns = objects.ResourceProvider(
-            self.context,
+            self.ctx,
             name='non_shared storage',
             uuid=ns_uuid,
         )
@@ -2274,7 +2274,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         # inventory, that storage provider is not marked as sharing that
         # DISK_GB inventory with anybody.
         got_rps = rp_obj._get_all_with_shared(
-            self.context,
+            self.ctx,
             resources,
         )
         got_ids = [rp.id for rp in got_rps]
@@ -2330,7 +2330,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         # Create two compute node providers with VCPU, RAM and local disk
         cn1_uuid = uuidsentinel.cn1
         cn1 = objects.ResourceProvider(
-            self.context,
+            self.ctx,
             name='cn1',
             uuid=cn1_uuid,
         )
@@ -2338,7 +2338,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
 
         cn2_uuid = uuidsentinel.cn2
         cn2 = objects.ResourceProvider(
-            self.context,
+            self.ctx,
             name='cn2',
             uuid=cn2_uuid,
         )
@@ -2346,7 +2346,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
 
         cn3_uuid = uuidsentinel.cn3
         cn3 = objects.ResourceProvider(
-            self.context,
+            self.ctx,
             name='cn3',
             uuid=cn3_uuid
         )
@@ -2407,7 +2407,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         # provider is returned
         requested_resources = self._requested_resources()
         p_alts = rp_obj.AllocationCandidates.get_by_filters(
-            self.context,
+            self.ctx,
             filters={
                 'resources': requested_resources,
             },
@@ -2488,7 +2488,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         # Create two compute node providers with VCPU, RAM and NO local disk
         cn1_uuid = uuidsentinel.cn1
         cn1 = objects.ResourceProvider(
-            self.context,
+            self.ctx,
             name='cn1',
             uuid=cn1_uuid,
         )
@@ -2496,7 +2496,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
 
         cn2_uuid = uuidsentinel.cn2
         cn2 = objects.ResourceProvider(
-            self.context,
+            self.ctx,
             name='cn2',
             uuid=cn2_uuid,
         )
@@ -2530,7 +2530,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         # Create the shared storage pool
         ss_uuid = uuidsentinel.ss
         ss = objects.ResourceProvider(
-            self.context,
+            self.ctx,
             name='shared storage',
             uuid=ss_uuid,
         )
@@ -2553,14 +2553,14 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         # Mark the shared storage pool as having inventory shared among any
         # provider associated via aggregate
         t = objects.Trait(
-            self.context,
+            self.ctx,
             name="MISC_SHARES_VIA_AGGREGATE",
         )
         # TODO(jaypipes): Once MISC_SHARES_VIA_AGGREGATE is a standard
         # os-traits trait, we won't need to create() here. Instead, we will
         # just do:
         # t = objects.Trait.get_by_name(
-        #    self.context,
+        #    self.ctx,
         #    "MISC_SHARES_VIA_AGGREGATE",
         # )
         t.create()
@@ -2577,7 +2577,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         # the shared storage pool provider
         requested_resources = self._requested_resources()
         p_alts = rp_obj.AllocationCandidates.get_by_filters(
-            self.context,
+            self.ctx,
             filters={
                 'resources': requested_resources,
             },
@@ -2688,7 +2688,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         # #1705071, this resulted in a KeyError
 
         p_alts = rp_obj.AllocationCandidates.get_by_filters(
-            self.context,
+            self.ctx,
             filters={
                 'resources': {
                     'DISK_GB': 10,
@@ -2737,7 +2737,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         # CUSTOM_MAGIC resources
         cn1_uuid = uuidsentinel.cn1
         cn1 = objects.ResourceProvider(
-            self.context,
+            self.ctx,
             name='cn1',
             uuid=cn1_uuid,
         )
@@ -2745,7 +2745,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
 
         cn2_uuid = uuidsentinel.cn2
         cn2 = objects.ResourceProvider(
-            self.context,
+            self.ctx,
             name='cn2',
             uuid=cn2_uuid,
         )
@@ -2778,7 +2778,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
 
         # Create a custom resource called MAGIC
         magic_rc = objects.ResourceClass(
-            self.context,
+            self.ctx,
             name='CUSTOM_MAGIC',
         )
         magic_rc.create()
@@ -2786,7 +2786,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         # Create the shared provider that servers MAGIC
         magic_p_uuid = uuidsentinel.magic_p
         magic_p = objects.ResourceProvider(
-            self.context,
+            self.ctx,
             name='shared custom resource provider',
             uuid=magic_p_uuid,
         )
@@ -2809,7 +2809,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         # Mark the magic provider as having inventory shared among any provider
         # associated via aggregate
         t = objects.Trait(
-            self.context,
+            self.ctx,
             name="MISC_SHARES_VIA_AGGREGATE",
         )
         # TODO(jaypipes): Once MISC_SHARES_VIA_AGGREGATE is a standard
@@ -2836,7 +2836,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         }
 
         p_alts = rp_obj.AllocationCandidates.get_by_filters(
-            self.context,
+            self.ctx,
             filters={
                 'resources': requested_resources,
             },
