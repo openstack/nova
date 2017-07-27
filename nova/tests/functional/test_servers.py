@@ -29,11 +29,15 @@ from nova import exception
 from nova import objects
 from nova.objects import block_device as block_device_obj
 from nova import test
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
 from nova.tests.functional import integrated_helpers
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_network
+import nova.tests.unit.image.fake
+from nova.tests.unit import policy_fixture
+from nova.virt import fake
 from nova import volume
 
 
@@ -1050,3 +1054,343 @@ class ServerTestV220(ServersTestBase):
             self.assertTrue(mock_clean_vols.called)
 
         self._delete_server(server_id)
+
+
+class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
+    """Tests moving servers while checking the resource allocations and usages
+
+    These tests use two compute hosts. Boot a server on one of them then try to
+    move the server to the other. At every step resource allocation of the
+    server and the resource usages of the computes are queried from placement
+    API and asserted.
+    """
+
+    REQUIRES_LOCKING = True
+    microversion = 'latest'
+
+    _enabled_filters = ['RetryFilter', 'ComputeFilter']
+
+    def setUp(self):
+        self.flags(enabled_filters=self._enabled_filters,
+                   group='filter_scheduler')
+        super(ServerMovingTests, self).setUp()
+
+        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.NeutronFixture(self))
+
+        # NOTE(gibi): After fix 1707071 we need to set the service version to
+        # pike to test pike only interactions. We need separate tests for
+        # ocata - pike interactions
+        # self.useFixture(nova_fixtures.AllServicesCurrent())
+
+        placement = self.useFixture(nova_fixtures.PlacementFixture())
+        self.placement_api = placement.api
+        api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
+            api_version='v2.1'))
+
+        self.admin_api = api_fixture.admin_api
+        self.admin_api.microversion = self.microversion
+
+        # NOTE(danms): We need admin_api so we can direct builds to
+        # specific compute nodes. We're not doing anything in these tests
+        # that should be affected by admin-ness, so this should be okay.
+        self.api = self.admin_api
+
+        # the image fake backend needed for image discovery
+        nova.tests.unit.image.fake.stub_out_image_service(self)
+
+        self.start_service('conductor')
+        self.start_service('scheduler')
+
+        self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
+
+        fake.set_nodes(['host1'])
+        self.compute1 = self.start_service('compute', host='host1')
+
+        # NOTE(sbauza): Make sure the FakeDriver returns a different nodename
+        # for the second compute node.
+        fake.set_nodes(['host2'])
+        self.addCleanup(fake.restore_nodes)
+        self.compute2 = self.start_service('compute', host='host2')
+        fake_network.set_stub_network_methods(self)
+
+        flavors = self.api.get_flavors()
+        self.flavor1 = flavors[0]
+        self.flavor2 = flavors[1]
+
+    def _other_hostname(self, host):
+        other_host = {'host1': 'host2',
+                      'host2': 'host1'}
+        return other_host[host]
+
+    def _get_provider_uuid_by_host(self, host):
+        # NOTE(gibi): the compute node id is the same as the compute node
+        # provider uuid on that compute
+        resp = self.admin_api.api_get(
+            'os-hypervisors?hypervisor_hostname_pattern=%s' % host).body
+        return resp['hypervisors'][0]['id']
+
+    def _get_provider_usages(self, provider_uuid):
+        return self.placement_api.get(
+            '/resource_providers/%s/usages' % provider_uuid).body['usages']
+
+    def _get_allocations_by_server_uuid(self, server_uuid):
+        return self.placement_api.get(
+            '/allocations/%s' % server_uuid).body['allocations']
+
+    def _run_periodics(self):
+        # NOTE(jaypipes): We always run periodics in the same order: first on
+        # compute1, then on compute2. However, we want to test scenarios when
+        # the periodics run at different times during mover operations. This is
+        # why we have the "reverse" tests which simply switch the source and
+        # dest host while keeping the order in which we run the
+        # periodics. This effectively allows us to test the matrix of timing
+        # scenarios during move operations.
+        ctx = context.get_admin_context()
+        LOG.info('Running periodic for compute1 (%s)',
+            self.compute1.manager.host)
+        self.compute1.manager.update_available_resource(ctx)
+        LOG.info('Running periodic for compute2 (%s)',
+            self.compute2.manager.host)
+        self.compute2.manager.update_available_resource(ctx)
+        LOG.info('Finished with periodics')
+
+    def test_resize_revert(self):
+        self._test_resize_revert(dest_hostname='host1')
+
+    def test_resize_revert_reverse(self):
+        # NOTE(danms): This will run the test the other direction,
+        # but with the periodics running in the same order. When
+        # bug 1707071 is fixed, we should be able to pass with things
+        # running both ways. Until then, skip.
+        self.skipTest('Bug 1707071')
+        self._test_resize_revert(dest_hostname='host2')
+
+    def test_resize_confirm(self):
+        self._test_resize_confirm(dest_hostname='host1')
+
+    def test_resize_confirm_reverse(self):
+        # NOTE(danms): This will run the test the other direction,
+        # but with the periodics running in the same order. When
+        # bug 1707071 is fixed, we should be able to pass with things
+        # running both ways. Until then, skip.
+        self.skipTest('Bug 1707071')
+        self._test_resize_confirm(dest_hostname='host2')
+
+    def assertFlavorMatchesAllocation(self, flavor, allocation):
+        self.assertEqual(flavor['vcpus'], allocation['VCPU'])
+        self.assertEqual(flavor['ram'], allocation['MEMORY_MB'])
+        self.assertEqual(flavor['disk'], allocation['DISK_GB'])
+
+    def _boot_and_check_allocations(self, flavor, source_hostname):
+        server_req = self._build_minimal_create_server_request(
+            self.api, 'some-server', flavor_id=flavor['id'],
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            networks=[])
+        server_req['availability_zone'] = 'nova:%s' % source_hostname
+        LOG.info('booting on %s', source_hostname)
+        created_server = self.api.post_server({'server': server_req})
+        server = self._wait_for_state_change(
+            self.admin_api, created_server, 'ACTIVE')
+
+        # Verify that our source host is what the server ended up on
+        self.assertEqual(source_hostname, server['OS-EXT-SRV-ATTR:host'])
+
+        self._run_periodics()
+
+        # Check usages on the selected host after boot
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertFlavorMatchesAllocation(flavor, source_usages)
+
+        # Check that the other provider has no usage
+        dest_rp_uuid = self._get_provider_uuid_by_host(
+            self._other_hostname(source_hostname))
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+        self.assertEqual({'VCPU': 0,
+                          'MEMORY_MB': 0,
+                          'DISK_GB': 0}, dest_usages)
+
+        # Check that the server only allocates resource from the host it is
+        # booted on
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations),
+                         'No allocation for the server on the host it'
+                         'is booted on')
+        allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(flavor, allocation)
+
+        return server
+
+    def _resize_and_check_allocations(self, server, old_flavor, new_flavor,
+            source_rp_uuid, dest_rp_uuid):
+        # Resize the server and check usages in VERIFY_RESIZE state
+        self.flags(allow_resize_to_same_host=False)
+        resize_req = {
+            'resize': {
+                'flavorRef': new_flavor['id']
+            }
+        }
+        self.api.post_server_action(server['id'], resize_req)
+        self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+
+        self._run_periodics()
+
+        # the original host expected to have the old resource usage
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        # NOTE(danms): This is bug 1707071, where we've lost the
+        # doubled allocation
+        self.assertEqual(0, source_usages['VCPU'])
+        self.assertEqual(0, source_usages['MEMORY_MB'])
+        self.assertEqual(0, source_usages['DISK_GB'])
+
+        # NOTE(danms): After we fix the 'healing' of the doubled allocation
+        # by the resource tracker, the following will be expected
+        # self.assertFlavorMatchesAllocation(old_flavor, source_usages)
+
+        # the dest host expected to have resource allocation based on
+        # the new flavor the server is resized to
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+
+        # NOTE(danms): This is bug 1707071 where we've lost the entire
+        # allocation because one of the computes deleted it
+        self.assertEqual(0, dest_usages['VCPU'])
+        self.assertEqual(0, dest_usages['MEMORY_MB'])
+        self.assertEqual(0, dest_usages['DISK_GB'])
+
+        # NOTE(danms): After we fix the 'healing' of the double allocation
+        # by the resource tracker, the following will be expected
+        # self.assertFlavorMatchesAllocation(new_flavor, dest_usages)
+
+        # and our server should have allocation on both providers accordingly
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        # NOTE(danms): This is bug 1707071, where we've lost the
+        # doubled allocation
+        self.assertEqual(0, len(allocations))
+        self.assertNotIn(source_rp_uuid, allocations)
+
+        # NOTE(danms): After we fix the 'healing' of the doubled allocation
+        # by the resource tracker, the following will be expected
+        # self.assertEqual(2, len(allocations))
+        # source_allocation = allocations[source_rp_uuid]['resources']
+        # self.assertFlavorMatchesAllocation(old_flavor, source_allocation)
+
+        # NOTE(danms): This is bug 1707071, where we've lost the
+        # doubled allocation
+        self.assertNotIn(dest_rp_uuid, allocations)
+
+        # NOTE(danms): After we fix the 'healing' of the doubled allocation
+        # by the resource tracker, the following will be expected
+        # self.assertEqual(2, len(allocations))
+        # dest_allocation = allocations[dest_rp_uuid]['resources']
+        # self.assertFlavorMatchesAllocation(new_flavor, dest_allocation)
+
+    def _delete_and_check_allocations(self, server, source_rp_uuid,
+                                      dest_rp_uuid):
+        # Check usages after delete
+        self.api.delete_server(server['id'])
+        self._wait_until_deleted(server)
+
+        self._run_periodics()
+
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertEqual({'VCPU': 0,
+                          'MEMORY_MB': 0,
+                          'DISK_GB': 0}, source_usages)
+
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+        self.assertEqual({'VCPU': 0,
+                          'MEMORY_MB': 0,
+                          'DISK_GB': 0}, dest_usages)
+
+        # and no allocations for the deleted server
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(0, len(allocations))
+
+    def _test_resize_revert(self, dest_hostname):
+        source_hostname = self._other_hostname(dest_hostname)
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        server = self._boot_and_check_allocations(self.flavor1,
+            source_hostname)
+
+        self._resize_and_check_allocations(server, self.flavor1, self.flavor2,
+            source_rp_uuid, dest_rp_uuid)
+
+        # Revert the resize and check the usages
+        post = {'revertResize': None}
+        self.api.post_server_action(server['id'], post)
+        self._wait_for_state_change(self.api, server, 'ACTIVE')
+
+        self._run_periodics()
+
+        # the original host expected to have the old resource allocation
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+
+        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+
+        # and the target host should not have usage
+        self.assertEqual({'VCPU': 0,
+                          'MEMORY_MB': 0,
+                          'DISK_GB': 0}, dest_usages,
+                         'Target host %s still has usage after the resize has '
+                         'been reverted' % dest_hostname)
+
+        # Check that the server only allocates resource from the original host
+        self.assertEqual(1, len(allocations))
+        source_allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
+
+        self._delete_and_check_allocations(
+            server, source_rp_uuid, dest_rp_uuid)
+
+    def _test_resize_confirm(self, dest_hostname):
+        source_hostname = self._other_hostname(dest_hostname)
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        server = self._boot_and_check_allocations(self.flavor1,
+            source_hostname)
+
+        self._resize_and_check_allocations(server, self.flavor1, self.flavor2,
+            source_rp_uuid, dest_rp_uuid)
+
+        # Confirm the resize and check the usages
+        post = {'confirmResize': None}
+        self.api.post_server_action(
+            server['id'], post, check_response_status=[204])
+        self._wait_for_state_change(self.api, server, 'ACTIVE')
+
+        # Fetch allocations post-confirm
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+
+        # NOTE(danms): This is bug 1707071, where we've lost the doubled
+        # allocation
+        self.assertEqual(0, len(allocations))
+
+        self._run_periodics()
+
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+
+        self.assertEqual({'VCPU': 0,
+                          'MEMORY_MB': 0,
+                          'DISK_GB': 0}, source_usages,
+                         'The source host %s still has usages after the '
+                         'resize has been confirmed' % source_hostname)
+
+        # and the target host allocation should be according to the new flavor
+        self.assertFlavorMatchesAllocation(self.flavor2, dest_usages)
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+
+        # and the server allocates only from the target host
+        self.assertEqual(1, len(allocations))
+        dest_allocation = allocations[dest_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor2, dest_allocation)
+
+        self._delete_and_check_allocations(
+            server, source_rp_uuid, dest_rp_uuid)

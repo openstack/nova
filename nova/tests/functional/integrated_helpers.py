@@ -27,6 +27,7 @@ import nova.conf
 import nova.image.glance
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.functional.api import client as api_client
 from nova.tests.unit import cast_as_call
 import nova.tests.unit.image.fake
 from nova.tests import uuidsentinel as uuids
@@ -254,3 +255,16 @@ class InstanceHelperMixin(object):
         if networks is not None:
             server['networks'] = networks
         return server
+
+    def _wait_until_deleted(self, server):
+        try:
+            for i in range(40):
+                server = self.api.get_server(server['id'])
+                if server['status'] == 'ERROR':
+                    self.fail('Server went to error state instead of'
+                              'disappearing.')
+                time.sleep(0.5)
+
+            self.fail('Server failed to delete.')
+        except api_client.OpenStackApiNotFoundException:
+            return
