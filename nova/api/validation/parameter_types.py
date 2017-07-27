@@ -42,6 +42,15 @@ def multi_params(schema):
     return {'type': 'array', 'items': schema}
 
 
+# NOTE: We don't check actual values of queries on params
+# which are defined as the following common_param.
+# Please note those are for backward compatible existing
+# query parameters because previously multiple parameters
+# might be input and accepted.
+common_query_param = multi_params({'type': 'string'})
+common_query_regex_param = multi_params({'type': 'string', 'format': 'regex'})
+
+
 class ValidationRegex(object):
     def __init__(self, regex, reason):
         self.regex = regex
