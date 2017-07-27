@@ -1,0 +1,5 @@
+# As part of the doc-migration during Pike, the main cells landing page
+# moved. Redirect from the old to new location.
+redirectmatch 301 ^/nova/([^/]+)/cells.html$ /nova/$1/user/cells.html
+# This pattern should match the URL on the draft site
+redirectmatch 301 /doc/build/html/cells.html$ /nova/$1/user/cells.html
