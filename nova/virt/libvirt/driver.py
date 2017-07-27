@@ -2839,7 +2839,8 @@ class LibvirtDriver(driver.ComputeDriver):
         while bytes_to_read > 0 and os.path.exists(path):
             libvirt_utils.chown(path, os.getuid())
             with libvirt_utils.file_open(path, 'rb') as fp:
-                read_log_data, remaining = utils.last_bytes(fp, bytes_to_read)
+                read_log_data, remaining = libvirt_utils.last_bytes(
+                                                fp, bytes_to_read)
                 # We need the log file content in chronological order,
                 # that's why we *prepend* the log data.
                 log_data = read_log_data + log_data
