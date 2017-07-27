@@ -72,10 +72,12 @@
             },
             "tags": [],
             "user_id": "fake",
-            "uuid": "c03c0bf9-f46e-4e4f-93f1-817568567ee2"},
+            "uuid": "c03c0bf9-f46e-4e4f-93f1-817568567ee2",
+            "updated_at": null
+        },
         "nova_object.name": "InstanceUpdatePayload",
         "nova_object.namespace": "nova",
-        "nova_object.version": "1.5"},
+        "nova_object.version": "1.6"},
     "priority": "INFO",
     "publisher_id": "nova-compute:fake-mini"
 }

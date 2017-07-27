@@ -64,11 +64,12 @@
                 "nova_object.namespace": "nova"
             },
             "user_id":"fake",
-            "uuid":"178b0921-8f85-4257-88b6-2e743b5a975c"
+            "uuid":"178b0921-8f85-4257-88b6-2e743b5a975c",
+            "updated_at": "2012-10-29T13:42:11Z"
         },
         "nova_object.name":"InstanceActionPayload",
         "nova_object.namespace":"nova",
-        "nova_object.version":"1.4"
+        "nova_object.version":"1.5"
     },
     "priority":"INFO",
     "publisher_id":"nova-compute:compute"

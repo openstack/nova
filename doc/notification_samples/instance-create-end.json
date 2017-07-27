@@ -78,12 +78,13 @@
                 "nova_object.version": "1.3",
                 "nova_object.namespace": "nova"
             },
+            "updated_at": "2012-10-29T13:42:11Z",
             "user_id":"fake",
             "uuid":"178b0921-8f85-4257-88b6-2e743b5a975c"
         },
         "nova_object.name":"InstanceCreatePayload",
         "nova_object.namespace":"nova",
-        "nova_object.version":"1.6"
+        "nova_object.version":"1.7"
     },
     "priority":"INFO",
     "publisher_id":"nova-compute:compute"

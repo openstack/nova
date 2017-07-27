@@ -3,7 +3,7 @@
     "publisher_id": "nova-compute:compute",
     "payload": {
         "nova_object.namespace": "nova",
-        "nova_object.version": "1.4",
+        "nova_object.version": "1.5",
         "nova_object.data": {
             "node": "fake-mini",
             "fault": null,
@@ -80,7 +80,8 @@
             "ramdisk_id": "",
             "architecture": null,
             "progress": 0,
-            "task_state": null
+            "task_state": null,
+            "updated_at": "2012-10-29T13:42:11Z"
         },
         "nova_object.name": "InstanceActionPayload"
     },

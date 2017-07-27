@@ -48,6 +48,7 @@ class InstancePayload(base.NotificationPayloadBase):
         'launched_at': ('instance', 'launched_at'),
         'terminated_at': ('instance', 'terminated_at'),
         'deleted_at': ('instance', 'deleted_at'),
+        'updated_at': ('instance', 'updated_at'),
 
         'state': ('instance', 'vm_state'),
         'power_state': ('instance', 'power_state'),
@@ -63,7 +64,8 @@ class InstancePayload(base.NotificationPayloadBase):
     # Version 1.2: Add auto_disk_config field
     # Version 1.3: Add key_name field
     # Version 1.4: Add BDM related data
-    VERSION = '1.4'
+    # Version 1.5: Add updated_at field
+    VERSION = '1.5'
     fields = {
         'uuid': fields.UUIDField(),
         'user_id': fields.StringField(nullable=True),
@@ -90,6 +92,7 @@ class InstancePayload(base.NotificationPayloadBase):
         'launched_at': fields.DateTimeField(nullable=True),
         'terminated_at': fields.DateTimeField(nullable=True),
         'deleted_at': fields.DateTimeField(nullable=True),
+        'updated_at': fields.DateTimeField(nullable=True),
 
         'state': fields.InstanceStateField(nullable=True),
         'power_state': fields.InstancePowerStateField(nullable=True),
@@ -125,7 +128,8 @@ class InstanceActionPayload(InstancePayload):
     # Version 1.2: Added auto_disk_config field to InstancePayload
     # Version 1.3: Added key_name field to InstancePayload
     # Version 1.4: Add BDM related data
-    VERSION = '1.4'
+    # Version 1.5: Added updated_at field to InstancePayload
+    VERSION = '1.5'
     fields = {
         'fault': fields.ObjectField('ExceptionPayload', nullable=True),
     }
@@ -138,10 +142,11 @@ class InstanceActionPayload(InstancePayload):
 @nova_base.NovaObjectRegistry.register_notification
 class InstanceActionVolumePayload(InstanceActionPayload):
     # Version 1.0: Initial version
-    #         1.1: Added key_name field to InstancePayload
-    #         1.2: Add BDM related data
+    # Version 1.1: Added key_name field to InstancePayload
+    # Version 1.2: Add BDM related data
+    # Version 1.3: Added updated_at field to InstancePayload
 
-    VERSION = '1.2'
+    VERSION = '1.3'
     fields = {
         'volume_id': fields.UUIDField()
     }
@@ -161,7 +166,8 @@ class InstanceActionVolumeSwapPayload(InstanceActionPayload):
     # Version 1.2: Added auto_disk_config field to InstancePayload
     # Version 1.3: Added key_name field to InstancePayload
     # Version 1.4: Add BDM related data
-    VERSION = '1.4'
+    # Version 1.5: Added updated_at field to InstancePayload
+    VERSION = '1.5'
     fields = {
         'old_volume_id': fields.UUIDField(),
         'new_volume_id': fields.UUIDField(),
@@ -188,7 +194,8 @@ class InstanceCreatePayload(InstanceActionPayload):
     #         1.4: Add key_name field to InstancePayload
     #         1.5: Add BDM related data to InstancePayload
     #         1.6: Add tags field to InstanceCreatePayload
-    VERSION = '1.6'
+    #         1.7: Added updated_at field to InstancePayload
+    VERSION = '1.7'
 
     fields = {
         'keypairs': fields.ListOfObjectsField('KeypairPayload'),
@@ -213,7 +220,8 @@ class InstanceUpdatePayload(InstancePayload):
     # Version 1.3: Added auto_disk_config field to InstancePayload
     # Version 1.4: Added key_name field to InstancePayload
     # Version 1.5: Add BDM related data
-    VERSION = '1.5'
+    # Version 1.6: Added updated_at field to InstancePayload
+    VERSION = '1.6'
     fields = {
         'state_update': fields.ObjectField('InstanceStateUpdatePayload'),
         'audit_period': fields.ObjectField('AuditPeriodPayload'),

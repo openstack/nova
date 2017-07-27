@@ -5,7 +5,7 @@
     "payload": {
         "nova_object.name": "InstanceActionPayload",
         "nova_object.namespace": "nova",
-        "nova_object.version": "1.4",
+        "nova_object.version": "1.5",
         "nova_object.data": {
             "display_description": "some-server",
             "reservation_id": "r-rqe0mlje",
@@ -82,7 +82,8 @@
             "host": "compute",
             "image_uuid": "a2459075-d96c-40d5-893e-577ff92e721c",
             "state": "active",
-            "fault": null
+            "fault": null,
+            "updated_at": "2012-10-29T13:42:11Z"
         }
     }
 }

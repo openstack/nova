@@ -83,10 +83,12 @@
             "tenant_id": "6f70656e737461636b20342065766572",
             "terminated_at": null,
             "user_id": "fake",
-            "uuid": "d5ca7280-1f12-4238-a86f-378bb5d93c38"},
+            "uuid": "d5ca7280-1f12-4238-a86f-378bb5d93c38",
+            "updated_at": "2012-10-29T13:42:11Z"
+        },
         "nova_object.name": "InstanceUpdatePayload",
         "nova_object.namespace": "nova",
-        "nova_object.version": "1.5"},
+        "nova_object.version": "1.6"},
     "priority": "INFO",
     "publisher_id": "nova-api:fake-mini"
 }
