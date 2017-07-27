@@ -161,6 +161,12 @@ class TestInstanceNotificationSample(
         self._attach_volume_to_server(server, self.cinder.SWAP_OLD_VOL)
         self.api.delete_server(server['id'])
         self._wait_until_deleted(server)
+        # NOTE(gibi): The wait_unit_deleted() call polls the REST API to see if
+        # the instance is disappeared however the _delete_instance() in
+        # compute/manager destroys the instance first then send the
+        # instance.delete.end notification. So to avoid race condition the test
+        # needs to wait for the notification as well here.
+        self._wait_for_notification('instance.delete.end')
         self.assertEqual(9, len(fake_notifier.VERSIONED_NOTIFICATIONS),
                          fake_notifier.VERSIONED_NOTIFICATIONS)
 
