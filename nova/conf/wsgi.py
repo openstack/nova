@@ -45,12 +45,22 @@ Possible values:
         default='%(client_ip)s "%(request_line)s" status: %(status_code)s'
                 ' len: %(body_length)s time: %(wall_seconds).7f',
         deprecated_group='DEFAULT',
+        deprecated_for_removal=True,
+        deprecated_since='16.0.0',
+        deprecated_reason="""
+This option only works when running nova-api under eventlet, and
+encodes very eventlet specific pieces of information. Starting in Pike
+the preferred model for running nova-api is under uwsgi or apache
+mod_wsgi.
+""",
         help="""
 It represents a python format string that is used as the template to generate
 log lines. The following values can be formatted into it: client_ip,
 date_time, request_line, status_code, body_length, wall_seconds.
 
-This option is used for building custom request loglines.
+This option is used for building custom request loglines when running
+nova-api under eventlet. If used under uwsgi or apache, this option
+has no effect.
 
 Possible values:
 

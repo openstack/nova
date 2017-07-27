@@ -1,0 +1,6 @@
+---
+deprecations:
+  - |
+    Configuration option ``wsgi_log_format`` is deprecated. This only
+    applies when running nova-api under eventlet, which is no longer
+    the preferred deployment mode.
