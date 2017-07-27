@@ -39,6 +39,42 @@ from nova.tests import uuidsentinel
 CONF = conf.CONF
 
 
+class UtilitiesTestCase(test.NoDBTestCase):
+
+    def test_mask_passwd(self):
+        # try to trip up the regex match with extra : and @.
+        url1 = ("http://user:pass@domain.com:1234/something?"
+                "email=me@somewhere.com")
+        self.assertEqual(
+            ("http://user:****@domain.com:1234/something?"
+             "email=me@somewhere.com"),
+            manage.mask_passwd_in_url(url1))
+
+        # pretty standard kinds of urls that we expect, have different
+        # schemes. This ensures none of the parts get lost.
+        url2 = "mysql+pymysql://root:pass@127.0.0.1/nova_api?charset=utf8"
+        self.assertEqual(
+            "mysql+pymysql://root:****@127.0.0.1/nova_api?charset=utf8",
+            manage.mask_passwd_in_url(url2))
+
+        url3 = "rabbit://stackrabbit:pass@10.42.0.53:5672/"
+        self.assertEqual(
+            "rabbit://stackrabbit:****@10.42.0.53:5672/",
+            manage.mask_passwd_in_url(url3))
+
+        url4 = ("mysql+pymysql://nova:my_password@my_IP/nova_api?"
+                "charset=utf8&ssl_ca=/etc/nova/tls/mysql/ca-cert.pem"
+                "&ssl_cert=/etc/nova/tls/mysql/server-cert.pem"
+                "&ssl_key=/etc/nova/tls/mysql/server-key.pem")
+        url4_safe = ("mysql+pymysql://nova:****@my_IP/nova_api?"
+                "charset=utf8&ssl_ca=/etc/nova/tls/mysql/ca-cert.pem"
+                "&ssl_cert=/etc/nova/tls/mysql/server-cert.pem"
+                "&ssl_key=/etc/nova/tls/mysql/server-key.pem")
+        self.assertEqual(
+            url4_safe,
+            manage.mask_passwd_in_url(url4))
+
+
 class FloatingIpCommandsTestCase(test.NoDBTestCase):
     def setUp(self):
         super(FloatingIpCommandsTestCase, self).setUp()
@@ -1454,13 +1490,30 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         self.assertIn('--database_connection', self.output.getvalue())
 
     def test_list_cells_no_cells_verbose_false(self):
+        ctxt = context.RequestContext()
+        # This uses fake uuids so the table can stay under 80 characeters.
+        cell_mapping0 = objects.CellMapping(
+            context=ctxt, uuid='00000000-0000-0000',
+            database_connection='fake://user1:pass1@host1/db0',
+            transport_url='none://user1:pass1@host1/',
+            name='cell0')
+        cell_mapping0.create()
+        cell_mapping1 = objects.CellMapping(
+            context=ctxt, uuid='9e36a3ed-3eb6-4327',
+            database_connection='fake://user1@host1/db0',
+            transport_url='none://user1@host1/vhost1',
+            name='cell1')
+        cell_mapping1.create()
         self.assertEqual(0, self.commands.list_cells())
         output = self.output.getvalue().strip()
         self.assertEqual('''\
-+------+------+
-| Name | UUID |
-+------+------+
-+------+------+''', output)
++-------+--------------------+---------------------------+-----------------------------+
+|  Name |        UUID        |       Transport URL       |     Database Connection     |
++-------+--------------------+---------------------------+-----------------------------+
+| cell0 | 00000000-0000-0000 |  none://user1:****@host1/ | fake://user1:****@host1/db0 |
+| cell1 | 9e36a3ed-3eb6-4327 | none://user1@host1/vhost1 |    fake://user1@host1/db0   |
++-------+--------------------+---------------------------+-----------------------------+''',  # noqa
+                         output)
 
     def test_list_cells_multiple_sorted_verbose_true(self):
         ctxt = context.RequestContext()
