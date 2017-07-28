@@ -1561,10 +1561,14 @@ class ComputeManager(manager.Manager):
                         ' Error: %s', e.message, instance=instance)
             raise
 
-        except Exception:
+        except Exception as ex:
             LOG.exception('Instance failed block device setup',
                           instance=instance)
-            raise exception.InvalidBDM()
+            # InvalidBDM will eventually result in a BuildAbortException when
+            # booting from volume, and will be recorded as an instance fault.
+            # Maintain the original exception message which most likely has
+            # useful details which the standard InvalidBDM error message lacks.
+            raise exception.InvalidBDM(six.text_type(ex))
 
     def _update_instance_after_spawn(self, context, instance):
         instance.power_state = self._get_power_state(context, instance)
