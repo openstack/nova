@@ -6355,7 +6355,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(volume_drivers.LibvirtFakeVolumeDriver,
                        'connect_volume')
     @mock.patch.object(volume_drivers.LibvirtFakeVolumeDriver, 'get_config')
-    def test_get_volume_config(self, get_config, connect_volume):
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_set_cache_mode')
+    def test_get_volume_config(self, _set_cache_mode,
+                               get_config, connect_volume):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         connection_info = {'driver_volume_type': 'fake',
                            'data': {'device_path': '/fake',
@@ -6370,6 +6372,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         get_config.return_value = mock_config
         config = drvr._get_volume_config(connection_info, disk_info)
         get_config.assert_called_once_with(connection_info, disk_info)
+        _set_cache_mode.assert_called_once_with(config)
         self.assertEqual(mock_config, config)
 
     def test_attach_invalid_volume_type(self):
@@ -6460,12 +6463,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock.patch.object(drvr, '_connect_volume'),
             mock.patch.object(drvr, '_get_volume_config',
                               return_value=mock_conf),
-            mock.patch.object(drvr, '_set_cache_mode'),
             mock.patch.object(drvr, '_check_discard_for_attach_volume'),
             mock.patch.object(drvr, '_build_device_metadata'),
             mock.patch.object(objects.Instance, 'save')
-        ) as (mock_connect_volume, mock_get_volume_config,
-              mock_set_cache_mode, mock_check_discard,
+        ) as (mock_connect_volume, mock_get_volume_config, mock_check_discard,
               mock_build_metadata, mock_save):
             for state in (power_state.RUNNING, power_state.PAUSED):
                 mock_dom.info.return_value = [state, 512, 512, 2, 1234, 5678]
@@ -6486,7 +6487,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     connection_info, disk_info, instance)
                 mock_get_volume_config.assert_called_with(
                     connection_info, disk_info)
-                mock_set_cache_mode.assert_called_with(mock_conf)
                 mock_dom.attachDeviceFlags.assert_called_with(
                     mock_conf.to_xml(), flags=flags)
                 mock_check_discard.assert_called_with(mock_conf, instance)
@@ -14797,9 +14797,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                               'save'),
             mock.patch.object(drvr, '_connect_volume'),
             mock.patch.object(drvr, '_get_volume_config',
-                              return_value=mock_conf),
-            mock.patch.object(drvr, '_set_cache_mode')
-        ) as (volume_save, connect_volume, get_volume_config, set_cache_mode):
+                              return_value=mock_conf)
+        ) as (volume_save, connect_volume, get_volume_config):
             devices = drvr._get_guest_storage_config(instance, image_meta,
                 disk_info, False, bdi, flavor, "hvm")
 
@@ -14811,7 +14810,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             get_volume_config.assert_called_with(bdm['connection_info'],
                 {'bus': 'virtio', 'type': 'disk', 'dev': 'vdc'})
             volume_save.assert_called_once_with()
-            self.assertEqual(3, set_cache_mode.call_count)
 
     def test_get_neutron_events(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
