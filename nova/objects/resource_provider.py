@@ -738,7 +738,9 @@ def _get_providers_with_shared_capacity(ctx, rc_id, amount):
         rp_to_rpt_join, t_tbl,
         sa.and_(
             rpt_tbl.c.trait_id == t_tbl.c.id,
-            t_tbl.c.name == os_traits.MISC_SHARES_VIA_AGGREGATE,
+            # The traits table wants unicode trait names, but os_traits
+            # presents native str, so we need to cast.
+            t_tbl.c.name == six.text_type(os_traits.MISC_SHARES_VIA_AGGREGATE),
         ),
     )
 
