@@ -429,7 +429,20 @@ class Guest(object):
 
         LOG.debug('Attempting initial detach for device %s',
                   alternative_device_name)
-        _try_detach_device(conf, persistent, live)
+        try:
+            _try_detach_device(conf, persistent, live)
+        except exception.DeviceNotFound:
+            # NOTE(melwitt): There are effectively two configs for an instance.
+            # The persistent config (affects instance upon next boot) and the
+            # live config (affects running instance). When we detach a device,
+            # we need to detach it from both configs if the instance has a
+            # persistent config and a live config. If we tried to detach the
+            # device with persistent=True and live=True and it was not found,
+            # we should still try to detach from the live config, so continue.
+            if persistent and live:
+                pass
+            else:
+                raise
         LOG.debug('Start retrying detach until device %s is gone.',
                   alternative_device_name)
 
