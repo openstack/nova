@@ -315,9 +315,6 @@ class TestPlacementURLs(test.NoDBTestCase):
 
 class TestNormalizeResourceQsParam(test.NoDBTestCase):
 
-    def setUp(self):
-        super(TestNormalizeResourceQsParam, self).setUp()
-
     def test_success(self):
         qs = "VCPU:1"
         resources = util.normalize_resources_qs_param(qs)
