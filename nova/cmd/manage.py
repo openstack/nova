@@ -101,7 +101,10 @@ CONF = nova.conf.CONF
 
 QUOTAS = quota.QUOTAS
 
-_EXTRA_DEFAULT_LOG_LEVELS = ['oslo_db=INFO', 'oslo_policy=INFO']
+# Keep this list sorted and one entry per line for readability.
+_EXTRA_DEFAULT_LOG_LEVELS = ['oslo_concurrency=INFO',
+                             'oslo_db=INFO',
+                             'oslo_policy=INFO']
 
 
 # Decorators for actions
