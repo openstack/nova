@@ -692,7 +692,15 @@ class VMOps(object):
             if delete:
                 self._pathutils.remove(configdrive_path)
 
+    @serialconsoleops.instance_synchronized
     def _delete_disk_files(self, instance_name):
+        # We want to avoid the situation in which serial console workers
+        # are started while we perform this operation, preventing us from
+        # deleting the instance log files (bug #1556189). This can happen
+        # due to delayed instance lifecycle events.
+        #
+        # The unsynchronized method is being used to avoid a deadlock.
+        self._serial_console_ops.stop_console_handler_unsync(instance_name)
         self._pathutils.get_instance_dir(instance_name,
                                          create_dir=False,
                                          remove_dir=True)

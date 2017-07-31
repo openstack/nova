@@ -1056,6 +1056,10 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
     def test_delete_disk_files(self):
         mock_instance = fake_instance.fake_instance_obj(self.context)
         self._vmops._delete_disk_files(mock_instance.name)
+
+        stop_console_handler = (
+            self._vmops._serial_console_ops.stop_console_handler_unsync)
+        stop_console_handler.assert_called_once_with(mock_instance.name)
         self._vmops._pathutils.get_instance_dir.assert_called_once_with(
             mock_instance.name, create_dir=False, remove_dir=True)
 
