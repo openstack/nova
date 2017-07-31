@@ -253,23 +253,6 @@ def write_to_file(path, contents, umask=None):
             os.umask(saved_umask)
 
 
-def update_mtime(path):
-    """Touch a file without being the owner.
-
-    :param path: File bump the mtime on
-    """
-    try:
-        utils.execute('touch', '-c', path, run_as_root=True)
-    except processutils.ProcessExecutionError as exc:
-        # touch can intermittently fail when launching several instances with
-        # the same base image and using shared storage, so log the exception
-        # but don't fail. Ideally we'd know if we were on shared storage and
-        # would re-raise the error if we are not on shared storage.
-        LOG.warning("Failed to update mtime on path %(path)s. "
-                    "Error: %(error)s",
-                    {'path': path, "error": exc})
-
-
 def _id_map_to_config(id_map):
     return "%s:%s:%s" % (id_map.start, id_map.target, id_map.count)
 

@@ -34,7 +34,6 @@ from nova.tests.unit import fake_instance
 from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.virt.libvirt import imagecache
-from nova.virt.libvirt import utils as libvirt_utils
 
 CONF = nova.conf.CONF
 
@@ -430,8 +429,8 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                 self.assertNotEqual(stream.getvalue().find('Failed to remove'),
                                     -1)
 
-    @mock.patch.object(libvirt_utils, 'update_mtime')
-    def test_mark_in_use(self, mock_mtime):
+    @mock.patch('nova.privsep.dac_admin.utime')
+    def test_mark_in_use(self, mock_utime):
         img = '123'
 
         with self._make_base_file() as fname:
@@ -440,13 +439,13 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             image_cache_manager.used_images = {'123': (1, 0, ['banana-42'])}
             image_cache_manager._mark_in_use(img, fname)
 
-            mock_mtime.assert_called_once_with(fname)
+            mock_utime.assert_called_once_with(fname)
             self.assertEqual(image_cache_manager.unexplained_images, [])
             self.assertEqual(image_cache_manager.removable_base_files, [])
 
-    @mock.patch.object(libvirt_utils, 'update_mtime')
+    @mock.patch('nova.privsep.dac_admin.utime')
     @mock.patch.object(lockutils, 'external_lock')
-    def test_verify_base_images(self, mock_lock, mock_mtime):
+    def test_verify_base_images(self, mock_lock, mock_utime):
         hashed_1 = '356a192b7913b04c54574d18c28d46e6395428ab'
         hashed_21 = '472b07b9fcf2c2451e8781e944bf5f77cd8457c8'
         hashed_22 = '12c6fc06c99a462375eeb3f43dfd832b08ca9e17'
@@ -679,12 +678,12 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
         self.assertEqual(image_cache_manager.back_swap_images, expect_set)
 
     @mock.patch.object(lockutils, 'external_lock')
-    @mock.patch.object(libvirt_utils, 'update_mtime')
     @mock.patch('os.path.exists')
     @mock.patch('os.path.getmtime')
     @mock.patch('os.remove')
-    def test_age_and_verify_swap_images(self, mock_remove, mock_getmtime,
-            mock_exist, mock_mtime, mock_lock):
+    @mock.patch('nova.privsep.dac_admin.utime')
+    def test_age_and_verify_swap_images(self, mock_utime, mock_remove,
+            mock_getmtime, mock_exist, mock_lock):
         base_dir = '/tmp_age_test'
         self.flags(image_info_filename_pattern=base_dir + '/%(image)s.info',
                    group='libvirt')

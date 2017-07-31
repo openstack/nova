@@ -758,13 +758,6 @@ disk size: 4.4M
         image_arch = libvirt_utils.get_arch(image_meta)
         self.assertEqual(obj_fields.Architecture.X86_64, image_arch)
 
-    def test_update_mtime_error(self):
-        with mock.patch('nova.utils.execute',
-                        side_effect=processutils.ProcessExecutionError):
-            with mock.patch.object(libvirt_utils.LOG, 'warning') as mock_log:
-                libvirt_utils.update_mtime(mock.sentinel.path)
-        self.assertTrue(mock_log.called)
-
     def test_is_mounted(self):
         mount_path = "/var/lib/nova/mnt"
         source = "192.168.0.1:/nova"

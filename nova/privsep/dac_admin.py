@@ -65,6 +65,18 @@ def chmod(path, mode):
     os.chmod(path, mode)
 
 
+@nova.privsep.dac_admin_pctxt.entrypoint
+def utime(path):
+    if not os.path.exists(path):
+        raise exception.FileNotFound(file_path=path)
+
+    # NOTE(mikal): the old version of this used execute(touch, ...), which
+    # would apparently fail on shared storage when multiple instances were
+    # being launched at the same time. If we see failures here, we might need
+    # to wrap this in a try / except.
+    os.utime(path, None)
+
+
 class path(object):
     @staticmethod
     @nova.privsep.dac_admin_pctxt.entrypoint

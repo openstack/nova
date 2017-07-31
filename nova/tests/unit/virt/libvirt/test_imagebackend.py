@@ -341,7 +341,8 @@ class FlatTestCase(_ImageTestCase, test.NoDBTestCase):
     @mock.patch.object(imagebackend.disk, 'extend')
     @mock.patch.object(fake_libvirt_utils, 'copy_image')
     @mock.patch.object(imagebackend.utils, 'synchronized')
-    def test_create_image(self, mock_sync, mock_copy, mock_extend):
+    @mock.patch('nova.privsep.dac_admin.utime')
+    def test_create_image(self, mock_utime, mock_sync, mock_copy, mock_extend):
         mock_sync.side_effect = lambda *a, **kw: self._fake_deco
         fn = mock.MagicMock()
         image = self.image_class(self.INSTANCE, self.NAME)
@@ -351,6 +352,7 @@ class FlatTestCase(_ImageTestCase, test.NoDBTestCase):
         fn.assert_called_once_with(target=self.TEMPLATE_PATH, image_id=None)
         self.assertTrue(mock_sync.called)
         self.assertFalse(mock_extend.called)
+        mock_utime.assert_called()
 
     @mock.patch.object(imagebackend.disk, 'extend')
     @mock.patch.object(fake_libvirt_utils, 'copy_image')
@@ -372,8 +374,9 @@ class FlatTestCase(_ImageTestCase, test.NoDBTestCase):
     @mock.patch.object(imagebackend.utils, 'synchronized')
     @mock.patch.object(images, 'qemu_img_info',
                        return_value=imageutils.QemuImgInfo())
-    def test_create_image_extend(self, mock_qemu, mock_sync, mock_copy,
-                                 mock_extend):
+    @mock.patch('nova.privsep.dac_admin.utime')
+    def test_create_image_extend(self, mock_utime, mock_qemu, mock_sync,
+                                 mock_copy, mock_extend):
         mock_sync.side_effect = lambda *a, **kw: self._fake_deco
         fn = mock.MagicMock()
         mock_qemu.return_value.virtual_size = 1024
@@ -389,6 +392,7 @@ class FlatTestCase(_ImageTestCase, test.NoDBTestCase):
             imgmodel.LocalFileImage(self.PATH, imgmodel.FORMAT_RAW),
             self.SIZE)
         mock_qemu.assert_called_once_with(self.TEMPLATE_PATH)
+        mock_utime.assert_called()
 
     @mock.patch.object(os.path, 'exists')
     @mock.patch.object(imagebackend.images, 'qemu_img_info')
@@ -498,7 +502,9 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
     @mock.patch.object(imagebackend.utils, 'synchronized')
     @mock.patch.object(fake_libvirt_utils, 'create_cow_image')
     @mock.patch.object(imagebackend.disk, 'extend')
-    def test_create_image(self, mock_extend, mock_create, mock_sync):
+    @mock.patch('nova.privsep.dac_admin.utime')
+    def test_create_image(self, mock_utime, mock_extend, mock_create,
+                          mock_sync):
         mock_sync.side_effect = lambda *a, **kw: self._fake_deco
         fn = mock.MagicMock()
         image = self.image_class(self.INSTANCE, self.NAME)
@@ -509,13 +515,15 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         fn.assert_called_once_with(target=self.TEMPLATE_PATH)
         self.assertTrue(mock_sync.called)
         self.assertFalse(mock_extend.called)
+        mock_utime.assert_called()
 
     @mock.patch.object(imagebackend.utils, 'synchronized')
     @mock.patch.object(fake_libvirt_utils, 'create_cow_image')
     @mock.patch.object(imagebackend.disk, 'extend')
     @mock.patch.object(os.path, 'exists', side_effect=[])
     @mock.patch.object(imagebackend.Image, 'verify_base_size')
-    def test_create_image_with_size(self, mock_verify, mock_exist,
+    @mock.patch('nova.privsep.dac_admin.utime')
+    def test_create_image_with_size(self, mock_utime, mock_verify, mock_exist,
                                     mock_extend, mock_create, mock_sync):
         mock_sync.side_effect = lambda *a, **kw: self._fake_deco
         fn = mock.MagicMock()
@@ -537,14 +545,16 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         fn.assert_called_once_with(target=self.TEMPLATE_PATH)
         mock_exist.assert_has_calls(exist_calls)
         self.assertTrue(mock_sync.called)
+        mock_utime.assert_called()
 
     @mock.patch.object(imagebackend.utils, 'synchronized')
     @mock.patch.object(fake_libvirt_utils, 'create_cow_image')
     @mock.patch.object(imagebackend.disk, 'extend')
     @mock.patch.object(os.path, 'exists', side_effect=[])
     @mock.patch.object(imagebackend.Qcow2, 'get_disk_size')
-    def test_create_image_too_small(self, mock_get, mock_exist, mock_extend,
-                                    mock_create, mock_sync):
+    @mock.patch('nova.privsep.dac_admin.utime')
+    def test_create_image_too_small(self, mock_utime, mock_get, mock_exist,
+                                    mock_extend, mock_create, mock_sync):
         mock_sync.side_effect = lambda *a, **kw: self._fake_deco
         mock_get.return_value = self.SIZE
         fn = mock.MagicMock()
@@ -569,8 +579,10 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
     @mock.patch.object(os.path, 'exists', side_effect=[])
     @mock.patch.object(imagebackend.Image, 'verify_base_size')
     @mock.patch.object(fake_libvirt_utils, 'copy_image')
-    def test_generate_resized_backing_files(self, mock_copy, mock_verify,
-                                            mock_exist, mock_extend, mock_get,
+    @mock.patch('nova.privsep.dac_admin.utime')
+    def test_generate_resized_backing_files(self, mock_utime, mock_copy,
+                                            mock_verify, mock_exist,
+                                            mock_extend, mock_get,
                                             mock_create, mock_sync):
         mock_sync.side_effect = lambda *a, **kw: self._fake_deco
         mock_get.return_value = self.QCOW2_BASE
@@ -597,6 +609,7 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
         fn.assert_called_once_with(target=self.TEMPLATE_PATH)
         self.assertTrue(mock_sync.called)
         self.assertFalse(mock_create.called)
+        mock_utime.assert_called()
 
     @mock.patch.object(imagebackend.utils, 'synchronized')
     @mock.patch.object(fake_libvirt_utils, 'create_cow_image')
@@ -604,10 +617,11 @@ class Qcow2TestCase(_ImageTestCase, test.NoDBTestCase):
     @mock.patch.object(imagebackend.disk, 'extend')
     @mock.patch.object(os.path, 'exists', side_effect=[])
     @mock.patch.object(imagebackend.Image, 'verify_base_size')
-    def test_qcow2_exists_and_has_no_backing_file(self, mock_verify,
-                                                  mock_exist, mock_extend,
-                                                  mock_get, mock_create,
-                                                  mock_sync):
+    @mock.patch('nova.privsep.dac_admin.utime')
+    def test_qcow2_exists_and_has_no_backing_file(self, mock_utime,
+                                                  mock_verify, mock_exist,
+                                                  mock_extend, mock_get,
+                                                  mock_create, mock_sync):
         mock_sync.side_effect = lambda *a, **kw: self._fake_deco
         mock_get.return_value = None
         fn = mock.MagicMock()
