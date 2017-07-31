@@ -4500,9 +4500,10 @@ pool:
   type: string
 port:
   description: |
-    To provision the server instance with a NIC for an already existing port, specify
-    the port-id in the ``port`` attribute in a ``networks`` object. The port status
-    must be ``DOWN``. required if you omit the ``uuid`` attribute.
+    To provision the server instance with a NIC for an already existing port,
+    specify the port-id in the ``port`` attribute in a ``networks`` object.
+    The port status must be ``DOWN``. Required if you omit the ``uuid``
+    attribute. Requested security groups are not applied to pre-existing ports.
   in: body
   required: false
   type: string
@@ -4913,9 +4914,10 @@ security_group_rules_quota_details:
   max_version: 2.35
 security_groups:
   description: |
-    One or more security groups. Specify the name of the security group in the ``name``
-    attribute. If you omit this attribute, the API creates the server in the ``default``
-    security group.
+    One or more security groups. Specify the name of the security group in the
+    ``name`` attribute. If you omit this attribute, the API creates the server
+    in the ``default`` security group. Requested security groups are not
+    applied to pre-existing ports.
   in: body
   required: false
   type: array
