@@ -178,11 +178,14 @@ def _ensure_no_port_binding_failure(port):
         raise exception.PortBindingFailed(port_id=port['id'])
 
 
-def _filter_hypervisor_macs(instance, ports, hypervisor_macs):
+def _filter_hypervisor_macs(instance, requested_ports_dict, hypervisor_macs):
     """Removes macs from set if used by existing ports
 
-    :param requested_networks: list of NetworkRequests
-    :type requested_networks: nova.objects.NetworkRequestList
+    :param instance: The server instance.
+    :type instance: nova.objects.instance.Instance
+    :param requested_ports_dict: dict, keyed by port ID, of ports requested by
+        the user
+    :type requested_ports_dict: dict
     :param hypervisor_macs: None or a set of MAC addresses that the
         instance should use. hypervisor_macs are supplied by the hypervisor
         driver (contrast with requested_networks which is user supplied).
@@ -204,10 +207,10 @@ def _filter_hypervisor_macs(instance, ports, hypervisor_macs):
     # to create a port on a network. If we find a mac with a
     # pre-allocated port we also remove it from this set.
     available_macs = set(hypervisor_macs)
-    if not ports:
+    if not requested_ports_dict:
         return available_macs
 
-    for port in ports.values():
+    for port in requested_ports_dict.values():
         mac = port['mac_address']
         if mac not in hypervisor_macs:
             LOG.debug("Port %(port)s mac address %(mac)s is "
@@ -515,13 +518,17 @@ class API(base_api.NetworkAPI):
         """Processes and validates requested networks for allocation.
 
         Iterates over the list of NetworkRequest objects, validating the
-        request and building sets of ports, networks and MAC addresses to
+        request and building sets of ports and networks to
         use for allocating ports for the instance.
 
+        :param context: The user request context.
+        :type context: nova.context.RequestContext
         :param instance: allocate networks on this instance
         :type instance: nova.objects.Instance
         :param neutron: neutron client session
         :type neutron: neutronclient.v2_0.client.Client
+        :param requested_networks: List of user-requested networks and/or ports
+        :type requested_networks: nova.objects.NetworkRequestList
         :returns: tuple of:
             - ports: dict mapping of port id to port dict
             - ordered_networks: list of nova.objects.NetworkRequest objects
@@ -672,10 +679,19 @@ class API(base_api.NetworkAPI):
 
         :param context: The request context.
         :param instance: nova.objects.instance.Instance object.
-        :param requested_networks: value containing
-            network_id, fixed_ip, and port_id
+        :param neutron: neutron client
+        :param requested_networks: nova.objects.NetworkRequestList, list of
+            user-requested networks and/or ports; may be empty
         :param ordered_networks: output from _validate_requested_port_ids
             that will be used to create and update ports
+        :returns: dict, keyed by network ID, of networks to use
+        :raises InterfaceAttachFailedNoNetwork: If no specific networks were
+            requested and none are available.
+        :raises NetworkAmbiguous: If no specific networks were requested but
+            more than one is available.
+        :raises ExternalNetworkAttachForbidden: If the policy rules forbid
+            the request context from using an external non-shared network but
+            one was requested (or available).
         """
 
         # Get networks from Neutron
@@ -743,9 +759,12 @@ class API(base_api.NetworkAPI):
         :param instance: nova.objects.instance.Instance object.
         :param ordered_networks: objects.NetworkRequestList in requested order
         :param nets: a dict of network_id to networks returned from neutron
-        :param neutron: neutronclient using built from users request context
-        :param security_group_ids: a list of security_groups to go to neutron
-        :returns a list of pairs (NetworkRequest, created_port_uuid)
+        :param neutron: neutronclient built from users request context
+        :param security_group_ids: a list of security group IDs to be applied
+            to any ports created
+        :returns a list of pairs (NetworkRequest, created_port_uuid); note that
+            created_port_uuid will be None for the pair where a pre-existing
+            port was part of the user request
         """
         created_port_ids = []
         requests_and_created_ports = []
@@ -836,10 +855,15 @@ class API(base_api.NetworkAPI):
         neutron = get_client(context)
 
         #
-        # Validate ports and networks with neutron
+        # Validate ports and networks with neutron. The requested_ports_dict
+        # variable is a dict, keyed by port ID, of ports that were on the user
+        # request and may be empty. The ordered_networks variable is a list of
+        # NetworkRequest objects for any networks or ports specifically
+        # requested by the user, which again may be empty.
         #
-        ports, ordered_networks = self._validate_requested_port_ids(
-            context, instance, neutron, requested_networks)
+        requested_ports_dict, ordered_networks = (
+            self._validate_requested_port_ids(
+                context, instance, neutron, requested_networks))
 
         nets = self._validate_requested_network_ids(
             context, instance, neutron, requested_networks, ordered_networks)
@@ -847,14 +871,19 @@ class API(base_api.NetworkAPI):
             LOG.debug("No network configured", instance=instance)
             return network_model.NetworkInfo([])
 
-        #
-        # Create any ports that might be required,
-        # after validating requested security groups
-        #
+        # Validate requested security groups
         security_groups = self._clean_security_groups(security_groups)
         security_group_ids = self._process_security_groups(
                                     instance, neutron, security_groups)
 
+        # Create ports from the list of ordered_networks. The returned
+        # requests_and_created_ports variable is a list of 2-item tuples of
+        # the form (NetworkRequest, created_port_id). Note that a tuple pair
+        # will have None for the created_port_id if the NetworkRequest already
+        # contains a port_id, meaning the user requested a specific
+        # pre-existing port so one wasn't created here. The ports will be
+        # updated later in _update_ports_for_instance to be bound to the
+        # instance and compute host.
         requests_and_created_ports = self._create_ports_for_instance(
             context, instance, ordered_networks, nets, neutron,
             security_group_ids)
@@ -862,13 +891,14 @@ class API(base_api.NetworkAPI):
         #
         # Update existing and newly created ports
         #
-        available_macs = _filter_hypervisor_macs(instance, ports, macs)
+        available_macs = _filter_hypervisor_macs(
+            instance, requested_ports_dict, macs)
 
         # We always need admin_client to build nw_info,
         # we sometimes need it when updating ports
         admin_client = get_client(context, admin=True)
 
-        ordered_nets, ordered_ports, preexisting_port_ids, \
+        ordered_nets, ordered_port_ids, preexisting_port_ids, \
             created_port_ids = self._update_ports_for_instance(
                 context, instance,
                 neutron, admin_client, requests_and_created_ports, nets,
@@ -880,7 +910,7 @@ class API(base_api.NetworkAPI):
         #
         nw_info = self.get_instance_nw_info(
             context, instance, networks=ordered_nets,
-            port_ids=ordered_ports,
+            port_ids=ordered_port_ids,
             admin_client=admin_client,
             preexisting_port_ids=preexisting_port_ids,
             update_cells=True)
@@ -909,12 +939,22 @@ class API(base_api.NetworkAPI):
         :param instance: nova.objects.instance.Instance object.
         :param neutron: client using user context
         :param admin_client: client using admin context
-        :param requests_and_created_ports: [(NetworkRequest, created_port_id)]
+        :param requests_and_created_ports: [(NetworkRequest, created_port_id)];
+            Note that created_port_id will be None for any user-requested
+            pre-existing port.
         :param nets: a dict of network_id to networks returned from neutron
         :param bind_host_id: a string for port['binding:host_id']
         :param dhcp_opts: a list dicts that contain dhcp option name and value
             e.g. [{'opt_name': 'tftp-server', 'opt_value': '1.2.3.4'}]
         :param available_macs: a list of available mac addresses
+        :returns: tuple with the following::
+
+            * list of network dicts in their requested order
+            * list of port IDs in their requested order - note that does not
+              mean the port was requested by the user, it could be a port
+              created on a network requested by the user
+            * list of pre-existing port IDs requested by the user
+            * list of created port IDs
         """
 
         # The neutron client and port_client (either the admin context or
