@@ -644,7 +644,12 @@ class ResourceProvider(base.NovaObject):
         with conn.begin():
             if to_delete_names:
                 context.session.query(models.ResourceProviderTrait).filter(
-                    models.ResourceProviderTrait.trait_id.in_(to_delete_ids)
+                    sa.and_(
+                        models.ResourceProviderTrait.trait_id.in_(
+                            to_delete_ids),
+                        (models.ResourceProviderTrait.resource_provider_id ==
+                         _id)
+                    )
                 ).delete(synchronize_session='fetch')
             if to_add_names:
                 for name in to_add_names:
