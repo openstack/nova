@@ -1196,16 +1196,41 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         # Verify that our source host is what the server ended up on
         self.assertEqual(source_hostname, server['OS-EXT-SRV-ATTR:host'])
 
-        self._run_periodics()
-
-        # Check usages on the selected host after boot
         source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        dest_rp_uuid = self._get_provider_uuid_by_host(
+            self._other_hostname(source_hostname))
+
+        # Before we run periodics, make sure that we have allocations/usages
+        # only on the source host
         source_usages = self._get_provider_usages(source_rp_uuid)
         self.assertFlavorMatchesAllocation(flavor, source_usages)
 
         # Check that the other provider has no usage
-        dest_rp_uuid = self._get_provider_uuid_by_host(
-            self._other_hostname(source_hostname))
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+        self.assertEqual({'VCPU': 0,
+                          'MEMORY_MB': 0,
+                          'DISK_GB': 0}, dest_usages)
+
+        # Check that the server only allocates resource from the host it is
+        # booted on
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations),
+                         'No allocation for the server on the host it'
+                         'is booted on')
+        allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(flavor, allocation)
+
+        self._run_periodics()
+
+        # After running the periodics but before we start any resize operation,
+        # we should have exactly the same allocation/usage information as
+        # before running the periodics
+
+        # Check usages on the selected host after boot
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertFlavorMatchesAllocation(flavor, source_usages)
+
+        # Check that the other provider has no usage
         dest_usages = self._get_provider_usages(dest_rp_uuid)
         self.assertEqual({'VCPU': 0,
                           'MEMORY_MB': 0,
@@ -1233,6 +1258,26 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         }
         self.api.post_server_action(server['id'], resize_req)
         self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+
+        # OK, so the resize operation has run, but we have not yet confirmed or
+        # reverted the resize operation. Before we run periodics, make sure
+        # that we have allocations/usages on BOTH the source and the
+        # destination hosts (because during select_destinations(), the
+        # scheduler should have created a "doubled-up" allocation referencing
+        # both the source and destination hosts
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertFlavorMatchesAllocation(old_flavor, source_usages)
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+        self.assertFlavorMatchesAllocation(new_flavor, dest_usages)
+
+        # Check that the server allocates resource from both source and dest
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(2, len(allocations),
+                         'Expected scheduler to create doubled-up allocation')
+        source_alloc = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(old_flavor, source_alloc)
+        dest_alloc = allocations[dest_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(new_flavor, dest_alloc)
 
         self._run_periodics()
 
