@@ -1,0 +1,15 @@
+---
+other:
+  - |
+    The ``PUT /os-services/disable``, ``PUT /os-services/enable`` and
+    ``PUT /os-services/force-down`` APIs to enable, disable, or force-down a
+    service will now only work with *nova-compute* services. If you are using
+    those APIs to try and disable a non-compute service, like nova-scheduler or
+    nova-conductor, those APIs will result in a 404 response.
+
+    There really never was a good reason to disable or enable non-compute
+    services anyway since that would not do anything. The nova-scheduler and
+    nova-api services are checking the ``status`` and ``forced_down`` fields to
+    see if instance builds can be scheduled to a compute host or if instances
+    can be evacuated from a downed compute host. There is nothing that relies
+    on a disabled or downed nova-conductor or nova-scheduler service.
