@@ -906,6 +906,8 @@ class TestNetworkMetadata(test.NoDBTestCase):
                         'gateway': '192.168.1.1'
                     }
                 ],
+                'services': [{'address': '1.2.3.4', 'type': 'dns'},
+                             {'address': '2.3.4.5', 'type': 'dns'}],
                 'network_id': 1
             },
             net_metadata['networks'][0])
@@ -929,6 +931,8 @@ class TestNetworkMetadata(test.NoDBTestCase):
                         'gateway': 'fd00::1:1'
                     }
                 ],
+                'services': [{'address': '1:2:3:4::', 'type': 'dns'},
+                             {'address': '2:3:4:5::', 'type': 'dns'}],
                 'network_id': 1
             },
             net_metadata['networks'][1])
@@ -989,6 +993,10 @@ class TestNetworkMetadata(test.NoDBTestCase):
                         'gateway': 'fd00::1:1'
                     }
                 ],
+                'services': [
+                    {'address': '1:2:3:4::', 'type': 'dns'},
+                    {'address': '2:3:4:5::', 'type': 'dns'}
+                ],
                 'type': 'ipv6_%s' % mode,
                 'network_id': 1
             },
@@ -1019,6 +1027,10 @@ class TestNetworkMetadata(test.NoDBTestCase):
                     'gateway': '192.168.1.1',
                     'netmask': '255.255.255.0',
                     'network': '0.0.0.0'}],
+                'services': [
+                    {'address': '1.2.3.4', 'type': 'dns'},
+                    {'address': '2.3.4.5', 'type': 'dns'}
+                ],
             'type': 'ipv4'
         }
         net = netutils._get_nets(
@@ -1123,6 +1135,8 @@ class TestNetworkMetadata(test.NoDBTestCase):
                             "network": "0.0.0.0"
                         }
                     ],
+                   'services': [{'address': '1.2.3.4', 'type': 'dns'},
+                                {'address': '2.3.4.5', 'type': 'dns'}],
                     "type": "ipv4"
                 },
                 {
@@ -1137,6 +1151,8 @@ class TestNetworkMetadata(test.NoDBTestCase):
                               {'gateway': 'fd00::1:1',
                                'netmask': 'ffff:ffff:ffff::',
                                'network': '::'}],
+                   'services': [{'address': '1:2:3:4::', 'type': 'dns'},
+                                {'address': '2:3:4:5::', 'type': 'dns'}],
                    'type': 'ipv6'
                 },
                 {
@@ -1153,6 +1169,8 @@ class TestNetworkMetadata(test.NoDBTestCase):
                             "network": "0.0.0.0"
                         }
                     ],
+                   'services': [{'address': '1.2.3.4', 'type': 'dns'},
+                                {'address': '2.3.4.5', 'type': 'dns'}],
                     "type": "ipv4"
                 }
             ],
@@ -1218,6 +1236,8 @@ class TestNetworkMetadata(test.NoDBTestCase):
                             "gateway": "fd00::1:1"
                         }
                     ],
+                   'services': [{'address': '1:2:3:4::', 'type': 'dns'},
+                                {'address': '2:3:4:5::', 'type': 'dns'}],
                     "ip_address": "fd00::2",
                     "id": "network0"
                 }
