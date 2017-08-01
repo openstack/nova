@@ -25,6 +25,7 @@ semantics of real hypervisor connections.
 
 import collections
 import contextlib
+import copy
 
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -160,6 +161,7 @@ class FakeDriver(driver.ComputeDriver):
         self.active_migrations = {}
         if not _FAKE_NODES:
             set_nodes([CONF.host])
+        self._nodes = copy.copy(_FAKE_NODES)
 
     def init_host(self, host):
         return
@@ -467,7 +469,7 @@ class FakeDriver(driver.ComputeDriver):
                 'sockets': 4,
                 }),
             ])
-        if nodename not in _FAKE_NODES:
+        if nodename not in self._nodes:
             return {}
 
         host_status = self.host_status_base.copy()
@@ -566,7 +568,7 @@ class FakeDriver(driver.ComputeDriver):
                 'host': 'fakehost'}
 
     def get_available_nodes(self, refresh=False):
-        return _FAKE_NODES
+        return self._nodes
 
     def instance_on_disk(self, instance):
         return False

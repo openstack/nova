@@ -278,8 +278,9 @@ class TestOpenStackClient(object):
     def put_server(self, server_id, server):
         return self.api_put('/servers/%s' % server_id, server).body
 
-    def post_server_action(self, server_id, data):
-        return self.api_post('/servers/%s/action' % server_id, data).body
+    def post_server_action(self, server_id, data, **kwargs):
+        return self.api_post(
+            '/servers/%s/action' % server_id, data, **kwargs).body
 
     def delete_server(self, server_id):
         return self.api_delete('/servers/%s' % server_id)

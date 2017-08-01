@@ -1391,6 +1391,14 @@ class CinderFixture(fixtures.Fixture):
                            fake_unreserve_volume)
 
 
+class PlacementApiClient(object):
+    def __init__(self, placement_fixture):
+        self.fixture = placement_fixture
+
+    def get(self, url):
+        return client.APIResponse(self.fixture._fake_get(None, url))
+
+
 class PlacementFixture(fixtures.Fixture):
     """A fixture to placement operations.
 
@@ -1441,6 +1449,8 @@ class PlacementFixture(fixtures.Fixture):
         self.useFixture(fixtures.MonkeyPatch(
             'nova.scheduler.client.report.SchedulerReportClient.delete',
             self._fake_delete))
+
+        self.api = PlacementApiClient(self)
 
     @staticmethod
     def _update_headers_with_version(headers, **kwargs):
