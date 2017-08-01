@@ -3502,20 +3502,26 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
 
         self.stubs.Set(vm_utils, "safe_find_sr", lambda _x: "asdf")
-
-        expected = {'block_migration': True,
-                    'is_volume_backed': False,
-                    'migrate_data': {
-                        'migrate_send_data': {'value': 'fake_migrate_data'},
-                        'destination_sr_ref': 'asdf'
+        with mock.patch.object(self.conn._vmops._session, "host_ref") as \
+                fake_host_ref, mock.patch.object(
+                    self.conn._vmops, '_get_network_ref') as \
+                fake_get_network_ref:
+            fake_host_ref.return_value = 'fake_host_ref'
+            fake_get_network_ref.return_value = 'fake_network_ref'
+            expected = {'block_migration': True,
+                        'is_volume_backed': False,
+                        'migrate_data': {
+                            'migrate_send_data': {'value':
+                                                  'fake_migrate_data'},
+                            'destination_sr_ref': 'asdf'}
                         }
-                    }
-        result = self.conn.check_can_live_migrate_destination(self.context,
-                              {'host': 'host'},
-                              {}, {},
-                              True, False)
-        result.is_volume_backed = False
-        self.assertEqual(expected, result.to_legacy_dict())
+            result = self.conn.check_can_live_migrate_destination(
+                self.context,
+                {'host': 'host'},
+                {}, {},
+                True, False)
+            result.is_volume_backed = False
+            self.assertEqual(expected, result.to_legacy_dict())
 
     def test_check_live_migrate_destination_verifies_ip(self):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
@@ -3659,17 +3665,21 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
     def test_check_can_live_migrate_works(self, mock_get_by_host):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
         self.conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
-
-        metadata = {'host': 'test_host_uuid'}
-        aggregate = objects.Aggregate(metadata=metadata)
-        aggregate_list = objects.AggregateList(objects=[aggregate])
-        mock_get_by_host.return_value = aggregate_list
-
-        instance = objects.Instance(host='host')
-        self.conn.check_can_live_migrate_destination(
-            self.context, instance, None, None)
-        mock_get_by_host.assert_called_once_with(
-            self.context, CONF.host, key='hypervisor_pool')
+        with mock.patch.object(self.conn._vmops._session, "host_ref") as \
+                fake_host_ref, \
+                mock.patch.object(self.conn._vmops,
+                                  '_get_network_ref') as fake_get_network_ref:
+            fake_host_ref.return_value = 'fake_host_ref'
+            fake_get_network_ref.return_value = 'fake_network_ref'
+            metadata = {'host': 'test_host_uuid'}
+            aggregate = objects.Aggregate(metadata=metadata)
+            aggregate_list = objects.AggregateList(objects=[aggregate])
+            mock_get_by_host.return_value = aggregate_list
+            instance = objects.Instance(host='host')
+            self.conn.check_can_live_migrate_destination(
+                self.context, instance, None, None)
+            mock_get_by_host.assert_called_once_with(
+                self.context, CONF.host, key='hypervisor_pool')
 
     @mock.patch.object(objects.AggregateList, 'get_by_host')
     def test_check_can_live_migrate_fails(self, mock_get_by_host):
