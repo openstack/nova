@@ -13,24 +13,52 @@
 #    under the License.
 
 import collections
+import copy
 import functools
 import threading
 
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
+from oslo_utils import timeutils
 
 from nova import rpc
 
 
-SUBSCRIBERS = collections.defaultdict(threading.Event)
-NOTIFICATIONS = []
+class _Sub(object):
+    """Allow a subscriber to efficiently wait for an event to occur, and
+    retrieve events which have occured.
+    """
+
+    def __init__(self):
+        self._cond = threading.Condition()
+        self._notifications = []
+
+    def received(self, notification):
+        with self._cond:
+            self._notifications.append(notification)
+            self._cond.notifyAll()
+
+    def wait_n(self, n, timeout=1.0):
+        """Wait until at least n notifications have been received, and return
+        them. May return less than n notifications if timeout is reached.
+        """
+
+        with timeutils.StopWatch(timeout) as timer:
+            with self._cond:
+                while len(self._notifications) < n and not timer.expired():
+                    self._cond.wait(timer.leftover())
+                return copy.copy(self._notifications)
+
+
+VERSIONED_SUBS = collections.defaultdict(_Sub)
 VERSIONED_NOTIFICATIONS = []
+NOTIFICATIONS = []
 
 
 def reset():
     del NOTIFICATIONS[:]
     del VERSIONED_NOTIFICATIONS[:]
-    SUBSCRIBERS.clear()
+    VERSIONED_SUBS.clear()
 
 
 FakeMessage = collections.namedtuple('Message',
@@ -81,7 +109,7 @@ class FakeVersionedNotifier(FakeNotifier):
                         'event_type': event_type,
                         'payload': payload}
         VERSIONED_NOTIFICATIONS.append(notification)
-        _notify_subscribers(notification)
+        VERSIONED_SUBS[event_type].received(notification)
 
 
 def stub_notifier(test):
@@ -101,14 +129,5 @@ def stub_notifier(test):
                                                        None)))
 
 
-def wait_for_versioned_notification(event_type, timeout=1.0):
-    # NOTE: The event stored in SUBSCRIBERS is not used for synchronizing
-    # the access to shared state as there is no parallel access to
-    # SUBSCRIBERS because the only parallelism is due to eventlet.
-    # The event is simply used to avoid polling the list of received
-    # notifications
-    return SUBSCRIBERS[event_type].wait(timeout)
-
-
-def _notify_subscribers(notification):
-    SUBSCRIBERS[notification['event_type']].set()
+def wait_for_versioned_notifications(event_type, n_events=1, timeout=1.0):
+    return VERSIONED_SUBS[event_type].wait_n(n_events, timeout=timeout)

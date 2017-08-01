@@ -13,7 +13,6 @@
 #    under the License.
 
 import os
-import time
 
 from oslo_config import cfg
 from oslo_serialization import jsonutils
@@ -208,26 +207,15 @@ class NotificationSampleTestBase(test.TestCase,
                     if notification['event_type'] == event_type]
 
     def _wait_for_notification(self, event_type, timeout=1.0):
-        received = fake_notifier.wait_for_versioned_notification(
-            event_type, timeout)
+        notifications = fake_notifier.wait_for_versioned_notifications(
+            event_type, timeout=timeout)
         self.assertTrue(
-            received,
+            len(notifications) > 0,
             'notification %s hasn\'t been received' % event_type)
 
     def _wait_for_notifications(self, event_type, expected_count, timeout=1.0):
-        notifications = []
-        start_time = time.clock()
-
-        while (len(notifications) < expected_count
-               and time.clock() - start_time < timeout):
-
-            fake_notifier.wait_for_versioned_notification(event_type, timeout)
-            notifications += self._get_notifications(event_type)
-            # NOTE(gibi): reading and then resetting the fake_notifier without
-            # synchronization doesn't lead to race condition as the only
-            # parallelism is due to eventlet.
-            fake_notifier.reset()
-
+        notifications = fake_notifier.wait_for_versioned_notifications(
+                event_type, n_events=expected_count, timeout=timeout)
         self.assertEqual(expected_count, len(notifications),
                          'Unexpected number of %s notifications '
                          'within the given timeout. '
