@@ -600,3 +600,9 @@ FAQs
    ``nova-manage cell_v2 map_instances --cell_uuid <cell_uuid>`` command to
    map all instances in the given cell. See the :ref:`man-page-cells-v2` man
    page for details on command usage.
+
+#. Should I change any of the ``[cells]`` configuration options for Cells v2?
+
+   **NO**. Those options are for Cells v1 usage only and are not used at all
+   for Cells v2. That includes the ``nova-cells`` service - it has nothing
+   to do with Cells v2.
