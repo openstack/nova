@@ -1,0 +1,6 @@
+---
+deprecations:
+  - |
+    Cells v1, which includes the ``[cells]`` configuration options and
+    ``nova-cells`` service, is deprecated in favor of Cells v2. For information
+    on Cells v2, see: https://docs.openstack.org/nova/latest/user/cells.html

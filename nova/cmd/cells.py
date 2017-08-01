@@ -29,6 +29,7 @@ from nova import utils
 from nova import version
 
 CONF = nova.conf.CONF
+LOG = logging.getLogger('nova.cells')
 
 
 def main():
@@ -39,6 +40,8 @@ def main():
 
     gmr.TextGuruMeditation.setup_autorun(version)
 
+    LOG.warning('Cells v1 is deprecated in favor of Cells v2 and will be '
+                'removed in the future.')
     server = service.Service.create(binary='nova-cells',
                                     topic=cells.TOPIC,
                                     manager='nova.cells.manager.CellsManager')
