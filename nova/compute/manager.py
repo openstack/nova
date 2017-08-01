@@ -6793,8 +6793,22 @@ class ComputeManager(manager.Manager):
                       {'event': event.key}, instance=instance)
             _event.send(event)
         else:
-            LOG.warning('Received unexpected event %(event)s for instance',
-                        {'event': event.key}, instance=instance)
+            # If it's a network-vif-unplugged event and the instance is being
+            # deleted then we don't need to make this a warning as it's
+            # expected. There are other things which could trigger this like
+            # detaching an interface, but we don't have a task state for that.
+            if (event.name == 'network-vif-unplugged' and
+                    instance.task_state == task_states.DELETING):
+                LOG.debug('Received event %s for instance which is being '
+                          'deleted.', event.key, instance=instance)
+            else:
+                LOG.warning('Received unexpected event %(event)s for '
+                            'instance with vm_state %(vm_state)s and '
+                            'task_state %(task_state)s.',
+                            {'event': event.key,
+                             'vm_state': instance.vm_state,
+                             'task_state': instance.task_state},
+                            instance=instance)
 
     def _process_instance_vif_deleted_event(self, context, instance,
                                             deleted_vif_id):
