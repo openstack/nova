@@ -35,7 +35,6 @@ import nova.conf
 from nova import context
 from nova import exception
 from nova import objects
-from nova.objects import base
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
@@ -44,9 +43,13 @@ from nova.volume import cinder
 
 CONF = nova.conf.CONF
 
+# This is the server ID.
 FAKE_UUID = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
+# This is the old volume ID (to swap from).
 FAKE_UUID_A = '00000000-aaaa-aaaa-aaaa-000000000000'
+# This is the new volume ID (to swap to).
 FAKE_UUID_B = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb'
+# This is a volume that is not found.
 FAKE_UUID_C = 'cccccccc-cccc-cccc-cccc-cccccccccccc'
 
 IMAGE_UUID = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
@@ -57,10 +60,15 @@ def fake_get_instance(self, context, instance_id, expected_attrs=None):
 
 
 def fake_get_volume(self, context, id):
-    return {'id': FAKE_UUID_A,
-            'status': 'available',
-            'attach_status': 'detached'
-            }
+    if id == FAKE_UUID_A:
+        status = 'in-use'
+        attach_status = 'attached'
+    elif id == FAKE_UUID_B:
+        status = 'available'
+        attach_status = 'detached'
+    else:
+        raise exception.VolumeNotFound(volume_id=id)
+    return {'id': id, 'status': status, 'attach_status': attach_status}
 
 
 def fake_attach_volume(self, context, instance, volume_id, device, tag=None):
@@ -71,9 +79,9 @@ def fake_detach_volume(self, context, instance, volume):
     pass
 
 
-def fake_swap_volume(self, context, instance,
-                     old_volume_id, new_volume_id):
-    pass
+def fake_swap_volume(self, context, instance, old_volume, new_volume):
+    if old_volume['id'] != FAKE_UUID_A:
+        raise exception.VolumeBDMNotFound(volume_id=old_volume['id'])
 
 
 def fake_create_snapshot(self, context, volume, name, description):
@@ -101,29 +109,21 @@ def fake_compute_volume_snapshot_create(self, context, volume_id,
 
 
 @classmethod
-def fake_bdm_list_get_by_instance_uuid(cls, context, instance_uuid):
-    db_list = [fake_block_device.FakeDbBlockDeviceDict(
-            {'id': 1,
-             'instance_uuid': instance_uuid,
-             'device_name': '/dev/fake0',
-             'delete_on_termination': 'False',
-             'source_type': 'volume',
-             'destination_type': 'volume',
-             'snapshot_id': None,
-             'volume_id': FAKE_UUID_A,
-             'volume_size': 1}),
-            fake_block_device.FakeDbBlockDeviceDict(
-            {'id': 2,
-             'instance_uuid': instance_uuid,
-             'device_name': '/dev/fake1',
-             'delete_on_termination': 'False',
-             'source_type': 'volume',
-             'destination_type': 'volume',
-             'snapshot_id': None,
-             'volume_id': FAKE_UUID_B,
-             'volume_size': 1})]
-    item_cls = objects.BlockDeviceMapping
-    return base.obj_make_list(context, cls(), item_cls, db_list)
+def fake_bdm_get_by_volume_and_instance(cls, ctxt, volume_id, instance_uuid):
+    if volume_id != FAKE_UUID_A:
+        raise exception.VolumeBDMNotFound(volume_id=volume_id)
+    db_bdm = fake_block_device.FakeDbBlockDeviceDict(
+        {'id': 1,
+         'instance_uuid': instance_uuid,
+         'device_name': '/dev/fake0',
+         'delete_on_termination': 'False',
+         'source_type': 'volume',
+         'destination_type': 'volume',
+         'snapshot_id': None,
+         'volume_id': FAKE_UUID_A,
+         'volume_size': 1})
+    return objects.BlockDeviceMapping._from_db_object(
+        ctxt, objects.BlockDeviceMapping(), db_bdm)
 
 
 class BootFromVolumeTest(test.TestCase):
@@ -344,9 +344,9 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
 
     def setUp(self):
         super(VolumeAttachTestsV21, self).setUp()
-        self.stub_out('nova.objects.BlockDeviceMappingList'
-                      '.get_by_instance_uuid',
-                      fake_bdm_list_get_by_instance_uuid)
+        self.stub_out('nova.objects.BlockDeviceMapping'
+                      '.get_by_volume_and_instance',
+                      fake_bdm_get_by_volume_and_instance)
         self.stubs.Set(compute_api.API, 'get', fake_get_instance)
         self.stubs.Set(cinder.API, 'get', fake_get_volume)
         self.context = context.get_admin_context()
@@ -377,8 +377,10 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
                           FAKE_UUID,
                           FAKE_UUID_A)
 
-    @mock.patch.object(objects.BlockDeviceMappingList,
-                       'get_by_instance_uuid', return_value=None)
+    @mock.patch.object(objects.BlockDeviceMapping,
+                       'get_by_volume_and_instance',
+                       side_effect=exception.VolumeBDMNotFound(
+                           volume_id=FAKE_UUID_A))
     def test_show_no_bdms(self, mock_mr):
         self.assertRaises(exc.HTTPNotFound,
                           self.attachments.show,
