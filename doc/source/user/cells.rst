@@ -388,11 +388,15 @@ database yet. This will set up a single cell Nova deployment.
    database url is taken from the ``[database]/connection`` setting in the Nova
    configuration file if not specified on the command line.
 
-6. Configure and start your compute hosts. Before step 7, make sure you have
-   compute hosts in the database by running
-   ``nova service-list --binary nova-compute``.
+6. Configure your compute host(s), making sure ``[DEFAULT]/transport_url``
+   matches the transport URL for the cell created in step 5, and start the
+   nova-compute service. Before step 7, make sure you have compute hosts in the
+   database by running::
+  
+     nova service-list --binary nova-compute
 
-7. Run the ``discover_hosts`` command to map compute hosts to the single cell::
+7. Run the ``discover_hosts`` command to map compute hosts to the single cell
+   by running::
 
      nova-manage cell_v2 discover_hosts
 
