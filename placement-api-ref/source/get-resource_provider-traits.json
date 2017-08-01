@@ -1,0 +1,7 @@
+{
+    "resource_provider_generation": 1,
+    "traits": [
+        "CUSTOM_HW_FPGA_CLASS1",
+        "CUSTOM_HW_FPGA_CLASS3"
+    ]
+}
