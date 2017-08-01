@@ -960,21 +960,15 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                   run_as_root=True),
                         mock.call('brctl', 'stp', 'qbrvif-xxx-yyy', 'off',
                                   run_as_root=True),
-                        mock.call('tee', ('/sys/class/net/qbrvif-xxx-yyy'
-                                          '/bridge/multicast_snooping'),
-                                  process_input='0', run_as_root=True,
-                                  check_exit_code=[0, 1]),
-                        mock.call('tee', ('/proc/sys/net/ipv6/conf'
-                                          '/qbrvif-xxx-yyy/disable_ipv6'),
-                                  process_input='1', run_as_root=True,
-                                  check_exit_code=[0, 1]),
                         mock.call('ip', 'link', 'set', 'qbrvif-xxx-yyy', 'up',
                                   run_as_root=True),
                         mock.call('brctl', 'addif', 'qbrvif-xxx-yyy',
                                   'qvbvif-xxx-yyy', run_as_root=True)],
             'create_ivs_vif_port': [mock.call('qvovif-xxx-yyy', 'aaa-bbb-ccc',
                                     'ca:fe:de:ad:be:ef',
-                                    'f0000000-0000-0000-0000-000000000001')]
+                                    'f0000000-0000-0000-0000-000000000001')],
+            'disable_ipv6': [mock.call('qbrvif-xxx-yyy')],
+            'multicast_snoop': [mock.call('qbrvif-xxx-yyy')]
         }
         with test.nested(
                 mock.patch.object(linux_net, 'device_exists',
@@ -982,15 +976,20 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                 mock.patch.object(utils, 'execute'),
                 mock.patch.object(linux_net, '_create_veth_pair'),
                 mock.patch.object(linux_net, 'create_ivs_vif_port'),
-                mock.patch.object(os.path, 'exists', return_value=True)
+                mock.patch.object(os.path, 'exists', return_value=True),
+                mock.patch('nova.privsep.libvirt.disable_multicast_snooping'),
+                mock.patch('nova.privsep.libvirt.disable_ipv6')
         ) as (device_exists, execute, _create_veth_pair, create_ivs_vif_port,
-              path_exists):
+              path_exists, disable_ipv6, disable_multicast_snooping):
             d = vif.LibvirtGenericVIFDriver()
             d.plug(self.instance, self.vif_ivs)
             device_exists.assert_has_calls(calls['device_exists'])
             _create_veth_pair.assert_has_calls(calls['_create_veth_pair'])
             execute.assert_has_calls(calls['execute'])
             create_ivs_vif_port.assert_has_calls(calls['create_ivs_vif_port'])
+            disable_multicast_snooping.assert_has_calls(
+                calls['multicast_snoop'])
+            disable_ipv6.assert_has_calls(calls['disable_ipv6'])
 
     def test_unplug_ivs_hybrid(self):
         calls = {

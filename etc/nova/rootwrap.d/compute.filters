@@ -37,10 +37,6 @@ blkid: CommandFilter, blkid, root
 # nova/virt/disk/mount/nbd.py: 'blockdev', '--flushbufs', device
 blockdev: RegExpFilter, blockdev, root, blockdev, (--getsize64|--flushbufs), /dev/.*
 
-# nova/virt/libvirt/guest.py: 'tee',
-# nova/virt/libvirt/vif.py: utils.execute('tee',
-tee: CommandFilter, tee, root
-
 # nova/virt/libvirt/vif.py: 'ip', 'tuntap', 'add', dev, 'mode', 'tap'
 # nova/virt/libvirt/vif.py: 'ip', 'link', 'set', dev, 'up'
 # nova/virt/libvirt/vif.py: 'ip', 'link', 'delete', dev
@@ -204,6 +200,7 @@ privsep-rootwrap-os_brick: RegExpFilter, privsep-helper, root, privsep-helper, -
 
 privsep-rootwrap-dac_admin: RegExpFilter, privsep-helper, root, privsep-helper, --config-file, /etc/(?!\.\.).*, --privsep_context, nova.privsep.dac_admin_pctxt, --privsep_sock_path, /tmp/.*
 
+privsep-rootwrap-dacnet_admin: RegExpFilter, privsep-helper, root, privsep-helper, --config-file, /etc/(?!\.\.).*, --privsep_context, nova.privsep.dacnet_admin_pctxt, --privsep_sock_path, /tmp/.*
 
 # nova/virt/libvirt/storage/dmcrypt.py:
 cryptsetup: CommandFilter, cryptsetup, root
