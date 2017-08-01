@@ -761,13 +761,14 @@ class TestInstanceNotificationSample(
         self.api.post_server_action(server['id'], post)
         mock_rebuild.side_effect = _compute_resources_unavailable
         self._wait_for_state_change(self.api, server, expected_status='ERROR')
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        notification = self._get_notifications('instance.rebuild.error')
+        self.assertEqual(1, len(notification))
         self._verify_notification(
             'instance-rebuild-error',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=notification[0])
 
     def _test_restore_server(self, server):
         self.flags(reclaim_instance_interval=30)
