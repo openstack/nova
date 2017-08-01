@@ -38,15 +38,18 @@ blkid: CommandFilter, blkid, root
 blockdev: RegExpFilter, blockdev, root, blockdev, (--getsize64|--flushbufs), /dev/.*
 
 # nova/virt/disk/vfs/localfs.py: 'tee', canonpath
+# nova/virt/libvirt/guest.py: 'tee',
+# nova/virt/libvirt/vif.py: utils.execute('tee',
 tee: CommandFilter, tee, root
 
 # nova/virt/disk/vfs/localfs.py: 'mkdir', canonpath
 mkdir: CommandFilter, mkdir, root
 
 # nova/virt/disk/vfs/localfs.py: 'chown'
-# nova/virt/libvirt/connection.py: 'chown', os.getuid( console_log
-# nova/virt/libvirt/connection.py: 'chown', os.getuid( console_log
-# nova/virt/libvirt/connection.py: 'chown', 'root', basepath('disk')
+# nova/virt/libvirt/utils.py: def chown(): execute('chown', owner, path,
+# nova/virt/libvirt/driver.py: 'chown', os.getuid( console_log
+# nova/virt/libvirt/driver.py: 'chown', os.getuid( console_log
+# nova/virt/libvirt/driver.py: 'chown', 'root', basepath('disk')
 chown: CommandFilter, chown, root
 
 # nova/virt/disk/vfs/localfs.py: 'chmod'
@@ -100,7 +103,7 @@ mm-ctl: CommandFilter, mm-ctl, root
 # nova/network/linux_net.py: 'ovs-ofctl', ....
 ovs-ofctl: CommandFilter, ovs-ofctl, root
 
-# nova/virt/libvirt/connection.py: 'dd', if=%s % virsh_output, ...
+# nova/virt/libvirt/driver.py: 'dd', if=%s % virsh_output, ...
 dd: CommandFilter, dd, root
 
 # nova/virt/xenapi/volume_utils.py: 'iscsiadm', '-m', ...
@@ -185,7 +188,7 @@ mkfs.ext3: CommandFilter, mkfs.ext3, root
 mkfs.ext4: CommandFilter, mkfs.ext4, root
 mkfs.ntfs: CommandFilter, mkfs.ntfs, root
 
-# nova/virt/libvirt/connection.py:
+# nova/virt/libvirt/driver.py:
 lvremove: CommandFilter, lvremove, root
 
 # nova/virt/libvirt/utils.py:
@@ -197,7 +200,7 @@ lvs: CommandFilter, lvs, root
 # nova/virt/libvirt/utils.py:
 vgs: CommandFilter, vgs, root
 
-# nova/utils.py:read_file_as_root: 'cat', file_path
+# nova/utils.py: read_file_as_root: 'cat', file_path
 # (called from nova/virt/disk/vfs/localfs.py:VFSLocalFS.read_file)
 read_passwd: RegExpFilter, cat, root, cat, (/var|/usr)?/tmp/openstack-vfs-localfs[^/]+/etc/passwd
 read_shadow: RegExpFilter, cat, root, cat, (/var|/usr)?/tmp/openstack-vfs-localfs[^/]+/etc/shadow
@@ -221,9 +224,6 @@ scsi_id: CommandFilter, /lib/udev/scsi_id, root
 # and (implicitly) the actual python code invoked.
 privsep-rootwrap: RegExpFilter, privsep-helper, root, privsep-helper, --config-file, /etc/(?!\.\.).*, --privsep_context, os_brick.privileged.default, --privsep_sock_path, /tmp/.*
 
-# nova/storage/linuxscsi.py: sg_scan device
-sg_scan: CommandFilter, sg_scan, root
-
 # nova/virt/libvirt/storage/dmcrypt.py:
 cryptsetup: CommandFilter, cryptsetup, root
 
@@ -236,7 +236,7 @@ rbd: CommandFilter, rbd, root
 # nova/virt/libvirt/utils.py: 'shred', '-n3', '-s%d' % volume_size, path
 shred: CommandFilter, shred, root
 
-# nova/virt/libvirt/volume.py: 'cp', '/dev/stdin', delete_control..
+# nova/virt/libvirt/volume/volume.py: 'cp', '/dev/stdin', delete_control..
 cp: CommandFilter, cp, root
 
 # nova/virt/xenapi/vm_utils.py:
