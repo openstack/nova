@@ -1981,7 +1981,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                         instance['uuid'],
                         'compute_task', 'migrate_server',
                         dict(vm_state=vm_states.ERROR,
-                             task_state=inst_obj.task_state,
+                             task_state=None,
                              expected_task_state=task_states.MIGRATING,),
                         expected_ex, request_spec)
         self.assertEqual(ex.kwargs['reason'], six.text_type(expected_ex))
