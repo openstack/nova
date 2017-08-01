@@ -106,21 +106,23 @@ def _allocations_dict(allocations, key_fetcher, resource_provider=None):
 def _serialize_allocations_for_consumer(allocations):
     """Turn a list of allocations into a dict by resource provider uuid.
 
-    {'allocations':
-       RP_UUID_1: {
-           'generation': GENERATION,
-           'resources': {
-              'DISK_GB': 4,
-              'VCPU': 2
-           }
-       },
-       RP_UUID_2: {
-           'generation': GENERATION,
-           'resources': {
-              'DISK_GB': 6,
-              'VCPU': 3
-           }
-       }
+    {
+        'allocations': {
+            RP_UUID_1: {
+                'generation': GENERATION,
+                'resources': {
+                    'DISK_GB': 4,
+                    'VCPU': 2
+                }
+            },
+            RP_UUID_2: {
+                'generation': GENERATION,
+                'resources': {
+                    'DISK_GB': 6,
+                    'VCPU': 3
+                }
+            }
+        }
     }
     """
     return _allocations_dict(allocations,
