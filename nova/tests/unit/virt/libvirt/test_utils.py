@@ -765,8 +765,8 @@ disk size: 4.4M
         self.assertEqual(obj_fields.Architecture.X86_64, image_arch)
 
     def test_update_mtime_error(self):
-        with mock.patch.object(libvirt_utils, 'execute',
-                               side_effect=processutils.ProcessExecutionError):
+        with mock.patch('nova.utils.execute',
+                        side_effect=processutils.ProcessExecutionError):
             with mock.patch.object(libvirt_utils.LOG, 'warning') as mock_log:
                 libvirt_utils.update_mtime(mock.sentinel.path)
         self.assertTrue(mock_log.called)
