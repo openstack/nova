@@ -236,8 +236,13 @@ class SchedulerReportClient(object):
         self._provider_aggregate_map = {}
         auth_plugin = keystone.load_auth_from_conf_options(
             CONF, 'placement')
+        # Set content-type and accept on every request to ensure we notify
+        # placement service of our request and response body media type
+        # preferences.
         self._client = keystone.load_session_from_conf_options(
-            CONF, 'placement', auth=auth_plugin)
+            CONF, 'placement', auth=auth_plugin,
+            additional_headers={'accept': 'application/json'})
+
         # NOTE(danms): Keep track of how naggy we've been
         self._warn_count = 0
         self.ks_filter = {'service_type': 'placement',
