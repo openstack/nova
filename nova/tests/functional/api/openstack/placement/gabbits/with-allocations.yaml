@@ -40,7 +40,7 @@ tests:
   response_headers:
       content-type: /application/json/
   response_strings:
-      - Unable to delete inventory for resource provider $ENVIRON['RP_UUID'] because the inventory is in use.
+      - "Inventory for 'VCPU, DISK_GB' on resource provider '$ENVIRON['RP_UUID']' in use"
 
 - name: get total usages by project
   GET: /usages?project_id=$ENVIRON['PROJECT_ID']
