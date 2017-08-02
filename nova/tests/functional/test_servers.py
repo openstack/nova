@@ -1071,6 +1071,10 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
     _enabled_filters = ['RetryFilter', 'ComputeFilter']
 
     def setUp(self):
+        # NOTE(danms): The test defaults to using SmallFakeDriver,
+        # which only has one vcpu, which can't take the doubled allocation
+        # we're now giving it. So, use the (big) FakeDriver here.
+        self.flags(compute_driver='fake.FakeDriver')
         self.flags(enabled_filters=self._enabled_filters,
                    group='filter_scheduler')
         super(ServerMovingTests, self).setUp()
@@ -1191,6 +1195,14 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         self.assertEqual(flavor['vcpus'], allocation['VCPU'])
         self.assertEqual(flavor['ram'], allocation['MEMORY_MB'])
         self.assertEqual(flavor['disk'], allocation['DISK_GB'])
+
+    def assertFlavorsMatchAllocation(self, old_flavor, new_flavor, allocation):
+        self.assertEqual(old_flavor['vcpus'] + new_flavor['vcpus'],
+                         allocation['VCPU'])
+        self.assertEqual(old_flavor['ram'] + new_flavor['ram'],
+                         allocation['MEMORY_MB'])
+        self.assertEqual(old_flavor['disk'] + new_flavor['disk'],
+                         allocation['DISK_GB'])
 
     def _boot_and_check_allocations(self, flavor, source_hostname):
         server_req = self._build_minimal_create_server_request(
@@ -1464,34 +1476,13 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
 
         usages = self._get_provider_usages(rp_uuid)
-
-        # NOTE(gibi): This is bug 1707252, where the usages are not doubled for
-        # resize to same host
-        self.assertFlavorMatchesAllocation(old_flavor, usages)
-
-        # NOTE(gibi): After fixing bug 1707252 the following is expected
-        # self.assertEqual(old_flavor['vcpus'] + new_flavor['vcpus'],
-        #                  usages['VCPU'])
-        # self.assertEqual(old_flavor['ram'] + new_flavor['ram'],
-        #                  usages['MEMORY_MB'])
-        # self.assertEqual(old_flavor['disk'] + new_flavor['disk'],
-        #                  usages['DISK_GB'])
+        self.assertFlavorsMatchAllocation(old_flavor, new_flavor, usages)
 
         allocations = self._get_allocations_by_server_uuid(server['id'])
 
         self.assertEqual(1, len(allocations))
         allocation = allocations[rp_uuid]['resources']
-        # NOTE(gibi): This is bug 1707252, where allocation is not doubled for
-        # resize to same host
-        self.assertFlavorMatchesAllocation(old_flavor, allocation)
-
-        # NOTE(gibi): After fixing bug 1707252 the following is expected
-        # self.assertEqual(old_flavor['vcpus'] + new_flavor['vcpus'],
-        #                  allocation['VCPU'])
-        # self.assertEqual(old_flavor['ram'] + new_flavor['ram'],
-        #                  allocation['MEMORY_MB'])
-        # self.assertEqual(old_flavor['disk'] + new_flavor['disk'],
-        #                  allocation['DISK_GB'])
+        self.assertFlavorsMatchAllocation(old_flavor, new_flavor, allocation)
 
         # We've resized to the same host and have doubled allocations for both
         # the old and new flavor on the same host. Run the periodic on the
