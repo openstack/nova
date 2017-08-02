@@ -34,25 +34,32 @@ uses. The options values are chosen from the entry points under the namespace
 """),
     cfg.StrOpt("driver",
         default="filter_scheduler",
-        choices=("filter_scheduler", "caching_scheduler",
-                 "chance_scheduler", "fake_scheduler"),
         deprecated_name="scheduler_driver",
         deprecated_group="DEFAULT",
         help="""
-The class of the driver used by the scheduler.
+The class of the driver used by the scheduler. This should be chosen from one
+of the entrypoints under the namespace 'nova.scheduler.driver' of file
+'setup.cfg'. If nothing is specified in this option, the 'filter_scheduler' is
+used.
 
-The options are chosen from the entry points under the namespace
-'nova.scheduler.driver' in 'setup.cfg'.
+Other options are:
+
+* 'caching_scheduler' which aggressively caches the system state for better
+  individual scheduler performance at the risk of more retries when running
+  multiple schedulers.
+* 'chance_scheduler' which simply picks a host at random.
+* 'fake_scheduler' which is used for testing.
 
 Possible values:
 
-* A string, where the string corresponds to the class name of a scheduler
-  driver. There are a number of options available:
-** 'caching_scheduler', which aggressively caches the system state for better
-   individual scheduler performance at the risk of more retries when running
-   multiple schedulers
-** 'chance_scheduler', which simply picks a host at random
-** 'fake_scheduler', which is used for testing
+* Any of the drivers included in Nova:
+** filter_scheduler
+** caching_scheduler
+** chance_scheduler
+** fake_scheduler
+* You may also set this to the entry point name of a custom scheduler driver,
+  but you will be responsible for creating and maintaining it in your setup.cfg
+  file.
 """),
     cfg.IntOpt("periodic_task_interval",
         default=60,
