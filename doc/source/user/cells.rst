@@ -40,6 +40,9 @@ See `Comparison with Cells V1`_ for more detail.
 Status
 ~~~~~~
 
+.. warning:: Cells v1 is deprecated in favor of Cells v2 as of the
+             16.0.0 Pike release.
+
 Cells v1 is considered experimental and receives much less testing than the
 rest of Nova. For example, there is no job for testing cells v1 with Neutron.
 
