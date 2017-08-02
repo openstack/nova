@@ -5599,8 +5599,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         fake_rt.tracked_migrations[self.instance['uuid']] = (
             self.migration, None)
 
+        @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                    'drop_move_claim')
         @mock.patch('nova.compute.rpcapi.ComputeAPI.finish_revert_resize')
-        @mock.patch.object(fake_rt, '_get_instance_type', return_value=None)
         @mock.patch.object(self.instance, 'revert_migration_context')
         @mock.patch.object(self.compute.network_api, 'get_instance_nw_info')
         @mock.patch.object(self.compute, '_is_instance_storage_shared')
@@ -5627,8 +5628,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                              mock_is_instance_storage_shared,
                              mock_get_instance_nw_info,
                              mock_revert_migration_context,
-                             mock_get_itype,
-                             mock_finish_revert):
+                             mock_finish_revert,
+                             mock_drop_move_claim):
 
             self.instance.migration_context = objects.MigrationContext()
             self.migration.source_compute = self.instance['host']
@@ -5638,6 +5639,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                        migration=self.migration,
                                        instance=self.instance,
                                        reservations=None)
+            mock_drop_move_claim.assert_called_once_with(self.context,
+                self.instance, self.instance.node)
             self.assertIsNotNone(self.instance.migration_context)
 
         @mock.patch.object(self.compute, "_notify_about_instance_usage")

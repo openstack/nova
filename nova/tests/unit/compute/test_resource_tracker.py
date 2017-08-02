@@ -187,6 +187,7 @@ _INSTANCE_FIXTURES = [
         task_state=None,
         os_type='fake-os',  # Used by the stats collector.
         project_id='fake-project',  # Used by the stats collector.
+        user_id=uuids.user_id,
         flavor = _INSTANCE_TYPE_OBJ_FIXTURES[1],
         old_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[1],
         new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[1],
@@ -209,6 +210,7 @@ _INSTANCE_FIXTURES = [
         task_state=None,
         os_type='fake-os',
         project_id='fake-project-2',
+        user_id=uuids.user_id,
         flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2],
         old_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2],
         new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2],
@@ -1684,6 +1686,8 @@ class TestInstanceClaim(BaseTestCase):
 
 
 class TestResize(BaseTestCase):
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                return_value=False)
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
@@ -1693,7 +1697,8 @@ class TestResize(BaseTestCase):
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     @mock.patch('nova.objects.ComputeNode.save')
     def test_resize_claim_same_host(self, save_mock, get_mock, migr_mock,
-                                    get_cn_mock, pci_mock, instance_pci_mock):
+                                    get_cn_mock, pci_mock, instance_pci_mock,
+                                    is_bfv_mock):
         # Resize an existing instance from its current flavor (instance type
         # 1) to a new flavor (instance type 2) and verify that the compute
         # node's resources are appropriately updated to account for the new
@@ -1781,6 +1786,8 @@ class TestResize(BaseTestCase):
         self.assertEqual(128, cn.memory_mb_used)
         self.assertEqual(0, len(self.rt.tracked_migrations))
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                return_value=False)
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
@@ -1802,6 +1809,7 @@ class TestResize(BaseTestCase):
                                     pci_get_by_compute_node_mock,
                                     pci_get_by_instance_mock,
                                     pci_get_by_instance_uuid_mock,
+                                    is_bfv_mock,
                                     revert=False):
         self.flags(reserved_host_disk_mb=0,
                    reserved_host_memory_mb=0)
@@ -1995,7 +2003,8 @@ class TestResize(BaseTestCase):
         self.assertEqual(request, pci_req_mock.return_value.requests[0])
         alloc_mock.assert_called_once_with(instance)
 
-    def test_drop_move_claim_on_revert(self):
+    @mock.patch('nova.scheduler.utils.resources_from_flavor')
+    def test_drop_move_claim_on_revert(self, mock_resources):
         self._setup_rt()
         cn = _COMPUTE_NODE_FIXTURES[0].obj_clone()
         self.rt.compute_nodes[_NODENAME] = cn
@@ -2010,7 +2019,7 @@ class TestResize(BaseTestCase):
 
         instance = _INSTANCE_FIXTURES[0].obj_clone()
         instance.task_state = task_states.RESIZE_MIGRATING
-        instance.new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
+        instance.flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2]
         instance.migration_context = objects.MigrationContext()
         instance.migration_context.new_pci_devices = objects.PciDeviceList(
             objects=pci_devs)
@@ -2438,6 +2447,33 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         # Scheduled instances should not have their allocations removed
         rc.delete_allocation_for_instance.assert_not_called()
 
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocations_for_resource_provider')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'delete_allocation_for_instance')
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    def test_remove_deleted_instances_allocations_move_ops(self, mock_get,
+            mock_delete_allocs, mock_get_allocs):
+        """Test that we do NOT delete allocations for instances that are
+        currently undergoing move operations.
+        """
+        self.rt.tracked_instances = {}
+        # Create 1 instance
+        instance = _INSTANCE_FIXTURES[0].obj_clone()
+        instance.uuid = uuids.moving_instance
+        instance.host = uuids.destination
+        # Instances in resizing/move will be ACTIVE or STOPPED
+        instance.vm_state = vm_states.ACTIVE
+        # Mock out the allocation call
+        allocs = {uuids.inst0: mock.sentinel.moving_instance}
+        mock_get_allocs.return_value = allocs
+        mock_get.return_value = instance
+
+        cn = self.rt.compute_nodes[_NODENAME]
+        ctx = mock.sentinel.ctx
+        self.rt._remove_deleted_instances_allocations(ctx, cn)
+        mock_delete_allocs.assert_not_called()
+
     @mock.patch('nova.objects.Instance.get_by_uuid')
     def test_remove_deleted_instances_allocations_no_instance(self,
             mock_inst_get):
@@ -2488,7 +2524,9 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         @mock.patch.object(self.rt,
                            '_remove_deleted_instances_allocations')
         @mock.patch.object(self.rt, '_update_usage_from_instance')
-        def test(uufi, rdia):
+        @mock.patch('nova.objects.Service.get_minimum_version',
+                    return_value=22)
+        def test(version_mock, uufi, rdia):
             self.rt._update_usage_from_instances('ctxt', [], 'foo')
 
         test()

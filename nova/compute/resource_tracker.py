@@ -41,6 +41,7 @@ from nova.pci import manager as pci_manager
 from nova.pci import request as pci_request
 from nova import rpc
 from nova.scheduler import client as scheduler_client
+from nova.scheduler import utils as scheduler_utils
 from nova import utils
 from nova.virt import hardware
 
@@ -464,6 +465,36 @@ class ResourceTracker(object):
 
             ctxt = context.elevated()
             self._update(ctxt, self.compute_nodes[nodename])
+
+        # NOTE(jaypipes): This sucks, but due to the fact that confirm_resize()
+        # only runs on the source host and revert_resize() runs on the
+        # destination host, we need to do this here. Basically, what we're
+        # doing here is grabbing the existing allocations for this instance
+        # from the placement API, dropping the resources in the doubled-up
+        # allocation set that refer to the source host UUID and calling PUT
+        # /allocations back to the placement API. The allocation that gets
+        # PUT'd back to placement will only include the destination host and
+        # any shared providers in the case of a confirm_resize operation and
+        # the source host and shared providers for a revert_resize operation..
+        my_resources = scheduler_utils.resources_from_flavor(instance,
+            instance_type or instance.flavor)
+        cn_uuid = self.compute_nodes[nodename].uuid
+        operation = 'Confirming'
+        source_or_dest = 'source'
+        if prefix == 'new_':
+            operation = 'Reverting'
+            source_or_dest = 'destination'
+        LOG.debug("%s resize on %s host. Removing resources claimed on "
+                  "provider %s from allocation",
+                  operation, source_or_dest, cn_uuid, instance=instance)
+        res = self.reportclient.remove_provider_from_instance_allocation(
+            instance.uuid, cn_uuid, instance.user_id,
+            instance.project_id, my_resources)
+        if not res:
+            LOG.error("Failed to save manipulated allocation when "
+                      "%s resize on %s host %s.",
+                      operation.lower(), source_or_dest, cn_uuid,
+                      instance=instance)
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def update_usage(self, context, instance, nodename):
