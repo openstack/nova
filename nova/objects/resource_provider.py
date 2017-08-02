@@ -1506,18 +1506,14 @@ class Allocation(_HasAResourceProvider):
         self._destroy(self._context, self.id)
 
 
-def _delete_current_allocs(conn, allocs):
+def _delete_current_allocs(conn, consumer_id):
     """Deletes any existing allocations that correspond to the allocations to
     be written. This is wrapped in a transaction, so if the write subsequently
     fails, the deletion will also be rolled back.
     """
-    for alloc in allocs:
-        rp_id = alloc.resource_provider.id
-        consumer_id = alloc.consumer_id
-        del_sql = _ALLOC_TBL.delete().where(
-                sa.and_(_ALLOC_TBL.c.resource_provider_id == rp_id,
-                        _ALLOC_TBL.c.consumer_id == consumer_id))
-        conn.execute(del_sql)
+    del_sql = _ALLOC_TBL.delete().where(
+        _ALLOC_TBL.c.consumer_id == consumer_id)
+    conn.execute(del_sql)
 
 
 def _check_capacity_exceeded(conn, allocs):
@@ -1831,9 +1827,10 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
         # against concurrent updates.
         with conn.begin():
             # First delete any existing allocations for that rp/consumer combo.
-            _delete_current_allocs(conn, allocs)
+            consumer_id = allocs[0].consumer_id
+            _delete_current_allocs(conn, consumer_id)
             before_gens = _check_capacity_exceeded(conn, allocs)
-            self._ensure_consumer_project_user(conn, allocs[0].consumer_id)
+            self._ensure_consumer_project_user(conn, consumer_id)
             # Now add the allocations that were passed in.
             for alloc in allocs:
                 rp = alloc.resource_provider

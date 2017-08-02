@@ -858,6 +858,140 @@ class TestAllocation(ResourceProviderBaseCase):
 
         self.assertEqual(0, len(allocations))
 
+    def test_multi_provider_allocation(self):
+        """Tests that an allocation that includes more than one resource
+        provider can be created, listed and deleted properly.
+
+        Bug #1707669 highlighted a situation that arose when attempting to
+        remove part of an allocation for a source host during a resize
+        operation where the exiting allocation was not being properly
+        deleted.
+        """
+        cn_source = objects.ResourceProvider(
+            context=self.ctx,
+            uuid=uuidsentinel.cn_source,
+            name=uuidsentinel.cn_source,
+        )
+        cn_source.create()
+
+        cn_dest = objects.ResourceProvider(
+            context=self.ctx,
+            uuid=uuidsentinel.cn_dest,
+            name=uuidsentinel.cn_dest,
+        )
+        cn_dest.create()
+
+        # Add same inventory to both source and destination host
+        for cn in (cn_source, cn_dest):
+            cpu_inv = objects.Inventory(
+                context=self.ctx,
+                resource_provider=cn,
+                resource_class=fields.ResourceClass.VCPU,
+                total=24,
+                reserved=0,
+                min_unit=1,
+                max_unit=24,
+                step_size=1,
+                allocation_ratio=16.0)
+            ram_inv = objects.Inventory(
+                context=self.ctx,
+                resource_provider=cn,
+                resource_class=fields.ResourceClass.MEMORY_MB,
+                total=1024,
+                reserved=0,
+                min_unit=64,
+                max_unit=1024,
+                step_size=64,
+                allocation_ratio=1.5)
+            inv_list = objects.InventoryList(context=self.ctx,
+                objects=[cpu_inv, ram_inv])
+            cn.set_inventory(inv_list)
+
+        # Now create an allocation that represents a move operation where the
+        # scheduler has selected cn_dest as the target host and created a
+        # "doubled-up" allocation for the duration of the move operation
+        alloc_list = objects.AllocationList(context=self.ctx,
+            objects=[
+                objects.Allocation(
+                    context=self.ctx,
+                    consumer_id=uuidsentinel.instance,
+                    resource_provider=cn_source,
+                    resource_class=fields.ResourceClass.VCPU,
+                    used=1),
+                objects.Allocation(
+                    context=self.ctx,
+                    consumer_id=uuidsentinel.instance,
+                    resource_provider=cn_source,
+                    resource_class=fields.ResourceClass.MEMORY_MB,
+                    used=256),
+                objects.Allocation(
+                    context=self.ctx,
+                    consumer_id=uuidsentinel.instance,
+                    resource_provider=cn_dest,
+                    resource_class=fields.ResourceClass.VCPU,
+                    used=1),
+                objects.Allocation(
+                    context=self.ctx,
+                    consumer_id=uuidsentinel.instance,
+                    resource_provider=cn_dest,
+                    resource_class=fields.ResourceClass.MEMORY_MB,
+                    used=256),
+            ])
+        alloc_list.create_all()
+
+        src_allocs = objects.AllocationList.get_all_by_resource_provider_uuid(
+            self.ctx, cn_source.uuid)
+
+        self.assertEqual(2, len(src_allocs))
+
+        dest_allocs = objects.AllocationList.get_all_by_resource_provider_uuid(
+            self.ctx, cn_dest.uuid)
+
+        self.assertEqual(2, len(dest_allocs))
+
+        consumer_allocs = objects.AllocationList.get_all_by_consumer_id(
+            self.ctx, uuidsentinel.instance)
+
+        self.assertEqual(4, len(consumer_allocs))
+
+        # Validate that when we create an allocation for a consumer that we
+        # delete any existing allocation and replace it with what the new.
+        # Here, we're emulating the step that occurs on confirm_resize() where
+        # the source host pulls the existing allocation for the instance and
+        # removes any resources that refer to itself and saves the allocation
+        # back to placement
+        new_alloc_list = objects.AllocationList(context=self.ctx,
+            objects=[
+                objects.Allocation(
+                    context=self.ctx,
+                    consumer_id=uuidsentinel.instance,
+                    resource_provider=cn_dest,
+                    resource_class=fields.ResourceClass.VCPU,
+                    used=1),
+                objects.Allocation(
+                    context=self.ctx,
+                    consumer_id=uuidsentinel.instance,
+                    resource_provider=cn_dest,
+                    resource_class=fields.ResourceClass.MEMORY_MB,
+                    used=256),
+            ])
+        new_alloc_list.create_all()
+
+        src_allocs = objects.AllocationList.get_all_by_resource_provider_uuid(
+            self.ctx, cn_source.uuid)
+
+        self.assertEqual(0, len(src_allocs))
+
+        dest_allocs = objects.AllocationList.get_all_by_resource_provider_uuid(
+            self.ctx, cn_dest.uuid)
+
+        self.assertEqual(2, len(dest_allocs))
+
+        consumer_allocs = objects.AllocationList.get_all_by_consumer_id(
+            self.ctx, uuidsentinel.instance)
+
+        self.assertEqual(2, len(consumer_allocs))
+
     def test_destroy(self):
         rp, allocation = self._make_allocation()
         allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
@@ -891,67 +1025,6 @@ class TestAllocation(ResourceProviderBaseCase):
         self.assertEqual(rp.id, allocations[0].resource_provider.id)
         self.assertEqual(allocation.resource_provider.id,
                          allocations[0].resource_provider.id)
-
-    def test_get_all_multiple_providers(self):
-        # This confirms that the join with resource provider is
-        # behaving.
-        rp1, allocation1 = self._make_allocation(uuidsentinel.rp1)
-        rp2, allocation2 = self._make_allocation(uuidsentinel.rp2)
-        allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
-            self.ctx, rp1.uuid)
-        self.assertEqual(1, len(allocations))
-        self.assertEqual(rp1.id, allocations[0].resource_provider.id)
-        self.assertEqual(allocation1.resource_provider.id,
-                         allocations[0].resource_provider.id)
-
-        # add more allocations for the first resource provider
-        # of the same class
-        alloc3 = objects.Allocation(
-            self.ctx,
-            consumer_id=uuidsentinel.consumer1,
-            resource_class=fields.ResourceClass.DISK_GB,
-            resource_provider=rp1,
-            used=2,
-        )
-        alloc_list = objects.AllocationList(self.ctx, objects=[alloc3])
-        alloc_list.create_all()
-        allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
-            self.ctx, rp1.uuid)
-        self.assertEqual(2, len(allocations))
-
-        # add more allocations for the first resource provider
-        # of a different class
-        # First we need to add sufficient inventory
-        res_cls = fields.ResourceClass.IPV4_ADDRESS
-        inv = objects.Inventory(self.ctx, resource_provider=rp1,
-                resource_class=res_cls, total=256, max_unit=10)
-        inv.obj_set_defaults()
-        inv.create()
-        # Now allocate 4 of them.
-        alloc4 = objects.Allocation(
-            self.ctx,
-            consumer_id=uuidsentinel.consumer2,
-            resource_class=res_cls,
-            resource_provider=rp1,
-            used=4,
-        )
-        alloc_list = objects.AllocationList(self.ctx, objects=[alloc4])
-        alloc_list.create_all()
-        allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
-            self.ctx, rp1.uuid)
-        self.assertEqual(3, len(allocations))
-        self.assertEqual(rp1.uuid, allocations[0].resource_provider.uuid)
-
-        allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
-            self.ctx, rp2.uuid)
-        self.assertEqual(1, len(allocations))
-        self.assertEqual(rp2.uuid, allocations[0].resource_provider.uuid)
-        self.assertIn(fields.ResourceClass.DISK_GB,
-                      [allocation.resource_class
-                       for allocation in allocations])
-        self.assertNotIn(fields.ResourceClass.IPV4_ADDRESS,
-                      [allocation.resource_class
-                       for allocation in allocations])
 
 
 class TestAllocationListCreateDelete(ResourceProviderBaseCase):
