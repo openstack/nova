@@ -1117,6 +1117,16 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         flavors = self.api.get_flavors()
         self.flavor1 = flavors[0]
         self.flavor2 = flavors[1]
+        # create flavor3 which has less MEMORY_MB but more DISK_GB than flavor2
+        flavor_body = {'flavor':
+                           {'name': 'test_flavor3',
+                            'ram': int(self.flavor2['ram'] / 2),
+                            'vcpus': 1,
+                            'disk': self.flavor2['disk'] * 2,
+                            'id': 'a22d5517-147c-4147-a0d1-e698df5cd4e3'
+                            }}
+
+        self.flavor3 = self.api.post_flavor(flavor_body)
 
     def _other_hostname(self, host):
         other_host = {'host1': 'host2',
@@ -1439,3 +1449,146 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
 
         self._delete_and_check_allocations(
             server, source_rp_uuid, dest_rp_uuid)
+
+    def _resize_to_same_host_and_check_allocations(self, server, old_flavor,
+                                                   new_flavor, rp_uuid):
+        # Resize the server to the same host and check usages in VERIFY_RESIZE
+        # state
+        self.flags(allow_resize_to_same_host=True)
+        resize_req = {
+            'resize': {
+                'flavorRef': new_flavor['id']
+            }
+        }
+        self.api.post_server_action(server['id'], resize_req)
+        self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+
+        usages = self._get_provider_usages(rp_uuid)
+
+        # NOTE(gibi): This is bug 1707252, where the usages are not doubled for
+        # resize to same host
+        self.assertFlavorMatchesAllocation(old_flavor, usages)
+
+        # NOTE(gibi): After fixing bug 1707252 the following is expected
+        # self.assertEqual(old_flavor['vcpus'] + new_flavor['vcpus'],
+        #                  usages['VCPU'])
+        # self.assertEqual(old_flavor['ram'] + new_flavor['ram'],
+        #                  usages['MEMORY_MB'])
+        # self.assertEqual(old_flavor['disk'] + new_flavor['disk'],
+        #                  usages['DISK_GB'])
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+
+        self.assertEqual(1, len(allocations))
+        allocation = allocations[rp_uuid]['resources']
+        # NOTE(gibi): This is bug 1707252, where allocation is not doubled for
+        # resize to same host
+        self.assertFlavorMatchesAllocation(old_flavor, allocation)
+
+        # NOTE(gibi): After fixing bug 1707252 the following is expected
+        # self.assertEqual(old_flavor['vcpus'] + new_flavor['vcpus'],
+        #                  allocation['VCPU'])
+        # self.assertEqual(old_flavor['ram'] + new_flavor['ram'],
+        #                  allocation['MEMORY_MB'])
+        # self.assertEqual(old_flavor['disk'] + new_flavor['disk'],
+        #                  allocation['DISK_GB'])
+
+        # We've resized to the same host and have doubled allocations for both
+        # the old and new flavor on the same host. Run the periodic on the
+        # compute to see if it tramples on what the scheduler did.
+        self._run_periodics()
+
+        usages = self._get_provider_usages(rp_uuid)
+
+        # NOTE(gibi): This is bug 1707071 where the compute "healing" periodic
+        # tramples on the doubled allocations created in the scheduler.
+        self.assertFlavorMatchesAllocation(new_flavor, usages)
+
+        # NOTE(gibi): After fixing bug 1707252 the following is expected
+        # self.assertEqual(old_flavor['vcpus'] + new_flavor['vcpus'],
+        #                  usages['VCPU'])
+        # self.assertEqual(old_flavor['ram'] + new_flavor['ram'],
+        #                  usages['MEMORY_MB'])
+        # self.assertEqual(old_flavor['disk'] + new_flavor['disk'],
+        #                  usages['DISK_GB'])
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations))
+        allocation = allocations[rp_uuid]['resources']
+
+        # NOTE(gibi): This is bug 1707071 where the compute "healing" periodic
+        # tramples on the doubled allocations created in the scheduler.
+        self.assertFlavorMatchesAllocation(new_flavor, allocation)
+
+        # NOTE(gibi): After fixing bug 1707252 the following is expected
+        # self.assertEqual(old_flavor['vcpus'] + new_flavor['vcpus'],
+        #                  allocation['VCPU'])
+        # self.assertEqual(old_flavor['ram'] + new_flavor['ram'],
+        #                  allocation['MEMORY_MB'])
+        # self.assertEqual(old_flavor['disk'] + new_flavor['disk'],
+        #                  allocation['DISK_GB'])
+
+    def test_resize_revert_same_host(self):
+        # make sure that the test only uses a single host
+        compute2_service_id = self.admin_api.get_services(
+            host=self.compute2.host, binary='nova-compute')[0]['id']
+        self.admin_api.put_service(compute2_service_id, {'status': 'disabled'})
+
+        hostname = self.compute1.manager.host
+        rp_uuid = self._get_provider_uuid_by_host(hostname)
+
+        server = self._boot_and_check_allocations(self.flavor2, hostname)
+
+        self._resize_to_same_host_and_check_allocations(
+            server, self.flavor2, self.flavor3, rp_uuid)
+
+        # Revert the resize and check the usages
+        post = {'revertResize': None}
+        self.api.post_server_action(server['id'], post)
+        self._wait_for_state_change(self.api, server, 'ACTIVE')
+
+        self._run_periodics()
+
+        # after revert only allocations due to the old flavor should remain
+        usages = self._get_provider_usages(rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor2, usages)
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations))
+        allocation = allocations[rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor2, allocation)
+
+        self._delete_and_check_allocations(server, rp_uuid, rp_uuid)
+
+    def test_resize_confirm_same_host(self):
+        # make sure that the test only uses a single host
+        compute2_service_id = self.admin_api.get_services(
+            host=self.compute2.host, binary='nova-compute')[0]['id']
+        self.admin_api.put_service(compute2_service_id, {'status': 'disabled'})
+
+        hostname = self.compute1.manager.host
+        rp_uuid = self._get_provider_uuid_by_host(hostname)
+
+        server = self._boot_and_check_allocations(self.flavor2, hostname)
+
+        self._resize_to_same_host_and_check_allocations(
+            server, self.flavor2, self.flavor3, rp_uuid)
+
+        # Confirm the resize and check the usages
+        post = {'confirmResize': None}
+        self.api.post_server_action(
+            server['id'], post, check_response_status=[204])
+        self._wait_for_state_change(self.api, server, 'ACTIVE')
+
+        self._run_periodics()
+
+        # after confirm only allocations due to the new flavor should remain
+        usages = self._get_provider_usages(rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor3, usages)
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations))
+        allocation = allocations[rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor3, allocation)
+
+        self._delete_and_check_allocations(server, rp_uuid, rp_uuid)
