@@ -5549,7 +5549,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        "_get_guest_storage_config")
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_numa_support")
-    def test_get_guest_config_aarch64(self, mock_numa, mock_storage):
+    @mock.patch('os.path.exists', return_value=True)
+    def test_get_guest_config_aarch64(self, mock_path_exists,
+                                      mock_numa, mock_storage):
         def get_host_capabilities_stub(self):
             cpu = vconfig.LibvirtConfigGuestCPU()
             cpu.arch = fields.Architecture.AARCH64
@@ -5576,6 +5578,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         cfg = drvr._get_guest_config(instance_ref,
                                      _fake_network_info(self, 1),
                                      image_meta, disk_info)
+        self.assertTrue(mock_path_exists.called)
+        mock_path_exists.assert_called_with(
+            libvirt_driver.DEFAULT_UEFI_LOADER_PATH['aarch64'])
         self.assertEqual(cfg.os_mach_type, "virt")
 
     def test_get_guest_config_machine_type_s390(self):

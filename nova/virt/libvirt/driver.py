@@ -4540,6 +4540,9 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest.sysinfo = self._get_guest_config_sysinfo(instance)
                 guest.os_smbios = vconfig.LibvirtConfigGuestSMBIOS()
             hw_firmware_type = image_meta.properties.get('hw_firmware_type')
+            if caps.host.cpu.arch == fields.Architecture.AARCH64:
+                if not hw_firmware_type:
+                    hw_firmware_type = fields.FirmwareType.UEFI
             if hw_firmware_type == fields.FirmwareType.UEFI:
                 if self._has_uefi_support():
                     global uefi_logged
