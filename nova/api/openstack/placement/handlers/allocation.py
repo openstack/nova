@@ -32,6 +32,7 @@ ALLOCATION_SCHEMA = {
     "properties": {
         "allocations": {
             "type": "array",
+            "minItems": 1,
             "items": {
                 "type": "object",
                 "properties": {
