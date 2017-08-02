@@ -56,6 +56,7 @@ from __future__ import print_function
 
 import functools
 import os
+import re
 import sys
 import traceback
 
@@ -120,6 +121,16 @@ def param2id(object_id):
         return ec2utils.ec2_vol_id_to_uuid(object_id)
     else:
         return object_id
+
+
+def mask_passwd_in_url(url):
+    parsed = urlparse.urlparse(url)
+    safe_netloc = re.sub(':.*@', ':****@', parsed.netloc)
+    new_parsed = urlparse.ParseResult(
+        parsed.scheme, safe_netloc,
+        parsed.path, parsed.params,
+        parsed.query, parsed.fragment)
+    return urlparse.urlunparse(new_parsed)
 
 
 class ShellCommands(object):
@@ -1496,7 +1507,7 @@ class CellV2Commands(object):
         return 0
 
     @args('--verbose', action='store_true',
-          help=_('Show more details than just the cell name and uuid.'))
+          help=_('Show sensitive details, such as passwords'))
     def list_cells(self, verbose=False):
         """Lists the v2 cells in the deployment.
 
@@ -1506,15 +1517,18 @@ class CellV2Commands(object):
         cell_mappings = objects.CellMappingList.get_all(
             context.get_admin_context())
 
-        field_names = [_('Name'), _('UUID')]
-        if verbose:
-            field_names.extend([_('Transport URL'), _('Database Connection')])
+        field_names = [_('Name'), _('UUID'), _('Transport URL'),
+                       _('Database Connection')]
 
         t = prettytable.PrettyTable(field_names)
         for cell in sorted(cell_mappings, key=lambda _cell: _cell.name):
             fields = [cell.name, cell.uuid]
             if verbose:
                 fields.extend([cell.transport_url, cell.database_connection])
+            else:
+                fields.extend([
+                    mask_passwd_in_url(cell.transport_url),
+                    mask_passwd_in_url(cell.database_connection)])
             t.add_row(fields)
         print(t)
         return 0
