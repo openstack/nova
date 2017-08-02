@@ -282,6 +282,14 @@ class TestOpenStackClient(object):
     def delete_server(self, server_id):
         return self.api_delete('/servers/%s' % server_id)
 
+    def force_down_service(self, host, binary, forced_down):
+        req = {
+            "host": host,
+            "binary": binary,
+            "forced_down": forced_down
+        }
+        return self.api_put('/os-services/force-down', req).body['service']
+
     def get_image(self, image_id):
         return self.api_get('/images/%s' % image_id).body['image']
 
