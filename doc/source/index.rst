@@ -175,6 +175,7 @@ these are a great place to start reading up on the current plans.
    :maxdepth: 1
 
    user/cells
+   user/cellsv2_layout
    user/upgrade
    contributor/api
    contributor/microversions
