@@ -1,8 +1,3 @@
-# As part of the doc-migration during Pike, the main cells landing page
-# moved. Redirect from the old to new location.
-# This pattern should match the URL on the draft site
-redirectmatch 301 /doc/build/html/cells.html$ /nova/$1/user/cells.html
-
 # The following is generated with:
 #
 # git log --follow --name-status --format='%H' 2d0dfc632f.. -- doc/source | \
@@ -22,6 +17,7 @@ redirectmatch 301 ^/nova/([^/]+)/support-matrix.html$ /nova/$1/user/support-matr
 redirectmatch 301 ^/nova/([^/]+)/upgrade.html$ /nova/$1/user/upgrade.html
 redirectmatch 301 ^/nova/([^/]+)/vendordata.html$ /nova/$1/user/vendordata.html
 redirectmatch 301 ^/nova/([^/]+)/wsgi.html$ /nova/$1/user/wsgi.html
+redirectmatch 301 ^/nova/([^/]+)/api_microversion_history.html$ /nova/$1/reference/api-microversion-history.html
 redirectmatch 301 ^/nova/([^/]+)/gmr.html$ /nova/$1/reference/gmr.html
 redirectmatch 301 ^/nova/([^/]+)/i18n.html$ /nova/$1/reference/i18n.html
 redirectmatch 301 ^/nova/([^/]+)/notifications.html$ /nova/$1/reference/notifications.html
