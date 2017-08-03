@@ -122,43 +122,15 @@ fields (in addition to the ones that were already there):
 
 * source_type - this can have one of the following values:
 
-    * `image`
-    * `volume`
-    * `snapshot`
-    * `blank`
+  * `image`
+  * `volume`
+  * `snapshot`
+  * `blank`
 
 * dest_type  - this can have one of the following values:
 
-    * `local`
-    * `volume`
-
-Combination of the above two fields would define what kind of block device the
-entry is referring to. We currently support the following combinations:
-
-    * `image` -> `local` - this is only currently reserved for the entry
-      referring to the Glance image that the instance is being booted with (it
-      should also be marked as a boot device). It is also worth noting that an
-      API request that specifies this, also has to provide the same Glance uuid
-      as the `image_ref` parameter to the boot request (this is done for
-      backwards compatibility and may be changed in the future). This
-      functionality might be extended to specify additional Glance images
-      to be attached to an instance after boot (similar to kernel/ramdisk
-      images) but this functionality is not supported by any of the current
-      drivers.
-    * `volume` -> `volume` - this is just a Cinder volume to be attached to the
-      instance. It can be marked as a boot device.
-    * `snapshot` -> `volume` - this works exactly as passing `type=snap` does.
-      It would create a volume from a Cinder volume snapshot and attach that
-      volume to the instance. Can be marked bootable.
-    * `image` -> `volume` - As one would imagine, this would download a Glance
-      image to a cinder volume and attach it to an instance. Can also be marked
-      as bootable. This is really only a shortcut for creating a volume out of
-      an image before booting an instance with the newly created volume.
-    * `blank` -> `volume` - Creates a blank Cinder volume and attaches it. This
-      will also require the volume size to be set.
-    * `blank` -> `local` - Depending on the guest_format field (see below),
-      this will either mean an ephemeral blank disk on hypervisor local
-      storage, or a swap disk (instances can have only one of those).
+  * `local`
+  * `volume`
 
 * guest_format - Tells Nova how/if to format the device prior to attaching,
   should be only used with blank local images. Denotes a swap disk if the value
@@ -189,10 +161,42 @@ entry is referring to. We currently support the following combinations:
   usage is to set it to 0 for the boot device and leave it as None for any
   other devices.
 
+Valid source / dest combinations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Nova will not allow mixing of two formats in a single request, and will do
-basic validation to make sure that the requested block device mapping is valid
-before accepting a boot request.
+Combination of the ``source_type`` and ``dest_type`` will define the
+kind of block device the entry is referring to. The following
+combinations are supported:
+
+* `image` -> `local` - this is only currently reserved for the entry
+  referring to the Glance image that the instance is being booted with
+  (it should also be marked as a boot device). It is also worth noting
+  that an API request that specifies this, also has to provide the
+  same Glance uuid as the `image_ref` parameter to the boot request
+  (this is done for backwards compatibility and may be changed in the
+  future). This functionality might be extended to specify additional
+  Glance images to be attached to an instance after boot (similar to
+  kernel/ramdisk images) but this functionality is not supported by
+  any of the current drivers.
+* `volume` -> `volume` - this is just a Cinder volume to be attached to the
+  instance. It can be marked as a boot device.
+* `snapshot` -> `volume` - this works exactly as passing `type=snap` does.
+  It would create a volume from a Cinder volume snapshot and attach that
+  volume to the instance. Can be marked bootable.
+* `image` -> `volume` - As one would imagine, this would download a Glance
+  image to a cinder volume and attach it to an instance. Can also be marked
+  as bootable. This is really only a shortcut for creating a volume out of
+  an image before booting an instance with the newly created volume.
+* `blank` -> `volume` - Creates a blank Cinder volume and attaches it. This
+  will also require the volume size to be set.
+* `blank` -> `local` - Depending on the guest_format field (see below),
+  this will either mean an ephemeral blank disk on hypervisor local
+  storage, or a swap disk (instances can have only one of those).
+
+
+Nova will not allow mixing of BDMv1 and BDMv2 in a single request, and
+will do basic validation to make sure that the requested block device
+mapping is valid before accepting a boot request.
 
 .. [1] In addition to the BlockDeviceMapping Nova object, we also have the
    BlockDeviceDict class in :mod: `nova.block_device` module. This class
