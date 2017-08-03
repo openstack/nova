@@ -232,9 +232,9 @@ well as some extra records in the databases.
 All nova deployments must now have the following databases available
 and configured:
 
- 1. The "API" database
- 2. One special "cell" database called "cell0"
- 3. One (or eventually more) "cell" databases
+1. The "API" database
+2. One special "cell" database called "cell0"
+3. One (or eventually more) "cell" databases
 
 Thus, a small nova deployment will have an API database, a cell0, and
 what we will call here a "cell1" database. High-level tracking
