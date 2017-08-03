@@ -470,6 +470,195 @@ class TestPutAllocations(SchedulerReportClientTestCase):
 
         self.assertTrue(res)
 
+    def test_claim_resources_success_resize_to_same_host_no_shared(self):
+        """Tests that when a resize to the same host operation is detected
+        (existing allocations for the same instance UUID and same resource
+        provider) that we end up constructing an appropriate allocation that
+        contains the original resources on the source host as well as the
+        resources on the destination host, which in this case are the same.
+        """
+        get_current_allocations_resp_mock = mock.Mock(status_code=200)
+        get_current_allocations_resp_mock.json.return_value = {
+            'allocations': {
+                uuids.same_host: {
+                    'resource_provider_generation': 42,
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                        'DISK_GB': 20
+                    },
+                },
+            },
+        }
+
+        self.ks_sess_mock.get.return_value = get_current_allocations_resp_mock
+        put_allocations_resp_mock = mock.Mock(status_code=204)
+        self.ks_sess_mock.put.return_value = put_allocations_resp_mock
+        consumer_uuid = uuids.consumer_uuid
+        # This is the resize-up allocation where VCPU, MEMORY_MB and DISK_GB
+        # are all being increased but on the same host. We also throw a custom
+        # resource class in the new allocation to make sure it's not lost and
+        # that we don't have a KeyError when merging the allocations.
+        alloc_req = {
+            'allocations': [
+                {
+                    'resource_provider': {
+                        'uuid': uuids.same_host,
+                    },
+                    'resources': {
+                        'VCPU': 2,
+                        'MEMORY_MB': 2048,
+                        'DISK_GB': 40,
+                        'CUSTOM_FOO': 1
+                    },
+                },
+            ],
+        }
+
+        project_id = uuids.project_id
+        user_id = uuids.user_id
+        res = self.client.claim_resources(consumer_uuid, alloc_req, project_id,
+            user_id)
+
+        expected_url = "/allocations/%s" % consumer_uuid
+        # New allocation should include doubled resources claimed on the same
+        # host.
+        expected_payload = {
+            'allocations': [
+                {
+                    'resource_provider': {
+                        'uuid': uuids.same_host,
+                    },
+                    'resources': {
+                        'VCPU': 3,
+                        'MEMORY_MB': 3072,
+                        'DISK_GB': 60,
+                        'CUSTOM_FOO': 1
+                    },
+                },
+            ],
+        }
+        expected_payload['project_id'] = project_id
+        expected_payload['user_id'] = user_id
+        self.ks_sess_mock.put.assert_called_once_with(
+            expected_url, endpoint_filter=mock.ANY,
+            headers={'OpenStack-API-Version': 'placement 1.10'},
+            json=mock.ANY, raise_exc=False)
+        # We have to pull the json body from the mock call_args to validate
+        # it separately otherwise hash seed issues get in the way.
+        actual_payload = self.ks_sess_mock.put.call_args[1]['json']
+        sort_by_uuid = lambda x: x['resource_provider']['uuid']
+        expected_allocations = sorted(expected_payload['allocations'],
+                                      key=sort_by_uuid)
+        actual_allocations = sorted(actual_payload['allocations'],
+                                    key=sort_by_uuid)
+        self.assertEqual(expected_allocations, actual_allocations)
+
+        self.assertTrue(res)
+
+    def test_claim_resources_success_resize_to_same_host_with_shared(self):
+        """Tests that when a resize to the same host operation is detected
+        (existing allocations for the same instance UUID and same resource
+        provider) that we end up constructing an appropriate allocation that
+        contains the original resources on the source host as well as the
+        resources on the destination host, which in this case are the same.
+        This test adds the fun wrinkle of throwing a shared storage provider
+        in the mix when doing resize to the same host.
+        """
+        get_current_allocations_resp_mock = mock.Mock(status_code=200)
+        get_current_allocations_resp_mock.json.return_value = {
+            'allocations': {
+                uuids.same_host: {
+                    'resource_provider_generation': 42,
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024
+                    },
+                },
+                uuids.shared_storage: {
+                    'resource_provider_generation': 42,
+                    'resources': {
+                        'DISK_GB': 20,
+                    },
+                },
+            },
+        }
+
+        self.ks_sess_mock.get.return_value = get_current_allocations_resp_mock
+        put_allocations_resp_mock = mock.Mock(status_code=204)
+        self.ks_sess_mock.put.return_value = put_allocations_resp_mock
+        consumer_uuid = uuids.consumer_uuid
+        # This is the resize-up allocation where VCPU, MEMORY_MB and DISK_GB
+        # are all being increased but DISK_GB is on a shared storage provider.
+        alloc_req = {
+            'allocations': [
+                {
+                    'resource_provider': {
+                        'uuid': uuids.same_host,
+                    },
+                    'resources': {
+                        'VCPU': 2,
+                        'MEMORY_MB': 2048
+                    },
+                },
+                {
+                    'resource_provider': {
+                        'uuid': uuids.shared_storage,
+                    },
+                    'resources': {
+                        'DISK_GB': 40,
+                    },
+                },
+            ],
+        }
+
+        project_id = uuids.project_id
+        user_id = uuids.user_id
+        res = self.client.claim_resources(consumer_uuid, alloc_req, project_id,
+            user_id)
+
+        expected_url = "/allocations/%s" % consumer_uuid
+        # New allocation should include doubled resources claimed on the same
+        # host.
+        expected_payload = {
+            'allocations': [
+                {
+                    'resource_provider': {
+                        'uuid': uuids.same_host,
+                    },
+                    'resources': {
+                        'VCPU': 3,
+                        'MEMORY_MB': 3072
+                    },
+                },
+                {
+                    'resource_provider': {
+                        'uuid': uuids.shared_storage,
+                    },
+                    'resources': {
+                        'DISK_GB': 60,
+                    },
+                },
+            ],
+        }
+        expected_payload['project_id'] = project_id
+        expected_payload['user_id'] = user_id
+        self.ks_sess_mock.put.assert_called_once_with(
+            expected_url, endpoint_filter=mock.ANY,
+            headers={'OpenStack-API-Version': 'placement 1.10'},
+            json=mock.ANY, raise_exc=False)
+        # We have to pull the json body from the mock call_args to validate
+        # it separately otherwise hash seed issues get in the way.
+        actual_payload = self.ks_sess_mock.put.call_args[1]['json']
+        sort_by_uuid = lambda x: x['resource_provider']['uuid']
+        expected_allocations = sorted(expected_payload['allocations'],
+                                      key=sort_by_uuid)
+        actual_allocations = sorted(actual_payload['allocations'],
+                                    key=sort_by_uuid)
+        self.assertEqual(expected_allocations, actual_allocations)
+
+        self.assertTrue(res)
+
     def test_claim_resources_fail_retry_success(self):
         get_resp_mock = mock.Mock(status_code=200)
         get_resp_mock.json.return_value = {
