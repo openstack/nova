@@ -194,12 +194,13 @@ Advanced testing and guides
     contributor/testing/serial-console
     contributor/testing/zero-downtime-upgrade
 
-Sample Configuration File
--------------------------
+Configuration
+-------------
 
 .. toctree::
     :maxdepth: 1
 
+    configuration/config
     configuration/sample-config
 
 Sample Policy file
