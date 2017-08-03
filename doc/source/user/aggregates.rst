@@ -67,21 +67,21 @@ Design
 
 The OSAPI Admin API is extended to support the following operations:
 
-    * Aggregates
+* Aggregates
 
-      * list aggregates: returns a list of all the host-aggregates (optionally filtered by availability zone)
-      * create aggregate: creates an aggregate, takes a friendly name, etc. returns an id
-      * show aggregate: shows the details of an aggregate (id, name, availability_zone, hosts and metadata)
-      * update aggregate: updates the name and availability zone of an aggregate
-      * set metadata: sets the metadata on an aggregate to the values supplied
-      * delete aggregate: deletes an aggregate, it fails if the aggregate is not empty
-      * add host: adds a host to the aggregate
-      * remove host: removes a host from the aggregate
+  * list aggregates: returns a list of all the host-aggregates (optionally filtered by availability zone)
+  * create aggregate: creates an aggregate, takes a friendly name, etc. returns an id
+  * show aggregate: shows the details of an aggregate (id, name, availability_zone, hosts and metadata)
+  * update aggregate: updates the name and availability zone of an aggregate
+  * set metadata: sets the metadata on an aggregate to the values supplied
+  * delete aggregate: deletes an aggregate, it fails if the aggregate is not empty
+  * add host: adds a host to the aggregate
+  * remove host: removes a host from the aggregate
 
-    * Hosts
+* Hosts
 
-      * start host maintenance (or evacuate-host): disallow a host to serve API requests and migrate instances to other hosts of the aggregate
-      * stop host maintenance: (or rebalance-host): put the host back into operational mode, migrating instances back onto that host
+  * start host maintenance (or evacuate-host): disallow a host to serve API requests and migrate instances to other hosts of the aggregate
+  * stop host maintenance: (or rebalance-host): put the host back into operational mode, migrating instances back onto that host
 
 Using the Nova CLI
 ------------------
