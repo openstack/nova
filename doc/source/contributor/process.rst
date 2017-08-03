@@ -58,25 +58,25 @@ used by many OpenStack projects, including the following steps.
 
 - Feature Proposal Freeze
 
-   -  make sure all code is up for review
-   -  so we can optimise for completed features, not lots of half
-      completed features
+  -  make sure all code is up for review
+  -  so we can optimise for completed features, not lots of half
+     completed features
 
 - Feature Freeze
 
-   -  make sure all feature code is merged
+  -  make sure all feature code is merged
 
 - String Freeze
 
-   -  give translators time to translate all our strings
-   -  Note: debug logs are no longer translated
+  -  give translators time to translate all our strings
+  -  Note: debug logs are no longer translated
 
 - Dependency Freeze
 
-   -  time to co-ordinate the final list of dependencies, and give packagers
-      time to package them
-   -  generally it is also quite destabilising to take upgrades (beyond
-      bug fixes) this late
+  -  time to co-ordinate the final list of dependencies, and give packagers
+     time to package them
+  -  generally it is also quite destabilising to take upgrades (beyond
+     bug fixes) this late
 
 As with all processes here, there are exceptions. The exceptions at
 this stage need to be discussed with the horizontal teams that might be
