@@ -23,6 +23,7 @@ redirectmatch 301 ^/nova/([^/]+)/i18n.html$ /nova/$1/reference/i18n.html
 redirectmatch 301 ^/nova/([^/]+)/notifications.html$ /nova/$1/reference/notifications.html
 redirectmatch 301 ^/nova/([^/]+)/policy_enforcement.html$ /nova/$1/reference/policy-enforcement.html
 redirectmatch 301 ^/nova/([^/]+)/rpc.html$ /nova/$1/reference/rpc.html
+redirectmatch 301 ^/nova/([^/]+)/devref/rpc.html /nova/$1/reference/rpc.html
 redirectmatch 301 ^/nova/([^/]+)/scheduler_evolution.html$ /nova/$1/reference/scheduler-evolution.html
 redirectmatch 301 ^/nova/([^/]+)/services.html$ /nova/$1/reference/services.html
 redirectmatch 301 ^/nova/([^/]+)/stable_api.html$ /nova/$1/reference/stable-api.html
