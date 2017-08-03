@@ -203,12 +203,13 @@ Configuration
     configuration/config
     configuration/sample-config
 
-Sample Policy file
-------------------
+Policy
+------
 
 .. toctree::
     :maxdepth: 1
 
+    configuration/policy
     configuration/sample-policy
 
 Man Pages
