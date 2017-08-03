@@ -718,7 +718,7 @@ class ComputeManager(manager.Manager):
         self._delete_scheduler_instance_info(context, instance.uuid)
 
     def _init_instance(self, context, instance):
-        '''Initialize this instance during service init.'''
+        """Initialize this instance during service init."""
 
         # NOTE(danms): If the instance appears to not be owned by this
         # host, it may have been evacuated away, but skipped by the
