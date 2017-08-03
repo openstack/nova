@@ -20,18 +20,18 @@ RPC API Versions
 
 * If an RPC method is modified, the following needs to happen:
 
- * The manager-side (example: compute/manager) needs a version bump
- * The manager-side method needs to tolerate older calls as well as
-   newer calls
- * Arguments can be added as long as they are optional. Arguments
-   cannot be removed or changed in an incompatible way.
- * The RPC client code (example: compute/rpcapi.py) needs to be able
-   to honor a pin for the older version (see
-   self.client.can_send_version() calls). If we are pinned at 1.5, but
-   the version requirement for a method is 1.7, we need to be able to
-   formulate the call at version 1.5.
- * Methods can drop compatibility with older versions when we bump a
-   major version.
+  * The manager-side (example: compute/manager) needs a version bump
+  * The manager-side method needs to tolerate older calls as well as
+      newer calls
+  * Arguments can be added as long as they are optional. Arguments
+    cannot be removed or changed in an incompatible way.
+  * The RPC client code (example: compute/rpcapi.py) needs to be able
+    to honor a pin for the older version (see
+    self.client.can_send_version() calls). If we are pinned at 1.5, but
+    the version requirement for a method is 1.7, we need to be able to
+    formulate the call at version 1.5.
+  * Methods can drop compatibility with older versions when we bump a
+    major version.
 
 * RPC methods can be deprecated by removing the client (example:
   compute/rpcapi.py) implementation. However, the manager method must
@@ -98,22 +98,22 @@ very long. So here are some key points:
 
 * `Terms <https://specs.openstack.org/openstack/api-wg/guidelines/terms.html>`_
 
-    * ``project`` should be used in the REST API instead of ``tenant``.
-    * ``server`` should be used in the REST API instead of ``instance``.
-    * ``compute`` should be used in the REST API instead of ``nova``.
+  * ``project`` should be used in the REST API instead of ``tenant``.
+  * ``server`` should be used in the REST API instead of ``instance``.
+  * ``compute`` should be used in the REST API instead of ``nova``.
 
 * `Naming Conventions <https://specs.openstack.org/openstack/api-wg/guidelines/naming.html>`_
 
-    * URL should not include underscores; use hyphens ('-') instead.
-    * The field names contained in a request/response body should
-      use snake_case style, not CamelCase or Mixed_Case style.
+  * URL should not include underscores; use hyphens ('-') instead.
+  * The field names contained in a request/response body should
+    use snake_case style, not CamelCase or Mixed_Case style.
 
 * `HTTP Response Codes <http://specs.openstack.org/openstack/api-wg/guidelines/http.html#http-response-codes>`_
 
-    * Synchronous resource creation: ``201 Created``
-    * Asynchronous resource creation: ``202 Accepted``
-    * Synchronous resource deletion: ``204 No Content``
-    * For all other successful operations: ``200 OK``
+  * Synchronous resource creation: ``201 Created``
+  * Asynchronous resource creation: ``202 Accepted``
+  * Synchronous resource deletion: ``204 No Content``
+  * For all other successful operations: ``200 OK``
 
 
 Config Options
@@ -144,11 +144,11 @@ A config option should be checked for:
 
 * Descriptions/Validations for the possible values.
 
-    * If this is an option with numeric values (int, float), describe the
-      edge cases (like the min value, max value, 0, -1).
-    * If this is a DictOpt, describe the allowed keys.
-    * If this is a StrOpt, list any possible regex validations, or provide a
-      list of acceptable and/or prohibited values.
+  * If this is an option with numeric values (int, float), describe the
+    edge cases (like the min value, max value, 0, -1).
+  * If this is a DictOpt, describe the allowed keys.
+  * If this is a StrOpt, list any possible regex validations, or provide a
+    list of acceptable and/or prohibited values.
 
 Previously used sections which explained which services consume a specific
 config option and which options are related to each other got dropped
