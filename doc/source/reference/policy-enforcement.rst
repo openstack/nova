@@ -111,16 +111,16 @@ specific API.
 Nova should provide different prefix for policy rule name that used to
 group them, and put them in different policy configure file in policy.d
 
-  * EC2 API: Use prefix "ec2_api". The rule looks like "ec2_api:[action]"
+* EC2 API: Use prefix "ec2_api". The rule looks like "ec2_api:[action]"
 
-  * Nova V2 API: After we move to V2.1, we needn't spend time to change V2
-    api rule, and needn't to bother deployer upgrade their policy config. So
-    just keep V2 API policy rule named as before.
+* Nova V2 API: After we move to V2.1, we needn't spend time to change V2
+  api rule, and needn't to bother deployer upgrade their policy config. So
+  just keep V2 API policy rule named as before.
 
-  * Nova V2.1 API: We name the policy rule as
-    "os_compute_api:[extension]:[action]". The core API may be changed in
-    the future, so we needn't name them as "compute" or "compute_extension"
-    to distinguish the core or extension API.
+* Nova V2.1 API: We name the policy rule as
+  "os_compute_api:[extension]:[action]". The core API may be changed in
+  the future, so we needn't name them as "compute" or "compute_extension"
+  to distinguish the core or extension API.
 
 This will affect EC2 API and V2.1 API. For EC2 API, it need deployer update
 their policy config. For V2.1 API, there isn't any user yet, so there won't
@@ -134,18 +134,18 @@ After group the policy rules for different API, we can separate them into
 different files. Then deployer will more clear for which rule he can set for
 specific API. The rules can be grouped as below:
 
-  * policy.json: It only contains the generic rule, like: ::
+* policy.json: It only contains the generic rule, like: ::
 
-    "context_is_admin":  "role:admin",
-    "admin_or_owner":  "is_admin:True or project_id:%(project_id)s",
-    "default": "rule:admin_or_owner",
+  "context_is_admin":  "role:admin",
+  "admin_or_owner":  "is_admin:True or project_id:%(project_id)s",
+  "default": "rule:admin_or_owner",
 
-  * policy.d/00-ec2-api.conf: It contains all the policy rules for EC2 API.
+* policy.d/00-ec2-api.conf: It contains all the policy rules for EC2 API.
 
-  * policy.d/00-v2-api.conf: It contains all the policy rules for nova V2 API.
+* policy.d/00-v2-api.conf: It contains all the policy rules for nova V2 API.
 
-  * policy.d/00-v2.1-api.conf: It contains all the policy rules for nova v2.1
-    API.
+* policy.d/00-v2.1-api.conf: It contains all the policy rules for nova v2.1
+  API.
 
 The prefix '00-' is used to order the configure file. All the files in
 policy.d will be loaded by alphabetical order. '00-' means those files will
