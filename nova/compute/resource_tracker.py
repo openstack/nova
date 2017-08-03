@@ -28,6 +28,7 @@ from nova.compute import claims
 from nova.compute import monitors
 from nova.compute import stats
 from nova.compute import task_states
+from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 import nova.conf
 from nova import exception
@@ -40,7 +41,6 @@ from nova.pci import manager as pci_manager
 from nova.pci import request as pci_request
 from nova import rpc
 from nova.scheduler import client as scheduler_client
-from nova.scheduler.client import report
 from nova import utils
 from nova.virt import hardware
 
@@ -120,7 +120,7 @@ def _normalize_inventory_from_cn_obj(inv_data, cn):
             # TODO(johngarbutt) We should either move to reserved_host_disk_gb
             # or start tracking DISK_MB.
             reserved_mb = CONF.reserved_host_disk_mb
-            reserved_gb = report.convert_mb_to_ceil_gb(reserved_mb)
+            reserved_gb = compute_utils.convert_mb_to_ceil_gb(reserved_mb)
             disk_inv['reserved'] = reserved_gb
 
 

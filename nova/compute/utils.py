@@ -18,6 +18,7 @@ import contextlib
 import functools
 import inspect
 import itertools
+import math
 import string
 import traceback
 
@@ -216,6 +217,15 @@ def is_volume_backed_instance(context, instance, bdms=None):
         return not instance.image_ref
 
     return not instance['image_ref']
+
+
+def convert_mb_to_ceil_gb(mb_value):
+    gb_int = 0
+    if mb_value:
+        gb_float = mb_value / 1024.0
+        # ensure we reserve/allocate enough space by rounding up to nearest GB
+        gb_int = int(math.ceil(gb_float))
+    return gb_int
 
 
 def _get_unused_letter(used_letters):

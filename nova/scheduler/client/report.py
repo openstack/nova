@@ -15,7 +15,6 @@
 
 import copy
 import functools
-import math
 import re
 import time
 
@@ -30,6 +29,7 @@ from nova import exception
 from nova.i18n import _LE, _LI, _LW
 from nova import objects
 from nova.objects import fields
+from nova.scheduler import utils as scheduler_utils
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
@@ -87,15 +87,6 @@ def safe_connect(f):
     return wrapper
 
 
-def convert_mb_to_ceil_gb(mb_value):
-    gb_int = 0
-    if mb_value:
-        gb_float = mb_value / 1024.0
-        # ensure we reserve/allocate enough space by rounding up to nearest GB
-        gb_int = int(math.ceil(gb_float))
-    return gb_int
-
-
 def _compute_node_to_inventory_dict(compute_node):
     """Given a supplied `objects.ComputeNode` object, return a dict, keyed
     by resource class, of various inventory information.
@@ -127,7 +118,8 @@ def _compute_node_to_inventory_dict(compute_node):
     if compute_node.local_gb > 0:
         # TODO(johngarbutt) We should either move to reserved_host_disk_gb
         # or start tracking DISK_MB.
-        reserved_disk_gb = convert_mb_to_ceil_gb(CONF.reserved_host_disk_mb)
+        reserved_disk_gb = compute_utils.convert_mb_to_ceil_gb(
+            CONF.reserved_host_disk_mb)
         result[DISK_GB] = {
             'total': compute_node.local_gb,
             'reserved': reserved_disk_gb,
@@ -145,37 +137,8 @@ def _instance_to_allocations_dict(instance):
 
     :param instance: `objects.Instance` object to translate
     """
-    # NOTE(danms): Boot-from-volume instances consume no local disk
-    is_bfv = compute_utils.is_volume_backed_instance(instance._context,
-                                                     instance)
-    # TODO(johngarbutt) we have to round up swap MB to the next GB.
-    # It would be better to claim disk in MB, but that is hard now.
-    swap_in_gb = convert_mb_to_ceil_gb(instance.flavor.swap)
-    disk = ((0 if is_bfv else instance.flavor.root_gb) +
-            swap_in_gb + instance.flavor.ephemeral_gb)
-    alloc_dict = {
-        MEMORY_MB: instance.flavor.memory_mb,
-        VCPU: instance.flavor.vcpus,
-        DISK_GB: disk,
-    }
-
-    # Pull out any resource overrides, which are in the format
-    # "resources:FOO" and generate a dict of FOO=value candidates
-    # for overriding the resources in the allocation.
-    overrides = {k.split(':', 1)[1]: v for k, v in
-                 instance.flavor.extra_specs.items()
-                 if k.startswith('resources:')}
-
-    # Any resource overrides which are properly namespaced as custom,
-    # or are standard resource class values override the alloc_dict
-    # already constructed from the base flavor values above. Since
-    # extra_specs are string values and resource counts are always
-    # integers, we convert them here too for any that we find.
-    overrides = {k: int(v) for k, v in overrides.items()
-            if (k.startswith(objects.ResourceClass.CUSTOM_NAMESPACE) or
-                k in fields.ResourceClass.STANDARD)}
-
-    alloc_dict.update(overrides)
+    alloc_dict = scheduler_utils.resources_from_flavor(instance,
+        instance.flavor)
 
     # Remove any zero allocations.
     return {key: val for key, val in alloc_dict.items() if val}
@@ -232,13 +195,8 @@ def _move_operation_alloc_request(source_allocs, dest_alloc_req):
                         alloc['resource_provider']['uuid']):
                     # Now sum the current allocation resource amounts with
                     # the new allocation resource amounts.
-                    for res_name, res_value in alloc['resources'].items():
-                        if res_name in current_alloc['resources']:
-                            current_alloc['resources'][res_name] += res_value
-                        else:
-                            # This is a new resource class in the new
-                            # allocation for which we need to account.
-                            current_alloc['resources'][res_name] = res_value
+                    scheduler_utils.merge_resources(current_alloc['resources'],
+                                                    alloc['resources'])
 
     LOG.debug("New allocation request containing both source and "
               "destination hosts in move operation: %s", new_alloc_req)

@@ -143,6 +143,42 @@ def _process_extra_specs(extra_specs, resources):
             resources[std_key] = val
 
 
+def resources_from_flavor(instance, flavor):
+    """Convert a flavor into a set of resources for placement, taking into
+    account boot-from-volume instances.
+
+    This takes an instance and a flavor and returns a dict of
+    resource_class:amount based on the attributes of the flavor, accounting for
+    any overrides that are made in extra_specs.
+    """
+    is_bfv = compute_utils.is_volume_backed_instance(instance._context,
+                                                     instance)
+    swap_in_gb = compute_utils.convert_mb_to_ceil_gb(flavor.swap)
+    disk = ((0 if is_bfv else flavor.root_gb) +
+            swap_in_gb + flavor.ephemeral_gb)
+
+    resources = {
+        fields.ResourceClass.VCPU: flavor.vcpus,
+        fields.ResourceClass.MEMORY_MB: flavor.memory_mb,
+        fields.ResourceClass.DISK_GB: disk,
+    }
+    if "extra_specs" in flavor:
+        _process_extra_specs(flavor.extra_specs, resources)
+    return resources
+
+
+def merge_resources(original_resources, new_resources, sign=1):
+    """Merge a list of new resources with existing resources.
+
+    Either add the resources (if sign is 1) or subtract (if sign is -1)
+    """
+
+    all_keys = set(original_resources.keys()) | set(new_resources.keys())
+    for key in all_keys:
+        original_resources[key] = (original_resources.get(key, 0) +
+                                   (sign * new_resources.get(key, 0)))
+
+
 def resources_from_request_spec(spec_obj):
     """Given a RequestSpec object, returns a dict, keyed by resource class
     name, of requested amounts of those resources.

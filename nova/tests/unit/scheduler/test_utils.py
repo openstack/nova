@@ -161,3 +161,66 @@ class TestUtils(test.NoDBTestCase):
                 extra_specs={"resources:CUSTOM_TEST_CLASS": ""})
         fake_spec = objects.RequestSpec(flavor=flavor)
         utils.resources_from_request_spec(fake_spec)
+
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                return_value=False)
+    def test_resources_from_flavor_no_bfv(self, mock_is_bfv):
+        flavor = objects.Flavor(vcpus=1, memory_mb=1024, root_gb=10,
+                                ephemeral_gb=5, swap=1024,
+                                extra_specs={})
+        instance = objects.Instance()
+        expected = {
+            'VCPU': 1,
+            'MEMORY_MB': 1024,
+            'DISK_GB': 16,
+        }
+        actual = utils.resources_from_flavor(instance, flavor)
+        self.assertEqual(expected, actual)
+
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                return_value=True)
+    def test_resources_from_flavor_bfv(self, mock_is_bfv):
+        flavor = objects.Flavor(vcpus=1, memory_mb=1024, root_gb=10,
+                                ephemeral_gb=5, swap=1024,
+                                extra_specs={})
+        instance = objects.Instance()
+        expected = {
+            'VCPU': 1,
+            'MEMORY_MB': 1024,
+            'DISK_GB': 6,  # No root disk...
+        }
+        actual = utils.resources_from_flavor(instance, flavor)
+        self.assertEqual(expected, actual)
+
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                return_value=False)
+    def test_resources_from_flavor_with_override(self, mock_is_bfv):
+        flavor = objects.Flavor(vcpus=1, memory_mb=1024, root_gb=10,
+                                ephemeral_gb=5, swap=1024,
+                                extra_specs={'resources:VCPU': '2'})
+        instance = objects.Instance()
+        expected = {
+            'VCPU': 2,
+            'MEMORY_MB': 1024,
+            'DISK_GB': 16,
+        }
+        actual = utils.resources_from_flavor(instance, flavor)
+        self.assertEqual(expected, actual)
+
+    def test_merge_resources(self):
+        resources = {
+            'VCPU': 1, 'MEMORY_MB': 1024,
+        }
+        new_resources = {
+            'VCPU': 2, 'MEMORY_MB': 2048, 'CUSTOM_FOO': 1,
+        }
+        doubled = {
+            'VCPU': 3, 'MEMORY_MB': 3072, 'CUSTOM_FOO': 1,
+        }
+        saved_orig = dict(resources)
+        utils.merge_resources(resources, new_resources)
+        # Check to see that we've doubled our resources
+        self.assertEqual(doubled, resources)
+        # and then removed those doubled resources
+        utils.merge_resources(resources, saved_orig, -1)
+        self.assertEqual(new_resources, resources)
