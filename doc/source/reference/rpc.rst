@@ -17,7 +17,7 @@
 AMQP and Nova
 =============
 
-AMQP is the messaging technology chosen by the OpenStack cloud.  The AMQP
+AMQP is the messaging technology chosen by the OpenStack cloud. The AMQP
 broker, either RabbitMQ or Qpid, sits between any two Nova components and
 allows them to communicate in a loosely coupled fashion. More precisely, Nova
 components (the compute fabric of OpenStack) use Remote Procedure Calls (RPC
@@ -41,20 +41,18 @@ like the one depicted in the figure below:
 .. image:: /_static/images/rpc-arch.png
    :width: 60%
 
-..
-
 Nova implements RPC (both request+response, and one-way, respectively nicknamed
-'rpc.call' and 'rpc.cast') over AMQP by providing an adapter class which take
-cares of marshaling and unmarshaling of messages into function calls. Each Nova
-service (for example Compute, Scheduler, etc.) create two queues at the
+``rpc.call`` and ``rpc.cast``) over AMQP by providing an adapter class which
+take cares of marshaling and unmarshaling of messages into function calls. Each
+Nova service (for example Compute, Scheduler, etc.) create two queues at the
 initialization time, one which accepts messages with routing keys
-'NODE-TYPE.NODE-ID' (for example compute.hostname) and another, which accepts
-messages with routing keys as generic 'NODE-TYPE' (for example compute). The
-former is used specifically when Nova-API needs to redirect commands to a
-specific node like 'euca-terminate instance'. In this case, only the compute
-node whose host's hypervisor is running the virtual machine can kill the
-instance. The API acts as a consumer when RPC calls are request/response,
-otherwise it acts as a publisher only.
+``NODE-TYPE.NODE-ID`` (for example ``compute.hostname``) and another, which
+accepts messages with routing keys as generic ``NODE-TYPE`` (for example
+``compute``). The former is used specifically when Nova-API needs to redirect
+commands to a specific node like ``euca-terminate instance``. In this case,
+only the compute node whose host's hypervisor is running the virtual machine
+can kill the instance. The API acts as a consumer when RPC calls are
+request/response, otherwise it acts as a publisher only.
 
 Nova RPC Mappings
 -----------------
@@ -67,63 +65,68 @@ may use the queue either as an Invoker (such as API or Scheduler) or a Worker
 (such as Compute or Network). Invokers and Workers do not actually exist in the
 Nova object model, but we are going to use them as an abstraction for sake of
 clarity. An Invoker is a component that sends messages in the queuing system
-via two operations: 1) rpc.call and ii) rpc.cast; a Worker is a component that
-receives messages from the queuing system and reply accordingly to rpc.call
-operations.
+via two operations: 1) ``rpc.call`` and ii) ``rpc.cast``; a Worker is a
+component that receives messages from the queuing system and reply accordingly
+to ``rpc.call`` operations.
 
 Figure 2 shows the following internal elements:
 
-* Topic Publisher: a Topic Publisher comes to life when an rpc.call or an
-  rpc.cast operation is executed; this object is instantiated and used to push
-  a message to the queuing system. Every publisher connects always to the same
+Topic Publisher
+  A Topic Publisher comes to life when an ``rpc.call`` or an ``rpc.cast``
+  operation is executed; this object is instantiated and used to push a message
+  to the queuing system. Every publisher connects always to the same
   topic-based exchange; its life-cycle is limited to the message delivery.
 
-* Direct Consumer: a Direct Consumer comes to life if (an only if) a rpc.call
-  operation is executed; this object is instantiated and used to receive a
-  response message from the queuing system; Every consumer connects to a unique
-  direct-based exchange via a unique exclusive queue; its life-cycle is limited
-  to the message delivery; the exchange and queue identifiers are determined by
-  a UUID generator, and are marshaled in the message sent by the Topic
-  Publisher (only rpc.call operations).
+Direct Consumer
+  A Direct Consumer comes to life if (and only if) an ``rpc.call`` operation is
+  executed; this object is instantiated and used to receive a response message
+  from the queuing system. Every consumer connects to a unique direct-based
+  exchange via a unique exclusive queue; its life-cycle is limited to the
+  message delivery; the exchange and queue identifiers are determined by a UUID
+  generator, and are marshaled in the message sent by the Topic Publisher (only
+  ``rpc.call`` operations).
 
-* Topic Consumer: a Topic Consumer comes to life as soon as a Worker is
-  instantiated and exists throughout its life-cycle; this object is used to
-  receive messages from the queue and it invokes the appropriate action as
-  defined by the Worker role. A Topic Consumer connects to the same topic-based
-  exchange either via a shared queue or via a unique exclusive queue. Every
-  Worker has two topic consumers, one that is addressed only during rpc.cast
-  operations (and it connects to a shared queue whose exchange key is 'topic')
-  and the other that is addressed only during rpc.call operations (and it
-  connects to a unique queue whose exchange key is 'topic.host').
+Topic Consumer
+  A Topic Consumer comes to life as soon as a Worker is instantiated and exists
+  throughout its life-cycle; this object is used to receive messages from the
+  queue and it invokes the appropriate action as defined by the Worker role. A
+  Topic Consumer connects to the same topic-based exchange either via a shared
+  queue or via a unique exclusive queue. Every Worker has two topic consumers,
+  one that is addressed only during ``rpc.cast`` operations (and it connects to
+  a shared queue whose exchange key is ``topic``) and the other that is
+  addressed only during ``rpc.call`` operations (and it connects to a unique
+  queue whose exchange key is ``topic.host``).
 
-* Direct Publisher: a Direct Publisher comes to life only during rpc.call
-  operations and it is instantiated to return the message required by the
-  request/response operation. The object connects to a direct-based exchange
-  whose identity is dictated by the incoming message.
+Direct Publisher
+  A Direct Publisher comes to life only during ``rpc.call`` operations and it
+  is instantiated to return the message required by the request/response
+  operation. The object connects to a direct-based exchange whose identity is
+  dictated by the incoming message.
 
-* Topic Exchange: The Exchange is a routing table that exists in the context of
-  a virtual host (the multi-tenancy mechanism provided by Qpid or RabbitMQ);
-  its type (such as topic vs. direct) determines the routing policy; a message
-  broker node will have only one topic-based exchange for every topic in Nova.
+Topic Exchange
+  The Exchange is a routing table that exists in the context of a virtual host
+  (the multi-tenancy mechanism provided by Qpid or RabbitMQ); its type (such as
+  topic vs. direct) determines the routing policy; a message broker node will
+  have only one topic-based exchange for every topic in Nova.
 
-* Direct Exchange: this is a routing table that is created during rpc.call
-  operations; there are many instances of this kind of exchange throughout the
-  life-cycle of a message broker node, one for each rpc.call invoked.
+Direct Exchange
+  This is a routing table that is created during ``rpc.call`` operations; there
+  are many instances of this kind of exchange throughout the life-cycle of a
+  message broker node, one for each ``rpc.call`` invoked.
 
-* Queue Element: A Queue is a message bucket. Messages are kept in the queue
-  until a Consumer (either Topic or Direct Consumer) connects to the queue and
-  fetch it. Queues can be shared or can be exclusive. Queues whose routing key
-  is 'topic' are shared amongst Workers of the same personality.
+Queue Element
+  A Queue is a message bucket. Messages are kept in the queue until a Consumer
+  (either Topic or Direct Consumer) connects to the queue and fetch it. Queues
+  can be shared or can be exclusive. Queues whose routing key is ``topic`` are
+  shared amongst Workers of the same personality.
 
 .. image:: /_static/images/rpc-rabt.png
    :width: 60%
 
-..
-
 RPC Calls
 ---------
 
-The diagram below shows the message flow during an rpc.call operation:
+The diagram below shows the message flow during an ``rpc.call`` operation:
 
 1. A Topic Publisher is instantiated to send the message request to the queuing
    system; immediately before the publishing operation, a Direct Consumer is
@@ -137,18 +140,16 @@ The diagram below shows the message flow during an rpc.call operation:
    response message to the queuing system.
 
 4. Once the message is dispatched by the exchange, it is fetched by the Direct
-   Consumer dictated by the routing key (such as 'msg_id') and passed to the
+   Consumer dictated by the routing key (such as ``msg_id``) and passed to the
    Invoker.
 
 .. image:: /_static/images/rpc-flow-1.png
    :width: 60%
 
-..
-
 RPC Casts
 ---------
 
-The diagram below shows the message flow during an rpc.cast operation:
+The diagram below shows the message flow during an ``rpc.cast`` operation:
 
 1. A Topic Publisher is instantiated to send the message request to the queuing
    system.
@@ -160,22 +161,22 @@ The diagram below shows the message flow during an rpc.cast operation:
 .. image:: /_static/images/rpc-flow-2.png
    :width: 60%
 
-..
-
 AMQP Broker Load
 ----------------
 
 At any given time the load of a message broker node running either Qpid or
 RabbitMQ is function of the following parameters:
 
-* Throughput of API calls: the number of API calls (more precisely rpc.call
-  ops) being served by the OpenStack cloud dictates the number of direct-based
-  exchanges, related queues and direct consumers connected to them.
+Throughput of API calls
+  The number of API calls (more precisely ``rpc.call`` ops) being served by the
+  OpenStack cloud dictates the number of direct-based exchanges, related queues
+  and direct consumers connected to them.
 
-* Number of Workers: there is one queue shared amongst workers with the same
-  personality; however there are as many exclusive queues as the number of
-  workers; the number of workers dictates also the number of routing keys
-  within the topic-based exchange, which is shared amongst all workers.
+Number of Workers
+  There is one queue shared amongst workers with the same personality; however
+  there are as many exclusive queues as the number of workers; the number of
+  workers dictates also the number of routing keys within the topic-based
+  exchange, which is shared amongst all workers.
 
 The figure below shows the status of a RabbitMQ node after Nova components'
 bootstrap in a test environment. Exchanges and queues being created by Nova
@@ -187,17 +188,15 @@ components are:
 
 * Queues
 
-  1. compute.phantom (phantom is hostname)
-  2. compute
-  3. network.phantom (phantom is hostname)
-  4. network
-  5. scheduler.phantom (phantom is hostname)
-  6. scheduler
+  1. ``compute.phantom`` (``phantom`` is hostname)
+  2. ``compute``
+  3. ``network.phantom`` (``phantom`` is hostname)
+  4. ``network``
+  5. ``scheduler.phantom`` (``phantom`` is hostname)
+  6. ``scheduler``
 
 .. image:: /_static/images/rpc-state.png
    :width: 60%
-
-..
 
 RabbitMQ Gotchas
 ----------------
@@ -210,97 +209,120 @@ to the RabbitMQ server (please note that most of the following material can be
 also found in the Kombu documentation; it has been summarized and revised here
 for sake of clarity):
 
-* Hostname: The hostname to the AMQP server.
+``hostname``
+  The hostname to the AMQP server.
 
-* Userid: A valid username used to authenticate to the server.
+``userid``
+  A valid username used to authenticate to the server.
 
-* Password: The password used to authenticate to the server.
+``password``
+  The password used to authenticate to the server.
 
-* Virtual_host: The name of the virtual host to work with. This virtual host
-  must exist on the server, and the user must have access to it. Default is
-  "/".
+``virtual_host``
+  The name of the virtual host to work with. This virtual host must exist on
+  the server, and the user must have access to it. Default is "/".
 
-* Port: The port of the AMQP server. Default is 5672 (amqp).
+``port``
+  The port of the AMQP server. Default is ``5672`` (amqp).
 
 The following parameters are default:
 
-* Insist: insist on connecting to a server. In a configuration with multiple
+``insist``
+  Insist on connecting to a server. In a configuration with multiple
   load-sharing servers, the Insist option tells the server that the client is
   insisting on a connection to the specified server. Default is False.
 
-* Connect_timeout: the timeout in seconds before the client gives up connecting
-  to the server. The default is no timeout.
+``connect_timeout``
+  The timeout in seconds before the client gives up connecting to the server.
+  The default is no timeout.
 
-* SSL: use SSL to connect to the server. The default is False.
+``ssl``
+  Use SSL to connect to the server. The default is False.
 
 More precisely Consumers need the following parameters:
 
-* Connection: the above mentioned Connection object.
+``connection``
+  The above mentioned Connection object.
 
-* Queue: name of the queue.
+``queue``
+  Name of the queue.
 
-* Exchange: name of the exchange the queue binds to.
+``exchange``
+  Name of the exchange the queue binds to.
 
-* Routing_key: the interpretation of the routing key depends on the value of
-  the exchange_type attribute.
+``routing_key``
+  The interpretation of the routing key depends on the value of the
+  ``exchange_type`` attribute.
 
-  * Direct exchange: if the routing key property of the message and the
-    routing_key attribute of the queue are identical, then the message is
-    forwarded to the queue.
+  Direct exchange
+    If the routing key property of the message and the ``routing_key`` attribute of
+    the queue are identical, then the message is forwarded to the queue.
 
-  * Fanout exchange: messages are forwarded to the queues bound the exchange,
-    even if the binding does not have a key.
+  Fanout exchange
+    Messages are forwarded to the queues bound the exchange, even if the
+    binding does not have a key.
 
-  * Topic exchange: if the routing key property of the message matches the
-    routing key of the key according to a primitive pattern matching scheme,
-    then the message is forwarded to the queue. The message routing key then
-    consists of words separated by dots (".", like domain names), and two
-    special characters are available; star ("") and hash ("#"). The star
-    matches any word, and the hash matches zero or more words. For example
-    ".stock.#" matches the routing keys "usd.stock" and "eur.stock.db" but not
-    "stock.nasdaq".
+  Topic exchange
+    If the routing key property of the message matches the routing key of the
+    key according to a primitive pattern matching scheme, then the message is
+    forwarded to the queue. The message routing key then consists of words
+    separated by dots (``.``, like domain names), and two special characters
+    are available; star (``*``) and hash (``#``). The star matches any word,
+    and the hash matches zero or more words. For example ``.stock.#`` matches
+    the routing keys ``usd.stock`` and ``eur.stock.db`` but not
+    ``stock.nasdaq``.
 
-* Durable: this flag determines the durability of both exchanges and queues;
-  durable exchanges and queues remain active when a RabbitMQ server restarts.
+``durable``
+  This flag determines the durability of both exchanges and queues; durable
+  exchanges and queues remain active when a RabbitMQ server restarts.
   Non-durable exchanges/queues (transient exchanges/queues) are purged when a
   server restarts. It is worth noting that AMQP specifies that durable queues
   cannot bind to transient exchanges. Default is True.
 
-* Auto_delete: if set, the exchange is deleted when all queues have finished
-  using it. Default is False.
-
-* Exclusive: exclusive queues (such as non-shared) may only be consumed from by
-  the current connection. When exclusive is on, this also implies auto_delete.
+``auto_delete``
+  If set, the exchange is deleted when all queues have finished using it.
   Default is False.
 
-* Exchange_type: AMQP defines several default exchange types (routing
-  algorithms) that covers most of the common messaging use cases.
+``exclusive``
+  Exclusive queues (such as non-shared) may only be consumed from by the
+  current connection. When exclusive is on, this also implies ``auto_delete``.
+  Default is False.
 
-* Auto_ack: acknowledgment is handled automatically once messages are received.
-  By default auto_ack is set to False, and the receiver is required to manually
+``exchange_type``
+  AMQP defines several default exchange types (routing algorithms) that covers
+  most of the common messaging use cases.
+
+``auto_ack``
+  Acknowledgment is handled automatically once messages are received.  By
+  default ``auto_ack`` is set to False, and the receiver is required to manually
   handle acknowledgment.
 
-* No_ack: it disable acknowledgment on the server-side. This is different from
-  auto_ack in that acknowledgment is turned off altogether. This functionality
-  increases performance but at the cost of reliability. Messages can get lost
-  if a client dies before it can deliver them to the application.
+``no_ack``
+  It disable acknowledgment on the server-side. This is different from
+  ``auto_ack`` in that acknowledgment is turned off altogether. This
+  functionality increases performance but at the cost of reliability. Messages
+  can get lost if a client dies before it can deliver them to the application.
 
-* Auto_declare: if this is True and the exchange name is set, the exchange will
-  be automatically declared at instantiation. Auto declare is on by default.
+``auto_declare``
+  If this is True and the exchange name is set, the exchange will be
+  automatically declared at instantiation. Auto declare is on by default.
 
 Publishers specify most the parameters of Consumers (such as they do not
 specify a queue name), but they can also specify the following:
 
-* Delivery_mode: the default delivery mode used for messages. The value is an
-  integer. The following delivery modes are supported by RabbitMQ:
+``delivery_mode``
+  The default delivery mode used for messages. The value is an integer. The
+  following delivery modes are supported by RabbitMQ:
 
-  * 1 or "transient": the message is transient. Which means it is stored in
-    memory only, and is lost if the server dies or restarts.
+  ``1`` (transient)
+    The message is transient. Which means it is stored in memory only, and is
+    lost if the server dies or restarts.
 
-  * 2 or "persistent": the message is persistent. Which means the message is
-    stored both in-memory, and on disk, and therefore preserved if the server
-    dies or restarts.
+  ``2`` (persistent)
+    The message is persistent. Which means the message is stored both
+    in-memory, and on disk, and therefore preserved if the server dies or
+    restarts.
 
-The default value is 2 (persistent). During a send operation, Publishers can
-override the delivery mode of messages so that, for example, transient messages
-can be sent over a durable queue.
+The default value is ``2`` (persistent). During a send operation, Publishers
+can override the delivery mode of messages so that, for example, transient
+messages can be sent over a durable queue.
