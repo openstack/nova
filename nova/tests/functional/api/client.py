@@ -425,8 +425,17 @@ class TestOpenStackClient(object):
         return self.api_delete('/servers/%s/os-interface/%s' %
                                (server_id, port_id))
 
-    def get_services(self):
-        return self.api_get('/os-services').body['services']
+    def get_services(self, binary=None, host=None):
+        url = '/os-services?'
+        if binary:
+            url += 'binary=%s&' % binary
+        if host:
+            url += 'host=%s&' % host
+        return self.api_get(url).body['services']
+
+    def put_service(self, service_id, req):
+        return self.api_put(
+            '/os-services/%s' % service_id, req).body['service']
 
     def post_keypair(self, keypair):
         return self.api_post('/os-keypairs', keypair).body['keypair']
