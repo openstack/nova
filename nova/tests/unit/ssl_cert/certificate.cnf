@@ -1,0 +1,39 @@
+[ req ]
+default_md              = sha512
+default_bits            = 4096
+distinguished_name      = req-dn
+req_extensions          = req_ext
+x509_extensions         = x509_ext
+string_mask             = utf8only
+prompt                  = no
+
+# Section x509_ext is used when generating a self-signed certificate. I.e., openssl req -x509 ...
+[ x509_ext ]
+subjectKeyIdentifier    = hash
+authorityKeyIdentifier  = keyid,issuer
+basicConstraints        = CA:FALSE
+keyUsage                = digitalSignature, keyEncipherment
+extendedKeyUsage        = serverAuth
+subjectAltName          = @alternate_names
+
+# Section req_ext is used when generating a certificate signing request. I.e., openssl req ...
+[ req_ext ]
+subjectKeyIdentifier    = hash
+basicConstraints        = CA:FALSE
+keyUsage                = digitalSignature, keyEncipherment
+extendedKeyUsage        = serverAuth
+subjectAltName          = @alternate_names
+
+[ req-dn ]
+C                       = US
+ST                      = Texas
+L                       = Austin
+O                       = OpenStack Foundation
+OU                      = OpenStack Developers
+CN                      = *
+
+[ alternate_names ]
+DNS.1                   = localhost
+DNS.2                   = ip6-localhost
+IP.1                    = 127.0.0.1
+IP.2                    = ::1
