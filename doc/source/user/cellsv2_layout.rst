@@ -291,3 +291,35 @@ Neutron Metadata API proxy
 The Neutron metadata API proxy should be global across all cells, and
 thus be configured as an API-level service with access to the
 ``[api_database]/connection`` information.
+
+Operations Requiring upcalls
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you deploy multiple cells with a superconductor as described above,
+computes and cell-based conductors will not have the ability to speak
+to the scheduler as they are not connected to the same MQ. This is by
+design for isolation, but currently the processes are not in place to
+implement some features without such connectivity. Thus, anything that
+requires a so-called "upcall" will not function. This impacts the
+following:
+
+- Instance reschedules during boot
+- Instance affinity reporting from the compute nodes to scheduler
+- The late anti-affinity check
+
+The first is simple: if you boot an instance, it gets scheduled to a
+compute node, fails, it would normally be re-scheduled to another
+node. That requires scheduler intervention and thus it will not work
+in Pike with a multi-cell layout. If you do not rely on reschedules
+for covering up transient compute-node failures, then this will not
+affect you. To ensure you do not make futile attempts at rescheduling,
+you should set ``[scheduler]/max_attempts=1`` in ``nova.conf``.
+
+The second two are related. The summary is that some of the facilities
+that Nova has for ensuring that affinty/anti-affinity is preserved
+between instances does not function in Pike with a multi-cell
+layout. If you don't use affinity operations, then this will not
+affect you. To make sure you don't make futile attempts at the
+affinity check, you should set
+``[workarounds]/disable_group_policy_check_upcall=True`` and
+``[filter_scheduler]/track_instance_changes=False`` in ``nova.conf``.
