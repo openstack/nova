@@ -789,7 +789,7 @@ class Rbd(Image):
 
     SUPPORTS_CLONE = True
 
-    def __init__(self, instance=None, disk_name=None, path=None, **kwargs):
+    def __init__(self, instance=None, disk_name=None, path=None):
         if not CONF.libvirt.images_rbd_pool:
             raise RuntimeError(_('You should specify'
                                  ' images_rbd_pool'
