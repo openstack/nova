@@ -1492,6 +1492,12 @@ class API(base_api.NetworkAPI):
                     context, neutron, request_net.port_id)
             pci_request_id = None
             if vnic_type in network_model.VNIC_TYPES_SRIOV:
+                # TODO(moshele): To differentiate between the SR-IOV legacy
+                # and SR-IOV ovs hardware offload we will leverage the nic
+                # feature based scheduling in nova. This mean we will need
+                # libvirt to expose the nic feature. At the moment
+                # there is a limitation that deployers cannot use both
+                # SR-IOV modes (legacy and ovs) in the same deployment.
                 spec = {pci_request.PCI_NET_TAG: phynet_name}
                 dev_type = pci_request.DEVICE_TYPE_FOR_VNIC_TYPE.get(vnic_type)
                 if dev_type:

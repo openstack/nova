@@ -142,6 +142,15 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         devname='tap-xxx-yyy-zzz',
         ovs_interfaceid='aaa-bbb-ccc')
 
+    vif_ovs_direct = network_model.VIF(id='vif-xxx-yyy-zzz',
+        address='ca:fe:de:ad:be:ef',
+        network=network_ovs,
+        vnic_type=network_model.VNIC_TYPE_DIRECT,
+        profile={'pci_slot': '0000:0a:00.1'},
+        type=network_model.VIF_TYPE_OVS,
+        details={'port_filter': False},
+        ovs_interfaceid='aaa-bbb-ccc')
+
     vif_ovs_hybrid = network_model.VIF(id='vif-xxx-yyy-zzz',
         address='ca:fe:de:ad:be:ef',
         network=network_ovs,
@@ -1479,6 +1488,15 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                "source", "type", "unix")
         self._assertMacEquals(node, self.vif_vhostuser_ovs)
         self._assertModel(xml, network_model.VIF_MODEL_VIRTIO)
+
+    def test_ovs_direct(self):
+        d = vif.LibvirtGenericVIFDriver()
+        xml = self._get_instance_xml(d, self.vif_ovs_direct)
+        node = self._get_node(xml)
+        self._assertTypeAndPciEquals(node,
+                                     "hostdev",
+                                     self.vif_ovs_direct)
+        self._assertMacEquals(node, self.vif_ovs_direct)
 
     def test_agilio_ovs_direct(self):
         d = vif.LibvirtGenericVIFDriver()

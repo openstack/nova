@@ -21,6 +21,7 @@ versioned object model os_vif.objects.*
 import sys
 
 from os_vif import objects
+from os_vif.objects import fields as os_vif_fields
 from oslo_config import cfg
 from oslo_log import log as logging
 
@@ -277,9 +278,24 @@ def _nova_to_osvif_vif_bridge(vif):
 
 # VIF_TYPE_OVS = 'ovs'
 def _nova_to_osvif_vif_ovs(vif):
+    vnic_type = vif.get('vnic_type', model.VNIC_TYPE_NORMAL)
     profile = objects.vif.VIFPortProfileOpenVSwitch(
         interface_id=vif.get('ovs_interfaceid') or vif['id'])
-    if _is_firewall_required(vif) or vif.is_hybrid_plug_enabled():
+    if vnic_type == model.VNIC_TYPE_DIRECT:
+        profile = objects.vif.VIFPortProfileOVSRepresentor(
+            interface_id=vif.get('ovs_interfaceid') or vif['id'],
+            representor_name=_get_vif_name(vif),
+            representor_address=vif["profile"]['pci_slot'])
+        obj = _get_vif_instance(
+            vif,
+            objects.vif.VIFHostDevice,
+            port_profile=profile,
+            plugin="ovs",
+            dev_address=vif["profile"]['pci_slot'],
+            dev_type=os_vif_fields.VIFHostDeviceDevType.ETHERNET)
+        if vif["network"]["bridge"] is not None:
+            obj.network.bridge = vif["network"]["bridge"]
+    elif _is_firewall_required(vif) or vif.is_hybrid_plug_enabled():
         obj = _get_vif_instance(
             vif,
             objects.vif.VIFBridge,
