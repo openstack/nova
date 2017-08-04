@@ -409,11 +409,10 @@ def delete_inventories(req):
               '%(rp_uuid)s because the inventory was updated by '
               'another process. Please retry your request.')
               % {'rp_uuid': resource_provider.uuid})
-    except exception.InventoryInUse:
-        raise webob.exc.HTTPConflict(
-            _('Unable to delete inventory for resource provider '
-              '%(rp_uuid)s because the inventory is in use.')
-              % {'rp_uuid': resource_provider.uuid})
+    except exception.InventoryInUse as ex:
+        # NOTE(mriedem): This message cannot change without impacting the
+        # nova.scheduler.client.report._RE_INV_IN_USE regex.
+        raise webob.exc.HTTPConflict(explanation=ex.format_message())
 
     response = req.response
     response.status = 204
