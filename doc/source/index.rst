@@ -251,6 +251,13 @@ Metadata
 
     user/vendordata
 
+Administrators Guide
+====================
+.. toctree::
+   :maxdepth: 2
+
+   admin/index
+
 Indices and tables
 ==================
 
