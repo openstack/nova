@@ -54,6 +54,16 @@ tests:
   response_json_paths:
       $.errors[0].title: Bad Request
 
+- name: put an allocation empty list
+  PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
+  request_headers:
+      content-type: application/json
+  data:
+      allocations: []
+  status: 400
+  response_strings:
+      - "Failed validating 'minItems'"
+
 - name: put an allocation violate schema
   PUT: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
   request_headers:
