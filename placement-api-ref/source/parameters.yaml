@@ -1,4 +1,10 @@
 # variables in path
+consumer_uuid:
+  type: string
+  in: path
+  required: true
+  description: >
+    The uuid of a consumer.
 resource_class_path: &resource_class_path
   type: string
   in: path
@@ -27,6 +33,12 @@ member_of:
     A comma-separated list of strings representing aggregate uuids.
     The returned resource providers must be associated with at
     least one of the aggregates identified by uuid.
+project_id: &project_id
+  type: string
+  in: query
+  required: true
+  description: >
+    The uuid of a project.
 resource_provider_name_query:
   type: string
   in: query
@@ -67,6 +79,12 @@ trait_name_query:
 
     `in` operator filters the traits whose name is in the specified list, e.g.
     name=in:HW_CPU_X86_AVX,HW_CPU_X86_SSE,HW_CPU_X86_INVALID_FEATURE.
+user_id: &user_id
+  type: string
+  in: query
+  required: false
+  description: >
+    The uuid of a user.
 
 # variables in body
 aggregates:
@@ -92,6 +110,18 @@ allocation_ratio: &allocation_ratio
 allocation_ratio_opt:
   <<: *allocation_ratio
   required: false
+allocations_array:
+  type: array
+  in: body
+  required: true
+  description: >
+    A list of dictionaries.
+allocations_by_resource_provider:
+  type: object
+  in: body
+  required: true
+  description: >
+    A dictionary of allocations keyed by resource provider uuid.
 inventories:
   type: object
   in: body
@@ -116,6 +146,10 @@ min_unit: &min_unit
 min_unit_opt:
   <<: *min_unit
   required: false
+project_id_body:
+  <<: *project_id
+  in: body
+  min_version: 1.8
 reserved: &reserved
   type: integer
   in: body
@@ -162,6 +196,12 @@ resource_provider_name:
   required: true
   description: >
     The name of one resource provider.
+resource_provider_object:
+  type: object
+  in: body
+  required: true
+  description: >
+    A dictionary contains uuid of the resource provider.
 resource_provider_uuid:
   <<: *resource_provider_uuid_path
   in: body
@@ -175,6 +215,12 @@ resource_providers:
   required: true
   description: >
     A list of ``resource_provider`` objects.
+resources:
+  type: object
+  in: body
+  required: true
+  description: >
+    A dictionary of resource records keyed by resource class name.
 step_size: &step_size
   type: integer
   in: body
@@ -198,6 +244,11 @@ traits:
   required: true
   description: >
     A list of traits.
+user_id_body:
+  <<: *user_id
+  in: body
+  required: true
+  min_version: 1.8
 version_id:
   type: string
   in: body
