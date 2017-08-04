@@ -42,6 +42,7 @@ extensions = ['sphinx.ext.autodoc',
               'oslo_config.sphinxconfiggen',
               'oslo_config.sphinxext',
               'oslo_policy.sphinxpolicygen',
+              'oslo_policy.sphinxext',
               'ext.versioned_notifications',
               'ext.feature_matrix',
               ]
