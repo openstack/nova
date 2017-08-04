@@ -52,7 +52,7 @@ def main():
 
     cmd_common.block_db_access('nova-compute')
     objects_base.NovaObject.indirection_api = conductor_rpcapi.ConductorAPI()
-
+    objects.Service.enable_min_version_cache()
     server = service.Service.create(binary='nova-compute',
                                     topic=compute_rpcapi.RPC_TOPIC)
     service.serve(server)

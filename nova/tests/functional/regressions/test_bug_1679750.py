@@ -41,7 +41,8 @@ class TestLocalDeleteAllocations(test.TestCase,
         self.start_service('conductor')
         self.start_service('consoleauth')
 
-        self.flags(group='scheduler', driver='chance_scheduler')
+        self.flags(enabled_filters=['RetryFilter', 'ComputeFilter'],
+                   group='filter_scheduler')
         self.start_service('scheduler')
 
         self.compute = self.start_service('compute')

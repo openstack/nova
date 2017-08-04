@@ -1081,11 +1081,7 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
 
         self.useFixture(policy_fixture.RealPolicyFixture())
         self.useFixture(nova_fixtures.NeutronFixture(self))
-
-        # NOTE(gibi): After fix 1707071 we need to set the service version to
-        # pike to test pike only interactions. We need separate tests for
-        # ocata - pike interactions
-        # self.useFixture(nova_fixtures.AllServicesCurrent())
+        self.useFixture(nova_fixtures.AllServicesCurrent())
 
         placement = self.useFixture(nova_fixtures.PlacementFixture())
         self.placement_api = placement.api
@@ -1308,7 +1304,6 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         source_allocation = allocations[source_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(old_flavor, source_allocation)
 
-        self.assertEqual(2, len(allocations))
         dest_allocation = allocations[dest_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(new_flavor, dest_allocation)
 
@@ -1394,6 +1389,7 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         # destination host
         allocations = self._get_allocations_by_server_uuid(server['id'])
 
+        # and the server allocates only from the target host
         self.assertEqual(1, len(allocations))
 
         source_usages = self._get_provider_usages(source_rp_uuid)
@@ -1406,6 +1402,12 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
                           'DISK_GB': 0}, source_usages,
                          'The source host %s still has usages after the '
                          'resize has been confirmed' % source_hostname)
+
+        # and the target host allocation should be according to the new flavor
+        self.assertFlavorMatchesAllocation(self.flavor2, dest_usages)
+
+        dest_allocation = allocations[dest_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor2, dest_allocation)
 
         self._run_periodics()
 
@@ -1462,29 +1464,13 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
 
         usages = self._get_provider_usages(rp_uuid)
 
-        # NOTE(gibi): This is bug 1707071 where the compute "healing" periodic
-        # tramples on the doubled allocations created in the scheduler.
-        self.assertFlavorMatchesAllocation(new_flavor, usages)
-
-        # NOTE(gibi): After fixing bug 1707252 the following is expected
-        # self.assertEqual(old_flavor['vcpus'] + new_flavor['vcpus'],
-        #                  usages['VCPU'])
-        # self.assertEqual(old_flavor['ram'] + new_flavor['ram'],
-        #                  usages['MEMORY_MB'])
-        # self.assertEqual(old_flavor['disk'] + new_flavor['disk'],
-        #                  usages['DISK_GB'])
+        self.assertFlavorsMatchAllocation(old_flavor, new_flavor, usages)
 
         allocations = self._get_allocations_by_server_uuid(server['id'])
         self.assertEqual(1, len(allocations))
         allocation = allocations[rp_uuid]['resources']
 
-        # NOTE(gibi): After fixing bug 1707252 the following is expected
-        # self.assertEqual(old_flavor['vcpus'] + new_flavor['vcpus'],
-        #                  allocation['VCPU'])
-        # self.assertEqual(old_flavor['ram'] + new_flavor['ram'],
-        #                  allocation['MEMORY_MB'])
-        # self.assertEqual(old_flavor['disk'] + new_flavor['disk'],
-        #                  allocation['DISK_GB'])
+        self.assertFlavorsMatchAllocation(old_flavor, new_flavor, allocation)
 
     def test_resize_revert_same_host(self):
         # make sure that the test only uses a single host

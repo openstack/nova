@@ -31,6 +31,7 @@ from nova.objects import base as obj_base
 from nova.objects import fields as obj_fields
 from nova.objects import pci_device
 from nova.pci import manager as pci_manager
+from nova.scheduler import utils as sched_utils
 from nova import test
 from nova.tests.unit.objects import test_pci_device as fake_pci_device
 from nova.tests import uuidsentinel as uuids
@@ -467,7 +468,9 @@ class BaseTestCase(test.NoDBTestCase):
 
 class TestUpdateAvailableResources(BaseTestCase):
 
-    def _update_available_resources(self):
+    @mock.patch('nova.objects.Service.get_minimum_version',
+                return_value=22)
+    def _update_available_resources(self, version_mock):
         # We test RT._update separately, since the complexity
         # of the update_available_resource() function is high enough as
         # it is, we just want to focus here on testing the resources
@@ -1688,6 +1691,8 @@ class TestInstanceClaim(BaseTestCase):
 class TestResize(BaseTestCase):
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)
+    @mock.patch('nova.objects.Service.get_minimum_version',
+                return_value=22)
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
@@ -1698,7 +1703,7 @@ class TestResize(BaseTestCase):
     @mock.patch('nova.objects.ComputeNode.save')
     def test_resize_claim_same_host(self, save_mock, get_mock, migr_mock,
                                     get_cn_mock, pci_mock, instance_pci_mock,
-                                    is_bfv_mock):
+                                    version_mock, is_bfv_mock):
         # Resize an existing instance from its current flavor (instance type
         # 1) to a new flavor (instance type 2) and verify that the compute
         # node's resources are appropriately updated to account for the new
@@ -1788,6 +1793,8 @@ class TestResize(BaseTestCase):
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)
+    @mock.patch('nova.objects.Service.get_minimum_version',
+                return_value=22)
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance_uuid',
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
@@ -1809,8 +1816,10 @@ class TestResize(BaseTestCase):
                                     pci_get_by_compute_node_mock,
                                     pci_get_by_instance_mock,
                                     pci_get_by_instance_uuid_mock,
+                                    version_mock,
                                     is_bfv_mock,
                                     revert=False):
+
         self.flags(reserved_host_disk_mb=0,
                    reserved_host_memory_mb=0)
         virt_resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
@@ -1893,12 +1902,23 @@ class TestResize(BaseTestCase):
             ignore=['stats']
         ))
 
-    def test_instance_build_resize_confirm(self):
-        self._test_instance_build_resize()
+        cn = self.rt.compute_nodes[_NODENAME]
+        cn_uuid = cn.uuid
+        rc = self.sched_client_mock.reportclient
+        remove_method = rc.remove_provider_from_instance_allocation
+        expected_resources = sched_utils.resources_from_flavor(instance,
+            flavor)
+        remove_method.assert_called_once_with(instance.uuid, cn_uuid,
+            instance.user_id, instance.project_id, expected_resources)
 
     def test_instance_build_resize_revert(self):
         self._test_instance_build_resize(revert=True)
 
+    def test_instance_build_resize_confirm(self):
+        self._test_instance_build_resize()
+
+    @mock.patch('nova.objects.Service.get_minimum_version',
+                return_value=22)
     @mock.patch('nova.pci.stats.PciDeviceStats.support_requests',
                 return_value=True)
     @mock.patch('nova.objects.PciDevice.save')
@@ -1911,7 +1931,7 @@ class TestResize(BaseTestCase):
     @mock.patch('nova.objects.ComputeNode.save')
     def test_resize_claim_dest_host_with_pci(self, save_mock, get_mock,
             migr_mock, get_cn_mock, pci_mock, pci_req_mock, pci_claim_mock,
-            pci_dev_save_mock, pci_supports_mock):
+            pci_dev_save_mock, pci_supports_mock, version_mock):
         # Starting from an empty destination compute node, perform a resize
         # operation for an instance containing SR-IOV PCI devices on the
         # original host.
@@ -2038,7 +2058,12 @@ class TestResize(BaseTestCase):
                 self.rt.drop_move_claim(ctx, instance, _NODENAME)
                 mock_pci_free_device.assert_called_once_with(
                     pci_dev, mock.ANY)
+                # Check that we grabbed resourced for the right flavor...
+                mock_resources.assert_called_once_with(instance,
+                    instance.flavor)
 
+    @mock.patch('nova.objects.Service.get_minimum_version',
+                return_value=22)
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
@@ -2048,7 +2073,7 @@ class TestResize(BaseTestCase):
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     @mock.patch('nova.objects.ComputeNode.save')
     def test_resize_claim_two_instances(self, save_mock, get_mock, migr_mock,
-            get_cn_mock, pci_mock, instance_pci_mock):
+            get_cn_mock, pci_mock, instance_pci_mock, version_mock):
         # Issue two resize claims against a destination host with no prior
         # instances on it and validate that the accounting for resources is
         # correct.
@@ -2163,6 +2188,8 @@ class TestResize(BaseTestCase):
 
 
 class TestRebuild(BaseTestCase):
+    @mock.patch('nova.objects.Service.get_minimum_version',
+                return_value=22)
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
                 return_value=objects.InstancePCIRequests(requests=[]))
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
@@ -2172,7 +2199,7 @@ class TestRebuild(BaseTestCase):
     @mock.patch('nova.objects.InstanceList.get_by_host_and_node')
     @mock.patch('nova.objects.ComputeNode.save')
     def test_rebuild_claim(self, save_mock, get_mock, migr_mock, get_cn_mock,
-            pci_mock, instance_pci_mock):
+            pci_mock, instance_pci_mock, version_mock):
         # Rebuild an instance, emulating an evacuate command issued against the
         # original instance. The rebuild operation uses the resource tracker's
         # _move_claim() method, but unlike with resize_claim(), rebuild_claim()
