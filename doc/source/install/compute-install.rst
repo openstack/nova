@@ -2,7 +2,10 @@ Install and configure a compute node
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This section describes how to install and configure the Compute service on a
-compute node. The service supports several hypervisors to deploy instances or
+compute node for Ubuntu, openSUSE and SUSE Linux Enterprise,
+and Red Hat Enterprise Linux and CentOS.
+
+The service supports several hypervisors to deploy instances or
 virtual machines (VMs). For simplicity, this configuration uses the Quick
 EMUlator (QEMU) hypervisor with the kernel-based VM (KVM) extension on compute
 nodes that support hardware acceleration for virtual machines.  On legacy
@@ -22,4 +25,6 @@ environment with additional compute nodes.
 .. toctree::
    :glob:
 
-   compute-install-*
+   compute-install-ubuntu.rst
+   compute-install-rdo.rst
+   compute-install-obs.rst

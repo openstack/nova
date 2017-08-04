@@ -1,5 +1,5 @@
-Install and configure a compute node
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Install and configure a compute node for Ubuntu
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This section describes how to install and configure the Compute service on a
 compute node. The service supports several hypervisors to deploy instances or

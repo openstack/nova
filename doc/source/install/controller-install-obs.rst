@@ -1,5 +1,5 @@
-Install and configure controller node
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Install and configure controller node for openSUSE and SUSE Linux Enterprise
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This section describes how to install and configure the Compute service,
 code-named nova, on the controller node.
