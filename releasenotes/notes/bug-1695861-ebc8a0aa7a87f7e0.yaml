@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    Fixes `bug 1695861`_ in which the aggregate API accepted requests that
+    have availability zone names including ':'. With this fix, a creation
+    of an availabilty zone whose name includes ':' results in a
+    ``400 BadRequest`` error response.
+
+    .. _bug 1695861: https://bugs.launchpad.net/nova/+bug/1695861
