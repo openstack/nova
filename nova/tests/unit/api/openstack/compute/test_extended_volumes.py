@@ -20,12 +20,14 @@ from nova.api.openstack.compute import (extended_volumes
                                                    as extended_volumes_v21)
 from nova.api.openstack import wsgi as os_wsgi
 from nova import compute
+from nova import context as nova_context
 from nova import objects
 from nova.objects import instance as instance_obj
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
+from nova.tests import uuidsentinel as uuids
 from nova import volume
 
 UUID1 = '00000000-0000-0000-0000-000000000001'
@@ -138,8 +140,25 @@ class ExtendedVolumesTestV21(test.TestCase):
         actual = server.get('%svolumes_attached' % self.prefix)
         self.assertEqual(self.exp_volumes_show, actual)
 
-    def test_detail(self):
+    @mock.patch.object(objects.InstanceMappingList, 'get_by_instance_uuids')
+    def test_detail(self, mock_get_by_instance_uuids):
+        mock_get_by_instance_uuids.return_value = [
+            objects.InstanceMapping(
+                instance_uuid=UUID1,
+                cell_mapping=objects.CellMapping(
+                    uuid=uuids.cell1,
+                    transport_url='fake://nowhere/',
+                    database_connection=uuids.cell1)),
+            objects.InstanceMapping(
+                instance_uuid=UUID2,
+                cell_mapping=objects.CellMapping(
+                    uuid=uuids.cell1,
+                    transport_url='fake://nowhere/',
+                    database_connection=uuids.cell1))]
+
         res = self._make_request('/detail')
+        mock_get_by_instance_uuids.assert_called_once_with(
+            test.MatchType(nova_context.RequestContext), [UUID1, UUID2])
 
         self.assertEqual(200, res.status_int)
         for i, server in enumerate(self._get_servers(res.body)):
