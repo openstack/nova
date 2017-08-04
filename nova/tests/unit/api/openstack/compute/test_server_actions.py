@@ -896,7 +896,7 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         location = response.headers['Location']
         self.assertEqual(self.image_url + '123' if self.image_url else
-                         glance.generate_image_url('123'),
+                         glance.generate_image_url('123', self.context),
                          location)
 
     def test_create_image_v2_45(self):
@@ -997,8 +997,9 @@ class ServerActionsControllerTestV21(test.TestCase):
                 FAKE_UUID, body=body)
 
             location = response.headers['Location']
-            image_id = location.replace(self.image_url or
-                                        glance.generate_image_url(''), '')
+            image_id = location.replace(
+                self.image_url or glance.generate_image_url('', self.context),
+                '')
             image = image_service.show(None, image_id)
 
             self.assertEqual(image['name'], 'snapshot_of_volume_backed')
@@ -1145,7 +1146,8 @@ class ServerActionsControllerTestV21(test.TestCase):
 
         location = response.headers['Location']
         self.assertEqual(self.image_url + '123' if self.image_url else
-                            glance.generate_image_url('123'), location)
+                            glance.generate_image_url('123', self.context),
+                         location)
 
     def test_create_image_with_too_much_metadata(self):
         body = {

@@ -55,7 +55,8 @@ def _dummy_opt(name):
     return cfg.Opt(name, type=lambda x: None)
 
 
-def register_ksa_opts(conf, group, default_service_type, deprecated_opts=None):
+def register_ksa_opts(conf, group, default_service_type, include_auth=True,
+                      deprecated_opts=None):
     """Register keystoneauth auth, Session, and Adapter opts.
 
     :param conf: oslo_config.cfg.CONF in which to register the options
@@ -63,6 +64,10 @@ def register_ksa_opts(conf, group, default_service_type, deprecated_opts=None):
                   options.
     :param default_service_type: Default for the service_type conf option on
                                  the Adapter.
+    :param include_auth: For service types where Nova is acting on behalf of
+                         the user, auth should come from the user context.
+                         In those cases, set this arg to False to avoid
+                         registering ksa auth options.
     :param deprecated_opts: dict of deprecated opts to register with the ksa
                             Session or Adapter opts.  See docstring for
                             the deprecated_opts param of:
@@ -72,7 +77,8 @@ def register_ksa_opts(conf, group, default_service_type, deprecated_opts=None):
     group = getattr(group, 'name', group)
     ks_loading.register_session_conf_options(
         conf, group, deprecated_opts=deprecated_opts)
-    ks_loading.register_auth_conf_options(conf, group)
+    if include_auth:
+        ks_loading.register_auth_conf_options(conf, group)
     conf.register_opts(get_ksa_adapter_opts(
         default_service_type, deprecated_opts=deprecated_opts), group=group)
     # Have to register dummies for the version-related opts we removed

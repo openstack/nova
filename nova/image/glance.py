@@ -56,7 +56,8 @@ CONF = nova.conf.CONF
 _SESSION = None
 
 
-def _glanceclient_from_endpoint(context, endpoint, version):
+def _session_and_auth(context):
+    # Session is cached, but auth needs to be pulled from context each time.
     global _SESSION
 
     if not _SESSION:
@@ -65,21 +66,25 @@ def _glanceclient_from_endpoint(context, endpoint, version):
 
     auth = service_auth.get_auth_plugin(context)
 
-    # TODO(johngarbutt) eventually we should default to getting the
-    # endpoint URL from the service catalog.
-    return glanceclient.Client(version, session=_SESSION, auth=auth,
+    return _SESSION, auth
+
+
+def _glanceclient_from_endpoint(context, endpoint, version):
+    sess, auth = _session_and_auth(context)
+
+    return glanceclient.Client(version, session=sess, auth=auth,
                                endpoint_override=endpoint,
                                global_request_id=context.global_id)
 
 
-def generate_glance_url():
+def generate_glance_url(context):
     """Return a random glance url from the api servers we know about."""
-    return next(get_api_servers())
+    return next(get_api_servers(context))
 
 
-def generate_image_url(image_ref):
+def generate_image_url(image_ref, context):
     """Generate an image URL from an image_ref."""
-    return "%s/images/%s" % (generate_glance_url(), image_ref)
+    return "%s/images/%s" % (generate_glance_url(context), image_ref)
 
 
 def _endpoint_from_image_ref(image_href):
@@ -106,7 +111,7 @@ def generate_identity_headers(context, status='Confirmed'):
     }
 
 
-def get_api_servers():
+def get_api_servers(context):
     """Shuffle a list of service endpoints and return an iterator that will
     cycle through the list, looping around to the beginning if necessary.
     """
@@ -117,13 +122,12 @@ def get_api_servers():
         api_servers = CONF.glance.api_servers
         random.shuffle(api_servers)
     else:
-        # TODO(efried): Plumb in a reasonable auth from callers' contexts
+        sess, auth = _session_and_auth(context)
         ksa_adap = utils.get_ksa_adapter(
             nova.conf.glance.DEFAULT_SERVICE_TYPE,
+            ksa_auth=auth, ksa_session=sess,
             min_version='2.0', max_version='2.latest')
-        # TODO(efried): Use ksa_adap.get_endpoint() when bug #1707995 is fixed.
-        api_servers = [ksa_adap.endpoint_override or
-                       ksa_adap.get_endpoint_data().catalog_url]
+        api_servers = [utils.get_endpoint(ksa_adap)]
 
     return itertools.cycle(api_servers)
 
@@ -149,7 +153,7 @@ class GlanceClientWrapper(object):
     def _create_onetime_client(self, context, version):
         """Create a client that will be used for one call."""
         if self.api_servers is None:
-            self.api_servers = get_api_servers()
+            self.api_servers = get_api_servers(context)
         self.api_server = next(self.api_servers)
         return _glanceclient_from_endpoint(context, self.api_server, version)
 

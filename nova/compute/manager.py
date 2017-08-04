@@ -2946,7 +2946,7 @@ class ComputeManager(manager.Manager):
         # image_ref, not the new one.  Since the DB has been updated
         # to point to the new one... we have to override it.
         # TODO(jaypipes): Move generate_image_url() into the nova.image.api
-        orig_image_ref_url = glance.generate_image_url(orig_image_ref)
+        orig_image_ref_url = glance.generate_image_url(orig_image_ref, context)
         extra_usage_info = {'image_ref_url': orig_image_ref_url}
         compute_utils.notify_usage_exists(
                 self.notifier, context, instance,

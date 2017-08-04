@@ -92,7 +92,7 @@ class ImagesControllerTestV21(test.NoDBTestCase):
                                     "rel": "alternate",
                                     "type": "application/vnd.openstack.image",
                                     "href": self.alternate %
-                                            (glance.generate_glance_url(),
+                                            (glance.generate_glance_url('ctx'),
                                              123),
                                 }],
             },
@@ -136,7 +136,7 @@ class ImagesControllerTestV21(test.NoDBTestCase):
                                     "type":
                                         "application/vnd.openstack.image",
                                     "href": self.alternate %
-                                            (glance.generate_glance_url(),
+                                            (glance.generate_glance_url('ctx'),
                                              124),
                                 }],
             },
@@ -196,7 +196,7 @@ class ImagesControllerTestV21(test.NoDBTestCase):
         image_125["links"][0]["href"] = "%s/125" % self.url_prefix
         image_125["links"][1]["href"] = "%s/125" % self.bookmark_prefix
         image_125["links"][2]["href"] = (
-            "%s/images/125" % glance.generate_glance_url())
+            "%s/images/125" % glance.generate_glance_url('ctx'))
 
         image_126 = copy.deepcopy(self.expected_image_124["image"])
         image_126['id'] = '126'
@@ -206,7 +206,7 @@ class ImagesControllerTestV21(test.NoDBTestCase):
         image_126["links"][0]["href"] = "%s/126" % self.url_prefix
         image_126["links"][1]["href"] = "%s/126" % self.bookmark_prefix
         image_126["links"][2]["href"] = (
-            "%s/images/126" % glance.generate_glance_url())
+            "%s/images/126" % glance.generate_glance_url('ctx'))
 
         image_127 = copy.deepcopy(self.expected_image_124["image"])
         image_127['id'] = '127'
@@ -216,7 +216,7 @@ class ImagesControllerTestV21(test.NoDBTestCase):
         image_127["links"][0]["href"] = "%s/127" % self.url_prefix
         image_127["links"][1]["href"] = "%s/127" % self.bookmark_prefix
         image_127["links"][2]["href"] = (
-            "%s/images/127" % glance.generate_glance_url())
+            "%s/images/127" % glance.generate_glance_url('ctx'))
 
         image_128 = copy.deepcopy(self.expected_image_124["image"])
         image_128['id'] = '128'
@@ -226,7 +226,7 @@ class ImagesControllerTestV21(test.NoDBTestCase):
         image_128["links"][0]["href"] = "%s/128" % self.url_prefix
         image_128["links"][1]["href"] = "%s/128" % self.bookmark_prefix
         image_128["links"][2]["href"] = (
-            "%s/images/128" % glance.generate_glance_url())
+            "%s/images/128" % glance.generate_glance_url('ctx'))
 
         image_129 = copy.deepcopy(self.expected_image_124["image"])
         image_129['id'] = '129'
@@ -236,7 +236,7 @@ class ImagesControllerTestV21(test.NoDBTestCase):
         image_129["links"][0]["href"] = "%s/129" % self.url_prefix
         image_129["links"][1]["href"] = "%s/129" % self.bookmark_prefix
         image_129["links"][2]["href"] = (
-            "%s/images/129" % glance.generate_glance_url())
+            "%s/images/129" % glance.generate_glance_url('ctx'))
 
         image_130 = copy.deepcopy(self.expected_image_123["image"])
         image_130['id'] = '130'
@@ -247,7 +247,7 @@ class ImagesControllerTestV21(test.NoDBTestCase):
         image_130["links"][0]["href"] = "%s/130" % self.url_prefix
         image_130["links"][1]["href"] = "%s/130" % self.bookmark_prefix
         image_130["links"][2]["href"] = (
-            "%s/images/130" % glance.generate_glance_url())
+            "%s/images/130" % glance.generate_glance_url('ctx'))
 
         image_131 = copy.deepcopy(self.expected_image_123["image"])
         image_131['id'] = '131'
@@ -258,7 +258,7 @@ class ImagesControllerTestV21(test.NoDBTestCase):
         image_131["links"][0]["href"] = "%s/131" % self.url_prefix
         image_131["links"][1]["href"] = "%s/131" % self.bookmark_prefix
         image_131["links"][2]["href"] = (
-            "%s/images/131" % glance.generate_glance_url())
+            "%s/images/131" % glance.generate_glance_url('ctx'))
 
         expected = [self.expected_image_123["image"],
                     self.expected_image_124["image"],
@@ -352,7 +352,7 @@ class ImagesControllerTestV21(test.NoDBTestCase):
         view = images_view.ViewBuilder()
         request = self.http_request.blank(self.url_base + 'images/1')
         generated_url = view._get_alternate_link(request, 1)
-        actual_url = "%s/images/1" % glance.generate_glance_url()
+        actual_url = "%s/images/1" % glance.generate_glance_url('ctx')
         self.assertEqual(generated_url, actual_url)
 
     def _check_response(self, controller_method, response, expected_code):
