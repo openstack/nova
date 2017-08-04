@@ -599,3 +599,12 @@ class SmallFakeDriver(FakeDriver):
     vcpus = 1
     memory_mb = 8192
     local_gb = 1028
+
+
+class MediumFakeDriver(FakeDriver):
+    # Fake driver that has enough resources to host more than one instance
+    # but not that much that cannot be exhausted easily
+
+    vcpus = 10
+    memory_mb = 8192
+    local_gb = 1028
