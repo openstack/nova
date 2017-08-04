@@ -150,6 +150,24 @@ valid_name_leading_trailing_spaces_regex_base = (
     "^[%(ws)s]*[%(no_ws)s][%(no_ws)s%(ws)s]+[%(no_ws)s][%(ws)s]*$")
 
 
+valid_az_name_regex = ValidationRegex(
+    valid_name_regex_base % (
+        _build_regex_range(ws=False, invert=True),
+        _build_regex_range(exclude=[':']),
+        _build_regex_range(ws=False, invert=True)),
+    _("printable characters except :."
+      "Can not start or end with whitespace."))
+
+
+# az's name disallow ':'.
+valid_az_name_leading_trailing_spaces_regex = ValidationRegex(
+    valid_name_leading_trailing_spaces_regex_base % {
+        'ws': _build_regex_range(exclude=[':']),
+        'no_ws': _build_regex_range(ws=False, exclude=[':'])},
+    _("printable characters except :, "
+      "with at least one non space character"))
+
+
 valid_cell_name_regex = ValidationRegex(
     valid_name_regex_base % (
         _build_regex_range(ws=False, invert=True),
@@ -242,6 +260,18 @@ name = {
     # This definition is used for all their parameters.
     'type': 'string', 'minLength': 1, 'maxLength': 255,
     'format': 'name'
+}
+
+
+az_name = {
+    'type': 'string', 'minLength': 1, 'maxLength': 255,
+    'format': 'az_name'
+}
+
+
+az_name_with_leading_trailing_spaces = {
+    'type': 'string', 'minLength': 1, 'maxLength': 255,
+    'format': 'az_name_with_leading_trailing_spaces'
 }
 
 
