@@ -257,3 +257,171 @@ off the live snapshotting mechanism by setting up its value to ``True`` in the
 
    [workarounds]
    disable_libvirt_livesnapshot = True
+
+Cannot find suitable emulator for x86_64
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Problem
+-------
+
+When you attempt to create a VM, the error shows the VM is in the ``BUILD``
+then ``ERROR`` state.
+
+Solution
+--------
+
+On the KVM host, run :command:`cat /proc/cpuinfo`. Make sure the ``vmx`` or
+``svm`` flags are set.
+
+Follow the instructions in the `Enable KVM
+<https://docs.openstack.org/ocata/config-reference/compute/hypervisor-kvm.html#enable-kvm>`__
+section in the OpenStack Configuration Reference to enable hardware
+virtualization support in your BIOS.
+
+Failed to attach volume after detaching
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Problem
+-------
+
+Failed to attach a volume after detaching the same volume.
+
+Solution
+--------
+
+You must change the device name on the :command:`nova-attach` command. The VM
+might not clean up after a :command:`nova-detach` command runs. This example
+shows how the :command:`nova-attach` command fails when you use the ``vdb``,
+``vdc``, or ``vdd`` device names:
+
+.. code-block:: console
+
+   # ls -al /dev/disk/by-path/
+   total 0
+   drwxr-xr-x 2 root root 200 2012-08-29 17:33 .
+   drwxr-xr-x 5 root root 100 2012-08-29 17:33 ..
+   lrwxrwxrwx 1 root root 9 2012-08-29 17:33 pci-0000:00:04.0-virtio-pci-virtio0 -> ../../vda
+   lrwxrwxrwx 1 root root 10 2012-08-29 17:33 pci-0000:00:04.0-virtio-pci-virtio0-part1 -> ../../vda1
+   lrwxrwxrwx 1 root root 10 2012-08-29 17:33 pci-0000:00:04.0-virtio-pci-virtio0-part2 -> ../../vda2
+   lrwxrwxrwx 1 root root 10 2012-08-29 17:33 pci-0000:00:04.0-virtio-pci-virtio0-part5 -> ../../vda5
+   lrwxrwxrwx 1 root root 9 2012-08-29 17:33 pci-0000:00:06.0-virtio-pci-virtio2 -> ../../vdb
+   lrwxrwxrwx 1 root root 9 2012-08-29 17:33 pci-0000:00:08.0-virtio-pci-virtio3 -> ../../vdc
+   lrwxrwxrwx 1 root root 9 2012-08-29 17:33 pci-0000:00:09.0-virtio-pci-virtio4 -> ../../vdd
+   lrwxrwxrwx 1 root root 10 2012-08-29 17:33 pci-0000:00:09.0-virtio-pci-virtio4-part1 -> ../../vdd1
+
+You might also have this problem after attaching and detaching the same volume
+from the same VM with the same mount point multiple times. In this case,
+restart the KVM host.
+
+Failed to attach volume, systool is not installed
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Problem
+-------
+
+This warning and error occurs if you do not have the required ``sysfsutils``
+package installed on the compute node:
+
+.. code-block:: console
+
+   WARNING nova.virt.libvirt.utils [req-1200f887-c82b-4e7c-a891-fac2e3735dbb\
+   admin admin|req-1200f887-c82b-4e7c-a891-fac2e3735dbb admin admin] systool\
+   is not installed
+   ERROR nova.compute.manager [req-1200f887-c82b-4e7c-a891-fac2e3735dbb admin\
+   admin|req-1200f887-c82b-4e7c-a891-fac2e3735dbb admin admin]
+   [instance: df834b5a-8c3f-477a-be9b-47c97626555c|instance: df834b5a-8c3f-47\
+   7a-be9b-47c97626555c]
+   Failed to attach volume 13d5c633-903a-4764-a5a0-3336945b1db1 at /dev/vdk.
+
+Solution
+--------
+
+Install the ``sysfsutils`` package on the compute node. For example:
+
+.. code-block:: console
+
+   # apt-get install sysfsutils
+
+Failed to connect volume in FC SAN
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Problem
+-------
+
+The compute node failed to connect to a volume in a Fibre Channel (FC) SAN
+configuration. The WWN may not be zoned correctly in your FC SAN that links the
+compute host to the storage array:
+
+.. code-block:: console
+
+   ERROR nova.compute.manager [req-2ddd5297-e405-44ab-aed3-152cd2cfb8c2 admin\
+   demo|req-2ddd5297-e405-44ab-aed3-152cd2cfb8c2 admin demo] [instance: 60ebd\
+   6c7-c1e3-4bf0-8ef0-f07aa4c3d5f3|instance: 60ebd6c7-c1e3-4bf0-8ef0-f07aa4c3\
+   d5f3]
+   Failed to connect to volume 6f6a6a9c-dfcf-4c8d-b1a8-4445ff883200 while\
+   attaching at /dev/vdjTRACE nova.compute.manager [instance: 60ebd6c7-c1e3-4\
+   bf0-8ef0-f07aa4c3d5f3|instance: 60ebd6c7-c1e3-4bf0-8ef0-f07aa4c3d5f3]
+   Traceback (most recent call last):…f07aa4c3d5f3\] ClientException: The\
+   server has either erred or is incapable of performing the requested\
+   operation.(HTTP 500)(Request-ID: req-71e5132b-21aa-46ee-b3cc-19b5b4ab2f00)
+
+Solution
+--------
+
+The network administrator must configure the FC SAN fabric by correctly zoning
+the WWN (port names) from your compute node HBAs.
+
+Multipath call failed exit
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Problem
+-------
+
+Multipath call failed exit. This warning occurs in the Compute log if you do
+not have the optional ``multipath-tools`` package installed on the compute
+node. This is an optional package and the volume attachment does work without
+the multipath tools installed.  If the ``multipath-tools`` package is installed
+on the compute node, it is used to perform the volume attachment.  The IDs in
+your message are unique to your system.
+
+.. code-block:: console
+
+   WARNING nova.storage.linuxscsi [req-cac861e3-8b29-4143-8f1b-705d0084e571 \
+   admin admin|req-cac861e3-8b29-4143-8f1b-705d0084e571 admin admin] \
+   Multipath call failed exit (96)
+
+Solution
+--------
+
+Install the ``multipath-tools`` package on the compute node. For example:
+
+.. code-block:: console
+
+   # apt-get install multipath-tools
+
+Failed to Attach Volume, Missing sg_scan
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Problem
+-------
+
+Failed to attach volume to an instance, ``sg_scan`` file not found. This error
+occurs when the sg3-utils package is not installed on the compute node.  The
+IDs in your message are unique to your system:
+
+.. code-block:: console
+
+   ERROR nova.compute.manager [req-cf2679fd-dd9e-4909-807f-48fe9bda3642 admin admin|req-cf2679fd-dd9e-4909-807f-48fe9bda3642 admin admin]
+   [instance: 7d7c92e0-49fa-4a8e-87c7-73f22a9585d5|instance:  7d7c92e0-49fa-4a8e-87c7-73f22a9585d5]
+   Failed to attach volume  4cc104c4-ac92-4bd6-9b95-c6686746414a at /dev/vdcTRACE nova.compute.manager
+   [instance:  7d7c92e0-49fa-4a8e-87c7-73f22a9585d5|instance: 7d7c92e0-49fa-4a8e-87c7-73f22a9585d5]
+   Stdout: '/usr/local/bin/nova-rootwrap: Executable not found: /usr/bin/sg_scan'
+
+Solution
+--------
+
+Install the ``sg3-utils`` package on the compute node. For example:
+
+.. code-block:: console
+
+   # apt-get install sg3-utils

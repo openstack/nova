@@ -14,7 +14,36 @@ operating system, and exposes functionality over a web-based API.
 .. toctree::
    :maxdepth: 2
 
+   admin-password-injection.rst
+   adv-config.rst
    arch.rst
+   availability-zones.rst
+   configuring-migrations.rst
+   cpu-topologies.rst
+   default-ports.rst
+   euca2ools.rst
+   evacuate.rst
+   flavors2.rst
+   flavors.rst
+   huge-pages.rst
+   live-migration-usage.rst
+   manage-logs.rst
+   manage-the-cloud.rst
+   manage-users.rst
+   manage-volumes.rst
+   migration.rst
    networking-nova.rst
-   system-admin.rst
+   node-down.rst
+   numa.rst
+   pci-passthrough.rst
+   quotas2.rst
+   quotas.rst
+   remote-console-access.rst
+   root-wrap-reference.rst
+   security-groups.rst
+   security.rst
+   service-groups.rst
+   services.rst
+   ssh-configuration.rst
    support-compute.rst
+   system-admin.rst
