@@ -88,8 +88,8 @@ integration testing efforts.
    user/feature-classification
    user/support-matrix
 
-Developer Guide
-===============
+For Contributors
+================
 
 If you are new to Nova, this should help you start to understand what Nova
 actually does, and why.
@@ -98,6 +98,15 @@ actually does, and why.
    :maxdepth: 1
 
    contributor/index
+
+There are also a number of technical references on both current and future
+looking parts of our architecture. These are collected below.
+
+.. toctree::
+   :maxdepth: 1
+
+   reference/index
+
 
 Architecture Concepts
 ----------------------
@@ -115,18 +124,13 @@ Open Development.
 .. toctree::
    :maxdepth: 1
 
-   reference/rpc
    user/architecture
    user/block-device-mapping
    user/conductor
    user/filter-scheduler
    user/aggregates
-   reference/i18n
-   reference/notifications
    user/placement
    user/quotas
-   reference/threading
-   reference/vm-states
    user/wsgi
 
 Architecture Evolution Plans
@@ -142,12 +146,8 @@ these are a great place to start reading up on the current plans.
 .. toctree::
    :maxdepth: 1
 
-   user/cells
    user/cellsv2_layout
    user/upgrade
-   reference/policy-enforcement
-   reference/stable-api
-   reference/scheduler-evolution
 
 Configuration
 -------------
@@ -175,13 +175,6 @@ Man Pages
 
    cli/index
 
-Module Reference
-----------------
-.. toctree::
-   :maxdepth: 1
-
-   reference/services
-
 
 .. # NOTE(mriedem): This is the section where we hide things that we don't
    # actually want in the table of contents but sphinx build would fail if
@@ -191,7 +184,6 @@ Module Reference
    :hidden:
 
    contributor/development-environment
-   reference/gmr
    contributor/api
    contributor/api-2
    contributor/blueprints
@@ -207,6 +199,18 @@ Module Reference
    contributor/how-to-get-involved
    contributor/process
    contributor/project-scope
+   user/cells
+   reference/gmr
+   reference/i18n
+   reference/notifications
+   reference/policy-enforcement
+   reference/rpc
+   reference/scheduler-evolution
+   reference/services
+   reference/stable-api
+   reference/threading
+   reference/vm-states
+   reference/i18n
 
 Installation Guide
 ==================
@@ -224,7 +228,7 @@ Metadata
 
     user/vendordata
 
-Administrators Guide
+Administration Guide
 ====================
 .. toctree::
    :maxdepth: 2
