@@ -29,15 +29,16 @@ extended_server_attributes_policies = [
 
 This rule will control the visibility for a set of servers attributes:
 
-- OS-EXT-SRV-ATTR:host
-- OS-EXT-SRV-ATTR:instance_name
-- OS-EXT-SRV-ATTR:reservation_id (since microversion 2.3)
-- OS-EXT-SRV-ATTR:launch_index (since microversion 2.3)
-- OS-EXT-SRV-ATTR:hostname (since microversion 2.3)
-- OS-EXT-SRV-ATTR:kernel_id (since microversion 2.3)
-- OS-EXT-SRV-ATTR:ramdisk_id (since microversion 2.3)
-- OS-EXT-SRV-ATTR:root_device_name (since microversion 2.3)
-- OS-EXT-SRV-ATTR:user_data (since microversion 2.3)""",
+- ``OS-EXT-SRV-ATTR:host``
+- ``OS-EXT-SRV-ATTR:instance_name``
+- ``OS-EXT-SRV-ATTR:reservation_id`` (since microversion 2.3)
+- ``OS-EXT-SRV-ATTR:launch_index`` (since microversion 2.3)
+- ``OS-EXT-SRV-ATTR:hostname`` (since microversion 2.3)
+- ``OS-EXT-SRV-ATTR:kernel_id`` (since microversion 2.3)
+- ``OS-EXT-SRV-ATTR:ramdisk_id`` (since microversion 2.3)
+- ``OS-EXT-SRV-ATTR:root_device_name`` (since microversion 2.3)
+- ``OS-EXT-SRV-ATTR:user_data`` (since microversion 2.3)
+""",
         [
             {
                 'method': 'GET',

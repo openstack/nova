@@ -29,9 +29,9 @@ extended_status_policies = [
 
 This policy will control the visibility for a set of attributes:
 
-- OS-EXT-STS:task_state
-- OS-EXT-STS:vm_state
-- OS-EXT-STS:power_state
+- ``OS-EXT-STS:task_state``
+- ``OS-EXT-STS:vm_state``
+- ``OS-EXT-STS:power_state``
 """,
         [
             {
