@@ -17,8 +17,6 @@ import hashlib
 import importlib
 import os
 import os.path
-import socket
-import struct
 import tempfile
 
 import eventlet
@@ -458,58 +456,6 @@ Exit code: -2''')
             [mock.call(['a', '1'], None),
              mock.call(['a', '1'], None),
              mock.call(['a', '1'], None)])
-
-
-class VPNPingTestCase(test.NoDBTestCase):
-    """Unit tests for utils.vpn_ping()."""
-    def setUp(self):
-        super(VPNPingTestCase, self).setUp()
-        self.port = 'fake'
-        self.address = 'fake'
-        self.session_id = 0x1234
-        self.fmt = '!BQxxxxxQxxxx'
-
-    def fake_reply_packet(self, pkt_id=0x40):
-        return struct.pack(self.fmt, pkt_id, 0x0, self.session_id)
-
-    def setup_socket(self, mock_socket, return_value, side_effect=None):
-        socket_obj = mock.MagicMock()
-        if side_effect is not None:
-            socket_obj.recv.side_effect = side_effect
-        else:
-            socket_obj.recv.return_value = return_value
-        mock_socket.return_value = socket_obj
-
-    @mock.patch.object(socket, 'socket')
-    def test_vpn_ping_timeout(self, mock_socket):
-        """Server doesn't reply within timeout."""
-        self.setup_socket(mock_socket, None, socket.timeout)
-        rc = utils.vpn_ping(self.address, self.port,
-                            session_id=self.session_id)
-        self.assertFalse(rc)
-
-    @mock.patch.object(socket, 'socket')
-    def test_vpn_ping_bad_len(self, mock_socket):
-        """Test a short/invalid server reply."""
-        self.setup_socket(mock_socket, 'fake_reply')
-        rc = utils.vpn_ping(self.address, self.port,
-                            session_id=self.session_id)
-        self.assertFalse(rc)
-
-    @mock.patch.object(socket, 'socket')
-    def test_vpn_ping_bad_id(self, mock_socket):
-        """Server sends an unknown packet ID."""
-        self.setup_socket(mock_socket, self.fake_reply_packet(pkt_id=0x41))
-        rc = utils.vpn_ping(self.address, self.port,
-                            session_id=self.session_id)
-        self.assertFalse(rc)
-
-    @mock.patch.object(socket, 'socket')
-    def test_vpn_ping_ok(self, mock_socket):
-        self.setup_socket(mock_socket, self.fake_reply_packet())
-        rc = utils.vpn_ping(self.address, self.port,
-                            session_id=self.session_id)
-        self.assertTrue(rc)
 
 
 class MonkeyPatchTestCase(test.NoDBTestCase):
