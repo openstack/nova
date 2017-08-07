@@ -85,7 +85,6 @@ integration testing efforts.
 .. toctree::
    :maxdepth: 1
 
-   contributor/testing
    user/feature-classification
    user/support-matrix
 
@@ -98,37 +97,7 @@ actually does, and why.
 .. toctree::
    :maxdepth: 1
 
-   contributor/how-to-get-involved
-   contributor/process
-   user/architecture
-   contributor/project-scope
-   contributor/development-environment
-
-Development Policies
---------------------
-
-The Nova community is a large community. We have lots of users, and they all
-have a lot of expectations around upgrade and backwards compatibility.
-For example, having a good stable API, with discoverable versions and
-capabilities is important for maintaining the strong ecosystem around Nova.
-
-Our process is always evolving, just as Nova and the community around Nova
-evolves over time. If there are things that seem strange, or you have
-ideas on how to improve things, please engage in that debate, so we
-continue to improve how the Nova community operates.
-
-This section looks at the processes and why. The main aim behind all the
-process is to aid good communication between all members of the Nova
-community, while keeping users happy and keeping developers productive.
-
-.. toctree::
-   :maxdepth: 1
-
-   contributor/process
-   contributor/blueprints
-   contributor/policies
-   contributor/code-review
-   contributor/releasenotes
+   contributor/index
 
 Architecture Concepts
 ----------------------
@@ -146,8 +115,8 @@ Open Development.
 .. toctree::
    :maxdepth: 1
 
-   contributor/api-2
    reference/rpc
+   user/architecture
    user/block-device-mapping
    user/conductor
    user/filter-scheduler
@@ -155,7 +124,6 @@ Open Development.
    reference/i18n
    reference/notifications
    user/placement
-   contributor/placement
    user/quotas
    reference/threading
    reference/vm-states
@@ -177,22 +145,9 @@ these are a great place to start reading up on the current plans.
    user/cells
    user/cellsv2_layout
    user/upgrade
-   contributor/api
-   contributor/microversions
    reference/policy-enforcement
    reference/stable-api
    reference/scheduler-evolution
-
-Advanced testing and guides
-----------------------------
-
-.. toctree::
-    :maxdepth: 1
-
-    reference/gmr
-    contributor/testing/libvirt-numa
-    contributor/testing/serial-console
-    contributor/testing/zero-downtime-upgrade
 
 Configuration
 -------------
@@ -234,6 +189,24 @@ Module Reference
    # since that's already covered with modindex below.
 .. toctree::
    :hidden:
+
+   contributor/development-environment
+   reference/gmr
+   contributor/api
+   contributor/api-2
+   contributor/blueprints
+   contributor/code-review
+   contributor/microversions
+   contributor/placement.rst
+   contributor/policies.rst
+   contributor/releasenotes
+   contributor/testing
+   contributor/testing/libvirt-numa
+   contributor/testing/serial-console
+   contributor/testing/zero-downtime-upgrade
+   contributor/how-to-get-involved
+   contributor/process
+   contributor/project-scope
 
 Installation Guide
 ==================
