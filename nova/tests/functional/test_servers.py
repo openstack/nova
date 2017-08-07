@@ -1305,52 +1305,22 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
 
         # the original host expected to have the old resource usage
         source_usages = self._get_provider_usages(source_rp_uuid)
-        # NOTE(danms): This is bug 1707071, where we've lost the
-        # doubled allocation
-        self.assertEqual(0, source_usages['VCPU'])
-        self.assertEqual(0, source_usages['MEMORY_MB'])
-        self.assertEqual(0, source_usages['DISK_GB'])
-
-        # NOTE(danms): After we fix the 'healing' of the doubled allocation
-        # by the resource tracker, the following will be expected
-        # self.assertFlavorMatchesAllocation(old_flavor, source_usages)
+        self.assertFlavorMatchesAllocation(old_flavor, source_usages)
 
         # the dest host expected to have resource allocation based on
         # the new flavor the server is resized to
         dest_usages = self._get_provider_usages(dest_rp_uuid)
-
-        # NOTE(danms): This is bug 1707071 where we've lost the entire
-        # allocation because one of the computes deleted it
-        self.assertEqual(0, dest_usages['VCPU'])
-        self.assertEqual(0, dest_usages['MEMORY_MB'])
-        self.assertEqual(0, dest_usages['DISK_GB'])
-
-        # NOTE(danms): After we fix the 'healing' of the double allocation
-        # by the resource tracker, the following will be expected
-        # self.assertFlavorMatchesAllocation(new_flavor, dest_usages)
+        self.assertFlavorMatchesAllocation(new_flavor, dest_usages)
 
         # and our server should have allocation on both providers accordingly
         allocations = self._get_allocations_by_server_uuid(server['id'])
-        # NOTE(danms): This is bug 1707071, where we've lost the
-        # doubled allocation
-        self.assertEqual(0, len(allocations))
-        self.assertNotIn(source_rp_uuid, allocations)
+        self.assertEqual(2, len(allocations))
+        source_allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(old_flavor, source_allocation)
 
-        # NOTE(danms): After we fix the 'healing' of the doubled allocation
-        # by the resource tracker, the following will be expected
-        # self.assertEqual(2, len(allocations))
-        # source_allocation = allocations[source_rp_uuid]['resources']
-        # self.assertFlavorMatchesAllocation(old_flavor, source_allocation)
-
-        # NOTE(danms): This is bug 1707071, where we've lost the
-        # doubled allocation
-        self.assertNotIn(dest_rp_uuid, allocations)
-
-        # NOTE(danms): After we fix the 'healing' of the doubled allocation
-        # by the resource tracker, the following will be expected
-        # self.assertEqual(2, len(allocations))
-        # dest_allocation = allocations[dest_rp_uuid]['resources']
-        # self.assertFlavorMatchesAllocation(new_flavor, dest_allocation)
+        self.assertEqual(2, len(allocations))
+        dest_allocation = allocations[dest_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(new_flavor, dest_allocation)
 
     def _delete_and_check_allocations(self, server, source_rp_uuid,
                                       dest_rp_uuid):
@@ -1395,19 +1365,24 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         # the original host expected to have the old resource allocation
         source_usages = self._get_provider_usages(source_rp_uuid)
         allocations = self._get_allocations_by_server_uuid(server['id'])
-        dest_usages = self._get_provider_usages(dest_rp_uuid)
-
         self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
 
-        # and the target host should not have usage
-        self.assertEqual({'VCPU': 0,
-                          'MEMORY_MB': 0,
-                          'DISK_GB': 0}, dest_usages,
-                         'Target host %s still has usage after the resize has '
-                         'been reverted' % dest_hostname)
+        # NOTE(jaypipes): This should be uncommented when bug 1707071 is fixed.
+        # Currently, we're not cleaning up the destination allocation on
+        # confirm and the source allocation on resize
+        # dest_usages = self._get_provider_usages(dest_rp_uuid)
+        # self.assertEqual({'VCPU': 0,
+        #                   'MEMORY_MB': 0,
+        #                   'DISK_GB': 0}, dest_usages,
+        #                'Target host %s still has usage after the resize has '
+        #                  'been reverted' % dest_hostname)
 
+        # NOTE(jaypipes): This should be uncommented when bug 1707071 is fixed.
+        # Currently, we're not cleaning up the destination allocation on
+        # confirm and the source allocation on resize
         # Check that the server only allocates resource from the original host
-        self.assertEqual(1, len(allocations))
+        # self.assertEqual(1, len(allocations))
+
         source_allocation = allocations[source_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
 
@@ -1434,28 +1409,33 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         # Fetch allocations post-confirm
         allocations = self._get_allocations_by_server_uuid(server['id'])
 
-        # NOTE(danms): This is bug 1707071, where we've lost the doubled
-        # allocation
-        self.assertEqual(0, len(allocations))
+        self.assertEqual(2, len(allocations))
 
         self._run_periodics()
 
-        source_usages = self._get_provider_usages(source_rp_uuid)
         dest_usages = self._get_provider_usages(dest_rp_uuid)
 
-        self.assertEqual({'VCPU': 0,
-                          'MEMORY_MB': 0,
-                          'DISK_GB': 0}, source_usages,
-                         'The source host %s still has usages after the '
-                         'resize has been confirmed' % source_hostname)
+        # NOTE(jaypipes): This should be uncommented when bug 1707071 is fixed.
+        # Currently, we're not cleaning up the destination allocation on
+        # confirm and the source allocation on resize
+        # source_usages = self._get_provider_usages(source_rp_uuid)
+        # self.assertEqual({'VCPU': 0,
+        #                   'MEMORY_MB': 0,
+        #                   'DISK_GB': 0}, source_usages,
+        #                  'The source host %s still has usages after the '
+        #                  'resize has been confirmed' % source_hostname)
 
         # and the target host allocation should be according to the new flavor
         self.assertFlavorMatchesAllocation(self.flavor2, dest_usages)
 
         allocations = self._get_allocations_by_server_uuid(server['id'])
 
+        # NOTE(jaypipes): This should be uncommented when bug 1707071 is fixed.
+        # Currently, we're not cleaning up the destination allocation on
+        # confirm and the source allocation on resize
         # and the server allocates only from the target host
-        self.assertEqual(1, len(allocations))
+        # self.assertEqual(1, len(allocations))
+
         dest_allocation = allocations[dest_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor2, dest_allocation)
 
