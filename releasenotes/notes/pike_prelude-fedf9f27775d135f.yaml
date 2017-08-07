@@ -1,0 +1,43 @@
+---
+prelude: |
+    The 16.0.0 release includes many new features and bug fixes. It is
+    difficult to cover all the changes that have been introduced. Please at
+    least read the upgrade section which describes the required actions to
+    upgrade your cloud from 15.0.0 (Ocata) to 16.0.0 (Pike).
+
+    That said, a few major changes are worth mentioning. This is not an
+    exhaustive list:
+
+    - The latest Compute API microversion supported for Ocata is v2.53. Details
+      on REST API microversions added since the 15.0.0 Ocata release can be
+      found in the `REST API Version History`_ page.
+    - The FilterScheduler driver now provides allocations to the Placement API,
+      which helps concurrent schedulers to verify resource consumptions
+      directly without waiting for compute services to ask for a reschedule in
+      case of a race condition. That is an important performance improvement
+      that includes allowing one to use more than one scheduler worker if
+      there are capacity concerns. For more details, see the
+      `Pike Upgrade Notes for Placement`_.
+    - Nova now supports a Cells v2 multi-cell deployment. The default
+      deployment is a single cell. There are known `limitations with
+      multiple cells`_. Refer to the `Cells v2 Layout`_ page for more
+      information about deploying multiple cells.
+    - Cells v1 is now deprecated in favor of Cells v2.
+    - The quota system has been reworked to `count resources`_ at the point of
+      creation rather than using a reserve/commit/rollback approach. No
+      operator impacts are expected.
+    - Compute-specific documentation is being migrated from
+      http://docs.openstack.org to https://docs.openstack.org/nova/ and the
+      layout for the Nova developer documentation is being re-organized. If you
+      think anything is missing or you now have broken bookmarks, please
+      `report a bug`_.
+
+    .. _Pike Upgrade Notes for Placement: https://docs.openstack.org/nova/latest/user/placement.html#pike-16-0-0
+
+    .. _limitations with multiple cells: https://docs.openstack.org/nova/latest/user/cellsv2_layout.html#caveats-of-a-multi-cell-deployment
+
+    .. _Cells v2 Layout: https://docs.openstack.org/nova/latest/user/cellsv2_layout.html
+
+    .. _count resources: https://specs.openstack.org/openstack/nova-specs/specs/pike/approved/cells-count-resources-to-check-quota-in-api.html
+
+    .. _report a bug: https://bugs.launchpad.net/nova/
