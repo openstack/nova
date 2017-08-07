@@ -20,6 +20,7 @@
 from __future__ import print_function
 
 import argparse
+import inspect
 import traceback
 
 from oslo_log import log as logging
@@ -29,7 +30,6 @@ import nova.conf
 import nova.db.api
 from nova import exception
 from nova.i18n import _
-from nova import utils
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
@@ -50,6 +50,35 @@ def block_db_access(service_name):
             raise exception.DBNotAllowed(service_name)
 
     nova.db.api.IMPL = NoDB()
+
+
+def validate_args(fn, *args, **kwargs):
+    """Check that the supplied args are sufficient for calling a function.
+
+    >>> validate_args(lambda a: None)
+    Traceback (most recent call last):
+        ...
+    MissingArgs: Missing argument(s): a
+    >>> validate_args(lambda a, b, c, d: None, 0, c=1)
+    Traceback (most recent call last):
+        ...
+    MissingArgs: Missing argument(s): b, d
+
+    :param fn: the function to check
+    :param arg: the positional arguments supplied
+    :param kwargs: the keyword arguments supplied
+    """
+    argspec = inspect.getargspec(fn)
+
+    num_defaults = len(argspec.defaults or [])
+    required_args = argspec.args[:len(argspec.args) - num_defaults]
+
+    if six.get_method_self(fn) is not None:
+        required_args.pop(0)
+
+    missing = [arg for arg in required_args if arg not in kwargs]
+    missing = missing[len(args):]
+    return missing
 
 
 # Decorators for actions
@@ -155,7 +184,7 @@ def get_action_fn():
 
     # call the action with the remaining arguments
     # check arguments
-    missing = utils.validate_args(fn, *fn_args, **fn_kwargs)
+    missing = validate_args(fn, *fn_args, **fn_kwargs)
     if missing:
         # NOTE(mikal): this isn't the most helpful error message ever. It is
         # long, and tells you a lot of things you probably don't want to know
