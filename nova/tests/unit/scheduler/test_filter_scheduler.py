@@ -147,10 +147,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 '_get_all_host_states')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
                 '_get_sorted_hosts')
-    def test_schedule_successful_claim(self, mock_get_hosts,
-            mock_get_all_states, mock_claim):
+    def _test_schedule_successful_claim(self, mock_get_hosts,
+            mock_get_all_states, mock_claim, num_instances=1):
         spec_obj = objects.RequestSpec(
-            num_instances=1,
+            num_instances=num_instances,
             flavor=objects.Flavor(memory_mb=512,
                                   root_gb=512,
                                   ephemeral_gb=0,
@@ -187,6 +187,16 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         # Ensure that we have consumed the resources on the chosen host states
         host_state.consume_from_request.assert_called_once_with(spec_obj)
+
+    def test_schedule_successful_claim(self):
+        self._test_schedule_successful_claim()
+
+    def test_schedule_old_reqspec_and_move_operation(self):
+        """This test is for verifying that in case of a move operation with an
+        original RequestSpec created for 3 concurrent instances, we only verify
+        the instance that is moved.
+        """
+        self._test_schedule_successful_claim(num_instances=3)
 
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
                 '_cleanup_allocations')
