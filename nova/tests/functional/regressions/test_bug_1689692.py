@@ -52,7 +52,6 @@ class ServerListLimitMarkerCell0Test(test.TestCase,
         self.api.microversion = 'latest'
 
         self.start_service('conductor')
-        self.flags(driver='chance_scheduler', group='scheduler')
         self.start_service('scheduler')
         # We don't start the compute service because we want NoValidHost so
         # all of the instances go into ERROR state and get put into cell0.

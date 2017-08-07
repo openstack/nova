@@ -1700,7 +1700,7 @@ class ComputeTestCase(BaseTestCase,
 
         # get total memory as reported by virt driver:
         resources = self.compute.driver.get_available_resource(NODENAME)
-        self.assertEqual(1, resources['vcpus'])
+        self.assertEqual(2, resources['vcpus'])
 
         # build an instance, specifying an amount of memory that exceeds
         # total_mem_mb, but is less than the oversubscribed limit:

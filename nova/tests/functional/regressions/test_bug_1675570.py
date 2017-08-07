@@ -61,7 +61,6 @@ class TestLocalDeleteAttachedVolumes(test.TestCase):
         nova.tests.unit.image.fake.stub_out_image_service(self)
 
         self.start_service('conductor')
-        self.flags(driver='chance_scheduler', group='scheduler')
         self.start_service('scheduler')
         self.start_service('compute')
         # The consoleauth service is needed for deleting console tokens.

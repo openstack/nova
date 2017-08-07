@@ -78,7 +78,6 @@ class NotificationSampleTestBase(test.TestCase,
 
         self.useFixture(utils_fixture.TimeFixture(test_services.fake_utcnow()))
 
-        self.flags(driver='chance_scheduler', group='scheduler')
         # the image fake backend needed for image discovery
         nova.tests.unit.image.fake.stub_out_image_service(self)
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)

@@ -10,7 +10,7 @@
         "memory_mb": 8192,
         "memory_mb_used": 512,
         "running_vms": 0,
-        "vcpus": 1,
+        "vcpus": 2,
         "vcpus_used": 0
     }
 }

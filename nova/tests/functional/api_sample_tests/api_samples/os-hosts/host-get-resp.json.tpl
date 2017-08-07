@@ -2,7 +2,7 @@
     "host": [
         {
             "resource": {
-                "cpu": 1,
+                "cpu": 2,
                 "disk_gb": 1028,
                 "host": "%(host_name)s",
                 "memory_mb": 8192,

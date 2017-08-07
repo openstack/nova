@@ -22,7 +22,7 @@
             "id": "%(int:service_id)s",
             "disabled_reason": null
         },
-        "vcpus": 1,
+        "vcpus": 2,
         "vcpus_used": 0
     }
 }

@@ -63,10 +63,6 @@ class TestRetryBetweenComputeNodeBuilds(test.TestCase):
 
         self.start_service('conductor')
         self.start_service('consoleauth')
-
-        # Configure a minimal filter scheduler setup.
-        self.flags(enabled_filters=['ComputeFilter', 'RetryFilter'],
-                   group='filter_scheduler')
         self.start_service('scheduler')
 
         # We start two compute services because we're going to fake one
