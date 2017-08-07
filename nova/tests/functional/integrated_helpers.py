@@ -79,7 +79,7 @@ class _IntegratedTestBase(test.TestCase):
         nova.tests.unit.image.fake.stub_out_image_service(self)
         self._setup_services()
 
-        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+        self.useFixture(cast_as_call.CastAsCall(self))
         self.useFixture(nova_fixtures.PlacementFixture())
 
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)

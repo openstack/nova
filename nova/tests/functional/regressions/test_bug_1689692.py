@@ -56,7 +56,7 @@ class ServerListLimitMarkerCell0Test(test.TestCase,
         self.start_service('scheduler')
         # We don't start the compute service because we want NoValidHost so
         # all of the instances go into ERROR state and get put into cell0.
-        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+        self.useFixture(cast_as_call.CastAsCall(self))
 
     def test_list_servers_marker_in_cell0_more_limit(self):
         """Creates three servers, then lists them with a marker on the first

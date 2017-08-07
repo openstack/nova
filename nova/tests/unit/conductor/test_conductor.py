@@ -462,7 +462,7 @@ class _BaseTaskTestCase(object):
         self.mox.ReplayAll()
 
         # build_instances() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+        self.useFixture(cast_as_call.CastAsCall(self))
 
         mock_getaz.return_value = 'myaz'
 
@@ -508,7 +508,7 @@ class _BaseTaskTestCase(object):
         updates = {'vm_state': vm_states.ERROR, 'task_state': None}
 
         # build_instances() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+        self.useFixture(cast_as_call.CastAsCall(self))
 
         self.conductor.build_instances(
             self.context,
@@ -552,7 +552,7 @@ class _BaseTaskTestCase(object):
                   set_vm_state_and_notify, cleanup_mock):
             # build_instances() is a cast, we need to wait for it to
             # complete
-            self.useFixture(cast_as_call.CastAsCall(self.stubs))
+            self.useFixture(cast_as_call.CastAsCall(self))
 
             populate_retry.side_effect = exc.MaxRetriesExceeded(
                 reason="Too many try")
@@ -599,7 +599,7 @@ class _BaseTaskTestCase(object):
         updates = {'vm_state': vm_states.ERROR, 'task_state': None}
 
         # build_instances() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+        self.useFixture(cast_as_call.CastAsCall(self))
 
         self.conductor.build_instances(
                           context=self.context,
@@ -645,7 +645,7 @@ class _BaseTaskTestCase(object):
         image = {'fake-data': 'should_pass_silently'}
 
         # build_instances() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+        self.useFixture(cast_as_call.CastAsCall(self))
 
         with mock.patch.object(self.conductor_manager.compute_rpcapi,
                 'build_and_run_instance'):
@@ -690,7 +690,7 @@ class _BaseTaskTestCase(object):
         image = {'fake-data': 'should_pass_silently'}
 
         # build_instances() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+        self.useFixture(cast_as_call.CastAsCall(self))
 
         with mock.patch.object(self.conductor_manager.compute_rpcapi,
                 'build_and_run_instance'):
@@ -742,7 +742,7 @@ class _BaseTaskTestCase(object):
         image = {'fake-data': 'should_pass_silently'}
 
         # build_instances() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+        self.useFixture(cast_as_call.CastAsCall(self))
 
         with mock.patch.object(self.conductor_manager.compute_rpcapi,
                 'build_and_run_instance'):
@@ -790,7 +790,7 @@ class _BaseTaskTestCase(object):
         image = {'fake-data': 'should_pass_silently'}
 
         # build_instances() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+        self.useFixture(cast_as_call.CastAsCall(self))
 
         @mock.patch.object(self.conductor_manager.compute_rpcapi,
                 'build_and_run_instance', new=mock.MagicMock())
@@ -833,7 +833,7 @@ class _BaseTaskTestCase(object):
         image = {'fake-data': 'should_pass_silently'}
 
         # build_instances() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+        self.useFixture(cast_as_call.CastAsCall(self))
 
         @mock.patch.object(self.conductor_manager.compute_rpcapi,
                            'build_and_run_instance')
@@ -926,7 +926,7 @@ class _BaseTaskTestCase(object):
         host = {'host': 'host1', 'nodename': 'node1', 'limits': []}
 
         # unshelve_instance() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+        self.useFixture(cast_as_call.CastAsCall(self))
 
         @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
         @mock.patch.object(self.conductor_manager.compute_rpcapi,
@@ -1278,7 +1278,7 @@ class _BaseTaskTestCase(object):
         sig_mock.side_effect = exception
 
         # build_instances() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+        self.useFixture(cast_as_call.CastAsCall(self))
 
         self.assertRaises(exc.UnsupportedPolicyException,
                           self.conductor.rebuild_instance,
@@ -2354,7 +2354,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.mox.ReplayAll()
 
         # build_instances() is a cast, we need to wait for it to complete
-        self.useFixture(cast_as_call.CastAsCall(self.stubs))
+        self.useFixture(cast_as_call.CastAsCall(self))
 
         self.conductor.build_instances(self.context,
                 instances=instances,
@@ -2398,7 +2398,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                         build_and_run_instance, get_buildreq):
 
             # build_instances() is a cast, we need to wait for it to complete
-            self.useFixture(cast_as_call.CastAsCall(self.stubs))
+            self.useFixture(cast_as_call.CastAsCall(self))
 
             self.conductor.build_instances(self.context,
                     instances=instances,
