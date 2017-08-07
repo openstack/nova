@@ -108,37 +108,43 @@ wrap_exception = functools.partial(exception_wrapper.wrap_exception,
                                    binary='nova-compute')
 
 
+@contextlib.contextmanager
+def errors_out_migration_ctxt(migration):
+    """Context manager to error out migration on failure."""
+
+    try:
+        yield
+    except Exception as ex:
+        with excutils.save_and_reraise_exception():
+            # NOTE(rajesht): If InstanceNotFound error is thrown from
+            # decorated function, migration status should be set to
+            # 'error', without checking current migration status.
+            if not isinstance(ex, exception.InstanceNotFound):
+                status = migration.status
+                if status not in ['migrating', 'post-migrating']:
+                    return
+
+            migration.status = 'error'
+            try:
+                with migration.obj_as_admin():
+                    migration.save()
+            except Exception:
+                LOG.debug('Error setting migration status for instance %s.',
+                          migration.instance_uuid, exc_info=True)
+
+
 @utils.expects_func_args('migration')
 def errors_out_migration(function):
     """Decorator to error out migration on failure."""
 
     @functools.wraps(function)
     def decorated_function(self, context, *args, **kwargs):
-        try:
+        wrapped_func = safe_utils.get_wrapped_function(function)
+        keyed_args = inspect.getcallargs(wrapped_func, self, context,
+                                         *args, **kwargs)
+        migration = keyed_args['migration']
+        with errors_out_migration_ctxt(migration):
             return function(self, context, *args, **kwargs)
-        except Exception as ex:
-            with excutils.save_and_reraise_exception():
-                wrapped_func = safe_utils.get_wrapped_function(function)
-                keyed_args = inspect.getcallargs(wrapped_func, self, context,
-                                                 *args, **kwargs)
-                migration = keyed_args['migration']
-
-                # NOTE(rajesht): If InstanceNotFound error is thrown from
-                # decorated function, migration status should be set to
-                # 'error', without checking current migration status.
-                if not isinstance(ex, exception.InstanceNotFound):
-                    status = migration.status
-                    if status not in ['migrating', 'post-migrating']:
-                        return
-
-                migration.status = 'error'
-                try:
-                    with migration.obj_as_admin():
-                        migration.save()
-                except Exception:
-                    LOG.debug('Error setting migration status '
-                              'for instance %s.',
-                              migration.instance_uuid, exc_info=True)
 
     return decorated_function
 
