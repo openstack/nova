@@ -1,0 +1,14 @@
+---
+issues:
+  - |
+    Due to `bug 1707256`_, shared storage modeling in Placement is not
+    supported by the scheduler. This means that in the Pike release series,
+    an operator will be unable to model a shared storage pool between two or
+    more compute hosts using the Placement service for scheduling and resource
+    tracking.
+
+    This is not a regression, just a note about functionality that is not yet
+    available. Support for modeling shared storage providers will be worked on
+    in the Queens release.
+
+    .. _bug 1707256: https://bugs.launchpad.net/nova/+bug/1707256
