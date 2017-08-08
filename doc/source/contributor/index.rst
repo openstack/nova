@@ -47,6 +47,7 @@ For Reviewers
 * :doc:`/contributor/code-review`: important cheat sheet for what's important
   when doing code review in Nova, especially some things that are hard to test
   for, but need human eyes.
+* :doc:`/reference/i18n`: what we require for i18n in patches
 
 Testing
 =======
