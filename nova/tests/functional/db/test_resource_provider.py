@@ -1836,6 +1836,44 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
         self._assert_traits(trait_names, rp.get_traits())
         self.assertEqual(rp.generation, generation + 1)
 
+    def test_set_traits_for_correct_resource_provider(self):
+        """This test creates two ResourceProviders, and attaches same trait to
+        both of them. Then detaching the trait from one of them, and ensure
+        the trait still associated with another one.
+        """
+        # Create two ResourceProviders
+        rp1 = objects.ResourceProvider(
+            context=self.ctx,
+            uuid=uuidsentinel.fake_resource_provider1,
+            name=uuidsentinel.fake_resource_name1,
+        )
+        rp1.create()
+        rp2 = objects.ResourceProvider(
+            context=self.ctx,
+            uuid=uuidsentinel.fake_resource_provider2,
+            name=uuidsentinel.fake_resource_name2,
+        )
+        rp2.create()
+
+        # Create a trait
+        t = objects.Trait(self.ctx)
+        t.name = 'CUSTOM_TRAIT_A'
+        t.create()
+
+        # Associate the trait with two ResourceProviders
+        rp1.set_traits([t])
+        rp2.set_traits([t])
+
+        # Ensure the association
+        self._assert_traits(['CUSTOM_TRAIT_A'], rp1.get_traits())
+        self._assert_traits(['CUSTOM_TRAIT_A'], rp2.get_traits())
+
+        # Detach the trait from one of ResourceProvider, and ensure the
+        # trait association with another ResourceProvider still exists.
+        rp1.set_traits([])
+        self._assert_traits([], rp1.get_traits())
+        self._assert_traits(['CUSTOM_TRAIT_A'], rp2.get_traits())
+
     def test_trait_delete_in_use(self):
         rp = objects.ResourceProvider(
             context=self.ctx,
