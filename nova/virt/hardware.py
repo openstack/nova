@@ -1023,7 +1023,7 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None,
             LOG.debug('Host cell has limitations on usable CPUs. There are '
                       'not enough free CPUs to schedule this instance. '
                       'Usage: %(usage)d, limit: %(limit)d',
-                      {'usage': memory_usage, 'limit': cpu_limit})
+                      {'usage': cpu_usage, 'limit': cpu_limit})
             return
 
     pagesize = None
