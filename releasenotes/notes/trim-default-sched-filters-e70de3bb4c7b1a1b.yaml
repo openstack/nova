@@ -1,0 +1,10 @@
+---
+upgrade:
+  - |
+    Since we now use Placement to verify basic CPU/RAM/disk resources when
+    using the FilterScheduler, the ``RamFilter`` and ``DiskFilter`` entries are
+    being removed from the default value for the ``enabled_filters`` config
+    option in the ``[filter_scheduler]`` group.  If you are overriding this
+    option, you probably should remove them from your version.  If you are
+    using CachingScheduler you may wish to enable these filters as we will
+    not use Placement in that case.

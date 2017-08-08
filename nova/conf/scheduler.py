@@ -248,8 +248,6 @@ Related options:
         default=[
           "RetryFilter",
           "AvailabilityZoneFilter",
-          "RamFilter",
-          "DiskFilter",
           "ComputeFilter",
           "ComputeCapabilitiesFilter",
           "ImagePropertiesFilter",
@@ -262,8 +260,7 @@ Related options:
 Filters that the scheduler will use.
 
 An ordered list of filter class names that will be used for filtering
-hosts. Ignore the word 'default' in the name of this option: these filters will
-*always* be applied, and they will be applied in the order they are listed so
+hosts. These filters will be applied in the order they are listed so
 place your most restrictive filters first to make the filtering process more
 efficient.
 
