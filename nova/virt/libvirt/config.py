@@ -1201,6 +1201,20 @@ class LibvirtConfigGuestDeviceAddressPCI(LibvirtConfigGuestDeviceAddress):
         self.slot = None
         self.function = None
 
+    def format_dom(self):
+        xml = super(LibvirtConfigGuestDeviceAddressPCI, self).format_dom()
+
+        if self.domain is not None:
+            xml.set("domain", str(self.domain))
+        if self.bus is not None:
+            xml.set("bus", str(self.bus))
+        if self.slot is not None:
+            xml.set("slot", str(self.slot))
+        if self.function is not None:
+            xml.set("function", str(self.function))
+
+        return xml
+
     def parse_dom(self, xmldoc):
         self.domain = xmldoc.get('domain')
         self.bus = xmldoc.get('bus')

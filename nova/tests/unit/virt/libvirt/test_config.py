@@ -1058,6 +1058,42 @@ class LibvirtConfigGuestDiskTest(LibvirtConfigBaseTest):
           <address type="drive" controller="1" bus="2" target="3" unit="4"/>
         </disk>""", obj.to_xml())
 
+    def test_config_disk_device_address_pci(self):
+        obj = config.LibvirtConfigGuestDeviceAddressPCI()
+        obj.domain = 1
+        obj.bus = 2
+        obj.slot = 3
+        obj.function = 4
+
+        xml = """
+        <address type="pci" domain="1" bus="2" slot="3" function="4"/>
+        """
+        self.assertXmlEqual(xml, obj.to_xml())
+
+    def test_config_disk_device_address_pci_added(self):
+        obj = config.LibvirtConfigGuestDisk()
+        obj.source_type = "network"
+        obj.source_name = "volumes/volume-0"
+        obj.source_protocol = "rbd"
+        obj.source_hosts = ["192.168.1.1"]
+        obj.source_ports = ["1234"]
+        obj.target_dev = "hdb"
+        obj.target_bus = "virtio"
+        obj.device_addr = config.LibvirtConfigGuestDeviceAddressPCI()
+        obj.device_addr.domain = 1
+        obj.device_addr.bus = 2
+        obj.device_addr.slot = 3
+        obj.device_addr.function = 4
+
+        self.assertXmlEqual("""
+        <disk type="network" device="disk">
+          <source protocol="rbd" name="volumes/volume-0">
+            <host name="192.168.1.1" port="1234"/>
+          </source>
+          <target bus="virtio" dev="hdb"/>
+          <address type="pci" domain="1" bus="2" slot="3" function="4"/>
+        </disk>""", obj.to_xml())
+
     def test_config_disk_device_address_type_virtio_mmio(self):
         xml = """
             <disk type='file' device='disk'>
