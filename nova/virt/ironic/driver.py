@@ -589,10 +589,15 @@ class IronicDriver(virt_driver.ComputeDriver):
         :returns: a list of raw node from ironic
 
         """
+        node_list = []
         try:
             node_list = self.ironicclient.call("node.list", **kwargs)
-        except exception.NovaException:
-            node_list = []
+        except exception.NovaException as e:
+            LOG.error("Failed to get the list of nodes from the Ironic "
+                      "inventory. Error: %s", e)
+        except Exception as e:
+            LOG.error("An unknown error has occurred when trying to get the "
+                      "list of nodes from the Ironic inventory. Error: %s", e)
         return node_list
 
     def list_instances(self):
