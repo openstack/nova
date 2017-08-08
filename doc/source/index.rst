@@ -38,33 +38,48 @@ decisions we have made in order to support that scope. We also document our
 plans for evolving our architecture over time. Finally, we documented our
 current development process and policies.
 
-Compute API References
-======================
+For End Users
+=============
 
-The Nova compute API is quite large, we provide a concept guide which
-gives some of the high level details, as well as a more detailed API
-reference.
+As an end user of nova, you'll use nova to create and manage servers with
+either tools or the API directly.
 
-The API reference covers all versions of the API. Version 2.0 and
-Version 2.1 are actually the same API, and Version 2.1 evolves forward
-with microversions. The API ref starts with the base API version, and
-specifies all changes that exist to it as microversions roll
-forward. You can also see a history of our microversions here:
+Tools for using Nova
+--------------------
 
-.. toctree::
-   :maxdepth: 1
+* `Horizon
+  <https://docs.openstack.org/horizon/latest/user/launch-instances.html>`_: The
+  official web ui for the OpenStack Project.
+* `OpenStack Client
+  <https://docs.openstack.org/python-openstackclient/latest/>`_: The official
+  CLI for OpenStack Projects. You should use this as your CLI for most things,
+  it includes not just nova commands but also commands for most of the projects
+  in OpenStack.
+* `Nova Client
+  <https://docs.openstack.org/python-novaclient/latest/user/shell.html>`_: For
+  some very advanced features (or administrative commands) of nova you may need
+  to use nova client. It is still supported, but the ``openstack`` cli is
+  recommended.
 
-   reference/api-microversion-history
+Writing to the API
+------------------
 
-.. note::
-    Only Version 2.1 APIs should be used from this point forward, Version 2.0
-    APIs are only provided for backward compatibility purposes.
+All end user (and some administrative) features of nova are exposed via a REST
+API, which can be used to build more complicated logic or automation with
+nova. This can be consumed directly, or via various SDKs. The following
+resources will help you get started with consuming the API directly.
 
-.. _`Compute API Guide`: http://developer.openstack.org/api-guide/compute/
-.. _`Compute API Reference`: http://developer.openstack.org/api-ref/compute/
-
-There was a session on the v2.1 API at the Liberty summit which you can watch
-`here <https://www.openstack.org/summit/vancouver-2015/summit-videos/presentation/introduction-of-a-new-nova-rest-api-why-we-need-to-use-nova-v2-1-api>`_.
+* `Compute API Guide: <https://developer.openstack.org/api-guide/compute/>`_: The
+  concept guide for the API. This helps lay out the concepts behind the API to
+  make consuming the API reference easier.
+* `Compute API Reference <http://developer.openstack.org/api-ref/compute/>`_:
+  The complete reference for the API, including all methods and request /
+  response parameters and their meaning.
+* `API Microversion History <reference/api-microversion-history>`_: The
+  compute API evolves over time through `Microversions
+  <https://developer.openstack.org/api-guide/compute/microversions.html>`_. This
+  provides the history of all those changes. Consider it a "what's new" in the
+  compute API.
 
 
 Feature Status
@@ -200,6 +215,7 @@ Man Pages
    contributor/process
    contributor/project-scope
    user/cells
+   reference/api-microversion-history.rst
    reference/gmr
    reference/i18n
    reference/notifications
@@ -210,7 +226,6 @@ Man Pages
    reference/stable-api
    reference/threading
    reference/vm-states
-   reference/i18n
 
 Installation Guide
 ==================
