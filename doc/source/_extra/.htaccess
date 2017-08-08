@@ -17,7 +17,12 @@ redirectmatch 301 ^/nova/([^/]+)/cells.html$ /nova/$1/user/cells.html
 redirectmatch 301 ^/nova/([^/]+)/code-review.html$ /nova/$1/contributor/code-review.html
 redirectmatch 301 ^/nova/([^/]+)/conductor.html$ /nova/$1/user/conductor.html
 redirectmatch 301 ^/nova/([^/]+)/development.environment.html$ /nova/$1/contributor/development-environment.html
-redirectmatch 301 ^/nova/([^/]+)/devref/rpc.html /nova/$1/reference/rpc.html
+redirectmatch 301 ^/nova/([^/]+)/devref/api.html /nova/$1/contributor/api.html
+redirectmatch 301 ^/nova/([^/]+)/devref/cells.html /nova/$1/user/cells.html
+redirectmatch 301 ^/nova/([^/]+)/devref/filter_scheduler.html /nova/$1/user/filter-scheduler.html
+# catch all, if we hit something in devref assume it moved to
+# reference unless we have already triggered a hit above.
+redirectmatch 301 ^/nova/([^/]+)/devref/([^/]+).html /nova/$1/reference/$2.html
 redirectmatch 301 ^/nova/([^/]+)/feature_classification.html$ /nova/$1/user/feature-classification.html
 redirectmatch 301 ^/nova/([^/]+)/filter_scheduler.html$ /nova/$1/user/filter-scheduler.html
 redirectmatch 301 ^/nova/([^/]+)/gmr.html$ /nova/$1/reference/gmr.html
@@ -28,6 +33,8 @@ redirectmatch 301 ^/nova/([^/]+)/man/nova-api-metadata.html$ /nova/$1/cli/nova-a
 redirectmatch 301 ^/nova/([^/]+)/man/nova-api-os-compute.html$ /nova/$1/cli/nova-api-os-compute.html
 redirectmatch 301 ^/nova/([^/]+)/man/nova-api.html$ /nova/$1/cli/nova-api.html
 redirectmatch 301 ^/nova/([^/]+)/man/nova-cells.html$ /nova/$1/cli/nova-cells.html
+# this is gone and never coming back, indicate that to the end users
+redirectmatch 410 ^/nova/([^/]+)/man/nova-cert.html$
 redirectmatch 301 ^/nova/([^/]+)/man/nova-compute.html$ /nova/$1/cli/nova-compute.html
 redirectmatch 301 ^/nova/([^/]+)/man/nova-conductor.html$ /nova/$1/cli/nova-conductor.html
 redirectmatch 301 ^/nova/([^/]+)/man/nova-console.html$ /nova/$1/cli/nova-console.html
