@@ -75,33 +75,111 @@ resources will help you get started with consuming the API directly.
 * `Compute API Reference <http://developer.openstack.org/api-ref/compute/>`_:
   The complete reference for the API, including all methods and request /
   response parameters and their meaning.
-* `API Microversion History <reference/api-microversion-history>`_: The
+* :doc:`API Microversion History </reference/api-microversion-history>`: The
   compute API evolves over time through `Microversions
   <https://developer.openstack.org/api-guide/compute/microversions.html>`_. This
   provides the history of all those changes. Consider it a "what's new" in the
   compute API.
+* :doc:`Block Device Mapping </user/block-device-mapping>`: One of the trickier
+  parts to understand is the Block Device Mapping parameters used to connect
+  specific block devices to computes. This deserves it's own deep dive.
 
+For Operators
+=============
 
-Feature Status
-==============
+Architecture Overview
+---------------------
 
-Nova aims to have a single compute API that works the same across
-all deployments of Nova.
-While many features are well-tested, well-documented, support live upgrade,
-and are ready for production, some are not. Also the choice of underlying
-technology affects the list of features that are ready for production.
+* :doc:`Nova architecture </user/architecture>`: An overview of how all the parts in
+  nova fit together.
 
-Our first attempt to communicate this is the feature support matrix
-(previously called the hypervisor support matrix).
-Over time we hope to evolve that to include a classification of each feature's
-maturity and exactly what technology combinations are covered by current
-integration testing efforts.
+Installation
+------------
+
+.. TODO(sdague): links to all the rest of the install guide pieces.
+
+The detailed install guide for nova. A functioning nova will also require
+having installed keystone, glance, and neutron.
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
-   user/feature-classification
-   user/support-matrix
+   install/index
+
+Deployment Considerations
+-------------------------
+
+There is information you might want to consider before doing your deployment,
+especially if it is going to be a larger deployment. For smaller deployments
+the defaults from the :doc:`install guide </install/index>` will be sufficient.
+
+* **Compute Driver Features Supported**: While the majority of nova deployments use
+  libvirt/kvm, you can use nova with other compute drivers. Nova attempts to
+  provide a unified feature set across these, however, not all features are
+  implemented on all backends, and not all features are equally well tested.
+
+  * :doc:`Feature Support by Use Case </user/feature-classification>`: A view of
+    what features each driver supports based on what's important to some large
+    use cases (General Purpose Cloud, NFV Cloud, HPC Cloud).
+  * :doc:`Feature Support full list </user/support-matrix>`: A detailed dive through
+    features in each compute driver backend.
+
+* :doc:`Cells v2 Planning </user/cellsv2_layout>`: For large deployments, Cells v2
+  allows sharding of your compute environment. Upfront planning is key to a
+  successful Cells v2 layout.
+* :doc:`Placement service </user/placement>`: Overview of the new placement
+  service, including how it fits in with the rest of nova.
+* :doc:`Running nova-api on wsgi <user/wsgi>`: Considerations for using a real
+  WSGI container instead of the baked in eventlet web server.
+
+Maintenance
+-----------
+
+Once you are running nova, the following information is extremely useful.
+
+* :doc:`Admin Guide </admin/index>`: A collection of guides for administrating
+  nova.
+
+  .. warning::
+
+     This guide was imported during the Pike cycle and is a bit out of
+     date. It will be updated during Queens to be more accurate.
+
+* :doc:`Upgrades </user/upgrade>`: How nova is designed to be upgraded for minimal
+  service impact, and the order you should do them in.
+* :doc:`Quotas </user/quotas>`: Managing project quotas in nova.
+* :doc:`Aggregates </user/aggregates>`: Aggregates are a useful way of grouping
+  hosts together for scheduling purposes.
+* :doc:`Filter Scheduler </user/filter-scheduler>`: How the filter scheduler is
+  configured, and how that will impact where computes land in your
+  environment. If you are seeing unexpected distribution of compute instances
+  in your hosts, you'll want to dive into this configuration.
+* :doc:`Exposing custom metadata to compute instances </user/vendordata>`: How and
+  when you might want to extend the basic metadata exposed to compute instances
+  (either via metadata server or config drive) for site local purposes.
+
+Reference Material
+------------------
+
+* :doc:`Nova CLI Command References </cli/index>`: the complete command reference
+  for all the daemons and admin tools that come with nova.
+
+* **Configuration**:
+
+  * :doc:`Config Reference </configuration/config>`: a complete reference of all
+    configuration options available in the nova.conf file.
+
+  * :doc:`Sample Config File </configuration/sample-config>`: a sample config file
+    with inline documentation.
+
+* **Policy**: nova, like most OpenStack projects, uses a policy language to
+  restrict permissions on REST API actions.
+
+  * :doc:`Policy Reference </configuration/policy>`: a complete reference of all
+    policy points in nova and what they impact.
+
+  * :doc:`Sample Policy File </configuration/sample-policy>`: a sample policy file
+    with inline documentation.
 
 For Contributors
 ================
@@ -123,74 +201,6 @@ looking parts of our architecture. These are collected below.
    reference/index
 
 
-Architecture Concepts
-----------------------
-
-This follows on for the discussion in the introduction, and digs into
-details on specific parts of the Nova architecture.
-
-We find it important to document the reasons behind our architectural
-decisions, so its easier for people to engage in the debates about
-the future of Nova's architecture. This is all part of Open Design and
-Open Development.
-
-.. NOTE: keep this list sorted by title
-
-.. toctree::
-   :maxdepth: 1
-
-   user/architecture
-   user/block-device-mapping
-   user/conductor
-   user/filter-scheduler
-   user/aggregates
-   user/placement
-   user/quotas
-   user/wsgi
-
-Architecture Evolution Plans
------------------------------
-
-The following section includes documents that describe the overall plan behind
-groups of nova-specs. Most of these cover items relating to the evolution of
-various parts of Nova's architecture. Once the work is complete,
-these documents will move into the "Concepts" section.
-If you want to get involved in shaping the future of Nova's architecture,
-these are a great place to start reading up on the current plans.
-
-.. toctree::
-   :maxdepth: 1
-
-   user/cellsv2_layout
-   user/upgrade
-
-Configuration
--------------
-
-.. toctree::
-    :maxdepth: 1
-
-    configuration/config
-    configuration/sample-config
-
-Policy
-------
-
-.. toctree::
-    :maxdepth: 1
-
-    configuration/policy
-    configuration/sample-policy
-
-Man Pages
-----------
-
-.. toctree::
-   :maxdepth: 1
-
-   cli/index
-
-
 .. # NOTE(mriedem): This is the section where we hide things that we don't
    # actually want in the table of contents but sphinx build would fail if
    # they aren't in the toctree somewhere. For example, we hide api/autoindex
@@ -198,6 +208,12 @@ Man Pages
 .. toctree::
    :hidden:
 
+   admin/index
+   cli/index
+   configuration/config
+   configuration/sample-config
+   configuration/policy
+   configuration/sample-policy
    contributor/development-environment
    contributor/api
    contributor/api-2
@@ -214,7 +230,6 @@ Man Pages
    contributor/how-to-get-involved
    contributor/process
    contributor/project-scope
-   user/cells
    reference/api-microversion-history.rst
    reference/gmr
    reference/i18n
@@ -226,29 +241,21 @@ Man Pages
    reference/stable-api
    reference/threading
    reference/vm-states
+   user/aggregates
+   user/architecture
+   user/block-device-mapping
+   user/cells
+   user/cellsv2_layout
+   user/conductor
+   user/feature-classification
+   user/filter-scheduler
+   user/placement
+   user/quotas
+   user/support-matrix
+   user/upgrade
+   user/vendordata
+   user/wsgi
 
-Installation Guide
-==================
-
-.. toctree::
-   :maxdepth: 2
-
-   install/index
-
-Metadata
-========
-
-.. toctree::
-    :maxdepth: 1
-
-    user/vendordata
-
-Administration Guide
-====================
-.. toctree::
-   :maxdepth: 2
-
-   admin/index
 
 Indices and tables
 ==================
