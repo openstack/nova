@@ -1,0 +1,23 @@
+{
+    "allocations": {
+        "56785a3f-6f1c-4fec-af0b-0faf075b1fcb": {
+            "resources": {
+                "MEMORY_MB": 256,
+                "VCPU": 1
+            }
+        },
+        "9afd5aeb-d6b9-4dea-a588-1e6327a91834": {
+            "resources": {
+                "MEMORY_MB": 512,
+                "VCPU": 2
+            }
+        },
+        "9d16a611-e7f9-4ef3-be26-c61ed01ecefb": {
+            "resources": {
+                "MEMORY_MB": 1024,
+                "VCPU": 1
+            }
+        }
+    },
+    "resource_provider_generation": 12
+}
