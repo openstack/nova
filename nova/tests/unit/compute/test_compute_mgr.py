@@ -1385,6 +1385,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         self.assertEqual([x['uuid'] for x in driver_instances],
                          [x['uuid'] for x in result])
+        expected_filters = {'uuid': driver_uuids}
+        mock_instance_list.assert_called_with(self.context, expected_filters,
+                                              use_slave=True)
 
     @mock.patch('nova.objects.InstanceList.get_by_filters')
     def test_get_instances_on_driver_empty(self, mock_instance_list):
@@ -1403,7 +1406,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         # Test getting instances when driver doesn't support
         # 'list_instance_uuids'
         self.compute.host = 'host'
-        filters = {'host': self.compute.host}
+        filters = {}
 
         self.flags(instance_name_template='inst-%i')
 
@@ -1437,6 +1440,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         self.assertEqual([x['uuid'] for x in driver_instances],
                          [x['uuid'] for x in result])
+        expected_filters = {'host': self.compute.host}
+        mock_instance_list.assert_called_with(self.context, expected_filters,
+                                              use_slave=True)
 
     def test_instance_usage_audit(self):
         instances = [objects.Instance(uuid=uuids.instance)]
