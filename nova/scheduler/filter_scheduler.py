@@ -117,8 +117,7 @@ class FilterScheduler(driver.Scheduler):
 
         :param context: The RequestContext object
         :param spec_obj: The RequestSpec object
-        :param instance_uuids: List of UUIDs, one for each value of the spec
-                               object's num_instances attribute
+        :param instance_uuids: List of instance UUIDs to place or move.
         :param alloc_reqs_by_rp_uuid: Optional dict, keyed by resource provider
                                       UUID, of the allocation requests that may
                                       be used to claim resources against
@@ -159,7 +158,13 @@ class FilterScheduler(driver.Scheduler):
         claimed_instance_uuids = []
 
         selected_hosts = []
-        num_instances = spec_obj.num_instances
+
+        # NOTE(sbauza): The RequestSpec.num_instances field contains the number
+        # of instances created when the RequestSpec was used to first boot some
+        # instances. This is incorrect when doing a move or resize operation,
+        # so prefer the length of instance_uuids unless it is None.
+        num_instances = (len(instance_uuids) if instance_uuids
+                         else spec_obj.num_instances)
         for num in range(num_instances):
             hosts = self._get_sorted_hosts(spec_obj, hosts, num)
             if not hosts:
