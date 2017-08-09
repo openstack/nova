@@ -627,8 +627,8 @@ There are two changes for the 2.51 microversion:
 Adds support for applying tags when creating a server. The tag schema is
 the same as in the `2.26`_ microversion.
 
-2.53
-----
+2.53 (Maximum in Pike)
+----------------------
 
 **os-services**
 
