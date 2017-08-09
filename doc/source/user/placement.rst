@@ -195,11 +195,33 @@ Pike (16.0.0)
 * The ``nova.scheduler.filter_scheduler.FilterScheduler`` in Pike will
   no longer fall back to not using the Placement Service, even if older
   computes are running in the deployment.
-* The scheduler now requests allocation candidates from the Placement service
-  during scheduling. The allocation candidates information was introduced in
-  the Placement API 1.10 microversion, so you should upgrade the placement
-  service **before** the Nova scheduler service so that the scheduler can take
-  advantage of the allocation candidate information.
+* The FilterScheduler now requests allocation candidates from the Placement
+  service during scheduling. The allocation candidates information was
+  introduced in the Placement API 1.10 microversion, so you should upgrade the
+  placement service **before** the Nova scheduler service so that the scheduler
+  can take advantage of the allocation candidate information.
+
+  The scheduler gets the allocation candidates from the placement API and
+  uses those to get the compute nodes, which come from the cell(s). The
+  compute nodes are passed through the enabled scheduler filters and weighers.
+  The scheduler then iterates over this filtered and weighed list of hosts and
+  attempts to claim resources in the placement API for each instance in the
+  request. Claiming resources involves finding an allocation candidate that
+  contains an allocation against the selected host's UUID and asking the
+  placement API to allocate the requested instance resources. We continue
+  performing this claim request until success or we run out of allocation
+  candidates, resulting in a NoValidHost error.
+
+  For a move operation, such as migration, allocations are made in Placement
+  against both the source and destination compute node. Once the
+  move operation is complete, the resource tracker in the *nova-compute*
+  service will adjust the allocations in Placement appropriately.
+
+  For a resize to the same host, allocations are summed on the single compute
+  node. This could pose a problem if the compute node has limited capacity.
+  Since resizing to the same host is disabled by default, and generally only
+  used in testing, this is mentioned for completeness but should not be a
+  concern for production deployments.
 
 
 REST API
