@@ -203,9 +203,10 @@ class UpgradeCommands(object):
             versions = self._placement_get("/")
             max_version = pkg_resources.parse_version(
                 versions["versions"][0]["max_version"])
-            # NOTE(rpodolyaka): 1.4 is needed in Pike and further as
-            # FilterScheduler will no longer fall back to not using placement
-            needs_version = pkg_resources.parse_version("1.4")
+            # NOTE(rpodolyaka): 1.10 is needed in Pike and further as
+            # FilterScheduler requires GET /allocation_candidates in the
+            # Placement API.
+            needs_version = pkg_resources.parse_version("1.10")
             if max_version < needs_version:
                 msg = (_('Placement API version %(needed)s needed, '
                          'you have %(current)s.') %
