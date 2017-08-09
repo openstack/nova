@@ -292,6 +292,19 @@ The Neutron metadata API proxy should be global across all cells, and
 thus be configured as an API-level service with access to the
 ``[api_database]/connection`` information.
 
+Consoleauth service and console proxies
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The consoleauth service should be global across all cells and thus be
+configured as an API-level service with access to the
+``[api_database]/connection`` information. The various console proxies
+should also be global across all cells but they don't need access to the
+API database.
+
+Future work will deprecate the consoleauth service, store token
+authorizations in the cell databases, and require console proxies running
+per cell instead of globally.
+
 Operations Requiring upcalls
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
