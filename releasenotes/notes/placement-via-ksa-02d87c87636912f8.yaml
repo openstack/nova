@@ -1,0 +1,16 @@
+---
+upgrade:
+  - |
+    Nova now uses keystoneauth1 configuration to set up communication with the
+    placement service.  Use keystoneauth1 loading parameters for auth, Session,
+    and Adapter setup in the ``[placement]`` conf section.  Note that, by
+    default, the 'internal' interface will be tried first, followed by the
+    'public' interface.  Use the conf option ``[placement].valid_interfaces``
+    to override this behavior.
+deprecations:
+  - |
+    Configuration options in the ``[placement]`` section are deprecated as
+    follows:
+
+    * ``os_region_name`` is deprecated in favor of ``region_name``
+    * ``os_interface`` is deprecated in favor of ``valid_interfaces``

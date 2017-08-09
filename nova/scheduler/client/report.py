@@ -19,7 +19,6 @@ import re
 import time
 
 from keystoneauth1 import exceptions as ks_exc
-from keystoneauth1 import loading as keystone
 from oslo_log import log as logging
 from six.moves.urllib import parse
 
@@ -246,9 +245,6 @@ class SchedulerReportClient(object):
         self._client = self._create_client()
         # NOTE(danms): Keep track of how naggy we've been
         self._warn_count = 0
-        self.ks_filter = {'service_type': 'placement',
-                          'region_name': CONF.placement.os_region_name,
-                          'interface': CONF.placement.os_interface}
 
     @utils.synchronized(PLACEMENT_CLIENT_SEMAPHORE)
     def _create_client(self):
@@ -257,73 +253,36 @@ class SchedulerReportClient(object):
         self._provider_tree = provider_tree.ProviderTree()
         self._provider_aggregate_map = {}
         self.aggregate_refresh_time = {}
-        auth_plugin = keystone.load_auth_from_conf_options(
-            CONF, 'placement')
-        return keystone.load_session_from_conf_options(
-            CONF, 'placement', auth=auth_plugin,
-            additional_headers={'accept': 'application/json'})
+        # TODO(mriedem): Perform some version discovery at some point.
+        client = utils.get_ksa_adapter('placement')
+        # Set accept header on every request to ensure we notify placement
+        # service of our response body media type preferences.
+        client.additional_headers = {'accept': 'application/json'}
+        return client
 
     def get(self, url, version=None):
-        kwargs = {}
-        if version is not None:
-            # TODO(mriedem): Perform some version discovery at some point.
-            kwargs = {
-                'headers': {
-                    'OpenStack-API-Version': 'placement %s' % version
-                },
-            }
-        return self._client.get(
-            url,
-            endpoint_filter=self.ks_filter, raise_exc=False, **kwargs)
+        return self._client.get(url, raise_exc=False, microversion=version)
 
     def post(self, url, data, version=None):
         # NOTE(sdague): using json= instead of data= sets the
         # media type to application/json for us. Placement API is
         # more sensitive to this than other APIs in the OpenStack
         # ecosystem.
-        kwargs = {}
-        if version is not None:
-            # TODO(mriedem): Perform some version discovery at some point.
-            kwargs = {
-                'headers': {
-                    'OpenStack-API-Version': 'placement %s' % version
-                },
-            }
-        return self._client.post(
-            url, json=data,
-            endpoint_filter=self.ks_filter, raise_exc=False, **kwargs)
+        return self._client.post(url, json=data, raise_exc=False,
+                                 microversion=version)
 
     def put(self, url, data, version=None):
         # NOTE(sdague): using json= instead of data= sets the
         # media type to application/json for us. Placement API is
         # more sensitive to this than other APIs in the OpenStack
         # ecosystem.
-        kwargs = {}
-        if version is not None:
-            # TODO(mriedem): Perform some version discovery at some point.
-            kwargs = {
-                'headers': {
-                    'OpenStack-API-Version': 'placement %s' % version
-                },
-            }
+        kwargs = {'microversion': version}
         if data:
             kwargs['json'] = data
-        return self._client.put(
-            url, endpoint_filter=self.ks_filter, raise_exc=False,
-            **kwargs)
+        return self._client.put(url, raise_exc=False, **kwargs)
 
     def delete(self, url, version=None):
-        kwargs = {}
-        if version is not None:
-            # TODO(mriedem): Perform some version discovery at some point.
-            kwargs = {
-                'headers': {
-                    'OpenStack-API-Version': 'placement %s' % version
-                },
-            }
-        return self._client.delete(
-            url,
-            endpoint_filter=self.ks_filter, raise_exc=False, **kwargs)
+        return self._client.delete(url, raise_exc=False, microversion=version)
 
     @safe_connect
     def get_allocation_candidates(self, resources):

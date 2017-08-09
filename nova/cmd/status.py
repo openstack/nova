@@ -26,7 +26,6 @@ import textwrap
 import traceback
 
 from keystoneauth1 import exceptions as ks_exc
-from keystoneauth1 import loading as keystone
 from oslo_config import cfg
 import pkg_resources
 import prettytable
@@ -41,6 +40,7 @@ from nova.db.sqlalchemy import api as db_session
 from nova.i18n import _
 from nova.objects import cell_mapping as cell_mapping_obj
 from nova.objects import fields
+from nova import utils
 from nova import version
 
 CONF = nova.conf.CONF
@@ -174,22 +174,16 @@ class UpgradeCommands(object):
 
         return UpgradeCheckResult(UpgradeCheckCode.SUCCESS)
 
-    def _placement_get(self, path):
+    @staticmethod
+    def _placement_get(path):
         """Do an HTTP get call against placement engine.
 
         This is in a dedicated method to make it easier for unit
         testing purposes.
 
         """
-        ks_filter = {'service_type': 'placement',
-                     'region_name': CONF.placement.os_region_name,
-                     'interface': CONF.placement.os_interface}
-        auth = keystone.load_auth_from_conf_options(
-            CONF, 'placement')
-        client = keystone.load_session_from_conf_options(
-            CONF, 'placement', auth=auth)
-
-        return client.get(path, endpoint_filter=ks_filter).json()
+        client = utils.get_ksa_adapter('placement')
+        return client.get(path).json()
 
     def _check_placement(self):
         """Checks to see if the placement API is ready for scheduling.
@@ -198,6 +192,7 @@ class UpgradeCommands(object):
         service catalog and that we can make requests against it.
         """
         try:
+            # TODO(efried): Use ksa's version filtering in _placement_get
             versions = self._placement_get("/")
             max_version = pkg_resources.parse_version(
                 versions["versions"][0]["max_version"])

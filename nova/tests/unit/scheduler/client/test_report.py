@@ -36,11 +36,8 @@ class SafeConnectedTestCase(test.NoDBTestCase):
     def setUp(self):
         super(SafeConnectedTestCase, self).setUp()
         self.context = context.get_admin_context()
-        self.ks_sess_mock = mock.Mock()
 
-        with test.nested(
-                mock.patch('keystoneauth1.loading.load_auth_from_conf_options')
-        ) as _auth_mock:  # noqa
+        with mock.patch('keystoneauth1.loading.load_auth_from_conf_options'):
             self.client = report.SchedulerReportClient()
 
     @mock.patch('keystoneauth1.session.Session.request')
@@ -157,21 +154,23 @@ class TestConstructor(test.NoDBTestCase):
 
         load_auth_mock.assert_called_once_with(CONF, 'placement')
         load_sess_mock.assert_called_once_with(CONF, 'placement',
-                additional_headers={'accept': 'application/json'},
-                auth=load_auth_mock.return_value)
-        self.assertIsNone(client.ks_filter['interface'])
+                                              auth=load_auth_mock.return_value)
+        self.assertEqual(['internal', 'public'], client._client.interface)
+        self.assertEqual({'accept': 'application/json'},
+                         client._client.additional_headers)
 
     @mock.patch('keystoneauth1.loading.load_session_from_conf_options')
     @mock.patch('keystoneauth1.loading.load_auth_from_conf_options')
     def test_constructor_admin_interface(self, load_auth_mock, load_sess_mock):
-        self.flags(os_interface='admin', group='placement')
+        self.flags(valid_interfaces='admin', group='placement')
         client = report.SchedulerReportClient()
 
         load_auth_mock.assert_called_once_with(CONF, 'placement')
         load_sess_mock.assert_called_once_with(CONF, 'placement',
-                additional_headers={'accept': 'application/json'},
-                auth=load_auth_mock.return_value)
-        self.assertEqual('admin', client.ks_filter['interface'])
+                                              auth=load_auth_mock.return_value)
+        self.assertEqual(['admin'], client._client.interface)
+        self.assertEqual({'accept': 'application/json'},
+                         client._client.additional_headers)
 
 
 class SchedulerReportClientTestCase(test.NoDBTestCase):
@@ -179,7 +178,7 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
     def setUp(self):
         super(SchedulerReportClientTestCase, self).setUp()
         self.context = context.get_admin_context()
-        self.ks_sess_mock = mock.Mock()
+        self.ks_adap_mock = mock.Mock()
         self.compute_node = objects.ComputeNode(
             uuid=uuids.compute_node,
             hypervisor_hostname='foo',
@@ -192,10 +191,10 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
         )
 
         with test.nested(
-                mock.patch('keystoneauth1.session.Session',
-                           return_value=self.ks_sess_mock),
+                mock.patch('keystoneauth1.adapter.Adapter',
+                           return_value=self.ks_adap_mock),
                 mock.patch('keystoneauth1.loading.load_auth_from_conf_options')
-        ) as (_auth_mock, _sess_mock):
+        ):
             self.client = report.SchedulerReportClient()
 
     def _init_provider_tree(self, generation_override=None,
@@ -298,9 +297,9 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         get_resp_mock.json.return_value = {
             'allocations': {},  # build instance, not move
         }
-        self.ks_sess_mock.get.return_value = get_resp_mock
+        self.ks_adap_mock.get.return_value = get_resp_mock
         resp_mock = mock.Mock(status_code=204)
-        self.ks_sess_mock.put.return_value = resp_mock
+        self.ks_adap_mock.put.return_value = resp_mock
         consumer_uuid = uuids.consumer_uuid
         alloc_req = {
             'allocations': {
@@ -323,10 +322,9 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         expected_payload = copy.deepcopy(alloc_req)
         expected_payload['project_id'] = project_id
         expected_payload['user_id'] = user_id
-        self.ks_sess_mock.put.assert_called_once_with(
-            expected_url, endpoint_filter=mock.ANY,
-            headers={'OpenStack-API-Version': 'placement 1.10'},
-            json=expected_payload, raise_exc=False)
+        self.ks_adap_mock.put.assert_called_once_with(
+            expected_url, microversion='1.10', json=expected_payload,
+            raise_exc=False)
 
         self.assertTrue(res)
 
@@ -349,9 +347,9 @@ class TestPutAllocations(SchedulerReportClientTestCase):
             },
         }
 
-        self.ks_sess_mock.get.return_value = get_resp_mock
+        self.ks_adap_mock.get.return_value = get_resp_mock
         resp_mock = mock.Mock(status_code=204)
-        self.ks_sess_mock.put.return_value = resp_mock
+        self.ks_adap_mock.put.return_value = resp_mock
         consumer_uuid = uuids.consumer_uuid
         alloc_req = {
             'allocations': [
@@ -399,13 +397,12 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         }
         expected_payload['project_id'] = project_id
         expected_payload['user_id'] = user_id
-        self.ks_sess_mock.put.assert_called_once_with(
-            expected_url, endpoint_filter=mock.ANY,
-            headers={'OpenStack-API-Version': 'placement 1.10'},
-            json=mock.ANY, raise_exc=False)
+        self.ks_adap_mock.put.assert_called_once_with(
+            expected_url, microversion='1.10', json=mock.ANY,
+            raise_exc=False)
         # We have to pull the json body from the mock call_args to validate
         # it separately otherwise hash seed issues get in the way.
-        actual_payload = self.ks_sess_mock.put.call_args[1]['json']
+        actual_payload = self.ks_adap_mock.put.call_args[1]['json']
         sort_by_uuid = lambda x: x['resource_provider']['uuid']
         expected_allocations = sorted(expected_payload['allocations'],
                                       key=sort_by_uuid)
@@ -443,9 +440,9 @@ class TestPutAllocations(SchedulerReportClientTestCase):
             },
         }
 
-        self.ks_sess_mock.get.return_value = get_resp_mock
+        self.ks_adap_mock.get.return_value = get_resp_mock
         resp_mock = mock.Mock(status_code=204)
-        self.ks_sess_mock.put.return_value = resp_mock
+        self.ks_adap_mock.put.return_value = resp_mock
         consumer_uuid = uuids.consumer_uuid
         alloc_req = {
             'allocations': [
@@ -510,14 +507,13 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         }
         expected_payload['project_id'] = project_id
         expected_payload['user_id'] = user_id
-        self.ks_sess_mock.put.assert_called_once_with(
-            expected_url, endpoint_filter=mock.ANY,
-            headers={'OpenStack-API-Version': 'placement 1.10'},
-            json=mock.ANY, raise_exc=False)
+        self.ks_adap_mock.put.assert_called_once_with(
+            expected_url, microversion='1.10', json=mock.ANY,
+            raise_exc=False)
         # We have to pull the allocations from the json body from the
         # mock call_args to validate it separately otherwise hash seed
         # issues get in the way.
-        actual_payload = self.ks_sess_mock.put.call_args[1]['json']
+        actual_payload = self.ks_adap_mock.put.call_args[1]['json']
         sort_by_uuid = lambda x: x['resource_provider']['uuid']
         expected_allocations = sorted(expected_payload['allocations'],
                                       key=sort_by_uuid)
@@ -548,9 +544,9 @@ class TestPutAllocations(SchedulerReportClientTestCase):
             },
         }
 
-        self.ks_sess_mock.get.return_value = get_current_allocations_resp_mock
+        self.ks_adap_mock.get.return_value = get_current_allocations_resp_mock
         put_allocations_resp_mock = mock.Mock(status_code=204)
-        self.ks_sess_mock.put.return_value = put_allocations_resp_mock
+        self.ks_adap_mock.put.return_value = put_allocations_resp_mock
         consumer_uuid = uuids.consumer_uuid
         # This is the resize-up allocation where VCPU, MEMORY_MB and DISK_GB
         # are all being increased but on the same host. We also throw a custom
@@ -597,13 +593,11 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         }
         expected_payload['project_id'] = project_id
         expected_payload['user_id'] = user_id
-        self.ks_sess_mock.put.assert_called_once_with(
-            expected_url, endpoint_filter=mock.ANY,
-            headers={'OpenStack-API-Version': 'placement 1.10'},
-            json=mock.ANY, raise_exc=False)
+        self.ks_adap_mock.put.assert_called_once_with(
+            expected_url, microversion='1.10', json=mock.ANY, raise_exc=False)
         # We have to pull the json body from the mock call_args to validate
         # it separately otherwise hash seed issues get in the way.
-        actual_payload = self.ks_sess_mock.put.call_args[1]['json']
+        actual_payload = self.ks_adap_mock.put.call_args[1]['json']
         sort_by_uuid = lambda x: x['resource_provider']['uuid']
         expected_allocations = sorted(expected_payload['allocations'],
                                       key=sort_by_uuid)
@@ -641,9 +635,9 @@ class TestPutAllocations(SchedulerReportClientTestCase):
             },
         }
 
-        self.ks_sess_mock.get.return_value = get_current_allocations_resp_mock
+        self.ks_adap_mock.get.return_value = get_current_allocations_resp_mock
         put_allocations_resp_mock = mock.Mock(status_code=204)
-        self.ks_sess_mock.put.return_value = put_allocations_resp_mock
+        self.ks_adap_mock.put.return_value = put_allocations_resp_mock
         consumer_uuid = uuids.consumer_uuid
         # This is the resize-up allocation where VCPU, MEMORY_MB and DISK_GB
         # are all being increased but DISK_GB is on a shared storage provider.
@@ -700,13 +694,11 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         }
         expected_payload['project_id'] = project_id
         expected_payload['user_id'] = user_id
-        self.ks_sess_mock.put.assert_called_once_with(
-            expected_url, endpoint_filter=mock.ANY,
-            headers={'OpenStack-API-Version': 'placement 1.10'},
-            json=mock.ANY, raise_exc=False)
+        self.ks_adap_mock.put.assert_called_once_with(
+            expected_url, microversion='1.10', json=mock.ANY, raise_exc=False)
         # We have to pull the json body from the mock call_args to validate
         # it separately otherwise hash seed issues get in the way.
-        actual_payload = self.ks_sess_mock.put.call_args[1]['json']
+        actual_payload = self.ks_adap_mock.put.call_args[1]['json']
         sort_by_uuid = lambda x: x['resource_provider']['uuid']
         expected_allocations = sorted(expected_payload['allocations'],
                                       key=sort_by_uuid)
@@ -721,7 +713,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         get_resp_mock.json.return_value = {
             'allocations': {},  # build instance, not move
         }
-        self.ks_sess_mock.get.return_value = get_resp_mock
+        self.ks_adap_mock.get.return_value = get_resp_mock
         resp_mocks = [
             mock.Mock(
                 status_code=409,
@@ -730,7 +722,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
                      'Please retry your update'),
             mock.Mock(status_code=204),
         ]
-        self.ks_sess_mock.put.side_effect = resp_mocks
+        self.ks_adap_mock.put.side_effect = resp_mocks
         consumer_uuid = uuids.consumer_uuid
         alloc_req = {
             'allocations': [
@@ -758,16 +750,11 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         # We should have exactly two calls to the placement API that look
         # identical since we're retrying the same HTTP request
         expected_calls = [
-            mock.call(expected_url, endpoint_filter=mock.ANY,
-                headers={'OpenStack-API-Version': 'placement 1.10'},
-                json=expected_payload, raise_exc=False),
-            mock.call(expected_url, endpoint_filter=mock.ANY,
-                headers={'OpenStack-API-Version': 'placement 1.10'},
-                json=expected_payload, raise_exc=False),
-        ]
+            mock.call(expected_url, microversion='1.10', json=expected_payload,
+                      raise_exc=False)] * 2
         self.assertEqual(len(expected_calls),
-                         self.ks_sess_mock.put.call_count)
-        self.ks_sess_mock.put.assert_has_calls(expected_calls)
+                         self.ks_adap_mock.put.call_count)
+        self.ks_adap_mock.put.assert_has_calls(expected_calls)
 
         self.assertTrue(res)
 
@@ -777,9 +764,9 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         get_resp_mock.json.return_value = {
             'allocations': {},  # build instance, not move
         }
-        self.ks_sess_mock.get.return_value = get_resp_mock
+        self.ks_adap_mock.get.return_value = get_resp_mock
         resp_mock = mock.Mock(status_code=409)
-        self.ks_sess_mock.put.return_value = resp_mock
+        self.ks_adap_mock.put.return_value = resp_mock
         consumer_uuid = uuids.consumer_uuid
         alloc_req = {
             'allocations': [
@@ -804,10 +791,9 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         expected_payload = copy.deepcopy(alloc_req)
         expected_payload['project_id'] = project_id
         expected_payload['user_id'] = user_id
-        self.ks_sess_mock.put.assert_called_once_with(
-            expected_url, endpoint_filter=mock.ANY,
-            headers={'OpenStack-API-Version': 'placement 1.10'},
-            json=expected_payload, raise_exc=False)
+        self.ks_adap_mock.put.assert_called_once_with(
+            expected_url, microversion='1.10', json=expected_payload,
+            raise_exc=False)
 
         self.assertFalse(res)
         self.assertTrue(mock_log.called)
@@ -837,9 +823,9 @@ class TestPutAllocations(SchedulerReportClientTestCase):
                 },
             },
         }
-        self.ks_sess_mock.get.return_value = get_resp_mock
+        self.ks_adap_mock.get.return_value = get_resp_mock
         resp_mock = mock.Mock(status_code=204)
-        self.ks_sess_mock.put.return_value = resp_mock
+        self.ks_adap_mock.put.return_value = resp_mock
         consumer_uuid = uuids.consumer_uuid
         project_id = uuids.project_id
         user_id = uuids.user_id
@@ -865,17 +851,15 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         expected_payload['user_id'] = user_id
         # We have to pull the json body from the mock call_args to validate
         # it separately otherwise hash seed issues get in the way.
-        actual_payload = self.ks_sess_mock.put.call_args[1]['json']
+        actual_payload = self.ks_adap_mock.put.call_args[1]['json']
         sort_by_uuid = lambda x: x['resource_provider']['uuid']
         expected_allocations = sorted(expected_payload['allocations'],
                                       key=sort_by_uuid)
         actual_allocations = sorted(actual_payload['allocations'],
                                     key=sort_by_uuid)
         self.assertEqual(expected_allocations, actual_allocations)
-        self.ks_sess_mock.put.assert_called_once_with(
-            expected_url, endpoint_filter=mock.ANY,
-            headers={'OpenStack-API-Version': 'placement 1.10'},
-            json=mock.ANY, raise_exc=False)
+        self.ks_adap_mock.put.assert_called_once_with(
+            expected_url, microversion='1.10', json=mock.ANY, raise_exc=False)
 
         self.assertTrue(res)
 
@@ -911,9 +895,9 @@ class TestPutAllocations(SchedulerReportClientTestCase):
                 },
             },
         }
-        self.ks_sess_mock.get.return_value = get_resp_mock
+        self.ks_adap_mock.get.return_value = get_resp_mock
         resp_mock = mock.Mock(status_code=204)
-        self.ks_sess_mock.put.return_value = resp_mock
+        self.ks_adap_mock.put.return_value = resp_mock
         consumer_uuid = uuids.consumer_uuid
         project_id = uuids.project_id
         user_id = uuids.user_id
@@ -947,17 +931,15 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         expected_payload['user_id'] = user_id
         # We have to pull the json body from the mock call_args to validate
         # it separately otherwise hash seed issues get in the way.
-        actual_payload = self.ks_sess_mock.put.call_args[1]['json']
+        actual_payload = self.ks_adap_mock.put.call_args[1]['json']
         sort_by_uuid = lambda x: x['resource_provider']['uuid']
         expected_allocations = sorted(expected_payload['allocations'],
                                       key=sort_by_uuid)
         actual_allocations = sorted(actual_payload['allocations'],
                                     key=sort_by_uuid)
         self.assertEqual(expected_allocations, actual_allocations)
-        self.ks_sess_mock.put.assert_called_once_with(
-            expected_url, endpoint_filter=mock.ANY,
-            headers={'OpenStack-API-Version': 'placement 1.10'},
-            json=mock.ANY, raise_exc=False)
+        self.ks_adap_mock.put.assert_called_once_with(
+            expected_url, microversion='1.10', json=mock.ANY, raise_exc=False)
 
         self.assertTrue(res)
 
@@ -986,15 +968,15 @@ class TestPutAllocations(SchedulerReportClientTestCase):
                 },
             },
         }
-        self.ks_sess_mock.get.return_value = get_resp_mock
+        self.ks_adap_mock.get.return_value = get_resp_mock
         consumer_uuid = uuids.consumer_uuid
         project_id = uuids.project_id
         user_id = uuids.user_id
         res = self.client.remove_provider_from_instance_allocation(
             consumer_uuid, uuids.source, user_id, project_id, mock.Mock())
 
-        self.ks_sess_mock.get.assert_called()
-        self.ks_sess_mock.put.assert_not_called()
+        self.ks_adap_mock.get.assert_called()
+        self.ks_adap_mock.put.assert_not_called()
 
         self.assertTrue(res)
 
@@ -1004,15 +986,15 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         existing allocations fails for some reason
         """
         get_resp_mock = mock.Mock(status_code=500)
-        self.ks_sess_mock.get.return_value = get_resp_mock
+        self.ks_adap_mock.get.return_value = get_resp_mock
         consumer_uuid = uuids.consumer_uuid
         project_id = uuids.project_id
         user_id = uuids.user_id
         res = self.client.remove_provider_from_instance_allocation(
             consumer_uuid, uuids.source, user_id, project_id, mock.Mock())
 
-        self.ks_sess_mock.get.assert_called()
-        self.ks_sess_mock.put.assert_not_called()
+        self.ks_adap_mock.get.assert_called()
+        self.ks_adap_mock.put.assert_not_called()
 
         self.assertFalse(res)
 
@@ -1148,15 +1130,14 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         }
         resources = {'VCPU': 1, 'MEMORY_MB': 1024}
         resp_mock.json.return_value = json_data
-        self.ks_sess_mock.get.return_value = resp_mock
+        self.ks_adap_mock.get.return_value = resp_mock
 
         alloc_reqs, p_sums = self.client.get_allocation_candidates(resources)
 
         expected_url = '/allocation_candidates?%s' % parse.urlencode(
             {'resources': 'MEMORY_MB:1024,VCPU:1'})
-        self.ks_sess_mock.get.assert_called_once_with(
-            expected_url, endpoint_filter=mock.ANY, raise_exc=False,
-            headers={'OpenStack-API-Version': 'placement 1.10'})
+        self.ks_adap_mock.get.assert_called_once_with(
+            expected_url, raise_exc=False, microversion='1.10')
         self.assertEqual(mock.sentinel.alloc_reqs, alloc_reqs)
         self.assertEqual(mock.sentinel.p_sums, p_sums)
 
@@ -1164,14 +1145,13 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         # Ensure _get_resource_provider() just returns None when the placement
         # API doesn't find a resource provider matching a UUID
         resp_mock = mock.Mock(status_code=404)
-        self.ks_sess_mock.get.return_value = resp_mock
+        self.ks_adap_mock.get.return_value = resp_mock
 
         res = self.client.get_allocation_candidates({'foo': 'bar'})
 
         expected_url = '/allocation_candidates?resources=foo%3Abar'
-        self.ks_sess_mock.get.assert_called_once_with(
-            expected_url, endpoint_filter=mock.ANY, raise_exc=False,
-            headers={'OpenStack-API-Version': 'placement 1.10'})
+        self.ks_adap_mock.get.assert_called_once_with(
+            expected_url, raise_exc=False, microversion='1.10')
         self.assertIsNone(res[0])
         self.assertIsNone(res[0])
 
@@ -1186,7 +1166,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             'generation': 42,
         }
         resp_mock.json.return_value = json_data
-        self.ks_sess_mock.get.return_value = resp_mock
+        self.ks_adap_mock.get.return_value = resp_mock
 
         result = self.client._get_resource_provider(uuid)
 
@@ -1196,24 +1176,22 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                 generation=42,
         )
         expected_url = '/resource_providers/' + uuid
-        self.ks_sess_mock.get.assert_called_once_with(expected_url,
-                                                      endpoint_filter=mock.ANY,
-                                                      raise_exc=False)
+        self.ks_adap_mock.get.assert_called_once_with(
+            expected_url, raise_exc=False, microversion=None)
         self.assertEqual(expected_provider_dict, result)
 
     def test_get_resource_provider_not_found(self):
         # Ensure _get_resource_provider() just returns None when the placement
         # API doesn't find a resource provider matching a UUID
         resp_mock = mock.Mock(status_code=404)
-        self.ks_sess_mock.get.return_value = resp_mock
+        self.ks_adap_mock.get.return_value = resp_mock
 
         uuid = uuids.compute_node
         result = self.client._get_resource_provider(uuid)
 
         expected_url = '/resource_providers/' + uuid
-        self.ks_sess_mock.get.assert_called_once_with(expected_url,
-                                                      endpoint_filter=mock.ANY,
-                                                      raise_exc=False)
+        self.ks_adap_mock.get.assert_called_once_with(
+            expected_url, raise_exc=False, microversion=None)
         self.assertIsNone(result)
 
     @mock.patch.object(report.LOG, 'error')
@@ -1222,19 +1200,18 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         # communicate with the placement API and not getting an error we can
         # deal with
         resp_mock = mock.Mock(status_code=503)
-        self.ks_sess_mock.get.return_value = resp_mock
-        self.ks_sess_mock.get.return_value.headers = {
+        self.ks_adap_mock.get.return_value = resp_mock
+        self.ks_adap_mock.get.return_value.headers = {
             'openstack-request-id': uuids.request_id}
 
         uuid = uuids.compute_node
         result = self.client._get_resource_provider(uuid)
 
         expected_url = '/resource_providers/' + uuid
-        self.ks_sess_mock.get.assert_called_once_with(expected_url,
-                                                      endpoint_filter=mock.ANY,
-                                                      raise_exc=False)
-        # A 503 Service Unavailable should trigger an error log that
-        # includes the placement request id and return None
+        self.ks_adap_mock.get.assert_called_once_with(
+            expected_url, raise_exc=False, microversion=None)
+        # A 503 Service Unavailable should trigger an error log
+        # that includes the placement request id and return None
         # from _get_resource_provider()
         self.assertTrue(logging_mock.called)
         self.assertIsNone(result)
@@ -1248,7 +1225,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         uuid = uuids.compute_node
         name = 'computehost'
         resp_mock = mock.Mock(status_code=201)
-        self.ks_sess_mock.post.return_value = resp_mock
+        self.ks_adap_mock.post.return_value = resp_mock
 
         result = self.client._create_resource_provider(uuid, name)
 
@@ -1262,11 +1239,9 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             generation=0,
         )
         expected_url = '/resource_providers'
-        self.ks_sess_mock.post.assert_called_once_with(
-                expected_url,
-                endpoint_filter=mock.ANY,
-                json=expected_payload,
-                raise_exc=False)
+        self.ks_adap_mock.post.assert_called_once_with(
+            expected_url, json=expected_payload, raise_exc=False,
+            microversion=None)
         self.assertEqual(expected_provider_dict, result)
 
     @mock.patch.object(report.LOG, 'info')
@@ -1282,8 +1257,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         uuid = uuids.compute_node
         name = 'computehost'
         resp_mock = mock.Mock(status_code=409)
-        self.ks_sess_mock.post.return_value = resp_mock
-        self.ks_sess_mock.post.return_value.headers = {
+        self.ks_adap_mock.post.return_value = resp_mock
+        self.ks_adap_mock.post.return_value.headers = {
             'openstack-request-id': uuids.request_id}
 
         get_rp_mock.return_value = mock.sentinel.get_rp
@@ -1295,11 +1270,9 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             'name': name,
         }
         expected_url = '/resource_providers'
-        self.ks_sess_mock.post.assert_called_once_with(
-                expected_url,
-                endpoint_filter=mock.ANY,
-                json=expected_payload,
-                raise_exc=False)
+        self.ks_adap_mock.post.assert_called_once_with(
+            expected_url, json=expected_payload, raise_exc=False,
+            microversion=None)
         self.assertEqual(mock.sentinel.get_rp, result)
         # The 409 response will produce a message to the info log.
         self.assertTrue(logging_mock.called)
@@ -1314,8 +1287,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         uuid = uuids.compute_node
         name = 'computehost'
         resp_mock = mock.Mock(status_code=503)
-        self.ks_sess_mock.post.return_value = resp_mock
-        self.ks_sess_mock.post.return_value.headers = {
+        self.ks_adap_mock.post.return_value = resp_mock
+        self.ks_adap_mock.post.return_value.headers = {
             'x-openstack-request-id': uuids.request_id}
 
         result = self.client._create_resource_provider(uuid, name)
@@ -1325,11 +1298,9 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             'name': name,
         }
         expected_url = '/resource_providers'
-        self.ks_sess_mock.post.assert_called_once_with(
-                expected_url,
-                endpoint_filter=mock.ANY,
-                json=expected_payload,
-                raise_exc=False)
+        self.ks_adap_mock.post.assert_called_once_with(
+            expected_url, json=expected_payload, raise_exc=False,
+            microversion=None)
         # A 503 Service Unavailable should log an error that
         # includes the placement request id and
         # _create_resource_provider() should return None
@@ -1353,7 +1324,7 @@ class TestAggregates(SchedulerReportClientTestCase):
             ],
         }
         resp_mock.json.return_value = json_data
-        self.ks_sess_mock.get.return_value = resp_mock
+        self.ks_adap_mock.get.return_value = resp_mock
 
         result = self.client._get_provider_aggregates(uuid)
 
@@ -1362,9 +1333,8 @@ class TestAggregates(SchedulerReportClientTestCase):
             uuids.agg2,
         ])
         expected_url = '/resource_providers/' + uuid + '/aggregates'
-        self.ks_sess_mock.get.assert_called_once_with(
-            expected_url, endpoint_filter=mock.ANY, raise_exc=False,
-            headers={'OpenStack-API-Version': 'placement 1.1'})
+        self.ks_adap_mock.get.assert_called_once_with(
+            expected_url, raise_exc=False, microversion='1.1')
         self.assertEqual(expected, result)
 
     @mock.patch.object(report.LOG, 'warning')
@@ -1376,16 +1346,15 @@ class TestAggregates(SchedulerReportClientTestCase):
         """
         uuid = uuids.compute_node
         resp_mock = mock.Mock(status_code=404)
-        self.ks_sess_mock.get.return_value = resp_mock
-        self.ks_sess_mock.get.return_value.headers = {
+        self.ks_adap_mock.get.return_value = resp_mock
+        self.ks_adap_mock.get.return_value.headers = {
             'x-openstack-request-id': uuids.request_id}
 
         result = self.client._get_provider_aggregates(uuid)
 
         expected_url = '/resource_providers/' + uuid + '/aggregates'
-        self.ks_sess_mock.get.assert_called_once_with(
-            expected_url, endpoint_filter=mock.ANY, raise_exc=False,
-            headers={'OpenStack-API-Version': 'placement 1.1'})
+        self.ks_adap_mock.get.assert_called_once_with(
+            expected_url, raise_exc=False, microversion='1.1')
         self.assertTrue(log_mock.called)
         self.assertEqual(uuids.request_id,
                         log_mock.call_args[0][1]['placement_req_id'])
@@ -1398,16 +1367,15 @@ class TestAggregates(SchedulerReportClientTestCase):
         """
         uuid = uuids.compute_node
         resp_mock = mock.Mock(status_code=400)
-        self.ks_sess_mock.get.return_value = resp_mock
-        self.ks_sess_mock.get.return_value.headers = {
+        self.ks_adap_mock.get.return_value = resp_mock
+        self.ks_adap_mock.get.return_value.headers = {
             'x-openstack-request-id': uuids.request_id}
 
         result = self.client._get_provider_aggregates(uuid)
 
         expected_url = '/resource_providers/' + uuid + '/aggregates'
-        self.ks_sess_mock.get.assert_called_once_with(
-            expected_url, endpoint_filter=mock.ANY, raise_exc=False,
-            headers={'OpenStack-API-Version': 'placement 1.1'})
+        self.ks_adap_mock.get.assert_called_once_with(
+            expected_url, raise_exc=False, microversion='1.1')
         self.assertTrue(log_mock.called)
         self.assertEqual(uuids.request_id,
                         log_mock.call_args[0][1]['placement_req_id'])
