@@ -22,15 +22,7 @@ To manually recover a failed compute node:
 
 #. Identify the VMs on the affected hosts by using a combination of the
    :command:`openstack server list` and :command:`openstack server show`
-   commands or the :command:`euca-describe-instances` command.
-
-   For example, this command displays information about the i-000015b9 instance
-   that runs on the np-rcc54 node:
-
-   ..  code-block:: console
-
-       $ euca-describe-instances
-       i-000015b9 at3-ui02 running nectarkey (376, np-rcc54) 0 m1.xxlarge 2012-06-19T00:48:11.000Z 115.146.93.60
+   commands.
 
 #. Query the Compute database for the status of the host. This example converts
    an EC2 API instance ID to an OpenStack ID. If you use the :command:`nova`
@@ -298,24 +290,6 @@ After power resumes and all hardware components restart:
   This action enables you to connect to the instance without the volume
   attached, if you allow only connections through public keys.
 
-To script the disaster recovery plan (DRP), use the `https://github.com/Razique
-<https://github.com/Razique/BashStuff/blob/master/SYSTEMS/OpenStack/SCR_5006_V00_NUAC-OPENSTACK-DRP-OpenStack.sh>`_
-bash script.
-
-This script completes these steps:
-
-#. Creates an array for instances and their attached volumes.
-
-#. Updates the MySQL database.
-
-#. Restarts all instances with euca2ools.
-
-#. Reattaches the volumes.
-
-#. Uses Compute credentials to make an SSH connection into every instance.
-
-The script includes a ``test mode``, which enables you to perform the sequence
-for only one instance.
 
 To reproduce the power loss, connect to the compute node that runs that
 instance and close the iSCSI session. Do not detach the volume by using the

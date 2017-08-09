@@ -2,9 +2,9 @@
 nova-api
 ========
 
--------------------------------------------
-Server for the Nova EC2 and OpenStack APIs
--------------------------------------------
+-------------------------------------
+Server for the OpenStack Compute APIs
+-------------------------------------
 
 :Author: openstack@lists.openstack.org
 :Date:   2012-09-27

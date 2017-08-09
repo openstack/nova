@@ -186,52 +186,6 @@ in the OpenStack Configuration Reference.
    systems can be built within an OpenStack cluster, or provisioned outside of
    it, but OpenStack software does not provide these features.
 
-EC2 compatibility API
-~~~~~~~~~~~~~~~~~~~~~
-
-.. todo:: Does this need to be removed now?
-
-In addition to the native compute API, OpenStack provides an EC2-compatible
-API. This API allows EC2 legacy workflows built for EC2 to work with OpenStack.
-
-.. warning::
-
-   Nova in tree EC2-compatible API is deprecated.  The `ec2-api project
-   <https://git.openstack.org/cgit/openstack/ec2-api/>`_ is working to
-   implement the EC2 API.
-
-You can use numerous third-party tools and language-specific SDKs to interact
-with OpenStack clouds. You can use both native and compatibility APIs. Some of
-the more popular third-party tools are:
-
-Euca2ools
-  A popular open source command-line tool for interacting with the EC2 API.
-  This is convenient for multi-cloud environments where EC2 is the common API,
-  or for transitioning from EC2-based clouds to OpenStack. For more
-  information, see the `Eucalyptus Documentation
-  <http://docs.hpcloud.com/eucalyptus>`__.
-
-Hybridfox
-  A Firefox browser add-on that provides a graphical interface to many popular
-  public and private cloud technologies, including OpenStack.  For more
-  information, see the `hybridfox site
-  <http://code.google.com/p/hybridfox/>`__.
-
-boto
-  Python library for interacting with Amazon Web Services. You can use this
-  library to access OpenStack through the EC2 compatibility API.  For more
-  information, see the `boto project page on GitHub
-  <https://github.com/boto/boto>`__.
-
-fog
-  A Ruby cloud services library. It provides methods to interact with a large
-  number of cloud and virtualization platforms, including OpenStack. For more
-  information, see the `fog site <https://rubygems.org/gems/fog>`__.
-
-php-opencloud
-  A PHP SDK designed to work with most OpenStack-based cloud deployments, as
-  well as Rackspace public cloud. For more information, see the `php-opencloud
-  site <http://www.php-opencloud.com>`__.
 
 Building blocks
 ~~~~~~~~~~~~~~~

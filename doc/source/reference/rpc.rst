@@ -49,9 +49,9 @@ initialization time, one which accepts messages with routing keys
 ``NODE-TYPE.NODE-ID`` (for example ``compute.hostname``) and another, which
 accepts messages with routing keys as generic ``NODE-TYPE`` (for example
 ``compute``). The former is used specifically when Nova-API needs to redirect
-commands to a specific node like ``euca-terminate instance``. In this case,
-only the compute node whose host's hypervisor is running the virtual machine
-can kill the instance. The API acts as a consumer when RPC calls are
+commands to a specific node like ``openstack server delete $instance``. In this
+case, only the compute node whose host's hypervisor is running the virtual
+machine can kill the instance. The API acts as a consumer when RPC calls are
 request/response, otherwise it acts as a publisher only.
 
 Nova RPC Mappings

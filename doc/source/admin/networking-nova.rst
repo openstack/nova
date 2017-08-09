@@ -525,14 +525,12 @@ Enable ping and SSH on VMs
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You need to enable ``ping`` and ``ssh`` on your VMs for network access.  This
-can be done with either the :command:`nova` or :command:`euca2ools` commands.
+can be done with the :command:`openstack` command.
 
 .. note::
 
    Run these commands as root only if the credentials used to interact with
-   ``nova-api`` are in ``/root/.bashrc``. If the EC2 credentials in the
-   ``.bashrc`` file are for an unprivileged user, you must run these commands
-   as that user instead.
+   ``nova-api`` are in ``/root/.bashrc``.
 
 Enable ping and SSH with :command:`openstack security group rule create`
 commands:
@@ -541,13 +539,6 @@ commands:
 
    $ openstack security group rule create --protocol icmp default
    $ openstack security group rule create --protocol tcp --dst-port 22:22 default
-
-Enable ping and SSH with ``euca2ools``:
-
-.. code-block:: console
-
-   $ euca-authorize -P icmp -t -1:-1 -s 0.0.0.0/0 default
-   $ euca-authorize -P tcp -p 22 -s 0.0.0.0/0 default
 
 If you have run these commands and still cannot ping or SSH your instances,
 check the number of running ``dnsmasq`` processes, there should be two. If not,

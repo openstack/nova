@@ -6,14 +6,12 @@ Manage the cloud
 
 .. toctree::
 
-   euca2ools.rst
    common/nova-show-usage-statistics-for-hosts-instances.rst
 
-System administrators can use the :command:`openstack` and :command:`euca2ools`
-commands to manage their clouds.
+System administrators can use the :command:`openstack` to manage their clouds.
 
-The ``openstack`` client and ``euca2ools`` can be used by all users, though
-specific commands might be restricted by the Identity service.
+The ``openstack`` client can be used by all users, though specific commands
+might be restricted by the Identity service.
 
 **Managing the cloud with the openstack client**
 
