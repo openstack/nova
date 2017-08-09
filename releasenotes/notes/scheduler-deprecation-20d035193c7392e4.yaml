@@ -1,0 +1,9 @@
+---
+deprecations:
+  - |
+    The CachingScheduler and ChanceScheduler drivers are deprecated in Pike.
+    These are not integrated with the placement service, and their primary
+    purpose (speed over correctness) should be addressed by the default
+    FilterScheduler going forward. If ChanceScheduler behavior is desired
+    (i.e. speed trumps correctness) then configuring the FilterScheduler with
+    no enabled filters should approximate that behavior.

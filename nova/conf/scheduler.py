@@ -46,8 +46,8 @@ Other options are:
 
 * 'caching_scheduler' which aggressively caches the system state for better
   individual scheduler performance at the risk of more retries when running
-  multiple schedulers.
-* 'chance_scheduler' which simply picks a host at random.
+  multiple schedulers. [DEPRECATED]
+* 'chance_scheduler' which simply picks a host at random. [DEPRECATED]
 * 'fake_scheduler' which is used for testing.
 
 Possible values:

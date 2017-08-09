@@ -21,6 +21,8 @@ Chance (Random) Scheduler implementation
 
 import random
 
+from oslo_log import log as logging
+
 from nova.compute import rpcapi as compute_rpcapi
 import nova.conf
 from nova import exception
@@ -28,12 +30,18 @@ from nova.i18n import _
 from nova.scheduler import driver
 
 CONF = nova.conf.CONF
+LOG = logging.getLogger(__name__)
 
 
 class ChanceScheduler(driver.Scheduler):
     """Implements Scheduler as a random node selector."""
 
     USES_ALLOCATION_CANDIDATES = False
+
+    def __init__(self, *args, **kwargs):
+        super(ChanceScheduler, self).__init__(*args, **kwargs)
+        LOG.warning('ChanceScheduler is deprecated in Pike and will be '
+                    'removed in a subsequent release.')
 
     def _filter_hosts(self, hosts, spec_obj):
         """Filter a list of hosts based on RequestSpec."""
