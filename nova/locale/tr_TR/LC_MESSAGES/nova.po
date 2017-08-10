@@ -8,9 +8,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 15.0.0.0rc2.dev255\n"
+"Project-Id-Version: nova 16.0.0.0b4.dev149\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2017-03-02 18:28+0000\n"
+"POT-Creation-Date: 2017-08-10 04:03+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -234,13 +234,6 @@ msgstr "Mimari ismi '%(arch)s' tanınmıyor"
 msgid "Architecture name '%s' is not valid"
 msgstr "Mimari adı '%s' geçerli değil"
 
-msgid ""
-"Asymmetric NUMA topologies require explicit assignment of CPUs and memory to "
-"nodes in image or flavor"
-msgstr ""
-"Asimetrik NUMA topolojileri CPU ve hafızanın imajda ya da nitelikte düğüme "
-"ayrıca atanmasını gerektirir"
-
 #, python-format
 msgid ""
 "Attempt to consume PCI device %(compute_node_id)s:%(address)s from empty pool"
@@ -380,10 +373,6 @@ msgstr "İstenilen imaj dosyası bulunamadı"
 msgid "Can not handle authentication request for %d credentials"
 msgstr "%d kimlik bilgileri için kimlik doğrulama isteği ele alınamadı"
 
-#, python-format
-msgid "Can only run %s more instances of this type."
-msgstr "Bu türde yalnızca %s tane daha sunucu çalıştırılabilir."
-
 msgid "Can't detach root device volume"
 msgstr "Kök aygıt mantıksal sürücüsü ayrılamaz"
 
@@ -425,13 +414,6 @@ msgstr ""
 msgid "Cannot call %(method)s on orphaned %(objtype)s object"
 msgstr "Artık %(objtype)s objesi üzerinde %(method)s çağrılamaz"
 
-msgid ""
-"Cannot create default bittorrent URL without xenserver.torrent_base_url "
-"configuration option set."
-msgstr ""
-"xenserver.torrent_base_url yapılandırma seçeneği ayarlanmadan varsayılan "
-"bittorrent URL'si oluşturulamaz."
-
 msgid "Cannot find SR of content-type ISO"
 msgstr "ISO içerik türünün SR'si bulunamıyor"
 
@@ -451,9 +433,6 @@ msgstr "İstemci %(aggregate_id)s takımından çıkarılamıyor. Sebep: %(reaso
 
 msgid "Cannot rescue a volume-backed instance"
 msgstr "Mantıksal sürücü destekli sunucu kurtarılamıyor"
-
-msgid "Cannot run any more instances of this type."
-msgstr "Bu türde daha fazla sunucu çalıştırılamıyor."
 
 #, python-format
 msgid "Cannot update aggregate %(aggregate_id)s. Reason: %(reason)s."
@@ -826,10 +805,6 @@ msgstr ""
 #, python-format
 msgid "Expected a uuid but received %(uuid)s."
 msgstr "Bir uuid bekleniyordu ama %(uuid)s alındı."
-
-#, python-format
-msgid "Expected object of type: %s"
-msgstr "Beklenen nesne türü: %s"
 
 #, python-format
 msgid "Extra column %(table)s.%(column)s in shadow table"
@@ -1499,10 +1474,6 @@ msgid "Invalid exclusion expression %r"
 msgstr "Geçersiz dışlama ifadesi %r"
 
 #, python-format
-msgid "Invalid field name: %s"
-msgstr "Geçersiz alan ismi: %s"
-
-#, python-format
 msgid "Invalid fixed IP Address %s in request"
 msgstr "İstekte %s geçersiz sabit IP Adresi"
 
@@ -1617,14 +1588,6 @@ msgid "Invalid timestamp for date %s"
 msgstr "%s tarihi için geçersiz zaman damgası"
 
 #, python-format
-msgid "Invalid type for %s"
-msgstr "%s için geçersiz tür"
-
-#, python-format
-msgid "Invalid type for %s entry"
-msgstr "%s girdisi için geçersiz tür"
-
-#, python-format
 msgid "Invalid usage_type: %s"
 msgstr "Geçersiz usage_type: %s"
 
@@ -1665,13 +1628,6 @@ msgstr "Geçersiz volume_size."
 #, python-format
 msgid "Ironic node uuid not supplied to driver for instance %s."
 msgstr "Ironic düğümü uuid'si %s sunucusu için sürücüye sağlanmamış."
-
-#, python-format
-msgid ""
-"Ironic node: %(id)s failed to validate. (deploy: %(deploy)s, power: "
-"%(power)s)"
-msgstr ""
-"Ironic düğümü: %(id)s doğrulayamadı. (açılma: %(deploy)s, güç: %(power)s)"
 
 msgid "Is the appropriate service running?"
 msgstr "Uygun servis çalışıyor mu?"
@@ -2165,9 +2121,6 @@ msgid ""
 msgstr ""
 "Bu özellik tarafından yalnızca dosya-tabanlı SR'ler (ext/NFS) desteklenir.  "
 "SR %(uuid)s ise %(type)s türünde"
-
-msgid "Only root certificate can be retrieved."
-msgstr "Sadece kök sertifikası alınabilir."
 
 #, python-format
 msgid "OpenSSL error: %s"
@@ -2718,27 +2671,6 @@ msgstr "Örnek şu ankinden daha yeni hypervisor versiyonu gerektirir."
 
 #, python-format
 msgid ""
-"The metadata for this location will not work with this module %(module)s.  "
-"%(reason)s."
-msgstr ""
-"Bu konum için metadata bu %(module)s modülüyle çalışmayacak.  %(reason)s."
-
-#, python-format
-msgid "The method %(method_name)s is not implemented."
-msgstr "Bu metod %(method_name)s uygulanmamış."
-
-#, python-format
-msgid "The module %(module)s is misconfigured: %(reason)s."
-msgstr "%(module)s birimi eksik yapılandırılmış: %(reason)s."
-
-#, python-format
-msgid "The mount %(mount_path)s is not a valid Quobyte volume. Error: %(exc)s"
-msgstr ""
-"%(mount_path)s bağı geçerli bir Qubyte mantıksal sürücüsü değil. Hata: "
-"%(exc)s"
-
-#, python-format
-msgid ""
 "The network range is not big enough to fit %(num_networks)s networks. "
 "Network size is %(network_size)s"
 msgstr ""
@@ -2781,10 +2713,6 @@ msgid ""
 msgstr ""
 "Ağlar arasındaki ve vlan başlangıcındaki toplamlar arası 4094'den büyük "
 "olamaz"
-
-#, python-format
-msgid "The supplied device (%(device)s) is busy."
-msgstr "Verilen aygıt (%(device)s) meşgul."
 
 #, python-format
 msgid "The supplied device path (%(path)s) is in use."
@@ -2863,10 +2791,6 @@ msgstr ""
 msgid "There is no such action: %s"
 msgstr "Böyle bir işlem yok: %s"
 
-#, python-format
-msgid "There was an error with the download module %(module)s. %(reason)s"
-msgstr "%(module)s indirme birimiyle ilgili bir hata vardı. %(reason)s"
-
 msgid "There were no records found where instance_uuid was NULL."
 msgstr "instance_uuid'in NULL olduğu kayıt bulunamadı."
 
@@ -2915,13 +2839,6 @@ msgstr "Neutron Ağlarını silmek için UUID gerekiyor"
 
 msgid "Unable to authenticate Ironic client."
 msgstr "Ironic istemcisi doğrulanamıyor."
-
-msgid ""
-"Unable to claim IP for VPN instances, ensure it isn't running, and try again "
-"in a few minutes"
-msgstr ""
-"VPN örnekleri için IP talep edilemiyor, çalışmadığından emin olun ve birkaç "
-"dakika içerisinde tekrar deneyin"
 
 #, python-format
 msgid "Unable to contact guest agent. The following call timed out: %(method)s"
@@ -3106,10 +3023,6 @@ msgstr "%(target_cell)s e yönlendirirken bilinmeyen %(cell_type)s"
 msgid "Unknown action"
 msgstr "Bilinmeyen eylem"
 
-#, python-format
-msgid "Unknown action %s"
-msgstr "Bilinmeyen eylem %s"
-
 msgid "Unknown argument: port"
 msgstr "Bilinmeyen bağımsız değişken: port"
 
@@ -3274,15 +3187,8 @@ msgstr ""
 "Mantıksal sürücü %(volume_id)s oluşturulması %(seconds)s saniye beklememize "
 "ya da %(attempts)s kere denemeye rağmen bitmedi. Ve durumu %(volume_status)s."
 
-#, python-format
-msgid "Volume %(volume_id)s is not attached to anything"
-msgstr "%(volume_id)s bölümü hiçbir şeyle ilişkilendirilmedi"
-
 msgid "Volume does not belong to the requested instance."
 msgstr "Mantıksal sürücü istenen sunucuya ait değil."
-
-msgid "Volume must be attached in order to detach."
-msgstr "Mantıksal sürücünün ayrılabilmesi için eklenmiş olmalıdır."
 
 #, python-format
 msgid ""
@@ -3602,10 +3508,6 @@ msgstr "vlan tam sayı olmalı"
 #, python-format
 msgid "volume %s already attached"
 msgstr "mantıksal sürücü %s zaten ekli"
-
-#, python-format
-msgid "volume %s already detached"
-msgstr "mantıksal sürücü %s zaten ayrılmış"
 
 #, python-format
 msgid "volume '%(vol)s' status must be 'available'. Currently in '%(status)s'"

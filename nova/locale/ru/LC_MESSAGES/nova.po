@@ -14,9 +14,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 15.0.0.0rc2.dev255\n"
+"Project-Id-Version: nova 16.0.0.0b4.dev149\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2017-03-02 18:28+0000\n"
+"POT-Creation-Date: 2017-08-10 04:03+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -306,13 +306,6 @@ msgstr "Имя архитектуры %(arch)s не распознано"
 msgid "Architecture name '%s' is not valid"
 msgstr "Недопустимое имя архитектуры: '%s'"
 
-msgid ""
-"Asymmetric NUMA topologies require explicit assignment of CPUs and memory to "
-"nodes in image or flavor"
-msgstr ""
-"Асимметричные топологии NUMA требуют явного назначения CPU и памяти узлам в "
-"образе или разновидности"
-
 #, python-format
 msgid ""
 "Attempt to consume PCI device %(compute_node_id)s:%(address)s from empty pool"
@@ -486,10 +479,6 @@ msgid "Can not handle authentication request for %d credentials"
 msgstr ""
 "Невозможно обработать запрос идентификации для идентификационных данных %d"
 
-#, python-format
-msgid "Can only run %s more instances of this type."
-msgstr "Возможно выполнить только еще %s экземпляров этого типа."
-
 msgid "Can't detach root device volume"
 msgstr "Невозможно отключить корневой том устройства"
 
@@ -524,10 +513,6 @@ msgstr ""
 "записями, которые невозможно идентифицировать на удаленном хосте."
 
 #, python-format
-msgid "Cannot access 'scality_sofs_config': %s"
-msgstr "Нет доступа к scality_sofs_config: %s"
-
-#, python-format
 msgid "Cannot add host to aggregate %(aggregate_id)s. Reason: %(reason)s."
 msgstr ""
 "Не удается добавить хост в составной объект %(aggregate_id)s. Причина: "
@@ -549,13 +534,6 @@ msgstr ""
 msgid "Cannot call %(method)s on orphaned %(objtype)s object"
 msgstr "Невозможно вызвать %(method)s в неприсвоенном объекте %(objtype)s"
 
-msgid ""
-"Cannot create default bittorrent URL without xenserver.torrent_base_url "
-"configuration option set."
-msgstr ""
-"Невозможно создать URL bittorrent по умолчанию без настроенного параметра "
-"конфигурации xenserver.torrent_base_url.  "
-
 #, python-format
 msgid ""
 "Cannot determine the parent storage pool for %s; cannot determine where to "
@@ -568,9 +546,6 @@ msgid "Cannot disassociate auto assigned floating IP"
 msgstr ""
 "Невозможно удалить связь автоматически присвоенного нефиксированного IP"
 
-msgid "Cannot execute /sbin/mount.sofs"
-msgstr "Не удалось выполнить /sbin/mount.sofs"
-
 msgid "Cannot find SR of content-type ISO"
 msgstr "Невозможно найти SR типа содержимого ISO"
 
@@ -579,11 +554,6 @@ msgstr "Невозможно найти SR для чтения/записи VDI.
 
 msgid "Cannot find image for rebuild"
 msgstr "Невозможно найти образ для перекомпоновки"
-
-msgid "Cannot mount Scality SOFS, check syslog for errors"
-msgstr ""
-"Не удалось смонтировать Scality SOFS. Проверьте системный протокол на "
-"наличие ошибок"
 
 #, python-format
 msgid "Cannot remove host %(host)s in aggregate %(id)s"
@@ -605,9 +575,6 @@ msgid ""
 msgstr ""
 "Невозможно изменить размер корневого диска в меньшую сторону. Текущий "
 "размер: %(curr_root_gb)s ГБ. Запрошенный размер: %(new_root_gb)s ГБ."
-
-msgid "Cannot run any more instances of this type."
-msgstr "Невозможно выполнить никакие другие экземпляры этого типа."
 
 msgid ""
 "Cannot set cpu thread pinning policy in a non dedicated cpu pinning policy"
@@ -660,14 +627,6 @@ msgstr ""
 #, python-format
 msgid "Cell with name %(name)s already exists."
 msgstr "Ячейка с именем %(name)s уже существует."
-
-#, python-format
-msgid "Certificate is not valid after: %s UTC"
-msgstr "Сертификат не действует после: %s UTC"
-
-#, python-format
-msgid "Certificate is not valid before: %s UTC"
-msgstr "Сертификат будет действовать, начиная с: %s UTC"
 
 #, python-format
 msgid ""
@@ -1041,9 +1000,6 @@ msgstr ""
 msgid "Error mounting %(image)s with libguestfs (%(e)s)"
 msgstr "Ошибка при монтировании %(image)s с помощью libguestfs (%(e)s)"
 
-msgid "Error occurred while creating the verifier"
-msgstr "Ошибка при создании агента проверки"
-
 #, python-format
 msgid "Error when creating resource monitor: %(monitor)s"
 msgstr "Ошибка при создании монитора ресурсов: %(monitor)s"
@@ -1083,10 +1039,6 @@ msgstr "Превышено максимальное количество поп�
 #, python-format
 msgid "Expected a uuid but received %(uuid)s."
 msgstr "Ожидался uuid, а получен %(uuid)s."
-
-#, python-format
-msgid "Expected object of type: %s"
-msgstr "Ожидался объект типа: %s"
 
 #, python-format
 msgid "Extra column %(table)s.%(column)s in shadow table"
@@ -1868,10 +1820,6 @@ msgstr ""
 "хоста:порт"
 
 #, python-format
-msgid "Invalid certificate format: %s"
-msgstr "Недопустимый формат сертификата: %s"
-
-#, python-format
 msgid "Invalid characters in hostname '%(hostname)s'"
 msgstr "Недопустимые символы в имени хоста %(hostname)s"
 
@@ -1912,10 +1860,6 @@ msgstr "Недопустимая запись: '%s'; ожидается спис
 #, python-format
 msgid "Invalid exclusion expression %r"
 msgstr "Недопустимое выражение исключения %r"
-
-#, python-format
-msgid "Invalid field name: %s"
-msgstr "Недопустимое имя поля: %s"
 
 #, python-format
 msgid "Invalid fixed IP Address %s in request"
@@ -2006,10 +1950,6 @@ msgid "Invalid proxy request signature."
 msgstr "Неверная подпись запроса прокси."
 
 #, python-format
-msgid "Invalid public key type for signature key type: %s"
-msgstr "Недопустимый тип открытого ключа для данного типа ключа подписи: %s"
-
-#, python-format
 msgid "Invalid range expression %r"
 msgstr "Недопустимое выражение диапазона %r"
 
@@ -2024,14 +1964,6 @@ msgstr "Недопустимое имя группы защиты: %(name)s."
 msgid "Invalid service catalog json."
 msgstr "Недопустимый json каталога службы."
 
-#, python-format
-msgid "Invalid signature hash method: %s"
-msgstr "Недопустимый метод хэша подписи: %s"
-
-#, python-format
-msgid "Invalid signature key type: %s"
-msgstr "Недопустимый тип ключа подписи: %s"
-
 msgid "Invalid start time. The start time cannot occur after the end time."
 msgstr ""
 "Неверное время запуска. Время запуска не может быть больше конечного времени."
@@ -2045,14 +1977,6 @@ msgstr "Недопустимый target_lun"
 #, python-format
 msgid "Invalid timestamp for date %s"
 msgstr "Неверное системное время для даты %s"
-
-#, python-format
-msgid "Invalid type for %s"
-msgstr "Недопустимый тип для %s"
-
-#, python-format
-msgid "Invalid type for %s entry"
-msgstr "Недопустимый тип для записи %s"
 
 #, python-format
 msgid "Invalid usage_type: %s"
@@ -2095,14 +2019,6 @@ msgstr "Недопустимое значение volume_size."
 #, python-format
 msgid "Ironic node uuid not supplied to driver for instance %s."
 msgstr "Драйверу не передан UUID узла Ironic для экземпляра %s."
-
-#, python-format
-msgid ""
-"Ironic node: %(id)s failed to validate. (deploy: %(deploy)s, power: "
-"%(power)s)"
-msgstr ""
-"Узел Ironic: %(id)s не удалось проверить. (развертывание: %(deploy)s, "
-"питание: %(power)s)"
 
 msgid "Is the appropriate service running?"
 msgstr "Выполняется ли соответствующая служба?"
@@ -2174,13 +2090,6 @@ msgstr "Перечисление виртуальных интерфейсов �
 #, python-format
 msgid "Live migration %(id)s for server %(uuid)s is not in progress."
 msgstr "Оперативный перенос %(id)s для сервера %(uuid)s не выполняется."
-
-msgid ""
-"Live migration can not be used without shared storage except a booted from "
-"volume VM which does not have a local disk."
-msgstr ""
-"Выполнение оперативной миграции невозможно без общей системы хранения. "
-"Исключение: загрузка с ВМ тома, не имеющей локального диска."
 
 msgid ""
 "Live migration with API v2.25 requires all the Mitaka upgrade to be complete "
@@ -2718,9 +2627,6 @@ msgstr ""
 "В этой функции поддерживаются только SR (ext/NFS) на основе файлов. SR "
 "%(uuid)s имеет тип %(type)s"
 
-msgid "Only root certificate can be retrieved."
-msgstr "Может быть извлечен только базовый сертификат."
-
 #, python-format
 msgid "OpenSSL error: %s"
 msgstr "Ошибка OpenSSL: %s"
@@ -3058,14 +2964,6 @@ msgstr ""
 "удовлетворить для %(vcpus)d VCPU"
 
 #, python-format
-msgid ""
-"Required image properties for signature verification do not exist. Cannot "
-"verify signature. Missing property: %s"
-msgstr ""
-"Отсутствуют свойства образа, необходимые для проверки подписи. Проверка "
-"подписи невозможна. Отсутствует свойство: %s"
-
-#, python-format
 msgid "Rescue device does not exist for instance %s"
 msgstr "Устройство аварийного восстановления не существует для экземпляра %s"
 
@@ -3264,10 +3162,6 @@ msgstr ""
 "достаточно ли свободного места на диске."
 
 #, python-format
-msgid "Signature verification for the image failed: %(reason)s."
-msgstr "Проверка подписи образа не выполнена: %(reason)s."
-
-#, python-format
 msgid "Snapshot %(snapshot_id)s could not be found."
 msgstr "Снимок %(snapshot_id)s не может быть найден."
 
@@ -3396,28 +3290,6 @@ msgstr "Копии необходима новая версия гипервиз
 
 #, python-format
 msgid ""
-"The metadata for this location will not work with this module %(module)s.  "
-"%(reason)s."
-msgstr ""
-"Метаданные для этого расположения не будут работать с модулем %(module)s.  "
-"%(reason)s."
-
-#, python-format
-msgid "The method %(method_name)s is not implemented."
-msgstr "Метод %(method_name)s не реализован."
-
-#, python-format
-msgid "The module %(module)s is misconfigured: %(reason)s."
-msgstr "Модуль %(module)s настроен неправильно: %(reason)s."
-
-#, python-format
-msgid "The mount %(mount_path)s is not a valid Quobyte volume. Error: %(exc)s"
-msgstr ""
-"Путь монтирования %(mount_path)s не является допустимым томом Quobyte. "
-"Ошибка: %(exc)s"
-
-#, python-format
-msgid ""
 "The network range is not big enough to fit %(num_networks)s networks. "
 "Network size is %(network_size)s"
 msgstr ""
@@ -3460,9 +3332,6 @@ msgstr "Запрашиваемые сведения о типе консоли �
 msgid "The requested functionality is not supported."
 msgstr "Запрошенная функциональность не поддерживается."
 
-msgid "The signature data was not properly encoded using base64"
-msgstr "Данные подписи в кодировке base64 содержат ошибку"
-
 #, python-format
 msgid "The specified cluster '%s' was not found in vCenter"
 msgstr "Указанный кластер '%s' не найден в vCenter"
@@ -3471,10 +3340,6 @@ msgid ""
 "The sum between the number of networks and the vlan start cannot be greater "
 "than 4094"
 msgstr "Сумма числа сетей и началом vlan не может быть больше 4094"
-
-#, python-format
-msgid "The supplied device (%(device)s) is busy."
-msgstr "Указанное устройство (%(device)s) занято."
 
 #, python-format
 msgid "The supplied device path (%(path)s) is in use."
@@ -3556,10 +3421,6 @@ msgstr ""
 #, python-format
 msgid "There is no such action: %s"
 msgstr "Не существует такого действия: %s"
-
-#, python-format
-msgid "There was an error with the download module %(module)s. %(reason)s"
-msgstr "В модуле загрузки %(module)s возникла ошибка. %(reason)s"
 
 msgid "There were no records found where instance_uuid was NULL."
 msgstr "Не обнаружены записи, для которых instance_uuid равен NULL."
@@ -3658,13 +3519,6 @@ msgstr ""
 
 msgid "Unable to authenticate Ironic client."
 msgstr "Не удалось идентифицировать клиент Ironic."
-
-msgid ""
-"Unable to claim IP for VPN instances, ensure it isn't running, and try again "
-"in a few minutes"
-msgstr ""
-"Невозможно затребовать IP для экземпляров VPN, убедитесь в том, что он не "
-"выполняется, и повторите запрос через несколько минут"
 
 #, python-format
 msgid "Unable to contact guest agent. The following call timed out: %(method)s"
@@ -3805,10 +3659,6 @@ msgstr "Невозможно получить целевую информаци�
 msgid "Unable to resize disk down."
 msgstr "Нельзя уменьшить размер диска."
 
-#, python-format
-msgid "Unable to retrieve certificate with ID: %s"
-msgstr "Не удается получить сертификат с ИД: %s"
-
 msgid "Unable to set password on instance"
 msgstr "Невозможно установить пароль для экземпляра"
 
@@ -3879,10 +3729,6 @@ msgstr "Неизвестный %(cell_type)s при маршрутизации �
 
 msgid "Unknown action"
 msgstr "Неизвестное действие"
-
-#, python-format
-msgid "Unknown action %s"
-msgstr "Неизвестное действие %s"
 
 msgid "Unknown argument: port"
 msgstr "Неизвестный аргумент: порт"
@@ -4005,9 +3851,6 @@ msgstr ""
 "Значение (%(value)s) параметра Group%(property)s неверно. Содержимое "
 "ограничено до '%(allowed)s'."
 
-msgid "Value required for 'scality_sofs_config'"
-msgstr "Требуется значение для 'scality_sofs_config'"
-
 #, python-format
 msgid ""
 "Version %(req_ver)s is not supported by the API. Minimum is %(min_ver)s and "
@@ -4062,10 +3905,6 @@ msgstr ""
 "Создание тома %(volume_id)s не завершается долгое время %(seconds)s секунд "
 "или %(attempts)s попыток. Состояние тома: %(volume_status)s."
 
-#, python-format
-msgid "Volume %(volume_id)s is not attached to anything"
-msgstr "Том %(volume_id)s никуда не присоединён"
-
 msgid "Volume does not belong to the requested instance."
 msgstr "Том не относится к запрашиваемому экземпляру."
 
@@ -4082,12 +3921,6 @@ msgstr ""
 "Размер тома меньше, чем минимальный размер, указанный в метаданных образа. "
 "Размер тома составляет %(volume_size)i байт, минимальный размер - "
 "%(image_min_disk)i байт."
-
-msgid "Volume must be attached in order to detach."
-msgstr "Том должен быть подключен, чтобы его можно было отключить."
-
-msgid "Volume resource quota exceeded"
-msgstr "Превышена квота ресурса тома"
 
 #, python-format
 msgid ""
@@ -4495,10 +4328,6 @@ msgstr "Значение vlan должно быть целым числом"
 #, python-format
 msgid "volume %s already attached"
 msgstr "Том %s уже присоединен"
-
-#, python-format
-msgid "volume %s already detached"
-msgstr "Том %s уже отключен"
 
 #, python-format
 msgid "volume '%(vol)s' status must be 'available'. Currently in '%(status)s'"
