@@ -199,7 +199,8 @@ class TestCase(testtools.TestCase):
 
         self.useFixture(nova_fixtures.OutputStreamCapture())
 
-        self.useFixture(nova_fixtures.StandardLogging())
+        self.stdlog = nova_fixtures.StandardLogging()
+        self.useFixture(self.stdlog)
 
         # NOTE(sdague): because of the way we were using the lock
         # wrapper we ended up with a lot of tests that started
