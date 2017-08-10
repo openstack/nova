@@ -1041,29 +1041,76 @@ class ResourceTracker(object):
             if instance.vm_state not in vm_states.ALLOW_RESOURCE_REMOVAL:
                 self._update_usage_from_instance(context, instance, nodename)
 
-        # Remove allocations for instances that have been removed.
         self._remove_deleted_instances_allocations(context, cn)
 
     def _remove_deleted_instances_allocations(self, context, cn):
-        tracked_keys = set(self.tracked_instances.keys())
+        # NOTE(jaypipes): All of this code sucks. It's basically dealing with
+        # all the corner cases in move, local delete, unshelve and rebuild
+        # operations for when allocations should be deleted when things didn't
+        # happen according to the normal flow of events where the scheduler
+        # always creates allocations for an instance
+        known_instances = set(self.tracked_instances.keys())
         allocations = self.reportclient.get_allocations_for_resource_provider(
                 cn.uuid) or {}
-        allocations_to_delete = set(allocations.keys()) - tracked_keys
-        for instance_uuid in allocations_to_delete:
-            # Allocations related to instances being scheduled should not be
-            # deleted if we already wrote the allocation previously.
+        for instance_uuid, alloc in allocations.items():
+            if instance_uuid in known_instances:
+                LOG.debug("Instance %s actively managed on this compute host "
+                          "and has allocations in placement: %s.",
+                          instance_uuid, alloc)
+                continue
             try:
                 instance = objects.Instance.get_by_uuid(context, instance_uuid,
                                                         expected_attrs=[])
-                if not instance.host:
-                    continue
             except exception.InstanceNotFound:
-                # The instance is gone, so we definitely want to
-                # remove allocations associated with it.
-                pass
-            LOG.debug('Deleting stale allocation for instance %s',
-                      instance_uuid)
-            self.reportclient.delete_allocation_for_instance(instance_uuid)
+                # The instance is gone, so we definitely want to remove
+                # allocations associated with it.
+                # NOTE(jaypipes): This will not be true if/when we support
+                # cross-cell migrations...
+                LOG.debug("Instance %s has been deleted (perhaps locally). "
+                          "Deleting allocations that remained for this "
+                          "instance against this compute host: %s.",
+                          instance_uuid, alloc)
+                self.reportclient.delete_allocation_for_instance(instance_uuid)
+                continue
+            if not instance.host:
+                # Allocations related to instances being scheduled should not
+                # be deleted if we already wrote the allocation previously.
+                LOG.debug("Instance %s has been scheduled to this compute "
+                          "host, the scheduler has made an allocation "
+                          "against this compute node but the instance has "
+                          "yet to start. Skipping heal of allocation: %s.",
+                          instance_uuid, alloc)
+                continue
+            if (instance.host == cn.host and
+                    instance.node == cn.hypervisor_hostname):
+                # The instance is supposed to be on this compute host but is
+                # not in the list of actively managed instances.
+                LOG.warning("Instance %s is not being actively managed by "
+                            "this compute host but has allocations "
+                            "referencing this compute host: %s. Skipping "
+                            "heal of allocation because we do not know "
+                            "what to do.", instance_uuid, alloc)
+                continue
+            if instance.host != cn.host:
+                # The instance has been moved to another host either via a
+                # migration, evacuation or unshelve in between the time when we
+                # ran InstanceList.get_by_host_and_node(), added those
+                # instances to RT.tracked_instances and the above
+                # Instance.get_by_uuid() call. We SHOULD attempt to remove any
+                # allocations that reference this compute host if the VM is in
+                # a stable terminal state (i.e. it isn't in a state of waiting
+                # for resize to confirm/revert), however if the destination
+                # host is an Ocata compute host, it will delete the allocation
+                # that contains this source compute host information anyway and
+                # recreate an allocation that only refers to itself. So we
+                # don't need to do anything in that case. Just log the
+                # situation here for debugging information but don't attempt to
+                # delete or change the allocation.
+                LOG.debug("Instance %s has been moved to another host %s(%s). "
+                          "There are allocations remaining against the source "
+                          "host that might need to be removed: %s.",
+                          instance_uuid, instance.host, instance.node, alloc)
+                continue
 
     def _find_orphaned_instances(self):
         """Given the set of instances and migrations already account for

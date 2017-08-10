@@ -2394,26 +2394,32 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         mock_update_usage.assert_called_once_with(
             self.rt._get_usage_dict(self.instance), _NODENAME, sign=-1)
 
-    @mock.patch('nova.compute.resource_tracker.LOG')
     @mock.patch('nova.objects.Instance.get_by_uuid')
-    def test_remove_deleted_instances_allocations(self, mock_inst_get,
-                                                  mock_log):
+    def test_remove_deleted_instances_allocations_deleted_instance(self,
+            mock_inst_get):
         rc = self.rt.reportclient
         self.rt.tracked_instances = {}
-        # Create 3 instances
-        instance_uuids = (uuids.inst0, uuids.inst1, uuids.inst2)
-        for i in range(3):
-            instance = _INSTANCE_FIXTURES[0].obj_clone()
-            instance.uuid = instance_uuids[i]
-            if i > 0:
-                # Only add the last two to tracked_instances, to simulate one
-                # deleted instance
-                inst_dict = obj_base.obj_to_primitive(instance)
-                self.rt.tracked_instances[instance.uuid] = inst_dict
-        # Mock out the allocation call
+        allocs = {uuids.deleted: "fake_deleted_instance"}
+        rc.get_allocations_for_resource_provider = mock.MagicMock(
+            return_value=allocs)
+        rc.delete_allocation_for_instance = mock.MagicMock()
+        mock_inst_get.side_effect = exc.InstanceNotFound(
+            instance_id=uuids.deleted)
+        cn = self.rt.compute_nodes[_NODENAME]
+        ctx = mock.sentinel.ctx
+        # Call the method.
+        self.rt._remove_deleted_instances_allocations(ctx, cn)
+        # Only one call should be made to delete allocations, and that should
+        # be for the first instance created above
+        rc.delete_allocation_for_instance.assert_called_once_with(
+            uuids.deleted)
+
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    def test_remove_deleted_instances_allocations_scheduled_instance(self,
+            mock_inst_get):
+        rc = self.rt.reportclient
+        self.rt.tracked_instances = {}
         allocs = {uuids.scheduled: "fake_scheduled_instance"}
-        for i in range(3):
-            allocs[instance_uuids[i]] = "fake_instance_%s" % i
         rc.get_allocations_for_resource_provider = mock.MagicMock(
             return_value=allocs)
         rc.delete_allocation_for_instance = mock.MagicMock()
@@ -2421,8 +2427,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         def get_by_uuid(ctx, inst_uuid, expected_attrs=None):
             ret = _INSTANCE_FIXTURES[0].obj_clone()
             ret.uuid = inst_uuid
-            if inst_uuid == uuids.scheduled:
-                ret.host = None
+            ret.host = None  # This indicates the instance is being scheduled
             return ret
 
         mock_inst_get.side_effect = get_by_uuid
@@ -2430,15 +2435,12 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         ctx = mock.sentinel.ctx
         # Call the method.
         self.rt._remove_deleted_instances_allocations(ctx, cn)
-        # Only one call should be made to delete allocations, and that should
-        # be for the first instance created above
-        rc.delete_allocation_for_instance.assert_called_once_with(uuids.inst0)
-        mock_log.debug.assert_called_once_with(
-            'Deleting stale allocation for instance %s', uuids.inst0)
+        # Scheduled instances should not have their allocations removed
+        rc.delete_allocation_for_instance.assert_not_called()
 
     @mock.patch('nova.objects.Instance.get_by_uuid')
     def test_remove_deleted_instances_allocations_no_instance(self,
-                                                              mock_inst_get):
+            mock_inst_get):
         # If for some reason an instance is no longer available, but
         # there are allocations for it, we want to be sure those
         # allocations are removed, not that an InstanceNotFound
