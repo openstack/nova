@@ -800,8 +800,7 @@ class API(base_api.NetworkAPI):
 
     def allocate_for_instance(self, context, instance, vpn,
                               requested_networks, macs=None,
-                              security_groups=None,
-                              dhcp_options=None, bind_host_id=None):
+                              security_groups=None, bind_host_id=None):
         """Allocate network resources for the instance.
 
         :param context: The request context.
@@ -818,11 +817,6 @@ class API(base_api.NetworkAPI):
             MAC addresses).
         :param security_groups: None or security groups to allocate for
             instance.
-        :param dhcp_options: None or a set of key/value pairs that should
-            determine the DHCP BOOTP response, eg. for PXE booting an instance
-            configured with the baremetal hypervisor. It is expected that these
-            are already formatted for the neutron v2 api.
-            See nova/virt/driver.py:dhcp_options_for_instance for an example.
         :param bind_host_id: the host ID to attach to the ports being created.
         :returns: network info as from get_instance_nw_info()
         """
@@ -872,7 +866,7 @@ class API(base_api.NetworkAPI):
             created_port_ids = self._update_ports_for_instance(
                 context, instance,
                 neutron, admin_client, requests_and_created_ports, nets,
-                bind_host_id, dhcp_options, available_macs)
+                bind_host_id, available_macs)
 
         #
         # Perform a full update of the network_info_cache,
@@ -897,12 +891,12 @@ class API(base_api.NetworkAPI):
 
     def _update_ports_for_instance(self, context, instance, neutron,
             admin_client, requests_and_created_ports, nets,
-            bind_host_id, dhcp_opts, available_macs):
+            bind_host_id, available_macs):
         """Update ports from network_requests.
 
         Updates the pre-existing ports and the ones created in
         ``_create_ports_for_instance`` with ``device_id``, ``device_owner``,
-        optionally ``mac_address`` and ``dhcp_opts``, and, depending on the
+        optionally ``mac_address`` and, depending on the
         loaded extensions, ``rxtx_factor``, ``binding:host_id``, ``dns_name``.
 
         :param context: The request context.
@@ -912,8 +906,6 @@ class API(base_api.NetworkAPI):
         :param requests_and_created_ports: [(NetworkRequest, created_port_id)]
         :param nets: a dict of network_id to networks returned from neutron
         :param bind_host_id: a string for port['binding:host_id']
-        :param dhcp_opts: a list dicts that contain dhcp option name and value
-            e.g. [{'opt_name': 'tftp-server', 'opt_value': '1.2.3.4'}]
         :param available_macs: a list of available mac addresses
         """
 
@@ -956,8 +948,6 @@ class API(base_api.NetworkAPI):
                     request.pci_request_id, port_req_body)
                 self._populate_mac_address(
                     instance, port_req_body, available_macs)
-                if dhcp_opts is not None:
-                    port_req_body['port']['extra_dhcp_opts'] = dhcp_opts
 
                 if created_port_id:
                     port_id = created_port_id

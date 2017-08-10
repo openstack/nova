@@ -216,7 +216,6 @@ class API(base_api.NetworkAPI):
     def allocate_for_instance(self, context, instance, vpn,
                               requested_networks, macs=None,
                               security_groups=None,
-                              dhcp_options=None,
                               bind_host_id=None):
         """Allocates all network structures for an instance.
 
@@ -230,11 +229,6 @@ class API(base_api.NetworkAPI):
             with requested_networks which is user supplied).
         :param security_groups: None or security groups to allocate for
             instance.
-        :param dhcp_options: None or a set of key/value pairs that should
-            determine the DHCP BOOTP response, eg. for PXE booting an instance
-            configured with the baremetal hypervisor. It is expected that these
-            are already formatted for the neutron v2 api.
-            See nova/virt/driver.py:dhcp_options_for_instance for an example.
         :param bind_host_id: ignored by this driver.
         :returns: network info as from get_instance_nw_info() below
         """
@@ -251,7 +245,6 @@ class API(base_api.NetworkAPI):
         args['host'] = instance.host
         args['rxtx_factor'] = flavor['rxtx_factor']
         args['macs'] = macs
-        args['dhcp_options'] = dhcp_options
 
         # Check to see if we're asked to 'auto' allocate networks because if
         # so we need to just null out the requested_networks value so the

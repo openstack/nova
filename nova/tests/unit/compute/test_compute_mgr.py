@@ -420,7 +420,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         macs = 'fake-macs'
         sec_groups = 'fake-sec-groups'
         final_result = 'meow'
-        dhcp_options = None
 
         expected_sleep_times = [1, 2, 4, 8, 16, 30, 30, 30]
 
@@ -431,8 +430,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                        req_networks,
                                                        macs,
                                                        sec_groups,
-                                                       is_vpn,
-                                                       dhcp_options)
+                                                       is_vpn)
 
         mock_sleep.has_calls(expected_sleep_times)
         self.assertEqual(final_result, res)
@@ -450,7 +448,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             objects=[objects.NetworkRequest(network_id='fake')])
         macs = 'fake-macs'
         sec_groups = 'fake-sec-groups'
-        dhcp_options = None
 
         with mock.patch.object(
                 self.compute.network_api, 'allocate_for_instance',
@@ -458,13 +455,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.assertRaises(test.TestingException,
                               self.compute._allocate_network_async,
                               self.context, instance, req_networks, macs,
-                              sec_groups, is_vpn, dhcp_options)
+                              sec_groups, is_vpn)
 
         mock_allocate.assert_called_once_with(
             self.context, instance, vpn=is_vpn,
             requested_networks=req_networks, macs=macs,
             security_groups=sec_groups,
-            dhcp_options=dhcp_options,
             bind_host_id=instance.get('host'))
 
     @mock.patch.object(manager.ComputeManager, '_instance_update')
@@ -480,7 +476,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             objects=[objects.NetworkRequest(network_id='fake')])
         macs = 'fake-macs'
         sec_groups = 'fake-sec-groups'
-        dhcp_options = None
         final_result = 'zhangtralon'
 
         with mock.patch.object(self.compute.network_api,
@@ -491,8 +486,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                        req_networks,
                                                        macs,
                                                        sec_groups,
-                                                       is_vpn,
-                                                       dhcp_options)
+                                                       is_vpn)
         self.assertEqual(final_result, res)
         self.assertEqual(1, sleep.call_count)
 
@@ -503,7 +497,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             objects=[objects.NetworkRequest(network_id='none')])
         nwinfo = self.compute._allocate_network_async(
             self.context, mock.sentinel.instance, req_networks, macs=None,
-            security_groups=['default'], is_vpn=False, dhcp_options=None)
+            security_groups=['default'], is_vpn=False)
         self.assertEqual(0, len(nwinfo))
 
     @mock.patch('nova.compute.manager.ComputeManager.'
@@ -5145,7 +5139,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 instance, self.requested_networks, self.security_groups)
 
         mock_allocate.assert_called_once_with(self.context, instance,
-                self.requested_networks, None, self.security_groups, None)
+                self.requested_networks, None, self.security_groups)
         self.assertTrue(hasattr(nw_info_obj, 'wait'), "wait must be there")
 
     @mock.patch.object(manager.ComputeManager, '_allocate_network')
@@ -5159,7 +5153,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 instance, self.requested_networks, self.security_groups)
 
         mock_allocate.assert_called_once_with(self.context, instance,
-                self.requested_networks, None, self.security_groups, None)
+                self.requested_networks, None, self.security_groups)
         self.assertTrue(hasattr(nw_info_obj, 'wait'), "wait must be there")
 
     @mock.patch.object(manager.ComputeManager, '_allocate_network')
