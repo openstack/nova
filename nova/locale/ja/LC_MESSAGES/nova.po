@@ -11,9 +11,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 15.0.0.0rc2.dev255\n"
+"Project-Id-Version: nova 16.0.0.0b4.dev149\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2017-03-02 18:28+0000\n"
+"POT-Creation-Date: 2017-08-10 04:03+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -305,13 +305,6 @@ msgstr "アーキテクチャー名 '%(arch)s' は認識できません"
 msgid "Architecture name '%s' is not valid"
 msgstr "アーキテクチャー名 '%s' が有効ではありません"
 
-msgid ""
-"Asymmetric NUMA topologies require explicit assignment of CPUs and memory to "
-"nodes in image or flavor"
-msgstr ""
-"非対称 NUMA トポロジーでは、CPU とメモリーのノードへの割り当てを、イメージか"
-"フレーバーで明示的に指定する必要があります"
-
 #, python-format
 msgid ""
 "Attempt to consume PCI device %(compute_node_id)s:%(address)s from empty pool"
@@ -486,10 +479,6 @@ msgstr "要求されたイメージが見つかりません"
 msgid "Can not handle authentication request for %d credentials"
 msgstr "%d 認証情報に関する認証要求を処理できません"
 
-#, python-format
-msgid "Can only run %s more instances of this type."
-msgstr "このタイプのインスタンスは、あと %s 個に限り実行できます。"
-
 msgid "Can't detach root device volume"
 msgstr "ルートデバイスボリュームは切断することはできません"
 
@@ -521,10 +510,6 @@ msgstr ""
 "ない組み込みのシステムアカウント等のアカウントで実行してはなりません。"
 
 #, python-format
-msgid "Cannot access 'scality_sofs_config': %s"
-msgstr "'scality_sofs_config' にアクセスできません: %s"
-
-#, python-format
 msgid "Cannot add host to aggregate %(aggregate_id)s. Reason: %(reason)s."
 msgstr ""
 "ホストをアグリゲート %(aggregate_id)s に追加できません。理由: %(reason)s。"
@@ -546,13 +531,6 @@ msgid "Cannot call %(method)s on orphaned %(objtype)s object"
 msgstr ""
 "親のない %(objtype)s オブジェクトで %(method)s を呼び出すことはできません"
 
-msgid ""
-"Cannot create default bittorrent URL without xenserver.torrent_base_url "
-"configuration option set."
-msgstr ""
-"xenserver.torrent_base_url の設定オプションを設定しないかぎり、デフォルトの "
-"bittorrent URL を作成できません。"
-
 #, python-format
 msgid ""
 "Cannot determine the parent storage pool for %s; cannot determine where to "
@@ -565,9 +543,6 @@ msgid "Cannot disassociate auto assigned floating IP"
 msgstr ""
 "自動的に割り当てられたFloating IP の割り当て解除を行うことができません。"
 
-msgid "Cannot execute /sbin/mount.sofs"
-msgstr "/sbin/mount.sofs を実行できません"
-
 msgid "Cannot find SR of content-type ISO"
 msgstr "コンテンツタイプが ISO の SR が見つかりません"
 
@@ -576,9 +551,6 @@ msgstr "VDI の読み取り/書き込み用の SR が見つかりません。"
 
 msgid "Cannot find image for rebuild"
 msgstr "再作成用のイメージが見つかりません"
-
-msgid "Cannot mount Scality SOFS, check syslog for errors"
-msgstr "Scality SOFS をマウントできません。syslog でエラーを確認してください"
 
 #, python-format
 msgid "Cannot remove host %(host)s in aggregate %(id)s"
@@ -599,9 +571,6 @@ msgid ""
 msgstr ""
 "ルートディスクのサイズを小さくすることはできません。現在のサイズ: "
 "%(curr_root_gb)s GB。要求されたサイズ: %(new_root_gb)s GB。"
-
-msgid "Cannot run any more instances of this type."
-msgstr "このタイプのインスタンスをこれ以上実行することはできません。"
 
 msgid ""
 "Cannot set cpu thread pinning policy in a non dedicated cpu pinning policy"
@@ -649,14 +618,6 @@ msgstr "セルメッセージが最大ホップ数 %(hop_count)s に達しまし
 #, python-format
 msgid "Cell with name %(name)s already exists."
 msgstr "名前が %(name)s のセルは既に存在します。"
-
-#, python-format
-msgid "Certificate is not valid after: %s UTC"
-msgstr "証明書は以下の時間以降には無効です: %s UTC"
-
-#, python-format
-msgid "Certificate is not valid before: %s UTC"
-msgstr "証明書は以下の時間以前には無効です: %s UTC"
 
 #, python-format
 msgid ""
@@ -1029,9 +990,6 @@ msgstr ""
 "libguestfs (%(e)s) を使用してイメージ %(image)s をマウントする際にエラーが発"
 "生しました"
 
-msgid "Error occurred while creating the verifier"
-msgstr "ベリファイヤーの作成中にエラーが発生しました"
-
 #, python-format
 msgid "Error when creating resource monitor: %(monitor)s"
 msgstr "リソースモニター %(monitor)s を作成するときにエラーが発生しました"
@@ -1070,10 +1028,6 @@ msgstr "再試行の最大回数を超えました。%(reason)s"
 #, python-format
 msgid "Expected a uuid but received %(uuid)s."
 msgstr "UUID が必要ですが、%(uuid)s を受け取りました。"
-
-#, python-format
-msgid "Expected object of type: %s"
-msgstr "想定されるオブジェクトタイプ: %s"
 
 #, python-format
 msgid "Extra column %(table)s.%(column)s in shadow table"
@@ -1865,10 +1819,6 @@ msgstr ""
 "broker_hosts 値 %s が無効です。hostname:port の形式でなければなりません"
 
 #, python-format
-msgid "Invalid certificate format: %s"
-msgstr "無効な証明書の形式: %s"
-
-#, python-format
 msgid "Invalid characters in hostname '%(hostname)s'"
 msgstr "ホスト名 '%(hostname)s' に無効な文字があります"
 
@@ -1909,10 +1859,6 @@ msgstr "項目 '%s' は無効です。リストまたは辞書型が期待され
 #, python-format
 msgid "Invalid exclusion expression %r"
 msgstr "排他式 %r は無効です"
-
-#, python-format
-msgid "Invalid field name: %s"
-msgstr "フィールド名が無効です: %s"
 
 #, python-format
 msgid "Invalid fixed IP Address %s in request"
@@ -1999,10 +1945,6 @@ msgid "Invalid proxy request signature."
 msgstr "無効なプロキシー要求シグニチャー"
 
 #, python-format
-msgid "Invalid public key type for signature key type: %s"
-msgstr "シグニチャーの鍵タイプの無効な公開鍵: %s"
-
-#, python-format
 msgid "Invalid range expression %r"
 msgstr "範囲式 %r は無効です"
 
@@ -2017,14 +1959,6 @@ msgstr "セキュリティーグループ名が無効です: %(name)s。"
 msgid "Invalid service catalog json."
 msgstr "無効なサービスカタログ JSON。"
 
-#, python-format
-msgid "Invalid signature hash method: %s"
-msgstr "無効なシグニチャーハッシュメソッド: %s"
-
-#, python-format
-msgid "Invalid signature key type: %s"
-msgstr "無効なシグニチャーの鍵タイプ: %s"
-
 msgid "Invalid start time. The start time cannot occur after the end time."
 msgstr "無効な開始時刻。開始時刻を終了時刻より後にすることはできません。"
 
@@ -2037,14 +1971,6 @@ msgstr "無効な target_lun"
 #, python-format
 msgid "Invalid timestamp for date %s"
 msgstr "日付 %s のタイムスタンプが無効です"
-
-#, python-format
-msgid "Invalid type for %s"
-msgstr "%s のタイプが無効です"
-
-#, python-format
-msgid "Invalid type for %s entry"
-msgstr "%s 項目のタイプが無効です"
 
 #, python-format
 msgid "Invalid usage_type: %s"
@@ -2088,14 +2014,6 @@ msgstr "volume_size が無効です。"
 msgid "Ironic node uuid not supplied to driver for instance %s."
 msgstr ""
 "Ironic ノード uuid が、インスタンス %s のドライバーに提供されていません。"
-
-#, python-format
-msgid ""
-"Ironic node: %(id)s failed to validate. (deploy: %(deploy)s, power: "
-"%(power)s)"
-msgstr ""
-"Ironic ノード %(id)s を検証できませんでした。(デプロイ: %(deploy)s、電源: "
-"%(power)s)"
 
 msgid "Is the appropriate service running?"
 msgstr "適切なサービスが実行されていますか?"
@@ -2167,13 +2085,6 @@ msgstr "このクラウドでは仮想インターフェースの一覧表示を
 #, python-format
 msgid "Live migration %(id)s for server %(uuid)s is not in progress."
 msgstr "サーバー %(uuid)s のマイグレーション %(id)s は進行中ではありません。"
-
-msgid ""
-"Live migration can not be used without shared storage except a booted from "
-"volume VM which does not have a local disk."
-msgstr ""
-"ローカルディスクを持たないボリューム VM から起動する場合を除いて、共有スト"
-"レージなしにはライブマイグレーションを行うことはできません。"
 
 msgid ""
 "Live migration with API v2.25 requires all the Mitaka upgrade to be complete "
@@ -2727,9 +2638,6 @@ msgstr ""
 "この機能でサポートされるのは、ファイルベースの SR (ext/NFS) のみです。SR "
 "%(uuid)s のタイプは %(type)s です。"
 
-msgid "Only root certificate can be retrieved."
-msgstr "ルート証明書のみが取得可能です。"
-
 #, python-format
 msgid "OpenSSL error: %s"
 msgstr "OpenSSL エラー: %s"
@@ -3072,14 +2980,6 @@ msgstr ""
 "%(vcpus)d を満たすことができません"
 
 #, python-format
-msgid ""
-"Required image properties for signature verification do not exist. Cannot "
-"verify signature. Missing property: %s"
-msgstr ""
-"シグニチャーの検証に必要なイメージプロパティーが存在しません。シグニチャーを"
-"検証できません。プロパティーが存在しません: %s"
-
-#, python-format
 msgid "Rescue device does not exist for instance %s"
 msgstr "インスタンス %s 用のレスキューデバイスが存在しません"
 
@@ -3284,10 +3184,6 @@ msgstr ""
 "な空き容量があるかどうかを確認してください。"
 
 #, python-format
-msgid "Signature verification for the image failed: %(reason)s."
-msgstr "イメージのシグニチャーの検証が失敗しました: %(reason)s。"
-
-#, python-format
 msgid "Snapshot %(snapshot_id)s could not be found."
 msgstr "スナップショット %(snapshot_id)s が見つかりませんでした。"
 
@@ -3423,28 +3319,6 @@ msgstr ""
 
 #, python-format
 msgid ""
-"The metadata for this location will not work with this module %(module)s.  "
-"%(reason)s."
-msgstr ""
-"このロケーションのメタデータは、このモジュール %(module)s では機能しませ"
-"ん。%(reason)s。"
-
-#, python-format
-msgid "The method %(method_name)s is not implemented."
-msgstr "メソッド %(method_name)s は実装されていません。"
-
-#, python-format
-msgid "The module %(module)s is misconfigured: %(reason)s."
-msgstr "モジュール %(module)s の設定に誤りがあります: %(reason)s。"
-
-#, python-format
-msgid "The mount %(mount_path)s is not a valid Quobyte volume. Error: %(exc)s"
-msgstr ""
-"マウント %(mount_path)s は有効な Quobyte ボリュームではありません。エラー: "
-"%(exc)s"
-
-#, python-format
-msgid ""
 "The network range is not big enough to fit %(num_networks)s networks. "
 "Network size is %(network_size)s"
 msgstr ""
@@ -3485,10 +3359,6 @@ msgstr "要求されたコンソールタイプの詳細にはアクセスでき
 msgid "The requested functionality is not supported."
 msgstr "要求された機能はサポートされていません。"
 
-msgid "The signature data was not properly encoded using base64"
-msgstr ""
-"このシグニチャーデータは base64 を使用して適切にエンコードされませんでした"
-
 #, python-format
 msgid "The specified cluster '%s' was not found in vCenter"
 msgstr "指定されたクラスター '%s' が vCenter で見つかりませんでした"
@@ -3497,10 +3367,6 @@ msgid ""
 "The sum between the number of networks and the vlan start cannot be greater "
 "than 4094"
 msgstr "ネットワーク数と VLAN の開始番号の和は 4094 より大きくできません。"
-
-#, python-format
-msgid "The supplied device (%(device)s) is busy."
-msgstr "指定されたデバイス (%(device)s) は使用中です。"
 
 #, python-format
 msgid "The supplied device path (%(path)s) is in use."
@@ -3582,10 +3448,6 @@ msgstr ""
 #, python-format
 msgid "There is no such action: %s"
 msgstr "このようなアクションはありません: %s"
-
-#, python-format
-msgid "There was an error with the download module %(module)s. %(reason)s"
-msgstr "ダウンロードモジュール %(module)s でエラーが発生しました。%(reason)s"
 
 msgid "There were no records found where instance_uuid was NULL."
 msgstr "instance_uuid がヌルのレコードはありませんでした。"
@@ -3687,13 +3549,6 @@ msgstr ""
 
 msgid "Unable to authenticate Ironic client."
 msgstr "Ironic クライアントを認証できません。"
-
-msgid ""
-"Unable to claim IP for VPN instances, ensure it isn't running, and try again "
-"in a few minutes"
-msgstr ""
-"VPN インスタンスの IP を要求できません。実行中でないことを確認し、数分後に再"
-"試行してください"
 
 #, python-format
 msgid "Unable to contact guest agent. The following call timed out: %(method)s"
@@ -3835,10 +3690,6 @@ msgstr "ターゲットの情報 %s を取得できません"
 msgid "Unable to resize disk down."
 msgstr "ディスクのサイズを縮小することができません。"
 
-#, python-format
-msgid "Unable to retrieve certificate with ID: %s"
-msgstr "以下の ID の証明書を取得できません: %s"
-
 msgid "Unable to set password on instance"
 msgstr "インスタンスにパスワードを設定できません"
 
@@ -3910,10 +3761,6 @@ msgstr "%(target_cell)s へのルーティングにおける不明な %(cell_typ
 
 msgid "Unknown action"
 msgstr "不明なアクション"
-
-#, python-format
-msgid "Unknown action %s"
-msgstr "不明なアクション %s"
 
 msgid "Unknown argument: port"
 msgstr "不明な引数: port"
@@ -4035,9 +3882,6 @@ msgstr ""
 "パラメーターグループ %(property)s の値 (%(value)s) が無効です。指定できる内容"
 "は '%(allowed)s' だけです。"
 
-msgid "Value required for 'scality_sofs_config'"
-msgstr "'scality_sofs_config' の値が必要です"
-
 #, python-format
 msgid ""
 "Version %(req_ver)s is not supported by the API. Minimum is %(min_ver)s and "
@@ -4093,10 +3937,6 @@ msgstr ""
 "%(volume_id)s を作成することができませんでした。状況は %(volume_status)s で"
 "す。"
 
-#, python-format
-msgid "Volume %(volume_id)s is not attached to anything"
-msgstr "ボリューム %(volume_id)s はどこにも接続されていません"
-
 msgid "Volume does not belong to the requested instance."
 msgstr "ボリュームが要求されたインスタンスに属していません。"
 
@@ -4115,12 +3955,6 @@ msgstr ""
 "ボリュームがイメージのメタデータで指定された最小サイズよりも小さくなっていま"
 "す。ボリュームサイズは %(volume_size)i バイト、最小サイズは "
 "%(image_min_disk)i バイトです。"
-
-msgid "Volume must be attached in order to detach."
-msgstr "ボリュームを切り離すにはボリュームが接続されていなければいけません。"
-
-msgid "Volume resource quota exceeded"
-msgstr "ボリュームのリソースクォータを超過しました"
 
 #, python-format
 msgid ""
@@ -4529,10 +4363,6 @@ msgstr "vlan は整数でなければなりません"
 #, python-format
 msgid "volume %s already attached"
 msgstr "ボリューム %s は既に接続されています"
-
-#, python-format
-msgid "volume %s already detached"
-msgstr "ボリューム %s は既に切り離されています"
 
 #, python-format
 msgid "volume '%(vol)s' status must be 'available'. Currently in '%(status)s'"

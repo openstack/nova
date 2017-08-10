@@ -10,9 +10,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 15.0.0.0rc2.dev255\n"
+"Project-Id-Version: nova 16.0.0.0b4.dev149\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2017-03-02 18:28+0000\n"
+"POT-Creation-Date: 2017-08-10 04:03+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -269,13 +269,6 @@ msgstr "Název architektury '%(arch)s' nebyl rozpoznán"
 msgid "Architecture name '%s' is not valid"
 msgstr "Název architektury '%s' není platný"
 
-msgid ""
-"Asymmetric NUMA topologies require explicit assignment of CPUs and memory to "
-"nodes in image or flavor"
-msgstr ""
-"Asymetrické topologie NUMA vyžadují konkrétní přidělení CPU  paměti uzlům v "
-"obrazu nebo konfiguraci"
-
 #, python-format
 msgid ""
 "Attempt to consume PCI device %(compute_node_id)s:%(address)s from empty pool"
@@ -428,10 +421,6 @@ msgstr "Nelze najít požadovaný obraz"
 msgid "Can not handle authentication request for %d credentials"
 msgstr "Nelze zpracovat žádost o ověření přihlašovacích údajů %d"
 
-#, python-format
-msgid "Can only run %s more instances of this type."
-msgstr "Lze spustit pouze %s dalších instancí tohoto typu."
-
 msgid "Can't detach root device volume"
 msgstr "Nelze odpojit svazek kořenového zařízení"
 
@@ -463,10 +452,6 @@ msgstr ""
 "přihlásit na vzdálených hostitelích."
 
 #, python-format
-msgid "Cannot access 'scality_sofs_config': %s"
-msgstr "Není přístup k 'scality_sofs_config': %s"
-
-#, python-format
 msgid "Cannot add host to aggregate %(aggregate_id)s. Reason: %(reason)s."
 msgstr ""
 "Nelze přidat hostitele do agregátu %(aggregate_id)s. Důvod: %(reason)s."
@@ -478,18 +463,8 @@ msgstr "Nelze připojit jeden nebo více svazků k mnoha instancím"
 msgid "Cannot call %(method)s on orphaned %(objtype)s object"
 msgstr "Nelze volat %(method)s na osiřelém objektu %(objtype)s"
 
-msgid ""
-"Cannot create default bittorrent URL without xenserver.torrent_base_url "
-"configuration option set."
-msgstr ""
-"Nelze vytvořit výchozí URL bittorrentu bez nastavení volby xenserver."
-"torrent_base_url"
-
 msgid "Cannot disassociate auto assigned floating IP"
 msgstr "Nelze odloučit automaticky přidělenou plovoucí IP adresu"
-
-msgid "Cannot execute /sbin/mount.sofs"
-msgstr "Nelze spustit /sbin/mount.sofs"
 
 msgid "Cannot find SR of content-type ISO"
 msgstr "Nelze najít SR typu obsahu ISO"
@@ -499,10 +474,6 @@ msgstr "Nelze najít SR pro čtení/zápis VDI."
 
 msgid "Cannot find image for rebuild"
 msgstr "Nelze najít obraz ke znovu sestavení"
-
-msgid "Cannot mount Scality SOFS, check syslog for errors"
-msgstr ""
-"Nelze připojit Scality SOFS, zkontrolujte záznam systému pro možné chyby"
 
 #, python-format
 msgid "Cannot remove host %(host)s in aggregate %(id)s"
@@ -523,9 +494,6 @@ msgid ""
 msgstr ""
 "Nelze zmenšit velikost kořenového disku. Současná velikost: %(curr_root_gb)s "
 "GB. Požadovaná velikost: %(new_root_gb)s GB."
-
-msgid "Cannot run any more instances of this type."
-msgstr "Již nelze spouštět další instance tohoto typu."
 
 msgid "Cannot set realtime policy in a non dedicated cpu pinning policy"
 msgstr ""
@@ -569,14 +537,6 @@ msgstr "Zpráva buňky dosáhla maximálního počtu skoků: %(hop_count)s"
 #, python-format
 msgid "Cell with name %(name)s already exists."
 msgstr "Buňka s názvem %(name)s již existuje."
-
-#, python-format
-msgid "Certificate is not valid after: %s UTC"
-msgstr "Certifikát nemá platnost po: %s UTC"
-
-#, python-format
-msgid "Certificate is not valid before: %s UTC"
-msgstr "Certifikát nemá platnost před: %s UTC"
 
 #, python-format
 msgid ""
@@ -936,9 +896,6 @@ msgstr ""
 msgid "Error mounting %(image)s with libguestfs (%(e)s)"
 msgstr "Chyba při připojování %(image)s pomocí libguestfs (%(e)s)"
 
-msgid "Error occurred while creating the verifier"
-msgstr "Při vytváření ověřovatele došlo k chybě"
-
 #, python-format
 msgid "Error when creating resource monitor: %(monitor)s"
 msgstr "Chyba při vytváření monitoru zdroje: %(monitor)s"
@@ -976,10 +933,6 @@ msgstr "Překročen maximální počet pokusů. %(reason)s"
 #, python-format
 msgid "Expected a uuid but received %(uuid)s."
 msgstr "Očekáváno uuid ale obdrženo %(uuid)s."
-
-#, python-format
-msgid "Expected object of type: %s"
-msgstr "Očekáván objekt typu: %s"
 
 #, python-format
 msgid "Extra column %(table)s.%(column)s in shadow table"
@@ -1699,10 +1652,6 @@ msgstr ""
 "port"
 
 #, python-format
-msgid "Invalid certificate format: %s"
-msgstr "Neplatný formát certifikátu: %s"
-
-#, python-format
 msgid "Invalid characters in hostname '%(hostname)s'"
 msgstr "Neplatné znaky v názvu hostitele '%(hostname)s'"
 
@@ -1743,10 +1692,6 @@ msgstr "Neplatná položka: '%s'; Očekáváno list nebo dict"
 #, python-format
 msgid "Invalid exclusion expression %r"
 msgstr "Neplatný výraz vyloučení %r"
-
-#, python-format
-msgid "Invalid field name: %s"
-msgstr "Neplatný název pole: %s"
 
 #, python-format
 msgid "Invalid fixed IP Address %s in request"
@@ -1834,10 +1779,6 @@ msgid "Invalid proxy request signature."
 msgstr "Neplatný podpis žádosti od prostředníka."
 
 #, python-format
-msgid "Invalid public key type for signature key type: %s"
-msgstr "Neplatný typ veřejného klíče pro typ klíče podpisu: %s"
-
-#, python-format
 msgid "Invalid range expression %r"
 msgstr "Neplatný výraz rozsahu %r"
 
@@ -1852,14 +1793,6 @@ msgstr "Neplatný název bezpečnostní skupiny: %(name)s."
 msgid "Invalid service catalog json."
 msgstr "Neplatný json katalog služeb"
 
-#, python-format
-msgid "Invalid signature hash method: %s"
-msgstr "Neplatná metoda hashování podpisu: %s"
-
-#, python-format
-msgid "Invalid signature key type: %s"
-msgstr "Neplatný typ klíče podpisu: %s"
-
 msgid "Invalid start time. The start time cannot occur after the end time."
 msgstr "Neplatný čas spuštění. Čas spuštění nemůže nastat po čase ukončení."
 
@@ -1872,14 +1805,6 @@ msgstr "Neplatný target_lun"
 #, python-format
 msgid "Invalid timestamp for date %s"
 msgstr "Neplatné časové razítko pro datum %s"
-
-#, python-format
-msgid "Invalid type for %s"
-msgstr "Neplatný typ pro %s"
-
-#, python-format
-msgid "Invalid type for %s entry"
-msgstr "Neplatný typ pro položku %s"
 
 #, python-format
 msgid "Invalid usage_type: %s"
@@ -1921,13 +1846,6 @@ msgstr "Neplatná velikost svazku"
 #, python-format
 msgid "Ironic node uuid not supplied to driver for instance %s."
 msgstr "UUID uzlu Ironic nebylo předáno ovladači instance %s."
-
-#, python-format
-msgid ""
-"Ironic node: %(id)s failed to validate. (deploy: %(deploy)s, power: "
-"%(power)s)"
-msgstr ""
-"Uzel Ironic: nelze ověřit %(id)s. (nasazení: %(deploy)s, napájení %(power)s)"
 
 msgid "Is the appropriate service running?"
 msgstr "Běží odpovídající služba?"
@@ -1990,13 +1908,6 @@ msgstr "Řádek %(linenum)d : %(line)s"
 #, python-format
 msgid "Link Local address is not found.:%s"
 msgstr "Adresa místního spojení nenalezena.: %s"
-
-msgid ""
-"Live migration can not be used without shared storage except a booted from "
-"volume VM which does not have a local disk."
-msgstr ""
-"Přesunutí za provozu nemůže být použito bez sdíleného úložiště, kromě "
-"zavedení ze svazku VM, který nemá místní disk."
 
 #, python-format
 msgid "Malformed message body: %(reason)s"
@@ -2466,9 +2377,6 @@ msgstr ""
 "Pouze souborové SR (ext/NFS) jsou touto funkcí podporovány. SR %(uuid)s má "
 "typ %(type)s"
 
-msgid "Only root certificate can be retrieved."
-msgstr "Může být získán pouze kořenový certifikát."
-
 #, python-format
 msgid "OpenSSL error: %s"
 msgstr "Chyba OpenSSL: %s"
@@ -2776,14 +2684,6 @@ msgstr ""
 "pro daný počet vCPU %(vcpus)d"
 
 #, python-format
-msgid ""
-"Required image properties for signature verification do not exist. Cannot "
-"verify signature. Missing property: %s"
-msgstr ""
-"Požadované vlastnosti obrazu pro ověření podpisu neexistují. Nelze ověřit "
-"podpis. Chybí vlastnost: %s"
-
-#, python-format
 msgid "Rescue device does not exist for instance %s"
 msgstr "Záchranné zařízení neexistuje v instanci %s"
 
@@ -2966,10 +2866,6 @@ msgstr ""
 "zda máte na svém disku dostatek volného místa."
 
 #, python-format
-msgid "Signature verification for the image failed: %(reason)s."
-msgstr "Selhalo ověření podpisu pro obraz: %(reason)s."
-
-#, python-format
 msgid "Snapshot %(snapshot_id)s could not be found."
 msgstr "Snímek %(snapshot_id)s nemohl být nalezen."
 
@@ -3095,26 +2991,6 @@ msgstr "Instance vyžaduje novější verzi hypervizoru, než byla poskytnuta."
 
 #, python-format
 msgid ""
-"The metadata for this location will not work with this module %(module)s.  "
-"%(reason)s."
-msgstr ""
-"Popisná data pro toto umístění nebudou s tímto modulem %(module)s fungovat. "
-"%(reason)s."
-
-#, python-format
-msgid "The method %(method_name)s is not implemented."
-msgstr "Metoda %(method_name)s není zavedena."
-
-#, python-format
-msgid "The module %(module)s is misconfigured: %(reason)s."
-msgstr "Modul %(module)s je špatně nastavena: %(reason)s."
-
-#, python-format
-msgid "The mount %(mount_path)s is not a valid Quobyte volume. Error: %(exc)s"
-msgstr "Připojení %(mount_path)s není platný svazek Quobyte. Chyba %(exc)s"
-
-#, python-format
-msgid ""
 "The network range is not big enough to fit %(num_networks)s networks. "
 "Network size is %(network_size)s"
 msgstr ""
@@ -3155,9 +3031,6 @@ msgstr "Požadované podrobnosti typu konzole nejsou přístupné"
 msgid "The requested functionality is not supported."
 msgstr "Požadovaná funkce není podporována."
 
-msgid "The signature data was not properly encoded using base64"
-msgstr "Data podpisu nebyla zakódována správně pomocí base64"
-
 #, python-format
 msgid "The specified cluster '%s' was not found in vCenter"
 msgstr "Zadaný cluster '%s' nebyl nalezen ve vCenter"
@@ -3166,10 +3039,6 @@ msgid ""
 "The sum between the number of networks and the vlan start cannot be greater "
 "than 4094"
 msgstr "Suma mezi počtem sítí a spuštění vlan nemůže být větší než 4094"
-
-#, python-format
-msgid "The supplied device (%(device)s) is busy."
-msgstr "Zadané zařízení (%(device)s) je zaneprázdněno."
 
 #, python-format
 msgid "The supplied device path (%(path)s) is in use."
@@ -3249,10 +3118,6 @@ msgstr ""
 #, python-format
 msgid "There is no such action: %s"
 msgstr "Žádná taková činnost: %s"
-
-#, python-format
-msgid "There was an error with the download module %(module)s. %(reason)s"
-msgstr "U staženého modulu %(module)s se vyskytla chyba. %(reason)s"
 
 msgid "There were no records found where instance_uuid was NULL."
 msgstr "Nebyly nalezeny žádné záznamy, kde uuid instance bylo prázdné."
@@ -3347,13 +3212,6 @@ msgstr ""
 
 msgid "Unable to authenticate Ironic client."
 msgstr "Nelze ověřit klienta ironic."
-
-msgid ""
-"Unable to claim IP for VPN instances, ensure it isn't running, and try again "
-"in a few minutes"
-msgstr ""
-"Nelze získat IP pro instance VPN, ujistěte se, že není spuštěna a zkuste to "
-"znovu za pár minut."
 
 #, python-format
 msgid "Unable to contact guest agent. The following call timed out: %(method)s"
@@ -3486,10 +3344,6 @@ msgstr "Nelze získat informace o cíli %s"
 msgid "Unable to resize disk down."
 msgstr "Nelze zmenšit velikost disku."
 
-#, python-format
-msgid "Unable to retrieve certificate with ID: %s"
-msgstr "Nelze získat certifikát s ID: %s"
-
 msgid "Unable to set password on instance"
 msgstr "Nelze nastavit heslo instance"
 
@@ -3559,10 +3413,6 @@ msgstr "Neznámý %(cell_type)s, při směrování do %(target_cell)s"
 
 msgid "Unknown action"
 msgstr "Neznámá činnost"
-
-#, python-format
-msgid "Unknown action %s"
-msgstr "Neznámá činnost %s"
 
 msgid "Unknown argument: port"
 msgstr "Neznámý argument: port"
@@ -3684,9 +3534,6 @@ msgstr ""
 "Hodnota (%(value)s) pro parametr Skupiny %(property)s je neplatný. Obsah je "
 "omezen na '%(allowed)s'."
 
-msgid "Value required for 'scality_sofs_config'"
-msgstr "Je třeba zadat hodnotu pro 'scality_sofs_config'"
-
 #, python-format
 msgid ""
 "Version %(req_ver)s is not supported by the API. Minimum is %(min_ver)s and "
@@ -3740,10 +3587,6 @@ msgstr ""
 "%(seconds)s vteřin nebo %(attempts)s pokusech. A jeho stav je "
 "%(volume_status)s."
 
-#, python-format
-msgid "Volume %(volume_id)s is not attached to anything"
-msgstr "Svazek %(volume_id)s není k ničemu připojen"
-
 msgid "Volume does not belong to the requested instance."
 msgstr "Svazek nepatří do požadované instance."
 
@@ -3761,12 +3604,6 @@ msgstr ""
 "Svazek je menší, než minimální zadaná velikost zadaná v popisných datech "
 "obrazu. Svazek má %(volume_size)i bajtů, minimální velikost je "
 "%(image_min_disk)i bajtů."
-
-msgid "Volume must be attached in order to detach."
-msgstr "Pro odpojení svazku musí být nejdříve připojen."
-
-msgid "Volume resource quota exceeded"
-msgstr "Překročena kvóta zdroje svazku"
 
 #, python-format
 msgid ""
@@ -4125,10 +3962,6 @@ msgstr "vlan musí být celé číslo"
 #, python-format
 msgid "volume %s already attached"
 msgstr "svazek %s již je připojen"
-
-#, python-format
-msgid "volume %s already detached"
-msgstr "Svazek %s již je připojen"
 
 #, python-format
 msgid "volume '%(vol)s' status must be 'available'. Currently in '%(status)s'"

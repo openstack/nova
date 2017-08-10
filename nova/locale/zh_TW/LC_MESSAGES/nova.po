@@ -10,9 +10,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 15.0.0.0rc2.dev255\n"
+"Project-Id-Version: nova 16.0.0.0b4.dev149\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2017-03-02 18:28+0000\n"
+"POT-Creation-Date: 2017-08-10 04:03+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -283,11 +283,6 @@ msgstr "未辨識架構名稱 '%(arch)s'"
 msgid "Architecture name '%s' is not valid"
 msgstr "架構名稱 '%s' 無效"
 
-msgid ""
-"Asymmetric NUMA topologies require explicit assignment of CPUs and memory to "
-"nodes in image or flavor"
-msgstr "非對稱 NUMA 拓蹼需要向映像檔或特性中的節點明確指派 CPU 和記憶體"
-
 #, python-format
 msgid ""
 "Attempt to consume PCI device %(compute_node_id)s:%(address)s from empty pool"
@@ -439,10 +434,6 @@ msgstr "找不到所要求的映像檔"
 msgid "Can not handle authentication request for %d credentials"
 msgstr "無法處理對 %d 認證的鑑別要求"
 
-#, python-format
-msgid "Can only run %s more instances of this type."
-msgstr "最多還能執行 %s 個這種類型的實例。"
-
 msgid "Can't detach root device volume"
 msgstr "無法分離根裝置磁區"
 
@@ -472,10 +463,6 @@ msgstr ""
 "Compute。"
 
 #, python-format
-msgid "Cannot access 'scality_sofs_config': %s"
-msgstr "無法存取 'scality_sofs_config'：%s"
-
-#, python-format
 msgid "Cannot add host to aggregate %(aggregate_id)s. Reason: %(reason)s."
 msgstr "無法將主機新增至聚集 %(aggregate_id)s。原因：%(reason)s。"
 
@@ -494,13 +481,6 @@ msgstr ""
 msgid "Cannot call %(method)s on orphaned %(objtype)s object"
 msgstr "無法對孤立的 %(objtype)s 物件呼叫 %(method)s"
 
-msgid ""
-"Cannot create default bittorrent URL without xenserver.torrent_base_url "
-"configuration option set."
-msgstr ""
-"如果沒有 xenserver.torrent_base_url 配置選項集，則無法建立預設 bittorrent "
-"URL。"
-
 #, python-format
 msgid ""
 "Cannot determine the parent storage pool for %s; cannot determine where to "
@@ -510,9 +490,6 @@ msgstr "無法判定 %s 的母項儲存區；無法判定用來儲存映像檔�
 msgid "Cannot disassociate auto assigned floating IP"
 msgstr "無法斷開與自動指派之浮動 IP 的關聯"
 
-msgid "Cannot execute /sbin/mount.sofs"
-msgstr "無法執行 /sbin/mount.sofs"
-
 msgid "Cannot find SR of content-type ISO"
 msgstr "找不到內容類型為 ISO 的「儲存體儲存庫 (SR)」"
 
@@ -521,9 +498,6 @@ msgstr "找不到「儲存體儲存庫 (SR)」來讀寫 VDI。"
 
 msgid "Cannot find image for rebuild"
 msgstr "找不到要重建的映像檔"
-
-msgid "Cannot mount Scality SOFS, check syslog for errors"
-msgstr "無法裝載 Scality SOFS，請檢查系統日誌以找出錯誤"
 
 #, python-format
 msgid "Cannot remove host %(host)s in aggregate %(id)s"
@@ -543,9 +517,6 @@ msgid ""
 msgstr ""
 "無法將根磁碟調小。現行大小：%(curr_root_gb)s GB。所要求的大小："
 "%(new_root_gb)s GB。"
-
-msgid "Cannot run any more instances of this type."
-msgstr "無法執行更多這類型的實例。"
 
 msgid ""
 "Cannot set cpu thread pinning policy in a non dedicated cpu pinning policy"
@@ -589,14 +560,6 @@ msgstr "Cell 訊息已達到跳躍數上限：%(hop_count)s"
 #, python-format
 msgid "Cell with name %(name)s already exists."
 msgstr "名稱為 %(name)s 的 Cell 已存在。"
-
-#, python-format
-msgid "Certificate is not valid after: %s UTC"
-msgstr "在世界標準時間 %s 之後，憑證無效"
-
-#, python-format
-msgid "Certificate is not valid before: %s UTC"
-msgstr "在世界標準時間 %s 之前，憑證無效"
 
 #, python-format
 msgid ""
@@ -940,9 +903,6 @@ msgstr ""
 msgid "Error mounting %(image)s with libguestfs (%(e)s)"
 msgstr "裝載具有 libguestfs (%(e)s) 的 %(image)s 時發生錯誤"
 
-msgid "Error occurred while creating the verifier"
-msgstr "建立驗證器時發生錯誤"
-
 #, python-format
 msgid "Error when creating resource monitor: %(monitor)s"
 msgstr "建立資源監視器 %(monitor)s 時發生錯誤"
@@ -980,10 +940,6 @@ msgstr "已超出重試次數上限。%(reason)s"
 #, python-format
 msgid "Expected a uuid but received %(uuid)s."
 msgstr "需要 UUID，但收到 %(uuid)s。"
-
-#, python-format
-msgid "Expected object of type: %s"
-msgstr "需要類型為 %s 的物件"
 
 #, python-format
 msgid "Extra column %(table)s.%(column)s in shadow table"
@@ -1706,10 +1662,6 @@ msgid "Invalid broker_hosts value: %s. It should be in hostname:port format"
 msgstr "broker_hosts 值 %s 無效。它應為 hostname:port 格式"
 
 #, python-format
-msgid "Invalid certificate format: %s"
-msgstr "無效的憑證格式：%s"
-
-#, python-format
 msgid "Invalid characters in hostname '%(hostname)s'"
 msgstr "主機名稱 '%(hostname)s' 中有無效字元"
 
@@ -1750,10 +1702,6 @@ msgstr "項目 '%s' 無效；預期清單或字典"
 #, python-format
 msgid "Invalid exclusion expression %r"
 msgstr "無效的排除表示式 %r"
-
-#, python-format
-msgid "Invalid field name: %s"
-msgstr "無效的欄位名稱：%s"
 
 #, python-format
 msgid "Invalid fixed IP Address %s in request"
@@ -1840,10 +1788,6 @@ msgid "Invalid proxy request signature."
 msgstr "無效的 Proxy 要求簽章。"
 
 #, python-format
-msgid "Invalid public key type for signature key type: %s"
-msgstr "簽章金鑰類型的公開金鑰類型無效：%s"
-
-#, python-format
 msgid "Invalid range expression %r"
 msgstr "無效的範圍表示式 %r"
 
@@ -1858,14 +1802,6 @@ msgstr "安全群組名稱 %(name)s 無效。"
 msgid "Invalid service catalog json."
 msgstr "無效的服務型錄 JSON。"
 
-#, python-format
-msgid "Invalid signature hash method: %s"
-msgstr "無效的簽章雜湊方法：%s"
-
-#, python-format
-msgid "Invalid signature key type: %s"
-msgstr "無效的簽章金鑰類型：%s"
-
 msgid "Invalid start time. The start time cannot occur after the end time."
 msgstr "無效的開始時間。開始時間不能在結束時間之後。"
 
@@ -1878,14 +1814,6 @@ msgstr "目標 LUN 無效"
 #, python-format
 msgid "Invalid timestamp for date %s"
 msgstr "日期 %s 的時間戳記無效"
-
-#, python-format
-msgid "Invalid type for %s"
-msgstr "%s 的類型無效"
-
-#, python-format
-msgid "Invalid type for %s entry"
-msgstr "%s 項目的類型無效"
 
 #, python-format
 msgid "Invalid usage_type: %s"
@@ -1927,12 +1855,6 @@ msgstr "無效的 volume_size。"
 #, python-format
 msgid "Ironic node uuid not supplied to driver for instance %s."
 msgstr "未將 Ironic 節點 UUID 提供給實例 %s 的驅動程式。"
-
-#, python-format
-msgid ""
-"Ironic node: %(id)s failed to validate. (deploy: %(deploy)s, power: "
-"%(power)s)"
-msgstr "無法驗證 Ironic 節點 %(id)s。（部署：%(deploy)s，電源：%(power)s）"
 
 msgid "Is the appropriate service running?"
 msgstr "正在執行適當的服務嗎？"
@@ -1999,12 +1921,6 @@ msgstr "這個雲端不支援列出虛擬介面。"
 #, python-format
 msgid "Live migration %(id)s for server %(uuid)s is not in progress."
 msgstr "伺服器 %(uuid)s 的即時移轉 %(id)s 不在進行中。"
-
-msgid ""
-"Live migration can not be used without shared storage except a booted from "
-"volume VM which does not have a local disk."
-msgstr ""
-"在沒有共用儲存體的情況下，無法使用即時移轉，不含沒有本端磁碟的啟動磁區 VM。"
 
 msgid ""
 "Live migration with API v2.25 requires all the Mitaka upgrade to be complete "
@@ -2521,9 +2437,6 @@ msgstr ""
 "此特性僅支援檔案型「儲存體儲存庫 (SR)」(ext/NFS)。「儲存體儲存庫 "
 "(SR)」%(uuid)s 的類型是%(type)s"
 
-msgid "Only root certificate can be retrieved."
-msgstr "只能擷取主要憑證。"
-
 #, python-format
 msgid "OpenSSL error: %s"
 msgstr "OpenSSL 錯誤：%s"
@@ -2844,12 +2757,6 @@ msgstr ""
 "%(vcpus)d"
 
 #, python-format
-msgid ""
-"Required image properties for signature verification do not exist. Cannot "
-"verify signature. Missing property: %s"
-msgstr "簽章驗證所需的映像檔內容不存在。無法驗證簽章。遺漏了內容：%s"
-
-#, python-format
 msgid "Rescue device does not exist for instance %s"
 msgstr "實例 %s 的救援裝置不存在"
 
@@ -3037,10 +2944,6 @@ msgstr ""
 "使用 resize2fs 來縮小檔案系統時失敗，請檢查磁碟上是否具有足夠的可用空間。"
 
 #, python-format
-msgid "Signature verification for the image failed: %(reason)s."
-msgstr "映像檔的簽章驗證失敗：%(reason)s。"
-
-#, python-format
 msgid "Snapshot %(snapshot_id)s could not be found."
 msgstr "找不到 Snapshot %(snapshot_id)s。"
 
@@ -3166,24 +3069,6 @@ msgstr "實例需要比所提供版本還新的 Hypervisor 版本。"
 
 #, python-format
 msgid ""
-"The metadata for this location will not work with this module %(module)s.  "
-"%(reason)s."
-msgstr "此位置的 meta 資料將不適用於此模組 %(module)s。%(reason)s。"
-
-#, python-format
-msgid "The method %(method_name)s is not implemented."
-msgstr "未實作方法 %(method_name)s。"
-
-#, python-format
-msgid "The module %(module)s is misconfigured: %(reason)s."
-msgstr "模組 %(module)s 配置錯誤：%(reason)s。"
-
-#, python-format
-msgid "The mount %(mount_path)s is not a valid Quobyte volume. Error: %(exc)s"
-msgstr "裝載 %(mount_path)s 不是有效的 Quobyte 磁區。錯誤：%(exc)s"
-
-#, python-format
-msgid ""
 "The network range is not big enough to fit %(num_networks)s networks. "
 "Network size is %(network_size)s"
 msgstr ""
@@ -3222,9 +3107,6 @@ msgstr "無法存取所要求的主控台類型詳細資料"
 msgid "The requested functionality is not supported."
 msgstr "所要求的功能不受支援。"
 
-msgid "The signature data was not properly encoded using base64"
-msgstr "簽章資料未使用 base64 進行正確編碼"
-
 #, python-format
 msgid "The specified cluster '%s' was not found in vCenter"
 msgstr "在 vCenter 中找不到指定的叢集 '%s'"
@@ -3233,10 +3115,6 @@ msgid ""
 "The sum between the number of networks and the vlan start cannot be greater "
 "than 4094"
 msgstr "網路數目及 VLAN 起始號碼之和不能大於 4094"
-
-#, python-format
-msgid "The supplied device (%(device)s) is busy."
-msgstr "提供的裝置 (%(device)s) 忙碌中。"
 
 #, python-format
 msgid "The supplied device path (%(path)s) is in use."
@@ -3311,10 +3189,6 @@ msgstr ""
 #, python-format
 msgid "There is no such action: %s"
 msgstr "沒有這樣的動作：%s"
-
-#, python-format
-msgid "There was an error with the download module %(module)s. %(reason)s"
-msgstr "下載模組 %(module)s 發生錯誤。%(reason)s"
 
 msgid "There were no records found where instance_uuid was NULL."
 msgstr "找不到 instance_uuid 為空值的記錄。"
@@ -3408,11 +3282,6 @@ msgstr ""
 
 msgid "Unable to authenticate Ironic client."
 msgstr "無法鑑別 Ironic 用戶端。"
-
-msgid ""
-"Unable to claim IP for VPN instances, ensure it isn't running, and try again "
-"in a few minutes"
-msgstr "無法要求 VPN 實例的 IP，請確保它不在執行中，並在幾分鐘後重試"
 
 #, python-format
 msgid "Unable to contact guest agent. The following call timed out: %(method)s"
@@ -3548,10 +3417,6 @@ msgstr "無法取得目標資訊 %s"
 msgid "Unable to resize disk down."
 msgstr "無法將磁碟大小調小。"
 
-#, python-format
-msgid "Unable to retrieve certificate with ID: %s"
-msgstr "無法擷取 ID 為 %s 的憑證"
-
 msgid "Unable to set password on instance"
 msgstr "無法在實例上設定密碼"
 
@@ -3621,10 +3486,6 @@ msgstr "遞送至 %(target_cell)s 時 %(cell_type)s 不明"
 
 msgid "Unknown action"
 msgstr "不明動作"
-
-#, python-format
-msgid "Unknown action %s"
-msgstr "不明的動作 %s"
 
 msgid "Unknown argument: port"
 msgstr "不明引數：埠"
@@ -3742,9 +3603,6 @@ msgid ""
 msgstr ""
 "參數 Group %(property)s 的值 (%(value)s) 無效。內容僅限於'%(allowed)s'。"
 
-msgid "Value required for 'scality_sofs_config'"
-msgstr "'scality_sofs_config' 需要值"
-
 #, python-format
 msgid ""
 "Version %(req_ver)s is not supported by the API. Minimum is %(min_ver)s and "
@@ -3794,10 +3652,6 @@ msgstr ""
 "即使在等待 %(seconds)s 秒或者嘗試 %(attempts)s 次之後，也未完成建立磁區 "
 "%(volume_id)s。並且它的狀態是%(volume_status)s。"
 
-#, python-format
-msgid "Volume %(volume_id)s is not attached to anything"
-msgstr "磁區 %(volume_id)s 未連接至任何項目"
-
 msgid "Volume does not belong to the requested instance."
 msgstr "磁區不屬於所要求的實例。"
 
@@ -3813,12 +3667,6 @@ msgid ""
 msgstr ""
 "磁區小於映像檔 meta 資料中指定的大小下限。磁區大小為 %(volume_size)i 位元組，"
 "大小下限為 %(image_min_disk)i 位元組。"
-
-msgid "Volume must be attached in order to detach."
-msgstr "磁區必須連接才能分離。"
-
-msgid "Volume resource quota exceeded"
-msgstr "已超出磁區資源配額"
 
 #, python-format
 msgid ""
@@ -4202,10 +4050,6 @@ msgstr "VLAN 必須是整數"
 #, python-format
 msgid "volume %s already attached"
 msgstr "已連接磁區 %s"
-
-#, python-format
-msgid "volume %s already detached"
-msgstr "已分離磁區 %s"
 
 #, python-format
 msgid "volume '%(vol)s' status must be 'available'. Currently in '%(status)s'"

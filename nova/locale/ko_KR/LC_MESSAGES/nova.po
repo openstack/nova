@@ -12,9 +12,9 @@
 # Ian Y. Choi <ianyrchoi@gmail.com>, 2017. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 15.0.0.0rc2.dev255\n"
+"Project-Id-Version: nova 16.0.0.0b4.dev149\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2017-03-02 18:28+0000\n"
+"POT-Creation-Date: 2017-08-10 04:03+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -300,13 +300,6 @@ msgstr "아키텍처 이름 '%(arch)s'이(가) 인식되지 않음"
 msgid "Architecture name '%s' is not valid"
 msgstr "아키텍처 이름 '%s'이(가) 올바르지 않음"
 
-msgid ""
-"Asymmetric NUMA topologies require explicit assignment of CPUs and memory to "
-"nodes in image or flavor"
-msgstr ""
-"비대칭 NUMA 토폴로지의 경우 이미지 또는 플레이버에서 노드에 CPU 및 메모리를 "
-"명시적으로 지정해야 함"
-
 #, python-format
 msgid ""
 "Attempt to consume PCI device %(compute_node_id)s:%(address)s from empty pool"
@@ -474,10 +467,6 @@ msgstr "요청된 이미지를 찾을 수 없음"
 msgid "Can not handle authentication request for %d credentials"
 msgstr "%d 신임 정보에 대한 인증 정보를 처리할 수 없음"
 
-#, python-format
-msgid "Can only run %s more instances of this type."
-msgstr "이 유형의 %s 추가 인스턴스만 실행할 수 있습니다. "
-
 msgid "Can't detach root device volume"
 msgstr "루트 디바이스 볼륨을 분리할 수 없음"
 
@@ -509,10 +498,6 @@ msgstr ""
 "인증할 수 없는 다른 계정으로 실행하지 않아야 합니다."
 
 #, python-format
-msgid "Cannot access 'scality_sofs_config': %s"
-msgstr "'scality_sofs_config'에 액세스할 수 없음: %s"
-
-#, python-format
 msgid "Cannot add host to aggregate %(aggregate_id)s. Reason: %(reason)s."
 msgstr "호스트를 집합 %(aggregate_id)s에 추가할 수 없습니다. 이유: %(reason)s."
 
@@ -532,13 +517,6 @@ msgstr ""
 msgid "Cannot call %(method)s on orphaned %(objtype)s object"
 msgstr "고아 %(objtype)s 오브젝트에서 %(method)s 메소드를 호출할 수 없음"
 
-msgid ""
-"Cannot create default bittorrent URL without xenserver.torrent_base_url "
-"configuration option set."
-msgstr ""
-"xenserver.torrent_base_url 구성 옵션 설정 없이 기본 bittorrent URL을 작성할 "
-"수 없습니다. "
-
 #, python-format
 msgid ""
 "Cannot determine the parent storage pool for %s; cannot determine where to "
@@ -550,9 +528,6 @@ msgstr ""
 msgid "Cannot disassociate auto assigned floating IP"
 msgstr "자동 할당된 Floating IP의 연관을 해제할 수 없음"
 
-msgid "Cannot execute /sbin/mount.sofs"
-msgstr "/sbin/mount.sofs를 실행할 수 없음"
-
 msgid "Cannot find SR of content-type ISO"
 msgstr "컨텐츠 유형 ISO의 SR을 찾을 수 없음"
 
@@ -561,9 +536,6 @@ msgstr "VDI를 읽기/쓰기할 SR을 찾을 수 없습니다. "
 
 msgid "Cannot find image for rebuild"
 msgstr "다시 빌드할 이미지를 찾을 수 없음"
-
-msgid "Cannot mount Scality SOFS, check syslog for errors"
-msgstr "스케일 SOFS를 마운트할 수 없음. syslog에서 오류 확인"
 
 #, python-format
 msgid "Cannot remove host %(host)s in aggregate %(id)s"
@@ -584,9 +556,6 @@ msgid ""
 msgstr ""
 "루트 디스크를 더 적은 크기로 조정할 수 없음. 현재 크기: %(curr_root_gb)sGB. "
 "요청된 크기: %(new_root_gb)sGB."
-
-msgid "Cannot run any more instances of this type."
-msgstr "이 유형의 인스턴스를 추가로 실행할 수 없습니다. "
 
 msgid ""
 "Cannot set cpu thread pinning policy in a non dedicated cpu pinning policy"
@@ -631,14 +600,6 @@ msgstr "셀 메시지가 최대 홉 계수에 도달함: %(hop_count)s"
 #, python-format
 msgid "Cell with name %(name)s already exists."
 msgstr "이름이 %(name)s인 셀이 이미 존재합니다. "
-
-#, python-format
-msgid "Certificate is not valid after: %s UTC"
-msgstr "%s UTC 후에 인증서가 올바르지 않음"
-
-#, python-format
-msgid "Certificate is not valid before: %s UTC"
-msgstr "%s UTC 전에 인증서가 올바르지 않음"
 
 #, python-format
 msgid ""
@@ -1018,9 +979,6 @@ msgstr ""
 msgid "Error mounting %(image)s with libguestfs (%(e)s)"
 msgstr "libguestfs(%(e)s)를 갖는 %(image)s 마운트 오류"
 
-msgid "Error occurred while creating the verifier"
-msgstr "확인자를 작성하는 중에 오류 발생"
-
 #, python-format
 msgid "Error when creating resource monitor: %(monitor)s"
 msgstr "자원 모니터 작성 중에 오류 발생: %(monitor)s"
@@ -1058,10 +1016,6 @@ msgstr "최대 재시도 횟수를 초과했습니다. %(reason)s"
 #, python-format
 msgid "Expected a uuid but received %(uuid)s."
 msgstr "uuid를 예상했지만 %(uuid)s을(를) 수신했습니다. "
-
-#, python-format
-msgid "Expected object of type: %s"
-msgstr "예상한 오브젝트 유형: %s"
 
 #, python-format
 msgid "Extra column %(table)s.%(column)s in shadow table"
@@ -1840,10 +1794,6 @@ msgid "Invalid broker_hosts value: %s. It should be in hostname:port format"
 msgstr "Invalid broker_hosts 값: %s. hostname:port 형식을 사용해야 함"
 
 #, python-format
-msgid "Invalid certificate format: %s"
-msgstr "올바르지 않은 인증서 형식: %s"
-
-#, python-format
 msgid "Invalid characters in hostname '%(hostname)s'"
 msgstr "호스트 이름 '%(hostname)s'의 올바르지 않은 문자"
 
@@ -1884,10 +1834,6 @@ msgstr "올바르지 않은 항목: '%s', 목록 또는 사전 예상"
 #, python-format
 msgid "Invalid exclusion expression %r"
 msgstr "올바르지 않은 제외 표현식 %r"
-
-#, python-format
-msgid "Invalid field name: %s"
-msgstr "잘못된 필드 이름: %s"
 
 #, python-format
 msgid "Invalid fixed IP Address %s in request"
@@ -1975,10 +1921,6 @@ msgid "Invalid proxy request signature."
 msgstr "올바르지 않은 프록시 요청 서명입니다. "
 
 #, python-format
-msgid "Invalid public key type for signature key type: %s"
-msgstr "서명 키 유형에 올바르지 않은 공용 키: %s"
-
-#, python-format
 msgid "Invalid range expression %r"
 msgstr "올바르지 않은 범위 표현식 %r"
 
@@ -1993,14 +1935,6 @@ msgstr "올바르지 않은 보안 그룹 이름: %(name)s."
 msgid "Invalid service catalog json."
 msgstr "올바르지 않은 서비스 카탈로그 json입니다. "
 
-#, python-format
-msgid "Invalid signature hash method: %s"
-msgstr "올바르지 않은 서명 해시 메소드: %s"
-
-#, python-format
-msgid "Invalid signature key type: %s"
-msgstr "올바르지 않은 서명 키 유형: %s"
-
 msgid "Invalid start time. The start time cannot occur after the end time."
 msgstr ""
 "시작 시간이 올바르지 않습니다. 종료 시간 후에는 시작 시간이 올 수 없습니다."
@@ -2014,14 +1948,6 @@ msgstr "올바르지 않은 target_lun"
 #, python-format
 msgid "Invalid timestamp for date %s"
 msgstr "날짜 %s에 대한 올바르지 않은 시간소인"
-
-#, python-format
-msgid "Invalid type for %s"
-msgstr "%s에 올바르지 않은 유형"
-
-#, python-format
-msgid "Invalid type for %s entry"
-msgstr "%s 항목에 올바르지 않은 유형"
 
 #, python-format
 msgid "Invalid usage_type: %s"
@@ -2063,14 +1989,6 @@ msgstr "volume_size가 올바르지 않습니다."
 #, python-format
 msgid "Ironic node uuid not supplied to driver for instance %s."
 msgstr "아이로닉 노드 uuid가 인스턴스 %s의 드라이버에 제공되지 않습니다."
-
-#, python-format
-msgid ""
-"Ironic node: %(id)s failed to validate. (deploy: %(deploy)s, power: "
-"%(power)s)"
-msgstr ""
-"아이로닉 노드: %(id)s이(가) 유효성을 검증하는 데 실패했습니다.(배치: "
-"%(deploy)s, 전원: %(power)s)"
 
 msgid "Is the appropriate service running?"
 msgstr "적합한 서버가 실행 중입니까?"
@@ -2138,13 +2056,6 @@ msgstr "이 클라우드에서는 가상 인터페이스 나열이 지원되지 
 #, python-format
 msgid "Live migration %(id)s for server %(uuid)s is not in progress."
 msgstr "%(uuid)s 서버의 라이브 마이그레이션 %(id)s이(가) 진행 중이 아닙니다."
-
-msgid ""
-"Live migration can not be used without shared storage except a booted from "
-"volume VM which does not have a local disk."
-msgstr ""
-"공유 스토리지가 없으면 라이브 마이그레이션을 사용할 수 없습니다(로컬 디스크"
-"가 없는 볼륨에서 부팅된 VM은 제외). "
 
 msgid ""
 "Live migration with API v2.25 requires all the Mitaka upgrade to be complete "
@@ -2696,9 +2607,6 @@ msgstr ""
 "이 기능에서는 파일 기반 SR(ext/NFS)만 지원합니다. SR %(uuid)s이(가) %(type)s "
 "유형입니다."
 
-msgid "Only root certificate can be retrieved."
-msgstr "루트 인증서만 검색할 수 있습니다. "
-
 #, python-format
 msgid "OpenSSL error: %s"
 msgstr "OpenSSL 오류: %s"
@@ -3046,14 +2954,6 @@ msgstr ""
 "을(를) 충족시킬 수 없음"
 
 #, python-format
-msgid ""
-"Required image properties for signature verification do not exist. Cannot "
-"verify signature. Missing property: %s"
-msgstr ""
-"서명 검증에 필요한 이미지 특성이 없습니다. 서명을 확인할 수 없습니다. 누락된 "
-"특성: %s"
-
-#, python-format
 msgid "Rescue device does not exist for instance %s"
 msgstr "%s 인스턴스에 대한 복구 디바이스가 없음"
 
@@ -3257,10 +3157,6 @@ msgstr ""
 "여유 공간이 있는지 확인하십시오."
 
 #, python-format
-msgid "Signature verification for the image failed: %(reason)s."
-msgstr "이미지의 서명 검증에 실패: %(reason)s."
-
-#, python-format
 msgid "Snapshot %(snapshot_id)s could not be found."
 msgstr "%(snapshot_id)s 스냅샷을 찾을 수 없습니다. "
 
@@ -3394,27 +3290,6 @@ msgstr "인스턴스는 제공된 것보다 최신 하이퍼바이저 버전이 
 
 #, python-format
 msgid ""
-"The metadata for this location will not work with this module %(module)s.  "
-"%(reason)s."
-msgstr ""
-"이 위치의 메타데이터가 %(module)s 모듈에서 작동하지 않습니다.%(reason)s인 동"
-"안에는 인스턴스 연관을 변경할 수 없습니다."
-
-#, python-format
-msgid "The method %(method_name)s is not implemented."
-msgstr "%(method_name)s 메소드가 구현되지 않습니다."
-
-#, python-format
-msgid "The module %(module)s is misconfigured: %(reason)s."
-msgstr "%(module)s 모듈이 잘못 구성됨: %(reason)s."
-
-#, python-format
-msgid "The mount %(mount_path)s is not a valid Quobyte volume. Error: %(exc)s"
-msgstr ""
-"마운트 %(mount_path)s이(가) 올바른 Quobyte 볼륨이 아닙니다. 오류: %(exc)s"
-
-#, python-format
-msgid ""
 "The network range is not big enough to fit %(num_networks)s networks. "
 "Network size is %(network_size)s"
 msgstr ""
@@ -3466,9 +3341,6 @@ msgstr "요청된 콘솔 유형 세부사항에 액세스할 수 없습니다."
 msgid "The requested functionality is not supported."
 msgstr "요청된 기능이 지원되지 않습니다."
 
-msgid "The signature data was not properly encoded using base64"
-msgstr "base64를 사용하여 서명 데이터가 올바르게 인코딩되지 않음"
-
 #, python-format
 msgid "The specified cluster '%s' was not found in vCenter"
 msgstr "지정된 클러스터 '%s'을(를) vCenter에서 찾을 수 없음"
@@ -3477,10 +3349,6 @@ msgid ""
 "The sum between the number of networks and the vlan start cannot be greater "
 "than 4094"
 msgstr "네트워크 수와 vlan 시작 사이의 합은 4094를 초과할 수 없음"
-
-#, python-format
-msgid "The supplied device (%(device)s) is busy."
-msgstr "제공된 디바이스(%(device)s)가 사용 중입니다. "
 
 #, python-format
 msgid "The supplied device path (%(path)s) is in use."
@@ -3558,10 +3426,6 @@ msgstr ""
 #, python-format
 msgid "There is no such action: %s"
 msgstr "해당 조치가 없음: %s"
-
-#, python-format
-msgid "There was an error with the download module %(module)s. %(reason)s"
-msgstr "다운로드 모듈 %(module)s에서 오류가 발생했습니다. 이유: %(reason)s"
 
 msgid "There were no records found where instance_uuid was NULL."
 msgstr "instance_uuid가 널인 레코드가 없습니다."
@@ -3664,13 +3528,6 @@ msgstr "아이로닉 클라이언트를 인증할 수 없습니다."
 #, python-format
 msgid "Unable to automatically allocate a network for project %(project_id)s"
 msgstr "%(project_id)s 때문에 자동으로 네트워크를 할당할 수 없습니다."
-
-msgid ""
-"Unable to claim IP for VPN instances, ensure it isn't running, and try again "
-"in a few minutes"
-msgstr ""
-"VPN 인스턴스에 대한 IP를 청구할 수 없습니다. 실행 중이 아닌지 확인하고 몇 분 "
-"후 다시 시도하십시오."
 
 #, python-format
 msgid "Unable to contact guest agent. The following call timed out: %(method)s"
@@ -3811,10 +3668,6 @@ msgstr "대상 정보 %s을(를) 얻을 수 없음"
 msgid "Unable to resize disk down."
 msgstr "디스크 크기를 줄일 수 없습니다."
 
-#, python-format
-msgid "Unable to retrieve certificate with ID: %s"
-msgstr "ID로 인증서를 검색할 수 없음: %s"
-
 msgid "Unable to set password on instance"
 msgstr "인스턴스에 대한 비밀번호를 설정할 수 없음"
 
@@ -3883,10 +3736,6 @@ msgstr "%(target_cell)s(으)로 라우팅할 때 알 수 없는 %(cell_type)s "
 
 msgid "Unknown action"
 msgstr "알 수 없는 조치"
-
-#, python-format
-msgid "Unknown action %s"
-msgstr "알 수 없는 조치 %s"
 
 msgid "Unknown argument: port"
 msgstr "알 수 없는 인수: 포트"
@@ -4009,9 +3858,6 @@ msgstr ""
 "%(property)s 매개변수 그룹에 대한 값(%(value)s)이 올바르지 않습니다. 컨텐츠"
 "는 '%(allowed)s'(으)로 제한됩니다. "
 
-msgid "Value required for 'scality_sofs_config'"
-msgstr "'scality_sofs_config'에 필요한 값"
-
 #, python-format
 msgid ""
 "Version %(req_ver)s is not supported by the API. Minimum is %(min_ver)s and "
@@ -4068,10 +3914,6 @@ msgstr ""
 "%(seconds)s 초 동안 기다리거나 %(attempts)s 시도 하였으나 %(volume_id)s 볼륨"
 "이 생성되지 않았습니다. 지금 상태는 %(volume_status)s 입니다."
 
-#, python-format
-msgid "Volume %(volume_id)s is not attached to anything"
-msgstr "%(volume_id)s 볼륨이 어디에도 연결되지 않았습니다"
-
 msgid "Volume does not belong to the requested instance."
 msgstr "볼륨이 요청된 인스턴스에 속해 있지 않습니다."
 
@@ -4087,12 +3929,6 @@ msgid ""
 msgstr ""
 "볼륨이 이미지 메타데이터에서 지정된 최소 크기보다 작습니다. 볼륨크기는 "
 "%(volume_size)i바이트이고 최소 크기는 %(image_min_disk)i바이트입니다. "
-
-msgid "Volume must be attached in order to detach."
-msgstr "분리하려면 볼륨이 첨부되어야 합니다. "
-
-msgid "Volume resource quota exceeded"
-msgstr "볼륨 리소스 quota를 초과하였습니다"
 
 #, python-format
 msgid ""
@@ -4492,10 +4328,6 @@ msgstr "vlan은 정수여야 함"
 #, python-format
 msgid "volume %s already attached"
 msgstr "볼륨 %s이(가) 이미 접속됨"
-
-#, python-format
-msgid "volume %s already detached"
-msgstr "볼륨 %s이(가) 이미 분리되었음"
 
 #, python-format
 msgid "volume '%(vol)s' status must be 'available'. Currently in '%(status)s'"
