@@ -102,14 +102,20 @@ def add_command_parsers(subparsers, categories):
 
             action_kwargs = []
             for args, kwargs in getattr(action_fn, 'args', []):
-                # FIXME(markmc): hack to assume dest is the arg name without
-                # the leading hyphens if no dest is supplied
-                kwargs.setdefault('dest', args[0][2:])
-                if kwargs['dest'].startswith('action_kwarg_'):
-                    action_kwargs.append(kwargs['dest'][len('action_kwarg_'):])
+                # we must handle positional parameters (ARG) separately from
+                # positional parameters (--opt). Detect this by checking for
+                # the presence of leading '--'
+                if args[0] != args[0].lstrip('-'):
+                    kwargs.setdefault('dest', args[0].lstrip('-'))
+                    if kwargs['dest'].startswith('action_kwarg_'):
+                        action_kwargs.append(
+                            kwargs['dest'][len('action_kwarg_'):])
+                    else:
+                        action_kwargs.append(kwargs['dest'])
+                        kwargs['dest'] = 'action_kwarg_' + kwargs['dest']
                 else:
-                    action_kwargs.append(kwargs['dest'])
-                    kwargs['dest'] = 'action_kwarg_' + kwargs['dest']
+                    action_kwargs.append(args[0])
+                    args = ['action_kwarg_' + arg for arg in args]
 
                 parser.add_argument(*args, **kwargs)
 
