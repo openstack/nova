@@ -15,28 +15,29 @@
       License for the specific language governing permissions and limitations
       under the License.
 
-==========================================
-Welcome to Nova's developer documentation!
-==========================================
+========================
+OpenStack Compute (nova)
+========================
 
-Nova is an OpenStack project designed to provide power massively scalable, on
-demand, self service access to compute resources.
+What is nova?
+=============
 
-The developer documentation provided here is continually kept up-to-date
-based on the latest code, and may not represent the state of the project at
-any specific prior release.
+Nova is the OpenStack project that provides a way to provision compute
+instances (either VMs or Baremetal) on hardware or hypervisors. Nova runs as a
+set of daemons on top of existing Linux servers to provide that service.
 
-.. note:: This is documentation for developers, if you are looking for more
-          general documentation including API, install, operator and user
-          guides see `docs.openstack.org`_
+It requires the following additional OpenStack services for basic function:
 
-.. _`docs.openstack.org`: http://docs.openstack.org
+* `Keystone <https://docs.openstack.org/keystone/latest/>`_: This provides
+  identity and authentication for all OpenSack services.
+* `Glance <https://docs.openstack.org/glance/latest/>`_: This provides the
+  compute image repository. All compute instances launch from glance images.
+* `Neutron <https://docs.openstack.org/neutron/latest/>`_: This is
+  responsible for provisioning the virtual or physical networks that compute
+  instances connect to on boot.
 
-This documentation is intended to help explain what the Nova developers think
-is the current scope of the Nova project, as well as the architectural
-decisions we have made in order to support that scope. We also document our
-plans for evolving our architecture over time. Finally, we documented our
-current development process and policies.
+It can also integrate with other services to include: persistent block
+storage, encrypted disks, and baremetal compute instances.
 
 For End Users
 =============
