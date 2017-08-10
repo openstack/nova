@@ -31,7 +31,6 @@ from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova import context
 from nova import exception
 from nova.i18n import _
-from nova.i18n import _LW
 
 LOG = logging.getLogger(__name__)
 
@@ -96,7 +95,7 @@ class NovaProxyRequestHandlerBase(object):
                     except Cookie.CookieError:
                         # NOTE(stgleb): Do not print out cookie content
                         # for security reasons.
-                        LOG.warning(_LW('Found malformed cookie'))
+                        LOG.warning('Found malformed cookie')
                     else:
                         if 'token' in cookie:
                             token = cookie['token'].value

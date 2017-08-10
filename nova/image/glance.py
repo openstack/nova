@@ -42,7 +42,6 @@ import six.moves.urllib.parse as urlparse
 
 import nova.conf
 from nova import exception
-from nova.i18n import _LE, _LI, _LW
 import nova.image.download as image_xfers
 from nova import objects
 from nova.objects import fields
@@ -115,11 +114,10 @@ def get_api_servers():
         if '//' not in api_server:
             api_server = 'http://' + api_server
             # NOTE(sdague): remove in O.
-            LOG.warning(
-                _LW("No protocol specified in for api_server '%s', "
-                    "please update [glance] api_servers with fully "
-                    "qualified url including scheme (http / https)"),
-                api_server)
+            LOG.warning("No protocol specified in for api_server '%s', "
+                        "please update [glance] api_servers with fully "
+                        "qualified url including scheme (http / https)",
+                        api_server)
         api_servers.append(api_server)
     random.shuffle(api_servers)
     return itertools.cycle(api_servers)
@@ -177,9 +175,9 @@ class GlanceClientWrapper(object):
                 else:
                     extra = 'done trying'
 
-                LOG.exception(_LE("Error contacting glance server "
-                                  "'%(server)s' for '%(method)s', "
-                                  "%(extra)s."),
+                LOG.exception("Error contacting glance server "
+                              "'%(server)s' for '%(method)s', "
+                              "%(extra)s.",
                               {'server': self.api_server,
                                'method': method, 'extra': extra})
                 if attempt == num_attempts:
@@ -208,8 +206,8 @@ class GlanceImageServiceV2(object):
             try:
                 self._download_handlers[scheme] = mod.get_download_handler()
             except Exception as ex:
-                LOG.error(_LE('When loading the module %(module_str)s the '
-                              'following error occurred: %(ex)s'),
+                LOG.error('When loading the module %(module_str)s the '
+                          'following error occurred: %(ex)s',
                           {'module_str': str(mod), 'ex': ex})
 
     def show(self, context, image_id, include_locations=False,
@@ -255,8 +253,8 @@ class GlanceImageServiceV2(object):
         except KeyError:
             return None
         except Exception:
-            LOG.error(_LE("Failed to instantiate the download handler "
-                          "for %(scheme)s"), {'scheme': scheme})
+            LOG.error("Failed to instantiate the download handler "
+                      "for %(scheme)s", {'scheme': scheme})
         return
 
     def detail(self, context, **kwargs):
@@ -286,11 +284,10 @@ class GlanceImageServiceV2(object):
                 if xfer_mod:
                     try:
                         xfer_mod.download(context, o, dst_path, loc_meta)
-                        LOG.info(_LI("Successfully transferred "
-                                     "using %s"), o.scheme)
+                        LOG.info("Successfully transferred using %s", o.scheme)
                         return
                     except Exception:
-                        LOG.exception(_LE("Download image error"))
+                        LOG.exception("Download image error")
 
         try:
             image_chunks = self._client.call(context, 2, 'data', image_id)
@@ -323,8 +320,8 @@ class GlanceImageServiceV2(object):
                 )
             except cursive_exception.SignatureVerificationError:
                 with excutils.save_and_reraise_exception():
-                    LOG.error(_LE('Image signature verification failed '
-                                  'for image: %s'), image_id)
+                    LOG.error('Image signature verification failed '
+                              'for image: %s', image_id)
 
         close_file = False
         if data is None and dst_path:
@@ -340,13 +337,13 @@ class GlanceImageServiceV2(object):
                         verifier.update(chunk)
                     verifier.verify()
 
-                    LOG.info(_LI('Image signature verification succeeded '
-                                 'for image: %s'), image_id)
+                    LOG.info('Image signature verification succeeded '
+                             'for image: %s', image_id)
 
                 except cryptography.exceptions.InvalidSignature:
                     with excutils.save_and_reraise_exception():
-                        LOG.error(_LE('Image signature verification failed '
-                                      'for image: %s'), image_id)
+                        LOG.error('Image signature verification failed '
+                                  'for image: %s', image_id)
             return image_chunks
         else:
             try:
@@ -356,16 +353,16 @@ class GlanceImageServiceV2(object):
                     data.write(chunk)
                 if verifier:
                     verifier.verify()
-                    LOG.info(_LI('Image signature verification succeeded '
-                                 'for image %s'), image_id)
+                    LOG.info('Image signature verification succeeded '
+                             'for image %s', image_id)
             except cryptography.exceptions.InvalidSignature:
                 data.truncate(0)
                 with excutils.save_and_reraise_exception():
-                    LOG.error(_LE('Image signature verification failed '
-                                  'for image: %s'), image_id)
+                    LOG.error('Image signature verification failed '
+                              'for image: %s', image_id)
             except Exception as ex:
                 with excutils.save_and_reraise_exception():
-                    LOG.error(_LE("Error writing to %(path)s: %(exception)s"),
+                    LOG.error("Error writing to %(path)s: %(exception)s",
                               {'path': dst_path, 'exception': ex})
             finally:
                 if close_file:
@@ -445,9 +442,9 @@ class GlanceImageServiceV2(object):
                       supported_disk_formats[0])
             return supported_disk_formats[0]
 
-        LOG.warning(_LW('Unable to determine disk_format schema from the '
-                        'Image Service v2 API. Defaulting to '
-                        '%(preferred_disk_format)s.'),
+        LOG.warning('Unable to determine disk_format schema from the '
+                    'Image Service v2 API. Defaulting to '
+                    '%(preferred_disk_format)s.',
                     {'preferred_disk_format': preferred_disk_formats[0]})
         return preferred_disk_formats[0]
 

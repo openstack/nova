@@ -65,7 +65,7 @@ import nova.conf
 import nova.context
 from nova.db.sqlalchemy import models
 from nova import exception
-from nova.i18n import _, _LI, _LE, _LW
+from nova.i18n import _
 from nova import safe_utils
 
 profiler_sqlalchemy = importutils.try_import('osprofiler.sqlalchemy')
@@ -905,7 +905,7 @@ def floating_ip_get(context, id):
         if not result:
             raise exception.FloatingIpNotFound(id=id)
     except db_exc.DBError:
-        LOG.warning(_LW("Invalid floating IP ID %s in request"), id)
+        LOG.warning("Invalid floating IP ID %s in request", id)
         raise exception.InvalidID(id=id)
     return result
 
@@ -1589,7 +1589,7 @@ def virtual_interface_create(context, values):
         vif_ref.update(values)
         vif_ref.save(context.session)
     except db_exc.DBError:
-        LOG.exception(_LE("VIF creation failed with a database error."))
+        LOG.exception("VIF creation failed with a database error.")
         raise exception.VirtualInterfaceCreateException()
 
     return vif_ref
@@ -1936,7 +1936,7 @@ def instance_get(context, instance_id, columns_to_join=None):
     except db_exc.DBError:
         # NOTE(sdague): catch all in case the db engine chokes on the
         # id because it's too long of an int to store.
-        LOG.warning(_LW("Invalid instance id %s in request"), instance_id)
+        LOG.warning("Invalid instance id %s in request", instance_id)
         raise exception.InvalidID(id=instance_id)
 
 
@@ -3689,17 +3689,17 @@ def _refresh_quota_usages(quota_usage, until_refresh, in_use):
     :param in_use:        Actual quota usage for the resource.
     """
     if quota_usage.in_use != in_use:
-        LOG.info(_LI('quota_usages out of sync, updating. '
-                     'project_id: %(project_id)s, '
-                     'user_id: %(user_id)s, '
-                     'resource: %(res)s, '
-                     'tracked usage: %(tracked_use)s, '
-                     'actual usage: %(in_use)s'),
-            {'project_id': quota_usage.project_id,
-             'user_id': quota_usage.user_id,
-             'res': quota_usage.resource,
-             'tracked_use': quota_usage.in_use,
-             'in_use': in_use})
+        LOG.info('quota_usages out of sync, updating. '
+                 'project_id: %(project_id)s, '
+                 'user_id: %(user_id)s, '
+                 'resource: %(res)s, '
+                 'tracked usage: %(tracked_use)s, '
+                 'actual usage: %(in_use)s',
+                 {'project_id': quota_usage.project_id,
+                  'user_id': quota_usage.user_id,
+                  'res': quota_usage.resource,
+                  'tracked_use': quota_usage.in_use,
+                  'in_use': in_use})
     else:
         LOG.debug('QuotaUsage has not changed, refresh is unnecessary for: %s',
                   dict(quota_usage))
@@ -3896,8 +3896,8 @@ def quota_reserve(context, resources, project_quotas, user_quotas, deltas,
         context.session.add(usage_ref)
 
     if unders:
-        LOG.warning(_LW("Change will make usage less than 0 for the following "
-                        "resources: %s"), unders)
+        LOG.warning("Change will make usage less than 0 for the following "
+                    "resources: %s", unders)
 
     if overs:
         if project_quotas == user_quotas:
@@ -5598,9 +5598,9 @@ def vol_usage_update(context, id, rd_req, rd_bytes, wr_req, wr_bytes,
             rd_bytes < current_usage['curr_read_bytes'] or
             wr_req < current_usage['curr_writes'] or
                 wr_bytes < current_usage['curr_write_bytes']):
-            LOG.info(_LI("Volume(%s) has lower stats then what is in "
-                         "the database. Instance must have been rebooted "
-                         "or crashed. Updating totals."), id)
+            LOG.info("Volume(%s) has lower stats then what is in "
+                     "the database. Instance must have been rebooted "
+                     "or crashed. Updating totals.", id)
             if not update_totals:
                 values['tot_reads'] = (models.VolumeUsage.tot_reads +
                                        current_usage['curr_reads'])
@@ -5959,8 +5959,8 @@ def aggregate_metadata_add(context, aggregate_id, metadata, set_delete=False,
                 if attempt < max_retries - 1:
                     ctxt.reraise = False
                 else:
-                    LOG.warning(_LW("Add metadata failed for aggregate %(id)s "
-                                    "after %(retries)s retries"),
+                    LOG.warning("Add metadata failed for aggregate %(id)s "
+                                "after %(retries)s retries",
                                 {"id": aggregate_id, "retries": max_retries})
 
 
@@ -6380,7 +6380,7 @@ def _archive_if_instance_deleted(table, shadow_table, instances, conn,
             result_delete = conn.execute(delete_statement)
             return result_delete.rowcount
     except db_exc.DBReferenceError as ex:
-        LOG.warning(_LW('Failed to archive %(table)s: %(error)s'),
+        LOG.warning('Failed to archive %(table)s: %(error)s',
                     {'table': table.__tablename__,
                      'error': six.text_type(ex)})
         return 0
@@ -6472,8 +6472,8 @@ def _archive_deleted_rows_for_table(tablename, max_rows):
         # A foreign key constraint keeps us from deleting some of
         # these rows until we clean up a dependent table.  Just
         # skip this table for now; we'll come back to it later.
-        LOG.warning(_LW("IntegrityError detected when archiving table "
-                        "%(tablename)s: %(error)s"),
+        LOG.warning("IntegrityError detected when archiving table "
+                    "%(tablename)s: %(error)s",
                     {'tablename': tablename, 'error': six.text_type(ex)})
 
     if ((max_rows is None or rows_archived < max_rows)

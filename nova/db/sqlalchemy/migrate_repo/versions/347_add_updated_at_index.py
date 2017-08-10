@@ -14,8 +14,6 @@ from oslo_log import log as logging
 from sqlalchemy import MetaData, Table, Index
 from sqlalchemy.engine import reflection
 
-from nova.i18n import _LI
-
 LOG = logging.getLogger(__name__)
 
 INDEX_COLUMNS_1 = ['project_id']
@@ -42,16 +40,16 @@ def upgrade(migrate_engine):
     meta.bind = migrate_engine
     table = Table(TABLE_NAME, meta, autoload=True)
     if _get_table_index(migrate_engine, TABLE_NAME, INDEX_COLUMNS_1):
-        LOG.info(_LI('Skipped adding %s because an equivalent index'
-                     ' already exists.'), INDEX_NAME_1)
+        LOG.info('Skipped adding %s because an equivalent index'
+                 ' already exists.', INDEX_NAME_1)
     else:
         columns = [getattr(table.c, col_name) for col_name in INDEX_COLUMNS_1]
         index = Index(INDEX_NAME_1, *columns)
         index.create(migrate_engine)
 
     if _get_table_index(migrate_engine, TABLE_NAME, INDEX_COLUMNS_2):
-        LOG.info(_LI('Skipped adding %s because an equivalent index'
-                     ' already exists.'), INDEX_NAME_2)
+        LOG.info('Skipped adding %s because an equivalent index'
+                 ' already exists.', INDEX_NAME_2)
     else:
         columns = [getattr(table.c, col_name) for col_name in INDEX_COLUMNS_2]
         index = Index(INDEX_NAME_2, *columns)
