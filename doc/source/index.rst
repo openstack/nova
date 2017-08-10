@@ -23,16 +23,18 @@ What is nova?
 =============
 
 Nova is the OpenStack project that provides a way to provision compute
-instances (either VMs or Baremetal) on hardware or hypervisors. Nova runs as a
-set of daemons on top of existing Linux servers to provide that service.
+instances (aka virtual servers). Nova supports creating virtual machines,
+baremetal servers (through the use of ironic), and has limited support for
+system containers. Nova runs as a set of daemons on top of existing Linux
+servers to provide that service.
 
 It requires the following additional OpenStack services for basic function:
 
-* `Keystone <https://docs.openstack.org/keystone/latest/>`_: This provides
-  identity and authentication for all OpenSack services.
-* `Glance <https://docs.openstack.org/glance/latest/>`_: This provides the
+* `Keystone <https://docs.openstack.org/keystone/latest/>`__: This provides
+  identity and authentication for all OpenStack services.
+* `Glance <https://docs.openstack.org/glance/latest/>`__: This provides the
   compute image repository. All compute instances launch from glance images.
-* `Neutron <https://docs.openstack.org/neutron/latest/>`_: This is
+* `Neutron <https://docs.openstack.org/neutron/latest/>`__: This is
   responsible for provisioning the virtual or physical networks that compute
   instances connect to on boot.
 
@@ -83,7 +85,7 @@ resources will help you get started with consuming the API directly.
   compute API.
 * :doc:`Block Device Mapping </user/block-device-mapping>`: One of the trickier
   parts to understand is the Block Device Mapping parameters used to connect
-  specific block devices to computes. This deserves it's own deep dive.
+  specific block devices to computes. This deserves its own deep dive.
 
 For Operators
 =============
@@ -100,7 +102,11 @@ Installation
 .. TODO(sdague): links to all the rest of the install guide pieces.
 
 The detailed install guide for nova. A functioning nova will also require
-having installed keystone, glance, and neutron.
+having installed `keystone
+<https://docs.openstack.org/keystone/latest/install/>`__, `glance
+<https://docs.openstack.org/glance/latest/install/>`__, and `neutron
+<https://docs.openstack.org/neutron/latest/install/>`__. Please ensure that you
+follow their install guides first.
 
 .. toctree::
    :maxdepth: 2
@@ -128,10 +134,10 @@ the defaults from the :doc:`install guide </install/index>` will be sufficient.
 * :doc:`Cells v2 Planning </user/cellsv2_layout>`: For large deployments, Cells v2
   allows sharding of your compute environment. Upfront planning is key to a
   successful Cells v2 layout.
-* :doc:`Placement service </user/placement>`: Overview of the new placement
+* :doc:`Placement service </user/placement>`: Overview of the placement
   service, including how it fits in with the rest of nova.
 * :doc:`Running nova-api on wsgi <user/wsgi>`: Considerations for using a real
-  WSGI container instead of the baked in eventlet web server.
+  WSGI container instead of the baked-in eventlet web server.
 
 Maintenance
 -----------
@@ -152,12 +158,12 @@ Once you are running nova, the following information is extremely useful.
 * :doc:`Aggregates </user/aggregates>`: Aggregates are a useful way of grouping
   hosts together for scheduling purposes.
 * :doc:`Filter Scheduler </user/filter-scheduler>`: How the filter scheduler is
-  configured, and how that will impact where computes land in your
+  configured, and how that will impact where compute instances land in your
   environment. If you are seeing unexpected distribution of compute instances
   in your hosts, you'll want to dive into this configuration.
 * :doc:`Exposing custom metadata to compute instances </user/vendordata>`: How and
   when you might want to extend the basic metadata exposed to compute instances
-  (either via metadata server or config drive) for site local purposes.
+  (either via metadata server or config drive) for your specific purposes.
 
 Reference Material
 ------------------
