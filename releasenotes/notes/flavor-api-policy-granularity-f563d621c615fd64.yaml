@@ -1,0 +1,13 @@
+---
+features:
+  - |
+    Add granularity to the ``os_compute_api:os-flavor-manage`` policy
+    with the addition of distinct actions for create and delete:
+
+    - ``os_compute_api:os-flavor-manage:create``
+    - ``os_compute_api:os-flavor-manage:delete``
+
+    To address backwards compatibility, the new rules added to the
+    flavor_manage.py policy file, default to the existing rule,
+    ``os_compute_api:os-flavor-manage``, if it is set to a non-default
+    value.

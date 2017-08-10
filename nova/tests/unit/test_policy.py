@@ -72,6 +72,9 @@ class PolicyTestCase(test.NoDBTestCase):
             oslo_policy.RuleDefault("true", '@'),
             oslo_policy.RuleDefault("example:allowed", '@'),
             oslo_policy.RuleDefault("example:denied", "!"),
+            oslo_policy.RuleDefault("old_action_not_default", "@"),
+            oslo_policy.RuleDefault("new_action", "@"),
+            oslo_policy.RuleDefault("old_action_default", "rule:admin_api"),
             oslo_policy.RuleDefault("example:get_http",
                                     "http://www.example.com"),
             oslo_policy.RuleDefault("example:my_file",
@@ -181,6 +184,32 @@ class PolicyTestCase(test.NoDBTestCase):
                 "project_id:%(project_id)s")])
         mock_warning.assert_not_called()
 
+    @mock.patch.object(policy.LOG, 'warning')
+    def test_verify_deprecated_policy_using_old_action(self, mock_warning):
+
+        old_policy = "old_action_not_default"
+        new_policy = "new_action"
+        default_rule = "rule:admin_api"
+
+        using_old_action = policy.verify_deprecated_policy(
+            old_policy, new_policy, default_rule, self.context)
+
+        mock_warning.assert_called_once_with("Start using the new "
+            "action '{0}'. The existing action '{1}' is being deprecated and "
+            "will be removed in future release.".format(new_policy,
+                                                        old_policy))
+        self.assertTrue(using_old_action)
+
+    def test_verify_deprecated_policy_using_new_action(self):
+        old_policy = "old_action_default"
+        new_policy = "new_action"
+        default_rule = "rule:admin_api"
+
+        using_old_action = policy.verify_deprecated_policy(
+            old_policy, new_policy, default_rule, self.context)
+
+        self.assertFalse(using_old_action)
+
 
 class IsAdminCheckTestCase(test.NoDBTestCase):
     def setUp(self):
@@ -283,6 +312,8 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-flavor-extra-specs:update",
 "os_compute_api:os-flavor-extra-specs:delete",
 "os_compute_api:os-flavor-manage",
+"os_compute_api:os-flavor-manage:create",
+"os_compute_api:os-flavor-manage:delete",
 "os_compute_api:os-floating-ips-bulk",
 "os_compute_api:os-floating-ip-dns:domain:delete",
 "os_compute_api:os-floating-ip-dns:domain:update",
