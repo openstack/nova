@@ -2977,3 +2977,137 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         self.assertIsNotNone(magic_p_req_magic)
         self.assertEqual(
             requested_resources[magic_rc.name], magic_p_req_magic.amount)
+
+    def test_mix_local_and_shared(self):
+        # The aggregate that will be associated to shared storage pool
+        agg_uuid = uuidsentinel.agg
+
+        # Create three compute node providers with VCPU and RAM, but only
+        # the third compute node has DISK. The first two computes will
+        # share the storage from the shared storage pool
+        cn1_uuid = uuidsentinel.cn1
+        cn1 = objects.ResourceProvider(
+            self.ctx,
+            name='cn1',
+            uuid=cn1_uuid,
+        )
+        cn1.create()
+
+        cn2_uuid = uuidsentinel.cn2
+        cn2 = objects.ResourceProvider(
+            self.ctx,
+            name='cn2',
+            uuid=cn2_uuid,
+        )
+        cn2.create()
+
+        cn3_uuid = uuidsentinel.cn3
+        cn3 = objects.ResourceProvider(
+            self.ctx,
+            name='cn3',
+            uuid=cn3_uuid
+        )
+        cn3.create()
+
+        # Populate the two compute node providers with inventory
+        for cn in (cn1, cn2, cn3):
+            vcpu = objects.Inventory(
+                resource_provider=cn,
+                resource_class=fields.ResourceClass.VCPU,
+                total=24,
+                reserved=0,
+                min_unit=1,
+                max_unit=24,
+                step_size=1,
+                allocation_ratio=16.0,
+            )
+            memory_mb = objects.Inventory(
+                resource_provider=cn,
+                resource_class=fields.ResourceClass.MEMORY_MB,
+                total=1024,
+                reserved=0,
+                min_unit=64,
+                max_unit=1024,
+                step_size=1,
+                allocation_ratio=1.5,
+            )
+            disk_gb = objects.Inventory(
+                resource_provider=cn3,
+                resource_class=fields.ResourceClass.DISK_GB,
+                total=2000,
+                reserved=100,
+                min_unit=10,
+                max_unit=2000,
+                step_size=1,
+                allocation_ratio=1.0,
+            )
+            if cn == cn3:
+                inv_list = objects.InventoryList(
+                    objects=[vcpu, memory_mb, disk_gb])
+            else:
+                inv_list = objects.InventoryList(objects=[vcpu, memory_mb])
+            cn.set_inventory(inv_list)
+
+        # Create the shared storage pool
+        ss_uuid = uuidsentinel.ss
+        ss = objects.ResourceProvider(
+            self.ctx,
+            name='shared storage',
+            uuid=ss_uuid,
+        )
+        ss.create()
+
+        # Give the shared storage pool some inventory of DISK_GB
+        disk_gb = objects.Inventory(
+            resource_provider=ss,
+            resource_class=fields.ResourceClass.DISK_GB,
+            total=2000,
+            reserved=100,
+            min_unit=10,
+            max_unit=2000,
+            step_size=1,
+            allocation_ratio=1.0,
+        )
+        inv_list = objects.InventoryList(objects=[disk_gb])
+        ss.set_inventory(inv_list)
+
+        t = objects.Trait.get_by_name(self.ctx, "MISC_SHARES_VIA_AGGREGATE")
+        ss.set_traits(objects.TraitList(objects=[t]))
+
+        # Put the cn1, cn2 and ss in the same aggregate
+        cn1.set_aggregates([agg_uuid])
+        cn2.set_aggregates([agg_uuid])
+        ss.set_aggregates([agg_uuid])
+
+        requested_resources = self._requested_resources()
+        p_alts = rp_obj.AllocationCandidates.get_by_filters(
+            self.ctx,
+            filters={
+                'resources': requested_resources,
+            },
+        )
+
+        # Expect cn1, cn2, cn3 and ss in the summaries
+        p_sums = p_alts.provider_summaries
+        self.assertEqual(4, len(p_sums))
+
+        p_sum_rps = set([ps.resource_provider.uuid for ps in p_sums])
+
+        self.assertEqual(set([cn1_uuid, cn2_uuid,
+                              ss_uuid, cn3_uuid]),
+                         p_sum_rps)
+
+        # Expect three allocation requests: (cn1, ss), (cn2, ss), (cn3)
+        a_reqs = p_alts.allocation_requests
+        self.assertEqual(3, len(a_reqs))
+
+        expected_ar = []
+        for ar in a_reqs:
+            rr_set = set()
+            for rr in ar.resource_requests:
+                rr_set.add(rr.resource_provider.uuid)
+            expected_ar.append(rr_set)
+
+        self.assertEqual(sorted(expected_ar),
+                         sorted([set([cn1.uuid, ss.uuid]),
+                                 set([cn2.uuid, ss.uuid]), set([cn3.uuid])]))
