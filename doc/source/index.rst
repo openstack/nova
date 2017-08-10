@@ -167,6 +167,10 @@ Reference Material
 
 * **Configuration**:
 
+  * :doc:`Configuration Guide </admin/configuration/index>`: detailed
+    configuration guides for various parts of you Nova system. Helpful
+    reference for setting up specific hypervisor backends.
+
   * :doc:`Config Reference </configuration/config>`: a complete reference of all
     configuration options available in the nova.conf file.
 
@@ -210,6 +214,7 @@ looking parts of our architecture. These are collected below.
    :hidden:
 
    admin/index
+   admin/configuration/index
    cli/index
    configuration/config
    configuration/sample-config
