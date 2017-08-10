@@ -1612,22 +1612,13 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
             }
         }
 
-        # NOTE(gibi): This is bug 1708637. Placement returns no allocation
-        # candidate and the scheduler falls back to the legacy filtering. As
-        # CoreFilter is not enabled the filtering result in hosts selected
-        # without enough VCPU resource
-        self.api.post_server_action(server['id'], resize_req)
-        server = self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
-        self.assertEqual(dest_hostname, server['OS-EXT-SRV-ATTR:host'])
-
-        # Note(gibi): After bug 1708637 is fixed the following is expected
-        # resp = self.api.post_server_action(
-        #     server['id'], resize_req, check_response_status=[400])
-        # self.assertEqual(
-        #     resp['badRequest']['message'],
-        #     "No valid host was found. No valid host found for resize")
-        # server = self.admin_api.get_server(server['id'])
-        # self.assertEqual(source_hostname, server['OS-EXT-SRV-ATTR:host'])
+        resp = self.api.post_server_action(
+            server['id'], resize_req, check_response_status=[400])
+        self.assertEqual(
+            resp['badRequest']['message'],
+            "No valid host was found. No valid host found for resize")
+        server = self.admin_api.get_server(server['id'])
+        self.assertEqual(source_hostname, server['OS-EXT-SRV-ATTR:host'])
 
         # only the source host shall have usages after the failed resize
         source_usages = self._get_provider_usages(source_rp_uuid)

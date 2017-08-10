@@ -134,13 +134,7 @@ class SchedulerManager(manager.Manager):
                           "API. This may be a temporary occurrence as compute "
                           "nodes start up and begin reporting inventory to "
                           "the Placement service.")
-                # TODO(jaypipes): Setting provider_summaries to None triggers
-                # the scheduler to load all compute nodes to do scheduling "the
-                # old way".  Really, we should raise NoValidHosts here, but all
-                # functional tests will fall over if we do that without
-                # changing the PlacementFixture to load compute node inventory
-                # into the placement database before starting functional tests.
-                provider_summaries = None
+                raise exception.NoValidHost(reason="")
             else:
                 # Build a dict of lists of allocation requests, keyed by
                 # provider UUID, so that when we attempt to claim resources for
