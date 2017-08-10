@@ -16,7 +16,11 @@
 import collections
 import itertools
 
+from oslo_log import log as logging
+
 from nova.scheduler import filter_scheduler
+
+LOG = logging.getLogger(__name__)
 
 
 class CachingScheduler(filter_scheduler.FilterScheduler):
@@ -58,6 +62,8 @@ class CachingScheduler(filter_scheduler.FilterScheduler):
     def __init__(self, *args, **kwargs):
         super(CachingScheduler, self).__init__(*args, **kwargs)
         self.all_host_states = None
+        LOG.warning('CachingScheduler is deprecated in Pike and will be '
+                    'removed in a subsequent release.')
 
     def run_periodic_tasks(self, context):
         """Called from a periodic tasks in the manager."""
