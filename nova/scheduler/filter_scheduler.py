@@ -284,16 +284,8 @@ class FilterScheduler(driver.Scheduler):
         # allocation request
         alloc_req = alloc_reqs[0]
 
-        claimed = self.placement_client.claim_resources(instance_uuid,
+        return self.placement_client.claim_resources(instance_uuid,
             alloc_req, project_id, user_id)
-
-        if not claimed:
-            return False
-
-        LOG.debug("Successfully claimed resources for instance %s using "
-                  "allocation request %s", instance_uuid, alloc_req)
-
-        return True
 
     def _get_sorted_hosts(self, spec_obj, host_states, index):
         """Returns a list of HostState objects that match the required
