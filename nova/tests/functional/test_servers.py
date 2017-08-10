@@ -1592,3 +1592,76 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
 
         self._delete_and_check_allocations(
             server, source_rp_uuid, dest_rp_uuid)
+
+    def test_evacuate(self):
+        source_hostname = self.compute1.host
+        dest_hostname = self.compute2.host
+
+        server = self._boot_and_check_allocations(
+            self.flavor1, source_hostname)
+
+        source_compute_id = self.admin_api.get_services(
+            host=source_hostname, binary='nova-compute')[0]['id']
+
+        self.compute1.stop()
+        # force it down to avoid waiting for the service group to time out
+        self.admin_api.put_service(
+            source_compute_id, {'forced_down': 'true'})
+
+        # evacuate the server
+        post = {'evacuate': {}}
+        self.api.post_server_action(
+            server['id'], post)
+        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        self.assertEqual(dest_hostname, server['OS-EXT-SRV-ATTR:host'])
+
+        # Expect to have allocation and usages on both computes as the
+        # source compute is still down
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(2, len(allocations))
+        source_allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
+        dest_allocation = allocations[dest_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
+
+        # start up the source compute
+        self.compute1.start()
+        self.admin_api.put_service(
+            source_compute_id, {'forced_down': 'false'})
+
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        # NOTE(gibi): this is bug 1709902 as the source compute does not clean
+        # up the allocation during init_host
+        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        # after fixing bug 1709902 the following is expected
+        # self.assertEqual({'VCPU': 0,
+        #                   'MEMORY_MB': 0,
+        #                   'DISK_GB': 0},
+        #                  source_usages)
+
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        # NOTE(gibi): this is bug 1709902 as the source compute does not clean
+        # up the allocation during init_host
+        self.assertEqual(2, len(allocations))
+        source_allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
+
+        # after fixing bug 1709902 the following is expected
+        # self.assertEqual(1, len(allocations))
+        dest_allocation = allocations[dest_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
+
+        self._delete_and_check_allocations(
+            server, source_rp_uuid, dest_rp_uuid)
