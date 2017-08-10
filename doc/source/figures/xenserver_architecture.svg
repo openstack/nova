@@ -1,0 +1,1035 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:osb="http://www.openswatchbook.org/uri/2009/osb"
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="1052.3622"
+   height="744.09448"
+   id="svg2"
+   version="1.1"
+   inkscape:version="0.48.5 r10040"
+   sodipodi:docname="xenserver_architecture.svg"
+   inkscape:export-filename="/data/matelakat/citrix/openstack-manuals/doc/common/figures/xenserver_architecture.png"
+   inkscape:export-xdpi="90"
+   inkscape:export-ydpi="90">
+  <defs
+     id="defs4">
+    <linearGradient
+       inkscape:collect="always"
+       id="linearGradient4500">
+      <stop
+         style="stop-color:#000000;stop-opacity:1;"
+         offset="0"
+         id="stop4502" />
+      <stop
+         style="stop-color:#000000;stop-opacity:0;"
+         offset="1"
+         id="stop4504" />
+    </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       id="linearGradient4492">
+      <stop
+         style="stop-color:#9acd32;stop-opacity:1;"
+         offset="0"
+         id="stop4494" />
+      <stop
+         style="stop-color:#9acd32;stop-opacity:0;"
+         offset="1"
+         id="stop4496" />
+    </linearGradient>
+    <linearGradient
+       inkscape:collect="always"
+       id="linearGradient4466">
+      <stop
+         style="stop-color:#e6e6e6;stop-opacity:1;"
+         offset="0"
+         id="stop4468" />
+      <stop
+         style="stop-color:#e6e6e6;stop-opacity:0;"
+         offset="1"
+         id="stop4470" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient3939"
+       osb:paint="solid">
+      <stop
+         style="stop-color:#ffffff;stop-opacity:1;"
+         offset="0"
+         id="stop3941" />
+    </linearGradient>
+    <linearGradient
+       id="linearGradient3905">
+      <stop
+         style="stop-color:#ffffff;stop-opacity:1;"
+         offset="0"
+         id="stop3907" />
+      <stop
+         style="stop-color:#ffffff;stop-opacity:0;"
+         offset="1"
+         id="stop3909" />
+    </linearGradient>
+    <marker
+       inkscape:stockid="Arrow1Lend"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="Arrow1Lend"
+       style="overflow:visible;">
+      <path
+         id="path4332"
+         d="M 0.0,0.0 L 5.0,-5.0 L -12.5,0.0 L 5.0,5.0 L 0.0,0.0 z "
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1.0pt;"
+         transform="scale(0.8) rotate(180) translate(12.5,0)" />
+    </marker>
+    <linearGradient
+       id="linearGradient7048"
+       osb:paint="solid">
+      <stop
+         style="stop-color:#e6e6e6;stop-opacity:1;"
+         offset="0"
+         id="stop7050" />
+    </linearGradient>
+    <marker
+       inkscape:stockid="DotS"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="DotS"
+       style="overflow:visible">
+      <path
+         id="path4396"
+         d="M -2.5,-1.0 C -2.5,1.7600000 -4.7400000,4.0 -7.5,4.0 C -10.260000,4.0 -12.5,1.7600000 -12.5,-1.0 C -12.5,-3.7600000 -10.260000,-6.0 -7.5,-6.0 C -4.7400000,-6.0 -2.5,-3.7600000 -2.5,-1.0 z "
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1.0pt"
+         transform="scale(0.2) translate(7.4, 1)" />
+    </marker>
+    <marker
+       inkscape:stockid="DotL"
+       orient="auto"
+       refY="0.0"
+       refX="0.0"
+       id="DotL"
+       style="overflow:visible">
+      <path
+         id="path4390"
+         d="M -2.5,-1.0 C -2.5,1.7600000 -4.7400000,4.0 -7.5,4.0 C -10.260000,4.0 -12.5,1.7600000 -12.5,-1.0 C -12.5,-3.7600000 -10.260000,-6.0 -7.5,-6.0 C -4.7400000,-6.0 -2.5,-3.7600000 -2.5,-1.0 z "
+         style="fill-rule:evenodd;stroke:#000000;stroke-width:1.0pt"
+         transform="scale(0.8) translate(7.4, 1)" />
+    </marker>
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient4466"
+       id="linearGradient4472"
+       x1="674.46939"
+       y1="314.57198"
+       x2="780.38394"
+       y2="314.57198"
+       gradientUnits="userSpaceOnUse" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient4492"
+       id="linearGradient4498"
+       x1="787.41589"
+       y1="486.19415"
+       x2="856.69507"
+       y2="486.19415"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="translate(14.693733,0)" />
+    <linearGradient
+       inkscape:collect="always"
+       xlink:href="#linearGradient4500"
+       id="linearGradient4508"
+       x1="802.10962"
+       y1="486.19415"
+       x2="871.38879"
+       y2="486.19415"
+       gradientUnits="userSpaceOnUse" />
+  </defs>
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="0.95278738"
+     inkscape:cx="274.65546"
+     inkscape:cy="640.53351"
+     inkscape:document-units="px"
+     inkscape:current-layer="layer1"
+     showgrid="false"
+     inkscape:snap-global="true"
+     inkscape:window-width="1918"
+     inkscape:window-height="1178"
+     inkscape:window-x="0"
+     inkscape:window-y="20"
+     inkscape:window-maximized="0"
+     showborder="false"
+     inkscape:showpageshadow="false"
+     showguides="true"
+     inkscape:guide-bbox="true">
+    <sodipodi:guide
+       orientation="0,1"
+       position="276.55698,759.87572"
+       id="guide3447" />
+  </sodipodi:namedview>
+  <metadata
+     id="metadata7">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:groupmode="layer"
+     id="layer2"
+     inkscape:label="BG"
+     style="display:none"
+     transform="translate(0,-308.2677)"
+     sodipodi:insensitive="true" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1"
+     style="display:inline"
+     transform="translate(0,-308.2677)">
+    <rect
+       inkscape:export-ydpi="90"
+       inkscape:export-xdpi="90"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       y="172.49611"
+       x="674.90039"
+       height="284.15173"
+       width="105.44614"
+       id="rect4458"
+       style="fill:url(#linearGradient4472);fill-opacity:1;stroke:#000000;stroke-width:0.86199999;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" />
+    <rect
+       y="270.44586"
+       x="-69.845314"
+       height="87.20697"
+       width="196.9351"
+       id="rect3852"
+       style="fill:#add8e6;fill-opacity:1;stroke:#000000;stroke-width:0.86199999;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" />
+    <rect
+       y="270.7019"
+       x="306.05771"
+       height="169.7836"
+       width="337.82095"
+       id="rect3856"
+       style="fill:#add8e6;fill-opacity:1;stroke:#000000;stroke-width:0.86199999;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" />
+    <rect
+       style="fill:#f5f5f5;fill-opacity:1;stroke:#000000;stroke-width:0.86199999;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="rect3891"
+       width="180.41019"
+       height="30.944281"
+       x="-61.620872"
+       y="316.62616" />
+    <rect
+       y="317.6662"
+       x="333.98236"
+       height="30.944281"
+       width="143.98161"
+       id="rect3860"
+       style="fill:#f5f5f5;fill-opacity:1;stroke:#000000;stroke-width:0.86199999;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" />
+    <rect
+       style="fill:#f5f5f5;fill-opacity:1;stroke:#000000;stroke-width:0.86199999;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="rect3965"
+       width="143.98161"
+       height="30.944281"
+       x="333.98236"
+       y="355.54691" />
+    <rect
+       style="fill:#f5f5f5;fill-opacity:1;stroke:#000000;stroke-width:0.86199999;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="rect3981"
+       width="143.98161"
+       height="30.944281"
+       x="491.56616"
+       y="317.6662" />
+    <rect
+       y="355.54691"
+       x="491.56616"
+       height="30.944281"
+       width="143.98161"
+       id="rect3989"
+       style="fill:#f5f5f5;fill-opacity:1;stroke:#000000;stroke-width:0.86199999;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" />
+    <rect
+       style="fill:none;stroke:#000000;stroke-width:0.86199999;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="rect3074"
+       width="1012.3212"
+       height="619.64288"
+       x="-117.67857"
+       y="53.612183"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <rect
+       style="fill:none;stroke:#000000;stroke-width:0.86199999;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="rect3846"
+       width="247.411"
+       height="284.15173"
+       x="-87.901787"
+       y="172.49611"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <rect
+       y="172.49611"
+       x="159.53322"
+       height="284.15173"
+       width="515.14404"
+       id="rect3848"
+       style="fill:none;stroke:#000000;stroke-width:0.86199999;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="28.727776"
+       y="335.9606"
+       id="text3887"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
+         sodipodi:role="line"
+         id="tspan3889"
+         x="28.727776"
+         y="335.9606">xapi plug-ins</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="405.70999"
+       y="336.59732"
+       id="text3914"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
+         sodipodi:role="line"
+         id="tspan3916"
+         x="405.70999"
+         y="336.59732">nova-compute</tspan></text>
+    <text
+       sodipodi:linespacing="125%"
+       id="text3967"
+       y="374.47803"
+       x="405.70999"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       xml:space="preserve"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
+         y="374.47803"
+         x="405.70999"
+         id="tspan3969"
+         sodipodi:role="line">nova.virt.xenapi</tspan></text>
+    <rect
+       y="456.78183"
+       x="-87.901787"
+       height="56.830276"
+       width="868.27838"
+       id="rect3844"
+       style="fill:#9acd32;fill-opacity:1;stroke:#000000;stroke-width:0.86199999;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <path
+       style="fill:url(#linearGradient4498);fill-opacity:1;stroke:url(#linearGradient4508)"
+       d="m 775.87964,456.74011 95.957,0 0,56.8017 -95.957,0"
+       id="rect4490"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cccc"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <rect
+       style="fill:#9acd32;fill-opacity:1;stroke:#000000;stroke-width:0.86199999;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="rect3854"
+       width="196.93509"
+       height="76.596931"
+       x="-69.845314"
+       y="366.41385"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <rect
+       y="393.42764"
+       x="333.98236"
+       height="30.944281"
+       width="143.98161"
+       id="rect3973"
+       style="fill:#9acd32;fill-opacity:1;stroke:#000000;stroke-width:0.86199999;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="405.70999"
+       y="412.35876"
+       id="text3975"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
+         sodipodi:role="line"
+         id="tspan3977"
+         x="405.70999"
+         y="412.35876">XenAPI</tspan></text>
+    <text
+       sodipodi:linespacing="125%"
+       id="text3983"
+       y="336.59732"
+       x="563.29376"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       xml:space="preserve"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
+         y="336.59732"
+         x="563.29376"
+         id="tspan3985"
+         sodipodi:role="line">nova-network</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="563.29376"
+       y="374.47803"
+       id="text3991"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
+         sodipodi:role="line"
+         id="tspan3993"
+         x="563.29376"
+         y="374.47803">dhcpd</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="382.84781"
+       y="491.72754"
+       id="text3995"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
+         sodipodi:role="line"
+         id="tspan3997"
+         x="382.84781"
+         y="491.72754">Xen</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:bold;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans Bold"
+       x="-80.812202"
+       y="205.85435"
+       id="text3999"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
+         sodipodi:role="line"
+         id="tspan4001"
+         x="-80.812202"
+         y="205.85435">Domain 0</tspan></text>
+    <text
+       sodipodi:linespacing="125%"
+       id="text4003"
+       y="205.85435"
+       x="176.38271"
+       style="font-size:14px;font-style:normal;font-weight:bold;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans Bold"
+       xml:space="preserve"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
+         y="205.85435"
+         x="176.38271"
+         id="tspan4005"
+         sodipodi:role="line">OpenStack VM</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="29.073402"
+       y="408.57462"
+       id="text4007"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
+         sodipodi:role="line"
+         id="tspan4009"
+         x="29.073402"
+         y="408.57462">xapi</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:bold;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans Bold"
+       x="684.73535"
+       y="205.85435"
+       id="text4011"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
+         sodipodi:role="line"
+         id="tspan4013"
+         x="684.73535"
+         y="205.85435">Tenant VM</tspan></text>
+    <rect
+       style="fill:none;stroke:#000000;stroke-width:0.86199999;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       id="rect4015"
+       width="271.22079"
+       height="90.604172"
+       x="325.94226"
+       y="559.19153"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="-58.367851"
+       y="292.44919"
+       id="text4202"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
+         sodipodi:role="line"
+         id="tspan4204"
+         x="-58.367851"
+         y="292.44919">OpenStack add-ons</tspan></text>
+    <text
+       sodipodi:linespacing="125%"
+       id="text4206"
+       y="292.36218"
+       x="321.68292"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       xml:space="preserve"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
+         y="292.36218"
+         x="321.68292"
+         id="tspan4208"
+         sodipodi:role="line">OpenStack</tspan></text>
+    <g
+       id="g4256"
+       transform="translate(-216.72769,0)"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90">
+      <rect
+         ry="0"
+         y="159.50504"
+         x="411.306"
+         height="23.571428"
+         width="75.836899"
+         id="rect4210"
+         style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.86199999;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" />
+      <text
+         sodipodi:linespacing="125%"
+         id="text4212"
+         y="176.50999"
+         x="449.40219"
+         style="font-size:14px;font-style:normal;font-weight:bold;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans Bold"
+         xml:space="preserve"><tspan
+           y="176.50999"
+           x="449.40219"
+           id="tspan4214"
+           sodipodi:role="line">eth0</tspan></text>
+    </g>
+    <g
+       id="g4261"
+       transform="translate(-30.112803,0)"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90">
+      <rect
+         style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.86199999;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+         id="rect4263"
+         width="75.836899"
+         height="23.571428"
+         x="411.306"
+         y="159.50504"
+         ry="0" />
+      <text
+         xml:space="preserve"
+         style="font-size:14px;font-style:normal;font-weight:bold;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans Bold"
+         x="449.40219"
+         y="176.50999"
+         id="text4265"
+         sodipodi:linespacing="125%"><tspan
+           sodipodi:role="line"
+           id="tspan4267"
+           x="449.40219"
+           y="176.50999">eth1</tspan></text>
+    </g>
+    <g
+       transform="translate(156.50209,0)"
+       id="g4269"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90">
+      <rect
+         ry="0"
+         y="159.50504"
+         x="411.306"
+         height="23.571428"
+         width="75.836899"
+         id="rect4271"
+         style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.86199999;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" />
+      <text
+         sodipodi:linespacing="125%"
+         id="text4273"
+         y="176.50999"
+         x="449.40219"
+         style="font-size:14px;font-style:normal;font-weight:bold;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans Bold"
+         xml:space="preserve"><tspan
+           y="176.50999"
+           x="449.40219"
+           id="tspan4275"
+           sodipodi:role="line">eth2</tspan></text>
+    </g>
+    <g
+       id="g4277"
+       transform="translate(276.5269,0)"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90">
+      <rect
+         style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.86199999;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+         id="rect4279"
+         width="75.836899"
+         height="23.571428"
+         x="411.306"
+         y="159.50504"
+         ry="0" />
+      <text
+         xml:space="preserve"
+         style="font-size:14px;font-style:normal;font-weight:bold;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans Bold"
+         x="449.40219"
+         y="176.50999"
+         id="text4281"
+         sodipodi:linespacing="125%"><tspan
+           sodipodi:role="line"
+           id="tspan4283"
+           x="449.40219"
+           y="176.50999">eth0</tspan></text>
+    </g>
+    <g
+       transform="translate(-415.71429,0)"
+       id="g4285"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90">
+      <rect
+         ry="11.785714"
+         y="159.50504"
+         x="411.306"
+         height="23.571428"
+         width="75.836899"
+         id="rect4287"
+         style="fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0.86199999;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none" />
+      <text
+         sodipodi:linespacing="125%"
+         id="text4289"
+         y="176.50999"
+         x="449.40219"
+         style="font-size:14px;font-style:normal;font-weight:bold;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#ffffff;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans Bold"
+         xml:space="preserve"><tspan
+           y="176.50999"
+           x="449.40219"
+           id="tspan4291"
+           sodipodi:role="line">xenbr0</tspan></text>
+    </g>
+    <path
+       style="fill:none;stroke:#ff0000;stroke-width:4.0999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-start:url(#DotS);marker-mid:none;marker-end:url(#DotS)"
+       d="m 32.142857,-149.02264 0,-30.45431 198.561043,0 0,30.51715"
+       id="path4323"
+       inkscape:connector-curvature="0"
+       transform="translate(0,308.2677)"
+       sodipodi:nodetypes="cccc"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <path
+       sodipodi:nodetypes="cccc"
+       inkscape:connector-curvature="0"
+       id="path5503"
+       d="m 419.18051,159.24506 0,-30.45431 306.58544,0 0,30.51715"
+       style="fill:none;stroke:#0000ff;stroke-width:4.0999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-start:url(#DotS);marker-mid:none;marker-end:url(#DotS)"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <g
+       id="g7083"
+       transform="translate(-54.424119,12.626907)"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90">
+      <g
+         id="g7071"
+         transform="translate(-69.700523,128.28938)">
+        <rect
+           ry="17.162745"
+           y="-104.26248"
+           x="230.31477"
+           height="34.850266"
+           width="604.90869"
+           id="rect7073"
+           style="fill:#ffffe0;fill-opacity:1;stroke:#000000;stroke-width:0.70866144;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:2.83464567, 2.83464567;stroke-dashoffset:0" />
+        <flowRoot
+           transform="translate(230.31478,304.22709)"
+           style="font-size:14px;font-style:normal;font-weight:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+           id="flowRoot7075"
+           xml:space="preserve"><flowRegion
+             id="flowRegion7077"><rect
+               style="font-weight:normal;-inkscape-font-specification:Sans"
+               y="-401.41852"
+               x="12.121831"
+               height="23.036509"
+               width="583.37402"
+               id="rect7079" /></flowRegion><flowPara
+             id="flowPara7081">Networks connected to physical interfaces according to the selected configuration.</flowPara></flowRoot>      </g>
+    </g>
+    <rect
+       inkscape:export-ydpi="90"
+       inkscape:export-xdpi="90"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       y="116.37157"
+       x="593.00385"
+       height="21.698574"
+       width="18.943327"
+       id="rect3292"
+       style="fill:#ffffff;fill-opacity:1;stroke:none" />
+    <path
+       style="fill:none;stroke:#008000;stroke-width:4.0999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-start:url(#DotS);marker-mid:none;marker-end:url(#DotS)"
+       d="m 602.47031,159.24506 0,-87.807933"
+       id="path5505"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:bold;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans Bold"
+       x="330.34961"
+       y="574.69836"
+       id="text5507"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
+         sodipodi:role="line"
+         id="tspan5509"
+         x="330.34961"
+         y="574.69836">Storage Repository</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:bold;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans Bold"
+       x="-97.85714"
+       y="-225.19122"
+       id="text5518"
+       sodipodi:linespacing="125%"
+       transform="translate(0,308.2677)"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
+         sodipodi:role="line"
+         id="tspan5520"
+         x="-97.85714"
+         y="-225.19122">Physical Host</tspan></text>
+    <g
+       id="g5534"
+       transform="translate(179.359,8.2142857)"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90">
+      <path
+         transform="translate(-1.4285714,305.41056)"
+         d="m 406.07142,275.70163 c 0,3.05729 -10.31344,5.53571 -23.03571,5.53571 -12.72228,0 -23.03572,-2.47842 -23.03572,-5.53571 0,-3.05729 10.31344,-5.53571 23.03572,-5.53571 12.72227,0 23.03571,2.47842 23.03571,5.53571 z"
+         sodipodi:ry="5.5357137"
+         sodipodi:rx="23.035715"
+         sodipodi:cy="275.70163"
+         sodipodi:cx="383.03571"
+         id="path5526"
+         style="fill:none;stroke:#000000;stroke-opacity:1"
+         sodipodi:type="arc" />
+      <path
+         sodipodi:open="true"
+         sodipodi:end="3.1415927"
+         sodipodi:start="0"
+         sodipodi:type="arc"
+         style="fill:none;stroke:#000000;stroke-opacity:1"
+         id="path5528"
+         sodipodi:cx="383.03571"
+         sodipodi:cy="275.70163"
+         sodipodi:rx="23.035715"
+         sodipodi:ry="5.5357137"
+         d="m 406.07142,275.70163 c 0,3.05729 -10.31344,5.53571 -23.03571,5.53571 -12.72228,0 -23.03572,-2.47842 -23.03572,-5.53571 0,0 0,0 0,0"
+         transform="translate(-1.4285714,347.91056)" />
+      <path
+         transform="translate(0,308.2677)"
+         inkscape:connector-curvature="0"
+         id="path5530"
+         d="m 358.57143,315.52305 0,-42.14285"
+         style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+      <path
+         transform="translate(0,308.2677)"
+         inkscape:connector-curvature="0"
+         id="path5532"
+         d="m 404.64286,315.16591 0,-42.5"
+         style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1" />
+    </g>
+    <g
+       id="g5540"
+       transform="translate(118.64471,8.2142857)"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90">
+      <path
+         sodipodi:type="arc"
+         style="fill:none;stroke:#000000;stroke-opacity:1"
+         id="path5542"
+         sodipodi:cx="383.03571"
+         sodipodi:cy="275.70163"
+         sodipodi:rx="23.035715"
+         sodipodi:ry="5.5357137"
+         d="m 406.07142,275.70163 c 0,3.05729 -10.31344,5.53571 -23.03571,5.53571 -12.72228,0 -23.03572,-2.47842 -23.03572,-5.53571 0,-3.05729 10.31344,-5.53571 23.03572,-5.53571 12.72227,0 23.03571,2.47842 23.03571,5.53571 z"
+         transform="translate(-1.4285714,305.41056)" />
+      <path
+         transform="translate(-1.4285714,347.91056)"
+         d="m 406.07142,275.70163 c 0,3.05729 -10.31344,5.53571 -23.03571,5.53571 -12.72228,0 -23.03572,-2.47842 -23.03572,-5.53571 0,0 0,0 0,0"
+         sodipodi:ry="5.5357137"
+         sodipodi:rx="23.035715"
+         sodipodi:cy="275.70163"
+         sodipodi:cx="383.03571"
+         id="path5544"
+         style="fill:none;stroke:#000000;stroke-opacity:1"
+         sodipodi:type="arc"
+         sodipodi:start="0"
+         sodipodi:end="3.1415927"
+         sodipodi:open="true" />
+      <path
+         style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         d="m 358.57143,315.52305 0,-42.14285"
+         id="path5546"
+         inkscape:connector-curvature="0"
+         transform="translate(0,308.2677)" />
+      <path
+         style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+         d="m 404.64286,315.16591 0,-42.5"
+         id="path5548"
+         inkscape:connector-curvature="0"
+         transform="translate(0,308.2677)" />
+    </g>
+    <path
+       style="fill:none;stroke:#007fff;stroke-width:3.54330707;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       d="m 498.64471,583.07647 0,-126.42857"
+       id="path5552"
+       inkscape:connector-curvature="0"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <path
+       inkscape:connector-curvature="0"
+       id="path5554"
+       d="m 562.09359,583.07647 0,-45.48655 163.67236,0 0,-80.94202"
+       style="fill:none;stroke:#007fff;stroke-width:3.54330707;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none"
+       sodipodi:nodetypes="cccc"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <g
+       id="g7064"
+       transform="translate(388.90873,676.80221)"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90">
+      <rect
+         ry="17.67767"
+         y="-104.26248"
+         x="230.31477"
+         height="56.063469"
+         width="248.49753"
+         id="rect7062"
+         style="fill:#ffffe0;fill-opacity:1;stroke:#000000;stroke-width:0.70866144;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:2.83464567, 2.83464567;stroke-dashoffset:0" />
+      <flowRoot
+         transform="translate(230.31478,304.22709)"
+         style="font-size:14px;font-style:normal;font-weight:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+         id="flowRoot7054"
+         xml:space="preserve"><flowRegion
+           id="flowRegion7056"><rect
+             style="font-weight:normal;-inkscape-font-specification:Sans"
+             y="-401.41852"
+             x="12.121831"
+             height="43.436558"
+             width="222.73865"
+             id="rect7058" /></flowRegion><flowPara
+           id="flowPara7060">Virtual block devices, usually on local disk.</flowPara></flowRoot>    </g>
+    <path
+       sodipodi:nodetypes="cc"
+       inkscape:connector-curvature="0"
+       id="path7091"
+       d="m 127.0972,409.61316 206.38502,0"
+       style="fill:none;stroke:#ff0000;stroke-width:4.09960651;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:12.29881954, 12.29881954;stroke-dashoffset:0;marker-start:none;marker-mid:none;marker-end:none"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <g
+       transform="translate(-316.17775,631.34535)"
+       id="g7829"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90">
+      <rect
+         style="fill:#ffffe0;fill-opacity:1;stroke:#000000;stroke-width:0.70866144;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:2.83464567, 2.83464567;stroke-dashoffset:0"
+         id="rect7831"
+         width="286.88333"
+         height="88.388351"
+         x="230.31477"
+         y="-104.26248"
+         ry="17.67767" />
+      <flowRoot
+         xml:space="preserve"
+         id="flowRoot7833"
+         style="font-size:14px;font-style:normal;font-weight:normal;text-align:start;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:start;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+         transform="translate(230.31478,304.22709)"><flowRegion
+           id="flowRegion7835"><rect
+             id="rect7837"
+             width="264.15491"
+             height="71.720833"
+             x="12.121831"
+             y="-401.41852"
+             style="font-weight:normal;-inkscape-font-specification:Sans" /></flowRegion><flowPara
+           id="flowPara7839">OpenStack is using the XenAPI Python module to communicate with dom0 through the management network.</flowPara></flowRoot>    </g>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1;marker-end:url(#Arrow1Lend)"
+       d="m 201.02035,248.10959 c 0,0 107.07617,11.11167 31.31474,-136.3706"
+       id="path7841"
+       inkscape:connector-curvature="0"
+       transform="translate(0,308.2677)"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <path
+       sodipodi:nodetypes="cc"
+       inkscape:connector-curvature="0"
+       id="path3899"
+       d="m 230.7039,129.24506 0,-57.807933"
+       style="fill:none;stroke:#ff0000;stroke-width:4.0999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-start:url(#DotS);marker-mid:none;marker-end:url(#DotS)"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <path
+       style="fill:none;stroke:#0000ff;stroke-width:4.0999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;marker-start:url(#DotS);marker-mid:none;marker-end:url(#DotS)"
+       d="m 419.18051,128.82664 0,-57.389513"
+       id="path3901"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <rect
+       style="fill:#ffffff;fill-opacity:1;stroke:none"
+       id="rect3903"
+       width="751.53168"
+       height="20.739056"
+       x="127.27921"
+       y="88.32563"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#ff0000;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="233.7428"
+       y="101.81532"
+       id="text4309"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
+         sodipodi:role="line"
+         id="tspan4311"
+         x="233.7428"
+         y="101.81532">Management Network</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#006400;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="609.74438"
+       y="103.17225"
+       id="text4313"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
+         sodipodi:role="line"
+         id="tspan4315"
+         x="609.74438"
+         y="103.17225">Public Network</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:14px;font-style:normal;font-weight:normal;text-align:center;line-height:125%;letter-spacing:0px;word-spacing:0px;text-anchor:middle;fill:#0000ff;fill-opacity:1;stroke:none;font-family:Sans;-inkscape-font-specification:Sans"
+       x="418.85345"
+       y="103.17225"
+       id="text4317"
+       sodipodi:linespacing="125%"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
+         sodipodi:role="line"
+         id="tspan4319"
+         x="418.85345"
+         y="103.17225">Tenant Network</tspan></text>
+    <path
+       inkscape:export-ydpi="90"
+       inkscape:export-xdpi="90"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       style="fill:none;stroke:#0000ff;stroke-width:4.0999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:none;stroke-dashoffset:0;marker-start:url(#DotS);marker-mid:none;marker-end:none"
+       d="m 726.42871,128.79075 35.70232,0"
+       id="path3296"
+       inkscape:connector-curvature="0"
+       sodipodi:nodetypes="cc" />
+    <path
+       sodipodi:nodetypes="cc"
+       inkscape:connector-curvature="0"
+       id="path4270"
+       d="m 762.05169,128.79075 58.70883,0"
+       style="fill:none;stroke:#0000ff;stroke-width:4.0999999;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-opacity:1;stroke-dasharray:4.0999999, 8.19999981;stroke-dashoffset:0;marker-start:none;marker-mid:none;marker-end:none"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90" />
+    <text
+       xml:space="preserve"
+       style="font-size:40px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Sans"
+       x="792.61133"
+       y="-1.0195068"
+       id="text4462"
+       sodipodi:linespacing="125%"
+       transform="translate(0,308.2677)"
+       inkscape:export-filename="/home/matel/openstack-manuals/doc/src/docbkx/common/figures/xenserver_architecture.png"
+       inkscape:export-xdpi="90"
+       inkscape:export-ydpi="90"><tspan
+         sodipodi:role="line"
+         id="tspan4464"
+         x="792.61133"
+         y="-1.0195068">...</tspan></text>
+  </g>
+</svg>
