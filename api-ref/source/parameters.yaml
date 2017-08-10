@@ -3085,8 +3085,9 @@ force_snapshot:
 forced_down_2_11:
   description: |
     Whether or not this service was forced down manually by an
-    administrator. This value is useful to know that some 3rd party has
-    verified the service should be marked down.
+    administrator after the service was fenced. This value is useful
+    to know that some 3rd party has verified the service should be
+    marked down.
   in: body
   required: true
   type: boolean
@@ -3095,9 +3096,17 @@ forced_down_2_11:
 # PUT /os-services/{service_id} added in 2.53.
 forced_down_2_53_in:
   description: |
-    Whether or not this service was forced down manually by an
-    administrator. This value is useful to know that some 3rd party has
-    verified the service should be marked down.
+    ``forced_down`` is a manual override to tell nova that the service in
+    question has been fenced manually by the operations team (either hard
+    powered off, or network unplugged). That signals that it is safe to proceed
+    with ``evacuate`` or other operations that nova has safety checks to
+    prevent for hosts that are up.
+
+    .. warning::
+
+       Setting a service forced down without completely fencing it will likely
+       result in the corruption of VMs on that host.
+
   in: body
   required: false
   type: boolean
@@ -3106,8 +3115,9 @@ forced_down_2_53_in:
 forced_down_2_53_out:
   description: |
     Whether or not this service was forced down manually by an
-    administrator. This value is useful to know that some 3rd party has
-    verified the service should be marked down.
+    administrator after the service was fenced. This value is useful
+    to know that some 3rd party has verified the service should be
+    marked down.
   in: body
   required: true
   type: boolean

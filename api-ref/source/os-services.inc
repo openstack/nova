@@ -195,7 +195,16 @@ Update Forced Down
 
 .. rest_method:: PUT /os-services/force-down
 
-Set or unset ``forced_down`` flag for the service.
+Set or unset ``forced_down`` flag for the service. ``forced_down`` is a manual
+override to tell nova that the service in question has been fenced manually by
+the operations team (either hard powered off, or network unplugged). That
+signals that it is safe to proceed with ``evacuate`` or other operations that
+nova has safety checks to prevent for hosts that are up.
+
+.. warning::
+
+   Setting a service forced down without completely fencing it will likely
+   result in the corruption of VMs on that host.
 
 Action ``force-down`` available as of microversion 2.11.
 
