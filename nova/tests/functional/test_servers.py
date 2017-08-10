@@ -1073,8 +1073,8 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
     def setUp(self):
         # NOTE(danms): The test defaults to using SmallFakeDriver,
         # which only has one vcpu, which can't take the doubled allocation
-        # we're now giving it. So, use the (big) FakeDriver here.
-        self.flags(compute_driver='fake.FakeDriver')
+        # we're now giving it. So, use the bigger MediumFakeDriver here.
+        self.flags(compute_driver='fake.MediumFakeDriver')
         self.flags(enabled_filters=self._enabled_filters,
                    group='filter_scheduler')
         super(ServerMovingTests, self).setUp()
@@ -1583,3 +1583,68 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         self.assertFlavorMatchesAllocation(self.flavor3, allocation)
 
         self._delete_and_check_allocations(server, rp_uuid, rp_uuid)
+
+    def test_resize_not_enough_resource(self):
+        # Try to resize to a flavor that requests more VCPU than what the
+        # compute hosts has available and expect the resize to fail
+
+        flavor_body = {'flavor':
+                           {'name': 'test_too_big_flavor',
+                            'ram': 1024,
+                            'vcpus': fake.MediumFakeDriver.vcpus + 1,
+                            'disk': 20,
+                            }}
+
+        big_flavor = self.api.post_flavor(flavor_body)
+
+        dest_hostname = self.compute2.host
+        source_hostname = self._other_hostname(dest_hostname)
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        server = self._boot_and_check_allocations(
+            self.flavor1, source_hostname)
+
+        self.flags(allow_resize_to_same_host=False)
+        resize_req = {
+            'resize': {
+                'flavorRef': big_flavor['id']
+            }
+        }
+
+        # NOTE(gibi): This is bug 1708637. Placement returns no allocation
+        # candidate and the scheduler falls back to the legacy filtering. As
+        # CoreFilter is not enabled the filtering result in hosts selected
+        # without enough VCPU resource
+        self.api.post_server_action(server['id'], resize_req)
+        server = self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
+        self.assertEqual(dest_hostname, server['OS-EXT-SRV-ATTR:host'])
+
+        # Note(gibi): After bug 1708637 is fixed the following is expected
+        # resp = self.api.post_server_action(
+        #     server['id'], resize_req, check_response_status=[400])
+        # self.assertEqual(
+        #     resp['badRequest']['message'],
+        #     "No valid host was found. No valid host found for resize")
+        # server = self.admin_api.get_server(server['id'])
+        # self.assertEqual(source_hostname, server['OS-EXT-SRV-ATTR:host'])
+
+        # only the source host shall have usages after the failed resize
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+
+        # Check that the other provider has no usage
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+        self.assertEqual({'VCPU': 0,
+                          'MEMORY_MB': 0,
+                          'DISK_GB': 0}, dest_usages)
+
+        # Check that the server only allocates resource from the host it is
+        # booted on
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations))
+        allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, allocation)
+
+        self._delete_and_check_allocations(
+            server, source_rp_uuid, dest_rp_uuid)
