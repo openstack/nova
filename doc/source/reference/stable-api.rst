@@ -20,7 +20,7 @@ Nova Stable REST API
 
 This document describes both the current state of the Nova REST API -- as
 of the Pike release -- and also attempts to describe how the Nova team
-evolved the REST API's implementation over time and remove some of the
+evolved the REST API's implementation over time and removed some of the
 cruft that has crept in over the years.
 
 Background
@@ -36,7 +36,8 @@ Newer code is called the "v2.1 API" and exists in the
 The v2 API is the old Nova REST API. It is mostly replaced by v2.1 API.
 
 The v2.1 API is the new Nova REST API with a set of improvements which
-includes Microversion and standardized validation of inputs using JSON-Schema.
+includes `Microversion <https://developer.openstack.org/api-guide/compute/microversions.html>`_
+and standardized validation of inputs using JSON-Schema.
 Also the v2.1 API is totally backwards compatible with the v2 API (That is the
 reason we call it as v2.1 API).
 
@@ -56,7 +57,7 @@ Evolution of Nova REST API
 Nova v2 API + Extensions
 ************************
 
-Nova use to have v2 API. In v2 API, there was a concept called 'extension'.
+Nova used to have v2 API. In v2 API, there was a concept called 'extension'.
 An operator can use it to enable/disable part of Nova REST API based on requirements.
 An end user may query the '/extensions' API to discover what *API functionality* is
 supported by the Nova deployment.
@@ -67,9 +68,10 @@ to one deployment and not another -- it was impossible for an end user to
 know what the OpenStack Compute API actually included. No two OpenStack
 deployments were consistent, which made cloud interoperability impossible.
 
-In Newton release, extensions magic was deprecated and marked for removal.
+In the Newton release, stevedore loading of API extension plugins was
+deprecated and marked for removal.
 
-In Newton release, v2 API code base has been removed and /v2 endpoints were
+In the Newton release, v2 API code base has been removed and /v2 endpoints were
 directed to v2.1 code base.
 
 
@@ -92,7 +94,7 @@ mode is based on v2.1 implementation with below difference:
 Nova v2.1 API + Microversion
 ****************************
 
-In Kilo release, nova v2.1 API has been released. v2.1 API
+In the Kilo release, nova v2.1 API has been released. v2.1 API
 is supposed to be backward compatible with v2 API with strong
 input validation using JSON Schema.
 
@@ -111,25 +113,26 @@ API extensions instead of old V2 handcrafted extension load mechanism.
 There was an argument that the plugin framework supported extensibility in
 the Nova API to allow deployers to publish custom API resources.
 
-In Newton release, config options of blacklist and whitelist extensions and
+In the Newton release, config options of blacklist and whitelist extensions and
 stevedore things were deprecated and marked for removal.
 
-In Pike, stevedore based plugin framekwork has been removed and url mapping
-is done with plain router list. No more dynamic magic of detecting API
-implementation for url.
+In Pike, stevedore based plugin framework has been removed and url mapping
+is done with plain router list. There is no more dynamic magic of detecting API
+implementation for url. See :doc:`Extending the API </contributor/api>`
+for more information.
 
 The '/extensions' API exposed the list of enabled API functions to users
 by GET method. However as the above, new API extensions should not be added
 to the list of this API. The '/extensions' API is frozen in Nova V2.1 API and
-is deprecated.
+is `deprecated <https://developer.openstack.org/api-ref/compute/#extensions-extensions-deprecated>`_.
 
 Things which are History now
 ****************************
 
-Till Pike release, many deprecated things have been removed and became
+As of the Pike release, many deprecated things have been removed and became
 history in Nova API world:
 
-* v2 legacy framework.
-* API extensions concept.
-* Stevedore magic to load the extension/plugin dynamically.
-* Configurable way to enable/disable APIs extensions.
+* v2 legacy framework
+* API extensions concept
+* stevedore magic to load the extension/plugin dynamically
+* Configurable way to enable/disable APIs extensions
