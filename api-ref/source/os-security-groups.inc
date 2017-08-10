@@ -41,7 +41,7 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
-  - security_groups: security_groups
+  - security_groups: security_groups_obj
   - description: description
   - id: security_group_id_body
   - name: name
