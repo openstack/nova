@@ -87,3 +87,4 @@ here. If you are contributing to one of these please read the subsystem guide
 before diving in.
 
 * :doc:`/contributor/placement`
+* :doc:`/user/conductor`
