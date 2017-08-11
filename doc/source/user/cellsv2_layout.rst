@@ -320,6 +320,7 @@ following:
 #. Instance affinity reporting from the compute nodes to scheduler
 #. The late anti-affinity check
 #. Querying host aggregates from the cell
+#. Attaching a volume and ``[cinder]/cross_az_attach=False``
 
 The first is simple: if you boot an instance, it gets scheduled to a
 compute node, fails, it would normally be re-scheduled to another
@@ -344,3 +345,16 @@ driver will attempt to figure out if block migration should be performed
 based on source and destination hosts being in the same aggregate. Since
 aggregates data has migrated to the API database, the cell conductor will
 not be able to access the aggregate information and will fail.
+
+The fifth is a problem because when a volume is attached to an instance
+in the *nova-compute* service, and ``[cinder]/cross_az_attach=False`` in
+nova.conf, we attempt to look up the availability zone that the instance is
+in which includes getting any host aggregates that the ``instance.host`` is in.
+Since the aggregates are in the API database and the cell conductor cannot
+access that information, so this will fail. In the future this check could be
+moved to the *nova-api* service such that the availability zone between the
+instance and the volume is checked before we reach the cell, except in the
+case of boot from volume where the *nova-compute* service itself creates the
+volume and must tell Cinder in which availability zone to create the volume.
+Long-term, volume creation during boot from volume should be moved to the
+top-level superconductor which would eliminate this AZ up-call check problem.
