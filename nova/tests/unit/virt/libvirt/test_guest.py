@@ -18,6 +18,7 @@ import sys
 
 import mock
 from oslo_utils import encodeutils
+import six
 
 from nova import context
 from nova import exception
@@ -272,9 +273,19 @@ class GuestTestCase(test.NoDBTestCase):
 
     def test_detach_device_with_retry_device_not_found(self):
         get_config = mock.Mock(return_value=None)
-        self.assertRaises(
+        ex = self.assertRaises(
             exception.DeviceNotFound, self.guest.detach_device_with_retry,
             get_config, "/dev/vdb", persistent=True, live=True)
+        self.assertIn("/dev/vdb", six.text_type(ex))
+
+    def test_detach_device_with_retry_device_not_found_alt_name(self):
+        """Tests to make sure we use the alternative name in errors."""
+        get_config = mock.Mock(return_value=None)
+        ex = self.assertRaises(
+            exception.DeviceNotFound, self.guest.detach_device_with_retry,
+            get_config, mock.sentinel.device, persistent=True, live=True,
+            alternative_device_name='foo')
+        self.assertIn('foo', six.text_type(ex))
 
     @mock.patch.object(libvirt_guest.Guest, "detach_device")
     def test_detach_device_with_retry_operation_failed(self, mock_detach):

@@ -364,7 +364,8 @@ class Guest(object):
     def detach_device_with_retry(self, get_device_conf_func, device,
                                  persistent, live, max_retry_count=7,
                                  inc_sleep_time=2,
-                                 max_sleep_time=30):
+                                 max_sleep_time=30,
+                                 alternative_device_name=None):
         """Detaches a device from the guest. After the initial detach request,
         a function is returned which can be used to ensure the device is
         successfully removed from the guest domain (retrying the removal as
@@ -385,7 +386,11 @@ class Guest(object):
                                time will not be incremented using param
                                inc_sleep_time. On reaching this threshold,
                                max_sleep_time will be used as the sleep time.
+        :param alternative_device_name: This is an alternative identifier for
+            the device if device is not an ID, used solely for error messages.
         """
+        alternative_device_name = alternative_device_name or device
+
         def _try_detach_device(conf, persistent=False, live=False):
             # Raise DeviceNotFound if the device isn't found during detach
             try:
@@ -398,17 +403,19 @@ class Guest(object):
                         if 'not found' in errmsg:
                             # This will be raised if the live domain
                             # detach fails because the device is not found
-                            raise exception.DeviceNotFound(device=device)
+                            raise exception.DeviceNotFound(
+                                device=alternative_device_name)
                     elif errcode == libvirt.VIR_ERR_INVALID_ARG:
                         errmsg = ex.get_error_message()
                         if 'no target device' in errmsg:
                             # This will be raised if the persistent domain
                             # detach fails because the device is not found
-                            raise exception.DeviceNotFound(device=device)
+                            raise exception.DeviceNotFound(
+                                device=alternative_device_name)
 
         conf = get_device_conf_func(device)
         if conf is None:
-            raise exception.DeviceNotFound(device=device)
+            raise exception.DeviceNotFound(device=alternative_device_name)
 
         _try_detach_device(conf, persistent, live)
 
@@ -424,8 +431,8 @@ class Guest(object):
                 _try_detach_device(config, persistent=False, live=live)
 
                 reason = _("Unable to detach from guest transient domain.")
-                raise exception.DeviceDetachFailed(device=device,
-                                                   reason=reason)
+                raise exception.DeviceDetachFailed(
+                    device=alternative_device_name, reason=reason)
 
         return _do_wait_and_retry_detach
 
