@@ -189,9 +189,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             ironic_states.AVAILABLE, ironic_states.NOSTATE]
         return (node_obj.maintenance or
                 node_obj.power_state in bad_power_states or
-                node_obj.provision_state not in good_provision_states or
-                (node_obj.provision_state in good_provision_states and
-                 node_obj.instance_uuid is not None))
+                node_obj.provision_state not in good_provision_states)
 
     def _node_resources_used(self, node_obj):
         """Determine whether the node's resources are currently used.
@@ -309,19 +307,13 @@ class IronicDriver(virt_driver.ComputeDriver):
             # Node is in the process of deploying, is deployed, or is in
             # the process of cleaning up from a deploy. Report all of its
             # resources as in use.
-            instance_info = self._parse_node_instance_info(node, properties)
-
-            # Use instance_info instead of properties here is because the
-            # properties of a deployed node can be changed which will count
-            # as available resources.
-            vcpus_used = vcpus = instance_info['vcpus']
-            memory_mb_used = memory_mb = instance_info['memory_mb']
-            local_gb_used = local_gb = instance_info['local_gb']
-
+            vcpus_used = vcpus
+            memory_mb_used = memory_mb
+            local_gb_used = local_gb
         # Always checking allows us to catch the case where Nova thinks there
         # are available resources on the Node, but Ironic does not (because it
         # is not in a usable state): https://launchpad.net/bugs/1503453
-        if self._node_resources_unavailable(node):
+        elif self._node_resources_unavailable(node):
             # The node's current state is such that it should not present any
             # of its resources to Nova
             vcpus = 0
@@ -743,6 +735,12 @@ class IronicDriver(virt_driver.ComputeDriver):
             # node is "disabled".  In the future, we should detach inventory
             # accounting from the concept of a node being disabled or not. The
             # two things don't really have anything to do with each other.
+            LOG.debug('Node %(node)s is not ready for a deployment, '
+                      'reporting an empty inventory for it. Node\'s '
+                      'provision state is %(prov)s, power state is '
+                      '%(power)s and maintenance is %(maint)s.',
+                      {'node': node.uuid, 'prov': node.provision_state,
+                       'power': node.power_state, 'maint': node.maintenance})
             return {}
 
         result = {
