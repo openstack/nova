@@ -1210,6 +1210,21 @@ class ResourceTracker(object):
                           "host that might need to be removed: %s.",
                           instance_uuid, instance.host, instance.node, alloc)
 
+    def delete_allocation_for_evacuated_instance(self, instance, node):
+        # Clean up the instance allocation from this node in placement
+        my_resources = scheduler_utils.resources_from_flavor(
+            instance, instance.flavor)
+
+        cn_uuid = self.compute_nodes[node].uuid
+
+        res = self.reportclient.remove_provider_from_instance_allocation(
+            instance.uuid, cn_uuid, instance.user_id,
+            instance.project_id, my_resources)
+        if not res:
+            LOG.error("Failed to clean allocation of an evacuated "
+                      "instance on the source node  %s",
+                      cn_uuid, instance=instance)
+
     def _find_orphaned_instances(self):
         """Given the set of instances and migrations already account for
         by resource tracker, sanity check the hypervisor to determine
