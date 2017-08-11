@@ -25,6 +25,11 @@ LOG = logging.getLogger(__name__)
 class ExactCoreFilter(filters.BaseHostFilter):
     """Exact Core Filter."""
 
+    def __init__(self, *args, **kwargs):
+        super(ExactCoreFilter, self).__init__(*args, **kwargs)
+        LOG.warning('ExactCoreFilter is deprecated in Pike and will be '
+                    'removed in a subsequent release.')
+
     def host_passes(self, host_state, spec_obj):
         """Return True if host has the exact number of CPU cores."""
         if not host_state.vcpus_total:

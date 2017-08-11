@@ -291,6 +291,13 @@ Related options:
         ],
         deprecated_name="baremetal_scheduler_default_filters",
         deprecated_group="DEFAULT",
+        deprecated_for_removal=True,
+        deprecated_reason="""
+These filters were used to overcome some of the baremetal scheduling
+limitations in Nova prior to the use of the Placement API. Now scheduling will
+use the custom resource class defined for each baremetal node to make its
+selection.
+""",
         help="""
 Filters used for filtering baremetal hosts.
 
@@ -313,6 +320,13 @@ Related options:
     cfg.BoolOpt("use_baremetal_filters",
         deprecated_name="scheduler_use_baremetal_filters",
         deprecated_group="DEFAULT",
+        deprecated_for_removal=True,
+        deprecated_reason="""
+These filters were used to overcome some of the baremetal scheduling
+limitations in Nova prior to the use of the Placement API. Now scheduling will
+use the custom resource class defined for each baremetal node to make its
+selection.
+""",
         default=False,
         help="""
 Enable baremetal filters.
