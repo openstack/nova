@@ -1001,6 +1001,104 @@ class SchedulerReportClient(object):
         return r.status_code == 204
 
     @safe_connect
+    def remove_provider_from_instance_allocation(self, consumer_uuid, rp_uuid,
+                                                 user_id, project_id,
+                                                 resources):
+        """Grabs an allocation for a particular consumer UUID, strips parts of
+        the allocation that refer to a supplied resource provider UUID, and
+        then PUTs the resulting allocation back to the placement API for the
+        consumer.
+
+        We call this method on two occasions: on the source host during a
+        confirm_resize() operation and on the destination host during a
+        revert_resize() operation. This is important to reconcile the
+        "doubled-up" allocation that the scheduler constructs when claiming
+        resources against the destination host during a move operation.
+
+        If the move was between hosts, the entire allocation for rp_uuid will
+        be dropped. If the move is a resize on the same host, then we will
+        subtract resources from the single allocation to ensure we do not
+        exceed the reserved or max_unit amounts for the resource on the host.
+
+        :param consumer_uuid: The instance/consumer UUID
+        :param rp_uuid: The UUID of the provider whose resources we wish to
+                        remove from the consumer's allocation
+        :param user_id: The instance's user
+        :param project_id: The instance's project
+        :param resources: The resources to be dropped from the allocation
+        """
+        url = '/allocations/%s' % consumer_uuid
+
+        # Grab the "doubled-up" allocation that we will manipulate
+        r = self.get(url)
+        if r.status_code != 200:
+            LOG.warning("Failed to retrieve allocations for %s. Got HTTP %s",
+                        consumer_uuid, r.status_code)
+            return False
+
+        current_allocs = r.json()['allocations']
+        if not current_allocs:
+            LOG.error("Expected to find current allocations for %s, but "
+                      "found none.", consumer_uuid)
+            return False
+
+        # If the host isn't in the current allocation for the instance, don't
+        # do anything
+        if rp_uuid not in current_allocs:
+            LOG.warning("Expected to find allocations referencing resource "
+                        "provider %s for %s, but found none.",
+                        rp_uuid, consumer_uuid)
+            return True
+
+        compute_providers = [uuid for uuid, alloc in current_allocs.items()
+                             if 'VCPU' in alloc['resources']]
+        LOG.debug('Current allocations for instance: %s', current_allocs,
+                  instance_uuid=consumer_uuid)
+        LOG.debug('Instance %s has resources on %i compute nodes',
+                  consumer_uuid, len(compute_providers))
+
+        new_allocs = [
+            {
+                'resource_provider': {
+                    'uuid': alloc_rp_uuid,
+                },
+                'resources': alloc['resources'],
+            }
+            for alloc_rp_uuid, alloc in current_allocs.items()
+            if alloc_rp_uuid != rp_uuid
+        ]
+
+        if len(compute_providers) == 1:
+            # NOTE(danms): We are in a resize to same host scenario. Since we
+            # are the only provider then we need to merge back in the doubled
+            # allocation with our part subtracted
+            peer_alloc = {
+                'resource_provider': {
+                    'uuid': rp_uuid,
+                },
+                'resources': current_allocs[rp_uuid]['resources']
+            }
+            LOG.debug('Original resources from same-host '
+                      'allocation: %s', peer_alloc['resources'])
+            scheduler_utils.merge_resources(peer_alloc['resources'],
+                                            resources, -1)
+            LOG.debug('Subtracting old resources from same-host '
+                      'allocation: %s', peer_alloc['resources'])
+            new_allocs.append(peer_alloc)
+
+        payload = {'allocations': new_allocs}
+        payload['project_id'] = project_id
+        payload['user_id'] = user_id
+        LOG.debug("Sending updated allocation %s for instance %s after "
+                  "removing resources for %s.",
+                  new_allocs, consumer_uuid, rp_uuid)
+        r = self.put(url, payload, version='1.10')
+        if r.status_code != 204:
+            LOG.warning("Failed to save allocation for %s. Got HTTP %s: %s",
+                        consumer_uuid, r.status_code, r.text)
+        return r.status_code == 204
+
+    @safe_connect
     def put_allocations(self, rp_uuid, consumer_uuid, alloc_data, project_id,
                         user_id):
         """Creates allocation records for the supplied instance UUID against

@@ -239,7 +239,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
     def test_claim_resources_success(self):
         get_resp_mock = mock.Mock(status_code=200)
         get_resp_mock.json.return_value = {
-            'allocations': [],  # build instance, not move
+            'allocations': {},  # build instance, not move
         }
         self.ks_sess_mock.get.return_value = get_resp_mock
         resp_mock = mock.Mock(status_code=204)
@@ -662,7 +662,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
     def test_claim_resources_fail_retry_success(self):
         get_resp_mock = mock.Mock(status_code=200)
         get_resp_mock.json.return_value = {
-            'allocations': [],  # build instance, not move
+            'allocations': {},  # build instance, not move
         }
         self.ks_sess_mock.get.return_value = get_resp_mock
         resp_mocks = [
@@ -718,7 +718,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
     def test_claim_resources_failure(self, mock_log):
         get_resp_mock = mock.Mock(status_code=200)
         get_resp_mock.json.return_value = {
-            'allocations': [],  # build instance, not move
+            'allocations': {},  # build instance, not move
         }
         self.ks_sess_mock.get.return_value = get_resp_mock
         resp_mock = mock.Mock(status_code=409)
@@ -754,6 +754,210 @@ class TestPutAllocations(SchedulerReportClientTestCase):
 
         self.assertFalse(res)
         self.assertTrue(mock_log.called)
+
+    def test_remove_provider_from_inst_alloc_no_shared(self):
+        """Tests that the method which manipulates an existing doubled-up
+        allocation for a move operation to remove the source host results in
+        sending placement the proper payload to PUT
+        /allocations/{consumer_uuid} call.
+        """
+        get_resp_mock = mock.Mock(status_code=200)
+        get_resp_mock.json.return_value = {
+            'allocations': {
+                uuids.source: {
+                    'resource_provider_generation': 42,
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
+                },
+                uuids.destination: {
+                    'resource_provider_generation': 42,
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
+                },
+            },
+        }
+        self.ks_sess_mock.get.return_value = get_resp_mock
+        resp_mock = mock.Mock(status_code=204)
+        self.ks_sess_mock.put.return_value = resp_mock
+        consumer_uuid = uuids.consumer_uuid
+        project_id = uuids.project_id
+        user_id = uuids.user_id
+        res = self.client.remove_provider_from_instance_allocation(
+            consumer_uuid, uuids.source, user_id, project_id, mock.Mock())
+
+        expected_url = "/allocations/%s" % consumer_uuid
+        # New allocations should only include the destination...
+        expected_payload = {
+            'allocations': [
+                {
+                    'resource_provider': {
+                        'uuid': uuids.destination,
+                    },
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
+                },
+            ],
+        }
+        expected_payload['project_id'] = project_id
+        expected_payload['user_id'] = user_id
+        # We have to pull the json body from the mock call_args to validate
+        # it separately otherwise hash seed issues get in the way.
+        actual_payload = self.ks_sess_mock.put.call_args[1]['json']
+        sort_by_uuid = lambda x: x['resource_provider']['uuid']
+        expected_allocations = sorted(expected_payload['allocations'],
+                                      key=sort_by_uuid)
+        actual_allocations = sorted(actual_payload['allocations'],
+                                    key=sort_by_uuid)
+        self.assertEqual(expected_allocations, actual_allocations)
+        self.ks_sess_mock.put.assert_called_once_with(
+            expected_url, endpoint_filter=mock.ANY,
+            headers={'OpenStack-API-Version': 'placement 1.10'},
+            json=mock.ANY, raise_exc=False)
+
+        self.assertTrue(res)
+
+    def test_remove_provider_from_inst_alloc_with_shared(self):
+        """Tests that the method which manipulates an existing doubled-up
+        allocation with DISK_GB being consumed from a shared storage provider
+        for a move operation to remove the source host results in sending
+        placement the proper payload to PUT /allocations/{consumer_uuid}
+        call.
+        """
+        get_resp_mock = mock.Mock(status_code=200)
+        get_resp_mock.json.return_value = {
+            'allocations': {
+                uuids.source: {
+                    'resource_provider_generation': 42,
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
+                },
+                uuids.shared_storage: {
+                    'resource_provider_generation': 42,
+                    'resources': {
+                        'DISK_GB': 100,
+                    },
+                },
+                uuids.destination: {
+                    'resource_provider_generation': 42,
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
+                },
+            },
+        }
+        self.ks_sess_mock.get.return_value = get_resp_mock
+        resp_mock = mock.Mock(status_code=204)
+        self.ks_sess_mock.put.return_value = resp_mock
+        consumer_uuid = uuids.consumer_uuid
+        project_id = uuids.project_id
+        user_id = uuids.user_id
+        res = self.client.remove_provider_from_instance_allocation(
+            consumer_uuid, uuids.source, user_id, project_id, mock.Mock())
+
+        expected_url = "/allocations/%s" % consumer_uuid
+        # New allocations should only include the destination...
+        expected_payload = {
+            'allocations': [
+                {
+                    'resource_provider': {
+                        'uuid': uuids.shared_storage,
+                    },
+                    'resources': {
+                        'DISK_GB': 100,
+                    },
+                },
+                {
+                    'resource_provider': {
+                        'uuid': uuids.destination,
+                    },
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
+                },
+            ],
+        }
+        expected_payload['project_id'] = project_id
+        expected_payload['user_id'] = user_id
+        # We have to pull the json body from the mock call_args to validate
+        # it separately otherwise hash seed issues get in the way.
+        actual_payload = self.ks_sess_mock.put.call_args[1]['json']
+        sort_by_uuid = lambda x: x['resource_provider']['uuid']
+        expected_allocations = sorted(expected_payload['allocations'],
+                                      key=sort_by_uuid)
+        actual_allocations = sorted(actual_payload['allocations'],
+                                    key=sort_by_uuid)
+        self.assertEqual(expected_allocations, actual_allocations)
+        self.ks_sess_mock.put.assert_called_once_with(
+            expected_url, endpoint_filter=mock.ANY,
+            headers={'OpenStack-API-Version': 'placement 1.10'},
+            json=mock.ANY, raise_exc=False)
+
+        self.assertTrue(res)
+
+    def test_remove_provider_from_inst_alloc_no_source(self):
+        """Tests that if remove_provider_from_instance_allocation() fails to
+        find any allocations for the source host, it just returns True and
+        does not attempt to rewrite the allocation for the consumer.
+        """
+        get_resp_mock = mock.Mock(status_code=200)
+        # Act like the allocations already did not include the source host for
+        # some reason
+        get_resp_mock.json.return_value = {
+            'allocations': {
+                uuids.shared_storage: {
+                    'resource_provider_generation': 42,
+                    'resources': {
+                        'DISK_GB': 100,
+                    },
+                },
+                uuids.destination: {
+                    'resource_provider_generation': 42,
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    },
+                },
+            },
+        }
+        self.ks_sess_mock.get.return_value = get_resp_mock
+        consumer_uuid = uuids.consumer_uuid
+        project_id = uuids.project_id
+        user_id = uuids.user_id
+        res = self.client.remove_provider_from_instance_allocation(
+            consumer_uuid, uuids.source, user_id, project_id, mock.Mock())
+
+        self.ks_sess_mock.get.assert_called()
+        self.ks_sess_mock.put.assert_not_called()
+
+        self.assertTrue(res)
+
+    def test_remove_provider_from_inst_alloc_fail_get_allocs(self):
+        """Tests that we gracefully exit with False from
+        remove_provider_from_instance_allocation() if the call to get the
+        existing allocations fails for some reason
+        """
+        get_resp_mock = mock.Mock(status_code=500)
+        self.ks_sess_mock.get.return_value = get_resp_mock
+        consumer_uuid = uuids.consumer_uuid
+        project_id = uuids.project_id
+        user_id = uuids.user_id
+        res = self.client.remove_provider_from_instance_allocation(
+            consumer_uuid, uuids.source, user_id, project_id, mock.Mock())
+
+        self.ks_sess_mock.get.assert_called()
+        self.ks_sess_mock.put.assert_not_called()
+
+        self.assertFalse(res)
 
 
 class TestProviderOperations(SchedulerReportClientTestCase):

@@ -1173,22 +1173,12 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         self._test_resize_revert(dest_hostname='host1')
 
     def test_resize_revert_reverse(self):
-        # NOTE(danms): This will run the test the other direction,
-        # but with the periodics running in the same order. When
-        # bug 1707071 is fixed, we should be able to pass with things
-        # running both ways. Until then, skip.
-        self.skipTest('Bug 1707071')
         self._test_resize_revert(dest_hostname='host2')
 
     def test_resize_confirm(self):
         self._test_resize_confirm(dest_hostname='host1')
 
     def test_resize_confirm_reverse(self):
-        # NOTE(danms): This will run the test the other direction,
-        # but with the periodics running in the same order. When
-        # bug 1707071 is fixed, we should be able to pass with things
-        # running both ways. Until then, skip.
-        self.skipTest('Bug 1707071')
         self._test_resize_confirm(dest_hostname='host2')
 
     def assertFlavorMatchesAllocation(self, flavor, allocation):
@@ -1367,21 +1357,15 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         allocations = self._get_allocations_by_server_uuid(server['id'])
         self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
 
-        # NOTE(jaypipes): This should be uncommented when bug 1707071 is fixed.
-        # Currently, we're not cleaning up the destination allocation on
-        # confirm and the source allocation on resize
-        # dest_usages = self._get_provider_usages(dest_rp_uuid)
-        # self.assertEqual({'VCPU': 0,
-        #                   'MEMORY_MB': 0,
-        #                   'DISK_GB': 0}, dest_usages,
-        #                'Target host %s still has usage after the resize has '
-        #                  'been reverted' % dest_hostname)
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+        self.assertEqual({'VCPU': 0,
+                          'MEMORY_MB': 0,
+                          'DISK_GB': 0}, dest_usages,
+                          'Target host %s still has usage after the resize '
+                          'has been reverted' % dest_hostname)
 
-        # NOTE(jaypipes): This should be uncommented when bug 1707071 is fixed.
-        # Currently, we're not cleaning up the destination allocation on
-        # confirm and the source allocation on resize
         # Check that the server only allocates resource from the original host
-        # self.assertEqual(1, len(allocations))
+        self.assertEqual(1, len(allocations))
 
         source_allocation = allocations[source_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
@@ -1406,35 +1390,42 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
             server['id'], post, check_response_status=[204])
         self._wait_for_state_change(self.api, server, 'ACTIVE')
 
-        # Fetch allocations post-confirm
+        # After confirming, we should have an allocation only on the
+        # destination host
         allocations = self._get_allocations_by_server_uuid(server['id'])
 
-        self.assertEqual(2, len(allocations))
+        self.assertEqual(1, len(allocations))
 
-        self._run_periodics()
-
+        source_usages = self._get_provider_usages(source_rp_uuid)
         dest_usages = self._get_provider_usages(dest_rp_uuid)
-
-        # NOTE(jaypipes): This should be uncommented when bug 1707071 is fixed.
-        # Currently, we're not cleaning up the destination allocation on
-        # confirm and the source allocation on resize
-        # source_usages = self._get_provider_usages(source_rp_uuid)
-        # self.assertEqual({'VCPU': 0,
-        #                   'MEMORY_MB': 0,
-        #                   'DISK_GB': 0}, source_usages,
-        #                  'The source host %s still has usages after the '
-        #                  'resize has been confirmed' % source_hostname)
 
         # and the target host allocation should be according to the new flavor
         self.assertFlavorMatchesAllocation(self.flavor2, dest_usages)
+        self.assertEqual({'VCPU': 0,
+                          'MEMORY_MB': 0,
+                          'DISK_GB': 0}, source_usages,
+                         'The source host %s still has usages after the '
+                         'resize has been confirmed' % source_hostname)
+
+        self._run_periodics()
+
+        # Check we're still accurate after running the periodics
+
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+        source_usages = self._get_provider_usages(source_rp_uuid)
+
+        # and the target host allocation should be according to the new flavor
+        self.assertFlavorMatchesAllocation(self.flavor2, dest_usages)
+        self.assertEqual({'VCPU': 0,
+                          'MEMORY_MB': 0,
+                          'DISK_GB': 0}, source_usages,
+                          'The source host %s still has usages after the '
+                          'resize has been confirmed' % source_hostname)
 
         allocations = self._get_allocations_by_server_uuid(server['id'])
 
-        # NOTE(jaypipes): This should be uncommented when bug 1707071 is fixed.
-        # Currently, we're not cleaning up the destination allocation on
-        # confirm and the source allocation on resize
         # and the server allocates only from the target host
-        # self.assertEqual(1, len(allocations))
+        self.assertEqual(1, len(allocations))
 
         dest_allocation = allocations[dest_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor2, dest_allocation)
@@ -1486,10 +1477,6 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         allocations = self._get_allocations_by_server_uuid(server['id'])
         self.assertEqual(1, len(allocations))
         allocation = allocations[rp_uuid]['resources']
-
-        # NOTE(gibi): This is bug 1707071 where the compute "healing" periodic
-        # tramples on the doubled allocations created in the scheduler.
-        self.assertFlavorMatchesAllocation(new_flavor, allocation)
 
         # NOTE(gibi): After fixing bug 1707252 the following is expected
         # self.assertEqual(old_flavor['vcpus'] + new_flavor['vcpus'],
