@@ -746,8 +746,8 @@ class SchedulerReportClient(object):
         removed_instances = set(allocations.keys()) - set(instance_dict.keys())
 
         for uuid in removed_instances:
-            LOG.warning(_LW('Deleting stale allocation for instance %s'),
-                        uuid)
+            LOG.debug('Deleting stale allocation for instance %s',
+                      uuid)
             self._delete_allocation_for_instance(uuid)
 
     @safe_connect
