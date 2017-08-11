@@ -316,9 +316,10 @@ implement some features without such connectivity. Thus, anything that
 requires a so-called "upcall" will not function. This impacts the
 following:
 
-- Instance reschedules during boot
-- Instance affinity reporting from the compute nodes to scheduler
-- The late anti-affinity check
+#. Instance reschedules during boot
+#. Instance affinity reporting from the compute nodes to scheduler
+#. The late anti-affinity check
+#. Querying host aggregates from the cell
 
 The first is simple: if you boot an instance, it gets scheduled to a
 compute node, fails, it would normally be re-scheduled to another
@@ -336,3 +337,10 @@ affect you. To make sure you don't make futile attempts at the
 affinity check, you should set
 ``[workarounds]/disable_group_policy_check_upcall=True`` and
 ``[filter_scheduler]/track_instance_changes=False`` in ``nova.conf``.
+
+The fourth is currently only a problem when performing live migrations
+using the XenAPI driver and not specifying ``--block-migrate``. The
+driver will attempt to figure out if block migration should be performed
+based on source and destination hosts being in the same aggregate. Since
+aggregates data has migrated to the API database, the cell conductor will
+not be able to access the aggregate information and will fail.
