@@ -1,36 +1,17 @@
 Extending the API
 =================
 
-.. TODO::
-
-   Update this to reflect the removal of the legacy v2 API code
-
 Background
 ----------
 
-Nova has two API plugin frameworks, one for the original V2 API and
-one for what we call V2.1 which also supports V2.1 microversions. The
-V2.1 API acts from a REST API user point of view in an identical way
-to the original V2 API. V2.1 is implemented in the same framework as
-microversions, with the version requested being 2.1.
+Nova has v2.1 API frameworks which supports microversions.
 
-The V2 API is now frozen and with the exception of significant bugs no
-change should be made to the V2 API code. API changes should only be
-made through V2.1 microversions.
-
-This document covers how to write plugins for the v2.1 framework. A
+This document covers how to add API for the v2.1 API framework. A
 :doc:`microversions specific document <microversions>` covers the details
-around what is required for the microversions part. It does not cover V2
-plugins which should no longer be developed.
+around what is required for the microversions part.
 
-There may still be references to a v3 API both in comments and in the
-directory path of relevant files. This is because v2.1 first started
-out being called v3 rather than v2.1. Where you see references to v3
-you can treat it as a reference to v2.1 with or without microversions
-support.
-
-The original V2 API plugins live in ``nova/api/openstack/compute/legacy_v2``
-and the V2.1 plugins live in ``nova/api/openstack/compute``.
+The v2.1 API framework is under ``nova/api`` and each API is implemented in
+``nova/api/openstack/compute``.
 
 Note that any change to the Nova API to be merged will first require a
 spec be approved first. See `here <https://github.com/openstack/nova-specs>`_
@@ -39,20 +20,19 @@ please refer to the `OpenStack API WG
 <https://wiki.openstack.org/wiki/API_Working_Group>`_
 
 
-Basic plugin structure
-----------------------
+Basic API Controller
+--------------------
 
-A very basic skeleton of a v2.1 plugin can be seen `here in the unittests <https://git.openstack.org/cgit/openstack/nova/tree/nova/tests/unit/api/openstack/compute/basic.py>`_. An annotated version below::
+API controller includes the implementation of API methods for a resource.
 
-    """Basic Test Extension"""
+A very basic controller of a v2.1 API::
 
+    """Basic Controller"""
+
+    from nova.api.openstack.compute.schemas import xyz
     from nova.api.openstack import extensions
     from nova.api.openstack import wsgi
-
-
-    ALIAS = 'test-basic'
-    # ALIAS needs to be unique and should be of the format
-    # ^[a-z]+[a-z\-]*[a-z]$
+    from nova.api import validation
 
     class BasicController(wsgi.Controller):
 
@@ -61,34 +41,66 @@ A very basic skeleton of a v2.1 plugin can be seen `here in the unittests <https
             data = {'param': 'val'}
             return data
 
-        # Defining a method implements the following API responses:
-        #   delete -> DELETE
-        #   update -> PUT
-        #   create -> POST
-        #   show -> GET
-        # If a method is not defined a request to it will be a 404 response
+        # Define support for POST on a collection
+        @extensions.expected_errors((400, 409))
+        @validation.schema(xyz.create)
+        @wsgi.response(201)
+        def create(self, req, body):
+            write_body_here = ok
+            return response_body
 
-        # It is also possible to define support for further responses
-        # See `servers.py <http://git.openstack.org/cgit/openstack/nova/tree/nova/nova/api/openstack/compute/servers.py>`_.
+        # Defining support for other RESTFul methods based on resouce.
 
 
-    class Basic(extensions.V3APIExtensionBase):
-        """Basic Test Extension."""
+See `servers.py for ref <http://git.openstack.org/cgit/openstack/nova/tree/nova/nova/api/openstack/compute/servers.py>`_.
 
-        name = "BasicTest"
-        alias = ALIAS
-        version = 1
+All of the controller modules should live in the ``nova/api/openstack/compute`` directory.
 
-        # Both get_resources and get_controller_extensions must always
-        # be defined by can return an empty array
-        def get_resources(self):
-            resource = extensions.ResourceExtension('test', BasicController())
-            return [resource]
+URL Mapping to API
+~~~~~~~~~~~~~~~~~~
 
-        def get_controller_extensions(self):
-            return []
+The URL mapping is based on the plain list which routes the API request to
+appropriate controller and method. Each API needs to add its route information
+in ``nova/api/openstack/compute/routes.py``.
 
-All of these plugin files should live in the ``nova/api/openstack/compute`` directory.
+A basic skeleton of URL mapping in routers.py::
+
+    """URL Mapping Router List"""
+
+    import functools
+
+    import nova.api.openstack
+    from nova.api.openstack.compute import basic_api
+
+    # Create a controller object
+    basic_controller = functools.partial(
+        _create_controller, basic_api.BasicController, [], [])
+
+    # Routing list structure:
+    # (
+    #     ('Route path': {
+    #         'HTTP method: [
+    #             'Controller',
+    #             'The method of controller is used to handle this route'
+    #         ],
+    #         ...
+    #     }),
+    #     ...
+    # )
+    ROUTE_LIST = (
+        .
+        .
+        .
+        ('/basic', {
+            'GET': [basic_controller, 'index'],
+            'POST': [basic_controller, 'create']
+        }),
+        .
+        .
+        .
+    )
+
+Complete routing list can be found in `routes.py <https://git.openstack.org/cgit/openstack/nova/tree/nova/api/openstack/compute/routes.py>`_.
 
 
 Policy
@@ -96,18 +108,16 @@ Policy
 
 Policy (permission) is defined ``etc/nova/policy.json``. Implementation of policy
 is changing a bit at the moment. Will add more to this document or reference
-another one in the future. Note that a 'discoverable' policy needs to be added
-for each plugin that you wish to appear in the ``/extension`` output. Also
-look at the authorize call in plugins currently merged.
+another one in the future. Also look at the authorize call in controller currently merged.
 
 Modularity
 ~~~~~~~~~~
 
-The Nova REST API is separated into different plugins in the directory
+The Nova REST API is separated into different controllers in the directory
 'nova/api/openstack/compute/'
 
 Because microversions are supported in the Nova REST API, the API can be
-extended without any new plugin. But for code readability, the Nova REST API
+extended without any new controller. But for code readability, the Nova REST API
 code still needs modularity. Here are rules for how to separate modules:
 
 * You are adding a new resource
@@ -138,17 +148,13 @@ corresponding method with the ``validation.schema`` decorator like::
     def update(self, req, id, body):
         ....
 
-Nova supports the extension of JSON-Schema definitions based on the
-loaded API extensions for some APIs. Stevedore library tries to find
-specific name methods which return additional parameters and extends
-them to the original JSON-Schema definitions.
+Similarly to controller modularity, JSON-Schema definitions can be added
+in same or separate JSON-Schema module.
+
 The following are the combinations of extensible API and method name
-which returns additional parameters:
+which returns additional JSON-Schema parameters:
 
 * Create a server API  - get_server_create_schema()
-* Update a server API  - get_server_update_schema()
-* Rebuild a server API - get_server_rebuild_schema()
-* Resize a server API  - get_server_resize_schema()
 
 For example, keypairs extension(Keypairs class) contains the method
 get_server_create_schema() which returns::
@@ -159,21 +165,12 @@ get_server_create_schema() which returns::
 
 then the parameter key_name is allowed on Create a server API.
 
-Support files
--------------
+.. note:: Currently only create schema are implemented in modular way.
+          Final goal is to merge them all and define the concluded
+          process in this doc.
 
-At least one entry needs to made in ``setup.cfg`` for each plugin.
-An entry point for the plugin must be added to nova.api.v21.extensions
-even if no resource or controller is added. Other entry points available
-are
-
-* Modify create behaviour (nova.api.v21.extensions.server.create)
-* Modify rebuild behaviour (nova.api.v21.extensions.server.rebuild)
-* Modify update behaviour (nova.api.v21.extensions.server.update)
-* Modify resize behaviour (nova.api.v21.extensions.server.resize)
-
-These are essentially hooks into the servers plugin which allow other
-plugins to modify behaviour without having to modify servers.py. In
+These are essentially hooks into the servers controller which allow other
+controller to modify behaviour without having to modify servers.py. In
 the past not having this capability led to very large chunks of
 unrelated code being added to servers.py which was difficult to
 maintain.
