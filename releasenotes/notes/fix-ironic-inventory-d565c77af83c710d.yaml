@@ -1,0 +1,30 @@
+---
+fixes:
+  - |
+    The ironic virt driver no longer reports an empty inventory for bare metal
+    nodes that have instances on them. Instead the custom resource class, VCPU,
+    memory and disk are reported as they are configured on the node.
+issues:
+  - |
+    Due to the changes in scheduling of bare metal nodes, additional resources
+    may be reported as free to Placement. This happens in two cases:
+
+    * An instance is deployed with a flavor smaller than a node (only possible
+      when exact filters are not used)
+    * Node properties were modified in ironic for a deployed nodes
+
+    When such instances were deployed without using a custom resource class,
+    it is possible for the scheduler to try deploying another instance on
+    the same node. It will cause a failure in the compute and a scheduling
+    retry.
+
+    The recommended work around is to assign a resource class to all ironic
+    nodes, and use it for scheduling of bare metal instances.
+deprecations:
+  - |
+    Scheduling bare metal (ironic) instances using standard resource classes
+    (VCPU, memory, disk) is deprecated and will no longer be supported in
+    Queens.  Custom resource classes should be used instead.
+    Please refer to the `ironic documentation
+    <https://docs.openstack.org/ironic/latest/install/configure-nova-flavors.html#scheduling-based-on-resource-classes>`_
+    for a detailed explanation.
