@@ -668,6 +668,11 @@ class ComputeManager(manager.Manager):
             self.driver.destroy(context, instance,
                                 network_info,
                                 bdi, destroy_disks)
+
+            rt = self._get_resource_tracker()
+            rt.delete_allocation_for_evacuated_instance(
+                instance, migration.source_node)
+
             migration.status = 'completed'
             migration.save()
 

@@ -1641,27 +1641,16 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
             source_compute_id, {'forced_down': 'false'})
 
         source_usages = self._get_provider_usages(source_rp_uuid)
-        # NOTE(gibi): this is bug 1709902 as the source compute does not clean
-        # up the allocation during init_host
-        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
-        # after fixing bug 1709902 the following is expected
-        # self.assertEqual({'VCPU': 0,
-        #                   'MEMORY_MB': 0,
-        #                   'DISK_GB': 0},
-        #                  source_usages)
+        self.assertEqual({'VCPU': 0,
+                          'MEMORY_MB': 0,
+                          'DISK_GB': 0},
+                         source_usages)
 
         dest_usages = self._get_provider_usages(dest_rp_uuid)
         self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
 
         allocations = self._get_allocations_by_server_uuid(server['id'])
-        # NOTE(gibi): this is bug 1709902 as the source compute does not clean
-        # up the allocation during init_host
-        self.assertEqual(2, len(allocations))
-        source_allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
-
-        # after fixing bug 1709902 the following is expected
-        # self.assertEqual(1, len(allocations))
+        self.assertEqual(1, len(allocations))
         dest_allocation = allocations[dest_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
 
