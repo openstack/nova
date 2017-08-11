@@ -5643,6 +5643,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                 self.instance, self.instance.node)
             self.assertIsNotNone(self.instance.migration_context)
 
+        @mock.patch('nova.objects.Service.get_minimum_version',
+                    return_value=22)
         @mock.patch.object(self.compute, "_notify_about_instance_usage")
         @mock.patch.object(self.compute, "_set_instance_info")
         @mock.patch.object(self.instance, 'save')
@@ -5665,7 +5667,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                     mock_mig_save,
                                     mock_inst_save,
                                     mock_set,
-                                    mock_notify):
+                                    mock_notify,
+                                    mock_version):
             self.compute.finish_revert_resize(context=self.context,
                                               instance=self.instance,
                                               reservations=None,

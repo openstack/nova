@@ -260,6 +260,7 @@ class TestCase(testtools.TestCase):
         self._base_test_obj_backup = copy.copy(
             objects_base.NovaObjectRegistry._registry._obj_classes)
         self.addCleanup(self._restore_obj_registry)
+        objects.Service.clear_min_version_cache()
 
         # NOTE(danms): Reset the cached list of cells
         from nova.compute import api
