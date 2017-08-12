@@ -1,0 +1,75 @@
+
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        accept: application/json
+        content-type: application/json
+        OpenStack-API-Version: placement latest
+
+tests:
+
+- name: create a resource provider
+  POST: /resource_providers
+  data:
+      name: an rp
+  status: 201
+
+- name: get resource provider
+  GET: $LOCATION
+  status: 200
+
+- name: create a resource class
+  POST: /resource_classes
+  request_headers:
+    content-type: application/json
+  data:
+      name: CUSTOM_GOLD
+  status: 201
+
+- name: add inventory to an rp
+  PUT: /resource_providers/$HISTORY['get resource provider'].$RESPONSE['$.uuid']/inventories
+  data:
+      resource_provider_generation: 0
+      inventories:
+          VCPU:
+              total: 24
+              max_unit: 9999
+          CUSTOM_GOLD:
+              total: 5
+              max_unit: 9999
+  status: 200
+
+- name: allocate some of it two
+  desc: this is the one that used to raise a 500
+  PUT: /allocations/6d9f83db-6eb5-49f6-84b0-5d03c6aa9fc8
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $HISTORY['get resource provider'].$RESPONSE['$.uuid']
+            resources:
+                DISK_GB: 5
+                CUSTOM_GOLD: 1
+  status: 409
+
+- name: allocate some of it custom
+  PUT: /allocations/6d9f83db-6eb5-49f6-84b0-5d03c6aa9fc8
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $HISTORY['get resource provider'].$RESPONSE['$.uuid']
+            resources:
+                CUSTOM_GOLD: 1
+  status: 204
+
+- name: allocate some of it standard
+  PUT: /allocations/6d9f83db-6eb5-49f6-84b0-5d03c6aa9fc8
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $HISTORY['get resource provider'].$RESPONSE['$.uuid']
+            resources:
+                DISK_GB: 1
+  status: 409
