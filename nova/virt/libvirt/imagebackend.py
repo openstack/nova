@@ -118,7 +118,8 @@ class Image(object):
         pass
 
     def libvirt_info(self, disk_bus, disk_dev, device_type, cache_mode,
-                     extra_specs, hypervisor_version, boot_order=None):
+                     extra_specs, hypervisor_version, boot_order=None,
+                     disk_unit=None):
         """Get `LibvirtConfigGuestDisk` filled for this image.
 
         :disk_dev: Disk bus device name
@@ -144,9 +145,23 @@ class Image(object):
         info.source_path = self.path
         info.boot_order = boot_order
 
+        if disk_bus == 'scsi':
+            self.disk_scsi(info, disk_unit)
+
         self.disk_qos(info, extra_specs)
 
         return info
+
+    def disk_scsi(self, info, disk_unit):
+        # The driver is responsible to create the SCSI controller
+        # at index 0.
+        info.device_addr = vconfig.LibvirtConfigGuestDeviceAddressDrive()
+        info.device_addr.controller = 0
+        if disk_unit is not None:
+            # In order to allow up to 256 disks handled by one
+            # virtio-scsi controller, the device addr should be
+            # specified.
+            info.device_addr.unit = disk_unit
 
     def disk_qos(self, info, extra_specs):
         tune_items = ['disk_read_bytes_sec', 'disk_read_iops_sec',
@@ -797,7 +812,8 @@ class Rbd(Image):
         self.discard_mode = CONF.libvirt.hw_disk_discard
 
     def libvirt_info(self, disk_bus, disk_dev, device_type, cache_mode,
-            extra_specs, hypervisor_version, boot_order=None):
+                     extra_specs, hypervisor_version, boot_order=None,
+                     disk_unit=None):
         """Get `LibvirtConfigGuestDisk` filled for this image.
 
         :disk_dev: Disk bus device name
@@ -832,6 +848,9 @@ class Rbd(Image):
         if auth_enabled:
             info.auth_secret_type = 'ceph'
             info.auth_secret_uuid = CONF.libvirt.rbd_secret_uuid
+
+        if disk_bus == 'scsi':
+            self.disk_scsi(info, disk_unit)
 
         self.disk_qos(info, extra_specs)
 
