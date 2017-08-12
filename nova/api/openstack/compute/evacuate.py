@@ -74,7 +74,7 @@ class EvacuateController(wsgi.Controller):
     # backwards compatibility reasons.
     @extensions.expected_errors((400, 404, 409))
     @wsgi.action('evacuate')
-    @validation.schema(evacuate.evacuate, "2.1", "2.13")
+    @validation.schema(evacuate.evacuate, "2.0", "2.13")
     @validation.schema(evacuate.evacuate_v214, "2.14", "2.28")
     @validation.schema(evacuate.evacuate_v2_29, "2.29")
     def _evacuate(self, req, id, body):
