@@ -3957,7 +3957,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     def test_terminate_volume_connections(self, mock_term_conn,
                                           mock_attach_delete):
         """Tests _terminate_volume_connections with cinder v2 style,
-        cinder v3.27 style, and non-volume BDMs.
+        cinder v3.44 style, and non-volume BDMs.
         """
         bdms = objects.BlockDeviceMappingList(
             objects=[

@@ -2323,7 +2323,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.assertEqual('available',
                                  volumes[uuids.new_volume]['status'])
                 # Make assertions about what was called if there was or was not
-                # a Cinder 3.27 style attachment provided.
+                # a Cinder 3.44 style attachment provided.
                 if attachment_id is None:
                     # Old style attachment, so unreserve was called and
                     # attachment_delete was not called.
@@ -2341,7 +2341,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                              volumes[uuids.old_volume],
                                              volumes[uuids.new_volume])
                 # Make assertions about what was called if there was or was not
-                # a Cinder 3.27 style attachment provided.
+                # a Cinder 3.44 style attachment provided.
                 if attachment_id is None:
                     # Old style attachment, so reserve was called and
                     # attachment_create was not called.

@@ -5046,7 +5046,7 @@ class ComputeManager(manager.Manager):
                           "for volume %(volume)s", {'volume': conn_volume},
                           instance=instance)
                 if bdm.attachment_id is None:
-                    # This is the pre-3.27 flow for new-style volume
+                    # This is the pre-3.44 flow for new-style volume
                     # attachments so just terminate the connection.
                     self.volume_api.terminate_connection(context,
                                                          conn_volume,
@@ -5112,7 +5112,7 @@ class ComputeManager(manager.Manager):
         old_volume = self.volume_api.get(context, old_volume_id)
         # Yes this is a tightly-coupled state check of what's going on inside
         # cinder, but we need this while we still support old (v1/v2) and
-        # new style attachments (v3.27). Once we drop support for old style
+        # new style attachments (v3.44). Once we drop support for old style
         # attachments we could think about cleaning up the cinder-initiated
         # swap volume API flows.
         is_cinder_migration = (
