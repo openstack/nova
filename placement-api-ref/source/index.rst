@@ -24,3 +24,4 @@ Openstack Placement API concepts, please refer to the
 .. include:: resource_provider_allocations.inc
 .. include:: usages.inc
 .. include:: resource_provider_usages.inc
+.. include:: allocation_candidates.inc
