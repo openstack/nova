@@ -208,6 +208,14 @@ resource_provider_object:
   required: true
   description: >
     A dictionary contains uuid of the resource provider.
+resource_provider_usages:
+  type: object
+  in: body
+  required: true
+  description: >
+    The usage summary of the resource provider. This is a dictionary that
+    describes how much each class of resource is being consumed on this
+    resource provider. For example, ``"VCPU": 1`` means 1 VCPU is used.
 resource_provider_uuid:
   <<: *resource_provider_uuid_path
   in: body
