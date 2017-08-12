@@ -70,7 +70,7 @@ class FakeAttachment(object):
 
     def __init__(self):
         self.id = uuids.attachment_id
-        self.status = 'attached'
+        self.status = 'attaching'
         self.instance = uuids.instance_uuid
         self.volume_id = uuids.volume_id
         self.attached_at = timeutils.utcnow()
@@ -78,7 +78,8 @@ class FakeAttachment(object):
         self.attach_mode = 'rw'
         self.connection_info = {'driver_volume_type': 'fake_type',
                                 'target_lun': '1',
-                                'foo': 'bar'}
+                                'foo': 'bar',
+                                'attachment_id': uuids.attachment_id}
         self.att = {'id': self.id,
                     'status': self.status,
                     'instance': self.instance,
@@ -303,7 +304,7 @@ class CinderApiTestCase(test.NoDBTestCase):
         attachment_ref = {'id': uuids.attachment_id,
                           'connection_info': {}}
         expected_attachment_ref = {'id': uuids.attachment_id,
-                                   'connection_info': {'data': {}}}
+                                   'connection_info': {}}
         mock_cinderclient.return_value.attachments.create.return_value = (
             attachment_ref)
         result = self.api.attachment_create(
@@ -339,16 +340,18 @@ class CinderApiTestCase(test.NoDBTestCase):
         """Tests the happy path for updating a volume attachment."""
         fake_attachment = FakeAttachment()
         expected_attachment_ref = {
-            'id': uuids.attachment_id,
-            'status': 'attached',
-            'instance': fake_attachment.instance,
-            'volume_id': fake_attachment.volume_id,
-            'attached_at': fake_attachment.attached_at,
-            'detached_at': None,
-            'attach_mode': 'rw',
-            'connection_info': {'driver_volume_type': 'fake_type',
-                                'data': {'foo': 'bar',
-                                         'target_lun': '1'}}}
+             'id': uuids.attachment_id,
+             'volume_id': fake_attachment.volume_id,
+             'connection_info': {
+                 'attach_mode': 'rw',
+                 'attached_at': fake_attachment.attached_at,
+                 'connector': {'host': 'fake-host'},
+                 'data': {'foo': 'bar', 'target_lun': '1'},
+                 'detached_at': None,
+                 'driver_volume_type': 'fake_type',
+                 'instance': fake_attachment.instance,
+                 'status': 'attaching',
+                 'volume_id': fake_attachment.volume_id}}
         mock_cinderclient.return_value.attachments.update.return_value = (
             fake_attachment)
         result = self.api.attachment_update(
