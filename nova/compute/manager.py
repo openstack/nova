@@ -5642,10 +5642,6 @@ class ComputeManager(manager.Manager):
                                           network_info=network_info)
         LOG.info(_LI('Migrating instance to %s finished successfully.'),
                  dest, instance=instance)
-        LOG.info(_LI("You may see the error \"libvirt: QEMU error: "
-                     "Domain not found: no domain with matching name.\" "
-                     "This error can be safely ignored."),
-                 instance=instance)
 
         self._clean_instance_console_tokens(ctxt, instance)
         if migrate_data and migrate_data.obj_attr_is_set('migration'):
