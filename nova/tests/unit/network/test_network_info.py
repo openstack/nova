@@ -856,16 +856,20 @@ iface eth1 inet static
 class TestNetworkMetadata(test.NoDBTestCase):
     def setUp(self):
         super(TestNetworkMetadata, self).setUp()
-        self.netinfo = model.NetworkInfo([fake_network_cache_model.new_vif(
-            {'type': 'ethernet'})])
+        self.netinfo = self._new_netinfo()
+
+    def _new_netinfo(self, vif_type='ethernet'):
+        netinfo = model.NetworkInfo([fake_network_cache_model.new_vif(
+            {'type': vif_type})])
 
         # Give this vif ipv4 and ipv6 dhcp subnets
         ipv4_subnet = fake_network_cache_model.new_subnet(version=4)
         ipv6_subnet = fake_network_cache_model.new_subnet(version=6)
 
-        self.netinfo[0]['network']['subnets'][0] = ipv4_subnet
-        self.netinfo[0]['network']['subnets'][1] = ipv6_subnet
-        self.netinfo[0]['network']['meta']['mtu'] = 1500
+        netinfo[0]['network']['subnets'][0] = ipv4_subnet
+        netinfo[0]['network']['subnets'][1] = ipv6_subnet
+        netinfo[0]['network']['meta']['mtu'] = 1500
+        return netinfo
 
     def test_get_network_metadata_json(self):
 
@@ -1195,3 +1199,32 @@ class TestNetworkMetadata(test.NoDBTestCase):
         self.netinfo[0]['network']['subnets'].pop(0)
         network_json = netutils.get_network_metadata(self.netinfo)
         self.assertEqual(expected_json, network_json)
+
+    def test_legacy_vif_types_type_passed_through(self):
+        legacy_types = [
+            model.VIF_TYPE_BRIDGE,
+            model.VIF_TYPE_DVS,
+            model.VIF_TYPE_HW_VEB,
+            model.VIF_TYPE_HYPERV,
+            model.VIF_TYPE_OVS,
+            model.VIF_TYPE_TAP,
+            model.VIF_TYPE_VHOSTUSER,
+            model.VIF_TYPE_VIF,
+        ]
+        link_types = []
+        for vif_type in legacy_types:
+            network_json = netutils.get_network_metadata(
+                self._new_netinfo(vif_type=vif_type))
+            link_types.append(network_json["links"][0]["type"])
+
+        self.assertEqual(legacy_types, link_types)
+
+    def test_new_vif_types_get_type_phy(self):
+        new_types = ["whizbang_nvf", "vswitch9"]
+        link_types = []
+        for vif_type in new_types:
+            network_json = netutils.get_network_metadata(
+                self._new_netinfo(vif_type=vif_type))
+            link_types.append(network_json["links"][0]["type"])
+
+        self.assertEqual(["phy"] * len(new_types), link_types)
