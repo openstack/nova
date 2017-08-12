@@ -813,7 +813,9 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                   run_as_root=True,
                                   check_exit_code=exit_code),
                         mock.call('ip', 'link', 'set',
-                                  'eth13', port_state,
+                                  'eth13', 'address',
+                                  self.vif_hw_veb_macvtap['address'],
+                                  port_state,
                                   run_as_root=True,
                                   check_exit_code=exit_code)]
         }
