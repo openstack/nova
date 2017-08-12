@@ -5801,6 +5801,51 @@ class ComputeTestCase(BaseTestCase):
         mock_post.assert_called_once_with(c, instance, False, dest)
         mock_clear.assert_called_once_with(mock.ANY)
 
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'pre_live_migration')
+    @mock.patch.object(network_api.API, 'migrate_instance_start')
+    @mock.patch.object(compute_rpcapi.ComputeAPI,
+                       'post_live_migration_at_destination')
+    @mock.patch.object(compute_manager.InstanceEvents,
+                       'clear_events_for_instance')
+    @mock.patch.object(compute_utils, 'EventReporter')
+    @mock.patch('nova.objects.Migration.save')
+    def test_live_migration_handles_errors_correctly(self,
+            mock_save, mock_event, mock_clear,
+            mock_post, mock_migrate, mock_pre):
+        # Confirm live_migration() works as expected correctly.
+        # creating instance testdata
+        c = context.get_admin_context()
+        instance = self._create_fake_instance_obj(context=c)
+        instance.host = self.compute.host
+        dest = 'desthost'
+
+        migrate_data = migrate_data_obj.LibvirtLiveMigrateData(
+            is_shared_instance_path=False,
+            is_shared_block_storage=False)
+        mock_pre.return_value = migrate_data
+
+        # start test
+        migration = objects.Migration()
+        with mock.patch.object(self.compute.driver,
+                               'cleanup') as mock_cleanup:
+            mock_cleanup.side_effect = test.TestingException
+
+            self.assertRaises(test.TestingException,
+                self.compute.live_migration,
+                c, dest, instance, False, migration, migrate_data)
+
+        # ensure we have updated the instance and migration objects
+        self.assertEqual(vm_states.ERROR, instance.vm_state)
+        self.assertIsNone(instance.task_state)
+        self.assertEqual("error", migration.status)
+
+        mock_pre.assert_called_once_with(c, instance, False, None,
+                                         dest, migrate_data)
+        self.assertEqual(0, mock_clear.call_count)
+
+        # cleanup
+        instance.destroy()
+
     @mock.patch.object(fake.FakeDriver, 'unfilter_instance')
     @mock.patch.object(network_api.API, 'migrate_instance_start')
     @mock.patch.object(compute_rpcapi.ComputeAPI,
