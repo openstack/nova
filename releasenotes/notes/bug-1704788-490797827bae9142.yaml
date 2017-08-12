@@ -1,0 +1,5 @@
+---
+fixes:
+  - Correctly allow the use of a custom scheduler driver by using the name of
+    the custom driver entry point in the ``[scheduler]/driver`` config option.
+    You must also update the entry point in ``setup.cfg``.
