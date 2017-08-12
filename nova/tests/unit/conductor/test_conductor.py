@@ -1538,7 +1538,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             instance = objects.Instance.get_by_uuid(
                 self.ctxt, self.params['build_requests'][0].instance_uuid)
         self.assertEqual('error', instance.vm_state)
-        self.assertIsNone(None, instance.task_state)
+        self.assertIsNone(instance.task_state)
 
     @mock.patch('nova.compute.utils.notify_about_instance_usage')
     @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')

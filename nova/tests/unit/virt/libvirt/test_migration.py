@@ -44,7 +44,7 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
     def test_graphics_listen_addrs_empty(self):
         data = objects.LibvirtLiveMigrateData()
         addrs = migration.graphics_listen_addrs(data)
-        self.assertIsNone(None, addrs)
+        self.assertIsNone(addrs)
 
     def test_graphics_listen_addrs_spice(self):
         data = objects.LibvirtLiveMigrateData(
