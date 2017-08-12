@@ -1903,7 +1903,11 @@ def set_vf_interface_vlan(pci_addr, mac_addr, vlan=0):
                   run_as_root=True,
                   check_exit_code=exit_code)
     # Bring up/down the VF's interface
+    # TODO(edand): The mac is assigned as a workaround for the following issue
+    #              https://bugzilla.redhat.com/show_bug.cgi?id=1372944
+    #              once resolved it will be removed
     utils.execute('ip', 'link', 'set', vf_ifname,
+                  'address', mac_addr,
                   port_state,
                   run_as_root=True,
                   check_exit_code=exit_code)
