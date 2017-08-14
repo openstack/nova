@@ -156,6 +156,11 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         self.ironicclient = client_wrapper.IronicClientWrapper()
 
+        # This is needed for the instance flavor migration in Pike, and should
+        # be removed in Queens. Since this will run several times in the life
+        # of the driver, track the instances that have already been migrated.
+        self._migrated_instance_uuids = set()
+
     def _get_node(self, node_uuid):
         """Get a node by its UUID."""
         return self.ironicclient.call('node.get', node_uuid,
@@ -511,14 +516,9 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param host: the hostname of the compute host.
 
         """
-        if not self.node_cache:
-            self._refresh_cache()
-        # Since there could be many, many instances controlled by this host,
-        # spawn this asynchronously so as not to stall the startup of the
-        # compute service.
-        utils.spawn_n(self._pike_flavor_migration, host)
+        return
 
-    def _pike_flavor_migration(self, host):
+    def _pike_flavor_migration(self, node_uuids):
         """This code is needed in Pike to prevent problems where an operator
         has already adjusted their flavors to add the custom resource class to
         extra_specs. Since existing ironic instances will not have this in
@@ -533,28 +533,32 @@ class IronicDriver(virt_driver.ComputeDriver):
         """
         ctx = nova_context.get_admin_context()
 
-        # Using itervalues here as the number of nodes can be very high
-        for node in six.itervalues(self.node_cache):
-            if not node.instance_uuid:
+        for node_uuid in node_uuids:
+            node = self._node_from_cache(node_uuid)
+            if not node:
                 continue
-
-            if not node.resource_class:
+            node_rc = node.resource_class
+            if not node_rc:
                 LOG.warning("Node %(node)s does not have its resource_class "
                         "set.", {"node": node.uuid})
                 continue
-            rc = obj_fields.ResourceClass.normalize_name(node.resource_class)
+            if node.instance_uuid in self._migrated_instance_uuids:
+                continue
+            normalized_rc = obj_fields.ResourceClass.normalize_name(node_rc)
             instance = objects.Instance.get_by_uuid(ctx, node.instance_uuid,
                     expected_attrs=["flavor"])
             specs = instance.flavor.extra_specs
-            res_key = "resources:%s" % rc
-            if res_key in specs:
-                # Flavor has already been updated
+            resource_key = "resources:%s" % normalized_rc
+            self._migrated_instance_uuids.add(node.instance_uuid)
+            if resource_key in specs:
+                # The compute must have been restarted, and the instance.flavor
+                # has already been migrated
                 continue
-            specs[res_key] = 1
+            specs[resource_key] = "1"
             instance.save()
             LOG.debug("The flavor extra_specs for Ironic instance %(inst)s "
                       "have been updated for custom resource class '%(rc)s'.",
-                      {"inst": instance.uuid, "rc": rc})
+                      {"inst": instance.uuid, "rc": node_rc})
         return
 
     def _get_hypervisor_type(self):
@@ -694,6 +698,16 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         self.node_cache = node_cache
         self.node_cache_time = time.time()
+        # For Pike, we need to ensure that all instances have their flavor
+        # migrated to include the resource_class. Since there could be many,
+        # many instances controlled by this host, spawn this asynchronously so
+        # as not to block this service.
+        node_uuids = [node.uuid for node in self.node_cache.values()
+                      if node.instance_uuid and
+                      node.instance_uuid not in self._migrated_instance_uuids]
+        if node_uuids:
+            # No need to run unless something has changed
+            utils.spawn_n(self._pike_flavor_migration, node_uuids)
 
     def get_available_nodes(self, refresh=False):
         """Returns the UUIDs of Ironic nodes managed by this compute service.
