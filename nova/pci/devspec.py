@@ -31,22 +31,6 @@ ANY = '*'
 REGEX_ANY = '.*'
 
 
-def get_pci_dev_info(pci_obj, property, max, hex_value):
-    a = getattr(pci_obj, property)
-    if a == ANY:
-        return
-    try:
-        v = int(a, 16)
-    except ValueError:
-        raise exception.PciConfigInvalidWhitelist(
-            reason = "invalid %s %s" % (property, a))
-    if v > max:
-        raise exception.PciConfigInvalidWhitelist(
-            reason=_("invalid %(property)s %(attr)s") %
-                     {'property': property, 'attr': a})
-    setattr(pci_obj, property, hex_value % v)
-
-
 @six.add_metaclass(abc.ABCMeta)
 class PciAddressSpec(object):
     """Abstract class for all PCI address spec styles
@@ -65,6 +49,23 @@ class PciAddressSpec(object):
             all(c in string.hexdigits for c in self.slot),
             all(c in string.hexdigits for c in self.func)])
 
+    def _set_pci_dev_info(self, prop, maxval, hex_value):
+        a = getattr(self, prop)
+        if a == ANY:
+            return
+        try:
+            v = int(a, 16)
+        except ValueError:
+            raise exception.PciConfigInvalidWhitelist(
+                reason=_("property %(property)s ('%(attr)s') does not parse "
+                         "as a hex number.") % {'property': prop, 'attr': a})
+        if v > maxval:
+            raise exception.PciConfigInvalidWhitelist(
+                reason=_("property %(property)s (%(attr)s) is greater than "
+                         "the maximum allowable value (%(max)X).") %
+                         {'property': prop, 'attr': a, 'max': maxval})
+        setattr(self, prop, hex_value % v)
+
 
 class PhysicalPciAddress(PciAddressSpec):
     """Manages the address fields for a fully-qualified PCI address.
@@ -82,10 +83,10 @@ class PhysicalPciAddress(PciAddressSpec):
             else:
                 self.domain, self.bus, self.slot, self.func = (
                     utils.get_pci_address_fields(pci_addr))
-            get_pci_dev_info(self, 'func', MAX_FUNC, '%1x')
-            get_pci_dev_info(self, 'domain', MAX_DOMAIN, '%04x')
-            get_pci_dev_info(self, 'bus', MAX_BUS, '%02x')
-            get_pci_dev_info(self, 'slot', MAX_SLOT, '%02x')
+            self._set_pci_dev_info('func', MAX_FUNC, '%1x')
+            self._set_pci_dev_info('domain', MAX_DOMAIN, '%04x')
+            self._set_pci_dev_info('bus', MAX_BUS, '%02x')
+            self._set_pci_dev_info('slot', MAX_SLOT, '%02x')
         except (KeyError, ValueError):
             raise exception.PciDeviceWrongAddressFormat(address=pci_addr)
 
@@ -115,7 +116,7 @@ class PciAddressGlobSpec(PciAddressSpec):
         dbs, sep, func = pci_addr.partition('.')
         if func:
             self.func = func.strip()
-            get_pci_dev_info(self, 'func', MAX_FUNC, '%01x')
+            self._set_pci_dev_info('func', MAX_FUNC, '%01x')
         if dbs:
             dbs_fields = dbs.split(':')
             if len(dbs_fields) > 3:
@@ -127,9 +128,9 @@ class PciAddressGlobSpec(PciAddressSpec):
             dbs_all.extend(dbs_fields)
             dbs_checked = [s.strip() or ANY for s in dbs_all]
             self.domain, self.bus, self.slot = dbs_checked
-            get_pci_dev_info(self, 'domain', MAX_DOMAIN, '%04x')
-            get_pci_dev_info(self, 'bus', MAX_BUS, '%02x')
-            get_pci_dev_info(self, 'slot', MAX_SLOT, '%02x')
+            self._set_pci_dev_info('domain', MAX_DOMAIN, '%04x')
+            self._set_pci_dev_info('bus', MAX_BUS, '%02x')
+            self._set_pci_dev_info('slot', MAX_SLOT, '%02x')
 
     def match(self, phys_pci_addr):
         conditions = [
@@ -176,7 +177,7 @@ class WhitelistPciAddress(object):
 
     This class checks the address fields of the pci.passthrough_whitelist
     configuration option, validating the address fields.
-    Example config are:
+    Example configs:
 
         | [pci]
         | passthrough_whitelist = {"address":"*:0a:00.*",
@@ -226,8 +227,8 @@ class WhitelistPciAddress(object):
 
         # Try to match on the parent PCI address if the PciDeviceSpec is a
         # PF (sriov is available) and the device to match is a VF.  This
-        # makes possible to specify the PCI address of a PF in the
-        # pci_passthrough_whitelist to match any of it's VFs PCI devices.
+        # makes it possible to specify the PCI address of a PF in the
+        # pci.passthrough_whitelist to match any of its VFs' PCI addresses.
         if self.is_physical_function and pci_phys_addr:
             pci_phys_addr_obj = PhysicalPciAddress(pci_phys_addr)
             if self.pci_address_spec.match(pci_phys_addr_obj):
@@ -238,7 +239,7 @@ class WhitelistPciAddress(object):
         return self.pci_address_spec.match(pci_addr_obj)
 
 
-class PciDeviceSpec(object):
+class PciDeviceSpec(PciAddressSpec):
     def __init__(self, dev_spec):
         self.tags = dev_spec
         self._init_dev_details()
@@ -253,8 +254,8 @@ class PciDeviceSpec(object):
         self.dev_name = self.tags.pop("devname", None)
 
         self.vendor_id = self.vendor_id.strip()
-        get_pci_dev_info(self, 'vendor_id', MAX_VENDOR_ID, '%04x')
-        get_pci_dev_info(self, 'product_id', MAX_PRODUCT_ID, '%04x')
+        self._set_pci_dev_info('vendor_id', MAX_VENDOR_ID, '%04x')
+        self._set_pci_dev_info('product_id', MAX_PRODUCT_ID, '%04x')
 
         if self.address and self.dev_name:
             raise exception.PciDeviceInvalidDeviceName()
@@ -281,9 +282,9 @@ class PciDeviceSpec(object):
 
     def match_pci_obj(self, pci_obj):
         return self.match({'vendor_id': pci_obj.vendor_id,
-                            'product_id': pci_obj.product_id,
-                            'address': pci_obj.address,
-                            'parent_addr': pci_obj.parent_addr})
+                           'product_id': pci_obj.product_id,
+                           'address': pci_obj.address,
+                           'parent_addr': pci_obj.parent_addr})
 
     def get_tags(self):
         return self.tags

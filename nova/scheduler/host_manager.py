@@ -225,7 +225,7 @@ class HostState(object):
         self.updated = compute.updated_at
         self.numa_topology = compute.numa_topology
         self.pci_stats = pci_stats.PciDeviceStats(
-            compute.pci_device_pools)
+            stats=compute.pci_device_pools)
 
         # All virt drivers report host_ip
         self.host_ip = compute.host_ip
@@ -264,7 +264,7 @@ class HostState(object):
         @set_update_time_on_success
         def _locked(self, spec_obj):
             # Scheduler API is inherently multi-threaded as every incoming RPC
-            # message will be dispatched in it's own green thread. So the
+            # message will be dispatched in its own green thread. So the
             # shared host state should be consumed in a consistent way to make
             # sure its data is valid under concurrent write operations.
             self._locked_consume_from_request(spec_obj)

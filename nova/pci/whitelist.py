@@ -26,15 +26,16 @@ CONF = nova.conf.CONF
 
 class Whitelist(object):
 
-    """White list class to decide assignable pci devices.
+    """White list class to represent assignable pci devices.
 
-    Not all devices on compute node can be assigned to guest, the
-    cloud administrator decides the devices that can be assigned
-    based on vendor_id or product_id etc. If no white list specified,
-    no device will be assignable.
+    Not all devices on a compute node can be assigned to a guest. The
+    cloud administrator decides which devices can be assigned
+    based on vendor_id or product_id, etc. If no white list is specified,
+    no devices will be assignable.
     """
 
-    def _parse_white_list_from_config(self, whitelists):
+    @staticmethod
+    def _parse_white_list_from_config(whitelists):
         """Parse and validate the pci whitelist from the nova config."""
         specs = []
         for jsonspec in whitelists:
@@ -64,14 +65,16 @@ class Whitelist(object):
     def __init__(self, whitelist_spec=None):
         """White list constructor
 
-        For example, followed json string specifies that devices whose
+        For example, the following json string specifies that devices whose
         vendor_id is '8086' and product_id is '1520' can be assigned
-        to guest.
+        to guests.
         '[{"product_id":"1520", "vendor_id":"8086"}]'
 
-        :param whitelist_spec: A json string for a list of dictionaries,
-                               each dictionary specifies the pci device
-                               properties requirement.
+        :param whitelist_spec: A json string for a dictionary or list thereof.
+                               Each dictionary specifies the pci device
+                               properties requirement. See the definition of
+                               passthrough_whitelist in nova.conf.pci for
+                               details and examples.
         """
         super(Whitelist, self).__init__()
         if whitelist_spec:
