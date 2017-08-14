@@ -1223,7 +1223,7 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         # booted on
         allocations = self._get_allocations_by_server_uuid(server['id'])
         self.assertEqual(1, len(allocations),
-                         'No allocation for the server on the host it'
+                         'No allocation for the server on the host it '
                          'is booted on')
         allocation = allocations[source_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(flavor, allocation)
@@ -1248,7 +1248,7 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         # booted on
         allocations = self._get_allocations_by_server_uuid(server['id'])
         self.assertEqual(1, len(allocations),
-                         'No allocation for the server on the host it'
+                         'No allocation for the server on the host it '
                          'is booted on')
         allocation = allocations[source_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(flavor, allocation)
