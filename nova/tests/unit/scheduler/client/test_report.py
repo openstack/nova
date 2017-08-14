@@ -57,6 +57,21 @@ class SafeConnectedTestCase(test.NoDBTestCase):
         self.client._get_resource_provider("fake")
         self.assertTrue(req.called)
 
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_create_client')
+    @mock.patch('keystoneauth1.session.Session.request')
+    def test_missing_endpoint_create_client(self, req, create_client):
+        """Test EndpointNotFound retry behavior.
+
+        A missing endpoint should cause _create_client to be called.
+        """
+        req.side_effect = ks_exc.EndpointNotFound()
+        self.client._get_resource_provider("fake")
+
+        # This is the second time _create_client is called, but the first since
+        # the mock was created.
+        self.assertTrue(create_client.called)
+
     @mock.patch('keystoneauth1.session.Session.request')
     def test_missing_auth(self, req):
         """Test Missing Auth handled correctly.
