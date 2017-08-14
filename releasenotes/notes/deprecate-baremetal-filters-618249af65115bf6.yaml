@@ -1,0 +1,14 @@
+---
+deprecations:
+  - |
+    The configuration options ``baremetal_enabled_filters`` and
+    ``use_baremetal_filters`` are deprecated in Pike and should only be used if
+    your deployment still contains nodes that have not had their resource_class
+    attribute set. See `Ironic release notes <https://docs.openstack.org/releasenotes/ironic/>`_
+    for upgrade concerns.
+  - |
+    The following scheduler filters are deprecated in Pike: ``ExactRamFilter``,
+    ``ExactCoreFilter`` and ``ExactDiskFilter`` and should only be used if your
+    deployment still contains nodes that have not had their resource_class
+    attribute set. See `Ironic release notes <https://docs.openstack.org/releasenotes/ironic/>`_
+    for upgrade concerns.
