@@ -65,6 +65,18 @@ Nova Database
 
     Lists and optionally deletes database records where instance_uuid is NULL.
 
+``nova-manage db online_data_migrations [--max-count]``
+
+   Perform data migration to update all live data. Return exit code 0 if
+   migrations were successful or exit code 1 for partial updates. This command
+   should be called after upgrading database schema and nova services on all
+   controller nodes. If the command exits with partial updates (exit code 1)
+   the command will need to be called again.
+
+   ``--max-count`` controls the maximum number of objects to migrate in a given
+   call. If not specified, migration will occur in batches of 50 until fully
+   complete.
+
 Nova API Database
 ~~~~~~~~~~~~~~~~~
 
