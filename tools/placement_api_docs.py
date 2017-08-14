@@ -18,6 +18,7 @@ from nova.api.openstack.placement import handler
 
 # A humane ordering of HTTP methods for sorted output.
 ORDERED_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']
+DEPRECATED_METHODS = [('POST', '/resource_providers/{uuid}/inventories')]
 
 
 def _header_line(map_entry):
@@ -41,7 +42,8 @@ def inspect_doc(doc_files):
 
     header_lines = []
     for map_entry in routes:
-        header_lines.append(_header_line(map_entry))
+        if map_entry not in DEPRECATED_METHODS:
+            header_lines.append(_header_line(map_entry))
 
     content_lines = []
     for doc_file in doc_files:
