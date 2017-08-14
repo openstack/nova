@@ -141,7 +141,8 @@ class TestConstructor(test.NoDBTestCase):
 
         load_auth_mock.assert_called_once_with(CONF, 'placement')
         load_sess_mock.assert_called_once_with(CONF, 'placement',
-                                              auth=load_auth_mock.return_value)
+                additional_headers={'accept': 'application/json'},
+                auth=load_auth_mock.return_value)
         self.assertIsNone(client.ks_filter['interface'])
 
     @mock.patch('keystoneauth1.loading.load_session_from_conf_options')
@@ -152,7 +153,8 @@ class TestConstructor(test.NoDBTestCase):
 
         load_auth_mock.assert_called_once_with(CONF, 'placement')
         load_sess_mock.assert_called_once_with(CONF, 'placement',
-                                              auth=load_auth_mock.return_value)
+                additional_headers={'accept': 'application/json'},
+                auth=load_auth_mock.return_value)
         self.assertEqual('admin', client.ks_filter['interface'])
 
 
