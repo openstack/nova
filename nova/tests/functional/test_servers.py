@@ -1721,24 +1721,13 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         self.api.post_server_action(server['id'], req)
         self._wait_for_state_change(self.api, server, 'SHELVED_OFFLOADED')
         source_usages = self._get_provider_usages(source_rp_uuid)
-        # NOTE(gibi): this is bug 1710249 where shelve offload doesn't free up
-        # the resources
-        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
-        # NOTE(gibi): after fixing bug 1710249 the following should be true
-        # after offload there should be no usages
-        # self.assertEqual({'VCPU': 0,
-        #                   'MEMORY_MB': 0,
-        #                   'DISK_GB': 0},
-        #                  source_usages)
-        # NOTE(gibi): this is bug 1710249 where shelve offload doesn't free up
-        # the resources
+        self.assertEqual({'VCPU': 0,
+                          'MEMORY_MB': 0,
+                          'DISK_GB': 0},
+                         source_usages)
+
         allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(1, len(allocations))
-        allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, allocation)
-        # NOTE(gibi): after fixing bug 1710249 the following should be true
-        # after offload there should be no allocations
-        # self.assertEqual(0, len(allocations))
+        self.assertEqual(0, len(allocations))
 
     def test_shelve_offload_unshelve_diff_host(self):
         source_hostname = self.compute1.host
@@ -1772,18 +1761,9 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         self.assertFlavorMatchesAllocation(self.flavor1, current_usages)
 
         allocations = self._get_allocations_by_server_uuid(server['id'])
-        # NOTE(gibi): this is bug 1710249 where shelve offload doesn't free up
-        # the resources
-        self.assertEqual(2, len(allocations))
-        allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, allocation)
+        self.assertEqual(1, len(allocations))
         allocation = allocations[current_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor1, allocation)
-
-        # NOTE(gibi): after fixing bug 1710249 the following should be true
-        # self.assertEqual(1, len(allocations))
-        # allocation = allocations[current_rp_uuid]['resources']
-        # self.assertFlavorMatchesAllocation(self.flavor1, allocation)
 
         self._delete_and_check_allocations(
             server, source_rp_uuid, source_rp_uuid)
@@ -1817,24 +1797,12 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         # the host running the instance should have resource usage
         current_rp_uuid = self._get_provider_uuid_by_host(current_hostname)
         current_usages = self._get_provider_usages(current_rp_uuid)
-        # NOTE(gibi): this is bug 1710249 where shelve offload doesn't free up
-        # the resources so the host now have doubled allocation
-        self.assertFlavorsMatchAllocation(
-            self.flavor1, self.flavor1, current_usages)
-
-        # NOTE(gibi): after fixing bug 1710249 the following should be true
-        # self.assertFlavorMatchesAllocation(self.flavor1, current_usages)
+        self.assertFlavorMatchesAllocation(self.flavor1, current_usages)
 
         allocations = self._get_allocations_by_server_uuid(server['id'])
         self.assertEqual(1, len(allocations))
         allocation = allocations[current_rp_uuid]['resources']
-        # NOTE(gibi): this is bug 1710249 where shelve offload doesn't free up
-        # the resources so the host now have doubled allocation
-        self.assertFlavorsMatchAllocation(
-            self.flavor1, self.flavor1, allocation)
-
-        # NOTE(gibi): after fixing bug 1710249 the following should be true
-        # self.assertFlavorMatchesAllocation(self.flavor1, allocation)
+        self.assertFlavorMatchesAllocation(self.flavor1, allocation)
 
         self._delete_and_check_allocations(
             server, source_rp_uuid, source_rp_uuid)

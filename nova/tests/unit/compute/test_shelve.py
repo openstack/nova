@@ -179,6 +179,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         instance = self._shelve_offload(clean_shutdown=False)
         mock_power_off.assert_called_once_with(instance, 0, 0)
 
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                'delete_allocation_for_shelve_offloaded_instance')
     @mock.patch.object(nova.compute.manager.ComputeManager,
                        '_update_resource_tracker')
     @mock.patch.object(nova.compute.manager.ComputeManager,
@@ -188,7 +190,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     def _shelve_offload(self, mock_notify, mock_notify_instance_usage,
                         mock_get_power_state, mock_update_resource_tracker,
-                        clean_shutdown=True):
+                        mock_delete_alloc, clean_shutdown=True):
         host = 'fake-mini'
         instance = self._create_fake_instance_obj(params={'host': host})
         instance.task_state = task_states.SHELVING
@@ -221,6 +223,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             self.context, instance)
         mock_update_resource_tracker.assert_called_once_with(self.context,
                                                              instance)
+        mock_delete_alloc.assert_called_once_with(instance)
 
         return instance
 
