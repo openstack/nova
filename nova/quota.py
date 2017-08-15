@@ -1367,9 +1367,10 @@ class CountableResource(AbsoluteResource):
         """Initializes a CountableResource.
 
         Countable resources are those resources which directly
-        correspond to objects in the database, i.e., instances, cores,
-        etc., but for which a count by project ID is inappropriate.  A
-        CountableResource must be constructed with a counting
+        correspond to objects in the database, but for which a count
+        by project ID is inappropriate e.g. security_group_rules,
+        keypairs, etc.
+        A CountableResource must be constructed with a counting
         function, which will be called to determine the current counts
         of the resource.
 
