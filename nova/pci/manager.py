@@ -21,7 +21,6 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
 from nova import exception
-from nova.i18n import _LW
 from nova import objects
 from nova.objects import fields
 from nova.pci import stats
@@ -168,9 +167,9 @@ class PciDevTracker(object):
                 try:
                     existed.remove()
                 except exception.PciDeviceInvalidStatus as e:
-                    LOG.warning(_LW("Trying to remove device with %(status)s "
-                                    "ownership %(instance_uuid)s because of "
-                                    "%(pci_exception)s"),
+                    LOG.warning("Trying to remove device with %(status)s "
+                                "ownership %(instance_uuid)s because of "
+                                "%(pci_exception)s",
                                 {'status': existed.status,
                                  'instance_uuid': existed.instance_uuid,
                                  'pci_exception': e.format_message()})
@@ -228,8 +227,8 @@ class PciDevTracker(object):
             dev.claim(instance_uuid)
         if instance_numa_topology and any(
                                         dev.numa_node is None for dev in devs):
-            LOG.warning(_LW("Assigning a pci device without numa affinity to"
-            "instance %(instance)s which has numa topology"),
+            LOG.warning("Assigning a pci device without numa affinity to "
+                        "instance %(instance)s which has numa topology",
                         {'instance': instance_uuid})
         return devs
 

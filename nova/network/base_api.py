@@ -22,7 +22,7 @@ from oslo_utils import excutils
 
 from nova.db import base
 from nova import hooks
-from nova.i18n import _, _LE
+from nova.i18n import _
 from nova.network import model as network_model
 from nova import objects
 
@@ -56,7 +56,7 @@ def update_instance_cache_with_nw_info(impl, context, instance,
         instance.info_cache = ic
     except Exception:
         with excutils.save_and_reraise_exception():
-            LOG.exception(_LE('Failed storing info cache'), instance=instance)
+            LOG.exception('Failed storing info cache', instance=instance)
 
 
 def refresh_cache(f):

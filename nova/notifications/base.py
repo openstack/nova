@@ -29,7 +29,6 @@ import six
 import nova.conf
 import nova.context
 from nova import exception
-from nova.i18n import _LE
 from nova.image import glance
 from nova import network
 from nova.network import model as network_model
@@ -142,8 +141,8 @@ def send_update(context, old_instance, new_instance, service="compute",
                       'instance could not be found and was most likely '
                       'deleted.', instance=new_instance)
         except Exception:
-            LOG.exception(_LE("Failed to send state update notification"),
-                    instance=new_instance)
+            LOG.exception("Failed to send state update notification",
+                          instance=new_instance)
 
 
 def send_update_with_states(context, instance, old_vm_state, new_vm_state,
@@ -185,8 +184,8 @@ def send_update_with_states(context, instance, old_vm_state, new_vm_state,
                       'instance could not be found and was most likely '
                       'deleted.', instance=instance)
         except Exception:
-            LOG.exception(_LE("Failed to send state update notification"),
-                    instance=instance)
+            LOG.exception("Failed to send state update notification",
+                          instance=instance)
 
 
 def _compute_states_payload(instance, old_vm_state=None,
@@ -336,7 +335,7 @@ def bandwidth_usage(instance_ref, audit_start,
         except Exception:
             try:
                 with excutils.save_and_reraise_exception():
-                    LOG.exception(_LE('Failed to get nw_info'),
+                    LOG.exception('Failed to get nw_info',
                                   instance=instance_ref)
             except Exception:
                 if ignore_missing_network_data:

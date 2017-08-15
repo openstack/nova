@@ -22,7 +22,6 @@ from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
 from nova.db.sqlalchemy import models as main_models
 from nova import exception
-from nova.i18n import _LE
 from nova import objects
 from nova.objects import base
 from nova.objects import fields
@@ -258,9 +257,9 @@ def _get_main_keypairs(context, limit):
 def migrate_keypairs_to_api_db(context, count):
     bad_instances = _count_unmigrated_instances(context)
     if bad_instances:
-        LOG.error(_LE('Some instances are still missing keypair '
-                      'information. Unable to run keypair migration '
-                      'at this time.'))
+        LOG.error('Some instances are still missing keypair '
+                  'information. Unable to run keypair migration '
+                  'at this time.')
         return 0, 0
 
     main_keypairs = _get_main_keypairs(context, count)

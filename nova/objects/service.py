@@ -20,7 +20,6 @@ from nova import availability_zones
 from nova import context as nova_context
 from nova import db
 from nova import exception
-from nova.i18n import _LW
 from nova.notifications.objects import base as notification
 from nova.notifications.objects import service as service_notification
 from nova import objects
@@ -402,8 +401,8 @@ class Service(base.NovaPersistentObject, base.NovaObject,
     @base.remotable_classmethod
     def get_minimum_version_multi(cls, context, binaries, use_slave=False):
         if not all(binary.startswith('nova-') for binary in binaries):
-            LOG.warning(_LW('get_minimum_version called with likely-incorrect '
-                            'binaries `%s\''), ','.join(binaries))
+            LOG.warning('get_minimum_version called with likely-incorrect '
+                        'binaries `%s\'', ','.join(binaries))
             raise exception.ObjectActionError(action='get_minimum_version',
                                               reason='Invalid binary prefix')
 

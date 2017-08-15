@@ -23,7 +23,6 @@ from oslo_log import log as logging
 
 
 from nova import exception
-from nova.i18n import _LW
 
 LOG = logging.getLogger(__name__)
 
@@ -152,9 +151,9 @@ def get_mac_by_pci_address(pci_addr, pf_interface=False):
             mac = next(f).strip()
             return mac
     except (IOError, StopIteration) as e:
-        LOG.warning(_LW("Could not find the expected sysfs file for "
-                        "determining the MAC address of the PCI device "
-                        "%(addr)s. May not be a NIC. Error: %(e)s"),
+        LOG.warning("Could not find the expected sysfs file for "
+                    "determining the MAC address of the PCI device "
+                    "%(addr)s. May not be a NIC. Error: %(e)s",
                     {'addr': pci_addr, 'e': e})
         raise exception.PciDeviceNotFoundById(id=pci_addr)
 

@@ -20,7 +20,7 @@ from oslo_config import cfg
 from oslo_log import log as logging
 
 from nova import exception
-from nova.i18n import _, _LI, _LW
+from nova.i18n import _
 from nova.network import dns_driver
 
 CONF = cfg.CONF
@@ -115,8 +115,7 @@ class MiniDNS(dns_driver.DNSDriver):
         outfile.close()
         shutil.move(outfile.name, self.filename)
         if not deleted:
-            LOG.warning(_LW('Cannot delete entry |%s|'),
-                        self.qualify(name, domain))
+            LOG.warning('Cannot delete entry |%s|', self.qualify(name, domain))
             raise exception.NotFound
 
     def modify_address(self, name, address, domain):
@@ -190,10 +189,10 @@ class MiniDNS(dns_driver.DNSDriver):
                         entry['domain'] != fqdomain.lower()):
                     outfile.write(line)
                 else:
-                    LOG.info(_LI("deleted %s"), entry)
+                    LOG.info("deleted %s", entry)
                     deleted = True
         outfile.close()
         shutil.move(outfile.name, self.filename)
         if not deleted:
-            LOG.warning(_LW('Cannot delete domain |%s|'), fqdomain)
+            LOG.warning('Cannot delete domain |%s|', fqdomain)
             raise exception.NotFound

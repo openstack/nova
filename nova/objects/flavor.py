@@ -30,7 +30,6 @@ from nova.db.sqlalchemy.api import require_context
 from nova.db.sqlalchemy import api_models
 from nova.db.sqlalchemy import models as main_models
 from nova import exception
-from nova.i18n import _LW
 from nova.notifications.objects import base as notification
 from nova.notifications.objects import flavor as flavor_notification
 from nova import objects
@@ -199,7 +198,7 @@ def _ensure_migrated(context):
     result = context.session.query(main_models.InstanceTypes).\
              filter_by(deleted=0).count()
     if result:
-        LOG.warning(_LW('Main database contains %(count)i unmigrated flavors'),
+        LOG.warning('Main database contains %(count)i unmigrated flavors',
                     {'count': result})
     return result == 0
 
@@ -760,7 +759,7 @@ def migrate_flavors(ctxt, count, hard_delete=False):
             else:
                 db.flavor_destroy(ctxt, flavor.flavorid)
         except exception.FlavorNotFound:
-            LOG.warning(_LW('Flavor id %(id)i disappeared during migration'),
+            LOG.warning('Flavor id %(id)i disappeared during migration',
                         {'id': flavor_id})
         except (exception.FlavorExists, exception.FlavorIdExists) as e:
             LOG.error(six.text_type(e))

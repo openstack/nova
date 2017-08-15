@@ -21,7 +21,6 @@ from oslo_log import log as logging
 import six
 
 from nova import exception
-from nova.i18n import _LE
 from nova.objects import fields
 from nova.objects import pci_device_pool
 from nova.pci import utils
@@ -157,12 +156,12 @@ class PciDeviceStats(object):
             # Failed to allocate the required number of devices
             # Return the devices already allocated back to their pools
             if sum([pool['count'] for pool in pools]) < count:
-                LOG.error(_LE("Failed to allocate PCI devices for instance."
+                LOG.error("Failed to allocate PCI devices for instance."
                           " Unassigning devices back to pools."
                           " This should not happen, since the scheduler"
                           " should have accurate information, and allocation"
                           " during claims is controlled via a hold"
-                          " on the compute node semaphore"))
+                          " on the compute node semaphore")
                 for d in range(len(alloc_devices)):
                     self.add_device(alloc_devices.pop())
                 return None

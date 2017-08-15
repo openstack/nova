@@ -36,7 +36,7 @@ import six
 
 import nova.conf
 from nova import exception
-from nova.i18n import _, _LE, _LW
+from nova.i18n import _
 from nova.network import model as network_model
 from nova import objects
 from nova.pci import utils as pci_utils
@@ -141,8 +141,8 @@ class IptablesTable(object):
             chain_set = self.unwrapped_chains
 
         if name not in chain_set:
-            LOG.warning(_LW('Attempted to remove chain %s which does not '
-                            'exist'), name)
+            LOG.warning('Attempted to remove chain %s which does not exist',
+                        name)
             return
         self.dirty = True
 
@@ -210,8 +210,8 @@ class IptablesTable(object):
                 self.remove_rules.append(IptablesRule(chain, rule, wrap, top))
             self.dirty = True
         except ValueError:
-            LOG.warning(_LW('Tried to remove rule that was not there:'
-                            ' %(chain)r %(rule)r %(wrap)r %(top)r'),
+            LOG.warning('Tried to remove rule that was not there:'
+                        ' %(chain)r %(rule)r %(wrap)r %(top)r',
                         {'chain': chain, 'rule': rule,
                          'top': top, 'wrap': wrap})
 
@@ -714,8 +714,8 @@ def ensure_floating_forward(floating_ip, fixed_ip, device, network):
     regex = '.*\s+%s(/32|\s+|$)' % floating_ip
     num_rules = iptables_manager.ipv4['nat'].remove_rules_regex(regex)
     if num_rules:
-        msg = _LW('Removed %(num)d duplicate rules for floating IP %(float)s')
-        LOG.warning(msg, {'num': num_rules, 'float': floating_ip})
+        LOG.warning('Removed %(num)d duplicate rules for floating IP '
+                    '%(float)s', {'num': num_rules, 'float': floating_ip})
     for chain, rule in floating_forward_rules(floating_ip, fixed_ip, device):
         iptables_manager.ipv4['nat'].add_rule(chain, rule)
     iptables_manager.apply()
@@ -762,7 +762,7 @@ def clean_conntrack(fixed_ip):
         _execute('conntrack', '-D', '-r', fixed_ip, run_as_root=True,
                  check_exit_code=[0, 1])
     except processutils.ProcessExecutionError:
-        LOG.exception(_LE('Error deleting conntrack entries for %s'), fixed_ip)
+        LOG.exception('Error deleting conntrack entries for %s', fixed_ip)
 
 
 def _enable_ipv4_forwarding():
@@ -1013,7 +1013,7 @@ def restart_dhcp(context, dev, network_ref, fixedips):
                 _add_dnsmasq_accept_rules(dev)
                 return
             except Exception as exc:
-                LOG.error(_LE('kill -HUP dnsmasq threw %s'), exc)
+                LOG.error('kill -HUP dnsmasq threw %s', exc)
         else:
             LOG.debug('Pid %d is stale, relaunching dnsmasq', pid)
 
@@ -1091,7 +1091,7 @@ interface %s
             try:
                 _execute('kill', pid, run_as_root=True)
             except Exception as exc:
-                LOG.error(_LE('killing radvd threw %s'), exc)
+                LOG.error('killing radvd threw %s', exc)
         else:
             LOG.debug('Pid %d is stale, relaunching radvd', pid)
 
@@ -1123,7 +1123,7 @@ def _host_dhcp(fixedip):
     #            to truncate the hostname to only 63 characters.
     hostname = fixedip.instance.hostname
     if len(hostname) > 63:
-        LOG.warning(_LW('hostname %s too long, truncating.'), hostname)
+        LOG.warning('hostname %s too long, truncating.', hostname)
         hostname = fixedip.instance.hostname[:2] + '-' +\
                    fixedip.instance.hostname[-60:]
     if CONF.use_single_default_gateway:
@@ -1258,7 +1258,7 @@ def _ovs_vsctl(args):
     try:
         return utils.execute(*full_args, run_as_root=True)
     except Exception as e:
-        LOG.error(_LE("Unable to execute %(cmd)s. Exception: %(exception)s"),
+        LOG.error("Unable to execute %(cmd)s. Exception: %(exception)s",
                   {'cmd': full_args, 'exception': e})
         raise exception.OvsConfigurationFailure(inner_exception=e)
 
@@ -1322,9 +1322,9 @@ def create_tap_dev(dev, mac_address=None, multiqueue=False):
         except processutils.ProcessExecutionError:
             if multiqueue:
                 LOG.warning(
-                    _LW('Failed to create a tap device with ip tuntap. '
-                        'tunctl does not support creation of multi-queue '
-                        'enabled devices, skipping fallback.'))
+                    'Failed to create a tap device with ip tuntap. '
+                    'tunctl does not support creation of multi-queue '
+                    'enabled devices, skipping fallback.')
                 raise
 
             # Second option: tunctl
@@ -1359,7 +1359,7 @@ def delete_net_dev(dev):
             LOG.debug("Net device removed: '%s'", dev)
         except processutils.ProcessExecutionError:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE("Failed removing net device: '%s'"), dev)
+                LOG.error("Failed removing net device: '%s'", dev)
 
 
 def delete_bridge_dev(dev):
@@ -1370,7 +1370,7 @@ def delete_bridge_dev(dev):
             utils.execute('brctl', 'delbr', dev, run_as_root=True)
         except processutils.ProcessExecutionError:
             with excutils.save_and_reraise_exception():
-                LOG.error(_LE("Failed removing bridge device: '%s'"), dev)
+                LOG.error("Failed removing bridge device: '%s'", dev)
 
 
 # Similar to compute virt layers, the Linux network node
@@ -1681,18 +1681,18 @@ def _exec_ebtables(*cmd, **kwargs):
             # See if we can retry the error.
             if any(error in exc.stderr for error in retry_strings):
                 if count > attempts and check_exit_code:
-                    LOG.warning(_LW('%s failed. Not Retrying.'), ' '.join(cmd))
+                    LOG.warning('%s failed. Not Retrying.', ' '.join(cmd))
                     raise
                 else:
                     # We need to sleep a bit before retrying
-                    LOG.warning(_LW("%(cmd)s failed. Sleeping %(time)s "
-                                    "seconds before retry."),
+                    LOG.warning("%(cmd)s failed. Sleeping %(time)s "
+                                "seconds before retry.",
                                 {'cmd': ' '.join(cmd), 'time': sleep})
                     time.sleep(sleep)
             else:
                 # Not eligible for retry
                 if check_exit_code:
-                    LOG.warning(_LW('%s failed. Not Retrying.'), ' '.join(cmd))
+                    LOG.warning('%s failed. Not Retrying.', ' '.join(cmd))
                     raise
                 else:
                     return
