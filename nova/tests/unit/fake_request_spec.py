@@ -80,6 +80,7 @@ def fake_spec_obj(remove_id=False):
     req_obj.limits = objects.SchedulerLimits()
     req_obj.instance_group = objects.InstanceGroup(uuid=uuids.instgroup)
     req_obj.project_id = 'fake'
+    req_obj.user_id = 'fake-user'
     req_obj.num_instances = 1
     req_obj.availability_zone = None
     req_obj.ignore_hosts = ['host2', 'host4']

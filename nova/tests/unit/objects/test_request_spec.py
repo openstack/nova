@@ -78,12 +78,13 @@ class _TestRequestSpecObject(object):
         instance.numa_topology = None
         instance.pci_requests = None
         instance.project_id = fakes.FAKE_PROJECT_ID
+        instance.user_id = fakes.FAKE_USER_ID
         instance.availability_zone = 'nova'
 
         spec = objects.RequestSpec()
         spec._from_instance(instance)
         instance_fields = ['numa_topology', 'pci_requests', 'uuid',
-                           'project_id', 'availability_zone']
+                           'project_id', 'user_id', 'availability_zone']
         for field in instance_fields:
             if field == 'uuid':
                 self.assertEqual(getattr(instance, field),
@@ -97,12 +98,13 @@ class _TestRequestSpecObject(object):
                         numa_topology=None,
                         pci_requests=None,
                         project_id=fakes.FAKE_PROJECT_ID,
+                        user_id=fakes.FAKE_USER_ID,
                         availability_zone='nova')
 
         spec = objects.RequestSpec()
         spec._from_instance(instance)
         instance_fields = ['numa_topology', 'pci_requests', 'uuid',
-                           'project_id', 'availability_zone']
+                           'project_id', 'user_id', 'availability_zone']
         for field in instance_fields:
             if field == 'uuid':
                 self.assertEqual(instance.get(field),
@@ -124,6 +126,7 @@ class _TestRequestSpecObject(object):
             vcpus=1,
             numa_topology=None,
             project_id=fakes.FAKE_PROJECT_ID,
+            user_id=fakes.FAKE_USER_ID,
             availability_zone='nova',
             pci_requests={
                 'instance_uuid': 'fakeid',
@@ -142,6 +145,7 @@ class _TestRequestSpecObject(object):
             memory_mb=10,
             vcpus=1,
             project_id=fakes.FAKE_PROJECT_ID,
+            user_id=fakes.FAKE_USER_ID,
             availability_zone='nova',
             pci_requests=None,
             numa_topology={'cells': [{'id': 1, 'cpuset': ['1'], 'memory': 8192,
@@ -180,6 +184,7 @@ class _TestRequestSpecObject(object):
         spec.numa_topology = None
         spec.pci_requests = None
         spec.project_id = fakes.FAKE_PROJECT_ID
+        spec.user_id = fakes.FAKE_USER_ID
         spec.availability_zone = 'nova'
 
         instance = spec._to_legacy_instance()
@@ -190,6 +195,7 @@ class _TestRequestSpecObject(object):
                           'numa_topology': None,
                           'pci_requests': None,
                           'project_id': fakes.FAKE_PROJECT_ID,
+                          'user_id': fakes.FAKE_USER_ID,
                           'availability_zone': 'nova'}, instance)
 
     def test_to_legacy_instance_with_unset_values(self):
@@ -281,6 +287,7 @@ class _TestRequestSpecObject(object):
                          numa_topology=None,
                          pci_requests=None,
                          project_id=1,
+                         user_id=2,
                          availability_zone='nova')}
         filt_props = {}
 
@@ -623,6 +630,16 @@ class _TestRequestSpecObject(object):
         primitive = req_obj.obj_to_primitive(target_version='1.7',
                                              version_manifest=versions)
         self.assertNotIn('security_groups', primitive)
+
+    def test_compat_user_id(self):
+        req_obj = objects.RequestSpec(project_id=fakes.FAKE_PROJECT_ID,
+                                      user_id=fakes.FAKE_USER_ID)
+        versions = ovo_base.obj_tree_get_versions('RequestSpec')
+        primitive = req_obj.obj_to_primitive(target_version='1.8',
+                                             version_manifest=versions)
+        primitive = primitive['nova_object.data']
+        self.assertNotIn('user_id', primitive)
+        self.assertIn('project_id', primitive)
 
     def test_default_requested_destination(self):
         req_obj = objects.RequestSpec()

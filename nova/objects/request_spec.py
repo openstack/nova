@@ -41,7 +41,8 @@ class RequestSpec(base.NovaObject):
     # Version 1.6: Added requested_destination
     # Version 1.7: Added destroy()
     # Version 1.8: Added security_groups
-    VERSION = '1.8'
+    # Version 1.9: Added user_id
+    VERSION = '1.9'
 
     fields = {
         'id': fields.IntegerField(),
@@ -53,6 +54,7 @@ class RequestSpec(base.NovaObject):
         # TODO(mriedem): The project_id shouldn't be nullable since the
         # scheduler relies on it being set.
         'project_id': fields.StringField(nullable=True),
+        'user_id': fields.StringField(nullable=True),
         'availability_zone': fields.StringField(nullable=True),
         'flavor': fields.ObjectField('Flavor', nullable=False),
         'num_instances': fields.IntegerField(default=1),
@@ -82,6 +84,9 @@ class RequestSpec(base.NovaObject):
     def obj_make_compatible(self, primitive, target_version):
         super(RequestSpec, self).obj_make_compatible(primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 9):
+            if 'user_id' in primitive:
+                del primitive['user_id']
         if target_version < (1, 8):
             if 'security_groups' in primitive:
                 del primitive['security_groups']
@@ -153,7 +158,7 @@ class RequestSpec(base.NovaObject):
             return
 
         instance_fields = ['numa_topology', 'pci_requests', 'uuid',
-                           'project_id', 'availability_zone']
+                           'project_id', 'user_id', 'availability_zone']
         for field in instance_fields:
             if field == 'uuid':
                 setattr(self, 'instance_uuid', getter(instance, field))
@@ -307,7 +312,8 @@ class RequestSpec(base.NovaObject):
         # fields, we can only return a dict.
         instance = {}
         instance_fields = ['numa_topology', 'pci_requests',
-                           'project_id', 'availability_zone', 'instance_uuid']
+                           'project_id', 'user_id', 'availability_zone',
+                           'instance_uuid']
         for field in instance_fields:
             if not self.obj_attr_is_set(field):
                 continue
@@ -388,7 +394,8 @@ class RequestSpec(base.NovaObject):
     @classmethod
     def from_components(cls, context, instance_uuid, image, flavor,
             numa_topology, pci_requests, filter_properties, instance_group,
-            availability_zone, security_groups=None, project_id=None):
+            availability_zone, security_groups=None, project_id=None,
+            user_id=None):
         """Returns a new RequestSpec object hydrated by various components.
 
         This helper is useful in creating the RequestSpec from the various
@@ -409,6 +416,8 @@ class RequestSpec(base.NovaObject):
                                 set security_groups on the resulting object.
         :param project_id: The project_id for the requestspec (should match
                            the instance project_id).
+        :param user_id: The user_id for the requestspec (should match
+                           the instance user_id).
         """
         spec_obj = cls(context)
         spec_obj.num_instances = 1
@@ -417,6 +426,7 @@ class RequestSpec(base.NovaObject):
         if spec_obj.instance_group is None and filter_properties:
             spec_obj._populate_group_info(filter_properties)
         spec_obj.project_id = project_id or context.project_id
+        spec_obj.user_id = user_id or context.user_id
         spec_obj._image_meta_from_image(image)
         spec_obj._from_flavor(flavor)
         spec_obj._from_instance_pci_requests(pci_requests)
@@ -438,9 +448,11 @@ class RequestSpec(base.NovaObject):
         spec_obj.obj_set_defaults()
         return spec_obj
 
-    def ensure_project_id(self, instance):
+    def ensure_project_and_user_id(self, instance):
         if 'project_id' not in self or self.project_id is None:
             self.project_id = instance.project_id
+        if 'user_id' not in self or self.user_id is None:
+            self.user_id = instance.user_id
 
     @staticmethod
     def _from_db_object(context, spec, db_spec):
@@ -628,7 +640,8 @@ def _create_minimal_request_spec(context, instance):
         instance.flavor, instance.numa_topology,
         instance.pci_requests,
         {}, None, instance.availability_zone,
-        project_id=instance.project_id
+        project_id=instance.project_id,
+        user_id=instance.user_id
     )
     scheduler_utils.setup_instance_group(context, request_spec)
     request_spec.create()

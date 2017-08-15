@@ -301,7 +301,7 @@ class LiveMigrationTask(base.TaskBase):
             request_spec.requested_destination = objects.Destination(
                 cell=cell_mapping)
 
-        request_spec.ensure_project_id(self.instance)
+        request_spec.ensure_project_and_user_id(self.instance)
 
         return request_spec
 
