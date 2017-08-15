@@ -2620,6 +2620,7 @@ class AllocationCandidates(base.NovaObject):
                     resource_requests=resource_requests,
                 )
                 alloc_request_objs.append(req_obj)
+                continue
 
             has_none = len(local_resources) == 0
             if has_none:
