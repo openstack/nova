@@ -4344,6 +4344,9 @@ class ComputeManager(manager.Manager):
         # NOTE(ndipanov): Free resources from the resource tracker
         self._update_resource_tracker(context, instance)
 
+        rt = self._get_resource_tracker()
+        rt.delete_allocation_for_shelve_offloaded_instance(instance)
+
         # NOTE(sfinucan): RPC calls should no longer be attempted against this
         # instance, so ensure any calls result in errors
         self._nil_out_instance_obj_host_and_node(instance)
