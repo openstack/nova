@@ -464,6 +464,9 @@ class FakeVirtDomain(object):
     def isActive(self):
         return True
 
+    def isPersistent(self):
+        return True
+
 
 class CacheConcurrencyTestCase(test.NoDBTestCase):
     def setUp(self):

@@ -357,9 +357,8 @@ class Guest(object):
                 devs.append(dev)
         return devs
 
-    def detach_device_with_retry(self, get_device_conf_func, device,
-                                 persistent, live, max_retry_count=7,
-                                 inc_sleep_time=2,
+    def detach_device_with_retry(self, get_device_conf_func, device, live,
+                                 max_retry_count=7, inc_sleep_time=2,
                                  max_sleep_time=30,
                                  alternative_device_name=None):
         """Detaches a device from the guest. After the initial detach request,
@@ -370,8 +369,6 @@ class Guest(object):
         :param get_device_conf_func: function which takes device as a parameter
                                      and returns the configuration for device
         :param device: device to detach
-        :param persistent: bool to indicate whether the change is
-                           persistent or not
         :param live: bool to indicate whether it affects the guest in running
                      state
         :param max_retry_count: number of times the returned function will
@@ -415,6 +412,8 @@ class Guest(object):
         conf = get_device_conf_func(device)
         if conf is None:
             raise exception.DeviceNotFound(device=alternative_device_name)
+
+        persistent = self.has_persistent_configuration()
 
         LOG.debug('Attempting initial detach for device %s', device)
         _try_detach_device(conf, persistent, live)
