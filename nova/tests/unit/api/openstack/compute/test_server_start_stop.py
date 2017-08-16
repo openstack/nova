@@ -17,7 +17,6 @@ from oslo_policy import policy as oslo_policy
 import six
 import webob
 
-from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute import servers \
         as server_v21
 from nova.compute import api as compute_api
@@ -41,9 +40,7 @@ class ServerStartStopTestV21(test.TestCase):
                       fakes.fake_instance_get())
 
     def _setup_controller(self):
-        ext_info = extension_info.LoadedExtensionInfo()
-        self.controller = server_v21.ServersController(
-                              extension_info=ext_info)
+        self.controller = server_v21.ServersController()
 
     @mock.patch.object(compute_api.API, 'start')
     def test_start(self, start_mock):
@@ -130,9 +127,7 @@ class ServerStartStopPolicyEnforcementV21(test.TestCase):
 
     def setUp(self):
         super(ServerStartStopPolicyEnforcementV21, self).setUp()
-        ext_info = extension_info.LoadedExtensionInfo()
-        self.controller = server_v21.ServersController(
-                          extension_info=ext_info)
+        self.controller = server_v21.ServersController()
         self.req = fakes.HTTPRequest.blank('')
         self.useFixture(nova_fixtures.SingleCellSimple())
         self.stub_out(

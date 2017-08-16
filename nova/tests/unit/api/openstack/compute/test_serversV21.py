@@ -37,7 +37,6 @@ import webob
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack import compute
-from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute import ips
 from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import views
@@ -174,8 +173,7 @@ class ControllerTest(test.TestCase):
                       instance_update_and_get_original)
         self.flags(group='glance', api_servers=['http://localhost:9292'])
 
-        ext_info = extension_info.LoadedExtensionInfo()
-        self.controller = servers.ServersController(extension_info=ext_info)
+        self.controller = servers.ServersController()
         self.ips_controller = ips.IPsController()
         policy.reset()
         policy.init()
@@ -2459,8 +2457,7 @@ class ServerStatusTest(test.TestCase):
         super(ServerStatusTest, self).setUp()
         fakes.stub_out_nw_api(self)
 
-        ext_info = extension_info.LoadedExtensionInfo()
-        self.controller = servers.ServersController(extension_info=ext_info)
+        self.controller = servers.ServersController()
 
     def _get_with_state(self, vm_state, task_state=None):
         self.stub_out('nova.db.instance_get_by_uuid',
@@ -2569,8 +2566,7 @@ class ServersControllerCreateTest(test.TestCase):
 
         fakes.stub_out_nw_api(self)
 
-        ext_info = extension_info.LoadedExtensionInfo()
-        self.controller = servers.ServersController(extension_info=ext_info)
+        self.controller = servers.ServersController()
 
         def instance_create(context, inst):
             inst_type = flavors.get_flavor_by_flavor_id(3)
@@ -3674,8 +3670,7 @@ class ServersControllerCreateTestV232(test.NoDBTestCase):
         super(ServersControllerCreateTestV232, self).setUp()
         self.flags(use_neutron=True)
 
-        ext_info = extension_info.LoadedExtensionInfo()
-        self.controller = servers.ServersController(extension_info=ext_info)
+        self.controller = servers.ServersController()
 
         self.body = {
             'server': {
@@ -3771,8 +3766,7 @@ class ServersControllerCreateTestV237(test.NoDBTestCase):
         # Set the use_neutron flag to process requested networks.
         self.flags(use_neutron=True)
         # Create the server controller.
-        ext_info = extension_info.LoadedExtensionInfo()
-        self.controller = servers.ServersController(extension_info=ext_info)
+        self.controller = servers.ServersController()
         # Define a basic server create request body which tests can customize.
         self.body = {
             'server': {
@@ -3948,8 +3942,7 @@ class ServersControllerCreateTestWithMock(test.TestCase):
         self.instance_cache_by_id = {}
         self.instance_cache_by_uuid = {}
 
-        ext_info = extension_info.LoadedExtensionInfo()
-        self.controller = servers.ServersController(extension_info=ext_info)
+        self.controller = servers.ServersController()
 
         self.body = {
             'server': {
@@ -4596,8 +4589,7 @@ class ServersInvalidRequestTestCase(test.TestCase):
 
     def setUp(self):
         super(ServersInvalidRequestTestCase, self).setUp()
-        ext_info = extension_info.LoadedExtensionInfo()
-        self.controller = servers.ServersController(extension_info=ext_info)
+        self.controller = servers.ServersController()
 
     def _invalid_server_create(self, body):
         req = fakes.HTTPRequestV21.blank('/fake/servers')
@@ -4672,9 +4664,7 @@ class ServersPolicyEnforcementV21(test.NoDBTestCase):
     def setUp(self):
         super(ServersPolicyEnforcementV21, self).setUp()
         self.useFixture(nova_fixtures.AllServicesCurrent())
-        ext_info = extension_info.LoadedExtensionInfo()
-        ext_info.extensions.update({'os-networks': 'fake'})
-        self.controller = servers.ServersController(extension_info=ext_info)
+        self.controller = servers.ServersController()
         self.req = fakes.HTTPRequest.blank('')
         self.image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
 
@@ -5156,8 +5146,7 @@ class ServersActionsJsonTestV239(test.NoDBTestCase):
 
     def setUp(self):
         super(ServersActionsJsonTestV239, self).setUp()
-        ext_info = extension_info.LoadedExtensionInfo()
-        self.controller = servers.ServersController(extension_info=ext_info)
+        self.controller = servers.ServersController()
         self.req = fakes.HTTPRequest.blank('', version='2.39')
 
     @mock.patch.object(common, 'check_img_metadata_properties_quota')

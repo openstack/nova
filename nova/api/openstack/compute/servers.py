@@ -127,9 +127,6 @@ class ServersController(wsgi.Controller):
         return robj
 
     def __init__(self, **kwargs):
-        # TODO(alex_xu): Remove this line when 'extension_info' won't be passed
-        # in when creating controller.
-        kwargs.pop('extension_info', None)
 
         super(ServersController, self).__init__(**kwargs)
         self.compute_api = compute.API()

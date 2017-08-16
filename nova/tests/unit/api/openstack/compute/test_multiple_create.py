@@ -17,7 +17,6 @@ import webob
 
 from nova.api.openstack.compute import block_device_mapping \
         as block_device_mapping_v21
-from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute import multiple_create as multiple_create_v21
 from nova.api.openstack.compute import servers as servers_v21
 from nova.compute import api as compute_api
@@ -49,9 +48,7 @@ class MultiCreateExtensionTestV21(test.TestCase):
         # Network API needs to be stubbed out before creating the controllers.
         fakes.stub_out_nw_api(self)
 
-        ext_info = extension_info.LoadedExtensionInfo()
-        self.controller = servers_v21.ServersController(
-            extension_info=ext_info)
+        self.controller = servers_v21.ServersController()
 
         def instance_get(context, instance_id):
             """Stub for compute/api create() pulling in instance after

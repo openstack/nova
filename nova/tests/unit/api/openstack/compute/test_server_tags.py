@@ -13,7 +13,6 @@
 import mock
 from webob import exc
 
-from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute import server_tags
 from nova.api.openstack.compute import servers
 from nova.compute import vm_states
@@ -298,8 +297,7 @@ class ServerTagsTest(test.TestCase):
     def test_show_with_details_information_non_existing_instance(self):
         req = self._get_request(
             '/v2/fake/servers/%s' % NON_EXISTING_UUID, 'GET')
-        ext_info = extension_info.LoadedExtensionInfo()
-        servers_controller = servers.ServersController(extension_info=ext_info)
+        servers_controller = servers.ServersController()
         self.assertRaises(exc.HTTPNotFound, servers_controller.show, req,
                           NON_EXISTING_UUID)
 

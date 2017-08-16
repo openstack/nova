@@ -22,7 +22,6 @@ from oslo_config import cfg
 from oslo_serialization import base64
 from oslo_serialization import jsonutils
 
-from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import user_data
 from nova.compute import flavors
@@ -60,8 +59,7 @@ class ServersControllerCreateTest(test.TestCase):
         # Network API needs to be stubbed out before creating the controllers.
         fakes.stub_out_nw_api(self)
 
-        ext_info = extension_info.LoadedExtensionInfo()
-        self.controller = servers.ServersController(extension_info=ext_info)
+        self.controller = servers.ServersController()
 
         def instance_create(context, inst):
             inst_type = flavors.get_flavor_by_flavor_id(3)

@@ -17,7 +17,6 @@ import mock
 from oslo_utils import uuidutils
 import webob
 
-from nova.api.openstack.compute import extension_info
 from nova.api.openstack.compute import servers as servers_v21
 from nova.compute import api as compute_api
 from nova.compute import task_states
@@ -97,8 +96,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         self.context = self.req.environ['nova.context']
 
     def _get_controller(self):
-        ext_info = extension_info.LoadedExtensionInfo()
-        return self.servers.ServersController(extension_info=ext_info)
+        return self.servers.ServersController()
 
     def _set_fake_extension(self):
         pass
