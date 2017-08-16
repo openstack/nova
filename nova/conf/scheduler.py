@@ -478,6 +478,21 @@ Possible values:
   meaningful, as negative values would make this behave as a soft affinity
   weigher.
 """),
+    cfg.BoolOpt(
+        "shuffle_best_same_weighed_hosts",
+        default=False,
+        help="""
+Enable spreading the instances between hosts with the same best weight.
+
+Enabling it is beneficial for cases when host_subset_size is 1
+(default), but there is a large number of hosts with same maximal weight.
+This scenario is common in Ironic deployments where there are typically many
+baremetal nodes with identical weights returned to the scheduler.
+In such case enabling this option will reduce contention and chances for
+rescheduling events.
+At the same time it will make the instance packing (even in unweighed case)
+less dense.
+"""),
     # TODO(mikal): replace this option with something involving host aggregates
     cfg.ListOpt("isolated_images",
         default=[],

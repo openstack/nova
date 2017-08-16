@@ -461,6 +461,43 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # weighed hosts and thus return [hs1, hs2]
         self.assertEqual([hs1, hs2], results)
 
+    @mock.patch('random.shuffle', side_effect=lambda x: x.reverse())
+    @mock.patch('nova.scheduler.host_manager.HostManager.get_weighed_hosts')
+    @mock.patch('nova.scheduler.host_manager.HostManager.get_filtered_hosts')
+    def test_get_sorted_hosts_shuffle_top_equal(self, mock_filt, mock_weighed,
+                                                mock_shuffle):
+        """Tests that top best weighed hosts are shuffled when enabled.
+        """
+        self.flags(host_subset_size=1, group='filter_scheduler')
+        self.flags(shuffle_best_same_weighed_hosts=True,
+                   group='filter_scheduler')
+        hs1 = mock.Mock(spec=host_manager.HostState, host='host1')
+        hs2 = mock.Mock(spec=host_manager.HostState, host='host2')
+        hs3 = mock.Mock(spec=host_manager.HostState, host='host3')
+        hs4 = mock.Mock(spec=host_manager.HostState, host='host4')
+        all_host_states = [hs1, hs2, hs3, hs4]
+
+        mock_weighed.return_value = [
+            weights.WeighedHost(hs1, 1.0),
+            weights.WeighedHost(hs2, 1.0),
+            weights.WeighedHost(hs3, 0.5),
+            weights.WeighedHost(hs4, 0.5),
+        ]
+
+        results = self.driver._get_sorted_hosts(mock.sentinel.spec,
+            all_host_states, mock.sentinel.index)
+
+        mock_filt.assert_called_once_with(all_host_states, mock.sentinel.spec,
+            mock.sentinel.index)
+
+        mock_weighed.assert_called_once_with(mock_filt.return_value,
+            mock.sentinel.spec)
+
+        # We override random.shuffle() to reverse the list, thus the
+        # head of the list should become [host#2, host#1]
+        # (as the host_subset_size is 1) and the tail should stay the same.
+        self.assertEqual([hs2, hs1, hs3, hs4], results)
+
     def test_cleanup_allocations(self):
         instance_uuids = []
         # Check we don't do anything if there's no instance UUIDs to cleanup
