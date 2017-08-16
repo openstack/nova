@@ -419,9 +419,11 @@ class Guest(object):
 
         persistent = self.has_persistent_configuration()
 
-        LOG.debug('Attempting initial detach for device %s', device)
+        LOG.debug('Attempting initial detach for device %s',
+                  alternative_device_name)
         _try_detach_device(conf, persistent, live)
-        LOG.debug('Start retrying detach until device %s is gone.', device)
+        LOG.debug('Start retrying detach until device %s is gone.',
+                  alternative_device_name)
 
         @loopingcall.RetryDecorator(max_retry_count=max_retry_count,
                                     inc_sleep_time=inc_sleep_time,
