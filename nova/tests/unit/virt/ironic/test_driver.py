@@ -256,17 +256,12 @@ class IronicDriverTestCase(test.NoDBTestCase):
                 self.driver._wait_for_power_state, instance, 'fake message')
         self.assertTrue(fake_validate.called)
 
-    def _test__node_resource(self, has_inst_info):
+    def test__node_resource_with_instance_uuid(self):
         node_uuid = uuidutils.generate_uuid()
         props = _get_properties()
         stats = _get_stats()
-        if has_inst_info:
-            instance_info = _get_instance_info()
-        else:
-            instance_info = {}
         node = ironic_utils.get_test_node(uuid=node_uuid,
                                           instance_uuid=self.instance_uuid,
-                                          instance_info=instance_info,
                                           properties=props,
                                           resource_class='foo')
 
@@ -285,29 +280,17 @@ class IronicDriverTestCase(test.NoDBTestCase):
         gotkeys = sorted(result.keys())
         self.assertEqual(wantkeys, gotkeys)
 
-        if has_inst_info:
-            props_dict = instance_info
-            expected_cpus = instance_info['vcpus']
-        else:
-            props_dict = props
-            expected_cpus = props['cpus']
-        self.assertEqual(0, result['vcpus'])
-        self.assertEqual(expected_cpus, result['vcpus_used'])
-        self.assertEqual(0, result['memory_mb'])
-        self.assertEqual(props_dict['memory_mb'], result['memory_mb_used'])
-        self.assertEqual(0, result['local_gb'])
-        self.assertEqual(props_dict['local_gb'], result['local_gb_used'])
+        self.assertEqual(props['cpus'], result['vcpus'])
+        self.assertEqual(result['vcpus'], result['vcpus_used'])
+        self.assertEqual(props['memory_mb'], result['memory_mb'])
+        self.assertEqual(result['memory_mb'], result['memory_mb_used'])
+        self.assertEqual(props['local_gb'], result['local_gb'])
+        self.assertEqual(result['local_gb'], result['local_gb_used'])
 
         self.assertEqual(node_uuid, result['hypervisor_hostname'])
         self.assertEqual(stats, result['stats'])
         self.assertEqual('foo', result['resource_class'])
         self.assertIsNone(result['numa_topology'])
-
-    def test__node_resource(self):
-        self._test__node_resource(True)
-
-    def test__node_resource_no_instance_info(self):
-        self._test__node_resource(False)
 
     def test__node_resource_canonicalizes_arch(self):
         node_uuid = uuidutils.generate_uuid()
@@ -411,12 +394,12 @@ class IronicDriverTestCase(test.NoDBTestCase):
             instance_info=instance_info)
 
         result = self.driver._node_resource(node)
-        self.assertEqual(0, result['vcpus'])
-        self.assertEqual(instance_info['vcpus'], result['vcpus_used'])
-        self.assertEqual(0, result['memory_mb'])
-        self.assertEqual(instance_info['memory_mb'], result['memory_mb_used'])
-        self.assertEqual(0, result['local_gb'])
-        self.assertEqual(instance_info['local_gb'], result['local_gb_used'])
+        self.assertEqual(props['cpus'], result['vcpus'])
+        self.assertEqual(result['vcpus'], result['vcpus_used'])
+        self.assertEqual(props['memory_mb'], result['memory_mb'])
+        self.assertEqual(result['memory_mb'], result['memory_mb_used'])
+        self.assertEqual(props['local_gb'], result['local_gb'])
+        self.assertEqual(result['local_gb'], result['local_gb_used'])
         self.assertEqual(node_uuid, result['hypervisor_hostname'])
         self.assertEqual(stats, result['stats'])
 
@@ -683,11 +666,6 @@ class IronicDriverTestCase(test.NoDBTestCase):
             {'uuid': uuidutils.generate_uuid(),
              'power_state': ironic_states.POWER_ON,
              'provision_state': ironic_states.DELETED},
-            # a node in AVAILABLE with an instance uuid
-            {'uuid': uuidutils.generate_uuid(),
-             'instance_uuid': uuidutils.generate_uuid(),
-             'power_state': ironic_states.POWER_OFF,
-             'provision_state': ironic_states.AVAILABLE}
         ]
         for n in node_dicts:
             node = ironic_utils.get_test_node(**n)
@@ -761,8 +739,11 @@ class IronicDriverTestCase(test.NoDBTestCase):
         """
         mock_nr.return_value = {
             'vcpus': 24,
+            'vcpus_used': 0,
             'memory_mb': 1024,
+            'memory_mb_used': 0,
             'local_gb': 100,
+            'local_gb_used': 0,
             'resource_class': None,
         }
 
@@ -807,8 +788,67 @@ class IronicDriverTestCase(test.NoDBTestCase):
         """
         mock_nr.return_value = {
             'vcpus': 24,
+            'vcpus_used': 0,
             'memory_mb': 1024,
+            'memory_mb_used': 0,
             'local_gb': 100,
+            'local_gb_used': 0,
+            'resource_class': 'iron-nfv',
+        }
+
+        result = self.driver.get_inventory(mock.sentinel.nodename)
+
+        expected = {
+            fields.ResourceClass.VCPU: {
+                'total': 24,
+                'reserved': 0,
+                'min_unit': 1,
+                'max_unit': 24,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+            fields.ResourceClass.MEMORY_MB: {
+                'total': 1024,
+                'reserved': 0,
+                'min_unit': 1,
+                'max_unit': 1024,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+            fields.ResourceClass.DISK_GB: {
+                'total': 100,
+                'reserved': 0,
+                'min_unit': 1,
+                'max_unit': 100,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+            'CUSTOM_IRON_NFV': {
+                'total': 1,
+                'reserved': 0,
+                'min_unit': 1,
+                'max_unit': 1,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+        }
+        mock_nfc.assert_called_once_with(mock.sentinel.nodename)
+        mock_nr.assert_called_once_with(mock_nfc.return_value)
+        self.assertEqual(expected, result)
+
+    @mock.patch.object(ironic_driver.IronicDriver, '_node_resource')
+    @mock.patch.object(ironic_driver.IronicDriver, '_node_from_cache')
+    def test_get_inventory_with_rc_occupied(self, mock_nfc, mock_nr):
+        """Ensure that when a node is used, we report the inventory matching
+        the consumed resources.
+        """
+        mock_nr.return_value = {
+            'vcpus': 24,
+            'vcpus_used': 24,
+            'memory_mb': 1024,
+            'memory_mb_used': 1024,
+            'local_gb': 100,
+            'local_gb_used': 100,
             'resource_class': 'iron-nfv',
         }
 
@@ -860,8 +900,11 @@ class IronicDriverTestCase(test.NoDBTestCase):
         """
         mock_nr.return_value = {
             'vcpus': 0,
+            'vcpus_used': 0,
             'memory_mb': 0,
+            'memory_mb_used': 0,
             'local_gb': 0,
+            'local_gb_used': 0,
             'resource_class': None,
         }
 
