@@ -1360,7 +1360,17 @@ class LibvirtDriver(driver.ComputeDriver):
 
             state = guest.get_power_state(self._host)
             live = state in (power_state.RUNNING, power_state.PAUSED)
-            guest.detach_device(interface, persistent=True, live=live)
+            # Now we are going to loop until the interface is detached or we
+            # timeout.
+            wait_for_detach = guest.detach_device_with_retry(
+                guest.get_interface_by_cfg, cfg, persistent=True, live=live,
+                alternative_device_name=vif.get('address'))
+            wait_for_detach()
+        except exception.DeviceNotFound:
+            # The interface is gone so just log it as a warning.
+            LOG.warning(_LW('Detaching interface %(mac)s failed because '
+                            'the device is no longer found on the guest.'),
+                        {'mac': vif.get('address')}, instance=instance)
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
             if error_code == libvirt.VIR_ERR_NO_DOMAIN:
@@ -1387,7 +1397,7 @@ class LibvirtDriver(driver.ComputeDriver):
                             instance_uuid=instance.uuid)
 
                 # The interface is gone so just log it as a warning.
-                LOG.warning(_LW('Detaching interface %(mac)s failed  because '
+                LOG.warning(_LW('Detaching interface %(mac)s failed because '
                                 'the device is no longer found on the guest.'),
                             {'mac': mac}, instance=instance)
 
