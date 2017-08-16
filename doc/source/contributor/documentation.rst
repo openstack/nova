@@ -2,25 +2,25 @@
  Documentation Guide Lines
 ===========================
 
-These are some basic guidelines in contributing to documentation in Nova.
+These are some basic guidelines for contributing to documentation in Nova.
 
 Review Guidelines
 =================
 
-Documentation only patches differ from code patches in a few ways.
+Documentation-only patches differ from code patches in a few ways.
 
 * They are often written by users / operators that aren't plugged into daily
-  cycles of nova or on irc.
+  cycles of nova or on irc
 * Outstanding patches are far more likely to trigger merge conflict in git than
-  code patches.
+  code patches
 * There may be wide variation on points of view of what the "best" or
-  "clearest" way is to say a thing.
+  "clearest" way is to say a thing
 
 This all can lead to a large number of practical documentation improvements
 stalling out because the author submitted the fix, and does not have the time
 to merge conflict chase or is used to the gerrit follow up model.
 
-As such documentation patches should be evaluated in the basic context of "does
+As such, documentation patches should be evaluated in the basic context of "does
 this make things better than the current tree". Patches are cheap, it can
 always be further enhanced in future patches.
 
@@ -40,17 +40,17 @@ every stable release (e.g. ``pike``).
 
 .. note::
 
-   This raises an interesting an unexplored question about whether we want all
+   This raises an interesting and unexplored question about whether we want all
    of ``doc/source`` published with stable branches that will be stale and
    unimproved as we address content in ``latest``.
 
 The ``api-ref`` and ``api-guide`` publish only from master to a single site on
-developer.openstack.org. As such they are effectively branchless.
+developer.openstack.org. As such, they are effectively branchless.
 
 Guidelines for consumable docs
 ==============================
 
-* Give users context before following a link.
+* Give users context before following a link
 
   Most users exploring our documentation will be trying to learn about our
   software. Entry and subpages that provide links to in depth topics need to
