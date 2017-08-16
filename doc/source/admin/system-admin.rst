@@ -38,7 +38,7 @@ responsibilities of services and drivers are:
 
 ``nova-api``
   Receives XML requests and sends them to the rest of the system. A WSGI app
-  routes and authenticates requests. Supports the EC2 and OpenStack APIs. A
+  routes and authenticates requests. Supports the OpenStack Compute APIs. A
   ``nova.conf`` configuration file is created when Compute is installed.
 
 ``nova-cert``
