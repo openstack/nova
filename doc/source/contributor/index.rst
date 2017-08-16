@@ -48,6 +48,8 @@ For Reviewers
   when doing code review in Nova, especially some things that are hard to test
   for, but need human eyes.
 * :doc:`/reference/i18n`: what we require for i18n in patches
+* :doc:`/contributor/documentation`: Guidelines for handling documentation
+  contributions
 
 Testing
 =======

@@ -225,6 +225,7 @@ looking parts of our architecture. These are collected below.
    contributor/api-2
    contributor/blueprints
    contributor/code-review
+   contributor/documentation
    contributor/microversions
    contributor/placement.rst
    contributor/policies.rst
