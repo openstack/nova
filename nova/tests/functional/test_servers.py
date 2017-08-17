@@ -1656,3 +1656,176 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
 
         self._delete_and_check_allocations(
             server, source_rp_uuid, dest_rp_uuid)
+
+    def _boot_then_shelve_and_check_allocations(self, hostname, rp_uuid):
+        # avoid automatic shelve offloading
+        self.flags(shelved_offload_time=-1)
+        server = self._boot_and_check_allocations(
+            self.flavor1, hostname)
+        req = {
+            'shelve': {}
+        }
+        self.api.post_server_action(server['id'], req)
+        self._wait_for_state_change(self.api, server, 'SHELVED')
+        # the host should maintain the existing allocation for this instance
+        # while the instance is shelved
+        source_usages = self._get_provider_usages(rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        # Check that the server only allocates resource from the host it is
+        # booted on
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations))
+        allocation = allocations[rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, allocation)
+        return server
+
+    def test_shelve_unshelve(self):
+        source_hostname = self.compute1.host
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        server = self._boot_then_shelve_and_check_allocations(
+            source_hostname, source_rp_uuid)
+
+        req = {
+            'unshelve': {}
+        }
+        self.api.post_server_action(server['id'], req)
+        self._wait_for_state_change(self.api, server, 'ACTIVE')
+
+        # the host should have resource usage as the instance is ACTIVE
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+
+        # Check that the server only allocates resource from the host it is
+        # booted on
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations))
+        allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, allocation)
+
+        self._delete_and_check_allocations(
+            server, source_rp_uuid, source_rp_uuid)
+
+    def _shelve_offload_and_check_allocations(self, server, source_rp_uuid):
+        req = {
+            'shelveOffload': {}
+        }
+        self.api.post_server_action(server['id'], req)
+        self._wait_for_state_change(self.api, server, 'SHELVED_OFFLOADED')
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        # NOTE(gibi): this is bug 1710249 where shelve offload doesn't free up
+        # the resources
+        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        # NOTE(gibi): after fixing bug 1710249 the following should be true
+        # after offload there should be no usages
+        # self.assertEqual({'VCPU': 0,
+        #                   'MEMORY_MB': 0,
+        #                   'DISK_GB': 0},
+        #                  source_usages)
+        # NOTE(gibi): this is bug 1710249 where shelve offload doesn't free up
+        # the resources
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations))
+        allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, allocation)
+        # NOTE(gibi): after fixing bug 1710249 the following should be true
+        # after offload there should be no allocations
+        # self.assertEqual(0, len(allocations))
+
+    def test_shelve_offload_unshelve_diff_host(self):
+        source_hostname = self.compute1.host
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        server = self._boot_then_shelve_and_check_allocations(
+            source_hostname, source_rp_uuid)
+
+        self._shelve_offload_and_check_allocations(server, source_rp_uuid)
+
+        # unshelve after shelve offload will do scheduling. this test case
+        # wants to test the scenario when the scheduler select a different host
+        # to ushelve the instance. So we disable the original host.
+        source_service_id = self.admin_api.get_services(
+            host=source_hostname, binary='nova-compute')[0]['id']
+        self.admin_api.put_service(source_service_id, {'status': 'disabled'})
+
+        req = {
+            'unshelve': {}
+        }
+        self.api.post_server_action(server['id'], req)
+        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        # unshelving an offloaded instance will call the scheduler so the
+        # instance might end up on a different host
+        current_hostname = server['OS-EXT-SRV-ATTR:host']
+        self.assertEqual(current_hostname, self._other_hostname(
+            source_hostname))
+
+        # the host running the instance should have resource usage
+        current_rp_uuid = self._get_provider_uuid_by_host(current_hostname)
+        current_usages = self._get_provider_usages(current_rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor1, current_usages)
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        # NOTE(gibi): this is bug 1710249 where shelve offload doesn't free up
+        # the resources
+        self.assertEqual(2, len(allocations))
+        allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, allocation)
+        allocation = allocations[current_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, allocation)
+
+        # NOTE(gibi): after fixing bug 1710249 the following should be true
+        # self.assertEqual(1, len(allocations))
+        # allocation = allocations[current_rp_uuid]['resources']
+        # self.assertFlavorMatchesAllocation(self.flavor1, allocation)
+
+        self._delete_and_check_allocations(
+            server, source_rp_uuid, source_rp_uuid)
+
+    def test_shelve_offload_unshelve_same_host(self):
+        source_hostname = self.compute1.host
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        server = self._boot_then_shelve_and_check_allocations(
+            source_hostname, source_rp_uuid)
+
+        self._shelve_offload_and_check_allocations(server, source_rp_uuid)
+
+        # unshelve after shelve offload will do scheduling. this test case
+        # wants to test the scenario when the scheduler select the same host
+        # to ushelve the instance. So we disable the other host.
+        source_service_id = self.admin_api.get_services(
+            host=self._other_hostname(source_hostname),
+            binary='nova-compute')[0]['id']
+        self.admin_api.put_service(source_service_id, {'status': 'disabled'})
+
+        req = {
+            'unshelve': {}
+        }
+        self.api.post_server_action(server['id'], req)
+        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        # unshelving an offloaded instance will call the scheduler so the
+        # instance might end up on a different host
+        current_hostname = server['OS-EXT-SRV-ATTR:host']
+        self.assertEqual(current_hostname, source_hostname)
+
+        # the host running the instance should have resource usage
+        current_rp_uuid = self._get_provider_uuid_by_host(current_hostname)
+        current_usages = self._get_provider_usages(current_rp_uuid)
+        # NOTE(gibi): this is bug 1710249 where shelve offload doesn't free up
+        # the resources so the host now have doubled allocation
+        self.assertFlavorsMatchAllocation(
+            self.flavor1, self.flavor1, current_usages)
+
+        # NOTE(gibi): after fixing bug 1710249 the following should be true
+        # self.assertFlavorMatchesAllocation(self.flavor1, current_usages)
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations))
+        allocation = allocations[current_rp_uuid]['resources']
+        # NOTE(gibi): this is bug 1710249 where shelve offload doesn't free up
+        # the resources so the host now have doubled allocation
+        self.assertFlavorsMatchAllocation(
+            self.flavor1, self.flavor1, allocation)
+
+        # NOTE(gibi): after fixing bug 1710249 the following should be true
+        # self.assertFlavorMatchesAllocation(self.flavor1, allocation)
+
+        self._delete_and_check_allocations(
+            server, source_rp_uuid, source_rp_uuid)
