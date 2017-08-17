@@ -6613,8 +6613,7 @@ class ComputeTestCase(BaseTestCase,
             mock.call(ctxt, inst2.uuid, use_slave=True)])
         mock_get_inst.assert_called_once_with(ctxt,
                                               {'deleted': True,
-                                               'soft_deleted': False,
-                                               'host': self.compute.host})
+                                               'soft_deleted': False})
 
     @mock.patch.object(compute_manager.ComputeManager,
                        '_get_instances_on_driver')
@@ -6629,8 +6628,7 @@ class ComputeTestCase(BaseTestCase,
 
         mock_get.assert_called_once_with(ctxt,
                                               {'deleted': True,
-                                               'soft_deleted': False,
-                                               'host': self.compute.host})
+                                               'soft_deleted': False})
         mock_power.assert_has_calls([mock.call(inst1), mock.call(inst2)])
         mock_set.assert_has_calls([mock.call(inst1, False),
                                    mock.call(inst2, False)])
@@ -6649,8 +6647,7 @@ class ComputeTestCase(BaseTestCase,
 
         mock_get.assert_called_once_with(ctxt,
                                          {'deleted': True,
-                                          'soft_deleted': False,
-                                          'host': self.compute.host})
+                                          'soft_deleted': False})
         mock_set.assert_has_calls([mock.call(inst1, False),
                                    mock.call(inst2, False)])
         mock_power.assert_has_calls([mock.call(inst1), mock.call(inst2)])
@@ -6670,8 +6667,7 @@ class ComputeTestCase(BaseTestCase,
 
         mock_get.assert_called_once_with(ctxt,
                                          {'deleted': True,
-                                          'soft_deleted': False,
-                                          'host': self.compute.host})
+                                          'soft_deleted': False})
         mock_power.assert_has_calls([mock.call(inst1), mock.call(inst2)])
         mock_set.assert_has_calls([mock.call(inst1, False),
                                    mock.call(inst2, False)])
@@ -6694,8 +6690,7 @@ class ComputeTestCase(BaseTestCase,
         self.assertEqual(val, [instance])
         mock_get.assert_called_once_with(
             admin_context, {'deleted': True,
-                            'soft_deleted': False,
-                            'host': self.compute.host})
+                            'soft_deleted': False})
         mock_is_older.assert_called_once_with(now,
                     CONF.running_deleted_instance_timeout)
 

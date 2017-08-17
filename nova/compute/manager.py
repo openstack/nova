@@ -610,6 +610,9 @@ class ComputeManager(manager.Manager):
         # The driver doesn't support uuids listing, so we'll have
         # to brute force.
         driver_instances = self.driver.list_instances()
+        # NOTE(mjozefcz): In this case we need to apply host filter.
+        # Without this all instance data would be fetched from db.
+        filters['host'] = self.host
         instances = objects.InstanceList.get_by_filters(context, filters,
                                                         use_slave=True)
         name_map = {instance.name: instance for instance in instances}
@@ -6727,8 +6730,7 @@ class ComputeManager(manager.Manager):
         """
         timeout = CONF.running_deleted_instance_timeout
         filters = {'deleted': True,
-                   'soft_deleted': False,
-                   'host': self.host}
+                   'soft_deleted': False}
         instances = self._get_instances_on_driver(context, filters)
         return [i for i in instances if self._deleted_old_enough(i, timeout)]
 
