@@ -1398,11 +1398,11 @@ class OnsetFileLimitExceeded(QuotaError):
 
 
 class OnsetFilePathLimitExceeded(OnsetFileLimitExceeded):
-    msg_fmt = _("Personality file path too long")
+    msg_fmt = _("Personality file path exceeds maximum %(allowed)s")
 
 
 class OnsetFileContentLimitExceeded(OnsetFileLimitExceeded):
-    msg_fmt = _("Personality file content too long")
+    msg_fmt = _("Personality file content exceeds maximum %(allowed)s")
 
 
 class KeypairLimitExceeded(QuotaError):

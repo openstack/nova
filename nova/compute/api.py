@@ -311,9 +311,11 @@ class API(base.Base):
             # Favor path limit over content limit for reporting
             # purposes
             if 'injected_file_path_bytes' in exc.kwargs['overs']:
-                raise exception.OnsetFilePathLimitExceeded()
+                raise exception.OnsetFilePathLimitExceeded(
+                      allowed=exc.kwargs['quotas']['injected_file_path_bytes'])
             else:
-                raise exception.OnsetFileContentLimitExceeded()
+                raise exception.OnsetFileContentLimitExceeded(
+                   allowed=exc.kwargs['quotas']['injected_file_content_bytes'])
 
     def _check_metadata_properties_quota(self, context, metadata=None):
         """Enforce quota limits on metadata properties."""
