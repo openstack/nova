@@ -333,26 +333,62 @@ class GuestTestCase(test.NoDBTestCase):
         # Some time later, we can do the wait/retry to ensure detach
         self.assertRaises(exception.DeviceNotFound, retry_detach)
 
-    @mock.patch.object(libvirt_guest.Guest, "detach_device")
-    def test_detach_device_with_retry_invalid_argument(self, mock_detach):
+    def test_detach_device_with_retry_invalid_argument(self):
         # This simulates a persistent domain detach failing because
         # the device is not found
         conf = mock.Mock(spec=vconfig.LibvirtConfigGuestDevice)
         conf.to_xml.return_value = "</xml>"
         self.domain.isPersistent.return_value = True
 
-        get_config = mock.Mock(return_value=conf)
+        get_config = mock.Mock()
+        # Simulate the persistent domain attach attempt followed by the live
+        # domain attach attempt and success
+        get_config.side_effect = [conf, conf, None]
         fake_device = "vdb"
         fake_exc = fakelibvirt.make_libvirtError(
             fakelibvirt.libvirtError, "",
             error_message="invalid argument: no target device vdb",
             error_code=fakelibvirt.VIR_ERR_INVALID_ARG,
             error_domain=fakelibvirt.VIR_FROM_DOMAIN)
-        mock_detach.side_effect = fake_exc
+        # Detach from persistent raises not found, detach from live succeeds
+        self.domain.detachDeviceFlags.side_effect = [fake_exc, None]
+        retry_detach = self.guest.detach_device_with_retry(get_config,
+            fake_device, live=True, inc_sleep_time=.01, max_retry_count=3)
+        # We should have tried to detach from the persistent domain
+        self.domain.detachDeviceFlags.assert_called_once_with(
+            "</xml>", flags=(fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG |
+                             fakelibvirt.VIR_DOMAIN_AFFECT_LIVE))
+        # During the retry detach, should detach from the live domain
+        self.domain.detachDeviceFlags.reset_mock()
+        retry_detach()
+        # We should have tried to detach from the live domain
+        self.domain.detachDeviceFlags.assert_called_once_with(
+            "</xml>", flags=fakelibvirt.VIR_DOMAIN_AFFECT_LIVE)
+
+    def test_detach_device_with_retry_invalid_argument_no_live(self):
+        # This simulates a persistent domain detach failing because
+        # the device is not found
+        conf = mock.Mock(spec=vconfig.LibvirtConfigGuestDevice)
+        conf.to_xml.return_value = "</xml>"
+        self.domain.isPersistent.return_value = True
+
+        get_config = mock.Mock()
+        # Simulate the persistent domain attach attempt
+        get_config.return_value = conf
+        fake_device = "vdb"
+        fake_exc = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError, "",
+            error_message="invalid argument: no target device vdb",
+            error_code=fakelibvirt.VIR_ERR_INVALID_ARG,
+            error_domain=fakelibvirt.VIR_FROM_DOMAIN)
+        # Detach from persistent raises not found
+        self.domain.detachDeviceFlags.side_effect = fake_exc
         self.assertRaises(exception.DeviceNotFound,
-            self.guest.detach_device_with_retry,
-            get_config, fake_device, live=True, inc_sleep_time=.01,
-            max_retry_count=3)
+            self.guest.detach_device_with_retry, get_config,
+            fake_device, live=False, inc_sleep_time=.01, max_retry_count=3)
+        # We should have tried to detach from the persistent domain
+        self.domain.detachDeviceFlags.assert_called_once_with(
+            "</xml>", flags=fakelibvirt.VIR_DOMAIN_AFFECT_CONFIG)
 
     def test_get_xml_desc(self):
         self.guest.get_xml_desc()
