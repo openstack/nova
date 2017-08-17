@@ -7091,6 +7091,7 @@ class ComputeTestCase(BaseTestCase,
             {'host': 'otherhost'})
 
         migration = objects.Migration(instance_uuid=evacuated_instance.uuid)
+        migration.source_node = NODENAME
         mock_get_filter.return_value = [migration]
         instances.append(evacuated_instance)
         mock_get_inst.return_value = instances
@@ -7148,6 +7149,7 @@ class ComputeTestCase(BaseTestCase,
             {'host': 'otherhost'})
 
         migration = objects.Migration(instance_uuid=evacuated_instance.uuid)
+        migration.source_node = NODENAME
         mock_get_filter.return_value = [migration]
         instances.append(evacuated_instance)
         mock_get_drv.return_value = instances
@@ -7207,6 +7209,7 @@ class ComputeTestCase(BaseTestCase,
             {'host': 'otherhost'})
 
         migration = objects.Migration(instance_uuid=evacuated_instance.uuid)
+        migration.source_node = NODENAME
         mock_get_filter.return_value = [migration]
         instances.append(evacuated_instance)
         mock_get_inst.return_value = instances

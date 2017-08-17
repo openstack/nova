@@ -652,6 +652,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.compute.init_virt_events()
         self.assertFalse(mock_register.called)
 
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                'delete_allocation_for_evacuated_instance')
     @mock.patch.object(manager.ComputeManager, '_get_instances_on_driver')
     @mock.patch.object(manager.ComputeManager, 'init_virt_events')
     @mock.patch.object(context, 'get_admin_context')
@@ -663,13 +665,14 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     @mock.patch('nova.objects.Migration.save')
     def test_init_host_with_evacuated_instance(self, mock_save, mock_mig_get,
             mock_temp_mut, mock_init_host, mock_destroy, mock_host_get,
-            mock_admin_ctxt, mock_init_virt, mock_get_inst):
+            mock_admin_ctxt, mock_init_virt, mock_get_inst, mock_delete_alloc):
         our_host = self.compute.host
         not_our_host = 'not-' + our_host
 
         deleted_instance = fake_instance.fake_instance_obj(
                 self.context, host=not_our_host, uuid=uuids.deleted_instance)
         migration = objects.Migration(instance_uuid=deleted_instance.uuid)
+        migration.source_node = 'fake-node'
         mock_mig_get.return_value = [migration]
         mock_admin_ctxt.return_value = self.context
         mock_host_get.return_value = objects.InstanceList()
@@ -695,6 +698,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         mock_destroy.assert_called_once_with(self.context, deleted_instance,
                                              mock.ANY, mock.ANY, mock.ANY)
         mock_save.assert_called_once_with()
+        mock_delete_alloc.assert_called_once_with(
+            deleted_instance, migration.source_node)
 
     def test_init_instance_with_binding_failed_vif_type(self):
         # this instance will plug a 'binding_failed' vif
@@ -3300,6 +3305,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         migration = objects.Migration(instance_uuid=instance_2.uuid)
         # Consider the migration successful
         migration.status = 'done'
+        migration.source_node = 'fake-node'
 
         with test.nested(
             mock.patch.object(self.compute, '_get_instances_on_driver',
@@ -3313,16 +3319,20 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                return_value=False),
             mock.patch.object(self.compute.driver, 'destroy'),
             mock.patch('nova.objects.MigrationList.get_by_filters'),
-            mock.patch('nova.objects.Migration.save')
+            mock.patch('nova.objects.Migration.save'),
+            mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                       'delete_allocation_for_evacuated_instance')
         ) as (_get_instances_on_driver, get_instance_nw_info,
               _get_instance_block_device_info, _is_instance_storage_shared,
-              destroy, migration_list, migration_save):
+              destroy, migration_list, migration_save, remove_allocation):
             migration_list.return_value = [migration]
             self.compute._destroy_evacuated_instances(self.context)
             # Only instance 2 should be deleted. Instance 1 is still running
             # here, but no migration from our host exists, so ignore it
             destroy.assert_called_once_with(self.context, instance_2, None,
                                             {}, True)
+            remove_allocation.assert_called_once_with(
+                instance_2, migration.source_node)
 
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_destroy_evacuated_instances')
