@@ -2539,6 +2539,16 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         # instance that no longer exists.
         rc.delete_allocation_for_instance.assert_called_once_with(uuids.inst0)
 
+    def test_delete_allocation_for_shelve_offloaded_instance(self):
+        instance = _INSTANCE_FIXTURES[0].obj_clone()
+        instance.uuid = uuids.inst0
+
+        self.rt.delete_allocation_for_shelve_offloaded_instance(instance)
+
+        rc = self.rt.reportclient
+        mock_remove_allocation = rc.delete_allocation_for_instance
+        mock_remove_allocation.assert_called_once_with(instance.uuid)
+
     def test_update_usage_from_instances_goes_negative(self):
         # NOTE(danms): The resource tracker _should_ report negative resources
         # for things like free_ram_mb if overcommit is being used. This test
