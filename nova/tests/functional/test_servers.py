@@ -1105,12 +1105,14 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
 
         fake.set_nodes(['host1'])
+        self.flags(host='host1')
         self.compute1 = self.start_service('compute', host='host1')
 
         # NOTE(sbauza): Make sure the FakeDriver returns a different nodename
         # for the second compute node.
         fake.set_nodes(['host2'])
         self.addCleanup(fake.restore_nodes)
+        self.flags(host='host2')
         self.compute2 = self.start_service('compute', host='host2')
         fake_network.set_stub_network_methods(self)
 
@@ -1797,3 +1799,71 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
 
         self._delete_and_check_allocations(
             server, source_rp_uuid, source_rp_uuid)
+
+    def test_live_migrate_force(self):
+        source_hostname = self.compute1.host
+        dest_hostname = self.compute2.host
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        server = self._boot_and_check_allocations(
+            self.flavor1, source_hostname)
+        post = {
+            'os-migrateLive': {
+                'host': dest_hostname,
+                'block_migration': True,
+                'force': True,
+            }
+        }
+
+        self.api.post_server_action(server['id'], post)
+        self._wait_for_server_parameter(self.api, server,
+            {'OS-EXT-SRV-ATTR:host': dest_hostname,
+             'status': 'ACTIVE'})
+
+        self._run_periodics()
+
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        # NOTE(lajos katona): After bug 1712045 is solved on the source there
+        # will be no allocations:
+        # self.assertFlavorMatchesAllocation(
+        #     {'ram': 0, 'disk': 0, 'vcpus': 0}, source_usages)
+
+        # NOTE(lajos katona): while bug 1712045 is not solved on the source
+        # host the allocations are remaining:
+        # on the original host should not have the old resource usage
+        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+        # NOTE(lajos katona): When bug 1712008 is solved the dest host
+        # expected to have resource allocation:
+        # self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+
+        # NOTE(lajos katona): the allocation on the destination host is empty,
+        # but when bug 1712008 is solved expected to be equal described by the
+        # flavor:
+        self.assertFlavorMatchesAllocation(
+            {'ram': 0, 'disk': 0, 'vcpus': 0}, dest_usages)
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        # the server has just 1 allocation:
+        self.assertEqual(1, len(allocations))
+
+        # NOTE(lajos katona): When bug 1712045 is solved the server has
+        # no allocation on the source:
+        # self.assertNotIn(source_rp_uuid, allocations)
+
+        # Instead the source allocation is still there
+        source_allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
+
+        # NOTE(lajos katona): When bug 1712008 solved the server should have
+        # an allocation for the destination:
+        # dest_allocation = allocations[dest_rp_uuid]['resources']
+        # self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
+
+        # Instead the server has no allocation for the destination host:
+        self.assertNotIn(dest_rp_uuid, allocations)
+
+        self._delete_and_check_allocations(
+            server, source_rp_uuid, dest_rp_uuid)
