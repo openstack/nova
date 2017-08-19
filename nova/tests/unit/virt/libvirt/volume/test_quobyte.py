@@ -239,7 +239,9 @@ class QuobyteTestCase(test.NoDBTestCase):
         stat_mock.assert_called_with(self.TEST_MNT_POINT)
         part_mock.assert_called_once_with(all=True)
 
-    def test_validate_volume_no_mtab_entry(self):
+    @mock.patch.object(psutil, "disk_partitions")
+    def test_validate_volume_no_mtab_entry(self, part_mock):
+        part_mock.return_value = []  # no quobyte@ devices
         msg = ("No matching Quobyte mount entry for %(mpt)s"
                " could be found for validation in partition list."
                % {'mpt': self.TEST_MNT_POINT})
