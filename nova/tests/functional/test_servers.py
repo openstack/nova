@@ -1824,31 +1824,17 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         self._run_periodics()
 
         source_usages = self._get_provider_usages(source_rp_uuid)
-        # NOTE(lajos katona): After bug 1712045 is solved on the source there
-        # will be no allocations:
-        # self.assertFlavorMatchesAllocation(
-        #     {'ram': 0, 'disk': 0, 'vcpus': 0}, source_usages)
-
-        # NOTE(lajos katona): while bug 1712045 is not solved on the source
-        # host the allocations are remaining:
-        # on the original host should not have the old resource usage
-        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        # NOTE(danms): There should be no usage for the source
+        self.assertFlavorMatchesAllocation(
+            {'ram': 0, 'disk': 0, 'vcpus': 0}, source_usages)
 
         dest_usages = self._get_provider_usages(dest_rp_uuid)
         self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
 
         allocations = self._get_allocations_by_server_uuid(server['id'])
-        # the server has an allocation on the source and dest nodes
-        self.assertEqual(2, len(allocations))
-
-        # NOTE(lajos katona): When bug 1712045 is solved the server has
-        # no allocation on the source:
-        # self.assertNotIn(source_rp_uuid, allocations)
-
-        # Instead the source allocation is still there
-        source_allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
-
+        # the server has an allocation on only the dest node
+        self.assertEqual(1, len(allocations))
+        self.assertNotIn(source_rp_uuid, allocations)
         dest_allocation = allocations[dest_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
 
@@ -1878,32 +1864,16 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         self._run_periodics()
 
         source_usages = self._get_provider_usages(source_rp_uuid)
-        # NOTE(lajos katona): After bug 1712045 is solved on the source there
-        # will be no allocations:
-        # self.assertFlavorMatchesAllocation(
-        #     {'ram': 0, 'disk': 0, 'vcpus': 0}, source_usages)
-
-        # NOTE(lajos katona): while bug 1712045 is not solved on the source
-        # host the allocations are remaining:
-        # on the original host should not have the old resource usage
-        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        # NOTE(danms): There should be no usage for the source
+        self.assertFlavorMatchesAllocation(
+            {'ram': 0, 'disk': 0, 'vcpus': 0}, source_usages)
 
         dest_usages = self._get_provider_usages(dest_rp_uuid)
         self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
 
         allocations = self._get_allocations_by_server_uuid(server['id'])
-        # NOTE(lajos katona): the server has 2 allocations, instead of one,
-        # after bug 1712045 will be solved we can expect just one allocation
-        self.assertEqual(2, len(allocations))
-
-        # NOTE(lajos katona): When bug 1712045 is solved the server has
-        # no allocation on the source:
-        # self.assertNotIn(source_rp_uuid, allocations)
-
-        # Instead the source allocation is still there
-        source_allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
-
+        self.assertEqual(1, len(allocations))
+        self.assertNotIn(source_rp_uuid, allocations)
         dest_allocation = allocations[dest_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
 
