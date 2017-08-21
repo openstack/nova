@@ -5633,6 +5633,10 @@ class ComputeManager(manager.Manager):
             # method
             destroy_vifs = True
 
+        # NOTE(danms): Save source node before calling post method on
+        # destination, which will update it
+        source_node = instance.node
+
         # Define domain at destination host, without doing it,
         # pause/suspend/terminate do not work.
         post_at_dest_success = True
@@ -5663,6 +5667,10 @@ class ComputeManager(manager.Manager):
         # NOTE(timello): make sure we update available resources on source
         # host even before next periodic task.
         self.update_available_resource(ctxt)
+
+        rt = self._get_resource_tracker()
+        rt.delete_allocation_for_migrated_instance(
+            instance, source_node)
 
         self._update_scheduler_instance_info(ctxt, instance)
         self._notify_about_instance_usage(ctxt, instance,
