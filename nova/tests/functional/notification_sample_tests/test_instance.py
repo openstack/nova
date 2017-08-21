@@ -20,6 +20,7 @@ from nova.tests import fixtures
 from nova.tests.functional.notification_sample_tests \
     import notification_sample_base
 from nova.tests.unit import fake_notifier
+from nova.virt import fake
 
 
 class TestInstanceNotificationSampleWithMultipleCompute(
@@ -33,6 +34,7 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         self.useFixture(self.neutron)
         self.cinder = fixtures.CinderFixture(self)
         self.useFixture(self.cinder)
+        self.useFixture(fixtures.AllServicesCurrent())
 
     def test_live_migration_actions(self):
         server = self._boot_a_server(
@@ -40,6 +42,8 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         self._wait_for_notification('instance.create.end')
         self._attach_volume_to_server(server, self.cinder.SWAP_OLD_VOL)
         # server will boot on host1
+        fake.set_nodes(['host2'])
+        self.addCleanup(fake.restore_nodes)
         self.useFixture(fixtures.ConfPatcher(host='host2'))
         self.compute2 = self.start_service('compute', host='host2')
 
