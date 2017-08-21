@@ -387,6 +387,7 @@ class InstanceStateUpdatePayload(base.NotificationPayloadBase):
 @base.notification_sample('instance-unpause-end.json')
 @base.notification_sample('instance-resize-start.json')
 @base.notification_sample('instance-resize-end.json')
+@base.notification_sample('instance-resize-error.json')
 @base.notification_sample('instance-suspend-start.json')
 @base.notification_sample('instance-suspend-end.json')
 @base.notification_sample('instance-power_on-start.json')

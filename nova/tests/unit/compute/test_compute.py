@@ -11816,7 +11816,8 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
                                          self.instance_type, {}, {})
 
     @mock.patch.object(compute_manager.ComputeManager, "_reschedule")
-    def test_reschedule_fails_with_exception(self, mock_res):
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    def test_reschedule_fails_with_exception(self, mock_notify, mock_res):
         """Original exception should be raised if the _reschedule method
         raises another exception
         """
@@ -11837,6 +11838,9 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
                     self.context, {}, {}, instance,
                     self.compute.compute_task_api.resize_instance, method_args,
                     task_states.RESIZE_PREP, exc_info)
+            mock_notify.assert_called_once_with(
+                self.context, instance, 'fake-mini', action='resize',
+                phase='error', exception=mock_res.side_effect)
 
     @mock.patch.object(compute_manager.ComputeManager, "_reschedule")
     def test_reschedule_false(self, mock_res):
