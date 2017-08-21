@@ -4647,6 +4647,36 @@ class TestNeutronv2WithMock(test.TestCase):
             uuids.port_id, {'port': {'device_id': '', 'device_owner': ''}})
         self.assertTrue(mock_log.called)
 
+    @mock.patch.object(neutronapi, 'get_client')
+    def test_associate_floating_ip_conflict(self, mock_get_client):
+        """Tests that if Neutron raises a Conflict we handle it and re-raise
+        as a nova-specific exception.
+        """
+        mock_get_client.return_value.update_floatingip.side_effect = (
+            exceptions.Conflict(
+                "Cannot associate floating IP 172.24.5.15 "
+                "(60a8f00b-4404-4518-ad66-00448a155904) with port "
+                "95ee1ffb-6d41-447d-a90e-b6ce5d9c92fa using fixed IP "
+                "10.1.0.9, as that fixed IP already has a floating IP on "
+                "external network bdcda645-f612-40ab-a956-0d95af42cf7c.")
+        )
+        with test.nested(
+            mock.patch.object(
+                self.api, '_get_port_id_by_fixed_address',
+                return_value='95ee1ffb-6d41-447d-a90e-b6ce5d9c92fa'),
+            mock.patch.object(
+                self.api, '_get_floating_ip_by_address',
+                return_value={'id': uuids.floating_ip_id})
+        ) as (
+            _get_floating_ip_by_address, _get_port_id_by_fixed_address
+        ):
+            instance = fake_instance.fake_instance_obj(
+                self.context, uuid='2a2200ec-02fe-484e-885b-9bae7b21ecba')
+            self.assertRaises(exception.FloatingIpAssociateFailed,
+                              self.api.associate_floating_ip,
+                              self.context, instance,
+                              '172.24.5.15', '10.1.0.9')
+
 
 class TestNeutronv2ModuleMethods(test.NoDBTestCase):
 

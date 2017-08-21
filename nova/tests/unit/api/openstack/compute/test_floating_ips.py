@@ -672,6 +672,15 @@ class FloatingIpTestV21(test.TestCase):
                           self.manager._add_floating_ip, self.fake_req,
                           TEST_INST, body=body)
 
+    @mock.patch.object(network.api.API, 'associate_floating_ip',
+                       side_effect=exception.FloatingIpAssociateFailed(
+                           address='10.10.10.11'))
+    def test_associate_floating_ip_failed(self, associate_mock):
+        body = dict(addFloatingIp=dict(address='10.10.10.11'))
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.manager._add_floating_ip, self.fake_req,
+                          TEST_INST, body=body)
+
     def test_associate_floating_ip_bad_address_key(self):
         body = dict(addFloatingIp=dict(bad_address='10.10.10.11'))
         req = fakes.HTTPRequest.blank('/v2/fake/servers/test_inst/action')
