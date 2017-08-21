@@ -2,7 +2,7 @@
     "host": [
         {
             "resource": {
-                "cpu": 1,
+                "cpu": 2,
                 "disk_gb": 1028,
                 "host": "c1a7de0ac9d94e4baceae031d05caae3",
                 "memory_mb": 8192,

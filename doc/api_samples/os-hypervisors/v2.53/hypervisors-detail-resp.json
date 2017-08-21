@@ -36,7 +36,7 @@
                 "id": "62f62f6e-a713-4cbe-87d3-3ecf8a1e0f8d",
                 "disabled_reason": null
             },
-            "vcpus": 1,
+            "vcpus": 2,
             "vcpus_used": 0
         }
     ],

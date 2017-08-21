@@ -50,7 +50,6 @@ class ServerTagsFilteringTest(test.TestCase,
         self.api.microversion = 'latest'
 
         self.start_service('conductor')
-        self.flags(driver='chance_scheduler', group='scheduler')
         self.start_service('scheduler')
         self.start_service('compute')
         # The consoleauth service is needed for deleting console tokens when

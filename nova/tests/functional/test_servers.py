@@ -1068,15 +1068,11 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
     REQUIRES_LOCKING = True
     microversion = 'latest'
 
-    _enabled_filters = ['RetryFilter', 'ComputeFilter']
-
     def setUp(self):
         # NOTE(danms): The test defaults to using SmallFakeDriver,
         # which only has one vcpu, which can't take the doubled allocation
         # we're now giving it. So, use the bigger MediumFakeDriver here.
         self.flags(compute_driver='fake.MediumFakeDriver')
-        self.flags(enabled_filters=self._enabled_filters,
-                   group='filter_scheduler')
         super(ServerMovingTests, self).setUp()
 
         self.useFixture(policy_fixture.RealPolicyFixture())

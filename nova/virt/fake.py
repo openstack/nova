@@ -596,7 +596,7 @@ class SmallFakeDriver(FakeDriver):
     # instead of requiring new samples every time those
     # values are adjusted allow them to be overwritten here.
 
-    vcpus = 1
+    vcpus = 2
     memory_mb = 8192
     local_gb = 1028
 

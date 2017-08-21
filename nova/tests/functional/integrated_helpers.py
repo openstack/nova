@@ -77,10 +77,11 @@ class _IntegratedTestBase(test.TestCase):
         self.flags(use_neutron=self.USE_NEUTRON)
 
         nova.tests.unit.image.fake.stub_out_image_service(self)
-        self._setup_services()
 
         self.useFixture(cast_as_call.CastAsCall(self))
         self.useFixture(nova_fixtures.PlacementFixture())
+
+        self._setup_services()
 
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
 
@@ -88,7 +89,6 @@ class _IntegratedTestBase(test.TestCase):
         return self.start_service('compute')
 
     def _setup_scheduler_service(self):
-        self.flags(group='scheduler', driver='chance_scheduler')
         return self.start_service('scheduler')
 
     def _setup_services(self):
