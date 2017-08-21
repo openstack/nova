@@ -772,7 +772,7 @@ Deletes a server.
 
 By default, the instance is going to be (hard) deleted immediately from
 the system, but you can set ``reclaim_instance_interval`` > 0 to make
-the API soft delete the instance, so that the instance's vm won't be
+the API soft delete the instance, so that the instance won't be
 deleted until the ``reclaim_instance_interval`` has expired since the
 instance was soft deleted. The instance marked as ``SOFT_DELETED`` can
 be recovered via ``restore`` action before it's really deleted from the
