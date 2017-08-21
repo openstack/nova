@@ -1835,19 +1835,11 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
 
         dest_usages = self._get_provider_usages(dest_rp_uuid)
-        # NOTE(lajos katona): When bug 1712008 is solved the dest host
-        # expected to have resource allocation:
-        # self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
-
-        # NOTE(lajos katona): the allocation on the destination host is empty,
-        # but when bug 1712008 is solved expected to be equal described by the
-        # flavor:
-        self.assertFlavorMatchesAllocation(
-            {'ram': 0, 'disk': 0, 'vcpus': 0}, dest_usages)
+        self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
 
         allocations = self._get_allocations_by_server_uuid(server['id'])
-        # the server has just 1 allocation:
-        self.assertEqual(1, len(allocations))
+        # the server has an allocation on the source and dest nodes
+        self.assertEqual(2, len(allocations))
 
         # NOTE(lajos katona): When bug 1712045 is solved the server has
         # no allocation on the source:
@@ -1857,13 +1849,8 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         source_allocation = allocations[source_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
 
-        # NOTE(lajos katona): When bug 1712008 solved the server should have
-        # an allocation for the destination:
-        # dest_allocation = allocations[dest_rp_uuid]['resources']
-        # self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
-
-        # Instead the server has no allocation for the destination host:
-        self.assertNotIn(dest_rp_uuid, allocations)
+        dest_allocation = allocations[dest_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
 
         self._delete_and_check_allocations(
             server, source_rp_uuid, dest_rp_uuid)
