@@ -267,10 +267,11 @@ class InstanceHelperMixin(object):
         return server
 
     def _wait_until_deleted(self, server):
+        initially_in_error = (server['status'] == 'ERROR')
         try:
             for i in range(40):
                 server = self.api.get_server(server['id'])
-                if server['status'] == 'ERROR':
+                if not initially_in_error and server['status'] == 'ERROR':
                     self.fail('Server went to error state instead of'
                               'disappearing.')
                 time.sleep(0.5)

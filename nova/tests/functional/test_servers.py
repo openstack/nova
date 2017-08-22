@@ -2032,6 +2032,92 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
 
         self._delete_and_check_allocations(server)
 
+    def _wait_for_notification_event_type(self, event_type, max_retries=50):
+        retry_counter = 0
+        while True:
+            if len(fake_notifier.NOTIFICATIONS) > 0:
+                for notification in fake_notifier.NOTIFICATIONS:
+                    if notification.event_type == event_type:
+                        return
+            if retry_counter == max_retries:
+                self.fail('Wait for notification event type (%s) failed'
+                          % event_type)
+            retry_counter += 1
+            time.sleep(0.1)
+
+    def test_evacuate_with_no_compute(self):
+        source_hostname = self.compute1.host
+        dest_hostname = self.compute2.host
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        # Disable compute service on destination host
+        compute2_service_id = self.admin_api.get_services(
+            host=dest_hostname, binary='nova-compute')[0]['id']
+        self.admin_api.put_service(compute2_service_id, {'status': 'disabled'})
+
+        server = self._boot_and_check_allocations(
+            self.flavor1, source_hostname)
+
+        # Force source compute down
+        source_compute_id = self.admin_api.get_services(
+            host=source_hostname, binary='nova-compute')[0]['id']
+        self.compute1.stop()
+        self.admin_api.put_service(
+            source_compute_id, {'forced_down': 'true'})
+
+        # Initialize fake_notifier
+        fake_notifier.stub_notifier(self)
+        fake_notifier.reset()
+
+        # Initiate evacuation
+        post = {'evacuate': {}}
+        self.api.post_server_action(server['id'], post)
+
+        # NOTE(elod.illes): Should be changed to non-polling solution when
+        # patch https://review.openstack.org/#/c/482629/ gets merged:
+        # fake_notifier.wait_for_versioned_notifications(
+        #     'compute_task.rebuild_server')
+        self._wait_for_notification_event_type('compute_task.rebuild_server')
+
+        self._run_periodics()
+
+        # There is no other host to evacuate to so the rebuild should put the
+        # VM to ERROR state, but it should remain on source compute
+        expected_params = {'OS-EXT-SRV-ATTR:host': source_hostname,
+                           'status': 'ERROR'}
+        server = self._wait_for_server_parameter(self.api, server,
+                                                 expected_params)
+
+        # Check migrations
+        migrations = self.api.get_migrations()
+        self.assertEqual(1, len(migrations))
+        self.assertEqual('evacuation', migrations[0]['migration_type'])
+        self.assertEqual(server['id'], migrations[0]['instance_uuid'])
+        self.assertEqual(source_hostname, migrations[0]['source_compute'])
+        self.assertEqual('error', migrations[0]['status'])
+
+        # Restart source host
+        self.admin_api.put_service(
+            source_compute_id, {'forced_down': 'false'})
+        self.compute1.start()
+
+        self._run_periodics()
+
+        # Check allocation and usages: should only use resources on source host
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations))
+        allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, allocation)
+
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        zero_usage = {'VCPU': 0, 'DISK_GB': 0, 'MEMORY_MB': 0}
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+        self.assertEqual(zero_usage, dest_usages)
+
+        self._delete_and_check_allocations(server)
+
     def test_evacuate(self):
         source_hostname = self.compute1.host
         dest_hostname = self.compute2.host
