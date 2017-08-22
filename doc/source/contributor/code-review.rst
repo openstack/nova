@@ -86,6 +86,9 @@ Database Schema
   online. Generally, this can and should be hidden within the object
   layer so that an object can load from either the old or new
   location, and save to the new one.
+* Multiple Cells v2 cells are supported started in the Pike release.
+  As such, any online data migrations that move data from a cell
+  database to the API database must be multi-cell aware.
 
 REST API
 =========
