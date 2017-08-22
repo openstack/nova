@@ -316,7 +316,7 @@ The |NUMATopologyFilter| considers the NUMA topology that was specified for the 
 through the use of flavor extra_specs in combination with the image properties, as
 described in detail in the related nova-spec document:
 
-* http://git.openstack.org/cgit/openstack/nova-specs/tree/specs/juno/virt-driver-numa-placement.rst
+* http://git.openstack.org/cgit/openstack/nova-specs/tree/specs/juno/implemented/virt-driver-numa-placement.rst
 
 and try to match it with the topology exposed by the host, accounting for the
 ``ram_allocation_ratio`` and ``cpu_allocation_ratio`` for over-subscription. The
