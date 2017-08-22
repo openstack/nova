@@ -1863,3 +1863,58 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
 
         self._delete_and_check_allocations(
             server, source_rp_uuid, dest_rp_uuid)
+
+    def test_live_migrate(self):
+        source_hostname = self.compute1.host
+        dest_hostname = self.compute2.host
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        server = self._boot_and_check_allocations(
+            self.flavor1, source_hostname)
+        post = {
+            'os-migrateLive': {
+                'host': dest_hostname,
+                'block_migration': True,
+            }
+        }
+
+        self.api.post_server_action(server['id'], post)
+        self._wait_for_server_parameter(self.api, server,
+                                        {'OS-EXT-SRV-ATTR:host': dest_hostname,
+                                         'status': 'ACTIVE'})
+
+        self._run_periodics()
+
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        # NOTE(lajos katona): After bug 1712045 is solved on the source there
+        # will be no allocations:
+        # self.assertFlavorMatchesAllocation(
+        #     {'ram': 0, 'disk': 0, 'vcpus': 0}, source_usages)
+
+        # NOTE(lajos katona): while bug 1712045 is not solved on the source
+        # host the allocations are remaining:
+        # on the original host should not have the old resource usage
+        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        # NOTE(lajos katona): the server has 2 allocations, instead of one,
+        # after bug 1712045 will be solved we can expect just one allocation
+        self.assertEqual(2, len(allocations))
+
+        # NOTE(lajos katona): When bug 1712045 is solved the server has
+        # no allocation on the source:
+        # self.assertNotIn(source_rp_uuid, allocations)
+
+        # Instead the source allocation is still there
+        source_allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
+
+        dest_allocation = allocations[dest_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
+
+        self._delete_and_check_allocations(
+            server, source_rp_uuid, dest_rp_uuid)
