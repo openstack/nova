@@ -141,6 +141,11 @@ check is needed to ensure proper affinity policy.
 
 Operators that desire api/cell isolation over this check should
 enable this flag, which will avoid making that upcall from compute.
+
+Related options:
+
+* [filter_scheduler]/track_instance_changes also relies on upcalls from the
+  compute service to the scheduler service.
 """),
 ]
 
