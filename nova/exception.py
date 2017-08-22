@@ -1802,6 +1802,10 @@ class VolumesNotRemoved(Invalid):
     msg_fmt = _("Failed to remove volume(s): (%(reason)s)")
 
 
+class VolumeRebaseFailed(NovaException):
+    msg_fmt = _("Volume rebase failed: %(reason)s")
+
+
 class InvalidVideoMode(Invalid):
     msg_fmt = _("Provided video model (%(model)s) is not supported.")
 
