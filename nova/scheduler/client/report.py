@@ -30,6 +30,7 @@ from nova.i18n import _LE, _LI, _LW
 from nova import objects
 from nova.objects import fields
 from nova.scheduler import utils as scheduler_utils
+from nova import utils
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
@@ -39,6 +40,7 @@ DISK_GB = fields.ResourceClass.DISK_GB
 _RE_INV_IN_USE = re.compile("Inventory for (.+) on resource provider "
                             "(.+) in use")
 WARN_EVERY = 10
+PLACEMENT_CLIENT_SEMAPHORE = 'placement_client'
 
 
 def warn_limit(self, msg):
@@ -60,6 +62,9 @@ def safe_connect(f):
                 _LW('The placement API endpoint not found. Placement is '
                     'optional in Newton, but required in Ocata. Please '
                     'enable the placement service before upgrading.'))
+            # Reset client session so there is a new catalog, which
+            # gets cached when keystone is first successfully contacted.
+            self._client = self._create_client()
         except ks_exc.MissingAuthPlugin:
             warn_limit(
                 self,
@@ -234,20 +239,25 @@ class SchedulerReportClient(object):
         # A dict, keyed by resource provider UUID, of sets of aggregate UUIDs
         # the provider is associated with
         self._provider_aggregate_map = {}
-        auth_plugin = keystone.load_auth_from_conf_options(
-            CONF, 'placement')
-        # Set content-type and accept on every request to ensure we notify
-        # placement service of our request and response body media type
-        # preferences.
-        self._client = keystone.load_session_from_conf_options(
-            CONF, 'placement', auth=auth_plugin,
-            additional_headers={'accept': 'application/json'})
-
+        self._client = self._create_client()
         # NOTE(danms): Keep track of how naggy we've been
         self._warn_count = 0
         self.ks_filter = {'service_type': 'placement',
                           'region_name': CONF.placement.os_region_name,
                           'interface': CONF.placement.os_interface}
+
+    @utils.synchronized(PLACEMENT_CLIENT_SEMAPHORE)
+    def _create_client(self):
+        """Create the HTTP session accessing the placement service."""
+        # Flush _resource_providers and aggregates so we start from a
+        # clean slate.
+        self._resource_providers = {}
+        self._provider_aggregate_map = {}
+        auth_plugin = keystone.load_auth_from_conf_options(
+            CONF, 'placement')
+        return keystone.load_session_from_conf_options(
+            CONF, 'placement', auth=auth_plugin,
+            additional_headers={'accept': 'application/json'})
 
     def get(self, url, version=None):
         kwargs = {}
