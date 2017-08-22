@@ -28,8 +28,6 @@ import pyclbr
 import random
 import re
 import shutil
-import socket
-import struct
 import sys
 import tempfile
 import time
@@ -64,15 +62,6 @@ CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
-# used in limits
-TIME_UNITS = {
-    'SECOND': 1,
-    'MINUTE': 60,
-    'HOUR': 3600,
-    'DAY': 86400
-}
-
-
 _IS_NEUTRON = None
 
 synchronized = lockutils.synchronized_with_prefix('nova-')
@@ -98,58 +87,6 @@ VIM_IMAGE_ATTRIBUTES = (
 )
 
 _FILE_CACHE = {}
-
-
-def vpn_ping(address, port, timeout=0.05, session_id=None):
-    """Sends a vpn negotiation packet and returns the server session.
-
-    Returns Boolean indicating whether the vpn_server is listening.
-    Basic packet structure is below.
-
-    Client packet (14 bytes)::
-
-         0 1      8 9  13
-        +-+--------+-----+
-        |x| cli_id |?????|
-        +-+--------+-----+
-        x = packet identifier 0x38
-        cli_id = 64 bit identifier
-        ? = unknown, probably flags/padding
-
-    Server packet (26 bytes)::
-
-         0 1      8 9  13 14    21 2225
-        +-+--------+-----+--------+----+
-        |x| srv_id |?????| cli_id |????|
-        +-+--------+-----+--------+----+
-        x = packet identifier 0x40
-        cli_id = 64 bit identifier
-        ? = unknown, probably flags/padding
-        bit 9 was 1 and the rest were 0 in testing
-
-    """
-    # NOTE(tonyb) session_id isn't used for a real VPN connection so using a
-    #             cryptographically weak value is fine.
-    if session_id is None:
-        session_id = random.randint(0, 0xffffffffffffffff)
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    data = struct.pack('!BQxxxxx', 0x38, session_id)
-    sock.sendto(data, (address, port))
-    sock.settimeout(timeout)
-    try:
-        received = sock.recv(2048)
-    except socket.timeout:
-        return False
-    finally:
-        sock.close()
-    fmt = '!BQxxxxxQxxxx'
-    if len(received) != struct.calcsize(fmt):
-        LOG.warning(_LW('Expected to receive %(exp)s bytes, '
-                        'but actually %(act)s'),
-                    dict(exp=struct.calcsize(fmt), act=len(received)))
-        return False
-    (identifier, server_sess, client_sess) = struct.unpack(fmt, received)
-    return (identifier == 0x40 and client_sess == session_id)
 
 
 def get_root_helper():
