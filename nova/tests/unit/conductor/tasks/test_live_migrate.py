@@ -12,6 +12,7 @@
 
 import mock
 import oslo_messaging as messaging
+import six
 
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
@@ -246,6 +247,33 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                           mock.call(self.destination)],
                          mock_get_info.call_args_list)
 
+    @mock.patch.object(objects.Service, 'get_by_compute_host')
+    @mock.patch.object(live_migrate.LiveMigrationTask, '_get_compute_info')
+    @mock.patch.object(servicegroup.API, 'service_is_up')
+    @mock.patch.object(compute_rpcapi.ComputeAPI,
+                       'check_can_live_migrate_destination')
+    @mock.patch.object(objects.HostMapping, 'get_by_host',
+                       return_value=objects.HostMapping(
+                           cell_mapping=objects.CellMapping(
+                               uuid=uuids.different)))
+    def test_check_requested_destination_fails_different_cells(
+            self, mock_get_host_mapping, mock_check, mock_is_up,
+            mock_get_info, mock_get_host):
+        mock_get_host.return_value = "service"
+        mock_is_up.return_value = True
+        hypervisor_details = objects.ComputeNode(
+            hypervisor_type="a",
+            hypervisor_version=6.1,
+            free_ram_mb=513,
+            memory_mb=512,
+            ram_allocation_ratio=1.0)
+        mock_get_info.return_value = hypervisor_details
+        mock_check.return_value = "migrate_data"
+
+        ex = self.assertRaises(exception.MigrationPreCheckError,
+                               self.task._check_requested_destination)
+        self.assertIn('across cells', six.text_type(ex))
+
     def test_find_destination_works(self):
         self.mox.StubOutWithMock(utils, 'get_image_from_system_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
@@ -270,6 +298,10 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
         self.mox.ReplayAll()
         self.assertEqual("host1", self.task._find_destination())
+
+        # Make sure the request_spec was updated to include the cell
+        # mapping.
+        self.assertIsNotNone(self.fake_spec.requested_destination.cell)
 
     def test_find_destination_works_with_no_request_spec(self):
         task = live_migrate.LiveMigrationTask(
@@ -300,6 +332,9 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             setup_ig.assert_called_once_with(self.context, another_spec)
             select_dest.assert_called_once_with(self.context, another_spec,
                     [self.instance.uuid])
+            # Make sure the request_spec was updated to include the cell
+            # mapping.
+            self.assertIsNotNone(another_spec.requested_destination.cell)
             check_compat.assert_called_once_with("host1")
             call_livem_checks.assert_called_once_with("host1")
         do_test()
@@ -577,3 +612,27 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 self.instance.project_id, self.instance.user_id)
 
         test()
+
+    @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid',
+                       side_effect=exception.InstanceMappingNotFound(
+                           uuid=uuids.instance))
+    def test_get_source_cell_mapping_not_found(self, mock_get):
+        """Negative test where InstanceMappingNotFound is raised and converted
+        to MigrationPreCheckError.
+        """
+        self.assertRaises(exception.MigrationPreCheckError,
+                          self.task._get_source_cell_mapping)
+        mock_get.assert_called_once_with(
+            self.task.context, self.task.instance.uuid)
+
+    @mock.patch.object(objects.HostMapping, 'get_by_host',
+                       side_effect=exception.HostMappingNotFound(
+                           name='destination'))
+    def test_get_destination_cell_mapping_not_found(self, mock_get):
+        """Negative test where HostMappingNotFound is raised and converted
+        to MigrationPreCheckError.
+        """
+        self.assertRaises(exception.MigrationPreCheckError,
+                          self.task._get_destination_cell_mapping)
+        mock_get.assert_called_once_with(
+            self.task.context, self.task.destination)
