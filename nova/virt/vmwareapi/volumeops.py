@@ -21,6 +21,7 @@ from oslo_log import log as logging
 from oslo_vmware import exceptions as oslo_vmw_exceptions
 from oslo_vmware import vim_util as vutil
 
+from nova.compute import power_state
 import nova.conf
 from nova import exception
 from nova.i18n import _
@@ -332,7 +333,7 @@ class VMwareVolumeOps(object):
         # IDE does not support disk hotplug
         if adapter_type == constants.ADAPTER_TYPE_IDE:
             state = vm_util.get_vm_state(self._session, instance)
-            if state.lower() != 'poweredoff':
+            if state != power_state.SHUTDOWN:
                 raise exception.Invalid(_('%s does not support disk '
                                           'hotplug.') % adapter_type)
 
@@ -532,7 +533,7 @@ class VMwareVolumeOps(object):
         # IDE does not support disk hotplug
         if vmdk.adapter_type == constants.ADAPTER_TYPE_IDE:
             state = vm_util.get_vm_state(self._session, instance)
-            if state.lower() != 'poweredoff':
+            if state != power_state.SHUTDOWN:
                 raise exception.Invalid(_('%s does not support disk '
                                           'hotplug.') % vmdk.adapter_type)
 
