@@ -1,0 +1,7 @@
+---
+deprecations:
+  - |
+    The `nova-manage cell` command has been deprecated. This command
+    configures various aspects of the Cells v1 functionality. Cells v1 has
+    been deprecated, thus, this command is also deprecated. It will be removed
+    in its entirety when Cells v1 is removed.
