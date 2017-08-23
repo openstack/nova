@@ -75,7 +75,6 @@ Contents
 
     users
     versions
-    extensions
     microversions
     general_info
     server_concepts
