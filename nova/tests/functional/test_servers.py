@@ -1311,8 +1311,6 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         self.api.delete_server(server['id'])
         self._wait_until_deleted(server)
 
-        self._run_periodics()
-
         source_usages = self._get_provider_usages(source_rp_uuid)
         self.assertEqual({'VCPU': 0,
                           'MEMORY_MB': 0,

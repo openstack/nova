@@ -724,6 +724,10 @@ class ComputeManager(manager.Manager):
             bdm.destroy()
 
         self._update_resource_tracker(context, instance)
+
+        rt = self._get_resource_tracker()
+        rt.reportclient.delete_allocation_for_instance(instance.uuid)
+
         self._notify_about_instance_usage(context, instance, "delete.end",
                 system_metadata=system_meta)
         compute_utils.notify_about_instance_action(context, instance,
