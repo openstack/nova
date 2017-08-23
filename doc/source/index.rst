@@ -249,6 +249,7 @@ looking parts of our architecture. These are collected below.
    reference/notifications
    reference/policy-enforcement
    reference/rpc
+   reference/scheduling
    reference/scheduler-evolution
    reference/services
    reference/stable-api

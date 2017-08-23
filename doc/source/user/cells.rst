@@ -69,6 +69,7 @@ detract from that effort. Further discussion on this can be found in the
 There are no plans to remove Cells V1 until V2 is usable by existing
 deployments and there is a migration path.
 
+.. _cells-v2:
 
 Cells V2
 ========

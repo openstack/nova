@@ -45,6 +45,7 @@ extensions = ['sphinx.ext.autodoc',
               'oslo_policy.sphinxext',
               'ext.versioned_notifications',
               'ext.feature_matrix',
+              'sphinxcontrib.actdiag',
               ]
 
 # openstackdocstheme options
@@ -57,6 +58,9 @@ sample_config_basename = '_static/nova'
 
 policy_generator_config_file = '../../etc/nova/nova-policy-generator.conf'
 sample_policy_basename = '_static/nova'
+
+actdiag_html_image_format = 'SVG'
+actdiag_antialias = True
 
 todo_include_todos = True
 
