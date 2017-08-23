@@ -1225,6 +1225,18 @@ class ResourceTracker(object):
                       "instance on the source node  %s",
                       cn_uuid, instance=instance)
 
+    def delete_allocation_for_migrated_instance(self, instance, node):
+        my_resources = scheduler_utils.resources_from_flavor(instance,
+                                                             instance.flavor)
+        cn = self.compute_nodes[node]
+        res = self.reportclient.remove_provider_from_instance_allocation(
+            instance.uuid, cn.uuid, instance.user_id, instance.project_id,
+            my_resources)
+        if not res:
+            LOG.error('Failed to clean allocation of a migrated instance '
+                      'on the source node %s', cn.uuid,
+                      instance=instance)
+
     def _find_orphaned_instances(self):
         """Given the set of instances and migrations already account for
         by resource tracker, sanity check the hypervisor to determine
