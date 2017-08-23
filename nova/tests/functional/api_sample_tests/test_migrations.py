@@ -18,6 +18,7 @@ import datetime
 from nova import context
 from nova import objects
 from nova.tests.functional.api_sample_tests import api_sample_base
+from nova.tests import uuidsentinel as uuids
 
 
 # NOTE(ShaoHe Feng) here I can not use uuidsentinel, it generate a random
@@ -44,7 +45,8 @@ def _stub_migrations(stub_self, context, filters):
             'created_at': datetime.datetime(2012, 10, 29, 13, 42, 2),
             'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2),
             'deleted_at': None,
-            'deleted': False
+            'deleted': False,
+            'uuid': uuids.migration1,
         },
         {
             'id': 5678,
@@ -62,7 +64,8 @@ def _stub_migrations(stub_self, context, filters):
             'created_at': datetime.datetime(2013, 10, 22, 13, 42, 2),
             'updated_at': datetime.datetime(2013, 10, 22, 13, 42, 2),
             'deleted_at': None,
-            'deleted': False
+            'deleted': False,
+            'uuid': uuids.migration2,
         }
     ]
     return fake_migrations
