@@ -321,10 +321,14 @@ class FilterScheduler(driver.Scheduler):
 
     def _get_all_host_states(self, context, spec_obj, provider_summaries):
         """Template method, so a subclass can implement caching."""
-        # NOTE(jaypipes): None is treated differently from an empty dict. We
-        # pass None when we want to grab all compute nodes (for instance, when
-        # using the caching scheduler. We pass an empty dict when the Placement
-        # API found no providers that match the requested constraints.
+        # NOTE(jaypipes): provider_summaries being None is treated differently
+        # from an empty dict. provider_summaries is None when we want to grab
+        # all compute nodes, for instance when using the caching scheduler.
+        # The provider_summaries variable will be an empty dict when the
+        # Placement API found no providers that match the requested
+        # constraints, which in turn makes compute_uuids an empty list and
+        # get_host_states_by_uuids will return an empty tuple also, which will
+        # eventually result in a NoValidHost error.
         compute_uuids = None
         if provider_summaries is not None:
             compute_uuids = list(provider_summaries.keys())

@@ -599,3 +599,29 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 mock.call(self.context, 'scheduler.select_destinations.end',
                  dict(request_spec=expected))]
             self.assertEqual(expected, mock_info.call_args_list)
+
+    def test_get_all_host_states_provider_summaries_is_none(self):
+        """Tests that HostManager.get_host_states_by_uuids is called with
+        compute_uuids being None when the incoming provider_summaries is None.
+        """
+        with mock.patch.object(self.driver.host_manager,
+                               'get_host_states_by_uuids') as get_host_states:
+            self.driver._get_all_host_states(
+                mock.sentinel.ctxt, mock.sentinel.spec_obj, None)
+        # Make sure get_host_states_by_uuids was called with
+        # compute_uuids being None.
+        get_host_states.assert_called_once_with(
+            mock.sentinel.ctxt, None, mock.sentinel.spec_obj)
+
+    def test_get_all_host_states_provider_summaries_is_empty(self):
+        """Tests that HostManager.get_host_states_by_uuids is called with
+        compute_uuids being [] when the incoming provider_summaries is {}.
+        """
+        with mock.patch.object(self.driver.host_manager,
+                               'get_host_states_by_uuids') as get_host_states:
+            self.driver._get_all_host_states(
+                mock.sentinel.ctxt, mock.sentinel.spec_obj, {})
+        # Make sure get_host_states_by_uuids was called with
+        # compute_uuids being [].
+        get_host_states.assert_called_once_with(
+            mock.sentinel.ctxt, [], mock.sentinel.spec_obj)
