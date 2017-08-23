@@ -752,6 +752,7 @@ class Migration(BASE, NovaBase, models.SoftDeleteMixin):
         Index('migrations_by_host_nodes_and_status_idx', 'deleted',
               'source_compute', 'dest_compute', 'source_node', 'dest_node',
               'status'),
+        Index('migrations_uuid', 'uuid', unique=True),
     )
     id = Column(Integer, primary_key=True, nullable=False)
     # NOTE(tr3buchet): the ____compute variables are instance['host']
@@ -765,6 +766,7 @@ class Migration(BASE, NovaBase, models.SoftDeleteMixin):
     old_instance_type_id = Column(Integer())
     new_instance_type_id = Column(Integer())
     instance_uuid = Column(String(36), ForeignKey('instances.uuid'))
+    uuid = Column(String(36), nullable=True)
     # TODO(_cerberus_): enum
     status = Column(String(255))
     migration_type = Column(Enum('migration', 'resize', 'live-migration',
