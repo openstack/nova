@@ -117,6 +117,16 @@ class LiveMigrationTask(base.TaskBase):
         source_node, dest_node = self._check_compatible_with_source_hypervisor(
             self.destination)
         self._call_livem_checks_on_host(self.destination)
+        # Make sure the forced destination host is in the same cell that the
+        # instance currently lives in.
+        # NOTE(mriedem): This can go away if/when the forced destination host
+        # case calls select_destinations.
+        source_cell_mapping = self._get_source_cell_mapping()
+        dest_cell_mapping = self._get_destination_cell_mapping()
+        if source_cell_mapping.uuid != dest_cell_mapping.uuid:
+            raise exception.MigrationPreCheckError(
+                reason=(_('Unable to force live migrate instance %s '
+                          'across cells.') % self.instance.uuid))
         return source_node, dest_node
 
     def _claim_resources_on_destination(self, source_node, dest_node):
@@ -246,6 +256,36 @@ class LiveMigrationTask(base.TaskBase):
                     "%s") % destination
             raise exception.MigrationPreCheckError(msg)
 
+    def _get_source_cell_mapping(self):
+        """Returns the CellMapping for the cell in which the instance lives
+
+        :returns: nova.objects.CellMapping record for the cell where
+            the instance currently lives.
+        :raises: MigrationPreCheckError - in case a mapping is not found
+        """
+        try:
+            return objects.InstanceMapping.get_by_instance_uuid(
+                self.context, self.instance.uuid).cell_mapping
+        except exception.InstanceMappingNotFound:
+            raise exception.MigrationPreCheckError(
+                reason=(_('Unable to determine in which cell '
+                          'instance %s lives.') % self.instance.uuid))
+
+    def _get_destination_cell_mapping(self):
+        """Returns the CellMapping for the destination host
+
+        :returns: nova.objects.CellMapping record for the cell where
+            the destination host is mapped.
+        :raises: MigrationPreCheckError - in case a mapping is not found
+        """
+        try:
+            return objects.HostMapping.get_by_host(
+                self.context, self.destination).cell_mapping
+        except exception.HostMappingNotFound:
+            raise exception.MigrationPreCheckError(
+                reason=(_('Unable to determine in which cell '
+                          'destination host %s lives.') % self.destination))
+
     def _find_destination(self):
         # TODO(johngarbutt) this retry loop should be shared
         attempted_hosts = [self.source]
@@ -269,6 +309,21 @@ class LiveMigrationTask(base.TaskBase):
             # is not forced to be the original host
             request_spec.reset_forced_destinations()
         scheduler_utils.setup_instance_group(self.context, request_spec)
+
+        # We currently only support live migrating to hosts in the same
+        # cell that the instance lives in, so we need to tell the scheduler
+        # to limit the applicable hosts based on cell.
+        cell_mapping = self._get_source_cell_mapping()
+        LOG.debug('Requesting cell %(cell)s while live migrating',
+                  {'cell': cell_mapping.identity},
+                  instance=self.instance)
+        if ('requested_destination' in request_spec and
+                request_spec.requested_destination):
+            request_spec.requested_destination.cell = cell_mapping
+        else:
+            request_spec.requested_destination = objects.Destination(
+                cell=cell_mapping)
+
         host = None
         while host is None:
             self._check_not_over_max_retries(attempted_hosts)
