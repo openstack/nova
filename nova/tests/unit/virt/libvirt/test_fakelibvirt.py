@@ -13,6 +13,7 @@
 #    under the License.
 
 from lxml import etree
+from oslo_utils import uuidutils
 import six
 
 from nova.objects import fields as obj_fields
@@ -125,29 +126,32 @@ class FakeLibvirtTests(test.NoDBTestCase):
         raise self.failureException("Invalid XML didn't raise libvirtError")
 
     def test_defineXML_defines_domain(self):
+        uuid = uuidutils.generate_uuid()
         conn = self.get_openAuth_curry_func()('qemu:///system')
-        conn.defineXML(get_vm_xml())
-        dom = conn.lookupByName('testname')
+        conn.defineXML(get_vm_xml(uuid=uuid))
+        dom = conn.lookupByUUIDString(uuid)
         self.assertEqual('testname', dom.name())
         self.assertEqual(0, dom.isActive())
         dom.undefine()
         self.assertRaises(libvirt.libvirtError,
-                          conn.lookupByName,
-                          'testname')
+                          conn.lookupByUUIDString,
+                          uuid)
 
     def test_blockStats(self):
+        uuid = uuidutils.generate_uuid()
         conn = self.get_openAuth_curry_func()('qemu:///system')
-        conn.createXML(get_vm_xml(), 0)
-        dom = conn.lookupByName('testname')
+        conn.createXML(get_vm_xml(uuid=uuid), 0)
+        dom = conn.lookupByUUIDString(uuid)
         blockstats = dom.blockStats('vda')
         self.assertEqual(len(blockstats), 5)
         for x in blockstats:
             self.assertIn(type(x), six.integer_types)
 
     def test_attach_detach(self):
+        uuid = uuidutils.generate_uuid()
         conn = self.get_openAuth_curry_func()('qemu:///system')
-        conn.createXML(get_vm_xml(), 0)
-        dom = conn.lookupByName('testname')
+        conn.createXML(get_vm_xml(uuid=uuid), 0)
+        dom = conn.lookupByUUIDString(uuid)
         xml = '''<disk type='block'>
                    <driver name='qemu' type='raw'/>
                    <source dev='/dev/nbd0'/>
@@ -157,9 +161,10 @@ class FakeLibvirtTests(test.NoDBTestCase):
         self.assertTrue(dom.detachDevice(xml))
 
     def test_info(self):
+        uuid = uuidutils.generate_uuid()
         conn = self.get_openAuth_curry_func()('qemu:///system')
-        conn.createXML(get_vm_xml(), 0)
-        dom = conn.lookupByName('testname')
+        conn.createXML(get_vm_xml(uuid=uuid), 0)
+        dom = conn.lookupByUUIDString(uuid)
         info = dom.info()
         self.assertEqual(info[0], libvirt.VIR_DOMAIN_RUNNING)
         self.assertEqual(info[1], 128000)
@@ -168,40 +173,43 @@ class FakeLibvirtTests(test.NoDBTestCase):
         self.assertIn(type(info[4]), six.integer_types)
 
     def test_createXML_runs_domain(self):
+        uuid = uuidutils.generate_uuid()
         conn = self.get_openAuth_curry_func()('qemu:///system')
-        conn.createXML(get_vm_xml(), 0)
-        dom = conn.lookupByName('testname')
+        conn.createXML(get_vm_xml(uuid=uuid), 0)
+        dom = conn.lookupByUUIDString(uuid)
         self.assertEqual('testname', dom.name())
         self.assertEqual(1, dom.isActive())
         dom.destroy()
         try:
-            conn.lookupByName('testname')
+            conn.lookupByUUIDString(uuid)
         except libvirt.libvirtError as e:
             self.assertEqual(e.get_error_code(), libvirt.VIR_ERR_NO_DOMAIN)
             self.assertEqual(e.get_error_domain(), libvirt.VIR_FROM_QEMU)
             return
-        self.fail("lookupByName succeeded for destroyed non-defined VM")
+        self.fail("lookupByUUIDString succeeded for destroyed non-defined VM")
 
     def test_defineXML_remembers_uuid(self):
         conn = self.get_openAuth_curry_func()('qemu:///system')
         uuid = 'b21f957d-a72f-4b93-b5a5-45b1161abb02'
         conn.defineXML(get_vm_xml(uuid=uuid))
-        dom = conn.lookupByName('testname')
+        dom = conn.lookupByUUIDString(uuid)
         self.assertEqual(dom.UUIDString(), uuid)
 
     def test_createWithFlags(self):
+        uuid = uuidutils.generate_uuid()
         conn = self.get_openAuth_curry_func()('qemu:///system')
-        conn.defineXML(get_vm_xml())
-        dom = conn.lookupByName('testname')
+        conn.defineXML(get_vm_xml(uuid=uuid))
+        dom = conn.lookupByUUIDString(uuid)
         self.assertFalse(dom.isActive(), 'Defined domain was running.')
         dom.createWithFlags(0)
         self.assertTrue(dom.isActive(),
                         'Domain wasn\'t running after createWithFlags')
 
     def test_managedSave(self):
+        uuid = uuidutils.generate_uuid()
         conn = self.get_openAuth_curry_func()('qemu:///system')
-        conn.defineXML(get_vm_xml())
-        dom = conn.lookupByName('testname')
+        conn.defineXML(get_vm_xml(uuid=uuid))
+        dom = conn.lookupByUUIDString(uuid)
         self.assertFalse(dom.isActive(), 'Defined domain was running.')
         dom.createWithFlags(0)
         self.assertEqual(dom.hasManagedSaveImage(0), 0)
@@ -211,18 +219,20 @@ class FakeLibvirtTests(test.NoDBTestCase):
         self.assertEqual(dom.hasManagedSaveImage(0), 0)
 
     def test_define_and_retrieve(self):
+        uuid = uuidutils.generate_uuid()
         conn = self.get_openAuth_curry_func()('qemu:///system')
         self.assertEqual(conn.listAllDomains(), [])
-        conn.defineXML(get_vm_xml())
-        dom = conn.lookupByName('testname')
+        conn.defineXML(get_vm_xml(uuid=uuid))
+        dom = conn.lookupByUUIDString(uuid)
         xml = dom.XMLDesc(0)
         etree.fromstring(xml)
 
     def _test_accepts_source_type(self, source_type):
+        uuid = uuidutils.generate_uuid()
         conn = self.get_openAuth_curry_func()('qemu:///system')
         self.assertEqual(conn.listAllDomains(), [])
-        conn.defineXML(get_vm_xml(source_type=source_type))
-        dom = conn.lookupByName('testname')
+        conn.defineXML(get_vm_xml(source_type=source_type, uuid=uuid))
+        dom = conn.lookupByUUIDString(uuid)
         xml = dom.XMLDesc(0)
         tree = etree.fromstring(xml)
         elem = tree.find('./devices/disk/source')
@@ -241,10 +251,11 @@ class FakeLibvirtTests(test.NoDBTestCase):
         self._test_network_type_sticks('network')
 
     def _test_network_type_sticks(self, network_type):
+        uuid = uuidutils.generate_uuid()
         conn = self.get_openAuth_curry_func()('qemu:///system')
         self.assertEqual(conn.listAllDomains(), [])
-        conn.defineXML(get_vm_xml(interface_type=network_type))
-        dom = conn.lookupByName('testname')
+        conn.defineXML(get_vm_xml(interface_type=network_type, uuid=uuid))
+        dom = conn.lookupByUUIDString(uuid)
         xml = dom.XMLDesc(0)
         tree = etree.fromstring(xml)
         elem = tree.find('./devices/interface')
