@@ -291,8 +291,6 @@ class API(base_api.NetworkAPI):
     def setup_networks_on_host(self, context, instance, host=None,
                                teardown=False):
         """Setup or teardown the network structures."""
-        if not self._has_port_binding_extension(context, refresh_cache=True):
-            return
         # Check if the instance is migrating to a new host.
         port_migrating = host and (instance.host != host)
         # If the port is migrating to a new host or if it is a
@@ -484,21 +482,17 @@ class API(base_api.NetworkAPI):
         :param port_client: The client with appropriate karma for
             updating the ports.
         """
-        port_binding = self._has_port_binding_extension(context,
-                            refresh_cache=True, neutron=neutron)
         if port_client is None:
             # Requires admin creds to set port bindings
-            port_client = (neutron if not port_binding else
-                           get_client(context, admin=True))
+            port_client = get_client(context, admin=True)
         for port_id in ports:
             # A port_id is optional in the NetworkRequest object so check here
             # in case the caller forgot to filter the list.
             if port_id is None:
                 continue
             port_req_body = {'port': {'device_id': '', 'device_owner': ''}}
-            if port_binding:
-                port_req_body['port'][BINDING_HOST_ID] = None
-                port_req_body['port'][BINDING_PROFILE] = {}
+            port_req_body['port'][BINDING_HOST_ID] = None
+            port_req_body['port'][BINDING_PROFILE] = {}
             if constants.DNS_INTEGRATION in self.extensions:
                 port_req_body['port']['dns_name'] = ''
             try:
@@ -917,14 +911,8 @@ class API(base_api.NetworkAPI):
         :param available_macs: a list of available mac addresses
         """
 
-        # The neutron client and port_client (either the admin context or
-        # tenant context) are read here. The reason for this is that there are
-        # a number of different calls for the instance allocation.
-        # We require admin creds to set port bindings.
-        port_client = (neutron if not
-                       self._has_port_binding_extension(context,
-                           refresh_cache=True, neutron=neutron) else
-                       admin_client)
+        # We currently require admin creds to set port bindings.
+        port_client = admin_client
 
         preexisting_port_ids = []
         created_port_ids = []
@@ -1015,12 +1003,6 @@ class API(base_api.NetworkAPI):
             self.extensions.clear()
             self.extensions = {ext['name']: ext for ext in extensions_list}
 
-    def _has_port_binding_extension(self, context, refresh_cache=False,
-                                    neutron=None):
-        if refresh_cache:
-            self._refresh_neutron_extensions_cache(context, neutron=neutron)
-        return constants.PORTBINDING_EXT in self.extensions
-
     def _has_auto_allocate_extension(self, context, refresh_cache=False,
                                      neutron=None):
         if refresh_cache or not self.extensions:
@@ -1099,13 +1081,11 @@ class API(base_api.NetworkAPI):
             flavor = instance.get_flavor()
             rxtx_factor = flavor.get('rxtx_factor')
             port_req_body['port']['rxtx_factor'] = rxtx_factor
-        has_port_binding_extension = (
-            self._has_port_binding_extension(context, neutron=neutron))
-        if has_port_binding_extension:
-            port_req_body['port'][BINDING_HOST_ID] = bind_host_id
-            self._populate_neutron_binding_profile(instance,
-                                                   pci_request_id,
-                                                   port_req_body)
+        port_req_body['port'][BINDING_HOST_ID] = bind_host_id
+        self._populate_neutron_binding_profile(instance,
+                                               pci_request_id,
+                                               port_req_body)
+
         if constants.DNS_INTEGRATION in self.extensions:
             # If the DNS integration extension is enabled in Neutron, most
             # ports will get their dns_name attribute set in the port create or
@@ -1115,8 +1095,7 @@ class API(base_api.NetworkAPI):
             # Neutron and the port is on a network that has a non-blank
             # dns_domain attribute. This case requires to be processed by
             # method _update_port_dns_name
-            if (not has_port_binding_extension
-                or not network.get('dns_domain')):
+            if (not network.get('dns_domain')):
                 port_req_body['port']['dns_name'] = instance.hostname
 
     def _update_port_dns_name(self, context, instance, network, port_id,
@@ -1134,7 +1113,6 @@ class API(base_api.NetworkAPI):
         require this additional update request.
         """
         if (constants.DNS_INTEGRATION in self.extensions and
-            self._has_port_binding_extension(context) and
             network.get('dns_domain')):
             try:
                 port_req_body = {'port': {'dns_name': instance.hostname}}
@@ -2481,8 +2459,6 @@ class API(base_api.NetworkAPI):
 
     def _update_port_binding_for_instance(self, context, instance, host,
                                           migration=None):
-        if not self._has_port_binding_extension(context, refresh_cache=True):
-            return
         neutron = get_client(context, admin=True)
         search_opts = {'device_id': instance.uuid,
                        'tenant_id': instance.project_id}
