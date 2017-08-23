@@ -62,14 +62,19 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
     def test_execute_with_destination(self):
         with test.nested(
             mock.patch.object(self.task, '_check_host_is_up'),
-            mock.patch.object(self.task, '_check_requested_destination'),
+            mock.patch.object(self.task, '_check_requested_destination',
+                              return_value=(mock.sentinel.source_node,
+                                            mock.sentinel.dest_node)),
+            mock.patch.object(self.task, '_claim_resources_on_destination'),
             mock.patch.object(self.task.compute_rpcapi, 'live_migration'),
-        ) as (mock_check_up, mock_check_dest, mock_mig):
+        ) as (mock_check_up, mock_check_dest, mock_claim, mock_mig):
             mock_mig.return_value = "bob"
 
             self.assertEqual("bob", self.task.execute())
             mock_check_up.assert_called_once_with(self.instance_host)
             mock_check_dest.assert_called_once_with()
+            mock_claim.assert_called_once_with(
+                mock.sentinel.source_node, mock.sentinel.dest_node)
             mock_mig.assert_called_once_with(
                 self.context,
                 host=self.instance_host,
@@ -161,7 +166,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         mock_get_info.return_value = hypervisor_details
         mock_check.return_value = "migrate_data"
 
-        self.task._check_requested_destination()
+        self.assertEqual((hypervisor_details, hypervisor_details),
+                         self.task._check_requested_destination())
         self.assertEqual("migrate_data", self.task.migrate_data)
         mock_get_host.assert_called_once_with(self.context, self.destination)
         mock_is_up.assert_called_once_with("service")
@@ -475,3 +481,99 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             side_effect=messaging.MessagingTimeout):
             self.assertRaises(exception.MigrationPreCheckError,
                 self.task._call_livem_checks_on_host, {})
+
+    def test_claim_resources_on_destination_no_source_allocations(self):
+        """Tests the negative scenario where the instance does not have
+        allocations in Placement on the source compute node so no claim is
+        attempted on the destination compute node.
+        """
+        source_node = objects.ComputeNode(uuid=uuids.source_node)
+        dest_node = objects.ComputeNode(uuid=uuids.dest_node)
+
+        @mock.patch.object(self.task.scheduler_client.reportclient,
+                           'get_allocations_for_instance', return_value={})
+        @mock.patch.object(self.task.scheduler_client.reportclient,
+                           'claim_resources',
+                           new_callable=mock.NonCallableMock)
+        def test(mock_claim, mock_get_allocs):
+            self.task._claim_resources_on_destination(source_node, dest_node)
+            mock_get_allocs.assert_called_once_with(
+                uuids.source_node, self.instance)
+
+        test()
+
+    def test_claim_resources_on_destination_claim_fails(self):
+        """Tests the negative scenario where the resource allocation claim
+        on the destination compute node fails, resulting in an error.
+        """
+        source_node = objects.ComputeNode(uuid=uuids.source_node)
+        dest_node = objects.ComputeNode(uuid=uuids.dest_node)
+        source_res_allocs = {
+            'VCPU': self.instance.vcpus,
+            'MEMORY_MB': self.instance.memory_mb,
+            # This would really include ephemeral and swap too but we're lazy.
+            'DISK_GB': self.instance.root_gb
+        }
+        dest_alloc_request = {
+            'allocations': [
+                {
+                    'resource_provider': {
+                        'uuid': uuids.dest_node
+                    },
+                    'resources': source_res_allocs
+                }
+            ]
+        }
+
+        @mock.patch.object(self.task.scheduler_client.reportclient,
+                           'get_allocations_for_instance',
+                           return_value=source_res_allocs)
+        @mock.patch.object(self.task.scheduler_client.reportclient,
+                           'claim_resources', return_value=False)
+        def test(mock_claim, mock_get_allocs):
+            self.assertRaises(exception.MigrationPreCheckError,
+                              self.task._claim_resources_on_destination,
+                              source_node, dest_node)
+            mock_get_allocs.assert_called_once_with(
+                uuids.source_node, self.instance)
+            mock_claim.assert_called_once_with(
+                self.instance.uuid, dest_alloc_request,
+                self.instance.project_id, self.instance.user_id)
+
+        test()
+
+    def test_claim_resources_on_destination(self):
+        """Happy path test where everything is successful."""
+        source_node = objects.ComputeNode(uuid=uuids.source_node)
+        dest_node = objects.ComputeNode(uuid=uuids.dest_node)
+        source_res_allocs = {
+            'VCPU': self.instance.vcpus,
+            'MEMORY_MB': self.instance.memory_mb,
+            # This would really include ephemeral and swap too but we're lazy.
+            'DISK_GB': self.instance.root_gb
+        }
+        dest_alloc_request = {
+            'allocations': [
+                {
+                    'resource_provider': {
+                        'uuid': uuids.dest_node
+                    },
+                    'resources': source_res_allocs
+                }
+            ]
+        }
+
+        @mock.patch.object(self.task.scheduler_client.reportclient,
+                           'get_allocations_for_instance',
+                           return_value=source_res_allocs)
+        @mock.patch.object(self.task.scheduler_client.reportclient,
+                           'claim_resources', return_value=True)
+        def test(mock_claim, mock_get_allocs):
+            self.task._claim_resources_on_destination(source_node, dest_node)
+            mock_get_allocs.assert_called_once_with(
+                uuids.source_node, self.instance)
+            mock_claim.assert_called_once_with(
+                self.instance.uuid, dest_alloc_request,
+                self.instance.project_id, self.instance.user_id)
+
+        test()

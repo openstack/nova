@@ -911,7 +911,7 @@ class SchedulerReportClient(object):
             self._delete_inventory(compute_node.uuid)
 
     @safe_connect
-    def _get_allocations_for_instance(self, rp_uuid, instance):
+    def get_allocations_for_instance(self, rp_uuid, instance):
         url = '/allocations/%s' % instance.uuid
         resp = self.get(url)
         if not resp:
@@ -925,8 +925,8 @@ class SchedulerReportClient(object):
 
     def _allocate_for_instance(self, rp_uuid, instance):
         my_allocations = _instance_to_allocations_dict(instance)
-        current_allocations = self._get_allocations_for_instance(rp_uuid,
-                                                                 instance)
+        current_allocations = self.get_allocations_for_instance(rp_uuid,
+                                                                instance)
         if current_allocations == my_allocations:
             allocstr = ','.join(['%s=%s' % (k, v)
                                  for k, v in my_allocations.items()])
@@ -943,9 +943,14 @@ class SchedulerReportClient(object):
             LOG.info(_LI('Submitted allocation for instance'),
                      instance=instance)
 
-    # NOTE(jaypipes): Currently, this method is ONLY used by the scheduler to
-    # allocate resources on the selected destination hosts. This method should
-    # not be called by the resource tracker; instead, the
+    # NOTE(jaypipes): Currently, this method is ONLY used in two places:
+    # 1. By the scheduler to allocate resources on the selected destination
+    #    hosts.
+    # 2. By the conductor LiveMigrationTask to allocate resources on a forced
+    #    destination host. This is a short-term fix for Pike which should be
+    #    replaced in Queens by conductor calling the scheduler in the force
+    #    host case.
+    # This method should not be called by the resource tracker; instead, the
     # _allocate_for_instance() method is used which does not perform any
     # checking that a move operation is in place.
     @safe_connect

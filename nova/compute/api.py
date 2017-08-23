@@ -3867,7 +3867,9 @@ class API(base.Base):
         # NOTE(sbauza): Force is a boolean by the new related API version
         if force is False and host_name:
             nodes = objects.ComputeNodeList.get_all_by_host(context, host_name)
-            # NOTE(sbauza): Unset the host to make sure we call the scheduler
+            # Unset the host to make sure we call the scheduler
+            # from the conductor LiveMigrationTask. Yes this is tightly-coupled
+            # to behavior in conductor and not great.
             host_name = None
             # FIXME(sbauza): Since only Ironic driver uses more than one
             # compute per service but doesn't support live migrations,
@@ -3883,6 +3885,8 @@ class API(base.Base):
                     host=target.host,
                     node=target.hypervisor_hostname
                 )
+                # This is essentially a hint to the scheduler to only consider
+                # the specified host but still run it through the filters.
                 request_spec.requested_destination = destination
 
         try:
