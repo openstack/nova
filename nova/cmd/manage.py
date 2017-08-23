@@ -1028,7 +1028,13 @@ class GetLogCommands(object):
 
 
 class CellCommands(object):
-    """Commands for managing cells."""
+    """Commands for managing cells v1 functionality."""
+
+    # TODO(stephenfin): Remove this when cells v1 is removed
+    description = ('DEPRECATED: The cell commands, which configure cells v1 '
+                   'functionality, are deprecated as Cells v1 itself has '
+                   'been deprecated. They will be removed in an upcoming '
+                   'release.')
 
     def _create_transport_hosts(self, username, password,
                                 broker_hosts=None, hostname=None, port=None):
