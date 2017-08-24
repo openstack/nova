@@ -641,10 +641,11 @@ class Guest(object):
                 destination, flags=flags, bandwidth=bandwidth)
         else:
             if params:
+                # In migrateToURI3 these parameters are extracted from the
+                # `params` dict
                 if migrate_uri:
-                    # In migrateToURI3 this paramenter is searched in
-                    # the `params` dict
                     params['migrate_uri'] = migrate_uri
+                params['bandwidth'] = bandwidth
                 self._domain.migrateToURI3(
                     destination, params=params, flags=flags)
             else:

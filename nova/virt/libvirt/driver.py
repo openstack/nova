@@ -6210,7 +6210,6 @@ class LibvirtDriver(driver.ComputeDriver):
             if self._host.has_min_version(
                     MIN_LIBVIRT_BLOCK_LM_WITH_VOLUMES_VERSION):
                 params = {
-                    'bandwidth': CONF.libvirt.live_migration_bandwidth,
                     'destination_xml': new_xml_str,
                     'migrate_disks': device_names,
                 }
