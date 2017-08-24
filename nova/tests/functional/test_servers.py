@@ -1950,3 +1950,76 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         # Expects no allocation records on the failed host.
         self.assertFlavorMatchesAllocation(
            {'vcpus': 0, 'ram': 0, 'disk': 0}, failed_usages)
+
+    def test_rescheduling_when_migrating_instance(self):
+        """Tests that allocations are removed from the destination node by
+        the compute service when a cold migrate / resize fails and a reschedule
+        request is sent back to conductor.
+        """
+        source_hostname = self.compute1.manager.host
+        server = self._boot_and_check_allocations(
+            self.flavor1, source_hostname)
+
+        def fake_prep_resize(*args, **kwargs):
+            raise test.TestingException('Simulated _prep_resize failure.')
+
+        # Yes this isn't great in a functional test, but it's simple.
+        self.stub_out('nova.compute.manager.ComputeManager._prep_resize',
+                      fake_prep_resize)
+
+        # Now migrate the server which is going to fail on the destination.
+        self.api.post_server_action(server['id'], {'migrate': None})
+
+        # When the destination compute calls conductor and conductor calls
+        # the scheduler to get another host, it's going to fail since there
+        # are only two hosts and we started on the first and failed on the
+        # second, so the scheduler will raise NoValidHost and a fault will
+        # be recorded on the instance. However, the instance is not put into
+        # ERROR state since it's still OK on the source host, but faults are
+        # only shown in the API for ERROR/DELETED instances, so we can't poll
+        # for the fault. So we poll for instance action events instead.
+        completion_event = None
+        for attempt in range(10):
+            actions = self.api.get_instance_actions(server['id'])
+            # Look for the migrate action.
+            for action in actions:
+                if action['action'] == 'migrate':
+                    events = (
+                        self.api.api_get(
+                            '/servers/%s/os-instance-actions/%s' %
+                            (server['id'], action['request_id'])
+                        ).body['instanceAction']['events'])
+                    # Look for the compute_prep_resize being in error state.
+                    for event in events:
+                        if (event['event'] == 'compute_prep_resize' and
+                                event['result'] is not None and
+                                event['result'].lower() == 'error'):
+                            completion_event = event
+                            # Break out of the events loop.
+                            break
+                    if completion_event:
+                        # Break out of the actions loop.
+                        break
+            # We didn't find the completion event yet, so wait a bit.
+            time.sleep(0.5)
+
+        if completion_event is None:
+            self.fail('Timed out waiting for compute_prep_resize failure '
+                      'event. Current instance actions: %s' % actions)
+
+        dest_hostname = self._other_hostname(source_hostname)
+        dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        failed_usages = self._get_provider_usages(dest_rp_uuid)
+        # FIXME(mriedem): Due to bug 1712850 the allocations are not removed
+        # from the destination node before the reschedule. Remove this once
+        # the bug is fixed as it should be:
+        # # Expects no allocation records on the failed host.
+        # self.assertFlavorMatchesAllocation(
+        #    {'vcpus': 0, 'ram': 0, 'disk': 0}, failed_usages)
+        self.assertFlavorMatchesAllocation(self.flavor1, failed_usages)
+
+        # Ensure the allocation records still exist on the source host.
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
