@@ -651,6 +651,8 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
 
     def test_live_migration(self):
         instance_ref, network_info = self._get_running_instance()
+        instance_ref.info_cache = objects.InstanceInfoCache(
+            network_info=network_info)
         fake_context = context.RequestContext('fake', 'fake')
         migration = objects.Migration(context=fake_context, id=1)
         migrate_data = objects.LibvirtLiveMigrateData(

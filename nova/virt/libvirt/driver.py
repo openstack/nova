@@ -327,6 +327,8 @@ MIN_QEMU_LUKS_VERSION = (2, 6, 0)
 
 VGPU_RESOURCE_SEMAPHORE = "vgpu_resources"
 
+MIN_MIGRATION_SPEED_BW = 1  # 1 MiB/s
+
 
 class LibvirtDriver(driver.ComputeDriver):
     capabilities = {
@@ -5508,6 +5510,12 @@ class LibvirtDriver(driver.ComputeDriver):
         if CONF.vif_plugging_is_fatal:
             raise exception.VirtualInterfaceCreateException()
 
+    def _neutron_failed_live_migration_callback(self, event_name, instance):
+        msg = ('Neutron reported failure during live migration '
+               'with %(event)s for instance %(uuid)s' %
+               {'event': event_name, 'uuid': instance.uuid})
+        raise exception.MigrationError(reason=msg)
+
     def _get_neutron_events(self, network_info):
         # NOTE(danms): We need to collect any VIFs that are currently
         # down that we expect a down->up event for. Anything that is
@@ -5516,6 +5524,16 @@ class LibvirtDriver(driver.ComputeDriver):
         # already up so we don't block on it.
         return [('network-vif-plugged', vif['id'])
                 for vif in network_info if vif.get('active', True) is False]
+
+    def _get_neutron_events_for_live_migration(self, network_info):
+        # Neutron should send events to Nova indicating that the VIFs
+        # are successfully plugged on destination host.
+
+        # TODO(sahid): Currently we only use the mechanism of waiting
+        # for neutron events during live-migration for linux-bridge.
+        return [('network-vif-plugged', vif['id'])
+                for vif in network_info if (
+                        vif.get('type') == network_model.VIF_TYPE_BRIDGE)]
 
     def _cleanup_failed_start(self, context, instance, network_info,
                               block_device_info, guest, destroy_disks):
@@ -6891,7 +6909,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def _live_migration_operation(self, context, instance, dest,
                                   block_migration, migrate_data, guest,
-                                  device_names):
+                                  device_names, bandwidth):
         """Invoke the live migration operation
 
         :param context: security context
@@ -6904,6 +6922,7 @@ class LibvirtDriver(driver.ComputeDriver):
         :param guest: the guest domain object
         :param device_names: list of device names that are being migrated with
             instance
+        :param bandwidth: MiB/s of bandwidth allowed for the migration at start
 
         This method is intended to be run in a background thread and will
         block that thread until the migration is finished or failed.
@@ -6977,7 +6996,7 @@ class LibvirtDriver(driver.ComputeDriver):
                           flags=migration_flags,
                           params=params,
                           domain_xml=new_xml_str,
-                          bandwidth=CONF.libvirt.live_migration_bandwidth)
+                          bandwidth=bandwidth)
 
             for hostname, port in serial_ports:
                 serial_console.release_port(host=hostname, port=port)
@@ -7320,11 +7339,58 @@ class LibvirtDriver(driver.ComputeDriver):
             disk_paths, device_names = self._live_migration_copy_disk_paths(
                 context, instance, guest)
 
-        opthread = utils.spawn(self._live_migration_operation,
-                                     context, instance, dest,
-                                     block_migration,
-                                     migrate_data, guest,
-                                     device_names)
+        deadline = CONF.vif_plugging_timeout
+        if utils.is_neutron() and deadline:
+            # We don't generate events if CONF.vif_plugging_timeout=0
+            # meaning that the operator disabled using them.
+
+            # In case of Linux Bridge, the agent is waiting for new
+            # TAP devices on destination node. They are going to be
+            # created by libvirt at the very beginning of the
+            # live-migration process. Then receiving the events from
+            # Neutron will ensure that everything is configured
+            # correctly.
+            events = self._get_neutron_events_for_live_migration(
+                instance.get_network_info())
+        else:
+            # TODO(sahid): This 'is_neutron()' condition should be
+            # removed when nova-network will be erased from the tree
+            # (Rocky).
+            events = []
+
+        if events:
+            # We start migration with the minimum bandwidth
+            # speed. Depending on the VIF type (see:
+            # _get_neutron_events_for_live_migration) we will wait for
+            # Neutron to send events that confirm network is setup or
+            # directly configure QEMU to use the maximun BW allowed.
+            bandwidth = MIN_MIGRATION_SPEED_BW
+        else:
+            bandwidth = CONF.libvirt.live_migration_bandwidth
+
+        try:
+            error_cb = self._neutron_failed_live_migration_callback
+            with self.virtapi.wait_for_instance_event(instance, events,
+                                                      deadline=deadline,
+                                                      error_callback=error_cb):
+                opthread = utils.spawn(self._live_migration_operation,
+                                       context, instance, dest,
+                                       block_migration,
+                                       migrate_data, guest,
+                                       device_names, bandwidth)
+        except eventlet.timeout.Timeout:
+            msg = ('Timeout waiting for VIF plugging events, '
+                   'canceling migration')
+            raise exception.MigrationError(reason=msg)
+        else:
+            if utils.is_neutron() and events:
+                LOG.debug('VIF events received, continuing migration '
+                          'with max bandwidth configured: %d',
+                          CONF.libvirt.live_migration_bandwidth,
+                          instance=instance)
+                # Configure QEMU to use the maximum bandwidth allowed.
+                guest.migrate_configure_max_speed(
+                    CONF.libvirt.live_migration_bandwidth)
 
         finish_event = eventlet.event.Event()
         self.active_migrations[instance.uuid] = deque()
