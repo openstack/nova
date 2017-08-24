@@ -1054,7 +1054,12 @@ def _get_object_from_results(session, results, value, func):
 
 
 def _get_vm_ref_from_name(session, vm_name):
-    """Get reference to the VM with the name specified."""
+    """Get reference to the VM with the name specified.
+
+    This method reads all of the names of the VM's that are running
+    on the backend, then it filters locally the matching vm_name.
+    It is far more optimal to use _get_vm_ref_from_vm_uuid.
+    """
     vms = session._call_method(vim_util, "get_objects",
                 "VirtualMachine", ["name"])
     return _get_object_from_results(session, vms, vm_name,
@@ -1065,20 +1070,6 @@ def _get_vm_ref_from_name(session, vm_name):
 def get_vm_ref_from_name(session, vm_name):
     return (_get_vm_ref_from_vm_uuid(session, vm_name) or
             _get_vm_ref_from_name(session, vm_name))
-
-
-def _get_vm_ref_from_uuid(session, instance_uuid):
-    """Get reference to the VM with the uuid specified.
-
-    This method reads all of the names of the VM's that are running
-    on the backend, then it filters locally the matching
-    instance_uuid. It is far more optimal to use
-    _get_vm_ref_from_vm_uuid.
-    """
-    vms = session._call_method(vim_util, "get_objects",
-                "VirtualMachine", ["name"])
-    return _get_object_from_results(session, vms, instance_uuid,
-                                    _get_object_for_value)
 
 
 def _get_vm_ref_from_vm_uuid(session, instance_uuid):
@@ -1129,7 +1120,7 @@ def search_vm_ref_by_identifier(session, identifier):
     """
     vm_ref = (_get_vm_ref_from_vm_uuid(session, identifier) or
               _get_vm_ref_from_extraconfig(session, identifier) or
-              _get_vm_ref_from_uuid(session, identifier))
+              _get_vm_ref_from_name(session, identifier))
     return vm_ref
 
 
