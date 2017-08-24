@@ -1237,6 +1237,30 @@ class ResourceTracker(object):
                       'on the source node %s', cn.uuid,
                       instance=instance)
 
+    def delete_allocation_for_failed_resize(self, instance, node, flavor):
+        """Delete instance allocations for the node during a failed resize
+
+        :param instance: The instance being resized/migrated.
+        :param node: The node provider on which the instance should have
+            allocations to remove. If this is a resize to the same host, then
+            the new_flavor resources are subtracted from the single allocation.
+        :param flavor: This is the new_flavor during a resize.
+        """
+        resources = scheduler_utils.resources_from_flavor(instance, flavor)
+        cn = self.compute_nodes[node]
+        res = self.reportclient.remove_provider_from_instance_allocation(
+            instance.uuid, cn.uuid, instance.user_id, instance.project_id,
+            resources)
+        if not res:
+            if instance.instance_type_id == flavor.id:
+                operation = 'migration'
+            else:
+                operation = 'resize'
+            LOG.error('Failed to clean allocation after a failed '
+                      '%(operation)s on node %(node)s',
+                      {'operation': operation, 'node': cn.uuid},
+                      instance=instance)
+
     def _find_orphaned_instances(self):
         """Given the set of instances and migrations already account for
         by resource tracker, sanity check the hypervisor to determine

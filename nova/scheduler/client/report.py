@@ -1029,11 +1029,15 @@ class SchedulerReportClient(object):
         then PUTs the resulting allocation back to the placement API for the
         consumer.
 
-        We call this method on two occasions: on the source host during a
-        confirm_resize() operation and on the destination host during a
-        revert_resize() operation. This is important to reconcile the
-        "doubled-up" allocation that the scheduler constructs when claiming
-        resources against the destination host during a move operation.
+        We call this method on three occasions:
+
+        1. On the source host during a confirm_resize() operation.
+        2. On the destination host during a revert_resize() operation.
+        3. On the destination host when prep_resize fails.
+
+        This is important to reconcile the "doubled-up" allocation that the
+        scheduler constructs when claiming resources against the destination
+        host during a move operation.
 
         If the move was between hosts, the entire allocation for rp_uuid will
         be dropped. If the move is a resize on the same host, then we will
