@@ -16,7 +16,7 @@ Compute is configured with the following default scheduler options in the
    scheduler_driver_task_period = 60
    scheduler_driver = nova.scheduler.filter_scheduler.FilterScheduler
    scheduler_available_filters = nova.scheduler.filters.all_filters
-   scheduler_default_filters = RetryFilter, AvailabilityZoneFilter, RamFilter, DiskFilter, ComputeFilter, ComputeCapabilitiesFilter, ImagePropertiesFilter, ServerGroupAntiAffinityFilter, ServerGroupAffinityFilter
+   scheduler_default_filters = RetryFilter, AvailabilityZoneFilter, ComputeFilter, ComputeCapabilitiesFilter, ImagePropertiesFilter, ServerGroupAntiAffinityFilter, ServerGroupAffinityFilter
 
 By default, the ``scheduler_driver`` is configured as a filter scheduler, as
 described in the next section. In the default configuration, this scheduler
@@ -25,11 +25,6 @@ considers hosts that meet all the following criteria:
 * Have not been attempted for scheduling purposes (``RetryFilter``).
 
 * Are in the requested availability zone (``AvailabilityZoneFilter``).
-
-* Have sufficient RAM available (``RamFilter``).
-
-* Have sufficient disk space available for root and ephemeral storage
-  (``DiskFilter``).
 
 * Can service the request (``ComputeFilter``).
 
@@ -114,7 +109,7 @@ default filters are:
 
 .. code-block:: ini
 
-   scheduler_default_filters = RetryFilter, AvailabilityZoneFilter, RamFilter, ComputeFilter, ComputeCapabilitiesFilter, ImagePropertiesFilter, ServerGroupAntiAffinityFilter, ServerGroupAffinityFilter
+   scheduler_default_filters = RetryFilter, AvailabilityZoneFilter, ComputeCapabilitiesFilter, ImagePropertiesFilter, ServerGroupAntiAffinityFilter, ServerGroupAffinityFilter
 
 Compute filters
 ~~~~~~~~~~~~~~~
@@ -1061,7 +1056,7 @@ as well as the other filters that are typically enabled:
 
 .. code-block:: ini
 
-   scheduler_default_filters=AggregateInstanceExtraSpecsFilter,RetryFilter,AvailabilityZoneFilter,RamFilter,ComputeFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,ServerGroupAntiAffinityFilter,ServerGroupAffinityFilter
+   scheduler_default_filters=AggregateInstanceExtraSpecsFilter,RetryFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,ServerGroupAntiAffinityFilter,ServerGroupAffinityFilter
 
 Example: Specify compute hosts with SSDs
 ----------------------------------------

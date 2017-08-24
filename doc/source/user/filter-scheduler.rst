@@ -344,10 +344,10 @@ The default values for these settings in nova.conf are:
 ::
 
     --filter_scheduler.available_filters=nova.scheduler.filters.all_filters
-    --filter_scheduler.enabled_filters=RamFilter,ComputeFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,ServerGroupAntiAffinityFilter,ServerGroupAffinityFilter
+    --filter_scheduler.enabled_filters=ComputeFilter,AvailabilityZoneFilter,ComputeCapabilitiesFilter,ImagePropertiesFilter,ServerGroupAntiAffinityFilter,ServerGroupAffinityFilter
 
 With this configuration, all filters in ``nova.scheduler.filters``
-would be available, and by default the |RamFilter|, |ComputeFilter|,
+would be available, and by default the |ComputeFilter|,
 |AvailabilityZoneFilter|, |ComputeCapabilitiesFilter|,
 |ImagePropertiesFilter|, |ServerGroupAntiAffinityFilter|,
 and |ServerGroupAffinityFilter| would be used.
