@@ -40,6 +40,7 @@ from nova.tests import uuidsentinel as uuids
 from nova.virt import hardware
 from nova.virt.xenapi import driver as xenapi_conn
 from nova.virt.xenapi import fake
+from nova.virt.xenapi.image import utils as image_utils
 from nova.virt.xenapi import vm_utils
 import time
 
@@ -222,6 +223,8 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
         self.context.auth_token = 'auth_token'
         self.session = FakeSession()
         self.instance = {"uuid": "uuid"}
+        self.image_handler = image_utils.get_image_handler(
+            CONF.xenserver.image_handler)
         self.flags(group='glance', api_servers=['http://localhost:9292'])
 
         make_uuid_stack_patcher = mock.patch.object(
@@ -274,7 +277,8 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
         self._stub_glance_download_vhd()
 
         result = vm_utils._fetch_vhd_image(self.context, self.session,
-                                           self.instance, 'image_id')
+                                           self.instance, 'image_id',
+                                           self.image_handler)
 
         self.assertEqual("vdi", result['root']['uuid'])
         mock_safe_find_sr.assert_called_once_with(self.session)
@@ -300,7 +304,7 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
 
         self.assertRaises(exception.FlavorDiskSmallerThanImage,
                 vm_utils._fetch_vhd_image, self.context, self.session,
-                self.instance, 'image_id')
+                self.instance, 'image_id', self.image_handler)
 
         mock_safe_find_sr.assert_called_once_with(self.session)
         mock_scan_sr.assert_called_once_with(self.session, "sr")
@@ -315,7 +319,8 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
         self._stub_glance_download_vhd(raise_exc=RuntimeError)
 
         self.assertRaises(RuntimeError, vm_utils._fetch_vhd_image,
-                self.context, self.session, self.instance, 'image_id')
+                self.context, self.session, self.instance, 'image_id',
+                self.image_handler)
         self._assert_call_plugin_serialized_with_retry()
         self._assert_make_uuid_stack_and_get_sr_path()
 
@@ -549,7 +554,8 @@ class CreateCachedImageTestCase(VMUtilsTestBase):
         self.assertEqual((False, {'root': {'uuid': 'vdi_uuid', 'file': None}}),
                          vm_utils._create_cached_image('context', self.session,
                                     'instance', 'name', 'uuid',
-                                    vm_utils.ImageType.DISK_VHD))
+                                    vm_utils.ImageType.DISK_VHD,
+                                    'image_handler'))
 
     @mock.patch.object(vm_utils, '_safe_copy_vdi', return_value='new_vdi_ref')
     def test_no_cow(self, mock_safe_copy_vdi, mock_safe_find_sr):
@@ -559,7 +565,8 @@ class CreateCachedImageTestCase(VMUtilsTestBase):
         self.assertEqual((False, {'root': {'uuid': 'vdi_uuid', 'file': None}}),
                          vm_utils._create_cached_image('context', self.session,
                                     'instance', 'name', 'uuid',
-                                    vm_utils.ImageType.DISK_VHD))
+                                    vm_utils.ImageType.DISK_VHD,
+                                    'image_handler'))
 
     def test_no_cow_no_ext(self, mock_safe_find_sr):
         self.flags(use_cow_images=False)
@@ -569,7 +576,8 @@ class CreateCachedImageTestCase(VMUtilsTestBase):
         self.assertEqual((False, {'root': {'uuid': 'vdi_uuid', 'file': None}}),
                          vm_utils._create_cached_image('context', self.session,
                                     'instance', 'name', 'uuid',
-                                    vm_utils.ImageType.DISK_VHD))
+                                    vm_utils.ImageType.DISK_VHD,
+                                    'image_handler'))
 
     @mock.patch.object(vm_utils, '_clone_vdi', return_value='new_vdi_ref')
     @mock.patch.object(vm_utils, '_fetch_image',
@@ -583,7 +591,8 @@ class CreateCachedImageTestCase(VMUtilsTestBase):
         self.assertEqual((True, {'root': {'uuid': 'vdi_uuid', 'file': None}}),
                          vm_utils._create_cached_image('context', self.session,
                                     'instance', 'name', 'uuid',
-                                    vm_utils.ImageType.DISK_VHD))
+                                    vm_utils.ImageType.DISK_VHD,
+                                    'image_handler'))
 
 
 class DestroyCachedImageTestCase(VMUtilsTestBase):
@@ -909,7 +918,8 @@ class VDIOtherConfigTestCase(VMUtilsTestBase):
         self.session.VDI_get_other_config = lambda vdi: {}
 
         vm_utils.create_image(self.context, self.session, self.fake_instance,
-                'myvdi', 'image1', vm_utils.ImageType.DISK_VHD)
+                'myvdi', 'image1', vm_utils.ImageType.DISK_VHD,
+                'image_handler')
 
         expected = {'nova_disk_type': 'root',
                     'nova_instance_uuid': 'aaaa-bbbb-cccc-dddd'}

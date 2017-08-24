@@ -57,6 +57,7 @@ from nova.virt import configdrive
 from nova.virt import driver as virt_driver
 from nova.virt import firewall
 from nova.virt.xenapi import agent as xapi_agent
+from nova.virt.xenapi.image import utils as image_utils
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import volume_utils
 from nova.virt.xenapi import volumeops
@@ -150,10 +151,22 @@ class VMOps(object):
         self.vif_driver = vif_impl(xenapi_session=self._session)
         self.default_root_dev = '/dev/sda'
 
-        LOG.debug("Importing image upload handler: %s",
-                  CONF.xenserver.image_upload_handler)
-        self.image_upload_handler = importutils.import_object(
-                                CONF.xenserver.image_upload_handler)
+        image_handler_cfg = CONF.xenserver.image_handler
+        self.image_handler = image_utils.get_image_handler(image_handler_cfg)
+        # TODO(jianghuaw): Remove these lines relative to the deprecated
+        # option of "image_upload_handler" in the next release - Stein.
+        self.image_upload_handler = None
+        image_upload_handler_cfg = CONF.xenserver.image_upload_handler
+        if image_upload_handler_cfg:
+            # If *image_upload_handler* is explicitly configured, it
+            # means it indends to use non-default image upload handler.
+            # In order to avoid mis-using the default image_handler which
+            # may have different behavor than the explicitly configured
+            # handler, we keep using *image_upload_handler*.
+            LOG.warning("Deprecated: importing image upload handler: %s",
+                        image_upload_handler_cfg)
+            self.image_upload_handler = importutils.import_object(
+                image_upload_handler_cfg)
 
     def agent_enabled(self, instance):
         if CONF.xenserver.disable_agent:
@@ -356,8 +369,9 @@ class VMOps(object):
         # If we didn't get a root VDI from volumes,
         # then use the Glance image as the root device
         if 'root' not in vdis:
-            create_image_vdis = vm_utils.create_image(context, self._session,
-                    instance, name_label, image_meta.id, image_type)
+            create_image_vdis = vm_utils.create_image(
+                context, self._session, instance, name_label, image_meta.id,
+                image_type, self.image_handler)
             vdis.update(create_image_vdis)
 
         # Fetch VDI refs now so we don't have to fetch the ref multiple times
@@ -1029,12 +1043,23 @@ class VMOps(object):
                 post_snapshot_callback=update_task_state) as vdi_uuids:
             update_task_state(task_state=task_states.IMAGE_UPLOADING,
                               expected_state=task_states.IMAGE_PENDING_UPLOAD)
-            self.image_upload_handler.upload_image(context,
-                                                   self._session,
-                                                   instance,
-                                                   image_id,
-                                                   vdi_uuids,
-                                                   )
+            if self.image_upload_handler:
+                # TODO(jianghuaw): remove this branch once the
+                # deprecated option of "image_upload_handler"
+                # gets removed in the next release - Stein.
+                self.image_upload_handler.upload_image(context,
+                                                       self._session,
+                                                       instance,
+                                                       image_id,
+                                                       vdi_uuids,
+                                                       )
+            else:
+                self.image_handler.upload_image(context,
+                                                self._session,
+                                                instance,
+                                                image_id,
+                                                vdi_uuids,
+                                                )
 
         duration = timeutils.delta_seconds(start_time, timeutils.utcnow())
         LOG.debug("Finished snapshot and upload for VM, duration: "

@@ -689,6 +689,10 @@ class ImageDeleteConflict(NovaException):
     msg_fmt = _("Conflict deleting image. Reason: %(reason)s.")
 
 
+class ImageHandlerUnsupported(NovaException):
+    msg_fmt = _("Error: unsupported image handler %(image_handler)s.")
+
+
 class PreserveEphemeralNotSupported(Invalid):
     msg_fmt = _("The current driver does not support "
                 "preserving ephemeral partitions.")

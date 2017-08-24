@@ -41,7 +41,8 @@ def stubout_firewall_driver(stubs, conn):
 
 
 def stubout_instance_snapshot(stubs):
-    def fake_fetch_image(context, session, instance, name_label, image, type):
+    def fake_fetch_image(context, session, instance, name_label, image, type,
+                         image_handler):
         return {'root': dict(uuid=_make_fake_vdi(), file=None),
                 'kernel': dict(uuid=_make_fake_vdi(), file=None),
                 'ramdisk': dict(uuid=_make_fake_vdi(), file=None)}

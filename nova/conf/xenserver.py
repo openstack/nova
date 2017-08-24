@@ -449,7 +449,16 @@ Related options:
 """),
     # TODO(dharinic): Make this, a stevedore plugin
     cfg.StrOpt('image_upload_handler',
-        default='nova.virt.xenapi.image.glance.GlanceStore',
+        default='',
+        deprecated_for_removal=True,
+        deprecated_since='18.0.0',
+        deprecated_reason="""
+Instead of setting the class path here, we will use short names
+to represent image handlers. The download and upload handlers
+must also be matching. So another new option "image_handler"
+will be used to set the short name for a specific image handler
+for both image download and upload.
+""",
         help="""
 Dom0 plugin driver used to handle image uploads.
 
@@ -460,6 +469,25 @@ Images, and snapshots from XenServer need to be uploaded to the data
 store for use. image_upload_handler takes in a value for the Dom0
 plugin driver. This driver is then called to uplaod images to the
 GlanceStore.
+"""),
+    cfg.StrOpt('image_handler',
+        default='direct_vhd',
+        choices=('direct_vhd', 'vdi_local_dev'),
+        help="""
+The plugin used to handle image uploads and downloads.
+
+Provide a short name representing an image driver required to
+handle the image between compute host and glance.
+
+Description for the allowed values:
+* ``direct_vhd``: This plugin directly processes the VHD files in XenServer
+SR(Storage Repository). So this plugin only works when the host's SR
+type is file system based e.g. ext, nfs.
+* ``vdi_local_dev``: This plugin implements an image handler which attaches
+the instance's VDI as a local disk to the VM where the OpenStack Compute
+service runs in. It uploads the raw disk to glance when creating image;
+When booting an instance from a glance image, it downloads the image and
+streams it into the disk which is attached to the compute VM.
 """),
 ]
 

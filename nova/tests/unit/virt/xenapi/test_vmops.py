@@ -25,6 +25,8 @@ except ImportError:
 from eventlet import greenthread
 import mock
 from os_xenapi.client import host_xenstore
+from oslo_utils import importutils
+from oslo_utils import timeutils
 import six
 
 from nova.compute import power_state
@@ -43,6 +45,7 @@ from nova import utils
 from nova.virt import fake
 from nova.virt.xenapi import agent as xenapi_agent
 from nova.virt.xenapi import fake as xenapi_fake
+from nova.virt.xenapi.image import utils as image_utils
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import vmops
 from nova.virt.xenapi import volume_utils
@@ -217,6 +220,88 @@ class VMOpsTestCase(VMOpsTestBase):
                 network_info=[], rescue=True)
         try_auto_config.assert_called_once_with(self._vmops._session,
                 'fake-ref', instance.flavor.root_gb)
+
+    @mock.patch.object(vm_utils, 'snapshot_attached_here')
+    @mock.patch.object(timeutils, 'delta_seconds')
+    @mock.patch.object(timeutils, 'utcnow')
+    @mock.patch.object(image_utils, 'get_image_handler')
+    def test_snapshot_using_image_handler(self,
+                                          mock_get_image_handler,
+                                          mock_utcnow,
+                                          mock_delta_seconds,
+                                          mock_snapshot_attached_here):
+        mock_utcnow.side_effect = ['fake_start', 'fake_end']
+        self.flags(image_handler='direct_vhd', group='xenserver')
+        mock_get_image_handler.return_value = mock.Mock()
+
+        class FakeVdiUuid(object):
+            def __enter__(self):
+                pass
+
+            def __exit__(self, Type, value, traceback):
+                pass
+
+        fake_vdi_uuid = FakeVdiUuid()
+        mock_snapshot_attached_here.return_value = fake_vdi_uuid
+        self._setup_mock_vmops()
+        vmops = self._vmops
+        with mock.patch.object(vmops, '_get_vm_opaque_ref',
+                               return_value='fake_ref') as mock_get_opa_ref:
+            fake_instance = {'name': 'fake_name'}
+
+            vmops.snapshot('fake_ctx', fake_instance, 'fake_image_id',
+                                 mock.Mock())
+
+            vmops.image_handler.upload_image.assert_called_once_with(
+                'fake_ctx', vmops._session, fake_instance,
+                'fake_image_id', None)
+            mock_get_opa_ref.assert_called_once_with(fake_instance)
+            mock_delta_seconds.assert_called_once_with('fake_start',
+                                                       'fake_end')
+            self.assertEqual(mock_utcnow.call_count, 2)
+
+    @mock.patch.object(vm_utils, 'snapshot_attached_here')
+    @mock.patch.object(timeutils, 'delta_seconds')
+    @mock.patch.object(timeutils, 'utcnow')
+    @mock.patch.object(image_utils, 'get_image_handler')
+    @mock.patch.object(importutils, 'import_object')
+    def test_snapshot_using_upload_image_handler(self,
+                                                 mock_import_object,
+                                                 mock_get_image_handler,
+                                                 mock_utcnow,
+                                                 mock_delta_seconds,
+                                                 mock_snapshot_attached_here):
+        mock_utcnow.side_effect = ['fake_start', 'fake_end']
+        self.flags(image_upload_handler='image_upload_handler',
+                   group='xenserver')
+        mock_get_image_handler.return_value = mock.Mock()
+
+        class FakeVdiUuid(object):
+            def __enter__(self):
+                pass
+
+            def __exit__(self, Type, value, traceback):
+                pass
+
+        fake_vdi_uuid = FakeVdiUuid()
+        mock_snapshot_attached_here.return_value = fake_vdi_uuid
+        mock_import_object.return_value = mock.Mock()
+        self._setup_mock_vmops()
+        vmops = self._vmops
+        with mock.patch.object(vmops, '_get_vm_opaque_ref',
+                               return_value='fake_ref') as mock_get_opa_ref:
+            fake_instance = {'name': 'fake_name'}
+
+            vmops.snapshot('fake_ctx', fake_instance, 'fake_image_id',
+                                 mock.Mock())
+
+            vmops.image_upload_handler.upload_image.assert_called_once_with(
+                'fake_ctx', vmops._session, fake_instance,
+                'fake_image_id', None)
+            mock_get_opa_ref.assert_called_once_with(fake_instance)
+            mock_delta_seconds.assert_called_once_with('fake_start',
+                                                       'fake_end')
+            self.assertEqual(mock_utcnow.call_count, 2)
 
 
 class InjectAutoDiskConfigTestCase(VMOpsTestBase):
