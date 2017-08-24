@@ -235,6 +235,7 @@ looking parts of our architecture. These are collected below.
    admin/index
    admin/configuration/index
    cli/index
+   configuration/index
    configuration/config
    configuration/sample-config
    configuration/policy
