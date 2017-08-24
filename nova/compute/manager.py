@@ -1724,12 +1724,34 @@ class ComputeManager(manager.Manager):
                 try:
                     result = self._do_build_and_run_instance(*args, **kwargs)
                 except Exception:
+                    # NOTE(mriedem): This should really only happen if
+                    # _decode_files in _do_build_and_run_instance fails, and
+                    # that's before a guest is spawned so it's OK to remove
+                    # allocations for the instance for this node from Placement
+                    # below as there is no guest consuming resources anyway.
+                    # The _decode_files case could be handled more specifically
+                    # but that's left for another day.
                     result = build_results.FAILED
                     raise
                 finally:
                     fails = (build_results.FAILED,
                              build_results.RESCHEDULED)
                     if result in fails:
+                        # Remove the allocation records from Placement for
+                        # the instance if the build failed or is being
+                        # rescheduled to another node. The instance.host is
+                        # likely set to None in _do_build_and_run_instance
+                        # which means if the user deletes the instance, it will
+                        # be deleted in the API, not the compute service.
+                        # Setting the instance.host to None in
+                        # _do_build_and_run_instance means that the
+                        # ResourceTracker will no longer consider this instance
+                        # to be claiming resources against it, so we want to
+                        # reflect that same thing in Placement.
+                        rt = self._get_resource_tracker()
+                        rt.reportclient.delete_allocation_for_instance(
+                            instance.uuid)
+
                         self._build_failed()
                     else:
                         self._failed_builds = 0

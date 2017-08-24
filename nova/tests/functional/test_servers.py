@@ -23,6 +23,7 @@ from oslo_serialization import base64
 from oslo_utils import timeutils
 
 from nova.compute import api as compute_api
+from nova.compute import manager as compute_manager
 from nova.compute import rpcapi
 from nova import context
 from nova import exception
@@ -1877,3 +1878,77 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
 
         self._delete_and_check_allocations(
             server, source_rp_uuid, dest_rp_uuid)
+
+    def test_rescheduling_when_booting_instance(self):
+        self.failed_hostname = None
+        old_build_resources = (compute_manager.ComputeManager.
+            _build_resources)
+
+        def fake_build_resources(sl, *args, **kwargs):
+            # We failed on the first scheduling
+            if not self.failed_hostname:
+                self.failed_hostname = sl.host
+                raise Exception()
+
+            return old_build_resources(sl, *args, **kwargs)
+
+        self.stub_out('nova.compute.manager.ComputeManager._build_resources',
+                      fake_build_resources)
+
+        server_req = self._build_minimal_create_server_request(
+                self.api, 'some-server', flavor_id=self.flavor1['id'],
+                image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+                networks=[])
+
+        created_server = self.api.post_server({'server': server_req})
+        server = self._wait_for_state_change(
+                self.admin_api, created_server, 'ACTIVE')
+        dest_hostname = server['OS-EXT-SRV-ATTR:host']
+
+        LOG.info('failed on %s', self.failed_hostname)
+        LOG.info('booting on %s', dest_hostname)
+
+        failed_rp_uuid = self._get_provider_uuid_by_host(self.failed_hostname)
+        dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        failed_usages = self._get_provider_usages(failed_rp_uuid)
+        # Expects no allocation records on the failed host.
+        self.assertFlavorMatchesAllocation(
+           {'vcpus': 0, 'ram': 0, 'disk': 0}, failed_usages)
+
+        # Ensure the allocation records on the destination host.
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+
+    def test_abort_when_booting_instance(self):
+        self.failed_hostname = None
+        old_build_resources = (compute_manager.ComputeManager.
+            _build_resources)
+
+        def fake_build_resources(sl, *args, **kwargs):
+            # We failed on the first scheduling
+            if not self.failed_hostname:
+                self.failed_hostname = sl.host
+                raise exception.BuildAbortException(instance_uuid='fake_uuid',
+                    reason='just abort')
+
+            return old_build_resources(sl, *args, **kwargs)
+
+        self.stub_out('nova.compute.manager.ComputeManager._build_resources',
+                      fake_build_resources)
+
+        server_req = self._build_minimal_create_server_request(
+                self.api, 'some-server', flavor_id=self.flavor1['id'],
+                image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+                networks=[])
+
+        created_server = self.api.post_server({'server': server_req})
+        self._wait_for_state_change(self.admin_api, created_server, 'ERROR')
+
+        LOG.info('failed on %s', self.failed_hostname)
+
+        failed_rp_uuid = self._get_provider_uuid_by_host(self.failed_hostname)
+        failed_usages = self._get_provider_usages(failed_rp_uuid)
+        # Expects no allocation records on the failed host.
+        self.assertFlavorMatchesAllocation(
+           {'vcpus': 0, 'ram': 0, 'disk': 0}, failed_usages)
