@@ -663,6 +663,13 @@ class Guest(object):
         """
         self._domain.migrateSetMaxDowntime(mstime)
 
+    def migrate_configure_max_speed(self, bandwidth):
+        """The maximum bandwidth that will be used to do migration
+
+        :param bw: Bandwidth in MiB/s
+        """
+        self._domain.migrateSetMaxSpeed(bandwidth)
+
     def migrate_start_postcopy(self):
         """Switch running live migration to post-copy mode"""
         self._domain.migrateStartPostCopy()
