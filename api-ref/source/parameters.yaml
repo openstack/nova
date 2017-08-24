@@ -3453,10 +3453,10 @@ ip_range_delete:
 key_name:
   description: |
     Key pair name.
-    .. note::
 
-      The ``null`` value allowed in Nova legacy v2 API, but due to the strict
-      input validation, it isn't allowed in Nova v2.1 API.
+    .. note:: The ``null`` value was allowed in the Nova legacy v2 API,
+              but due to strict input validation, it is not allowed in
+              the Nova v2.1 API.
   in: body
   required: false
   type: string
