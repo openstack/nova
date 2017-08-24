@@ -776,6 +776,9 @@ class Domain(object):
     def migrateSetMaxDowntime(self, downtime):
         pass
 
+    def migrateSetMaxSpeed(self, bandwidth):
+        pass
+
     def attachDevice(self, xml):
         disk_info = _parse_disk_info(etree.fromstring(xml))
         disk_info['_attached'] = True
