@@ -1138,4 +1138,4 @@ def register_opts(conf):
 
 def list_opts():
     return {'DEFAULT': ALL_OPTS,
-            'compute': compute_opts}
+            'compute': compute_group_opts}
