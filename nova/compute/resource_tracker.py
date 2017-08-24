@@ -1272,10 +1272,7 @@ class ResourceTracker(object):
             self._update_usage(usage, nodename)
 
     def delete_allocation_for_shelve_offloaded_instance(self, instance):
-        res = self.reportclient.delete_allocation_for_instance(instance.uuid)
-        if not res:
-            LOG.error("Failed to clean allocation of a shelve offloaded "
-                      "instance", instance=instance)
+        self.reportclient.delete_allocation_for_instance(instance.uuid)
 
     def _verify_resources(self, resources):
         resource_keys = ["vcpus", "memory_mb", "local_gb", "cpu_info",
