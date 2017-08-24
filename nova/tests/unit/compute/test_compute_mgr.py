@@ -4834,13 +4834,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     @mock.patch.object(manager.ComputeManager,
                        '_nil_out_instance_obj_host_and_node')
     @mock.patch.object(conductor_api.ComputeTaskAPI, 'build_instances')
-    @mock.patch.object(manager.ComputeManager, '_get_resource_tracker')
-    def test_reschedule_on_resources_unavailable(self, mock_get_resource,
+    @mock.patch.object(resource_tracker.ResourceTracker, 'instance_claim')
+    def test_reschedule_on_resources_unavailable(self, mock_claim,
                 mock_build, mock_nil, mock_save, mock_start,
                 mock_finish, mock_notify):
         reason = 'resource unavailable'
         exc = exception.ComputeResourcesUnavailable(reason=reason)
-        mock_get_resource.side_effect = exc
+        mock_claim.side_effect = exc
         self._do_build_instance_update(mock_save, reschedule_update=True)
 
         with mock.patch.object(
@@ -4858,7 +4858,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
         self._instance_action_events(mock_start, mock_finish)
         self._assert_build_instance_update(mock_save, reschedule_update=True)
-        mock_get_resource.assert_called_once_with()
+        mock_claim.assert_called_once_with(self.context, self.instance,
+            self.node, self.limits)
         mock_notify.assert_has_calls([
             mock.call(self.context, self.instance, 'create.start',
                 extra_usage_info= {'image_name': self.image.get('name')}),
