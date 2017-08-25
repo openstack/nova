@@ -65,7 +65,7 @@ API service.
 
     cfg.StrOpt(
         'default_publisher_id',
-        default='$my_ip',
+        default='$host',
         deprecated_group='DEFAULT',
         deprecated_for_removal=True,
         deprecated_since='17.0.0',
@@ -81,12 +81,12 @@ notifications using different publisher, change this value accordingly.
 
 Possible values:
 
-* Defaults to the IPv4 address of this host, but it can be any valid
+* Defaults to the current hostname of this host, but it can be any valid
   oslo.messaging publisher_id
 
 Related options:
 
-*  my_ip - IP address of this host
+*  host - Hostname, FQDN or IP address of this host.
 """),
     cfg.StrOpt(
         'notification_format',
