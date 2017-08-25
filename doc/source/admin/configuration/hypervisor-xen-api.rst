@@ -440,19 +440,30 @@ attached NFS or any other shared storage):
 
    sr_matching_filter = "default-sr:true"
 
-Image upload in TGZ compressed format
--------------------------------------
+Use different image handler
+---------------------------
 
-To start uploading ``tgz`` compressed raw disk images to the Image service,
-configure ``xenapi_image_upload_handler`` by replacing ``GlanceStore`` with
-``VdiThroughDevStore``.
+We support three different implementations for glance image handler. You
+can choose a specific image handler based on the demand:
+
+* ``direct_vhd``: This image handler will call XAPI plugins to directly
+  process the VHD files in XenServer SR(Storage Repository). So this handler
+  only works when the host's SR type is file system based e.g. ext, nfs.
+
+* ``vdi_local_dev``: This image handler uploads ``tgz`` compressed raw
+  disk images to the glance image service.
+
+* ``vdi_remote_stream``:  With this image handler, the image data streams
+  between XenServer and the glance image service. As it uses the remote
+  APIs supported by XAPI, this plugin works for all SR types supported by
+  XenServer.
+
+``direct_vhd`` is the default image handler. If want to use a different image
+handler, you can change the config setting of ``image_handler`` within the
+``[xenserver]`` section. For example, the following config setting is to use
+``vdi_remote_stream`` as the image handler:
 
 .. code-block:: ini
 
-   xenapi_image_upload_handler=nova.virt.xenapi.image.vdi_through_dev.VdiThroughDevStore
-
-As opposed to:
-
-.. code-block:: ini
-
-   xenapi_image_upload_handler=nova.virt.xenapi.image.glance.GlanceStore
+   [xenserver]
+   image_handler=vdi_remote_stream

@@ -23,6 +23,24 @@ features:
       an instance from a glance image, it downloads the image and streams it
       into the disk which is attached to the compute VM.
 
+    * ``vdi_remote_stream``
+
+      This plugin implements an image proxy in nova compute service.
+
+      For image upload, the proxy will export a data stream for a VDI from
+      XenServer via the remote API supplied by XAPI; convert the stream
+      to the image format supported by glance; and upload the image to glance.
+
+      For image download, the proxy downloads an image stream from glance;
+      extracts the data stream from the image stream; and then remotely
+      imports the data stream to XenServer's VDI via the remote API supplied
+      by XAPI.
+
+      Note: Under this implementation, the image data may reside in one or
+      more pieces of storage of various formats on the host, but the import
+      and export operations interact with a single, proxied VDI object
+      independent of the underlying structure.
+
 deprecations:
   - |
     The ``image_upload_handler`` option in the ``xenserver`` conf section
