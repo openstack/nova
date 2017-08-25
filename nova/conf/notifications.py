@@ -67,6 +67,14 @@ API service.
         'default_publisher_id',
         default='$my_ip',
         deprecated_group='DEFAULT',
+        deprecated_for_removal=True,
+        deprecated_since='17.0.0',
+        deprecated_reason="""
+This option is only used when ``monkey_patch=True`` and
+``monkey_patch_modules`` is configured to specify the legacy notify_decorator.
+Since the monkey_patch and monkey_patch_modules options are deprecated, this
+option is also deprecated.
+""",
         help="""
 Default publisher_id for outgoing notifications. If you consider routing
 notifications using different publisher, change this value accordingly.

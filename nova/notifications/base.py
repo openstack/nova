@@ -46,6 +46,8 @@ LOG = log.getLogger(__name__)
 CONF = nova.conf.CONF
 
 
+# TODO(mriedem): Remove this when CONF.monkey_patch, CONF.monkey_patch_modules
+# and CONF.default_publisher_id are removed in Rocky.
 def notify_decorator(name, fn):
     """Decorator for notify which is used from utils.monkey_patch().
 

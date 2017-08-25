@@ -1,0 +1,17 @@
+---
+deprecations:
+  - |
+    The following configuration options are deprecated for removal:
+
+    - ``[DEFAULT]/monkey_patch``
+    - ``[DEFAULT]/monkey_patch_modules``
+
+    Monkey patching nova is not tested, not supported, and is a barrier to
+    interoperability. If you have code which relies on monkey patching
+    decorators, for example, for notifications, please propose those changes
+    upstream.
+
+    As a result, the following option is also deprecated for removal since it
+    is only used when specified with ``[DEFAULT]/monkey_patch_modules``:
+
+    - ``[notifications]/default_publisher_id``
