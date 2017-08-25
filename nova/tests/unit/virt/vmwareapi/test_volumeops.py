@@ -16,6 +16,7 @@ import mock
 from oslo_vmware import exceptions as oslo_vmw_exceptions
 from oslo_vmware import vim_util as vutil
 
+from nova.compute import power_state
 from nova.compute import vm_states
 from nova import context
 from nova import exception
@@ -132,7 +133,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
             mock.patch.object(vm_util, 'get_vmdk_info',
                               return_value=vmdk_info),
             mock.patch.object(vm_util, 'get_vm_state',
-                              return_value='PoweredOn')
+                              return_value=power_state.RUNNING)
         ) as (get_vm_ref, get_volume_ref, get_vmdk_info,
               get_vm_state):
             self.assertRaises(exception.Invalid,
@@ -291,7 +292,7 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
             mock.patch.object(vm_util, 'get_vmdk_info',
                               return_value=vmdk_info),
             mock.patch.object(vm_util, 'get_vm_state',
-                              return_value='PoweredOn')
+                              return_value=power_state.RUNNING)
         ) as (get_vm_ref, get_volume_ref, get_vmdk_backed_disk_device,
               get_vmdk_info, get_vm_state):
             self.assertRaises(exception.Invalid,
@@ -411,9 +412,9 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
         adapter_type = adapter_type or default_adapter_type
 
         if adapter_type == constants.ADAPTER_TYPE_IDE:
-            vm_state = 'PoweredOff'
+            vm_state = power_state.SHUTDOWN
         else:
-            vm_state = 'PoweredOn'
+            vm_state = power_state.RUNNING
         with test.nested(
             mock.patch.object(vm_util, 'get_vm_ref', return_value=vm_ref),
             mock.patch.object(self._volumeops, '_get_volume_ref'),
