@@ -1949,39 +1949,17 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         self.assertFlavorMatchesAllocation(
            {'vcpus': 0, 'ram': 0, 'disk': 0}, failed_usages)
 
-    def test_rescheduling_when_migrating_instance(self):
-        """Tests that allocations are removed from the destination node by
-        the compute service when a cold migrate / resize fails and a reschedule
-        request is sent back to conductor.
+    def _wait_for_prep_resize_fail_completion(self, server, expected_action):
+        """Polls instance action events for the given instance and action
+        until it finds the compute_prep_resize action event with an error
+        result.
         """
-        source_hostname = self.compute1.manager.host
-        server = self._boot_and_check_allocations(
-            self.flavor1, source_hostname)
-
-        def fake_prep_resize(*args, **kwargs):
-            raise test.TestingException('Simulated _prep_resize failure.')
-
-        # Yes this isn't great in a functional test, but it's simple.
-        self.stub_out('nova.compute.manager.ComputeManager._prep_resize',
-                      fake_prep_resize)
-
-        # Now migrate the server which is going to fail on the destination.
-        self.api.post_server_action(server['id'], {'migrate': None})
-
-        # When the destination compute calls conductor and conductor calls
-        # the scheduler to get another host, it's going to fail since there
-        # are only two hosts and we started on the first and failed on the
-        # second, so the scheduler will raise NoValidHost and a fault will
-        # be recorded on the instance. However, the instance is not put into
-        # ERROR state since it's still OK on the source host, but faults are
-        # only shown in the API for ERROR/DELETED instances, so we can't poll
-        # for the fault. So we poll for instance action events instead.
         completion_event = None
         for attempt in range(10):
             actions = self.api.get_instance_actions(server['id'])
             # Look for the migrate action.
             for action in actions:
-                if action['action'] == 'migrate':
+                if action['action'] == expected_action:
                     events = (
                         self.api.api_get(
                             '/servers/%s/os-instance-actions/%s' %
@@ -2005,19 +1983,78 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
             self.fail('Timed out waiting for compute_prep_resize failure '
                       'event. Current instance actions: %s' % actions)
 
+    def test_rescheduling_when_migrating_instance(self):
+        """Tests that allocations are removed from the destination node by
+        the compute service when a cold migrate / resize fails and a reschedule
+        request is sent back to conductor.
+        """
+        source_hostname = self.compute1.manager.host
+        server = self._boot_and_check_allocations(
+            self.flavor1, source_hostname)
+
+        def fake_prep_resize(*args, **kwargs):
+            raise test.TestingException('Simulated _prep_resize failure.')
+
+        # Yes this isn't great in a functional test, but it's simple.
+        self.stub_out('nova.compute.manager.ComputeManager._prep_resize',
+                      fake_prep_resize)
+
+        # Now migrate the server which is going to fail on the destination.
+        self.api.post_server_action(server['id'], {'migrate': None})
+
+        self._wait_for_prep_resize_fail_completion(server, 'migrate')
+
         dest_hostname = self._other_hostname(source_hostname)
         dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
 
         failed_usages = self._get_provider_usages(dest_rp_uuid)
-        # FIXME(mriedem): Due to bug 1712850 the allocations are not removed
-        # from the destination node before the reschedule. Remove this once
-        # the bug is fixed as it should be:
-        # # Expects no allocation records on the failed host.
-        # self.assertFlavorMatchesAllocation(
-        #    {'vcpus': 0, 'ram': 0, 'disk': 0}, failed_usages)
-        self.assertFlavorMatchesAllocation(self.flavor1, failed_usages)
+        # Expects no allocation records on the failed host.
+        self.assertFlavorMatchesAllocation(
+           {'vcpus': 0, 'ram': 0, 'disk': 0}, failed_usages)
 
         # Ensure the allocation records still exist on the source host.
         source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
         source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+
+    def test_resize_to_same_host_prep_resize_fails(self):
+        """Tests that when we resize to the same host and resize fails in
+        the prep_resize method, we cleanup the allocations before rescheduling.
+        """
+        # make sure that the test only uses a single host
+        compute2_service_id = self.admin_api.get_services(
+            host=self.compute2.host, binary='nova-compute')[0]['id']
+        self.admin_api.put_service(compute2_service_id, {'status': 'disabled'})
+
+        hostname = self.compute1.manager.host
+        rp_uuid = self._get_provider_uuid_by_host(hostname)
+
+        server = self._boot_and_check_allocations(self.flavor1, hostname)
+
+        def fake_prep_resize(*args, **kwargs):
+            # Ensure the allocations are doubled now before we fail.
+            usages = self._get_provider_usages(rp_uuid)
+            self.assertFlavorsMatchAllocation(
+                self.flavor1, self.flavor2, usages)
+            raise test.TestingException('Simulated _prep_resize failure.')
+
+        # Yes this isn't great in a functional test, but it's simple.
+        self.stub_out('nova.compute.manager.ComputeManager._prep_resize',
+                      fake_prep_resize)
+
+        self.flags(allow_resize_to_same_host=True)
+        resize_req = {
+            'resize': {
+                'flavorRef': self.flavor2['id']
+            }
+        }
+        self.api.post_server_action(server['id'], resize_req)
+
+        self._wait_for_prep_resize_fail_completion(server, 'resize')
+
+        # Ensure the allocation records still exist on the host.
+        source_rp_uuid = self._get_provider_uuid_by_host(hostname)
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        # The new_flavor should have been subtracted from the doubled
+        # allocation which just leaves us with the original flavor.
         self.assertFlavorMatchesAllocation(self.flavor1, source_usages)

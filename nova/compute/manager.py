@@ -3789,6 +3789,7 @@ class ComputeManager(manager.Manager):
                                               current_period=True)
             self._notify_about_instance_usage(
                     context, instance, "resize.prep.start")
+            failed = False
             try:
                 self._prep_resize(context, image, instance,
                                   instance_type, filter_properties,
@@ -3797,14 +3798,31 @@ class ComputeManager(manager.Manager):
             #               instance to be migrated is backed by LVM.
             #               Remove when LVM migration is implemented.
             except exception.MigrationPreCheckError:
+                # TODO(mriedem): How is it even possible to get here?
+                # _prep_resize does not call the driver. The resize_instance
+                # method does, but we RPC cast to the source node to do that
+                # so we shouldn't even get this exception...
+                failed = True
                 raise
             except Exception:
+                failed = True
                 # try to re-schedule the resize elsewhere:
                 exc_info = sys.exc_info()
                 self._reschedule_resize_or_reraise(context, image, instance,
                         exc_info, instance_type, request_spec,
                         filter_properties)
             finally:
+                if failed:
+                    # Since we hit a failure, we're either rescheduling or dead
+                    # and either way we need to cleanup any allocations created
+                    # by the scheduler for the destination node. Note that for
+                    # a resize to the same host, the scheduler will merge the
+                    # flavors, so here we'd be subtracting the new flavor from
+                    # the allocated resources on this node.
+                    rt = self._get_resource_tracker()
+                    rt.delete_allocation_for_failed_resize(
+                        instance, node, instance_type)
+
                 extra_usage_info = dict(
                         new_instance_type=instance_type.name,
                         new_instance_type_id=instance_type.id)
