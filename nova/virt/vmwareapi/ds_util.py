@@ -456,8 +456,8 @@ def _filter_datastores_matching_storage_policy(session, data_stores,
 
 def _update_datacenter_cache_from_objects(session, dcs):
     """Updates the datastore/datacenter cache."""
-    while dcs:
-        for dco in dcs.objects:
+    with vutil.WithRetrieval(session.vim, dcs) as dc_objs:
+        for dco in dc_objs:
             dc_ref = dco.obj
             ds_refs = []
             prop_dict = vm_util.propset_dict(dco.propSet)
@@ -474,7 +474,6 @@ def _update_datacenter_cache_from_objects(session, dcs):
             for ds_ref in ds_refs:
                 _DS_DC_MAPPING[ds_ref] = DcInfo(ref=dc_ref, name=name,
                                                 vmFolder=vmFolder)
-        dcs = session._call_method(vutil, 'continue_retrieval', dcs)
 
 
 def get_dc_info(session, ds_ref):
