@@ -120,7 +120,7 @@ def format_cpu_spec(cpuset, allow_ranges=True):
     """Format a libvirt CPU range specification.
 
     Format a set/list of CPU indexes as a libvirt CPU range
-    specification. It allow_ranges is true, it will try to detect
+    specification. If allow_ranges is true, it will try to detect
     continuous ranges of CPUs, otherwise it will just list each CPU
     index explicitly.
 
