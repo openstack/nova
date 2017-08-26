@@ -95,16 +95,12 @@ def get_network_with_the_name(session, network_name="vmnet0", cluster=None):
                                        'get_object_properties',
                                        None, cluster,
                                        'ClusterComputeResource', ['network'])
-    while vm_networks:
-        if vm_networks.objects:
-            network_obj = _get_network_obj(session, vm_networks.objects,
-                                           network_name)
-            if network_obj:
-                session._call_method(vutil, 'cancel_retrieval',
-                                     vm_networks)
-                return network_obj
-        vm_networks = session._call_method(vutil, 'continue_retrieval',
-                                           vm_networks)
+
+    with vutil.WithRetrieval(session.vim, vm_networks) as network_objs:
+        network_obj = _get_network_obj(session, network_objs, network_name)
+        if network_obj:
+            return network_obj
+
     LOG.debug("Network %s not found on cluster!", network_name)
 
 

@@ -95,7 +95,6 @@ class GetNetworkWithTheNameTestCase(test.NoDBTestCase):
                       vim_util.get_moref("dvportgroup-136",
                                          "DistributedVirtualPortgroup")]
         networks = self._build_cluster_networks(net_morefs)
-        self._continue_retrieval_called = False
 
         def mock_call_method(module, method, *args, **kwargs):
             if method == 'get_object_properties':
@@ -104,18 +103,15 @@ class GetNetworkWithTheNameTestCase(test.NoDBTestCase):
                 result = fake.DataObject()
                 result.name = 'no-match'
                 return result
-            if method == 'continue_retrieval':
-                self._continue_retrieval_called = True
 
         with mock.patch.object(self._session, '_call_method',
                                mock_call_method):
             res = network_util.get_network_with_the_name(self._session,
                                                         'fake_net',
                                                         'fake_cluster')
-            self.assertTrue(self._continue_retrieval_called)
             self.assertIsNone(res)
 
-    def _get_network_dvs_match(self, name, token=False):
+    def _get_network_dvs_match(self, name):
         net_morefs = [vim_util.get_moref("dvportgroup-135",
                                          "DistributedVirtualPortgroup")]
         networks = self._build_cluster_networks(net_morefs)
@@ -125,19 +121,10 @@ class GetNetworkWithTheNameTestCase(test.NoDBTestCase):
                 return networks
             if method == 'get_object_property':
                 result = fake.DataObject()
-                if not token or self._continue_retrieval_called:
-                    result.name = name
-                else:
-                    result.name = 'fake_name'
+                result.name = name
                 result.key = 'fake_key'
                 result.distributedVirtualSwitch = 'fake_dvs'
                 return result
-            if method == 'continue_retrieval':
-                if token:
-                    self._continue_retrieval_called = True
-                    return networks
-            if method == 'cancel_retrieval':
-                self._cancel_retrieval_called = True
 
         with mock.patch.object(self._session, '_call_method',
                                mock_call_method):
@@ -147,22 +134,10 @@ class GetNetworkWithTheNameTestCase(test.NoDBTestCase):
             self.assertIsNotNone(res)
 
     def test_get_network_dvs_exact_match(self):
-        self._cancel_retrieval_called = False
         self._get_network_dvs_match('fake_net')
-        self.assertTrue(self._cancel_retrieval_called)
 
     def test_get_network_dvs_match(self):
-        self._cancel_retrieval_called = False
         self._get_network_dvs_match('dvs_7-virtualwire-7-fake_net')
-        self.assertTrue(self._cancel_retrieval_called)
-
-    def test_get_network_dvs_match_with_token(self):
-        self._continue_retrieval_called = False
-        self._cancel_retrieval_called = False
-        self._get_network_dvs_match('dvs_7-virtualwire-7-fake_net',
-                                    token=True)
-        self.assertTrue(self._continue_retrieval_called)
-        self.assertTrue(self._cancel_retrieval_called)
 
     def test_get_network_network_match(self):
         net_morefs = [vim_util.get_moref("network-54", "Network")]
