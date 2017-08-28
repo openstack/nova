@@ -891,7 +891,7 @@ class _ComputeAPIUnitTestMixIn(object):
                   'cores': -inst.flavor.vcpus,
                   'ram': -inst.flavor.memory_mb}
         delete_time = datetime.datetime(1955, 11, 5, 9, 30,
-                                        tzinfo=iso8601.iso8601.Utc())
+                                        tzinfo=iso8601.UTC)
         self.useFixture(utils_fixture.TimeFixture(delete_time))
         task_state = (delete_type == 'soft_delete' and
                       task_states.SOFT_DELETING or task_states.DELETING)
@@ -1096,7 +1096,7 @@ class _ComputeAPIUnitTestMixIn(object):
                     inst, 'delete.start')
             db.constraint(host=mox.IgnoreArg()).AndReturn('constraint')
             delete_time = datetime.datetime(1955, 11, 5, 9, 30,
-                                            tzinfo=iso8601.iso8601.Utc())
+                                            tzinfo=iso8601.UTC)
             updates['deleted_at'] = delete_time
             updates['deleted'] = True
             fake_inst = fake_instance.fake_db_instance(**updates)

@@ -1052,8 +1052,8 @@ class SqlAlchemyDbApiNoDbTestCase(test.NoDBTestCase):
         t2 = t1 + datetime.timedelta(seconds=10)
         t3 = t2 + datetime.timedelta(hours=1)
 
-        t2_utc = t2.replace(tzinfo=iso8601.iso8601.Utc())
-        t3_utc = t3.replace(tzinfo=iso8601.iso8601.Utc())
+        t2_utc = t2.replace(tzinfo=iso8601.UTC)
+        t3_utc = t3.replace(tzinfo=iso8601.UTC)
 
         datetime_keys = ('created_at', 'deleted_at')
 
@@ -2374,7 +2374,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         dt_keys = ('created_at', 'deleted_at', 'updated_at',
                    'launched_at', 'terminated_at')
         dt = timeutils.utcnow()
-        dt_utc = dt.replace(tzinfo=iso8601.iso8601.Utc())
+        dt_utc = dt.replace(tzinfo=iso8601.UTC)
         for key in dt_keys:
             values[key] = dt_utc
         inst = db.instance_create(self.ctxt, values)
@@ -2391,7 +2391,7 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         dt_keys = ('created_at', 'deleted_at', 'updated_at',
                    'launched_at', 'terminated_at')
         dt = timeutils.utcnow()
-        dt_utc = dt.replace(tzinfo=iso8601.iso8601.Utc())
+        dt_utc = dt.replace(tzinfo=iso8601.UTC)
         for key in dt_keys:
             values[key] = dt_utc
         inst = db.instance_create(self.ctxt, {})

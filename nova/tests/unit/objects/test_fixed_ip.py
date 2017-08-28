@@ -213,7 +213,7 @@ class _TestFixedIPObject(object):
         now = timeutils.utcnow()
         now_tz = timeutils.parse_isotime(
             utils.isotime(now)).replace(
-                tzinfo=iso8601.iso8601.Utc())
+                tzinfo=iso8601.UTC)
         disassociate.return_value = 123
         result = fixed_ip.FixedIP.disassociate_all_by_timeout(self.context,
                                                               'host', now)

@@ -69,7 +69,7 @@ class _TestBandwidthUsage(test.TestCase):
 
     @staticmethod
     def _time_now_and_start_period():
-        now = timeutils.utcnow().replace(tzinfo=iso8601.iso8601.Utc(),
+        now = timeutils.utcnow().replace(tzinfo=iso8601.UTC,
                                          microsecond=0)
         start_period = now - datetime.timedelta(seconds=10)
         return now, start_period
