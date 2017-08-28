@@ -42,7 +42,7 @@ def _fake_service(**kwargs):
         'id': 123,
         'uuid': uuidsentinel.service,
         'host': 'fake-host',
-        'binary': 'nova-fake',
+        'binary': 'nova-compute',
         'topic': 'fake-service-topic',
         'report_count': 1,
         'forced_down': False,

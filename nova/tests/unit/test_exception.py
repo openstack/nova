@@ -71,7 +71,7 @@ class WrapExceptionTestCase(test.NoDBTestCase):
     def test_wrap_exception_unknown_module(self):
         ctxt = context.get_admin_context()
         wrapped = exception_wrapper.wrap_exception(
-            rpc.get_notifier('fake'), binary='fake-binary')
+            rpc.get_notifier('fake'), binary='nova-compute')
         self.assertRaises(
             TypeError, wrapped(bad_function_unknown_module), None, ctxt)
         self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
@@ -81,7 +81,7 @@ class WrapExceptionTestCase(test.NoDBTestCase):
 
     def test_wrap_exception_with_notifier(self):
         wrapped = exception_wrapper.wrap_exception(rpc.get_notifier('fake'),
-                                                   binary='fake-binary')
+                                                   binary='nova-compute')
         ctxt = context.get_admin_context()
         self.assertRaises(test.TestingException,
                           wrapped(bad_function_exception), 1, ctxt, 3, zoo=3)
@@ -98,7 +98,8 @@ class WrapExceptionTestCase(test.NoDBTestCase):
         self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
         self.assertEqual('compute.exception', notification['event_type'])
-        self.assertEqual('fake-binary:fake-mini', notification['publisher_id'])
+        self.assertEqual('nova-compute:fake-mini',
+                         notification['publisher_id'])
         self.assertEqual('ERROR', notification['priority'])
 
         payload = notification['payload']
@@ -120,7 +121,7 @@ class WrapExceptionTestCase(test.NoDBTestCase):
         mock_notifier.is_enabled.return_value = False
 
         wrapped = exception_wrapper.wrap_exception(rpc.get_notifier('fake'),
-                                                   binary='fake-binary')
+                                                   binary='nova-compute')
         ctxt = context.get_admin_context()
         self.assertRaises(test.TestingException,
                           wrapped(bad_function_exception), 1, ctxt, 3, zoo=3)
@@ -133,7 +134,7 @@ class WrapExceptionTestCase(test.NoDBTestCase):
         self.flags(notification_format='unversioned', group='notifications')
 
         wrapped = exception_wrapper.wrap_exception(rpc.get_notifier('fake'),
-                                                   binary='fake-binary')
+                                                   binary='nova-compute')
         ctxt = context.get_admin_context()
         self.assertRaises(test.TestingException,
                           wrapped(bad_function_exception), 1, ctxt, 3, zoo=3)
