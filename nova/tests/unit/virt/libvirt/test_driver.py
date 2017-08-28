@@ -6315,7 +6315,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch.object(host.Host, "has_min_version", return_value=True)
     def test_quiesce(self, mock_has_min_version):
-        self.create_fake_libvirt_mock(lookupByName=self.fake_lookup)
+        self.create_fake_libvirt_mock(lookupByUUIDString=self.fake_lookup)
         with mock.patch.object(FakeVirtDomain, "fsFreeze") as mock_fsfreeze:
             drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
             instance = objects.Instance(**self.test_instance)
@@ -6327,7 +6327,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(host.Host, "has_min_version", return_value=True)
     def test_unquiesce(self, mock_has_min_version):
         self.create_fake_libvirt_mock(getLibVersion=lambda: 1002005,
-                                      lookupByName=self.fake_lookup)
+                                      lookupByUUIDString=self.fake_lookup)
         with mock.patch.object(FakeVirtDomain, "fsThaw") as mock_fsthaw:
             drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
             instance = objects.Instance(**self.test_instance)
@@ -6422,7 +6422,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     def test_attach_invalid_volume_type(self):
         self.create_fake_libvirt_mock()
-        libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
+        libvirt_driver.LibvirtDriver._conn.lookupByUUIDString \
+            = self.fake_lookup
         instance = objects.Instance(**self.test_instance)
         self.mox.ReplayAll()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -6435,7 +6436,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_attach_blockio_invalid_hypervisor(self):
         self.flags(virt_type='lxc', group='libvirt')
         self.create_fake_libvirt_mock()
-        libvirt_driver.LibvirtDriver._conn.lookupByName = self.fake_lookup
+        libvirt_driver.LibvirtDriver._conn.lookupByUUIDString \
+            = self.fake_lookup
         instance = objects.Instance(**self.test_instance)
         self.mox.ReplayAll()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -10323,10 +10325,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
         vdmock.XMLDesc(0).AndReturn(dummyxml)
 
-        def fake_lookup(instance_name):
-            if instance_name == instance.name:
+        def fake_lookup(_uuid):
+            if _uuid == instance.uuid:
                 return vdmock
-        self.create_fake_libvirt_mock(lookupByName=fake_lookup)
+        self.create_fake_libvirt_mock(lookupByUUIDString=fake_lookup)
 
         fake_libvirt_utils.disk_sizes['/test/disk'] = 10 * units.Gi
         fake_libvirt_utils.disk_sizes['/test/disk.local'] = 20 * units.Gi
@@ -10433,10 +10435,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
         vdmock.XMLDesc(0).AndReturn(dummyxml)
 
-        def fake_lookup(instance_name):
-            if instance_name == instance.name:
+        def fake_lookup(_uuid):
+            if _uuid == instance.uuid:
                 return vdmock
-        self.create_fake_libvirt_mock(lookupByName=fake_lookup)
+        self.create_fake_libvirt_mock(lookupByUUIDString=fake_lookup)
 
         fake_libvirt_utils.disk_sizes['/test/disk'] = 10 * units.Gi
         fake_libvirt_utils.disk_sizes['/test/disk.local'] = 20 * units.Gi
@@ -10501,10 +10503,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
         vdmock.XMLDesc(0).AndReturn(dummyxml)
 
-        def fake_lookup(instance_name):
-            if instance_name == instance.name:
+        def fake_lookup(_uuid):
+            if _uuid == instance.uuid:
                 return vdmock
-        self.create_fake_libvirt_mock(lookupByName=fake_lookup)
+        self.create_fake_libvirt_mock(lookupByUUIDString=fake_lookup)
 
         fake_libvirt_utils.disk_sizes['/test/disk'] = 10 * units.Gi
 
@@ -11337,7 +11339,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 return FakeVirtDomain(fake_dom_xml)
 
             self.create_fake_libvirt_mock()
-            libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup
+            libvirt_driver.LibvirtDriver._conn.lookupByUUIDString = fake_lookup
 
             drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
@@ -11379,7 +11381,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 return FakeVirtDomain(fake_dom_xml)
 
             self.create_fake_libvirt_mock()
-            libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup
+            libvirt_driver.LibvirtDriver._conn.lookupByUUIDString = fake_lookup
 
             drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
@@ -11425,7 +11427,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 return 'pty'
 
             self.create_fake_libvirt_mock()
-            libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup
+            libvirt_driver.LibvirtDriver._conn.lookupByUUIDString = fake_lookup
             libvirt_driver.LibvirtDriver._flush_libvirt_console = _fake_flush
             libvirt_driver.LibvirtDriver._append_to_file = _fake_append_to_file
 
@@ -11459,7 +11461,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             return FakeVirtDomain(fake_dom_xml)
 
         self.create_fake_libvirt_mock()
-        libvirt_driver.LibvirtDriver._conn.lookupByName = fake_lookup
+        libvirt_driver.LibvirtDriver._conn.lookupByUUIDString = fake_lookup
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(exception.ConsoleNotAvailable,
                           drvr.get_console_output, self.context, instance)
@@ -14212,10 +14214,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
         vdmock.XMLDesc(flags=0).AndReturn(dummyxml)
 
-        def fake_lookup(instance_name):
-            if instance_name == instance['name']:
+        def fake_lookup(_uuid):
+            if _uuid == instance['uuid']:
                 return vdmock
-        self.create_fake_libvirt_mock(lookupByName=fake_lookup)
+        self.create_fake_libvirt_mock(lookupByUUIDString=fake_lookup)
 
         self.mox.ReplayAll()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -14231,10 +14233,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
         vdmock.XMLDesc(flags=0).AndReturn(dummyxml)
 
-        def fake_lookup(instance_name):
-            if instance_name == instance['name']:
+        def fake_lookup(_uuid):
+            if _uuid == instance['uuid']:
                 return vdmock
-        self.create_fake_libvirt_mock(lookupByName=fake_lookup)
+        self.create_fake_libvirt_mock(lookupByUUIDString=fake_lookup)
 
         self.mox.ReplayAll()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -14252,10 +14254,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
         vdmock.XMLDesc(flags=0).AndReturn(dummyxml)
 
-        def fake_lookup(instance_name):
-            if instance_name == instance['name']:
+        def fake_lookup(_uuid):
+            if _uuid == instance['uuid']:
                 return vdmock
-        self.create_fake_libvirt_mock(lookupByName=fake_lookup)
+        self.create_fake_libvirt_mock(lookupByUUIDString=fake_lookup)
 
         self.mox.ReplayAll()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -14271,10 +14273,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.mox.StubOutWithMock(vdmock, "XMLDesc")
         vdmock.XMLDesc(flags=0).AndReturn(dummyxml)
 
-        def fake_lookup(instance_name):
-            if instance_name == instance['name']:
+        def fake_lookup(_uuid):
+            if _uuid == instance['uuid']:
                 return vdmock
-        self.create_fake_libvirt_mock(lookupByName=fake_lookup)
+        self.create_fake_libvirt_mock(lookupByUUIDString=fake_lookup)
 
         self.mox.ReplayAll()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -14900,7 +14902,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_cleanup_wants_vif_errors_ignored(self, undefine, unplug):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
         fake_inst = {'name': 'foo'}
-        with mock.patch.object(drvr._conn, 'lookupByName') as lookup:
+        with mock.patch.object(drvr._conn, 'lookupByUUIDString') as lookup:
             lookup.return_value = fake_inst
             # NOTE(danms): Make unplug cause us to bail early, since
             # we only care about how it was called
