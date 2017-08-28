@@ -4821,6 +4821,25 @@ def migration_get_all_by_filters(context, filters):
     return query.all()
 
 
+@pick_context_manager_writer
+def migration_migrate_to_uuid(context, count):
+    # Avoid circular import
+    from nova import objects
+
+    db_migrations = model_query(context, models.Migration).filter_by(
+        uuid=None).limit(count).all()
+
+    done = 0
+    for db_migration in db_migrations:
+        mig = objects.Migration(context)
+        mig._from_db_object(context, mig, db_migration)
+        done += 1
+
+    # We don't have any situation where we can (detectably) not
+    # migrate a thing, so report anything that matched as "completed".
+    return done, done
+
+
 ##################
 
 

@@ -82,6 +82,7 @@ from nova import config
 from nova import context
 from nova import db
 from nova.db import migration
+from nova.db.sqlalchemy import api as sa_db
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -666,6 +667,8 @@ class DbCommands(object):
         quotas_obj.migrate_quota_limits_to_api_db,
         # Added in Pike
         quotas_obj.migrate_quota_classes_to_api_db,
+        # Added in Queens
+        sa_db.migration_migrate_to_uuid,
     )
 
     def __init__(self):

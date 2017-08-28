@@ -3827,6 +3827,38 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(0, total)
         self.assertEqual(0, done)
 
+    def test_migration_migrate_to_uuid(self):
+        total, done = sqlalchemy_api.migration_migrate_to_uuid(self.ctxt, 10)
+        self.assertEqual(0, total)
+        self.assertEqual(0, done)
+
+        # Create two migrations, one with a uuid and one without.
+        db.migration_create(self.ctxt,
+                            dict(source_compute='src', source_node='srcnode',
+                                 dest_compute='dst', dest_node='dstnode',
+                                 status='running'))
+        db.migration_create(self.ctxt,
+                            dict(source_compute='src', source_node='srcnode',
+                                 dest_compute='dst', dest_node='dstnode',
+                                 status='running',
+                                 uuid=uuidsentinel.migration2))
+
+        # Now migrate them, we should find one and update one
+        total, done = sqlalchemy_api.migration_migrate_to_uuid(self.ctxt, 10)
+        self.assertEqual(1, total)
+        self.assertEqual(1, done)
+
+        # Get the migrations back to make sure the original uuid didn't change.
+        migrations = db.migration_get_all_by_filters(self.ctxt, {})
+        uuids = [m.uuid for m in migrations]
+        self.assertIn(uuidsentinel.migration2, uuids)
+        self.assertNotIn(None, uuids)
+
+        # Run the online migration again to see nothing was processed.
+        total, done = sqlalchemy_api.migration_migrate_to_uuid(self.ctxt, 10)
+        self.assertEqual(0, total)
+        self.assertEqual(0, done)
+
 
 class BaseInstanceTypeTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def setUp(self):
