@@ -1589,9 +1589,6 @@ def create_folder(session, parent_folder_ref, name):
     The moref of the folder is returned.
     """
 
-    folder = _get_folder(session, parent_folder_ref, name)
-    if folder:
-        return folder
     LOG.debug("Creating folder: %(name)s. Parent ref: %(parent)s.",
               {'name': name, 'parent': parent_folder_ref.value})
     try:
