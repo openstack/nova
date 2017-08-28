@@ -27,6 +27,7 @@ from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import six
+import testtools
 
 import nova
 from nova.compute import build_results
@@ -2451,6 +2452,45 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertTrue(event.ready())
         self.assertEqual(event_obj, event.wait())
         self.assertEqual({}, self.compute.instance_events._events)
+
+    @mock.patch('nova.compute.manager.LOG')
+    def test_process_instance_event_deleting(self, mock_log):
+        """Tests that we don't log a warning when we get a
+        network-vif-unplugged event for an instance that's being deleted.
+        """
+        inst_obj = objects.Instance(uuid=uuids.instance,
+                                    vm_state=vm_states.ACTIVE,
+                                    task_state=task_states.DELETING)
+        event_obj = objects.InstanceExternalEvent(name='network-vif-unplugged',
+                                                  tag=uuids.port_id)
+        with mock.patch.object(self.compute.instance_events,
+                               'pop_instance_event', return_value=None):
+            self.compute._process_instance_event(inst_obj, event_obj)
+        # assert we logged at debug level
+        mock_log.debug.assert_called()
+        self.assertThat(mock_log.debug.call_args[0][0],
+                        testtools.matchers.MatchesRegex(
+                            'Received event .* for instance which is being '
+                            'deleted.'))
+
+    @mock.patch('nova.compute.manager.LOG')
+    def test_process_instance_event_unexpected_warning(self, mock_log):
+        """Tests that we log a warning when we get an unexpected event."""
+        inst_obj = objects.Instance(uuid=uuids.instance,
+                                    vm_state=vm_states.ACTIVE,
+                                    task_state=None)
+        event_obj = objects.InstanceExternalEvent(name='network-vif-unplugged',
+                                                  tag=uuids.port_id)
+        with mock.patch.object(self.compute.instance_events,
+                               'pop_instance_event', return_value=None):
+            self.compute._process_instance_event(inst_obj, event_obj)
+        # assert we logged at warning level
+        mock_log.warning.assert_called()
+        self.assertThat(mock_log.warning.call_args[0][0],
+                        testtools.matchers.MatchesRegex(
+                            'Received unexpected event .* for '
+                            'instance with vm_state .* and '
+                            'task_state .*.'))
 
     def test_process_instance_vif_deleted_event(self):
         vif1 = fake_network_cache_model.new_vif()
