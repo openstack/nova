@@ -2365,13 +2365,22 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
     def _mock_live_migration(self, context, instance, dest,
                              post_method, recover_method,
                              block_migration=False, migrate_data=None):
+        self._abort_migration = False
+        self._migrating = True
         while self._migrating:
             time.sleep(0.5)
 
-        post_method(context, instance, dest, block_migration,
-                    migrate_data)
+        if self._abort_migration:
+            recover_method(context, instance, dest)
+        else:
+            post_method(context, instance, dest, block_migration,
+                        migrate_data)
 
     def _mock_force_complete(self, instance):
+        self._migrating = False
+
+    def _mock_live_migration_abort(self, instance):
+        self._abort_migration = True
         self._migrating = False
 
     @mock.patch('nova.virt.fake.FakeDriver.live_migration')
@@ -2421,6 +2430,71 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         self.assertNotIn(source_rp_uuid, allocations)
 
         dest_allocation = allocations[dest_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
+
+        self._delete_and_check_allocations(
+            server, source_rp_uuid, dest_rp_uuid)
+
+    @mock.patch('nova.virt.fake.FakeDriver.live_migration')
+    @mock.patch('nova.virt.fake.FakeDriver.live_migration_abort')
+    def test_live_migrate_delete(self, mock_live_migration_abort,
+                                 mock_live_migration):
+        mock_live_migration.side_effect = self._mock_live_migration
+        mock_live_migration_abort.side_effect = self._mock_live_migration_abort
+
+        source_hostname = self.compute1.host
+        dest_hostname = self.compute2.host
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        server = self._boot_and_check_allocations(
+            self.flavor1, source_hostname)
+
+        post = {
+            'os-migrateLive': {
+                'host': dest_hostname,
+                'block_migration': True,
+            }
+        }
+        self.api.post_server_action(server['id'], post)
+
+        migration = self._wait_for_migration_status(server, 'running')
+
+        self.api.delete_migration(server['id'], migration['id'])
+        self._wait_for_server_parameter(self.api, server,
+            {'OS-EXT-SRV-ATTR:host': source_hostname,
+             'status': 'ACTIVE'})
+
+        self._run_periodics()
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        # Note(lajos katona): After solving bug #1714237 there should be
+        # only 1 allocation:
+        # self.assertEqual(1, len(allocations))
+        self.assertEqual(2, len(allocations))
+
+        # Note(lajos katona): After solving bug #1714237 the destination
+        # resource provider should not be among the allocations:
+        # self.assertNotIn(dest_rp_uuid, allocations)
+
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+
+        source_allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
+
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+        # Note(lajos katona): After solving bug #1714237 on the destination
+        # there should be zero usage:
+        # self.assertFlavorMatchesAllocation(
+        #    {'ram': 0, 'disk': 0, 'vcpus': 0}, dest_usages)
+        self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+
+        dest_allocation = allocations[dest_rp_uuid]['resources']
+        # Note(lajos katona): After solving bug #1714237 on the destination
+        # there should be zero allocation:
+        # self.assertFlavorMatchesAllocation(
+        #     {'ram': 0, 'disk': 0, 'vcpus': 0}, dest_allocation)
         self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
 
         self._delete_and_check_allocations(
