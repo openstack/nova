@@ -133,7 +133,7 @@ class TestNeutronDriver(test.NoDBTestCase):
                 'list_security_groups',
                 return_value=security_groups_list) as mock_list_secgroup:
             sg_api = neutron_driver.SecurityGroupAPI()
-            sg_api.list(self.context, project=self.context.tenant,
+            sg_api.list(self.context, project=self.context.project_id,
                         search_opts=search_opts)
 
             mock_list_secgroup.assert_called_once_with(
@@ -144,7 +144,7 @@ class TestNeutronDriver(test.NoDBTestCase):
         expected_sg_id = '85cc3048-abc3-43cc-89b3-377341426ac5'
         expected_sg = {'security_group': {'name': sg_name,
                                  'id': expected_sg_id,
-                                 'tenant_id': self.context.tenant,
+                                 'tenant_id': self.context.project_id,
                                  'description': 'server', 'rules': []}}
         self.mocked_client.show_security_group.return_value = expected_sg
 
