@@ -80,7 +80,7 @@ The VNC console connection works as follows:
    instance.
 
    The compute host specifies the address that the proxy should use to connect
-   through the ``nova.conf`` file option, ``vncserver_proxyclient_address``. In
+   through the ``nova.conf`` file option, ``server_proxyclient_address``. In
    this way, the VNC proxy works as a bridge between the public network and
    private host network.
 
@@ -111,7 +111,7 @@ To customize the VNC console, use the following configuration options in your
 .. note::
 
    To support :ref:`live migration <section_configuring-compute-migrations>`,
-   you cannot specify a specific IP address for ``vncserver_listen``, because
+   you cannot specify a specific IP address for ``server_listen``, because
    that IP address does not exist on the destination host.
 
 .. list-table:: **Description of VNC configuration options**
@@ -151,9 +151,9 @@ To customize the VNC console, use the following configuration options in your
    * - novncproxy_base_url = http://127.0.0.1:6080/vnc_auto.html
      - (StrOpt) Location of VNC console proxy, in the form
        "http://127.0.0.1:6080/vnc_auto.html"
-   * - vncserver_listen = 127.0.0.1
+   * - server_listen = 127.0.0.1
      - (StrOpt) IP address on which instance vncservers should listen
-   * - vncserver_proxyclient_address = 127.0.0.1
+   * - server_proxyclient_address = 127.0.0.1
      - (StrOpt) The address to which proxy clients (like nova-xvpvncproxy)
        should connect
    * - xvpvncproxy_base_url = http://127.0.0.1:6081/console
@@ -162,7 +162,7 @@ To customize the VNC console, use the following configuration options in your
 
 .. note::
 
-   - The ``vncserver_proxyclient_address`` defaults to ``127.0.0.1``, which is
+   - The ``server_proxyclient_address`` defaults to ``127.0.0.1``, which is
      the address of the compute host that Compute instructs proxies to use when
      connecting to instance servers.
 
@@ -220,7 +220,7 @@ By default, ``nova-novncproxy`` binds on ``0.0.0.0:6080``.
 To connect the service to your Compute deployment, add the following
 configuration options to your ``nova.conf`` file:
 
-- ``vncserver_listen=0.0.0.0``
+- ``server_listen=0.0.0.0``
 
   Specifies the address on which the VNC service should bind. Make sure it is
   assigned one of the compute node interfaces. This address is the one used by
@@ -234,7 +234,7 @@ configuration options to your ``nova.conf`` file:
 
      To use live migration, use the 0.0.0.0 address.
 
-- ``vncserver_proxyclient_address=127.0.0.1``
+- ``server_proxyclient_address=127.0.0.1``
 
   The address of the compute host that Compute instructs proxies to use when
   connecting to instance ``vncservers``.
@@ -278,21 +278,22 @@ Frequently asked questions about VNC access to virtual machines
 
   .. code-block:: console
 
+     [vnc]
      # These flags help construct a connection data structure
-     vncserver_proxyclient_address=192.168.1.2
+     server_proxyclient_address=192.168.1.2
      novncproxy_base_url=http://172.24.1.1:6080/vnc_auto.html
      xvpvncproxy_base_url=http://172.24.1.1:6081/console
 
      # This is the address where the underlying vncserver (not the proxy)
      # will listen for connections.
-     vncserver_listen=192.168.1.2
+     server_listen=192.168.1.2
 
   .. note::
 
      ``novncproxy_base_url`` and ``xvpvncproxy_base_url`` use a public IP; this
      is the URL that is ultimately returned to clients, which generally do not
      have access to your private network. Your PROXYSERVER must be able to
-     reach ``vncserver_proxyclient_address``, because that is the address over
+     reach ``server_proxyclient_address``, because that is the address over
      which the VNC connection is proxied.
 
 - **Q: My noVNC does not work with recent versions of web browsers. Why?**

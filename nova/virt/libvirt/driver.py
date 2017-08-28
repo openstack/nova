@@ -2935,7 +2935,7 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.ConsoleTypeUnavailable(console_type='vnc')
 
         port = get_vnc_port_for_instance(instance.name)
-        host = CONF.vnc.vncserver_proxyclient_address
+        host = CONF.vnc.server_proxyclient_address
 
         return ctype.ConsoleVNC(host=host, port=port)
 
@@ -4955,7 +4955,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 # necessitate deprecating this option entirely in the future.
                 # Refer to bug #1682020 for more information.
                 graphics.keymap = CONF.vnc.keymap
-            graphics.listen = CONF.vnc.vncserver_listen
+            graphics.listen = CONF.vnc.server_listen
             guest.add_device(graphics)
             add_video_driver = True
         if CONF.spice.enabled and guest.virt_type not in ('lxc', 'uml', 'xen'):
@@ -5889,7 +5889,7 @@ class LibvirtDriver(driver.ComputeDriver):
         data = objects.LibvirtLiveMigrateData()
         data.filename = filename
         data.image_type = CONF.libvirt.images_type
-        data.graphics_listen_addr_vnc = CONF.vnc.vncserver_listen
+        data.graphics_listen_addr_vnc = CONF.vnc.server_listen
         data.graphics_listen_addr_spice = CONF.spice.server_listen
         if CONF.serial_console.enabled:
             data.serial_listen_addr = CONF.serial_console.proxyclient_address
@@ -6927,7 +6927,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                 instance=instance)
                     greenthread.sleep(1)
 
-        # Store vncserver_listen and latest disk device info
+        # Store server_listen and latest disk device info
         if not migrate_data:
             migrate_data = objects.LibvirtLiveMigrateData(bdms=[])
         else:

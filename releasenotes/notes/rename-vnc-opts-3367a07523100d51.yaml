@@ -1,0 +1,11 @@
+---
+upgrade:
+  - |
+    The following configuration options have been renamed:
+
+    - ``[vnc]vncserver_listen`` (now ``[vnc]server_listen``)
+    - ``[vnc]vncserver_proxyclient_address`` (now
+      ``[vnc]server_proxyclient_address``)
+
+    This establishes a consistent naming between VNC and Spice options and
+    removes some unnecessary duplication.

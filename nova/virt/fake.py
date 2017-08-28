@@ -510,7 +510,7 @@ class FakeDriver(driver.ComputeDriver):
         data = migrate_data.LibvirtLiveMigrateData()
         data.filename = 'fake'
         data.image_type = CONF.libvirt.images_type
-        data.graphics_listen_addr_vnc = CONF.vnc.vncserver_listen
+        data.graphics_listen_addr_vnc = CONF.vnc.server_listen
         data.graphics_listen_addr_spice = CONF.spice.server_listen
         data.serial_listen_addr = None
         data.block_migration = block_migration

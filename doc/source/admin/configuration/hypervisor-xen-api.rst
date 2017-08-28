@@ -397,7 +397,7 @@ VNC proxy address
 
 Assuming you are talking to XAPI through a management network, and XenServer is
 on the address: 10.10.1.34 specify the same address for the vnc proxy address:
-``vncserver_proxyclient_address=10.10.1.34``
+``server_proxyclient_address=10.10.1.34``
 
 Storage
 -------

@@ -113,8 +113,8 @@ Install and configure components
         [vnc]
         # ...
         enabled = True
-        vncserver_listen = 0.0.0.0
-        vncserver_proxyclient_address = $my_ip
+        server_listen = 0.0.0.0
+        server_proxyclient_address = $my_ip
         novncproxy_base_url = http://controller:6080/vnc_auto.html
 
      The server component listens on all IP addresses and the proxy component
