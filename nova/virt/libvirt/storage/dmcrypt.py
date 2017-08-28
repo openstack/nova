@@ -20,7 +20,7 @@ from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils import excutils
 
-from nova.virt.libvirt import utils
+from nova import utils
 
 
 LOG = logging.getLogger(__name__)

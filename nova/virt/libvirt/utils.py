@@ -41,10 +41,6 @@ LOG = logging.getLogger(__name__)
 RESIZE_SNAPSHOT_NAME = 'nova-resize'
 
 
-def execute(*args, **kwargs):
-    return utils.execute(*args, **kwargs)
-
-
 def get_iscsi_initiator():
     return volumeutils.get_iscsi_initiator()
 
@@ -61,7 +57,7 @@ def create_image(disk_format, path, size):
                  M for Mebibytes, 'G' for Gibibytes, 'T' for Tebibytes).
                  If no suffix is given, it will be interpreted as bytes.
     """
-    execute('qemu-img', 'create', '-f', disk_format, path, size)
+    utils.execute('qemu-img', 'create', '-f', disk_format, path, size)
 
 
 def create_cow_image(backing_file, path, size=None):
@@ -93,7 +89,7 @@ def create_cow_image(backing_file, path, size=None):
         csv_opts = ",".join(cow_opts)
         cow_opts = ['-o', csv_opts]
     cmd = base_cmd + cow_opts + [path]
-    execute(*cmd)
+    utils.execute(*cmd)
 
 
 def create_ploop_image(disk_format, path, size, fs_type):
@@ -112,15 +108,15 @@ def create_ploop_image(disk_format, path, size, fs_type):
     if not fs_type:
         fs_type = CONF.default_ephemeral_format or \
                   disk.FS_FORMAT_EXT4
-    execute('mkdir', '-p', path)
+    utils.execute('mkdir', '-p', path)
     disk_path = os.path.join(path, 'root.hds')
-    execute('ploop', 'init', '-s', size, '-f', disk_format, '-t', fs_type,
-            disk_path, run_as_root=True, check_exit_code=True)
+    utils.execute('ploop', 'init', '-s', size, '-f', disk_format, '-t',
+                  fs_type, disk_path, run_as_root=True, check_exit_code=True)
     # Add read access for all users, because "ploop init" creates
     # disk with rw rights only for root. OpenStack user should have access
     # to the disk to request info via "qemu-img info"
-    execute('chmod', '-R', 'a+r', path,
-            run_as_root=True, check_exit_code=True)
+    utils.execute('chmod', '-R', 'a+r', path,
+                  run_as_root=True, check_exit_code=True)
 
 
 def pick_disk_driver_name(hypervisor_version, is_block_dev=False):
@@ -142,8 +138,8 @@ def pick_disk_driver_name(hypervisor_version, is_block_dev=False):
             # 4002000 == 4.2.0
             if hypervisor_version >= 4002000:
                 try:
-                    execute('xend', 'status',
-                            run_as_root=True, check_exit_code=True)
+                    utils.execute('xend', 'status',
+                                  run_as_root=True, check_exit_code=True)
                 except OSError as exc:
                     if exc.errno == errno.ENOENT:
                         LOG.debug("xend is not found")
@@ -157,7 +153,8 @@ def pick_disk_driver_name(hypervisor_version, is_block_dev=False):
                     return 'qemu'
             # libvirt will use xend/xm toolstack
             try:
-                out, err = execute('tap-ctl', 'check', check_exit_code=False)
+                out, err = utils.execute('tap-ctl', 'check',
+                                         check_exit_code=False)
                 if out == 'ok\n':
                     # 4000000 == 4.0.0
                     if hypervisor_version > 4000000:
@@ -225,7 +222,7 @@ def copy_image(src, dest, host=None, receive=False,
         # rather recreated efficiently.  In addition, since
         # coreutils 8.11, holes can be read efficiently too.
         # we add '-r' argument because ploop disks are directories
-        execute('cp', '-r', src, dest)
+        utils.execute('cp', '-r', src, dest)
     else:
         if receive:
             src = "%s:%s" % (utils.safe_ip_format(host), src)
@@ -262,7 +259,7 @@ def chown(path, owner):
     :param path: File or directory whose ownership to change
     :param owner: Desired new owner (given as uid or username)
     """
-    execute('chown', owner, path, run_as_root=True)
+    utils.execute('chown', owner, path, run_as_root=True)
 
 
 def update_mtime(path):
@@ -271,7 +268,7 @@ def update_mtime(path):
     :param path: File bump the mtime on
     """
     try:
-        execute('touch', '-c', path, run_as_root=True)
+        utils.execute('touch', '-c', path, run_as_root=True)
     except processutils.ProcessExecutionError as exc:
         # touch can intermittently fail when launching several instances with
         # the same base image and using shared storage, so log the exception
@@ -299,8 +296,8 @@ def chown_for_id_maps(path, id_maps):
     gid_maps_str = ','.join([_id_map_to_config(id_map) for id_map in id_maps if
                              isinstance(id_map,
                                         vconfig.LibvirtConfigGuestGIDMap)])
-    execute('nova-idmapshift', '-i', '-u', uid_maps_str,
-            '-g', gid_maps_str, path, run_as_root=True)
+    utils.execute('nova-idmapshift', '-i', '-u', uid_maps_str,
+                  '-g', gid_maps_str, path, run_as_root=True)
 
 
 def extract_snapshot(disk_path, source_fmt, out_path, dest_fmt):
@@ -323,7 +320,7 @@ def extract_snapshot(disk_path, source_fmt, out_path, dest_fmt):
         qemu_img_cmd += ('-c',)
 
     qemu_img_cmd += (disk_path, out_path)
-    execute(*qemu_img_cmd)
+    utils.execute(*qemu_img_cmd)
 
 
 def load_file(path):
