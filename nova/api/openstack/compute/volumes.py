@@ -292,24 +292,16 @@ class VolumeAttachmentController(wsgi.Controller):
         volume_id = id
         instance = common.get_instance(self.compute_api, context, server_id)
 
-        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                context, instance.uuid)
-
-        if not bdms:
-            msg = _("Instance %s is not attached.") % server_id
+        try:
+            bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
+                context, volume_id, instance.uuid)
+        except exception.VolumeBDMNotFound:
+            msg = (_("Instance %(instance)s is not attached "
+                     "to volume %(volume)s") %
+                   {'instance': server_id, 'volume': volume_id})
             raise exc.HTTPNotFound(explanation=msg)
 
-        assigned_mountpoint = None
-
-        for bdm in bdms:
-            if bdm.volume_id == volume_id:
-                assigned_mountpoint = bdm.device_name
-                break
-
-        if assigned_mountpoint is None:
-            msg = _("volume_id not found: %s") % volume_id
-            raise exc.HTTPNotFound(explanation=msg)
-
+        assigned_mountpoint = bdm.device_name
         return {'volumeAttachment': _translate_attachment_detail_view(
             volume_id,
             instance.uuid,
@@ -359,16 +351,6 @@ class VolumeAttachmentController(wsgi.Controller):
         attachment['serverId'] = server_id
         attachment['volumeId'] = volume_id
         attachment['device'] = device
-
-        # NOTE(justinsb): And now, we have a problem...
-        # The attach is async, so there's a window in which we don't see
-        # the attachment (until the attachment completes).  We could also
-        # get problems with concurrent requests.  I think we need an
-        # attachment state, and to write to the DB here, but that's a bigger
-        # change.
-        # For now, we'll probably have to rely on libraries being smart
-
-        # TODO(justinsb): How do I return "accepted" here?
         return {'volumeAttachment': attachment}
 
     @wsgi.response(202)
@@ -399,34 +381,18 @@ class VolumeAttachmentController(wsgi.Controller):
 
         instance = common.get_instance(self.compute_api, context, server_id)
 
-        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                context, instance.uuid)
-        found = False
         try:
-            for bdm in bdms:
-                if bdm.volume_id != old_volume_id:
-                    continue
-                try:
-                    self.compute_api.swap_volume(context, instance, old_volume,
-                                                 new_volume)
-                    found = True
-                    break
-                except (exception.VolumeBDMNotFound):
-                    # The volume is not attached.  Treat it as NotFound
-                    # by falling through.
-                    pass
-                except exception.InvalidVolume as e:
-                    raise exc.HTTPBadRequest(explanation=e.format_message())
+            self.compute_api.swap_volume(context, instance, old_volume,
+                                         new_volume)
+        except exception.VolumeBDMNotFound as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.InvalidVolume as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'swap_volume', server_id)
-
-        if not found:
-            msg = _("The volume was either invalid or not attached to the "
-                    "instance.")
-            raise exc.HTTPNotFound(explanation=msg)
 
     @wsgi.response(202)
     @extensions.expected_errors((400, 403, 404, 409))
@@ -448,40 +414,32 @@ class VolumeAttachmentController(wsgi.Controller):
         except exception.VolumeNotFound as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
 
-        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                context, instance.uuid)
-        if not bdms:
-            msg = _("Instance %s is not attached.") % server_id
+        try:
+            bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
+                context, volume_id, instance.uuid)
+        except exception.VolumeBDMNotFound:
+            msg = (_("Instance %(instance)s is not attached "
+                     "to volume %(volume)s") %
+                   {'instance': server_id, 'volume': volume_id})
             raise exc.HTTPNotFound(explanation=msg)
 
-        found = False
-        try:
-            for bdm in bdms:
-                if bdm.volume_id != volume_id:
-                    continue
-                if bdm.is_root:
-                    msg = _("Can't detach root device volume")
-                    raise exc.HTTPForbidden(explanation=msg)
-                try:
-                    self.compute_api.detach_volume(context, instance, volume)
-                    found = True
-                    break
-                except exception.InvalidVolume as e:
-                    raise exc.HTTPBadRequest(explanation=e.format_message())
-                except exception.InstanceUnknownCell as e:
-                    raise exc.HTTPNotFound(explanation=e.format_message())
-                except exception.InvalidInput as e:
-                    raise exc.HTTPBadRequest(explanation=e.format_message())
+        if bdm.is_root:
+            msg = _("Cannot detach a root device volume")
+            raise exc.HTTPForbidden(explanation=msg)
 
+        try:
+            self.compute_api.detach_volume(context, instance, volume)
+        except exception.InvalidVolume as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
+        except exception.InstanceUnknownCell as e:
+            raise exc.HTTPNotFound(explanation=e.format_message())
+        except exception.InvalidInput as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'detach_volume', server_id)
-
-        if not found:
-            msg = _("volume_id not found: %s") % volume_id
-            raise exc.HTTPNotFound(explanation=msg)
 
 
 def _translate_snapshot_detail_view(context, vol):
