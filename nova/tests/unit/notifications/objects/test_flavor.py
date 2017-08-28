@@ -55,7 +55,7 @@ class TestFlavorNotification(test.TestCase):
         payload = notification.call_args[1]['payload']
 
         self.assertEqual("fake-mini", publisher.host)
-        self.assertEqual("nova-api", publisher.binary)
+        self.assertEqual("nova-api", publisher.source)
         self.assertEqual(fields.NotificationPriority.INFO, priority)
         self.assertEqual('flavor', event_type.object)
         self.assertEqual(getattr(fields.NotificationAction, action),

@@ -27,16 +27,16 @@ CONF = nova.conf.CONF
 
 
 def _emit_exception_notification(notifier, context, ex, function_name, args,
-                                 binary):
+                                 source):
     _emit_legacy_exception_notification(notifier, context, ex, function_name,
                                         args)
-    _emit_versioned_exception_notification(context, ex, binary)
+    _emit_versioned_exception_notification(context, ex, source)
 
 
 @rpc.if_notifications_enabled
-def _emit_versioned_exception_notification(context, ex, binary):
+def _emit_versioned_exception_notification(context, ex, source):
     versioned_exception_payload = exception.ExceptionPayload.from_exception(ex)
-    publisher = base.NotificationPublisher(host=CONF.host, binary=binary)
+    publisher = base.NotificationPublisher(host=CONF.host, source=source)
     event_type = base.EventType(
             object='compute',
             action=fields.NotificationAction.EXCEPTION)

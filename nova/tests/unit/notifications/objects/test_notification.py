@@ -199,7 +199,7 @@ class TestNotificationBase(test.NoDBTestCase):
                 object='test_object',
                 action=fields.NotificationAction.UPDATE),
             publisher=notification.NotificationPublisher(host='fake-host',
-                                                         binary='nova-fake'),
+                                                         source='nova-fake'),
             priority=fields.NotificationPriority.INFO,
             payload=self.payload)
 
@@ -393,7 +393,7 @@ notification_object_data = {
     'IpPayload': '1.0-8ecf567a99e516d4af094439a7632d34',
     'KeypairNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'KeypairPayload': '1.0-6daebbbde0e1bf35c1556b1ecd9385c1',
-    'NotificationPublisher': '1.0-bbbc1402fb0e443a3eb227cc52b61545',
+    'NotificationPublisher': '2.0-578ee5fea2922ff32e8917621f140857',
     'ServiceStatusNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'ServiceStatusPayload': '1.1-7b6856bd879db7f3ecbcd0ca9f35f92f',
 }

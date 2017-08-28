@@ -41,7 +41,7 @@ class TestServiceStatusNotification(test.TestCase):
         payload = mock_notification.call_args[1]['payload']
 
         self.assertEqual(service_obj.host, publisher.host)
-        self.assertEqual(service_obj.binary, publisher.binary)
+        self.assertEqual(service_obj.binary, publisher.source)
         self.assertEqual(fields.NotificationPriority.INFO, priority)
         self.assertEqual('service', event_type.object)
         self.assertEqual(fields.NotificationAction.UPDATE,

@@ -138,21 +138,22 @@ class NotificationPayloadBase(NotificationObject):
 @base.NovaObjectRegistry.register_notification
 class NotificationPublisher(NotificationObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    #         2.0: The binary field has been renamed to source
+    VERSION = '2.0'
 
     fields = {
         'host': fields.StringField(nullable=False),
-        'binary': fields.StringField(nullable=False),
+        'source': fields.StringField(nullable=False),
     }
 
-    def __init__(self, host, binary):
+    def __init__(self, host, source):
         super(NotificationPublisher, self).__init__()
         self.host = host
-        self.binary = binary
+        self.source = source
 
     @classmethod
     def from_service_obj(cls, service):
-        return cls(host=service.host, binary=service.binary)
+        return cls(host=service.host, source=service.binary)
 
 
 @base.NovaObjectRegistry.register_if(False)
@@ -189,7 +190,7 @@ class NotificationBase(NotificationObject):
                    event_type=
                    self.event_type.to_notification_event_type_field(),
                    publisher_id='%s:%s' %
-                                (self.publisher.binary,
+                                (self.publisher.source,
                                  self.publisher.host),
                    payload=self.payload.obj_to_primitive())
 
