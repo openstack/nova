@@ -498,8 +498,9 @@ def format_remote_path(host, path):
     return "%s:%s" % (safe_ip_format(host), path)
 
 
+# TODO(mriedem): Remove this in Rocky.
 def monkey_patch():
-    """If the CONF.monkey_patch set as True,
+    """DEPRECATED: If the CONF.monkey_patch set as True,
     this function patches a decorator
     for all functions in specified modules.
     You can set decorators for each modules
@@ -517,6 +518,7 @@ def monkey_patch():
     # If CONF.monkey_patch is not True, this function do nothing.
     if not CONF.monkey_patch:
         return
+    LOG.warning('Monkey patching nova is deprecated for removal.')
     if six.PY2:
         is_method = inspect.ismethod
     else:

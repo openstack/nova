@@ -63,6 +63,12 @@ entry.
     cfg.BoolOpt(
         'monkey_patch',
         default=False,
+        deprecated_for_removal=True,
+        deprecated_since='17.0.0',
+        deprecated_reason="""
+Monkey patching nova is not tested, not supported, and is a barrier
+for interoperability.
+""",
         help="""
 Determine if monkey patching should be applied.
 
@@ -74,6 +80,12 @@ Related options:
     cfg.ListOpt(
         'monkey_patch_modules',
         default=['nova.compute.api:nova.notifications.notify_decorator'],
+        deprecated_for_removal=True,
+        deprecated_since='17.0.0',
+        deprecated_reason="""
+Monkey patching nova is not tested, not supported, and is a barrier
+for interoperability.
+""",
         help="""
 List of modules/decorators to monkey patch.
 
@@ -83,7 +95,6 @@ modules.
 Possible values:
 
 * nova.compute.api:nova.notifications.notify_decorator
-* nova.api.ec2.cloud:nova.notifications.notify_decorator
 * [...]
 
 Related options:
