@@ -4950,14 +4950,22 @@ class LibvirtDriver(driver.ComputeDriver):
         if CONF.vnc.enabled and guest.virt_type not in ('lxc', 'uml'):
             graphics = vconfig.LibvirtConfigGuestGraphics()
             graphics.type = "vnc"
-            graphics.keymap = CONF.vnc.keymap
+            if CONF.vnc.keymap:
+                # TODO(stephenfin): There are some issues here that may
+                # necessitate deprecating this option entirely in the future.
+                # Refer to bug #1682020 for more information.
+                graphics.keymap = CONF.vnc.keymap
             graphics.listen = CONF.vnc.vncserver_listen
             guest.add_device(graphics)
             add_video_driver = True
         if CONF.spice.enabled and guest.virt_type not in ('lxc', 'uml', 'xen'):
             graphics = vconfig.LibvirtConfigGuestGraphics()
             graphics.type = "spice"
-            graphics.keymap = CONF.spice.keymap
+            if CONF.spice.keymap:
+                # TODO(stephenfin): There are some issues here that may
+                # necessitate deprecating this option entirely in the future.
+                # Refer to bug #1682020 for more information.
+                graphics.keymap = CONF.spice.keymap
             graphics.listen = CONF.spice.server_listen
             guest.add_device(graphics)
             add_video_driver = True

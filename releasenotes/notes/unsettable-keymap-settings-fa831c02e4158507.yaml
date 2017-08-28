@@ -1,0 +1,6 @@
+---
+fixes:
+  - |
+    It is now possible to unset the ``[vnc]keymap`` and ``[spice]keymap``
+    configuration options. These were known to cause issues for some users
+    with non-US keyboards and may be deprecated in the future.
