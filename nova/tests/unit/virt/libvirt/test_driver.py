@@ -15752,6 +15752,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     def setUp(self):
         super(LibvirtDriverTestCase, self).setUp()
         self.flags(sysinfo_serial="none", group="libvirt")
+        self.flags(instances_path=self.useFixture(fixtures.TempDir()).path)
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
         os_vif.initialize()
 
@@ -15782,7 +15783,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         inst = {}
         inst['id'] = 1
-        inst['uuid'] = '52d3b512-1152-431f-a8f7-28f0288a622b'
+        inst['uuid'] = uuids.fake_instance_id
         inst['os_type'] = 'linux'
         inst['image_ref'] = uuids.fake_image_ref
         inst['reservation_id'] = 'r-fakeres'
