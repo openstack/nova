@@ -538,6 +538,8 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
         rp = mock.sentinel.rp
         get_res_pool_of_host.return_value = rp
 
+        detach_disk_from_vm.side_effect = [
+            oslo_vmw_exceptions.FileNotFoundException]
         instance = self._instance
         volume_ref = mock.sentinel.volume_ref
         vm_ref = mock.sentinel.vm_ref
