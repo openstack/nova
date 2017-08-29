@@ -14,6 +14,7 @@
 #    under the License.
 
 import mock
+import webob
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack.compute import used_limits \
@@ -32,7 +33,13 @@ class FakeRequest(object):
         self.reserved = reserved
 
         self.api_version_request = api_version_request.min_api_version()
-        self.GET = {'reserved': 1} if reserved else {}
+        if reserved:
+            self.GET = webob.request.MultiDict({'reserved': 1})
+        else:
+            self.GET = webob.request.MultiDict({})
+
+    def is_legacy_v2(self):
+        return False
 
 
 class UsedLimitsTestCaseV21(test.NoDBTestCase):
@@ -114,7 +121,7 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
             "user_id": user_id
         }
         fake_req = FakeRequest(self.fake_context)
-        fake_req.GET = {'tenant_id': tenant_id}
+        fake_req.GET = webob.request.MultiDict({'tenant_id': tenant_id})
 
         with mock.patch.object(quota.QUOTAS, 'get_project_quotas',
                               return_value={}) as mock_get_quotas:
@@ -125,8 +132,11 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
             mock_get_quotas.assert_called_once_with(self.fake_context,
                 tenant_id, usages=True)
 
-    def test_admin_can_fetch_used_limits_for_own_project(self):
+    def _test_admin_can_fetch_used_limits_for_own_project(self, req_get):
         project_id = "123456"
+        if 'tenant_id' in req_get:
+            project_id = req_get['tenant_id']
+
         user_id = "A1234"
         self.fake_context.project_id = project_id
         self.fake_context.user_id = user_id
@@ -137,7 +147,7 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
             },
         }
         fake_req = FakeRequest(self.fake_context)
-        fake_req.GET = {}
+        fake_req.GET = webob.request.MultiDict(req_get)
 
         with mock.patch.object(quota.QUOTAS, 'get_project_quotas',
                                return_value={}) as mock_get_quotas:
@@ -146,6 +156,28 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
 
             mock_get_quotas.assert_called_once_with(self.fake_context,
                 project_id, usages=True)
+
+    def test_admin_can_fetch_used_limits_for_own_project(self):
+        req_get = {}
+        self._test_admin_can_fetch_used_limits_for_own_project(req_get)
+
+    def test_admin_can_fetch_used_limits_for_dummy_only(self):
+        # for back compatible we allow additional param to be send to req.GET
+        # it can be removed when we add restrictions to query param later
+        req_get = {'dummy': 'dummy'}
+        self._test_admin_can_fetch_used_limits_for_own_project(req_get)
+
+    def test_admin_can_fetch_used_limits_with_positive_int(self):
+        req_get = {'tenant_id': 123}
+        self._test_admin_can_fetch_used_limits_for_own_project(req_get)
+
+    def test_admin_can_fetch_used_limits_with_negative_int(self):
+        req_get = {'tenant_id': -1}
+        self._test_admin_can_fetch_used_limits_for_own_project(req_get)
+
+    def test_admin_can_fetch_used_limits_with_unkown_param(self):
+        req_get = {'tenant_id': '123', 'unknown': 'unknown'}
+        self._test_admin_can_fetch_used_limits_for_own_project(req_get)
 
     def test_non_admin_cannot_fetch_used_limits_for_any_other_project(self):
         project_id = "123456"
@@ -164,7 +196,7 @@ class UsedLimitsTestCaseV21(test.NoDBTestCase):
             "user_id": user_id
         }
         fake_req = FakeRequest(self.fake_context)
-        fake_req.GET = {'tenant_id': tenant_id}
+        fake_req.GET = webob.request.MultiDict({'tenant_id': tenant_id})
 
         self.mock_can.side_effect = exception.PolicyNotAuthorized(
             action=self.used_limit_extension)
