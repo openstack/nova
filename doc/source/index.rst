@@ -76,13 +76,21 @@ resources will help you get started with consuming the API directly.
   concept guide for the API. This helps lay out the concepts behind the API to
   make consuming the API reference easier.
 * `Compute API Reference <http://developer.openstack.org/api-ref/compute/>`_:
-  The complete reference for the API, including all methods and request /
-  response parameters and their meaning.
-* :doc:`API Microversion History </reference/api-microversion-history>`: The
-  compute API evolves over time through `Microversions
+  The complete reference for the compute API, including all methods and
+  request / response parameters and their meaning.
+* :doc:`Compute API Microversion History </reference/api-microversion-history>`:
+  The compute API evolves over time through `Microversions
   <https://developer.openstack.org/api-guide/compute/microversions.html>`_. This
   provides the history of all those changes. Consider it a "what's new" in the
   compute API.
+* `Placement API Reference <https://developer.openstack.org/api-ref/placement/>`_:
+  The complete reference for the placement API, including all methods and
+  request / response parameters and their meaning.
+* :ref:`Placement API Microversion History <placement-api-microversion-history>`:
+  The placement API evolves over time through `Microversions
+  <https://developer.openstack.org/api-guide/compute/microversions.html>`_. This
+  provides the history of all those changes. Consider it a "what's new" in the
+  placement API.
 * :doc:`Block Device Mapping </user/block-device-mapping>`: One of the trickier
   parts to understand is the Block Device Mapping parameters used to connect
   specific block devices to computes. This deserves its own deep dive.
