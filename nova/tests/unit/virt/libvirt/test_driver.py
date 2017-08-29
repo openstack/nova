@@ -3565,15 +3565,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual(cfg.devices[4].model, 'virtio-scsi')
             mock_save.assert_called_with()
 
-    def test_get_guest_config_with_vnc(self):
-        self.flags(enabled=True,
-                   vncserver_listen='10.0.0.1',
-                   keymap='en-ie',
-                   group='vnc')
-        self.flags(virt_type='kvm', group='libvirt')
-        self.flags(pointer_model='ps2mouse')
-        self.flags(enabled=False, group='spice')
-
+    def _get_guest_config_with_graphics(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
@@ -3583,6 +3575,19 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                             image_meta)
         cfg = drvr._get_guest_config(instance_ref, [],
                                      image_meta, disk_info)
+        return cfg
+
+    def test_get_guest_config_with_vnc(self):
+        self.flags(enabled=True,
+                   vncserver_listen='10.0.0.1',
+                   keymap='en-ie',
+                   group='vnc')
+        self.flags(virt_type='kvm', group='libvirt')
+        self.flags(pointer_model='ps2mouse')
+        self.flags(enabled=False, group='spice')
+
+        cfg = self._get_guest_config_with_graphics()
+
         self.assertEqual(len(cfg.devices), 7)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
@@ -3610,15 +3615,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                    group='libvirt')
         self.flags(enabled=False, group='spice')
 
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance_ref = objects.Instance(**self.test_instance)
-        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        cfg = self._get_guest_config_with_graphics()
 
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance_ref,
-                                            image_meta)
-        cfg = drvr._get_guest_config(instance_ref, [],
-                                     image_meta, disk_info)
         self.assertEqual(len(cfg.devices), 8)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
@@ -3651,15 +3649,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                    keymap='en-ie',
                    group='spice')
 
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance_ref = objects.Instance(**self.test_instance)
-        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        cfg = self._get_guest_config_with_graphics()
 
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance_ref,
-                                            image_meta)
-        cfg = drvr._get_guest_config(instance_ref, [],
-                                     image_meta, disk_info)
         self.assertEqual(len(cfg.devices), 8)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
@@ -3692,15 +3683,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                    agent_enabled=True,
                    group='spice')
 
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance_ref = objects.Instance(**self.test_instance)
-        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        cfg = self._get_guest_config_with_graphics()
 
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance_ref,
-                                            image_meta)
-        cfg = drvr._get_guest_config(instance_ref, [],
-                                     image_meta, disk_info)
         self.assertEqual(len(cfg.devices), 8)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
@@ -3724,24 +3708,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(cfg.devices[5].type, "spice")
         self.assertEqual(cfg.devices[6].type, "qxl")
 
-    def _test_get_guest_config_with_graphics(self):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance_ref = objects.Instance(**self.test_instance)
-        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
-
-        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
-                                            instance_ref,
-                                            image_meta)
-        cfg = drvr._get_guest_config(instance_ref, [],
-                                     image_meta, disk_info)
-        return cfg.devices
-
     def test_get_guest_config_with_vnc_no_keymap(self):
         self.flags(virt_type='kvm', group='libvirt')
         self.flags(enabled=True, keymap=None, group='vnc')
         self.flags(enabled=False, group='spice')
-        devices = self._test_get_guest_config_with_graphics()
-        for device in devices:
+
+        cfg = self._get_guest_config_with_graphics()
+
+        for device in cfg.devices:
             if device.root_name == 'graphics':
                 self.assertIsInstance(device,
                                       vconfig.LibvirtConfigGuestGraphics)
@@ -3752,8 +3726,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.flags(virt_type='kvm', group='libvirt')
         self.flags(enabled=True, keymap=None, group='spice')
         self.flags(enabled=False, group='vnc')
-        devices = self._test_get_guest_config_with_graphics()
-        for device in devices:
+
+        cfg = self._get_guest_config_with_graphics()
+
+        for device in cfg.devices:
             if device.root_name == 'graphics':
                 self.assertIsInstance(device,
                                       vconfig.LibvirtConfigGuestGraphics)
