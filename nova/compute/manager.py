@@ -3603,6 +3603,60 @@ class ComputeManager(manager.Manager):
 
     def _delete_allocation_after_move(self, instance, migration, flavor,
                                       nodename):
+        rt = self._get_resource_tracker()
+        cn_uuid = rt.get_node_uuid(nodename)
+
+        if migration.source_node == nodename:
+            if migration.status == 'confirmed':
+                # NOTE(danms): We're confirming on the source node, so try to
+                # delete the allocation based on the migration uuid
+                deleted = self.reportclient.delete_allocation_for_instance(
+                    migration.uuid)
+                if deleted:
+                    LOG.info(_('Source node %(node)s confirmed migration '
+                               '%(mig)s; deleted migration-based '
+                               'allocation'),
+                             {'node': nodename, 'mig': migration.uuid})
+                    # NOTE(danms): We succeeded, which means we do not
+                    # need to do the complex double allocation dance
+                    return
+            else:
+                # We're reverting (or failed) on the source, so we
+                # need to check if our migration holds a claim and if
+                # so, avoid doing the legacy behavior below.
+                mig_allocs = self.reportclient.get_allocations_for_instance(
+                    cn_uuid, migration)
+                if mig_allocs:
+                    LOG.info(_('Source node %(node)s reverted migration '
+                               '%(mig)s; not deleting migration-based '
+                               'allocation'),
+                             {'node': nodename, 'mig': migration.uuid})
+                    return
+        elif migration.dest_node == nodename:
+            # NOTE(danms): We're reverting on the destination node
+            # (and we must not be doing a same-host migration if we
+            # made it past the check above), so we need to check to
+            # see if the source did migration-based allocation
+            # accounting
+            allocs = self.reportclient.get_allocations_for_instance(
+                cn_uuid, migration)
+            if allocs:
+                # NOTE(danms): The source did migration-based allocation
+                # accounting, so we should let the source node rejigger
+                # the allocations in finish_resize_revert()
+                LOG.info(_('Destination node %(node)s reverted migration '
+                           '%(mig)s; not deleting migration-based '
+                           'allocation'),
+                         {'node': nodename, 'mig': migration.uuid})
+                return
+
+        # TODO(danms): Remove below this line when we remove compatibility
+        # for double-accounting migrations (likely rocky)
+        LOG.info(_('Doing legacy allocation math for migration %(mig)s after '
+                   'instance move'),
+                 {'mig': migration.uuid},
+                 instance=instance)
+
         # NOTE(jaypipes): This sucks, but due to the fact that confirm_resize()
         # only runs on the source host and revert_resize() runs on the
         # destination host, we need to do this here. Basically, what we're
@@ -3614,8 +3668,6 @@ class ComputeManager(manager.Manager):
         # any shared providers in the case of a confirm_resize operation and
         # the source host and shared providers for a revert_resize operation..
         my_resources = scheduler_utils.resources_from_flavor(instance, flavor)
-        rt = self._get_resource_tracker()
-        cn_uuid = rt.get_node_uuid(nodename)
         res = self.reportclient.remove_provider_from_instance_allocation(
             instance.uuid, cn_uuid, instance.user_id,
             instance.project_id, my_resources)
