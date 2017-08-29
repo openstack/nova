@@ -2789,6 +2789,46 @@ class _ComputeAPIUnitTestMixIn(object):
         self._test_snapshot_volume_backed(False, True,
                                           vm_state=vm_states.SUSPENDED)
 
+    @mock.patch.object(context, 'set_target_cell')
+    @mock.patch.object(objects.BlockDeviceMapping, 'get_by_volume')
+    def test_get_bdm_by_volume_id(self, mock_get_by_volume,
+                                  mock_target_cell):
+        fake_cells = [mock.sentinel.cell0, mock.sentinel.cell1]
+
+        mock_get_by_volume.side_effect = [
+            exception.VolumeBDMNotFound(volume_id=mock.sentinel.volume_id),
+            mock.sentinel.bdm]
+
+        with mock.patch.object(compute_api, 'CELLS', fake_cells):
+            bdm = self.compute_api._get_bdm_by_volume_id(
+                self.context, mock.sentinel.volume_id,
+                mock.sentinel.expected_attrs)
+
+        self.assertEqual(mock.sentinel.bdm, bdm)
+
+        mock_target_cell.assert_has_calls([
+            mock.call(self.context, cell) for cell in fake_cells])
+        mock_get_by_volume.assert_has_calls(
+            [mock.call(self.context,
+                       mock.sentinel.volume_id,
+                       expected_attrs=mock.sentinel.expected_attrs)] * 2)
+
+    @mock.patch.object(context, 'set_target_cell')
+    @mock.patch.object(objects.BlockDeviceMapping, 'get_by_volume')
+    def test_get_missing_bdm_by_volume_id(self, mock_get_by_volume,
+                                          mock_target_cell):
+        fake_cells = [mock.sentinel.cell0, mock.sentinel.cell1]
+
+        mock_get_by_volume.side_effect = exception.VolumeBDMNotFound(
+            volume_id=mock.sentinel.volume_id)
+
+        with mock.patch.object(compute_api, 'CELLS', fake_cells):
+            self.assertRaises(
+                exception.VolumeBDMNotFound,
+                self.compute_api._get_bdm_by_volume_id,
+                self.context, mock.sentinel.volume_id,
+                mock.sentinel.expected_attrs)
+
     def test_volume_snapshot_create(self):
         volume_id = '1'
         create_info = {'id': 'eyedee'}
@@ -2808,12 +2848,12 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, objects.BlockDeviceMapping(),
                 fake_bdm, expected_attrs=['instance'])
 
-        self.mox.StubOutWithMock(objects.BlockDeviceMapping,
-                                 'get_by_volume')
+        self.mox.StubOutWithMock(self.compute_api,
+                                 '_get_bdm_by_volume_id')
         self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
                 'volume_snapshot_create')
 
-        objects.BlockDeviceMapping.get_by_volume(
+        self.compute_api._get_bdm_by_volume_id(
                 self.context, volume_id,
                 expected_attrs=['instance']).AndReturn(fake_bdm)
         self.compute_api.compute_rpcapi.volume_snapshot_create(self.context,
@@ -2883,12 +2923,12 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, objects.BlockDeviceMapping(),
                 fake_bdm, expected_attrs=['instance'])
 
-        self.mox.StubOutWithMock(objects.BlockDeviceMapping,
-                                 'get_by_volume')
+        self.mox.StubOutWithMock(self.compute_api,
+                                 '_get_bdm_by_volume_id')
         self.mox.StubOutWithMock(self.compute_api.compute_rpcapi,
                 'volume_snapshot_delete')
 
-        objects.BlockDeviceMapping.get_by_volume(
+        self.compute_api._get_bdm_by_volume_id(
                 self.context, volume_id,
                 expected_attrs=['instance']).AndReturn(fake_bdm)
         self.compute_api.compute_rpcapi.volume_snapshot_delete(self.context,
