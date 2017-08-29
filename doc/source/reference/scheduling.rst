@@ -25,11 +25,15 @@ Overview
 
 The scheduling process is described below.
 
+.. note:: This is current as of the 16.0.0 Pike release. Any mention of
+    alternative hosts passed between the scheduler and conductor(s) is future
+    work.
+
 .. actdiag::
 
     actdiag {
         build-spec -> send-spec -> send-reqs -> query -> return-rps ->
-            create -> filter -> return-hosts -> send-hosts;
+            create -> filter -> claim -> return-hosts -> send-hosts;
 
         lane conductor {
             label = "Conductor";
@@ -40,7 +44,7 @@ The scheduling process is described below.
 
         lane scheduler {
             label = "Scheduler";
-            send-reqs [label = "Submit resource requirements to placement", height = 38];
+            send-reqs [label = "Submit resource requirements to placement", height = 64];
             create [label = "Create a HostState object for each RP returned from Placement", height = 64];
             filter [label = "Filter and weigh results", height = 38];
             return-hosts [label = "Return a list of selected host & alternates, along with their allocations, to the conductor", height = 89];
@@ -50,6 +54,7 @@ The scheduling process is described below.
             label = "Placement";
             query [label = "Query to determine the RPs representing compute nodes to satisfy requirements", height = 64];
             return-rps [label = "Return list of resource providers and their corresponding allocations to scheduler", height = 89];
+            claim [label = "Create allocations against selected compute node", height = 64];
         }
     }
 
