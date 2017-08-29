@@ -329,8 +329,9 @@ class LiveMigrationTask(base.TaskBase):
             self._check_not_over_max_retries(attempted_hosts)
             request_spec.ignore_hosts = attempted_hosts
             try:
-                host = self.scheduler_client.select_destinations(self.context,
-                        request_spec, [self.instance.uuid])[0]['host']
+                hoststate = self.scheduler_client.select_destinations(
+                    self.context, request_spec, [self.instance.uuid])[0]
+                host = hoststate['host']
             except messaging.RemoteError as ex:
                 # TODO(ShaoHe Feng) There maybe multi-scheduler, and the
                 # scheduling algorithm is R-R, we can let other scheduler try.
@@ -346,8 +347,46 @@ class LiveMigrationTask(base.TaskBase):
                 LOG.debug("Skipping host: %(host)s because: %(e)s",
                     {"host": host, "e": e})
                 attempted_hosts.append(host)
+                # The scheduler would have created allocations against the
+                # selected destination host in Placement, so we need to remove
+                # those before moving on.
+                self._remove_host_allocations(host, hoststate['nodename'])
                 host = None
         return host
+
+    def _remove_host_allocations(self, host, node):
+        """Removes instance allocations against the given host from Placement
+
+        :param host: The name of the host.
+        :param node: The name of the node.
+        """
+        # Get the compute node object since we need the UUID.
+        # TODO(mriedem): If the result of select_destinations eventually
+        # returns the compute node uuid, we wouldn't need to look it
+        # up via host/node and we can save some time.
+        try:
+            compute_node = objects.ComputeNode.get_by_host_and_nodename(
+                self.context, host, node)
+        except exception.ComputeHostNotFound:
+            # This shouldn't happen, but we're being careful.
+            LOG.info('Unable to remove instance allocations from host %s '
+                     'and node %s since it was not found.', host, node,
+                     instance=self.instance)
+            return
+
+        # Calculate the resource class amounts to subtract from the allocations
+        # on the node based on the instance flavor.
+        resources = scheduler_utils.resources_from_flavor(
+            self.instance, self.instance.flavor)
+
+        # Now remove the allocations for our instance against that node.
+        # Note that this does not remove allocations against any other node
+        # or shared resource provider, it's just undoing what the scheduler
+        # allocated for the given (destination) node.
+        self.scheduler_client.reportclient.\
+            remove_provider_from_instance_allocation(
+                self.instance.uuid, compute_node.uuid, self.instance.user_id,
+                self.instance.project_id, resources)
 
     def _check_not_over_max_retries(self, attempted_hosts):
         if CONF.migrate_max_retries == -1:
