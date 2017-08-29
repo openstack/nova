@@ -242,19 +242,19 @@ class ResourceTracker(object):
         """Create a claim for a rebuild operation."""
         instance_type = instance.flavor
         return self._move_claim(context, instance, instance_type, nodename,
-                                move_type='evacuation', limits=limits,
-                                image_meta=image_meta, migration=migration)
+                                migration, move_type='evacuation',
+                                limits=limits, image_meta=image_meta)
 
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def resize_claim(self, context, instance, instance_type, nodename,
-                     image_meta=None, limits=None):
+                     migration, image_meta=None, limits=None):
         """Create a claim for a resize or cold-migration move."""
         return self._move_claim(context, instance, instance_type, nodename,
-                                image_meta=image_meta, limits=limits)
+                                migration, image_meta=image_meta,
+                                limits=limits)
 
     def _move_claim(self, context, instance, new_instance_type, nodename,
-                    move_type=None, image_meta=None, limits=None,
-                    migration=None):
+                    migration, move_type=None, image_meta=None, limits=None):
         """Indicate that resources are needed for a move to this host.
 
         Move can be either a migrate/resize, live-migrate or an
@@ -270,7 +270,7 @@ class ResourceTracker(object):
         :param limits: Dict of oversubscription limits for memory, disk,
         and CPUs
         :param migration: A migration object if one was already created
-                          elsewhere for this operation
+                          elsewhere for this operation (otherwise None)
         :returns: A Claim ticket representing the reserved resources.  This
         should be turned into finalize  a resource claim or free
         resources after the compute operation is finished.

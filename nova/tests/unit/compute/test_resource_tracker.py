@@ -1780,7 +1780,8 @@ class TestResize(BaseTestCase):
                        return_value=mig_context_obj),
             mock.patch('nova.objects.Instance.save'),
         ) as (create_mig_mock, ctxt_mock, inst_save_mock):
-            claim = self.rt.resize_claim(ctx, instance, new_flavor, _NODENAME)
+            claim = self.rt.resize_claim(ctx, instance, new_flavor, _NODENAME,
+                                         None)
 
         create_mig_mock.assert_called_once_with(
                 ctx, instance, new_flavor, _NODENAME,
@@ -1888,7 +1889,7 @@ class TestResize(BaseTestCase):
                        return_value=mig_context_obj),
             mock.patch('nova.objects.Instance.save'),
         ) as (create_mig_mock, ctxt_mock, inst_save_mock):
-            self.rt.resize_claim(ctx, instance, new_flavor, _NODENAME)
+            self.rt.resize_claim(ctx, instance, new_flavor, _NODENAME, None)
 
         expected = compute_update_usage(expected, new_flavor, sign=1)
         self.assertTrue(obj_base.obj_equal_prims(
@@ -2014,7 +2015,7 @@ class TestResize(BaseTestCase):
                        return_value=mig_context_obj),
             mock.patch('nova.objects.Instance.save'),
         ) as (alloc_mock, create_mig_mock, ctxt_mock, inst_save_mock):
-            self.rt.resize_claim(ctx, instance, new_flavor, _NODENAME)
+            self.rt.resize_claim(ctx, instance, new_flavor, _NODENAME, None)
 
         pci_claim_mock.assert_called_once_with(ctx, pci_req_mock.return_value,
                                                None)
@@ -2177,8 +2178,8 @@ class TestResize(BaseTestCase):
                        side_effect=[mig_context_obj1, mig_context_obj2]),
             mock.patch('nova.objects.Instance.save'),
         ) as (create_mig_mock, ctxt_mock, inst_save_mock):
-            self.rt.resize_claim(ctx, instance1, flavor1, _NODENAME)
-            self.rt.resize_claim(ctx, instance2, flavor2, _NODENAME)
+            self.rt.resize_claim(ctx, instance1, flavor1, _NODENAME, None)
+            self.rt.resize_claim(ctx, instance2, flavor2, _NODENAME, None)
         cn = self.rt.compute_nodes[_NODENAME]
         self.assertTrue(obj_base.obj_equal_prims(expected, cn))
         self.assertEqual(2, len(self.rt.tracked_migrations),

@@ -34,6 +34,34 @@ class MigrationTask(base.TaskBase):
         self.compute_rpcapi = compute_rpcapi
         self.scheduler_client = scheduler_client
 
+        # Persist things from the happy path so we don't have to look
+        # them up if we need to roll back
+        self._migration = None
+
+    def _preallocate_migration(self):
+        minver = objects.Service.get_minimum_version_multi(self.context,
+                                                           ['nova-compute'])
+        if minver < 23:
+            # NOTE(danms): We can't pre-create the migration since we
+            # have old computes. Let the compute do it (legacy
+            # behavior).
+            return None
+
+        migration = objects.Migration(context=self.context.elevated())
+        migration.old_instance_type_id = self.instance.flavor.id
+        migration.new_instance_type_id = self.flavor.id
+        migration.status = 'pre-migrating'
+        migration.instance_uuid = self.instance.uuid
+        migration.source_compute = self.instance.host
+        migration.source_node = self.instance.node
+        migration.migration_type = (self.instance.flavor.id != self.flavor.id
+                                    and 'resize' or 'migration')
+        migration.create()
+
+        self._migration = migration
+
+        return migration
+
     def _execute(self):
         # TODO(sbauza): Remove that once prep_resize() accepts a  RequestSpec
         # object in the signature and all the scheduler.utils methods too
@@ -64,6 +92,8 @@ class MigrationTask(base.TaskBase):
             self.request_spec.requested_destination = objects.Destination(
                 cell=instance_mapping.cell_mapping)
 
+        migration = self._preallocate_migration()
+
         hosts = self.scheduler_client.select_destinations(
             self.context, self.request_spec, [self.instance.uuid])
         host_state = hosts[0]
@@ -88,9 +118,11 @@ class MigrationTask(base.TaskBase):
         # RPC cast to the destination host to start the migration process.
         self.compute_rpcapi.prep_resize(
             self.context, self.instance, legacy_spec['image'],
-            self.flavor, host, self.reservations,
+            self.flavor, host, migration, self.reservations,
             request_spec=legacy_spec, filter_properties=legacy_props,
             node=node, clean_shutdown=self.clean_shutdown)
 
     def rollback(self):
-        pass
+        if self._migration:
+            self._migration.status = 'error'
+            self._migration.save()

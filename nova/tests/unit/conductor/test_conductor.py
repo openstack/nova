@@ -2305,7 +2305,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             self.context, fake_spec, [inst_obj.uuid])
         prep_resize_mock.assert_called_once_with(
             self.context, inst_obj, legacy_request_spec['image'],
-            flavor, hosts[0]['host'], [resvs],
+            flavor, hosts[0]['host'], None, [resvs],
             request_spec=legacy_request_spec,
             filter_properties=legacy_filter_props,
             node=hosts[0]['nodename'], clean_shutdown=True)

@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 22
+SERVICE_VERSION = 23
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -112,6 +112,9 @@ SERVICE_VERSION_HISTORY = (
     # Version 22: A marker for the behaviour change of auto-healing code on the
     # compute host regarding allocations against an instance
     {'compute_rpc': '4.17'},
+    # Version 23: Compute hosts allow pre-creation of the migration object
+    # for cold migration.
+    {'compute_rpc': '4.18'},
 )
 
 
