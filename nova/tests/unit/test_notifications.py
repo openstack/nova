@@ -19,6 +19,7 @@ import copy
 import datetime
 
 import mock
+from oslo_config import cfg
 from oslo_context import context as o_context
 from oslo_context import fixture as o_fixture
 from oslo_utils import timeutils
@@ -35,6 +36,8 @@ from nova import test
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_notifier
 from nova.tests import uuidsentinel as uuids
+
+CONF = cfg.CONF
 
 
 class NotificationsTestCase(test.TestCase):
@@ -625,6 +628,7 @@ class NotificationsTestCase(test.TestCase):
         self.assertEqual(n.event_type, func_name)
         self.assertEqual(n.context, ctxt)
         self.assertTrue(self.decorated_function_called)
+        self.assertEqual(CONF.host, n.publisher_id)
 
 
 class NotificationsFormatTestCase(test.NoDBTestCase):

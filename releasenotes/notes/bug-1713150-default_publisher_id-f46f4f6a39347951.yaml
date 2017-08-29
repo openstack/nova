@@ -1,0 +1,5 @@
+---
+upgrade:
+  - |
+    The ``[notifications]/default_publisher_id`` configuration option now
+    defaults to ``[DEFAULT]/host`` rather than ``[DEFAULT]/my_ip``.
