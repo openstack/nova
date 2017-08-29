@@ -753,9 +753,9 @@ def _pack_instance_onto_cores(available_siblings,
 
         :param threads_no: Number of host threads per cores which can
                            be used to pin vCPUs according to the
-                           policies :param sibling_set: List of
-                           available threads per host cores on a
-                           specific host NUMA node.
+                           policies.
+        :param sibling_set: List of available threads per host cores
+                            on a specific host NUMA node.
         :param instance_cores: Set of vCPUs requested.
         :param num_cpu_reserved: Number of additional host CPUs which
                                  needs to be reserved.
