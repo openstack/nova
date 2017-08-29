@@ -286,9 +286,16 @@ class LiveMigrationTask(base.TaskBase):
                 reason=(_('Unable to determine in which cell '
                           'destination host %s lives.') % self.destination))
 
-    def _find_destination(self):
-        # TODO(johngarbutt) this retry loop should be shared
-        attempted_hosts = [self.source]
+    def _get_request_spec_for_select_destinations(self, attempted_hosts=None):
+        """Builds a RequestSpec that can be passed to select_destinations
+
+        Used when calling the scheduler to pick a destination host for live
+        migrating the instance.
+
+        :param attempted_hosts: List of host names to ignore in the scheduler.
+            This is generally at least seeded with the source host.
+        :returns: nova.objects.RequestSpec object
+        """
         image = utils.get_image_from_system_metadata(
             self.instance.system_metadata)
         filter_properties = {'ignore_hosts': attempted_hosts}
@@ -323,6 +330,14 @@ class LiveMigrationTask(base.TaskBase):
         else:
             request_spec.requested_destination = objects.Destination(
                 cell=cell_mapping)
+
+        return request_spec
+
+    def _find_destination(self):
+        # TODO(johngarbutt) this retry loop should be shared
+        attempted_hosts = [self.source]
+        request_spec = self._get_request_spec_for_select_destinations(
+            attempted_hosts)
 
         host = None
         while host is None:
