@@ -268,6 +268,7 @@ looking parts of our architecture. These are collected below.
    reference/stable-api
    reference/threading
    reference/vm-states
+   user/index
    user/aggregates
    user/architecture
    user/block-device-mapping
