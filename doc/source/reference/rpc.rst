@@ -18,7 +18,7 @@ AMQP and Nova
 =============
 
 AMQP is the messaging technology chosen by the OpenStack cloud. The AMQP
-broker, either RabbitMQ or Qpid, sits between any two Nova components and
+broker, default to Rabbitmq, sits between any two Nova components and
 allows them to communicate in a loosely coupled fashion. More precisely, Nova
 components (the compute fabric of OpenStack) use Remote Procedure Calls (RPC
 hereinafter) to communicate to one another; however such a paradigm is built
@@ -105,7 +105,7 @@ Direct Publisher
 
 Topic Exchange
   The Exchange is a routing table that exists in the context of a virtual host
-  (the multi-tenancy mechanism provided by Qpid or RabbitMQ); its type (such as
+  (the multi-tenancy mechanism provided by RabbitMQ etc); its type (such as
   topic vs. direct) determines the routing policy; a message broker node will
   have only one topic-based exchange for every topic in Nova.
 
@@ -164,8 +164,8 @@ The diagram below shows the message flow during an ``rpc.cast`` operation:
 AMQP Broker Load
 ----------------
 
-At any given time the load of a message broker node running either Qpid or
-RabbitMQ is function of the following parameters:
+At any given time the load of a message broker node running RabbitMQ etc
+is function of the following parameters:
 
 Throughput of API calls
   The number of API calls (more precisely ``rpc.call`` ops) being served by the
