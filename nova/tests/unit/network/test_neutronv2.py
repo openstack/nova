@@ -458,11 +458,6 @@ class TestNeutronv2Base(test.TestCase):
 
         bind_host_id = kwargs.get('bind_host_id') or None
 
-        has_extra_dhcp_opts = False
-        dhcp_options = kwargs.get('dhcp_options')
-        if dhcp_options is not None:
-            has_extra_dhcp_opts = True
-
         has_dns_extension = False
         if kwargs.get('dns_extension'):
             has_dns_extension = True
@@ -543,8 +538,6 @@ class TestNeutronv2Base(test.TestCase):
 
             if macs:
                 port_req_body['port']['mac_address'] = macs.pop()
-            if has_extra_dhcp_opts:
-                port_req_body['port']['extra_dhcp_opts'] = dhcp_options
 
             if not request.port_id:
                 port_id = uuids.fake
@@ -775,8 +768,7 @@ class TestNeutronv2Base(test.TestCase):
             mock_vif.side_effect = _new_vif
 
             requested_networks = kwargs.get("requested_networks", None)
-            allowed_keys = ["macs", "security_groups",
-                            "dhcp_options", "bind_host_id"]
+            allowed_keys = ["macs", "security_groups", "bind_host_id"]
             afi_kwargs = {}
             for key in kwargs.keys():
                 if key in allowed_keys:
@@ -4707,7 +4699,7 @@ class TestNeutronv2WithMock(test.TestCase):
                           self.api._update_ports_for_instance,
                           self.context, instance, ntrn, ntrn,
                           requests_and_created_ports, nets, bind_host_id=None,
-                          dhcp_opts=None, available_macs=None)
+                          available_macs=None)
         # assert the calls
         mock_update_port.assert_has_calls([
             mock.call(ntrn, instance, uuids.preexisting_port_id, mock.ANY),
@@ -5113,40 +5105,6 @@ class TestNeutronv2Portbinding(TestNeutronv2Base):
                           self.context, 'id')
 
 
-class TestNeutronv2ExtraDhcpOpts(TestNeutronv2Base):
-    def setUp(self):
-        super(TestNeutronv2ExtraDhcpOpts, self).setUp()
-        neutronapi.get_client(mox.IgnoreArg()).MultipleTimes().AndReturn(
-            self.moxed_client)
-
-    def test_allocate_for_instance_1_with_extra_dhcp_opts_turned_off(self):
-        self._allocate_for_instance(1, extra_dhcp_opts=False)
-
-    def test_allocate_for_instance_extradhcpopts(self):
-        dhcp_opts = [{'opt_name': 'bootfile-name',
-                          'opt_value': 'pxelinux.0'},
-                         {'opt_name': 'tftp-server',
-                          'opt_value': '123.123.123.123'},
-                         {'opt_name': 'server-ip-address',
-                          'opt_value': '123.123.123.456'}]
-
-        self._allocate_for_instance(1, dhcp_options=dhcp_opts)
-
-    def test_allocate_for_instance_extradhcpopts_update(self):
-        dhcp_opts = [{'opt_name': 'bootfile-name',
-                          'opt_value': 'pxelinux.0'},
-                         {'opt_name': 'tftp-server',
-                          'opt_value': '123.123.123.123'},
-                         {'opt_name': 'server-ip-address',
-                          'opt_value': '123.123.123.456'}]
-
-        requested_networks = objects.NetworkRequestList(
-            objects=[objects.NetworkRequest(port_id=uuids.portid_1)])
-        self._allocate_for_instance(net_idx=1,
-                                    requested_networks=requested_networks,
-                                    dhcp_options=dhcp_opts)
-
-
 class TestAllocateForInstance(test.NoDBTestCase):
     def setUp(self):
         super(TestAllocateForInstance, self).setUp()
@@ -5535,7 +5493,6 @@ class TestAllocateForInstance(test.NoDBTestCase):
         net2 = {"id": uuids.net2}
         nets = {uuids.net1: net1, uuids.net2: net2}
         bind_host_id = "bind_host_id"
-        dhcp_opts = [{'opt_name': 'tftp-server', 'opt_value': '1.2.3.4'}]
         available_macs = ["mac1", "mac2"]
 
         mock_neutron.list_extensions.return_value = {"extensions": [
@@ -5548,7 +5505,7 @@ class TestAllocateForInstance(test.NoDBTestCase):
             created_port_ids = api._update_ports_for_instance(
                 self.context, self.instance,
                 mock_neutron, mock_admin, requests_and_created_ports, nets,
-                bind_host_id, dhcp_opts, available_macs)
+                bind_host_id, available_macs)
 
         # TODO(johngarbutt) need to build on this test so we can replace
         # all the mox based tests
@@ -5562,7 +5519,6 @@ class TestAllocateForInstance(test.NoDBTestCase):
                 'device_owner': 'compute:test_az',
                 'mac_address': 'mac1',
                 neutronapi.BINDING_HOST_ID: bind_host_id,
-                'extra_dhcp_opts': dhcp_opts,
                 'device_id': self.instance.uuid}})
 
 

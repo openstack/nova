@@ -149,6 +149,7 @@ class NetworkAPI(object):
     def allocate_for_instance(self, ctxt, instance_id, project_id, host,
                               rxtx_factor, vpn, requested_networks, macs=None,
                               dhcp_options=None):
+        # NOTE(mriedem): dhcp_options should be removed in version 2.0
         version = '1.13'
         if not self.client.can_send_version(version):
             version = '1.9'

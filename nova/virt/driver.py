@@ -1291,32 +1291,6 @@ class ComputeDriver(object):
         """
         return None
 
-    def dhcp_options_for_instance(self, instance):
-        """Get DHCP options for this instance.
-
-        Some hypervisors (such as bare metal) require that instances boot from
-        the network, and manage their own TFTP service. This requires passing
-        the appropriate options out to the DHCP service. Most hypervisors can
-        use the default implementation which returns None.
-
-        This is called during spawn_instance by the compute manager.
-
-        Note that the format of the return value is specific to the Neutron
-        client API.
-
-        :return: None, or a set of DHCP options, eg:
-
-             |    [{'opt_name': 'bootfile-name',
-             |      'opt_value': '/tftpboot/path/to/config'},
-             |     {'opt_name': 'server-ip-address',
-             |      'opt_value': '1.2.3.4'},
-             |     {'opt_name': 'tftp-server',
-             |      'opt_value': '1.2.3.4'}
-             |    ]
-
-        """
-        return None
-
     def manage_image_cache(self, context, all_instances):
         """Manage the driver's local image cache.
 

@@ -4285,7 +4285,7 @@ class ComputeTestCase(BaseTestCase,
         security_groups = None if CONF.use_neutron else []
         mock_allocate.assert_called_once_with(self.context, instance,
                 vpn=False, requested_networks=None, macs=macs,
-                security_groups=security_groups, dhcp_options=None,
+                security_groups=security_groups,
                 bind_host_id=self.compute.host)
         mock_mac.assert_called_once_with(test.MatchType(instance_obj.Instance))
 

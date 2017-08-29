@@ -1359,7 +1359,7 @@ class ComputeManager(manager.Manager):
             raise exception.InstanceExists(name=instance.name)
 
     def _allocate_network_async(self, context, instance, requested_networks,
-                                macs, security_groups, is_vpn, dhcp_options):
+                                macs, security_groups, is_vpn):
         """Method used to allocate networks in the background.
 
         Broken out for testing.
@@ -1384,7 +1384,6 @@ class ComputeManager(manager.Manager):
                         requested_networks=requested_networks,
                         macs=macs,
                         security_groups=security_groups,
-                        dhcp_options=dhcp_options,
                         bind_host_id=bind_host_id)
                 LOG.debug('Instance network_info: |%s|', nwinfo,
                           instance=instance)
@@ -1430,14 +1429,13 @@ class ComputeManager(manager.Manager):
             security_groups = []
 
         macs = self.driver.macs_for_instance(instance)
-        dhcp_options = self.driver.dhcp_options_for_instance(instance)
         network_info = self._allocate_network(context, instance,
-                requested_networks, macs, security_groups, dhcp_options)
+                requested_networks, macs, security_groups)
 
         return network_info
 
     def _allocate_network(self, context, instance, requested_networks, macs,
-                          security_groups, dhcp_options):
+                          security_groups):
         """Start network allocation asynchronously.  Return an instance
         of NetworkInfoAsyncWrapper that can be used to retrieve the
         allocated networks when the operation has finished.
@@ -1453,8 +1451,7 @@ class ComputeManager(manager.Manager):
         is_vpn = False
         return network_model.NetworkInfoAsyncWrapper(
                 self._allocate_network_async, context, instance,
-                requested_networks, macs, security_groups, is_vpn,
-                dhcp_options)
+                requested_networks, macs, security_groups, is_vpn)
 
     def _default_root_device_name(self, instance, image_meta, root_bdm):
         try:

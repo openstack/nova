@@ -136,7 +136,7 @@ class ApiTestCase(test.TestCase):
                                "allocate_for_instance") as mock_alloc:
             kwargs = dict(zip(['host', 'instance_id', 'project_id',
                                'requested_networks', 'rxtx_factor', 'vpn',
-                                'macs', 'dhcp_options'],
+                                'macs'],
                               itertools.repeat(mock.ANY)))
             mock_alloc.return_value = []
             flavor = flavors.get_default_flavor()
