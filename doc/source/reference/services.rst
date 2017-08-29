@@ -50,6 +50,6 @@ Implementation-Specific Drivers
 
 A manager will generally load a driver for some of its tasks. The driver is responsible for specific implementation details.  Anything running shell commands on a host, or dealing with other non-python code should probably be happening in a driver.
 
-Drivers should minimize touching the database, although it is currently acceptable for implementation specific data. This may be reconsidered at some point.
+Drivers should not touch the database as the database management is done inside `nova-conductor`.
 
 It usually makes sense to define an Abstract Base Class for the specific driver (i.e. VolumeDriver), to define the methods that a different driver would need to implement.

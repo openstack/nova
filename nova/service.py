@@ -136,6 +136,11 @@ class Service(service.Service):
                 }
 
     def start(self):
+        """Start the service.
+
+        This includes starting an RPC service, initializing
+        periodic tasks, etc.
+        """
         verstr = version.version_string_with_package()
         LOG.info(_LI('Starting %(topic)s node (version %(version)s)'),
                   {'topic': self.topic, 'version': verstr})
@@ -256,6 +261,7 @@ class Service(service.Service):
             LOG.warning(_LW('Service killed that has no database entry'))
 
     def stop(self):
+        """stop the service and clean up."""
         try:
             self.rpcserver.stop()
             self.rpcserver.wait()
@@ -286,6 +292,7 @@ class Service(service.Service):
             sys.exit(1)
 
     def reset(self):
+        """reset the service."""
         self.manager.reset()
 
 
