@@ -5683,6 +5683,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             return self.nw_info
 
         @mock.patch.object(self.compute, '_get_resource_tracker')
+        @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
         @mock.patch.object(self.compute.driver, 'finish_revert_migration')
         @mock.patch.object(self.compute.network_api, 'get_instance_nw_info',
                            side_effect=_get_instance_nw_info)
@@ -5708,11 +5709,13 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                     migrate_instance_finish,
                     get_instance_nw_info,
                     finish_revert_migration,
+                    mock_get_cn,
                     get_resource_tracker):
 
             fault_create.return_value = (
                 test_instance_fault.fake_faults['fake-uuid'][0])
             self.instance.migration_context = objects.MigrationContext()
+            self.migration.uuid = uuids.migration
             self.migration.source_compute = self.instance['host']
             self.migration.source_node = self.instance['host']
             self.compute.finish_revert_resize(context=self.context,
@@ -5780,6 +5783,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
         @mock.patch('nova.objects.Service.get_minimum_version',
                     return_value=22)
+        @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
         @mock.patch.object(self.compute, "_notify_about_instance_usage")
         @mock.patch.object(self.compute, "_set_instance_info")
         @mock.patch.object(self.instance, 'save')
@@ -5803,7 +5807,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                     mock_inst_save,
                                     mock_set,
                                     mock_notify,
+                                    mock_get_cn,
                                     mock_version):
+            self.migration.uuid = uuids.migration
             self.compute.finish_revert_resize(context=self.context,
                                               instance=self.instance,
                                               reservations=None,
@@ -5952,6 +5958,70 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
         # No allocations by migration, legacy cleanup
         doit(False)
+
+    def test_revert_allocation(self):
+        """New-style migration-based allocation revert."""
+
+        @mock.patch.object(self.compute, '_get_resource_tracker')
+        @mock.patch.object(self.compute, 'reportclient')
+        def doit(mock_report, mock_rt):
+            cu = uuids.node
+            mock_rt.return_value.compute_nodes[self.instance.node].uuid = cu
+            a = {cu: {'resources': {'DISK_GB': 1}}}
+            mock_report.get_allocations_for_consumer.return_value = a
+            self.migration.uuid = uuids.migration
+
+            r = self.compute._revert_allocation(mock.sentinel.ctx,
+                                                self.instance, self.migration)
+
+            self.assertTrue(r)
+            mock_report.put_allocations.assert_called_once_with(
+                cu, self.instance.uuid, {'DISK_GB': 1},
+                self.instance.project_id, self.instance.user_id)
+
+        doit()
+
+    def test_revert_allocation_old_style(self):
+        """Test that we don't delete allocs for migration if none found."""
+
+        @mock.patch.object(self.compute, 'reportclient')
+        def doit(mock_report):
+            mock_report.get_allocations_for_consumer.return_value = {}
+            self.migration.uuid = uuids.migration
+
+            r = self.compute._revert_allocation(mock.sentinel.ctx,
+                                                self.instance, self.migration)
+
+            self.assertFalse(r)
+            self.assertFalse(mock_report.put_allocations.called)
+            self.assertFalse(mock_report.delete_allocation_for_instance.called)
+
+        doit()
+
+    def test_revert_allocation_new_style_unpossible(self):
+        """Test for the should-not-be-possible case of multiple old allocs.
+
+        This should not be a thing that can happen, but just verify that
+        we fall through and guess at one of them. There's not really much else
+        we can do.
+        """
+
+        @mock.patch.object(self.compute, 'reportclient')
+        def doit(mock_report):
+            a = {
+                uuids.node: {'resources': {'DISK_GB': 1}},
+                uuids.edon: {'resources': {'DISK_GB': 1}},
+            }
+            mock_report.get_allocations_for_consumer.return_value = a
+            self.migration.uuid = uuids.migration
+
+            r = self.compute._revert_allocation(mock.sentinel.ctx,
+                                                self.instance, self.migration)
+
+            self.assertTrue(r)
+            self.assertTrue(mock_report.put_allocations.called)
+
+        doit()
 
     def test_consoles_enabled(self):
         self.flags(enabled=False, group='vnc')
@@ -6401,6 +6471,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         self.assertFalse(do_cleanup)
         self.assertFalse(destroy_disks)
 
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
     @mock.patch('nova.objects.InstanceFault.create')
     @mock.patch('nova.objects.Instance.save')
     @mock.patch('nova.compute.utils.notify_usage_exists')
@@ -6409,9 +6480,11 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                 new=lambda *a: False)
     def test_prep_resize_errors_migration(self, mock_niu, mock_notify,
                                           mock_save,
-                                          mock_if):
+                                          mock_if, mock_cn):
         migration = mock.MagicMock()
         flavor = objects.Flavor(name='flavor', id=1)
+        cn = objects.ComputeNode(uuid=uuids.compute)
+        mock_cn.return_value = cn
 
         @mock.patch.object(self.compute, '_reschedule')
         @mock.patch.object(self.compute, '_prep_resize')
