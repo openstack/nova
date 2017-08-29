@@ -76,3 +76,4 @@ redirectmatch 301 ^/nova/([^/]+)/upgrade.html$ /nova/$1/user/upgrade.html
 redirectmatch 301 ^/nova/([^/]+)/vendordata.html$ /nova/$1/user/vendordata.html
 redirectmatch 301 ^/nova/([^/]+)/vmstates.html$ /nova/$1/reference/vm-states.html
 redirectmatch 301 ^/nova/([^/]+)/wsgi.html$ /nova/$1/user/wsgi.html
+redirectmatch 301 ^/nova/([^/]+)/user/cellsv2_layout.html$ /nova/$1/user/cellsv2-layout.html

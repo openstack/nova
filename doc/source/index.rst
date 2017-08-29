@@ -144,7 +144,7 @@ the defaults from the :doc:`install guide </install/index>` will be sufficient.
   * :doc:`Feature Support full list </user/support-matrix>`: A detailed dive through
     features in each compute driver backend.
 
-* :doc:`Cells v2 Planning </user/cellsv2_layout>`: For large deployments, Cells v2
+* :doc:`Cells v2 Planning </user/cellsv2-layout>`: For large deployments, Cells v2
   allows sharding of your compute environment. Upfront planning is key to a
   successful Cells v2 layout.
 * :doc:`Placement service </user/placement>`: Overview of the placement
@@ -275,7 +275,7 @@ looking parts of our architecture. These are collected below.
    user/architecture
    user/block-device-mapping
    user/cells
-   user/cellsv2_layout
+   user/cellsv2-layout
    user/conductor
    user/feature-classification
    user/filter-scheduler
