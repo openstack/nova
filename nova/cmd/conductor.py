@@ -20,6 +20,7 @@ from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_reports import guru_meditation_report as gmr
 
+from nova.conductor import rpcapi
 import nova.conf
 from nova import config
 from nova import objects
@@ -40,7 +41,7 @@ def main():
     gmr.TextGuruMeditation.setup_autorun(version)
 
     server = service.Service.create(binary='nova-conductor',
-                                    topic=CONF.conductor.topic)
+                                    topic=rpcapi.RPC_TOPIC)
     workers = CONF.conductor.workers or processutils.get_worker_count()
     service.serve(server, workers=workers)
     service.wait()

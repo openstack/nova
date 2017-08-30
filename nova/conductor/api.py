@@ -31,7 +31,7 @@ class API(object):
 
     def __init__(self):
         self.conductor_rpcapi = rpcapi.ConductorAPI()
-        self.base_rpcapi = baserpc.BaseAPI(topic=CONF.conductor.topic)
+        self.base_rpcapi = baserpc.BaseAPI(topic=rpcapi.RPC_TOPIC)
 
     def object_backport_versions(self, context, objinst, object_versions):
         return self.conductor_rpcapi.object_backport_versions(context, objinst,
