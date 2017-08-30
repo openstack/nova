@@ -72,7 +72,8 @@ PCIAddressField = fields.PCIAddressField
 # NOTE(danms): These are things we need to import for some of our
 # own implementations below, our tests, or other transitional
 # bits of code. These should be removable after we finish our
-# conversion
+# conversion. So do not use these nova fields directly in any new code;
+# instead, use the oslo.versionedobjects fields.
 Enum = fields.Enum
 Field = fields.Field
 FieldType = fields.FieldType
