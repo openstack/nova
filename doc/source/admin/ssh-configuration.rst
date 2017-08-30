@@ -17,7 +17,7 @@ disks to other nodes.
 To share a key pair between compute nodes, complete the following steps:
 
 #. On the first node, obtain a key pair (public key and private key). Use the
-   root key that is in the ``/root/.ssh/id_rsa`` and ``/root/.ssh/id_ras.pub``
+   root key that is in the ``/root/.ssh/id_rsa`` and ``/root/.ssh/id_rsa.pub``
    directories or generate a new key pair.
 
 #. Run :command:`setenforce 0` to put SELinux into permissive mode.
