@@ -2517,6 +2517,91 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                          fake_inst.system_metadata)
         mock_save.assert_called_once_with()
 
+    @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename',
+                       side_effect=exc.ComputeHostNotFound('source-host'))
+    def test_allocate_for_evacuate_dest_host_source_node_not_found_no_reqspec(
+            self, get_compute_node):
+        """Tests that the source node for the instance isn't found. In this
+        case there is no request spec provided.
+        """
+        instance = self.params['build_requests'][0].instance
+        instance.host = 'source-host'
+        with mock.patch.object(self.conductor,
+                               '_set_vm_state_and_notify') as notify:
+            ex = self.assertRaises(
+                exc.ComputeHostNotFound,
+                self.conductor._allocate_for_evacuate_dest_host,
+                self.ctxt, instance, 'dest-host')
+        get_compute_node.assert_called_once_with(
+            self.ctxt, instance.host, instance.node)
+        notify.assert_called_once_with(
+            self.ctxt, instance.uuid, 'rebuild_server',
+            {'vm_state': instance.vm_state, 'task_state': None}, ex, {})
+
+    @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename',
+                       return_value=objects.ComputeNode(host='source-host'))
+    @mock.patch.object(objects.ComputeNode,
+                       'get_first_node_by_host_for_old_compat',
+                       side_effect=exc.ComputeHostNotFound(host='dest-host'))
+    def test_allocate_for_evacuate_dest_host_dest_node_not_found_reqspec(
+            self, get_dest_node, get_source_node):
+        """Tests that the destination node for the request isn't found. In this
+        case there is a request spec provided.
+        """
+        instance = self.params['build_requests'][0].instance
+        instance.host = 'source-host'
+        reqspec = self.params['request_specs'][0]
+        with mock.patch.object(self.conductor,
+                               '_set_vm_state_and_notify') as notify:
+            ex = self.assertRaises(
+                exc.ComputeHostNotFound,
+                self.conductor._allocate_for_evacuate_dest_host,
+                self.ctxt, instance, 'dest-host', reqspec)
+        get_source_node.assert_called_once_with(
+            self.ctxt, instance.host, instance.node)
+        get_dest_node.assert_called_once_with(
+            self.ctxt, 'dest-host', use_slave=True)
+        notify.assert_called_once_with(
+            self.ctxt, instance.uuid, 'rebuild_server',
+            {'vm_state': instance.vm_state, 'task_state': None}, ex,
+            reqspec.to_legacy_request_spec_dict())
+
+    @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename',
+                       return_value=objects.ComputeNode(host='source-host'))
+    @mock.patch.object(objects.ComputeNode,
+                       'get_first_node_by_host_for_old_compat',
+                       return_value=objects.ComputeNode(host='dest-host'))
+    def test_allocate_for_evacuate_dest_host_claim_fails(
+            self, get_dest_node, get_source_node):
+        """Tests that the allocation claim fails."""
+        instance = self.params['build_requests'][0].instance
+        instance.host = 'source-host'
+        reqspec = self.params['request_specs'][0]
+        with test.nested(
+            mock.patch.object(self.conductor,
+                              '_set_vm_state_and_notify'),
+            mock.patch.object(scheduler_utils,
+                              'claim_resources_on_destination',
+                              side_effect=exc.NoValidHost(reason='I am full'))
+        ) as (
+            notify, claim
+        ):
+            ex = self.assertRaises(
+                exc.NoValidHost,
+                self.conductor._allocate_for_evacuate_dest_host,
+                self.ctxt, instance, 'dest-host', reqspec)
+        get_source_node.assert_called_once_with(
+            self.ctxt, instance.host, instance.node)
+        get_dest_node.assert_called_once_with(
+            self.ctxt, 'dest-host', use_slave=True)
+        claim.assert_called_once_with(
+            self.conductor.scheduler_client.reportclient, instance,
+            get_source_node.return_value, get_dest_node.return_value)
+        notify.assert_called_once_with(
+            self.ctxt, instance.uuid, 'rebuild_server',
+            {'vm_state': instance.vm_state, 'task_state': None}, ex,
+            reqspec.to_legacy_request_spec_dict())
+
 
 class ConductorTaskRPCAPITestCase(_BaseTaskTestCase,
         test_compute.BaseTestCase):
