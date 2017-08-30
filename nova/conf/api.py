@@ -365,36 +365,6 @@ Possible values:
 
 * Any valid dot-separated class path that can be imported.
 """),
-    cfg.BoolOpt("enable_network_quota",
-        deprecated_for_removal=True,
-        deprecated_since="14.0.0",
-        deprecated_reason="""
-CRUD operations on tenant networks are only available when using nova-network
-and nova-network is itself deprecated.""",
-        default=False,
-        help="""
-This option is used to enable or disable quota checking for tenant networks.
-
-Related options:
-
-* quota_networks
-"""),
-    cfg.IntOpt("quota_networks",
-        deprecated_for_removal=True,
-        deprecated_since="14.0.0",
-        deprecated_reason="""
-CRUD operations on tenant networks are only available when using nova-network
-and nova-network is itself deprecated.""",
-        default=3,
-        min=0,
-        help="""
-This option controls the number of private networks that can be created per
-project (or per tenant).
-
-Related options:
-
-* enable_network_quota
-"""),
 ]
 
 API_OPTS = (auth_opts +

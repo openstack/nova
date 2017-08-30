@@ -71,20 +71,6 @@ Possible values:
 
 * String with hostname, FQDN or IP address. Default is hostname of this host.
 """),
-    cfg.BoolOpt("use_ipv6",
-        default=False,
-        deprecated_for_removal=True,
-        deprecated_since="16.0.0",
-        deprecated_reason="""
-nova-network is deprecated, as are any related configuration options.
-""",
-        help="""
-Assign IPv6 and IPv4 addresses when creating instances.
-
-Related options:
-
-* use_neutron: this only works with nova-network.
-"""),
 ]
 
 

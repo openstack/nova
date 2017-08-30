@@ -1325,9 +1325,82 @@ Related options:
 """)
 ]
 
+ipv6_opts = [
+    cfg.BoolOpt('use_ipv6',
+        default=False,
+        deprecated_for_removal=True,
+        deprecated_since='16.0.0',
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
+        help="""
+Assign IPv6 and IPv4 addresses when creating instances.
+
+Related options:
+
+* use_neutron: this only works with nova-network.
+"""),
+    cfg.StrOpt('ipv6_backend',
+        default='rfc2462',
+        choices=('rfc2462', 'account_identifier'),
+        deprecated_for_removal=True,
+        deprecated_since='16.0.0',
+        deprecated_reason="""
+nova-network is deprecated, as are any related configuration options.
+""",
+        help="""
+Abstracts out IPv6 address generation to pluggable backends.
+
+nova-network can be put into dual-stack mode, so that it uses
+both IPv4 and IPv6 addresses. In dual-stack mode, by default, instances
+acquire IPv6 global unicast addresses with the help of stateless address
+auto-configuration mechanism.
+
+Related options:
+
+* use_neutron: this option only works with nova-network.
+* use_ipv6: this option only works if ipv6 is enabled for nova-network.
+"""),
+]
+
+
+quota_opts = [
+    cfg.BoolOpt('enable_network_quota',
+        deprecated_for_removal=True,
+        deprecated_since='14.0.0',
+        deprecated_reason="""
+CRUD operations on tenant networks are only available when using nova-network
+and nova-network is itself deprecated.""",
+        default=False,
+        help="""
+This option is used to enable or disable quota checking for tenant networks.
+
+Related options:
+
+* quota_networks
+"""),
+    cfg.IntOpt('quota_networks',
+        deprecated_for_removal=True,
+        deprecated_since='14.0.0',
+        deprecated_reason="""
+CRUD operations on tenant networks are only available when using nova-network
+and nova-network is itself deprecated.""",
+        default=3,
+        min=0,
+        help="""
+This option controls the number of private networks that can be created per
+project (or per tenant).
+
+Related options:
+
+* enable_network_quota
+"""),
+]
+
 
 ALL_DEFAULT_OPTS = (linux_net_opts + network_opts + ldap_dns_opts
-                   + rpcapi_opts + driver_opts + floating_ip_opts)
+                    + rpcapi_opts + driver_opts + floating_ip_opts
+                    + ipv6_opts + quota_opts)
 
 
 def register_opts(conf):
