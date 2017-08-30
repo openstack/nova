@@ -1,0 +1,63 @@
+# Bug 1714072 describes a situation where a resource provider is present in the
+# body of an allocation, but the resources object is empty. There should be at
+# least one resource class and value pair. If there is not a 400 response
+# should be returned. This gabbit file demonstrates the problem: a 500 on the final
+# test.
+
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        accept: application/json
+        content-type: application/json
+        OpenStack-API-Version: placement latest
+
+tests:
+
+- name: create a resource provider
+  POST: /resource_providers
+  data:
+      name: an rp
+  status: 201
+
+- name: get resource provider
+  GET: $LOCATION
+  status: 200
+
+- name: add inventory to an rp
+  PUT: $RESPONSE['$.links[?rel = "inventories"].href']
+  data:
+      resource_provider_generation: 0
+      inventories:
+          VCPU:
+              total: 24
+          MEMORY_MB:
+              total: 1024
+  status: 200
+
+- name: put a successful allocation
+  PUT: /allocations/c9f0186b-64f8-44fb-b6c9-83008d8d6940
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $HISTORY['get resource provider'].$RESPONSE['$.uuid']
+            resources:
+                VCPU: 1
+                MEMORY_MB: 1
+      project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
+      user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
+  status: 204
+
+- name: fail with empty resources
+  PUT: /allocations/c9f0186b-64f8-44fb-b6c9-83008d8d6940
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $HISTORY['get resource provider'].$RESPONSE['$.uuid']
+            resources: {}
+      project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
+      user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
+   # This should be 400
+  status: 500
