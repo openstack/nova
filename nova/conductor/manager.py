@@ -736,6 +736,67 @@ class ComputeTaskManager(base.Base):
             instance.save()
             return
 
+    def _allocate_for_evacuate_dest_host(self, context, instance, host,
+                                         request_spec=None):
+        # The user is forcing the destination host and bypassing the
+        # scheduler. We need to copy the source compute node
+        # allocations in Placement to the destination compute node.
+        # Normally select_destinations() in the scheduler would do this
+        # for us, but when forcing the target host we don't call the
+        # scheduler.
+        source_node = None  # This is used for error handling below.
+        try:
+            source_node = objects.ComputeNode.get_by_host_and_nodename(
+                context, instance.host, instance.node)
+            dest_node = (
+                objects.ComputeNode.get_first_node_by_host_for_old_compat(
+                    context, host, use_slave=True))
+        except exception.ComputeHostNotFound as ex:
+            with excutils.save_and_reraise_exception():
+                # TODO(mriedem): This ugly RequestSpec handling should be
+                # tucked away in _set_vm_state_and_notify.
+                if request_spec:
+                    request_spec = \
+                        request_spec.to_legacy_request_spec_dict()
+                else:
+                    request_spec = {}
+                self._set_vm_state_and_notify(
+                    context, instance.uuid, 'rebuild_server',
+                    {'vm_state': instance.vm_state,
+                     'task_state': None}, ex, request_spec)
+                if source_node:
+                    LOG.warning('Specified host %s for evacuate was not '
+                                'found.', host, instance=instance)
+                else:
+                    LOG.warning('Source host %s and node %s for evacuate was '
+                                'not found.', instance.host, instance.node,
+                                instance=instance)
+
+        # TODO(mriedem): In Queens, call select_destinations() with a
+        # skip_filters=True flag so the scheduler does the work of
+        # claiming resources on the destination in Placement but still
+        # bypass the scheduler filters, which honors the 'force' flag
+        # in the API.
+        try:
+            scheduler_utils.claim_resources_on_destination(
+                self.scheduler_client.reportclient, instance,
+                source_node, dest_node)
+        except exception.NoValidHost as ex:
+            with excutils.save_and_reraise_exception():
+                # TODO(mriedem): This ugly RequestSpec handling should be
+                # tucked away in _set_vm_state_and_notify.
+                if request_spec:
+                    request_spec = \
+                        request_spec.to_legacy_request_spec_dict()
+                else:
+                    request_spec = {}
+                self._set_vm_state_and_notify(
+                    context, instance.uuid, 'rebuild_server',
+                    {'vm_state': instance.vm_state,
+                     'task_state': None}, ex, request_spec)
+                LOG.warning('Specified host %s for evacuate is '
+                            'invalid.', host, instance=instance)
+
     @targets_cell
     def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
                          injected_files, new_pass, orig_sys_metadata,
@@ -746,7 +807,28 @@ class ComputeTaskManager(base.Base):
         with compute_utils.EventReporter(context, 'rebuild_server',
                                           instance.uuid):
             node = limits = None
-            if not host:
+            # The host variable is passed in two cases:
+            # 1. rebuild - the instance.host is passed to rebuild on the
+            #       same host and bypass the scheduler.
+            # 2. evacuate with specified host and force=True - the specified
+            #       host is passed and is meant to bypass the scheduler.
+            # NOTE(mriedem): This could be a lot more straight-forward if we
+            # had separate methods for rebuild and evacuate...
+            if host:
+                # We only create a new allocation on the specified host if
+                # we're doing an evacuate since that is a move operation.
+                if host != instance.host:
+                    # If a destination host is forced for evacuate, create
+                    # allocations against it in Placement.
+                    self._allocate_for_evacuate_dest_host(
+                        context, instance, host, request_spec)
+            else:
+                # At this point, either the user is doing a rebuild on the
+                # same host (not evacuate), or they are evacuating and
+                # specified a host but are not forcing it. The API passes
+                # host=None in this case but sets up the
+                # RequestSpec.requested_destination field for the specified
+                # host.
                 if not request_spec:
                     # NOTE(sbauza): We were unable to find an original
                     # RequestSpec object - probably because the instance is old
