@@ -163,12 +163,12 @@ on compute hosts rather than servers.
      This service runs on every compute node, and communicates with a
      hypervisor for managing compute resources on that node.
 
-   - **nova-network**
+   - **nova-network (deprecated)**
 
      This service handles networking of virtual servers. It is no longer under
      active development, and is being replaced by Neutron.
 
-   - **nova-ec2(deprecated)**
+   - **nova-ec2 (deprecated)**
 
      This service provides AWS EC2 API compatibility.
 
@@ -269,10 +269,11 @@ We also discuss how Nova proxies setting image metadata.
 
 TODO - add more details.
 
-Interactions with Neutron and Nova-Network
-==========================================
+Interactions with neutron and nova-network (deprecated)
+=======================================================
 
-We talk about how networking can be provided be either Nova or Neutron.
+We talk about how networking can be provided be either neutron or
+nova-network (deprecated).
 
 Here we discuss about Neutron's API and how Nova users port UUIDs.
 We also discuss Nova automatically creating ports, proxying security groups,
