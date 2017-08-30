@@ -807,6 +807,15 @@ class ComputeTaskManager(base.Base):
         with compute_utils.EventReporter(context, 'rebuild_server',
                                           instance.uuid):
             node = limits = None
+
+            try:
+                migration = objects.Migration.get_by_instance_and_status(
+                    context, instance.uuid, 'accepted')
+            except exception.MigrationNotFoundByStatus:
+                LOG.debug("No migration record for the rebuild/evacuate "
+                          "request.", instance=instance)
+                migration = None
+
             # The host variable is passed in two cases:
             # 1. rebuild - the instance.host is passed to rebuild on the
             #       same host and bypass the scheduler.
@@ -857,6 +866,9 @@ class ComputeTaskManager(base.Base):
                                           host_dict['nodename'],
                                           host_dict['limits'])
                 except exception.NoValidHost as ex:
+                    if migration:
+                        migration.status = 'error'
+                        migration.save()
                     request_spec = request_spec.to_legacy_request_spec_dict()
                     with excutils.save_and_reraise_exception():
                         self._set_vm_state_and_notify(context, instance.uuid,
@@ -866,6 +878,9 @@ class ComputeTaskManager(base.Base):
                         LOG.warning("No valid host found for rebuild",
                                     instance=instance)
                 except exception.UnsupportedPolicyException as ex:
+                    if migration:
+                        migration.status = 'error'
+                        migration.save()
                     request_spec = request_spec.to_legacy_request_spec_dict()
                     with excutils.save_and_reraise_exception():
                         self._set_vm_state_and_notify(context, instance.uuid,
@@ -874,14 +889,6 @@ class ComputeTaskManager(base.Base):
                                  'task_state': None}, ex, request_spec)
                         LOG.warning("Server with unsupported policy "
                                     "cannot be rebuilt", instance=instance)
-
-            try:
-                migration = objects.Migration.get_by_instance_and_status(
-                    context, instance.uuid, 'accepted')
-            except exception.MigrationNotFoundByStatus:
-                LOG.debug("No migration record for the rebuild/evacuate "
-                          "request.", instance=instance)
-                migration = None
 
             compute_utils.notify_about_instance_usage(
                 self.notifier, context, instance, "rebuild.scheduled")

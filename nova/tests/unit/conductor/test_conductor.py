@@ -1282,6 +1282,15 @@ class _BaseTaskTestCase(object):
         # build_instances() is a cast, we need to wait for it to complete
         self.useFixture(cast_as_call.CastAsCall(self))
 
+        # Create the migration record (normally created by the compute API).
+        migration = objects.Migration(self.context,
+                                      source_compute=inst_obj.host,
+                                      source_node=inst_obj.node,
+                                      instance_uuid=inst_obj.uuid,
+                                      status='accepted',
+                                      migration_type='evacuation')
+        migration.create()
+
         self.assertRaises(exc.UnsupportedPolicyException,
                           self.conductor.rebuild_instance,
                           self.context,
@@ -1293,6 +1302,10 @@ class _BaseTaskTestCase(object):
                                            exception, mock.ANY)
         self.assertFalse(select_dest_mock.called)
         self.assertFalse(rebuild_mock.called)
+
+        # Assert the migration status was updated.
+        migration = objects.Migration.get_by_id(self.context, migration.id)
+        self.assertEqual('error', migration.status)
 
     def test_rebuild_instance_evacuate_migration_record(self):
         inst_obj = self._create_fake_instance_obj()
