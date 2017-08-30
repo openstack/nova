@@ -1,8 +1,7 @@
 # Bug 1714072 describes a situation where a resource provider is present in the
 # body of an allocation, but the resources object is empty. There should be at
 # least one resource class and value pair. If there is not a 400 response
-# should be returned. This gabbit file demonstrates the problem: a 500 on the final
-# test.
+# should be returned.
 
 fixtures:
     - APIFixture
@@ -59,5 +58,6 @@ tests:
             resources: {}
       project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
       user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
-   # This should be 400
-  status: 500
+  status: 400
+  response_strings:
+      - does not have enough properties
