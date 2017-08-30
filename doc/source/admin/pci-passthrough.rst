@@ -57,10 +57,10 @@ Configure nova-api (Controller)
 
    .. code-block:: ini
 
-      [default]
-      pci_alias = { "vendor_id":"8086", "product_id":"154d", "device_type":"type-PF", "name":"a1" }
+      [pci]
+      alias = { "vendor_id":"8086", "product_id":"154d", "device_type":"type-PF", "name":"a1" }
 
-   For more information about the syntax of ``pci_alias``, refer to `nova.conf
+   For more information about the syntax of ``alias``, refer to `nova.conf
    configuration options`_.
 
 #. Restart the ``nova-api`` service.
@@ -92,20 +92,20 @@ Configure PCI devices (Compute)
 
    .. code-block:: ini
 
-      [default]
-      pci_passthrough_whitelist = { "address": "0000:41:00.0" }
+      [pci]
+      passthrough_whitelist = { "address": "0000:41:00.0" }
 
    Alternatively specify multiple PCI devices using whitelisting:
 
    .. code-block:: ini
 
-      [default]
-      pci_passthrough_whitelist = { "vendor_id": "8086", "product_id": "10fb" }
+      [pci]
+      passthrough_whitelist = { "vendor_id": "8086", "product_id": "10fb" }
 
    All PCI devices matching the ``vendor_id`` and ``product_id`` are added to
    the pool of PCI devices available for passthrough to VMs.
 
-   For more information about the syntax of ``pci_passthrough_whitelist``,
+   For more information about the syntax of ``passthrough_whitelist``,
    refer to `nova.conf configuration options`_.
 
 #. Specify the PCI alias for the device.
@@ -121,10 +121,10 @@ Configure PCI devices (Compute)
 
    .. code-block:: ini
 
-      [default]
-      pci_alias = { "vendor_id":"8086", "product_id":"154d", "device_type":"type-PF", "name":"a1" }
+      [pci]
+      alias = { "vendor_id":"8086", "product_id":"154d", "device_type":"type-PF", "name":"a1" }
 
-   For more information about the syntax of ``pci_alias``, refer to `nova.conf
+   For more information about the syntax of ``alias``, refer to `nova.conf
    configuration options`_.
 
 #. Restart the ``nova-compute`` service.
@@ -134,7 +134,7 @@ Create instances with PCI passthrough devices
 
 The ``nova-scheduler`` selects a destination host that has PCI devices
 available with the specified ``vendor_id`` and ``product_id`` that matches the
-``pci_alias`` from the flavor.
+``alias`` from the flavor.
 
 .. code-block:: console
 
