@@ -118,7 +118,4 @@ class FailedEvacuateStateTests(test.TestCase,
         self.assertEqual('evacuation', migrations[0]['migration_type'])
         self.assertEqual(server['id'], migrations[0]['instance_uuid'])
         self.assertEqual(self.hostname, migrations[0]['source_compute'])
-        self.assertEqual('accepted', migrations[0]['status'])
-        # NOTE(elod.illes): Migration status should be 'error' and not
-        # 'accepted'. Needs to be replaced when bug #1713783 is fixed.
-        # self.assertEqual('error', migrations[0]['status'])
+        self.assertEqual('error', migrations[0]['status'])
