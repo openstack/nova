@@ -51,6 +51,7 @@ ALLOCATION_SCHEMA = {
                     },
                     "resources": {
                         "type": "object",
+                        "minProperties": 1,
                         "patternProperties": {
                             "^[0-9A-Z_]+$": {
                                 "type": "integer",
