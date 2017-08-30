@@ -4073,9 +4073,31 @@ class API(base.Base):
         return objects.Migration.get_by_id_and_instance(
                 context, migration_id, instance_uuid)
 
+    def _get_bdm_by_volume_id(self, context, volume_id, expected_attrs=None):
+        """Retrieve a BDM without knowing its cell.
+
+        .. note:: The context will be targeted to the cell in which the
+            BDM is found, if any.
+
+        :param context: The API request context.
+        :param volume_id: The ID of the volume.
+        :param expected_attrs: list of any additional attributes that should
+            be joined when the BDM is loaded from the database.
+        :raises: nova.exception.VolumeBDMNotFound if not found in any cell
+        """
+        load_cells()
+        for cell in CELLS:
+            nova_context.set_target_cell(context, cell)
+            try:
+                return objects.BlockDeviceMapping.get_by_volume(
+                    context, volume_id, expected_attrs=expected_attrs)
+            except exception.NotFound:
+                continue
+        raise exception.VolumeBDMNotFound(volume_id=volume_id)
+
     def volume_snapshot_create(self, context, volume_id, create_info):
-        bdm = objects.BlockDeviceMapping.get_by_volume(
-                context, volume_id, expected_attrs=['instance'])
+        bdm = self._get_bdm_by_volume_id(
+            context, volume_id, expected_attrs=['instance'])
 
         # We allow creating the snapshot in any vm_state as long as there is
         # no task being performed on the instance and it has a host.
@@ -4096,8 +4118,8 @@ class API(base.Base):
 
     def volume_snapshot_delete(self, context, volume_id, snapshot_id,
                                delete_info):
-        bdm = objects.BlockDeviceMapping.get_by_volume(
-                context, volume_id, expected_attrs=['instance'])
+        bdm = self._get_bdm_by_volume_id(
+            context, volume_id, expected_attrs=['instance'])
 
         # We allow deleting the snapshot in any vm_state as long as there is
         # no task being performed on the instance and it has a host.
