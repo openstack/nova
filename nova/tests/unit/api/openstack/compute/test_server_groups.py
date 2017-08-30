@@ -191,15 +191,19 @@ class ServerGroupTestV21(test.NoDBTestCase):
         return (ig_uuid, instances, members)
 
     def _test_list_server_group_all(self, api_version='2.1'):
-        self._test_list_server_group(api_version=api_version, limited=False)
+        self._test_list_server_group(api_version=api_version,
+            limited='',
+            path='/os-server-groups?all_projects=True')
 
     def _test_list_server_group_offset_and_limit(self, api_version='2.1'):
-        self._test_list_server_group(api_version=api_version, limited=True)
+        self._test_list_server_group(api_version=api_version,
+            limited='&offset=1&limit=1',
+            path='/os-server-groups?all_projects=True')
 
     @mock.patch.object(nova.db, 'instance_group_get_all_by_project_id')
     @mock.patch.object(nova.db, 'instance_group_get_all')
     def _test_list_server_group(self, mock_get_all, mock_get_by_project,
-                                api_version='2.1', limited=False):
+                                path, api_version='2.1', limited=None):
         policies = ['anti-affinity']
         members = []
         metadata = {}  # always empty
@@ -254,7 +258,7 @@ class ServerGroupTestV21(test.NoDBTestCase):
 
         path = '/os-server-groups?all_projects=True'
         if limited:
-            path += '&offset=1&limit=1'
+            path += limited
         req = fakes.HTTPRequest.blank(path, version=api_version)
         admin_req = fakes.HTTPRequest.blank(path, use_admin_context=True,
                                             version=api_version)
@@ -494,6 +498,9 @@ class ServerGroupTestV21(test.NoDBTestCase):
     def test_list_server_group_by_tenant(self):
         self._test_list_server_group_by_tenant(api_version='2.1')
 
+    def test_list_server_group_all_v20(self):
+        self._test_list_server_group_all(api_version='2.0')
+
     def test_list_server_group_all(self):
         self._test_list_server_group_all(api_version='2.1')
 
@@ -506,6 +513,63 @@ class ServerGroupTestV21(test.NoDBTestCase):
 
         # test as non-admin
         self.controller.index(self.req)
+
+    def test_list_server_group_multiple_param(self):
+        self._test_list_server_group(api_version='2.1',
+            limited='&offset=2&limit=2&limit=1&offset=1',
+            path='/os-server-groups?all_projects=False&all_projects=True')
+
+    def test_list_server_group_additional_param(self):
+        self._test_list_server_group(api_version='2.1',
+            limited='&offset=1&limit=1',
+            path='/os-server-groups?dummy=False&all_projects=True')
+
+    def test_list_server_group_param_as_int(self):
+        self._test_list_server_group(api_version='2.1',
+            limited='&offset=1&limit=1',
+            path='/os-server-groups?all_projects=1')
+
+    def test_list_server_group_negative_int_as_offset(self):
+        self.assertRaises(exception.ValidationError,
+            self._test_list_server_group,
+            api_version='2.1',
+            limited='&offset=-1',
+            path='/os-server-groups?all_projects=1')
+
+    def test_list_server_group_string_int_as_offset(self):
+        self.assertRaises(exception.ValidationError,
+            self._test_list_server_group,
+            api_version='2.1',
+            limited='&offset=dummy',
+            path='/os-server-groups?all_projects=1')
+
+    def test_list_server_group_multiparam_string_as_offset(self):
+        self.assertRaises(exception.ValidationError,
+            self._test_list_server_group,
+            api_version='2.1',
+            limited='&offset=dummy&offset=1',
+            path='/os-server-groups?all_projects=1')
+
+    def test_list_server_group_negative_int_as_limit(self):
+        self.assertRaises(exception.ValidationError,
+            self._test_list_server_group,
+            api_version='2.1',
+            limited='&limit=-1',
+            path='/os-server-groups?all_projects=1')
+
+    def test_list_server_group_string_int_as_limit(self):
+        self.assertRaises(exception.ValidationError,
+            self._test_list_server_group,
+            api_version='2.1',
+            limited='&limit=dummy',
+            path='/os-server-groups?all_projects=1')
+
+    def test_list_server_group_multiparam_string_as_limit(self):
+        self.assertRaises(exception.ValidationError,
+            self._test_list_server_group,
+            api_version='2.1',
+            limited='&limit=dummy&limit=1',
+            path='/os-server-groups?all_projects=1')
 
     def test_list_server_groups_rbac_admin_only(self):
         # override policy to restrict to admin

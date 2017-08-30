@@ -50,3 +50,17 @@ create = {
 create_v215 = copy.deepcopy(create)
 policies = create_v215['properties']['server_group']['properties']['policies']
 policies['items'][0]['enum'].extend(['soft-anti-affinity', 'soft-affinity'])
+
+
+server_groups_query_param = {
+    'type': 'object',
+    'properties': {
+        'all_projects': parameter_types.multi_params({'type': 'string'}),
+        'limit': parameter_types.multi_params(
+             parameter_types.non_negative_integer),
+        'offset': parameter_types.multi_params(
+             parameter_types.non_negative_integer),
+    },
+    # For backward compatible changes
+    'additionalProperties': True
+}
