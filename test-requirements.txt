@@ -15,7 +15,7 @@ python-ironicclient>=1.14.0 # Apache-2.0
 python-subunit>=0.0.18 # Apache-2.0/BSD
 requests-mock>=1.1.0 # Apache-2.0
 sphinx>=1.6.2 # BSD
-sphinxcontrib-actdiag  # BSD
+sphinxcontrib-actdiag # BSD
 os-api-ref>=1.0.0 # Apache-2.0
 oslotest>=1.10.0 # Apache-2.0
 os-testr>=0.8.0 # Apache-2.0
