@@ -24,11 +24,12 @@ tests:
   request_headers:
       openstack-api-version: placement latest
   response_json_paths:
-      $.links.`len`: 5
+      $.links.`len`: 6
       $.links[?rel = "self"].href: /resource_providers/$ENVIRON['RP_UUID']
       $.links[?rel = "inventories"].href: /resource_providers/$ENVIRON['RP_UUID']/inventories
       $.links[?rel = "aggregates"].href: /resource_providers/$ENVIRON['RP_UUID']/aggregates
       $.links[?rel = "usages"].href: /resource_providers/$ENVIRON['RP_UUID']/usages
+      $.links[?rel = "allocations"].href: /resource_providers/$ENVIRON['RP_UUID']/allocations
       $.links[?rel = "traits"].href: /resource_providers/$ENVIRON['RP_UUID']/traits
 
 - name: get rp 1.0
@@ -89,4 +90,17 @@ tests:
       $.links[?rel = "inventories"].href: /resource_providers/$ENVIRON['RP_UUID']/inventories
       $.links[?rel = "usages"].href: /resource_providers/$ENVIRON['RP_UUID']/usages
       $.links[?rel = "aggregates"].href: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+      $.links[?rel = "traits"].href: /resource_providers/$ENVIRON['RP_UUID']/traits
+
+- name: get rp allocations link added in 1.11
+  GET: /resource_providers/$ENVIRON['RP_UUID']
+  request_headers:
+      openstack-api-version: placement 1.11
+  response_json_paths:
+      $.links.`len`: 6
+      $.links[?rel = "self"].href: /resource_providers/$ENVIRON['RP_UUID']
+      $.links[?rel = "inventories"].href: /resource_providers/$ENVIRON['RP_UUID']/inventories
+      $.links[?rel = "aggregates"].href: /resource_providers/$ENVIRON['RP_UUID']/aggregates
+      $.links[?rel = "usages"].href: /resource_providers/$ENVIRON['RP_UUID']/usages
+      $.links[?rel = "allocations"].href: /resource_providers/$ENVIRON['RP_UUID']/allocations
       $.links[?rel = "traits"].href: /resource_providers/$ENVIRON['RP_UUID']/traits

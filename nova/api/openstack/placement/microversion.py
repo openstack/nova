@@ -48,6 +48,7 @@ VERSIONS = [
             # PUT /allocations
     '1.9',  # Adds GET /usages
     '1.10',  # Adds GET /allocation_candidates resource endpoint
+    '1.11',  # Adds 'allocations' link to the GET /resource_providers response
 ]
 
 

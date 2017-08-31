@@ -147,12 +147,29 @@ tests:
   response_json_paths:
       $.errors[0].title: Bad Request
 
-- name: list one resource provider filtering by uuid
+- name: list one resource provider filtering by uuid with allocations link
   GET: /resource_providers?uuid=$ENVIRON['RP_UUID']
+  request_headers:
+      openstack-api-version: placement 1.11
   response_json_paths:
       $.resource_providers.`len`: 1
       $.resource_providers[0].uuid: $ENVIRON['RP_UUID']
       $.resource_providers[0].name: $ENVIRON['RP_NAME']
+      $.resource_providers[0].links.`len`: 6
+      $.resource_providers[0].links[?rel = "self"].href: /resource_providers/$ENVIRON['RP_UUID']
+      $.resource_providers[0].links[?rel = "inventories"].href: /resource_providers/$ENVIRON['RP_UUID']/inventories
+      $.resource_providers[0].links[?rel = "usages"].href: /resource_providers/$ENVIRON['RP_UUID']/usages
+      $.resource_providers[0].links[?rel = "allocations"].href: /resource_providers/$ENVIRON['RP_UUID']/allocations
+
+- name: list one resource provider filtering by uuid no allocations link
+  GET: /resource_providers?uuid=$ENVIRON['RP_UUID']
+  request_headers:
+      openstack-api-version: placement 1.10
+  response_json_paths:
+      $.resource_providers.`len`: 1
+      $.resource_providers[0].uuid: $ENVIRON['RP_UUID']
+      $.resource_providers[0].name: $ENVIRON['RP_NAME']
+      $.resource_providers[0].links.`len`: 5
       $.resource_providers[0].links[?rel = "self"].href: /resource_providers/$ENVIRON['RP_UUID']
       $.resource_providers[0].links[?rel = "inventories"].href: /resource_providers/$ENVIRON['RP_UUID']/inventories
       $.resource_providers[0].links[?rel = "usages"].href: /resource_providers/$ENVIRON['RP_UUID']/usages

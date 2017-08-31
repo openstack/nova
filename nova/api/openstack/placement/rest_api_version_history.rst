@@ -152,3 +152,10 @@ The 1.10 version brings a new REST resource endpoint for getting a list of
 allocation candidates. Allocation candidates are collections of possible
 allocations against resource providers that can satisfy a particular request
 for resources.
+
+1.11 Add 'allocations' link to the ``GET /resource_providers`` response
+-----------------------------------------------------------------------
+
+The ``/resource_providers/{rp_uuid}/allocations`` endpoint has been available
+since version 1.0, but was not listed in the ``links`` section of the
+``GET /resource_providers`` response.  The link is included as of version 1.11.

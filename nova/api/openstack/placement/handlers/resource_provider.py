@@ -90,6 +90,8 @@ def _serialize_links(environ, resource_provider):
         rel_types.append('aggregates')
     if want_version >= (1, 6):
         rel_types.append('traits')
+    if want_version >= (1, 11):
+        rel_types.append('allocations')
     for rel in rel_types:
         links.append({'rel': rel, 'href': '%s/%s' % (url, rel)})
     return links

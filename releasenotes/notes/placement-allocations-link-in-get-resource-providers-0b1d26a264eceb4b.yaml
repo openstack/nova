@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    A new 1.11 API microversion is added to the Placement REST API.  This adds
+    the ``resource_providers/{rp_uuid}/allocations`` link to the  ``links``
+    section of the response from ``GET /resource_providers``.
