@@ -14,6 +14,7 @@
 
 import os
 
+import ddt
 from eventlet import timeout as etimeout
 import mock
 from os_win import constants as os_win_const
@@ -40,6 +41,7 @@ from nova.virt.hyperv import volumeops
 CONF = cfg.CONF
 
 
+@ddt.ddt
 class VMOpsTestCase(test_base.HyperVBaseTestCase):
     """Unit tests for the Hyper-V VMOps class."""
 
@@ -413,17 +415,19 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
             self.assertRaises(exception.InstanceExists, self._vmops.spawn,
                               self.context, mock_instance, mock_image_meta,
                               [mock.sentinel.FILE], mock.sentinel.PASSWORD,
-                              mock.sentinel.INFO, block_device_info)
+                              mock.sentinel.network_info, block_device_info)
         elif fail is os_win_exc.HyperVException:
             self.assertRaises(os_win_exc.HyperVException, self._vmops.spawn,
                               self.context, mock_instance, mock_image_meta,
                               [mock.sentinel.FILE], mock.sentinel.PASSWORD,
-                              mock.sentinel.INFO, block_device_info)
-            mock_destroy.assert_called_once_with(mock_instance)
+                              mock.sentinel.network_info, block_device_info)
+            mock_destroy.assert_called_once_with(mock_instance,
+                                                 mock.sentinel.network_info,
+                                                 block_device_info)
         else:
             self._vmops.spawn(self.context, mock_instance, mock_image_meta,
                               [mock.sentinel.FILE], mock.sentinel.PASSWORD,
-                              mock.sentinel.INFO, block_device_info)
+                              mock.sentinel.network_info, block_device_info)
             self._vmops._vmutils.vm_exists.assert_called_once_with(
                 mock_instance.name)
             mock_delete_disk_files.assert_called_once_with(
@@ -438,11 +442,12 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
                                                             fake_vm_gen)
             mock_create_ephemerals.assert_called_once_with(
                 mock_instance, block_device_info['ephemerals'])
-            mock_get_neutron_events.assert_called_once_with(mock.sentinel.INFO)
+            mock_get_neutron_events.assert_called_once_with(
+                mock.sentinel.network_info)
             mock_get_image_vm_gen.assert_called_once_with(mock_instance.uuid,
                                                           mock_image_meta)
             mock_create_instance.assert_called_once_with(
-                mock_instance, mock.sentinel.INFO, root_device_info,
+                mock_instance, mock.sentinel.network_info, root_device_info,
                 block_device_info, fake_vm_gen, mock_image_meta)
             mock_save_device_metadata.assert_called_once_with(
                 self.context, mock_instance, block_device_info)
@@ -451,13 +456,13 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
                 mock_create_config_drive.assert_called_once_with(
                     self.context, mock_instance, [mock.sentinel.FILE],
                     mock.sentinel.PASSWORD,
-                    mock.sentinel.INFO)
+                    mock.sentinel.network_info)
                 mock_attach_config_drive.assert_called_once_with(
                     mock_instance, fake_config_drive_path, fake_vm_gen)
             mock_set_boot_order.assert_called_once_with(
                 mock_instance.name, fake_vm_gen, block_device_info)
             mock_power_on.assert_called_once_with(
-                mock_instance, network_info=mock.sentinel.INFO)
+                mock_instance, network_info=mock.sentinel.network_info)
 
     def test_spawn(self):
         self._test_spawn(exists=False, configdrive_required=True, fail=None)
@@ -1063,37 +1068,38 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         self._vmops._pathutils.get_instance_dir.assert_called_once_with(
             mock_instance.name, create_dir=False, remove_dir=True)
 
+    @ddt.data(True, False)
     @mock.patch('nova.virt.hyperv.volumeops.VolumeOps.disconnect_volumes')
     @mock.patch('nova.virt.hyperv.vmops.VMOps._delete_disk_files')
     @mock.patch('nova.virt.hyperv.vmops.VMOps.power_off')
     @mock.patch('nova.virt.hyperv.vmops.VMOps.unplug_vifs')
-    def test_destroy(self, mock_unplug_vifs, mock_power_off,
+    def test_destroy(self, vm_exists, mock_unplug_vifs, mock_power_off,
                      mock_delete_disk_files, mock_disconnect_volumes):
         mock_instance = fake_instance.fake_instance_obj(self.context)
-        self._vmops._vmutils.vm_exists.return_value = True
+        self._vmops._vmutils.vm_exists.return_value = vm_exists
 
         self._vmops.destroy(instance=mock_instance,
                             block_device_info=mock.sentinel.FAKE_BD_INFO,
                             network_info=mock.sentinel.fake_network_info)
 
+        if vm_exists:
+            self._vmops._vmutils.stop_vm_jobs.assert_called_once_with(
+                mock_instance.name)
+            mock_power_off.assert_called_once_with(mock_instance)
+            self._vmops._vmutils.destroy_vm.assert_called_once_with(
+                mock_instance.name)
+        else:
+            self.assertFalse(mock_power_off.called)
+            self.assertFalse(self._vmops._vmutils.destroy_vm.called)
+
         self._vmops._vmutils.vm_exists.assert_called_with(
             mock_instance.name)
-        mock_power_off.assert_called_once_with(mock_instance)
         mock_unplug_vifs.assert_called_once_with(
             mock_instance, mock.sentinel.fake_network_info)
-        self._vmops._vmutils.destroy_vm.assert_called_once_with(
-            mock_instance.name)
         mock_disconnect_volumes.assert_called_once_with(
             mock.sentinel.FAKE_BD_INFO)
         mock_delete_disk_files.assert_called_once_with(
             mock_instance.name)
-
-    def test_destroy_inexistent_instance(self):
-        mock_instance = fake_instance.fake_instance_obj(self.context)
-        self._vmops._vmutils.vm_exists.return_value = False
-
-        self._vmops.destroy(instance=mock_instance)
-        self.assertFalse(self._vmops._vmutils.destroy_vm.called)
 
     @mock.patch('nova.virt.hyperv.vmops.VMOps.power_off')
     def test_destroy_exception(self, mock_power_off):
@@ -1103,7 +1109,9 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
         self._vmops._vmutils.vm_exists.return_value = True
 
         self.assertRaises(os_win_exc.HyperVException,
-                          self._vmops.destroy, mock_instance)
+                          self._vmops.destroy, mock_instance,
+                          mock.sentinel.network_info,
+                          mock.sentinel.block_device_info)
 
     def test_reboot_hard(self):
         self._test_reboot(vmops.REBOOT_TYPE_HARD,
