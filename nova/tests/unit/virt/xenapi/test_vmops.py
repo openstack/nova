@@ -13,7 +13,9 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import base64
 import uuid
+import zlib
 
 try:
     import xmlrpclib
@@ -23,7 +25,6 @@ except ImportError:
 from eventlet import greenthread
 import mock
 from os_xenapi.client import host_xenstore
-from os_xenapi.client import session as xenapi_session
 import six
 
 from nova.compute import power_state
@@ -56,7 +57,7 @@ class VMOpsTestBase(stubs.XenAPITestBaseNoDB):
 
     def _setup_mock_vmops(self, product_brand=None, product_version=None):
         stubs.stubout_session(self.stubs, xenapi_fake.SessionBase)
-        self._session = xenapi_session.XenAPISession(
+        self._session = xenapi_fake.SessionBase(
             'http://localhost', 'root', 'test_pass')
         self.vmops = vmops.VMOps(self._session, fake.FakeVirtAPI())
 
@@ -235,8 +236,15 @@ class InjectAutoDiskConfigTestCase(VMOpsTestBase):
 
 
 class GetConsoleOutputTestCase(VMOpsTestBase):
-    def test_get_console_output_works(self):
+    def _mock_console_log(self, session, domid):
+        if domid == 0:
+            raise session.XenAPI.Failure('No console')
+        return base64.b64encode(zlib.compress(six.b('dom_id: %s' % domid)))
+
+    @mock.patch.object(vmops.vm_management, 'get_console_log')
+    def test_get_console_output_works(self, mock_console_log):
         ctxt = context.RequestContext('user', 'project')
+        mock_console_log.side_effect = self._mock_console_log
         instance = fake_instance.fake_instance_obj(ctxt)
         with mock.patch.object(self.vmops, '_get_last_dom_id',
                                return_value=42) as mock_last_dom:
@@ -244,7 +252,9 @@ class GetConsoleOutputTestCase(VMOpsTestBase):
                              self.vmops.get_console_output(instance))
             mock_last_dom.assert_called_once_with(instance, check_rescue=True)
 
-    def test_get_console_output_not_available(self):
+    @mock.patch.object(vmops.vm_management, 'get_console_log')
+    def test_get_console_output_not_available(self, mock_console_log):
+        mock_console_log.side_effect = self._mock_console_log
         ctxt = context.RequestContext('user', 'project')
         instance = fake_instance.fake_instance_obj(ctxt)
         # dom_id=0 used to trigger exception in fake XenAPI

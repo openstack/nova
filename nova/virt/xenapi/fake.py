@@ -360,6 +360,7 @@ def _create_local_pif(host_ref):
 def _create_object(table, obj):
     ref = uuidutils.generate_uuid()
     obj['uuid'] = uuidutils.generate_uuid()
+    obj['ref'] = ref
     _db_content[table][ref] = obj
     return ref
 
@@ -503,9 +504,11 @@ class Failure(Exception):
 class SessionBase(object):
     """Base class for Fake Sessions."""
 
-    def __init__(self, uri):
+    def __init__(self, uri, user=None, passwd=None):
         self._session = None
         xenapi_session.apply_session_helpers(self)
+        if user is not None:
+            self.xenapi.login_with_password(user, passwd)
 
     def pool_get_default_SR(self, _1, pool_ref):
         return list(_db_content['pool'].values())[0]['default-SR']
@@ -897,11 +900,21 @@ class SessionBase(object):
                     methodname)
             return meth(*full_params)
 
+    def call_xenapi(self, *args):
+        return self.xenapi_request(args[0], args[1:])
+
+    def get_all_refs_and_recs(self, cls):
+        return get_all_records(cls).items()
+
+    def get_rec(self, cls, ref):
+        return _db_content[cls].get(ref, None)
+
     def _login(self, method, params):
         self._session = uuidutils.generate_uuid()
         _session_info = {'uuid': uuidutils.generate_uuid(),
                          'this_host': list(_db_content['host'])[0]}
         _db_content['session'][self._session] = _session_info
+        self.host_ref = list(_db_content['host'])[0]
 
     def _logout(self):
         s = self._session

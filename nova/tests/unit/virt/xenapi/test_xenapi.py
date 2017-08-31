@@ -25,7 +25,6 @@ import re
 import mock
 from mox3 import mox
 from os_xenapi.client import host_management
-from os_xenapi.client import session as xenapi_session
 from os_xenapi.client import XenAPI
 from oslo_concurrency import lockutils
 from oslo_config import fixture as config_fixture
@@ -143,8 +142,7 @@ IMAGE_FIXTURES = {
 
 
 def get_session():
-    return xenapi_session.XenAPISession(
-        'http://localhost', 'root', 'test_pass')
+    return xenapi_fake.SessionBase('http://localhost', 'root', 'test_pass')
 
 
 def set_image_fixtures():
