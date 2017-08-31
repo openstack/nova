@@ -699,7 +699,7 @@ class SchedulerReportClient(object):
             LOG.debug(msg, rp_uuid)
             return
 
-        msg = _LI("Compute node %s reported no inventory but previous "
+        msg = _LI("Resource provider %s reported no inventory but previous "
                   "inventory was detected. Deleting existing inventory "
                   "records.")
         LOG.info(msg, rp_uuid)
