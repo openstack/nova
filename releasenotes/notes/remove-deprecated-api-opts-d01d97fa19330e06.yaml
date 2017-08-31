@@ -1,0 +1,13 @@
+---
+upgrade:
+  - |
+    The following deprecated configuration options have been removed from the
+    ``api`` section of ``nova.conf``:
+
+    - ``allow_instance_snapshots``
+
+    These were deprecated in the 16.0.0 release as they allowed inconsistent
+    API behavior across deployments. To disable snapshots in the
+    ``createImage`` server action API, change the
+    ``os_compute_api:servers:create_image`` and
+    ``os_compute_api:servers:create_image:allow_volume_backed`` policies.

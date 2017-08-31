@@ -983,7 +983,6 @@ class ServersController(wsgi.Controller):
     @wsgi.response(202)
     @wsgi.expected_errors((400, 403, 404, 409))
     @wsgi.action('createImage')
-    @common.check_snapshots_enabled
     @validation.schema(schema_servers.create_image, '2.0', '2.0')
     @validation.schema(schema_servers.create_image, '2.1')
     def _action_create_image(self, req, id, body):
