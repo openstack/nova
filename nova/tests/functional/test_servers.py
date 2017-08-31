@@ -1658,6 +1658,106 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         self._delete_and_check_allocations(
             server, source_rp_uuid, dest_rp_uuid)
 
+    def test_evacuate_forced_host(self):
+        """Evacuating a server with a forced host bypasses the scheduler
+        which means conductor has to create the allocations against the
+        destination node. This test recreates the scenarios and asserts
+        the allocations on the source and destination nodes are as expected.
+        """
+        source_hostname = self.compute1.host
+        dest_hostname = self.compute2.host
+
+        server = self._boot_and_check_allocations(
+            self.flavor1, source_hostname)
+
+        source_compute_id = self.admin_api.get_services(
+            host=source_hostname, binary='nova-compute')[0]['id']
+
+        self.compute1.stop()
+        # force it down to avoid waiting for the service group to time out
+        self.admin_api.put_service(
+            source_compute_id, {'forced_down': 'true'})
+
+        # evacuate the server and force the destination host which bypasses
+        # the scheduler
+        post = {
+            'evacuate': {
+                'host': dest_hostname,
+                'force': True
+            }
+        }
+        self.api.post_server_action(server['id'], post)
+        expected_params = {'OS-EXT-SRV-ATTR:host': dest_hostname,
+                           'status': 'ACTIVE'}
+        server = self._wait_for_server_parameter(self.api, server,
+                                                 expected_params)
+
+        # Run the periodics to show those don't modify allocations.
+        self._run_periodics()
+
+        # Expect to have allocation and usages on both computes as the
+        # source compute is still down
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+        # FIXME(mriedem): Due to bug 1713786 the dest node won't have
+        # allocations. Uncomment when fixed.
+        # self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+        self.assertFlavorMatchesAllocation(
+            {'vcpus': 0, 'ram': 0, 'disk': 0}, dest_usages)
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        # FIXME(mriedem): Uncomment when bug 1713786 is fixed
+        # self.assertEqual(2, len(allocations))
+        self.assertEqual(1, len(allocations))
+        source_allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
+        # dest_allocation = allocations[dest_rp_uuid]['resources']
+        # self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
+
+        # start up the source compute
+        self.compute1.start()
+        self.admin_api.put_service(
+            source_compute_id, {'forced_down': 'false'})
+
+        # Run the periodics again to show they don't change anything.
+        self._run_periodics()
+
+        # When the source node starts up, the instance has moved so the
+        # ResourceTracker should cleanup allocations for the source node.
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        # FIXME(mriedem): Due to bug 1713786, the source node fails to
+        # remove the allocation because the dest allocation doesn't exist
+        # yet and Placement won't allow an empty allocation body. Uncomment
+        # when fixed.
+        # self.assertEqual(
+        #     {'VCPU': 0, 'MEMORY_MB': 0, 'DISK_GB': 0}, source_usages)
+        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+
+        # The usages/allocations should still exist on the destination node
+        # after the source node starts back up.
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+        # FIXME(mriedem): Uncomment when bug 1713786 is fixed.
+        # self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+        self.assertFlavorMatchesAllocation(
+            {'vcpus': 0, 'ram': 0, 'disk': 0}, dest_usages)
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations))
+        # FIXME(mriedem): Due to bug 1713786 it's just the source for now.
+        # Uncomment when fixed.
+        # dest_allocation = allocations[dest_rp_uuid]['resources']
+        # self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
+        source_allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
+
+        self._delete_and_check_allocations(
+            server, source_rp_uuid, dest_rp_uuid)
+
     def _boot_then_shelve_and_check_allocations(self, hostname, rp_uuid):
         # avoid automatic shelve offloading
         self.flags(shelved_offload_time=-1)
