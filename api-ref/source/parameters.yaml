@@ -2680,6 +2680,11 @@ force_evacuate:
   description: |
     Force an evacuation by not verifying the provided destination host by the
     scheduler.
+
+    .. warning:: This could result in failures to actually evacuate the
+      instance to the specified host. It is recommended to either not specify
+      a host so that the scheduler will pick one, or specify a host without
+      ``force=True`` set.
   in: body
   required: false
   type: boolean
@@ -2688,6 +2693,11 @@ force_live_migrate:
   description: |
     Force a live-migration by not verifying the provided destination host by
     the scheduler.
+
+    .. warning:: This could result in failures to actually live migrate the
+      instance to the specified host. It is recommended to either not specify
+      a host so that the scheduler will pick one, or specify a host without
+      ``force=True`` set.
   in: body
   required: false
   type: boolean
@@ -2777,6 +2787,13 @@ host:
   description: |
     The name or ID of the host to which the server is evacuated.
     If you omit this parameter, the scheduler chooses a host.
+
+    .. warning:: Prior to microversion 2.29, specifying a host will bypass
+      validation by the scheduler, which could result in failures to actually
+      evacuate the instance to the specified host, or over-subscription of the
+      host. It is recommended to either not specify a host so that the
+      scheduler will pick one, or specify a host with microversion >= 2.29 and
+      without ``force=True`` set.
   in: body
   required: false
   type: string
@@ -2825,8 +2842,15 @@ host_memory_mb:
   type: integer
 host_migration:
   description: |
-    The host to which to migrate the server. If this parameter is ``None``, the scheduler
-    chooses a host.
+    The host to which to migrate the server. If this parameter is ``None``,
+    the scheduler chooses a host.
+
+    .. warning:: Prior to microversion 2.30, specifying a host will bypass
+      validation by the scheduler, which could result in failures to actually
+      migrate the instance to the specified host, or over-subscription of the
+      host. It is recommended to either not specify a host so that the
+      scheduler will pick one, or specify a host with microversion >= 2.30 and
+      without ``force=True`` set.
   in: body
   required: true
   type: string
