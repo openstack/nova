@@ -2718,3 +2718,117 @@ class ServerUnshelveSpawnFailTests(ProviderUsageBaseTestCase):
         usages = self._get_provider_usages(rp_uuid)
         self.assertFlavorMatchesAllocation(
            {'vcpus': 0, 'ram': 0, 'disk': 0}, usages)
+
+
+class ServerSoftDeleteTests(ProviderUsageBaseTestCase):
+
+    compute_driver = 'fake.SmallFakeDriver'
+
+    def setUp(self):
+        super(ServerSoftDeleteTests, self).setUp()
+        # We only need one compute service/host/node for these tests.
+        self.compute1 = self._start_compute('host1')
+
+        flavors = self.api.get_flavors()
+        self.flavor1 = flavors[0]
+
+    def _soft_delete_and_check_allocation(self, server, hostname):
+        self.api.delete_server(server['id'])
+        server = self._wait_for_state_change(self.api, server, 'SOFT_DELETED')
+
+        self._run_periodics()
+
+        # in soft delete state nova should keep the resource allocation as
+        # the instance can be restored
+        rp_uuid = self._get_provider_uuid_by_host(hostname)
+
+        usages = self._get_provider_usages(rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor1, usages)
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations))
+        allocation = allocations[rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, allocation)
+
+        # run the periodic reclaim but as time isn't advanced it should not
+        # reclaim the instance
+        ctxt = context.get_admin_context()
+        self.compute1._reclaim_queued_deletes(ctxt)
+
+        self._run_periodics()
+
+        usages = self._get_provider_usages(rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor1, usages)
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations))
+        allocation = allocations[rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, allocation)
+
+    def test_soft_delete_then_reclaim(self):
+        """Asserts that the automatic reclaim of soft deleted instance cleans
+        up the allocations in placement.
+        """
+
+        # make sure that instance will go to SOFT_DELETED state instead of
+        # deleted immediately
+        self.flags(reclaim_instance_interval=30)
+
+        hostname = self.compute1.host
+        rp_uuid = self._get_provider_uuid_by_host(hostname)
+
+        server = self._boot_and_check_allocations(self.flavor1, hostname)
+
+        self._soft_delete_and_check_allocation(server, hostname)
+
+        # advance the time and run periodic reclaim, instance should be deleted
+        # and resources should be freed
+        the_past = timeutils.utcnow() + datetime.timedelta(hours=1)
+        timeutils.set_time_override(override_time=the_past)
+        self.addCleanup(timeutils.clear_time_override)
+        ctxt = context.get_admin_context()
+        self.compute1._reclaim_queued_deletes(ctxt)
+
+        # Wait for real deletion
+        self._wait_until_deleted(server)
+
+        usages = self._get_provider_usages(rp_uuid)
+        self.assertEqual({'VCPU': 0,
+                          'MEMORY_MB': 0,
+                          'DISK_GB': 0}, usages)
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(0, len(allocations))
+
+    def test_soft_delete_then_restore(self):
+        """Asserts that restoring a soft deleted instance keeps the proper
+        allocation in placement.
+        """
+
+        # make sure that instance will go to SOFT_DELETED state instead of
+        # deleted immediately
+        self.flags(reclaim_instance_interval=30)
+
+        hostname = self.compute1.host
+        rp_uuid = self._get_provider_uuid_by_host(hostname)
+
+        server = self._boot_and_check_allocations(
+            self.flavor1, hostname)
+
+        self._soft_delete_and_check_allocation(server, hostname)
+
+        post = {'restore': {}}
+        self.api.post_server_action(server['id'], post)
+        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+
+        # after restore the allocations should be kept
+        usages = self._get_provider_usages(rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor1, usages)
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations))
+        allocation = allocations[rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, allocation)
+
+        # Now we want a real delete
+        self.flags(reclaim_instance_interval=0)
+        self._delete_and_check_allocations(server)
