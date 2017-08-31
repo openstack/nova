@@ -12,9 +12,14 @@
 
 import mock
 
+from nova import context as nova_context
+from nova import exception
 from nova import objects
+from nova.scheduler.client import report
 from nova.scheduler import utils
 from nova import test
+from nova.tests.unit import fake_instance
+from nova.tests import uuidsentinel as uuids
 
 
 class TestUtils(test.NoDBTestCase):
@@ -255,3 +260,113 @@ class TestUtils(test.NoDBTestCase):
         }
         utils.merge_resources(resources, new_resources, -1)
         self.assertEqual(merged, resources)
+
+    def test_claim_resources_on_destination_no_source_allocations(self):
+        """Tests the negative scenario where the instance does not have
+        allocations in Placement on the source compute node so no claim is
+        attempted on the destination compute node.
+        """
+        reportclient = report.SchedulerReportClient()
+        instance = fake_instance.fake_instance_obj(
+            nova_context.get_admin_context())
+        source_node = objects.ComputeNode(
+            uuid=uuids.source_node, host=instance.host)
+        dest_node = objects.ComputeNode(uuid=uuids.dest_node, host='dest-host')
+
+        @mock.patch.object(reportclient,
+                           'get_allocations_for_instance', return_value={})
+        @mock.patch.object(reportclient,
+                           'claim_resources',
+                           new_callable=mock.NonCallableMock)
+        def test(mock_claim, mock_get_allocs):
+            utils.claim_resources_on_destination(
+                reportclient, instance, source_node, dest_node)
+            mock_get_allocs.assert_called_once_with(
+                uuids.source_node, instance)
+
+        test()
+
+    def test_claim_resources_on_destination_claim_fails(self):
+        """Tests the negative scenario where the resource allocation claim
+        on the destination compute node fails, resulting in an error.
+        """
+        reportclient = report.SchedulerReportClient()
+        instance = fake_instance.fake_instance_obj(
+            nova_context.get_admin_context())
+        source_node = objects.ComputeNode(
+            uuid=uuids.source_node, host=instance.host)
+        dest_node = objects.ComputeNode(uuid=uuids.dest_node, host='dest-host')
+        source_res_allocs = {
+            'VCPU': instance.vcpus,
+            'MEMORY_MB': instance.memory_mb,
+            # This would really include ephemeral and swap too but we're lazy.
+            'DISK_GB': instance.root_gb
+        }
+        dest_alloc_request = {
+            'allocations': [
+                {
+                    'resource_provider': {
+                        'uuid': uuids.dest_node
+                    },
+                    'resources': source_res_allocs
+                }
+            ]
+        }
+
+        @mock.patch.object(reportclient,
+                           'get_allocations_for_instance',
+                           return_value=source_res_allocs)
+        @mock.patch.object(reportclient,
+                           'claim_resources', return_value=False)
+        def test(mock_claim, mock_get_allocs):
+            self.assertRaises(exception.NoValidHost,
+                              utils.claim_resources_on_destination,
+                              reportclient, instance, source_node, dest_node)
+            mock_get_allocs.assert_called_once_with(
+                uuids.source_node, instance)
+            mock_claim.assert_called_once_with(
+                instance.uuid, dest_alloc_request,
+                instance.project_id, instance.user_id)
+
+        test()
+
+    def test_claim_resources_on_destination(self):
+        """Happy path test where everything is successful."""
+        reportclient = report.SchedulerReportClient()
+        instance = fake_instance.fake_instance_obj(
+            nova_context.get_admin_context())
+        source_node = objects.ComputeNode(
+            uuid=uuids.source_node, host=instance.host)
+        dest_node = objects.ComputeNode(uuid=uuids.dest_node, host='dest-host')
+        source_res_allocs = {
+            'VCPU': instance.vcpus,
+            'MEMORY_MB': instance.memory_mb,
+            # This would really include ephemeral and swap too but we're lazy.
+            'DISK_GB': instance.root_gb
+        }
+        dest_alloc_request = {
+            'allocations': [
+                {
+                    'resource_provider': {
+                        'uuid': uuids.dest_node
+                    },
+                    'resources': source_res_allocs
+                }
+            ]
+        }
+
+        @mock.patch.object(reportclient,
+                           'get_allocations_for_instance',
+                           return_value=source_res_allocs)
+        @mock.patch.object(reportclient,
+                           'claim_resources', return_value=True)
+        def test(mock_claim, mock_get_allocs):
+            utils.claim_resources_on_destination(
+                reportclient, instance, source_node, dest_node)
+            mock_get_allocs.assert_called_once_with(
+                uuids.source_node, instance)
+            mock_claim.assert_called_once_with(
+                instance.uuid, dest_alloc_request,
+                instance.project_id, instance.user_id)
+
+        test()
