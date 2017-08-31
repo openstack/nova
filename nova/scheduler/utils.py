@@ -218,6 +218,87 @@ def resources_from_request_spec(spec_obj):
     return resources
 
 
+# TODO(mriedem): Remove this when select_destinations() in the scheduler takes
+# some sort of skip_filters flag.
+def claim_resources_on_destination(
+        reportclient, instance, source_node, dest_node):
+    """Copies allocations from source node to dest node in Placement
+
+    Normally the scheduler will allocate resources on a chosen destination
+    node during a move operation like evacuate and live migration. However,
+    because of the ability to force a host and bypass the scheduler, this
+    method can be used to manually copy allocations from the source node to
+    the forced destination node.
+
+    This is only appropriate when the instance flavor on the source node
+    is the same on the destination node, i.e. don't use this for resize.
+
+    :param reportclient: An instance of the SchedulerReportClient.
+    :param instance: The instance being moved.
+    :param source_node: source ComputeNode where the instance currently
+                        lives
+    :param dest_node: destination ComputeNode where the instance is being
+                      moved
+    :raises NoValidHost: If the allocation claim on the destination
+                         node fails.
+    """
+    # Get the current allocations for the source node and the instance.
+    source_node_allocations = reportclient.get_allocations_for_instance(
+        source_node.uuid, instance)
+    if source_node_allocations:
+        # Generate an allocation request for the destination node.
+        alloc_request = {
+            'allocations': [
+                {
+                    'resource_provider': {
+                        'uuid': dest_node.uuid
+                    },
+                    'resources': source_node_allocations
+                }
+            ]
+        }
+        # The claim_resources method will check for existing allocations
+        # for the instance and effectively "double up" the allocations for
+        # both the source and destination node. That's why when requesting
+        # allocations for resources on the destination node before we move,
+        # we use the existing resource allocations from the source node.
+        if reportclient.claim_resources(
+                instance.uuid, alloc_request,
+                instance.project_id, instance.user_id):
+            LOG.debug('Instance allocations successfully created on '
+                      'destination node %(dest)s: %(alloc_request)s',
+                      {'dest': dest_node.uuid,
+                       'alloc_request': alloc_request},
+                      instance=instance)
+        else:
+            # We have to fail even though the user requested that we force
+            # the host. This is because we need Placement to have an
+            # accurate reflection of what's allocated on all nodes so the
+            # scheduler can make accurate decisions about which nodes have
+            # capacity for building an instance. We also cannot rely on the
+            # resource tracker in the compute service automatically healing
+            # the allocations since that code is going away in Queens.
+            reason = (_('Unable to move instance %(instance_uuid)s to '
+                        'host %(host)s. There is not enough capacity on '
+                        'the host for the instance.') %
+                      {'instance_uuid': instance.uuid,
+                       'host': dest_node.host})
+            raise exception.NoValidHost(reason=reason)
+    else:
+        # This shouldn't happen, but it could be a case where there are
+        # older (Ocata) computes still so the existing allocations are
+        # getting overwritten by the update_available_resource periodic
+        # task in the compute service.
+        # TODO(mriedem): Make this an error when the auto-heal
+        # compatibility code in the resource tracker is removed.
+        LOG.warning('No instance allocations found for source node '
+                    '%(source)s in Placement. Not creating allocations '
+                    'for destination node %(dest)s and assuming the '
+                    'compute service will heal the allocations.',
+                    {'source': source_node.uuid, 'dest': dest_node.uuid},
+                    instance=instance)
+
+
 def set_vm_state_and_notify(context, instance_uuid, service, method, updates,
                             ex, request_spec):
     """changes VM state and notifies."""
