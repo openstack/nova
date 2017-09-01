@@ -138,6 +138,24 @@ ALLOCATION_SCHEMA_V1_12 = {
 }
 
 
+# POST to /allocations, added in microversion 1.13, uses the
+# POST_ALLOCATIONS_V1_13 schema to allow multiple allocations
+# from multiple consumers in one request. It is a dict, keyed by
+# consumer uuid, using the form of PUT allocations from microversion
+# 1.12. In POST the allocations can be empty, so DELETABLE_ALLOCATIONS
+# modifies ALLOCATION_SCHEMA_V1_12 accordingly.
+DELETABLE_ALLOCATIONS = copy.deepcopy(ALLOCATION_SCHEMA_V1_12)
+DELETABLE_ALLOCATIONS['properties']['allocations']['minProperties'] = 0
+POST_ALLOCATIONS_V1_13 = {
+    "type": "object",
+    "minProperties": 1,
+    "additionalProperties": False,
+    "patternProperties": {
+        "^[0-9a-fA-F-]{36}$": DELETABLE_ALLOCATIONS
+    }
+}
+
+
 def _allocations_dict(allocations, key_fetcher, resource_provider=None,
                       want_version=None):
     """Turn allocations into a dict of resources keyed by key_fetcher."""
@@ -277,7 +295,42 @@ def list_for_resource_provider(req):
     return req.response
 
 
-def _set_allocations(req, schema):
+def _new_allocations(context, resource_provider_uuid, consumer_uuid,
+                     resources, project_id, user_id):
+    """Create new allocation objects for a set of resources
+
+    Returns a list of Allocation objects.
+
+    :param context: The placement context.
+    :param resource_provider_uuid: The uuid of the resource provider that
+                                   has the resources.
+    :param consumer_uuid: The uuid of the consumer of the resources.
+    :param resources: A dict of resource classes and values.
+    :param project_id: The project consuming the resources.
+    :param user_id: The user consuming the resources.
+    """
+    allocations = []
+    try:
+        resource_provider = rp_obj.ResourceProvider.get_by_uuid(
+            context, resource_provider_uuid)
+    except exception.NotFound:
+        raise webob.exc.HTTPBadRequest(
+            _("Allocation for resource provider '%(rp_uuid)s' "
+              "that does not exist.") %
+            {'rp_uuid': resource_provider_uuid})
+    for resource_class in resources:
+        allocation = rp_obj.Allocation(
+            resource_provider=resource_provider,
+            consumer_id=consumer_uuid,
+            resource_class=resource_class,
+            project_id=project_id,
+            user_id=user_id,
+            used=resources[resource_class])
+        allocations.append(allocation)
+    return allocations
+
+
+def _set_allocations_for_consumer(req, schema):
     context = req.environ['placement.context']
     consumer_uuid = util.wsgi_path_item(req.environ, 'consumer_uuid')
     data = util.extract_json(req.body, schema)
@@ -299,25 +352,13 @@ def _set_allocations(req, schema):
     # that does not exist, raise a 400.
     allocation_objects = []
     for resource_provider_uuid, allocation in allocation_data.items():
-        try:
-            resource_provider = rp_obj.ResourceProvider.get_by_uuid(
-                context, resource_provider_uuid)
-        except exception.NotFound:
-            raise webob.exc.HTTPBadRequest(
-                _("Allocation for resource provider '%(rp_uuid)s' "
-                  "that does not exist.") %
-                {'rp_uuid': resource_provider_uuid})
-
-        resources = allocation['resources']
-        for resource_class in resources:
-            allocation = rp_obj.Allocation(
-                resource_provider=resource_provider,
-                consumer_id=consumer_uuid,
-                resource_class=resource_class,
-                project_id=data.get('project_id'),
-                user_id=data.get('user_id'),
-                used=resources[resource_class])
-            allocation_objects.append(allocation)
+        new_allocations = _new_allocations(context,
+                                           resource_provider_uuid,
+                                           consumer_uuid,
+                                           allocation['resources'],
+                                           data.get('project_id'),
+                                           data.get('user_id'))
+        allocation_objects.extend(new_allocations)
 
     allocations = rp_obj.AllocationList(
         context, objects=allocation_objects)
@@ -349,22 +390,84 @@ def _set_allocations(req, schema):
 @wsgi_wrapper.PlacementWsgify
 @microversion.version_handler('1.0', '1.7')
 @util.require_content('application/json')
-def set_allocations(req):
-    return _set_allocations(req, ALLOCATION_SCHEMA)
+def set_allocations_for_consumer(req):
+    return _set_allocations_for_consumer(req, ALLOCATION_SCHEMA)
 
 
 @wsgi_wrapper.PlacementWsgify  # noqa
 @microversion.version_handler('1.8', '1.11')
 @util.require_content('application/json')
-def set_allocations(req):
-    return _set_allocations(req, ALLOCATION_SCHEMA_V1_8)
+def set_allocations_for_consumer(req):
+    return _set_allocations_for_consumer(req, ALLOCATION_SCHEMA_V1_8)
 
 
 @wsgi_wrapper.PlacementWsgify  # noqa
 @microversion.version_handler('1.12')
 @util.require_content('application/json')
+def set_allocations_for_consumer(req):
+    return _set_allocations_for_consumer(req, ALLOCATION_SCHEMA_V1_12)
+
+
+@wsgi_wrapper.PlacementWsgify
+@microversion.version_handler('1.13')
+@util.require_content('application/json')
 def set_allocations(req):
-    return _set_allocations(req, ALLOCATION_SCHEMA_V1_12)
+    context = req.environ['placement.context']
+    data = util.extract_json(req.body, POST_ALLOCATIONS_V1_13)
+
+    # Create a sequence of allocation objects to be used in an
+    # AllocationList.create_all() call, which will mean all the changes
+    # happen within a single transaction and with resource provider
+    # generations check all in one go.
+    allocation_objects = []
+
+    for consumer_uuid in data:
+        project_id = data[consumer_uuid]['project_id']
+        user_id = data[consumer_uuid]['user_id']
+        allocations = data[consumer_uuid]['allocations']
+        if allocations:
+            for resource_provider_uuid in allocations:
+                resources = allocations[resource_provider_uuid]['resources']
+                new_allocations = _new_allocations(context,
+                                                   resource_provider_uuid,
+                                                   consumer_uuid,
+                                                   resources,
+                                                   project_id,
+                                                   user_id)
+                allocation_objects.extend(new_allocations)
+        else:
+            # The allocations are empty, which means wipe them out.
+            # Internal to the allocation object this is signalled by a
+            # used value of 0.
+            allocations = rp_obj.AllocationList.get_all_by_consumer_id(
+                context, consumer_uuid)
+            for allocation in allocations:
+                allocation.used = 0
+                allocation_objects.append(allocation)
+
+    allocations = rp_obj.AllocationList(
+        context, objects=allocation_objects)
+
+    try:
+        allocations.create_all()
+        LOG.debug("Successfully wrote allocations %s", allocations)
+    except exception.NotFound as exc:
+        raise webob.exc.HTTPBadRequest(
+            _("Unable to allocate inventory %(error)s") % {'error': exc})
+    except exception.InvalidInventory as exc:
+        # InvalidInventory is a parent for several exceptions that
+        # indicate either that Inventory is not present, or that
+        # capacity limits have been exceeded.
+        raise webob.exc.HTTPConflict(
+            _('Unable to allocate inventory: %(error)s') % {'error': exc})
+    except exception.ConcurrentUpdateDetected as exc:
+        raise webob.exc.HTTPConflict(
+            _('Inventory changed while attempting to allocate: %(error)s') %
+            {'error': exc})
+
+    req.response.status = 204
+    req.response.content_type = None
+    return req.response
 
 
 @wsgi_wrapper.PlacementWsgify

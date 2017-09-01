@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Microversion 1.13 of the Placement API gives the ability to set or clear
+    allocations for more than one consumer uuid with a request to
+    ``POST /allocations``.

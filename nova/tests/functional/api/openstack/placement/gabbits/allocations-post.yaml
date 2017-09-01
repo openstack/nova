@@ -1,0 +1,288 @@
+# Test that it possible to POST multiple allocations to /allocations to
+# simultaneously make changes, including removing resources for a consumer if
+# the allocations are empty.
+
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        accept: application/json
+        content-type: application/json
+        openstack-api-version: placement 1.13
+
+tests:
+
+- name: create compute one
+  POST: /resource_providers
+  data:
+      name: compute01
+  status: 201
+
+- name: rp compute01
+  desc: provide a reference for later reuse
+  GET: $LOCATION
+
+- name: create compute two
+  POST: /resource_providers
+  data:
+      name: compute02
+  status: 201
+
+- name: rp compute02
+  desc: provide a reference for later reuse
+  GET: $LOCATION
+
+- name: create shared disk
+  POST: /resource_providers
+  data:
+      name: storage01
+  status: 201
+
+- name: rp storage01
+  desc: provide a reference for later reuse
+  GET: $LOCATION
+
+- name: inventory compute01
+  PUT: $HISTORY['rp compute01'].$RESPONSE['links[?rel = "inventories"].href']
+  data:
+      resource_provider_generation: 0
+      inventories:
+          VCPU:
+              total: 16
+          MEMORY_MB:
+              total: 2048
+
+- name: inventory compute02
+  PUT: $HISTORY['rp compute02'].$RESPONSE['links[?rel = "inventories"].href']
+  data:
+      resource_provider_generation: 0
+      inventories:
+          VCPU:
+              total: 16
+          MEMORY_MB:
+              total: 2048
+
+- name: inventory storage01
+  PUT: $HISTORY['rp storage01'].$RESPONSE['links[?rel = "inventories"].href']
+  data:
+      resource_provider_generation: 0
+      inventories:
+          DISK_GB:
+              total: 4096
+
+- name: confirm only POST
+  GET: /allocations
+  status: 405
+  response_headers:
+      allow: POST
+
+- name: 404 on older 1.12 microversion post
+  POST: /allocations
+  request_headers:
+      openstack-api-version: placement 1.12
+  status: 404
+
+- name: post allocations two consumers
+  POST: /allocations
+  data:
+      $ENVIRON['INSTANCE_UUID']:
+          allocations:
+              $HISTORY['rp compute02'].$RESPONSE['uuid']:
+                  resources:
+                      MEMORY_MB: 1024
+                      VCPU: 2
+              $HISTORY['rp storage01'].$RESPONSE['uuid']:
+                  resources:
+                      DISK_GB: 5
+          project_id: $ENVIRON['PROJECT_ID']
+          user_id: $ENVIRON['USER_ID']
+      $ENVIRON['MIGRATION_UUID']:
+          allocations:
+              $HISTORY['rp compute01'].$RESPONSE['uuid']:
+                  resources:
+                      MEMORY_MB: 1024
+                      VCPU: 2
+          project_id: $ENVIRON['PROJECT_ID']
+          user_id: $ENVIRON['USER_ID']
+  status: 204
+
+- name: confirm usages
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']
+  response_json_paths:
+      $.usages.DISK_GB: 5
+      $.usages.VCPU: 4
+      $.usages.MEMORY_MB: 2048
+
+- name: clear and set allocations
+  POST: /allocations
+  data:
+      $ENVIRON['INSTANCE_UUID']:
+          allocations:
+              $HISTORY['rp compute02'].$RESPONSE['uuid']:
+                  resources:
+                      MEMORY_MB: 1024
+                      VCPU: 2
+              $HISTORY['rp storage01'].$RESPONSE['uuid']:
+                  resources:
+                      DISK_GB: 5
+          project_id: $ENVIRON['PROJECT_ID']
+          user_id: $ENVIRON['USER_ID']
+      $ENVIRON['MIGRATION_UUID']:
+          allocations: {}
+          project_id: $ENVIRON['PROJECT_ID']
+          user_id: $ENVIRON['USER_ID']
+  status: 204
+
+- name: confirm usages after clear
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']
+  response_json_paths:
+      $.usages.DISK_GB: 5
+      $.usages.VCPU: 2
+      $.usages.MEMORY_MB: 1024
+
+- name: post allocations two users
+  POST: /allocations
+  data:
+      $ENVIRON['INSTANCE_UUID']:
+          allocations:
+              $HISTORY['rp compute02'].$RESPONSE['uuid']:
+                  resources:
+                      MEMORY_MB: 1024
+                      VCPU: 2
+              $HISTORY['rp storage01'].$RESPONSE['uuid']:
+                  resources:
+                      DISK_GB: 5
+          project_id: $ENVIRON['PROJECT_ID']
+          user_id: $ENVIRON['USER_ID']
+      # We must use a fresh consumer id with the alternate project id info.
+      # A previously seen consumer id will be assumed to always have the same
+      # project and user.
+      $ENVIRON['CONSUMER_UUID']:
+          allocations:
+              $HISTORY['rp compute01'].$RESPONSE['uuid']:
+                  resources:
+                      MEMORY_MB: 1024
+                      VCPU: 2
+          project_id: $ENVIRON['PROJECT_ID_ALT']
+          user_id: $ENVIRON['USER_ID_ALT']
+  status: 204
+
+- name: confirm usages user a
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']
+  response_json_paths:
+      $.usages.`len`: 3
+      $.usages.DISK_GB: 5
+      $.usages.VCPU: 2
+      $.usages.MEMORY_MB: 1024
+
+- name: confirm usages user b
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID_ALT']
+  response_json_paths:
+      $.usages.`len`: 2
+      $.usages.VCPU: 2
+      $.usages.MEMORY_MB: 1024
+
+- name: fail allocations over capacity
+  POST: /allocations
+  data:
+      $ENVIRON['INSTANCE_UUID']:
+          allocations:
+              $HISTORY['rp compute02'].$RESPONSE['uuid']:
+                  resources:
+                      MEMORY_MB: 1024
+                      VCPU: 2
+              $HISTORY['rp storage01'].$RESPONSE['uuid']:
+                  resources:
+                      DISK_GB: 5
+          project_id: $ENVIRON['PROJECT_ID']
+          user_id: $ENVIRON['USER_ID']
+      $ENVIRON['CONSUMER_UUID']:
+          allocations:
+              $HISTORY['rp compute01'].$RESPONSE['uuid']:
+                  resources:
+                      MEMORY_MB: 2049
+                      VCPU: 2
+          project_id: $ENVIRON['PROJECT_ID_ALT']
+          user_id: $ENVIRON['USER_ID_ALT']
+  status: 409
+  response_strings:
+      - The requested amount would exceed the capacity
+
+- name: fail allocations deep schema violate
+  desc: no schema yet
+  POST: /allocations
+  data:
+      $ENVIRON['INSTANCE_UUID']:
+          allocations:
+              $HISTORY['rp compute02'].$RESPONSE['uuid']:
+                  cow: moo
+          project_id: $ENVIRON['PROJECT_ID']
+          user_id: $ENVIRON['USER_ID']
+  status: 400
+
+- name: fail allocations shallow schema violate
+  desc: no schema yet
+  POST: /allocations
+  data:
+      $ENVIRON['INSTANCE_UUID']:
+          cow: moo
+  status: 400
+
+- name: fail resource provider not exist
+  POST: /allocations
+  data:
+      $ENVIRON['INSTANCE_UUID']:
+          allocations:
+              # this rp does not exist
+              'c42def7b-498b-4442-9502-c7970b14bea4':
+                  resources:
+                      MEMORY_MB: 1024
+                      VCPU: 2
+              $HISTORY['rp storage01'].$RESPONSE['uuid']:
+                  resources:
+                      DISK_GB: 5
+          project_id: $ENVIRON['PROJECT_ID']
+          user_id: $ENVIRON['USER_ID']
+  status: 400
+  response_strings:
+      - that does not exist
+
+- name: fail resource class not in inventory
+  POST: /allocations
+  data:
+      $ENVIRON['INSTANCE_UUID']:
+          allocations:
+              $HISTORY['rp compute02'].$RESPONSE['uuid']:
+                  resources:
+                      MEMORY_MB: 1024
+                      VCPU: 2
+                      PCI_DEVICE: 1
+              $HISTORY['rp storage01'].$RESPONSE['uuid']:
+                  resources:
+                      DISK_GB: 5
+          project_id: $ENVIRON['PROJECT_ID']
+          user_id: $ENVIRON['USER_ID']
+  status: 409
+  response_strings:
+      - "Inventory for 'PCI_DEVICE' on"
+
+- name: fail resource class not exist
+  POST: /allocations
+  data:
+      $ENVIRON['INSTANCE_UUID']:
+          allocations:
+              $HISTORY['rp compute02'].$RESPONSE['uuid']:
+                  resources:
+                      MEMORY_MB: 1024
+                      VCPU: 2
+                      CUSTOM_PONY: 1
+              $HISTORY['rp storage01'].$RESPONSE['uuid']:
+                  resources:
+                      DISK_GB: 5
+          project_id: $ENVIRON['PROJECT_ID']
+          user_id: $ENVIRON['USER_ID']
+  status: 400
+  response_strings:
+      - No such resource class CUSTOM_PONY

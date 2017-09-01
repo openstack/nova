@@ -100,9 +100,12 @@ ROUTE_DECLARATIONS = {
     '/resource_providers/{uuid}/allocations': {
         'GET': allocation.list_for_resource_provider,
     },
+    '/allocations': {
+        'POST': allocation.set_allocations,
+    },
     '/allocations/{consumer_uuid}': {
         'GET': allocation.list_for_consumer,
-        'PUT': allocation.set_allocations,
+        'PUT': allocation.set_allocations_for_consumer,
         'DELETE': allocation.delete_allocations,
     },
     '/allocation_candidates': {
