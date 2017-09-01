@@ -628,14 +628,19 @@ class ComputeManager(manager.Manager):
         """Destroys evacuated instances.
 
         While nova-compute was down, the instances running on it could be
-        evacuated to another host. Check that the instances reported
-        by the driver are still associated with this host.  If they are
-        not, destroy them, with the exception of instances which are in
-        the MIGRATING, RESIZE_MIGRATING, RESIZE_MIGRATED, RESIZE_FINISH
-        task state or RESIZED vm state.
+        evacuated to another host. This method looks for evacuation migration
+        records where this is the source host and which were either started
+        (accepted) or complete (done). From those migration records, local
+        instances reported by the hypervisor are compared to the instances
+        for the migration records and those local guests are destroyed, along
+        with instance allocation records in Placement for this node.
         """
         filters = {
             'source_compute': self.host,
+            # NOTE(mriedem): Migration records that have been accepted are
+            # included in case the source node comes back up while instances
+            # are being evacuated to another host. We don't want the same
+            # instance being reported from multiple hosts.
             'status': ['accepted', 'done'],
             'migration_type': 'evacuation',
         }
