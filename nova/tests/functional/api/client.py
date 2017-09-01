@@ -427,3 +427,12 @@ class TestOpenStackClient(object):
         """
         return self.api_put('/servers/%s/tags' % server_id,
                             {'tags': tags}).body['tags']
+
+    def get_migrations(self):
+        return self.api_get('os-migrations').body['migrations']
+
+    def forced_down_service(self, binary, host, force_down=True):
+        return self.api_put('os-services/force-down',
+                            {"host": host,
+                             "binary": binary,
+                             "forced_down": force_down}).body['service']
