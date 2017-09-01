@@ -95,6 +95,11 @@ resources will help you get started with consuming the API directly.
   parts to understand is the Block Device Mapping parameters used to connect
   specific block devices to computes. This deserves its own deep dive.
 
+Nova can be configured to emit notifications over RPC.
+
+* :ref:`Versioned Notifications <versioned_notification_samples>`: This
+  provides the list of existing versioned notifications with sample payloads.
+
 For Operators
 =============
 

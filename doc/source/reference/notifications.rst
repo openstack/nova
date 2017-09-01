@@ -311,6 +311,9 @@ requires the notification.
 Existing versioned notifications
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. This is a reference anchor used in the main index page.
+.. _versioned_notification_samples:
+
 .. versioned_notifications::
 
 
