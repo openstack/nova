@@ -34,6 +34,10 @@ class VersionedNotificationDirective(Directive):
 
     SAMPLE_ROOT = 'doc/notification_samples/'
     TOGGLE_SCRIPT = """
+<!-- jQuery -->
+<script type="text/javascript" src="../_static/js/jquery-3.2.1.min.js">
+</script>
+
 <script>
 jQuery(document).ready(function(){
     jQuery('#%s-div').toggle('show');
