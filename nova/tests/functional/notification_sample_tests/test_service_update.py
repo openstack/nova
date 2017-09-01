@@ -15,6 +15,7 @@
 from oslo_utils import fixture as utils_fixture
 
 from nova import exception
+from nova.objects import service
 from nova.tests import fixtures
 from nova.tests.functional.notification_sample_tests \
     import notification_sample_base
@@ -27,6 +28,16 @@ class TestServiceUpdateNotificationSamplev2_52(
     # These tests have to be capped at 2.52 since the PUT format changes in
     # the 2.53 microversion.
     MAX_MICROVERSION = '2.52'
+
+    def _verify_notification(self, sample_file_name, replacements=None,
+                             actual=None):
+        # This just extends the generic _verify_notification to default the
+        # service version to the current service version to avoid sample update
+        # after every service version bump.
+        if 'version' not in replacements:
+            replacements['version'] = service.SERVICE_VERSION
+        base = super(TestServiceUpdateNotificationSamplev2_52, self)
+        base._verify_notification(sample_file_name, replacements, actual)
 
     def setUp(self):
         super(TestServiceUpdateNotificationSamplev2_52, self).setUp()
