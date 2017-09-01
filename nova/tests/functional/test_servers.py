@@ -1800,20 +1800,13 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
 
         dest_usages = self._get_provider_usages(dest_rp_uuid)
-        # FIXME(mriedem): This is bug 1713786 where the claim fails and the
-        # dest node allocation isn't cleaned up. Uncomment when fixed.
-        # self.assertFlavorMatchesAllocation(
-        #     {'vcpus': 0, 'ram': 0, 'disk': 0}, dest_usages)
-        self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+        self.assertFlavorMatchesAllocation(
+            {'vcpus': 0, 'ram': 0, 'disk': 0}, dest_usages)
 
         allocations = self._get_allocations_by_server_uuid(server['id'])
-        # FIXME(mriedem): Uncomment when bug 1713786 is fixed.
-        # self.assertEqual(1, len(allocations))
-        self.assertEqual(2, len(allocations))
+        self.assertEqual(1, len(allocations))
         source_allocation = allocations[source_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
-        dest_allocation = allocations[dest_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
 
         # start up the source compute
         self.compute1.start()
@@ -1829,13 +1822,9 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
 
         allocations = self._get_allocations_by_server_uuid(server['id'])
-        # FIXME(mriedem): Uncomment when bug 1713786 is fixed.
-        # self.assertEqual(1, len(allocations))
-        self.assertEqual(2, len(allocations))
+        self.assertEqual(1, len(allocations))
         source_allocation = allocations[source_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
-        dest_allocation = allocations[dest_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
 
     def test_evacuate_rebuild_on_dest_fails(self):
         """Tests that the allocations on the destination node are cleaned up
