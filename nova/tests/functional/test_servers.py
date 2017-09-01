@@ -1829,6 +1829,78 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         dest_allocation = allocations[dest_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
 
+    def test_evacuate_rebuild_on_dest_fails(self):
+        """Tests that the allocations on the destination node are cleaned up
+        by the drop_move_claim in the ResourceTracker automatically when
+        the claim is made but the actual rebuild via the driver fails.
+        """
+        source_hostname = self.compute1.host
+        dest_hostname = self.compute2.host
+        dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        server = self._boot_and_check_allocations(
+            self.flavor1, source_hostname)
+
+        source_compute_id = self.admin_api.get_services(
+            host=source_hostname, binary='nova-compute')[0]['id']
+
+        self.compute1.stop()
+        # force it down to avoid waiting for the service group to time out
+        self.admin_api.put_service(
+            source_compute_id, {'forced_down': 'true'})
+
+        def fake_rebuild(*args, **kwargs):
+            # Assert the destination node allocation exists.
+            dest_usages = self._get_provider_usages(dest_rp_uuid)
+            self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+            raise test.TestingException('test_evacuate_rebuild_on_dest_fails')
+
+        with mock.patch.object(
+                self.compute2.driver, 'rebuild', fake_rebuild):
+            # evacuate the server
+            self.api.post_server_action(server['id'], {'evacuate': {}})
+            # the migration will fail on the dest node and the instance will
+            # go into error state
+            server = self._wait_for_state_change(self.api, server, 'ERROR')
+
+        # Run the periodics to show those don't modify allocations.
+        self._run_periodics()
+
+        # The allocation should still exist on the source node since it's
+        # still down, and the allocation on the destination node should be
+        # cleaned up.
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+        self.assertFlavorMatchesAllocation(
+            {'vcpus': 0, 'ram': 0, 'disk': 0}, dest_usages)
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations))
+        source_allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
+
+        # start up the source compute
+        self.compute1.start()
+        self.admin_api.put_service(
+            source_compute_id, {'forced_down': 'false'})
+
+        # Run the periodics again to show they don't change anything.
+        self._run_periodics()
+
+        # The source compute shouldn't have cleaned up the allocation for
+        # itself since the instance didn't move.
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations))
+        source_allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
+
     def _boot_then_shelve_and_check_allocations(self, hostname, rp_uuid):
         # avoid automatic shelve offloading
         self.flags(shelved_offload_time=-1)
