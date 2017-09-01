@@ -1210,14 +1210,16 @@ class ResourceTracker(object):
                           "host that might need to be removed: %s.",
                           instance_uuid, instance.host, instance.node, alloc)
 
-    def delete_allocation_for_evacuated_instance(self, instance, node):
-        self._delete_allocation_for_moved_instance(instance, node, 'evacuated')
+    def delete_allocation_for_evacuated_instance(self, instance, node,
+                                                 node_type='source'):
+        self._delete_allocation_for_moved_instance(
+            instance, node, 'evacuated', node_type)
 
     def delete_allocation_for_migrated_instance(self, instance, node):
         self._delete_allocation_for_moved_instance(instance, node, 'migrated')
 
     def _delete_allocation_for_moved_instance(
-            self, instance, node, move_type):
+            self, instance, node, move_type, node_type='source'):
         # Clean up the instance allocation from this node in placement
         my_resources = scheduler_utils.resources_from_flavor(
             instance, instance.flavor)
@@ -1229,8 +1231,8 @@ class ResourceTracker(object):
             instance.project_id, my_resources)
         if not res:
             LOG.error("Failed to clean allocation of %s "
-                      "instance on the source node  %s",
-                      move_type, cn_uuid, instance=instance)
+                      "instance on the %s node %s",
+                      move_type, node_type, cn_uuid, instance=instance)
 
     def delete_allocation_for_failed_resize(self, instance, node, flavor):
         """Delete instance allocations for the node during a failed resize

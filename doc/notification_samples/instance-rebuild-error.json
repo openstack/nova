@@ -82,9 +82,9 @@
                 "nova_object.name": "ExceptionPayload",
                 "nova_object.data": {
                     "module_name": "nova.tests.functional.notification_sample_tests.test_instance",
-                    "exception_message": "Insufficient compute resources: fake-resource.",
-                    "function_name": "_compute_resources_unavailable",
-                    "exception": "ComputeResourcesUnavailable"
+                    "exception_message": "Virtual Interface creation failed",
+                    "function_name": "_virtual_interface_create_failed",
+                    "exception": "VirtualInterfaceCreateException"
                 },
                 "nova_object.version": "1.0",
                 "nova_object.namespace": "nova"
