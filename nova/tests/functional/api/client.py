@@ -443,3 +443,6 @@ class TestOpenStackClient(object):
     def get_active_migrations(self, server_id):
         return self.api_get('/servers/%s/migrations' %
                             server_id).body['migrations']
+
+    def get_migrations(self):
+        return self.api_get('os-migrations').body['migrations']
