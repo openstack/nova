@@ -38,14 +38,13 @@ class PciDevTracker(object):
 
     It's called by compute node resource tracker to allocate and free
     devices to/from instances, and to update the available pci passthrough
-    devices information from hypervisor periodically.
+    device information from the hypervisor periodically.
 
-    `pci_devs` attribute of this class is the in-memory "master copy" of all
-    devices on each compute host, and all data changes that happen when
-    claiming/allocating/freeing
-    devices HAVE TO be made against instances contained in `pci_devs` list,
-    because they are periodically flushed to the DB when the save()
-    method is called.
+    The `pci_devs` attribute of this class is the in-memory "master copy" of
+    all devices on each compute host, and all data changes that happen when
+    claiming/allocating/freeing devices HAVE TO be made against instances
+    contained in `pci_devs` list, because they are periodically flushed to the
+    DB when the save() method is called.
 
     It is unsafe to fetch PciDevice objects elsewhere in the code for update
     purposes as those changes will end up being overwritten when the `pci_devs`

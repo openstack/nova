@@ -196,7 +196,7 @@ class Claim(NopClaim):
         if pci_requests.requests:
             stats = self.tracker.pci_tracker.stats
             if not stats.support_requests(pci_requests.requests):
-                return _('Claim pci failed.')
+                return _('Claim pci failed')
 
     def _test_numa_topology(self, resources, limit):
         host_topology = (resources.numa_topology
@@ -219,12 +219,12 @@ class Claim(NopClaim):
 
             if requested_topology and not instance_topology:
                 if pci_requests.requests:
-                    return (_("Requested instance NUMA topology together with"
-                              " requested PCI devices cannot fit the given"
-                              " host NUMA topology"))
+                    return (_("Requested instance NUMA topology together with "
+                              "requested PCI devices cannot fit the given "
+                              "host NUMA topology"))
                 else:
                     return (_("Requested instance NUMA topology cannot fit "
-                          "the given host NUMA topology"))
+                              "the given host NUMA topology"))
             elif instance_topology:
                 self.claimed_numa_topology = instance_topology
 

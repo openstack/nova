@@ -303,9 +303,9 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
                     parent.status = fields.PciDeviceStatus.UNCLAIMABLE
             else:
                 LOG.debug('Physical function addr: %(pf_addr)s parent of '
-                            'VF addr: %(vf_addr)s was not found',
-                            {'pf_addr': self.parent_addr,
-                                'vf_addr': self.address})
+                          'VF addr: %(vf_addr)s was not found',
+                          {'pf_addr': self.parent_addr,
+                           'vf_addr': self.address})
 
         self.status = fields.PciDeviceStatus.CLAIMED
         self.instance_uuid = instance_uuid

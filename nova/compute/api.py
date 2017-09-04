@@ -1180,7 +1180,7 @@ class API(base.Base):
                 block_device_mapping=block_device_mapping,
                 tags=tags)
 
-        return (instances, reservation_id)
+        return instances, reservation_id
 
     @staticmethod
     def _cleanup_build_artifacts(instances, instances_to_build):

@@ -156,12 +156,12 @@ class PciDeviceStats(object):
             # Failed to allocate the required number of devices
             # Return the devices already allocated back to their pools
             if sum([pool['count'] for pool in pools]) < count:
-                LOG.error("Failed to allocate PCI devices for instance."
-                          " Unassigning devices back to pools."
-                          " This should not happen, since the scheduler"
-                          " should have accurate information, and allocation"
-                          " during claims is controlled via a hold"
-                          " on the compute node semaphore")
+                LOG.error("Failed to allocate PCI devices for instance. "
+                          "Unassigning devices back to pools. "
+                          "This should not happen, since the scheduler "
+                          "should have accurate information, and allocation "
+                          "during claims is controlled via a hold "
+                          "on the compute node semaphore.")
                 for d in range(len(alloc_devices)):
                     self.add_device(alloc_devices.pop())
                 return None
@@ -223,7 +223,7 @@ class PciDeviceStats(object):
 
     def _filter_non_requested_pfs(self, request, matching_pools):
         # Remove SRIOV_PFs from pools, unless it has been explicitly requested
-        # This is especially needed in cases where PFs and VFs has the same
+        # This is especially needed in cases where PFs and VFs have the same
         # product_id.
         if all(spec.get('dev_type') != fields.PciDeviceType.SRIOV_PF for
                spec in request.spec):

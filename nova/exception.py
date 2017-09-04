@@ -1713,7 +1713,7 @@ class PciRequestAliasNotDefined(NovaException):
 
 
 class PciConfigInvalidWhitelist(Invalid):
-    msg_fmt = _("Invalid PCI devices Whitelist config %(reason)s")
+    msg_fmt = _("Invalid PCI devices Whitelist config: %(reason)s")
 
 
 # Cannot be templated, msg needs to be constructed when raised.

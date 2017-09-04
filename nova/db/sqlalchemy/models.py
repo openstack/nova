@@ -1453,10 +1453,10 @@ class PciDevice(BASE, NovaBase, models.SoftDeleteMixin):
 
     parent_addr = Column(String(12), nullable=True)
     instance = orm.relationship(Instance, backref="pci_devices",
-                            foreign_keys=instance_uuid,
-                            primaryjoin='and_('
-                            'PciDevice.instance_uuid == Instance.uuid,'
-                            'PciDevice.deleted == 0)')
+                                foreign_keys=instance_uuid,
+                                primaryjoin='and_('
+                                'PciDevice.instance_uuid == Instance.uuid,'
+                                'PciDevice.deleted == 0)')
 
 
 class Tag(BASE, models.ModelBase):

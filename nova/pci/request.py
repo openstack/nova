@@ -17,24 +17,24 @@
 
         | [pci]
         | alias = '{
-        |   "name": "QuicAssist",
+        |   "name": "QuickAssist",
         |   "product_id": "0443",
         |   "vendor_id": "8086",
         |   "device_type": "type-PCI",
         |   }'
 
-    Aliases with the same name and the same device_type are OR operation::
+    Aliases with the same name and the same device_type are ORed::
 
         | [pci]
         | alias = '{
-        |   "name": "QuicAssist",
+        |   "name": "QuickAssist",
         |   "product_id": "0442",
         |   "vendor_id": "8086",
         |   "device_type": "type-PCI",
         |   }'
 
-    These 2 aliases define a device request meaning: vendor_id is "8086" and
-    product id is "0442" or "0443".
+    These two aliases define a device request meaning: vendor_id is "8086" and
+    product_id is "0442" or "0443".
 
     """
 
@@ -156,11 +156,11 @@ def get_pci_requests_from_flavor(flavor):
     'alias_name_x:count, alias_name_y:count, ... '. The alias_name is
     defined in 'pci.alias' configurations.
 
-    The flavor's requirement is translated into pci requests list,
-    each entry in the list is a dictionary. The dictionary has
-    three keys. The 'specs' gives the pci device properties
-    requirement, the 'count' gives the number of devices, and the
-    optional 'alias_name' is the corresponding alias definition name.
+    The flavor's requirement is translated into a pci requests list.
+    Each entry in the list is a dict-ish object with three keys/attributes.
+    The 'specs' gives the pci device properties requirement, the 'count' gives
+    the number of devices, and the optional 'alias_name' is the corresponding
+    alias definition name.
 
     Example:
     Assume alias configuration is::

@@ -72,12 +72,26 @@ def parse_address(address):
 
 
 def get_pci_address_fields(pci_addr):
+    """Parse a fully-specified PCI device address.
+
+    Does not validate that the components are valid hex or wildcard values.
+
+    :param pci_addr: A string of the form "<domain>:<bus>:<slot>.<function>".
+    :return: A 4-tuple of strings ("<domain>", "<bus>", "<slot>", "<function>")
+    """
     dbs, sep, func = pci_addr.partition('.')
     domain, bus, slot = dbs.split(':')
-    return (domain, bus, slot, func)
+    return domain, bus, slot, func
 
 
 def get_pci_address(domain, bus, slot, func):
+    """Assembles PCI address components into a fully-specified PCI address.
+
+    Does not validate that the components are valid hex or wildcard values.
+
+    :param domain, bus, slot, func: Hex or wildcard strings.
+    :return: A string of the form "<domain>:<bus>:<slot>.<function>".
+    """
     return '%s:%s:%s.%s' % (domain, bus, slot, func)
 
 
@@ -103,7 +117,6 @@ def is_physical_function(domain, bus, slot, function):
     dev_path = "/sys/bus/pci/devices/%(d)s:%(b)s:%(s)s.%(f)s/" % {
         "d": domain, "b": bus, "s": slot, "f": function}
     if os.path.isdir(dev_path):
-        sriov_totalvfs = 0
         try:
             with open(dev_path + _SRIOV_TOTALVFS) as fd:
                 sriov_totalvfs = int(fd.read())
@@ -119,12 +132,12 @@ def _get_sysfs_netdev_path(pci_addr, pf_interface):
     Assumes a networking device - will not check for the existence of the path.
     """
     if pf_interface:
-        return "/sys/bus/pci/devices/%s/physfn/net" % (pci_addr)
-    return "/sys/bus/pci/devices/%s/net" % (pci_addr)
+        return "/sys/bus/pci/devices/%s/physfn/net" % pci_addr
+    return "/sys/bus/pci/devices/%s/net" % pci_addr
 
 
 def get_ifname_by_pci_address(pci_addr, pf_interface=False):
-    """Get the interface name based on a VF's pci address
+    """Get the interface name based on a VF's pci address.
 
     The returned interface name is either the parent PF's or that of the VF
     itself based on the argument of pf_interface.
@@ -138,7 +151,7 @@ def get_ifname_by_pci_address(pci_addr, pf_interface=False):
 
 
 def get_mac_by_pci_address(pci_addr, pf_interface=False):
-    """Get the MAC address of the nic based on it's PCI address
+    """Get the MAC address of the nic based on its PCI address.
 
     Raises PciDeviceNotFoundById in case the pci device is not a NIC
     """

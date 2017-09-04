@@ -193,7 +193,7 @@ class ResourceTracker(object):
         overhead = self.driver.estimate_instance_overhead(instance)
         LOG.debug("Memory overhead for %(flavor)d MB instance; %(overhead)d "
                   "MB", {'flavor': instance.flavor.memory_mb,
-                          'overhead': overhead['memory_mb']})
+                         'overhead': overhead['memory_mb']})
         LOG.debug("Disk overhead for %(flavor)d GB instance; %(overhead)d "
                   "GB", {'flavor': instance.flavor.root_gb,
                          'overhead': overhead.get('disk_gb', 0)})
