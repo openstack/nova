@@ -83,27 +83,6 @@ class HostTestCase(test.NoDBTestCase):
         self.host.get_connection()
         self.assertTrue(self.close_callback)
 
-    @mock.patch.object(fakelibvirt.virConnect, "registerCloseCallback")
-    def test_close_callback_bad_signature(self, mock_close):
-        '''Validates that a connection to libvirt exist,
-           even when registerCloseCallback method has a different
-           number of arguments in the libvirt python library.
-        '''
-        mock_close.side_effect = TypeError('dd')
-        connection = self.host.get_connection()
-        self.assertTrue(connection)
-
-    @mock.patch.object(fakelibvirt.virConnect, "registerCloseCallback")
-    def test_close_callback_not_defined(self, mock_close):
-        '''Validates that a connection to libvirt exist,
-           even when registerCloseCallback method missing from
-           the libvirt python library.
-        '''
-        mock_close.side_effect = AttributeError('dd')
-
-        connection = self.host.get_connection()
-        self.assertTrue(connection)
-
     @mock.patch.object(fakelibvirt.virConnect, "getLibVersion")
     def test_broken_connection(self, mock_ver):
         for (error, domain) in (

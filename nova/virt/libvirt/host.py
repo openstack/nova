@@ -381,15 +381,6 @@ class Host(object):
         try:
             LOG.debug("Registering for connection events: %s", str(self))
             wrapped_conn.registerCloseCallback(self._close_callback, None)
-        except (TypeError, AttributeError) as e:
-            # NOTE: The registerCloseCallback of python-libvirt 1.0.1+
-            # is defined with 3 arguments, and the above registerClose-
-            # Callback succeeds. However, the one of python-libvirt 1.0.0
-            # is defined with 4 arguments and TypeError happens here.
-            # Then python-libvirt 0.9 does not define a method register-
-            # CloseCallback.
-            LOG.debug("The version of python-libvirt does not support "
-                      "registerCloseCallback or is too old: %s", e)
         except libvirt.libvirtError as e:
             LOG.warning("URI %(uri)s does not support connection"
                         " events: %(error)s",
