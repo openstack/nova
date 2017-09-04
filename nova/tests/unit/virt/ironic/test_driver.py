@@ -2659,7 +2659,9 @@ class HashRingTestCase(test.NoDBTestCase):
 
     @mock.patch.object(ironic_driver.IronicDriver, '_refresh_hash_ring')
     def test_hash_ring_refreshed_on_init(self, mock_hr):
-        ironic_driver.IronicDriver(None)
+        d = ironic_driver.IronicDriver(None)
+        self.assertFalse(mock_hr.called)
+        d.init_host('foo')
         mock_hr.assert_called_once_with(mock.ANY)
 
     @mock.patch.object(hash_ring, 'HashRing')
@@ -2718,6 +2720,7 @@ class NodeCacheTestCase(test.NoDBTestCase):
         super(NodeCacheTestCase, self).setUp()
 
         self.driver = ironic_driver.IronicDriver(None)
+        self.driver.init_host('foo')
         self.driver.virtapi = fake.FakeVirtAPI()
         self.ctx = nova_context.get_admin_context()
 

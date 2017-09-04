@@ -152,7 +152,6 @@ class IronicDriver(virt_driver.ComputeDriver):
         self.node_cache = {}
         self.node_cache_time = 0
         self.servicegroup_api = servicegroup.API()
-        self._refresh_hash_ring(nova_context.get_admin_context())
 
         self.ironicclient = client_wrapper.IronicClientWrapper()
 
@@ -512,7 +511,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param host: the hostname of the compute host.
 
         """
-        return
+        self._refresh_hash_ring(nova_context.get_admin_context())
 
     def _pike_flavor_migration(self, node_uuids):
         """This code is needed in Pike to prevent problems where an operator
