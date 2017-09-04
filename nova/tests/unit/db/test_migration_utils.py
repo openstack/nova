@@ -13,11 +13,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import uuid
-
 from oslo_db.sqlalchemy.compat import utils as compat_utils
 from oslo_db.sqlalchemy import test_base
 from oslo_db.sqlalchemy import utils as oslodbutils
+from oslo_utils import uuidutils
 from sqlalchemy import Integer, String
 from sqlalchemy import MetaData, Table, Column
 from sqlalchemy.exc import NoSuchTableError
@@ -61,7 +60,7 @@ class TestMigrationUtilsSQLite(test_base.DbTestCase):
         table_name = "__test_deletefromselect_table__"
         uuidstrs = []
         for unused in range(10):
-            uuidstrs.append(uuid.uuid4().hex)
+            uuidstrs.append(uuidutils.generate_uuid(dashed=False))
 
         conn = self.engine.connect()
         test_table = Table(table_name, self.meta,

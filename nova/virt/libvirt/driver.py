@@ -57,6 +57,7 @@ from oslo_utils import importutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import units
+from oslo_utils import uuidutils
 import six
 from six.moves import range
 
@@ -1634,7 +1635,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                                   image_format,
                                                   snapshot['name'])
 
-        snapshot_name = uuid.uuid4().hex
+        snapshot_name = uuidutils.generate_uuid(dashed=False)
 
         state = guest.get_power_state(self._host)
 
@@ -7389,7 +7390,7 @@ class LibvirtDriver(driver.ComputeDriver):
             return True
         shared_storage = (dest == self.get_host_ip_addr())
         if not shared_storage:
-            tmp_file = uuid.uuid4().hex + '.tmp'
+            tmp_file = uuidutils.generate_uuid(dashed=False) + '.tmp'
             tmp_path = os.path.join(inst_base, tmp_file)
 
             try:
