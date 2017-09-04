@@ -1248,16 +1248,18 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
         allocation1 = rp_obj.Allocation(resource_provider=rp,
                                         consumer_id=consumer_uuid,
                                         resource_class=rp_class,
+                                        project_id=self.ctx.project_id,
+                                        user_id=self.ctx.user_id,
                                         used=100)
         allocation2 = rp_obj.Allocation(resource_provider=rp,
                                         consumer_id=consumer_uuid,
                                         resource_class=rp_class,
+                                        project_id=self.ctx.project_id,
+                                        user_id=self.ctx.user_id,
                                         used=200)
         allocation_list = rp_obj.AllocationList(
             self.ctx,
             objects=[allocation1, allocation2],
-            project_id=self.ctx.project_id,
-            user_id=self.ctx.user_id,
         )
         allocation_list.create_all()
 
@@ -1290,12 +1292,12 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
         allocation3 = rp_obj.Allocation(resource_provider=rp,
                                         consumer_id=other_consumer_uuid,
                                         resource_class=rp_class,
+                                        project_id=self.ctx.project_id,
+                                        user_id=uuidsentinel.other_user,
                                         used=200)
         allocation_list = rp_obj.AllocationList(
             self.ctx,
             objects=[allocation3],
-            project_id=self.ctx.project_id,
-            user_id=uuidsentinel.other_user,
         )
         allocation_list.create_all()
 

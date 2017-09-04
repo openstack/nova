@@ -119,8 +119,6 @@ class AllocationFixture(APIFixture):
         rp.create()
 
         # Create some DISK_GB inventory and allocations.
-        # Each set of allocations must have the same consumer_id because only
-        # the first allocation is used for the project/user association.
         consumer_id = uuidutils.generate_uuid()
         inventory = rp_obj.Inventory(
             self.context, resource_provider=rp,
@@ -132,23 +130,23 @@ class AllocationFixture(APIFixture):
             self.context, resource_provider=rp,
             resource_class='DISK_GB',
             consumer_id=consumer_id,
+            project_id=project_id,
+            user_id=user_id,
             used=500)
         alloc2 = rp_obj.Allocation(
             self.context, resource_provider=rp,
             resource_class='DISK_GB',
             consumer_id=consumer_id,
+            project_id=project_id,
+            user_id=user_id,
             used=500)
         alloc_list = rp_obj.AllocationList(
             self.context,
-            objects=[alloc1, alloc2],
-            project_id=project_id,
-            user_id=user_id,
+            objects=[alloc1, alloc2]
         )
         alloc_list.create_all()
 
         # Create some VCPU inventory and allocations.
-        # Each set of allocations must have the same consumer_id because only
-        # the first allocation is used for the project/user association.
         consumer_id = uuidutils.generate_uuid()
         inventory = rp_obj.Inventory(
             self.context, resource_provider=rp,
@@ -160,38 +158,40 @@ class AllocationFixture(APIFixture):
             self.context, resource_provider=rp,
             resource_class='VCPU',
             consumer_id=consumer_id,
+            project_id=project_id,
+            user_id=user_id,
             used=2)
         alloc2 = rp_obj.Allocation(
             self.context, resource_provider=rp,
             resource_class='VCPU',
             consumer_id=consumer_id,
+            project_id=project_id,
+            user_id=user_id,
             used=4)
         alloc_list = rp_obj.AllocationList(
                 self.context,
-                objects=[alloc1, alloc2],
-                project_id=project_id,
-                user_id=user_id)
+                objects=[alloc1, alloc2])
         alloc_list.create_all()
 
         # Create a couple of allocations for a different user.
-        # Each set of allocations must have the same consumer_id because only
-        # the first allocation is used for the project/user association.
         consumer_id = uuidutils.generate_uuid()
         alloc1 = rp_obj.Allocation(
             self.context, resource_provider=rp,
             resource_class='DISK_GB',
             consumer_id=consumer_id,
+            project_id=project_id,
+            user_id=alt_user_id,
             used=20)
         alloc2 = rp_obj.Allocation(
             self.context, resource_provider=rp,
             resource_class='VCPU',
             consumer_id=consumer_id,
+            project_id=project_id,
+            user_id=alt_user_id,
             used=1)
         alloc_list = rp_obj.AllocationList(
                 self.context,
-                objects=[alloc1, alloc2],
-                project_id=project_id,
-                user_id=alt_user_id)
+                objects=[alloc1, alloc2])
         alloc_list.create_all()
 
         # The ALT_RP_XXX variables are for a resource provider that has

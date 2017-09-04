@@ -59,6 +59,8 @@ _ALLOCATION_DB = {
     'resource_class_id': _RESOURCE_CLASS_ID,
     'consumer_id': uuids.fake_instance,
     'used': 8,
+    'user_id': None,
+    'project_id': None,
 }
 
 
