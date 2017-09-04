@@ -84,8 +84,6 @@ VIF_DETAILS_VHOSTUSER_FP_PLUG = 'vhostuser_fp_plug'
 # create a vrouter netdevice interface
 # TODO(mhenkel): Consider renaming this to be contrail-specific.
 VIF_DETAILS_VHOSTUSER_VROUTER_PLUG = 'vhostuser_vrouter_plug'
-# ovs vhost user interface type name
-OVS_VHOSTUSER_INTERFACE_TYPE = 'dpdkvhostuser'
 
 # Constants for dictionary keys in the 'vif_details' field that are
 # valid for VIF_TYPE_TAP.
