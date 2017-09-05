@@ -33,7 +33,7 @@ Public Contractual APIs
 Although nova has many internal APIs, they are not all public contractual
 APIs. Below is a link of our public contractual APIs:
 
-* http://developer.openstack.org/api-ref/compute/
+* https://developer.openstack.org/api-ref/compute/
 
 Anything not in this list is considered private, not to be used outside of
 nova, and should not be considered stable.
@@ -59,7 +59,7 @@ As a patch author, you should try to offset the reviewer resources
 spent on your patch by reviewing other patches. If no one does this, the review
 team (cores and otherwise) become spread too thin.
 
-For review guidelines see: http://docs.openstack.org/infra/manual/developers.html#peer-review
+For review guidelines see: https://docs.openstack.org/infra/manual/developers.html#peer-review
 
 Reverts for Retrospective Vetos
 ===============================
@@ -127,6 +127,6 @@ replacement, the deprecation is open-ended, but serves as a signal that new
 deployments should not rely on the metrics that Nova gathers and should instead
 focus their efforts on alternative solutions for placement.
 
-.. _Ceilometer: http://docs.openstack.org/developer/ceilometer/
-.. _Watcher: http://docs.openstack.org/developer/watcher/
+.. _Ceilometer: https://docs.openstack.org/ceilometer/latest/
+.. _Watcher: https://docs.openstack.org/watcher/latest/
 .. _Newton midcycle: http://lists.openstack.org/pipermail/openstack-dev/2016-August/100600.html
