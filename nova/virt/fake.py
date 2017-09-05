@@ -604,3 +604,34 @@ class MediumFakeDriver(FakeDriver):
     vcpus = 10
     memory_mb = 8192
     local_gb = 1028
+
+
+class FakeRescheduleDriver(FakeDriver):
+    """FakeDriver derivative that triggers a reschedule on the first spawn
+    attempt. This is expected to only be used in tests that have more than
+    one compute service.
+    """
+    # dict, keyed by instance uuid, mapped to a boolean telling us if the
+    # instance has been rescheduled or not
+    rescheduled = {}
+
+    def spawn(self, context, instance, image_meta, injected_files,
+              admin_password, network_info=None, block_device_info=None):
+        if not self.rescheduled.get(instance.uuid, False):
+            # We only reschedule on the first time something hits spawn().
+            self.rescheduled[instance.uuid] = True
+            raise exception.ComputeResourcesUnavailable(
+                reason='FakeRescheduleDriver')
+        super(FakeRescheduleDriver, self).spawn(
+            context, instance, image_meta, injected_files,
+            admin_password, network_info, block_device_info)
+
+
+class FakeBuildAbortDriver(FakeDriver):
+    """FakeDriver derivative that always fails on spawn() with a
+    BuildAbortException so no reschedule is attempted.
+    """
+    def spawn(self, context, instance, image_meta, injected_files,
+              admin_password, network_info=None, block_device_info=None):
+        raise exception.BuildAbortException(
+            instance_uuid=instance.uuid, reason='FakeBuildAbortDriver')
