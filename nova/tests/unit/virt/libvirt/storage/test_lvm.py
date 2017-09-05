@@ -69,64 +69,11 @@ class LvmTestCase(test.NoDBTestCase):
         self.stub_out('nova.virt.libvirt.storage.lvm.get_volume_size',
                       fake_lvm_size)
 
-        # Test the correct dd commands are run for various sizes
-        lvm_size = 1
+        # Test zeroing volumes works
+        lvm_size = 1024
         lvm.clear_volume('/dev/v1')
         mock_execute.assert_has_calls(
-            [mock.call('dd', 'bs=1', 'if=/dev/zero', 'of=/dev/v1',
-                       'seek=0', 'count=1', 'conv=fdatasync',
-                       run_as_root=True)])
-        mock_execute.reset_mock()
-
-        lvm_size = 1024
-        lvm.clear_volume('/dev/v2')
-        mock_execute.assert_has_calls(
-            [mock.call('dd', 'bs=1024', 'if=/dev/zero', 'of=/dev/v2',
-                       'seek=0', 'count=1', 'conv=fdatasync',
-                       run_as_root=True)])
-        mock_execute.reset_mock()
-
-        lvm_size = 1025
-        lvm.clear_volume('/dev/v3')
-        mock_execute.assert_has_calls(
-            [mock.call('dd', 'bs=1024', 'if=/dev/zero', 'of=/dev/v3',
-                       'seek=0', 'count=1', 'conv=fdatasync',
-                       run_as_root=True),
-             mock.call('dd', 'bs=1', 'if=/dev/zero', 'of=/dev/v3',
-                       'seek=1024', 'count=1', 'conv=fdatasync',
-                       run_as_root=True)])
-        mock_execute.reset_mock()
-
-        lvm_size = 1048576
-        lvm.clear_volume('/dev/v4')
-        mock_execute.assert_has_calls(
-            [mock.call('dd', 'bs=1048576', 'if=/dev/zero', 'of=/dev/v4',
-                       'seek=0', 'count=1', 'oflag=direct',
-                       run_as_root=True)])
-        mock_execute.reset_mock()
-
-        lvm_size = 1048577
-        lvm.clear_volume('/dev/v5')
-        mock_execute.assert_has_calls(
-            [mock.call('dd', 'bs=1048576', 'if=/dev/zero', 'of=/dev/v5',
-                       'seek=0', 'count=1', 'oflag=direct',
-                       run_as_root=True),
-             mock.call('dd', 'bs=1', 'if=/dev/zero', 'of=/dev/v5',
-                       'seek=1048576', 'count=1', 'conv=fdatasync',
-                       run_as_root=True)])
-        mock_execute.reset_mock()
-
-        lvm_size = 1234567
-        lvm.clear_volume('/dev/v6')
-        mock_execute.assert_has_calls(
-            [mock.call('dd', 'bs=1048576', 'if=/dev/zero', 'of=/dev/v6',
-                       'seek=0', 'count=1', 'oflag=direct',
-                       run_as_root=True),
-             mock.call('dd', 'bs=1024', 'if=/dev/zero', 'of=/dev/v6',
-                       'seek=1024', 'count=181', 'conv=fdatasync',
-                       run_as_root=True),
-             mock.call('dd', 'bs=1', 'if=/dev/zero', 'of=/dev/v6',
-                       'seek=1233920', 'count=647', 'conv=fdatasync',
+            [mock.call('shred', '-n0', '-z', '-s1024', '/dev/v1',
                        run_as_root=True)])
         mock_execute.reset_mock()
 
@@ -135,8 +82,7 @@ class LvmTestCase(test.NoDBTestCase):
         CONF.set_override('volume_clear_size', '1', 'libvirt')
         lvm.clear_volume('/dev/v7')
         mock_execute.assert_has_calls(
-            [mock.call('dd', 'bs=1048576', 'if=/dev/zero', 'of=/dev/v7',
-                       'seek=0', 'count=1', 'oflag=direct',
+            [mock.call('shred', '-n0', '-z', '-s1048576', '/dev/v7',
                        run_as_root=True)])
         mock_execute.reset_mock()
 
@@ -144,8 +90,7 @@ class LvmTestCase(test.NoDBTestCase):
         lvm_size = 1048576
         lvm.clear_volume('/dev/v9')
         mock_execute.assert_has_calls(
-            [mock.call('dd', 'bs=1048576', 'if=/dev/zero', 'of=/dev/v9',
-                              'seek=0', 'count=1', 'oflag=direct',
+            [mock.call('shred', '-n0', '-z', '-s1048576', '/dev/v9',
                        run_as_root=True)])
         mock_execute.reset_mock()
 
