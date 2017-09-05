@@ -4029,18 +4029,11 @@ class ComputeManager(manager.Manager):
         instance.launched_at = timeutils.utcnow()
         instance.save(expected_task_state=task_states.RESIZE_FINISH)
 
-        self._update_scheduler_instance_info(context, instance)
-        self._notify_about_instance_usage(
-            context, instance, "finish_resize.end",
-            network_info=network_info)
-        compute_utils.notify_about_instance_action(context, instance,
-               self.host, action=fields.NotificationAction.RESIZE_FINISH,
-               phase=fields.NotificationPhase.END)
+        return network_info
 
     @wrap_exception()
     @reverts_task_state
     @wrap_instance_event(prefix='compute')
-    @errors_out_migration
     @wrap_instance_fault
     def finish_resize(self, context, disk_info, image, instance,
                       reservations, migration):
@@ -4050,10 +4043,19 @@ class ComputeManager(manager.Manager):
         new host machine.
 
         """
-        with self._error_out_instance_on_exception(context, instance):
+        with self._error_out_instance_on_exception(context, instance), \
+             errors_out_migration_ctxt(migration):
             image_meta = objects.ImageMeta.from_dict(image)
-            self._finish_resize(context, instance, migration,
-                                disk_info, image_meta)
+            network_info = self._finish_resize(context, instance, migration,
+                                               disk_info, image_meta)
+
+        self._update_scheduler_instance_info(context, instance)
+        self._notify_about_instance_usage(
+            context, instance, "finish_resize.end",
+            network_info=network_info)
+        compute_utils.notify_about_instance_action(context, instance,
+               self.host, action=fields.NotificationAction.RESIZE_FINISH,
+               phase=fields.NotificationPhase.END)
 
     @wrap_exception()
     @wrap_instance_fault
