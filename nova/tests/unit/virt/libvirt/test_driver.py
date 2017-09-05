@@ -3685,6 +3685,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         cfg = self._get_guest_config_with_graphics()
 
+        expect = {"ppc": "vga", "ppc64": "vga",
+                  "ppc64le": "vga", "aarch64": "virtio"}
+        video_type = expect.get(blockinfo.libvirt_utils.get_arch({}), "qxl")
         self.assertEqual(len(cfg.devices), 8)
         self.assertIsInstance(cfg.devices[0],
                               vconfig.LibvirtConfigGuestDisk)
@@ -3706,7 +3709,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(cfg.devices[4].target_name, "com.redhat.spice.0")
         self.assertEqual(cfg.devices[4].type, 'spicevmc')
         self.assertEqual(cfg.devices[5].type, "spice")
-        self.assertEqual(cfg.devices[6].type, "qxl")
+        self.assertEqual(cfg.devices[6].type, video_type)
 
     def test_get_guest_config_with_vnc_no_keymap(self):
         self.flags(virt_type='kvm', group='libvirt')
