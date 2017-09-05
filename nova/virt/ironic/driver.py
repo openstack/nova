@@ -513,6 +513,21 @@ class IronicDriver(virt_driver.ComputeDriver):
         """
         self._refresh_hash_ring(nova_context.get_admin_context())
 
+    @staticmethod
+    def _pike_flavor_migration_for_node(ctx, node_rc, instance_uuid):
+        normalized_rc = obj_fields.ResourceClass.normalize_name(node_rc)
+        instance = objects.Instance.get_by_uuid(ctx, instance_uuid,
+                                                expected_attrs=["flavor"])
+        specs = instance.flavor.extra_specs
+        resource_key = "resources:%s" % normalized_rc
+        if resource_key in specs:
+            # The compute must have been restarted, and the instance.flavor
+            # has already been migrated
+            return False
+        specs[resource_key] = "1"
+        instance.save()
+        return True
+
     def _pike_flavor_migration(self, node_uuids):
         """This code is needed in Pike to prevent problems where an operator
         has already adjusted their flavors to add the custom resource class to
@@ -539,21 +554,12 @@ class IronicDriver(virt_driver.ComputeDriver):
                 continue
             if node.instance_uuid in self._migrated_instance_uuids:
                 continue
-            normalized_rc = obj_fields.ResourceClass.normalize_name(node_rc)
-            instance = objects.Instance.get_by_uuid(ctx, node.instance_uuid,
-                    expected_attrs=["flavor"])
-            specs = instance.flavor.extra_specs
-            resource_key = "resources:%s" % normalized_rc
+            self._pike_flavor_migration_for_node(ctx, node_rc,
+                                                 node.instance_uuid)
             self._migrated_instance_uuids.add(node.instance_uuid)
-            if resource_key in specs:
-                # The compute must have been restarted, and the instance.flavor
-                # has already been migrated
-                continue
-            specs[resource_key] = "1"
-            instance.save()
             LOG.debug("The flavor extra_specs for Ironic instance %(inst)s "
                       "have been updated for custom resource class '%(rc)s'.",
-                      {"inst": instance.uuid, "rc": node_rc})
+                      {"inst": node.instance_uuid, "rc": node_rc})
         return
 
     def _get_hypervisor_type(self):
