@@ -5180,7 +5180,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         requested Neutron security group and that will be returned from
         _validate_and_build_base_options
         """
-        instance_type = objects.Flavor(**test_flavor.fake_api_flavor)
+        instance_type = objects.Flavor(**test_flavor.fake_flavor)
         boot_meta = metadata = {}
         kernel_id = ramdisk_id = key_name = key_data = user_data = \
             access_ip_v4 = access_ip_v6 = config_drive = \

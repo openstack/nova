@@ -381,8 +381,7 @@ class TestNewtonCellsCheck(test.NoDBTestCase):
             '030_require_cell_setup')
         self.engine = db_api.get_api_engine()
 
-    @mock.patch('nova.objects.Flavor._ensure_migrated')
-    def _flavor_me(self, _):
+    def _flavor_me(self):
         flavor = objects.Flavor(context=self.context,
                                 name='foo', memory_mb=123,
                                 vcpus=1, root_gb=1,
