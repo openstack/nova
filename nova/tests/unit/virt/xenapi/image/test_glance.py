@@ -38,7 +38,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
         self.store = glance.GlanceStore()
 
         self.flags(api_servers=['http://localhost:9292'], group='glance')
-        self.flags(connection_url='test_url',
+        self.flags(connection_url='http://localhost',
                    connection_password='test_pass',
                    group='xenserver')
 

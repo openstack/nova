@@ -517,7 +517,7 @@ class GetInstanceForVdisForSrTestCase(VMUtilsTestBase):
         self.flags(instance_name_template='%d',
                    firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
-        self.flags(connection_url='test_url',
+        self.flags(connection_url='http://localhost',
                    connection_password='test_pass',
                    group='xenserver')
 
@@ -1181,7 +1181,7 @@ class VMUtilsSRPath(VMUtilsTestBase):
         self.flags(instance_name_template='%d',
                    firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
-        self.flags(connection_url='test_url',
+        self.flags(connection_url='http://localhost',
                    connection_password='test_pass',
                    group='xenserver')
         stubs.stubout_session(self.stubs, fake.SessionBase)
@@ -2123,7 +2123,7 @@ class CreateVmRecordTestCase(VMUtilsTestBase):
         self.flags(instance_name_template='%d',
                    firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
-        self.flags(connection_url='test_url',
+        self.flags(connection_url='http://localhost',
                    connection_password='test_pass',
                    group='xenserver')
 

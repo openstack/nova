@@ -56,8 +56,8 @@ class VMOpsTestBase(stubs.XenAPITestBaseNoDB):
 
     def _setup_mock_vmops(self, product_brand=None, product_version=None):
         stubs.stubout_session(self.stubs, xenapi_fake.SessionBase)
-        self._session = xenapi_session.XenAPISession('test_url', 'root',
-                                                     'test_pass')
+        self._session = xenapi_session.XenAPISession(
+            'http://localhost', 'root', 'test_pass')
         self.vmops = vmops.VMOps(self._session, fake.FakeVirtAPI())
 
     def create_vm(self, name, state="Running"):

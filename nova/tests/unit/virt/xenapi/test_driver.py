@@ -31,7 +31,7 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
 
     def _get_driver(self):
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
-        self.flags(connection_url='test_url',
+        self.flags(connection_url='http://localhost',
                    connection_password='test_pass', group='xenserver')
         return xenapi.XenAPIDriver(fake.FakeVirtAPI(), False)
 
