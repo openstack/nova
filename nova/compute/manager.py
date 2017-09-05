@@ -3488,6 +3488,14 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def confirm_resize(self, context, instance, reservations, migration):
+        """Confirms a migration/resize and deletes the 'old' instance.
+
+        This is called from the API and runs on the source host.
+
+        Nothing needs to happen on the destination host at this point since
+        the instance is already running there. This routine just cleans up the
+        source host.
+        """
         @utils.synchronized(instance.uuid)
         def do_confirm_resize(context, instance, migration_id):
             # NOTE(wangpan): Get the migration status from db, if it has been
@@ -3644,6 +3652,7 @@ class ComputeManager(manager.Manager):
             rt = self._get_resource_tracker()
             rt.drop_move_claim(context, instance, instance.node)
 
+            # RPC cast back to the source host to finish the revert there.
             self.compute_rpcapi.finish_revert_resize(context, instance,
                     migration, migration.source_compute)
 
@@ -3653,7 +3662,7 @@ class ComputeManager(manager.Manager):
     @errors_out_migration
     @wrap_instance_fault
     def finish_revert_resize(self, context, instance, reservations, migration):
-        """Finishes the second half of reverting a resize.
+        """Finishes the second half of reverting a resize on the source host.
 
         Bring the original source instance state back (active/shutoff) and
         revert the resized attributes in the database.
@@ -3754,6 +3763,7 @@ class ComputeManager(manager.Manager):
         with rt.resize_claim(context, instance, instance_type, node,
                              image_meta=image, limits=limits) as claim:
             LOG.info('Migrating', instance=instance)
+            # RPC cast to the source host to start the actual resize/migration.
             self.compute_rpcapi.resize_instance(
                     context, instance, claim.migration, image,
                     instance_type, clean_shutdown)
@@ -3767,8 +3777,14 @@ class ComputeManager(manager.Manager):
                     clean_shutdown):
         """Initiates the process of moving a running instance to another host.
 
-        Possibly changes the RAM and disk size in the process.
+        Possibly changes the VCPU, RAM and disk size in the process.
 
+        This is initiated from conductor and runs on the destination host.
+
+        The main purpose of this method is performing some checks on the
+        destination host and making a claim for resources. If the claim fails
+        then a reschedule to another host may be attempted which involves
+        calling back to conductor to start the process over again.
         """
         if node is None:
             node = self.driver.get_available_nodes(refresh=True)[0]
@@ -3867,7 +3883,11 @@ class ComputeManager(manager.Manager):
     def resize_instance(self, context, instance, image,
                         reservations, migration, instance_type,
                         clean_shutdown):
-        """Starts the migration of a running instance to another host."""
+        """Starts the migration of a running instance to another host.
+
+        This is initiated from the destination host's ``prep_resize`` routine
+        and runs on the source host.
+        """
         with self._error_out_instance_on_exception(context, instance), \
              errors_out_migration_ctxt(migration):
             # TODO(chaochin) Remove this until v5 RPC API
@@ -3924,6 +3944,7 @@ class ComputeManager(manager.Manager):
             instance.task_state = task_states.RESIZE_MIGRATED
             instance.save(expected_task_state=task_states.RESIZE_MIGRATING)
 
+            # RPC cast to the destination host to finish the resize/migration.
             self.compute_rpcapi.finish_resize(context, instance,
                     migration, image, disk_info, migration.dest_compute)
 

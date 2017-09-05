@@ -85,6 +85,7 @@ class MigrationTask(base.TaskBase):
         # rpc fake driver.
         legacy_spec = jsonutils.loads(jsonutils.dumps(legacy_spec))
 
+        # RPC cast to the destination host to start the migration process.
         self.compute_rpcapi.prep_resize(
             self.context, self.instance, legacy_spec['image'],
             self.flavor, host, self.reservations,
