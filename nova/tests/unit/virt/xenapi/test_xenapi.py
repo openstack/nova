@@ -143,7 +143,8 @@ IMAGE_FIXTURES = {
 
 
 def get_session():
-    return xenapi_session.XenAPISession('test_url', 'root', 'test_pass')
+    return xenapi_session.XenAPISession(
+        'http://localhost', 'root', 'test_pass')
 
 
 def set_image_fixtures():
@@ -234,7 +235,7 @@ class XenAPIVolumeTestCase(stubs.XenAPITestBaseNoDB):
                             group='oslo_concurrency')
         self.flags(firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
-        self.flags(connection_url='test_url',
+        self.flags(connection_url='http://localhost',
                    connection_password='test_pass',
                    group='xenserver')
 
@@ -294,7 +295,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
         self.flags(instance_name_template='%d',
                    firewall_driver='nova.virt.xenapi.firewall.'
                                    'Dom0IptablesFirewallDriver')
-        self.flags(connection_url='test_url',
+        self.flags(connection_url='http://localhost',
                    connection_password='test_pass',
                    group='xenserver')
         db_fakes.stub_out_db_instance_api(self)
@@ -1635,7 +1636,7 @@ class XenAPIMigrateInstance(stubs.XenAPITestBase):
 
     def setUp(self):
         super(XenAPIMigrateInstance, self).setUp()
-        self.flags(connection_url='test_url',
+        self.flags(connection_url='http://localhost',
                    connection_password='test_pass',
                    group='xenserver')
         self.flags(firewall_driver='nova.virt.xenapi.firewall.'
@@ -2123,7 +2124,7 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
 
     def setUp(self):
         super(XenAPIHostTestCase, self).setUp()
-        self.flags(connection_url='test_url',
+        self.flags(connection_url='http://localhost',
                    connection_password='test_pass',
                    group='xenserver')
         stubs.stubout_session(self.stubs, stubs.FakeSessionForVMTests)
@@ -2394,7 +2395,7 @@ class ToSupportedInstancesTestCase(test.NoDBTestCase):
 class XenAPIAutoDiskConfigTestCase(stubs.XenAPITestBase):
     def setUp(self):
         super(XenAPIAutoDiskConfigTestCase, self).setUp()
-        self.flags(connection_url='test_url',
+        self.flags(connection_url='http://localhost',
                    connection_password='test_pass',
                    group='xenserver')
         self.flags(firewall_driver='nova.virt.xenapi.firewall.'
@@ -2521,7 +2522,7 @@ class XenAPIGenerateLocal(stubs.XenAPITestBase):
     """Test generating of local disks, like swap and ephemeral."""
     def setUp(self):
         super(XenAPIGenerateLocal, self).setUp()
-        self.flags(connection_url='test_url',
+        self.flags(connection_url='http://localhost',
                    connection_password='test_pass',
                    group='xenserver')
         self.flags(firewall_driver='nova.virt.xenapi.firewall.'
@@ -2639,7 +2640,7 @@ class XenAPIBWCountersTestCase(stubs.XenAPITestBaseNoDB):
         super(XenAPIBWCountersTestCase, self).setUp()
         self.stubs.Set(vm_utils, 'list_vms',
                        XenAPIBWCountersTestCase._fake_list_vms)
-        self.flags(connection_url='test_url',
+        self.flags(connection_url='http://localhost',
                    connection_password='test_pass',
                    group='xenserver')
         self.flags(firewall_driver='nova.virt.xenapi.firewall.'
@@ -2775,7 +2776,7 @@ class XenAPIDom0IptablesFirewallTestCase(stubs.XenAPITestBase):
 
     def setUp(self):
         super(XenAPIDom0IptablesFirewallTestCase, self).setUp()
-        self.flags(connection_url='test_url',
+        self.flags(connection_url='http://localhost',
                    connection_password='test_pass',
                    group='xenserver')
         self.flags(instance_name_template='%d',
@@ -3059,7 +3060,7 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
     """Unit tests for aggregate operations."""
     def setUp(self):
         super(XenAPIAggregateTestCase, self).setUp()
-        self.flags(connection_url='http://test_url',
+        self.flags(connection_url='http://localhost',
                    connection_username='test_user',
                    connection_password='test_pass',
                    group='xenserver')
@@ -3439,7 +3440,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
     """Unit tests for live_migration."""
     def setUp(self):
         super(XenAPILiveMigrateTestCase, self).setUp()
-        self.flags(connection_url='test_url',
+        self.flags(connection_url='http://localhost',
                    connection_password='test_pass',
                    group='xenserver')
         self.flags(firewall_driver='nova.virt.xenapi.firewall.'
@@ -3948,7 +3949,7 @@ class XenAPILiveMigrateTestCase(stubs.XenAPITestBaseNoDB):
 class XenAPIInjectMetadataTestCase(stubs.XenAPITestBaseNoDB):
     def setUp(self):
         super(XenAPIInjectMetadataTestCase, self).setUp()
-        self.flags(connection_url='test_url',
+        self.flags(connection_url='http://localhost',
                    connection_password='test_pass',
                    group='xenserver')
         self.flags(firewall_driver='nova.virt.xenapi.firewall.'

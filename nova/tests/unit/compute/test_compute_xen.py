@@ -32,7 +32,7 @@ class ComputeXenTestCase(stubs.XenAPITestBaseNoDB):
     def setUp(self):
         super(ComputeXenTestCase, self).setUp()
         self.flags(compute_driver='xenapi.XenAPIDriver')
-        self.flags(connection_url='test_url',
+        self.flags(connection_url='http://localhost',
                    connection_password='test_pass',
                    group='xenserver')
 
