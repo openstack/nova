@@ -22,6 +22,7 @@ import sys
 
 from oslo_log import log as logging
 from oslo_reports import guru_meditation_report as gmr
+from oslo_reports import opts as gmr_opts
 
 import nova.conf
 from nova.conf import novnc
@@ -31,6 +32,7 @@ from nova import version
 
 CONF = nova.conf.CONF
 novnc.register_cli_opts(CONF)
+gmr_opts.set_defaults(CONF)
 
 
 def exit_with_error(msg, errno=-1):
@@ -49,7 +51,7 @@ def proxy(host, port):
 
     logging.setup(CONF, "nova")
 
-    gmr.TextGuruMeditation.setup_autorun(version)
+    gmr.TextGuruMeditation.setup_autorun(version, conf=CONF)
 
     # Create and start the NovaWebSockets proxy
     websocketproxy.NovaWebSocketProxy(

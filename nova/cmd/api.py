@@ -24,6 +24,7 @@ import sys
 
 from oslo_log import log as logging
 from oslo_reports import guru_meditation_report as gmr
+from oslo_reports import opts as gmr_opts
 
 import nova.conf
 from nova import config
@@ -41,13 +42,14 @@ def main():
     logging.setup(CONF, "nova")
     utils.monkey_patch()
     objects.register_all()
+    gmr_opts.set_defaults(CONF)
     if 'osapi_compute' in CONF.enabled_apis:
         # NOTE(mriedem): This is needed for caching the nova-compute service
         # version.
         objects.Service.enable_min_version_cache()
     log = logging.getLogger(__name__)
 
-    gmr.TextGuruMeditation.setup_autorun(version)
+    gmr.TextGuruMeditation.setup_autorun(version, conf=CONF)
 
     launcher = service.process_launcher()
     started = 0

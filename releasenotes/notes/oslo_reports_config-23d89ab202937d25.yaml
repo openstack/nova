@@ -1,0 +1,14 @@
+---
+features:
+  - |
+    Configuration options for `oslo.reports`, found in the ``oslo_reports``
+    group, are now exposed in nova. These include:
+
+    - ``log_dir``
+    - ``file_event_handler``
+    - ``file_event_handler_interval``
+
+    These will allow using a file trigger for the reports, which is
+    particularly useful for Windows nodes where the default signals are not
+    available. Also, specifying a log directory will allow the reports to be
+    generated at a specific location instead of stdout.
