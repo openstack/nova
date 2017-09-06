@@ -1005,7 +1005,8 @@ class ComputeTaskManager(base.Base):
                 with excutils.save_and_reraise_exception():
                     self._cleanup_build_artifacts(context, exc, instances,
                                                   build_requests,
-                                                  request_specs)
+                                                  request_specs,
+                                                  cell_mapping_cache)
 
         for (build_request, request_spec, host, instance) in six.moves.zip(
                 build_requests, request_specs, hosts, instances):
@@ -1073,7 +1074,7 @@ class ComputeTaskManager(base.Base):
                     limits=host['limits'])
 
     def _cleanup_build_artifacts(self, context, exc, instances, build_requests,
-                                 request_specs):
+                                 request_specs, cell_mapping_cache):
         for (instance, build_request, request_spec) in six.moves.zip(
                 instances, build_requests, request_specs):
             # Skip placeholders that were buried in cell0 or had their
@@ -1085,6 +1086,14 @@ class ComputeTaskManager(base.Base):
             self._set_vm_state_and_notify(context, instance.uuid,
                                           'build_instances', updates, exc,
                                           legacy_spec)
+
+            # TODO(mnaser): The cell mapping should already be populated by
+            #               this point to avoid setting it below here.
+            inst_mapping = objects.InstanceMapping.get_by_instance_uuid(
+                context, instance.uuid)
+            inst_mapping.cell_mapping = cell_mapping_cache[instance.uuid]
+            inst_mapping.save()
+
             # Be paranoid about artifacts being deleted underneath us.
             try:
                 build_request.destroy()

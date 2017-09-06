@@ -1803,6 +1803,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.assertIn('Quota exceeded', instance.fault.message)
         # Verify we removed the build objects.
         build_requests = objects.BuildRequestList.get_all(self.ctxt)
+        # Verify that the instance is mapped to a cell
+        inst_mapping = objects.InstanceMapping.get_by_instance_uuid(
+                self.ctxt, instance.uuid)
+        self.assertIsNotNone(inst_mapping.cell_mapping)
 
         self.assertEqual(0, len(build_requests))
 
