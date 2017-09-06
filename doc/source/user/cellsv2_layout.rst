@@ -282,8 +282,8 @@ With a multi-cell environment with multiple message queues, it is
 likely that operators will want to configure a separate connection to
 a unified queue for notifications. This can be done in the
 configuration file of all nodes. See the `oslo.messaging configuration
-<https://docs.openstack.org/oslo.messaging/latest/configration/opts.html#oslo_messaging_notifications.transport_url>`_
-documentation for more details
+<https://docs.openstack.org/oslo.messaging/latest/configuration/opts.html#oslo_messaging_notifications.transport_url>`_
+documentation for more details.
 
 Neutron Metadata API proxy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
