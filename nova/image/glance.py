@@ -22,6 +22,7 @@ import inspect
 import itertools
 import os
 import random
+import stat
 import sys
 import time
 
@@ -46,6 +47,7 @@ import nova.image.download as image_xfers
 from nova import objects
 from nova.objects import fields
 from nova import service_auth
+
 
 LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
@@ -272,6 +274,22 @@ class GlanceImageServiceV2(object):
 
         return _images
 
+    @staticmethod
+    def _safe_fsync(fh):
+        """Performs os.fsync on a filehandle only if it is supported.
+
+        fsync on a pipe, FIFO, or socket raises OSError with EINVAL.  This
+        method discovers whether the target filehandle is one of these types
+        and only performs fsync if it isn't.
+
+        :param fh: Open filehandle (not a path or fileno) to maybe fsync.
+        """
+        fileno = fh.fileno()
+        mode = os.fstat(fileno).st_mode
+        # A pipe answers True to S_ISFIFO
+        if not any(check(mode) for check in (stat.S_ISFIFO, stat.S_ISSOCK)):
+            os.fsync(fileno)
+
     def download(self, context, image_id, data=None, dst_path=None):
         """Calls out to Glance for data and writes data."""
         if CONF.glance.allowed_direct_url_schemes and dst_path is not None:
@@ -371,7 +389,7 @@ class GlanceImageServiceV2(object):
                     # subsequent host crash we don't have running instances
                     # using a corrupt backing file.
                     data.flush()
-                    os.fsync(data.fileno())
+                    self._safe_fsync(data)
                     data.close()
 
     def create(self, context, image_meta, data=None):
