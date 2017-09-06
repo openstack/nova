@@ -1173,8 +1173,8 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
 
     def _make_rp_and_inventory(self, **kwargs):
         # Create one resource provider and set some inventory
-        rp_name = uuidsentinel.rp_name
-        rp_uuid = uuidsentinel.rp_uuid
+        rp_name = kwargs.get('rp_name') or uuidsentinel.rp_name
+        rp_uuid = kwargs.get('rp_uuid') or uuidsentinel.rp_uuid
         rp = rp_obj.ResourceProvider(
             self.ctx, name=rp_name, uuid=rp_uuid)
         rp.create()
@@ -1313,6 +1313,134 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
             user_id=uuidsentinel.other_user)
         self.assertEqual(1, len(usage_list))
         self.assertEqual(200, usage_list[0].usage)
+
+    def test_create_and_clear(self):
+        """Test that a used of 0 in an allocation wipes allocations."""
+        consumer_uuid = uuidsentinel.consumer
+        rp_class = fields.ResourceClass.DISK_GB
+        target_rp = self._make_rp_and_inventory(resource_class=rp_class,
+                                                max_unit=500)
+
+        # Create two allocations with values and confirm the resulting
+        # usage is as expected.
+        allocation1 = rp_obj.Allocation(resource_provider=target_rp,
+                                        consumer_id=consumer_uuid,
+                                        resource_class=rp_class,
+                                        project_id=self.ctx.project_id,
+                                        user_id=self.ctx.user_id,
+                                        used=100)
+        allocation2 = rp_obj.Allocation(resource_provider=target_rp,
+                                        consumer_id=consumer_uuid,
+                                        resource_class=rp_class,
+                                        project_id=self.ctx.project_id,
+                                        user_id=self.ctx.user_id,
+                                        used=200)
+        allocation_list = rp_obj.AllocationList(
+            self.ctx,
+            objects=[allocation1, allocation2],
+        )
+        allocation_list.create_all()
+
+        allocations = rp_obj.AllocationList.get_all_by_consumer_id(
+            self.ctx, consumer_uuid)
+        self.assertEqual(2, len(allocations))
+        usage = sum(alloc.used for alloc in allocations)
+        self.assertEqual(300, usage)
+
+        # Create two allocations, one with 0 used, to confirm the
+        # resulting usage is only of one.
+        allocation1 = rp_obj.Allocation(resource_provider=target_rp,
+                                         consumer_id=consumer_uuid,
+                                         resource_class=rp_class,
+                                         project_id=self.ctx.project_id,
+                                         user_id=self.ctx.user_id,
+                                         used=0)
+        allocation2 = rp_obj.Allocation(resource_provider=target_rp,
+                                         consumer_id=consumer_uuid,
+                                         resource_class=rp_class,
+                                         project_id=self.ctx.project_id,
+                                         user_id=self.ctx.user_id,
+                                         used=200)
+        allocation_list = rp_obj.AllocationList(
+            self.ctx,
+            objects=[allocation1, allocation2],
+        )
+        allocation_list.create_all()
+
+        allocations = rp_obj.AllocationList.get_all_by_consumer_id(
+            self.ctx, consumer_uuid)
+        self.assertEqual(1, len(allocations))
+        usage = allocations[0].used
+        self.assertEqual(200, usage)
+
+        # add a source rp and a migration consumer
+        migration_uuid = uuidsentinel.migration
+        source_rp = self._make_rp_and_inventory(
+            rp_name=uuidsentinel.source_name, rp_uuid=uuidsentinel.source_uuid,
+            resource_class=rp_class, max_unit=500)
+
+        # Create two allocations, one as the consumer, one as the
+        # migration.
+        allocation1 = rp_obj.Allocation(resource_provider=target_rp,
+                                        consumer_id=consumer_uuid,
+                                        resource_class=rp_class,
+                                        project_id=self.ctx.project_id,
+                                        user_id=self.ctx.user_id,
+                                        used=200)
+        allocation2 = rp_obj.Allocation(resource_provider=source_rp,
+                                        consumer_id=migration_uuid,
+                                        resource_class=rp_class,
+                                        project_id=self.ctx.project_id,
+                                        user_id=self.ctx.user_id,
+                                        used=200)
+        allocation_list = rp_obj.AllocationList(
+            self.ctx,
+            objects=[allocation1, allocation2],
+        )
+        allocation_list.create_all()
+
+        # Check primary consumer allocations.
+        allocations = rp_obj.AllocationList.get_all_by_consumer_id(
+            self.ctx, consumer_uuid)
+        self.assertEqual(1, len(allocations))
+        usage = allocations[0].used
+        self.assertEqual(200, usage)
+
+        # Check migration allocations.
+        allocations = rp_obj.AllocationList.get_all_by_consumer_id(
+            self.ctx, migration_uuid)
+        self.assertEqual(1, len(allocations))
+        usage = allocations[0].used
+        self.assertEqual(200, usage)
+
+        # Clear the migration and confirm the target.
+        allocation1 = rp_obj.Allocation(resource_provider=target_rp,
+                                        consumer_id=consumer_uuid,
+                                        resource_class=rp_class,
+                                        project_id=self.ctx.project_id,
+                                        user_id=self.ctx.user_id,
+                                        used=200)
+        allocation2 = rp_obj.Allocation(resource_provider=source_rp,
+                                        consumer_id=migration_uuid,
+                                        resource_class=rp_class,
+                                        project_id=self.ctx.project_id,
+                                        user_id=self.ctx.user_id,
+                                        used=0)
+        allocation_list = rp_obj.AllocationList(
+            self.ctx,
+            objects=[allocation1, allocation2],
+        )
+        allocation_list.create_all()
+
+        allocations = rp_obj.AllocationList.get_all_by_consumer_id(
+            self.ctx, consumer_uuid)
+        self.assertEqual(1, len(allocations))
+        usage = allocations[0].used
+        self.assertEqual(200, usage)
+
+        allocations = rp_obj.AllocationList.get_all_by_consumer_id(
+            self.ctx, migration_uuid)
+        self.assertEqual(0, len(allocations))
 
 
 class UsageListTestCase(ResourceProviderBaseCase):

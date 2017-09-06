@@ -1658,7 +1658,7 @@ def _check_capacity_exceeded(conn, allocs):
                 resource_provider=rp_uuid)
         if rp_uuid not in res_providers:
             res_providers[rp_uuid] = alloc.resource_provider
-    return list(res_providers.values())
+    return res_providers
 
 
 def _ensure_lookup_table_entry(conn, tbl, external_id):
@@ -1791,12 +1791,31 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
             for alloc in allocs:
                 consumer_id = alloc.consumer_id
                 _delete_allocations_for_consumer(context, consumer_id)
-            # If there are any allocations with string resource class names
-            # that don't exist this will raise a ResourceClassNotFound
-            # exception.
-            before_gens = _check_capacity_exceeded(conn, allocs)
+            # Don't check capacity when alloc.used is zero. Zero is not a
+            # valid amount when making an allocation (the minimum consumption
+            # of a resource is one) but is used in this method to indicate a
+            # need for removal. Providing 0 is controlled at the HTTP API layer
+            # where PUT /allocations does not allow empty allocations. When
+            # POST /allocations is implemented it will for the special case of
+            # atomically setting and removing different allocations in the same
+            # request. _check_capacity_exceeded will raise a
+            # ResourceClassNotFound # if any allocation is using a resource
+            # class that does not exist.
+            visited_rps = _check_capacity_exceeded(conn,
+                                                   [alloc for alloc in
+                                                    allocs if alloc.used > 0])
             seen_consumers = set()
             for alloc in allocs:
+                # If alloc.used is set to zero that is a signal that we don't
+                # want to (re-)create any allocations for this resource class.
+                # _delete_current_allocs has already wiped out allocations so
+                # all that's being done here is adding the resource provider
+                # to visited_rps so its generation will be checked at the end
+                # of the transaction.
+                if alloc.used == 0:
+                    rp = alloc.resource_provider
+                    visited_rps[rp.uuid] = rp
+                    continue
                 consumer_id = alloc.consumer_id
                 # Only set consumer <-> project/user association if we
                 # haven't set it already.
@@ -1818,7 +1837,7 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
             # this will raise a ConcurrentUpdateDetected which can be caught
             # by the caller to choose to try again. It will also rollback the
             # transaction so that these changes always happen atomically.
-            for rp in before_gens:
+            for rp in visited_rps.values():
                 rp.generation = _increment_provider_generation(conn, rp)
 
     @classmethod
