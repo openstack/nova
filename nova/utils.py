@@ -45,7 +45,6 @@ from oslo_utils import importutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import units
-import prettytable
 import six
 from six.moves import range
 
@@ -385,23 +384,6 @@ def generate_password(length=None, symbolgroups=DEFAULT_PASSWORD_SYMBOLS):
     return ''.join(password)
 
 
-def get_my_linklocal(interface):
-    try:
-        if_str = execute('ip', '-f', 'inet6', '-o', 'addr', 'show', interface)
-        condition = '\s+inet6\s+([0-9a-f:]+)/\d+\s+scope\s+link'
-        links = [re.search(condition, x) for x in if_str[0].split('\n')]
-        address = [w.group(1) for w in links if w is not None]
-        if address[0] is not None:
-            return address[0]
-        else:
-            msg = _('Link Local address is not found.:%s') % if_str
-            raise exception.NovaException(msg)
-    except Exception as ex:
-        msg = _("Couldn't get Link Local IP of %(interface)s"
-                " :%(ex)s") % {'interface': interface, 'ex': ex}
-        raise exception.NovaException(msg)
-
-
 # TODO(sfinucan): Replace this with the equivalent from oslo.utils
 def utf8(value):
     """Try to turn a string into utf-8 if possible.
@@ -456,17 +438,6 @@ def get_shortened_ipv6(address):
 def get_shortened_ipv6_cidr(address):
     net = netaddr.IPNetwork(address, version=6)
     return str(net.cidr)
-
-
-def get_ip_version(network):
-    """Returns the IP version of a network (IPv4 or IPv6).
-
-    Raises AddrFormatError if invalid network.
-    """
-    if netaddr.IPNetwork(network).version == 6:
-        return "IPv6"
-    elif netaddr.IPNetwork(network).version == 4:
-        return "IPv4"
 
 
 def safe_ip_format(ip):
@@ -1296,63 +1267,3 @@ def isotime(at=None):
 
 def strtime(at):
     return at.strftime("%Y-%m-%dT%H:%M:%S.%f")
-
-
-def print_dict(dct, dict_property="Property", dict_value='Value'):
-    """Print a `dict` as a table of two columns.
-
-    :param dct: `dict` to print
-    :param dict_property: name of the first column
-    :param wrap: wrapping for the second column
-    :param dict_value: header label for the value (second) column
-    """
-    pt = prettytable.PrettyTable([dict_property, dict_value])
-    pt.align = 'l'
-    for k, v in sorted(dct.items()):
-        # convert dict to str to check length
-        if isinstance(v, dict):
-            v = six.text_type(v)
-        # if value has a newline, add in multiple rows
-        # e.g. fault with stacktrace
-        if v and isinstance(v, six.string_types) and r'\n' in v:
-            lines = v.strip().split(r'\n')
-            col1 = k
-            for line in lines:
-                pt.add_row([col1, line])
-                col1 = ''
-        else:
-            pt.add_row([k, v])
-
-    if six.PY2:
-        print(encodeutils.safe_encode(pt.get_string()))
-    else:
-        print(encodeutils.safe_encode(pt.get_string()).decode())
-
-
-def validate_args(fn, *args, **kwargs):
-    """Check that the supplied args are sufficient for calling a function.
-
-    >>> validate_args(lambda a: None)
-    Traceback (most recent call last):
-        ...
-    MissingArgs: Missing argument(s): a
-    >>> validate_args(lambda a, b, c, d: None, 0, c=1)
-    Traceback (most recent call last):
-        ...
-    MissingArgs: Missing argument(s): b, d
-
-    :param fn: the function to check
-    :param arg: the positional arguments supplied
-    :param kwargs: the keyword arguments supplied
-    """
-    argspec = inspect.getargspec(fn)
-
-    num_defaults = len(argspec.defaults or [])
-    required_args = argspec.args[:len(argspec.args) - num_defaults]
-
-    if six.get_method_self(fn) is not None:
-        required_args.pop(0)
-
-    missing = [arg for arg in required_args if arg not in kwargs]
-    missing = missing[len(args):]
-    return missing

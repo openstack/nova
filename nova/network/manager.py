@@ -65,6 +65,24 @@ LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
 
 
+def get_my_linklocal(interface):
+    try:
+        if_str = utils.execute(
+            'ip', '-f', 'inet6', '-o', 'addr', 'show', interface)
+        condition = '\s+inet6\s+([0-9a-f:]+)/\d+\s+scope\s+link'
+        links = [re.search(condition, x) for x in if_str[0].split('\n')]
+        address = [w.group(1) for w in links if w is not None]
+        if address[0] is not None:
+            return address[0]
+        else:
+            msg = _('Link Local address is not found.:%s') % if_str
+            raise exception.NovaException(msg)
+    except Exception as ex:
+        msg = _("Couldn't get Link Local IP of %(interface)s"
+                " :%(ex)s") % {'interface': interface, 'ex': ex}
+        raise exception.NovaException(msg)
+
+
 class RPCAllocateFixedIP(object):
     """Mixin class originally for FlatDCHP and VLAN network managers.
 
@@ -1816,7 +1834,7 @@ class FlatDHCPManager(RPCAllocateFixedIP, floating_ips.FloatingIP,
             self.driver.update_dhcp(elevated, dev, network)
             if CONF.use_ipv6:
                 self.driver.update_ra(context, dev, network)
-                gateway = utils.get_my_linklocal(dev)
+                gateway = get_my_linklocal(dev)
                 network.gateway_v6 = gateway
                 network.save()
 
@@ -2083,7 +2101,7 @@ class VlanManager(RPCAllocateFixedIP, floating_ips.FloatingIP, NetworkManager):
                 self.driver.update_dhcp(elevated, dev, network)
             if CONF.use_ipv6:
                 self.driver.update_ra(context, dev, network)
-                gateway = utils.get_my_linklocal(dev)
+                gateway = get_my_linklocal(dev)
                 network.gateway_v6 = gateway
                 network.save()
 

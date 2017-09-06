@@ -105,7 +105,7 @@ class TestCmdCommon(test.NoDBTestCase):
         mock_method_of.assert_called_once_with(mock_fn.return_value)
         mock_print.assert_called_once_with(' '.join([k for k, v in actions]))
 
-    @mock.patch.object(cmd_common.utils, 'validate_args')
+    @mock.patch.object(cmd_common, 'validate_args')
     @mock.patch.object(cmd_common, 'CONF')
     def test_get_action_fn(self, mock_CONF, mock_validate_args):
         mock_validate_args.return_value = None
@@ -127,7 +127,7 @@ class TestCmdCommon(test.NoDBTestCase):
         self.assertTrue(actual_kwargs['bar'])
         self.assertNotIn('missing', actual_kwargs)
 
-    @mock.patch.object(cmd_common.utils, 'validate_args')
+    @mock.patch.object(cmd_common, 'validate_args')
     @mock.patch.object(cmd_common, 'CONF')
     def test_get_action_fn_missing_args(self, mock_CONF, mock_validate_args):
         # Don't leak the actual print call

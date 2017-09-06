@@ -15,6 +15,7 @@
 
 import sys
 
+import netaddr
 from neutronclient.common import exceptions as n_exc
 from neutronclient.neutron import v2_0 as neutronv20
 from oslo_log import log as logging
@@ -273,7 +274,8 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
             if not rule.get('cidr'):
                 new_rule['ethertype'] = 'IPv4'
             else:
-                new_rule['ethertype'] = utils.get_ip_version(rule.get('cidr'))
+                version = netaddr.IPNetwork(rule.get('cidr')).version
+                new_rule['ethertype'] = 'IPv6' if version == 6 else 'IPv4'
             new_rule['remote_ip_prefix'] = rule.get('cidr')
             new_rule['security_group_id'] = rule.get('parent_group_id')
             new_rule['remote_group_id'] = rule.get('group_id')

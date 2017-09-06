@@ -67,10 +67,11 @@ from oslo_config import cfg
 from oslo_db import exception as db_exc
 from oslo_log import log as logging
 import oslo_messaging as messaging
+from oslo_utils import encodeutils
 from oslo_utils import importutils
 from oslo_utils import uuidutils
 import prettytable
-
+import six
 import six.moves.urllib.parse as urlparse
 from sqlalchemy.engine import url as sqla_url
 
@@ -674,6 +675,37 @@ class DbCommands(object):
     def __init__(self):
         pass
 
+    @staticmethod
+    def print_dict(dct, dict_property="Property", dict_value='Value'):
+        """Print a `dict` as a table of two columns.
+
+        :param dct: `dict` to print
+        :param dict_property: name of the first column
+        :param wrap: wrapping for the second column
+        :param dict_value: header label for the value (second) column
+        """
+        pt = prettytable.PrettyTable([dict_property, dict_value])
+        pt.align = 'l'
+        for k, v in sorted(dct.items()):
+            # convert dict to str to check length
+            if isinstance(v, dict):
+                v = six.text_type(v)
+            # if value has a newline, add in multiple rows
+            # e.g. fault with stacktrace
+            if v and isinstance(v, six.string_types) and r'\n' in v:
+                lines = v.strip().split(r'\n')
+                col1 = k
+                for line in lines:
+                    pt.add_row([col1, line])
+                    col1 = ''
+            else:
+                pt.add_row([k, v])
+
+        if six.PY2:
+            print(encodeutils.safe_encode(pt.get_string()))
+        else:
+            print(encodeutils.safe_encode(pt.get_string()).decode())
+
     @args('--version', metavar='<version>', help=argparse.SUPPRESS)
     @args('--local_cell', action='store_true',
           help='Only sync db in the local cell: do not attempt to fan-out'
@@ -758,8 +790,8 @@ class DbCommands(object):
                 sys.stdout.write('.')
         if verbose:
             if table_to_rows_archived:
-                utils.print_dict(table_to_rows_archived, _('Table'),
-                                 dict_value=_('Number of Rows Archived'))
+                self.print_dict(table_to_rows_archived, _('Table'),
+                                dict_value=_('Number of Rows Archived'))
             else:
                 print(_('Nothing was archived.'))
         # NOTE(danms): Return nonzero if we archived something
@@ -1039,6 +1071,36 @@ class CellCommands(object):
                    'been deprecated. They will be removed in an upcoming '
                    'release.')
 
+    @staticmethod
+    def parse_server_string(server_str):
+        """Parses the given server_string and returns a tuple of host and port.
+        If it's not a combination of host part and port, the port element is an
+        empty string. If the input is invalid expression, return a tuple of two
+        empty strings.
+        """
+        try:
+            # First of all, exclude pure IPv6 address (w/o port).
+            if netaddr.valid_ipv6(server_str):
+                return (server_str, '')
+
+            # Next, check if this is IPv6 address with a port number
+            # combination.
+            if server_str.find("]:") != -1:
+                (address, port) = server_str.replace('[', '', 1).split(']:')
+                return (address, port)
+
+            # Third, check if this is a combination of an address and a port
+            if server_str.find(':') == -1:
+                return (server_str, '')
+
+            # This must be a combination of an address and a port
+            (address, port) = server_str.split(':')
+            return (address, port)
+
+        except (ValueError, netaddr.AddrFormatError):
+            print('Invalid server_string: %s' % server_str)
+            return ('', '')
+
     def _create_transport_hosts(self, username, password,
                                 broker_hosts=None, hostname=None, port=None):
         """Returns a list of oslo.messaging.TransportHost objects."""
@@ -1048,7 +1110,7 @@ class CellCommands(object):
             hosts = broker_hosts.split(',')
             for host in hosts:
                 host = host.strip()
-                broker_hostname, broker_port = utils.parse_server_string(host)
+                broker_hostname, broker_port = self.parse_server_string(host)
                 if not broker_port:
                     msg = _('Invalid broker_hosts value: %s. It should be'
                             ' in hostname:port format') % host
