@@ -451,3 +451,16 @@ class ComputeNodeList(base.ObjectListBase, base.NovaObject):
                                                             compute_uuids)
         return base.obj_make_list(context, cls(context), objects.ComputeNode,
                                   db_computes)
+
+    @staticmethod
+    @db.select_db_reader_mode
+    def _db_compute_node_get_by_hv_type(context, hv_type):
+        db_computes = context.session.query(models.ComputeNode).filter(
+            models.ComputeNode.hypervisor_type == hv_type).all()
+        return db_computes
+
+    @classmethod
+    def get_by_hypervisor_type(cls, context, hv_type):
+        db_computes = cls._db_compute_node_get_by_hv_type(context, hv_type)
+        return base.obj_make_list(context, cls(context), objects.ComputeNode,
+                                  db_computes)
