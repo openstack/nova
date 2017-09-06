@@ -88,9 +88,8 @@ class RequestContext(context.RequestContext):
 
     def __init__(self, user_id=None, project_id=None, is_admin=None,
                  read_deleted="no", remote_address=None, timestamp=None,
-                 quota_class=None, user_name=None, project_name=None,
-                 service_catalog=None, instance_lock_checked=False,
-                 user_auth_plugin=None, **kwargs):
+                 quota_class=None, service_catalog=None,
+                 instance_lock_checked=False, user_auth_plugin=None, **kwargs):
         """:param read_deleted: 'no' indicates deleted records are hidden,
                 'yes' indicates deleted records are visible,
                 'only' indicates that *only* deleted records are visible.
@@ -131,8 +130,6 @@ class RequestContext(context.RequestContext):
         # rs_limits turnstile pre-processor.
         # See https://lists.launchpad.net/openstack/msg12200.html
         self.quota_class = quota_class
-        self.user_name = user_name
-        self.project_name = project_name
 
         # NOTE(dheeraj): The following attributes are used by cellsv2 to store
         # connection information for connecting to the target cell.
@@ -165,25 +162,6 @@ class RequestContext(context.RequestContext):
 
     read_deleted = property(_get_read_deleted, _set_read_deleted,
                             _del_read_deleted)
-
-    # FIXME(dims): user_id and project_id duplicate information that is
-    # already present in the oslo_context's RequestContext. We need to
-    # get rid of them.
-    @property
-    def project_id(self):
-        return self.tenant
-
-    @project_id.setter
-    def project_id(self, value):
-        self.tenant = value
-
-    @property
-    def user_id(self):
-        return self.user
-
-    @user_id.setter
-    def user_id(self, value):
-        self.user = value
 
     def to_dict(self):
         values = super(RequestContext, self).to_dict()
@@ -231,19 +209,6 @@ class RequestContext(context.RequestContext):
             service_catalog=values.get('service_catalog'),
             instance_lock_checked=values.get('instance_lock_checked', False),
         )
-
-    @classmethod
-    def from_environ(cls, environ, **kwargs):
-        ctx = super(RequestContext, cls).from_environ(environ, **kwargs)
-
-        # the base oslo.context sets its user param and tenant param but not
-        # our user_id and project_id param so fix those up.
-        if ctx.user and not ctx.user_id:
-            ctx.user_id = ctx.user
-        if ctx.tenant and not ctx.project_id:
-            ctx.project_id = ctx.tenant
-
-        return ctx
 
     def elevated(self, read_deleted=None):
         """Return a version of this context with admin flag set."""
