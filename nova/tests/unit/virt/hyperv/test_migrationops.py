@@ -201,7 +201,8 @@ class MigrationOpsTestCase(test_base.HyperVBaseTestCase):
 
         self._migrationops.migrate_disk_and_power_off(
             self.context, instance, mock.sentinel.FAKE_DEST, flavor,
-            network_info, None, self._FAKE_TIMEOUT, self._FAKE_RETRY_INTERVAL)
+            network_info, mock.sentinel.bdi,
+            self._FAKE_TIMEOUT, self._FAKE_RETRY_INTERVAL)
 
         mock_check_flavor.assert_called_once_with(instance, flavor)
         self._migrationops._vmops.power_off.assert_called_once_with(
@@ -210,7 +211,7 @@ class MigrationOpsTestCase(test_base.HyperVBaseTestCase):
         mock_migrate_disk_files.assert_called_once_with(
             instance.name, disk_files, mock.sentinel.FAKE_DEST)
         self._migrationops._vmops.destroy.assert_called_once_with(
-            instance, destroy_disks=False)
+            instance, network_info, mock.sentinel.bdi, destroy_disks=False)
 
     def test_confirm_migration(self):
         mock_instance = fake_instance.fake_instance_obj(self.context)
