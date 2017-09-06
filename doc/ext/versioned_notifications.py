@@ -21,16 +21,16 @@ It is used via a single directive in the .rst file
 """
 
 from docutils import nodes
+from docutils.parsers import rst
 import importlib
 import pkgutil
-from sphinx.util.compat import Directive
 
 import nova.notifications.objects
 from nova.notifications.objects import base as notification
 from nova.objects import base
 
 
-class VersionedNotificationDirective(Directive):
+class VersionedNotificationDirective(rst.Directive):
 
     SAMPLE_ROOT = 'doc/notification_samples/'
     TOGGLE_SCRIPT = """
