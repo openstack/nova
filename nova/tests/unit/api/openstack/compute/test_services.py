@@ -1180,7 +1180,7 @@ class ServicesCellsTestV21(test.TestCase):
     def test_services_detail(self):
         req = FakeRequest()
         res_dict = self.controller.index(req)
-        utc = iso8601.iso8601.Utc()
+        utc = iso8601.UTC
         response = {'services': [
                     {'id': 'cell1@1',
                      'binary': 'nova-scheduler',

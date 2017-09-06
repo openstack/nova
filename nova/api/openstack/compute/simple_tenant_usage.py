@@ -242,7 +242,7 @@ class SimpleTenantUsageController(wsgi.Controller):
         # instance object fields and still maintain backwards compatibility
         # in the API.
         if value.utcoffset() is None:
-            value = value.replace(tzinfo=iso8601.iso8601.Utc())
+            value = value.replace(tzinfo=iso8601.UTC)
         return value
 
     def _get_datetime_range(self, req):

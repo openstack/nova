@@ -40,7 +40,7 @@ import nova.utils
 CONF = cfg.CONF
 FAKE_NETWORK_PROJECT_ID = '6133f8b603924f45bc0c9e21f6df12fa'
 
-UTC = iso8601.iso8601.Utc()
+UTC = iso8601.UTC
 FAKE_NETWORKS = [
     {
         'bridge': 'br100', 'vpn_public_port': 1000,

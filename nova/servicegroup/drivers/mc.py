@@ -77,7 +77,7 @@ class MemcachedDriver(base.Driver):
         if updated_time_in_mc:
             # Change mc time to offset-aware time
             updated_time_in_mc = \
-                updated_time_in_mc.replace(tzinfo=iso8601.iso8601.Utc())
+                updated_time_in_mc.replace(tzinfo=iso8601.UTC)
             if updated_time_in_db <= updated_time_in_mc:
                 return updated_time_in_mc
 

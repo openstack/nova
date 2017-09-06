@@ -71,7 +71,7 @@ class MemcachedServiceGroupTestCase(test.NoDBTestCase):
         service_ref = {
             'host': 'fake-host',
             'topic': 'compute',
-            'updated_at': updated_at_time.replace(tzinfo=iso8601.iso8601.Utc())
+            'updated_at': updated_at_time.replace(tzinfo=iso8601.UTC)
         }
 
         self.mc_client.get.return_value = None
@@ -81,12 +81,12 @@ class MemcachedServiceGroupTestCase(test.NoDBTestCase):
         self.mc_client.reset_mock()
         retval = timeutils.utcnow()
         self.mc_client.get.return_value = retval
-        self.assertEqual(retval.replace(tzinfo=iso8601.iso8601.Utc()),
+        self.assertEqual(retval.replace(tzinfo=iso8601.UTC),
                          self.servicegroup_api.get_updated_time(service_ref))
         self.mc_client.get.assert_called_once_with('compute:fake-host')
         self.mc_client.reset_mock()
         service_ref['updated_at'] = \
-            retval.replace(tzinfo=iso8601.iso8601.Utc())
+            retval.replace(tzinfo=iso8601.UTC)
         self.mc_client.get.return_value = updated_at_time
         self.assertEqual(service_ref['updated_at'],
                          self.servicegroup_api.get_updated_time(service_ref))
