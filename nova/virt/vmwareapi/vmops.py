@@ -1497,9 +1497,7 @@ class VMwareVMOps(object):
         """Return data about the VM instance."""
         vm_ref = vm_util.get_vm_ref(self._session, instance)
 
-        lst_properties = ["summary.config.numCpu",
-                    "summary.config.memorySizeMB",
-                    "runtime.powerState"]
+        lst_properties = ["runtime.powerState"]
         try:
             vm_props = self._session._call_method(vutil,
                                                   "get_object_properties_dict",
@@ -1507,13 +1505,8 @@ class VMwareVMOps(object):
                                                   lst_properties)
         except vexc.ManagedObjectNotFoundException:
             raise exception.InstanceNotFound(instance_id=instance.uuid)
-        max_mem = int(vm_props.get('summary.config.memorySizeMB', 0)) * 1024
-        num_cpu = int(vm_props.get('summary.config.numCpu', 0))
         return hardware.InstanceInfo(
-            state=constants.POWER_STATES[vm_props['runtime.powerState']],
-            max_mem_kb=max_mem,
-            mem_kb=max_mem,
-            num_cpu=num_cpu)
+            state=constants.POWER_STATES[vm_props['runtime.powerState']])
 
     def _get_diagnostics(self, instance):
         """Return data about VM diagnostics."""

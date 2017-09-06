@@ -75,12 +75,16 @@ class TestPowerVMDriver(test.NoDBTestCase):
         self.assertEqual(mock_img.return_value, self.drv.image_api)
 
     @mock.patch('nova.virt.powervm.vm.get_pvm_uuid')
-    def test_get_info(self, mock_uuid):
-        mock_uuid.return_value = 'uuid'
-        info = self.drv.get_info('inst')
-        self.assertIsInstance(info, hardware.InstanceInfo)
-        self.assertEqual('uuid', info.id)
+    @mock.patch('nova.virt.powervm.vm.get_vm_qp')
+    @mock.patch('nova.virt.powervm.vm._translate_vm_state')
+    def test_get_info(self, mock_tx_state, mock_qp, mock_uuid):
+        mock_tx_state.return_value = 'fake-state'
+        self.assertEqual(hardware.InstanceInfo('fake-state'),
+                         self.drv.get_info('inst'))
         mock_uuid.assert_called_once_with('inst')
+        mock_qp.assert_called_once_with(
+            self.drv.adapter, mock_uuid.return_value, 'PartitionState')
+        mock_tx_state.assert_called_once_with(mock_qp.return_value)
 
     @mock.patch('nova.virt.powervm.vm.get_lpar_names')
     def test_list_instances(self, mock_names):

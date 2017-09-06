@@ -101,11 +101,7 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
             return fake_info[key]
         mock_info.__getitem__.side_effect = getitem
 
-        expected = hardware.InstanceInfo(state=constants.HYPERV_POWER_STATE[2],
-                                         max_mem_kb=mock.sentinel.FAKE_MEM_KB,
-                                         mem_kb=mock.sentinel.FAKE_MEM_KB,
-                                         num_cpu=mock.sentinel.FAKE_NUM_CPU,
-                                         cpu_time_ns=mock.sentinel.FAKE_CPU_NS)
+        expected = hardware.InstanceInfo(state=constants.HYPERV_POWER_STATE[2])
 
         self._vmops._vmutils.vm_exists.return_value = vm_exists
         self._vmops._vmutils.get_vm_summary_info.return_value = mock_info

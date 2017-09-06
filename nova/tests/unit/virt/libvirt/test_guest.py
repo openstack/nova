@@ -554,11 +554,7 @@ class GuestTestCase(test.NoDBTestCase):
         info = self.guest.get_info(self.host)
         self.domain.info.assert_called_once_with()
         self.assertEqual(1, info.state)
-        self.assertEqual(2, info.max_mem_kb)
-        self.assertEqual(3, info.mem_kb)
-        self.assertEqual(4, info.num_cpu)
-        self.assertEqual(5, info.cpu_time_ns)
-        self.assertEqual(6, info.id)
+        self.assertEqual(6, info.internal_id)
 
     def test_get_power_state(self):
         self.domain.info.return_value = (1, 2, 3, 4, 5)

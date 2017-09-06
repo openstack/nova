@@ -862,7 +862,7 @@ class LibvirtDriver(driver.ComputeDriver):
             try:
                 dom_info = self.get_info(instance)
                 state = dom_info.state
-                new_domid = dom_info.id
+                new_domid = dom_info.internal_id
             except exception.InstanceNotFound:
                 LOG.debug("During wait destroy, instance disappeared.",
                           instance=instance)

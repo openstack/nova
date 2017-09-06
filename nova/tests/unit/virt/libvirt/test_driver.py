@@ -12323,7 +12323,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         mock_get_domain.return_value = dom_mock
         mock_get_info.return_value = hardware.InstanceInfo(
-            state=power_state.SHUTDOWN, id=-1)
+            state=power_state.SHUTDOWN, internal_id=-1)
         mock_delete_instance_files.return_value = None
 
         instance = objects.Instance(self.context, **self.test_instance)
@@ -12384,7 +12384,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr._has_uefi_support = mock.Mock(return_value=False)
         drvr.delete_instance_files = mock.Mock(return_value=None)
         drvr.get_info = mock.Mock(return_value=
-            hardware.InstanceInfo(state=power_state.SHUTDOWN, id=-1)
+            hardware.InstanceInfo(state=power_state.SHUTDOWN, internal_id=-1)
         )
 
         instance = objects.Instance(self.context, **self.test_instance)
@@ -12407,7 +12407,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr._has_uefi_support = mock.Mock(return_value=False)
         drvr.delete_instance_files = mock.Mock(return_value=None)
         drvr.get_info = mock.Mock(return_value=
-            hardware.InstanceInfo(state=power_state.SHUTDOWN, id=-1)
+            hardware.InstanceInfo(state=power_state.SHUTDOWN, internal_id=-1)
         )
 
         instance = objects.Instance(self.context, **self.test_instance)
@@ -12433,7 +12433,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr._has_uefi_support = mock.Mock(return_value=False)
         drvr.delete_instance_files = mock.Mock(return_value=None)
         drvr.get_info = mock.Mock(return_value=
-            hardware.InstanceInfo(state=power_state.SHUTDOWN, id=-1)
+            hardware.InstanceInfo(state=power_state.SHUTDOWN, internal_id=-1)
         )
 
         instance = objects.Instance(self.context, **self.test_instance)
@@ -12455,9 +12455,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr._host.get_domain = mock.Mock(return_value=mock_domain)
         drvr._has_uefi_support = mock.Mock(return_value=True)
         drvr.delete_instance_files = mock.Mock(return_value=None)
-        drvr.get_info = mock.Mock(return_value=
-            hardware.InstanceInfo(state=power_state.SHUTDOWN, id=-1)
-        )
+        drvr.get_info = mock.Mock(return_value=hardware.InstanceInfo(
+            state=power_state.SHUTDOWN, internal_id=-1))
 
         instance = objects.Instance(self.context, **self.test_instance)
         drvr.destroy(self.context, instance, [])
@@ -12530,7 +12529,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock_domain.destroy.side_effect = ex
 
             mock_info = mock.MagicMock()
-            mock_info.id = 1
+            mock_info.internal_id = 1
             mock_info.state = power_state.SHUTDOWN
             mock_get_info.return_value = mock_info
 
@@ -12591,7 +12590,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_guest = mock.Mock(libvirt_guest.Guest, id=1)
         mock_guest.poweroff = mock.Mock(side_effect=[ex, None])
 
-        inst_info = hardware.InstanceInfo(power_state.SHUTDOWN, id=1)
+        inst_info = hardware.InstanceInfo(power_state.SHUTDOWN, internal_id=1)
         instance = objects.Instance(**self.test_instance)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
@@ -13906,11 +13905,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         info = drvr.get_info(instance)
         self.assertEqual(1, info.state)
-        self.assertEqual(2048, info.max_mem_kb)
-        self.assertEqual(737, info.mem_kb)
-        self.assertEqual(8, info.num_cpu)
-        self.assertEqual(12345, info.cpu_time_ns)
-        self.assertEqual(mock.sentinel.instance_id, info.id)
+        self.assertEqual(mock.sentinel.instance_id, info.internal_id)
         dom_mock.info.assert_called_once_with()
         dom_mock.ID.assert_called_once_with()
         mock_get_domain.assert_called_once_with(instance)

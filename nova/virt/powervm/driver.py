@@ -92,16 +92,9 @@ class PowerVMDriver(driver.ComputeDriver):
         """Get the current status of an instance.
 
         :param instance: nova.objects.instance.Instance object
-        :returns: An InstanceInfo object containing:
-
-        :state:           the running state, one of the power_state codes
-        :max_mem_kb:      (int) the maximum memory in KBytes allowed
-        :mem_kb:          (int) the memory in KBytes used by the domain
-        :num_cpu:         (int) the number of virtual CPUs for the domain
-        :cpu_time_ns:     (int) the CPU time used in nanoseconds
-        :id:              a unique ID for the instance
+        :returns: An InstanceInfo object.
         """
-        return vm.InstanceInfo(self.adapter, instance)
+        return vm.get_vm_info(self.adapter, instance)
 
     def list_instances(self):
         """Return the names of all the instances known to the virt host.

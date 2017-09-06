@@ -2353,7 +2353,5 @@ class VMInfoTests(VMUtilsTestBase):
         self.session.call_xenapi.side_effect = call_xenapi
 
         info = vm_utils.compile_info(self.session, "dummy")
-        self.assertEqual(hardware.InstanceInfo(state=power_state.RUNNING,
-                                               max_mem_kb=10, mem_kb=9,
-                                               num_cpu='5', cpu_time_ns=0),
+        self.assertEqual(hardware.InstanceInfo(state=power_state.RUNNING),
                          info)

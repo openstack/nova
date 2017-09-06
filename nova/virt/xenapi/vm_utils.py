@@ -1685,15 +1685,7 @@ def _vm_query_data_source(session, *args):
 
 def compile_info(session, vm_ref):
     """Fill record with VM status information."""
-    power_state = get_power_state(session, vm_ref)
-    max_mem = session.call_xenapi("VM.get_memory_static_max", vm_ref)
-    mem = session.call_xenapi("VM.get_memory_dynamic_max", vm_ref)
-    num_cpu = session.call_xenapi("VM.get_VCPUs_max", vm_ref)
-
-    return hardware.InstanceInfo(state=power_state,
-                                 max_mem_kb=int(max_mem) >> 10,
-                                 mem_kb=int(mem) >> 10,
-                                 num_cpu=num_cpu)
+    return hardware.InstanceInfo(state=get_power_state(session, vm_ref))
 
 
 def compile_instance_diagnostics(session, instance, vm_ref):
