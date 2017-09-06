@@ -35,6 +35,7 @@ def fake_db_migration(**updates):
         'deleted_at': None,
         'deleted': False,
         'id': 123,
+        'uuid': uuidsentinel.migration,
         'source_compute': 'compute-source',
         'dest_compute': 'compute-dest',
         'source_node': 'node-source',
@@ -103,11 +104,14 @@ class _TestMigrationObject(object):
         mig = migration.Migration(context=ctxt)
         mig.source_compute = 'foo'
         mig.migration_type = 'resize'
+        mig.uuid = uuidsentinel.migration
         mig.create()
         self.assertEqual(fake_migration['dest_compute'], mig.dest_compute)
+        self.assertIn('uuid', mig)
         mock_create.assert_called_once_with(ctxt,
                                             {'source_compute': 'foo',
-                                             'migration_type': 'resize'})
+                                             'migration_type': 'resize',
+                                             'uuid': uuidsentinel.migration})
 
     @mock.patch.object(db, 'migration_create')
     def test_recreate_fails(self, mock_create):
@@ -117,11 +121,13 @@ class _TestMigrationObject(object):
         mig = migration.Migration(context=ctxt)
         mig.source_compute = 'foo'
         mig.migration_type = 'resize'
+        mig.uuid = uuidsentinel.migration
         mig.create()
         self.assertRaises(exception.ObjectActionError, mig.create)
         mock_create.assert_called_once_with(ctxt,
                                             {'source_compute': 'foo',
-                                             'migration_type': 'resize'})
+                                             'migration_type': 'resize',
+                                             'uuid': uuidsentinel.migration})
 
     def test_create_fails_migration_type(self):
         ctxt = context.get_admin_context()
@@ -248,6 +254,25 @@ class _TestMigrationObject(object):
         fake_get.return_value = fake_migration
         migration = objects.Migration.get_by_id_and_instance(ctxt, '1', '1')
         self.compare_obj(migration, fake_migration)
+
+    def test_create_uuid_on_load(self):
+        values = {'source_compute': 'src',
+                  'dest_compute': 'dst',
+                  'source_node': 'srcnode',
+                  'dest_node': 'dstnode',
+                  'instance_uuid': 'fake',
+                  'status': 'faking',
+                  'migration_type': 'migration',
+                  'created_at': None,
+                  'deleted_at': None,
+                  'updated_at': None}
+        db_mig = db.migration_create(self.context, values)
+        mig = objects.Migration.get_by_id(self.context, db_mig.id)
+        self.assertIn('uuid', mig)
+        uuid = mig.uuid
+        # Make sure that it was saved and we get the same one back
+        mig = objects.Migration.get_by_id(self.context, db_mig.id)
+        self.assertEqual(uuid, mig.uuid)
 
 
 class TestMigrationObject(test_objects._LocalTest,

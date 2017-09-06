@@ -1126,7 +1126,7 @@ object_data = {
     'KeyPair': '1.4-1244e8d1b103cc69d038ed78ab3a8cc6',
     'KeyPairList': '1.3-94aad3ac5c938eef4b5e83da0212f506',
     'MemoryDiagnostics': '1.0-2c995ae0f2223bb0f8e523c5cc0b83da',
-    'Migration': '1.4-17979b9f2ae7f28d97043a220b2a8350',
+    'Migration': '1.5-48bebaada664ee15bc23b35b2b814d75',
     'MigrationContext': '1.1-9fb17b0b521370957a884636499df52d',
     'MigrationList': '1.3-55595bfc1a299a5962614d0821a3567e',
     'MonitorMetric': '1.1-53b1db7c4ae2c531db79761e7acc52ba',

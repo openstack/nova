@@ -50,6 +50,7 @@ class MigrationsController(wsgi.Controller):
             del obj['deleted']
             del obj['deleted_at']
             del obj['hidden']
+            del obj['uuid']
             if 'memory_total' in obj:
                 for key in detail_keys:
                     del obj[key]

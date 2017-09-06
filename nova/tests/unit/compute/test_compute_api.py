@@ -3391,6 +3391,7 @@ class _ComputeAPIUnitTestMixIn(object):
                           'dest_node': None, 'dest_host': None,
                           'old_instance_type_id': None,
                           'new_instance_type_id': None,
+                          'uuid': uuids.migration,
                           'instance_uuid': uuids.instance_2, 'status': None,
                           'migration_type': 'evacuation', 'memory_total': None,
                           'memory_processed': None, 'memory_remaining': None,

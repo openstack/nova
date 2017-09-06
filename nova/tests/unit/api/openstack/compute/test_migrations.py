@@ -50,7 +50,8 @@ fake_migrations = [
         'created_at': datetime.datetime(2012, 10, 29, 13, 42, 2),
         'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2),
         'deleted_at': None,
-        'deleted': False
+        'deleted': False,
+        'uuid': uuids.migration1,
     },
     # non in-progress live migration
     {
@@ -75,7 +76,8 @@ fake_migrations = [
         'created_at': datetime.datetime(2012, 10, 29, 13, 42, 2),
         'updated_at': datetime.datetime(2012, 10, 29, 13, 42, 2),
         'deleted_at': None,
-        'deleted': False
+        'deleted': False,
+        'uuid': uuids.migration2,
     },
     # in-progress resize
     {
@@ -100,7 +102,8 @@ fake_migrations = [
         'created_at': datetime.datetime(2013, 10, 22, 13, 42, 2),
         'updated_at': datetime.datetime(2013, 10, 22, 13, 42, 2),
         'deleted_at': None,
-        'deleted': False
+        'deleted': False,
+        'uuid': uuids.migration3,
     },
     # non in-progress resize
     {
@@ -125,7 +128,8 @@ fake_migrations = [
         'created_at': datetime.datetime(2013, 10, 22, 13, 42, 2),
         'updated_at': datetime.datetime(2013, 10, 22, 13, 42, 2),
         'deleted_at': None,
-        'deleted': False
+        'deleted': False,
+        'uuid': uuids.migration4,
     }
 ]
 
