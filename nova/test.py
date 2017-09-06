@@ -313,6 +313,9 @@ class TestCase(testtools.TestCase):
 
         self.useFixture(nova_fixtures.ForbidNewLegacyNotificationFixture())
 
+        # NOTE(mikal): make sure we don't load a privsep helper accidentally
+        self.useFixture(nova_fixtures.PrivsepNoHelperFixture())
+
     def _setup_cells(self):
         """Setup a normal cellsv2 environment.
 

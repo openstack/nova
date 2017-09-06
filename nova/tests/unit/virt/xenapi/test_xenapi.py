@@ -948,55 +948,25 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
 
     @testtools.skipIf(test_utils.is_osx(),
                       'IPv6 pretty-printing broken on OSX, see bug 1409135')
-    def test_spawn_netinject_file(self):
+    @mock.patch.object(nova.privsep.dac_admin, 'readlink')
+    @mock.patch.object(nova.privsep.dac_admin, 'writefile')
+    @mock.patch.object(nova.privsep.dac_admin, 'makedirs')
+    @mock.patch.object(nova.privsep.dac_admin, 'chown')
+    @mock.patch.object(nova.privsep.dac_admin, 'chmod')
+    def test_spawn_netinject_file(self, chmod, chown, mkdir, write_file,
+                                  read_link):
         self.flags(flat_injected=True)
         db_fakes.stub_out_db_instance_api(self, injected=True)
 
-        self._tee_executed = False
-
-        def _tee_handler(cmd, **kwargs):
-            actual = kwargs.get('process_input', None)
-            expected = """\
-# Injected by Nova on instance boot
-#
-# This file describes the network interfaces available on your system
-# and how to activate them. For more information, see interfaces(5).
-
-# The loopback network interface
-auto lo
-iface lo inet loopback
-
-auto eth0
-iface eth0 inet static
-    hwaddress ether DE:AD:BE:EF:00:01
-    address 192.168.1.100
-    netmask 255.255.255.0
-    broadcast 192.168.1.255
-    gateway 192.168.1.1
-    dns-nameservers 192.168.1.3 192.168.1.4
-iface eth0 inet6 static
-    hwaddress ether DE:AD:BE:EF:00:01
-    address 2001:db8:0:1:dcad:beff:feef:1
-    netmask 64
-    gateway 2001:db8:0:1::1
-"""
-            self.assertEqual(expected, actual)
-            self._tee_executed = True
-            return '', ''
-
-        def _readlink_handler(cmd_parts, **kwargs):
-            return os.path.realpath(cmd_parts[2]), ''
-
-        fake_processutils.fake_execute_set_repliers([
-            # Capture the tee .../etc/network/interfaces command
-            (r'tee.*interfaces', _tee_handler),
-            (r'readlink -nm.*', _readlink_handler),
-        ])
         self._test_spawn(IMAGE_MACHINE,
                          IMAGE_KERNEL,
                          IMAGE_RAMDISK,
                          check_injection=True)
-        self.assertTrue(self._tee_executed)
+        read_link.assert_called()
+        mkdir.assert_called()
+        chown.assert_called()
+        chmod.assert_called()
+        write_file.assert_called()
 
     @testtools.skipIf(test_utils.is_osx(),
                       'IPv6 pretty-printing broken on OSX, see bug 1409135')

@@ -37,23 +37,15 @@ blkid: CommandFilter, blkid, root
 # nova/virt/disk/mount/nbd.py: 'blockdev', '--flushbufs', device
 blockdev: RegExpFilter, blockdev, root, blockdev, (--getsize64|--flushbufs), /dev/.*
 
-# nova/virt/disk/vfs/localfs.py: 'tee', canonpath
 # nova/virt/libvirt/guest.py: 'tee',
 # nova/virt/libvirt/vif.py: utils.execute('tee',
 tee: CommandFilter, tee, root
 
-# nova/virt/disk/vfs/localfs.py: 'mkdir', canonpath
-mkdir: CommandFilter, mkdir, root
-
-# nova/virt/disk/vfs/localfs.py: 'chown'
 # nova/virt/libvirt/utils.py: def chown(): execute('chown', owner, path,
 # nova/virt/libvirt/driver.py: 'chown', os.getuid( console_log
 # nova/virt/libvirt/driver.py: 'chown', os.getuid( console_log
 # nova/virt/libvirt/driver.py: 'chown', 'root', basepath('disk')
 chown: CommandFilter, chown, root
-
-# nova/virt/disk/vfs/localfs.py: 'chmod'
-chmod: CommandFilter, chmod, root
 
 # nova/virt/libvirt/vif.py: 'ip', 'tuntap', 'add', dev, 'mode', 'tap'
 # nova/virt/libvirt/vif.py: 'ip', 'link', 'set', dev, 'up'
@@ -180,9 +172,6 @@ mkfs: CommandFilter, mkfs, root
 # nova/virt/libvirt/utils.py: 'qemu-img'
 qemu-img: CommandFilter, qemu-img, root
 
-# nova/virt/disk/vfs/localfs.py: 'readlink', '-e'
-readlink: CommandFilter, readlink, root
-
 # nova/virt/disk/api.py:
 mkfs.ext3: CommandFilter, mkfs.ext3, root
 mkfs.ext4: CommandFilter, mkfs.ext4, root
@@ -199,11 +188,6 @@ lvs: CommandFilter, lvs, root
 
 # nova/virt/libvirt/utils.py:
 vgs: CommandFilter, vgs, root
-
-# nova/utils.py: read_file_as_root: 'cat', file_path
-# (called from nova/virt/disk/vfs/localfs.py:VFSLocalFS.read_file)
-read_passwd: RegExpFilter, cat, root, cat, (/var|/usr)?/tmp/openstack-vfs-localfs[^/]+/etc/passwd
-read_shadow: RegExpFilter, cat, root, cat, (/var|/usr)?/tmp/openstack-vfs-localfs[^/]+/etc/shadow
 
 # os-brick needed commands
 read_initiator: ReadFileFilter, /etc/iscsi/initiatorname.iscsi
@@ -222,7 +206,10 @@ scsi_id: CommandFilter, /lib/udev/scsi_id, root
 # os_brick.privileged.default oslo.privsep context
 # This line ties the superuser privs with the config files, context name,
 # and (implicitly) the actual python code invoked.
-privsep-rootwrap: RegExpFilter, privsep-helper, root, privsep-helper, --config-file, /etc/(?!\.\.).*, --privsep_context, os_brick.privileged.default, --privsep_sock_path, /tmp/.*
+privsep-rootwrap-os_brick: RegExpFilter, privsep-helper, root, privsep-helper, --config-file, /etc/(?!\.\.).*, --privsep_context, os_brick.privileged.default, --privsep_sock_path, /tmp/.*
+
+privsep-rootwrap-dac_admin: RegExpFilter, privsep-helper, root, privsep-helper, --config-file, /etc/(?!\.\.).*, --privsep_context, nova.privsep.dac_admin_pctxt, --privsep_sock_path, /tmp/.*
+
 
 # nova/virt/libvirt/storage/dmcrypt.py:
 cryptsetup: CommandFilter, cryptsetup, root

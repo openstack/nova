@@ -145,18 +145,6 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         self.assertTrue([c for c in password
                          if c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'])
 
-    def test_read_file_as_root(self):
-        def fake_execute(*args, **kwargs):
-            if args[1] == 'bad':
-                raise processutils.ProcessExecutionError()
-            return 'fakecontents', None
-
-        self.stub_out('nova.utils.execute', fake_execute)
-        contents = utils.read_file_as_root('good')
-        self.assertEqual(contents, 'fakecontents')
-        self.assertRaises(exception.FileNotFound,
-                          utils.read_file_as_root, 'bad')
-
     def test_temporary_chown(self):
         def fake_execute(*args, **kwargs):
             if args[0] == 'chown':

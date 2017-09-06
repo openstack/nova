@@ -12,143 +12,48 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import grp
+import pwd
 import tempfile
 
+from collections import namedtuple
 import mock
-from oslo_concurrency import processutils
 
 from nova import exception
 from nova import test
-from nova.tests.unit import utils as tests_utils
 import nova.utils
 from nova.virt.disk.mount import nbd
 from nova.virt.disk.vfs import localfs as vfsimpl
 from nova.virt.image import model as imgmodel
 
 
-dirs = []
-files = {}
-commands = []
-
-
-def fake_execute(*args, **kwargs):
-    commands.append({"args": args, "kwargs": kwargs})
-
-    if args[0] == "readlink":
-        if args[1] == "-nm":
-            if args[2] in ["/scratch/dir/some/file",
-                           "/scratch/dir/some/dir",
-                           "/scratch/dir/other/dir",
-                           "/scratch/dir/other/file"]:
-                return args[2], ""
-        elif args[1] == "-e":
-            if args[2] in files:
-                return args[2], ""
-
-        return "", "No such file"
-    elif args[0] == "mkdir":
-        dirs.append(args[2])
-    elif args[0] == "chown":
-        owner = args[1]
-        path = args[2]
-        if path not in files:
-            raise Exception("No such file: " + path)
-
-        sep = owner.find(':')
-        if sep != -1:
-            user = owner[0:sep]
-            group = owner[sep + 1:]
-        else:
-            user = owner
-            group = None
-
-        if user:
-            if user == "fred":
-                uid = 105
-            else:
-                uid = 110
-            files[path]["uid"] = uid
-        if group:
-            if group == "users":
-                gid = 500
-            else:
-                gid = 600
-            files[path]["gid"] = gid
-    elif args[0] == "chgrp":
-        group = args[1]
-        path = args[2]
-        if path not in files:
-            raise Exception("No such file: " + path)
-
-        if group == "users":
-            gid = 500
-        else:
-            gid = 600
-        files[path]["gid"] = gid
-    elif args[0] == "chmod":
-        mode = args[1]
-        path = args[2]
-        if path not in files:
-            raise Exception("No such file: " + path)
-
-        files[path]["mode"] = int(mode, 8)
-    elif args[0] == "cat":
-        path = args[1]
-        if path not in files:
-            files[path] = {
-                "content": "Hello World",
-                "gid": 100,
-                "uid": 100,
-                "mode": 0o700
-                }
-        return files[path]["content"], ""
-    elif args[0] == "tee":
-        if args[1] == "-a":
-            path = args[2]
-            append = True
-        else:
-            path = args[1]
-            append = False
-        if path not in files:
-            files[path] = {
-                "content": "Hello World",
-                "gid": 100,
-                "uid": 100,
-                "mode": 0o700,
-                }
-        if append:
-            files[path]["content"] += kwargs["process_input"]
-        else:
-            files[path]["content"] = kwargs["process_input"]
-
-
 class VirtDiskVFSLocalFSTestPaths(test.NoDBTestCase):
     def setUp(self):
         super(VirtDiskVFSLocalFSTestPaths, self).setUp()
 
-        real_execute = processutils.execute
-
-        def nonroot_execute(*cmd_parts, **kwargs):
-            kwargs.pop('run_as_root', None)
-            return real_execute(*cmd_parts, **kwargs)
-
-        self.stub_out('oslo_concurrency.processutils.execute', nonroot_execute)
-        self.rawfile = imgmodel.LocalFileImage("/dummy.img",
+        self.rawfile = imgmodel.LocalFileImage('/dummy.img',
                                                imgmodel.FORMAT_RAW)
 
-    def test_check_safe_path(self):
-        if not tests_utils.coreutils_readlink_available():
-            self.skipTest("coreutils readlink(1) unavailable")
+    # NOTE(mikal): mocking a decorator is non-trivial, so this is the
+    # best we can do.
+
+    @mock.patch.object(nova.privsep.dac_admin, 'readlink')
+    def test_check_safe_path(self, read_link):
         vfs = vfsimpl.VFSLocalFS(self.rawfile)
-        vfs.imgdir = "/foo"
+        vfs.imgdir = '/foo'
+
+        read_link.return_value = '/foo/etc/something.conf'
+
         ret = vfs._canonical_path('etc/something.conf')
         self.assertEqual(ret, '/foo/etc/something.conf')
 
-    def test_check_unsafe_path(self):
-        if not tests_utils.coreutils_readlink_available():
-            self.skipTest("coreutils readlink(1) unavailable")
+    @mock.patch.object(nova.privsep.dac_admin, 'readlink')
+    def test_check_unsafe_path(self, read_link):
         vfs = vfsimpl.VFSLocalFS(self.rawfile)
-        vfs.imgdir = "/foo"
+        vfs.imgdir = '/foo'
+
+        read_link.return_value = '/etc/something.conf'
+
         self.assertRaises(exception.Invalid,
                           vfs._canonical_path,
                           'etc/../../../something.conf')
@@ -158,244 +63,109 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
     def setUp(self):
         super(VirtDiskVFSLocalFSTest, self).setUp()
 
-        self.qcowfile = imgmodel.LocalFileImage("/dummy.qcow2",
+        self.qcowfile = imgmodel.LocalFileImage('/dummy.qcow2',
                                                 imgmodel.FORMAT_QCOW2)
-        self.rawfile = imgmodel.LocalFileImage("/dummy.img",
+        self.rawfile = imgmodel.LocalFileImage('/dummy.img',
                                                imgmodel.FORMAT_RAW)
 
-    def test_makepath(self):
-        global dirs, commands
-        dirs = []
-        commands = []
-        self.stub_out('oslo_concurrency.processutils.execute', fake_execute)
-
+    @mock.patch.object(nova.privsep.dac_admin, 'readlink')
+    @mock.patch.object(nova.privsep.dac_admin, 'makedirs')
+    def test_makepath(self, mkdir, read_link):
         vfs = vfsimpl.VFSLocalFS(self.qcowfile)
-        vfs.imgdir = "/scratch/dir"
-        vfs.make_path("/some/dir")
-        vfs.make_path("/other/dir")
+        vfs.imgdir = '/scratch/dir'
 
-        self.assertEqual(dirs,
-                         ["/scratch/dir/some/dir", "/scratch/dir/other/dir"]),
+        vfs.make_path('/some/dir')
+        read_link.assert_called()
+        mkdir.assert_called_with(read_link.return_value)
 
-        root_helper = nova.utils.get_root_helper()
-        self.assertEqual(commands,
-                         [{'args': ('readlink', '-nm',
-                                    '/scratch/dir/some/dir'),
-                           'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}},
-                          {'args': ('mkdir', '-p',
-                                    '/scratch/dir/some/dir'),
-                           'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}},
-                          {'args': ('readlink', '-nm',
-                                    '/scratch/dir/other/dir'),
-                            'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}},
-                          {'args': ('mkdir', '-p',
-                                    '/scratch/dir/other/dir'),
-                           'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}}])
+        read_link.reset_mock()
+        mkdir.reset_mock()
+        vfs.make_path('/other/dir')
+        read_link.assert_called()
+        mkdir.assert_called_with(read_link.return_value)
 
-    def test_append_file(self):
-        global files, commands
-        files = {}
-        commands = []
-        self.stub_out('oslo_concurrency.processutils.execute', fake_execute)
-
+    @mock.patch.object(nova.privsep.dac_admin, 'readlink')
+    @mock.patch.object(nova.privsep.dac_admin, 'writefile')
+    def test_append_file(self, write_file, read_link):
         vfs = vfsimpl.VFSLocalFS(self.qcowfile)
-        vfs.imgdir = "/scratch/dir"
-        vfs.append_file("/some/file", " Goodbye")
+        vfs.imgdir = '/scratch/dir'
 
-        self.assertIn("/scratch/dir/some/file", files)
-        self.assertEqual(files["/scratch/dir/some/file"]["content"],
-                         "Hello World Goodbye")
+        vfs.append_file('/some/file', ' Goodbye')
 
-        root_helper = nova.utils.get_root_helper()
-        self.assertEqual(commands,
-                         [{'args': ('readlink', '-nm',
-                                    '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}},
-                          {'args': ('tee', '-a',
-                                    '/scratch/dir/some/file'),
-                           'kwargs': {'process_input': ' Goodbye',
-                                      'run_as_root': True,
-                                      'root_helper': root_helper}}])
+        read_link.assert_called()
+        write_file.assert_called_with(read_link.return_value, 'a', ' Goodbye')
 
-    def test_replace_file(self):
-        global files, commands
-        files = {}
-        commands = []
-        self.stub_out('oslo_concurrency.processutils.execute', fake_execute)
-
+    @mock.patch.object(nova.privsep.dac_admin, 'readlink')
+    @mock.patch.object(nova.privsep.dac_admin, 'writefile')
+    def test_replace_file(self, write_file, read_link):
         vfs = vfsimpl.VFSLocalFS(self.qcowfile)
-        vfs.imgdir = "/scratch/dir"
-        vfs.replace_file("/some/file", "Goodbye")
+        vfs.imgdir = '/scratch/dir'
 
-        self.assertIn("/scratch/dir/some/file", files)
-        self.assertEqual(files["/scratch/dir/some/file"]["content"],
-                         "Goodbye")
+        vfs.replace_file('/some/file', 'Goodbye')
 
-        root_helper = nova.utils.get_root_helper()
-        self.assertEqual(commands,
-                         [{'args': ('readlink', '-nm',
-                                    '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}},
-                          {'args': ('tee', '/scratch/dir/some/file'),
-                           'kwargs': {'process_input': 'Goodbye',
-                                      'run_as_root': True,
-                                      'root_helper': root_helper}}])
+        read_link.assert_called()
+        write_file.assert_called_with(read_link.return_value, 'w', 'Goodbye')
 
-    def test_read_file(self):
-        global commands, files
-        files = {}
-        commands = []
-        self.stub_out('oslo_concurrency.processutils.execute', fake_execute)
-
+    @mock.patch.object(nova.privsep.dac_admin, 'readlink')
+    @mock.patch.object(nova.privsep.dac_admin, 'readfile')
+    def test_read_file(self, read_file, read_link):
         vfs = vfsimpl.VFSLocalFS(self.qcowfile)
-        vfs.imgdir = "/scratch/dir"
-        self.assertEqual(vfs.read_file("/some/file"), "Hello World")
+        vfs.imgdir = '/scratch/dir'
 
-        root_helper = nova.utils.get_root_helper()
-        self.assertEqual(commands,
-                         [{'args': ('readlink', '-nm',
-                                    '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}},
-                          {'args': ('cat', '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}}])
+        self.assertEqual(read_file.return_value, vfs.read_file('/some/file'))
+        read_link.assert_called()
+        read_file.assert_called()
 
-    def test_has_file(self):
-        global commands, files
-        files = {}
-        commands = []
-        self.stub_out('oslo_concurrency.processutils.execute', fake_execute)
-
+    @mock.patch.object(nova.privsep.dac_admin.path, 'exists')
+    def test_has_file(self, exists):
         vfs = vfsimpl.VFSLocalFS(self.qcowfile)
-        vfs.imgdir = "/scratch/dir"
-        vfs.read_file("/some/file")
+        vfs.imgdir = '/scratch/dir'
+        has = vfs.has_file('/some/file')
+        self.assertEqual(exists.return_value, has)
 
-        self.assertTrue(vfs.has_file("/some/file"))
-        self.assertFalse(vfs.has_file("/other/file"))
-
-        root_helper = nova.utils.get_root_helper()
-        self.assertEqual(commands,
-                         [{'args': ('readlink', '-nm',
-                                    '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}},
-                          {'args': ('cat', '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}},
-                          {'args': ('readlink', '-nm',
-                                    '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}},
-                          {'args': ('readlink', '-e',
-                                    '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}},
-                          {'args': ('readlink', '-nm',
-                                    '/scratch/dir/other/file'),
-                           'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}},
-                          {'args': ('readlink', '-e',
-                                    '/scratch/dir/other/file'),
-                           'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}},
-                          ])
-
-    def test_set_permissions(self):
-        global commands, files
-        commands = []
-        files = {}
-        self.stub_out('oslo_concurrency.processutils.execute', fake_execute)
-
+    @mock.patch.object(nova.privsep.dac_admin, 'readlink')
+    @mock.patch.object(nova.privsep.dac_admin, 'chmod')
+    def test_set_permissions(self, chmod, read_link):
         vfs = vfsimpl.VFSLocalFS(self.qcowfile)
-        vfs.imgdir = "/scratch/dir"
-        vfs.read_file("/some/file")
+        vfs.imgdir = '/scratch/dir'
 
-        vfs.set_permissions("/some/file", 0o777)
-        self.assertEqual(files["/scratch/dir/some/file"]["mode"], 0o777)
+        vfs.set_permissions('/some/file', 0o777)
+        read_link.assert_called()
+        chmod.assert_called_with(read_link.return_value, 0o777)
 
-        root_helper = nova.utils.get_root_helper()
-        self.assertEqual(commands,
-                         [{'args': ('readlink', '-nm',
-                                    '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}},
-                          {'args': ('cat', '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}},
-                          {'args': ('readlink', '-nm',
-                                    '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}},
-                          {'args': ('chmod', '777',
-                                    '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}}])
-
-    def test_set_ownership(self):
-        global commands, files
-        commands = []
-        files = {}
-        self.stub_out('oslo_concurrency.processutils.execute', fake_execute)
-
+    @mock.patch.object(nova.privsep.dac_admin, 'readlink')
+    @mock.patch.object(nova.privsep.dac_admin, 'chown')
+    @mock.patch.object(pwd, 'getpwnam')
+    @mock.patch.object(grp, 'getgrnam')
+    def test_set_ownership(self, getgrnam, getpwnam, chown, read_link):
         vfs = vfsimpl.VFSLocalFS(self.qcowfile)
-        vfs.imgdir = "/scratch/dir"
-        vfs.read_file("/some/file")
+        vfs.imgdir = '/scratch/dir'
 
-        self.assertEqual(files["/scratch/dir/some/file"]["uid"], 100)
-        self.assertEqual(files["/scratch/dir/some/file"]["gid"], 100)
+        fake_passwd = namedtuple('fake_passwd', 'pw_uid')
+        getpwnam.return_value(fake_passwd(pw_uid=100))
 
-        vfs.set_ownership("/some/file", "fred", None)
-        self.assertEqual(files["/scratch/dir/some/file"]["uid"], 105)
-        self.assertEqual(files["/scratch/dir/some/file"]["gid"], 100)
+        fake_group = namedtuple('fake_group', 'gr_gid')
+        getgrnam.return_value(fake_group(gr_gid=101))
 
-        vfs.set_ownership("/some/file", None, "users")
-        self.assertEqual(files["/scratch/dir/some/file"]["uid"], 105)
-        self.assertEqual(files["/scratch/dir/some/file"]["gid"], 500)
+        vfs.set_ownership('/some/file', 'fred', None)
+        read_link.assert_called()
+        chown.assert_called_with(read_link.return_value,
+                                 uid=getpwnam.return_value.pw_uid)
 
-        vfs.set_ownership("/some/file", "joe", "admins")
-        self.assertEqual(files["/scratch/dir/some/file"]["uid"], 110)
-        self.assertEqual(files["/scratch/dir/some/file"]["gid"], 600)
+        read_link.reset_mock()
+        chown.reset_mock()
+        vfs.set_ownership('/some/file', None, 'users')
+        read_link.assert_called()
+        chown.assert_called_with(read_link.return_value,
+                                 gid=getgrnam.return_value.gr_gid)
 
-        root_helper = nova.utils.get_root_helper()
-        self.assertEqual(commands,
-                         [{'args': ('readlink', '-nm',
-                                    '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}},
-                          {'args': ('cat', '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}},
-                          {'args': ('readlink', '-nm',
-                                    '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}},
-                          {'args': ('chown', 'fred',
-                                    '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}},
-                          {'args': ('readlink', '-nm',
-                                    '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}},
-                          {'args': ('chgrp', 'users',
-                                    '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}},
-                          {'args': ('readlink', '-nm',
-                                    '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}},
-                          {'args': ('chown', 'joe:admins',
-                                    '/scratch/dir/some/file'),
-                           'kwargs': {'run_as_root': True,
-                                      'root_helper': root_helper}}])
+        read_link.reset_mock()
+        chown.reset_mock()
+        vfs.set_ownership('/some/file', 'joe', 'admins')
+        read_link.assert_called()
+        chown.assert_called_with(read_link.return_value,
+                                 uid=getpwnam.return_value.pw_uid,
+                                 gid=getgrnam.return_value.gr_gid)
 
     @mock.patch.object(nova.utils, 'execute')
     def test_get_format_fs(self, execute):
@@ -441,7 +211,7 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         vfs.setup()
 
         self.assertTrue(mkdtemp.called)
-        NbdMount.assert_called_once_with(self.qcowfile, "tmp/", None)
+        NbdMount.assert_called_once_with(self.qcowfile, 'tmp/', None)
         mounter.do_mount.assert_called_once_with()
 
     @mock.patch.object(tempfile, 'mkdtemp')
@@ -456,5 +226,5 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         vfs.setup(mount=False)
 
         self.assertTrue(mkdtemp.called)
-        NbdMount.assert_called_once_with(self.qcowfile, "tmp/", None)
+        NbdMount.assert_called_once_with(self.qcowfile, 'tmp/', None)
         self.assertFalse(mounter.do_mount.called)
