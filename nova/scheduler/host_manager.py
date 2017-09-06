@@ -596,6 +596,14 @@ class HostManager(object):
     def _get_computes_for_cells(self, context, cells, compute_uuids=None):
         """Get a tuple of compute node and service information.
 
+        :param context: request context
+        :param cells: list of CellMapping objects
+        :param compute_uuids: list of ComputeNode UUIDs. If this is None, all
+            compute nodes from each specified cell will be returned, otherwise
+            only the ComputeNode objects with a UUID in the list of UUIDs in
+            any given cell is returned. If this is an empty list, the returned
+            compute_nodes tuple item will be an empty dict.
+
         Returns a tuple (compute_nodes, services) where:
          - compute_nodes is cell-uuid keyed dict of compute node lists
          - services is a dict of services indexed by hostname
