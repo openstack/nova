@@ -2049,23 +2049,17 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
 
         dest_usages = self._get_provider_usages(dest_rp_uuid)
-        # FIXME(mriedem): This is bug 1712411 where the allocations, created
-        # by the scheduler, via conductor, are not cleaned up on the migration
-        # pre-check error. Uncomment the following code when this is fixed.
-        self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
-        # # Assert the allocations, created by the scheduler, are cleaned up
-        # # after the migration pre-check error happens.
-        # self.assertFlavorMatchesAllocation(
-        #     {'vcpus': 0, 'ram': 0, 'disk': 0}, dest_usages)
+        # Assert the allocations, created by the scheduler, are cleaned up
+        # after the migration pre-check error happens.
+        self.assertFlavorMatchesAllocation(
+            {'vcpus': 0, 'ram': 0, 'disk': 0}, dest_usages)
 
         allocations = self._get_allocations_by_server_uuid(server['id'])
-        # FIXME(mriedem): After bug 1712411 is fixed there should only be 1
-        # allocation for the instance, on the source node.
-        self.assertEqual(2, len(allocations))
+        # There should only be 1 allocation for the instance on the source node
+        self.assertEqual(1, len(allocations))
         self.assertIn(source_rp_uuid, allocations)
-        self.assertIn(dest_rp_uuid, allocations)
-        dest_allocation = allocations[dest_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
+        self.assertFlavorMatchesAllocation(
+            self.flavor1, allocations[source_rp_uuid]['resources'])
 
         self._delete_and_check_allocations(
             server, source_rp_uuid, dest_rp_uuid)
