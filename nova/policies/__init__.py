@@ -91,6 +91,7 @@ from nova.policies import volumes_attachments
 
 def list_rules():
     return itertools.chain(
+        base.list_rules(),
         admin_actions.list_rules(),
         admin_password.list_rules(),
         agents.list_rules(),
@@ -99,7 +100,6 @@ def list_rules():
         attach_interfaces.list_rules(),
         availability_zone.list_rules(),
         baremetal_nodes.list_rules(),
-        base.list_rules(),
         cells.list_rules(),
         cells_scheduler.list_rules(),
         config_drive.list_rules(),
