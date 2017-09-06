@@ -16,7 +16,7 @@
 
 Manages physical hosts. Some virt drivers do not support all host
 functions. For more information, see `nova virt support
-matrix <http://docs.openstack.org/developer/nova/support-matrix.html>`__
+matrix <https://docs.openstack.org/nova/latest/user/support-matrix.html>`__
 
 Policy defaults enable only users with the administrative role to perform
 all os-hosts related operations. Cloud providers can change these permissions

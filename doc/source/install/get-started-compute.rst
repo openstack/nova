@@ -45,8 +45,8 @@ OpenStack Compute consists of the following areas and their components:
   instance and updating its state in the database.
 
 ``nova-placement-api`` service
-  Tracks the inventory and usage of each provider. For details, see `Placement
-  API <https://docs.openstack.org/developer/nova/placement.html>`__.
+  Tracks the inventory and usage of each provider. For details, see
+  :doc:`/user/placement`.
 
 ``nova-scheduler`` service
   Takes a virtual machine instance request from the queue and determines on

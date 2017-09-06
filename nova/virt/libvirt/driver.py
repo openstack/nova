@@ -438,8 +438,8 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.warning('The libvirt driver is not tested on '
                         '%(type)s/%(arch)s by the OpenStack project and '
                         'thus its quality can not be ensured. For more '
-                        'information, see: http://docs.openstack.org/'
-                        'developer/nova/support-matrix.html',
+                        'information, see: https://docs.openstack.org/'
+                        'nova/latest/user/support-matrix.html',
                         {'type': CONF.libvirt.virt_type, 'arch': hostarch})
 
     def _handle_conn_event(self, enabled, reason):

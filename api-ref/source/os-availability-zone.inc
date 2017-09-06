@@ -9,7 +9,8 @@ Lists and gets detailed availability zone information.
 An availability zone is created or updated by setting the
 availability_zone parameter in the ``create``, ``update``, or
 ``create or update`` methods of the Host Aggregates API.
-See `Host Aggregates <http://docs.openstack.org/developer/nova/aggregates.html>`_
+See `Host Aggregates
+<https://docs.openstack.org/nova/latest/user/aggregates.html>`_
 for more details.
 
 

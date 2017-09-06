@@ -26,7 +26,7 @@ through the ``policy.json`` file.
 
 .. warning:: There is very limited support on this API, For more information,
              see `nova virt support matrix
-             <http://docs.openstack.org/developer/nova/support-matrix.html>`__
+             <https://docs.openstack.org/nova/latest/user/support-matrix.html>`__
 
 Normal response codes: 202
 

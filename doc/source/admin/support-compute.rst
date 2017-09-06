@@ -64,8 +64,7 @@ The report has the following sections:
 * Configuration: Lists all configuration options currently accessible through
   the CONF object for the current process.
 
-For more information, see `Guru Meditation Reports
-<https://docs.openstack.org/developer/nova/devref/gmr.html>`_.
+For more information, see :doc:`/reference/gmr`.
 
 .. _compute-common-errors-and-fixes:
 

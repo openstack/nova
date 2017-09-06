@@ -44,8 +44,7 @@ hypervisor to use can be difficult, and you must take budget, resource
 constraints, supported features, and required technical specifications into
 account. However, the majority of OpenStack development is done on systems
 using KVM and Xen-based hypervisors. For a detailed list of features and
-support across different hypervisors, see the `Feature Support Matrix
-<https://docs.openstack.org/developer/nova/support-matrix.html>`_.
+support across different hypervisors, see :doc:`/user/support-matrix`.
 
 You can also orchestrate clouds using multiple hypervisors in different
 availability zones. Compute supports the following hypervisors:
