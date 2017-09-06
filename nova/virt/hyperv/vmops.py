@@ -301,7 +301,7 @@ class VMOps(object):
             self.power_on(instance, network_info=network_info)
         except Exception:
             with excutils.save_and_reraise_exception():
-                self.destroy(instance)
+                self.destroy(instance, network_info, block_device_info)
 
     @contextlib.contextmanager
     def wait_vif_plug_events(self, instance, network_info):
@@ -701,7 +701,7 @@ class VMOps(object):
                                          create_dir=False,
                                          remove_dir=True)
 
-    def destroy(self, instance, network_info=None, block_device_info=None,
+    def destroy(self, instance, network_info, block_device_info,
                 destroy_disks=True):
         instance_name = instance.name
         LOG.info("Got request to destroy instance", instance=instance)
@@ -711,11 +711,12 @@ class VMOps(object):
                 # Stop the VM first.
                 self._vmutils.stop_vm_jobs(instance_name)
                 self.power_off(instance)
-                self.unplug_vifs(instance, network_info)
                 self._vmutils.destroy_vm(instance_name)
-                self._volumeops.disconnect_volumes(block_device_info)
             else:
                 LOG.debug("Instance not found", instance=instance)
+
+            self.unplug_vifs(instance, network_info)
+            self._volumeops.disconnect_volumes(block_device_info)
 
             if destroy_disks:
                 self._delete_disk_files(instance_name)
