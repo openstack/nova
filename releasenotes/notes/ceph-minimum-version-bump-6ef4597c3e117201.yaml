@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    Nova now requires Ceph/librados >= 11.1.0 if running under Python 3 with
+    the RBD image backend for the libvirt driver. Requirements for Python 2
+    users or users using a different backend remain unchanged.
