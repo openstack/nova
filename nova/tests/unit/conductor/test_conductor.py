@@ -1550,6 +1550,57 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.conductor.schedule_and_build_instances(**params)
         self.assertEqual(3, build_and_run_instance.call_count)
 
+    @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')
+    @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
+    @mock.patch('nova.objects.HostMapping.get_by_host')
+    def test_schedule_and_build_multiple_cells(
+            self, get_hostmapping, select_destinations,
+            build_and_run_instance):
+        """Test that creates two instances in separate cells."""
+        # This list needs to match the number of build_requests and the number
+        # of request_specs in params.
+        select_destinations.return_value = [{'host': 'fake-host',
+                                             'nodename': 'fake-nodename',
+                                             'limits': None},
+                                            {'host': 'fake-host2',
+                                             'nodename': 'fake-nodename2',
+                                             'limits': None}]
+
+        params = self.params
+
+        # The cells are created in the base TestCase setup.
+        self.start_service('compute', host='fake-host', cell='cell1')
+        self.start_service('compute', host='fake-host2', cell='cell2')
+
+        get_hostmapping.side_effect = self.host_mappings.values()
+
+        # create an additional build request and request spec
+        build_request = fake_build_request.fake_req_obj(self.ctxt)
+        del build_request.instance.id
+        build_request.create()
+        params['build_requests'].objects.append(build_request)
+        im2 = objects.InstanceMapping(
+            self.ctxt, instance_uuid=build_request.instance.uuid,
+            cell_mapping=None, project_id=self.ctxt.project_id)
+        im2.create()
+        params['request_specs'].append(objects.RequestSpec(
+            instance_uuid=build_request.instance_uuid,
+            instance_group=None))
+
+        instance_cells = set()
+
+        def _build_and_run_instance(ctxt, *args, **kwargs):
+            instance = kwargs['instance']
+            # Keep track of the cells that the instances were created in.
+            inst_mapping = objects.InstanceMapping.get_by_instance_uuid(
+                ctxt, instance.uuid)
+            instance_cells.add(inst_mapping.cell_mapping.uuid)
+
+        build_and_run_instance.side_effect = _build_and_run_instance
+        self.conductor.schedule_and_build_instances(**params)
+        self.assertEqual(2, build_and_run_instance.call_count)
+        self.assertEqual(2, len(instance_cells))
+
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
     def test_schedule_and_build_scheduler_failure(self, select_destinations):
         select_destinations.side_effect = Exception
