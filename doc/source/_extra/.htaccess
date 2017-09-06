@@ -6,6 +6,7 @@
 #   sort
 
 redirectmatch 301 ^/nova/([^/]+)/addmethod.openstackapi.html$ /nova/$1/contributor/api-2.html
+redirectmatch 301 ^/nova/([^/]+)/admin/flavors2.html$ /nova/$1/admin/flavors.html
 redirectmatch 301 ^/nova/([^/]+)/aggregates.html$ /nova/$1/user/aggregates.html
 redirectmatch 301 ^/nova/([^/]+)/api_microversion_dev.html$ /nova/$1/contributor/microversions.html
 redirectmatch 301 ^/nova/([^/]+)/api_microversion_history.html$ /nova/$1/reference/api-microversion-history.html
