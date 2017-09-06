@@ -96,6 +96,10 @@ notification payload:
   consume the new payload without any change.
 * a major version bump indicates a backward incompatible change of the payload
   which can mean removed fields, type change, etc in the payload.
+* there is an additional field 'nova_object.name' for every payload besides
+  'nova_object.data' and 'nova_object.version'. This field contains the name of
+  the nova internal representation of the payload type. Client code should not
+  depend on this name.
 
 There is a Nova configuration parameter `notifications.notification_format`
 that can be used to specify which notifications are emitted by Nova. The
@@ -282,6 +286,17 @@ decorated with the `notification_sample` decorator. For example the
 `doc/sample_notifications/service-update.json` and the
 ServiceUpdateNotification class is decorated accordingly.
 
+Notification payload classes can use inheritance to avoid duplicating common
+payload fragments in nova code. However the leaf classes used directly in a
+notification should be created with care to avoid future needs of adding extra
+level of inheritance that changes the name of the leaf class as that name is
+present in the payload class. If this cannot be avoided and the only change is
+the renaming then the version of the new payload shall be the same as the old
+payload was before the rename. See [3]_ as an example. If the renaming
+involves any other changes on the payload (e.g. adding new fields) then the
+version of the new payload shall be higher than the old payload was. See [4]_
+as an example.
+
 What should be in the notification payload
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 This is just a guideline. You should always consider the actual use case that
@@ -320,3 +335,5 @@ Existing versioned notifications
 
 .. [1] http://docs.openstack.org/developer/oslo.messaging/notifier.html
 .. [2] http://docs.openstack.org/developer/oslo.versionedobjects
+.. [3] https://review.openstack.org/#/c/463001/
+.. [4] https://review.openstack.org/#/c/453077/
