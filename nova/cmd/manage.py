@@ -709,8 +709,8 @@ class DbCommands(object):
         """Print the current database version."""
         print(migration.db_version())
 
-    @args('--max_rows', metavar='<number>', default=1000,
-            help='Maximum number of deleted rows to archive')
+    @args('--max_rows', type=int, metavar='<number>', default=1000,
+          help='Maximum number of deleted rows to archive')
     @args('--verbose', action='store_true', dest='verbose', default=False,
           help='Print how many rows were archived per table.')
     @args('--until-complete', action='store_true', dest='until_complete',
