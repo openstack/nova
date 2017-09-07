@@ -942,6 +942,7 @@ class ComputeTaskManager(base.Base):
             return
 
         host_mapping_cache = {}
+        cell_mapping_cache = {}
         instances = []
 
         for (build_request, request_spec, host) in six.moves.zip(
@@ -988,6 +989,7 @@ class ComputeTaskManager(base.Base):
                 with obj_target_cell(instance, cell):
                     instance.create()
                     instances.append(instance)
+                    cell_mapping_cache[instance.uuid] = cell
 
         # NOTE(melwitt): We recheck the quota after creating the
         # objects to prevent users from allocating more resources
@@ -1011,6 +1013,7 @@ class ComputeTaskManager(base.Base):
                 # Skip placeholders that were buried in cell0 or had their
                 # build requests deleted by the user before instance create.
                 continue
+            cell = cell_mapping_cache[instance.uuid]
             filter_props = request_spec.to_legacy_filter_properties_dict()
             scheduler_utils.populate_retry(filter_props, instance.uuid)
             scheduler_utils.populate_filter_properties(filter_props,
