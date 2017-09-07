@@ -841,17 +841,6 @@ class CinderClientTestCase(test.NoDBTestCase):
             self.mock_session.get_endpoint.return_value)
 
     @mock.patch('cinderclient.client.get_volume_api_from_url',
-                return_value='2')
-    def test_create_v2_client_with_microversion_fails(self, get_volume_api):
-        """Tests that requesting a microversion against a v2 client will raise
-        an exception.
-        """
-        self.assertRaises(exception.CinderAPIVersionNotAvailable,
-                          cinder.cinderclient, self.ctxt, microversion='3.44')
-        get_volume_api.assert_called_once_with(
-            self.mock_session.get_endpoint.return_value)
-
-    @mock.patch('cinderclient.client.get_volume_api_from_url',
                 return_value='3')
     @mock.patch('cinderclient.client.get_highest_client_server_version',
                 return_value=2.0)   # Fake the case that cinder is really old.

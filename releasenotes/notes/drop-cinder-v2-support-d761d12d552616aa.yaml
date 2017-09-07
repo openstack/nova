@@ -1,0 +1,8 @@
+---
+upgrade:
+  - |
+    Nova no longer supports the Block Storage (Cinder) v2 API. Ensure the
+    following configuration options are set properly for Cinder v3:
+
+    - ``[cinder]/catalog_info`` - Already defaults to Cinder v3
+    - ``[cinder]/endpoint_template`` - Not used by default.
