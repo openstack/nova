@@ -1516,8 +1516,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param image_meta: Image object returned by nova.image.glance
             that defines the image from which to boot this instance. Ignored
             by this driver.
-        :param injected_files: User files to inject into instance. Ignored
-            by this driver.
+        :param injected_files: User files to inject into instance.
         :param admin_password: Administrator password to set in
             instance. Ignored by this driver.
         :param allocations: Information about resources allocated to the
@@ -1554,10 +1553,33 @@ class IronicDriver(virt_driver.ComputeDriver):
         self._add_instance_info_to_node(node, instance, image_meta,
                                         instance.flavor, preserve_ephemeral)
 
+        # Config drive
+        configdrive_value = None
+        if configdrive.required_by(instance):
+            extra_md = {}
+            if admin_password:
+                extra_md['admin_pass'] = admin_password
+
+            try:
+                configdrive_value = self._generate_configdrive(
+                    context, instance, node, network_info, extra_md=extra_md,
+                    files=injected_files)
+            except Exception as e:
+                with excutils.save_and_reraise_exception():
+                    msg = ("Failed to build configdrive: %s" %
+                           six.text_type(e))
+                    LOG.error(msg, instance=instance)
+                    raise exception.InstanceDeployFailure(msg)
+
+            LOG.info("Config drive for instance %(instance)s on "
+                     "baremetal node %(node)s created.",
+                     {'instance': instance['uuid'], 'node': node_uuid})
+
         # Trigger the node rebuild/redeploy.
         try:
             self.ironicclient.call("node.set_provision_state",
-                              node_uuid, ironic_states.REBUILD)
+                              node_uuid, ironic_states.REBUILD,
+                              configdrive=configdrive_value)
         except (exception.NovaException,         # Retry failed
                 ironic.exc.InternalServerError,  # Validations
                 ironic.exc.BadRequest) as e:     # Maintenance

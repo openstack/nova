@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Now when you rebuild a baremetal instance, a new config drive
+    will be generated for the node based on the passed in personality files,
+    metadata, admin password, etc. This fix requires Ironic API 1.35.
