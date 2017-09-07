@@ -359,6 +359,8 @@ CPU topology
   - FLAVOR-THREADS: (integer) The number of threads per core for the guest VM.
     By default, this is set to ``1``.
 
+.. _extra-specs-cpu-policy:
+
 CPU pinning policy
   For the libvirt driver, you can pin the virtual CPUs (vCPUs) of instances to
   the host's physical CPU cores (pCPUs) using properties. You can further
@@ -471,6 +473,29 @@ NUMA topology
      If the combined values of ``hw:numa_cpus.N`` or ``hw:numa_mem.N`` are
      greater than the available number of CPUs or memory respectively, an
      exception is raised.
+
+Emulator threads policy
+  For the libvirt driver, you can assign a separate pCPU to an instance that
+  will be used for emulator threads, which are emulator processes not directly
+  related to the guest OS. This pCPU will used in addition to the pCPUs used
+  for the guest. This is generally required for use with a real-time OS.
+
+  .. important::
+
+     To use this extra spec, you must enable pinned CPUs. Refer to :ref:`CPU
+     policy <extra-specs-cpu-policy>` for more information.
+
+  .. code:: console
+
+     $ openstack flavor set FLAVOR-NAME \
+         --property hw:emulator_threads_policy=THREAD-POLICY
+
+  Valid THREAD-POLICY values are:
+
+  - ``share``: (default) The emulator threads float across the pCPUs associated
+    to the guest.
+
+  - ``isolate``: The emulator threads are isolated on a single pCPU.
 
 Large pages allocation
   You can configure the size of large pages used to back the VMs.
