@@ -1082,8 +1082,9 @@ class _BaseTaskTestCase(object):
                               return_value='fake_image'),
             mock.patch.object(self.conductor_manager, '_schedule_instances',
                               fake_schedule_instances),
-            mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
-        ) as (_get_image, _schedule_instances, get_by_instance_uuid):
+            mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid'),
+            mock.patch.object(objects.Instance, 'save')
+        ) as (_get_image, _schedule_instances, get_by_instance_uuid, save):
             get_by_instance_uuid.return_value = objects.InstanceMapping(
                 cell_mapping=objects.CellMapping.get_by_uuid(
                     self.context, uuids.cell1))
@@ -1101,8 +1102,9 @@ class _BaseTaskTestCase(object):
                        '_schedule_instances',
                        side_effect=messaging.MessagingTimeout())
     @mock.patch.object(image_api.API, 'get', return_value='fake_image')
+    @mock.patch.object(objects.Instance, 'save')
     def test_unshelve_instance_schedule_and_rebuild_messaging_exception(
-            self, mock_get_image, mock_schedule_instances, mock_im):
+            self, mock_save, mock_get_image, mock_schedule_instances, mock_im):
         mock_im.return_value = objects.InstanceMapping(
             cell_mapping=objects.CellMapping.get_by_uuid(self.context,
                                                          uuids.cell1))
@@ -1357,6 +1359,9 @@ class _BaseTaskTestCase(object):
 
 class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     """ComputeTaskManager Tests."""
+
+    NUMBER_OF_CELLS = 2
+
     def setUp(self):
         super(ConductorTaskTestCase, self).setUp()
         self.conductor = conductor_manager.ComputeTaskManager()
@@ -1557,7 +1562,6 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.assertEqual('error', instance.vm_state)
         self.assertIsNone(instance.task_state)
 
-    @mock.patch('nova.conductor.manager.try_target_cell')
     @mock.patch('nova.objects.TagList.destroy')
     @mock.patch('nova.objects.TagList.create')
     @mock.patch('nova.compute.utils.notify_about_instance_usage')
@@ -1565,37 +1569,35 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
     @mock.patch('nova.objects.BuildRequest.destroy')
     @mock.patch('nova.conductor.manager.ComputeTaskManager._bury_in_cell0')
-    @mock.patch('nova.conductor.manager.obj_target_cell')
-    def test_schedule_and_build_delete_during_scheduling(self, target_cell,
+    def test_schedule_and_build_delete_during_scheduling(self,
                                                          bury,
                                                          br_destroy,
                                                          select_destinations,
                                                          build_and_run,
                                                          notify,
                                                          taglist_create,
-                                                         taglist_destroy,
-                                                         try_target):
+                                                         taglist_destroy):
 
         br_destroy.side_effect = exc.BuildRequestNotFound(uuid='foo')
         self.start_service('compute', host='fake-host')
         select_destinations.return_value = [{'host': 'fake-host',
                                              'nodename': 'nodesarestupid',
                                              'limits': None}]
-        targeted_context = mock.MagicMock(
-            autospec='nova.context.RequestContext')
-        target_cell.return_value.__enter__.return_value = targeted_context
-        try_target.return_value.__enter__.return_value = targeted_context
         taglist_create.return_value = self.params['tags']
         self.conductor.schedule_and_build_instances(**self.params)
         self.assertFalse(build_and_run.called)
         self.assertFalse(bury.called)
         self.assertTrue(br_destroy.called)
         taglist_destroy.assert_called_once_with(
-            targeted_context, self.params['build_requests'][0].instance_uuid)
+            test.MatchType(context.RequestContext),
+            self.params['build_requests'][0].instance_uuid)
+        # Make sure TagList.destroy was called with the targeted context.
+        self.assertIsNotNone(taglist_destroy.call_args[0][0].db_connection)
 
         test_utils.assert_instance_delete_notification_by_uuid(
             notify, self.params['build_requests'][0].instance_uuid,
-            self.conductor.notifier, targeted_context)
+            self.conductor.notifier, test.MatchType(context.RequestContext),
+            expect_targeted_context=True)
 
     @mock.patch('nova.objects.Instance.destroy')
     @mock.patch('nova.compute.utils.notify_about_instance_usage')
@@ -1603,9 +1605,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
     @mock.patch('nova.objects.BuildRequest.destroy')
     @mock.patch('nova.conductor.manager.ComputeTaskManager._bury_in_cell0')
-    @mock.patch('nova.conductor.manager.obj_target_cell')
     def test_schedule_and_build_delete_during_scheduling_host_changed(
-            self, target_cell, bury, br_destroy, select_destinations,
+            self, bury, br_destroy, select_destinations,
             build_and_run, notify, instance_destroy):
 
         br_destroy.side_effect = exc.BuildRequestNotFound(uuid='foo')
@@ -1619,9 +1620,6 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         select_destinations.return_value = [{'host': 'fake-host',
                                              'nodename': 'nodesarestupid',
                                              'limits': None}]
-        targeted_context = mock.MagicMock(
-            autospec='nova.context.RequestContext')
-        target_cell.return_value.__enter__.return_value = targeted_context
         self.conductor.schedule_and_build_instances(**self.params)
         self.assertFalse(build_and_run.called)
         self.assertFalse(bury.called)
@@ -1629,7 +1627,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.assertEqual(2, instance_destroy.call_count)
         test_utils.assert_instance_delete_notification_by_uuid(
             notify, self.params['build_requests'][0].instance_uuid,
-            self.conductor.notifier, targeted_context)
+            self.conductor.notifier, test.MatchType(context.RequestContext),
+            expect_targeted_context=True)
 
     @mock.patch('nova.objects.Instance.destroy')
     @mock.patch('nova.compute.utils.notify_about_instance_usage')
@@ -1637,9 +1636,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
     @mock.patch('nova.objects.BuildRequest.destroy')
     @mock.patch('nova.conductor.manager.ComputeTaskManager._bury_in_cell0')
-    @mock.patch('nova.conductor.manager.obj_target_cell')
     def test_schedule_and_build_delete_during_scheduling_instance_not_found(
-            self, target_cell, bury, br_destroy, select_destinations,
+            self, bury, br_destroy, select_destinations,
             build_and_run, notify, instance_destroy):
 
         br_destroy.side_effect = exc.BuildRequestNotFound(uuid='foo')
@@ -1652,9 +1650,6 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         select_destinations.return_value = [{'host': 'fake-host',
                                              'nodename': 'nodesarestupid',
                                              'limits': None}]
-        targeted_context = mock.MagicMock(
-            autospec='nova.context.RequestContext')
-        target_cell.return_value.__enter__.return_value = targeted_context
         self.conductor.schedule_and_build_instances(**self.params)
         self.assertFalse(build_and_run.called)
         self.assertFalse(bury.called)
@@ -1662,7 +1657,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.assertEqual(1, instance_destroy.call_count)
         test_utils.assert_instance_delete_notification_by_uuid(
             notify, self.params['build_requests'][0].instance_uuid,
-            self.conductor.notifier, targeted_context)
+            self.conductor.notifier, test.MatchType(context.RequestContext),
+            expect_targeted_context=True)
 
     @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
