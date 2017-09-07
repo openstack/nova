@@ -1813,9 +1813,7 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
         _ensure_rc_cache(context)
         conn = context.session.connection()
 
-        # Short-circuit out if there are any allocations with string
-        # resource class names that don't exist this will raise a
-        # ResourceClassNotFound exception.
+        # Make sure that all of the allocations are new.
         for alloc in allocs:
             if 'id' in alloc:
                 raise exception.ObjectActionError(action='create',
@@ -1834,6 +1832,9 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
             # First delete any existing allocations for that rp/consumer combo.
             consumer_id = allocs[0].consumer_id
             _delete_current_allocs(conn, consumer_id)
+            # If there are any allocations with string resource class names
+            # that don't exist this will raise a ResourceClassNotFound
+            # exception.
             before_gens = _check_capacity_exceeded(conn, allocs)
             self._ensure_consumer_project_user(conn, consumer_id)
             # Now add the allocations that were passed in.
