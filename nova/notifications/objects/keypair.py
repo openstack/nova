@@ -41,6 +41,8 @@ class KeypairPayload(base.NotificationPayloadBase):
 
 @base.notification_sample('keypair-create-start.json')
 @base.notification_sample('keypair-create-end.json')
+@base.notification_sample('keypair-delete-start.json')
+@base.notification_sample('keypair-delete-end.json')
 @nova_base.NovaObjectRegistry.register_notification
 class KeypairNotification(base.NotificationBase):
     # Version 1.0: Initial version
