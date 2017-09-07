@@ -209,6 +209,10 @@ class TestCase(testtools.TestCase):
     USES_DB_SELF = False
     REQUIRES_LOCKING = False
 
+    # The number of non-cell0 cells to create. This is only used in the
+    # base class when USES_DB is True.
+    NUMBER_OF_CELLS = 1
+
     TIMEOUT_SCALING_FACTOR = 1
 
     def setUp(self):
@@ -324,9 +328,6 @@ class TestCase(testtools.TestCase):
         cells-aware code can find those two databases.
         """
         celldbs = nova_fixtures.CellDatabases()
-        celldbs.add_cell_database(objects.CellMapping.CELL0_UUID)
-        celldbs.add_cell_database(uuids.cell1, default=True)
-        self.useFixture(celldbs)
 
         ctxt = context.get_context()
         fake_transport = 'fake://nowhere/'
@@ -338,16 +339,24 @@ class TestCase(testtools.TestCase):
             transport_url=fake_transport,
             database_connection=objects.CellMapping.CELL0_UUID)
         c0.create()
+        self.cell_mappings[c0.name] = c0
+        celldbs.add_cell_database(objects.CellMapping.CELL0_UUID)
 
-        c1 = objects.CellMapping(
-            context=ctxt,
-            uuid=uuids.cell1,
-            name=CELL1_NAME,
-            transport_url=fake_transport,
-            database_connection=uuids.cell1)
-        c1.create()
+        for x in range(self.NUMBER_OF_CELLS):
+            name = 'cell%i' % (x + 1)
+            uuid = getattr(uuids, name)
+            cell = objects.CellMapping(
+                context=ctxt,
+                uuid=uuid,
+                name=name,
+                transport_url=fake_transport,
+                database_connection=uuid)
+            cell.create()
+            self.cell_mappings[name] = cell
+            # cell1 is the default cell
+            celldbs.add_cell_database(uuid, default=(x == 0))
 
-        self.cell_mappings = {cm.name: cm for cm in (c0, c1)}
+        self.useFixture(celldbs)
 
     def _restore_obj_registry(self):
         objects_base.NovaObjectRegistry._registry._obj_classes = \
