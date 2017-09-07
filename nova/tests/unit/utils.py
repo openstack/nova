@@ -299,7 +299,7 @@ class CustomMockCallMatcher(object):
 
 def assert_instance_delete_notification_by_uuid(
         mock_notify, expected_instance_uuid, expected_notifier,
-        expected_context):
+        expected_context, expect_targeted_context=False):
 
     match_by_instance_uuid = CustomMockCallMatcher(
         lambda instance:
@@ -315,3 +315,9 @@ def assert_instance_delete_notification_by_uuid(
                   match_by_instance_uuid,
                   'delete.end',
                   system_metadata={})])
+
+    for call in mock_notify.call_args_list:
+        if expect_targeted_context:
+            assert call[0][1].db_connection is not None
+        else:
+            assert call[0][1].db_connection is None
