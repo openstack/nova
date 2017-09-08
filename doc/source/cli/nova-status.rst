@@ -93,7 +93,7 @@ Upgrade
     make a successful request to the endpoint. The command also checks to
     see that there are compute node resource providers checking in with the
     Placement service. More information on the Placement service can be found
-    at: `<http://docs.openstack.org/developer/nova/placement.html>`_
+    at: `<https://docs.openstack.org/nova/latest/user/placement.html>`_
 
   **16.0.0 (Pike)**
 
@@ -104,7 +104,7 @@ Upgrade
 SEE ALSO
 ========
 
-* OpenStack Nova Docs: `<http://docs.openstack.org/developer/nova/>`_
+* OpenStack Nova Docs: `<https://docs.openstack.org/nova/latest/>`_
 
 BUGS
 ====

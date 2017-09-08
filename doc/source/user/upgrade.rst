@@ -29,6 +29,7 @@ This document is trying to describe how we can achieve that.
 Once we have introduced the key concepts relating to upgrade, we will
 introduce the process needed for a no downtime upgrade of nova.
 
+.. _minimal_downtime_upgrade:
 
 Minimal Downtime Upgrade Process
 --------------------------------

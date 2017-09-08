@@ -23,7 +23,7 @@ notifications_group = cfg.OptGroup(
 Most of the actions in Nova which manipulate the system state generate
 notifications which are posted to the messaging component (e.g. RabbitMQ) and
 can be consumed by any service outside the Openstack. More technical details
-at http://docs.openstack.org/developer/nova/notifications.html
+at https://docs.openstack.org/nova/latest/reference/notifications.html
 """)
 
 ALL_OPTS = [
@@ -108,7 +108,7 @@ Possible values:
   emitted. (Default)
 
 The list of versioned notifications is visible in
-http://docs.openstack.org/developer/nova/notifications.html
+https://docs.openstack.org/nova/latest/reference/notifications.html
 """),
     cfg.ListOpt(
         'versioned_notifications_topics',
@@ -123,7 +123,7 @@ Nova will send a message containing a versioned notification payload to each
 topic queue in this list.
 
 The list of versioned notifications is visible in
-http://docs.openstack.org/developer/nova/notifications.html
+https://docs.openstack.org/nova/latest/reference/notifications.html
 """),
     cfg.BoolOpt(
         'bdms_in_notifications',

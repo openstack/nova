@@ -14,12 +14,12 @@ supports versioning. There are two kinds of versions in Nova.
 
 For more details about Microversions, please reference:
 `Microversions
-<http://developer.openstack.org/api-guide/compute/microversions.html>`_
+<https://developer.openstack.org/api-guide/compute/microversions.html>`_
 
 .. note:: The maximum microversion supported by each release varies.
   Please reference:
   `API Microversion History
-  <http://docs.openstack.org/developer/nova/api_microversion_history.html>`__
+  <https://docs.openstack.org/nova/latest/reference/api-microversion-history.html>`__
   for API microversion history details.
 
 The Version APIs work differently from other APIs as they *do not*

@@ -22,7 +22,7 @@ Nova supports implicit 'default' Quota Class only.
     update the ``default`` quota class via the API, you'll still have
     a default quota of 20 for instances regardless of ``nova.conf``.
     Refer: `Quotas
-    <https://docs.openstack.org/developer/nova/quotas.html>`__
+    <https://docs.openstack.org/nova/latest/user/quotas.html>`__
     for more details.
 
 .. warning::

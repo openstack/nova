@@ -6,7 +6,7 @@
 
 This is a reference for the Openstack Placement API. To learn more about
 Openstack Placement API concepts, please refer to the
-`Placement Introduction <http://docs.openstack.org/developer/nova/placement.html>`_.
+`Placement Introduction <https://docs.openstack.org/nova/latest/user/placement.html>`_.
 
 .. rest_expand_all::
 

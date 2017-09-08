@@ -444,7 +444,7 @@ PCI devices on the host and the number of PCI devices requested by the
 instance. The ``NUMATopologyFilter`` filter must be enabled for this to have
 any significance. For more information, refer to the filter documentation:
 
-    https://docs.openstack.org/developer/nova/filter_scheduler.html
+    https://docs.openstack.org/nova/latest/user/filter-scheduler.html
 
 Possible values:
 

@@ -5,4 +5,4 @@ level of the nova directory:
 
 For a pre-generated example of the latest nova.conf, see:
 
-    http://docs.openstack.org/developer/nova/sample_config.html
+    https://docs.openstack.org/nova/latest/configuration/sample-config.html

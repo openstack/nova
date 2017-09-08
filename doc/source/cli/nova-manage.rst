@@ -280,7 +280,7 @@ Nova Project
 SEE ALSO
 ========
 
-* `OpenStack Nova <https://docs.openstack.org/developer/nova>`__
+* `OpenStack Nova <https://docs.openstack.org/nova/latest/>`__
 
 BUGS
 ====

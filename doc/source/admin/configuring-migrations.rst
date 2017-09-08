@@ -21,13 +21,11 @@ This document covers live migrations using the
    Not all Compute service hypervisor drivers support live-migration, or
    support all live-migration features.
 
-   Consult the `Hypervisor Support Matrix
-   <https://docs.openstack.org/developer/nova/support-matrix.html>`_ to
-   determine which hypervisors support live-migration.
+   Consult :doc:`/user/support-matrix` to determine which hypervisors
+   support live-migration.
 
-   See the `Hypervisor configuration pages
-   <https://docs.openstack.org/ocata/config-reference/compute/hypervisors.html>`_
-   for details on hypervisor-specific configuration settings.
+   See the :doc:`/configuration/index` for details
+   on hypervisor configuration settings.
 
 The migration types are:
 

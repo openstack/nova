@@ -45,7 +45,8 @@ from nova import version
 
 CONF = nova.conf.CONF
 
-PLACEMENT_DOCS_LINK = 'http://docs.openstack.org/developer/nova/placement.html'
+PLACEMENT_DOCS_LINK = 'https://docs.openstack.org/nova/latest' \
+                      '/user/placement.html'
 
 
 class UpgradeCheckCode(enum.IntEnum):
