@@ -14,7 +14,9 @@ import collections
 import copy
 # NOTE(cdent): The resource provider objects are designed to never be
 # used over RPC. Remote manipulation is done with the placement HTTP
-# API. The 'remotable' decorators should not be used.
+# API. The 'remotable' decorators should not be used, the objects should
+# not be registered and there is no need to express VERSIONs nor handle
+# obj_make_compatible.
 
 import os_traits
 from oslo_concurrency import lockutils
@@ -2248,8 +2250,6 @@ class TraitList(base.ObjectListBase, base.NovaObject):
 
 @base.NovaObjectRegistry.register_if(False)
 class AllocationRequestResource(base.NovaObject):
-    # 1.0: Initial version
-    VERSION = '1.0'
 
     fields = {
         'resource_provider': fields.ObjectField('ResourceProvider'),
@@ -2260,8 +2260,6 @@ class AllocationRequestResource(base.NovaObject):
 
 @base.NovaObjectRegistry.register_if(False)
 class AllocationRequest(base.NovaObject):
-    # 1.0: Initial version
-    VERSION = '1.0'
 
     fields = {
         'resource_requests': fields.ListOfObjectsField(
@@ -2272,8 +2270,6 @@ class AllocationRequest(base.NovaObject):
 
 @base.NovaObjectRegistry.register_if(False)
 class ProviderSummaryResource(base.NovaObject):
-    # 1.0: Initial version
-    VERSION = '1.0'
 
     fields = {
         'resource_class': fields.ResourceClassField(read_only=True),
@@ -2284,8 +2280,6 @@ class ProviderSummaryResource(base.NovaObject):
 
 @base.NovaObjectRegistry.register_if(False)
 class ProviderSummary(base.NovaObject):
-    # 1.0: Initial version
-    VERSION = '1.0'
 
     fields = {
         'resource_provider': fields.ObjectField('ResourceProvider'),
@@ -2375,8 +2369,6 @@ class AllocationCandidates(base.NovaObject):
     that match some request for resources, along with some summary information
     about the resource providers involved in these allocation candidates.
     """
-    # 1.0: Initial version
-    VERSION = '1.0'
 
     fields = {
         # A collection of allocation possibilities that can be attempted by the
