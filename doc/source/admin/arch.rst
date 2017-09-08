@@ -49,7 +49,7 @@ support across different hypervisors, see :doc:`/user/support-matrix`.
 You can also orchestrate clouds using multiple hypervisors in different
 availability zones. Compute supports the following hypervisors:
 
-- `Baremetal <https://wiki.openstack.org/wiki/Ironic>`__
+- `Baremetal <https://docs.openstack.org/ironic/latest/>`__
 
 - `Docker <https://www.docker.io>`__
 
@@ -70,9 +70,9 @@ availability zones. Compute supports the following hypervisors:
 
 - `Xen <http://www.xen.org/support/documentation.html>`__
 
-For more information about hypervisors, see the `Hypervisors
-<https://docs.openstack.org/ocata/config-reference/compute/hypervisors.html>`__
-section in the OpenStack Configuration Reference.
+For more information about hypervisors, see
+:doc:`/admin/configuration/hypervisors`
+section in the Nova Configuration Reference.
 
 Projects, users, and roles
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -174,7 +174,7 @@ ephemeral storage, depending on the flavor selected. In this case, the root
 file system can be on the persistent volume, and its state is maintained, even
 if the instance is shut down. For more information about this type of
 configuration, see `Introduction to the Block Storage service
-<https://docs.openstack.org/ocata/config-reference/block-storage/block-storage-overview.html>`_
+<https://docs.openstack.org/cinder/latest/configuration/block-storage/block-storage-overview.html>`_
 in the OpenStack Configuration Reference.
 
 .. note::
