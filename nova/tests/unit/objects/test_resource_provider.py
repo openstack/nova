@@ -181,7 +181,8 @@ class TestInventoryNoDB(test_objects._LocalTest):
 
     @mock.patch('nova.objects.resource_provider._ensure_rc_cache',
             side_effect=_fake_ensure_cache)
-    @mock.patch('nova.objects.InventoryList._get_all_by_resource_provider')
+    @mock.patch('nova.objects.resource_provider.InventoryList.'
+                '_get_all_by_resource_provider')
     def test_get_all_by_resource_provider(self, mock_get, mock_ensure_cache):
         expected = [dict(_INVENTORY_DB,
                          resource_provider=dict(_RESOURCE_PROVIDER_DB)),
@@ -189,7 +190,8 @@ class TestInventoryNoDB(test_objects._LocalTest):
                          id=_INVENTORY_DB['id'] + 1,
                          resource_provider=dict(_RESOURCE_PROVIDER_DB))]
         mock_get.return_value = expected
-        objs = objects.InventoryList.get_all_by_resource_provider_uuid(
+        rp_inv_list = resource_provider.InventoryList
+        objs = rp_inv_list.get_all_by_resource_provider_uuid(
             self.context, _RESOURCE_PROVIDER_DB['uuid'])
         self.assertEqual(2, len(objs))
         self.assertEqual(_INVENTORY_DB['id'], objs[0].id)
@@ -274,7 +276,7 @@ class TestInventory(test_objects._LocalTest):
         objects.Inventory._update_in_db(self.context,
                                         db_inventory.id,
                                         {'total': 32})
-        inventories = objects.InventoryList.\
+        inventories = resource_provider.InventoryList.\
             get_all_by_resource_provider_uuid(self.context, db_rp.uuid)
         self.assertEqual(32, inventories[0].total)
 
@@ -288,7 +290,7 @@ class TestInventory(test_objects._LocalTest):
         db_rp, db_inventory = self._make_inventory()
 
         retrieved_inventories = (
-            objects.InventoryList._get_all_by_resource_provider(
+            resource_provider.InventoryList._get_all_by_resource_provider(
                 self.context, db_rp.uuid)
         )
 
@@ -297,7 +299,7 @@ class TestInventory(test_objects._LocalTest):
         self.assertEqual(db_inventory.total, retrieved_inventories[0].total)
 
         retrieved_inventories = (
-            objects.InventoryList._get_all_by_resource_provider(
+            resource_provider.InventoryList._get_all_by_resource_provider(
                 self.context, uuids.bad_rp_uuid)
         )
         self.assertEqual(0, len(retrieved_inventories))
@@ -335,7 +337,7 @@ class TestInventory(test_objects._LocalTest):
         # that the inventory records for that resource provider uuid
         # and match expected total value.
         retrieved_inv = (
-            objects.InventoryList._get_all_by_resource_provider(
+            resource_provider.InventoryList._get_all_by_resource_provider(
                 self.context, db_rp1.uuid)
         )
         for inv in retrieved_inv:
@@ -344,7 +346,7 @@ class TestInventory(test_objects._LocalTest):
                              inv.total)
 
         retrieved_inv = (
-            objects.InventoryList._get_all_by_resource_provider(
+            resource_provider.InventoryList._get_all_by_resource_provider(
                 self.context, db_rp2.uuid)
         )
 
@@ -407,7 +409,7 @@ class TestInventory(test_objects._LocalTest):
 
     def test_find(self):
         rp = objects.ResourceProvider(uuid=uuids.rp_uuid)
-        inv_list = objects.InventoryList(objects=[
+        inv_list = resource_provider.InventoryList(objects=[
                 objects.Inventory(
                     resource_provider=rp,
                     resource_class=fields.ResourceClass.VCPU,

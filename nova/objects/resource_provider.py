@@ -1424,11 +1424,8 @@ class Inventory(_HasAResourceProvider):
         return _update_inventory_in_db(context, id_, updates)
 
 
-@base.NovaObjectRegistry.register
+@base.NovaObjectRegistry.register_if(False)
 class InventoryList(base.ObjectListBase, base.NovaObject):
-    # Version 1.0: Initial Version
-    # Version 1.1: Turn off remotable
-    VERSION = '1.1'
 
     fields = {
         'objects': fields.ListOfObjectsField('Inventory'),

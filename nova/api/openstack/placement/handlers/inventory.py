@@ -25,6 +25,7 @@ from nova import db
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.objects import resource_provider as rp_obj
 
 RESOURCE_CLASS_IDENTIFIER = "^[A-Z0-9_]+$"
 BASE_INVENTORY_SCHEMA = {
@@ -293,7 +294,7 @@ def get_inventories(req):
             _("No resource provider with uuid %(uuid)s found : %(error)s") %
              {'uuid': uuid, 'error': exc})
 
-    inventories = objects.InventoryList.get_all_by_resource_provider_uuid(
+    inventories = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
         context, resource_provider.uuid)
 
     return _send_inventories(req.response, resource_provider, inventories)
@@ -313,7 +314,7 @@ def get_inventory(req):
 
     resource_provider = objects.ResourceProvider.get_by_uuid(
         context, uuid)
-    inventory = objects.InventoryList.get_all_by_resource_provider_uuid(
+    inventory = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
         context, resource_provider.uuid).find(resource_class)
 
     if not inventory:
@@ -355,7 +356,7 @@ def set_inventories(req):
         inventory = _make_inventory_object(
             resource_provider, res_class, **inventory_data)
         inv_list.append(inventory)
-    inventories = objects.InventoryList(objects=inv_list)
+    inventories = rp_obj.InventoryList(objects=inv_list)
 
     try:
         resource_provider.set_inventory(inventories)
@@ -399,7 +400,7 @@ def delete_inventories(req):
     resource_provider = objects.ResourceProvider.get_by_uuid(
         context, uuid)
 
-    inventories = objects.InventoryList(objects=[])
+    inventories = rp_obj.InventoryList(objects=[])
 
     try:
         resource_provider.set_inventory(inventories)
