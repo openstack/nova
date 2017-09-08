@@ -25,6 +25,7 @@ from nova.api.openstack.placement import wsgi_wrapper
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.objects import resource_provider as rp_obj
 
 
 POST_RESOURCE_PROVIDER_SCHEMA = {
@@ -240,7 +241,7 @@ def list_resource_providers(req):
         resources = util.normalize_resources_qs_param(req.GET['resources'])
         filters['resources'] = resources
     try:
-        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             context, filters)
     except exception.ResourceClassNotFound as exc:
         raise webob.exc.HTTPBadRequest(
