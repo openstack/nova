@@ -5661,9 +5661,15 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         self.instance = fake_instance.fake_instance_obj(self.context,
                 vm_state=vm_states.ACTIVE,
                 expected_attrs=['metadata', 'system_metadata', 'info_cache'])
-        self.migration = objects.Migration(context=self.context.elevated(),
-                                           new_instance_type_id=7)
-        self.migration.status = 'migrating'
+        self.migration = objects.Migration(
+            context=self.context.elevated(),
+            instance_uuid=self.instance.uuid,
+            new_instance_type_id=7,
+            dest_compute=None,
+            dest_node=None,
+            dest_host=None,
+            status='migrating')
+        self.migration.save = mock.MagicMock()
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
         self.useFixture(fixtures.EventReporterStub())
 
@@ -5683,8 +5689,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             yield _finish_resize
 
     def test_finish_resize_failure(self):
-        migration = mock.NonCallableMagicMock()
-        migration.status = 'post-migrating'
+        self.migration.status = 'post-migrating'
 
         with self._mock_finish_resize() as _finish_resize:
             _finish_resize.side_effect = self.TestResizeError
@@ -5692,17 +5697,16 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                 self.TestResizeError, self.compute.finish_resize,
                 context=self.context, disk_info=[], image=self.image,
                 instance=self.instance, reservations=[],
-                migration=migration
+                migration=self.migration
             )
 
         # Assert that we set the migration to an error state
-        self.assertEqual("error", migration.status)
+        self.assertEqual("error", self.migration.status)
 
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_notify_about_instance_usage')
     def test_finish_resize_notify_failure(self, notify):
-        migration = mock.NonCallableMagicMock()
-        migration.status = 'post-migrating'
+        self.migration.status = 'post-migrating'
 
         with self._mock_finish_resize():
             notify.side_effect = self.TestResizeError
@@ -5710,11 +5714,11 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                 self.TestResizeError, self.compute.finish_resize,
                 context=self.context, disk_info=[], image=self.image,
                 instance=self.instance, reservations=[],
-                migration=migration
+                migration=self.migration
             )
 
         # Assert that we did not set the migration to an error state
-        self.assertEqual('post-migrating', migration.status)
+        self.assertEqual('post-migrating', self.migration.status)
 
     @contextlib.contextmanager
     def _mock_resize_instance(self):
@@ -5743,25 +5747,19 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             yield (migrate_disk_and_power_off, notify)
 
     def test_resize_instance_failure(self):
-        migration = mock.NonCallableMagicMock()
-
         with self._mock_resize_instance() as (
                 migrate_disk_and_power_off, notify):
             migrate_disk_and_power_off.side_effect = self.TestResizeError
             self.assertRaises(
                 self.TestResizeError, self.compute.resize_instance,
                 context=self.context, instance=self.instance, image=self.image,
-                reservations=[], migration=migration,
+                reservations=[], migration=self.migration,
                 instance_type='type', clean_shutdown=True)
 
         # Assert that we set the migration to an error state
-        self.assertEqual("error", migration.status)
+        self.assertEqual("error", self.migration.status)
 
     def test_resize_instance_notify_failure(self):
-        migration = mock.NonCallableMagicMock()
-        migration.dest_compute = None
-        migration.dest_node = None
-
         # Raise an exception sending the end notification, which is after we
         # cast the migration to the destination host
         def fake_notify(context, instance, event, network_info=None):
@@ -5774,11 +5772,11 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             self.assertRaises(
                 self.TestResizeError, self.compute.resize_instance,
                 context=self.context, instance=self.instance, image=self.image,
-                reservations=[], migration=migration,
+                reservations=[], migration=self.migration,
                 instance_type='type', clean_shutdown=True)
 
         # Assert that we did not set the migration to an error state
-        self.assertEqual('post-migrating', migration.status)
+        self.assertEqual('post-migrating', self.migration.status)
 
     def _test_revert_resize_instance_destroy_disks(self, is_shared=False):
 
