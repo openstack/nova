@@ -478,11 +478,11 @@ class TestAllocation(test_objects._LocalTest):
                                 step_size=1,
                                 allocation_ratio=1.0)
         inv.create()
-        obj = objects.Allocation(context=self.context,
-                                 resource_provider=rp,
-                                 resource_class=_RESOURCE_CLASS_NAME,
-                                 consumer_id=uuids.fake_instance,
-                                 used=8)
+        obj = resource_provider.Allocation(context=self.context,
+                                           resource_provider=rp,
+                                           resource_class=_RESOURCE_CLASS_NAME,
+                                           consumer_id=uuids.fake_instance,
+                                           used=8)
         alloc_list = resource_provider.AllocationList(self.context,
                                                       objects=[obj])
         self.assertNotIn("id", obj)
@@ -504,37 +504,15 @@ class TestAllocation(test_objects._LocalTest):
                                 step_size=1,
                                 allocation_ratio=1.0)
         inv.create()
-        obj = objects.Allocation(context=self.context,
-                                 id=99,
-                                 resource_provider=rp,
-                                 resource_class=_RESOURCE_CLASS_NAME,
-                                 consumer_id=uuids.fake_instance,
-                                 used=8)
+        obj = resource_provider.Allocation(context=self.context,
+                                           id=99,
+                                           resource_provider=rp,
+                                           resource_class=_RESOURCE_CLASS_NAME,
+                                           consumer_id=uuids.fake_instance,
+                                           used=8)
         alloc_list = resource_provider.AllocationList(self.context,
                                                       objects=[obj])
         self.assertRaises(exception.ObjectActionError, alloc_list.create_all)
-
-
-class TestAllocationNoDB(test_objects._LocalTest):
-    USES_DB = False
-
-    def test_custom_resource_raises(self):
-        """Ensure that if we send an inventory object to a backversioned 1.0
-        receiver, that we raise ValueError if the inventory record contains a
-        custom (non-standardized) resource class.
-        """
-        values = {
-            # NOTE(danms): We don't include an actual resource provider
-            # here because chained backporting of that is handled by
-            # the infrastructure and requires us to have a manifest
-            'resource_class': 'custom_resource',
-            'consumer_id': uuids.consumer_id,
-            'used': 1,
-        }
-        bdm = objects.Allocation(context=self.context, **values)
-        self.assertRaises(ValueError,
-                          bdm.obj_to_primitive,
-                          target_version='1.0')
 
 
 class TestAllocationListNoDB(test_objects._LocalTest):

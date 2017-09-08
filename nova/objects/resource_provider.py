@@ -1466,12 +1466,8 @@ class InventoryList(base.ObjectListBase, base.NovaObject):
                                   db_inventory_list)
 
 
-@base.NovaObjectRegistry.register
+@base.NovaObjectRegistry.register_if(False)
 class Allocation(_HasAResourceProvider):
-    # Version 1.0: Initial version
-    # Version 1.1: Changed resource_class to allow custom strings
-    # Version 1.2: Turn off remotable
-    VERSION = '1.2'
 
     fields = {
         'id': fields.IntegerField(),
@@ -1480,13 +1476,6 @@ class Allocation(_HasAResourceProvider):
         'resource_class': fields.ResourceClassField(),
         'used': fields.IntegerField(),
     }
-
-    def obj_make_compatible(self, primitive, target_version):
-        super(Allocation, self).obj_make_compatible(primitive, target_version)
-        target_version = versionutils.convert_version_to_tuple(target_version)
-        if target_version < (1, 1) and 'resource_class' in primitive:
-            rc = primitive['resource_class']
-            rc_cache.raise_if_custom_resource_class_pre_v1_1(rc)
 
     @staticmethod
     @db_api.api_context_manager.writer
@@ -1857,14 +1846,14 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
         db_allocation_list = cls._get_allocations_from_db(
             context, resource_provider_uuid=rp_uuid)
         return base.obj_make_list(
-            context, cls(context), objects.Allocation, db_allocation_list)
+            context, cls(context), Allocation, db_allocation_list)
 
     @classmethod
     def get_all_by_consumer_id(cls, context, consumer_id):
         db_allocation_list = cls._get_allocations_from_db(
             context, consumer_id=consumer_id)
         return base.obj_make_list(
-            context, cls(context), objects.Allocation, db_allocation_list)
+            context, cls(context), Allocation, db_allocation_list)
 
     def create_all(self):
         """Create the supplied allocations."""

@@ -236,7 +236,7 @@ def _set_allocations(req, schema):
 
         resources = allocation['resources']
         for resource_class in resources:
-            allocation = objects.Allocation(
+            allocation = rp_obj.Allocation(
                 resource_provider=resource_provider,
                 consumer_id=consumer_uuid,
                 resource_class=resource_class,

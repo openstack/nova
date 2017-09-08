@@ -128,12 +128,12 @@ class AllocationFixture(APIFixture):
             step_size=10, min_unit=10, max_unit=600)
         inventory.obj_set_defaults()
         rp.add_inventory(inventory)
-        alloc1 = objects.Allocation(
+        alloc1 = rp_obj.Allocation(
             self.context, resource_provider=rp,
             resource_class='DISK_GB',
             consumer_id=consumer_id,
             used=500)
-        alloc2 = objects.Allocation(
+        alloc2 = rp_obj.Allocation(
             self.context, resource_provider=rp,
             resource_class='DISK_GB',
             consumer_id=consumer_id,
@@ -156,12 +156,12 @@ class AllocationFixture(APIFixture):
             max_unit=4)
         inventory.obj_set_defaults()
         rp.add_inventory(inventory)
-        alloc1 = objects.Allocation(
+        alloc1 = rp_obj.Allocation(
             self.context, resource_provider=rp,
             resource_class='VCPU',
             consumer_id=consumer_id,
             used=2)
-        alloc2 = objects.Allocation(
+        alloc2 = rp_obj.Allocation(
             self.context, resource_provider=rp,
             resource_class='VCPU',
             consumer_id=consumer_id,
@@ -177,12 +177,12 @@ class AllocationFixture(APIFixture):
         # Each set of allocations must have the same consumer_id because only
         # the first allocation is used for the project/user association.
         consumer_id = uuidutils.generate_uuid()
-        alloc1 = objects.Allocation(
+        alloc1 = rp_obj.Allocation(
             self.context, resource_provider=rp,
             resource_class='DISK_GB',
             consumer_id=consumer_id,
             used=20)
-        alloc2 = objects.Allocation(
+        alloc2 = rp_obj.Allocation(
             self.context, resource_provider=rp,
             resource_class='VCPU',
             consumer_id=consumer_id,

@@ -1062,7 +1062,6 @@ object_data = {
     'AgentList': '1.0-5a7380d02c3aaf2a32fc8115ae7ca98c',
     'Aggregate': '1.3-f315cb68906307ca2d1cca84d4753585',
     'AggregateList': '1.2-fb6e19f3c3a3186b04eceb98b5dadbfa',
-    'Allocation': '1.2-54f99dfa9651922219c205a7fba69e2f',
     'BandwidthUsage': '1.2-c6e4c779c7f40f2407e3d70022e3cd1c',
     'BandwidthUsageList': '1.2-5fe7475ada6fe62413cbfcc06ec70746',
     'BlockDeviceMapping': '1.18-ad87cece6f84c65f5ec21615755bc6d3',
