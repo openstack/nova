@@ -21,6 +21,7 @@ from nova.api.openstack.placement import wsgi_wrapper
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.objects import resource_provider as rp_obj
 
 
 # Represents the allowed query string parameters to GET /usages
@@ -78,7 +79,7 @@ def list_usages(req):
             _("No resource provider with uuid %(uuid)s found: %(error)s") %
              {'uuid': uuid, 'error': exc})
 
-    usage = objects.UsageList.get_all_by_resource_provider_uuid(
+    usage = rp_obj.UsageList.get_all_by_resource_provider_uuid(
         context, uuid)
 
     response = req.response
@@ -107,8 +108,8 @@ def get_total_usages(req):
     project_id = req.GET.get('project_id')
     user_id = req.GET.get('user_id')
 
-    usages = objects.UsageList.get_all_by_project_user(context, project_id,
-                                                       user_id=user_id)
+    usages = rp_obj.UsageList.get_all_by_project_user(context, project_id,
+                                                      user_id=user_id)
 
     response = req.response
     usages_dict = {'usages': {resource.resource_class: resource.usage

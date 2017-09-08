@@ -1167,7 +1167,6 @@ object_data = {
     'Tag': '1.1-8b8d7d5b48887651a0e01241672e2963',
     'TagList': '1.1-55231bdb671ecf7641d6a2e9109b5d8e',
     'Usage': '1.1-b738dbebeb20e3199fc0ebca6e292a47',
-    'UsageList': '1.2-15ecf022a68ddbb8c2a6739cfc9f8f5e',
     'USBDeviceBus': '1.0-e4c7dd6032e46cd74b027df5eb2d4750',
     'VirtCPUFeature': '1.0-ea2464bdd09084bd388e5f61d5d4fc86',
     'VirtCPUModel': '1.0-5e1864af9227f698326203d7249796b5',

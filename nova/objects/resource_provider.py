@@ -1918,12 +1918,8 @@ class Usage(base.NovaObject):
         return target
 
 
-@base.NovaObjectRegistry.register
+@base.NovaObjectRegistry.register_if(False)
 class UsageList(base.ObjectListBase, base.NovaObject):
-    # Version 1.0: Initial version
-    # Version 1.1: Turn off remotable
-    # Version 1.2: Add get_all_by_project_user()
-    VERSION = '1.2'
 
     fields = {
         'objects': fields.ListOfObjectsField('Usage'),
