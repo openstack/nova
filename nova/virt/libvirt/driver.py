@@ -35,6 +35,7 @@ import itertools
 import mmap
 import operator
 import os
+import pwd
 import shutil
 import tempfile
 import time
@@ -81,6 +82,8 @@ from nova.objects import fields
 from nova.objects import migrate_data as migrate_data_obj
 from nova.pci import manager as pci_manager
 from nova.pci import utils as pci_utils
+from nova.privsep import dac_admin
+import nova.privsep.libvirt
 from nova import utils
 from nova import version
 from nova.virt import block_device as driver_block_device
@@ -1906,7 +1909,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 time.sleep(0.5)
 
             dev.abort_job()
-            libvirt_utils.chown(disk_delta, os.getuid())
+            dac_admin.chown(disk_delta, uid=os.getuid())
         finally:
             self._host.write_instance_config(xml)
             if quiesced:
@@ -2825,30 +2828,24 @@ class LibvirtDriver(driver.ComputeDriver):
                                  check_exit_code=False)
         return out
 
-    def _append_to_file(self, data, fpath):
-        LOG.info('data: %(data)r, fpath: %(fpath)r',
-                 {'data': data, 'fpath': fpath})
-        with open(fpath, 'a+') as fp:
-            fp.write(data)
-
-        return fpath
-
     def _get_console_output_file(self, instance, console_log):
         bytes_to_read = MAX_CONSOLE_BYTES
         log_data = b""  # The last N read bytes
         i = 0  # in case there is a log rotation (like "virtlogd")
         path = console_log
+
         while bytes_to_read > 0 and os.path.exists(path):
-            libvirt_utils.chown(path, os.getuid())
-            with libvirt_utils.file_open(path, 'rb') as fp:
-                read_log_data, remaining = libvirt_utils.last_bytes(
-                                                fp, bytes_to_read)
-                # We need the log file content in chronological order,
-                # that's why we *prepend* the log data.
-                log_data = read_log_data + log_data
-                bytes_to_read -= len(read_log_data)
-                path = console_log + "." + str(i)
-                i += 1
+            read_log_data, remaining = nova.privsep.libvirt.last_bytes(
+                                        path, bytes_to_read)
+            # We need the log file content in chronological order,
+            # that's why we *prepend* the log data.
+            log_data = read_log_data + log_data
+
+            # Prep to read the next file in the chain
+            bytes_to_read -= len(read_log_data)
+            path = console_log + "." + str(i)
+            i += 1
+
             if remaining > 0:
                 LOG.info('Truncated console log returned, '
                          '%d bytes ignored', remaining, instance=instance)
@@ -2896,12 +2893,6 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.ConsoleNotAvailable()
 
         console_log = self._get_console_log_path(instance)
-        # By default libvirt chowns the console log when it starts a domain.
-        # We need to chown it back before attempting to read from or write
-        # to it.
-        if os.path.exists(console_log):
-            libvirt_utils.chown(console_log, os.getuid())
-
         data = self._flush_libvirt_console(pty)
         # NOTE(markus_z): The virt_types kvm and qemu are the only ones
         # which create a dedicated file device for the console logging.
@@ -2909,9 +2900,8 @@ class LibvirtDriver(driver.ComputeDriver):
         # flush of that pty device into the "console.log" file to ensure
         # that a series of "get_console_output" calls return the complete
         # content even after rebooting a guest.
-        fpath = self._append_to_file(data, console_log)
-
-        return self._get_console_output_file(instance, fpath)
+        dac_admin.writefile(console_log, 'a+', data)
+        return self._get_console_output_file(instance, console_log)
 
     def get_host_ip_addr(self):
         ips = compute_utils.get_machine_ips()
@@ -3224,7 +3214,10 @@ class LibvirtDriver(driver.ComputeDriver):
                                      image_id=disk_images['ramdisk_id'])
 
         if CONF.libvirt.virt_type == 'uml':
-            libvirt_utils.chown(image('disk').path, 'root')
+            # PONDERING(mikal): can I assume that root is UID zero in every
+            # OS? Probably not.
+            uid = pwd.getpwnam('root').pw_uid
+            dac_admin.chown(image('disk').path, uid=uid)
 
         self._create_and_inject_local_root(context, instance,
                                            booted_from_volume, suffix,

@@ -41,12 +41,6 @@ blockdev: RegExpFilter, blockdev, root, blockdev, (--getsize64|--flushbufs), /de
 # nova/virt/libvirt/vif.py: utils.execute('tee',
 tee: CommandFilter, tee, root
 
-# nova/virt/libvirt/utils.py: def chown(): execute('chown', owner, path,
-# nova/virt/libvirt/driver.py: 'chown', os.getuid( console_log
-# nova/virt/libvirt/driver.py: 'chown', os.getuid( console_log
-# nova/virt/libvirt/driver.py: 'chown', 'root', basepath('disk')
-chown: CommandFilter, chown, root
-
 # nova/virt/libvirt/vif.py: 'ip', 'tuntap', 'add', dev, 'mode', 'tap'
 # nova/virt/libvirt/vif.py: 'ip', 'link', 'set', dev, 'up'
 # nova/virt/libvirt/vif.py: 'ip', 'link', 'delete', dev
