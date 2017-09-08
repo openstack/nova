@@ -6,7 +6,7 @@ Resource classes are entities that indicate standard or
 deployer-specific resources that can be provided by a resource
 provider.
 
-.. note:: Resource class API calls are availiable starting from version 1.2.
+.. note:: Resource class API calls are available starting from version 1.2.
 
 List resource classes
 =====================
