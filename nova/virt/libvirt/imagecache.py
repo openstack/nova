@@ -32,6 +32,7 @@ from oslo_utils import encodeutils
 import six
 
 import nova.conf
+from nova.privsep import dac_admin
 from nova import utils
 from nova.virt import imagecache
 from nova.virt.libvirt import utils as libvirt_utils
@@ -326,7 +327,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
 
         LOG.debug('image %(id)s at (%(base_file)s): image is in use',
                   {'id': img_id, 'base_file': base_file})
-        libvirt_utils.update_mtime(base_file)
+        dac_admin.utime(base_file)
 
     def _age_and_verify_swap_images(self, context, base_dir):
         LOG.debug('Verify swap images')
@@ -334,7 +335,7 @@ class ImageCacheManager(imagecache.ImageCacheManager):
         for ent in self.back_swap_images:
             base_file = os.path.join(base_dir, ent)
             if ent in self.used_swap_images and os.path.exists(base_file):
-                libvirt_utils.update_mtime(base_file)
+                dac_admin.utime(base_file)
             elif self.remove_unused_base_images:
                 self._remove_swap_file(base_file)
 

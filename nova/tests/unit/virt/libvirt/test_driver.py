@@ -9690,7 +9690,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                               self.context, instance,
                               "/fake/instance/dir", disk_info)
 
-    def test_create_images_and_backing_images_not_exist_fallback(self):
+    @mock.patch('nova.privsep.dac_admin.utime')
+    def test_create_images_and_backing_images_not_exist_fallback(self,
+                                                                 mock_utime):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         base_dir = os.path.join(CONF.instances_path,
@@ -9742,6 +9744,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 mock.call(self.context, ramdisk_path, instance.ramdisk_id)
             ])
 
+        mock_utime.assert_called()
+
     @mock.patch.object(libvirt_driver.libvirt_utils, 'fetch_image')
     def test_create_images_and_backing_images_exist(self, mock_fetch_image):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -9768,7 +9772,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                             '/fake/instance/dir', disk_info)
         self.assertFalse(mock_fetch_image.called)
 
-    def test_create_images_and_backing_ephemeral_gets_created(self):
+    @mock.patch('nova.privsep.dac_admin.utime')
+    def test_create_images_and_backing_ephemeral_gets_created(self,
+                                                              mock_utime):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         base_dir = os.path.join(CONF.instances_path,
@@ -9811,6 +9817,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 mock.call(root_backing, instance.flavor.root_gb * units.Gi),
                 mock.call(ephemeral_backing, 1 * units.Gi)
             ])
+
+        mock_utime.assert_called()
 
     def test_create_images_and_backing_disk_info_none(self):
         instance = objects.Instance(**self.test_instance)
@@ -11160,7 +11168,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                           'myVol', '/dev/something',
                                           run_as_root=True)
 
-    def test_create_ephemeral_specified_fs_not_valid(self):
+    @mock.patch('nova.privsep.dac_admin.utime')
+    def test_create_ephemeral_specified_fs_not_valid(self, mock_utime):
         CONF.set_override('default_ephemeral_format', 'ext4')
         ephemerals = [{'device_type': 'disk',
                        'disk_bus': 'virtio',

@@ -82,10 +82,6 @@ def write_to_file(path, contents, umask=None):
     pass
 
 
-def update_mtime(path):
-    pass
-
-
 def extract_snapshot(disk_path, source_fmt, out_path, dest_fmt):
     files[out_path] = b''
 
