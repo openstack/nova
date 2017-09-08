@@ -2,9 +2,9 @@
 nova-console
 ============
 
-----------------------------
+-------------------
 Nova Console Server
-----------------------------
+-------------------
 
 :Author: openstack@lists.openstack.org
 :Date:   2012-09-27
@@ -13,35 +13,36 @@ Nova Console Server
 :Manual section: 1
 :Manual group: cloud computing
 
-SYNOPSIS
+Synopsis
 ========
 
   nova-console [options]
 
-DESCRIPTION
+Description
 ===========
 
-nova-console is a console Proxy to set up multi-tenant VM console access (i.e. with xvp)
+`nova-console` is a server daemon that serves the Nova Console service, which
+is a console proxy to set up multi-tenant VM console access, e.g. with `XVP`.
 
-OPTIONS
+Options
 =======
 
  **General options**
 
-FILES
-========
+Files
+=====
 
-* /etc/nova/nova.conf
-* /etc/nova/policy.json
-* /etc/nova/rootwrap.conf
-* /etc/nova/rootwrap.d/
+* ``/etc/nova/nova.conf``
+* ``/etc/nova/policy.json``
+* ``/etc/nova/rootwrap.conf``
+* ``/etc/nova/rootwrap.d/``
 
-SEE ALSO
+See Also
 ========
 
 * `OpenStack Nova <https://docs.openstack.org/nova/latest/>`__
 
-BUGS
+Bugs
 ====
 
-* Nova bugs are managed at Launchpad `Bugs : Nova <https://bugs.launchpad.net/nova>`__
+* Nova bugs are managed at `Launchpad <https://bugs.launchpad.net/nova>`__

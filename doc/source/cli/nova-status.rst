@@ -13,21 +13,21 @@ CLI interface for nova status commands
 :Manual section: 1
 :Manual group: cloud computing
 
-SYNOPSIS
+Synopsis
 ========
 
   nova-status <category> <action> [<args>]
 
-DESCRIPTION
+Description
 ===========
 
-The nova-status command provides routines for checking the status of a Nova
-deployment.
+`nova-status` is a tool that provides routines for checking the status of a
+Nova deployment.
 
-OPTIONS
+Options
 =======
 
-The standard pattern for executing a nova-status command is::
+The standard pattern for executing a `nova-status` command is::
 
     nova-status <category> <command> [<args>]
 
@@ -37,16 +37,17 @@ Run without arguments to see a list of available command categories::
 
 Categories are:
 
-* upgrade
+* ``upgrade``
 
 Detailed descriptions are below.
 
-You can also run with a category argument such as "upgrade" to see a list of
+You can also run with a category argument such as ``upgrade`` to see a list of
 all commands in that category::
 
     nova-status upgrade
 
-These sections describe the available categories and arguments for nova-status.
+These sections describe the available categories and arguments for
+`nova-status`.
 
 Upgrade
 ~~~~~~~
@@ -100,13 +101,12 @@ Upgrade
   * Checks for the Placement API are modified to require version 1.4, that
     is needed in Pike and further for nova-scheduler to work correctly.
 
-
-SEE ALSO
+See Also
 ========
 
 * OpenStack Nova Docs: `<https://docs.openstack.org/nova/latest/>`_
 
-BUGS
+Bugs
 ====
 
-* Nova bugs are managed at Launchpad: `<https://bugs.launchpad.net/nova>`_
+* Nova bugs are managed at `Launchpad <https://bugs.launchpad.net/nova>`_

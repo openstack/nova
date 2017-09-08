@@ -1,10 +1,10 @@
-=============
+============
 nova-network
-=============
+============
 
----------------------
+-------------------
 Nova Network Server
----------------------
+-------------------
 
 :Author: openstack@lists.openstack.org
 :Date:   2012-09-27
@@ -13,35 +13,41 @@ Nova Network Server
 :Manual section: 1
 :Manual group: cloud computing
 
-SYNOPSIS
+Synopsis
 ========
 
   nova-network  [options]
 
-DESCRIPTION
+Description
 ===========
 
-Nova Network is responsible for allocating IPs and setting up the network
+`nova-network` is a server daemon that serves the Nova Network service, which
+is responsible for allocating IPs and setting up the network
 
-OPTIONS
+.. warning::
+
+   `nova-network` is deprecated and will be removed in an upcoming release. Use
+   `neutron` or another networking solution instead.
+
+Options
 =======
 
  **General options**
 
-FILES
-========
+Files
+=====
 
-* /etc/nova/nova.conf
-* /etc/nova/policy.json
-* /etc/nova/rootwrap.conf
-* /etc/nova/rootwrap.d/
+* ``/etc/nova/nova.conf``
+* ``/etc/nova/policy.json``
+* ``/etc/nova/rootwrap.conf``
+* ``/etc/nova/rootwrap.d/``
 
-SEE ALSO
+See Also
 ========
 
 * `OpenStack Nova <https://docs.openstack.org/nova/latest/>`__
 
-BUGS
+Bugs
 ====
 
-* Nova bugs are managed at Launchpad `Bugs : Nova <https://bugs.launchpad.net/nova>`__
+* Nova bugs are managed at `Launchpad <https://bugs.launchpad.net/nova>`__

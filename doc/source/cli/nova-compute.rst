@@ -2,9 +2,9 @@
 nova-compute
 ============
 
----------------------
+-------------------
 Nova Compute Server
----------------------
+-------------------
 
 :Author: openstack@lists.openstack.org
 :Date:   2012-09-27
@@ -13,38 +13,38 @@ Nova Compute Server
 :Manual section: 1
 :Manual group: cloud computing
 
-SYNOPSIS
+Synopsis
 ========
 
   nova-compute [options]
 
-DESCRIPTION
+Description
 ===========
 
-Handles all processes relating to instances (guest vms).  nova-compute is
-responsible for building a disk image, launching it via the
-underlying virtualization driver, responding to calls to check its state,
-attaching persistent storage, and terminating it.
+`nova-compute` is a server daemon that serves the Nova Compute service, which
+is responsible for building a disk image, launching an instance via the
+underlying virtualization driver, responding to calls to check the instance's
+state, attaching persistent storage, and terminating the instance.
 
-OPTIONS
+Options
 =======
 
  **General options**
 
-FILES
-========
+Files
+=====
 
-* /etc/nova/nova.conf
-* /etc/nova/policy.json
-* /etc/nova/rootwrap.conf
-* /etc/nova/rootwrap.d/
+* ``/etc/nova/nova.conf``
+* ``/etc/nova/policy.json``
+* ``/etc/nova/rootwrap.conf``
+* ``/etc/nova/rootwrap.d/``
 
-SEE ALSO
+See Also
 ========
 
 * `OpenStack Nova <https://docs.openstack.org/nova/latest/>`__
 
-BUGS
+Bugs
 ====
 
-* Nova bugs are managed at Launchpad `Bugs : Nova <https://bugs.launchpad.net/nova>`__
+* Nova bugs are managed at `Launchpad <https://bugs.launchpad.net/nova>`__
