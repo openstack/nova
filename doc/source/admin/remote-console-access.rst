@@ -6,6 +6,8 @@ To provide a remote console or remote desktop access to guest virtual machines,
 use VNC or SPICE HTML5 through either the OpenStack dashboard or the command
 line. Best practice is to select one or the other to run.
 
+.. _about-nova-consoleauth:
+
 About nova-consoleauth
 ~~~~~~~~~~~~~~~~~~~~~~
 

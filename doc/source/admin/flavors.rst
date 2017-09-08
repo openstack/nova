@@ -507,9 +507,8 @@ PCI passthrough
   Where:
 
   - ALIAS: (string) The alias which correspond to a particular PCI device class
-    as configured in the nova configuration file (see `nova.conf configuration
-    options
-    <https://docs.openstack.org/ocata/config-reference/compute/config-options.html>`_).
+    as configured in the nova configuration file (see
+    :doc:`/configuration/config`).
   - COUNT: (integer) The amount of PCI devices of type ALIAS to be assigned to
     a guest.
 

@@ -100,7 +100,8 @@ By default, an instance floats across all NUMA nodes on a host. NUMA awareness
 can be enabled implicitly through the use of huge pages or pinned CPUs or
 explicitly through the use of flavor extra specs or image metadata.  In all
 cases, the ``NUMATopologyFilter`` filter must be enabled. Details on this
-filter are provided in `Scheduling`_ configuration guide.
+filter are provided in :doc:`/admin/configuration/schedulers` in Nova
+configuration guide.
 
 .. caution::
 
@@ -162,7 +163,7 @@ memory mapping between the two nodes, run:
     driver will not spawn instances with such topologies.
 
 For more information about the syntax for ``hw:numa_nodes``, ``hw:numa_cpus.N``
-and ``hw:num_mem.N``, refer to the `Flavors`_ guide.
+and ``hw:num_mem.N``, refer to the :doc:`/admin/flavors` guide.
 
 Customizing instance CPU pinning policies
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -227,7 +228,7 @@ siblings if available. This is the default, but it can be set explicitly:
      --property hw:cpu_thread_policy=prefer
 
 For more information about the syntax for ``hw:cpu_policy`` and
-``hw:cpu_thread_policy``, refer to the `Flavors`_ guide.
+``hw:cpu_thread_policy``, refer to the :doc:`/admin/flavors` guide.
 
 Applications are frequently packaged as images. For applications that require
 real-time or near real-time behavior, configure image metadata to ensure
@@ -311,7 +312,7 @@ Similarly, to configure a flavor to use one core and one thread, run:
    with ten cores fails.
 
 For more information about the syntax for ``hw:cpu_sockets``, ``hw:cpu_cores``
-and ``hw:cpu_threads``, refer to the `Flavors`_ guide.
+and ``hw:cpu_threads``, refer to the :doc:`/admin/flavors` guide.
 
 It is also possible to set upper limits on the number of sockets, cores, and
 threads used. Unlike the hard values above, it is not necessary for this exact
@@ -325,8 +326,8 @@ instance topology, run:
    $ openstack flavor set m1.large --property=hw:cpu_max_sockets=2
 
 For more information about the syntax for ``hw:cpu_max_sockets``,
-``hw:cpu_max_cores``, and ``hw:cpu_max_threads``, refer to the `Flavors`_
-guide.
+``hw:cpu_max_cores``, and ``hw:cpu_max_threads``, refer to the
+:doc:`/admin/flavors` guide.
 
 Applications are frequently packaged as images. For applications that prefer
 certain CPU topologies, configure image metadata to hint that created instances
@@ -359,7 +360,5 @@ For more information about image metadata, refer to the `Image metadata`_
 guide.
 
 .. Links
-.. _`Scheduling`: https://docs.openstack.org/ocata/config-reference/compute/schedulers.html
-.. _`Flavors`: https://docs.openstack.org/admin-guide/compute-flavors.html
 .. _`Image metadata`: https://docs.openstack.org/image-guide/image-metadata.html
 .. _`discussion`: http://lists.openstack.org/pipermail/openstack-dev/2016-March/090367.html

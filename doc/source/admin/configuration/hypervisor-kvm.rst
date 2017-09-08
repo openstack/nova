@@ -56,6 +56,8 @@ see the following distribution-specific documentation:
   data/sec_vt_installation_kvm.html>`_ from the SUSE Linux Enterprise Server
   ``Virtualization Guide``.
 
+.. _enable-kvm:
+
 Enable KVM
 ~~~~~~~~~~
 
