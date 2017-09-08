@@ -122,7 +122,7 @@ class AllocationFixture(APIFixture):
         # Each set of allocations must have the same consumer_id because only
         # the first allocation is used for the project/user association.
         consumer_id = uuidutils.generate_uuid()
-        inventory = objects.Inventory(
+        inventory = rp_obj.Inventory(
             self.context, resource_provider=rp,
             resource_class='DISK_GB', total=2048,
             step_size=10, min_unit=10, max_unit=600)
@@ -150,7 +150,7 @@ class AllocationFixture(APIFixture):
         # Each set of allocations must have the same consumer_id because only
         # the first allocation is used for the project/user association.
         consumer_id = uuidutils.generate_uuid()
-        inventory = objects.Inventory(
+        inventory = rp_obj.Inventory(
             self.context, resource_provider=rp,
             resource_class='VCPU', total=10,
             max_unit=4)
@@ -238,7 +238,7 @@ class SharedStorageFixture(APIFixture):
 
         # Populate compute node inventory for VCPU and RAM
         for cn in (cn1, cn2):
-            vcpu_inv = objects.Inventory(
+            vcpu_inv = rp_obj.Inventory(
                 self.context,
                 resource_provider=cn,
                 resource_class='VCPU',
@@ -249,7 +249,7 @@ class SharedStorageFixture(APIFixture):
                 step_size=1,
                 allocation_ratio=16.0)
             vcpu_inv.obj_set_defaults()
-            ram_inv = objects.Inventory(
+            ram_inv = rp_obj.Inventory(
                 self.context,
                 resource_provider=cn,
                 resource_class='MEMORY_MB',
@@ -264,7 +264,7 @@ class SharedStorageFixture(APIFixture):
             cn.set_inventory(inv_list)
 
         # Populate shared storage provider with DISK_GB inventory
-        disk_inv = objects.Inventory(
+        disk_inv = rp_obj.Inventory(
             self.context,
             resource_provider=ss,
             resource_class='DISK_GB',

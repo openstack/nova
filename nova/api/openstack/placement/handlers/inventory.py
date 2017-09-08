@@ -150,7 +150,7 @@ def _make_inventory_object(resource_provider, resource_class, **data):
     # 0) for non-negative integers. It's not clear if that is
     # duplication or decoupling so leaving it as this for now.
     try:
-        inventory = objects.Inventory(
+        inventory = rp_obj.Inventory(
             resource_provider=resource_provider,
             resource_class=resource_class, **data)
     except (ValueError, TypeError) as exc:

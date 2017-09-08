@@ -21,7 +21,6 @@ from oslo_concurrency import lockutils
 from oslo_db import api as oslo_db_api
 from oslo_db import exception as db_exc
 from oslo_log import log as logging
-from oslo_utils import versionutils
 import six
 import sqlalchemy as sa
 from sqlalchemy import func
@@ -1366,12 +1365,8 @@ def _update_inventory_in_db(context, id_, updates):
         raise exception.NotFound()
 
 
-@base.NovaObjectRegistry.register
+@base.NovaObjectRegistry.register_if(False)
 class Inventory(_HasAResourceProvider):
-    # Version 1.0: Initial version
-    # Version 1.1: Changed resource_class to allow custom strings
-    # Version 1.2: Turn off remotable
-    VERSION = '1.2'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -1384,13 +1379,6 @@ class Inventory(_HasAResourceProvider):
         'step_size': fields.NonNegativeIntegerField(default=1),
         'allocation_ratio': fields.NonNegativeFloatField(default=1.0),
     }
-
-    def obj_make_compatible(self, primitive, target_version):
-        super(Inventory, self).obj_make_compatible(primitive, target_version)
-        target_version = versionutils.convert_version_to_tuple(target_version)
-        if target_version < (1, 1) and 'resource_class' in primitive:
-            rc = primitive['resource_class']
-            rc_cache.raise_if_custom_resource_class_pre_v1_1(rc)
 
     @property
     def capacity(self):
@@ -1459,7 +1447,7 @@ class InventoryList(base.ObjectListBase, base.NovaObject):
     def get_all_by_resource_provider_uuid(cls, context, rp_uuid):
         db_inventory_list = cls._get_all_by_resource_provider(context,
                                                               rp_uuid)
-        return base.obj_make_list(context, cls(context), objects.Inventory,
+        return base.obj_make_list(context, cls(context), Inventory,
                                   db_inventory_list)
 
 
