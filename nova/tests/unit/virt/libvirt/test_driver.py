@@ -17378,7 +17378,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                 mock.patch.object(libvirt_utils, 'write_to_file'),
                 mock.patch.object(drvr, '_destroy'),
                 mock.patch.object(drvr, '_create_domain'),
-                mock.patch.object(libvirt_utils, 'file_delete'),
+                mock.patch.object(os, 'unlink'),
                 mock.patch.object(shutil, 'rmtree'),
                 mock.patch.object(os.path, "isdir",
                                   side_effect=isdir_sideeffect),

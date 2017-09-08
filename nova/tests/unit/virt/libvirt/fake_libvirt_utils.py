@@ -136,10 +136,6 @@ def logical_volume_info(path):
     return {}
 
 
-def file_delete(path):
-    return True
-
-
 def get_fs_info(path):
     return {'total': 128 * (1024 ** 3),
             'used': 44 * (1024 ** 3),

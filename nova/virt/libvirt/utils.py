@@ -344,26 +344,6 @@ def file_open(*args, **kwargs):
     return open(*args, **kwargs)
 
 
-def file_delete(path):
-    """Delete (unlink) file
-
-    Note: The reason this is kept in a separate module is to easily
-          be able to provide a stub module that doesn't alter system
-          state at all (for unit tests)
-    """
-    return os.unlink(path)
-
-
-def path_exists(path):
-    """Returns if path exists
-
-    Note: The reason this is kept in a separate module is to easily
-          be able to provide a stub module that doesn't alter system
-          state at all (for unit tests)
-    """
-    return os.path.exists(path)
-
-
 def find_disk(guest):
     """Find root device path for instance
 

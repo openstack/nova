@@ -2757,13 +2757,13 @@ class LibvirtDriver(driver.ComputeDriver):
         virt_dom = guest._domain
         self._destroy(instance)
         self._create_domain(xml, virt_dom)
-        libvirt_utils.file_delete(unrescue_xml_path)
+        os.unlink(unrescue_xml_path)
         rescue_files = os.path.join(instance_dir, "*.rescue")
         for rescue_file in glob.iglob(rescue_files):
             if os.path.isdir(rescue_file):
                 shutil.rmtree(rescue_file)
             else:
-                libvirt_utils.file_delete(rescue_file)
+                os.unlink(rescue_file)
         # cleanup rescue volume
         lvm.remove_volumes([lvmdisk for lvmdisk in self._lvm_disks(instance)
                                 if lvmdisk.endswith('.rescue')])

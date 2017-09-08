@@ -21,7 +21,6 @@ from nova import exception
 from nova import test
 from nova import utils
 from nova.virt.libvirt.storage import lvm
-from nova.virt.libvirt import utils as libvirt_utils
 
 CONF = cfg.CONF
 
@@ -52,7 +51,7 @@ class LvmTestCase(test.NoDBTestCase):
         self.assertRaises(exception.VolumeBDMPathNotFound,
             lvm.get_volume_size, '/dev/foo')
 
-    @mock.patch.object(libvirt_utils, 'path_exists', return_value=True)
+    @mock.patch('os.path.exists', return_value=True)
     @mock.patch.object(utils, 'execute',
                        side_effect=processutils.ProcessExecutionError(
                             stderr='blockdev: i am sad in other ways'))
