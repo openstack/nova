@@ -2153,11 +2153,8 @@ class ResourceClass(base.NovaObject):
             raise exception.ResourceClassExists(resource_class=name)
 
 
-@base.NovaObjectRegistry.register
+@base.NovaObjectRegistry.register_if(False)
 class ResourceClassList(base.ObjectListBase, base.NovaObject):
-    # Version 1.0: Initial version
-    # Version 1.1: Turn off remotable
-    VERSION = '1.1'
 
     fields = {
         'objects': fields.ListOfObjectsField('ResourceClass'),
