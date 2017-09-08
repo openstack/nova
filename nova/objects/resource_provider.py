@@ -1983,13 +1983,8 @@ class UsageList(base.ObjectListBase, base.NovaObject):
         return "UsageList[" + ", ".join(strings) + "]"
 
 
-@base.NovaObjectRegistry.register
+@base.NovaObjectRegistry.register_if(False)
 class ResourceClass(base.NovaObject):
-    # Version 1.0: Initial version
-    VERSION = '1.0'
-
-    CUSTOM_NAMESPACE = 'CUSTOM_'
-    """All non-standard resource classes must begin with this string."""
 
     MIN_CUSTOM_RESOURCE_CLASS_ID = 10000
     """Any user-defined resource classes must have an identifier greater than
@@ -2053,10 +2048,11 @@ class ResourceClass(base.NovaObject):
         if self.name in fields.ResourceClass.STANDARD:
             raise exception.ResourceClassExists(resource_class=self.name)
 
-        if not self.name.startswith(self.CUSTOM_NAMESPACE):
+        if not self.name.startswith(fields.ResourceClass.CUSTOM_NAMESPACE):
             raise exception.ObjectActionError(
                 action='create',
-                reason='name must start with ' + self.CUSTOM_NAMESPACE)
+                reason='name must start with ' +
+                        fields.ResourceClass.CUSTOM_NAMESPACE)
 
         updates = self.obj_get_changes()
         # There is the possibility of a race when adding resource classes, as
@@ -2171,7 +2167,7 @@ class ResourceClassList(base.ObjectListBase, base.NovaObject):
     def get_all(cls, context):
         resource_classes = cls._get_all(context)
         return base.obj_make_list(context, cls(context),
-                                  objects.ResourceClass, resource_classes)
+                                  ResourceClass, resource_classes)
 
     def __repr__(self):
         strings = [repr(x) for x in self.objects]

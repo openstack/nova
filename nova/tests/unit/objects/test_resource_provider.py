@@ -574,12 +574,13 @@ class TestResourceClass(test.NoDBTestCase):
         self.context = context.RequestContext(self.user_id, self.project_id)
 
     def test_cannot_create_with_id(self):
-        rc = objects.ResourceClass(self.context, id=1, name='CUSTOM_IRON_NFV')
+        rc = resource_provider.ResourceClass(self.context, id=1,
+                                             name='CUSTOM_IRON_NFV')
         exc = self.assertRaises(exception.ObjectActionError, rc.create)
         self.assertIn('already created', str(exc))
 
     def test_cannot_create_requires_name(self):
-        rc = objects.ResourceClass(self.context)
+        rc = resource_provider.ResourceClass(self.context)
         exc = self.assertRaises(exception.ObjectActionError, rc.create)
         self.assertIn('name is required', str(exc))
 

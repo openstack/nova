@@ -22,7 +22,6 @@ import six
 from nova import exception
 from nova.i18n import _
 from nova.network import model as network_model
-from nova import objects
 
 
 # Import field errors from oslo.versionedobjects
@@ -463,6 +462,9 @@ class OSType(BaseNovaEnum):
 class ResourceClass(StringField):
     """Classes of resources provided to consumers."""
 
+    CUSTOM_NAMESPACE = 'CUSTOM_'
+    """All non-standard resource classes must begin with this string."""
+
     VCPU = 'VCPU'
     MEMORY_MB = 'MEMORY_MB'
     DISK_GB = 'DISK_GB'
@@ -486,12 +488,12 @@ class ResourceClass(StringField):
     V1_0 = (VCPU, MEMORY_MB, DISK_GB, PCI_DEVICE, SRIOV_NET_VF, NUMA_SOCKET,
             NUMA_CORE, NUMA_THREAD, NUMA_MEMORY_MB, IPV4_ADDRESS)
 
-    @staticmethod
-    def normalize_name(rc_name):
+    @classmethod
+    def normalize_name(cls, rc_name):
         if rc_name is None:
             return None
         norm_name = rc_name.upper()
-        cust_prefix = objects.ResourceClass.CUSTOM_NAMESPACE
+        cust_prefix = cls.CUSTOM_NAMESPACE
         norm_name = cust_prefix + norm_name
         # Replace some punctuation characters with underscores
         norm_name = re.sub('[^0-9A-Z]+', '_', norm_name)

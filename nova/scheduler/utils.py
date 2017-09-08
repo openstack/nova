@@ -31,7 +31,6 @@ from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import fields
 from nova.objects import instance as obj_instance
-from nova.objects.resource_provider import ResourceClass
 from nova import rpc
 
 
@@ -104,7 +103,7 @@ def _process_extra_specs(extra_specs, resources):
             if key.startswith("resources:")}
     resource_keys = set(resource_specs)
     custom_keys = set([key for key in resource_keys
-            if key.startswith(ResourceClass.CUSTOM_NAMESPACE)])
+            if key.startswith(fields.ResourceClass.CUSTOM_NAMESPACE)])
     std_keys = resource_keys - custom_keys
 
     def validate_int(key):

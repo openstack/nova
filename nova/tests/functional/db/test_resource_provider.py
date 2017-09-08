@@ -1459,7 +1459,7 @@ class ResourceClassListTestCase(ResourceProviderBaseCase):
 class ResourceClassTestCase(ResourceProviderBaseCase):
 
     def test_get_by_name(self):
-        rc = objects.ResourceClass.get_by_name(
+        rc = rp_obj.ResourceClass.get_by_name(
             self.ctx,
             fields.ResourceClass.VCPU
         )
@@ -1471,17 +1471,17 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
 
     def test_get_by_name_not_found(self):
         self.assertRaises(exception.ResourceClassNotFound,
-                          objects.ResourceClass.get_by_name,
+                          rp_obj.ResourceClass.get_by_name,
                           self.ctx,
                           'CUSTOM_NO_EXISTS')
 
     def test_get_by_name_custom(self):
-        rc = objects.ResourceClass(
+        rc = rp_obj.ResourceClass(
             self.ctx,
             name='CUSTOM_IRON_NFV',
         )
         rc.create()
-        get_rc = objects.ResourceClass.get_by_name(
+        get_rc = rp_obj.ResourceClass.get_by_name(
             self.ctx,
             'CUSTOM_IRON_NFV',
         )
@@ -1489,7 +1489,7 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
         self.assertEqual(rc.name, get_rc.name)
 
     def test_create_fail_not_using_namespace(self):
-        rc = objects.ResourceClass(
+        rc = rp_obj.ResourceClass(
             context=self.ctx,
             name='IRON_NFV',
         )
@@ -1497,39 +1497,40 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
         self.assertIn('name must start with', str(exc))
 
     def test_create_duplicate_standard(self):
-        rc = objects.ResourceClass(
+        rc = rp_obj.ResourceClass(
             context=self.ctx,
             name=fields.ResourceClass.VCPU,
         )
         self.assertRaises(exception.ResourceClassExists, rc.create)
 
     def test_create(self):
-        rc = objects.ResourceClass(
+        rc = rp_obj.ResourceClass(
             self.ctx,
             name='CUSTOM_IRON_NFV',
         )
         rc.create()
-        min_id = objects.ResourceClass.MIN_CUSTOM_RESOURCE_CLASS_ID
+        min_id = rp_obj.ResourceClass.MIN_CUSTOM_RESOURCE_CLASS_ID
         self.assertEqual(min_id, rc.id)
 
-        rc = objects.ResourceClass(
+        rc = rp_obj.ResourceClass(
             self.ctx,
             name='CUSTOM_IRON_ENTERPRISE',
         )
         rc.create()
         self.assertEqual(min_id + 1, rc.id)
 
-    @mock.patch.object(nova.objects.ResourceClass, "_get_next_id")
+    @mock.patch.object(nova.objects.resource_provider.ResourceClass,
+                       "_get_next_id")
     def test_create_duplicate_id_retry(self, mock_get):
         # This order of ID generation will create rc1 with an ID of 42, try to
         # create rc2 with the same ID, and then return 43 in the retry loop.
         mock_get.side_effect = (42, 42, 43)
-        rc1 = objects.ResourceClass(
+        rc1 = rp_obj.ResourceClass(
             self.ctx,
             name='CUSTOM_IRON_NFV',
         )
         rc1.create()
-        rc2 = objects.ResourceClass(
+        rc2 = rp_obj.ResourceClass(
             self.ctx,
             name='CUSTOM_TWO',
         )
@@ -1537,18 +1538,19 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
         self.assertEqual(rc1.id, 42)
         self.assertEqual(rc2.id, 43)
 
-    @mock.patch.object(nova.objects.ResourceClass, "_get_next_id")
+    @mock.patch.object(nova.objects.resource_provider.ResourceClass,
+                       "_get_next_id")
     def test_create_duplicate_id_retry_failing(self, mock_get):
         """negative case for test_create_duplicate_id_retry"""
         # This order of ID generation will create rc1 with an ID of 44, try to
         # create rc2 with the same ID, and then return 45 in the retry loop.
         mock_get.side_effect = (44, 44, 44, 44)
-        rc1 = objects.ResourceClass(
+        rc1 = rp_obj.ResourceClass(
             self.ctx,
             name='CUSTOM_IRON_NFV',
         )
         rc1.create()
-        rc2 = objects.ResourceClass(
+        rc2 = rp_obj.ResourceClass(
             self.ctx,
             name='CUSTOM_TWO',
         )
@@ -1556,28 +1558,28 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
         self.assertRaises(exception.MaxDBRetriesExceeded, rc2.create)
 
     def test_create_duplicate_custom(self):
-        rc = objects.ResourceClass(
+        rc = rp_obj.ResourceClass(
             self.ctx,
             name='CUSTOM_IRON_NFV',
         )
         rc.create()
-        self.assertEqual(objects.ResourceClass.MIN_CUSTOM_RESOURCE_CLASS_ID,
+        self.assertEqual(rp_obj.ResourceClass.MIN_CUSTOM_RESOURCE_CLASS_ID,
                          rc.id)
-        rc = objects.ResourceClass(
+        rc = rp_obj.ResourceClass(
             self.ctx,
             name='CUSTOM_IRON_NFV',
         )
         self.assertRaises(exception.ResourceClassExists, rc.create)
 
     def test_destroy_fail_no_id(self):
-        rc = objects.ResourceClass(
+        rc = rp_obj.ResourceClass(
             self.ctx,
             name='CUSTOM_IRON_NFV',
         )
         self.assertRaises(exception.ObjectActionError, rc.destroy)
 
     def test_destroy_fail_standard(self):
-        rc = objects.ResourceClass.get_by_name(
+        rc = rp_obj.ResourceClass.get_by_name(
             self.ctx,
             'VCPU',
         )
@@ -1585,7 +1587,7 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
                           rc.destroy)
 
     def test_destroy(self):
-        rc = objects.ResourceClass(
+        rc = rp_obj.ResourceClass(
             self.ctx,
             name='CUSTOM_IRON_NFV',
         )
@@ -1594,7 +1596,7 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
         rc_ids = (r.id for r in rc_list)
         self.assertIn(rc.id, rc_ids)
 
-        rc = objects.ResourceClass.get_by_name(
+        rc = rp_obj.ResourceClass.get_by_name(
             self.ctx,
             'CUSTOM_IRON_NFV',
         )
@@ -1606,7 +1608,7 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
 
         # Verify rc cache was purged of the old entry
         self.assertRaises(exception.ResourceClassNotFound,
-                          objects.ResourceClass.get_by_name,
+                          rp_obj.ResourceClass.get_by_name,
                           self.ctx,
                           'CUSTOM_IRON_NFV')
 
@@ -1614,7 +1616,7 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
         """Test that we raise an exception when attempting to delete a resource
         class that is referenced in an inventory record.
         """
-        rc = objects.ResourceClass(
+        rc = rp_obj.ResourceClass(
             self.ctx,
             name='CUSTOM_IRON_NFV',
         )
@@ -1644,14 +1646,14 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
         self.assertNotIn(rc.id, rc_ids)
 
     def test_save_fail_no_id(self):
-        rc = objects.ResourceClass(
+        rc = rp_obj.ResourceClass(
             self.ctx,
             name='CUSTOM_IRON_NFV',
         )
         self.assertRaises(exception.ObjectActionError, rc.save)
 
     def test_save_fail_standard(self):
-        rc = objects.ResourceClass.get_by_name(
+        rc = rp_obj.ResourceClass.get_by_name(
             self.ctx,
             'VCPU',
         )
@@ -1659,13 +1661,13 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
                           rc.save)
 
     def test_save(self):
-        rc = objects.ResourceClass(
+        rc = rp_obj.ResourceClass(
             self.ctx,
             name='CUSTOM_IRON_NFV',
         )
         rc.create()
 
-        rc = objects.ResourceClass.get_by_name(
+        rc = rp_obj.ResourceClass.get_by_name(
             self.ctx,
             'CUSTOM_IRON_NFV',
         )
@@ -1674,7 +1676,7 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
 
         # Verify rc cache was purged of the old entry
         self.assertRaises(exception.NotFound,
-                          objects.ResourceClass.get_by_name,
+                          rp_obj.ResourceClass.get_by_name,
                           self.ctx,
                           'CUSTOM_IRON_NFV')
 
@@ -2855,7 +2857,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
             cn.set_inventory(inv_list)
 
         # Create a custom resource called MAGIC
-        magic_rc = objects.ResourceClass(
+        magic_rc = rp_obj.ResourceClass(
             self.ctx,
             name='CUSTOM_MAGIC',
         )

@@ -1150,7 +1150,6 @@ object_data = {
     'Quotas': '1.3-40fcefe522111dddd3e5e6155702cf4e',
     'QuotasNoOp': '1.3-347a039fc7cfee7b225b68b5181e0733',
     'RequestSpec': '1.8-35033ecef47a880f9a5e46e2269e2b97',
-    'ResourceClass': '1.0-e6b367e2cf1733c5f3526f20a3286fe9',
     'ResourceProvider': '1.4-35e8a41d2ece17a862fac5b07ca966af',
     'ResourceProviderList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
     'S3ImageMapping': '1.0-7dd7366a890d82660ed121de9092276e',
