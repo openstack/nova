@@ -24,7 +24,6 @@ from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
 from nova import exception
 from nova.i18n import _
-from nova import objects
 from nova.objects import resource_provider as rp_obj
 
 
@@ -127,7 +126,7 @@ def create_resource_provider(req):
 
     try:
         uuid = data.get('uuid', uuidutils.generate_uuid())
-        resource_provider = objects.ResourceProvider(
+        resource_provider = rp_obj.ResourceProvider(
             context, name=data['name'], uuid=uuid)
         resource_provider.create()
     except db_exc.DBDuplicateEntry as exc:
@@ -161,7 +160,7 @@ def delete_resource_provider(req):
     context = req.environ['placement.context']
     # The containing application will catch a not found here.
     try:
-        resource_provider = objects.ResourceProvider.get_by_uuid(
+        resource_provider = rp_obj.ResourceProvider.get_by_uuid(
             context, uuid)
         resource_provider.destroy()
     except exception.ResourceProviderInUse as exc:
@@ -188,7 +187,7 @@ def get_resource_provider(req):
     # The containing application will catch a not found here.
     context = req.environ['placement.context']
 
-    resource_provider = objects.ResourceProvider.get_by_uuid(
+    resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
 
     req.response.body = encodeutils.to_utf8(jsonutils.dumps(
@@ -267,7 +266,7 @@ def update_resource_provider(req):
     context = req.environ['placement.context']
 
     # The containing application will catch a not found here.
-    resource_provider = objects.ResourceProvider.get_by_uuid(
+    resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
 
     data = util.extract_json(req.body, PUT_RESOURCE_PROVIDER_SCHEMA)

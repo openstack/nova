@@ -114,7 +114,7 @@ class AllocationFixture(APIFixture):
         # Stealing from the super
         rp_name = os.environ['RP_NAME']
         rp_uuid = os.environ['RP_UUID']
-        rp = objects.ResourceProvider(
+        rp = rp_obj.ResourceProvider(
             self.context, name=rp_name, uuid=rp_uuid)
         rp.create()
 
@@ -218,19 +218,19 @@ class SharedStorageFixture(APIFixture):
         os.environ['SS_UUID'] = ss_uuid
         os.environ['AGG_UUID'] = agg_uuid
 
-        cn1 = objects.ResourceProvider(
+        cn1 = rp_obj.ResourceProvider(
             self.context,
             name='cn1',
             uuid=cn1_uuid)
         cn1.create()
 
-        cn2 = objects.ResourceProvider(
+        cn2 = rp_obj.ResourceProvider(
             self.context,
             name='cn2',
             uuid=cn2_uuid)
         cn2.create()
 
-        ss = objects.ResourceProvider(
+        ss = rp_obj.ResourceProvider(
             self.context,
             name='ss',
             uuid=ss_uuid)

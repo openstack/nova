@@ -24,7 +24,6 @@ from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
 from nova import exception
 from nova.i18n import _
-from nova import objects
 from nova.objects import resource_provider as rp_obj
 
 
@@ -193,7 +192,7 @@ def list_for_resource_provider(req):
     # confirm existence of resource provider so we get a reasonable
     # 404 instead of empty list
     try:
-        resource_provider = objects.ResourceProvider.get_by_uuid(
+        resource_provider = rp_obj.ResourceProvider.get_by_uuid(
             context, uuid)
     except exception.NotFound as exc:
         raise webob.exc.HTTPNotFound(
@@ -226,7 +225,7 @@ def _set_allocations(req, schema):
         resource_provider_uuid = allocation['resource_provider']['uuid']
 
         try:
-            resource_provider = objects.ResourceProvider.get_by_uuid(
+            resource_provider = rp_obj.ResourceProvider.get_by_uuid(
                 context, resource_provider_uuid)
         except exception.NotFound:
             raise webob.exc.HTTPBadRequest(

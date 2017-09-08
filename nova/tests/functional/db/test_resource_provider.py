@@ -19,7 +19,6 @@ import sqlalchemy as sa
 import nova
 from nova import context
 from nova import exception
-from nova import objects
 from nova.objects import fields
 from nova.objects import resource_provider as rp_obj
 from nova import test
@@ -55,7 +54,7 @@ class ResourceProviderBaseCase(test.NoDBTestCase):
 
     def _make_allocation(self, rp_uuid=None, inv_dict=None):
         rp_uuid = rp_uuid or uuidsentinel.allocation_resource_provider
-        rp = objects.ResourceProvider(
+        rp = rp_obj.ResourceProvider(
             context=self.ctx,
             uuid=rp_uuid,
             name=rp_uuid)
@@ -77,13 +76,13 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
     """Test resource-provider objects' lifecycles."""
 
     def test_create_resource_provider_requires_uuid(self):
-        resource_provider = objects.ResourceProvider(
+        resource_provider = rp_obj.ResourceProvider(
             context = self.ctx)
         self.assertRaises(exception.ObjectActionError,
                           resource_provider.create)
 
     def test_create_resource_provider(self):
-        created_resource_provider = objects.ResourceProvider(
+        created_resource_provider = rp_obj.ResourceProvider(
             context=self.ctx,
             uuid=uuidsentinel.fake_resource_provider,
             name=uuidsentinel.fake_resource_name,
@@ -91,7 +90,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         created_resource_provider.create()
         self.assertIsInstance(created_resource_provider.id, int)
 
-        retrieved_resource_provider = objects.ResourceProvider.get_by_uuid(
+        retrieved_resource_provider = rp_obj.ResourceProvider.get_by_uuid(
             self.ctx,
             uuidsentinel.fake_resource_provider
         )
@@ -105,7 +104,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         self.assertEqual(0, retrieved_resource_provider.generation)
 
     def test_save_resource_provider(self):
-        created_resource_provider = objects.ResourceProvider(
+        created_resource_provider = rp_obj.ResourceProvider(
             context=self.ctx,
             uuid=uuidsentinel.fake_resource_provider,
             name=uuidsentinel.fake_resource_name,
@@ -113,14 +112,14 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         created_resource_provider.create()
         created_resource_provider.name = 'new-name'
         created_resource_provider.save()
-        retrieved_resource_provider = objects.ResourceProvider.get_by_uuid(
+        retrieved_resource_provider = rp_obj.ResourceProvider.get_by_uuid(
             self.ctx,
             uuidsentinel.fake_resource_provider
         )
         self.assertEqual('new-name', retrieved_resource_provider.name)
 
     def test_destroy_resource_provider(self):
-        created_resource_provider = objects.ResourceProvider(
+        created_resource_provider = rp_obj.ResourceProvider(
             context=self.ctx,
             uuid=uuidsentinel.fake_resource_provider,
             name=uuidsentinel.fake_resource_name,
@@ -128,7 +127,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         created_resource_provider.create()
         created_resource_provider.destroy()
         self.assertRaises(exception.NotFound,
-                          objects.ResourceProvider.get_by_uuid,
+                          rp_obj.ResourceProvider.get_by_uuid,
                           self.ctx,
                           uuidsentinel.fake_resource_provider)
         self.assertRaises(exception.NotFound,
@@ -140,7 +139,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
                           rp.destroy)
 
     def test_destroy_resource_provider_destroy_inventory(self):
-        resource_provider = objects.ResourceProvider(
+        resource_provider = rp_obj.ResourceProvider(
             context=self.ctx,
             uuid=uuidsentinel.fake_resource_provider,
             name=uuidsentinel.fake_resource_name,
@@ -161,7 +160,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         self.assertEqual(0, len(inventories))
 
     def test_create_inventory_with_uncreated_provider(self):
-        resource_provider = objects.ResourceProvider(
+        resource_provider = rp_obj.ResourceProvider(
             context=self.ctx,
             uuid=uuidsentinel.inventory_resource_provider
         )
@@ -174,7 +173,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
                           disk_inventory.create)
 
     def test_create_and_update_inventory(self):
-        resource_provider = objects.ResourceProvider(
+        resource_provider = rp_obj.ResourceProvider(
             context=self.ctx,
             uuid=uuidsentinel.inventory_resource_provider,
             name='foo',
@@ -216,7 +215,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         """Test attempting to set inventory to an unknown resource class raises
         an exception.
         """
-        rp = objects.ResourceProvider(
+        rp = rp_obj.ResourceProvider(
             context=self.ctx,
             uuid=uuidsentinel.rp_uuid,
             name='compute-host',
@@ -243,7 +242,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         inventory record for a resource class that still has allocations
         against it.
         """
-        rp = objects.ResourceProvider(
+        rp = rp_obj.ResourceProvider(
             context=self.ctx,
             uuid=uuidsentinel.rp_uuid,
             name='compute-host',
@@ -295,9 +294,9 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
 
     @mock.patch('nova.objects.resource_provider.LOG')
     def test_set_inventory_over_capacity(self, mock_log):
-        rp = objects.ResourceProvider(context=self.ctx,
-                                      uuid=uuidsentinel.rp_uuid,
-                                      name=uuidsentinel.rp_name)
+        rp = rp_obj.ResourceProvider(context=self.ctx,
+                                     uuid=uuidsentinel.rp_uuid,
+                                     name=uuidsentinel.rp_name)
         rp.create()
 
         disk_inv = rp_obj.Inventory(
@@ -342,9 +341,9 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
             mock.ANY, {'uuid': rp.uuid, 'resource': 'DISK_GB'})
 
     def test_provider_modify_inventory(self):
-        rp = objects.ResourceProvider(context=self.ctx,
-                                      uuid=uuidsentinel.rp_uuid,
-                                      name=uuidsentinel.rp_name)
+        rp = rp_obj.ResourceProvider(context=self.ctx,
+                                     uuid=uuidsentinel.rp_uuid,
+                                     name=uuidsentinel.rp_name)
         rp.create()
         saved_generation = rp.generation
 
@@ -478,9 +477,9 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
                           rp.set_inventory, inv_list)
 
     def test_delete_inventory_not_found(self):
-        rp = objects.ResourceProvider(context=self.ctx,
-                                      uuid=uuidsentinel.rp_uuid,
-                                      name=uuidsentinel.rp_name)
+        rp = rp_obj.ResourceProvider(context=self.ctx,
+                                     uuid=uuidsentinel.rp_uuid,
+                                     name=uuidsentinel.rp_name)
         rp.create()
         error = self.assertRaises(exception.NotFound, rp.delete_inventory,
                                   'DISK_GB')
@@ -497,9 +496,9 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
             % rp.uuid, str(error))
 
     def test_update_inventory_not_found(self):
-        rp = objects.ResourceProvider(context=self.ctx,
-                                      uuid=uuidsentinel.rp_uuid,
-                                      name=uuidsentinel.rp_name)
+        rp = rp_obj.ResourceProvider(context=self.ctx,
+                                     uuid=uuidsentinel.rp_uuid,
+                                     name=uuidsentinel.rp_name)
         rp.create()
         disk_inv = rp_obj.Inventory(resource_provider=rp,
                                     resource_class='DISK_GB',
@@ -536,9 +535,9 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
             mock.ANY, {'uuid': rp.uuid, 'resource': 'DISK_GB'})
 
     def test_add_invalid_inventory(self):
-        rp = objects.ResourceProvider(context=self.ctx,
-                                      uuid=uuidsentinel.rp_uuid,
-                                      name=uuidsentinel.rp_name)
+        rp = rp_obj.ResourceProvider(context=self.ctx,
+                                     uuid=uuidsentinel.rp_uuid,
+                                     name=uuidsentinel.rp_name)
         rp.create()
         disk_inv = rp_obj.Inventory(
             resource_provider=rp,
@@ -554,7 +553,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
                       % rp.uuid, str(error))
 
     def test_add_allocation_increments_generation(self):
-        rp = objects.ResourceProvider(context=self.ctx,
+        rp = rp_obj.ResourceProvider(context=self.ctx,
                 uuid=uuidsentinel.inventory_resource_provider, name='foo')
         rp.create()
         inv = rp_obj.Inventory(context=self.ctx, resource_provider=rp,
@@ -579,7 +578,7 @@ class ResourceProviderListTestCase(ResourceProviderBaseCase):
         for rp_i in ['1', '2']:
             uuid = getattr(uuidsentinel, 'rp_uuid_' + rp_i)
             name = 'rp_name_' + rp_i
-            rp = objects.ResourceProvider(self.ctx, name=name, uuid=uuid)
+            rp = rp_obj.ResourceProvider(self.ctx, name=name, uuid=uuid)
             rp.create()
 
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
@@ -597,7 +596,7 @@ class ResourceProviderListTestCase(ResourceProviderBaseCase):
         for rp_i in ['1', '2']:
             uuid = getattr(uuidsentinel, 'rp_uuid_' + rp_i)
             name = 'rp_name_' + rp_i
-            rp = objects.ResourceProvider(self.ctx, name=name, uuid=uuid)
+            rp = rp_obj.ResourceProvider(self.ctx, name=name, uuid=uuid)
             rp.create()
             inv = rp_obj.Inventory(
                 resource_provider=rp,
@@ -702,7 +701,7 @@ class ResourceProviderListTestCase(ResourceProviderBaseCase):
         for rp_i in [1, 2, 3, 4]:
             uuid = getattr(uuidsentinel, 'rp_uuid_' + str(rp_i))
             name = 'rp_name_' + str(rp_i)
-            rp = objects.ResourceProvider(self.ctx, name=name, uuid=uuid)
+            rp = rp_obj.ResourceProvider(self.ctx, name=name, uuid=uuid)
             rp.create()
             if rp_i % 2:
                 aggregate_uuids = [uuidsentinel.agg_a, uuidsentinel.agg_b]
@@ -752,7 +751,7 @@ class TestResourceProviderAggregates(test.NoDBTestCase):
         self.ctx = context.RequestContext('fake-user', 'fake-project')
 
     def test_set_and_get_new_aggregates(self):
-        rp = objects.ResourceProvider(
+        rp = rp_obj.ResourceProvider(
             context=self.ctx,
             uuid=uuidsentinel.rp_uuid,
             name=uuidsentinel.rp_name
@@ -767,13 +766,13 @@ class TestResourceProviderAggregates(test.NoDBTestCase):
 
         # Since get_aggregates always does a new query this is
         # mostly nonsense but is here for completeness.
-        read_rp = objects.ResourceProvider.get_by_uuid(
+        read_rp = rp_obj.ResourceProvider.get_by_uuid(
             self.ctx, uuidsentinel.rp_uuid)
         re_read_aggregate_uuids = read_rp.get_aggregates()
         self.assertItemsEqual(aggregate_uuids, re_read_aggregate_uuids)
 
     def test_set_aggregates_is_replace(self):
-        rp = objects.ResourceProvider(
+        rp = rp_obj.ResourceProvider(
             context=self.ctx,
             uuid=uuidsentinel.rp_uuid,
             name=uuidsentinel.rp_name
@@ -796,7 +795,7 @@ class TestResourceProviderAggregates(test.NoDBTestCase):
         self.assertEqual([], read_aggregate_uuids)
 
     def test_delete_rp_clears_aggs(self):
-        rp = objects.ResourceProvider(
+        rp = rp_obj.ResourceProvider(
             context=self.ctx,
             uuid=uuidsentinel.rp_uuid,
             name=uuidsentinel.rp_name
@@ -805,17 +804,17 @@ class TestResourceProviderAggregates(test.NoDBTestCase):
         rp_id = rp.id
         start_aggregate_uuids = [uuidsentinel.agg_a, uuidsentinel.agg_b]
         rp.set_aggregates(start_aggregate_uuids)
-        aggs = objects.ResourceProvider._get_aggregates(self.ctx, rp_id)
+        aggs = rp_obj.ResourceProvider._get_aggregates(self.ctx, rp_id)
         self.assertEqual(2, len(aggs))
         rp.destroy()
-        aggs = objects.ResourceProvider._get_aggregates(self.ctx, rp_id)
+        aggs = rp_obj.ResourceProvider._get_aggregates(self.ctx, rp_id)
         self.assertEqual(0, len(aggs))
 
 
 class TestAllocation(ResourceProviderBaseCase):
 
     def test_create_list_and_delete_allocation(self):
-        resource_provider = objects.ResourceProvider(
+        resource_provider = rp_obj.ResourceProvider(
             context=self.ctx,
             uuid=uuidsentinel.allocation_resource_provider,
             name=uuidsentinel.allocation_resource_name
@@ -867,14 +866,14 @@ class TestAllocation(ResourceProviderBaseCase):
         operation where the exiting allocation was not being properly
         deleted.
         """
-        cn_source = objects.ResourceProvider(
+        cn_source = rp_obj.ResourceProvider(
             context=self.ctx,
             uuid=uuidsentinel.cn_source,
             name=uuidsentinel.cn_source,
         )
         cn_source.create()
 
-        cn_dest = objects.ResourceProvider(
+        cn_dest = rp_obj.ResourceProvider(
             context=self.ctx,
             uuid=uuidsentinel.cn_dest,
             name=uuidsentinel.cn_dest,
@@ -1049,7 +1048,7 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
         rp2_class = fields.ResourceClass.IPV4_ADDRESS
         rp2_used = 2
 
-        rp1 = objects.ResourceProvider(
+        rp1 = rp_obj.ResourceProvider(
             self.ctx, name=rp1_name, uuid=rp1_uuid)
         rp1.create()
 
@@ -1111,10 +1110,10 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
         rp2_class = fields.ResourceClass.IPV4_ADDRESS
         rp2_used = 2
 
-        rp1 = objects.ResourceProvider(
+        rp1 = rp_obj.ResourceProvider(
             self.ctx, name=rp1_name, uuid=rp1_uuid)
         rp1.create()
-        rp2 = objects.ResourceProvider(
+        rp2 = rp_obj.ResourceProvider(
             self.ctx, name=rp2_name, uuid=rp2_uuid)
         rp2.create()
 
@@ -1221,7 +1220,7 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
         # Create one resource provider and set some inventory
         rp_name = uuidsentinel.rp_name
         rp_uuid = uuidsentinel.rp_uuid
-        rp = objects.ResourceProvider(
+        rp = rp_obj.ResourceProvider(
             self.ctx, name=rp_name, uuid=rp_uuid)
         rp.create()
         inv = rp_obj.Inventory(resource_provider=rp,
@@ -1363,7 +1362,7 @@ class UsageListTestCase(ResourceProviderBaseCase):
 
     def test_get_all_null(self):
         for uuid in [uuidsentinel.rp_uuid_1, uuidsentinel.rp_uuid_2]:
-            rp = objects.ResourceProvider(self.ctx, name=uuid, uuid=uuid)
+            rp = rp_obj.ResourceProvider(self.ctx, name=uuid, uuid=uuid)
             rp.create()
 
         usage_list = rp_obj.UsageList.get_all_by_resource_provider_uuid(
@@ -1387,9 +1386,9 @@ class UsageListTestCase(ResourceProviderBaseCase):
                          usage_list[0].resource_class)
 
     def test_get_inventory_no_allocation(self):
-        db_rp = objects.ResourceProvider(self.ctx,
-                                         name=uuidsentinel.rp_no_inv,
-                                         uuid=uuidsentinel.rp_no_inv)
+        db_rp = rp_obj.ResourceProvider(self.ctx,
+                                        name=uuidsentinel.rp_no_inv,
+                                        uuid=uuidsentinel.rp_no_inv)
         db_rp.create()
         inv = rp_obj.Inventory(resource_provider=db_rp,
                                resource_class=fields.ResourceClass.DISK_GB,
@@ -1406,9 +1405,9 @@ class UsageListTestCase(ResourceProviderBaseCase):
                          usage_list[0].resource_class)
 
     def test_get_all_multiple_inv(self):
-        db_rp = objects.ResourceProvider(self.ctx,
-                                         name=uuidsentinel.rp_no_inv,
-                                         uuid=uuidsentinel.rp_no_inv)
+        db_rp = rp_obj.ResourceProvider(self.ctx,
+                                        name=uuidsentinel.rp_no_inv,
+                                        uuid=uuidsentinel.rp_no_inv)
         db_rp.create()
         disk_inv = rp_obj.Inventory(
             resource_provider=db_rp,
@@ -1621,7 +1620,7 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
             name='CUSTOM_IRON_NFV',
         )
         rc.create()
-        rp = objects.ResourceProvider(
+        rp = rp_obj.ResourceProvider(
             self.ctx,
             name='my rp',
             uuid=uuidsentinel.rp,
@@ -1808,7 +1807,7 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
         self.assertEqual(0, len(traits))
 
     def test_set_traits_for_resource_provider(self):
-        rp = objects.ResourceProvider(
+        rp = rp_obj.ResourceProvider(
             context=self.ctx,
             uuid=uuidsentinel.fake_resource_provider,
             name=uuidsentinel.fake_resource_name,
@@ -1844,13 +1843,13 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
         the trait still associated with another one.
         """
         # Create two ResourceProviders
-        rp1 = objects.ResourceProvider(
+        rp1 = rp_obj.ResourceProvider(
             context=self.ctx,
             uuid=uuidsentinel.fake_resource_provider1,
             name=uuidsentinel.fake_resource_name1,
         )
         rp1.create()
-        rp2 = objects.ResourceProvider(
+        rp2 = rp_obj.ResourceProvider(
             context=self.ctx,
             uuid=uuidsentinel.fake_resource_provider2,
             name=uuidsentinel.fake_resource_name2,
@@ -1877,7 +1876,7 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
         self._assert_traits(['CUSTOM_TRAIT_A'], rp2.get_traits())
 
     def test_trait_delete_in_use(self):
-        rp = objects.ResourceProvider(
+        rp = rp_obj.ResourceProvider(
             context=self.ctx,
             uuid=uuidsentinel.fake_resource_provider,
             name=uuidsentinel.fake_resource_name,
@@ -1890,13 +1889,13 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
         self.assertRaises(exception.TraitInUse, t.destroy)
 
     def test_traits_get_all_with_associated_true(self):
-        rp1 = objects.ResourceProvider(
+        rp1 = rp_obj.ResourceProvider(
             context=self.ctx,
             uuid=uuidsentinel.fake_resource_provider1,
             name=uuidsentinel.fake_resource_name1,
         )
         rp1.create()
-        rp2 = objects.ResourceProvider(
+        rp2 = rp_obj.ResourceProvider(
             context=self.ctx,
             uuid=uuidsentinel.fake_resource_provider2,
             name=uuidsentinel.fake_resource_name2,
@@ -1917,13 +1916,13 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
                 filters={'associated': True}))
 
     def test_traits_get_all_with_associated_false(self):
-        rp1 = objects.ResourceProvider(
+        rp1 = rp_obj.ResourceProvider(
             context=self.ctx,
             uuid=uuidsentinel.fake_resource_provider1,
             name=uuidsentinel.fake_resource_name1,
         )
         rp1.create()
-        rp2 = objects.ResourceProvider(
+        rp2 = rp_obj.ResourceProvider(
             context=self.ctx,
             uuid=uuidsentinel.fake_resource_provider2,
             name=uuidsentinel.fake_resource_name2,
@@ -1990,7 +1989,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         """
         # Create the two "local disk" compute node providers
         cn1_uuid = uuidsentinel.cn1
-        cn1 = objects.ResourceProvider(
+        cn1 = rp_obj.ResourceProvider(
             self.ctx,
             name='cn1',
             uuid=cn1_uuid,
@@ -1998,7 +1997,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         cn1.create()
 
         cn2_uuid = uuidsentinel.cn2
-        cn2 = objects.ResourceProvider(
+        cn2 = rp_obj.ResourceProvider(
             self.ctx,
             name='cn2',
             uuid=cn2_uuid,
@@ -2032,7 +2031,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
 
         # Create the shared storage pool
         ss_uuid = uuidsentinel.ss
-        ss = objects.ResourceProvider(
+        ss = rp_obj.ResourceProvider(
             self.ctx,
             name='shared storage',
             uuid=ss_uuid,
@@ -2079,7 +2078,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
 
         # Create the two compute node providers
         cn1_uuid = uuidsentinel.cn1
-        cn1 = objects.ResourceProvider(
+        cn1 = rp_obj.ResourceProvider(
             self.ctx,
             name='cn1',
             uuid=cn1_uuid,
@@ -2087,7 +2086,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         cn1.create()
 
         cn2_uuid = uuidsentinel.cn2
-        cn2 = objects.ResourceProvider(
+        cn2 = rp_obj.ResourceProvider(
             self.ctx,
             name='cn2',
             uuid=cn2_uuid,
@@ -2121,7 +2120,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
 
         # Create the shared storage pool
         ss_uuid = uuidsentinel.ss
-        ss = objects.ResourceProvider(
+        ss = rp_obj.ResourceProvider(
             self.ctx,
             name='shared storage',
             uuid=ss_uuid,
@@ -2180,7 +2179,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         # is also returned by _get_all_with_shared() along with the other
         # compute nodes that are associated with the shared storage pool.
         cn3_uuid = uuidsentinel.cn3
-        cn3 = objects.ResourceProvider(
+        cn3 = rp_obj.ResourceProvider(
             self.ctx,
             name='cn3',
             uuid=cn3_uuid,
@@ -2287,7 +2286,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         # compute node providers are returned by _get_all_with_shared()
 
         cn4_uuid = uuidsentinel.cn4
-        cn4 = objects.ResourceProvider(
+        cn4 = rp_obj.ResourceProvider(
             self.ctx,
             name='cn4',
             uuid=cn4_uuid,
@@ -2295,7 +2294,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         cn4.create()
 
         cn5_uuid = uuidsentinel.cn5
-        cn5 = objects.ResourceProvider(
+        cn5 = rp_obj.ResourceProvider(
             self.ctx,
             name='cn5',
             uuid=cn5_uuid,
@@ -2330,7 +2329,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         # Create the storage provider but do NOT mark it sharing its inventory
         # with other providers
         ns_uuid = uuidsentinel.ns
-        ns = objects.ResourceProvider(
+        ns = rp_obj.ResourceProvider(
             self.ctx,
             name='non_shared storage',
             uuid=ns_uuid,
@@ -2420,7 +2419,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         """
         # Create two compute node providers with VCPU, RAM and local disk
         cn1_uuid = uuidsentinel.cn1
-        cn1 = objects.ResourceProvider(
+        cn1 = rp_obj.ResourceProvider(
             self.ctx,
             name='cn1',
             uuid=cn1_uuid,
@@ -2428,7 +2427,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         cn1.create()
 
         cn2_uuid = uuidsentinel.cn2
-        cn2 = objects.ResourceProvider(
+        cn2 = rp_obj.ResourceProvider(
             self.ctx,
             name='cn2',
             uuid=cn2_uuid,
@@ -2436,7 +2435,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         cn2.create()
 
         cn3_uuid = uuidsentinel.cn3
-        cn3 = objects.ResourceProvider(
+        cn3 = rp_obj.ResourceProvider(
             self.ctx,
             name='cn3',
             uuid=cn3_uuid
@@ -2578,7 +2577,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
 
         # Create two compute node providers with VCPU, RAM and NO local disk
         cn1_uuid = uuidsentinel.cn1
-        cn1 = objects.ResourceProvider(
+        cn1 = rp_obj.ResourceProvider(
             self.ctx,
             name='cn1',
             uuid=cn1_uuid,
@@ -2586,7 +2585,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         cn1.create()
 
         cn2_uuid = uuidsentinel.cn2
-        cn2 = objects.ResourceProvider(
+        cn2 = rp_obj.ResourceProvider(
             self.ctx,
             name='cn2',
             uuid=cn2_uuid,
@@ -2620,7 +2619,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
 
         # Create the shared storage pool
         ss_uuid = uuidsentinel.ss
-        ss = objects.ResourceProvider(
+        ss = rp_obj.ResourceProvider(
             self.ctx,
             name='shared storage',
             uuid=ss_uuid,
@@ -2816,7 +2815,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         # Create two compute node providers with VCPU, RAM and NO local
         # CUSTOM_MAGIC resources
         cn1_uuid = uuidsentinel.cn1
-        cn1 = objects.ResourceProvider(
+        cn1 = rp_obj.ResourceProvider(
             self.ctx,
             name='cn1',
             uuid=cn1_uuid,
@@ -2824,7 +2823,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         cn1.create()
 
         cn2_uuid = uuidsentinel.cn2
-        cn2 = objects.ResourceProvider(
+        cn2 = rp_obj.ResourceProvider(
             self.ctx,
             name='cn2',
             uuid=cn2_uuid,
@@ -2865,7 +2864,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
 
         # Create the shared provider that servers MAGIC
         magic_p_uuid = uuidsentinel.magic_p
-        magic_p = objects.ResourceProvider(
+        magic_p = rp_obj.ResourceProvider(
             self.ctx,
             name='shared custom resource provider',
             uuid=magic_p_uuid,
@@ -2988,7 +2987,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         # the third compute node has DISK. The first two computes will
         # share the storage from the shared storage pool
         cn1_uuid = uuidsentinel.cn1
-        cn1 = objects.ResourceProvider(
+        cn1 = rp_obj.ResourceProvider(
             self.ctx,
             name='cn1',
             uuid=cn1_uuid,
@@ -2996,7 +2995,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         cn1.create()
 
         cn2_uuid = uuidsentinel.cn2
-        cn2 = objects.ResourceProvider(
+        cn2 = rp_obj.ResourceProvider(
             self.ctx,
             name='cn2',
             uuid=cn2_uuid,
@@ -3004,7 +3003,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         cn2.create()
 
         cn3_uuid = uuidsentinel.cn3
-        cn3 = objects.ResourceProvider(
+        cn3 = rp_obj.ResourceProvider(
             self.ctx,
             name='cn3',
             uuid=cn3_uuid
@@ -3052,7 +3051,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
 
         # Create the shared storage pool
         ss_uuid = uuidsentinel.ss
-        ss = objects.ResourceProvider(
+        ss = rp_obj.ResourceProvider(
             self.ctx,
             name='shared storage',
             uuid=ss_uuid,
