@@ -77,8 +77,8 @@ trait_name_query:
   description: |
     A string to filter traits. The following options are available:
 
-    `starts_with` operator filters the traits whose name begins with a
-    specific prefix, e.g. name=starts_with:CUSTOM,
+    `startswith` operator filters the traits whose name begins with a
+    specific prefix, e.g. name=startswith:CUSTOM,
 
     `in` operator filters the traits whose name is in the specified list, e.g.
     name=in:HW_CPU_X86_AVX,HW_CPU_X86_SSE,HW_CPU_X86_INVALID_FEATURE.
