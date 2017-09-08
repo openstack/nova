@@ -21,6 +21,7 @@ from nova import conf
 from nova import config
 from nova import context
 from nova import objects
+from nova.objects import resource_provider as rp_obj
 from nova.tests import fixtures
 
 
@@ -283,7 +284,7 @@ class SharedStorageFixture(APIFixture):
             self.context,
             "MISC_SHARES_VIA_AGGREGATE",
         )
-        ss.set_traits(objects.TraitList(objects=[t]))
+        ss.set_traits(rp_obj.TraitList(objects=[t]))
 
         # Now associate the shared storage pool and both compute nodes with the
         # same aggregate

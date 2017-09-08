@@ -2270,10 +2270,8 @@ class Trait(base.NovaObject):
         self._destroy_in_db(self._context, self.id, self.name)
 
 
-@base.NovaObjectRegistry.register
+@base.NovaObjectRegistry.register_if(False)
 class TraitList(base.ObjectListBase, base.NovaObject):
-    # Version 1.0: Initial version
-    VERSION = '1.0'
 
     fields = {
         'objects': fields.ListOfObjectsField('Trait')

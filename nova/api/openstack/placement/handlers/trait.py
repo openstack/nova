@@ -24,6 +24,7 @@ from nova.api.openstack.placement import wsgi_wrapper
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.objects import resource_provider as rp_obj
 
 TRAIT = {
     "type": "string",
@@ -183,7 +184,7 @@ def list_traits(req):
         filters['associated'] = (
             True if req.GET['associated'].lower() == 'true' else False)
 
-    traits = objects.TraitList.get_all(context, filters)
+    traits = rp_obj.TraitList.get_all(context, filters)
     req.response.status = 200
     req.response.body = encodeutils.to_utf8(
         jsonutils.dumps(_serialize_traits(traits)))
@@ -229,7 +230,7 @@ def update_traits_for_resource_provider(req):
               "the generation and try again."),
             json_formatter=util.json_error_formatter)
 
-    trait_objs = objects.TraitList.get_all(
+    trait_objs = rp_obj.TraitList.get_all(
         context, filters={'name_in': traits})
     traits_name = set([obj.name for obj in trait_objs])
     non_existed_trait = set(traits) - set(traits_name)
@@ -256,7 +257,7 @@ def delete_traits_for_resource_provider(req):
 
     resource_provider = objects.ResourceProvider.get_by_uuid(context, uuid)
     try:
-        resource_provider.set_traits(objects.TraitList(objects=[]))
+        resource_provider.set_traits(rp_obj.TraitList(objects=[]))
     except exception.ConcurrentUpdateDetected as e:
         raise webob.exc.HTTPConflict(explanation=e.format_message())
 

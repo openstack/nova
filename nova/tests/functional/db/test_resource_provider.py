@@ -1769,7 +1769,7 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
             t.create()
 
         self._assert_traits_in(trait_names,
-                               objects.TraitList.get_all(self.ctx))
+                               rp_obj.TraitList.get_all(self.ctx))
 
     def test_traits_get_all_with_name_in_filter(self):
         trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
@@ -1778,12 +1778,12 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
             t.name = name
             t.create()
 
-        traits = objects.TraitList.get_all(self.ctx,
+        traits = rp_obj.TraitList.get_all(self.ctx,
             filters={'name_in': ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B']})
         self._assert_traits(['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B'], traits)
 
     def test_traits_get_all_with_non_existed_name(self):
-        traits = objects.TraitList.get_all(self.ctx,
+        traits = rp_obj.TraitList.get_all(self.ctx,
             filters={'name_in': ['CUSTOM_TRAIT_X', 'CUSTOM_TRAIT_Y']})
         self.assertEqual(0, len(traits))
 
@@ -1794,14 +1794,14 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
             t.name = name
             t.create()
 
-        traits = objects.TraitList.get_all(self.ctx,
+        traits = rp_obj.TraitList.get_all(self.ctx,
                                            filters={'prefix': 'CUSTOM'})
         self._assert_traits(
             ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C'],
             traits)
 
     def test_traits_get_all_with_non_existed_prefix(self):
-        traits = objects.TraitList.get_all(self.ctx,
+        traits = rp_obj.TraitList.get_all(self.ctx,
             filters={"prefix": "NOT_EXISTED"})
         self.assertEqual(0, len(traits))
 
@@ -1829,7 +1829,7 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
         generation = rp.generation
 
         trait_names.remove('CUSTOM_TRAIT_A')
-        updated_traits = objects.TraitList.get_all(self.ctx,
+        updated_traits = rp_obj.TraitList.get_all(self.ctx,
             filters={'name_in': trait_names})
         self._assert_traits(trait_names, updated_traits)
         rp.set_traits(updated_traits)
@@ -1906,12 +1906,12 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
             t.name = name
             t.create()
 
-        associated_traits = objects.TraitList.get_all(self.ctx,
+        associated_traits = rp_obj.TraitList.get_all(self.ctx,
             filters={'name_in': ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B']})
         rp1.set_traits(associated_traits)
         rp2.set_traits(associated_traits)
         self._assert_traits(['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B'],
-            objects.TraitList.get_all(self.ctx,
+            rp_obj.TraitList.get_all(self.ctx,
                 filters={'associated': True}))
 
     def test_traits_get_all_with_associated_false(self):
@@ -1933,12 +1933,12 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
             t.name = name
             t.create()
 
-        associated_traits = objects.TraitList.get_all(self.ctx,
+        associated_traits = rp_obj.TraitList.get_all(self.ctx,
             filters={'name_in': ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B']})
         rp1.set_traits(associated_traits)
         rp2.set_traits(associated_traits)
         self._assert_traits_in(['CUSTOM_TRAIT_C'],
-            objects.TraitList.get_all(self.ctx,
+            rp_obj.TraitList.get_all(self.ctx,
                 filters={'associated': False}))
 
     def test_sync_standard_traits(self):
@@ -1955,7 +1955,7 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
         self.assertEqual([], _db_traits(conn))
 
         all_traits = [trait.name for trait in
-                      objects.TraitList.get_all(self.ctx)]
+                      rp_obj.TraitList.get_all(self.ctx)]
         self.assertEqual(set(std_traits), set(all_traits))
         # confirm with a raw request
         self.assertEqual(set(std_traits), set(_db_traits(conn)))
@@ -2055,7 +2055,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         # Mark the shared storage pool as having inventory shared among any
         # provider associated via aggregate
         t = objects.Trait.get_by_name(self.ctx, "MISC_SHARES_VIA_AGGREGATE")
-        ss.set_traits(objects.TraitList(objects=[t]))
+        ss.set_traits(rp_obj.TraitList(objects=[t]))
 
         # OK, now that has all been set up, let's verify that we get the ID of
         # the shared storage pool when we ask for DISK_GB
@@ -2143,7 +2143,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         # Mark the shared storage pool as having inventory shared among any
         # provider associated via aggregate
         t = objects.Trait.get_by_name(self.ctx, "MISC_SHARES_VIA_AGGREGATE")
-        ss.set_traits(objects.TraitList(objects=[t]))
+        ss.set_traits(rp_obj.TraitList(objects=[t]))
 
         resources = self._requested_resources()
 
@@ -2642,7 +2642,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         # Mark the shared storage pool as having inventory shared among any
         # provider associated via aggregate
         t = objects.Trait.get_by_name(self.ctx, "MISC_SHARES_VIA_AGGREGATE")
-        ss.set_traits(objects.TraitList(objects=[t]))
+        ss.set_traits(rp_obj.TraitList(objects=[t]))
 
         # Now associate the shared storage pool and both compute nodes with the
         # same aggregate
@@ -2898,7 +2898,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         #    "MISC_SHARES_VIA_AGGREGATE",
         # )
         t.create()
-        magic_p.set_traits(objects.TraitList(objects=[t]))
+        magic_p.set_traits(rp_obj.TraitList(objects=[t]))
 
         # Now associate the shared custom resource provider and both compute
         # nodes with the same aggregate
@@ -3072,7 +3072,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         ss.set_inventory(inv_list)
 
         t = objects.Trait.get_by_name(self.ctx, "MISC_SHARES_VIA_AGGREGATE")
-        ss.set_traits(objects.TraitList(objects=[t]))
+        ss.set_traits(rp_obj.TraitList(objects=[t]))
 
         # Put the cn1, cn2 and ss in the same aggregate
         cn1.set_aggregates([agg_uuid])
