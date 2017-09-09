@@ -192,6 +192,7 @@ tests:
                 COWS: 12
   status: 400
   response_strings:
+      - Unable to allocate inventory for consumer
       - No such resource class COWS
   response_json_paths:
       $.errors[0].title: Bad Request
