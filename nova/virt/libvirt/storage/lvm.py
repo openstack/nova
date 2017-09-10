@@ -19,6 +19,8 @@
 #    under the License.
 #
 
+import os
+
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils import units
@@ -28,7 +30,6 @@ import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import utils
-from nova.virt.libvirt import utils as libvirt_utils
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
@@ -157,7 +158,7 @@ def get_volume_size(path):
         out, _err = utils.execute('blockdev', '--getsize64', path,
                                   run_as_root=True)
     except processutils.ProcessExecutionError:
-        if not libvirt_utils.path_exists(path):
+        if not os.path.exists(path):
             raise exception.VolumeBDMPathNotFound(path=path)
         else:
             raise

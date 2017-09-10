@@ -336,12 +336,14 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
                                image_meta, '')
 
     @catch_notimplementederror
-    def test_unrescue_unrescued_instance(self):
+    @mock.patch('os.unlink')
+    def test_unrescue_unrescued_instance(self, mock_unlink):
         instance_ref, network_info = self._get_running_instance()
         self.connection.unrescue(instance_ref, network_info)
 
     @catch_notimplementederror
-    def test_unrescue_rescued_instance(self):
+    @mock.patch('os.unlink')
+    def test_unrescue_rescued_instance(self, mock_unlink):
         image_meta = objects.ImageMeta.from_dict({})
         instance_ref, network_info = self._get_running_instance()
         self.connection.rescue(self.ctxt, instance_ref, network_info,
