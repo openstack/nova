@@ -1,13 +1,13 @@
 {
     "aggregate": {
-        "availability_zone": "london",
+        "availability_zone": "nova",
         "created_at": "2016-12-27T23:59:18.623100",
         "deleted": false,
         "deleted_at": null,
         "hosts": [],
         "id": 1,
         "metadata": {
-            "availability_zone": "london",
+            "availability_zone": "nova",
             "key": "value"
         },
         "name": "name",
