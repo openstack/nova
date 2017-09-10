@@ -2,6 +2,6 @@
     "aggregate":
     {
         "name": "name",
-        "availability_zone": "london"
+        "availability_zone": "nova"
     }
 }
