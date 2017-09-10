@@ -1,7 +1,7 @@
 {
     "aggregates": [
         {
-            "availability_zone": "nova",
+            "availability_zone": "london",
             "created_at": "%(strtime)s",
             "deleted": false,
             "deleted_at": null,
@@ -10,7 +10,7 @@
             ],
             "id": 1,
             "metadata": {
-                "availability_zone": "nova"
+                "availability_zone": "london"
             },
             "name": "name",
             "updated_at": null,

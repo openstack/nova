@@ -1302,7 +1302,9 @@ aggregate_az:
   type: string
 aggregate_az_optional:
   description: |
-    The availability zone of the host aggregate.
+    The availability zone of the host aggregate. You should use a custom
+    availability zone rather than the default returned by the
+    os-availability-zone API.
   in: body
   required: false
   type: string
@@ -4162,9 +4164,11 @@ os:
   type: string
 os-availability-zone:availability_zone:
   description: |
-    The availability zone from which to launch the server. When you provision resources,
-    you specify from which availability zone you want your instance to be built.  Typically,
-    you use availability zones to arrange OpenStack compute hosts into logical groups.
+    The availability zone from which to launch the server. When you
+    provision resources, you specify from which availability zone you
+    want your instance to be built.  Typically, an admin user will use
+    availability zones to arrange OpenStack compute hosts into logical
+    groups.
     An availability zone provides a form of physical isolation and redundancy from
     other availability zones. For instance, if some racks in your data center are
     on a separate power source, you can put servers in those racks in their own availability
@@ -4172,6 +4176,11 @@ os-availability-zone:availability_zone:
     segregating resources into availability zones, you can ensure that your application
     resources are spread across disparate machines to achieve high availability in
     the event of hardware or other failure.
+    You can list the available availability zones by calling the
+    os-availability-zone API, but you should avoid using the default
+    availability zone when booting the instance.  In general, the
+    default availability zone is named ``nova``. This AZ is only shown
+    when listing the availability zones as an admin.
   in: body
   required: false
   type: string
