@@ -1,6 +1,6 @@
 {
     "aggregate": {
-        "availability_zone": "nova",
+        "availability_zone": "london",
         "created_at": "%(strtime)s",
         "deleted": false,
         "deleted_at": null,
