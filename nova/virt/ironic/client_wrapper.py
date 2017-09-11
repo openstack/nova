@@ -54,10 +54,6 @@ class IronicClientWrapper(object):
                                                     'ironicclient.client')
         self._cached_client = None
 
-    def _invalidate_cached_client(self):
-        """Tell the wrapper to invalidate the cached ironic-client."""
-        self._cached_client = None
-
     def _get_auth_plugin(self):
         """Load an auth plugin from CONF options."""
         # If an auth plugin name is defined in `auth_type` option of [ironic]
@@ -137,21 +133,8 @@ class IronicClientWrapper(object):
         """
         retry_on_conflict = kwargs.pop('retry_on_conflict', True)
 
-        # NOTE(dtantsur): allow for authentication retry, other retries are
-        # handled by ironicclient starting with 0.8.0
-        for attempt in range(2):
-            client = self._get_client(retry_on_conflict=retry_on_conflict)
-
-            try:
-                return self._multi_getattr(client, method)(*args, **kwargs)
-            except ironic.exc.Unauthorized:
-                # In this case, the authorization token of the cached
-                # ironic-client probably expired. So invalidate the cached
-                # client and the next try will start with a fresh one.
-                if not attempt:
-                    self._invalidate_cached_client()
-                    LOG.debug("The Ironic client became unauthorized. "
-                              "Will attempt to reauthorize and try again.")
-                else:
-                    # This code should be unreachable actually
-                    raise
+        # authentication retry for token expiration is handled in keystone
+        # session, other retries are handled by ironicclient starting with
+        # 0.8.0
+        client = self._get_client(retry_on_conflict=retry_on_conflict)
+        return self._multi_getattr(client, method)(*args, **kwargs)
