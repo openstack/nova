@@ -300,34 +300,52 @@ def claim_resources_on_destination(
 
 def set_vm_state_and_notify(context, instance_uuid, service, method, updates,
                             ex, request_spec):
-    """changes VM state and notifies."""
-    LOG.warning(_LW("Failed to %(service)s_%(method)s: %(ex)s"),
+    """Updates the instance, sets the fault and sends an error notification.
+
+    :param context: The request context.
+    :param instance_uuid: The UUID of the instance to update.
+    :param service: The name of the originating service, e.g. 'compute_task'.
+        This becomes part of the publisher_id for the notification payload.
+    :param method: The method that failed, e.g. 'migrate_server'.
+    :param updates: dict of updates for the instance object, typically a
+        vm_state and/or task_state value.
+    :param ex: An exception which occurred during the given method.
+    :param request_spec: Optional request spec.
+    """
+    # e.g. "Failed to compute_task_migrate_server: No valid host was found"
+    LOG.warning("Failed to %(service)s_%(method)s: %(ex)s",
                 {'service': service, 'method': method, 'ex': ex})
+
+    # Convert the request spec to a dict if needed.
+    if request_spec is not None:
+        if isinstance(request_spec, objects.RequestSpec):
+            request_spec = request_spec.to_legacy_request_spec_dict()
+    else:
+        request_spec = {}
 
     vm_state = updates['vm_state']
     properties = request_spec.get('instance_properties', {})
-    # NOTE(vish): We shouldn't get here unless we have a catastrophic
-    #             failure, so just set the instance to its internal state
     notifier = rpc.get_notifier(service)
     state = vm_state.upper()
-    LOG.warning(_LW('Setting instance to %s state.'), state,
+    LOG.warning('Setting instance to %s state.', state,
                 instance_uuid=instance_uuid)
 
     instance = objects.Instance(context=context, uuid=instance_uuid,
                                 **updates)
     instance.obj_reset_changes(['uuid'])
     instance.save()
-    compute_utils.add_instance_fault_from_exc(context,
-            instance, ex, sys.exc_info())
+    compute_utils.add_instance_fault_from_exc(
+        context, instance, ex, sys.exc_info())
 
     payload = dict(request_spec=request_spec,
-                    instance_properties=properties,
-                    instance_id=instance_uuid,
-                    state=vm_state,
-                    method=method,
-                    reason=ex)
+                   instance_properties=properties,
+                   instance_id=instance_uuid,
+                   state=vm_state,
+                   method=method,
+                   reason=ex)
 
     event_type = '%s.%s' % (service, method)
+    # TODO(mriedem): Send a versioned notification.
     notifier.error(context, event_type, payload)
 
 

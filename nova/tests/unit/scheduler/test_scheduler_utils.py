@@ -23,7 +23,6 @@ from nova.compute import flavors
 from nova.compute import utils as compute_utils
 from nova import exception
 from nova import objects
-from nova import rpc
 from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests.unit import fake_instance
@@ -61,19 +60,19 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
             mock_get.assert_called_once_with()
         self.assertIsInstance(request_spec['instance_properties'], dict)
 
-    @mock.patch.object(rpc, 'get_notifier', return_value=mock.Mock())
+    @mock.patch('nova.rpc.LegacyValidatingNotifier')
     @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
     @mock.patch.object(objects.Instance, 'save')
-    def test_set_vm_state_and_notify(self, mock_save, mock_add, mock_get):
+    def _test_set_vm_state_and_notify(self, mock_save, mock_add, mock_notifier,
+                                      request_spec, payload_request_spec):
         expected_uuid = uuids.instance
-        request_spec = dict(instance_properties=dict(uuid='other-uuid'))
         updates = dict(vm_state='fake-vm-state')
         service = 'fake-service'
         method = 'fake-method'
         exc_info = 'exc_info'
 
-        payload = dict(request_spec=request_spec,
-                       instance_properties=request_spec.get(
+        payload = dict(request_spec=payload_request_spec,
+                       instance_properties=payload_request_spec.get(
                            'instance_properties', {}),
                        instance_id=expected_uuid,
                        state='fake-vm-state',
@@ -93,9 +92,37 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
                                          exc_info, mock.ANY)
         self.assertIsInstance(mock_add.call_args[0][1], objects.Instance)
         self.assertIsInstance(mock_add.call_args[0][3], tuple)
-        mock_get.return_value.error.assert_called_once_with(self.context,
-                                                            event_type,
-                                                            payload)
+        mock_notifier.return_value.error.assert_called_once_with(self.context,
+                                                                 event_type,
+                                                                 payload)
+
+    def test_set_vm_state_and_notify_request_spec_dict(self):
+        """Tests passing a legacy dict format request spec to
+        set_vm_state_and_notify.
+        """
+        request_spec = dict(instance_properties=dict(uuid='other-uuid'))
+        # The request_spec in the notification payload should be unchanged.
+        self._test_set_vm_state_and_notify(
+            request_spec=request_spec, payload_request_spec=request_spec)
+
+    def test_set_vm_state_and_notify_request_spec_object(self):
+        """Tests passing a RequestSpec object to set_vm_state_and_notify."""
+        request_spec = objects.RequestSpec.from_primitives(
+            self.context, dict(instance_properties=dict(uuid='other-uuid')),
+            filter_properties=dict())
+        # The request_spec in the notification payload should be converted
+        # to the legacy format.
+        self._test_set_vm_state_and_notify(
+            request_spec=request_spec,
+            payload_request_spec=request_spec.to_legacy_request_spec_dict())
+
+    def test_set_vm_state_and_notify_request_spec_none(self):
+        """Tests passing None for the request_spec to set_vm_state_and_notify.
+        """
+        # The request_spec in the notification payload should be changed to
+        # just an empty dict.
+        self._test_set_vm_state_and_notify(
+            request_spec=None, payload_request_spec={})
 
     def test_build_filter_properties(self):
         sched_hints = {'hint': ['over-there']}

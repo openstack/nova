@@ -2100,7 +2100,6 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         image = 'fake-image'
         fake_spec = objects.RequestSpec(image=objects.ImageMeta())
         spec_fc_mock.return_value = fake_spec
-        legacy_request_spec = fake_spec.to_legacy_request_spec_dict()
         metadata_mock.return_value = image
         exc_info = exc.NoValidHost(reason="")
         select_dest_mock.side_effect = exc_info
@@ -2120,7 +2119,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         sig_mock.assert_called_once_with(self.context, fake_spec)
         notify_mock.assert_called_once_with(self.context, inst_obj.uuid,
                                               'migrate_server', updates,
-                                              exc_info, legacy_request_spec)
+                                              exc_info, fake_spec)
         rollback_mock.assert_called_once_with()
 
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
@@ -2151,7 +2150,6 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         fake_spec = objects.RequestSpec(image=objects.ImageMeta())
         spec_fc_mock.return_value = fake_spec
-        legacy_request_spec = fake_spec.to_legacy_request_spec_dict()
 
         im_mock.return_value = objects.InstanceMapping(
             cell_mapping=objects.CellMapping.get_by_uuid(self.context,
@@ -2171,7 +2169,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         sig_mock.assert_called_once_with(self.context, fake_spec)
         notify_mock.assert_called_once_with(self.context, inst_obj.uuid,
                                             'migrate_server', updates,
-                                            exc_info, legacy_request_spec)
+                                            exc_info, fake_spec)
         rollback_mock.assert_called_once_with()
 
     def test_cold_migrate_no_valid_host_error_msg(self):
@@ -2232,7 +2230,6 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         exception = exc.UnsupportedPolicyException(reason='')
         fake_spec = fake_request_spec.fake_spec_obj()
         spec_fc_mock.return_value = fake_spec
-        legacy_request_spec = fake_spec.to_legacy_request_spec_dict()
 
         image_mock.return_value = image
         task_exec_mock.side_effect = exception
@@ -2244,7 +2241,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         updates = {'vm_state': vm_states.STOPPED, 'task_state': None}
         set_vm_mock.assert_called_once_with(self.context, inst_obj.uuid,
                                             'migrate_server', updates,
-                                            exception, legacy_request_spec)
+                                            exception, fake_spec)
 
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
@@ -2311,7 +2308,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             node=hosts[0]['nodename'], clean_shutdown=True)
         notify_mock.assert_called_once_with(self.context, inst_obj.uuid,
                                             'migrate_server', updates,
-                                            exc_info, legacy_request_spec)
+                                            exc_info, fake_spec)
         rollback_mock.assert_called_once_with()
 
     @mock.patch.object(objects.RequestSpec, 'save')
@@ -2341,12 +2338,9 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         # Just make sure we have an original flavor which is different from
         # the new one
         self.assertNotEqual(flavor, fake_spec.flavor)
-        with mock.patch.object(
-                fake_spec, 'to_legacy_request_spec_dict') as spec_to_dict_mock:
-            self.conductor._cold_migrate(self.context, inst_obj, flavor, {},
-                                         [resvs], True, fake_spec)
+        self.conductor._cold_migrate(self.context, inst_obj, flavor, {},
+                                     [resvs], True, fake_spec)
 
-        spec_to_dict_mock.assert_called_once_with()
         # Now the RequestSpec should be updated...
         self.assertEqual(flavor, fake_spec.flavor)
         # ...and persisted
@@ -2560,7 +2554,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             self.ctxt, instance.host, instance.node)
         notify.assert_called_once_with(
             self.ctxt, instance.uuid, 'rebuild_server',
-            {'vm_state': instance.vm_state, 'task_state': None}, ex, {})
+            {'vm_state': instance.vm_state, 'task_state': None}, ex, None)
 
     @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename',
                        return_value=objects.ComputeNode(host='source-host'))
@@ -2587,8 +2581,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             self.ctxt, 'dest-host', use_slave=True)
         notify.assert_called_once_with(
             self.ctxt, instance.uuid, 'rebuild_server',
-            {'vm_state': instance.vm_state, 'task_state': None}, ex,
-            reqspec.to_legacy_request_spec_dict())
+            {'vm_state': instance.vm_state, 'task_state': None}, ex, reqspec)
 
     @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename',
                        return_value=objects.ComputeNode(host='source-host'))
@@ -2623,8 +2616,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             get_source_node.return_value, get_dest_node.return_value)
         notify.assert_called_once_with(
             self.ctxt, instance.uuid, 'rebuild_server',
-            {'vm_state': instance.vm_state, 'task_state': None}, ex,
-            reqspec.to_legacy_request_spec_dict())
+            {'vm_state': instance.vm_state, 'task_state': None}, ex, reqspec)
 
     @mock.patch('nova.conductor.tasks.live_migrate.LiveMigrationTask.execute')
     def test_live_migrate_instance(self, mock_execute):
