@@ -2799,6 +2799,13 @@ class ComputeManager(manager.Manager):
                 # NOTE(ndipanov): We just abort the build for now and leave a
                 # migration record for potential cleanup later
                 self._set_migration_status(migration, 'failed')
+                # Since the claim failed, we need to remove the allocation
+                # created against the destination node. Note that we can only
+                # get here when evacuating to a destination node. Rebuilding
+                # on the same host (not evacuate) uses the NopClaim which will
+                # not raise ComputeResourcesUnavailable.
+                rt.delete_allocation_for_evacuated_instance(
+                    instance, scheduled_node, node_type='destination')
                 self._notify_instance_rebuild_error(context, instance, e)
 
                 raise exception.BuildAbortException(
