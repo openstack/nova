@@ -29,7 +29,9 @@ class TestListServersIpFilter(test.TestCase):
         super(TestListServersIpFilter, self).setUp()
         self.useFixture(policy_fixture.RealPolicyFixture())
         self.neutron = self.useFixture(
-            nova_fixtures.NeutronFixture(self, multiple_ports=True))
+            nova_fixtures.NeutronFixture(self))
+        # Add a 2nd port to the neutron fixture to have multiple ports
+        self.neutron.create_port(self.neutron.port_2)
         api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
             api_version='v2.1'))
         self.api = api_fixture.api

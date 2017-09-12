@@ -48,7 +48,9 @@ class EventType(NotificationObject):
     #              NotificationActionField enum
     # Version 1.5: Aggregate related values have been added to
     #              NotificationActionField enum
-    VERSION = '1.5'
+    # Version 1.6: ADD_FIX_IP replaced with INTERFACE_ATTACH in
+    #              NotificationActionField enum
+    VERSION = '1.6'
 
     fields = {
         'object': fields.StringField(nullable=False),

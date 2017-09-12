@@ -1,0 +1,93 @@
+{
+    "priority": "INFO",
+    "event_type": "instance.interface_attach.start",
+    "payload": {
+        "nova_object.name": "InstanceActionPayload",
+        "nova_object.version": "1.5",
+        "nova_object.namespace": "nova",
+        "nova_object.data": {
+            "power_state": "running",
+            "host_name": "some-server",
+            "reservation_id": "r-f8grvm0d",
+            "metadata": {},
+            "os_type": null,
+            "display_description": "some-server",
+            "ramdisk_id": "",
+            "deleted_at": null,
+            "launched_at": "2012-10-29T13:42:11Z",
+            "updated_at": "2012-10-29T13:42:11Z",
+            "key_name": "my-key",
+            "auto_disk_config": "MANUAL",
+            "block_devices": [
+                {
+                    "nova_object.data": {
+                        "boot_index": null,
+                        "delete_on_termination": false,
+                        "device_name": "/dev/sdb",
+                        "tag": null,
+                        "volume_id": "a07f71dc-8151-4e7d-a0cc-cd24a3f11113"
+                    },
+                    "nova_object.name": "BlockDevicePayload",
+                    "nova_object.namespace": "nova",
+                    "nova_object.version": "1.0"
+                }
+            ],
+            "availability_zone": "nova",
+            "display_name": "some-server",
+            "fault": null,
+            "locked": false,
+            "ip_addresses": [
+                {
+                    "nova_object.name": "IpPayload",
+                    "nova_object.version": "1.0",
+                    "nova_object.namespace": "nova",
+                    "nova_object.data": {
+                        "label": "private-network",
+                        "mac": "fa:16:3e:4c:2c:30",
+                        "version": 4,
+                        "address": "192.168.1.3",
+                        "meta": {},
+                        "port_uuid": "ce531f90-199f-48c0-816c-13e38010b442",
+                        "device_name": "tapce531f90-19"
+                    }
+                }
+            ],
+            "kernel_id": "",
+            "progress": 0,
+            "tenant_id": "6f70656e737461636b20342065766572",
+            "state": "active",
+            "task_state": null,
+            "uuid": "edbe0f81-b150-4fce-9258-4e03bb2ecb41",
+            "user_id": "fake",
+            "created_at": "2012-10-29T13:42:11Z",
+            "image_uuid": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
+            "node": "fake-mini",
+            "flavor": {
+                "nova_object.name": "FlavorPayload",
+                "nova_object.version": "1.3",
+                "nova_object.namespace": "nova",
+                "nova_object.data": {
+                    "vcpu_weight": 0,
+                    "memory_mb": 512,
+                    "name": "test_flavor",
+                    "root_gb": 1,
+                    "extra_specs": {
+                        "hw:watchdog_action": "disabled"
+                    },
+                    "disabled": false,
+                    "rxtx_factor": 1.0,
+                    "vcpus": 1,
+                    "is_public": true,
+                    "swap": 0,
+                    "flavorid": "a22d5517-147c-4147-a0d1-e698df5cd4e3",
+                    "projects": null,
+                    "ephemeral_gb": 0
+                }
+            },
+            "host": "compute",
+            "terminated_at": null,
+            "architecture": "x86_64"
+        }
+    },
+    "publisher_id": "nova-compute:compute"
+}

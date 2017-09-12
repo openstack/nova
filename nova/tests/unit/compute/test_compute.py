@@ -9869,7 +9869,8 @@ class ComputeAPITestCase(BaseTestCase):
                           self.compute_api.get_console_output,
                           self.context, instance)
 
-    def test_attach_interface(self):
+    @mock.patch.object(compute_utils, 'notify_about_instance_action')
+    def test_attach_interface(self, mock_notify):
         new_type = flavors.get_flavor_by_flavor_id('4')
         instance = objects.Instance(image_ref=uuids.image_instance,
                                     system_metadata={},
@@ -9893,9 +9894,15 @@ class ComputeAPITestCase(BaseTestCase):
         mock_allocate.assert_called_once_with(
             self.context, instance, port_id, network_id, req_ip,
             bind_host_id='fake-host', tag=None)
+        mock_notify.assert_has_calls([
+            mock.call(self.context, instance, self.compute.host,
+                      action='interface_attach', phase='start'),
+            mock.call(self.context, instance, self.compute.host,
+                      action='interface_attach', phase='end')])
         return nwinfo, port_id
 
-    def test_interface_tagged_attach(self):
+    @mock.patch.object(compute_utils, 'notify_about_instance_action')
+    def test_interface_tagged_attach(self, mock_notify):
         new_type = flavors.get_flavor_by_flavor_id('4')
         instance = objects.Instance(image_ref=uuids.image_instance,
                                     system_metadata={},
@@ -9920,6 +9927,11 @@ class ComputeAPITestCase(BaseTestCase):
         mock_allocate.assert_called_once_with(
             self.context, instance, port_id, network_id, req_ip,
             bind_host_id='fake-host', tag='foo')
+        mock_notify.assert_has_calls([
+            mock.call(self.context, instance, self.compute.host,
+                      action='interface_attach', phase='start'),
+            mock.call(self.context, instance, self.compute.host,
+                      action='interface_attach', phase='end')])
         return nwinfo, port_id
 
     def test_tagged_attach_interface_raises(self):
@@ -9947,6 +9959,7 @@ class ComputeAPITestCase(BaseTestCase):
         req_ip = '1.2.3.4'
 
         with test.nested(
+            mock.patch.object(compute_utils, 'notify_about_instance_action'),
             mock.patch.object(self.compute.driver, 'attach_interface'),
             mock.patch.object(self.compute.network_api,
                               'allocate_port_for_instance'),
@@ -9954,7 +9967,8 @@ class ComputeAPITestCase(BaseTestCase):
                               'deallocate_port_for_instance'),
             mock.patch.dict(self.compute.driver.capabilities,
                             supports_attach_interface=True)) as (
-                mock_attach, mock_allocate, mock_deallocate, mock_dict):
+                mock_notify, mock_attach, mock_allocate, mock_deallocate,
+                mock_dict):
 
             mock_allocate.return_value = nwinfo
             mock_attach.side_effect = exception.NovaException("attach_failed")
@@ -9967,6 +9981,9 @@ class ComputeAPITestCase(BaseTestCase):
                                                   tag=None)
             mock_deallocate.assert_called_once_with(self.context, instance,
                                                     port_id)
+            mock_notify.assert_has_calls([
+                mock.call(self.context, instance, self.compute.host,
+                          action='interface_attach', phase='start')])
 
     def test_detach_interface(self):
         nwinfo, port_id = self.test_attach_interface()
