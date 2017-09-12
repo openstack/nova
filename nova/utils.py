@@ -637,6 +637,10 @@ def generate_mac_address():
     return ':'.join(map(lambda x: "%02x" % x, mac))
 
 
+# NOTE(mikal): I really wanted this code to go away, but I can't find a way
+# to implement what the callers of this method want with privsep. Basically,
+# if we could hand off either a file descriptor or a file like object then
+# we could make this go away.
 @contextlib.contextmanager
 def temporary_chown(path, owner_uid=None):
     """Temporarily chown a path.
@@ -649,12 +653,12 @@ def temporary_chown(path, owner_uid=None):
     orig_uid = os.stat(path).st_uid
 
     if orig_uid != owner_uid:
-        execute('chown', owner_uid, path, run_as_root=True)
+        nova.privsep.dac_admin.chown(path, uid=owner_uid)
     try:
         yield
     finally:
         if orig_uid != owner_uid:
-            execute('chown', orig_uid, path, run_as_root=True)
+            nova.privsep.dac_admin.chown(path, uid=orig_uid)
 
 
 @contextlib.contextmanager

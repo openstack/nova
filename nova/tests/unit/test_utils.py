@@ -145,16 +145,13 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         self.assertTrue([c for c in password
                          if c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'])
 
-    def test_temporary_chown(self):
-        def fake_execute(*args, **kwargs):
-            if args[0] == 'chown':
-                fake_execute.uid = args[1]
-        self.stub_out('nova.utils.execute', fake_execute)
-
+    @mock.patch('nova.privsep.dac_admin.chown')
+    def test_temporary_chown(self, mock_chown):
         with tempfile.NamedTemporaryFile() as f:
             with utils.temporary_chown(f.name, owner_uid=2):
-                self.assertEqual(fake_execute.uid, 2)
-            self.assertEqual(fake_execute.uid, os.getuid())
+                mock_chown.assert_called_once_with(f.name, uid=2)
+                mock_chown.reset_mock()
+            mock_chown.assert_called_once_with(f.name, uid=os.getuid())
 
     def test_get_shortened_ipv6(self):
         self.assertEqual("abcd:ef01:2345:6789:abcd:ef01:c0a8:fefe",
