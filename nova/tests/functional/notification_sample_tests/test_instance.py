@@ -644,6 +644,105 @@ class TestInstanceNotificationSample(
         post = {'revertResize': None}
         self.api.post_server_action(server['id'], post)
 
+    @mock.patch('nova.compute.manager.ComputeManager._reschedule',
+                return_value=True)
+    @mock.patch('nova.compute.manager.ComputeManager._prep_resize')
+    def test_resize_server_error_but_reschedule_was_success(
+            self, mock_prep_resize, mock_reschedule):
+        """Test it, when the prep_resize method raise an exception,
+        but the reschedule_resize_or_reraise was successful and
+        scheduled the resize. In this case we get a notification
+        about the exception, which caused the prep_resize error.
+        """
+        def _build_resources(*args, **kwargs):
+            raise exception.FlavorDiskTooSmall()
+        server = self._boot_a_server(
+            extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
+        self.flags(allow_resize_to_same_host=True)
+        other_flavor_body = {
+            'flavor': {
+                'name': 'other_flavor_error',
+                'ram': 512,
+                'vcpus': 1,
+                'disk': 1,
+                'id': 'a22d5517-147c-4147-a0d1-e698df5cd4e9'
+            }
+        }
+        other_flavor_id = self.api.post_flavor(other_flavor_body)['id']
+
+        post = {
+            'resize': {
+                'flavorRef': other_flavor_id
+            }
+        }
+        fake_notifier.reset()
+        mock_prep_resize.side_effect = _build_resources
+        self.api.post_server_action(server['id'], post)
+        self._wait_for_notification('instance.resize.error')
+        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         'Unexpected number of notifications: %s' %
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
+        self._verify_notification('instance-resize-error',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']
+            },
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+
+    @mock.patch('nova.compute.manager.ComputeManager._reschedule')
+    @mock.patch('nova.compute.manager.ComputeManager._prep_resize')
+    def test_resize_server_error_and_reschedule_was_failed(
+            self, mock_prep_resize, mock_reschedule):
+        """Test it, when the prep_resize method raise an exception,
+        after trying again with the reschedule_resize_or_reraise method
+        call, but the rescheduled also was unsuccessful. In this
+        case called the exception block.
+        In the exception block send a notification about error.
+        At end called the six.reraise(*exc_info), which not
+        send another error.
+        """
+        def _build_resources(*args, **kwargs):
+            raise exception.FlavorDiskTooSmall()
+
+        server = self._boot_a_server(
+            extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
+        self.flags(allow_resize_to_same_host=True)
+        other_flavor_body = {
+            'flavor': {
+                'name': 'other_flavor_error',
+                'ram': 512,
+                'vcpus': 1,
+                'disk': 1,
+                'id': 'a22d5517-147c-4147-a0d1-e698df5cd4e9'
+            }
+        }
+        other_flavor_id = self.api.post_flavor(other_flavor_body)['id']
+
+        post = {
+            'resize': {
+                'flavorRef': other_flavor_id
+            }
+        }
+        fake_notifier.reset()
+        mock_prep_resize.side_effect = _build_resources
+        # This isn't realistic that _reschedule would raise FlavorDiskTooSmall,
+        # but it's needed for the notification sample to work.
+        mock_reschedule.side_effect = _build_resources
+        self.api.post_server_action(server['id'], post)
+        self._wait_for_state_change(self.api, server, expected_status='ERROR')
+        # There should be two notifications, one for the instance.resize.error
+        # and one for the compute.exception via the wrap_exception decorator on
+        # the ComputeManager.prep_resize method.
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                         'Unexpected number of notifications: %s' %
+                         fake_notifier.VERSIONED_NOTIFICATIONS)
+        self._verify_notification('instance-resize-error',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']
+            },
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+
     def _test_snapshot_server(self, server):
         post = {'createImage': {'name': 'test-snap'}}
         self.api.post_server_action(server['id'], post)

@@ -3849,13 +3849,22 @@ class ComputeManager(manager.Manager):
                     exc_info=sys.exc_info())
             self._notify_about_instance_usage(context, instance,
                     'resize.error', fault=error)
-
+            compute_utils.notify_about_instance_action(
+                context, instance, self.host,
+                action=fields.NotificationAction.RESIZE,
+                phase=fields.NotificationPhase.ERROR,
+                exception=error)
         if rescheduled:
             self._log_original_error(exc_info, instance_uuid)
             compute_utils.add_instance_fault_from_exc(context,
                     instance, exc_info[1], exc_info=exc_info)
             self._notify_about_instance_usage(context, instance,
                     'resize.error', fault=exc_info[1])
+            compute_utils.notify_about_instance_action(
+                context, instance, self.host,
+                action=fields.NotificationAction.RESIZE,
+                phase=fields.NotificationPhase.ERROR,
+                exception=exc_info[1])
         else:
             # not re-scheduling
             six.reraise(*exc_info)
