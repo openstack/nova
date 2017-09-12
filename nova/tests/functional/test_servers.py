@@ -1712,20 +1712,14 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
 
         dest_usages = self._get_provider_usages(dest_rp_uuid)
-        # FIXME(mriedem): Due to bug 1713786 the dest node won't have
-        # allocations. Uncomment when fixed.
-        # self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
-        self.assertFlavorMatchesAllocation(
-            {'vcpus': 0, 'ram': 0, 'disk': 0}, dest_usages)
+        self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
 
         allocations = self._get_allocations_by_server_uuid(server['id'])
-        # FIXME(mriedem): Uncomment when bug 1713786 is fixed
-        # self.assertEqual(2, len(allocations))
-        self.assertEqual(1, len(allocations))
+        self.assertEqual(2, len(allocations))
         source_allocation = allocations[source_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
-        # dest_allocation = allocations[dest_rp_uuid]['resources']
-        # self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
+        dest_allocation = allocations[dest_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
 
         # start up the source compute
         self.compute1.start()
@@ -1738,30 +1732,18 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         # When the source node starts up, the instance has moved so the
         # ResourceTracker should cleanup allocations for the source node.
         source_usages = self._get_provider_usages(source_rp_uuid)
-        # FIXME(mriedem): Due to bug 1713786, the source node fails to
-        # remove the allocation because the dest allocation doesn't exist
-        # yet and Placement won't allow an empty allocation body. Uncomment
-        # when fixed.
-        # self.assertEqual(
-        #     {'VCPU': 0, 'MEMORY_MB': 0, 'DISK_GB': 0}, source_usages)
-        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        self.assertEqual(
+            {'VCPU': 0, 'MEMORY_MB': 0, 'DISK_GB': 0}, source_usages)
 
         # The usages/allocations should still exist on the destination node
         # after the source node starts back up.
         dest_usages = self._get_provider_usages(dest_rp_uuid)
-        # FIXME(mriedem): Uncomment when bug 1713786 is fixed.
-        # self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
-        self.assertFlavorMatchesAllocation(
-            {'vcpus': 0, 'ram': 0, 'disk': 0}, dest_usages)
+        self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
 
         allocations = self._get_allocations_by_server_uuid(server['id'])
         self.assertEqual(1, len(allocations))
-        # FIXME(mriedem): Due to bug 1713786 it's just the source for now.
-        # Uncomment when fixed.
-        # dest_allocation = allocations[dest_rp_uuid]['resources']
-        # self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
-        source_allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
+        dest_allocation = allocations[dest_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
 
         self._delete_and_check_allocations(
             server, source_rp_uuid, dest_rp_uuid)
