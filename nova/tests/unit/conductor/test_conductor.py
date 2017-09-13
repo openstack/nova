@@ -2613,6 +2613,40 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             {'vm_state': instance.vm_state, 'task_state': None}, ex,
             reqspec.to_legacy_request_spec_dict())
 
+    @mock.patch('nova.conductor.tasks.live_migrate.LiveMigrationTask.execute')
+    def test_live_migrate_instance(self, mock_execute):
+        """Tests that asynchronous live migration targets the cell that the
+        instance lives in.
+        """
+        instance = self.params['build_requests'][0].instance
+        scheduler_hint = {'host': None}
+        reqspec = self.params['request_specs'][0]
+
+        # setUp created the instance mapping but didn't target it to a cell,
+        # to mock out the API doing that, but let's just update it to point
+        # at cell1.
+        im = objects.InstanceMapping.get_by_instance_uuid(
+            self.ctxt, instance.uuid)
+        im.cell_mapping = self.cell_mappings[test.CELL1_NAME]
+        im.save()
+
+        # Make sure the InstanceActionEvent is created in the cell.
+        original_event_start = objects.InstanceActionEvent.event_start
+
+        def fake_event_start(_cls, ctxt, *args, **kwargs):
+            # Make sure the context is targeted to the cell that the instance
+            # was created in.
+            self.assertIsNotNone(ctxt.db_connection, 'Context is not targeted')
+            original_event_start(ctxt, *args, **kwargs)
+
+        self.stub_out(
+            'nova.objects.InstanceActionEvent.event_start', fake_event_start)
+
+        self.conductor.live_migrate_instance(
+            self.ctxt, instance, scheduler_hint, block_migration=None,
+            disk_over_commit=None, request_spec=reqspec)
+        mock_execute.assert_called_once_with()
+
 
 class ConductorTaskRPCAPITestCase(_BaseTaskTestCase,
         test_compute.BaseTestCase):
