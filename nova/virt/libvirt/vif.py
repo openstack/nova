@@ -582,19 +582,8 @@ class LibvirtGenericVIFDriver(object):
             utils.execute('brctl', 'addbr', br_name, run_as_root=True)
             utils.execute('brctl', 'setfd', br_name, 0, run_as_root=True)
             utils.execute('brctl', 'stp', br_name, 'off', run_as_root=True)
-            utils.execute('tee',
-                          ('/sys/class/net/%s/bridge/multicast_snooping' %
-                           br_name),
-                          process_input='0',
-                          run_as_root=True,
-                          check_exit_code=[0, 1])
-            disv6 = '/proc/sys/net/ipv6/conf/%s/disable_ipv6' % br_name
-            if os.path.exists(disv6):
-                utils.execute('tee',
-                              disv6,
-                              process_input='1',
-                              run_as_root=True,
-                              check_exit_code=[0, 1])
+            nova.privsep.libvirt.disable_multicast_snooping(br_name)
+            nova.privsep.libvirt.disable_ipv6(br_name)
 
         if not linux_net.device_exists(v2_name):
             mtu = vif['network'].get_meta('mtu')

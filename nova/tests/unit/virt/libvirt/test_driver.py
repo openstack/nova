@@ -14154,17 +14154,18 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           domain=fake_domain)
         self.assertTrue(self.log_error_called)
 
-    def test_create_domain_enable_hairpin_fails(self):
+    @mock.patch('nova.privsep.libvirt.enable_hairpin')
+    def test_create_domain_enable_hairpin_fails(self, mock_writefile):
         """Tests that the xml is logged when enabling hairpin mode for the
         domain fails.
         """
         # Guest.enable_hairpin is only called for nova-network.
+        # TODO(mikal): remove this test when nova-net goes away
         self.flags(use_neutron=False)
         fake_xml = "<test>this is a test</test>"
         fake_domain = FakeVirtDomain(fake_xml)
 
-        def fake_execute(*args, **kwargs):
-            raise processutils.ProcessExecutionError('error')
+        mock_writefile.side_effect = IOError
 
         def fake_get_interfaces(*args):
             return ["dev"]
@@ -14180,14 +14181,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.create_fake_libvirt_mock()
         self.mox.ReplayAll()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.stubs.Set(nova.utils, 'execute', fake_execute)
         self.stubs.Set(
             nova.virt.libvirt.guest.Guest, 'get_interfaces',
             fake_get_interfaces)
 
-        self.assertRaises(processutils.ProcessExecutionError,
-                          drvr._create_domain,
-                          domain=fake_domain,
+        self.assertRaises(IOError, drvr._create_domain, domain=fake_domain,
                           power_on=False)
         self.assertTrue(self.log_error_called)
 
