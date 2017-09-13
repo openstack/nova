@@ -1782,6 +1782,17 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                           headroom=fake_headroom, usages=fake_usages)
         mock_check.side_effect = e
 
+        original_save = objects.Instance.save
+
+        def fake_save(inst, *args, **kwargs):
+            # Make sure the context is targeted to the cell that the instance
+            # was created in.
+            self.assertIsNotNone(
+                inst._context.db_connection, 'Context is not targeted')
+            original_save(inst, *args, **kwargs)
+
+        self.stub_out('nova.objects.Instance.save', fake_save)
+
         # This is needed to register the compute node in a cell.
         self.start_service('compute', host='fake-host')
         self.assertRaises(
