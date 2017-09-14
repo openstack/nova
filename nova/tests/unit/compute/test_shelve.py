@@ -44,6 +44,8 @@ def _fake_resources():
 
 
 class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
+    @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_terminate_volume_connections')
     @mock.patch.object(nova.virt.fake.SmallFakeDriver, 'power_off')
     @mock.patch.object(nova.virt.fake.SmallFakeDriver, 'snapshot')
     @mock.patch.object(nova.compute.manager.ComputeManager, '_get_power_state')
@@ -52,7 +54,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     def _shelve_instance(self, shelved_offload_time, mock_notify,
                          mock_notify_instance_usage, mock_get_power_state,
-                         mock_snapshot, mock_power_off,
+                         mock_snapshot, mock_power_off, mock_terminate,
                          clean_shutdown=True):
         mock_get_power_state.return_value = 123
 
@@ -156,6 +158,9 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                                               'fake_image_id', mock.ANY)
         mock_get_power_state.assert_has_calls(mock_get_power_state_call_list)
 
+        if CONF.shelved_offload_time == 0:
+            self.assertTrue(mock_terminate.called)
+
     def test_shelve(self):
         self._shelve_instance(-1)
 
@@ -177,6 +182,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         mock_power_off.assert_called_once_with(instance, 0, 0)
 
     @mock.patch.object(nova.compute.manager.ComputeManager,
+                       '_terminate_volume_connections')
+    @mock.patch.object(nova.compute.manager.ComputeManager,
                        '_update_resource_tracker')
     @mock.patch.object(nova.compute.manager.ComputeManager,
                        '_get_power_state', return_value = 123)
@@ -185,7 +192,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     def _shelve_offload(self, mock_notify, mock_notify_instance_usage,
                         mock_get_power_state, mock_update_resource_tracker,
-                        clean_shutdown=True):
+                        mock_terminate, clean_shutdown=True):
         host = 'fake-mini'
         instance = self._create_fake_instance_obj(params={'host': host})
         instance.task_state = task_states.SHELVING
@@ -203,6 +210,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
         self.assertEqual(vm_states.SHELVED_OFFLOADED, instance.vm_state)
         self.assertIsNone(instance.task_state)
+        self.assertTrue(mock_terminate.called)
 
         # prepare expect call lists
         mock_notify_instance_usage_call_list = [

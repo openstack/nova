@@ -4364,10 +4364,18 @@ class ComputeManager(manager.Manager):
         self.network_api.cleanup_instance_network_on_host(context, instance,
                                                           instance.host)
         network_info = self.network_api.get_instance_nw_info(context, instance)
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+            context, instance.uuid)
+
         block_device_info = self._get_instance_block_device_info(context,
-                                                                 instance)
+                                                                 instance,
+                                                                 bdms=bdms)
         self.driver.destroy(context, instance, network_info,
                 block_device_info)
+
+        # the instance is going to be removed from the host so we want to
+        # terminate all the connections with the volume server and the host
+        self._terminate_volume_connections(context, instance, bdms)
 
         instance.power_state = current_power_state
         # NOTE(mriedem): The vm_state has to be set before updating the
