@@ -74,6 +74,19 @@ def _load_auth_plugin(conf):
     raise neutron_client_exc.Unauthorized(message=err_msg)
 
 
+def _get_binding_profile(port):
+    """Convenience method to get the binding:profile from the port
+
+    The binding:profile in the port is undefined in the networking service
+    API and is dependent on backend configuration. This means it could be
+    an empty dict, None, or have some values.
+
+    :param port: dict port response body from the networking service API
+    :returns: The port binding:profile dict; empty if not set on the port
+    """
+    return port.get(BINDING_PROFILE, {}) or {}
+
+
 @profiler.trace_cls("neutron_api")
 class ClientWrapper(clientv20.Client):
     """A Neutron client wrapper class.
@@ -257,7 +270,7 @@ class API(base_api.NetworkAPI):
             # If the port already has a migration profile and if
             # it is to be torn down, then we need to clean up
             # the migration profile.
-            port_profile = p.get(BINDING_PROFILE)
+            port_profile = _get_binding_profile(p)
             if not port_profile:
                 continue
             if MIGRATING_ATTR in port_profile:
@@ -278,7 +291,7 @@ class API(base_api.NetworkAPI):
             # the given 'host'.
             host_id = p.get(BINDING_HOST_ID)
             if host_id != host:
-                port_profile = p.get(BINDING_PROFILE, {})
+                port_profile = _get_binding_profile(p)
                 port_profile[MIGRATING_ATTR] = host
                 self._update_port_with_migration_profile(
                     instance, p['id'], port_profile, admin_client)
@@ -2204,7 +2217,7 @@ class API(base_api.NetworkAPI):
             mtu=network_mtu
             )
         network['subnets'] = subnets
-        port_profile = port.get(BINDING_PROFILE)
+        port_profile = _get_binding_profile(port)
         if port_profile:
             physical_network = port_profile.get('physical_network')
             if physical_network:
@@ -2303,7 +2316,7 @@ class API(base_api.NetworkAPI):
                     vnic_type=current_neutron_port.get('binding:vnic_type',
                         network_model.VNIC_TYPE_NORMAL),
                     type=current_neutron_port.get('binding:vif_type'),
-                    profile=current_neutron_port.get(BINDING_PROFILE),
+                    profile=_get_binding_profile(current_neutron_port),
                     details=current_neutron_port.get('binding:vif_details'),
                     ovs_interfaceid=ovs_interfaceid,
                     devname=devname,
@@ -2471,7 +2484,7 @@ class API(base_api.NetworkAPI):
         ports = data['ports']
         for p in ports:
             updates = {}
-            binding_profile = p.get(BINDING_PROFILE, {})
+            binding_profile = _get_binding_profile(p)
 
             # If the host hasn't changed, like in the case of resizing to the
             # same host, there is nothing to do.
