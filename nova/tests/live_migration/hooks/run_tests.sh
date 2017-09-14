@@ -25,13 +25,6 @@ SERVICE_HOST=$primary_node
 STACK_USER=${STACK_USER:-stack}
 
 echo '1. test with all local storage (use default for volumes)'
-
-# We test with libvirt 2.5.0 on xenial nodes so we can test live block
-# migration with an attached volume.
-echo 'enabling block_migration with an iscsi attached volume in tempest'
-$ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m ini_file -a "dest=$BASE/new/tempest/etc/tempest.conf section=compute-feature-enabled option=block_migration_for_live_migration value=True"
-$ANSIBLE primary --sudo -f 5 -i "$WORKSPACE/inventory" -m ini_file -a "dest=$BASE/new/tempest/etc/tempest.conf section=compute-feature-enabled option=block_migrate_cinder_iscsi value=True"
-
 echo 'NOTE: test_volume_backed_live_migration is skipped due to https://bugs.launchpad.net/nova/+bug/1524898'
 run_tempest "block migration test" "^.*test_live_migration(?!.*(test_volume_backed_live_migration))"
 
