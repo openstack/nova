@@ -323,16 +323,16 @@ class CinderApiTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.volume.cinder.cinderclient',
                 side_effect=exception.CinderAPIVersionNotAvailable(
-                    version='3.27'))
+                    version='3.44'))
     def test_attachment_create_unsupported_api_version(self,
                                                        mock_cinderclient):
         """Tests that CinderAPIVersionNotAvailable is passed back through
-        if 3.27 isn't available.
+        if 3.44 isn't available.
         """
         self.assertRaises(exception.CinderAPIVersionNotAvailable,
                           self.api.attachment_create,
                           self.ctx, uuids.volume_id, uuids.instance_id)
-        mock_cinderclient.assert_called_once_with(self.ctx, '3.27')
+        mock_cinderclient.assert_called_once_with(self.ctx, '3.44')
 
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_attachment_update(self, mock_cinderclient):
@@ -379,16 +379,16 @@ class CinderApiTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.volume.cinder.cinderclient',
                 side_effect=exception.CinderAPIVersionNotAvailable(
-                    version='3.27'))
+                    version='3.44'))
     def test_attachment_update_unsupported_api_version(self,
                                                        mock_cinderclient):
         """Tests that CinderAPIVersionNotAvailable is passed back through
-        if 3.27 isn't available.
+        if 3.44 isn't available.
         """
         self.assertRaises(exception.CinderAPIVersionNotAvailable,
                           self.api.attachment_update,
                           self.ctx, uuids.attachment_id, connector={})
-        mock_cinderclient.assert_called_once_with(self.ctx, '3.27',
+        mock_cinderclient.assert_called_once_with(self.ctx, '3.44',
                                                   skip_version_check=True)
 
     @mock.patch('nova.volume.cinder.cinderclient')
@@ -400,7 +400,7 @@ class CinderApiTestCase(test.NoDBTestCase):
         attachment_id = uuids.attachment
         self.api.attachment_delete(self.ctx, attachment_id)
 
-        mock_cinderclient.assert_called_once_with(self.ctx, '3.27',
+        mock_cinderclient.assert_called_once_with(self.ctx, '3.44',
                                                   skip_version_check=True)
         mock_attachments.delete.assert_called_once_with(attachment_id)
 
@@ -421,16 +421,59 @@ class CinderApiTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.volume.cinder.cinderclient',
                 side_effect=exception.CinderAPIVersionNotAvailable(
-                    version='3.27'))
+                    version='3.44'))
     def test_attachment_delete_unsupported_api_version(self,
                                                        mock_cinderclient):
         """Tests that CinderAPIVersionNotAvailable is passed back through
-        if 3.27 isn't available.
+        if 3.44 isn't available.
         """
         self.assertRaises(exception.CinderAPIVersionNotAvailable,
                           self.api.attachment_delete,
                           self.ctx, uuids.attachment_id)
-        mock_cinderclient.assert_called_once_with(self.ctx, '3.27',
+        mock_cinderclient.assert_called_once_with(self.ctx, '3.44',
+                                                  skip_version_check=True)
+
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_attachment_complete(self, mock_cinderclient):
+        mock_attachments = mock.MagicMock()
+        mock_cinderclient.return_value = \
+            mock.MagicMock(attachments=mock_attachments)
+
+        attachment_id = uuids.attachment
+        self.api.attachment_complete(self.ctx, attachment_id)
+
+        mock_cinderclient.assert_called_once_with(self.ctx, '3.44',
+                                                  skip_version_check=True)
+        mock_attachments.complete.assert_called_once_with(attachment_id)
+
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_attachment_complete_failed(self, mock_cinderclient):
+        mock_cinderclient.return_value.attachments.complete.side_effect = (
+                cinder_exception.NotFound(404, '404'))
+
+        attachment_id = uuids.attachment
+        ex = self.assertRaises(exception.VolumeAttachmentNotFound,
+                               self.api.attachment_complete,
+                               self.ctx,
+                               attachment_id)
+
+        self.assertEqual(404, ex.code)
+        self.assertIn(attachment_id, six.text_type(ex))
+
+    @mock.patch('nova.volume.cinder.cinderclient',
+                side_effect=exception.CinderAPIVersionNotAvailable(
+                    version='3.44'))
+    def test_attachment_complete_unsupported_api_version(self,
+                                                         mock_cinderclient):
+        """Tests that CinderAPIVersionNotAvailable is passed back.
+
+        If microversion 3.44 isn't available that should result in a
+        CinderAPIVersionNotAvailable exception.
+        """
+        self.assertRaises(exception.CinderAPIVersionNotAvailable,
+                          self.api.attachment_complete,
+                          self.ctx, uuids.attachment_id)
+        mock_cinderclient.assert_called_once_with(self.ctx, '3.44',
                                                   skip_version_check=True)
 
     @mock.patch('nova.volume.cinder.cinderclient')
@@ -801,7 +844,7 @@ class CinderClientTestCase(test.NoDBTestCase):
         an exception.
         """
         self.assertRaises(exception.CinderAPIVersionNotAvailable,
-                          cinder.cinderclient, self.ctxt, microversion='3.27')
+                          cinder.cinderclient, self.ctxt, microversion='3.44')
         get_volume_api.assert_called_once_with(
             self.mock_session.get_endpoint.return_value)
 
@@ -817,7 +860,7 @@ class CinderClientTestCase(test.NoDBTestCase):
         exception.
         """
         self.assertRaises(exception.CinderAPIVersionNotAvailable,
-                          cinder.cinderclient, self.ctxt, microversion='3.27')
+                          cinder.cinderclient, self.ctxt, microversion='3.44')
         get_volume_api.assert_called_once_with(
             self.mock_session.get_endpoint.return_value)
         get_highest_version.assert_called_once_with(
@@ -834,8 +877,8 @@ class CinderClientTestCase(test.NoDBTestCase):
         is available in the server and supported by the client will result in
         creating a Client object with the requested microversion.
         """
-        client = cinder.cinderclient(self.ctxt, microversion='3.27')
-        self.assertEqual(cinder_api_versions.APIVersion('3.27'),
+        client = cinder.cinderclient(self.ctxt, microversion='3.44')
+        self.assertEqual(cinder_api_versions.APIVersion('3.44'),
                          client.api_version)
         get_volume_api.assert_called_once_with(
             self.mock_session.get_endpoint.return_value)
@@ -851,9 +894,9 @@ class CinderClientTestCase(test.NoDBTestCase):
         """Tests that creating a v3 client and requesting a microversion
         but asking to skip the version discovery check is honored.
         """
-        client = cinder.cinderclient(self.ctxt, microversion='3.27',
+        client = cinder.cinderclient(self.ctxt, microversion='3.44',
                                      skip_version_check=True)
-        self.assertEqual(cinder_api_versions.APIVersion('3.27'),
+        self.assertEqual(cinder_api_versions.APIVersion('3.44'),
                          client.api_version)
         get_volume_api.assert_called_once_with(
             self.mock_session.get_endpoint.return_value)

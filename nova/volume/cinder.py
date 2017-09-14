@@ -537,7 +537,11 @@ class API(object):
     @translate_volume_exception
     def attachment_create(self, context, volume_id, instance_id,
                           connector=None):
-        """Create a volume attachment. This requires microversion >= 3.27.
+        """Create a volume attachment. This requires microversion >= 3.44.
+
+        The attachment_create call was introduced in microversion 3.27. We
+        need 3.44 as minmum here as we need attachment_complete to finish the
+        attaching process and it which was introduced in version 3.44.
 
         :param context: The nova request context.
         :param volume_id: UUID of the volume on which to create the attachment.
@@ -550,7 +554,7 @@ class API(object):
             compatible connection_info dict
         """
         try:
-            attachment_ref = cinderclient(context, '3.27').attachments.create(
+            attachment_ref = cinderclient(context, '3.44').attachments.create(
                 volume_id, connector, instance_id)
             return _translate_attachment_ref(attachment_ref)
         except cinder_exception.ClientException as ex:
@@ -578,7 +582,7 @@ class API(object):
         """
         try:
             attachment_ref = cinderclient(
-                context, '3.27', skip_version_check=True).attachments.update(
+                context, '3.44', skip_version_check=True).attachments.update(
                     attachment_id, connector)
             return _translate_attachment_ref(attachment_ref.to_dict())
         except cinder_exception.ClientException as ex:
@@ -593,11 +597,34 @@ class API(object):
     def attachment_delete(self, context, attachment_id):
         try:
             cinderclient(
-                context, '3.27', skip_version_check=True).attachments.delete(
+                context, '3.44', skip_version_check=True).attachments.delete(
                     attachment_id)
         except cinder_exception.ClientException as ex:
             with excutils.save_and_reraise_exception():
                 LOG.error(('Delete attachment failed for attachment '
+                           '%(id)s. Error: %(msg)s Code: %(code)s'),
+                          {'id': attachment_id,
+                           'msg': six.text_type(ex),
+                           'code': getattr(ex, 'code', None)})
+
+    @translate_attachment_exception
+    def attachment_complete(self, context, attachment_id):
+        """Marks a volume attachment complete.
+
+        This call should be used to inform Cinder that a volume attachment is
+        fully connected on the compute host so Cinder can apply the necessary
+        state changes to the volume info in its database.
+
+        :param context: The nova request context.
+        :param attachment_id: UUID of the volume attachment to update.
+        """
+        try:
+            cinderclient(
+                context, '3.44', skip_version_check=True).attachments.complete(
+                    attachment_id)
+        except cinder_exception.ClientException as ex:
+            with excutils.save_and_reraise_exception():
+                LOG.error(('Complete attachment failed for attachment '
                            '%(id)s. Error: %(msg)s Code: %(code)s'),
                           {'id': attachment_id,
                            'msg': six.text_type(ex),

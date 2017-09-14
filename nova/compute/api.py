@@ -3730,7 +3730,7 @@ class API(base.Base):
             raise exception.InvalidVolume(reason=exc.format_message())
 
         # Get the BDM for the attached (old) volume so we can tell if it was
-        # attached with the new-style Cinder 3.27 API.
+        # attached with the new-style Cinder 3.44 API.
         bdm = objects.BlockDeviceMapping.get_by_volume_and_instance(
             context, old_volume['id'], instance.uuid)
         new_attachment_id = None
