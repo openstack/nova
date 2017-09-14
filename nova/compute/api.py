@@ -26,6 +26,7 @@ import functools
 import re
 import string
 
+from castellan import key_manager
 from oslo_log import log as logging
 from oslo_messaging import exceptions as oslo_exceptions
 from oslo_serialization import base64 as base64utils
@@ -59,7 +60,6 @@ from nova import exception_wrapper
 from nova import hooks
 from nova.i18n import _
 from nova import image
-from nova import keymgr
 from nova import network
 from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
@@ -256,7 +256,7 @@ class API(base.Base):
         self.servicegroup_api = servicegroup.API()
         self.notifier = rpc.get_notifier('compute', CONF.host)
         if CONF.ephemeral_storage_encryption.enabled:
-            self.key_manager = keymgr.API()
+            self.key_manager = key_manager.API()
 
         super(API, self).__init__(**kwargs)
 
