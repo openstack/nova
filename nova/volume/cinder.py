@@ -215,15 +215,29 @@ def _untranslate_snapshot_summary_view(context, snapshot):
 
 def _translate_attachment_ref(attachment_ref):
     """Building old style connection_info by adding the 'data' key back."""
-    connection_info = attachment_ref.pop('connection_info', {})
-    attachment_ref['connection_info'] = {}
-    if connection_info.get('driver_volume_type'):
-        attachment_ref['connection_info']['driver_volume_type'] = \
-            connection_info['driver_volume_type']
-    attachment_ref['connection_info']['data'] = {}
-    for k, v in connection_info.items():
-        if k != "driver_volume_type":
-            attachment_ref['connection_info']['data'][k] = v
+    translated_con_info = {}
+    connection_info_data = attachment_ref.pop('connection_info', None)
+    if connection_info_data:
+        connection_info_data.pop('attachment_id', None)
+        translated_con_info['driver_volume_type'] = \
+            connection_info_data.pop('driver_volume_type', None)
+        translated_con_info['data'] = connection_info_data
+        translated_con_info['status'] = attachment_ref.pop('status', None)
+        translated_con_info['instance'] = attachment_ref.pop('instance', None)
+        translated_con_info['attach_mode'] = attachment_ref.pop('attach_mode',
+                                                                None)
+        translated_con_info['attached_at'] = attachment_ref.pop('attached_at',
+                                                                None)
+        translated_con_info['detached_at'] = attachment_ref.pop('detached_at',
+                                                                None)
+
+        # Now the catch all...
+        for k, v in attachment_ref.items():
+            if k != "id":
+                translated_con_info[k] = v
+
+    attachment_ref['connection_info'] = translated_con_info
+
     return attachment_ref
 
 
@@ -584,7 +598,10 @@ class API(object):
             attachment_ref = cinderclient(
                 context, '3.44', skip_version_check=True).attachments.update(
                     attachment_id, connector)
-            return _translate_attachment_ref(attachment_ref.to_dict())
+            translated_attach_ref = _translate_attachment_ref(
+                attachment_ref.to_dict())
+            translated_attach_ref['connection_info']['connector'] = connector
+            return translated_attach_ref
         except cinder_exception.ClientException as ex:
             with excutils.save_and_reraise_exception():
                 LOG.error(('Update attachment failed for attachment '
