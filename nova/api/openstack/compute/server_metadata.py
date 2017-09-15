@@ -51,6 +51,14 @@ class ServerMetadataController(wsgi.Controller):
             meta_dict[key] = value
         return meta_dict
 
+    def _immutable_keys_check(self, metadata):
+        """Raise BadRequest if immutable key(s) specified in a change."""
+        key = common.contains_immutable_metadata_key(metadata)
+        if key is not None:
+            msg = ('create, modify or delete of key "{0}" '
+                   'is not allowed'.format(key))
+            raise exc.HTTPBadRequest(explanation=msg)
+
     @extensions.expected_errors(404)
     def index(self, req, server_id):
         """Returns the list of metadata for a given instance."""
@@ -64,6 +72,7 @@ class ServerMetadataController(wsgi.Controller):
     @validation.schema(server_metadata.create)
     def create(self, req, server_id, body):
         metadata = body['metadata']
+        self._immutable_keys_check(metadata)
         context = req.environ['nova.context']
         context.can(sm_policies.POLICY_ROOT % 'create')
         new_metadata = self._update_instance_metadata(context,
@@ -82,6 +91,7 @@ class ServerMetadataController(wsgi.Controller):
         if id not in meta_item:
             expl = _('Request body and URI mismatch')
             raise exc.HTTPBadRequest(explanation=expl)
+        self._immutable_keys_check(meta_item)
 
         self._update_instance_metadata(context,
                                        server_id,
@@ -96,6 +106,7 @@ class ServerMetadataController(wsgi.Controller):
         context = req.environ['nova.context']
         context.can(sm_policies.POLICY_ROOT % 'update_all')
         metadata = body['metadata']
+        self._immutable_keys_check(metadata)
         new_metadata = self._update_instance_metadata(context,
                                                       server_id,
                                                       metadata,
@@ -138,7 +149,7 @@ class ServerMetadataController(wsgi.Controller):
             msg = _("Metadata item was not found")
             raise exc.HTTPNotFound(explanation=msg)
 
-    @extensions.expected_errors((404, 409))
+    @extensions.expected_errors((400, 404, 409))
     @wsgi.response(204)
     def delete(self, req, server_id, id):
         """Deletes an existing metadata."""
@@ -149,6 +160,7 @@ class ServerMetadataController(wsgi.Controller):
         if id not in metadata:
             msg = _("Metadata item was not found")
             raise exc.HTTPNotFound(explanation=msg)
+        self._immutable_keys_check(id)
 
         server = common.get_instance(self.compute_api, context, server_id)
         try:
