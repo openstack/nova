@@ -746,9 +746,9 @@ class TestInstanceNotificationSample(
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_do_rebuild_instance_with_claim')
     def test_rebuild_server_exc(self, mock_rebuild):
-        def _compute_resources_unavailable(*args, **kwargs):
-            raise exception.ComputeResourcesUnavailable(
-                reason="fake-resource")
+        def _virtual_interface_create_failed(*args, **kwargs):
+            # A real error that could come out of driver.spawn() during rebuild
+            raise exception.VirtualInterfaceCreateException()
 
         server = self._boot_a_server(
             extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
@@ -763,7 +763,7 @@ class TestInstanceNotificationSample(
             }
         }
         self.api.post_server_action(server['id'], post)
-        mock_rebuild.side_effect = _compute_resources_unavailable
+        mock_rebuild.side_effect = _virtual_interface_create_failed
         self._wait_for_state_change(self.api, server, expected_status='ERROR')
         notification = self._get_notifications('instance.rebuild.error')
         self.assertEqual(1, len(notification))
