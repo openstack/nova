@@ -2111,6 +2111,101 @@ class ServerMovingTests(test.TestCase, integrated_helpers.InstanceHelperMixin):
         self._delete_and_check_allocations(
             server, source_rp_uuid, dest_rp_uuid)
 
+    def _wait_for_migration_status(self, server, expected_status):
+        """Waits for a migration record with the given status to be found
+        for the given server, else the test fails. The migration record, if
+        found, is returned.
+        """
+        for attempt in range(10):
+            migrations = self.api.api_get('/os-migrations').body['migrations']
+            for migration in migrations:
+                if (migration['instance_uuid'] == server['id'] and
+                        migration['status'].lower() ==
+                        expected_status.lower()):
+                    return migration
+            time.sleep(0.5)
+        self.fail('Timed out waiting for migration with status "%s" for '
+                  'instance: %s' % (expected_status, server['id']))
+
+    def test_live_migrate_pre_check_fails(self):
+        """Tests the case that the LiveMigrationTask in conductor has
+        called the scheduler which picked a host and created allocations
+        against it in Placement, but then when the conductor task calls
+        check_can_live_migrate_destination on the destination compute it
+        fails. The allocations on the destination compute node should be
+        cleaned up before the conductor task asks the scheduler for another
+        host to try the live migration.
+        """
+        self.failed_hostname = None
+        source_hostname = self.compute1.host
+        dest_hostname = self.compute2.host
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        server = self._boot_and_check_allocations(
+            self.flavor1, source_hostname)
+
+        def fake_check_can_live_migrate_destination(
+                context, instance, src_compute_info, dst_compute_info,
+                block_migration=False, disk_over_commit=False):
+            self.failed_hostname = dst_compute_info['host']
+            raise exception.MigrationPreCheckError(
+                reason='test_live_migrate_pre_check_fails')
+
+        with mock.patch('nova.virt.fake.FakeDriver.'
+                        'check_can_live_migrate_destination',
+                        side_effect=fake_check_can_live_migrate_destination):
+            post = {
+                'os-migrateLive': {
+                    'host': dest_hostname,
+                    'block_migration': True,
+                }
+            }
+            self.api.post_server_action(server['id'], post)
+            # As there are only two computes and we failed to live migrate to
+            # the only other destination host, the LiveMigrationTask raises
+            # MaxRetriesExceeded back to the conductor manager which handles it
+            # generically and sets the instance back to ACTIVE status and
+            # clears the task_state. The migration record status is set to
+            # 'error', so that's what we need to look for to know when this
+            # is done.
+            migration = self._wait_for_migration_status(server, 'error')
+
+        # The source_compute should be set on the migration record, but the
+        # destination shouldn't be as we never made it to one.
+        self.assertEqual(source_hostname, migration['source_compute'])
+        self.assertIsNone(migration['dest_compute'])
+        # Make sure the destination host (the only other host) is the failed
+        # host.
+        self.assertEqual(dest_hostname, self.failed_hostname)
+
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        # Since the instance didn't move, assert the allocations are still
+        # on the source node.
+        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+        # FIXME(mriedem): This is bug 1712411 where the allocations, created
+        # by the scheduler, via conductor, are not cleaned up on the migration
+        # pre-check error. Uncomment the following code when this is fixed.
+        self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+        # # Assert the allocations, created by the scheduler, are cleaned up
+        # # after the migration pre-check error happens.
+        # self.assertFlavorMatchesAllocation(
+        #     {'vcpus': 0, 'ram': 0, 'disk': 0}, dest_usages)
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        # FIXME(mriedem): After bug 1712411 is fixed there should only be 1
+        # allocation for the instance, on the source node.
+        self.assertEqual(2, len(allocations))
+        self.assertIn(source_rp_uuid, allocations)
+        self.assertIn(dest_rp_uuid, allocations)
+        dest_allocation = allocations[dest_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
+
+        self._delete_and_check_allocations(
+            server, source_rp_uuid, dest_rp_uuid)
+
     def test_rescheduling_when_booting_instance(self):
         self.failed_hostname = None
         old_build_resources = (compute_manager.ComputeManager.
