@@ -227,14 +227,10 @@ Pike (16.0.0)
 REST API
 ========
 
-The placement API service has its own REST API and data model.
+The placement API service has its own `REST API`_ and data model.  One
+can get a sample of the REST API via the functional test `gabbits`_.
 
-API Reference
-~~~~~~~~~~~~~
-
-A full API reference is forthcoming, but until then one can get a sample of the
-REST API via the functional test `gabbits`_.
-
+.. _`REST API`: https://developer.openstack.org/api-ref/placement/
 .. _gabbits: http://git.openstack.org/cgit/openstack/nova/tree/nova/tests/functional/api/openstack/placement/gabbits
 
 Microversions
