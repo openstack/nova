@@ -1165,15 +1165,17 @@ class ComputeTaskManager(base.Base):
                 continue
             updates = {'vm_state': vm_states.ERROR, 'task_state': None}
             legacy_spec = request_spec.to_legacy_request_spec_dict()
-            self._set_vm_state_and_notify(context, instance.uuid,
-                                          'build_instances', updates, exc,
-                                          legacy_spec)
+            cell = cell_mapping_cache[instance.uuid]
+            with try_target_cell(context, cell) as cctxt:
+                self._set_vm_state_and_notify(cctxt, instance.uuid,
+                                              'build_instances', updates, exc,
+                                              legacy_spec)
 
             # TODO(mnaser): The cell mapping should already be populated by
             #               this point to avoid setting it below here.
             inst_mapping = objects.InstanceMapping.get_by_instance_uuid(
                 context, instance.uuid)
-            inst_mapping.cell_mapping = cell_mapping_cache[instance.uuid]
+            inst_mapping.cell_mapping = cell
             inst_mapping.save()
 
             # Be paranoid about artifacts being deleted underneath us.
