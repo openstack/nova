@@ -200,10 +200,19 @@ performance reasons. Increasing this setting should improve response times
 of the metadata API when under heavy load. Higher values may increase memory
 usage, and result in longer times for host metadata changes to take effect.
 """),
+    cfg.ListOpt("immutable_metadata_keys",
+               default=None,
+               help="""
+Defines a list of regular expressions used to match and restrict
+immutable metadata key items that should be persistent and
+unchangeable within the NOVA instance in which they were originally
+allocated
+"""),
 ]
 
 file_opts = [
     cfg.StrOpt("vendordata_jsonfile_path",
+        default="/etc/novajoin/cloud-config-novajoin.json",
         deprecated_group="DEFAULT",
         help="""
 Cloud providers may store custom data in vendor data file that will then be

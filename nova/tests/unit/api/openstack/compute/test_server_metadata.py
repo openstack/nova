@@ -68,7 +68,7 @@ def stub_server_metadata():
     metadata = {
         "key1": "value1",
         "key2": "value2",
-        "key3": "value3",
+        "key3": "value3"
     }
     return metadata
 
@@ -134,6 +134,14 @@ class ServerMetaDataTestV21(test.TestCase):
         self.uuid = uuids.fake
         self.url = '/fake/servers/%s/metadata' % self.uuid
 
+    def _set_immutable_keys_config(self, do_override=False):
+        if do_override:
+            cfg.CONF.set_override("immutable_metadata_keys",
+                                  ["/^#?([a-f0-9]{6}|[a-f0-9]{3})$/", "key3", "key19", "/^[a-z0-9-]+$/"],
+                                  group='api')
+        else:
+            cfg.CONF.set_override("immutable_metadata_keys", None, group='api')
+
     def _get_request(self, param_url=''):
         return fakes.HTTPRequestV21.blank(self.url + param_url)
 
@@ -193,7 +201,6 @@ class ServerMetaDataTestV21(test.TestCase):
         req = self._get_request('/key2')
         req.method = 'DELETE'
         res = self.controller.delete(req, self.uuid, 'key2')
-
         self.assertIsNone(res)
 
     def test_delete_nonexistent_server(self):
@@ -219,6 +226,7 @@ class ServerMetaDataTestV21(test.TestCase):
         req.content_type = "application/json"
         body = {"metadata": {"key9": "value9"}}
         req.body = jsonutils.dump_as_bytes(body)
+
         res_dict = self.controller.create(req, self.uuid, body=body)
 
         body['metadata'].update({
@@ -664,6 +672,89 @@ class ServerMetaDataTestV21(test.TestCase):
         self.assertRaises(self.validation_ex,
                           self.controller.update_all, req, self.uuid,
                           body=data)
+
+    def test_delete_immutable_key(self):
+        self._set_immutable_keys_config(True)
+        self.stub_out('nova.db.instance_metadata_get',
+                      return_server_metadata)
+        req = self._get_request()
+        req.method = 'DELETE'
+        body = {
+            'metadata': {
+                'key3': 'foobar',
+                'key19': 'foobar',
+                'key99': 'value99',
+            },
+        }
+        req.body = jsonutils.dump_as_bytes(body)
+        req.headers["content-type"] = "application/json"
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.delete, req, self.uuid, 'key3')
+        self._set_immutable_keys_config(False)
+
+    def test_create_with_immutable_key(self):
+        self._set_immutable_keys_config(True)
+
+        self.stubs.Set(objects.Instance, 'save', fake_instance_save)
+        req = self._get_request()
+        req.method = 'POST'
+        req.content_type = "application/json"
+        body = {"metadata": {"key19": "value19"}}
+        req.body = jsonutils.dump_as_bytes(body)
+
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.create, req, self.uuid, body=body)
+        self._set_immutable_keys_config(False)
+
+    def test_update_immutable_item(self):
+        self._set_immutable_keys_config(True)
+
+        self.stubs.Set(objects.Instance, 'save', fake_instance_save)
+        req = self._get_request()
+        req.method = 'PUT'
+        req.content_type = "application/json"
+        body = {"meta": {"key19": "foobar"}}
+        req.body = jsonutils.dump_as_bytes(body)
+        req.headers["content-type"] = "application/json"
+
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.update, req, self.uuid, 'key19', body=body)
+        self._set_immutable_keys_config(False)
+
+    def test_update_all_immutable_keys(self):
+        self._set_immutable_keys_config(True)
+
+        self.stubs.Set(objects.Instance, 'save', fake_instance_save)
+        req = self._get_request()
+        req.method = 'PUT'
+        req.content_type = "application/json"
+        body = {
+            'metadata': {
+                'key19': 'foobar',
+                'key99': 'value99',
+            },
+        }
+        req.body = jsonutils.dump_as_bytes(body)
+        req.headers["content-type"] = "application/json"
+
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.update_all, req, self.uuid, body=body)
+        self._set_immutable_keys_config(False)
+
+    def test_update_item_immutable_keys(self):
+        self._set_immutable_keys_config(True)
+
+        self.stubs.Set(objects.Instance, 'save', fake_instance_save)
+        req = self._get_request()
+        req.method = 'PUT'
+        body = {"meta": {"key3": "e=mc**2"}}
+        req.body = jsonutils.dump_as_bytes(body)
+        req.headers["content-type"] = "application/json"
+
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller.update, req,
+                          self.uuid, 'key3', body=body)
+        self._set_immutable_keys_config(False)
 
 
 class BadStateServerMetaDataTestV21(test.TestCase):

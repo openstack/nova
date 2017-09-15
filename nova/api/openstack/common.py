@@ -532,3 +532,29 @@ def is_all_tenants(search_opts):
         # The empty string is considered enabling all_tenants
         all_tenants = 'all_tenants' in search_opts
     return all_tenants
+
+
+def contains_immutable_metadata_key(key_str):
+    """Function to heck the immutability of the given metadata key (key_str)
+    :param list key_str: Metadata key(s) that must be checked for immutability
+    :returns: None, or a matched immutable key found in the key_str
+    """
+
+    reg_list = CONF.api.immutable_metadata_keys
+    if reg_list is None or key_str is None:
+        return None
+
+    try:
+        for r_item in reg_list:
+            if isinstance(key_str, basestring):
+                if re.compile(r_item).match(key_str):
+                    return key_str
+            else:
+                for key in key_str:
+                    if re.compile(r_item).match(key):
+                        return key
+
+    except Exception, e:
+        raise exc.HTTPBadRequest(explanation="Immutable metadata key regular expression"
+                                             " is invalid = {0} : {1}".format(r_item, e))
+    return None
