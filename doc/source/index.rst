@@ -286,7 +286,10 @@ looking parts of our architecture. These are collected below.
    user/wsgi
 
 
-Indices and tables
-==================
+Search
+======
 
-* :ref:`search`
+* :ref:`Nova document search <search>`: Search the contents of this document.
+* `OpenStack wide search <https://docs.openstack.org>`_: Search the wider
+  set of OpenStack documentation, including forums.
+
