@@ -1,0 +1,12 @@
+---
+fixes:
+  - |
+    When forcing a specified destination host during evacuate, the
+    scheduler is bypassed but resource allocations will still be made in the
+    Placement service against the forced destination host. If the resource
+    allocation against the destination host fails, the evacuate operation
+    will fail, regardless of the ``force`` flag being specified in the API.
+    The guest will be unchanged on the source host. For more details, see
+    `bug 1713786`_.
+
+    .. _bug 1713786: https://bugs.launchpad.net/nova/+bug/1713786
