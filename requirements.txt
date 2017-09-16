@@ -14,14 +14,14 @@ cryptography!=2.0,>=1.9 # BSD/Apache-2.0
 WebOb>=1.7.1 # MIT
 greenlet>=0.4.10 # MIT
 PasteDeploy>=1.5.0 # MIT
-Paste # MIT
+Paste>=2.0.2 # MIT
 PrettyTable<0.8,>=0.7.1 # BSD
 sqlalchemy-migrate>=0.11.0 # Apache-2.0
 netaddr>=0.7.18 # BSD
 netifaces>=0.10.4 # MIT
 paramiko>=2.0.0 # LGPLv2.1+
 Babel!=2.4.0,>=2.3.4 # BSD
-enum34;python_version=='2.7' or python_version=='2.6' or python_version=='3.3' # BSD
+enum34>=1.0.4;python_version=='2.7' or python_version=='2.6' or python_version=='3.3' # BSD
 iso8601>=0.1.11 # MIT
 jsonschema<3.0.0,>=2.6.0 # MIT
 python-cinderclient>=3.2.0 # Apache-2.0
