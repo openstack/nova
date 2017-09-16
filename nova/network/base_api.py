@@ -33,6 +33,11 @@ LOG = logging.getLogger(__name__)
 @hooks.add_hook('instance_network_info')
 def update_instance_cache_with_nw_info(impl, context, instance,
                                        nw_info=None, update_cells=True):
+    if instance.deleted:
+        LOG.debug('Instance is deleted, no further info cache update',
+                  instance=instance)
+        return
+
     try:
         if not isinstance(nw_info, network_model.NetworkInfo):
             nw_info = None
