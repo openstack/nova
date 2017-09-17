@@ -1636,17 +1636,6 @@ class VMwareVMOps(object):
             self._datastore_browser_mapping[ds_ref.value] = ds_browser
         return ds_browser
 
-    def _get_host_ref_from_name(self, host_name):
-        """Get reference to the host with the name specified."""
-        host_objs = self._session._call_method(vim_util, "get_objects",
-                    "HostSystem", ["name"])
-        vm_util._cancel_retrieve_if_necessary(self._session, host_objs)
-        for host in host_objs:
-            if hasattr(host, 'propSet'):
-                if host.propSet[0].val == host_name:
-                    return host.obj
-        return None
-
     def _create_folder_if_missing(self, ds_name, ds_ref, folder):
         """Create a folder if it does not exist.
 
