@@ -33,21 +33,18 @@ class LibvirtDmcryptTestCase(test.NoDBTestCase):
         self.KEY = bytes(bytearray(x for x in range(0, self.KEY_SIZE)))
         self.KEY_STR = binascii.hexlify(self.KEY).decode('utf-8')
 
-    @mock.patch('nova.utils.execute')
+    @mock.patch('nova.privsep.libvirt.dmcrypt_create_volume')
     def test_create_volume(self, mock_execute):
         dmcrypt.create_volume(self.TARGET, self.PATH, self.CIPHER,
             self.KEY_SIZE, self.KEY)
 
         mock_execute.assert_has_calls([
-            mock.call('cryptsetup', 'create', self.TARGET, self.PATH,
-                      '--cipher=' + self.CIPHER,
-                      '--key-size=' + str(self.KEY_SIZE),
-                      '--key-file=-', process_input=self.KEY_STR,
-                      run_as_root=True),
+            mock.call(self.TARGET, self.PATH, self.CIPHER, self.KEY_SIZE,
+                      self.KEY)
         ])
 
     @mock.patch('nova.virt.libvirt.storage.dmcrypt.LOG')
-    @mock.patch('nova.utils.execute')
+    @mock.patch('nova.privsep.libvirt.dmcrypt_create_volume')
     def test_create_volume_fail(self, mock_execute, mock_log):
         mock_execute.side_effect = processutils.ProcessExecutionError()
 
@@ -58,16 +55,16 @@ class LibvirtDmcryptTestCase(test.NoDBTestCase):
         self.assertEqual(1, mock_execute.call_count)
         self.assertEqual(1, mock_log.error.call_count)  # error logged
 
-    @mock.patch('nova.utils.execute')
+    @mock.patch('nova.privsep.libvirt.dmcrypt_delete_volume')
     def test_delete_volume(self, mock_execute):
         dmcrypt.delete_volume(self.TARGET)
 
         mock_execute.assert_has_calls([
-            mock.call('cryptsetup', 'remove', self.TARGET, run_as_root=True),
+            mock.call(self.TARGET),
         ])
 
     @mock.patch('nova.virt.libvirt.storage.dmcrypt.LOG')
-    @mock.patch('nova.utils.execute')
+    @mock.patch('nova.privsep.libvirt.dmcrypt_delete_volume')
     def test_delete_volume_fail(self, mock_execute, mock_log):
         mock_execute.side_effect = processutils.ProcessExecutionError()
 
@@ -78,7 +75,7 @@ class LibvirtDmcryptTestCase(test.NoDBTestCase):
         self.assertEqual(1, mock_log.error.call_count)  # error logged
 
     @mock.patch('nova.virt.libvirt.storage.dmcrypt.LOG')
-    @mock.patch('nova.utils.execute')
+    @mock.patch('nova.privsep.libvirt.dmcrypt_delete_volume')
     def test_delete_missing_volume(self, mock_execute, mock_log):
         mock_execute.side_effect = \
                 processutils.ProcessExecutionError(exit_code=4)

@@ -5,4 +5,4 @@ upgrade:
     rootwrap configuration.
   - |
     The following commands are no longer required to be listed in your rootwrap
-    configuration: cat; chown; readlink; tee; touch.
+    configuration: cat; chown; cryptsetup; readlink; tee; touch.

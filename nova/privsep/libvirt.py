@@ -17,8 +17,11 @@
 libvirt specific routines.
 """
 
+import binascii
 import errno
 import os
+
+from oslo_concurrency import processutils
 
 import nova.privsep
 
@@ -54,6 +57,36 @@ def _last_bytes_inner(file_like_object, num):
 
     remaining = file_like_object.tell()
     return (file_like_object.read(), remaining)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def dmcrypt_create_volume(target, device, cipher, key_size, key):
+    """Sets up a dmcrypt mapping
+
+    :param target: device mapper logical device name
+    :param device: underlying block device
+    :param cipher: encryption cipher string digestible by cryptsetup
+    :param key_size: encryption key size
+    :param key: encoded encryption key bytestring
+    """
+    cmd = ('cryptsetup',
+           'create',
+           target,
+           device,
+           '--cipher=' + cipher,
+           '--key-size=' + str(key_size),
+           '--key-file=-')
+    key = binascii.hexlify(key).decode('utf-8')
+    processutils.execute(*cmd, process_input=key)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def dmcrypt_delete_volume(target):
+    """Deletes a dmcrypt mapping
+
+    :param target: name of the mapped logical device
+    """
+    processutils.execute('cryptsetup', 'remove', target)
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
