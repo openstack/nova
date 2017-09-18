@@ -1,0 +1,12 @@
+---
+upgrade:
+  - |
+    The ``notify_on_api_faults`` config option and the ``api.fault``
+    notification it enabled have been removed. As noted in `bug 1699115`_,
+    the ``api.fault`` notification has not worked since the v2.1 API was
+    introduced. As the v2.0 API is supported with the v2.1 codebase since
+    Newton, this notification has not been emitted since Newton. Given that
+    no one has reported an issue with this in that time, it is simply
+    removed.
+
+    .. _`bug 1699115`: https://bugs.launchpad.net/nova/+bug/1699115
