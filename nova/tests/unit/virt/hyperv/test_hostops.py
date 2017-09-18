@@ -197,6 +197,7 @@ class HostOpsTestCase(test_base.HyperVBaseTestCase):
                     'memory_mb_used': mock.sentinel.MEMORY_MB_USED,
                     'local_gb': mock.sentinel.LOCAL_GB,
                     'local_gb_used': mock.sentinel.LOCAL_GB_USED,
+                    'disk_available_least': mock.sentinel.LOCAL_GB_FREE,
                     'vcpus': self.FAKE_NUM_CPUS,
                     'vcpus_used': 0,
                     'hypervisor_type': 'hyperv',
