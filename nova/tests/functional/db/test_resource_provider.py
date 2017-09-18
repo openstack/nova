@@ -1708,55 +1708,55 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
             self.assertIn(expected, traits)
 
     def test_trait_create(self):
-        t = objects.Trait(self.ctx)
+        t = rp_obj.Trait(self.ctx)
         t.name = 'CUSTOM_TRAIT_A'
         t.create()
         self.assertIn('id', t)
         self.assertEqual(t.name, 'CUSTOM_TRAIT_A')
 
     def test_trait_create_with_id_set(self):
-        t = objects.Trait(self.ctx)
+        t = rp_obj.Trait(self.ctx)
         t.name = 'CUSTOM_TRAIT_A'
         t.id = 1
         self.assertRaises(exception.ObjectActionError, t.create)
 
     def test_trait_create_without_name_set(self):
-        t = objects.Trait(self.ctx)
+        t = rp_obj.Trait(self.ctx)
         self.assertRaises(exception.ObjectActionError, t.create)
 
     def test_trait_create_duplicated_trait(self):
-        trait = objects.Trait(self.ctx)
+        trait = rp_obj.Trait(self.ctx)
         trait.name = 'CUSTOM_TRAIT_A'
         trait.create()
-        tmp_trait = objects.Trait.get_by_name(self.ctx, 'CUSTOM_TRAIT_A')
+        tmp_trait = rp_obj.Trait.get_by_name(self.ctx, 'CUSTOM_TRAIT_A')
         self.assertEqual('CUSTOM_TRAIT_A', tmp_trait.name)
-        duplicated_trait = objects.Trait(self.ctx)
+        duplicated_trait = rp_obj.Trait(self.ctx)
         duplicated_trait.name = 'CUSTOM_TRAIT_A'
         self.assertRaises(exception.TraitExists, duplicated_trait.create)
 
     def test_trait_get(self):
-        t = objects.Trait(self.ctx)
+        t = rp_obj.Trait(self.ctx)
         t.name = 'CUSTOM_TRAIT_A'
         t.create()
-        t = objects.Trait.get_by_name(self.ctx, 'CUSTOM_TRAIT_A')
+        t = rp_obj.Trait.get_by_name(self.ctx, 'CUSTOM_TRAIT_A')
         self.assertEqual(t.name, 'CUSTOM_TRAIT_A')
 
     def test_trait_get_non_existed_trait(self):
         self.assertRaises(exception.TraitNotFound,
-            objects.Trait.get_by_name, self.ctx, 'CUSTOM_TRAIT_A')
+            rp_obj.Trait.get_by_name, self.ctx, 'CUSTOM_TRAIT_A')
 
     def test_trait_destroy(self):
-        t = objects.Trait(self.ctx)
+        t = rp_obj.Trait(self.ctx)
         t.name = 'CUSTOM_TRAIT_A'
         t.create()
-        t = objects.Trait.get_by_name(self.ctx, 'CUSTOM_TRAIT_A')
+        t = rp_obj.Trait.get_by_name(self.ctx, 'CUSTOM_TRAIT_A')
         self.assertEqual(t.name, 'CUSTOM_TRAIT_A')
         t.destroy()
-        self.assertRaises(exception.TraitNotFound, objects.Trait.get_by_name,
+        self.assertRaises(exception.TraitNotFound, rp_obj.Trait.get_by_name,
                           self.ctx, 'CUSTOM_TRAIT_A')
 
     def test_trait_destroy_with_standard_trait(self):
-        t = objects.Trait(self.ctx)
+        t = rp_obj.Trait(self.ctx)
         t.id = 1
         t.name = 'HW_CPU_X86_AVX'
         self.assertRaises(exception.TraitCannotDeleteStandard, t.destroy)
@@ -1764,7 +1764,7 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
     def test_traits_get_all(self):
         trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
         for name in trait_names:
-            t = objects.Trait(self.ctx)
+            t = rp_obj.Trait(self.ctx)
             t.name = name
             t.create()
 
@@ -1774,7 +1774,7 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
     def test_traits_get_all_with_name_in_filter(self):
         trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
         for name in trait_names:
-            t = objects.Trait(self.ctx)
+            t = rp_obj.Trait(self.ctx)
             t.name = name
             t.create()
 
@@ -1790,7 +1790,7 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
     def test_traits_get_all_with_prefix_filter(self):
         trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
         for name in trait_names:
-            t = objects.Trait(self.ctx)
+            t = rp_obj.Trait(self.ctx)
             t.name = name
             t.create()
 
@@ -1818,7 +1818,7 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
         trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
         trait_objs = []
         for name in trait_names:
-            t = objects.Trait(self.ctx)
+            t = rp_obj.Trait(self.ctx)
             t.name = name
             t.create()
             trait_objs.append(t)
@@ -1856,7 +1856,7 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
         rp2.create()
 
         # Create a trait
-        t = objects.Trait(self.ctx)
+        t = rp_obj.Trait(self.ctx)
         t.name = 'CUSTOM_TRAIT_A'
         t.create()
 
@@ -1881,7 +1881,7 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
             name=uuidsentinel.fake_resource_name,
         )
         rp.create()
-        t = objects.Trait(self.ctx)
+        t = rp_obj.Trait(self.ctx)
         t.name = 'CUSTOM_TRAIT_A'
         t.create()
         rp.set_traits([t])
@@ -1902,7 +1902,7 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
         rp2.create()
         trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
         for name in trait_names:
-            t = objects.Trait(self.ctx)
+            t = rp_obj.Trait(self.ctx)
             t.name = name
             t.create()
 
@@ -1929,7 +1929,7 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
         rp2.create()
         trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
         for name in trait_names:
-            t = objects.Trait(self.ctx)
+            t = rp_obj.Trait(self.ctx)
             t.name = name
             t.create()
 
@@ -2054,7 +2054,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
 
         # Mark the shared storage pool as having inventory shared among any
         # provider associated via aggregate
-        t = objects.Trait.get_by_name(self.ctx, "MISC_SHARES_VIA_AGGREGATE")
+        t = rp_obj.Trait.get_by_name(self.ctx, "MISC_SHARES_VIA_AGGREGATE")
         ss.set_traits(rp_obj.TraitList(objects=[t]))
 
         # OK, now that has all been set up, let's verify that we get the ID of
@@ -2142,7 +2142,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
 
         # Mark the shared storage pool as having inventory shared among any
         # provider associated via aggregate
-        t = objects.Trait.get_by_name(self.ctx, "MISC_SHARES_VIA_AGGREGATE")
+        t = rp_obj.Trait.get_by_name(self.ctx, "MISC_SHARES_VIA_AGGREGATE")
         ss.set_traits(rp_obj.TraitList(objects=[t]))
 
         resources = self._requested_resources()
@@ -2641,7 +2641,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
 
         # Mark the shared storage pool as having inventory shared among any
         # provider associated via aggregate
-        t = objects.Trait.get_by_name(self.ctx, "MISC_SHARES_VIA_AGGREGATE")
+        t = rp_obj.Trait.get_by_name(self.ctx, "MISC_SHARES_VIA_AGGREGATE")
         ss.set_traits(rp_obj.TraitList(objects=[t]))
 
         # Now associate the shared storage pool and both compute nodes with the
@@ -2886,14 +2886,14 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
 
         # Mark the magic provider as having inventory shared among any provider
         # associated via aggregate
-        t = objects.Trait(
+        t = rp_obj.Trait(
             self.ctx,
             name="MISC_SHARES_VIA_AGGREGATE",
         )
         # TODO(jaypipes): Once MISC_SHARES_VIA_AGGREGATE is a standard
         # os-traits trait, we won't need to create() here. Instead, we will
         # just do:
-        # t = objects.Trait.get_by_name(
+        # t = rp_obj.Trait.get_by_name(
         #    self.context,
         #    "MISC_SHARES_VIA_AGGREGATE",
         # )
@@ -3071,7 +3071,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
         inv_list = objects.InventoryList(objects=[disk_gb])
         ss.set_inventory(inv_list)
 
-        t = objects.Trait.get_by_name(self.ctx, "MISC_SHARES_VIA_AGGREGATE")
+        t = rp_obj.Trait.get_by_name(self.ctx, "MISC_SHARES_VIA_AGGREGATE")
         ss.set_traits(rp_obj.TraitList(objects=[t]))
 
         # Put the cn1, cn2 and ss in the same aggregate

@@ -104,7 +104,7 @@ def put_trait(req):
               '"CUSTOM_" and use following characters: "A"-"Z", "0"-"9" and '
               '"_"'))
 
-    trait = objects.Trait(context)
+    trait = rp_obj.Trait(context)
     trait.name = name
 
     try:
@@ -125,7 +125,7 @@ def get_trait(req):
     name = util.wsgi_path_item(req.environ, 'name')
 
     try:
-        objects.Trait.get_by_name(context, name)
+        rp_obj.Trait.get_by_name(context, name)
     except exception.TraitNotFound as ex:
         raise webob.exc.HTTPNotFound(
             explanation=ex.format_message())
@@ -142,7 +142,7 @@ def delete_trait(req):
     name = util.wsgi_path_item(req.environ, 'name')
 
     try:
-        trait = objects.Trait.get_by_name(context, name)
+        trait = rp_obj.Trait.get_by_name(context, name)
         trait.destroy()
     except exception.TraitNotFound as ex:
         raise webob.exc.HTTPNotFound(

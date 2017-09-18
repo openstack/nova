@@ -2181,10 +2181,8 @@ class ResourceClassList(base.ObjectListBase, base.NovaObject):
         return "ResourceClassList[" + ", ".join(strings) + "]"
 
 
-@base.NovaObjectRegistry.register
+@base.NovaObjectRegistry.register_if(False)
 class Trait(base.NovaObject):
-    # Version 1.0: Initial version
-    VERSION = '1.0'
 
     # All the user-defined traits must begin with this prefix.
     CUSTOM_NAMESPACE = 'CUSTOM_'

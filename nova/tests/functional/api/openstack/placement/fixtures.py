@@ -280,7 +280,7 @@ class SharedStorageFixture(APIFixture):
 
         # Mark the shared storage pool as having inventory shared among any
         # provider associated via aggregate
-        t = objects.Trait.get_by_name(
+        t = rp_obj.Trait.get_by_name(
             self.context,
             "MISC_SHARES_VIA_AGGREGATE",
         )
