@@ -24,11 +24,10 @@ dac_admin_pctxt = priv_context.PrivContext(
     'nova',
     cfg_section='nova_dac_admin',
     pypath=__name__ + '.dac_admin_pctxt',
-    # NOTE(tonyb): These map to CAP_CHOWN, CAP_DAC_OVERRIDE,
-    #              CAP_DAC_READ_SEARCH  and CAP_FOWNER.  Some do not have
-    #              symbolic names in oslo.privsep yet.  See capabilites(7)
-    #              for more information
-    capabilities=[0, 1, 2, 3],
+    capabilities=[capabilities.CAP_CHOWN,
+                  capabilities.CAP_DAC_OVERRIDE,
+                  capabilities.CAP_DAC_READ_SEARCH,
+                  capabilities.CAP_FOWNER],
 )
 
 
@@ -37,5 +36,21 @@ dacnet_admin_pctxt = priv_context.PrivContext(
     'nova',
     cfg_section='nova_dacnet_admin',
     pypath=__name__ + '.dacnet_admin_pctxt',
-    capabilities=[0, 1, 2, 3, capabilities.CAP_NET_ADMIN],
+    capabilities=[capabilities.CAP_CHOWN,
+                  capabilities.CAP_DAC_OVERRIDE,
+                  capabilities.CAP_DAC_READ_SEARCH,
+                  capabilities.CAP_FOWNER,
+                  capabilities.CAP_NET_ADMIN],
+)
+
+sys_admin_pctxt = priv_context.PrivContext(
+    'nova',
+    cfg_section='nova_sys_admin',
+    pypath=__name__ + '.sys_admin_pctxt',
+    capabilities=[capabilities.CAP_CHOWN,
+                  capabilities.CAP_DAC_OVERRIDE,
+                  capabilities.CAP_DAC_READ_SEARCH,
+                  capabilities.CAP_FOWNER,
+                  capabilities.CAP_NET_ADMIN,
+                  capabilities.CAP_SYS_ADMIN],
 )
