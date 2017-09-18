@@ -496,7 +496,7 @@ class API(base_api.NetworkAPI):
             port_req_body = {'port': {'device_id': '', 'device_owner': ''}}
             port_req_body['port'][BINDING_HOST_ID] = None
             port_req_body['port'][BINDING_PROFILE] = {}
-            if constants.DNS_INTEGRATION in self.extensions:
+            if self._has_dns_extension():
                 port_req_body['port']['dns_name'] = ''
             try:
                 port_client.update_port(port_id, port_req_body)
@@ -1037,6 +1037,9 @@ class API(base_api.NetworkAPI):
         self._refresh_neutron_extensions_cache(context, neutron=neutron)
         return constants.MULTI_NET_EXT in self.extensions
 
+    def _has_dns_extension(self):
+        return constants.DNS_INTEGRATION in self.extensions
+
     def _get_pci_device_profile(self, pci_dev):
         dev_spec = self.pci_whitelist.get_devspec(pci_dev)
         if dev_spec:
@@ -1110,7 +1113,7 @@ class API(base_api.NetworkAPI):
                                                pci_request_id,
                                                port_req_body)
 
-        if constants.DNS_INTEGRATION in self.extensions:
+        if self._has_dns_extension():
             # If the DNS integration extension is enabled in Neutron, most
             # ports will get their dns_name attribute set in the port create or
             # update requests in allocate_for_instance. So we just add the
@@ -1136,8 +1139,7 @@ class API(base_api.NetworkAPI):
         an additional update request. Only a very small fraction of ports will
         require this additional update request.
         """
-        if (constants.DNS_INTEGRATION in self.extensions and
-            network.get('dns_domain')):
+        if self._has_dns_extension() and network.get('dns_domain'):
             try:
                 port_req_body = {'port': {'dns_name': instance.hostname}}
                 neutron.update_port(port_id, port_req_body)
