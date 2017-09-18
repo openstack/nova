@@ -983,9 +983,16 @@ class _ComputeAPIUnitTestMixIn(object):
             self.context, inst.uuid, 'finished').AndReturn(migration)
         self.compute_api._record_action_start(
             self.context, inst, instance_actions.CONFIRM_RESIZE)
+
+        def _reset_task_state(context, instance, migration, src_host,
+                              cast=False):
+            inst.update({'task_state': None})
+
+        # After confirm resize action, instance task_state is reset to None
         self.compute_api.compute_rpcapi.confirm_resize(
             self.context, inst, migration,
-            migration['source_compute'], cast=False)
+            migration['source_compute'], cast=False).WithSideEffects(
+                                                     _reset_task_state)
 
     def _test_delete_shelved_part(self, inst):
         image_api = self.compute_api.image_api
@@ -1115,6 +1122,17 @@ class _ComputeAPIUnitTestMixIn(object):
         if self.cell_type != 'api':
             if inst.vm_state == vm_states.RESIZED:
                 self._test_delete_resized_part(inst)
+
+                # After confirm resize action, instance task_state
+                # is reset to None, so is the expected value. But
+                # for soft delete, task_state will be again reset
+                # back to soft-deleting in the code to avoid status
+                # checking failure.
+                updates['task_state'] = None
+                if delete_type == 'soft_delete':
+                    inst.save()
+                    updates['task_state'] = 'soft-deleting'
+
             if inst.host is not None:
                 self.context.elevated().AndReturn(self.context)
                 objects.Service.get_by_compute_host(self.context,
@@ -1200,6 +1218,9 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def test_delete_soft_with_down_host(self):
         self._test_delete('soft_delete', host='down-host')
+
+    def test_delete_soft_in_resized(self):
+        self._test_delete('soft_delete', vm_state=vm_states.RESIZED)
 
     def test_delete_soft(self):
         self._test_delete('soft_delete')

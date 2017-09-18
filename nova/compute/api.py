@@ -1921,6 +1921,18 @@ class API(base.Base):
 
             if instance.vm_state == vm_states.RESIZED:
                 self._confirm_resize_on_deleting(context, instance)
+                # NOTE(neha_alhat): After confirm resize vm_state will become
+                # 'active' and task_state will be set to 'None'. But for soft
+                # deleting a vm, the _do_soft_delete callback requires
+                # task_state in 'SOFT_DELETING' status. So, we need to set
+                # task_state as 'SOFT_DELETING' again for soft_delete case.
+                # After confirm resize and before saving the task_state to
+                # "SOFT_DELETING", during the short window, user can submit
+                # soft delete vm request again and system will accept and
+                # process it without any errors.
+                if delete_type == 'soft_delete':
+                    instance.task_state = instance_attrs['task_state']
+                    instance.save()
 
             is_local_delete = True
             try:
