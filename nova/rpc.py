@@ -337,6 +337,7 @@ class LegacyValidatingNotifier(object):
         'compute.instance.volume.attach',
         'compute.instance.volume.detach',
         'compute.libvirt.error',
+        'compute.metrics.update',
         'compute_task.build_instances',
         'compute_task.migrate_server',
         'compute_task.rebuild_server',
