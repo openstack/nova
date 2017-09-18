@@ -4,8 +4,5 @@ upgrade:
     A sys-admin privsep daemon has been added and needs to be included in your
     rootwrap configuration.
   - |
-    A dacnet-admin privsep daemon has been added and needs to be included in
-    your rootwrap configuration.
-  - |
     The following commands are no longer required to be listed in your rootwrap
     configuration: cat; chown; readlink; tee; touch.

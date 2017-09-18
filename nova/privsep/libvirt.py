@@ -56,14 +56,14 @@ def _last_bytes_inner(file_like_object, num):
     return (file_like_object.read(), remaining)
 
 
-@nova.privsep.dacnet_admin_pctxt.entrypoint
+@nova.privsep.sys_admin_pctxt.entrypoint
 def enable_hairpin(interface):
     """Enable hairpin mode for a libvirt guest."""
     with open('/sys/class/net/%s/brport/hairpin_mode' % interface, 'w') as f:
         f.write('1')
 
 
-@nova.privsep.dacnet_admin_pctxt.entrypoint
+@nova.privsep.sys_admin_pctxt.entrypoint
 def disable_multicast_snooping(interface):
     """Disable multicast snooping for a bridge."""
     with open('/sys/class/net/%s/bridge/multicast_snooping' % interface,
@@ -71,7 +71,7 @@ def disable_multicast_snooping(interface):
         f.write('0')
 
 
-@nova.privsep.dacnet_admin_pctxt.entrypoint
+@nova.privsep.sys_admin_pctxt.entrypoint
 def disable_ipv6(interface):
     """Disable ipv6 for a bridge."""
     with open('/proc/sys/net/ipv6/conf/%s/disable_ipv' % interface, 'w') as f:
