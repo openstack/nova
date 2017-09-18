@@ -23,7 +23,7 @@ from oslo_utils import excutils
 
 from nova import exception
 from nova.i18n import _
-import nova.privsep.dac_admin
+import nova.privsep.path
 from nova import utils
 from nova.virt.disk.mount import api as mount_api
 from nova.virt.disk.vfs import api as vfs
@@ -41,7 +41,7 @@ class VFSLocalFS(vfs.VFS):
     path with '..' in it will hit this safeguard.
     """
     def _canonical_path(self, path):
-        canonpath = nova.privsep.dac_admin.readlink(path)
+        canonpath = nova.privsep.path.readlink(path)
         if not canonpath.startswith(os.path.realpath(self.imgdir) + '/'):
             raise exception.Invalid(_('File path %s not valid') % path)
         return canonpath
@@ -100,32 +100,32 @@ class VFSLocalFS(vfs.VFS):
 
     def make_path(self, path):
         LOG.debug("Make directory path=%s", path)
-        nova.privsep.dac_admin.makedirs(self._canonical_path(path))
+        nova.privsep.path.makedirs(self._canonical_path(path))
 
     def append_file(self, path, content):
         LOG.debug("Append file path=%s", path)
-        return nova.privsep.dac_admin.writefile(
+        return nova.privsep.path.writefile(
             self._canonical_path(path), 'a', content)
 
     def replace_file(self, path, content):
         LOG.debug("Replace file path=%s", path)
-        return nova.privsep.dac_admin.writefile(
+        return nova.privsep.path.writefile(
             self._canonical_path(path), 'w', content)
 
     def read_file(self, path):
         LOG.debug("Read file path=%s", path)
-        return nova.privsep.dac_admin.readfile(self._canonical_path(path))
+        return nova.privsep.path.readfile(self._canonical_path(path))
 
     def has_file(self, path):
         # NOTE(mikal): it is deliberate that we don't generate a canonical
         # path here, as that tests for existance and would raise an exception.
         LOG.debug("Has file path=%s", path)
-        return nova.privsep.dac_admin.path.exists(path)
+        return nova.privsep.path.path.exists(path)
 
     def set_permissions(self, path, mode):
         LOG.debug("Set permissions path=%(path)s mode=%(mode)o",
                   {'path': path, 'mode': mode})
-        nova.privsep.dac_admin.chmod(self._canonical_path(path), mode)
+        nova.privsep.path.chmod(self._canonical_path(path), mode)
 
     def set_ownership(self, path, user, group):
         LOG.debug("Set permissions path=%(path)s "
@@ -138,7 +138,7 @@ class VFSLocalFS(vfs.VFS):
             chown_kwargs['uid'] = pwd.getpwnam(user).pw_uid
         if group:
             chown_kwargs['gid'] = grp.getgrnam(group).gr_gid
-        nova.privsep.dac_admin.chown(canonpath, **chown_kwargs)
+        nova.privsep.path.chown(canonpath, **chown_kwargs)
 
     def get_image_fs(self):
         if self.mount.device or self.mount.get_dev():

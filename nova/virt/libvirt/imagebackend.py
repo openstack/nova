@@ -33,7 +33,7 @@ import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import image
-from nova.privsep import dac_admin
+import nova.privsep.path
 from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt.image import model as imgmodel
@@ -541,7 +541,7 @@ class Flat(Image):
 
             # NOTE(mikal): Update the mtime of the base file so the image
             # cache manager knows it is in use.
-            dac_admin.utime(base)
+            nova.privsep.path.utime(base)
             self.verify_base_size(base, size)
             if not os.path.exists(self.path):
                 with fileutils.remove_path_on_error(self.path):
@@ -597,7 +597,7 @@ class Qcow2(Image):
 
         # NOTE(ankit): Update the mtime of the base file so the image
         # cache manager knows it is in use.
-        dac_admin.utime(base)
+        nova.privsep.path.utime(base)
         self.verify_base_size(base, size)
 
         legacy_backing_size = None
@@ -1091,7 +1091,7 @@ class Ploop(Image):
                 prepare_template(target=base, *args, **kwargs)
             else:
                 # Disk already exists in cache, just update time
-                dac_admin.utime(base)
+                nova.privsep.path.utime(base)
             self.verify_base_size(base, size)
 
             if os.path.exists(self.path):

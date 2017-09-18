@@ -9690,7 +9690,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                               self.context, instance,
                               "/fake/instance/dir", disk_info)
 
-    @mock.patch('nova.privsep.dac_admin.utime')
+    @mock.patch('nova.privsep.path.utime')
     def test_create_images_and_backing_images_not_exist_fallback(self,
                                                                  mock_utime):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -9772,7 +9772,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                             '/fake/instance/dir', disk_info)
         self.assertFalse(mock_fetch_image.called)
 
-    @mock.patch('nova.privsep.dac_admin.utime')
+    @mock.patch('nova.privsep.path.utime')
     def test_create_images_and_backing_ephemeral_gets_created(self,
                                                               mock_utime):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -11168,7 +11168,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                           'myVol', '/dev/something',
                                           run_as_root=True)
 
-    @mock.patch('nova.privsep.dac_admin.utime')
+    @mock.patch('nova.privsep.path.utime')
     def test_create_ephemeral_specified_fs_not_valid(self, mock_utime):
         CONF.set_override('default_ephemeral_format', 'ext4')
         ephemerals = [{'device_type': 'disk',
@@ -11382,7 +11382,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('nova.privsep.libvirt.last_bytes',
                 return_value=(b'67890', 0))
-    @mock.patch('nova.privsep.dac_admin.writefile')
+    @mock.patch('nova.privsep.path.writefile')
     def test_get_console_output_pty(self, mocked_writefile, mocked_last_bytes,
                                     mocked_path_exists):
         with utils.tempdir() as tmpdir:
@@ -15113,7 +15113,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 mock.sentinel.new_connection_info, 'vdb', instance)
 
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
-    @mock.patch('nova.privsep.dac_admin.chown')
+    @mock.patch('nova.privsep.path.chown')
     def _test_live_snapshot(self, mock_chown, mock_is_job_complete,
                             can_quiesce=False, require_quiesce=False):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
