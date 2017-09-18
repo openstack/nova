@@ -2275,6 +2275,32 @@ def instance_get_all_by_filters_sort(context, filters, limit=None, marker=None,
     return _instances_fill_metadata(context, query_prefix.all(), manual_joins)
 
 
+@require_context
+@pick_context_manager_reader_allow_async
+def instance_get_by_sort_filters(context, sort_keys, sort_dirs, values):
+    """Attempt to get a single instance based on a combination of sort
+    keys, directions and filter values. This is used to try to find a
+    marker instance when we don't have a marker uuid.
+
+    This returns just a uuid of the instance that matched.
+    """
+    query = context.session.query(models.Instance.uuid)
+    for skey, sdir, val in zip(sort_keys, sort_dirs, values):
+        col = getattr(models.Instance, skey)
+        if sdir == 'asc':
+            query = query.filter(col >= val).order_by(col)
+        else:
+            query = query.filter(col <= val).order_by(col.desc())
+
+    # We can't raise InstanceNotFound because we don't have a uuid to
+    # be looking for, so just return nothing if no match.
+    result = query.limit(1).first()
+    if result:
+        return result[0]
+    else:
+        return result
+
+
 def _db_connection_type(db_connection):
     """Returns a lowercase symbol for the db type.
 
