@@ -5923,61 +5923,21 @@ class TestNeutronv2AutoAllocateNetwork(test.NoDBTestCase):
         self.api = neutronapi.API()
         self.context = context.RequestContext(uuids.user_id, uuids.project_id)
 
-    def test__has_auto_allocate_extension_empty(self):
-        # Tests that the extension is not available but we refresh the list.
-        self.api.extensions = {}
-        with mock.patch.object(self.api,
-                               '_refresh_neutron_extensions_cache') as refresh:
-            self.assertFalse(
-                self.api._has_auto_allocate_extension(self.context))
-        # refresh is called because the extensions dict is empty
-        refresh.assert_called_once_with(self.context, neutron=None)
-
-    def test__has_auto_allocate_extension_false(self):
-        # Tests that the extension is not available and don't refresh the list.
-        self.api.extensions = {'foo': 'bar'}
-        with mock.patch.object(self.api,
-                               '_refresh_neutron_extensions_cache') as refresh:
-            self.assertFalse(
-                self.api._has_auto_allocate_extension(self.context))
-        self.assertFalse(refresh.called)
-
-    def test__has_auto_allocate_extension_refresh_ok(self):
-        # Tests the happy path with refresh.
-        self.api.extensions = {constants.AUTO_ALLOCATE_TOPO_EXT: mock.Mock()}
-        with mock.patch.object(self.api,
-                               '_refresh_neutron_extensions_cache') as refresh:
-            self.assertTrue(
-                self.api._has_auto_allocate_extension(
-                    self.context, refresh_cache=True))
-        refresh.assert_called_once_with(self.context, neutron=None)
-
-    def test__can_auto_allocate_network_no_extension(self):
-        # Tests when the auto-allocated-topology extension is not available.
-        with mock.patch.object(self.api, '_has_auto_allocate_extension',
-                               return_value=False):
-            self.assertFalse(self.api._can_auto_allocate_network(
-                self.context, mock.sentinel.neutron))
-
     def test__can_auto_allocate_network_validation_conflict(self):
         # Tests that the dry-run validation with neutron fails (not ready).
         ntrn = mock.Mock()
         ntrn.validate_auto_allocated_topology_requirements.side_effect = \
             exceptions.Conflict
-        with mock.patch.object(self.api, '_has_auto_allocate_extension',
-                               return_value=True):
-            self.assertFalse(self.api._can_auto_allocate_network(
-                self.context, ntrn))
+        self.assertFalse(self.api._can_auto_allocate_network(
+            self.context, ntrn))
         validate = ntrn.validate_auto_allocated_topology_requirements
         validate.assert_called_once_with(uuids.project_id)
 
     def test__can_auto_allocate_network(self):
         # Tests the happy path.
         ntrn = mock.Mock()
-        with mock.patch.object(self.api, '_has_auto_allocate_extension',
-                               return_value=True):
-            self.assertTrue(self.api._can_auto_allocate_network(
-                self.context, ntrn))
+        self.assertTrue(self.api._can_auto_allocate_network(
+            self.context, ntrn))
         validate = ntrn.validate_auto_allocated_topology_requirements
         validate.assert_called_once_with(uuids.project_id)
 

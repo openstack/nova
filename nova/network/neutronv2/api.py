@@ -1033,12 +1033,6 @@ class API(base_api.NetworkAPI):
             self.extensions.clear()
             self.extensions = {ext['name']: ext for ext in extensions_list}
 
-    def _has_auto_allocate_extension(self, context, refresh_cache=False,
-                                     neutron=None):
-        if refresh_cache or not self.extensions:
-            self._refresh_neutron_extensions_cache(context, neutron=neutron)
-        return constants.AUTO_ALLOCATE_TOPO_EXT in self.extensions
-
     def _has_multi_provider_extension(self, context, neutron=None):
         self._refresh_neutron_extensions_cache(context, neutron=neutron)
         return constants.MULTI_NET_EXT in self.extensions
@@ -1527,23 +1521,17 @@ class API(base_api.NetworkAPI):
         :returns: True if it's possible to auto-allocate networks, False
                   otherwise.
         """
-        # check that the auto-allocated-topology extension is available
-        if self._has_auto_allocate_extension(context, neutron=neutron):
-            # run the dry-run validation, which will raise a 409 if not ready
-            try:
-                neutron.validate_auto_allocated_topology_requirements(
-                    context.project_id)
-                LOG.debug('Network auto-allocation is available for project '
-                          '%s', context.project_id)
-            except neutron_client_exc.Conflict as ex:
-                LOG.debug('Unable to auto-allocate networks. %s',
-                          six.text_type(ex))
-            else:
-                return True
-        else:
-            LOG.debug('Unable to auto-allocate networks. The neutron '
-                      'auto-allocated-topology extension is not available.')
-        return False
+        # run the dry-run validation, which will raise a 409 if not ready
+        try:
+            neutron.validate_auto_allocated_topology_requirements(
+                context.project_id)
+            LOG.debug('Network auto-allocation is available for project '
+                      '%s', context.project_id)
+            return True
+        except neutron_client_exc.Conflict as ex:
+            LOG.debug('Unable to auto-allocate networks. %s',
+                      six.text_type(ex))
+            return False
 
     def _auto_allocate_network(self, instance, neutron):
         """Automatically allocates a network for the given project.
