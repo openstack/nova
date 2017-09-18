@@ -1040,6 +1040,10 @@ class API(base_api.NetworkAPI):
     def _has_dns_extension(self):
         return constants.DNS_INTEGRATION in self.extensions
 
+    def _has_qos_queue_extension(self, context, neutron=None):
+        self._refresh_neutron_extensions_cache(context, neutron=neutron)
+        return constants.QOS_QUEUE in self.extensions
+
     def _get_pci_device_profile(self, pci_dev):
         dev_spec = self.pci_whitelist.get_devspec(pci_dev)
         if dev_spec:
@@ -1103,8 +1107,7 @@ class API(base_api.NetworkAPI):
 
         If the extensions loaded contain QOS_QUEUE then pass the rxtx_factor.
         """
-        self._refresh_neutron_extensions_cache(context, neutron=neutron)
-        if constants.QOS_QUEUE in self.extensions:
+        if self._has_qos_queue_extension(context, neutron=neutron):
             flavor = instance.get_flavor()
             rxtx_factor = flavor.get('rxtx_factor')
             port_req_body['port']['rxtx_factor'] = rxtx_factor
