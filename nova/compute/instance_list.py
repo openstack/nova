@@ -74,7 +74,11 @@ def get_instances_sorted(ctx, filters, limit, marker, columns_to_join,
     This function is a generator of instances from the database like what you
     would get from instance_get_all_by_filters_sort() in the DB API.
 
-    FIXME: Make limit work
+    NOTE: Since we do these in parallel, a nonzero limit will be passed
+    to each database query, although the limit will be enforced in the
+    output of this function. Meaning, we will still query $limit from each
+    database, but only return $limit total results.
+
     FIXME: Make marker work
     """
 
@@ -112,8 +116,18 @@ def get_instances_sorted(ctx, filters, limit, marker, columns_to_join,
     # handle this anywhere yet anyway.
     results = context.scatter_gather_all_cells(ctx, do_query)
 
+    # If a limit was provided, and passed to the per-cell query routines.
+    # That means we have NUM_CELLS * limit items across results. So, we
+    # need to consume from that limit below and stop returning results.
+    limit = limit or 0
+
     # Generate results from heapq so we can return the inner
     # instance instead of the wrapper. This is basically free
     # as it works as our caller iterates the results.
     for i in heapq.merge(*results.values()):
         yield i._db_instance
+        limit -= 1
+        if limit == 0:
+            # We'll only hit this if limit was nonzero and we just generated
+            # our last one
+            return
