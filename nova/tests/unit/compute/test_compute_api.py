@@ -1037,6 +1037,13 @@ class _ComputeAPIUnitTestMixIn(object):
         mock_confirm = self.useFixture(
             fixtures.MockPatchObject(rpcapi, 'confirm_resize')).mock
 
+        def _reset_task_state(context, instance, migration, src_host,
+                              cast=False):
+            inst.update({'task_state': None})
+
+        # After confirm resize action, instance task_state is reset to None
+        mock_confirm.side_effect = _reset_task_state
+
         is_shelved = inst.vm_state in (vm_states.SHELVED,
                                        vm_states.SHELVED_OFFLOADED)
         if is_shelved:
@@ -1079,6 +1086,17 @@ class _ComputeAPIUnitTestMixIn(object):
                 expected_record_calls.append(
                     mock.call(self.context, inst,
                               instance_actions.CONFIRM_RESIZE))
+
+                # After confirm resize action, instance task_state
+                # is reset to None, so is the expected value. But
+                # for soft delete, task_state will be again reset
+                # back to soft-deleting in the code to avoid status
+                # checking failure.
+                updates['task_state'] = None
+                if delete_type == 'soft_delete':
+                    expected_save_calls.append(mock.call())
+                    updates['task_state'] = 'soft-deleting'
+
             if inst.host is not None:
                 mock_elevated.return_value = self.context
                 expected_elevated_calls.append(mock.call())
@@ -1221,6 +1239,9 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def test_delete_soft_with_down_host(self):
         self._test_delete('soft_delete', host='down-host')
+
+    def test_delete_soft_in_resized(self):
+        self._test_delete('soft_delete', vm_state=vm_states.RESIZED)
 
     def test_delete_soft(self):
         self._test_delete('soft_delete')
