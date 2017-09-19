@@ -684,6 +684,20 @@ class ServersControllerTest(ControllerTest):
         self.assertRaises(exception.ValidationError,
                           self.controller.index, req)
 
+    def test_get_servers_with_empty_regex_filter_param(self):
+        empty_string = ''
+        req = self.req('/fake/servers?flavor=%s' % empty_string,
+                       use_admin_context=True)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.index, req)
+
+    def test_get_servers_detail_with_empty_regex_filter_param(self):
+        empty_string = ''
+        req = self.req('/fake/servers/detail?flavor=%s' % empty_string,
+                       use_admin_context=True)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.detail, req)
+
     def test_get_servers_invalid_sort_key(self):
         req = self.req('/fake/servers?sort_key=foo&sort_dir=desc')
         self.assertRaises(exception.ValidationError,
