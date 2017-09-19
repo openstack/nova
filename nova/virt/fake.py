@@ -26,6 +26,7 @@ semantics of real hypervisor connections.
 import collections
 import contextlib
 import copy
+import time
 
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -665,3 +666,39 @@ class FakeUnshelveSpawnFailDriver(FakeDriver):
         super(FakeUnshelveSpawnFailDriver, self).spawn(
             context, instance, image_meta, injected_files,
             admin_password, allocations, network_info, block_device_info)
+
+
+class FakeLiveMigrateDriver(FakeDriver):
+    """FakeDriver derivative to handle force_complete and abort calls.
+
+    This module serves those tests that need to abort or force-complete
+    the live migration, thus the live migration will never be finished
+    without the force_complete_migration or delete_migration API calls.
+
+    """
+
+    def __init__(self, virtapi, read_only=False):
+        super(FakeLiveMigrateDriver, self).__init__(virtapi, read_only)
+        self._migrating = True
+        self._abort_migration = True
+
+    def live_migration(self, context, instance, dest,
+                       post_method, recover_method, block_migration=False,
+                       migrate_data=None):
+        self._abort_migration = False
+        self._migrating = True
+        while self._migrating:
+            time.sleep(0.1)
+
+        if self._abort_migration:
+            recover_method(context, instance, dest)
+        else:
+            post_method(context, instance, dest, block_migration,
+                        migrate_data)
+
+    def live_migration_force_complete(self, instance):
+        self._migrating = False
+
+    def live_migration_abort(self, instance):
+        self._abort_migration = True
+        self._migrating = False
