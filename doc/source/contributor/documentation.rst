@@ -1,8 +1,8 @@
-===========================
- Documentation Guide Lines
-===========================
+========================
+Documentation Guidelines
+========================
 
-These are some basic guidelines for contributing to documentation in Nova.
+These are some basic guidelines for contributing to documentation in nova.
 
 Review Guidelines
 =================
@@ -10,15 +10,17 @@ Review Guidelines
 Documentation-only patches differ from code patches in a few ways.
 
 * They are often written by users / operators that aren't plugged into daily
-  cycles of nova or on irc
-* Outstanding patches are far more likely to trigger merge conflict in git than
+  cycles of nova or on IRC
+
+* Outstanding patches are far more likely to trigger merge conflict in Git than
   code patches
+
 * There may be wide variation on points of view of what the "best" or
   "clearest" way is to say a thing
 
 This all can lead to a large number of practical documentation improvements
 stalling out because the author submitted the fix, and does not have the time
-to merge conflict chase or is used to the gerrit follow up model.
+to merge conflict chase or is used to the Gerrit follow up model.
 
 As such, documentation patches should be evaluated in the basic context of "does
 this make things better than the current tree". Patches are cheap, it can
@@ -30,12 +32,12 @@ How users consume docs
 ======================
 
 The current primary target for all documentation in nova is the web. While it
-is theoretically possible to generate pdf versions of the content, the tree is
+is theoretically possible to generate PDF versions of the content, the tree is
 not currently well structured for that, and it's not clear there is an audience
 for that.
 
 The main nova docs tree ``doc/source`` is published per release, so there will
-be copies of all of this as both the ``latest`` url (which is master), and for
+be copies of all of this as both the ``latest`` URL (which is master), and for
 every stable release (e.g. ``pike``).
 
 .. note::
@@ -45,7 +47,7 @@ every stable release (e.g. ``pike``).
    unimproved as we address content in ``latest``.
 
 The ``api-ref`` and ``api-guide`` publish only from master to a single site on
-developer.openstack.org. As such, they are effectively branchless.
+`developer.openstack.org`. As such, they are effectively branchless.
 
 Guidelines for consumable docs
 ==============================
@@ -60,7 +62,7 @@ Guidelines for consumable docs
   Providing these summaries helps the new consumer come up to speed more
   quickly.
 
-* Doc moves require .htaccess redirects
+* Doc moves require ``.htaccess`` redirects
 
   If a file is moved in a documentation source tree, we should be aware that it
   might be linked from external sources, and is now a ``404 Not Found`` error
