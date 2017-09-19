@@ -2522,6 +2522,22 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
             sys_meta = utils.metadata_to_dict(inst['system_metadata'])
             self.assertEqual(sys_meta, {})
 
+    def test_instance_get_all_by_filters_with_fault(self):
+        inst = self.create_instance_with_args()
+        result = db.instance_get_all_by_filters(self.ctxt, {},
+                                                columns_to_join=['fault'])
+        self.assertIsNone(result[0]['fault'])
+        db.instance_fault_create(self.ctxt,
+                                 {'instance_uuid': inst['uuid'],
+                                  'code': 123})
+        fault2 = db.instance_fault_create(self.ctxt,
+                                          {'instance_uuid': inst['uuid'],
+                                           'code': 123})
+        result = db.instance_get_all_by_filters(self.ctxt, {},
+                                                columns_to_join=['fault'])
+        # Make sure we get the latest fault
+        self.assertEqual(fault2['id'], result[0]['fault']['id'])
+
     def test_instance_get_all_by_filters(self):
         instances = [self.create_instance_with_args() for i in range(3)]
         filtered_instances = db.instance_get_all_by_filters(self.ctxt, {})
@@ -2639,6 +2655,9 @@ class InstanceTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_instance_get_by_uuid(self):
         inst = self.create_instance_with_args()
         result = db.instance_get_by_uuid(self.ctxt, inst['uuid'])
+        # instance_create() will return a fault=None, so delete it before
+        # comparing the result of instance_get_by_uuid()
+        del inst.fault
         self._assertEqualInstances(inst, result)
 
     def test_instance_get_by_uuid_join_empty(self):
