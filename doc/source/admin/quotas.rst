@@ -276,7 +276,7 @@ current quota values and the current quota usage:
 
 .. code-block:: console
 
-   $ nova limits --tenant PROJET_NAME
+   $ nova limits --tenant PROJECT_NAME
 
    +------+-----+-------+--------+------+----------------+
    | Verb | URI | Value | Remain | Unit | Next_Available |
