@@ -60,8 +60,8 @@ Configure nova-api (Controller)
       [pci]
       alias = { "vendor_id":"8086", "product_id":"154d", "device_type":"type-PF", "name":"a1" }
 
-   For more information about the syntax of ``alias``, refer to `nova.conf
-   configuration options`_.
+   For more information about the syntax of ``alias``, refer to
+   :doc:`/configuration/config`.
 
 #. Restart the ``nova-api`` service.
 
@@ -76,7 +76,7 @@ Configure a flavor to request two PCI devices, each with ``vendor_id`` of
    # openstack flavor set m1.large --property "pci_passthrough:alias"="a1:2"
 
 For more information about the syntax for ``pci_passthrough:alias``, refer to
-`flavor`_.
+:doc:`/admin/flavors`.
 
 Enable PCI passthrough (Compute)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -106,7 +106,7 @@ Configure PCI devices (Compute)
    the pool of PCI devices available for passthrough to VMs.
 
    For more information about the syntax of ``passthrough_whitelist``,
-   refer to `nova.conf configuration options`_.
+   refer to :doc:`/configuration/config`.
 
 #. Specify the PCI alias for the device.
 
@@ -124,8 +124,7 @@ Configure PCI devices (Compute)
       [pci]
       alias = { "vendor_id":"8086", "product_id":"154d", "device_type":"type-PF", "name":"a1" }
 
-   For more information about the syntax of ``alias``, refer to `nova.conf
-   configuration options`_.
+   For more information about the syntax of ``alias``, refer to :doc:`/configuration/config`.
 
 #. Restart the ``nova-compute`` service.
 
@@ -141,8 +140,6 @@ available with the specified ``vendor_id`` and ``product_id`` that matches the
    # openstack server create --flavor m1.large --image cirros-0.3.5-x86_64-uec --wait test-pci
 
 .. Links
-.. _`Create Virtual Functions`: https://docs.openstack.org/ocata/networking-guide/config-sriov.html#create-virtual-functions-compute
-.. _`Configure nova-scheduler`: https://docs.openstack.org/ocata/networking-guide/config-sriov.html#configure-nova-scheduler-controller
-.. _`nova.conf configuration options`: https://docs.openstack.org/ocata/config-reference/compute/config-options.html
-.. _`flavor`: https://docs.openstack.org/admin-guide/compute-flavors.html
-.. _`Networking Guide`: https://docs.openstack.org/ocata/networking-guide/config-sriov.html
+.. _`Create Virtual Functions`: https://docs.openstack.org/neutron/latest/admin/config-sriov.html#create-virtual-functions-compute
+.. _`Configure nova-scheduler`: https://docs.openstack.org/neutron/latest/admin/config-sriov.html#configure-nova-scheduler-controller
+.. _`Networking Guide`: https://docs.openstack.org/neutron/latest/admin/config-sriov.html

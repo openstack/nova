@@ -1189,7 +1189,7 @@ addresses:
     in a state set in the ``hide_server_address_states`` configuration option.
     By default, servers in ``building`` state hide their addresses information.
     See ``nova.conf`` `configuration options
-    <https://docs.openstack.org/ocata/config-reference/compute/config-options.html>`_
+    <https://docs.openstack.org/nova/latest/configuration/config.html>`_
     for more information.
   in: body
   required: true

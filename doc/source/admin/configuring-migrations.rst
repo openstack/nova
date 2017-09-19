@@ -52,8 +52,7 @@ The migration types are:
   - **Block live migration**, or simply block migration.  The instance has
     ephemeral disks that are not shared between the source and destination
     hosts.  Block migration is incompatible with read-only devices such as
-    CD-ROMs and `Configuration Drive (config\_drive)
-    <https://docs.openstack.org/user-guide/cli-config-drive.html>`_.
+    CD-ROMs and Configuration Drive (config\_drive).
 
   - **Volume-backed live migration**. Instances use volumes rather than
     ephemeral disks.
@@ -314,8 +313,7 @@ memory-intensive instances succeed.
 .. but perhaps I am missing something.
 
 The full list of live migration configuration parameters is documented in the
-`OpenStack Configuration Reference Guide
-<https://docs.openstack.org/ocata/config-reference/compute/config-options.html>`_
+:doc:`Nova Configuration Options </configuration/config>`
 
 .. _configuring-migrations-xenserver:
 
