@@ -44,6 +44,7 @@ from nova import block_device
 from nova.cells import opts as cells_opts
 from nova.compute import flavors
 from nova.compute import instance_actions
+from nova.compute import instance_list
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
@@ -2384,6 +2385,51 @@ class API(base.Base):
         # Only subtract from limit if it is not None
         limit = (limit - len(build_req_instances)) if limit else limit
 
+        fields = ['metadata', 'system_metadata', 'info_cache',
+                  'security_groups']
+        if expected_attrs:
+            fields.extend(expected_attrs)
+
+        if CONF.cells.enable:
+            insts = self._do_old_style_instance_list_for_poor_cellsv1_users(
+                context, filters, limit, marker, expected_attrs, sort_keys,
+                sort_dirs)
+        else:
+            insts = instance_list.get_instance_objects_sorted(
+                context, filters, limit, marker, fields, sort_keys, sort_dirs)
+
+        def _get_unique_filter_method():
+            seen_uuids = set()
+
+            def _filter(instance):
+                if instance.uuid in seen_uuids:
+                    return False
+                seen_uuids.add(instance.uuid)
+                return True
+
+            return _filter
+
+        filter_method = _get_unique_filter_method()
+        # Only subtract from limit if it is not None
+        limit = (limit - len(insts)) if limit else limit
+        # TODO(alaski): Clean up the objects concatenation when List objects
+        # support it natively.
+        instances = objects.InstanceList(
+            objects=list(filter(filter_method,
+                           build_req_instances.objects +
+                           insts.objects)))
+
+        if filter_ip:
+            instances = self._ip_filter(instances, filters, orig_limit)
+
+        return instances
+
+    def _do_old_style_instance_list_for_poor_cellsv1_users(self,
+                                                           context, filters,
+                                                           limit, marker,
+                                                           expected_attrs,
+                                                           sort_keys,
+                                                           sort_dirs):
         try:
             cell0_mapping = objects.CellMapping.get_by_uuid(context,
                 objects.CellMapping.CELL0_UUID)
@@ -2409,51 +2455,19 @@ class API(base.Base):
         # instance lists should be proxied to project Searchlight, or a similar
         # alternative.
         if limit is None or limit > 0:
-            if not CONF.cells.enable:
-                cell_instances = self._get_instances_by_filters_all_cells(
-                        context, filters,
-                        limit=limit, marker=marker,
-                        expected_attrs=expected_attrs, sort_keys=sort_keys,
-                        sort_dirs=sort_dirs)
-            else:
-                # NOTE(melwitt): If we're on cells v1, we need to read
-                # instances from the top-level database because reading from
-                # cells results in changed behavior, because of the syncing.
-                # We can remove this path once we stop supporting cells v1.
-                cell_instances = self._get_instances_by_filters(
-                    context, filters, limit=limit, marker=marker,
-                    expected_attrs=expected_attrs, sort_keys=sort_keys,
-                    sort_dirs=sort_dirs)
+            # NOTE(melwitt): If we're on cells v1, we need to read
+            # instances from the top-level database because reading from
+            # cells results in changed behavior, because of the syncing.
+            # We can remove this path once we stop supporting cells v1.
+            cell_instances = self._get_instances_by_filters(
+                context, filters, limit=limit, marker=marker,
+                expected_attrs=expected_attrs, sort_keys=sort_keys,
+                sort_dirs=sort_dirs)
         else:
             LOG.debug('Limit excludes any results from real cells')
             cell_instances = objects.InstanceList(objects=[])
 
-        def _get_unique_filter_method():
-            seen_uuids = set()
-
-            def _filter(instance):
-                if instance.uuid in seen_uuids:
-                    return False
-                seen_uuids.add(instance.uuid)
-                return True
-
-            return _filter
-
-        filter_method = _get_unique_filter_method()
-        # Only subtract from limit if it is not None
-        limit = (limit - len(cell_instances)) if limit else limit
-        # TODO(alaski): Clean up the objects concatenation when List objects
-        # support it natively.
-        instances = objects.InstanceList(
-            objects=list(filter(filter_method,
-                           build_req_instances.objects +
-                           cell0_instances.objects +
-                           cell_instances.objects)))
-
-        if filter_ip:
-            instances = self._ip_filter(instances, filters, orig_limit)
-
-        return instances
+        return cell0_instances + cell_instances
 
     @staticmethod
     def _ip_filter(inst_models, filters, limit):
@@ -2480,58 +2494,6 @@ class API(base.Base):
                 if limit and len(result_objs) == limit:
                     break
         return objects.InstanceList(objects=result_objs)
-
-    def _get_instances_by_filters_all_cells(self, context, *args, **kwargs):
-        """This is just a wrapper that iterates (non-zero) cells."""
-        load_cells()
-        if len(CELLS) == 1:
-            # We always expect at least two cells; one for cell0 and one for at
-            # least a single main cell. If there is only one cell it indicates
-            # that nova-api was started before all of the cells were mapped and
-            # we should provide a warning to the operator.
-            LOG.warning('At least two cells are expected but only one '
-                        'was found (%s). cell0 and the initial main cell '
-                        'should be created before starting nova-api since '
-                        'the cells are cached in each worker. When you '
-                        'create more cells, you will need to restart the '
-                        'nova-api service to reset the cache.',
-                        CELLS[0].identity)
-
-        limit = kwargs.pop('limit', None)
-
-        instances = []
-        for cell in CELLS:
-            if cell.uuid == objects.CellMapping.CELL0_UUID:
-                LOG.debug('Skipping already-collected cell0 list')
-                continue
-            LOG.debug('Listing %s instances in cell %s',
-                      limit or 'all', cell.identity)
-            with nova_context.target_cell(context, cell) as ccontext:
-                try:
-                    cell_insts = self._get_instances_by_filters(ccontext,
-                                                                *args,
-                                                                limit=limit,
-                                                                **kwargs)
-                except exception.MarkerNotFound:
-                    # NOTE(danms): We need to keep looking through the
-                    # later cells to find the marker
-                    continue
-                instances.extend(cell_insts)
-                # NOTE(danms): We must have found a marker if we had one,
-                # so make sure we don't require a marker in the next cell
-                kwargs['marker'] = None
-                if limit:
-                    limit -= len(cell_insts)
-                    if limit <= 0:
-                        break
-
-        marker = kwargs.get('marker')
-        if marker is not None and len(instances) == 0:
-            # NOTE(danms): If we did not find the marker in any cell,
-            # mimic the db_api behavior here.
-            raise exception.MarkerNotFound(marker=marker)
-
-        return objects.InstanceList(objects=instances)
 
     def _get_instances_by_filters(self, context, filters,
                                   limit=None, marker=None, expected_attrs=None,

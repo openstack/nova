@@ -10891,12 +10891,13 @@ class ComputeAPIIpFilterTestCase(test.NoDBTestCase):
                                          mock_buildreq_get):
         c = context.get_admin_context()
         # Limit is not supplied to the DB when using an IP filter
-        with mock.patch('nova.objects.InstanceList.get_by_filters') as m_get:
+        with mock.patch('nova.compute.instance_list.'
+                        'get_instance_objects_sorted') as m_get:
             m_get.return_value = objects.InstanceList(objects=[])
             self.compute_api.get_all(c, search_opts={'ip': '.10'}, limit=1)
             self.assertEqual(1, m_get.call_count)
-            kwargs = m_get.call_args[1]
-            self.assertIsNone(kwargs['limit'])
+            args = m_get.call_args[0]
+            self.assertIsNone(args[2])
 
     @mock.patch.object(objects.BuildRequestList, 'get_by_filters')
     @mock.patch.object(objects.CellMapping, 'get_by_uuid',
@@ -10905,12 +10906,13 @@ class ComputeAPIIpFilterTestCase(test.NoDBTestCase):
                                            mock_buildreq_get):
         c = context.get_admin_context()
         # No IP filter, verify that the limit is passed
-        with mock.patch('nova.objects.InstanceList.get_by_filters') as m_get:
+        with mock.patch('nova.compute.instance_list.'
+                        'get_instance_objects_sorted') as m_get:
             m_get.return_value = objects.InstanceList(objects=[])
             self.compute_api.get_all(c, search_opts={}, limit=1)
             self.assertEqual(1, m_get.call_count)
-            kwargs = m_get.call_args[1]
-            self.assertEqual(1, kwargs['limit'])
+            args = m_get.call_args[0]
+            self.assertEqual(1, args[2])
 
 
 def fake_rpc_method(self, context, method, **kwargs):
