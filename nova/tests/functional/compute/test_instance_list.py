@@ -49,6 +49,18 @@ class InstanceListTestCase(test.TestCase):
                         instance_type_id=i,
                         hostname='%s-inst%i' % (cell.name, i))
                     inst.create()
+                    if i % 2 == 0:
+                        # Make some faults for this instance
+                        for n in range(0, i + 1):
+                            msg = 'fault%i-%s' % (n, inst.hostname)
+                            f = objects.InstanceFault(context=cctx,
+                                                      instance_uuid=inst.uuid,
+                                                      code=i,
+                                                      message=msg,
+                                                      details='fake',
+                                                      host='fakehost')
+                            f.create()
+
                 self.instances.append(inst)
                 im = objects.InstanceMapping(context=self.context,
                                              project_id=inst.project_id,
@@ -312,3 +324,45 @@ class InstanceListTestCase(test.TestCase):
         # Make sure we found all (and only) the instances we asked for
         self.assertEqual(set(found_uuids), set(filters['uuid']))
         self.assertEqual(7, len(found_uuids))
+
+    def test_get_sorted_with_faults(self):
+        """Make sure we get faults when we ask for them."""
+        insts = list(
+            instance_list.get_instances_sorted(self.context, {},
+                                               None, None,
+                                               ['fault'],
+                                               ['hostname'], ['asc']))
+
+        # Two of the instances in each cell have faults (0th and 2nd)
+        expected_faults = self.NUMBER_OF_CELLS * 2
+        expected_no_fault = len(self.instances) - expected_faults
+        faults = [inst['fault'] for inst in insts]
+        self.assertEqual(expected_no_fault, faults.count(None))
+
+    def test_get_sorted_paginated_with_faults(self):
+        """Get pages of one with faults.
+
+        Do this specifically so we make sure we land on faulted marker
+        instances to ensure we don't omit theirs.
+        """
+        insts = []
+        while True:
+            if insts:
+                marker = insts[-1]['uuid']
+            else:
+                marker = None
+            batch = list(
+                instance_list.get_instances_sorted(self.context, {},
+                                                   1, marker,
+                                                   ['fault'],
+                                                   ['hostname'], ['asc']))
+            if not batch:
+                break
+            insts.extend(batch)
+
+        self.assertEqual(len(self.instances), len(insts))
+        # Two of the instances in each cell have faults (0th and 2nd)
+        expected_faults = self.NUMBER_OF_CELLS * 2
+        expected_no_fault = len(self.instances) - expected_faults
+        faults = [inst['fault'] for inst in insts]
+        self.assertEqual(expected_no_fault, faults.count(None))
