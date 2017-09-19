@@ -452,6 +452,10 @@ class CellDatabases(fixtures.Fixture):
         # NOTE(melwitt): This is a hack to try to deal with
         # local accesses i.e. non target_cell accesses.
         with self._cell_lock.read_lock():
+            # FIXME(mriedem): This is actually misleading and means we don't
+            # catch things like bug 1717000 where a context should be targeted
+            # to a cell but it's not, and the fixture here just returns the
+            # last targeted context that was used.
             return self._last_ctxt_mgr
 
     def _wrap_get_server(self, target, endpoints, serializer=None):
