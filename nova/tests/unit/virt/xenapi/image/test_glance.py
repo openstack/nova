@@ -106,7 +106,7 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
                            endpoint='http://10.0.0.1:9293',
                            **params)]
 
-        glance_api_servers = ['10.0.1.1:9292',
+        glance_api_servers = ['http://10.0.1.1:9292',
                               'http://10.0.0.1:9293']
         self.flags(api_servers=glance_api_servers, group='glance')
 

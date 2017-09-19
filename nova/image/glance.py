@@ -113,17 +113,8 @@ def get_api_servers():
     # NOTE(efried): utils.get_ksa_adapter().get_endpoint() is the preferred
     # mechanism for endpoint discovery. Only use `api_servers` if you really
     # need to shuffle multiple endpoints.
-    api_servers = []
     if CONF.glance.api_servers:
-        for api_server in CONF.glance.api_servers:
-            if '//' not in api_server:
-                api_server = 'http://' + api_server
-                # NOTE(sdague): remove in O.
-                LOG.warning("No protocol specified in for api_server '%s', "
-                            "please update [glance] api_servers with fully "
-                            "qualified url including scheme (http / https)",
-                            api_server)
-            api_servers.append(api_server)
+        api_servers = CONF.glance.api_servers
         random.shuffle(api_servers)
     else:
         # TODO(efried): Plumb in a reasonable auth from callers' contexts
@@ -131,8 +122,8 @@ def get_api_servers():
             nova.conf.glance.DEFAULT_SERVICE_TYPE,
             min_version='2.0', max_version='2.latest')
         # TODO(efried): Use ksa_adap.get_endpoint() when bug #1707995 is fixed.
-        api_servers.append(ksa_adap.endpoint_override or
-                           ksa_adap.get_endpoint_data().catalog_url)
+        api_servers = [ksa_adap.endpoint_override or
+                       ksa_adap.get_endpoint_data().catalog_url]
 
     return itertools.cycle(api_servers)
 
