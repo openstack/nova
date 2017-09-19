@@ -1433,7 +1433,7 @@ class ResourceClassListTestCase(ResourceProviderBaseCase):
         we only get a list of ResourceClass objects representing the standard
         classes.
         """
-        rcs = objects.ResourceClassList.get_all(self.ctx)
+        rcs = rp_obj.ResourceClassList.get_all(self.ctx)
         self.assertEqual(len(fields.ResourceClass.STANDARD), len(rcs))
 
     def test_get_all_with_custom(self):
@@ -1451,7 +1451,7 @@ class ResourceClassListTestCase(ResourceProviderBaseCase):
                 ins = rp_obj._RC_TBL.insert().values(id=c_id, name=c_name)
                 conn.execute(ins)
 
-        rcs = objects.ResourceClassList.get_all(self.ctx)
+        rcs = rp_obj.ResourceClassList.get_all(self.ctx)
         expected_count = len(fields.ResourceClass.STANDARD) + len(customs)
         self.assertEqual(expected_count, len(rcs))
 
@@ -1590,7 +1590,7 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
             name='CUSTOM_IRON_NFV',
         )
         rc.create()
-        rc_list = objects.ResourceClassList.get_all(self.ctx)
+        rc_list = rp_obj.ResourceClassList.get_all(self.ctx)
         rc_ids = (r.id for r in rc_list)
         self.assertIn(rc.id, rc_ids)
 
@@ -1600,7 +1600,7 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
         )
 
         rc.destroy()
-        rc_list = objects.ResourceClassList.get_all(self.ctx)
+        rc_list = rp_obj.ResourceClassList.get_all(self.ctx)
         rc_ids = (r.id for r in rc_list)
         self.assertNotIn(rc.id, rc_ids)
 
@@ -1639,7 +1639,7 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
 
         rp.set_inventory(objects.InventoryList(objects=[]))
         rc.destroy()
-        rc_list = objects.ResourceClassList.get_all(self.ctx)
+        rc_list = rp_obj.ResourceClassList.get_all(self.ctx)
         rc_ids = (r.id for r in rc_list)
         self.assertNotIn(rc.id, rc_ids)
 

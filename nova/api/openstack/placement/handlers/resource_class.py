@@ -23,6 +23,7 @@ from nova.api.openstack.placement import wsgi_wrapper
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.objects import resource_provider as rp_obj
 
 
 POST_RC_SCHEMA_V1_2 = {
@@ -153,7 +154,7 @@ def list_resource_classes(req):
     a collection of resource classes.
     """
     context = req.environ['placement.context']
-    rcs = objects.ResourceClassList.get_all(context)
+    rcs = rp_obj.ResourceClassList.get_all(context)
 
     response = req.response
     response.body = encodeutils.to_utf8(jsonutils.dumps(
