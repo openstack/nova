@@ -71,13 +71,14 @@ class ServerListLimitMarkerCell0Test(test.TestCase,
             self.addCleanup(self.api.delete_server, server['id'])
             self._wait_for_state_change(self.api, server, 'ERROR')
 
-        servers = self.api.get_servers()
+        servers = self.api.get_servers(search_opts=dict(sort_key='uuid'))
         self.assertEqual(3, len(servers))
 
         # Take the first server and user that as our marker.
         marker = servers[0]['id']
         # Since we're paging after the first server as our marker, there are
         # only two left so specifying three should just return two.
-        servers = self.api.get_servers(search_opts=dict(marker=marker,
+        servers = self.api.get_servers(search_opts=dict(sort_key='uuid',
+                                                        marker=marker,
                                                         limit=3))
         self.assertEqual(2, len(servers))
