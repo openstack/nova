@@ -67,7 +67,9 @@ class LibvirtVZStorageTestCase(test_volume.LibvirtVolumeBaseTestCase):
                                 self.disk_info,
                                 mock.sentinel.instance)
 
-    def test_libvirt_vzstorage_driver_connect(self):
+    @mock.patch.object(vzstorage.utils, 'synchronized',
+                       return_value=lambda f: f)
+    def test_libvirt_vzstorage_driver_connect(self, mock_synchronized):
         def brick_conn_vol(data):
             return {'path': 'vstorage://testcluster'}
 
@@ -86,6 +88,7 @@ class LibvirtVZStorageTestCase(test_volume.LibvirtVolumeBaseTestCase):
                          '-l /var/log/vstorage/testcluster/nova.log.gz '
                          '-C /tmp/ssd-cache/testcluster',
                           connection_info['data']['options'])
+        mock_synchronized.assert_called_once_with('vz_share-testcluster')
 
     def test_libvirt_vzstorage_driver_disconnect(self):
         drv = vzstorage.LibvirtVZStorageVolumeDriver(self.fake_host)
