@@ -13,12 +13,15 @@
 # under the License.
 
 from keystoneauth1 import exceptions as kse
-from keystoneauth1 import session
+from keystoneauth1 import loading as ks_loading
 from oslo_log import log as logging
 import webob
 
+import nova.conf
 from nova.i18n import _
 
+
+CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -29,7 +32,9 @@ def verify_project_id(context, project_id):
     an HTTPBadRequest is emitted.
 
     """
-    sess = session.Session(auth=context.get_auth_plugin())
+    sess = ks_loading.load_session_from_conf_options(
+        CONF, 'keystone', auth=context.get_auth_plugin())
+
     failure = webob.exc.HTTPBadRequest(
             explanation=_("Project ID %s is not a valid project.") %
             project_id)
