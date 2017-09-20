@@ -109,6 +109,10 @@ r="$r|(?:.*id\-10fd234a\-515c\-41e5\-b092\-8323060598c5.*)"
 # Bug 1709985: rebuild randomly times out, probably due to sync issues
 # tempest.api.compute.admin.test_servers.ServersAdminTestJSON.test_rebuild_server_in_error_state
 r="$r|(?:.*id\-682cb127\-e5bb\-4f53\-87ce\-cb9003604442.*)"
+# tempest.api.compute.servers.test_disk_config.ServerDiskConfigTestJSON.test_rebuild_server_with_auto_disk_config
+r="$r|(?:.*id\-9c9fae77\-4feb\-402f\-8450\-bf1c8b609713.*)"
+# tempest.api.compute.servers.test_disk_config.ServerDiskConfigTestJSON.test_rebuild_server_with_manual_disk_config
+r="$r|(?:.*id\-bef56b09\-2e8c\-4883\-a370\-4950812f430e.*)"
 r="$r).*$"
 
 export DEVSTACK_GATE_TEMPEST_REGEX="$r"
