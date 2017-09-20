@@ -66,7 +66,7 @@ class ResourceProviderBaseCase(test.NoDBTestCase):
         disk_inv.create()
         inv_list = objects.InventoryList(objects=[disk_inv])
         rp.set_inventory(inv_list)
-        alloc = objects.Allocation(self.ctx, resource_provider=rp,
+        alloc = rp_obj.Allocation(self.ctx, resource_provider=rp,
                 **DISK_ALLOCATION)
         alloc_list = rp_obj.AllocationList(self.ctx, objects=[alloc])
         alloc_list.create_all()
@@ -264,7 +264,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         inv_list = objects.InventoryList(objects=[inv])
         rp.set_inventory(inv_list)
 
-        alloc = objects.Allocation(
+        alloc = rp_obj.Allocation(
             resource_provider=rp,
             resource_class='VCPU',
             consumer_id=uuidsentinel.consumer,
@@ -324,7 +324,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         self.assertFalse(mock_log.warning.called)
 
         # Allocate something reasonable for the above inventory
-        alloc = objects.Allocation(
+        alloc = rp_obj.Allocation(
             context=self.ctx,
             resource_provider=rp,
             consumer_id=uuidsentinel.consumer,
@@ -561,7 +561,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
                 **DISK_INVENTORY)
         inv.create()
         expected_gen = rp.generation + 1
-        alloc = objects.Allocation(context=self.ctx, resource_provider=rp,
+        alloc = rp_obj.Allocation(context=self.ctx, resource_provider=rp,
                 **DISK_ALLOCATION)
         alloc_list = rp_obj.AllocationList(self.ctx, objects=[alloc])
         alloc_list.create_all()
@@ -634,7 +634,7 @@ class ResourceProviderListTestCase(ResourceProviderBaseCase):
             # Create the VCPU allocation only for the first RP
             if rp_i != '1':
                 continue
-            allocation_1 = objects.Allocation(
+            allocation_1 = rp_obj.Allocation(
                 resource_provider=rp,
                 consumer_id=uuidsentinel.consumer,
                 resource_class=fields.ResourceClass.VCPU,
@@ -825,7 +825,7 @@ class TestAllocation(ResourceProviderBaseCase):
         inv = objects.Inventory(context=self.ctx,
                 resource_provider=resource_provider, **DISK_INVENTORY)
         inv.create()
-        disk_allocation = objects.Allocation(
+        disk_allocation = rp_obj.Allocation(
             context=self.ctx,
             resource_provider=resource_provider,
             **DISK_ALLOCATION
@@ -912,25 +912,25 @@ class TestAllocation(ResourceProviderBaseCase):
         # "doubled-up" allocation for the duration of the move operation
         alloc_list = rp_obj.AllocationList(context=self.ctx,
             objects=[
-                objects.Allocation(
+                rp_obj.Allocation(
                     context=self.ctx,
                     consumer_id=uuidsentinel.instance,
                     resource_provider=cn_source,
                     resource_class=fields.ResourceClass.VCPU,
                     used=1),
-                objects.Allocation(
+                rp_obj.Allocation(
                     context=self.ctx,
                     consumer_id=uuidsentinel.instance,
                     resource_provider=cn_source,
                     resource_class=fields.ResourceClass.MEMORY_MB,
                     used=256),
-                objects.Allocation(
+                rp_obj.Allocation(
                     context=self.ctx,
                     consumer_id=uuidsentinel.instance,
                     resource_provider=cn_dest,
                     resource_class=fields.ResourceClass.VCPU,
                     used=1),
-                objects.Allocation(
+                rp_obj.Allocation(
                     context=self.ctx,
                     consumer_id=uuidsentinel.instance,
                     resource_provider=cn_dest,
@@ -962,13 +962,13 @@ class TestAllocation(ResourceProviderBaseCase):
         # back to placement
         new_alloc_list = rp_obj.AllocationList(context=self.ctx,
             objects=[
-                objects.Allocation(
+                rp_obj.Allocation(
                     context=self.ctx,
                     consumer_id=uuidsentinel.instance,
                     resource_provider=cn_dest,
                     resource_class=fields.ResourceClass.VCPU,
                     used=1),
-                objects.Allocation(
+                rp_obj.Allocation(
                     context=self.ctx,
                     consumer_id=uuidsentinel.instance,
                     resource_provider=cn_dest,
@@ -997,11 +997,11 @@ class TestAllocation(ResourceProviderBaseCase):
         allocations = rp_obj.AllocationList.get_all_by_resource_provider_uuid(
             self.ctx, rp.uuid)
         self.assertEqual(1, len(allocations))
-        objects.Allocation._destroy(self.ctx, allocation.id)
+        rp_obj.Allocation._destroy(self.ctx, allocation.id)
         allocations = rp_obj.AllocationList.get_all_by_resource_provider_uuid(
             self.ctx, rp.uuid)
         self.assertEqual(0, len(allocations))
-        self.assertRaises(exception.NotFound, objects.Allocation._destroy,
+        self.assertRaises(exception.NotFound, rp_obj.Allocation._destroy,
                           self.ctx, allocation.id)
 
     def test_get_allocations_from_db(self):
@@ -1067,14 +1067,14 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
         rp1.set_inventory(inv_list)
 
         # create the allocations for a first consumer
-        allocation_1 = objects.Allocation(resource_provider=rp1,
-                                          consumer_id=consumer_uuid,
-                                          resource_class=rp1_class,
-                                          used=rp1_used)
-        allocation_2 = objects.Allocation(resource_provider=rp1,
-                                          consumer_id=consumer_uuid,
-                                          resource_class=rp2_class,
-                                          used=rp2_used)
+        allocation_1 = rp_obj.Allocation(resource_provider=rp1,
+                                         consumer_id=consumer_uuid,
+                                         resource_class=rp1_class,
+                                         used=rp1_used)
+        allocation_2 = rp_obj.Allocation(resource_provider=rp1,
+                                         consumer_id=consumer_uuid,
+                                         resource_class=rp2_class,
+                                         used=rp2_used)
         allocation_list = rp_obj.AllocationList(
             self.ctx, objects=[allocation_1, allocation_2])
         allocation_list.create_all()
@@ -1083,14 +1083,14 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
         # allocations for more than one consumer in the db, then we
         # won't actually be doing real allocation math, which triggers
         # the sql monster.
-        allocation_1 = objects.Allocation(resource_provider=rp1,
-                                          consumer_id=consumer_uuid2,
-                                          resource_class=rp1_class,
-                                          used=rp1_used)
-        allocation_2 = objects.Allocation(resource_provider=rp1,
-                                          consumer_id=consumer_uuid2,
-                                          resource_class=rp2_class,
-                                          used=rp2_used)
+        allocation_1 = rp_obj.Allocation(resource_provider=rp1,
+                                         consumer_id=consumer_uuid2,
+                                         resource_class=rp1_class,
+                                         used=rp1_used)
+        allocation_2 = rp_obj.Allocation(resource_provider=rp1,
+                                         consumer_id=consumer_uuid2,
+                                         resource_class=rp2_class,
+                                         used=rp2_used)
         allocation_list = rp_obj.AllocationList(
             self.ctx, objects=[allocation_1, allocation_2])
         # If we are joining wrong, this will be a KeyError
@@ -1119,14 +1119,14 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
         rp2.create()
 
         # Two allocations, one for each resource provider.
-        allocation_1 = objects.Allocation(resource_provider=rp1,
-                                          consumer_id=consumer_uuid,
-                                          resource_class=rp1_class,
-                                          used=rp1_used)
-        allocation_2 = objects.Allocation(resource_provider=rp2,
-                                          consumer_id=consumer_uuid,
-                                          resource_class=rp2_class,
-                                          used=rp2_used)
+        allocation_1 = rp_obj.Allocation(resource_provider=rp1,
+                                         consumer_id=consumer_uuid,
+                                         resource_class=rp1_class,
+                                         used=rp1_used)
+        allocation_2 = rp_obj.Allocation(resource_provider=rp2,
+                                         consumer_id=consumer_uuid,
+                                         resource_class=rp2_class,
+                                         used=rp2_used)
         allocation_list = rp_obj.AllocationList(
             self.ctx, objects=[allocation_1, allocation_2])
 
@@ -1190,10 +1190,10 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
         # because a new allocataion is created, adding to the total
         # used, not replacing.
         rp1_used += 1
-        allocation_1 = objects.Allocation(resource_provider=rp1,
-                                          consumer_id=consumer_uuid,
-                                          resource_class=rp1_class,
-                                          used=rp1_used)
+        allocation_1 = rp_obj.Allocation(resource_provider=rp1,
+                                         consumer_id=consumer_uuid,
+                                         resource_class=rp1_class,
+                                         used=rp1_used)
         allocation_list = rp_obj.AllocationList(
             self.ctx, objects=[allocation_1])
         allocation_list.create_all()
@@ -1244,10 +1244,10 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
                                          **inventory_kwargs)
 
         # allocation, bad step_size
-        allocation = objects.Allocation(resource_provider=rp,
-                                        consumer_id=consumer_uuid,
-                                        resource_class=rp_class,
-                                        used=bad_used)
+        allocation = rp_obj.Allocation(resource_provider=rp,
+                                       consumer_id=consumer_uuid,
+                                       resource_class=rp_class,
+                                       used=bad_used)
         allocation_list = rp_obj.AllocationList(self.ctx,
                                                  objects=[allocation])
         self.assertRaises(exception.InvalidAllocationConstraintsViolated,
@@ -1291,14 +1291,14 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
         rp_class = fields.ResourceClass.DISK_GB
         rp = self._make_rp_and_inventory(resource_class=rp_class,
                                          max_unit=500)
-        allocation1 = objects.Allocation(resource_provider=rp,
-                                         consumer_id=consumer_uuid,
-                                         resource_class=rp_class,
-                                         used=100)
-        allocation2 = objects.Allocation(resource_provider=rp,
-                                         consumer_id=consumer_uuid,
-                                         resource_class=rp_class,
-                                         used=200)
+        allocation1 = rp_obj.Allocation(resource_provider=rp,
+                                        consumer_id=consumer_uuid,
+                                        resource_class=rp_class,
+                                        used=100)
+        allocation2 = rp_obj.Allocation(resource_provider=rp,
+                                        consumer_id=consumer_uuid,
+                                        resource_class=rp_class,
+                                        used=200)
         allocation_list = rp_obj.AllocationList(
             self.ctx,
             objects=[allocation1, allocation2],
@@ -1333,10 +1333,10 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
 
         # Create allocation for a different user in the project
         other_consumer_uuid = uuidsentinel.other_consumer
-        allocation3 = objects.Allocation(resource_provider=rp,
-                                         consumer_id=other_consumer_uuid,
-                                         resource_class=rp_class,
-                                         used=200)
+        allocation3 = rp_obj.Allocation(resource_provider=rp,
+                                        consumer_id=other_consumer_uuid,
+                                        resource_class=rp_class,
+                                        used=200)
         allocation_list = rp_obj.AllocationList(
             self.ctx,
             objects=[allocation3],
@@ -2229,13 +2229,13 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         # Consume all vCPU and RAM inventory on the "local disk" compute node
         # and verify it no longer is returned from _get_all_with_shared()
 
-        vcpu_alloc = objects.Allocation(
+        vcpu_alloc = rp_obj.Allocation(
             resource_provider=cn3,
             resource_class=fields.ResourceClass.VCPU,
             consumer_id=uuidsentinel.consumer,
             used=24,
         )
-        memory_mb_alloc = objects.Allocation(
+        memory_mb_alloc = rp_obj.Allocation(
             resource_provider=cn3,
             resource_class=fields.ResourceClass.MEMORY_MB,
             consumer_id=uuidsentinel.consumer,
@@ -2261,7 +2261,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         for x in range(3):
             # allocation_ratio for MEMORY_MB is 1.5, so we need to make 3
             # 512-MB allocations to fully consume the memory on the node
-            memory_mb_alloc = objects.Allocation(
+            memory_mb_alloc = rp_obj.Allocation(
                 resource_provider=cn2,
                 resource_class=fields.ResourceClass.MEMORY_MB,
                 consumer_id=getattr(uuidsentinel, 'consumer%d' % x),
