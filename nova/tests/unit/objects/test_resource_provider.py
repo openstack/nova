@@ -146,20 +146,20 @@ class TestInventoryNoDB(test_objects._LocalTest):
 
     @mock.patch('nova.objects.resource_provider._ensure_rc_cache',
             side_effect=_fake_ensure_cache)
-    @mock.patch('nova.objects.Inventory._create_in_db',
+    @mock.patch('nova.objects.resource_provider.Inventory._create_in_db',
                 return_value=_INVENTORY_DB)
     def test_create(self, mock_db_create, mock_ensure_cache):
         rp = objects.ResourceProvider(id=_RESOURCE_PROVIDER_ID,
                                       uuid=_RESOURCE_PROVIDER_UUID)
-        obj = objects.Inventory(context=self.context,
-                                resource_provider=rp,
-                                resource_class=_RESOURCE_CLASS_NAME,
-                                total=16,
-                                reserved=2,
-                                min_unit=1,
-                                max_unit=8,
-                                step_size=1,
-                                allocation_ratio=1.0)
+        obj = resource_provider.Inventory(context=self.context,
+                                          resource_provider=rp,
+                                          resource_class=_RESOURCE_CLASS_NAME,
+                                          total=16,
+                                          reserved=2,
+                                          min_unit=1,
+                                          max_unit=8,
+                                          step_size=1,
+                                          allocation_ratio=1.0)
         obj.create()
         self.assertEqual(_INVENTORY_ID, obj.id)
         expected = dict(_INVENTORY_DB)
@@ -168,12 +168,12 @@ class TestInventoryNoDB(test_objects._LocalTest):
 
     @mock.patch('nova.objects.resource_provider._ensure_rc_cache',
             side_effect=_fake_ensure_cache)
-    @mock.patch('nova.objects.Inventory._update_in_db',
+    @mock.patch('nova.objects.resource_provider.Inventory._update_in_db',
                 return_value=_INVENTORY_DB)
     def test_save(self, mock_db_save, mock_ensure_cache):
-        obj = objects.Inventory(context=self.context,
-                                id=_INVENTORY_ID,
-                                reserved=4)
+        obj = resource_provider.Inventory(context=self.context,
+                                          id=_INVENTORY_ID,
+                                          reserved=4)
         obj.save()
         mock_db_save.assert_called_once_with(self.context,
                                              _INVENTORY_ID,
@@ -210,7 +210,7 @@ class TestInventoryNoDB(test_objects._LocalTest):
                       max_unit=-8,
                       step_size=1,
                       allocation_ratio=1.0)
-        self.assertRaises(ValueError, objects.Inventory,
+        self.assertRaises(ValueError, resource_provider.Inventory,
                           **kwargs)
 
     def test_set_defaults(self):
@@ -219,7 +219,7 @@ class TestInventoryNoDB(test_objects._LocalTest):
         kwargs = dict(resource_provider=rp,
                       resource_class=_RESOURCE_CLASS_NAME,
                       total=16)
-        inv = objects.Inventory(self.context, **kwargs)
+        inv = resource_provider.Inventory(self.context, **kwargs)
 
         inv.obj_set_defaults()
         self.assertEqual(0, inv.reserved)
@@ -235,7 +235,7 @@ class TestInventoryNoDB(test_objects._LocalTest):
                       resource_class=_RESOURCE_CLASS_NAME,
                       total=16,
                       reserved=16)
-        inv = objects.Inventory(self.context, **kwargs)
+        inv = resource_provider.Inventory(self.context, **kwargs)
         inv.obj_set_defaults()
 
         self.assertEqual(0, inv.capacity)
@@ -261,21 +261,21 @@ class TestInventory(test_objects._LocalTest):
                        resource_provider_id=rp_id)
         updates.pop('id')
         updates.update(records)
-        return objects.Inventory._create_in_db(
+        return resource_provider.Inventory._create_in_db(
             self.context, updates)
 
     def test_create_in_db(self):
         updates = dict(_INVENTORY_DB)
         updates.pop('id')
-        db_inventory = objects.Inventory._create_in_db(
+        db_inventory = resource_provider.Inventory._create_in_db(
             self.context, updates)
         self.assertEqual(_INVENTORY_DB['total'], db_inventory.total)
 
     def test_update_in_db(self):
         db_rp, db_inventory = self._make_inventory()
-        objects.Inventory._update_in_db(self.context,
-                                        db_inventory.id,
-                                        {'total': 32})
+        resource_provider.Inventory._update_in_db(self.context,
+                                                  db_inventory.id,
+                                                  {'total': 32})
         inventories = resource_provider.InventoryList.\
             get_all_by_resource_provider_uuid(self.context, db_rp.uuid)
         self.assertEqual(32, inventories[0].total)
@@ -283,7 +283,7 @@ class TestInventory(test_objects._LocalTest):
     def test_update_in_db_fails_bad_id(self):
         db_rp, db_inventory = self._make_inventory()
         self.assertRaises(exception.NotFound,
-                          objects.Inventory._update_in_db,
+                          resource_provider.Inventory._update_in_db,
                           self.context, 99, {'total': 32})
 
     def test_get_all_by_resource_provider_uuid(self):
@@ -312,9 +312,9 @@ class TestInventory(test_objects._LocalTest):
         db_rp1, db_inv1 = self._make_inventory(uuids.fake_1)
         db_rp2, db_inv2 = self._make_inventory(uuids.fake_2)
 
-        objects.Inventory._update_in_db(self.context,
-                                        db_inv2.id,
-                                        {'total': 32})
+        resource_provider.Inventory._update_in_db(self.context,
+                                                  db_inv2.id,
+                                                  {'total': 32})
 
         # Create IPV4_ADDRESS resources for each provider.
         self._create_inventory_in_db(db_rp1.id,
@@ -361,8 +361,8 @@ class TestInventory(test_objects._LocalTest):
         inventory_dict.pop('resource_provider_id')
         inventory_dict.pop('resource_class_id')
         inventory_dict['resource_class'] = _RESOURCE_CLASS_NAME
-        inventory = objects.Inventory(context=self.context,
-                                      **inventory_dict)
+        inventory = resource_provider.Inventory(context=self.context,
+                                                **inventory_dict)
         error = self.assertRaises(exception.ObjectActionError,
                                   inventory.create)
         self.assertIn('resource_provider required', str(error))
@@ -375,8 +375,8 @@ class TestInventory(test_objects._LocalTest):
         inventory_dict.pop('resource_provider_id')
         inventory_dict.pop('resource_class_id')
         inventory_dict['resource_provider'] = rp
-        inventory = objects.Inventory(context=self.context,
-                                      **inventory_dict)
+        inventory = resource_provider.Inventory(context=self.context,
+                                                **inventory_dict)
         error = self.assertRaises(exception.ObjectActionError,
                                   inventory.create)
         self.assertIn('resource_provider required', str(error))
@@ -391,30 +391,30 @@ class TestInventory(test_objects._LocalTest):
         inventory_dict.pop('resource_provider_id')
         inventory_dict.pop('resource_class_id')
         inventory_dict['resource_provider'] = rp
-        inventory = objects.Inventory(context=self.context,
-                                      **inventory_dict)
+        inventory = resource_provider.Inventory(context=self.context,
+                                                **inventory_dict)
         error = self.assertRaises(exception.ObjectActionError,
                                   inventory.create)
         self.assertIn('resource_class required', str(error))
 
     def test_create_id_fails(self):
-        inventory = objects.Inventory(self.context, **_INVENTORY_DB)
+        inventory = resource_provider.Inventory(self.context, **_INVENTORY_DB)
         self.assertRaises(exception.ObjectActionError, inventory.create)
 
     def test_save_without_id_fails(self):
         inventory_dict = dict(_INVENTORY_DB)
         inventory_dict.pop('id')
-        inventory = objects.Inventory(self.context, **inventory_dict)
+        inventory = resource_provider.Inventory(self.context, **inventory_dict)
         self.assertRaises(exception.ObjectActionError, inventory.save)
 
     def test_find(self):
         rp = objects.ResourceProvider(uuid=uuids.rp_uuid)
         inv_list = resource_provider.InventoryList(objects=[
-                objects.Inventory(
+                resource_provider.Inventory(
                     resource_provider=rp,
                     resource_class=fields.ResourceClass.VCPU,
                     total=24),
-                objects.Inventory(
+                resource_provider.Inventory(
                     resource_provider=rp,
                     resource_class=fields.ResourceClass.MEMORY_MB,
                     total=10240),
@@ -437,28 +437,6 @@ class TestInventory(test_objects._LocalTest):
         # Use an invalid string...
         self.assertIsNone(inv_list.find('HOUSE'))
 
-    def test_custom_resource_raises(self):
-        """Ensure that if we send an inventory object to a backversioned 1.0
-        receiver, that we raise ValueError if the inventory record contains a
-        custom (non-standardized) resource class.
-        """
-        values = {
-            # NOTE(danms): We don't include an actual resource provider
-            # here because chained backporting of that is handled by
-            # the infrastructure and requires us to have a manifest
-            'resource_class': 'custom_resource',
-            'total': 1,
-            'reserved': 0,
-            'min_unit': 1,
-            'max_unit': 1,
-            'step_size': 1,
-            'allocation_ratio': 1.0,
-        }
-        bdm = objects.Inventory(context=self.context, **values)
-        self.assertRaises(ValueError,
-                          bdm.obj_to_primitive,
-                          target_version='1.0')
-
 
 class TestAllocation(test_objects._LocalTest):
     USES_DB = True
@@ -470,15 +448,15 @@ class TestAllocation(test_objects._LocalTest):
                                       uuid=_RESOURCE_PROVIDER_UUID,
                                       name=_RESOURCE_PROVIDER_NAME)
         rp.create()
-        inv = objects.Inventory(context=self.context,
-                                resource_provider=rp,
-                                resource_class=_RESOURCE_CLASS_NAME,
-                                total=16,
-                                reserved=2,
-                                min_unit=1,
-                                max_unit=8,
-                                step_size=1,
-                                allocation_ratio=1.0)
+        inv = resource_provider.Inventory(context=self.context,
+                                          resource_provider=rp,
+                                          resource_class=_RESOURCE_CLASS_NAME,
+                                          total=16,
+                                          reserved=2,
+                                          min_unit=1,
+                                          max_unit=8,
+                                          step_size=1,
+                                          allocation_ratio=1.0)
         inv.create()
         obj = resource_provider.Allocation(context=self.context,
                                            resource_provider=rp,
@@ -496,7 +474,7 @@ class TestAllocation(test_objects._LocalTest):
                                       uuid=_RESOURCE_PROVIDER_UUID,
                                       name=_RESOURCE_PROVIDER_NAME)
         rp.create()
-        inv = objects.Inventory(context=self.context,
+        inv = resource_provider.Inventory(context=self.context,
                                 resource_provider=rp,
                                 resource_class=_RESOURCE_CLASS_NAME,
                                 total=16,

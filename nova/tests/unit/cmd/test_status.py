@@ -32,6 +32,7 @@ from nova import context
 # in the tests, we don't use them in the actual CLI.
 from nova import objects
 from nova.objects import fields
+from nova.objects import resource_provider as rp_obj
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests import uuidsentinel as uuids
@@ -553,7 +554,7 @@ class TestUpgradeCheckResourceProviders(test.NoDBTestCase):
             name=rp_uuid,
             uuid=rp_uuid)
         rp.create()
-        inventory = objects.Inventory(
+        inventory = rp_obj.Inventory(
             context=ctxt,
             resource_provider=rp,
             **inventory)
