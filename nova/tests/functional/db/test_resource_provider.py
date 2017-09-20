@@ -525,7 +525,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         disk_inv.obj_set_defaults()
         rp.update_inventory(disk_inv)
 
-        usages = objects.UsageList.get_all_by_resource_provider_uuid(
+        usages = rp_obj.UsageList.get_all_by_resource_provider_uuid(
             self.ctx, rp.uuid)
         self.assertEqual(allocation.used, usages[0].usage)
 
@@ -1178,9 +1178,9 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
 
         # Check that those allocations changed usage on each
         # resource provider.
-        rp1_usage = objects.UsageList.get_all_by_resource_provider_uuid(
+        rp1_usage = rp_obj.UsageList.get_all_by_resource_provider_uuid(
             self.ctx, rp1_uuid)
-        rp2_usage = objects.UsageList.get_all_by_resource_provider_uuid(
+        rp2_usage = rp_obj.UsageList.get_all_by_resource_provider_uuid(
             self.ctx, rp2_uuid)
         self.assertEqual(rp1_used, rp1_usage[0].usage)
         self.assertEqual(rp2_used, rp2_usage[0].usage)
@@ -1198,7 +1198,7 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
             self.ctx, objects=[allocation_1])
         allocation_list.create_all()
 
-        rp1_usage = objects.UsageList.get_all_by_resource_provider_uuid(
+        rp1_usage = rp_obj.UsageList.get_all_by_resource_provider_uuid(
             self.ctx, rp1_uuid)
         self.assertEqual(rp1_used, rp1_usage[0].usage)
 
@@ -1210,9 +1210,9 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
             self.ctx, consumer_uuid)
         consumer_allocations.delete_all()
 
-        rp1_usage = objects.UsageList.get_all_by_resource_provider_uuid(
+        rp1_usage = rp_obj.UsageList.get_all_by_resource_provider_uuid(
             self.ctx, rp1_uuid)
-        rp2_usage = objects.UsageList.get_all_by_resource_provider_uuid(
+        rp2_usage = rp_obj.UsageList.get_all_by_resource_provider_uuid(
             self.ctx, rp2_uuid)
         self.assertEqual(0, rp1_usage[0].usage)
         self.assertEqual(0, rp2_usage[0].usage)
@@ -1232,7 +1232,7 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
         return rp
 
     def _validate_usage(self, rp, usage):
-        rp_usage = objects.UsageList.get_all_by_resource_provider_uuid(
+        rp_usage = rp_obj.UsageList.get_all_by_resource_provider_uuid(
             self.ctx, rp.uuid)
         self.assertEqual(usage, rp_usage[0].usage)
 
@@ -1346,13 +1346,13 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
         allocation_list.create_all()
 
         # Get usages back by project
-        usage_list = objects.UsageList.get_all_by_project_user(
+        usage_list = rp_obj.UsageList.get_all_by_project_user(
             self.ctx, self.ctx.project_id)
         self.assertEqual(1, len(usage_list))
         self.assertEqual(500, usage_list[0].usage)
 
         # Get usages back by project and user
-        usage_list = objects.UsageList.get_all_by_project_user(
+        usage_list = rp_obj.UsageList.get_all_by_project_user(
             self.ctx, self.ctx.project_id,
             user_id=uuidsentinel.other_user)
         self.assertEqual(1, len(usage_list))
@@ -1366,7 +1366,7 @@ class UsageListTestCase(ResourceProviderBaseCase):
             rp = objects.ResourceProvider(self.ctx, name=uuid, uuid=uuid)
             rp.create()
 
-        usage_list = objects.UsageList.get_all_by_resource_provider_uuid(
+        usage_list = rp_obj.UsageList.get_all_by_resource_provider_uuid(
             self.ctx, uuidsentinel.rp_uuid_1)
         self.assertEqual(0, len(usage_list))
 
@@ -1379,7 +1379,7 @@ class UsageListTestCase(ResourceProviderBaseCase):
         inv_list = objects.InventoryList(objects=[inv])
         db_rp.set_inventory(inv_list)
 
-        usage_list = objects.UsageList.get_all_by_resource_provider_uuid(
+        usage_list = rp_obj.UsageList.get_all_by_resource_provider_uuid(
             self.ctx, db_rp.uuid)
         self.assertEqual(1, len(usage_list))
         self.assertEqual(2, usage_list[0].usage)
@@ -1398,7 +1398,7 @@ class UsageListTestCase(ResourceProviderBaseCase):
         inv_list = objects.InventoryList(objects=[inv])
         db_rp.set_inventory(inv_list)
 
-        usage_list = objects.UsageList.get_all_by_resource_provider_uuid(
+        usage_list = rp_obj.UsageList.get_all_by_resource_provider_uuid(
             self.ctx, db_rp.uuid)
         self.assertEqual(1, len(usage_list))
         self.assertEqual(0, usage_list[0].usage)
@@ -1421,7 +1421,7 @@ class UsageListTestCase(ResourceProviderBaseCase):
         inv_list = objects.InventoryList(objects=[disk_inv, vcpu_inv])
         db_rp.set_inventory(inv_list)
 
-        usage_list = objects.UsageList.get_all_by_resource_provider_uuid(
+        usage_list = rp_obj.UsageList.get_all_by_resource_provider_uuid(
             self.ctx, db_rp.uuid)
         self.assertEqual(2, len(usage_list))
 
