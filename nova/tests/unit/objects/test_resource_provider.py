@@ -555,16 +555,6 @@ class TestAllocationListNoDB(test_objects._LocalTest):
         self.assertEqual(_ALLOCATION_DB['used'], allocations[0].used)
 
 
-class TestUsageNoDB(test_objects._LocalTest):
-    USES_DB = False
-
-    def test_v1_1_resource_class(self):
-        usage = objects.Usage(resource_class='foo')
-        self.assertRaises(ValueError,
-                          usage.obj_to_primitive,
-                          target_version='1.0')
-
-
 class TestResourceClass(test.NoDBTestCase):
 
     def setUp(self):

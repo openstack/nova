@@ -1166,7 +1166,6 @@ object_data = {
     'TaskLogList': '1.0-cc8cce1af8a283b9d28b55fcd682e777',
     'Tag': '1.1-8b8d7d5b48887651a0e01241672e2963',
     'TagList': '1.1-55231bdb671ecf7641d6a2e9109b5d8e',
-    'Usage': '1.1-b738dbebeb20e3199fc0ebca6e292a47',
     'USBDeviceBus': '1.0-e4c7dd6032e46cd74b027df5eb2d4750',
     'VirtCPUFeature': '1.0-ea2464bdd09084bd388e5f61d5d4fc86',
     'VirtCPUModel': '1.0-5e1864af9227f698326203d7249796b5',
