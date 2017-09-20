@@ -165,6 +165,7 @@ Once you are running nova, the following information is extremely useful.
      This guide was imported during the Pike cycle and is a bit out of
      date. It will be updated during Queens to be more accurate.
 
+* :doc:`Flavors </user/flavors>`: What flavors are and why they are used.
 * :doc:`Upgrades </user/upgrade>`: How nova is designed to be upgraded for minimal
   service impact, and the order you should do them in.
 * :doc:`Quotas </user/quotas>`: Managing project quotas in nova.
@@ -278,6 +279,7 @@ looking parts of our architecture. These are collected below.
    user/conductor
    user/feature-classification
    user/filter-scheduler
+   user/flavors
    user/placement
    user/quotas
    user/support-matrix
