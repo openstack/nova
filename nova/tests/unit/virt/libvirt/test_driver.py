@@ -985,6 +985,23 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 break
         self.assertFalse(version_arg_found)
 
+    # NOTE(sdague): python2.7 and python3.5 have different behaviors
+    # when it comes to comparing against the sentinel, so
+    # has_min_version is needed to pass python3.5.
+    @mock.patch.object(nova.virt.libvirt.host.Host, "has_min_version",
+                       return_value=True)
+    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
+                       return_value=mock.sentinel.qemu_version)
+    def test_qemu_image_version(self, mock_get_libversion, min_ver):
+        """Test that init_host sets qemu image version
+
+        A sentinel is used here so that we aren't chasing this value
+        against minimums that get raised over time.
+        """
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr.init_host("dummyhost")
+        self.assertEqual(images.QEMU_VERSION, mock.sentinel.qemu_version)
+
     @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
                        return_value=versionutils.convert_version_to_int(
                            libvirt_driver.MIN_LIBVIRT_OTHER_ARCH.get(
@@ -11612,9 +11629,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                               return_value=service_mock),
             mock.patch.object(host.Host, "get_capabilities")):
 
-            drvr.init_host("wibble")
             self.assertRaises(exception.HypervisorUnavailable,
-                              drvr.get_num_instances)
+                              drvr.init_host, ("wibble",))
             self.assertTrue(service_mock.disabled)
 
     def test_service_resume_after_broken_connection(self):

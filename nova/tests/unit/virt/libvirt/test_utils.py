@@ -173,6 +173,31 @@ blah BLAH: bb
 
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('nova.utils.execute')
+    def test_qemu_info_canon_qemu_2_10(self, mock_execute, mock_exists):
+        images.QEMU_VERSION = images.QEMU_VERSION_REQ_SHARED
+        path = "disk.config"
+        example_output = """image: disk.config
+file format: raw
+virtual size: 64M (67108864 bytes)
+cluster_size: 65536
+disk size: 96K
+blah BLAH: bb
+"""
+        mock_execute.return_value = (example_output, '')
+        image_info = images.qemu_img_info(path)
+        mock_execute.assert_called_once_with('env', 'LC_ALL=C', 'LANG=C',
+                                             'qemu-img', 'info', path,
+                                             '--force-share',
+                                             prlimit=images.QEMU_IMG_LIMITS)
+        mock_exists.assert_called_once_with(path)
+        self.assertEqual('disk.config', image_info.image)
+        self.assertEqual('raw', image_info.file_format)
+        self.assertEqual(67108864, image_info.virtual_size)
+        self.assertEqual(98304, image_info.disk_size)
+        self.assertEqual(65536, image_info.cluster_size)
+
+    @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('nova.utils.execute')
     def test_qemu_info_canon2(self, mock_execute, mock_exists):
         path = "disk.config"
         example_output = """image: disk.config
