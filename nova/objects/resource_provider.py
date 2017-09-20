@@ -1141,11 +1141,8 @@ def _get_all_with_shared(ctx, resources):
     return [r for r in ctx.session.execute(sel)]
 
 
-@base.NovaObjectRegistry.register
+@base.NovaObjectRegistry.register_if(False)
 class ResourceProviderList(base.ObjectListBase, base.NovaObject):
-    # Version 1.0: Initial Version
-    # Version 1.1: Turn off remotable
-    VERSION = '1.1'
 
     fields = {
         'objects': fields.ListOfObjectsField('ResourceProvider'),

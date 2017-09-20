@@ -582,13 +582,13 @@ class ResourceProviderListTestCase(ResourceProviderBaseCase):
             rp = objects.ResourceProvider(self.ctx, name=name, uuid=uuid)
             rp.create()
 
-        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx)
         self.assertEqual(2, len(resource_providers))
-        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx, filters={'name': u'rp_name_1'})
         self.assertEqual(1, len(resource_providers))
-        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx, filters={'uuid': getattr(uuidsentinel, 'rp_uuid_2')})
         self.assertEqual(1, len(resource_providers))
         self.assertEqual('rp_name_2', resource_providers[0].name)
@@ -645,57 +645,57 @@ class ResourceProviderListTestCase(ResourceProviderBaseCase):
 
         # Both RPs should accept that request given the only current allocation
         # for the first RP is leaving one VCPU
-        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx, {'resources': {fields.ResourceClass.VCPU: 1}})
         self.assertEqual(2, len(resource_providers))
         # Now, when asking for 2 VCPUs, only the second RP should accept that
         # given the current allocation for the first RP
-        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx, {'resources': {fields.ResourceClass.VCPU: 2}})
         self.assertEqual(1, len(resource_providers))
         # Adding a second resource request should be okay for the 2nd RP
         # given it has enough disk but we also need to make sure that the
         # first RP is not acceptable because of the VCPU request
-        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx, {'resources': {fields.ResourceClass.VCPU: 2,
                                          fields.ResourceClass.DISK_GB: 1022}})
         self.assertEqual(1, len(resource_providers))
         # Now, we are asking for both disk and VCPU resources that all the RPs
         # can't accept (as the 2nd RP is having a reserved size)
-        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx, {'resources': {fields.ResourceClass.VCPU: 2,
                                          fields.ResourceClass.DISK_GB: 1024}})
         self.assertEqual(0, len(resource_providers))
 
         # We also want to verify that asking for a specific RP can also be
         # checking the resource usage.
-        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx, {'name': u'rp_name_1',
                            'resources': {fields.ResourceClass.VCPU: 1}})
         self.assertEqual(1, len(resource_providers))
 
         # Let's verify that the min and max units are checked too
         # Case 1: amount is in between min and max and modulo step_size
-        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx, {'resources': {fields.ResourceClass.MEMORY_MB: 2}})
         self.assertEqual(2, len(resource_providers))
         # Case 2: amount is less than min_unit
-        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx, {'resources': {fields.ResourceClass.MEMORY_MB: 1}})
         self.assertEqual(0, len(resource_providers))
         # Case 3: amount is more than min_unit
-        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx, {'resources': {fields.ResourceClass.MEMORY_MB: 5}})
         self.assertEqual(0, len(resource_providers))
         # Case 4: amount is not modulo step_size
-        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx, {'resources': {fields.ResourceClass.MEMORY_MB: 3}})
         self.assertEqual(0, len(resource_providers))
 
     def test_get_all_by_filters_with_resources_not_existing(self):
         self.assertRaises(
             exception.ResourceClassNotFound,
-            objects.ResourceProviderList.get_all_by_filters,
+            rp_obj.ResourceProviderList.get_all_by_filters,
             self.ctx, {'resources': {'FOOBAR': 3}})
 
     def test_get_all_by_filters_aggregate(self):
@@ -708,7 +708,7 @@ class ResourceProviderListTestCase(ResourceProviderBaseCase):
                 aggregate_uuids = [uuidsentinel.agg_a, uuidsentinel.agg_b]
                 rp.set_aggregates(aggregate_uuids)
 
-        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx, filters={'member_of': [uuidsentinel.agg_a]})
 
         self.assertEqual(2, len(resource_providers))
@@ -718,24 +718,24 @@ class ResourceProviderListTestCase(ResourceProviderBaseCase):
         self.assertNotIn('rp_name_2', names)
         self.assertNotIn('rp_name_4', names)
 
-        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx, filters={'member_of':
                                    [uuidsentinel.agg_a, uuidsentinel.agg_b]})
         self.assertEqual(2, len(resource_providers))
 
-        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx, filters={'member_of':
                                    [uuidsentinel.agg_a, uuidsentinel.agg_b],
                                    'name': u'rp_name_1'})
         self.assertEqual(1, len(resource_providers))
 
-        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx, filters={'member_of':
                                    [uuidsentinel.agg_a, uuidsentinel.agg_b],
                                    'name': u'barnabas'})
         self.assertEqual(0, len(resource_providers))
 
-        resource_providers = objects.ResourceProviderList.get_all_by_filters(
+        resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx, filters={'member_of':
                                    [uuidsentinel.agg_1, uuidsentinel.agg_2]})
         self.assertEqual(0, len(resource_providers))
