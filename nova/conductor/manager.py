@@ -375,6 +375,7 @@ class ComputeTaskManager(base.Base):
             # exception will be raised by instance.save()
             pass
 
+    @targets_cell
     @wrap_instance_event(prefix='conductor')
     def live_migrate_instance(self, context, instance, scheduler_hint,
                               block_migration, disk_over_commit, request_spec):
