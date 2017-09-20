@@ -17,6 +17,7 @@ import random
 import time
 
 import mock
+from os_xenapi.client import exception as xenapi_exception
 from os_xenapi.client import host_glance
 from os_xenapi.client import XenAPI
 
@@ -303,3 +304,31 @@ class TestGlanceStore(stubs.XenAPITestBaseNoDB):
             mock_time_sleep.assert_has_calls(time_sleep_args)
             mock_call_plugin.assert_has_calls(call_plugin_args)
             mock_add_inst.assert_has_calls(add_inst_args)
+
+    @mock.patch.object(utils, 'get_auto_disk_config_from_instance')
+    @mock.patch.object(common_glance, 'generate_identity_headers')
+    @mock.patch.object(vm_utils, 'get_sr_path')
+    @mock.patch.object(host_glance, 'upload_vhd')
+    def test_upload_image_raises_exception_image_not_found(self,
+                                                           mock_upload,
+                                                           mock_sr_path,
+                                                           mock_extra_header,
+                                                           mock_disk_config):
+        params = self._get_upload_params()
+        mock_upload.return_value = 'fake_upload'
+        mock_sr_path.return_value = 'fake_sr_path'
+        mock_extra_header.return_value = 'fake_extra_header'
+        mock_disk_config.return_value = 'true'
+        image_id = 'fake_image_id'
+        mock_upload.side_effect = xenapi_exception.PluginImageNotFound(
+            image_id=image_id
+        )
+        self.assertRaises(exception.ImageNotFound, self.store.upload_image,
+                          self.context, self.session, self.instance,
+                          'fake_image_uuid', ['fake_vdi_uuid'])
+
+        mock_sr_path.assert_called_once_with(self.session)
+        mock_extra_header.assert_called_once_with(self.context)
+        mock_upload.assert_called_once_with(
+            self.session, 0, mock.ANY, mock.ANY, 'fake_image_uuid',
+            'fake_sr_path', 'fake_extra_header', **params)
