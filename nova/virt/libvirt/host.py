@@ -546,7 +546,7 @@ class Host(object):
         """
         try:
             conn = self.get_connection()
-            return conn.lookupByName(instance.name)
+            return conn.lookupByUUIDString(instance.uuid)
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
             if error_code == libvirt.VIR_ERR_NO_DOMAIN:
