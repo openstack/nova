@@ -77,6 +77,32 @@ Nova Database
    call. If not specified, migration will occur in batches of 50 until fully
    complete.
 
+``nova-manage db ironic_flavor_migration [--all] [--host] [--node] [--resource_class]``
+
+   Perform the ironic flavor migration process against the database
+   while services are offline. This is `not recommended` for most
+   people. The ironic compute driver will do this online and as
+   necessary if run normally. This routine is provided only for
+   advanced users that may be skipping the 16.0.0 Pike release, never
+   able to run services normally at the Pike level. Since this utility
+   is for use when all services (including ironic) are down, you must
+   pass the resource class set on your node(s) with the
+   ``--resource_class`` parameter.
+
+   To migrate a specific host and node, provide the hostname and node uuid with
+   ``--host $hostname --node $uuid``. To migrate all instances on nodes managed
+   by a single host, provide only ``--host``. To iterate over all nodes in the
+   system in a single pass, use ``--all``. Note that this process is not lightweight,
+   so it should not be run frequently without cause, although it is not harmful
+   to do so. If you have multiple cellsv2 cells, you should run this once per cell
+   with the corresponding cell config for each (i.e. this does not iterate cells
+   automatically).
+
+   Note that this is not recommended unless you need to run this
+   specific data migration offline, and it should be used with care as
+   the work done is non-trivial. Running smaller and more targeted batches (such as
+   specific nodes) is recommended.
+
 Nova API Database
 ~~~~~~~~~~~~~~~~~
 
