@@ -106,3 +106,20 @@ class ComputeNodeTestCase(test.TestCase):
                                                        [cn1.uuid, cn2.uuid,
                                                         uuidsentinel.noexists])
         self.assertEqual(2, len(cns))
+
+    def test_get_by_hypervisor_type(self):
+        cn1 = fake_compute_obj.obj_clone()
+        cn1._context = self.context
+        cn1.hypervisor_type = 'ironic'
+        cn1.create()
+
+        cn2 = fake_compute_obj.obj_clone()
+        cn2._context = self.context
+        cn2.hypervisor_type = 'libvirt'
+        cn2.host += '-alt'
+        cn2.create()
+
+        cns = objects.ComputeNodeList.get_by_hypervisor_type(self.context,
+                                                             'ironic')
+        self.assertEqual(1, len(cns))
+        self.assertEqual(cn1.uuid, cns[0].uuid)
