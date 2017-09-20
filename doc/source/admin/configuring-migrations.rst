@@ -88,7 +88,7 @@ the instructions below:
 
 #. Set the following parameters in ``nova.conf`` on all compute hosts:
 
-   - ``vncserver_listen=0.0.0.0``
+   - ``server_listen=0.0.0.0``
 
      You must not make the VNC server listen to the IP address of its compute
      host, since that addresses changes when the instance is migrated.

@@ -308,7 +308,7 @@ class PowerVMDriver(driver.ComputeDriver):
         lpar_uuid = vm.get_pvm_uuid(instance)
 
         # Build the connection to the VNC.
-        host = CONF.vnc.vncserver_proxyclient_address
+        host = CONF.vnc.server_proxyclient_address
         # TODO(thorst, efried) Add the x509 certificate support when it lands
 
         try:

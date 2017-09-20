@@ -3580,7 +3580,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     def test_get_guest_config_with_vnc(self):
         self.flags(enabled=True,
-                   vncserver_listen='10.0.0.1',
+                   server_listen='10.0.0.1',
                    keymap='en-ie',
                    group='vnc')
         self.flags(virt_type='kvm', group='libvirt')
@@ -7292,7 +7292,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self, mock_cpu, mock_test_file, mock_svc):
         # Tests that check_can_live_migrate_destination returns the listen
         # addresses required by check_can_live_migrate_source.
-        self.flags(vncserver_listen='192.0.2.12', group='vnc')
+        self.flags(server_listen='192.0.2.12', group='vnc')
         self.flags(server_listen='198.51.100.34', group='spice')
         self.flags(proxyclient_address='203.0.113.56', group='serial_console')
         self.flags(enabled=True, group='serial_console')

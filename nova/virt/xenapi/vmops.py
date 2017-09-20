@@ -1922,7 +1922,7 @@ class VMOps(object):
 
         # NOTE: XS5.6sp2+ use http over port 80 for xenapi com
         return ctype.ConsoleVNC(
-            host=CONF.vnc.vncserver_proxyclient_address,
+            host=CONF.vnc.server_proxyclient_address,
             port=80,
             internal_access_path=path)
 
