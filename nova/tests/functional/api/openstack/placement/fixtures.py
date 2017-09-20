@@ -138,7 +138,7 @@ class AllocationFixture(APIFixture):
             resource_class='DISK_GB',
             consumer_id=consumer_id,
             used=500)
-        alloc_list = objects.AllocationList(
+        alloc_list = rp_obj.AllocationList(
             self.context,
             objects=[alloc1, alloc2],
             project_id=project_id,
@@ -166,7 +166,7 @@ class AllocationFixture(APIFixture):
             resource_class='VCPU',
             consumer_id=consumer_id,
             used=4)
-        alloc_list = objects.AllocationList(
+        alloc_list = rp_obj.AllocationList(
                 self.context,
                 objects=[alloc1, alloc2],
                 project_id=project_id,
@@ -187,7 +187,7 @@ class AllocationFixture(APIFixture):
             resource_class='VCPU',
             consumer_id=consumer_id,
             used=1)
-        alloc_list = objects.AllocationList(
+        alloc_list = rp_obj.AllocationList(
                 self.context,
                 objects=[alloc1, alloc2],
                 project_id=project_id,

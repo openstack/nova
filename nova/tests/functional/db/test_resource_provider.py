@@ -68,7 +68,7 @@ class ResourceProviderBaseCase(test.NoDBTestCase):
         rp.set_inventory(inv_list)
         alloc = objects.Allocation(self.ctx, resource_provider=rp,
                 **DISK_ALLOCATION)
-        alloc_list = objects.AllocationList(self.ctx, objects=[alloc])
+        alloc_list = rp_obj.AllocationList(self.ctx, objects=[alloc])
         alloc_list.create_all()
         return rp, alloc
 
@@ -271,7 +271,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
             used=1,
         )
 
-        alloc_list = objects.AllocationList(
+        alloc_list = rp_obj.AllocationList(
             self.ctx,
             objects=[alloc]
         )
@@ -330,7 +330,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
             consumer_id=uuidsentinel.consumer,
             resource_class='DISK_GB',
             used=500)
-        alloc_list = objects.AllocationList(self.ctx, objects=[alloc])
+        alloc_list = rp_obj.AllocationList(self.ctx, objects=[alloc])
         alloc_list.create_all()
 
         # Update our inventory to over-subscribe us after the above allocation
@@ -563,7 +563,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         expected_gen = rp.generation + 1
         alloc = objects.Allocation(context=self.ctx, resource_provider=rp,
                 **DISK_ALLOCATION)
-        alloc_list = objects.AllocationList(self.ctx, objects=[alloc])
+        alloc_list = rp_obj.AllocationList(self.ctx, objects=[alloc])
         alloc_list.create_all()
         self.assertEqual(expected_gen, rp.generation)
 
@@ -639,7 +639,7 @@ class ResourceProviderListTestCase(ResourceProviderBaseCase):
                 consumer_id=uuidsentinel.consumer,
                 resource_class=fields.ResourceClass.VCPU,
                 used=1)
-            allocation_list = objects.AllocationList(
+            allocation_list = rp_obj.AllocationList(
                 self.ctx, objects=[allocation_1])
             allocation_list.create_all()
 
@@ -830,7 +830,7 @@ class TestAllocation(ResourceProviderBaseCase):
             resource_provider=resource_provider,
             **DISK_ALLOCATION
         )
-        alloc_list = objects.AllocationList(self.ctx,
+        alloc_list = rp_obj.AllocationList(self.ctx,
                 objects=[disk_allocation])
         alloc_list.create_all()
 
@@ -843,7 +843,7 @@ class TestAllocation(ResourceProviderBaseCase):
                          disk_allocation.consumer_id)
         self.assertIsInstance(disk_allocation.id, int)
 
-        allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
+        allocations = rp_obj.AllocationList.get_all_by_resource_provider_uuid(
             self.ctx, resource_provider.uuid)
 
         self.assertEqual(1, len(allocations))
@@ -853,7 +853,7 @@ class TestAllocation(ResourceProviderBaseCase):
 
         allocations[0].destroy()
 
-        allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
+        allocations = rp_obj.AllocationList.get_all_by_resource_provider_uuid(
             self.ctx, resource_provider.uuid)
 
         self.assertEqual(0, len(allocations))
@@ -910,7 +910,7 @@ class TestAllocation(ResourceProviderBaseCase):
         # Now create an allocation that represents a move operation where the
         # scheduler has selected cn_dest as the target host and created a
         # "doubled-up" allocation for the duration of the move operation
-        alloc_list = objects.AllocationList(context=self.ctx,
+        alloc_list = rp_obj.AllocationList(context=self.ctx,
             objects=[
                 objects.Allocation(
                     context=self.ctx,
@@ -939,17 +939,17 @@ class TestAllocation(ResourceProviderBaseCase):
             ])
         alloc_list.create_all()
 
-        src_allocs = objects.AllocationList.get_all_by_resource_provider_uuid(
+        src_allocs = rp_obj.AllocationList.get_all_by_resource_provider_uuid(
             self.ctx, cn_source.uuid)
 
         self.assertEqual(2, len(src_allocs))
 
-        dest_allocs = objects.AllocationList.get_all_by_resource_provider_uuid(
+        dest_allocs = rp_obj.AllocationList.get_all_by_resource_provider_uuid(
             self.ctx, cn_dest.uuid)
 
         self.assertEqual(2, len(dest_allocs))
 
-        consumer_allocs = objects.AllocationList.get_all_by_consumer_id(
+        consumer_allocs = rp_obj.AllocationList.get_all_by_consumer_id(
             self.ctx, uuidsentinel.instance)
 
         self.assertEqual(4, len(consumer_allocs))
@@ -960,7 +960,7 @@ class TestAllocation(ResourceProviderBaseCase):
         # the source host pulls the existing allocation for the instance and
         # removes any resources that refer to itself and saves the allocation
         # back to placement
-        new_alloc_list = objects.AllocationList(context=self.ctx,
+        new_alloc_list = rp_obj.AllocationList(context=self.ctx,
             objects=[
                 objects.Allocation(
                     context=self.ctx,
@@ -977,28 +977,28 @@ class TestAllocation(ResourceProviderBaseCase):
             ])
         new_alloc_list.create_all()
 
-        src_allocs = objects.AllocationList.get_all_by_resource_provider_uuid(
+        src_allocs = rp_obj.AllocationList.get_all_by_resource_provider_uuid(
             self.ctx, cn_source.uuid)
 
         self.assertEqual(0, len(src_allocs))
 
-        dest_allocs = objects.AllocationList.get_all_by_resource_provider_uuid(
+        dest_allocs = rp_obj.AllocationList.get_all_by_resource_provider_uuid(
             self.ctx, cn_dest.uuid)
 
         self.assertEqual(2, len(dest_allocs))
 
-        consumer_allocs = objects.AllocationList.get_all_by_consumer_id(
+        consumer_allocs = rp_obj.AllocationList.get_all_by_consumer_id(
             self.ctx, uuidsentinel.instance)
 
         self.assertEqual(2, len(consumer_allocs))
 
     def test_destroy(self):
         rp, allocation = self._make_allocation()
-        allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
+        allocations = rp_obj.AllocationList.get_all_by_resource_provider_uuid(
             self.ctx, rp.uuid)
         self.assertEqual(1, len(allocations))
         objects.Allocation._destroy(self.ctx, allocation.id)
-        allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
+        allocations = rp_obj.AllocationList.get_all_by_resource_provider_uuid(
             self.ctx, rp.uuid)
         self.assertEqual(0, len(allocations))
         self.assertRaises(exception.NotFound, objects.Allocation._destroy,
@@ -1006,20 +1006,20 @@ class TestAllocation(ResourceProviderBaseCase):
 
     def test_get_allocations_from_db(self):
         rp, allocation = self._make_allocation()
-        allocations = objects.AllocationList._get_allocations_from_db(
+        allocations = rp_obj.AllocationList._get_allocations_from_db(
             self.ctx, rp.uuid)
         self.assertEqual(1, len(allocations))
         self.assertEqual(rp.id, allocations[0].resource_provider_id)
         self.assertEqual(allocation.resource_provider.id,
                          allocations[0].resource_provider_id)
 
-        allocations = objects.AllocationList._get_allocations_from_db(
+        allocations = rp_obj.AllocationList._get_allocations_from_db(
             self.ctx, uuidsentinel.bad_rp_uuid)
         self.assertEqual(0, len(allocations))
 
     def test_get_all_by_resource_provider(self):
         rp, allocation = self._make_allocation()
-        allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
+        allocations = rp_obj.AllocationList.get_all_by_resource_provider_uuid(
             self.ctx, rp.uuid)
         self.assertEqual(1, len(allocations))
         self.assertEqual(rp.id, allocations[0].resource_provider.id)
@@ -1075,7 +1075,7 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
                                           consumer_id=consumer_uuid,
                                           resource_class=rp2_class,
                                           used=rp2_used)
-        allocation_list = objects.AllocationList(
+        allocation_list = rp_obj.AllocationList(
             self.ctx, objects=[allocation_1, allocation_2])
         allocation_list.create_all()
 
@@ -1091,7 +1091,7 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
                                           consumer_id=consumer_uuid2,
                                           resource_class=rp2_class,
                                           used=rp2_used)
-        allocation_list = objects.AllocationList(
+        allocation_list = rp_obj.AllocationList(
             self.ctx, objects=[allocation_1, allocation_2])
         # If we are joining wrong, this will be a KeyError
         allocation_list.create_all()
@@ -1127,7 +1127,7 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
                                           consumer_id=consumer_uuid,
                                           resource_class=rp2_class,
                                           used=rp2_used)
-        allocation_list = objects.AllocationList(
+        allocation_list = rp_obj.AllocationList(
             self.ctx, objects=[allocation_1, allocation_2])
 
         # There's no inventory, we have a failure.
@@ -1194,7 +1194,7 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
                                           consumer_id=consumer_uuid,
                                           resource_class=rp1_class,
                                           used=rp1_used)
-        allocation_list = objects.AllocationList(
+        allocation_list = rp_obj.AllocationList(
             self.ctx, objects=[allocation_1])
         allocation_list.create_all()
 
@@ -1206,7 +1206,7 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
         # NOTE(cdent): The database uses 'consumer_id' for the
         # column, presumably because some ids might not be uuids, at
         # some point in the future.
-        consumer_allocations = objects.AllocationList.get_all_by_consumer_id(
+        consumer_allocations = rp_obj.AllocationList.get_all_by_consumer_id(
             self.ctx, consumer_uuid)
         consumer_allocations.delete_all()
 
@@ -1248,14 +1248,14 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
                                         consumer_id=consumer_uuid,
                                         resource_class=rp_class,
                                         used=bad_used)
-        allocation_list = objects.AllocationList(self.ctx,
+        allocation_list = rp_obj.AllocationList(self.ctx,
                                                  objects=[allocation])
         self.assertRaises(exception.InvalidAllocationConstraintsViolated,
                           allocation_list.create_all)
 
         # correct for step size
         allocation.used = good_used
-        allocation_list = objects.AllocationList(self.ctx,
+        allocation_list = rp_obj.AllocationList(self.ctx,
                                                  objects=[allocation])
         allocation_list.create_all()
 
@@ -1299,7 +1299,7 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
                                          consumer_id=consumer_uuid,
                                          resource_class=rp_class,
                                          used=200)
-        allocation_list = objects.AllocationList(
+        allocation_list = rp_obj.AllocationList(
             self.ctx,
             objects=[allocation1, allocation2],
             project_id=self.ctx.project_id,
@@ -1337,7 +1337,7 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
                                          consumer_id=other_consumer_uuid,
                                          resource_class=rp_class,
                                          used=200)
-        allocation_list = objects.AllocationList(
+        allocation_list = rp_obj.AllocationList(
             self.ctx,
             objects=[allocation3],
             project_id=self.ctx.project_id,
@@ -2242,7 +2242,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
             used=1024,
         )
 
-        alloc_list = objects.AllocationList(
+        alloc_list = rp_obj.AllocationList(
             self.ctx,
             objects=[vcpu_alloc, memory_mb_alloc]
         )
@@ -2267,7 +2267,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
                 consumer_id=getattr(uuidsentinel, 'consumer%d' % x),
                 used=512,
             )
-            alloc_list = objects.AllocationList(
+            alloc_list = rp_obj.AllocationList(
                 self.ctx,
                 objects=[memory_mb_alloc]
             )

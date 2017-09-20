@@ -25,6 +25,7 @@ from nova.api.openstack.placement import wsgi_wrapper
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.objects import resource_provider as rp_obj
 
 
 LOG = logging.getLogger(__name__)
@@ -165,7 +166,7 @@ def list_for_consumer(req):
     # NOTE(cdent): There is no way for a 404 to be returned here,
     # only an empty result. We do not have a way to validate a
     # consumer id.
-    allocations = objects.AllocationList.get_all_by_consumer_id(
+    allocations = rp_obj.AllocationList.get_all_by_consumer_id(
         context, consumer_id)
 
     allocations_json = jsonutils.dumps(
@@ -199,7 +200,7 @@ def list_for_resource_provider(req):
             _("Resource provider '%(rp_uuid)s' not found: %(error)s") %
             {'rp_uuid': uuid, 'error': exc})
 
-    allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
+    allocations = rp_obj.AllocationList.get_all_by_resource_provider_uuid(
         context, uuid)
 
     allocations_json = jsonutils.dumps(
@@ -242,7 +243,7 @@ def _set_allocations(req, schema):
                 used=resources[resource_class])
             allocation_objects.append(allocation)
 
-    allocations = objects.AllocationList(
+    allocations = rp_obj.AllocationList(
         context,
         objects=allocation_objects,
         project_id=data.get('project_id'),
@@ -292,7 +293,7 @@ def delete_allocations(req):
     context = req.environ['placement.context']
     consumer_uuid = util.wsgi_path_item(req.environ, 'consumer_uuid')
 
-    allocations = objects.AllocationList.get_all_by_consumer_id(
+    allocations = rp_obj.AllocationList.get_all_by_consumer_id(
         context, consumer_uuid)
     if allocations:
         try:

@@ -483,7 +483,8 @@ class TestAllocation(test_objects._LocalTest):
                                  resource_class=_RESOURCE_CLASS_NAME,
                                  consumer_id=uuids.fake_instance,
                                  used=8)
-        alloc_list = objects.AllocationList(self.context, objects=[obj])
+        alloc_list = resource_provider.AllocationList(self.context,
+                                                      objects=[obj])
         self.assertNotIn("id", obj)
         alloc_list.create_all()
         self.assertIn("id", obj)
@@ -509,7 +510,8 @@ class TestAllocation(test_objects._LocalTest):
                                  resource_class=_RESOURCE_CLASS_NAME,
                                  consumer_id=uuids.fake_instance,
                                  used=8)
-        alloc_list = objects.AllocationList(self.context, objects=[obj])
+        alloc_list = resource_provider.AllocationList(self.context,
+                                                      objects=[obj])
         self.assertRaises(exception.ObjectActionError, alloc_list.create_all)
 
 
@@ -540,13 +542,14 @@ class TestAllocationListNoDB(test_objects._LocalTest):
 
     @mock.patch('nova.objects.resource_provider._ensure_rc_cache',
             side_effect=_fake_ensure_cache)
-    @mock.patch('nova.objects.AllocationList._get_allocations_from_db',
-                return_value=[_ALLOCATION_DB])
+    @mock.patch('nova.objects.resource_provider.AllocationList.'
+                '_get_allocations_from_db', return_value=[_ALLOCATION_DB])
     def test_get_allocations(self, mock_get_allocations_from_db,
             mock_ensure_cache):
         rp = objects.ResourceProvider(id=_RESOURCE_PROVIDER_ID,
                                       uuid=uuids.resource_provider)
-        allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
+        rp_alloc_list = resource_provider.AllocationList
+        allocations = rp_alloc_list.get_all_by_resource_provider_uuid(
             self.context, rp.uuid)
 
         self.assertEqual(1, len(allocations))

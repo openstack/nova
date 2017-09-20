@@ -1725,13 +1725,8 @@ def _ensure_user(conn, external_id):
     return _ensure_lookup_table_entry(conn, _USER_TBL, external_id)
 
 
-@base.NovaObjectRegistry.register
+@base.NovaObjectRegistry.register_if(False)
 class AllocationList(base.ObjectListBase, base.NovaObject):
-    # Version 1.0: Initial Version
-    # Version 1.1: Add create_all() and delete_all()
-    # Version 1.2: Turn off remotable
-    # Version 1.3: Add project_id and user_id fields
-    VERSION = '1.3'
 
     fields = {
         'objects': fields.ListOfObjectsField('Allocation'),
