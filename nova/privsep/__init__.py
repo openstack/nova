@@ -18,19 +18,6 @@
 from oslo_privsep import capabilities
 from oslo_privsep import priv_context
 
-# NOTE(tonyb): DAC == Discriminatory Access Control.  Basically this context
-#              can bypass permissions checks in the file-system.
-dac_admin_pctxt = priv_context.PrivContext(
-    'nova',
-    cfg_section='nova_dac_admin',
-    pypath=__name__ + '.dac_admin_pctxt',
-    capabilities=[capabilities.CAP_CHOWN,
-                  capabilities.CAP_DAC_OVERRIDE,
-                  capabilities.CAP_DAC_READ_SEARCH,
-                  capabilities.CAP_FOWNER],
-)
-
-
 # NOTE(mikal): DAC + CAP_NET_ADMIN, required for network sysfs changes
 dacnet_admin_pctxt = priv_context.PrivContext(
     'nova',

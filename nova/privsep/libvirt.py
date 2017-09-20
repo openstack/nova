@@ -14,8 +14,7 @@
 #    under the License.
 
 """
-libvirt specific routines that use the dac_admin_pctxt to bypass file-system
-checks.
+libvirt specific routines.
 """
 
 import errno
@@ -24,7 +23,7 @@ import os
 import nova.privsep
 
 
-@nova.privsep.dac_admin_pctxt.entrypoint
+@nova.privsep.sys_admin_pctxt.entrypoint
 def last_bytes(path, num):
     # NOTE(mikal): this is implemented in this contrived manner because you
     # can't mock a decorator in python (they're loaded at file parse time,

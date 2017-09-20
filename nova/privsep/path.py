@@ -13,7 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Routines that use the dac_admin_pctxt to bypass file-system checks"""
+"""Routines that bypass file-system checks."""
 
 import os
 
@@ -23,7 +23,7 @@ from nova import exception
 import nova.privsep
 
 
-@nova.privsep.dac_admin_pctxt.entrypoint
+@nova.privsep.sys_admin_pctxt.entrypoint
 def readfile(path):
     if not os.path.exists(path):
         raise exception.FileNotFound(file_path=path)
@@ -31,7 +31,7 @@ def readfile(path):
         return f.read()
 
 
-@nova.privsep.dac_admin_pctxt.entrypoint
+@nova.privsep.sys_admin_pctxt.entrypoint
 def writefile(path, mode, content):
     if not os.path.exists(path):
         raise exception.FileNotFound(file_path=path)
@@ -39,33 +39,33 @@ def writefile(path, mode, content):
         f.write(content)
 
 
-@nova.privsep.dac_admin_pctxt.entrypoint
+@nova.privsep.sys_admin_pctxt.entrypoint
 def readlink(path):
     if not os.path.exists(path):
         raise exception.FileNotFound(file_path=path)
     return os.readlink(path)
 
 
-@nova.privsep.dac_admin_pctxt.entrypoint
+@nova.privsep.sys_admin_pctxt.entrypoint
 def chown(path, uid=-1, gid=-1):
     if not os.path.exists(path):
         raise exception.FileNotFound(file_path=path)
     return os.chown(path, uid, gid)
 
 
-@nova.privsep.dac_admin_pctxt.entrypoint
+@nova.privsep.sys_admin_pctxt.entrypoint
 def makedirs(path):
     fileutils.ensure_tree(path)
 
 
-@nova.privsep.dac_admin_pctxt.entrypoint
+@nova.privsep.sys_admin_pctxt.entrypoint
 def chmod(path, mode):
     if not os.path.exists(path):
         raise exception.FileNotFound(file_path=path)
     os.chmod(path, mode)
 
 
-@nova.privsep.dac_admin_pctxt.entrypoint
+@nova.privsep.sys_admin_pctxt.entrypoint
 def utime(path):
     if not os.path.exists(path):
         raise exception.FileNotFound(file_path=path)
@@ -79,6 +79,6 @@ def utime(path):
 
 class path(object):
     @staticmethod
-    @nova.privsep.dac_admin_pctxt.entrypoint
+    @nova.privsep.sys_admin_pctxt.entrypoint
     def exists(path):
         return os.path.exists(path)
