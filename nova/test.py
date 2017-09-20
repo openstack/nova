@@ -61,6 +61,7 @@ from nova.tests.unit import conf_fixture
 from nova.tests.unit import policy_fixture
 from nova.tests import uuidsentinel as uuids
 from nova import utils
+from nova.virt import images
 
 
 CONF = cfg.CONF
@@ -303,6 +304,8 @@ class TestCase(testtools.TestCase):
 
         # Reset the traits sync flag
         objects.resource_provider._TRAITS_SYNCED = False
+        # Reset the global QEMU version flag.
+        images.QEMU_VERSION = None
 
         mox_fixture = self.useFixture(moxstubout.MoxStubout())
         self.mox = mox_fixture.mox
