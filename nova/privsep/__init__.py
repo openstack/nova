@@ -18,18 +18,6 @@
 from oslo_privsep import capabilities
 from oslo_privsep import priv_context
 
-# NOTE(mikal): DAC + CAP_NET_ADMIN, required for network sysfs changes
-dacnet_admin_pctxt = priv_context.PrivContext(
-    'nova',
-    cfg_section='nova_dacnet_admin',
-    pypath=__name__ + '.dacnet_admin_pctxt',
-    capabilities=[capabilities.CAP_CHOWN,
-                  capabilities.CAP_DAC_OVERRIDE,
-                  capabilities.CAP_DAC_READ_SEARCH,
-                  capabilities.CAP_FOWNER,
-                  capabilities.CAP_NET_ADMIN],
-)
-
 sys_admin_pctxt = priv_context.PrivContext(
     'nova',
     cfg_section='nova_sys_admin',
