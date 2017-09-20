@@ -82,8 +82,8 @@ from nova.objects import fields
 from nova.objects import migrate_data as migrate_data_obj
 from nova.pci import manager as pci_manager
 from nova.pci import utils as pci_utils
-from nova.privsep import dac_admin
 import nova.privsep.libvirt
+import nova.privsep.path
 from nova import utils
 from nova import version
 from nova.virt import block_device as driver_block_device
@@ -1908,7 +1908,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 time.sleep(0.5)
 
             dev.abort_job()
-            dac_admin.chown(disk_delta, uid=os.getuid())
+            nova.privsep.path.chown(disk_delta, uid=os.getuid())
         finally:
             self._host.write_instance_config(xml)
             if quiesced:
@@ -2899,7 +2899,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # flush of that pty device into the "console.log" file to ensure
         # that a series of "get_console_output" calls return the complete
         # content even after rebooting a guest.
-        dac_admin.writefile(console_log, 'a+', data)
+        nova.privsep.path.writefile(console_log, 'a+', data)
         return self._get_console_output_file(instance, console_log)
 
     def get_host_ip_addr(self):
@@ -3216,7 +3216,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # PONDERING(mikal): can I assume that root is UID zero in every
             # OS? Probably not.
             uid = pwd.getpwnam('root').pw_uid
-            dac_admin.chown(image('disk').path, uid=uid)
+            nova.privsep.path.chown(image('disk').path, uid=uid)
 
         self._create_and_inject_local_root(context, instance,
                                            booted_from_volume, suffix,

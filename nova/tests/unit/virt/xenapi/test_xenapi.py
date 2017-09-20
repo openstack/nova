@@ -948,11 +948,11 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
 
     @testtools.skipIf(test_utils.is_osx(),
                       'IPv6 pretty-printing broken on OSX, see bug 1409135')
-    @mock.patch.object(nova.privsep.dac_admin, 'readlink')
-    @mock.patch.object(nova.privsep.dac_admin, 'writefile')
-    @mock.patch.object(nova.privsep.dac_admin, 'makedirs')
-    @mock.patch.object(nova.privsep.dac_admin, 'chown')
-    @mock.patch.object(nova.privsep.dac_admin, 'chmod')
+    @mock.patch.object(nova.privsep.path, 'readlink')
+    @mock.patch.object(nova.privsep.path, 'writefile')
+    @mock.patch.object(nova.privsep.path, 'makedirs')
+    @mock.patch.object(nova.privsep.path, 'chown')
+    @mock.patch.object(nova.privsep.path, 'chmod')
     def test_spawn_netinject_file(self, chmod, chown, mkdir, write_file,
                                   read_link):
         self.flags(flat_injected=True)

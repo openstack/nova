@@ -37,7 +37,7 @@ class VirtDiskVFSLocalFSTestPaths(test.NoDBTestCase):
     # NOTE(mikal): mocking a decorator is non-trivial, so this is the
     # best we can do.
 
-    @mock.patch.object(nova.privsep.dac_admin, 'readlink')
+    @mock.patch.object(nova.privsep.path, 'readlink')
     def test_check_safe_path(self, read_link):
         vfs = vfsimpl.VFSLocalFS(self.rawfile)
         vfs.imgdir = '/foo'
@@ -47,7 +47,7 @@ class VirtDiskVFSLocalFSTestPaths(test.NoDBTestCase):
         ret = vfs._canonical_path('etc/something.conf')
         self.assertEqual(ret, '/foo/etc/something.conf')
 
-    @mock.patch.object(nova.privsep.dac_admin, 'readlink')
+    @mock.patch.object(nova.privsep.path, 'readlink')
     def test_check_unsafe_path(self, read_link):
         vfs = vfsimpl.VFSLocalFS(self.rawfile)
         vfs.imgdir = '/foo'
@@ -68,8 +68,8 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         self.rawfile = imgmodel.LocalFileImage('/dummy.img',
                                                imgmodel.FORMAT_RAW)
 
-    @mock.patch.object(nova.privsep.dac_admin, 'readlink')
-    @mock.patch.object(nova.privsep.dac_admin, 'makedirs')
+    @mock.patch.object(nova.privsep.path, 'readlink')
+    @mock.patch.object(nova.privsep.path, 'makedirs')
     def test_makepath(self, mkdir, read_link):
         vfs = vfsimpl.VFSLocalFS(self.qcowfile)
         vfs.imgdir = '/scratch/dir'
@@ -84,8 +84,8 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         read_link.assert_called()
         mkdir.assert_called_with(read_link.return_value)
 
-    @mock.patch.object(nova.privsep.dac_admin, 'readlink')
-    @mock.patch.object(nova.privsep.dac_admin, 'writefile')
+    @mock.patch.object(nova.privsep.path, 'readlink')
+    @mock.patch.object(nova.privsep.path, 'writefile')
     def test_append_file(self, write_file, read_link):
         vfs = vfsimpl.VFSLocalFS(self.qcowfile)
         vfs.imgdir = '/scratch/dir'
@@ -95,8 +95,8 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         read_link.assert_called()
         write_file.assert_called_with(read_link.return_value, 'a', ' Goodbye')
 
-    @mock.patch.object(nova.privsep.dac_admin, 'readlink')
-    @mock.patch.object(nova.privsep.dac_admin, 'writefile')
+    @mock.patch.object(nova.privsep.path, 'readlink')
+    @mock.patch.object(nova.privsep.path, 'writefile')
     def test_replace_file(self, write_file, read_link):
         vfs = vfsimpl.VFSLocalFS(self.qcowfile)
         vfs.imgdir = '/scratch/dir'
@@ -106,8 +106,8 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         read_link.assert_called()
         write_file.assert_called_with(read_link.return_value, 'w', 'Goodbye')
 
-    @mock.patch.object(nova.privsep.dac_admin, 'readlink')
-    @mock.patch.object(nova.privsep.dac_admin, 'readfile')
+    @mock.patch.object(nova.privsep.path, 'readlink')
+    @mock.patch.object(nova.privsep.path, 'readfile')
     def test_read_file(self, read_file, read_link):
         vfs = vfsimpl.VFSLocalFS(self.qcowfile)
         vfs.imgdir = '/scratch/dir'
@@ -116,15 +116,15 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         read_link.assert_called()
         read_file.assert_called()
 
-    @mock.patch.object(nova.privsep.dac_admin.path, 'exists')
+    @mock.patch.object(nova.privsep.path.path, 'exists')
     def test_has_file(self, exists):
         vfs = vfsimpl.VFSLocalFS(self.qcowfile)
         vfs.imgdir = '/scratch/dir'
         has = vfs.has_file('/some/file')
         self.assertEqual(exists.return_value, has)
 
-    @mock.patch.object(nova.privsep.dac_admin, 'readlink')
-    @mock.patch.object(nova.privsep.dac_admin, 'chmod')
+    @mock.patch.object(nova.privsep.path, 'readlink')
+    @mock.patch.object(nova.privsep.path, 'chmod')
     def test_set_permissions(self, chmod, read_link):
         vfs = vfsimpl.VFSLocalFS(self.qcowfile)
         vfs.imgdir = '/scratch/dir'
@@ -133,8 +133,8 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
         read_link.assert_called()
         chmod.assert_called_with(read_link.return_value, 0o777)
 
-    @mock.patch.object(nova.privsep.dac_admin, 'readlink')
-    @mock.patch.object(nova.privsep.dac_admin, 'chown')
+    @mock.patch.object(nova.privsep.path, 'readlink')
+    @mock.patch.object(nova.privsep.path, 'chown')
     @mock.patch.object(pwd, 'getpwnam')
     @mock.patch.object(grp, 'getgrnam')
     def test_set_ownership(self, getgrnam, getpwnam, chown, read_link):

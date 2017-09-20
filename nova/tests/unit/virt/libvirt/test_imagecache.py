@@ -429,7 +429,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
                 self.assertNotEqual(stream.getvalue().find('Failed to remove'),
                                     -1)
 
-    @mock.patch('nova.privsep.dac_admin.utime')
+    @mock.patch('nova.privsep.path.utime')
     def test_mark_in_use(self, mock_utime):
         img = '123'
 
@@ -443,7 +443,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
             self.assertEqual(image_cache_manager.unexplained_images, [])
             self.assertEqual(image_cache_manager.removable_base_files, [])
 
-    @mock.patch('nova.privsep.dac_admin.utime')
+    @mock.patch('nova.privsep.path.utime')
     @mock.patch.object(lockutils, 'external_lock')
     def test_verify_base_images(self, mock_lock, mock_utime):
         hashed_1 = '356a192b7913b04c54574d18c28d46e6395428ab'
@@ -681,7 +681,7 @@ class ImageCacheManagerTestCase(test.NoDBTestCase):
     @mock.patch('os.path.exists')
     @mock.patch('os.path.getmtime')
     @mock.patch('os.remove')
-    @mock.patch('nova.privsep.dac_admin.utime')
+    @mock.patch('nova.privsep.path.utime')
     def test_age_and_verify_swap_images(self, mock_utime, mock_remove,
             mock_getmtime, mock_exist, mock_lock):
         base_dir = '/tmp_age_test'

@@ -145,7 +145,7 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         self.assertTrue([c for c in password
                          if c in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'])
 
-    @mock.patch('nova.privsep.dac_admin.chown')
+    @mock.patch('nova.privsep.path.chown')
     def test_temporary_chown(self, mock_chown):
         with tempfile.NamedTemporaryFile() as f:
             with utils.temporary_chown(f.name, owner_uid=2):

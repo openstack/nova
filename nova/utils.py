@@ -653,12 +653,12 @@ def temporary_chown(path, owner_uid=None):
     orig_uid = os.stat(path).st_uid
 
     if orig_uid != owner_uid:
-        nova.privsep.dac_admin.chown(path, uid=owner_uid)
+        nova.privsep.path.chown(path, uid=owner_uid)
     try:
         yield
     finally:
         if orig_uid != owner_uid:
-            nova.privsep.dac_admin.chown(path, uid=orig_uid)
+            nova.privsep.path.chown(path, uid=orig_uid)
 
 
 @contextlib.contextmanager
