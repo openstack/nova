@@ -64,7 +64,7 @@ class ResourceProviderBaseCase(test.NoDBTestCase):
         disk_inv = objects.Inventory(context=self.ctx,
                 resource_provider=rp, **inv_dict)
         disk_inv.create()
-        inv_list = objects.InventoryList(objects=[disk_inv])
+        inv_list = rp_obj.InventoryList(objects=[disk_inv])
         rp.set_inventory(inv_list)
         alloc = rp_obj.Allocation(self.ctx, resource_provider=rp,
                 **DISK_ALLOCATION)
@@ -152,11 +152,11 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
             **DISK_INVENTORY
         )
         disk_inventory.create()
-        inventories = objects.InventoryList.get_all_by_resource_provider_uuid(
+        inventories = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
             self.ctx, resource_provider.uuid)
         self.assertEqual(1, len(inventories))
         resource_provider.destroy()
-        inventories = objects.InventoryList.get_all_by_resource_provider_uuid(
+        inventories = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
             self.ctx, resource_provider.uuid)
         self.assertEqual(0, len(inventories))
 
@@ -199,7 +199,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         disk_inventory.total = 32
         disk_inventory.save()
 
-        inventories = objects.InventoryList.get_all_by_resource_provider_uuid(
+        inventories = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
             self.ctx, resource_provider.uuid)
 
         self.assertEqual(1, len(inventories))
@@ -208,7 +208,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         inventories[0].total = 33
         inventories[0].save()
         reloaded_inventories = (
-            objects.InventoryList.get_all_by_resource_provider_uuid(
+            rp_obj.InventoryList.get_all_by_resource_provider_uuid(
             self.ctx, resource_provider.uuid))
         self.assertEqual(33, reloaded_inventories[0].total)
 
@@ -234,7 +234,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
             allocation_ratio=1.0,
         )
 
-        inv_list = objects.InventoryList(objects=[inv])
+        inv_list = rp_obj.InventoryList(objects=[inv])
         self.assertRaises(exception.ResourceClassNotFound,
                           rp.set_inventory, inv_list)
 
@@ -261,7 +261,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
             allocation_ratio=1.0,
         )
 
-        inv_list = objects.InventoryList(objects=[inv])
+        inv_list = rp_obj.InventoryList(objects=[inv])
         rp.set_inventory(inv_list)
 
         alloc = rp_obj.Allocation(
@@ -288,7 +288,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
             allocation_ratio=1.0,
         )
 
-        inv_list = objects.InventoryList(objects=[inv])
+        inv_list = rp_obj.InventoryList(objects=[inv])
         self.assertRaises(exception.InventoryInUse,
                           rp.set_inventory,
                           inv_list)
@@ -319,7 +319,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
                 step_size=1,
                 allocation_ratio=16.0)
 
-        inv_list = objects.InventoryList(objects=[disk_inv, vcpu_inv])
+        inv_list = rp_obj.InventoryList(objects=[disk_inv, vcpu_inv])
         rp.set_inventory(inv_list)
         self.assertFalse(mock_log.warning.called)
 
@@ -369,14 +369,14 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
                 allocation_ratio=16.0)
 
         # set to new list
-        inv_list = objects.InventoryList(objects=[disk_inv, vcpu_inv])
+        inv_list = rp_obj.InventoryList(objects=[disk_inv, vcpu_inv])
         rp.set_inventory(inv_list)
 
         # generation has bumped
         self.assertEqual(saved_generation + 1, rp.generation)
         saved_generation = rp.generation
 
-        new_inv_list = objects.InventoryList.get_all_by_resource_provider_uuid(
+        new_inv_list = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
                 self.ctx, uuidsentinel.rp_uuid)
         self.assertEqual(2, len(new_inv_list))
         resource_classes = [inv.resource_class for inv in new_inv_list]
@@ -384,14 +384,14 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         self.assertIn(fields.ResourceClass.DISK_GB, resource_classes)
 
         # reset list to just disk_inv
-        inv_list = objects.InventoryList(objects=[disk_inv])
+        inv_list = rp_obj.InventoryList(objects=[disk_inv])
         rp.set_inventory(inv_list)
 
         # generation has bumped
         self.assertEqual(saved_generation + 1, rp.generation)
         saved_generation = rp.generation
 
-        new_inv_list = objects.InventoryList.get_all_by_resource_provider_uuid(
+        new_inv_list = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
                 self.ctx, uuidsentinel.rp_uuid)
         self.assertEqual(1, len(new_inv_list))
         resource_classes = [inv.resource_class for inv in new_inv_list]
@@ -415,7 +415,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         self.assertEqual(saved_generation + 1, rp.generation)
         saved_generation = rp.generation
 
-        new_inv_list = objects.InventoryList.get_all_by_resource_provider_uuid(
+        new_inv_list = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
                 self.ctx, uuidsentinel.rp_uuid)
         self.assertEqual(1, len(new_inv_list))
         self.assertEqual(2048, new_inv_list[0].total)
@@ -443,7 +443,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         self.assertEqual(saved_generation + 1, rp.generation)
         saved_generation = rp.generation
 
-        new_inv_list = objects.InventoryList.get_all_by_resource_provider_uuid(
+        new_inv_list = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
                 self.ctx, uuidsentinel.rp_uuid)
         result = new_inv_list.find(fields.ResourceClass.DISK_GB)
         self.assertIsNone(result)
@@ -451,13 +451,13 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
                           fields.ResourceClass.DISK_GB)
 
         # check inventory list is empty
-        inv_list = objects.InventoryList.get_all_by_resource_provider_uuid(
+        inv_list = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
                 self.ctx, uuidsentinel.rp_uuid)
         self.assertEqual(0, len(inv_list))
 
         # add some inventory
         rp.add_inventory(vcpu_inv)
-        inv_list = objects.InventoryList.get_all_by_resource_provider_uuid(
+        inv_list = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
                 self.ctx, uuidsentinel.rp_uuid)
         self.assertEqual(1, len(inv_list))
 
@@ -529,7 +529,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
             self.ctx, rp.uuid)
         self.assertEqual(allocation.used, usages[0].usage)
 
-        inv_list = objects.InventoryList.get_all_by_resource_provider_uuid(
+        inv_list = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
             self.ctx, rp.uuid)
         self.assertEqual(new_total, inv_list[0].total)
         mock_log.warning.assert_called_once_with(
@@ -628,7 +628,7 @@ class ResourceProviderListTestCase(ResourceProviderBaseCase):
                 allocation_ratio=1.0)
             inv3.obj_set_defaults()
 
-            inv_list = objects.InventoryList(objects=[inv, inv2, inv3])
+            inv_list = rp_obj.InventoryList(objects=[inv, inv2, inv3])
             rp.set_inventory(inv_list)
 
             # Create the VCPU allocation only for the first RP
@@ -903,7 +903,7 @@ class TestAllocation(ResourceProviderBaseCase):
                 max_unit=1024,
                 step_size=64,
                 allocation_ratio=1.5)
-            inv_list = objects.InventoryList(context=self.ctx,
+            inv_list = rp_obj.InventoryList(context=self.ctx,
                 objects=[cpu_inv, ram_inv])
             cn.set_inventory(inv_list)
 
@@ -1063,7 +1063,7 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
                                  total=255, reserved=2,
                                  max_unit=max_unit)
         inv2.obj_set_defaults()
-        inv_list = objects.InventoryList(objects=[inv, inv2])
+        inv_list = rp_obj.InventoryList(objects=[inv, inv2])
         rp1.set_inventory(inv_list)
 
         # create the allocations for a first consumer
@@ -1146,7 +1146,7 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
                                 resource_class=rp1_class,
                                 total=1024)
         inv.obj_set_defaults()
-        inv_list = objects.InventoryList(objects=[inv])
+        inv_list = rp_obj.InventoryList(objects=[inv])
         rp1.set_inventory(inv_list)
         self.assertRaises(exception.InvalidInventory,
                           allocation_list.create_all)
@@ -1156,7 +1156,7 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
                                 resource_class=rp2_class,
                                 total=255, reserved=2)
         inv.obj_set_defaults()
-        inv_list = objects.InventoryList(objects=[inv])
+        inv_list = rp_obj.InventoryList(objects=[inv])
         rp2.set_inventory(inv_list)
 
         # Now the allocations will still fail because max_unit 1
@@ -1166,12 +1166,12 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
                                 resource_class=rp1_class,
                                 total=1024, max_unit=max_unit)
         inv1.obj_set_defaults()
-        rp1.set_inventory(objects.InventoryList(objects=[inv1]))
+        rp1.set_inventory(rp_obj.InventoryList(objects=[inv1]))
         inv2 = objects.Inventory(resource_provider=rp2,
                                 resource_class=rp2_class,
                                 total=255, reserved=2, max_unit=max_unit)
         inv2.obj_set_defaults()
-        rp2.set_inventory(objects.InventoryList(objects=[inv2]))
+        rp2.set_inventory(rp_obj.InventoryList(objects=[inv2]))
 
         # Now we can finally allocate.
         allocation_list.create_all()
@@ -1228,7 +1228,7 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
                                 total=1024, allocation_ratio=1,
                                 reserved=0, **kwargs)
         inv.obj_set_defaults()
-        rp.set_inventory(objects.InventoryList(objects=[inv]))
+        rp.set_inventory(rp_obj.InventoryList(objects=[inv]))
         return rp
 
     def _validate_usage(self, rp, usage):
@@ -1376,7 +1376,7 @@ class UsageListTestCase(ResourceProviderBaseCase):
                                 resource_class=fields.ResourceClass.DISK_GB,
                                 total=1024)
         inv.obj_set_defaults()
-        inv_list = objects.InventoryList(objects=[inv])
+        inv_list = rp_obj.InventoryList(objects=[inv])
         db_rp.set_inventory(inv_list)
 
         usage_list = rp_obj.UsageList.get_all_by_resource_provider_uuid(
@@ -1395,7 +1395,7 @@ class UsageListTestCase(ResourceProviderBaseCase):
                                 resource_class=fields.ResourceClass.DISK_GB,
                                 total=1024)
         inv.obj_set_defaults()
-        inv_list = objects.InventoryList(objects=[inv])
+        inv_list = rp_obj.InventoryList(objects=[inv])
         db_rp.set_inventory(inv_list)
 
         usage_list = rp_obj.UsageList.get_all_by_resource_provider_uuid(
@@ -1418,7 +1418,7 @@ class UsageListTestCase(ResourceProviderBaseCase):
             resource_provider=db_rp,
             resource_class=fields.ResourceClass.VCPU, total=24)
         vcpu_inv.obj_set_defaults()
-        inv_list = objects.InventoryList(objects=[disk_inv, vcpu_inv])
+        inv_list = rp_obj.InventoryList(objects=[disk_inv, vcpu_inv])
         db_rp.set_inventory(inv_list)
 
         usage_list = rp_obj.UsageList.get_all_by_resource_provider_uuid(
@@ -1633,13 +1633,13 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
             total=1,
         )
         inv.obj_set_defaults()
-        inv_list = objects.InventoryList(objects=[inv])
+        inv_list = rp_obj.InventoryList(objects=[inv])
         rp.set_inventory(inv_list)
 
         self.assertRaises(exception.ResourceClassInUse,
                           rc.destroy)
 
-        rp.set_inventory(objects.InventoryList(objects=[]))
+        rp.set_inventory(rp_obj.InventoryList(objects=[]))
         rc.destroy()
         rc_list = rp_obj.ResourceClassList.get_all(self.ctx)
         rc_ids = (r.id for r in rc_list)
@@ -2027,7 +2027,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
                 step_size=64,
                 allocation_ratio=1.5,
             )
-            inv_list = objects.InventoryList(objects=[vcpu, memory_mb])
+            inv_list = rp_obj.InventoryList(objects=[vcpu, memory_mb])
             cn.set_inventory(inv_list)
 
         # Create the shared storage pool
@@ -2051,7 +2051,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
             allocation_ratio=1.0,
         )
         disk_gb.obj_set_defaults()
-        inv_list = objects.InventoryList(objects=[disk_gb])
+        inv_list = rp_obj.InventoryList(objects=[disk_gb])
         ss.set_inventory(inv_list)
 
         # Mark the shared storage pool as having inventory shared among any
@@ -2116,7 +2116,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
                 step_size=1,
                 allocation_ratio=1.5,
             )
-            inv_list = objects.InventoryList(objects=[vcpu, memory_mb])
+            inv_list = rp_obj.InventoryList(objects=[vcpu, memory_mb])
             cn.set_inventory(inv_list)
 
         # Create the shared storage pool
@@ -2139,7 +2139,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
             step_size=1,
             allocation_ratio=1.0,
         )
-        inv_list = objects.InventoryList(objects=[disk_gb])
+        inv_list = rp_obj.InventoryList(objects=[disk_gb])
         ss.set_inventory(inv_list)
 
         # Mark the shared storage pool as having inventory shared among any
@@ -2216,7 +2216,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
             step_size=10,
             allocation_ratio=1.0,
         )
-        inv_list = objects.InventoryList(objects=[vcpu, memory_mb, disk_gb])
+        inv_list = rp_obj.InventoryList(objects=[vcpu, memory_mb, disk_gb])
         cn3.set_inventory(inv_list)
 
         got_rps = rp_obj._get_all_with_shared(
@@ -2324,7 +2324,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
                 step_size=1,
                 allocation_ratio=1.5,
             )
-            inv_list = objects.InventoryList(objects=[vcpu, memory_mb])
+            inv_list = rp_obj.InventoryList(objects=[vcpu, memory_mb])
             cn.set_inventory(inv_list)
 
         # Create the storage provider but do NOT mark it sharing its inventory
@@ -2348,7 +2348,7 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
             step_size=1,
             allocation_ratio=1.0,
         )
-        inv_list = objects.InventoryList(objects=[disk_gb])
+        inv_list = rp_obj.InventoryList(objects=[disk_gb])
         ns.set_inventory(inv_list)
 
         # Associate the new no-local-disk compute nodes and the non-shared
@@ -2487,7 +2487,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
                     allocation_ratio=1.0,
                 )
             disk_gb.obj_set_defaults()
-            inv_list = objects.InventoryList(objects=[
+            inv_list = rp_obj.InventoryList(objects=[
                 vcpu,
                 memory_mb,
                 disk_gb,
@@ -2615,7 +2615,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
                 step_size=1,
                 allocation_ratio=1.5,
             )
-            inv_list = objects.InventoryList(objects=[vcpu, memory_mb])
+            inv_list = rp_obj.InventoryList(objects=[vcpu, memory_mb])
             cn.set_inventory(inv_list)
 
         # Create the shared storage pool
@@ -2638,7 +2638,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
             step_size=1,
             allocation_ratio=1.0,
         )
-        inv_list = objects.InventoryList(objects=[disk_gb])
+        inv_list = rp_obj.InventoryList(objects=[disk_gb])
         ss.set_inventory(inv_list)
 
         # Mark the shared storage pool as having inventory shared among any
@@ -2853,7 +2853,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
                 step_size=1,
                 allocation_ratio=1.5,
             )
-            inv_list = objects.InventoryList(objects=[vcpu, memory_mb])
+            inv_list = rp_obj.InventoryList(objects=[vcpu, memory_mb])
             cn.set_inventory(inv_list)
 
         # Create a custom resource called MAGIC
@@ -2883,7 +2883,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
             step_size=1,
             allocation_ratio=1.0,
         )
-        inv_list = objects.InventoryList(objects=[magic])
+        inv_list = rp_obj.InventoryList(objects=[magic])
         magic_p.set_inventory(inv_list)
 
         # Mark the magic provider as having inventory shared among any provider
@@ -3044,10 +3044,10 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
                 allocation_ratio=1.0,
             )
             if cn == cn3:
-                inv_list = objects.InventoryList(
+                inv_list = rp_obj.InventoryList(
                     objects=[vcpu, memory_mb, disk_gb])
             else:
-                inv_list = objects.InventoryList(objects=[vcpu, memory_mb])
+                inv_list = rp_obj.InventoryList(objects=[vcpu, memory_mb])
             cn.set_inventory(inv_list)
 
         # Create the shared storage pool
@@ -3070,7 +3070,7 @@ class AllocationCandidatesTestCase(ResourceProviderBaseCase):
             step_size=1,
             allocation_ratio=1.0,
         )
-        inv_list = objects.InventoryList(objects=[disk_gb])
+        inv_list = rp_obj.InventoryList(objects=[disk_gb])
         ss.set_inventory(inv_list)
 
         t = rp_obj.Trait.get_by_name(self.ctx, "MISC_SHARES_VIA_AGGREGATE")

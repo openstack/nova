@@ -260,7 +260,7 @@ class SharedStorageFixture(APIFixture):
                 step_size=256,
                 allocation_ratio=1.5)
             ram_inv.obj_set_defaults()
-            inv_list = objects.InventoryList(objects=[vcpu_inv, ram_inv])
+            inv_list = rp_obj.InventoryList(objects=[vcpu_inv, ram_inv])
             cn.set_inventory(inv_list)
 
         # Populate shared storage provider with DISK_GB inventory
@@ -275,7 +275,7 @@ class SharedStorageFixture(APIFixture):
             step_size=10,
             allocation_ratio=1.0)
         disk_inv.obj_set_defaults()
-        inv_list = objects.InventoryList(objects=[disk_inv])
+        inv_list = rp_obj.InventoryList(objects=[disk_inv])
         ss.set_inventory(inv_list)
 
         # Mark the shared storage pool as having inventory shared among any

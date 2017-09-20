@@ -1118,7 +1118,6 @@ object_data = {
     'InstancePCIRequest': '1.1-b1d75ebc716cb12906d9d513890092bf',
     'InstancePCIRequests': '1.1-65e38083177726d806684cb1cc0136d2',
     'Inventory': '1.2-7f681fb6fb7b75fabceab3c4d0f8ce0c',
-    'InventoryList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
     'LibvirtLiveMigrateBDMInfo': '1.0-252aabb723ca79d5469fa56f64b57811',
     'LibvirtLiveMigrateData': '1.3-2795e5646ee21e8c7f1c3e64fb6c80a3',
     'KeyPair': '1.4-1244e8d1b103cc69d038ed78ab3a8cc6',
