@@ -33,7 +33,6 @@ from nova.db.sqlalchemy import api_models as models
 from nova.db.sqlalchemy import resource_class_cache as rc_cache
 from nova import exception
 from nova.i18n import _
-from nova import objects
 from nova.objects import base
 from nova.objects import fields
 
@@ -387,14 +386,8 @@ def _set_inventory(context, rp, inv_list):
     return exceeded
 
 
-@base.NovaObjectRegistry.register
+@base.NovaObjectRegistry.register_if(False)
 class ResourceProvider(base.NovaObject):
-    # Version 1.0: Initial version
-    # Version 1.1: Add destroy()
-    # Version 1.2: Add get_aggregates(), set_aggregates()
-    # Version 1.3: Turn off remotable
-    # Version 1.4: Add set/get_traits methods
-    VERSION = '1.4'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -1296,7 +1289,7 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
         _ensure_rc_cache(context)
         resource_providers = cls._get_all_by_filters_from_db(context, filters)
         return base.obj_make_list(context, cls(context),
-                                  objects.ResourceProvider, resource_providers)
+                                  ResourceProvider, resource_providers)
 
 
 class _HasAResourceProvider(base.NovaObject):

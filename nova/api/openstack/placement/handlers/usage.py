@@ -20,7 +20,6 @@ from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
 from nova import exception
 from nova.i18n import _
-from nova import objects
 from nova.objects import resource_provider as rp_obj
 
 
@@ -72,7 +71,7 @@ def list_usages(req):
     # It is also needed for the generation, used in the outgoing
     # representation.
     try:
-        resource_provider = objects.ResourceProvider.get_by_uuid(
+        resource_provider = rp_obj.ResourceProvider.get_by_uuid(
             context, uuid)
     except exception.NotFound as exc:
         raise webob.exc.HTTPNotFound(

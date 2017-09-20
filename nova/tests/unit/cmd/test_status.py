@@ -549,7 +549,7 @@ class TestUpgradeCheckResourceProviders(test.NoDBTestCase):
         """Helper method to create a resource provider with inventory"""
         ctxt = context.get_admin_context()
         rp_uuid = uuidutils.generate_uuid()
-        rp = objects.ResourceProvider(
+        rp = rp_obj.ResourceProvider(
             context=ctxt,
             name=rp_uuid,
             uuid=rp_uuid)

@@ -19,7 +19,6 @@ import webob
 
 from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement import util
-from nova import objects
 from nova.objects import resource_provider as rp_obj
 from nova import test
 from nova.tests import uuidsentinel
@@ -262,7 +261,7 @@ class TestPlacementURLs(test.NoDBTestCase):
 
     def setUp(self):
         super(TestPlacementURLs, self).setUp()
-        self.resource_provider = objects.ResourceProvider(
+        self.resource_provider = rp_obj.ResourceProvider(
             name=uuidsentinel.rp_name,
             uuid=uuidsentinel.rp_uuid)
         self.resource_class = rp_obj.ResourceClass(

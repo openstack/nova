@@ -1146,7 +1146,6 @@ object_data = {
     'Quotas': '1.3-40fcefe522111dddd3e5e6155702cf4e',
     'QuotasNoOp': '1.3-347a039fc7cfee7b225b68b5181e0733',
     'RequestSpec': '1.8-35033ecef47a880f9a5e46e2269e2b97',
-    'ResourceProvider': '1.4-35e8a41d2ece17a862fac5b07ca966af',
     'S3ImageMapping': '1.0-7dd7366a890d82660ed121de9092276e',
     'SchedulerLimits': '1.0-249c4bd8e62a9b327b7026b7f19cc641',
     'SchedulerRetries': '1.1-3c9c8b16143ebbb6ad7030e999d14cc0',

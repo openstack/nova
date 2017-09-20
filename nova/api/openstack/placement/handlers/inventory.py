@@ -24,7 +24,6 @@ from nova.api.openstack.placement import wsgi_wrapper
 from nova import db
 from nova import exception
 from nova.i18n import _
-from nova import objects
 from nova.objects import resource_provider as rp_obj
 
 RESOURCE_CLASS_IDENTIFIER = "^[A-Z0-9_]+$"
@@ -214,7 +213,7 @@ def create_inventory(req):
     """
     context = req.environ['placement.context']
     uuid = util.wsgi_path_item(req.environ, 'uuid')
-    resource_provider = objects.ResourceProvider.get_by_uuid(
+    resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
     data = _extract_inventory(req.body, POST_INVENTORY_SCHEMA)
     resource_class = data.pop('resource_class')
@@ -256,7 +255,7 @@ def delete_inventory(req):
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     resource_class = util.wsgi_path_item(req.environ, 'resource_class')
 
-    resource_provider = objects.ResourceProvider.get_by_uuid(
+    resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
     try:
         resource_provider.delete_inventory(resource_class)
@@ -287,7 +286,7 @@ def get_inventories(req):
     context = req.environ['placement.context']
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     try:
-        resource_provider = objects.ResourceProvider.get_by_uuid(
+        resource_provider = rp_obj.ResourceProvider.get_by_uuid(
             context, uuid)
     except exception.NotFound as exc:
         raise webob.exc.HTTPNotFound(
@@ -312,7 +311,7 @@ def get_inventory(req):
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     resource_class = util.wsgi_path_item(req.environ, 'resource_class')
 
-    resource_provider = objects.ResourceProvider.get_by_uuid(
+    resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
     inventory = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
         context, resource_provider.uuid).find(resource_class)
@@ -343,7 +342,7 @@ def set_inventories(req):
     """
     context = req.environ['placement.context']
     uuid = util.wsgi_path_item(req.environ, 'uuid')
-    resource_provider = objects.ResourceProvider.get_by_uuid(
+    resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
 
     data = _extract_inventories(req.body, PUT_INVENTORY_SCHEMA)
@@ -397,7 +396,7 @@ def delete_inventories(req):
     microversion.raise_http_status_code_if_not_version(req, 405, (1, 5))
     context = req.environ['placement.context']
     uuid = util.wsgi_path_item(req.environ, 'uuid')
-    resource_provider = objects.ResourceProvider.get_by_uuid(
+    resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
 
     inventories = rp_obj.InventoryList(objects=[])
@@ -438,7 +437,7 @@ def update_inventory(req):
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     resource_class = util.wsgi_path_item(req.environ, 'resource_class')
 
-    resource_provider = objects.ResourceProvider.get_by_uuid(
+    resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
 
     data = _extract_inventory(req.body, BASE_INVENTORY_SCHEMA)

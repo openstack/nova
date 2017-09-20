@@ -17,7 +17,7 @@ from oslo_utils import encodeutils
 from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
-from nova import objects
+from nova.objects import resource_provider as rp_obj
 
 
 PUT_AGGREGATES_SCHEMA = {
@@ -55,7 +55,7 @@ def get_aggregates(req):
     microversion.raise_http_status_code_if_not_version(req, 404, (1, 1))
     context = req.environ['placement.context']
     uuid = util.wsgi_path_item(req.environ, 'uuid')
-    resource_provider = objects.ResourceProvider.get_by_uuid(
+    resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
     aggregate_uuids = resource_provider.get_aggregates()
 
@@ -68,7 +68,7 @@ def set_aggregates(req):
     microversion.raise_http_status_code_if_not_version(req, 404, (1, 1))
     context = req.environ['placement.context']
     uuid = util.wsgi_path_item(req.environ, 'uuid')
-    resource_provider = objects.ResourceProvider.get_by_uuid(
+    resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
     aggregate_uuids = util.extract_json(req.body, PUT_AGGREGATES_SCHEMA)
     resource_provider.set_aggregates(aggregate_uuids)

@@ -23,7 +23,6 @@ from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
 from nova import exception
 from nova.i18n import _
-from nova import objects
 from nova.objects import resource_provider as rp_obj
 
 TRAIT = {
@@ -199,7 +198,7 @@ def list_traits_for_resource_provider(req):
     context = req.environ['placement.context']
     uuid = util.wsgi_path_item(req.environ, 'uuid')
 
-    resource_provider = objects.ResourceProvider.get_by_uuid(
+    resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
 
     response_body = _serialize_traits(resource_provider.get_traits())
@@ -221,7 +220,7 @@ def update_traits_for_resource_provider(req):
     data = util.extract_json(req.body, SET_TRAITS_FOR_RP_SCHEMA)
     rp_gen = data['resource_provider_generation']
     traits = data['traits']
-    resource_provider = objects.ResourceProvider.get_by_uuid(
+    resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
 
     if resource_provider.generation != rp_gen:
@@ -255,7 +254,7 @@ def delete_traits_for_resource_provider(req):
     context = req.environ['placement.context']
     uuid = util.wsgi_path_item(req.environ, 'uuid')
 
-    resource_provider = objects.ResourceProvider.get_by_uuid(context, uuid)
+    resource_provider = rp_obj.ResourceProvider.get_by_uuid(context, uuid)
     try:
         resource_provider.set_traits(rp_obj.TraitList(objects=[]))
     except exception.ConcurrentUpdateDetected as e:
