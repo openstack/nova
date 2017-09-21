@@ -80,9 +80,7 @@ def _get_marker_instance(ctx, marker):
             db_inst = db.instance_get_by_uuid(cctx, marker,
                                               columns_to_join=[])
         except exception.InstanceNotFound:
-            db_inst = None
-    if not db_inst:
-        raise exception.MarkerNotFound(marker=marker)
+            raise exception.MarkerNotFound(marker=marker)
     return db_inst
 
 
