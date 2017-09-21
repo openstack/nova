@@ -4,6 +4,15 @@
 XenServer (and other XAPI based Xen variants)
 =============================================
 
+.. todo::
+
+  os-xenapi version is 0.3.1 currently.
+  This document should be modified according to the new version.
+  This todo has been reported as `bug 1718606`_.
+
+.. _bug 1718606: https://bugs.launchpad.net/nova/+bug/1718606
+
+
 This section describes XAPI managed hypervisors, and how to use them with
 OpenStack.
 

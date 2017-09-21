@@ -230,6 +230,7 @@ Virtual hardware templates are called ``flavors``. By default, these are
 configurable by admin users, however that behavior can be changed by redefining
 the access controls for ``compute_extension:flavormanage`` in
 ``/etc/nova/policy.json`` on the ``compute-api`` server.
+For more information, refer to :doc:`/configuration/policy`.
 
 For a list of flavors that are available on your system:
 
