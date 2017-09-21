@@ -90,6 +90,57 @@ Show instance usage statistics
 
   #. Get diagnostic statistics:
 
+     .. note::
+
+        As of microversion v2.48, diagnostics information for all virt drivers will
+        have a standard format as below. For more details on diagnostics
+        response message see `server diagnostics api
+        <https://developer.openstack.org/api-ref/compute/#servers-diagnostics-servers-diagnostics>`__
+        documentation.
+
+     .. code-block:: console
+
+       $ nova diagnostics myCirrosServer
+       +----------------+------------------------------------------------------------------------+
+       | Property       | Value                                                                  |
+       +----------------+------------------------------------------------------------------------+
+       | config_drive   | False                                                                  |
+       | cpu_details    | []                                                                     |
+       | disk_details   | [{"read_requests": 887, "errors_count": -1, "read_bytes": 20273152,    |
+       |                | "write_requests": 89, "write_bytes": 303104}]                          |
+       | driver         | libvirt                                                                |
+       | hypervisor     | qemu                                                                   |
+       | hypervisor_os  | linux                                                                  |
+       | memory_details | {"used": 0, "maximum": 0}                                              |
+       | nic_details    | [{"rx_packets": 9, "rx_drop": 0, "tx_octets": 1464, "tx_errors": 0,    |
+       |                | "mac_address": "fa:16:3e:fa:db:d3", "rx_octets": 958, "rx_rate": null, |
+       |                | "rx_errors": 0, "tx_drop": 0, "tx_packets": 9, "tx_rate": null}]       |
+       | num_cpus       | 0                                                                      |
+       | num_disks      | 1                                                                      |
+       | num_nics       | 1                                                                      |
+       | state          | running                                                                |
+       | uptime         | 5528                                                                   |
+       +----------------+------------------------------------------------------------------------+
+
+     ``config_drive`` indicates if the config drive is supported on the
+     instance.
+
+     ``cpu_details`` contains a list of details per vCPU.
+
+     ``disk_details`` contains a list of details per disk.
+
+     ``driver`` indicates the current driver on which the VM is running.
+
+     ``hypervisor`` indicates the current hypervisor on which the VM is running.
+
+     ``nic_details`` containts a list of details per vNIC.
+
+     ``uptime`` is the amount of time in seconds that the VM has been runnning.
+
+     |
+
+     Diagnostics prior to v2.48:
+
      .. code-block:: console
 
         $ nova diagnostics myCirrosServer
