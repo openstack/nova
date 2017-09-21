@@ -189,12 +189,20 @@ class _TestInstanceGroupObject(object):
                                                    group=group_matcher,
                                                    action='create')
 
+    @mock.patch('nova.compute.utils.notify_about_server_group_action')
     @mock.patch('nova.compute.utils.notify_about_server_group_update')
     @mock.patch('nova.objects.InstanceGroup._destroy_in_db')
-    def test_destroy(self, mock_db_delete, mock_notify):
+    def test_destroy(self, mock_db_delete, mock_notify, mock_notify_action):
         obj = objects.InstanceGroup(context=self.context)
         obj.uuid = _DB_UUID
         obj.destroy()
+
+        group_matcher = test_utils.CustomMockCallMatcher(
+            lambda group: group.uuid == _DB_UUID)
+
+        mock_notify_action.assert_called_once_with(context=obj._context,
+                                                   group=group_matcher,
+                                                   action='delete')
         mock_db_delete.assert_called_once_with(self.context, _DB_UUID)
         mock_notify.assert_called_once_with(self.context, "delete",
                                             {'server_group_id': _DB_UUID})

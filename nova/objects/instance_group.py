@@ -436,6 +436,10 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
         self.obj_reset_changes()
         compute_utils.notify_about_server_group_update(self._context,
                                                        "delete", payload)
+        compute_utils.notify_about_server_group_action(
+            context=self._context,
+            group=self,
+            action=fields.NotificationAction.DELETE)
 
     @base.remotable_classmethod
     def add_members(cls, context, group_uuid, instance_uuids):
