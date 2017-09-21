@@ -385,22 +385,6 @@ class VMwareVolumeOps(object):
         else:
             raise exception.VolumeDriverNotFound(driver_type=driver_type)
 
-    def _relocate_vmdk_volume(self, volume_ref, res_pool, datastore,
-                              host=None):
-        """Relocate the volume.
-
-        The move type will be moveAllDiskBackingsAndAllowSharing.
-        """
-        client_factory = self._session.vim.client.factory
-        spec = vm_util.relocate_vm_spec(client_factory,
-                                        datastore=datastore,
-                                        host=host)
-        spec.pool = res_pool
-        task = self._session._call_method(self._session.vim,
-                                          "RelocateVM_Task", volume_ref,
-                                          spec=spec)
-        self._session._wait_for_task(task)
-
     def _get_host_of_vm(self, vm_ref):
         """Get the ESX host of given VM."""
         return self._session._call_method(vutil, 'get_object_property',
@@ -476,7 +460,8 @@ class VMwareVolumeOps(object):
                   {'backing': volume_ref, 'rp': res_pool, 'ds': datastore,
                    'host': host})
         try:
-            self._relocate_vmdk_volume(volume_ref, res_pool, datastore, host)
+            vm_util.relocate_vm(self._session, volume_ref, res_pool, datastore,
+                                host)
         except oslo_vmw_exceptions.FileNotFoundException:
             # Volume's vmdk was moved; remove the device so that we can
             # relocate the volume.
@@ -486,7 +471,8 @@ class VMwareVolumeOps(object):
                       "reattempting relocate.")
             self.detach_disk_from_vm(volume_ref, instance, original_device)
             detached = True
-            self._relocate_vmdk_volume(volume_ref, res_pool, datastore, host)
+            vm_util.relocate_vm(self._session, volume_ref, res_pool, datastore,
+                                host)
 
         # Volume's backing is relocated now; detach the old vmdk if not done
         # already.
@@ -604,6 +590,6 @@ class VMwareVolumeOps(object):
             # Pick the resource pool on which the instance resides. Move the
             # volume to the datastore of the instance.
             res_pool = self._get_res_pool_of_vm(vm_ref)
-            self._relocate_vmdk_volume(volume_ref, res_pool, datastore)
+            vm_util.relocate_vm(self._session, volume_ref, res_pool, datastore)
 
         self.attach_volume(connection_info, instance, adapter_type)
