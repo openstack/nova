@@ -17,7 +17,6 @@
 import testscenarios
 
 from nova import context
-from nova import db
 from nova import exception as ex
 from nova import objects
 from nova import test
@@ -195,19 +194,6 @@ class FlavorManageFullstack(testscenarios.WithScenarios, test.TestCase):
         # deleted flavor should not show up in a list
         resp = self.api.api_get('flavors')
         self.assertFlavorNotInList(new_flav['flavor'], resp.body)
-
-    def test_flavor_create_frozen(self):
-        ctx = context.get_admin_context()
-        db.flavor_create(ctx, {
-            'name': 'foo', 'memory_mb': 512, 'vcpus': 1,
-            'root_gb': 1, 'ephemeral_gb': 0, 'flavorid': 'foo',
-            'swap': 0, 'rxtx_factor': 1.0, 'vcpu_weight': 1,
-            'disabled': False, 'is_public': True,
-        })
-        new_flav = {'flavor': rand_flavor()}
-        resp = self.api.api_post('flavors', new_flav,
-                                 check_response_status=False)
-        self.assertEqual(409, resp.status)
 
     def test_flavor_manage_func(self):
         """Basic flavor creation lifecycle testing.

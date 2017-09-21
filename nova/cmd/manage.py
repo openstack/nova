@@ -89,7 +89,6 @@ from nova.i18n import _
 from nova import objects
 from nova.objects import aggregate as aggregate_obj
 from nova.objects import build_request as build_request_obj
-from nova.objects import flavor as flavor_obj
 from nova.objects import host_mapping as host_mapping_obj
 from nova.objects import instance as instance_obj
 from nova.objects import instance_group as instance_group_obj
@@ -643,10 +642,6 @@ class DbCommands(object):
     """Class for managing the main database."""
 
     online_migrations = (
-        # Added in Newton
-        flavor_obj.migrate_flavors,
-        # Added in Newton
-        flavor_obj.migrate_flavor_reset_autoincrement,
         # Added in Newton
         instance_obj.migrate_instance_keypairs,
         # Added in Newton
