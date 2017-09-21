@@ -56,7 +56,7 @@ class ServerMetadataController(wsgi.Controller):
         context.can(sm_policies.POLICY_ROOT % 'index')
         return {'metadata': self._get_metadata(context, server_id)}
 
-    @extensions.expected_errors((400, 403, 404, 409))
+    @extensions.expected_errors((403, 404, 409))
     # NOTE(gmann): Returns 200 for backwards compatibility but should be 201
     # as this operation complete the creation of metadata.
     @validation.schema(server_metadata.create)
@@ -88,7 +88,7 @@ class ServerMetadataController(wsgi.Controller):
 
         return {'meta': meta_item}
 
-    @extensions.expected_errors((400, 403, 404, 409))
+    @extensions.expected_errors((403, 404, 409))
     @validation.schema(server_metadata.update_all)
     def update_all(self, req, server_id, body):
         context = req.environ['nova.context']
