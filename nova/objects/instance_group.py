@@ -417,6 +417,10 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
         payload['server_group_id'] = self.uuid
         compute_utils.notify_about_server_group_update(self._context,
                                                        "create", payload)
+        compute_utils.notify_about_server_group_action(
+            context=self._context,
+            group=self,
+            action=fields.NotificationAction.CREATE)
 
     @base.remotable
     def create(self):

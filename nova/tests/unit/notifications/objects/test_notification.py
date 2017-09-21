@@ -395,6 +395,8 @@ notification_object_data = {
     'KeypairNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'KeypairPayload': '1.0-6daebbbde0e1bf35c1556b1ecd9385c1',
     'NotificationPublisher': '2.1-9f89fe4abb80f9a7b726e59800c905de',
+    'ServerGroupNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
+    'ServerGroupPayload': '1.0-eb4bd1738b4670cfe1b7c30344c143c3',
     'ServiceStatusNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'ServiceStatusPayload': '1.1-7b6856bd879db7f3ecbcd0ca9f35f92f',
 }

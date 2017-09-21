@@ -37,6 +37,7 @@ from nova.notifications.objects import base as notification_base
 from nova.notifications.objects import exception as notification_exception
 from nova.notifications.objects import instance as instance_notification
 from nova.notifications.objects import keypair as keypair_notification
+from nova.notifications.objects import server_group as sg_notification
 from nova import objects
 from nova.objects import fields
 from nova import rpc
@@ -555,6 +556,19 @@ def notify_about_host_update(context, event_suffix, host_payload):
     notifier = rpc.get_notifier(service='api', host=host_identifier)
 
     notifier.info(context, 'HostAPI.%s' % event_suffix, host_payload)
+
+
+def notify_about_server_group_action(context, group, action):
+    payload = sg_notification.ServerGroupPayload(group)
+    notification = sg_notification.ServerGroupNotification(
+        priority=fields.NotificationPriority.INFO,
+        publisher=notification_base.NotificationPublisher(
+            host=CONF.host, source=fields.NotificationSource.API),
+        event_type=notification_base.EventType(
+            object='server_group',
+            action=action),
+        payload=payload)
+    notification.emit(context)
 
 
 def refresh_info_cache_for_instance(context, instance):
