@@ -155,11 +155,12 @@ disk array LUNs, Ceph or GlusterFS.
 
 The next steps show how a regular Linux system might be configured as an NFS v4
 server for live migration.  For detailed information and alternative ways to
-configure NFS on Linux, see instructions for `Ubuntu
-<https://help.ubuntu.com/community/SettingUpNFSHowTo>`_, `RHEL and derivatives
-<https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/Storage_Administration_Guide/nfs-serverconfig.html>`_
-or `SLES and OpenSUSE
-<https://www.suse.com/documentation/sles-12/book_sle_admin/data/sec_nfs_configuring-nfs-server.html>`_.
+configure NFS on Linux, see instructions for `Ubuntu`_, `RHEL and derivatives`_
+or `SLES and OpenSUSE`_.
+
+.. _`Ubuntu`: https://help.ubuntu.com/community/SettingUpNFSHowTo
+.. _`RHEL and derivatives`: https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/Storage_Administration_Guide/nfs-serverconfig.html
+.. _`SLES and OpenSUSE`: https://www.suse.com/documentation/sles-12/book_sle_admin/data/sec_nfs_configuring-nfs-server.html
 
 #. Ensure that UID and GID of the nova user are identical on the compute hosts
    and the NFS server.

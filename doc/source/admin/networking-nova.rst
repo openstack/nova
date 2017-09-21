@@ -996,10 +996,11 @@ Solution
 --------
 
 Try loading the ``vhost_net`` kernel module as a workaround for this issue (see
-`bug #997978
-<https://bugs.launchpad.net/ubuntu/+source/libvirt/+bug/997978/>`__) . This
-kernel module may also `improve network performance
-<http://www.linux-kvm.org/page/VhostNet>`__ on KVM. To load the kernel module:
+`bug #997978`_) . This kernel module may also `improve network performance`_
+on KVM. To load the kernel module:
+
+.. _`bug #997978`: https://bugs.launchpad.net/ubuntu/+source/libvirt/+bug/997978/
+.. _`improve network performance`: http://www.linux-kvm.org/page/VhostNet
 
 .. code-block:: console
 
