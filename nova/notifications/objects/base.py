@@ -50,7 +50,9 @@ class EventType(NotificationObject):
     #              NotificationActionField enum
     # Version 1.6: ADD_FIX_IP replaced with INTERFACE_ATTACH in
     #              NotificationActionField enum
-    VERSION = '1.6'
+    # Version 1.7: REMOVE_FIXED_IP replaced with INTERFACE_DETACH in
+    #              NotificationActionField enum
+    VERSION = '1.7'
 
     fields = {
         'object': fields.StringField(nullable=False),
