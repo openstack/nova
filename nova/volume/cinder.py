@@ -120,25 +120,17 @@ def cinderclient(context, microversion=None, skip_version_check=False):
     # values.
     version = cinder_client.get_volume_api_from_url(url)
 
-    if version == '1':
+    if version != '3':
         raise exception.UnsupportedCinderAPIVersion(version=version)
 
-    if version == '2':
-        if microversion is not None:
-            # The Cinder v2 API does not support microversions.
-            raise exception.CinderAPIVersionNotAvailable(version=microversion)
-        LOG.warning("The support for the Cinder API v2 is deprecated, please "
-                    "upgrade to Cinder API v3.")
-
-    if version == '3':
-        version = '3.0'
-        # Check to see a specific microversion is requested and if so, can it
-        # be handled by the backing server.
-        if microversion is not None:
-            if skip_version_check:
-                version = microversion
-            else:
-                version = _check_microversion(url, microversion)
+    version = '3.0'
+    # Check to see a specific microversion is requested and if so, can it
+    # be handled by the backing server.
+    if microversion is not None:
+        if skip_version_check:
+            version = microversion
+        else:
+            version = _check_microversion(url, microversion)
 
     return cinder_client.Client(version,
                                 session=_SESSION,
