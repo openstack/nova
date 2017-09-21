@@ -13,14 +13,13 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import binascii
 import os
 
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils import excutils
 
-from nova import utils
+import nova.privsep.libvirt
 
 
 LOG = logging.getLogger(__name__)
@@ -54,16 +53,9 @@ def create_volume(target, device, cipher, key_size, key):
     :param key_size: encryption key size
     :param key: encoded encryption key bytestring
     """
-    cmd = ('cryptsetup',
-           'create',
-           target,
-           device,
-           '--cipher=' + cipher,
-           '--key-size=' + str(key_size),
-           '--key-file=-')
-    key = binascii.hexlify(key).decode('utf-8')
     try:
-        utils.execute(*cmd, process_input=key, run_as_root=True)
+        nova.privsep.libvirt.dmcrypt_create_volume(
+            target, device, cipher, key_size, key)
     except processutils.ProcessExecutionError as e:
         with excutils.save_and_reraise_exception():
             LOG.error("Could not start encryption for disk %(device)s: "
@@ -76,7 +68,7 @@ def delete_volume(target):
     :param target: name of the mapped logical device
     """
     try:
-        utils.execute('cryptsetup', 'remove', target, run_as_root=True)
+        nova.privsep.libvirt.dmcrypt_delete_volume(target)
     except processutils.ProcessExecutionError as e:
         # cryptsetup returns 4 when attempting to destroy a non-existent
         # dm-crypt device. It indicates that the device is invalid, which
