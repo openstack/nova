@@ -680,6 +680,9 @@ class ResourceTracker(object):
         self._pair_instances_to_migrations(migrations, instances)
         self._update_usage_from_migrations(context, migrations, nodename)
 
+        self._remove_deleted_instances_allocations(
+            context, self.compute_nodes[nodename], migrations)
+
         # Detect and account for orphaned instances that may exist on the
         # hypervisor, but are not in the DB:
         orphans = self._find_orphaned_instances()
@@ -1116,9 +1119,10 @@ class ResourceTracker(object):
                 self._update_usage_from_instance(context, instance, nodename,
                     has_ocata_computes=has_ocata_computes)
 
-        self._remove_deleted_instances_allocations(context, cn)
-
-    def _remove_deleted_instances_allocations(self, context, cn):
+    def _remove_deleted_instances_allocations(self, context, cn,
+                                              migrations):
+        migration_uuids = [migration.uuid for migration in migrations
+                           if 'uuid' in migration]
         # NOTE(jaypipes): All of this code sucks. It's basically dealing with
         # all the corner cases in move, local delete, unshelve and rebuild
         # operations for when allocations should be deleted when things didn't
@@ -1127,12 +1131,20 @@ class ResourceTracker(object):
         known_instances = set(self.tracked_instances.keys())
         allocations = self.reportclient.get_allocations_for_resource_provider(
                 cn.uuid) or {}
-        for instance_uuid, alloc in allocations.items():
-            if instance_uuid in known_instances:
+        for consumer_uuid, alloc in allocations.items():
+            if consumer_uuid in known_instances:
                 LOG.debug("Instance %s actively managed on this compute host "
                           "and has allocations in placement: %s.",
-                          instance_uuid, alloc)
+                          consumer_uuid, alloc)
                 continue
+            if consumer_uuid in migration_uuids:
+                LOG.debug("Migration %s is active on this compute host "
+                          "and has allocations in placement: %s.",
+                          consumer_uuid, alloc)
+                continue
+
+            # We know these are instances now, so proceed
+            instance_uuid = consumer_uuid
             try:
                 instance = objects.Instance.get_by_uuid(context, instance_uuid,
                                                         expected_attrs=[])

@@ -2444,7 +2444,30 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         cn = self.rt.compute_nodes[_NODENAME]
         ctx = mock.sentinel.ctx
         # Call the method.
-        self.rt._remove_deleted_instances_allocations(ctx, cn)
+        self.rt._remove_deleted_instances_allocations(ctx, cn, [])
+        # Only one call should be made to delete allocations, and that should
+        # be for the first instance created above
+        rc.delete_allocation_for_instance.assert_called_once_with(
+            uuids.deleted)
+
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    def test_remove_deleted_instances_allocations_ignores_migrations(self,
+            mock_inst_get):
+        rc = self.rt.reportclient
+        self.rt.tracked_instances = {}
+        allocs = {uuids.deleted: "fake_deleted_instance",
+                  uuids.migration: "fake_migration"}
+        mig = objects.Migration(uuid=uuids.migration)
+        rc.get_allocations_for_resource_provider = mock.MagicMock(
+            return_value=allocs)
+        rc.delete_allocation_for_instance = mock.MagicMock()
+        mock_inst_get.side_effect = exc.InstanceNotFound(
+            instance_id=uuids.deleted)
+        cn = self.rt.compute_nodes[_NODENAME]
+        ctx = mock.sentinel.ctx
+        # Call the method.
+        self.rt._remove_deleted_instances_allocations(
+            ctx, cn, [mig])
         # Only one call should be made to delete allocations, and that should
         # be for the first instance created above
         rc.delete_allocation_for_instance.assert_called_once_with(
@@ -2470,7 +2493,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         cn = self.rt.compute_nodes[_NODENAME]
         ctx = mock.sentinel.ctx
         # Call the method.
-        self.rt._remove_deleted_instances_allocations(ctx, cn)
+        self.rt._remove_deleted_instances_allocations(ctx, cn, [])
         # Scheduled instances should not have their allocations removed
         rc.delete_allocation_for_instance.assert_not_called()
 
@@ -2498,7 +2521,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
 
         cn = self.rt.compute_nodes[_NODENAME]
         ctx = mock.sentinel.ctx
-        self.rt._remove_deleted_instances_allocations(ctx, cn)
+        self.rt._remove_deleted_instances_allocations(ctx, cn, [])
         mock_delete_allocs.assert_not_called()
 
     @mock.patch('nova.objects.Instance.get_by_uuid')
@@ -2534,7 +2557,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         cn = self.rt.compute_nodes[_NODENAME]
         ctx = mock.sentinel.ctx
         # Call the method.
-        self.rt._remove_deleted_instances_allocations(ctx, cn)
+        self.rt._remove_deleted_instances_allocations(ctx, cn, [])
         # One call should be made to delete allocations, for our
         # instance that no longer exists.
         rc.delete_allocation_for_instance.assert_called_once_with(uuids.inst0)
@@ -2560,7 +2583,8 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         rc.delete_allocation_for_instance = mock.MagicMock()
         cn = self.rt.compute_nodes[_NODENAME]
         # Call the method.
-        self.rt._remove_deleted_instances_allocations(mock.sentinel.ctx, cn)
+        self.rt._remove_deleted_instances_allocations(mock.sentinel.ctx, cn,
+                                                      [])
         # We don't delete the allocation because the node is tracking the
         # instance and has allocations for it.
         rc.delete_allocation_for_instance.assert_not_called()
@@ -2593,7 +2617,8 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         rc.delete_allocation_for_instance = mock.MagicMock()
         cn = self.rt.compute_nodes[_NODENAME]
         # Call the method.
-        self.rt._remove_deleted_instances_allocations(mock.sentinel.ctx, cn)
+        self.rt._remove_deleted_instances_allocations(mock.sentinel.ctx, cn,
+                                                      [])
         # We don't delete the allocation because we're not sure what to do.
         # NOTE(mriedem): This is not actually the behavior we want. This is
         # testing the current behavior but in the future when we get smart
