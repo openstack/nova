@@ -14,6 +14,7 @@ import mock
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova.conductor.tasks import migrate
+from nova import exception
 from nova import objects
 from nova.scheduler import client as scheduler_client
 from nova.scheduler import utils as scheduler_utils
@@ -21,6 +22,7 @@ from nova import test
 from nova.tests.unit.conductor.test_conductor import FakeContext
 from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
+from nova.tests import uuidsentinel as uuids
 
 
 class MigrationTaskTestCase(test.NoDBTestCase):
@@ -81,6 +83,9 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         az_mock.assert_called_once_with(self.context, 'host1')
         self.assertIsNone(task._migration)
 
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient')
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.objects.Migration.save')
     @mock.patch('nova.objects.Migration.create')
     @mock.patch('nova.objects.Service.get_minimum_version_multi')
     @mock.patch('nova.availability_zones.get_host_availability_zone')
@@ -88,12 +93,24 @@ class MigrationTaskTestCase(test.NoDBTestCase):
     @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'prep_resize')
     def test_execute(self, prep_resize_mock, sel_dest_mock, sig_mock, az_mock,
-                     gmv_mock, cm_mock):
+                     gmv_mock, cm_mock, sm_mock, cn_mock, rc_mock):
         sel_dest_mock.return_value = self.hosts
         az_mock.return_value = 'myaz'
         task = self._generate_task()
         legacy_request_spec = self.request_spec.to_legacy_request_spec_dict()
         gmv_mock.return_value = 23
+
+        # We just need this hook point to set a uuid on the
+        # migration before we use it for teardown
+        def set_migration_uuid(*a, **k):
+            task._migration.uuid = uuids.migration
+            return mock.MagicMock()
+
+        # NOTE(danms): It's odd to do this on cn_mock, but it's just because
+        # of when we need to have it set in the flow and where we have an easy
+        # place to find it via self.migration.
+        cn_mock.side_effect = set_migration_uuid
+
         task.execute()
 
         sig_mock.assert_called_once_with(self.context, self.request_spec)
@@ -128,6 +145,7 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         self.flavor.id = 3
         self.test_execute()
 
+    @mock.patch('nova.conductor.tasks.migrate.revert_allocation_for_migration')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
     @mock.patch('nova.objects.Migration.save')
@@ -139,14 +157,101 @@ class MigrationTaskTestCase(test.NoDBTestCase):
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'prep_resize')
     def test_execute_rollback(self, prep_resize_mock, sel_dest_mock, sig_mock,
                               az_mock, gmv_mock, cm_mock, sm_mock, cn_mock,
-                              rc_mock):
+                              rc_mock, mock_ra):
         sel_dest_mock.return_value = self.hosts
         az_mock.return_value = 'myaz'
         task = self._generate_task()
         gmv_mock.return_value = 23
+
+        # We just need this hook point to set a uuid on the
+        # migration before we use it for teardown
+        def set_migration_uuid(*a, **k):
+            task._migration.uuid = uuids.migration
+            return mock.MagicMock()
+
+        # NOTE(danms): It's odd to do this on cn_mock, but it's just because
+        # of when we need to have it set in the flow and where we have an easy
+        # place to find it via self.migration.
+        cn_mock.side_effect = set_migration_uuid
+
         prep_resize_mock.side_effect = test.TestingException
+        task._held_allocations = mock.sentinel.allocs
         self.assertRaises(test.TestingException, task.execute)
         self.assertIsNotNone(task._migration)
         task._migration.create.assert_called_once_with()
         task._migration.save.assert_called_once_with()
         self.assertEqual('error', task._migration.status)
+        mock_ra.assert_called_once_with(task._source_cn, task.instance,
+                                        task._migration,
+                                        task._held_allocations)
+
+
+class MigrationTaskAllocationUtils(test.NoDBTestCase):
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    def test_replace_allocation_with_migration_no_host(self, mock_cn):
+        mock_cn.side_effect = exception.ComputeHostNotFound(host='host')
+        migration = objects.Migration()
+        instance = objects.Instance(host='host', node='node')
+
+        self.assertRaises(exception.ComputeHostNotFound,
+                          migrate.replace_allocation_with_migration,
+                          mock.sentinel.context,
+                          instance, migration)
+        mock_cn.assert_called_once_with(mock.sentinel.context,
+                                        instance.host, instance.node)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocations_for_consumer_by_provider')
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    def test_replace_allocation_with_migration_no_allocs(self, mock_cn,
+                                                         mock_ga):
+        mock_ga.return_value = None
+        migration = objects.Migration(uuid=uuids.migration)
+        instance = objects.Instance(uuid=uuids.instance,
+                                    host='host', node='node')
+
+        self.assertRaises(exception.InstanceUnacceptable,
+                          migrate.replace_allocation_with_migration,
+                          mock.sentinel.context,
+                          instance, migration)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'put_allocations')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocations_for_consumer_by_provider')
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    def test_replace_allocation_with_migration_allocs_fail(self, mock_cn,
+                                                           mock_ga, mock_pa):
+        migration = objects.Migration(uuid=uuids.migration)
+        instance = objects.Instance(uuid=uuids.instance,
+                                    user_id='fake', project_id='fake',
+                                    host='host', node='node')
+        mock_pa.return_value = False
+
+        self.assertRaises(exception.NoValidHost,
+                          migrate.replace_allocation_with_migration,
+                          mock.sentinel.context,
+                          instance, migration)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'put_allocations')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'delete_allocation_for_instance')
+    def test_revert_allocation_for_migration_retries_delete(self,
+                                                            mock_da, mock_pa):
+        migration = objects.Migration(uuid=uuids.migration)
+        instance = objects.Instance(uuid=uuids.instance,
+                                    user_id='fake', project_id='fake',
+                                    host='host', node='node')
+        source_cn = objects.ComputeNode(uuid=uuids.source)
+        mock_pa.return_value = False
+        migrate.revert_allocation_for_migration(source_cn,
+                                                instance, migration,
+                                                mock.sentinel.allocs)
+        mock_pa.assert_has_calls([
+            mock.call(source_cn.uuid, instance.uuid, mock.sentinel.allocs,
+                      instance.project_id, instance.user_id),
+            mock.call(source_cn.uuid, instance.uuid, mock.sentinel.allocs,
+                      instance.project_id, instance.user_id),
+        ])
+        mock_da.assert_called_once_with(migration.uuid)

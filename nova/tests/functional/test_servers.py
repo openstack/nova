@@ -26,6 +26,7 @@ from nova.compute import api as compute_api
 from nova.compute import instance_actions
 from nova.compute import rpcapi
 from nova import context
+from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import block_device as block_device_obj
@@ -1126,6 +1127,19 @@ class ProviderUsageBaseTestCase(test.TestCase,
         self.assertEqual(old_flavor['disk'] + new_flavor['disk'],
                          allocation['DISK_GB'])
 
+    def get_migration_uuid_for_instance(self, instance_uuid):
+        # NOTE(danms): This is too much introspection for a test like this, but
+        # we can't see the migration uuid from the API, so we just encapsulate
+        # the peek behind the curtains here to keep it out of the tests.
+        # TODO(danms): Get the migration uuid from the API once it is exposed
+        ctxt = context.get_admin_context()
+        migrations = db.migration_get_all_by_filters(
+            ctxt, {'instance_uuid': instance_uuid})
+        self.assertEqual(1, len(migrations),
+                         'Test expected a single migration, '
+                         'but found %i' % len(migrations))
+        return migrations[0].uuid
+
 
 class ServerMovingTests(ProviderUsageBaseTestCase):
     """Tests moving servers while checking the resource allocations and usages
@@ -1286,22 +1300,25 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         # OK, so the resize operation has run, but we have not yet confirmed or
         # reverted the resize operation. Before we run periodics, make sure
         # that we have allocations/usages on BOTH the source and the
-        # destination hosts (because during select_destinations(), the
-        # scheduler should have created a "doubled-up" allocation referencing
-        # both the source and destination hosts
+        # destination hosts.
         source_usages = self._get_provider_usages(source_rp_uuid)
         self.assertFlavorMatchesAllocation(old_flavor, source_usages)
         dest_usages = self._get_provider_usages(dest_rp_uuid)
         self.assertFlavorMatchesAllocation(new_flavor, dest_usages)
 
-        # Check that the server allocates resource from both source and dest
+        # The instance should own the new_flavor allocation against the
+        # destination host created by the scheduler
         allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(2, len(allocations),
-                         'Expected scheduler to create doubled-up allocation')
-        source_alloc = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(old_flavor, source_alloc)
+        self.assertEqual(1, len(allocations))
         dest_alloc = allocations[dest_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(new_flavor, dest_alloc)
+
+        # The migration should own the old_flavor allocation against the
+        # source host created by conductor
+        migration_uuid = self.get_migration_uuid_for_instance(server['id'])
+        allocations = self._get_allocations_by_server_uuid(migration_uuid)
+        source_alloc = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(old_flavor, source_alloc)
 
         self._run_periodics()
 
@@ -1314,14 +1331,19 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         dest_usages = self._get_provider_usages(dest_rp_uuid)
         self.assertFlavorMatchesAllocation(new_flavor, dest_usages)
 
-        # and our server should have allocation on both providers accordingly
+        # The instance should own the new_flavor allocation against the
+        # destination host
         allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(2, len(allocations))
-        source_allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(old_flavor, source_allocation)
-
+        self.assertEqual(1, len(allocations))
         dest_allocation = allocations[dest_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(new_flavor, dest_allocation)
+
+        # The migration should own the old_flavor allocation against the
+        # source host
+        migration_uuid = self.get_migration_uuid_for_instance(server['id'])
+        allocations = self._get_allocations_by_server_uuid(migration_uuid)
+        source_alloc = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(old_flavor, source_alloc)
 
     def _delete_and_check_allocations(self, server, source_rp_uuid,
                                       dest_rp_uuid):
@@ -1471,11 +1493,18 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         usages = self._get_provider_usages(rp_uuid)
         self.assertFlavorsMatchAllocation(old_flavor, new_flavor, usages)
 
+        # The instance should hold a new_flavor allocation
         allocations = self._get_allocations_by_server_uuid(server['id'])
-
         self.assertEqual(1, len(allocations))
         allocation = allocations[rp_uuid]['resources']
-        self.assertFlavorsMatchAllocation(old_flavor, new_flavor, allocation)
+        self.assertFlavorMatchesAllocation(new_flavor, allocation)
+
+        # The migration should hold an old_flavor allocation
+        migration_uuid = self.get_migration_uuid_for_instance(server['id'])
+        allocations = self._get_allocations_by_server_uuid(migration_uuid)
+        self.assertEqual(1, len(allocations))
+        allocation = allocations[rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(old_flavor, allocation)
 
         # We've resized to the same host and have doubled allocations for both
         # the old and new flavor on the same host. Run the periodic on the
@@ -1484,13 +1513,22 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
 
         usages = self._get_provider_usages(rp_uuid)
 
+        # In terms of usage, it's still double on the host because the instance
+        # and the migration each hold an allocation for the new and old
+        # flavors respectively.
         self.assertFlavorsMatchAllocation(old_flavor, new_flavor, usages)
 
+        # The instance should hold a new_flavor allocation
         allocations = self._get_allocations_by_server_uuid(server['id'])
         self.assertEqual(1, len(allocations))
         allocation = allocations[rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(new_flavor, allocation)
 
-        self.assertFlavorsMatchAllocation(old_flavor, new_flavor, allocation)
+        # The migration should hold an old_flavor allocation
+        allocations = self._get_allocations_by_server_uuid(migration_uuid)
+        self.assertEqual(1, len(allocations))
+        allocation = allocations[rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(old_flavor, allocation)
 
     def test_resize_revert_same_host(self):
         # make sure that the test only uses a single host
@@ -2293,6 +2331,20 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
             self.flavor1, source_hostname)
 
         def fake_prep_resize(*args, **kwargs):
+            dest_hostname = self._other_hostname(source_hostname)
+            dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+            dest_usages = self._get_provider_usages(dest_rp_uuid)
+            self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+            allocations = self._get_allocations_by_server_uuid(server['id'])
+            self.assertIn(dest_rp_uuid, allocations)
+
+            source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+            source_usages = self._get_provider_usages(source_rp_uuid)
+            self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+            migration_uuid = self.get_migration_uuid_for_instance(server['id'])
+            allocations = self._get_allocations_by_server_uuid(migration_uuid)
+            self.assertIn(source_rp_uuid, allocations)
+
             raise test.TestingException('Simulated _prep_resize failure.')
 
         # Yes this isn't great in a functional test, but it's simple.
@@ -2317,6 +2369,8 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
         source_usages = self._get_provider_usages(source_rp_uuid)
         self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertIn(source_rp_uuid, allocations)
 
     def test_resize_to_same_host_prep_resize_fails(self):
         """Tests that when we resize to the same host and resize fails in

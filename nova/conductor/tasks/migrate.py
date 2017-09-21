@@ -15,10 +15,140 @@ from oslo_serialization import jsonutils
 
 from nova import availability_zones
 from nova.conductor.tasks import base
+from nova import exception
+from nova.i18n import _
 from nova import objects
+from nova.scheduler import client as scheduler_client
 from nova.scheduler import utils as scheduler_utils
 
 LOG = logging.getLogger(__name__)
+
+
+def replace_allocation_with_migration(context, instance, migration):
+    """Replace instance's allocation with one for a migration.
+
+    :returns: (source_compute_node, migration_allocation)
+    """
+    try:
+        source_cn = objects.ComputeNode.get_by_host_and_nodename(
+            context, instance.host, instance.node)
+    except exception.ComputeHostNotFound:
+        LOG.error('Unable to find record for source '
+                  'node %(node)s on %(host)s',
+                  {'host': instance.host, 'node': instance.node},
+                  instance=instance)
+        # A generic error like this will just error out the migration
+        # and do any rollback required
+        raise
+
+    schedclient = scheduler_client.SchedulerClient()
+    reportclient = schedclient.reportclient
+
+    orig_alloc = reportclient.get_allocations_for_consumer_by_provider(
+        source_cn.uuid, instance.uuid)
+    if not orig_alloc:
+        LOG.error('Unable to find existing allocations for instance',
+                  instance=instance)
+        # A generic error like this will just error out the migration
+        # and do any rollback required
+        raise exception.InstanceUnacceptable(
+            instance_id=instance.uuid,
+            reason=_('Instance has no source node allocation'))
+
+    # FIXME(danms): Since we don't have an atomic operation to adjust
+    # allocations for multiple consumers, we have to have space on the
+    # source for double the claim before we delete the old one
+    # FIXME(danms): This method is flawed in that it asssumes allocations
+    # against only one provider. So, this may overwite allocations against
+    # a shared provider, if we had one.
+    success = reportclient.put_allocations(source_cn.uuid, migration.uuid,
+                                           orig_alloc,
+                                           instance.project_id,
+                                           instance.user_id)
+    if not success:
+        LOG.error('Unable to replace resource claim on source '
+                  'host %(host)s node %(node)s for instance',
+                  {'host': instance.host,
+                   'node': instance.node},
+                  instance=instance)
+        # Mimic the "no space" error that could have come from the
+        # scheduler. Once we have an atomic replace operation, this
+        # would be a severe error.
+        raise exception.NoValidHost(
+            reason=_('Unable to replace instance claim on source'))
+    else:
+        LOG.debug('Created allocations for migration %(mig)s on %(rp)s',
+                  {'mig': migration.uuid, 'rp': source_cn.uuid})
+
+    reportclient.delete_allocation_for_instance(instance.uuid)
+
+    return source_cn, orig_alloc
+
+
+def revert_allocation_for_migration(source_cn, instance, migration,
+                                    orig_alloc):
+    """Revert an allocation made for a migration back to the instance."""
+
+    schedclient = scheduler_client.SchedulerClient()
+    reportclient = schedclient.reportclient
+
+    # FIXME(danms): Since we don't have an atomic operation to adjust
+    # allocations for multiple consumers, we have to have space on the
+    # source for double the claim before we delete the old one
+    # FIXME(danms): This method is flawed in that it asssumes allocations
+    # against only one provider. So, this may overwite allocations against
+    # a shared provider, if we had one.
+    success = reportclient.put_allocations(source_cn.uuid, instance.uuid,
+                                           orig_alloc,
+                                           instance.project_id,
+                                           instance.user_id)
+    if not success:
+        LOG.error('Unable to replace resource claim on source '
+                  'host %(host)s node %(node)s for instance',
+                  {'host': instance.host,
+                   'node': instance.node},
+                  instance=instance)
+    else:
+        LOG.debug('Created allocations for instance %(inst)s on %(rp)s',
+                  {'inst': instance.uuid, 'rp': source_cn.uuid})
+
+    reportclient.delete_allocation_for_instance(migration.uuid)
+
+    # TODO(danms): Remove this late retry logic when we can replace
+    # the above two-step process with a single atomic one. Until then,
+    # we just re-attempt the claim for the instance now that we have
+    # cleared what should be an equal amount of space by deleting the
+    # holding migraton.
+
+    if not success:
+        # NOTE(danms): We failed to claim the resources for the
+        # instance above before the delete of the migration's
+        # claim. Try again to claim for the instance. This is just
+        # a racy attempt to be atomic and avoid stranding this
+        # instance without an allocation. When we have an atomic
+        # replace operation we should remove this.
+        success = reportclient.put_allocations(source_cn.uuid,
+                                               instance.uuid,
+                                               orig_alloc,
+                                               instance.project_id,
+                                               instance.user_id)
+        if success:
+            LOG.debug(
+                'Created allocations for instance %(inst)s on %(rp)s '
+                '(retried)',
+                {'inst': instance.uuid, 'rp': source_cn.uuid})
+        else:
+            LOG.error('Unable to replace resource claim on source '
+                      'host %(host)s node %(node)s for instance (retried)',
+                      {'host': instance.host,
+                       'node': instance.node},
+                      instance=instance)
+
+
+def should_do_migration_allocation(context):
+    minver = objects.Service.get_minimum_version_multi(context,
+                                                       ['nova-compute'])
+    return minver >= 23
 
 
 class MigrationTask(base.TaskBase):
@@ -37,14 +167,13 @@ class MigrationTask(base.TaskBase):
         # Persist things from the happy path so we don't have to look
         # them up if we need to roll back
         self._migration = None
+        self._held_allocations = None
+        self._source_cn = None
 
     def _preallocate_migration(self):
-        minver = objects.Service.get_minimum_version_multi(self.context,
-                                                           ['nova-compute'])
-        if minver < 23:
-            # NOTE(danms): We can't pre-create the migration since we
-            # have old computes. Let the compute do it (legacy
-            # behavior).
+        if not should_do_migration_allocation(self.context):
+            # NOTE(danms): We can't pre-create the migration since we have
+            # old computes. Let the compute do it (legacy behavior).
             return None
 
         migration = objects.Migration(context=self.context.elevated())
@@ -59,6 +188,11 @@ class MigrationTask(base.TaskBase):
         migration.create()
 
         self._migration = migration
+
+        self._source_cn, self._held_allocations = (
+            replace_allocation_with_migration(self.context,
+                                              self.instance,
+                                              self._migration))
 
         return migration
 
@@ -126,3 +260,16 @@ class MigrationTask(base.TaskBase):
         if self._migration:
             self._migration.status = 'error'
             self._migration.save()
+
+        if not self._held_allocations:
+            return
+
+        # NOTE(danms): We created new-style migration-based
+        # allocations for the instance, but failed before we kicked
+        # off the migration in the compute. Normally the latter would
+        # do that cleanup but we never got that far, so do it here and
+        # now.
+
+        revert_allocation_for_migration(self._source_cn, self.instance,
+                                        self._migration,
+                                        self._held_allocations)
