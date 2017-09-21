@@ -33,6 +33,7 @@ from oslo_utils import versionutils
 
 from nova.compute import power_state
 from nova.compute import task_states
+from nova.compute import vm_states
 import nova.conf
 from nova.console import type as ctype
 from nova import exception
@@ -635,3 +636,18 @@ class FakeBuildAbortDriver(FakeDriver):
               admin_password, network_info=None, block_device_info=None):
         raise exception.BuildAbortException(
             instance_uuid=instance.uuid, reason='FakeBuildAbortDriver')
+
+
+class FakeUnshelveSpawnFailDriver(FakeDriver):
+    """FakeDriver derivative that always fails on spawn() with a
+    VirtualInterfaceCreateException when unshelving an offloaded instance.
+    """
+    def spawn(self, context, instance, image_meta, injected_files,
+              admin_password, network_info=None, block_device_info=None):
+        if instance.vm_state == vm_states.SHELVED_OFFLOADED:
+            raise exception.VirtualInterfaceCreateException(
+                'FakeUnshelveSpawnFailDriver')
+        # Otherwise spawn normally during the initial build.
+        super(FakeUnshelveSpawnFailDriver, self).spawn(
+            context, instance, image_meta, injected_files,
+            admin_password, network_info, block_device_info)
