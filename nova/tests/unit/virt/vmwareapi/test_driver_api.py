@@ -42,6 +42,7 @@ from nova import exception
 from nova.image import glance
 from nova.network import model as network_model
 from nova import objects
+from nova.objects import fields
 from nova import test
 from nova.tests.unit import fake_diagnostics
 from nova.tests.unit import fake_instance
@@ -2122,6 +2123,41 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         self.assertEqual(
                 [("i686", "vmware", "hvm"), ("x86_64", "vmware", "hvm")],
                 stats['supported_instances'])
+
+    @mock.patch('nova.virt.vmwareapi.ds_util.get_available_datastores')
+    def test_get_inventory(self, mock_get_avail_ds):
+        ds1 = ds_obj.Datastore(ref='fake-ref', name='datastore1',
+                               capacity=10 * units.Gi, freespace=3 * units.Gi)
+        ds2 = ds_obj.Datastore(ref='fake-ref', name='datastore2',
+                               capacity=35 * units.Gi, freespace=25 * units.Gi)
+        ds3 = ds_obj.Datastore(ref='fake-ref', name='datastore3',
+                               capacity=50 * units.Gi, freespace=15 * units.Gi)
+        mock_get_avail_ds.return_value = [ds1, ds2, ds3]
+        inv = self.conn.get_inventory(self.node_name)
+        expected = {
+            fields.ResourceClass.VCPU: {
+                'total': 32,
+                'reserved': 0,
+                'min_unit': 1,
+                'max_unit': 16,
+                'step_size': 1,
+            },
+            fields.ResourceClass.MEMORY_MB: {
+                'total': 2048,
+                'reserved': 512,
+                'min_unit': 1,
+                'max_unit': 1024,
+                'step_size': 1,
+            },
+            fields.ResourceClass.DISK_GB: {
+                'total': 95,
+                'reserved': 0,
+                'min_unit': 1,
+                'max_unit': 25,
+                'step_size': 1,
+            },
+        }
+        self.assertEqual(expected, inv)
 
     def test_invalid_datastore_regex(self):
 

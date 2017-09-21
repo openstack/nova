@@ -34,12 +34,15 @@ from oslo_vmware import vim_util
 
 from nova.compute import power_state
 from nova.compute import task_states
+from nova.compute import utils as compute_utils
 import nova.conf
 from nova import exception
 from nova.i18n import _
+from nova.objects import fields as obj_fields
 import nova.privsep.path
 from nova.virt import driver
 from nova.virt.vmwareapi import constants
+from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
 from nova.virt.vmwareapi import host
 from nova.virt.vmwareapi import vim_util as nova_vim_util
@@ -341,6 +344,44 @@ class VMwareVCDriver(driver.ComputeDriver):
         This driver supports only one compute node.
         """
         return [self._nodename]
+
+    def get_inventory(self, nodename):
+        """Return a dict, keyed by resource class, of inventory information for
+        the supplied node.
+        """
+        stats = vm_util.get_stats_from_cluster(self._session,
+                                               self._cluster_ref)
+        datastores = ds_util.get_available_datastores(self._session,
+                                                      self._cluster_ref,
+                                                      self._datastore_regex)
+        total_disk_capacity = sum([ds.capacity for ds in datastores])
+        max_free_space = max([ds.freespace for ds in datastores])
+        reserved_disk_gb = compute_utils.convert_mb_to_ceil_gb(
+            CONF.reserved_host_disk_mb)
+        result = {
+            obj_fields.ResourceClass.VCPU: {
+                'total': stats['cpu']['vcpus'],
+                'reserved': CONF.reserved_host_cpus,
+                'min_unit': 1,
+                'max_unit': stats['cpu']['max_vcpus_per_host'],
+                'step_size': 1,
+            },
+            obj_fields.ResourceClass.MEMORY_MB: {
+                'total': stats['mem']['total'],
+                'reserved': CONF.reserved_host_memory_mb,
+                'min_unit': 1,
+                'max_unit': stats['mem']['max_mem_mb_per_host'],
+                'step_size': 1,
+            },
+            obj_fields.ResourceClass.DISK_GB: {
+                'total': total_disk_capacity // units.Gi,
+                'reserved': reserved_disk_gb,
+                'min_unit': 1,
+                'max_unit': max_free_space // units.Gi,
+                'step_size': 1,
+            },
+        }
+        return result
 
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, allocations, network_info=None,
