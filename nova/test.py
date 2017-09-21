@@ -401,7 +401,9 @@ class TestCase(testtools.TestCase):
                                      cell_mapping=cell)
             hm.create()
             self.host_mappings[hm.host] = hm
-
+            if host is not None:
+                # Make sure that CONF.host is relevant to the right hostname
+                self.useFixture(nova_fixtures.ConfPatcher(host=host))
         svc = self.useFixture(
             nova_fixtures.ServiceFixture(name, host, **kwargs))
 

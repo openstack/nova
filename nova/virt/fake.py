@@ -513,8 +513,12 @@ class FakeDriver(driver.ComputeDriver):
         data.graphics_listen_addr_vnc = CONF.vnc.vncserver_listen
         data.graphics_listen_addr_spice = CONF.spice.server_listen
         data.serial_listen_addr = None
-        data.block_migration = block_migration
-        data.disk_over_commit = disk_over_commit or False  # called with None
+        # Notes(eliqiao): block_migration and disk_over_commit are not
+        # nullable, so just don't set them if they are None
+        if block_migration is not None:
+            data.block_migration = block_migration
+        if disk_over_commit is not None:
+            data.disk_over_commit = disk_over_commit
         data.disk_available_mb = 100000
         data.is_shared_block_storage = True
         data.is_shared_instance_path = True
@@ -535,7 +539,7 @@ class FakeDriver(driver.ComputeDriver):
 
     def pre_live_migration(self, context, instance, block_device_info,
                            network_info, disk_info, migrate_data):
-        return
+        return migrate_data
 
     def unfilter_instance(self, instance, network_info):
         return
