@@ -46,6 +46,7 @@ extensions = ['sphinx.ext.autodoc',
               'ext.versioned_notifications',
               'ext.feature_matrix',
               'sphinxcontrib.actdiag',
+              'sphinxcontrib.seqdiag',
               ]
 
 # openstackdocstheme options
@@ -61,6 +62,9 @@ sample_policy_basename = '_static/nova'
 
 actdiag_html_image_format = 'SVG'
 actdiag_antialias = True
+
+seqdiag_html_image_format = 'SVG'
+seqdiag_antialias = True
 
 todo_include_todos = True
 
