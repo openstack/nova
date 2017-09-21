@@ -960,10 +960,11 @@ sort_key_flavor:
   type: string
 sort_key_server:
   description: |
-    Sorts by a server attribute. Default attribute is ``created``. You can specify
-    multiple pairs of sort key and sort direction query parameters. If you omit the
-    sort direction in a pair, the API uses the natural sorting direction of the server
-    ``sort_key`` attribute. The sort keys are limited to:
+    Sorts by a server attribute. Default attribute is ``created_at``. You can
+    specify multiple pairs of sort key and sort direction query parameters. If
+    you omit the sort direction in a pair, the API uses the natural sorting
+    direction of the server ``sort_key`` attribute. The sort keys are limited
+    to:
 
     - ``access_ip_v4``
     - ``access_ip_v6``
