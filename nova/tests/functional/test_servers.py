@@ -23,6 +23,7 @@ from oslo_serialization import base64
 from oslo_utils import timeutils
 
 from nova.compute import api as compute_api
+from nova.compute import instance_actions
 from nova.compute import rpcapi
 from nova import context
 from nova import exception
@@ -2425,3 +2426,104 @@ class ServerBuildAbortTests(ProviderUsageBaseTestCase):
         # Expects no allocation records on the failed host.
         self.assertFlavorMatchesAllocation(
            {'vcpus': 0, 'ram': 0, 'disk': 0}, failed_usages)
+
+
+class ServerUnshelveSpawnFailTests(ProviderUsageBaseTestCase):
+    """Tests server unshelve scenarios which trigger a
+    VirtualInterfaceCreateException during driver.spawn() and validates that
+    allocations in Placement are properly cleaned up.
+    """
+
+    compute_driver = 'fake.FakeUnshelveSpawnFailDriver'
+
+    def setUp(self):
+        super(ServerUnshelveSpawnFailTests, self).setUp()
+        # We only need one compute service/host/node for these tests.
+        fake.set_nodes(['host1'])
+        self.flags(host='host1')
+        self.compute1 = self.start_service('compute', host='host1')
+
+        flavors = self.api.get_flavors()
+        self.flavor1 = flavors[0]
+
+    # TODO(mriedem): move this into InstanceHelperMixin
+    def _wait_for_unshelve_fail_completion(self, server, expected_action):
+        """Polls instance action events for the given instance and action
+        until it finds the compute_unshelve_instance action event with an error
+        result.
+        """
+        completion_event = None
+        for attempt in range(10):
+            actions = self.api.get_instance_actions(server['id'])
+            # Look for the migrate action.
+            for action in actions:
+                if action['action'] == expected_action:
+                    events = (
+                        self.api.api_get(
+                            '/servers/%s/os-instance-actions/%s' %
+                            (server['id'], action['request_id'])
+                        ).body['instanceAction']['events'])
+                    # Look for the compute_unshelve_instance being in error
+                    # state.
+                    for event in events:
+                        if (event['event'] == 'compute_unshelve_instance' and
+                                event['result'] is not None and
+                                event['result'].lower() == 'error'):
+                            completion_event = event
+                            # Break out of the events loop.
+                            break
+                    if completion_event:
+                        # Break out of the actions loop.
+                        break
+            # We didn't find the completion event yet, so wait a bit.
+            time.sleep(0.5)
+
+        if completion_event is None:
+            self.fail('Timed out waiting for compute_unshelve_instance '
+                      'failure event. Current instance actions: %s' % actions)
+
+    def test_driver_spawn_fail_when_unshelving_instance(self):
+        """Tests that allocations, created by the scheduler, are cleaned
+        from the target node when the unshelve driver.spawn fails on that node.
+        """
+        hostname = self.compute1.manager.host
+        rp_uuid = self._get_provider_uuid_by_host(hostname)
+        usages = self._get_provider_usages(rp_uuid)
+        # We start with no usages on the host.
+        self.assertFlavorMatchesAllocation(
+           {'vcpus': 0, 'ram': 0, 'disk': 0}, usages)
+
+        server_req = self._build_minimal_create_server_request(
+            self.api, 'unshelve-spawn-fail', flavor_id=self.flavor1['id'],
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            networks='none')
+
+        server = self.api.post_server({'server': server_req})
+        self._wait_for_state_change(self.api, server, 'ACTIVE')
+
+        # assert allocations exist for the host
+        usages = self._get_provider_usages(rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor1, usages)
+
+        # shelve offload the server
+        self.flags(shelved_offload_time=0)
+        self.api.post_server_action(server['id'], {'shelve': None})
+        self._wait_for_state_change(self.api, server, 'SHELVED_OFFLOADED')
+
+        # assert allocations were removed from the host
+        usages = self._get_provider_usages(rp_uuid)
+        self.assertFlavorMatchesAllocation(
+           {'vcpus': 0, 'ram': 0, 'disk': 0}, usages)
+
+        # unshelve the server, which should fail
+        self.api.post_server_action(server['id'], {'unshelve': None})
+        self._wait_for_unshelve_fail_completion(
+            server, instance_actions.UNSHELVE)
+
+        # assert allocations were removed from the host
+        usages = self._get_provider_usages(rp_uuid)
+        # FIXME: this is bug 1713796 where the allocations aren't cleaned up;
+        # remove once fixed
+        self.assertFlavorMatchesAllocation(self.flavor1, usages)
+        # self.assertFlavorMatchesAllocation(
+        #    {'vcpus': 0, 'ram': 0, 'disk': 0}, usages)
