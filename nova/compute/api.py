@@ -2385,13 +2385,17 @@ class API(base.Base):
         # Only subtract from limit if it is not None
         limit = (limit - len(build_req_instances)) if limit else limit
 
+        # We could arguably avoid joining on security_groups if we're using
+        # neutron (which is the default) but if you're using neutron then the
+        # security_group_instance_association table should be empty anyway
+        # and the DB should optimize out that join, making it insignificant.
         fields = ['metadata', 'info_cache', 'security_groups']
         if expected_attrs:
             fields.extend(expected_attrs)
 
         if CONF.cells.enable:
             insts = self._do_old_style_instance_list_for_poor_cellsv1_users(
-                context, filters, limit, marker, expected_attrs, sort_keys,
+                context, filters, limit, marker, fields, sort_keys,
                 sort_dirs)
         else:
             insts = instance_list.get_instance_objects_sorted(
@@ -2426,7 +2430,7 @@ class API(base.Base):
     def _do_old_style_instance_list_for_poor_cellsv1_users(self,
                                                            context, filters,
                                                            limit, marker,
-                                                           expected_attrs,
+                                                           fields,
                                                            sort_keys,
                                                            sort_dirs):
         try:
@@ -2439,7 +2443,7 @@ class API(base.Base):
                 try:
                     cell0_instances = self._get_instances_by_filters(
                         cctxt, filters, limit=limit, marker=marker,
-                        expected_attrs=expected_attrs, sort_keys=sort_keys,
+                        fields=fields, sort_keys=sort_keys,
                         sort_dirs=sort_dirs)
                     # If we found the marker in cell0 we need to set it to None
                     # so we don't expect to find it in the cells below.
@@ -2460,7 +2464,7 @@ class API(base.Base):
             # We can remove this path once we stop supporting cells v1.
             cell_instances = self._get_instances_by_filters(
                 context, filters, limit=limit, marker=marker,
-                expected_attrs=expected_attrs, sort_keys=sort_keys,
+                fields=fields, sort_keys=sort_keys,
                 sort_dirs=sort_dirs)
         else:
             LOG.debug('Limit excludes any results from real cells')
@@ -2495,15 +2499,8 @@ class API(base.Base):
         return objects.InstanceList(objects=result_objs)
 
     def _get_instances_by_filters(self, context, filters,
-                                  limit=None, marker=None, expected_attrs=None,
+                                  limit=None, marker=None, fields=None,
                                   sort_keys=None, sort_dirs=None):
-        # We could arguably avoid joining on security_groups if we're using
-        # neutron (which is the default) but if you're using neutron then the
-        # security_group_instance_association table should be empty anyway
-        # and the DB should optimize out that join, making it insignificant.
-        fields = ['metadata', 'info_cache', 'security_groups']
-        if expected_attrs:
-            fields.extend(expected_attrs)
         return objects.InstanceList.get_by_filters(
             context, filters=filters, limit=limit, marker=marker,
             expected_attrs=fields, sort_keys=sort_keys, sort_dirs=sort_dirs)

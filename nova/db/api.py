@@ -783,6 +783,12 @@ def instance_get_all_by_filters_sort(context, filters, limit=None,
 
 
 def instance_get_by_sort_filters(context, sort_keys, sort_dirs, values):
+    """Get the uuid of the first instance in a sort order.
+
+    Return the first instance (uuid) of the set where each column value
+    is greater than or equal to the matching one in @values, for each key
+    in @sort_keys.
+    """
     return IMPL.instance_get_by_sort_filters(context, sort_keys, sort_dirs,
                                              values)
 

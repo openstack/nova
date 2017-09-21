@@ -2373,6 +2373,9 @@ def instance_get_by_sort_filters(context, sort_keys, sort_dirs, values):
     # be looking for, so just return nothing if no match.
     result = query.limit(1).first()
     if result:
+        # We're querying for a single column, which means we get back a
+        # tuple of one thing. Strip that out and just return the uuid
+        # for our caller.
         return result[0]
     else:
         return result

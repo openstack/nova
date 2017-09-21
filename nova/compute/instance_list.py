@@ -27,7 +27,7 @@ class InstanceSortContext(object):
         self._sort_dirs = sort_dirs
 
     def compare_instances(self, inst1, inst2):
-        """Implements cmp(inst1, inst2) for the first key that is different
+        """Implements cmp(inst1, inst2) for the first key that is different.
 
         Adjusts for the requested sort direction by inverting the result
         as needed.
@@ -77,6 +77,10 @@ def _get_marker_instance(ctx, marker):
     elevated = ctx.elevated(read_deleted='yes')
     with context.target_cell(elevated, im.cell_mapping) as cctx:
         try:
+            # NOTE(danms): We query this with no columns_to_join()
+            # as we're just getting values for the sort keys from
+            # it and none of the valid sort keys are on joined
+            # columns.
             db_inst = db.instance_get_by_uuid(cctx, marker,
                                               columns_to_join=[])
         except exception.InstanceNotFound:
@@ -112,7 +116,7 @@ def get_instances_sorted(ctx, filters, limit, marker, columns_to_join,
         # play if the user didn't ask for a specific ordering, but we
         # use the same scheme for consistency.
         sort_keys = ['created_at', 'id']
-        sort_dirs = ['asc', 'asc']
+        sort_dirs = ['desc', 'desc']
 
     if 'uuid' not in sort_keys:
         # Historically the default sort includes 'id' (see above), which
@@ -213,7 +217,7 @@ def get_instances_sorted(ctx, filters, limit, marker, columns_to_join,
     # handle this anywhere yet anyway.
     results = context.scatter_gather_all_cells(ctx, do_query)
 
-    # If a limit was provided, and passed to the per-cell query routines.
+    # If a limit was provided, it was passed to the per-cell query routines.
     # That means we have NUM_CELLS * limit items across results. So, we
     # need to consume from that limit below and stop returning results.
     limit = limit or 0
