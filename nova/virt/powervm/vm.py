@@ -22,6 +22,7 @@ from oslo_utils import strutils as stru
 from pypowervm import exceptions as pvm_exc
 from pypowervm.helpers import log_helper as pvm_log
 from pypowervm.tasks import power
+from pypowervm.tasks import power_opts as popts
 from pypowervm.tasks import vterm
 from pypowervm import util as pvm_u
 from pypowervm.utils import lpar_builder as lpar_bldr
@@ -151,19 +152,20 @@ def power_off(adapter, instance, force_immediate=False, timeout=None):
     with lockutils.lock('power_%s' % instance.uuid):
         entry = get_instance_wrapper(adapter, instance)
         # Get the current state and see if we can stop the VM
-        LOG.debug("Powering off request for instance %(inst)s which is in "
-                  "state %(state)s.  Force Immediate Flag: %(force)s.",
-                  {'inst': instance.name, 'state': entry.state,
-                   'force': force_immediate})
+        LOG.debug("Powering off request for instance in state %(state)s. "
+                  "Force Immediate Flag: %(force)s.",
+                  {'state': entry.state, 'force': force_immediate},
+                  instance=instance)
         if entry.state in _POWERVM_STOPPABLE_STATE:
             # Now stop the lpar
             try:
-                LOG.debug("Power off executing for instance %(inst)s.",
-                          {'inst': instance.name})
+                LOG.debug("Power off executing.", instance=instance)
                 kwargs = {'timeout': timeout} if timeout else {}
-                force = (power.Force.TRUE if force_immediate
-                         else power.Force.ON_FAILURE)
-                power.power_off(entry, None, force_immediate=force, **kwargs)
+                if force_immediate:
+                    power.PowerOp.stop(
+                        entry, opts=popts.PowerOffOpts().vsp_hard(), **kwargs)
+                else:
+                    power.power_off_progressive(entry, **kwargs)
             except pvm_exc.Error as e:
                 LOG.exception("PowerVM error during power_off.",
                               instance=instance)
@@ -186,8 +188,11 @@ def reboot(adapter, instance, hard):
         try:
             entry = get_instance_wrapper(adapter, instance)
             if entry.state != pvm_bp.LPARState.NOT_ACTIVATED:
-                power.power_off(entry, None, force_immediate=hard,
-                                restart=True)
+                if hard:
+                    power.PowerOp.stop(
+                        entry, opts=popts.PowerOffOpts().vsp_hard().restart())
+                else:
+                    power.power_off_progressive(entry, restart=True)
             else:
                 # pypowervm does NOT throw an exception if "already down".
                 # Any other exception from pypowervm is a legitimate failure;
