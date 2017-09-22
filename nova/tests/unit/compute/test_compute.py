@@ -9954,7 +9954,11 @@ class ComputeAPITestCase(BaseTestCase):
                                                     port_id)
             mock_notify.assert_has_calls([
                 mock.call(self.context, instance, self.compute.host,
-                          action='interface_attach', phase='start')])
+                          action='interface_attach', phase='start'),
+                mock.call(self.context, instance, self.compute.host,
+                          action='interface_attach',
+                          exception=mock_attach.side_effect,
+                          phase='error')])
 
     @mock.patch.object(compute_utils, 'notify_about_instance_action')
     def test_detach_interface(self, mock_notify):

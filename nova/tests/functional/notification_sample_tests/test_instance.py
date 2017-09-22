@@ -17,6 +17,7 @@ import mock
 from nova import context
 from nova import exception
 from nova.tests import fixtures
+from nova.tests.functional.api import client
 from nova.tests.functional.notification_sample_tests \
     import notification_sample_base
 from nova.tests.unit import fake_notifier
@@ -150,6 +151,7 @@ class TestInstanceNotificationSample(
             self._test_soft_delete_server,
             self._test_attach_volume_error,
             self._test_interface_attach_and_detach,
+            self._test_interface_attach_error,
         ]
 
         for action in actions:
@@ -1183,6 +1185,37 @@ class TestInstanceNotificationSample(
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
         self._verify_notification(
             'instance-interface_detach-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+
+    @mock.patch('nova.virt.fake.SmallFakeDriver.attach_interface')
+    def _test_interface_attach_error(self, server, mock_driver):
+        def _unsuccessful_attach_interface(*args, **kwargs):
+            raise exception.InterfaceAttachFailed("dummy")
+        mock_driver.side_effect = _unsuccessful_attach_interface
+        post = {
+            'interfaceAttachment': {
+                'net_id': fixtures.NeutronFixture.network_1['id']
+            }
+        }
+        self.assertRaises(
+            client.OpenStackApiException,
+            self.api.attach_interface, server['id'], post)
+        self._wait_for_notification('instance.interface_attach.error')
+        # 0. instance.interface_attach.start
+        # 1. instance.interface_attach.error
+        # 2. compute.exception
+        self.assertLessEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-interface_attach-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'instance-interface_attach-error',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
