@@ -2213,40 +2213,6 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         self._delete_and_check_allocations(
             server, source_rp_uuid, dest_rp_uuid)
 
-    def _wait_for_prep_resize_fail_completion(self, server, expected_action):
-        """Polls instance action events for the given instance and action
-        until it finds the compute_prep_resize action event with an error
-        result.
-        """
-        completion_event = None
-        for attempt in range(10):
-            actions = self.api.get_instance_actions(server['id'])
-            # Look for the migrate action.
-            for action in actions:
-                if action['action'] == expected_action:
-                    events = (
-                        self.api.api_get(
-                            '/servers/%s/os-instance-actions/%s' %
-                            (server['id'], action['request_id'])
-                        ).body['instanceAction']['events'])
-                    # Look for the compute_prep_resize being in error state.
-                    for event in events:
-                        if (event['event'] == 'compute_prep_resize' and
-                                event['result'] is not None and
-                                event['result'].lower() == 'error'):
-                            completion_event = event
-                            # Break out of the events loop.
-                            break
-                    if completion_event:
-                        # Break out of the actions loop.
-                        break
-            # We didn't find the completion event yet, so wait a bit.
-            time.sleep(0.5)
-
-        if completion_event is None:
-            self.fail('Timed out waiting for compute_prep_resize failure '
-                      'event. Current instance actions: %s' % actions)
-
     def test_rescheduling_when_migrating_instance(self):
         """Tests that allocations are removed from the destination node by
         the compute service when a cold migrate / resize fails and a reschedule
@@ -2266,7 +2232,8 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         # Now migrate the server which is going to fail on the destination.
         self.api.post_server_action(server['id'], {'migrate': None})
 
-        self._wait_for_prep_resize_fail_completion(server, 'migrate')
+        self._wait_for_action_fail_completion(
+            server, instance_actions.MIGRATE, 'compute_prep_resize')
 
         dest_hostname = self._other_hostname(source_hostname)
         dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
@@ -2314,7 +2281,8 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         }
         self.api.post_server_action(server['id'], resize_req)
 
-        self._wait_for_prep_resize_fail_completion(server, 'resize')
+        self._wait_for_action_fail_completion(
+            server, instance_actions.RESIZE, 'compute_prep_resize')
 
         # Ensure the allocation records still exist on the host.
         source_rp_uuid = self._get_provider_uuid_by_host(hostname)
@@ -2446,42 +2414,6 @@ class ServerUnshelveSpawnFailTests(ProviderUsageBaseTestCase):
         flavors = self.api.get_flavors()
         self.flavor1 = flavors[0]
 
-    # TODO(mriedem): move this into InstanceHelperMixin
-    def _wait_for_unshelve_fail_completion(self, server, expected_action):
-        """Polls instance action events for the given instance and action
-        until it finds the compute_unshelve_instance action event with an error
-        result.
-        """
-        completion_event = None
-        for attempt in range(10):
-            actions = self.api.get_instance_actions(server['id'])
-            # Look for the migrate action.
-            for action in actions:
-                if action['action'] == expected_action:
-                    events = (
-                        self.api.api_get(
-                            '/servers/%s/os-instance-actions/%s' %
-                            (server['id'], action['request_id'])
-                        ).body['instanceAction']['events'])
-                    # Look for the compute_unshelve_instance being in error
-                    # state.
-                    for event in events:
-                        if (event['event'] == 'compute_unshelve_instance' and
-                                event['result'] is not None and
-                                event['result'].lower() == 'error'):
-                            completion_event = event
-                            # Break out of the events loop.
-                            break
-                    if completion_event:
-                        # Break out of the actions loop.
-                        break
-            # We didn't find the completion event yet, so wait a bit.
-            time.sleep(0.5)
-
-        if completion_event is None:
-            self.fail('Timed out waiting for compute_unshelve_instance '
-                      'failure event. Current instance actions: %s' % actions)
-
     def test_driver_spawn_fail_when_unshelving_instance(self):
         """Tests that allocations, created by the scheduler, are cleaned
         from the target node when the unshelve driver.spawn fails on that node.
@@ -2517,8 +2449,8 @@ class ServerUnshelveSpawnFailTests(ProviderUsageBaseTestCase):
 
         # unshelve the server, which should fail
         self.api.post_server_action(server['id'], {'unshelve': None})
-        self._wait_for_unshelve_fail_completion(
-            server, instance_actions.UNSHELVE)
+        self._wait_for_action_fail_completion(
+            server, instance_actions.UNSHELVE, 'compute_unshelve_instance')
 
         # assert allocations were removed from the host
         usages = self._get_provider_usages(rp_uuid)
