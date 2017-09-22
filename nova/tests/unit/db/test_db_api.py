@@ -10758,3 +10758,62 @@ class ConsoleAuthTokenTestCase(test.TestCase):
         self.assertIsNone(db_obj1, "the token should have been deleted")
         self.assertIsNotNone(db_obj2, "a valid token should be found here")
         self.assertIsNotNone(db_obj3, "a valid token should be found here")
+
+
+class SortMarkerHelper(test.TestCase):
+    def setUp(self):
+        super(SortMarkerHelper, self).setUp()
+
+        self.context = context.RequestContext('fake', 'fake')
+        self.instances = []
+
+        launched = datetime.datetime(2005, 4, 30, 13, 00, 00)
+        td = datetime.timedelta
+
+        values = {
+            'key_name': ['dan', 'dan', 'taylor', 'jax'],
+            'memory_mb': [512, 1024, 2048, 256],
+            'launched_at': [launched + td(1), launched - td(256),
+                            launched + td(32), launched - td(5000)],
+        }
+
+        for i in range(0, 4):
+            inst = {'user_id': self.context.user_id,
+                    'project_id': self.context.project_id}
+            for key in values:
+                inst[key] = values[key].pop(0)
+            db_instance = db.instance_create(self.context, inst)
+            self.instances.append(db_instance)
+
+    def test_thing(self):
+        # Pull out the first instance sorted by our desired key
+        first = db.instance_get_all_by_filters_sort(self.context, {}, limit=1,
+                                                    sort_keys=['memory_mb'],
+                                                    sort_dirs=['asc'])
+        marker = first[0]['uuid']
+
+        # Starting with the marker, page through one at a time looking for the
+        # instance that would match if the previous marker was our marker.
+        values_found = [marker]
+        while True:
+            marker_inst = db.instance_get_by_uuid(self.context, marker)
+
+            marker = db.instance_get_by_sort_filters(
+                self.context,
+                ['memory_mb'],
+                ['asc'],
+                [marker_inst['memory_mb'] + 1,
+                 marker_inst['key_name'] + 'z'])
+            if not marker:
+                break
+            values_found.append(marker)
+
+        # Make sure we found everything
+        self.assertEqual(set([x['uuid'] for x in self.instances]),
+                         set(values_found))
+
+    def test_no_match(self):
+        marker = db.instance_get_by_sort_filters(self.context,
+                                                 ['memory_mb'], ['asc'],
+                                                 [4096])
+        self.assertIsNone(marker)

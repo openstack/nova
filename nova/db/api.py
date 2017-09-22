@@ -782,6 +782,11 @@ def instance_get_all_by_filters_sort(context, filters, limit=None,
         sort_dirs=sort_dirs)
 
 
+def instance_get_by_sort_filters(context, sort_keys, sort_dirs, values):
+    return IMPL.instance_get_by_sort_filters(context, sort_keys, sort_dirs,
+                                             values)
+
+
 def instance_get_active_by_window_joined(context, begin, end=None,
                                          project_id=None, host=None,
                                          columns_to_join=None, limit=None,
