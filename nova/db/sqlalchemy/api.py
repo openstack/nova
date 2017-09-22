@@ -1829,6 +1829,11 @@ def instance_create(context, values):
     # create the instance uuid to ec2_id mapping entry for instance
     ec2_instance_create(context, instance_ref['uuid'])
 
+    # Parity with the return value of instance_get_all_by_filters_sort()
+    # Obviously a newly-created instance record can't already have a fault
+    # record because of the FK constraint, so this is fine.
+    instance_ref.fault = None
+
     return instance_ref
 
 
@@ -1991,6 +1996,12 @@ def _instances_fill_metadata(context, instances, manual_joins=None):
         for row in _instance_pcidevs_get_multi(context, uuids):
             pcidevs[row['instance_uuid']].append(row)
 
+    if 'fault' in manual_joins:
+        faults = instance_fault_get_by_instance_uuids(context, uuids,
+                                                      latest=True)
+    else:
+        faults = {}
+
     filled_instances = []
     for inst in instances:
         inst = dict(inst)
@@ -1998,6 +2009,8 @@ def _instances_fill_metadata(context, instances, manual_joins=None):
         inst['metadata'] = meta[inst['uuid']]
         if 'pci_devices' in manual_joins:
             inst['pci_devices'] = pcidevs[inst['uuid']]
+        inst_faults = faults.get(inst['uuid'])
+        inst['fault'] = inst_faults and inst_faults[0] or None
         filled_instances.append(inst)
 
     return filled_instances
@@ -2006,7 +2019,7 @@ def _instances_fill_metadata(context, instances, manual_joins=None):
 def _manual_join_columns(columns_to_join):
     """Separate manually joined columns from columns_to_join
 
-    If columns_to_join contains 'metadata', 'system_metadata', or
+    If columns_to_join contains 'metadata', 'system_metadata', 'fault', or
     'pci_devices' those columns are removed from columns_to_join and added
     to a manual_joins list to be used with the _instances_fill_metadata method.
 
@@ -2019,7 +2032,7 @@ def _manual_join_columns(columns_to_join):
     """
     manual_joins = []
     columns_to_join_new = copy.copy(columns_to_join)
-    for column in ('metadata', 'system_metadata', 'pci_devices'):
+    for column in ('metadata', 'system_metadata', 'pci_devices', 'fault'):
         if column in columns_to_join_new:
             columns_to_join_new.remove(column)
             manual_joins.append(column)
