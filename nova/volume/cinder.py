@@ -573,6 +573,31 @@ class API(object):
                           instance_uuid=instance_id)
 
     @translate_attachment_exception
+    def attachment_get(self, context, attachment_id):
+        """Gets a volume attachment.
+
+        :param context: The nova request context.
+        :param attachment_id: UUID of the volume attachment to get.
+        :returns: a dict created from the
+            cinderclient.v3.attachments.VolumeAttachment object with a backward
+            compatible connection_info dict
+        """
+        try:
+            attachment_ref = cinderclient(
+                context, '3.44', skip_version_check=True).attachments.show(
+                attachment_id)
+            translated_attach_ref = _translate_attachment_ref(
+                attachment_ref.to_dict())
+            return translated_attach_ref
+        except cinder_exception.ClientException as ex:
+            with excutils.save_and_reraise_exception():
+                LOG.error(('Show attachment failed for attachment '
+                           '%(id)s. Error: %(msg)s Code: %(code)s'),
+                          {'id': attachment_id,
+                           'msg': six.text_type(ex),
+                           'code': getattr(ex, 'code', None)})
+
+    @translate_attachment_exception
     def attachment_update(self, context, attachment_id, connector):
         """Updates the connector on the volume attachment. An attachment
         without a connector is considered reserved but not fully attached.
