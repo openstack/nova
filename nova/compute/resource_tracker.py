@@ -148,6 +148,12 @@ class ResourceTracker(object):
         self.cpu_allocation_ratio = CONF.cpu_allocation_ratio
         self.disk_allocation_ratio = CONF.disk_allocation_ratio
 
+    def get_node_uuid(self, nodename):
+        try:
+            return self.compute_nodes[nodename].uuid
+        except KeyError:
+            raise exception.ComputeHostNotFound(host=nodename)
+
     @utils.synchronized(COMPUTE_RESOURCE_SEMAPHORE)
     def instance_claim(self, context, instance, nodename, limits=None):
         """Indicate that some resources are needed for an upcoming compute

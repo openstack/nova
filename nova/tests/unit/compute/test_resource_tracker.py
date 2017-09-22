@@ -1202,6 +1202,18 @@ class TestUpdateComputeNode(BaseTestCase):
         )
         self.assertFalse(ucn_mock.called)
 
+    def test_get_node_uuid(self):
+        self._setup_rt()
+        orig_compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()
+        self.rt.compute_nodes[_NODENAME] = orig_compute
+        uuid = self.rt.get_node_uuid(_NODENAME)
+        self.assertEqual(orig_compute.uuid, uuid)
+
+    def test_get_node_uuid_not_found(self):
+        self._setup_rt()
+        self.assertRaises(exc.ComputeHostNotFound,
+                          self.rt.get_node_uuid, 'foo')
+
 
 class TestNormalizatInventoryFromComputeNode(test.NoDBTestCase):
     def test_normalize_libvirt(self):
