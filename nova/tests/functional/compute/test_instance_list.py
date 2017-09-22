@@ -14,8 +14,11 @@ import datetime
 
 from nova.compute import instance_list
 from nova import context
+from nova import db
+from nova import exception
 from nova import objects
 from nova import test
+from nova.tests import uuidsentinel as uuids
 
 
 class InstanceListTestCase(test.TestCase):
@@ -31,11 +34,11 @@ class InstanceListTestCase(test.TestCase):
         dt = datetime.datetime(1985, 10, 25, 1, 21, 0)
         spread = datetime.timedelta(minutes=10)
 
-        cells = objects.CellMappingList.get_all(self.context)
+        self.cells = objects.CellMappingList.get_all(self.context)
         # Create three instances in each of the real cells. Leave the
         # first cell empty to make sure we don't break with an empty
         # one.
-        for cell in cells[1:]:
+        for cell in self.cells[1:]:
             for i in range(0, self.num_instances):
                 with context.target_cell(self.context, cell) as cctx:
                     inst = objects.Instance(
@@ -127,3 +130,185 @@ class InstanceListTestCase(test.TestCase):
         uuids = [inst['uuid'] for inst in insts]
         self.assertEqual(sorted(uuids), uuids)
         self.assertEqual(len(self.instances), len(uuids))
+
+    def _test_get_sorted_with_limit_marker(self, sort_by, pages=2, pagesize=2):
+        insts = []
+
+        page = 0
+        while True:
+            if page >= pages:
+                limit = None
+            else:
+                limit = pagesize
+            if insts:
+                marker = insts[-1]['uuid']
+            else:
+                marker = None
+            batch = list(
+                instance_list.get_instances_sorted(self.context, {},
+                                                   limit, marker,
+                                                   [], [sort_by], ['asc']))
+            if not batch:
+                break
+            insts.extend(batch)
+            page += 1
+
+        # We should have requested exactly (or one more unlimited) pages
+        self.assertIn(page, (pages, pages + 1))
+
+        # Make sure the full set matches what we know to be true
+        found = [x[sort_by] for x in insts]
+        had = [x[sort_by] for x in self.instances]
+
+        if sort_by == 'launched_at':
+            # We're comparing objects and database entries, so we need to
+            # squash the tzinfo of the object ones so we can compare
+            had = [x.replace(tzinfo=None) for x in had]
+
+        self.assertEqual(sorted(had), found)
+
+    def test_get_sorted_with_limit_marker_stable(self):
+        """Test sorted by hostname.
+
+        This will be a stable sort that won't change on each run.
+        """
+        self._test_get_sorted_with_limit_marker(sort_by='hostname')
+
+    def test_get_sorted_with_limit_marker_stable_different_pages(self):
+        """Test sorted by hostname with different page sizes.
+
+        Just do the above with page seams in different places.
+        """
+        self._test_get_sorted_with_limit_marker(sort_by='hostname',
+                                                pages=3, pagesize=1)
+
+    def test_get_sorted_with_limit_marker_random(self):
+        """Test sorted by uuid.
+
+        This will not be stable and the actual ordering will depend on
+        uuid generation and thus be different on each run. Do this in
+        addition to the stable sort above to keep us honest.
+        """
+        self._test_get_sorted_with_limit_marker(sort_by='uuid')
+
+    def test_get_sorted_with_limit_marker_random_different_pages(self):
+        """Test sorted by uuid with different page sizes.
+
+        Just do the above with page seams in different places.
+        """
+        self._test_get_sorted_with_limit_marker(sort_by='uuid',
+                                                pages=3, pagesize=2)
+
+    def test_get_sorted_with_limit_marker_datetime(self):
+        """Test sorted by launched_at.
+
+        This tests that we can do all of this, but with datetime
+        fields.
+        """
+        self._test_get_sorted_with_limit_marker(sort_by='launched_at')
+
+    def test_get_sorted_with_deleted_marker(self):
+        marker = self.instances[1]['uuid']
+
+        before = list(
+            instance_list.get_instances_sorted(self.context, {},
+                                               None, marker,
+                                               [], None, None))
+
+        db.instance_destroy(self.context, marker)
+
+        after = list(
+            instance_list.get_instances_sorted(self.context, {},
+                                               None, marker,
+                                               [], None, None))
+
+        self.assertEqual(before, after)
+
+    def test_get_sorted_with_invalid_marker(self):
+        self.assertRaises(exception.MarkerNotFound,
+                          list, instance_list.get_instances_sorted(
+                              self.context, {}, None, 'not-a-marker',
+                              [], None, None))
+
+    def test_get_sorted_with_purged_instance(self):
+        """Test that we handle a mapped but purged instance."""
+        im = objects.InstanceMapping(self.context,
+                                     instance_uuid=uuids.missing,
+                                     project_id=self.context.project_id,
+                                     user_id=self.context.user_id,
+                                     cell=self.cells[0])
+        im.create()
+        self.assertRaises(exception.MarkerNotFound,
+                          list, instance_list.get_instances_sorted(
+                              self.context, {}, None, uuids.missing,
+                              [], None, None))
+
+    def _test_get_paginated_with_filter(self, filters):
+
+        found_uuids = []
+        marker = None
+        while True:
+            # Query for those instances, sorted by a different key in
+            # pages of one until we've consumed them all
+            batch = list(
+                instance_list.get_instances_sorted(self.context,
+                                                   filters,
+                                                   1, marker, [],
+                                                   ['hostname'],
+                                                   ['asc']))
+            if not batch:
+                break
+            found_uuids.extend([x['uuid'] for x in batch])
+            marker = found_uuids[-1]
+
+        return found_uuids
+
+    def test_get_paginated_with_uuid_filter(self):
+        """Test getting pages with uuid filters.
+
+        This runs through the results of a uuid-filtered query in pages of
+        length one to ensure that we land on markers that are filtered out
+        of the query and are not accidentally returned.
+        """
+        # Pick a set of the instances by uuid, when sorted by uuid
+        all_uuids = [x['uuid'] for x in self.instances]
+        filters = {'uuid': sorted(all_uuids)[:7]}
+
+        found_uuids = self._test_get_paginated_with_filter(filters)
+
+        # Make sure we found all (and only) the instances we asked for
+        self.assertEqual(set(found_uuids), set(filters['uuid']))
+        self.assertEqual(7, len(found_uuids))
+
+    def test_get_paginated_with_other_filter(self):
+        """Test getting pages with another filter.
+
+        This runs through the results of a filtered query in pages of
+        length one to ensure we land on markers that are filtered out
+        of the query and are not accidentally returned.
+        """
+        expected = [inst['uuid'] for inst in self.instances
+                    if inst['instance_type_id'] == 1]
+        filters = {'instance_type_id': 1}
+
+        found_uuids = self._test_get_paginated_with_filter(filters)
+
+        self.assertEqual(set(expected), set(found_uuids))
+
+    def test_get_paginated_with_uuid_and_other_filter(self):
+        """Test getting pages with a uuid and other type of filter.
+
+        We do this to make sure that we still find (but exclude) the
+        marker even if one of the other filters would have included
+        it.
+        """
+        # Pick a set of the instances by uuid, when sorted by uuid
+        all_uuids = [x['uuid'] for x in self.instances]
+        filters = {'uuid': sorted(all_uuids)[:7],
+                   'user_id': 'fake'}
+
+        found_uuids = self._test_get_paginated_with_filter(filters)
+
+        # Make sure we found all (and only) the instances we asked for
+        self.assertEqual(set(found_uuids), set(filters['uuid']))
+        self.assertEqual(7, len(found_uuids))

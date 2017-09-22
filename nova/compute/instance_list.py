@@ -10,10 +10,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
 import heapq
+import itertools
 
 from nova import context
 from nova import db
+from nova import exception
+from nova import objects
 
 
 class InstanceSortContext(object):
@@ -58,6 +62,29 @@ class InstanceWrapper(object):
         return r == -1
 
 
+def _get_marker_instance(ctx, marker):
+    """Get the marker instance from its cell.
+
+    This returns the marker instance from the cell in which it lives
+    """
+
+    try:
+        im = objects.InstanceMapping.get_by_instance_uuid(ctx, marker)
+    except exception.InstanceMappingNotFound:
+        raise exception.MarkerNotFound(marker=marker)
+
+    elevated = ctx.elevated(read_deleted='yes')
+    with context.target_cell(elevated, im.cell_mapping) as cctx:
+        try:
+            db_inst = db.instance_get_by_uuid(cctx, marker,
+                                              columns_to_join=[])
+        except exception.InstanceNotFound:
+            db_inst = None
+    if not db_inst:
+        raise exception.MarkerNotFound(marker=marker)
+    return db_inst
+
+
 def get_instances_sorted(ctx, filters, limit, marker, columns_to_join,
                          sort_keys, sort_dirs):
     """Get a cross-cell list of instances matching filters.
@@ -78,8 +105,6 @@ def get_instances_sorted(ctx, filters, limit, marker, columns_to_join,
     to each database query, although the limit will be enforced in the
     output of this function. Meaning, we will still query $limit from each
     database, but only return $limit total results.
-
-    FIXME: Make marker work
     """
 
     if not sort_keys:
@@ -92,6 +117,16 @@ def get_instances_sorted(ctx, filters, limit, marker, columns_to_join,
 
     sort_ctx = InstanceSortContext(sort_keys, sort_dirs)
 
+    if marker:
+        # A marker UUID was provided from the API. Call this the 'global'
+        # marker as it determines where we start the process across
+        # all cells. Look up the instance in whatever cell it is in and
+        # record the values for the sort keys so we can find the marker
+        # instance in each cell (called the 'local' marker).
+        global_marker_instance = _get_marker_instance(ctx, marker)
+        global_marker_values = [global_marker_instance[key]
+                                for key in sort_keys]
+
     def do_query(ctx):
         """Generate InstanceWrapper(Instance) objects from a cell.
 
@@ -102,13 +137,65 @@ def get_instances_sorted(ctx, filters, limit, marker, columns_to_join,
         routine.
         """
 
+        # The local marker is a uuid of an instance in a cell that is found
+        # by the special method instance_get_by_sort_filters(). It should
+        # be the next instance in order according to the sort provided,
+        # but after the marker instance which may have been in another cell.
+        local_marker = None
+
+        # Since the regular DB query routines take a marker and assume that
+        # the marked instance was the last entry of the previous page, we
+        # may need to prefix it to our result query if we're not the cell
+        # that had the actual marker instance.
+        local_marker_prefix = []
+
+        if marker:
+            # FIXME(danms): If we knew which cell we were in here, we could
+            # avoid looking up the marker again. But, we don't currently.
+
+            local_marker = db.instance_get_by_sort_filters(
+                ctx, sort_keys, sort_dirs, global_marker_values)
+            if local_marker:
+                if local_marker != marker:
+                    # We did find a marker in our cell, but it wasn't
+                    # the global marker. Thus, we will use it as our
+                    # marker in the main query below, but we also need
+                    # to prefix that result with this marker instance
+                    # since the result below will not return it and it
+                    # has not been returned to the user yet. Note that
+                    # we do _not_ prefix the marker instance if our
+                    # marker was the global one since that has already
+                    # been sent to the user.
+                    local_marker_filters = copy.copy(filters)
+                    if 'uuid' not in local_marker_filters:
+                        # If a uuid filter was provided, it will
+                        # have included our marker already if this instance
+                        # is desired in the output set. If it wasn't, we
+                        # specifically query for it. If the other filters would
+                        # have excluded it, then we'll get an empty set here
+                        # and not include it in the output as expected.
+                        local_marker_filters['uuid'] = [local_marker]
+                    local_marker_prefix = db.instance_get_all_by_filters_sort(
+                        ctx, local_marker_filters, limit=1, marker=None,
+                        columns_to_join=columns_to_join,
+                        sort_keys=sort_keys,
+                        sort_dirs=sort_dirs)
+            else:
+                # There was a global marker but everything in our cell is
+                # _before_ that marker, so we return nothing. If we didn't
+                # have this clause, we'd pass marker=None to the query below
+                # and return a full unpaginated set for our cell.
+                return []
+
+        main_query_result = db.instance_get_all_by_filters_sort(
+            ctx, filters,
+            limit=limit, marker=local_marker,
+            columns_to_join=columns_to_join,
+            sort_keys=sort_keys,
+            sort_dirs=sort_dirs)
+
         return (InstanceWrapper(sort_ctx, inst) for inst in
-                db.instance_get_all_by_filters_sort(
-                    ctx, filters,
-                    limit=limit, marker=marker,
-                    columns_to_join=columns_to_join,
-                    sort_keys=sort_keys,
-                sort_dirs=sort_dirs))
+                itertools.chain(local_marker_prefix, main_query_result))
 
     # FIXME(danms): If we raise or timeout on a cell we need to handle
     # that here gracefully. The below routine will provide sentinels
