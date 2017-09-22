@@ -111,3 +111,19 @@ class InstanceListTestCase(test.TestCase):
         uuids = set([inst['uuid'] for inst in insts])
         expected = set([inst['uuid'] for inst in self.instances])
         self.assertEqual(expected, uuids)
+
+    def test_get_sorted_with_limit(self):
+        insts = instance_list.get_instances_sorted(self.context, {},
+                                                   5, None,
+                                                   [], ['uuid'], ['asc'])
+        uuids = [inst['uuid'] for inst in insts]
+        self.assertEqual(sorted(uuids)[:5], uuids)
+        self.assertEqual(5, len(uuids))
+
+    def test_get_sorted_with_large_limit(self):
+        insts = instance_list.get_instances_sorted(self.context, {},
+                                                   5000, None,
+                                                   [], ['uuid'], ['asc'])
+        uuids = [inst['uuid'] for inst in insts]
+        self.assertEqual(sorted(uuids), uuids)
+        self.assertEqual(len(self.instances), len(uuids))
