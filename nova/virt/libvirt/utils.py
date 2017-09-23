@@ -33,16 +33,11 @@ from nova.virt.disk import api as disk
 from nova.virt import images
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt.volume import remotefs
-from nova.virt import volumeutils
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 RESIZE_SNAPSHOT_NAME = 'nova-resize'
-
-
-def get_iscsi_initiator():
-    return volumeutils.get_iscsi_initiator()
 
 
 def create_image(disk_format, path, size):
