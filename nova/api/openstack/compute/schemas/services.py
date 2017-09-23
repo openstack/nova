@@ -65,3 +65,14 @@ service_update_v2_53 = {
     },
     'additionalProperties': False
 }
+
+
+index_query_schema = {
+    'type': 'object',
+    'properties': {
+        'host': parameter_types.common_query_param,
+        'binary': parameter_types.common_query_param,
+    },
+    # For backward compatible changes
+    'additionalProperties': True
+}
