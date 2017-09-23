@@ -1,0 +1,8 @@
+---
+upgrade:
+  - |
+    The *TrustedFilter* along with its related ``[trusted_computing]``
+    configuration options were deprecated in the 16.0.0 Pike release and have
+    been removed in the 17.0.0 Queens release. The *TrustedFilter* was always
+    experimental, had no continuous integration testing to prove it still
+    worked, and no reported users.

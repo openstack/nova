@@ -19,7 +19,6 @@ System administration
    live-migration-usage.rst
    remote-console-access.rst
    service-groups.rst
-   security.rst
    node-down.rst
    adv-config.rst
 

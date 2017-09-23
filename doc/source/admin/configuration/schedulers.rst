@@ -753,12 +753,6 @@ With the API, use the ``os:scheduler_hints`` key:
        }
    }
 
-TrustedFilter
--------------
-
-Filters hosts based on their trust. Only passes hosts that meet the trust
-requirements specified in the instance properties.
-
 .. _TypeAffinityFilter:
 
 TypeAffinityFilter
