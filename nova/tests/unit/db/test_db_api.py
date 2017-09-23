@@ -1910,17 +1910,6 @@ class ReservationTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(expected, db.quota_usage_get_all_by_project_and_user(
                                             self.ctxt, 'project1', 'user1'))
 
-    def test_reservation_expire(self):
-        self.assertEqual(len(self.reservations),
-                         db.reservation_expire(self.ctxt))
-
-        expected = {'project_id': 'project1', 'user_id': 'user1',
-                'resource0': {'reserved': 0, 'in_use': 0},
-                'resource1': {'reserved': 0, 'in_use': 1},
-                'fixed_ips': {'reserved': 0, 'in_use': 2}}
-        self.assertEqual(expected, db.quota_usage_get_all_by_project_and_user(
-                                            self.ctxt, 'project1', 'user1'))
-
 
 class SecurityGroupRuleTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def setUp(self):

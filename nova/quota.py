@@ -903,17 +903,6 @@ class DbQuotaDriver(object):
 
         objects.Quotas.destroy_all_by_project(context, project_id)
 
-    def expire(self, context):
-        """Expire reservations.
-
-        Explores all currently existing reservations and rolls back
-        any that have expired.
-
-        :param context: The request context, for access checks.
-        """
-
-        db.reservation_expire(context)
-
 
 class NoopQuotaDriver(object):
     """Driver that turns quotas calls into no-ops and pretends that quotas
@@ -1228,16 +1217,6 @@ class NoopQuotaDriver(object):
 
         :param context: The request context, for access checks.
         :param project_id: The ID of the project being deleted.
-        """
-        pass
-
-    def expire(self, context):
-        """Expire reservations.
-
-        Explores all currently existing reservations and rolls back
-        any that have expired.
-
-        :param context: The request context, for access checks.
         """
         pass
 
@@ -1794,17 +1773,6 @@ class QuotaEngine(object):
         """
 
         self._driver.destroy_all_by_project(context, project_id)
-
-    def expire(self, context):
-        """Expire reservations.
-
-        Explores all currently existing reservations and rolls back
-        any that have expired.
-
-        :param context: The request context, for access checks.
-        """
-
-        self._driver.expire(context)
 
     @property
     def resources(self):

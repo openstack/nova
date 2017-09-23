@@ -1266,11 +1266,6 @@ def quota_destroy_all_by_project(context, project_id):
     return IMPL.quota_destroy_all_by_project(context, project_id)
 
 
-def reservation_expire(context):
-    """Roll back any expired reservations."""
-    return IMPL.reservation_expire(context)
-
-
 ###################
 
 

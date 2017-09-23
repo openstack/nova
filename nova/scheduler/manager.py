@@ -80,10 +80,6 @@ class SchedulerManager(manager.Manager):
         super(SchedulerManager, self).__init__(service_name='scheduler',
                                                *args, **kwargs)
 
-    @periodic_task.periodic_task
-    def _expire_reservations(self, context):
-        QUOTAS.expire(context)
-
     @periodic_task.periodic_task(
         spacing=CONF.scheduler.discover_hosts_in_cells_interval,
         run_immediately=True)
