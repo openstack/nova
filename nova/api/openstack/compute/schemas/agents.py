@@ -11,6 +11,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+from nova.api.validation import parameter_types
 
 create = {
     'type': 'object',
@@ -78,4 +79,16 @@ update = {
     },
     'required': ['para'],
     'additionalProperties': False,
+}
+
+index_query = {
+    'type': 'object',
+    'properties': {
+        'hypervisor': parameter_types.common_query_param
+    },
+    # NOTE(gmann): This is kept True to keep backward compatibility.
+    # As of now Schema validation stripped out the additional parameters and
+    # does not raise 400. In the future, we may block the additional parameters
+    # by bump in Microversion.
+    'additionalProperties': True
 }

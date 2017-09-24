@@ -204,8 +204,10 @@ class AgentsTestV21(test.NoDBTestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller.delete, self.req, 'string_id')
 
-    def test_agents_list(self):
-        res_dict = self.controller.index(self.req)
+    def _test_agents_list(self, query_string=None):
+        req = fakes.HTTPRequest.blank('', use_admin_context=True,
+                                      query_string=query_string)
+        res_dict = self.controller.index(req)
         agents_list = [{'hypervisor': 'kvm', 'os': 'win',
                      'architecture': 'x86',
                      'version': '7.0',
@@ -233,9 +235,68 @@ class AgentsTestV21(test.NoDBTestCase):
                     ]
         self.assertEqual(res_dict, {'agents': agents_list})
 
+    def test_agents_list(self):
+        self._test_agents_list()
+
     def test_agents_list_with_hypervisor(self):
         req = fakes.HTTPRequest.blank('', use_admin_context=True,
                                       query_string='hypervisor=kvm')
+        res_dict = self.controller.index(req)
+        response = [{'hypervisor': 'kvm', 'os': 'win',
+                     'architecture': 'x86',
+                     'version': '7.0',
+                     'url': 'http://example.com/path/to/resource',
+                     'md5hash': 'add6bb58e139be103324d04d82d8f545',
+                     'agent_id': 1},
+                    {'hypervisor': 'kvm', 'os': 'linux',
+                     'architecture': 'x86',
+                     'version': '16.0',
+                     'url': 'http://example.com/path/to/resource1',
+                     'md5hash': 'add6bb58e139be103324d04d82d8f546',
+                     'agent_id': 2},
+                    ]
+        self.assertEqual(res_dict, {'agents': response})
+
+    def test_agents_list_with_multi_hypervisor_filter(self):
+        query_string = 'hypervisor=xen&hypervisor=kvm'
+        req = fakes.HTTPRequest.blank('', use_admin_context=True,
+                                      query_string=query_string)
+        res_dict = self.controller.index(req)
+        response = [{'hypervisor': 'kvm', 'os': 'win',
+                     'architecture': 'x86',
+                     'version': '7.0',
+                     'url': 'http://example.com/path/to/resource',
+                     'md5hash': 'add6bb58e139be103324d04d82d8f545',
+                     'agent_id': 1},
+                    {'hypervisor': 'kvm', 'os': 'linux',
+                     'architecture': 'x86',
+                     'version': '16.0',
+                     'url': 'http://example.com/path/to/resource1',
+                     'md5hash': 'add6bb58e139be103324d04d82d8f546',
+                     'agent_id': 2},
+                    ]
+        self.assertEqual(res_dict, {'agents': response})
+
+    def test_agents_list_query_allow_negative_int_as_string(self):
+        req = fakes.HTTPRequest.blank('', use_admin_context=True,
+                                      query_string='hypervisor=-1')
+        res_dict = self.controller.index(req)
+        self.assertEqual(res_dict, {'agents': []})
+
+    def test_agents_list_query_allow_int_as_string(self):
+        req = fakes.HTTPRequest.blank('', use_admin_context=True,
+                                      query_string='hypervisor=1')
+        res_dict = self.controller.index(req)
+        self.assertEqual(res_dict, {'agents': []})
+
+    def test_agents_list_with_unknown_filter(self):
+        query_string = 'unknown_filter=abc'
+        self._test_agents_list(query_string=query_string)
+
+    def test_agents_list_with_hypervisor_and_additional_filter(self):
+        req = fakes.HTTPRequest.blank(
+            '', use_admin_context=True,
+            query_string='hypervisor=kvm&additional_filter=abc')
         res_dict = self.controller.index(req)
         response = [{'hypervisor': 'kvm', 'os': 'win',
                      'architecture': 'x86',
