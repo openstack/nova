@@ -18,6 +18,7 @@ from nova import context
 from nova import db
 from nova import exception
 from nova import objects
+from nova.objects import instance as instance_obj
 
 
 class InstanceSortContext(object):
@@ -218,3 +219,20 @@ def get_instances_sorted(ctx, filters, limit, marker, columns_to_join,
             # We'll only hit this if limit was nonzero and we just generated
             # our last one
             return
+
+
+def get_instance_objects_sorted(ctx, filters, limit, marker, expected_attrs,
+                                sort_keys, sort_dirs):
+    """Same as above, but return an InstanceList."""
+    columns_to_join = instance_obj._expected_cols(expected_attrs)
+    instance_generator = get_instances_sorted(ctx, filters, limit, marker,
+                                              columns_to_join, sort_keys,
+                                              sort_dirs)
+    if 'fault' in expected_attrs:
+        # We join fault above, so we need to make sure we don't ask
+        # make_instance_list to do it again for us
+        expected_attrs = copy.copy(expected_attrs)
+        expected_attrs.remove('fault')
+    return instance_obj._make_instance_list(ctx, objects.InstanceList(),
+                                            instance_generator,
+                                            expected_attrs)

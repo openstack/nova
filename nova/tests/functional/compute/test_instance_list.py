@@ -366,3 +366,88 @@ class InstanceListTestCase(test.TestCase):
         expected_no_fault = len(self.instances) - expected_faults
         faults = [inst['fault'] for inst in insts]
         self.assertEqual(expected_no_fault, faults.count(None))
+
+
+class TestInstanceListObjects(test.TestCase):
+    def setUp(self):
+        super(TestInstanceListObjects, self).setUp()
+
+        self.context = context.RequestContext('fake', 'fake')
+        self.num_instances = 3
+        self.instances = []
+
+        dt = datetime.datetime(1985, 10, 25, 1, 21, 0)
+        spread = datetime.timedelta(minutes=10)
+
+        cells = objects.CellMappingList.get_all(self.context)
+        # Create three instances in each of the real cells. Leave the
+        # first cell empty to make sure we don't break with an empty
+        # one
+        for cell in cells[1:]:
+            for i in range(0, self.num_instances):
+                with context.target_cell(self.context, cell) as cctx:
+                    inst = objects.Instance(
+                        context=cctx,
+                        project_id=self.context.project_id,
+                        user_id=self.context.user_id,
+                        launched_at=dt,
+                        instance_type_id=i,
+                        hostname='%s-inst%i' % (cell.name, i))
+                    inst.create()
+                    if i % 2 == 0:
+                        # Make some faults for this instance
+                        for n in range(0, i + 1):
+                            msg = 'fault%i-%s' % (n, inst.hostname)
+                            f = objects.InstanceFault(context=cctx,
+                                                      instance_uuid=inst.uuid,
+                                                      code=i,
+                                                      message=msg,
+                                                      details='fake',
+                                                      host='fakehost')
+                            f.create()
+
+                self.instances.append(inst)
+                im = objects.InstanceMapping(context=self.context,
+                                             project_id=inst.project_id,
+                                             user_id=inst.user_id,
+                                             instance_uuid=inst.uuid,
+                                             cell_mapping=cell)
+                im.create()
+                dt += spread
+
+    def test_get_instance_objects_sorted(self):
+        filters = {}
+        limit = None
+        marker = None
+        expected_attrs = []
+        sort_keys = ['uuid']
+        sort_dirs = ['asc']
+        insts = instance_list.get_instance_objects_sorted(
+            self.context, filters, limit, marker, expected_attrs,
+            sort_keys, sort_dirs)
+        found_uuids = [x.uuid for x in insts]
+        had_uuids = sorted([x['uuid'] for x in self.instances])
+        self.assertEqual(had_uuids, found_uuids)
+
+        # Make sure none of the instances have fault set
+        self.assertEqual(0, len([inst for inst in insts
+                                 if 'fault' in inst]))
+
+    def test_get_instance_objects_sorted_with_fault(self):
+        filters = {}
+        limit = None
+        marker = None
+        expected_attrs = ['fault']
+        sort_keys = ['uuid']
+        sort_dirs = ['asc']
+        insts = instance_list.get_instance_objects_sorted(
+            self.context, filters, limit, marker, expected_attrs,
+            sort_keys, sort_dirs)
+        found_uuids = [x.uuid for x in insts]
+        had_uuids = sorted([x['uuid'] for x in self.instances])
+        self.assertEqual(had_uuids, found_uuids)
+
+        # They should all have fault set, but only some have
+        # actual faults
+        self.assertEqual(2, len([inst for inst in insts
+                                 if inst.fault]))
