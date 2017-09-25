@@ -63,8 +63,9 @@ api_db_opts = [
     cfg.StrOpt('mysql_sql_mode',
                default='TRADITIONAL',
                help=''),
-    cfg.IntOpt('idle_timeout',
+    cfg.IntOpt('connection_recycle_time',
                default=3600,
+               deprecated_name='idle_timeout',
                help=''),
     # TODO(markus_z): We should probably default this to 5 to not rely on the
     # SQLAlchemy default. Otherwise we wouldn't provide a stable default.
