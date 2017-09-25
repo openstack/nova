@@ -138,7 +138,6 @@ class _TestInstanceObject(object):
     @mock.patch.object(db, 'instance_get_by_uuid')
     def test_get_with_expected(self, mock_get, mock_fault_get, mock_extra_get):
         exp_cols = instance.INSTANCE_OPTIONAL_ATTRS[:]
-        exp_cols.remove('fault')
         exp_cols.remove('numa_topology')
         exp_cols.remove('pci_requests')
         exp_cols.remove('vcpu_model')
@@ -974,7 +973,7 @@ class _TestInstanceObject(object):
         self.assertEqual(fake_faults[0], dict(inst.fault.items()))
 
         mock_get.assert_called_once_with(self.context, fake_uuid,
-            columns_to_join=[])
+            columns_to_join=['fault'])
         mock_fault_get.assert_called_once_with(self.context, [fake_uuid])
 
     @mock.patch('nova.objects.EC2Ids.get_by_instance')
@@ -1848,7 +1847,7 @@ class _TestInstanceListObject(object):
         self.assertIsNone(instances[1].fault)
 
         mock_get_all.assert_called_once_with(self.context, 'host',
-            columns_to_join=[])
+            columns_to_join=['fault'])
         mock_fault_get.assert_called_once_with(self.context,
             [x['uuid'] for x in fake_insts])
 
