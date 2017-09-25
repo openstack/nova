@@ -109,6 +109,7 @@ class SchedulerAPI(object):
         'mitaka': '4.3',
         'newton': '4.3',
         'ocata': '4.3',
+        'pike': '4.4',
     }
 
     def __init__(self):
