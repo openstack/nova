@@ -276,6 +276,8 @@ class LegacyValidatingNotifier(object):
         'compute.instance.finish_resize.start',
         'compute.instance.live.migration.abort.start',
         'compute.instance.live.migration.abort.end',
+        'compute.instance.live.migration.force.complete.start',
+        'compute.instance.live.migration.force.complete.end',
         'compute.instance.live_migration.post.dest.end',
         'compute.instance.live_migration.post.dest.start',
         'compute.instance.live_migration._post.end',
