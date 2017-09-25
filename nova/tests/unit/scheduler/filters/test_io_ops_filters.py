@@ -19,7 +19,7 @@ from nova import test
 from nova.tests.unit.scheduler import fakes
 
 
-class TestNumInstancesFilter(test.NoDBTestCase):
+class TestIoOpsFilter(test.NoDBTestCase):
 
     def test_filter_num_iops_passes(self):
         self.flags(max_io_ops_per_host=8, group='filter_scheduler')
