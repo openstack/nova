@@ -66,7 +66,7 @@ Interdependencies to other options:
 
     cfg.BoolOpt(
         'disable_libvirt_livesnapshot',
-        default=True,
+        default=False,
         help="""
 Disable live snapshots when using the libvirt driver.
 

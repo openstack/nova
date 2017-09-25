@@ -1,0 +1,10 @@
+---
+upgrade:
+  - |
+    Nova now defaults to using the live snapshot feature of libvirt
+    when taking snapshots. This was previously disabled by default due
+    to crashes on load seen with older libvirt versions. It has been
+    used in production by many clouds, and appears stable in real
+    world environments. If you see crashes of guests during snapshots,
+    you can disable this with the ``disable_libvirt_livesnapshot``
+    config value in ``[workarounds]``.

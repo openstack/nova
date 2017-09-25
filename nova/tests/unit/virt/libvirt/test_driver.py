@@ -454,6 +454,7 @@ class FakeVirtDomain(object):
         else:
             self._fake_dom_xml = """
                 <domain type='kvm'>
+                    <name>testinstance1</name>
                     <devices>
                         <disk type='file'>
                             <source file='filename'/>
@@ -510,6 +511,9 @@ class FakeVirtDomain(object):
     def blockJobInfo(self, path, flags):
         pass
 
+    def blockJobAbort(self, path, flags):
+        pass
+
     def resume(self):
         pass
 
@@ -526,6 +530,9 @@ class FakeVirtDomain(object):
         return True
 
     def isPersistent(self):
+        return True
+
+    def undefine(self):
         return True
 
 
@@ -18998,6 +19005,14 @@ class _BaseSnapshotTests(test.NoDBTestCase):
 
 
 class LibvirtSnapshotTests(_BaseSnapshotTests):
+
+    def setUp(self):
+        super(LibvirtSnapshotTests, self).setUp()
+        # All paths through livesnapshot trigger a chown behind privsep
+        self.privsep_chown = mock.patch.object(nova.privsep.path, 'chown')
+        self.addCleanup(self.privsep_chown.stop)
+        self.privsep_chown.start()
+
     def test_ami(self):
         # Assign different image_ref from nova/images/fakes for testing ami
         self.instance_ref.image_ref = 'c905cedb-7281-47e4-8a62-f26bc5fc4c77'
