@@ -257,9 +257,9 @@ def _set_allocations(req, schema):
     # capacity limits have been exceeded.
     except exception.NotFound as exc:
         raise webob.exc.HTTPBadRequest(
-                _("Unable to allocate inventory for resource provider "
-                  "%(rp_uuid)s: %(error)s") %
-            {'rp_uuid': resource_provider_uuid, 'error': exc})
+                _("Unable to allocate inventory for consumer "
+                  "%(consumer_uuid)s: %(error)s") %
+            {'consumer_uuid': consumer_uuid, 'error': exc})
     except exception.InvalidInventory as exc:
         raise webob.exc.HTTPConflict(
             _('Unable to allocate inventory: %(error)s') % {'error': exc})
