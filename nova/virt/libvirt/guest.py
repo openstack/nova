@@ -641,6 +641,18 @@ class Guest(object):
                 destination, flags=flags, bandwidth=bandwidth)
         else:
             if params:
+                # Due to a quirk in the libvirt python bindings,
+                # VIR_MIGRATE_NON_SHARED_INC with an empty migrate_disks is
+                # interpreted as "block migrate all writable disks" rather than
+                # "don't block migrate any disks". This includes attached
+                # volumes, which will potentially corrupt data on those
+                # volumes. Consequently we need to explicitly unset
+                # VIR_MIGRATE_NON_SHARED_INC if there are no disks to be block
+                # migrated.
+                if (flags & libvirt.VIR_MIGRATE_NON_SHARED_INC != 0 and
+                        not params.get('migrate_disks')):
+                    flags &= ~libvirt.VIR_MIGRATE_NON_SHARED_INC
+
                 # In migrateToURI3 these parameters are extracted from the
                 # `params` dict
                 if migrate_uri:
