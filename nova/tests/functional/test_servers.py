@@ -2582,8 +2582,5 @@ class ServerUnshelveSpawnFailTests(ProviderUsageBaseTestCase):
 
         # assert allocations were removed from the host
         usages = self._get_provider_usages(rp_uuid)
-        # FIXME: this is bug 1713796 where the allocations aren't cleaned up;
-        # remove once fixed
-        self.assertFlavorMatchesAllocation(self.flavor1, usages)
-        # self.assertFlavorMatchesAllocation(
-        #    {'vcpus': 0, 'ram': 0, 'disk': 0}, usages)
+        self.assertFlavorMatchesAllocation(
+           {'vcpus': 0, 'ram': 0, 'disk': 0}, usages)
