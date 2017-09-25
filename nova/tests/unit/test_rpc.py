@@ -18,7 +18,6 @@ import mock
 import oslo_messaging as messaging
 from oslo_messaging.rpc import dispatcher
 from oslo_serialization import jsonutils
-import testtools
 
 from nova import context
 from nova import rpc
@@ -45,9 +44,11 @@ class RPCResetFixture(fixtures.Fixture):
         rpc.CONF = self.conf
 
 
-# We can't import nova.test.TestCase because that sets up an RPCFixture
-# that pretty much nullifies all of this testing
-class TestRPC(testtools.TestCase):
+class TestRPC(test.NoDBTestCase):
+
+    # We're testing the rpc code so we can't use the RPCFixture.
+    STUB_RPC = False
+
     def setUp(self):
         super(TestRPC, self).setUp()
         self.useFixture(RPCResetFixture())
