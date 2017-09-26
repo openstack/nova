@@ -3958,13 +3958,15 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
         db.instance_create(ctxt, {'uuid': uuid})
 
+        utc_now = timeutils.utcnow()
         values = {
             'action': action,
             'instance_uuid': uuid,
             'request_id': ctxt.request_id,
             'user_id': ctxt.user_id,
             'project_id': ctxt.project_id,
-            'start_time': timeutils.utcnow(),
+            'start_time': utc_now,
+            'updated_at': utc_now,
             'message': 'action-message'
         }
         if extra is not None:
@@ -4294,6 +4296,82 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
         action = db.action_get_by_request_id(self.ctxt, uuid,
                                              self.ctxt.request_id)
         self.assertNotEqual('Error', action['message'])
+
+    def test_instance_action_updated_with_event_start_and_finish_action(self):
+        uuid = uuidsentinel.uuid1
+        action = db.action_start(self.ctxt, self._create_action_values(uuid))
+        updated_create = action['updated_at']
+        self.assertIsNotNone(updated_create)
+        event_values = self._create_event_values(uuid)
+
+        # event start action
+        time_start = timeutils.utcnow() + datetime.timedelta(seconds=5)
+        event_values['start_time'] = time_start
+        db.action_event_start(self.ctxt, event_values)
+        action = db.action_get_by_request_id(self.ctxt, uuid,
+                                             self.ctxt.request_id)
+        updated_event_start = action['updated_at']
+        self.assertEqual(time_start.isoformat(),
+                         updated_event_start.isoformat())
+        self.assertTrue(updated_event_start > updated_create)
+
+        # event finish action
+        time_finish = timeutils.utcnow() + datetime.timedelta(seconds=10)
+        event_values = {
+            'finish_time': time_finish,
+            'result': 'Success'
+        }
+        event_values = self._create_event_values(uuid, extra=event_values)
+        db.action_event_finish(self.ctxt, event_values)
+        action = db.action_get_by_request_id(self.ctxt, uuid,
+                                             self.ctxt.request_id)
+        updated_event_finish = action['updated_at']
+        self.assertEqual(time_finish.isoformat(),
+                         updated_event_finish.isoformat())
+        self.assertTrue(updated_event_finish > updated_event_start)
+
+    def test_instance_action_not_updated_with_unknown_event_request(self):
+        """Tests that we don't update the action.updated_at field when
+        starting or finishing an action event if we couldn't find the
+        action by the request_id.
+        """
+        # Create a valid action - this represents an active user request.
+        uuid = uuidsentinel.uuid1
+        action = db.action_start(self.ctxt, self._create_action_values(uuid))
+        updated_create = action['updated_at']
+        self.assertIsNotNone(updated_create)
+        event_values = self._create_event_values(uuid)
+
+        # Now start an event on an unknown request ID and admin context where
+        # project_id won't be set.
+        time_start = timeutils.utcnow() + datetime.timedelta(seconds=5)
+        event_values['start_time'] = time_start
+        random_request_id = 'req-%s' % uuidsentinel.request_id
+        event_values['request_id'] = random_request_id
+        admin_context = context.get_admin_context()
+        event_ref = db.action_event_start(admin_context, event_values)
+        # The event would be created on the existing action.
+        self.assertEqual(action['id'], event_ref['action_id'])
+        # And the action.update_at should be the same as before the event was
+        # started.
+        action = db.action_get_by_request_id(self.ctxt, uuid,
+                                             self.ctxt.request_id)
+        self.assertEqual(updated_create, action['updated_at'])
+
+        # Now finish the event on the unknown request ID and admin context.
+        time_finish = timeutils.utcnow() + datetime.timedelta(seconds=10)
+        event_values = {
+            'finish_time': time_finish,
+            'request_id': random_request_id,
+            'result': 'Success'
+        }
+        event_values = self._create_event_values(uuid, extra=event_values)
+        db.action_event_finish(admin_context, event_values)
+        # And the action.update_at should be the same as before the event was
+        # finished.
+        action = db.action_get_by_request_id(self.ctxt, uuid,
+                                             self.ctxt.request_id)
+        self.assertEqual(updated_create, action['updated_at'])
 
 
 class InstanceFaultTestCase(test.TestCase, ModelsObjectComparatorMixin):

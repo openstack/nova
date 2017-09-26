@@ -6205,7 +6205,7 @@ def instance_fault_get_by_instance_uuids(context, instance_uuids,
 
 @pick_context_manager_writer
 def action_start(context, values):
-    convert_objects_related_datetimes(values, 'start_time')
+    convert_objects_related_datetimes(values, 'start_time', 'updated_at')
     action_ref = models.InstanceAction()
     action_ref.update(values)
     action_ref.save(context.session)
@@ -6214,7 +6214,8 @@ def action_start(context, values):
 
 @pick_context_manager_writer
 def action_finish(context, values):
-    convert_objects_related_datetimes(values, 'start_time', 'finish_time')
+    convert_objects_related_datetimes(values, 'start_time', 'finish_time',
+                                      'updated_at')
     query = model_query(context, models.InstanceAction).\
                         filter_by(instance_uuid=values['instance_uuid']).\
                         filter_by(request_id=values['request_id'])
@@ -6270,9 +6271,13 @@ def action_event_start(context, values):
     # according to request_id. Try to get the last created action so that
     # init_instance can continue to finish the recovery action, like:
     # powering_off, unpausing, and so on.
+    update_action = True
     if not action and not context.project_id:
         action = _action_get_last_created_by_instance_uuid(
             context, values['instance_uuid'])
+        # If we couldn't find an action by the request_id, we don't want to
+        # update this action since it likely represents an inactive action.
+        update_action = False
 
     if not action:
         raise exception.InstanceActionNotFound(
@@ -6284,9 +6289,19 @@ def action_event_start(context, values):
     event_ref = models.InstanceActionEvent()
     event_ref.update(values)
     context.session.add(event_ref)
+
+    # Update action updated_at.
+    if update_action:
+        action.update({'updated_at': values['start_time']})
+        action.save(context.session)
+
     return event_ref
 
 
+# NOTE: We need the retry_on_deadlock decorator for cases like resize where
+# a lot of events are happening at once between multiple hosts trying to
+# update the same action record in a small time window.
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 @pick_context_manager_writer
 def action_event_finish(context, values):
     """Finish an event on an instance action."""
@@ -6299,9 +6314,13 @@ def action_event_finish(context, values):
     # according to request_id. Try to get the last created action so that
     # init_instance can continue to finish the recovery action, like:
     # powering_off, unpausing, and so on.
+    update_action = True
     if not action and not context.project_id:
         action = _action_get_last_created_by_instance_uuid(
             context, values['instance_uuid'])
+        # If we couldn't find an action by the request_id, we don't want to
+        # update this action since it likely represents an inactive action.
+        update_action = False
 
     if not action:
         raise exception.InstanceActionNotFound(
@@ -6320,6 +6339,11 @@ def action_event_finish(context, values):
 
     if values['result'].lower() == 'error':
         action.update({'message': 'Error'})
+
+    # Update action updated_at.
+    if update_action:
+        action.update({'updated_at': values['finish_time']})
+        action.save(context.session)
 
     return event_ref
 

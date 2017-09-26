@@ -55,14 +55,17 @@ class InstanceAction(base.NovaPersistentObject, base.NovaObject,
                   'user_id': context.user_id,
                   'project_id': context.project_id,
                   'action': action_name,
-                  'start_time': context.timestamp}
+                  'start_time': context.timestamp,
+                  'updated_at': context.timestamp}
         return values
 
     @staticmethod
     def pack_action_finish(context, instance_uuid):
+        utcnow = timeutils.utcnow()
         values = {'request_id': context.request_id,
                   'instance_uuid': instance_uuid,
-                  'finish_time': timeutils.utcnow()}
+                  'finish_time': utcnow,
+                  'updated_at': utcnow}
         return values
 
     @base.remotable_classmethod
