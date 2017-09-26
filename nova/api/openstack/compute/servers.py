@@ -49,7 +49,7 @@ import nova.conf
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
-from nova.image import glance
+from nova.image import api as image_api
 from nova import objects
 from nova.objects import service as service_obj
 from nova.policies import servers as server_policies
@@ -1023,7 +1023,7 @@ class ServersController(wsgi.Controller):
 
         # build location of newly-created image entity
         image_id = str(image['id'])
-        image_ref = glance.generate_image_url(image_id, context)
+        image_ref = image_api.API().generate_image_url(image_id, context)
 
         resp = webob.Response(status_int=202)
         resp.headers['Location'] = image_ref
