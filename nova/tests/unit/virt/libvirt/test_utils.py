@@ -351,18 +351,17 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
     def test_create_ploop_image(self, fs_type,
                                 default_eph_format,
                                 expected_fs_type):
-        with mock.patch('nova.utils.execute') as mock_execute:
+        with test.nested(mock.patch('nova.utils.execute'),
+                         mock.patch('nova.privsep.libvirt.ploop_init')
+                         ) as (mock_execute, mock_ploop_init):
             self.flags(default_ephemeral_format=default_eph_format)
             libvirt_utils.create_ploop_image('expanded', '/some/path',
                                              '5G', fs_type)
             mock_execute.assert_has_calls([
-                mock.call('mkdir', '-p', '/some/path'),
-                mock.call('ploop', 'init', '-s', '5G',
-                          '-f', 'expanded', '-t', expected_fs_type,
-                          '/some/path/root.hds',
-                          run_as_root=True, check_exit_code=True),
-                mock.call('chmod', '-R', 'a+r', '/some/path',
-                          run_as_root=True, check_exit_code=True)])
+                mock.call('mkdir', '-p', '/some/path')])
+            mock_ploop_init.assert_has_calls([
+                mock.call('5G', 'expanded', expected_fs_type,
+                          '/some/path/root.hds')])
 
     def test_pick_disk_driver_name(self):
         type_map = {'kvm': ([True, 'qemu'], [False, 'qemu'], [None, 'qemu']),
