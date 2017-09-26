@@ -1009,7 +1009,9 @@ class SchedulerReportClient(object):
                 # involved in the claim. It's safe to retry the claim
                 # transaction.
                 LOG.debug("Another process changed the resource providers "
-                          "involved in our claim attempt. Retrying claim.")
+                          "involved in our claim attempt for consumer %s. "
+                          "Retrying claim, attempt: %s", consumer_uuid,
+                          (attempt + 1))
                 return self.claim_resources(consumer_uuid, alloc_request,
                     project_id, user_id, attempt=(attempt + 1))
             LOG.warning(
