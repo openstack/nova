@@ -152,18 +152,6 @@ mkfs.ext3: CommandFilter, mkfs.ext3, root
 mkfs.ext4: CommandFilter, mkfs.ext4, root
 mkfs.ntfs: CommandFilter, mkfs.ntfs, root
 
-# nova/virt/libvirt/driver.py:
-lvremove: CommandFilter, lvremove, root
-
-# nova/virt/libvirt/utils.py:
-lvcreate: CommandFilter, lvcreate, root
-
-# nova/virt/libvirt/utils.py:
-lvs: CommandFilter, lvs, root
-
-# nova/virt/libvirt/utils.py:
-vgs: CommandFilter, vgs, root
-
 # os-brick needed commands
 read_initiator: ReadFileFilter, /etc/iscsi/initiatorname.iscsi
 multipath: CommandFilter, multipath, root

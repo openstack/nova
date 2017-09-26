@@ -7,5 +7,5 @@ upgrade:
     Calls to mount in the virt disk api no longer ignore the value of stderr.
   - |
     The following commands are no longer required to be listed in your rootwrap
-    configuration: cat; chown; cryptsetup; dd; mkdir; mount; ploop;
-    prl_disk_tool; readlink; tee; touch; and umount.
+    configuration: cat; chown; cryptsetup; dd; lvcreate; lvremove; lvs; mkdir;
+    mount; ploop; prl_disk_tool; readlink; tee; touch; umount; and vgs.

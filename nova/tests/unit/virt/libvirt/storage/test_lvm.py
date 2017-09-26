@@ -19,44 +19,40 @@ from oslo_config import cfg
 
 from nova import exception
 from nova import test
-from nova import utils
 from nova.virt.libvirt.storage import lvm
 
 CONF = cfg.CONF
 
 
 class LvmTestCase(test.NoDBTestCase):
-    @mock.patch('nova.utils.execute')
-    def test_get_volume_size(self, mock_execute):
-        mock_execute.return_value = 123456789, None
+    @mock.patch('nova.privsep.fs.blockdev_size')
+    def test_get_volume_size(self, mock_blockdev_size):
+        mock_blockdev_size.return_value = '123456789', None
         size = lvm.get_volume_size('/dev/foo')
-        mock_execute.assert_has_calls(
-            [mock.call('blockdev', '--getsize64', '/dev/foo',
-                       run_as_root=True)])
         self.assertEqual(123456789, size)
 
-    @mock.patch.object(utils, 'execute',
-                       side_effect=processutils.ProcessExecutionError(
-                            stderr=('blockdev: cannot open /dev/foo: '
-                                    'No such device or address')))
-    def test_get_volume_size_not_found(self, mock_execute):
+    @mock.patch('nova.privsep.fs.blockdev_size',
+                side_effect=processutils.ProcessExecutionError(
+                    stderr=('blockdev: cannot open /dev/foo: '
+                            'No such device or address')))
+    def test_get_volume_size_not_found(self, mock_blockdev_size):
         self.assertRaises(exception.VolumeBDMPathNotFound,
                           lvm.get_volume_size, '/dev/foo')
 
-    @mock.patch.object(utils, 'execute',
-                       side_effect=processutils.ProcessExecutionError(
-                            stderr=('blockdev: cannot open /dev/foo: '
-                                    'No such file or directory')))
-    def test_get_volume_size_not_found_file(self, mock_execute):
+    @mock.patch('nova.privsep.fs.blockdev_size',
+                side_effect=processutils.ProcessExecutionError(
+                    stderr=('blockdev: cannot open /dev/foo: '
+                            'No such file or directory')))
+    def test_get_volume_size_not_found_file(self, mock_blockdev_size):
         self.assertRaises(exception.VolumeBDMPathNotFound,
             lvm.get_volume_size, '/dev/foo')
 
     @mock.patch('os.path.exists', return_value=True)
-    @mock.patch.object(utils, 'execute',
-                       side_effect=processutils.ProcessExecutionError(
-                            stderr='blockdev: i am sad in other ways'))
-    def test_get_volume_size_unexpectd_error(self, mock_execute,
-                                             mock_path_exists):
+    @mock.patch('nova.privsep.fs.blockdev_size',
+                side_effect=processutils.ProcessExecutionError(
+                    stderr='blockdev: i am sad in other ways'))
+    def test_get_volume_size_unexpected_error(self, mock_blockdev_size,
+                                              mock_path_exists):
         self.assertRaises(processutils.ProcessExecutionError,
                           lvm.get_volume_size, '/dev/foo')
 
@@ -117,18 +113,18 @@ class LvmTestCase(test.NoDBTestCase):
         lvm.clear_volume('/dev/vc')
         mock_execute.assert_not_called()
 
-    @mock.patch.object(utils, 'execute',
-                       side_effect=processutils.ProcessExecutionError(
-                                    stderr=('blockdev: cannot open /dev/foo: '
-                                            'No such file or directory')))
-    def test_lvm_clear_ignore_lvm_not_found(self, mock_execute):
+    @mock.patch('nova.privsep.fs.blockdev_size',
+                side_effect=processutils.ProcessExecutionError(
+                    stderr=('blockdev: cannot open /dev/foo: '
+                            'No such file or directory')))
+    def test_lvm_clear_ignore_lvm_not_found(self, mock_blockdev_size):
         lvm.clear_volume('/dev/foo')
 
     @mock.patch.object(lvm, 'clear_volume')
-    @mock.patch.object(utils, 'execute',
-                       side_effect=processutils.ProcessExecutionError('Error'))
-    def test_fail_remove_all_logical_volumes(self, mock_clear, mock_execute):
+    @mock.patch('nova.privsep.fs.lvremove',
+                side_effect=processutils.ProcessExecutionError('Error'))
+    def test_fail_remove_all_logical_volumes(self, mock_clear, mock_lvremove):
         self.assertRaises(exception.VolumesNotRemoved,
                           lvm.remove_volumes,
                           ['vol1', 'vol2', 'vol3'])
-        self.assertEqual(3, mock_execute.call_count)
+        self.assertEqual(3, mock_lvremove.call_count)

@@ -36,3 +36,43 @@ def mount(fstype, device, mountpoint, options):
 @nova.privsep.sys_admin_pctxt.entrypoint
 def umount(mountpoint):
     processutils.execute('umount', mountpoint, attempts=3, delay_on_retry=True)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def lvcreate(size, lv, vg, preallocated=None):
+    cmd = ['lvcreate']
+    if not preallocated:
+        cmd.extend(['-L', '%db' % size])
+    else:
+        cmd.extend(['-L', '%db' % preallocated,
+                    '--virtualsize', '%db' % size])
+    cmd.extend(['-n', lv, vg])
+    processutils.execute(*cmd, attempts=3)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def vginfo(vg):
+    return processutils.execute('vgs', '--noheadings', '--nosuffix',
+                                '--separator', '|', '--units', 'b',
+                                '-o', 'vg_size,vg_free', vg)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def lvlist(vg):
+    return processutils.execute('lvs', '--noheadings', '-o', 'lv_name', vg)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def lvinfo(path):
+    return processutils.execute('lvs', '-o', 'vg_all,lv_all',
+                                '--separator', '|', path)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def lvremove(path):
+    processutils.execute('lvremove', '-f', path, attempts=3)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def blockdev_size(path):
+    return processutils.execute('blockdev', '--getsize64', path)
