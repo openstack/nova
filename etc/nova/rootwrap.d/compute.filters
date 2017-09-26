@@ -6,9 +6,6 @@
 # nova/virt/xenapi/vm_utils.py: tune2fs, -j, partition_path
 tune2fs: CommandFilter, tune2fs, root
 
-# nova/virt/disk/vfs/localfs.py: 'blkid', '-o', 'value', '-s', 'TYPE', device
-blkid: CommandFilter, blkid, root
-
 # nova/virt/libvirt/utils.py: 'blockdev', '--getsize64', path
 # nova/virt/disk/mount/nbd.py: 'blockdev', '--flushbufs', device
 blockdev: RegExpFilter, blockdev, root, blockdev, (--getsize64|--flushbufs), /dev/.*
