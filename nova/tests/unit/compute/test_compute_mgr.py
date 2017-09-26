@@ -6574,13 +6574,16 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         migration.status = 'running'
         migration.id = 0
 
+        # TODO(jichenjc): will be removed when remove glance.generate_image_url
         @mock.patch('nova.image.glance.generate_image_url',
+                    return_value='fake-url')
+        @mock.patch('nova.image.api.API.generate_image_url',
                     return_value='fake-url')
         @mock.patch.object(objects.Migration, 'get_by_id',
                            return_value=migration)
         @mock.patch.object(self.compute.driver,
                            'live_migration_force_complete')
-        def _do_test(force_complete, get_by_id, gen_img_url):
+        def _do_test(force_complete, get_by_id, gen_img_url, glance_image_url):
             self.compute.live_migration_force_complete(
                 self.context, self.instance, migration.id)
 

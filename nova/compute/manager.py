@@ -74,7 +74,6 @@ from nova import exception_wrapper
 from nova import hooks
 from nova.i18n import _
 from nova import image
-from nova.image import glance
 from nova import manager
 from nova import network
 from nova.network import base_api as base_net_api
@@ -2974,8 +2973,8 @@ class ComputeManager(manager.Manager):
         # This instance.exists message should contain the original
         # image_ref, not the new one.  Since the DB has been updated
         # to point to the new one... we have to override it.
-        # TODO(jaypipes): Move generate_image_url() into the nova.image.api
-        orig_image_ref_url = glance.generate_image_url(orig_image_ref, context)
+        orig_image_ref_url = self.image_api.generate_image_url(orig_image_ref,
+                                                               context)
         extra_usage_info = {'image_ref_url': orig_image_ref_url}
         compute_utils.notify_usage_exists(
                 self.notifier, context, instance,
@@ -3307,10 +3306,9 @@ class ComputeManager(manager.Manager):
             msg = 'Instance disappeared during snapshot'
             LOG.debug(msg, instance=instance)
             try:
-                image_service = glance.get_default_image_service()
-                image = image_service.show(context, image_id)
+                image = self.image_api.get(context, image_id)
                 if image['status'] != 'active':
-                    image_service.delete(context, image_id)
+                    self.image_api.delete(context, image_id)
             except Exception:
                 LOG.warning("Error while trying to clean up image %s",
                             image_id, instance=instance)

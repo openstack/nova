@@ -55,6 +55,16 @@ class API(object):
         #                 the context alive...
         return glance.get_default_image_service()
 
+    @staticmethod
+    def generate_image_url(image_ref, context):
+        """Generate an image URL from an image_ref.
+
+        :param image_ref: The image ref to generate URL
+        :param context: The `nova.context.Context` object for the request
+        """
+        return "%s/images/%s" % (next(glance.get_api_servers(context)),
+                                 image_ref)
+
     def get_all(self, context, **kwargs):
         """Retrieves all information records about all disk images available
         to show to the requesting user. If the requesting user is an admin,
