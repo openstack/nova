@@ -10,10 +10,6 @@ kpartx: CommandFilter, kpartx, root
 # nova/virt/xenapi/vm_utils.py: tune2fs, -j, partition_path
 tune2fs: CommandFilter, tune2fs, root
 
-# nova/virt/disk/mount/nbd.py: 'qemu-nbd', '-c', device, image
-# nova/virt/disk/mount/nbd.py: 'qemu-nbd', '-d', device
-qemu-nbd: CommandFilter, qemu-nbd, root
-
 # nova/virt/disk/vfs/localfs.py: 'blkid', '-o', 'value', '-s', 'TYPE', device
 blkid: CommandFilter, blkid, root
 

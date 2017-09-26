@@ -214,8 +214,10 @@ class TestVirtDisk(test.NoDBTestCase):
     @mock.patch('os.path.exists', return_value=True)
     @mock.patch('nova.privsep.fs.loopremove')
     @mock.patch('nova.privsep.fs.umount')
+    @mock.patch('nova.privsep.fs.nbd_disconnect')
     def test_lxc_teardown_container(
-            self, mock_umount, mock_loopremove, mock_exist):
+            self, mock_nbd_disconnect, mock_umount, mock_loopremove,
+            mock_exist):
 
         def proc_mounts(mount_point):
             mount_points = {
@@ -248,18 +250,20 @@ class TestVirtDisk(test.NoDBTestCase):
         disk_api.teardown_container('/mnt/nbd/nopart')
         expected_commands += [
                               ('blockdev', '--flushbufs', '/dev/nbd15'),
-                              ('qemu-nbd', '-d', '/dev/nbd15'),
                              ]
+        mock_nbd_disconnect.assert_has_calls([mock.call('/dev/nbd15')])
         mock_umount.assert_has_calls([mock.call('/dev/nbd15')])
+        mock_nbd_disconnect.reset_mock()
         mock_umount.reset_mock()
 
         disk_api.teardown_container('/mnt/nbd/part')
         expected_commands += [
                               ('blockdev', '--flushbufs', '/dev/nbd15'),
                               ('kpartx', '-d', '/dev/nbd15'),
-                              ('qemu-nbd', '-d', '/dev/nbd15'),
                              ]
+        mock_nbd_disconnect.assert_has_calls([mock.call('/dev/nbd15')])
         mock_umount.assert_has_calls([mock.call('/dev/mapper/nbd15p1')])
+        mock_nbd_disconnect.reset_mock()
         mock_umount.reset_mock()
 
         # NOTE(thomasem): Not adding any commands in this case, because we're
@@ -274,10 +278,10 @@ class TestVirtDisk(test.NoDBTestCase):
     @mock.patch('nova.virt.disk.api._DiskImage._device_for_path',
                 return_value=None)
     @mock.patch('nova.privsep.fs.loopremove')
+    @mock.patch('nova.privsep.fs.nbd_disconnect')
     def test_lxc_teardown_container_with_namespace_cleaned(
-            self, mock_loopremove, mock_device_for_path, mock_exists):
-
-        expected_commands = []
+            self, mock_nbd_disconnect, mock_loopremove, mock_device_for_path,
+            mock_exists):
 
         disk_api.teardown_container('/mnt/loop/nopart', '/dev/loop0')
         mock_loopremove.assert_has_calls([mock.call('/dev/loop0')])
@@ -288,13 +292,9 @@ class TestVirtDisk(test.NoDBTestCase):
         mock_loopremove.reset_mock()
 
         disk_api.teardown_container('/mnt/nbd/nopart', '/dev/nbd15')
-        expected_commands += [
-                              ('qemu-nbd', '-d', '/dev/nbd15'),
-                             ]
+        mock_nbd_disconnect.assert_has_calls([mock.call('/dev/nbd15')])
+        mock_nbd_disconnect.reset_mock()
 
         disk_api.teardown_container('/mnt/nbd/part', '/dev/nbd15')
-        expected_commands += [
-                              ('qemu-nbd', '-d', '/dev/nbd15'),
-                             ]
-
-        self.assertEqual(self.executes, expected_commands)
+        mock_nbd_disconnect.assert_has_calls([mock.call('/dev/nbd15')])
+        mock_nbd_disconnect.reset_mock()
