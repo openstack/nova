@@ -338,32 +338,26 @@ class ExtendedQuotasTestV21(BaseQuotaSetsTest):
     def _get_http_request(self, url=''):
         return fakes.HTTPRequest.blank(url)
 
-    def test_quotas_update_exceed_in_used(self):
-        patcher = mock.patch.object(quota.QUOTAS, 'get_settable_quotas')
-        get_settable_quotas = patcher.start()
-
+    @mock.patch.object(quota.QUOTAS, 'get_settable_quotas')
+    def test_quotas_update_exceed_in_used(self, get_settable_quotas):
         body = {'quota_set': {'cores': 10}}
 
         get_settable_quotas.side_effect = self.fake_get_settable_quotas
         req = self._get_http_request()
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, 'update_me', body=body)
-        mock.patch.stopall()
 
-    def test_quotas_force_update_exceed_in_used(self):
-        patcher = mock.patch.object(quota.QUOTAS, 'get_settable_quotas')
-        get_settable_quotas = patcher.start()
-        patcher = mock.patch.object(self.plugin.QuotaSetsController,
-                                    '_get_quotas')
-        _get_quotas = patcher.start()
+    @mock.patch.object(quota.QUOTAS, 'get_settable_quotas')
+    def test_quotas_force_update_exceed_in_used(self, get_settable_quotas):
+        with mock.patch.object(self.plugin.QuotaSetsController,
+                               '_get_quotas') as _get_quotas:
 
-        body = {'quota_set': {'cores': 10, 'force': 'True'}}
+            body = {'quota_set': {'cores': 10, 'force': 'True'}}
 
-        get_settable_quotas.side_effect = self.fake_get_settable_quotas
-        _get_quotas.side_effect = self.fake_get_quotas
-        req = self._get_http_request()
-        self.controller.update(req, 'update_me', body=body)
-        mock.patch.stopall()
+            get_settable_quotas.side_effect = self.fake_get_settable_quotas
+            _get_quotas.side_effect = self.fake_get_quotas
+            req = self._get_http_request()
+            self.controller.update(req, 'update_me', body=body)
 
     @mock.patch('nova.objects.Quotas.create_limit')
     def test_quotas_update_good_data(self, mock_createlimit):
@@ -376,19 +370,16 @@ class ExtendedQuotasTestV21(BaseQuotaSetsTest):
                          len(mock_createlimit.mock_calls))
 
     @mock.patch('nova.objects.Quotas.create_limit')
-    def test_quotas_update_bad_data(self, mock_createlimit):
-        patcher = mock.patch.object(quota.QUOTAS, 'get_settable_quotas')
-        get_settable_quotas = patcher.start()
-
+    @mock.patch.object(quota.QUOTAS, 'get_settable_quotas')
+    def test_quotas_update_bad_data(self, mock_gsq, mock_createlimit):
         body = {'quota_set': {'cores': 10,
                               'instances': 1}}
 
-        get_settable_quotas.side_effect = self.fake_get_settable_quotas
+        mock_gsq.side_effect = self.fake_get_settable_quotas
         req = fakes.HTTPRequest.blank('/v2/fake4/os-quota-sets/update_me',
                                       use_admin_context=True)
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.update,
                           req, 'update_me', body=body)
-        mock.patch.stopall()
         self.assertEqual(0,
                          len(mock_createlimit.mock_calls))
 
