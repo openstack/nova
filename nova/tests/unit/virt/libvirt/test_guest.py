@@ -19,6 +19,7 @@ import sys
 import mock
 from oslo_utils import encodeutils
 import six
+import testtools
 
 from nova import context
 from nova import exception
@@ -645,6 +646,15 @@ class GuestTestCase(test.NoDBTestCase):
                            params={'p1': 'v1'}, flags=1, bandwidth=2)
         self.domain.migrateToURI3.assert_called_once_with(
             'an-uri', flags=1, params={'p1': 'v1', 'bandwidth': 2})
+
+    @testtools.skipIf(not six.PY2, 'libvirt python3 bindings accept unicode')
+    def test_migrate_v3_unicode(self):
+        self.guest.migrate('an-uri', domain_xml=u'</xml>',
+                           params={'p1': u'v1', 'p2': 'v2', 'p3': 3},
+                           flags=1, bandwidth=2)
+        self.domain.migrateToURI3.assert_called_once_with(
+                'an-uri', flags=1, params={'p1': 'v1', 'p2': 'v2', 'p3': 3,
+                                           'bandwidth': 2})
 
     def test_abort_job(self):
         self.guest.abort_job()

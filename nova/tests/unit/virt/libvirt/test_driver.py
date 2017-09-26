@@ -7963,7 +7963,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         target_xml = xml_tmpl.format(vnc='10.0.0.1',
                                      spice='10.0.0.2')
-        target_xml = etree.tostring(etree.fromstring(target_xml))
+        target_xml = etree.tostring(etree.fromstring(target_xml),
+                                    encoding='unicode')
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
@@ -8163,7 +8164,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             device_path='/dev/disk/by-path/'
             'ip-1.2.3.4:3260-iqn.'
             'cde.67890.opst-lun-Z')
-        target_xml = etree.tostring(etree.fromstring(target_xml))
+        target_xml = etree.tostring(etree.fromstring(target_xml),
+                                    encoding='unicode')
         serial = "58a84f6d-3f0c-4e19-a0af-eb657b790657"
 
         bdmi = objects.LibvirtLiveMigrateBDMInfo(serial=serial,
@@ -8201,8 +8203,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             parser = etree.XMLParser(remove_blank_text=True)
             config = etree.fromstring(config, parser)
             target_xml = etree.fromstring(target_xml, parser)
-            self.assertEqual(etree.tostring(target_xml),
-                             etree.tostring(config))
+            self.assertEqual(etree.tostring(target_xml, encoding='unicode'),
+                             etree.tostring(config, encoding='unicode'))
 
     def test_live_migration_uri(self):
         hypervisor_uri_map = (
@@ -8311,7 +8313,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         target_xml = xml_tmpl.format(device_path='/dev/disk/by-path/'
                                      'ip-1.2.3.4:3260-iqn.'
                                      'abc.12345.opst-lun-X')
-        target_xml = etree.tostring(etree.fromstring(target_xml))
+        target_xml = etree.tostring(etree.fromstring(target_xml),
+                                    encoding='unicode')
         serial = "58a84f6d-3f0c-4e19-a0af-eb657b790657"
         connection_info = {
             u'driver_volume_type': u'iscsi',
@@ -8362,7 +8365,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             device_path='/dev/disk/by-path/'
             'ip-1.2.3.4:3260-iqn.'
             'abc.12345.opst-lun-X')
-        target_xml = etree.tostring(etree.fromstring(target_xml))
+        target_xml = etree.tostring(etree.fromstring(target_xml),
+                                    encoding='unicode')
         serial = "58a84f6d-3f0c-4e19-a0af-eb657b790657"
         bdmi = objects.LibvirtLiveMigrateBDMInfo(serial=serial,
                                                  dev='vdb',
@@ -8404,7 +8408,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         initial_xml = xml_tmpl.format(addr='9.0.0.1', port='10100')
 
         target_xml = xml_tmpl.format(addr='9.0.0.12', port='10200')
-        target_xml = etree.tostring(etree.fromstring(target_xml))
+        target_xml = etree.tostring(etree.fromstring(target_xml),
+                                    encoding='unicode')
 
         # Preparing mocks
         mock_xml.return_value = initial_xml

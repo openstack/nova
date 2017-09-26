@@ -645,6 +645,14 @@ class Guest(object):
                 if migrate_uri:
                     params['migrate_uri'] = migrate_uri
                 params['bandwidth'] = bandwidth
+
+                # In the python2 libvirt bindings, strings passed to
+                # migrateToURI3 via params must not be unicode.
+                if six.PY2:
+                    params = {key: str(value) if isinstance(value, unicode)
+                                              else value
+                              for key, value in params.items()}
+
                 self._domain.migrateToURI3(
                     destination, params=params, flags=flags)
             else:
