@@ -1772,14 +1772,15 @@ def task_log_get(context, task_name, period_beginning,
 ####################
 
 
-def archive_deleted_rows(max_rows=None, before=None):
+def archive_deleted_rows(context=None, max_rows=None, before=None):
     """Move up to max_rows rows from production tables to the corresponding
     shadow tables.
 
+    :param context: nova.context.RequestContext for database access
     :param max_rows: Maximum number of rows to archive (required)
     :param before: optional datetime which when specified filters the records
         to only archive those records deleted before the given date
-    :returns: 2-item tuple:
+    :returns: 3-item tuple:
 
         - dict that maps table name to number of rows archived from that table,
           for example::
@@ -1790,8 +1791,10 @@ def archive_deleted_rows(max_rows=None, before=None):
                 'pci_devices': 2,
             }
         - list of UUIDs of instances that were archived
+        - total number of rows that were archived
     """
-    return IMPL.archive_deleted_rows(max_rows=max_rows, before=before)
+    return IMPL.archive_deleted_rows(context=context, max_rows=max_rows,
+                                     before=before)
 
 
 def pcidevice_online_data_migration(context, max_count):

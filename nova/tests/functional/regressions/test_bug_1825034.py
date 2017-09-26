@@ -69,7 +69,7 @@ class FillVirtualInterfaceListMigration(
         # Now archive the deleted instance record.
         # The following (archive stuff) is used to prove that the migration
         # created a "fake instance". It is not necessary to trigger the bug.
-        table_to_rows_archived, deleted_instance_uuids = (
+        table_to_rows_archived, deleted_instance_uuids, total_rows_archived = (
             db_api.archive_deleted_rows(max_rows=1000))
         self.assertIn('instances', table_to_rows_archived)
         self.assertEqual(1, table_to_rows_archived['instances'])

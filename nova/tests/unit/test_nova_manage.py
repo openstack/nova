@@ -385,6 +385,8 @@ class DBCommandsTestCase(test.NoDBTestCase):
         self.output = StringIO()
         self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
         self.commands = manage.DbCommands()
+        self.useFixture(nova_fixtures.Database())
+        self.useFixture(nova_fixtures.Database(database='api'))
 
     def test_archive_deleted_rows_negative(self):
         self.assertEqual(2, self.commands.archive_deleted_rows(-1))
@@ -393,13 +395,158 @@ class DBCommandsTestCase(test.NoDBTestCase):
         large_number = '1' * 100
         self.assertEqual(2, self.commands.archive_deleted_rows(large_number))
 
+    @mock.patch.object(manage.DbCommands, 'purge')
     @mock.patch.object(db, 'archive_deleted_rows',
-                       return_value=(dict(instances=10, consoles=5), list()))
-    @mock.patch.object(objects.CellMappingList, 'get_all')
-    def _test_archive_deleted_rows(self, mock_get_all, mock_db_archive,
-                                   verbose=False):
+                       # Each call to archive in each cell returns
+                       # total_rows_archived=15, so passing max_rows=30 will
+                       # only iterate the first two cells.
+                       return_value=(dict(instances=10, consoles=5),
+                                     list(), 15))
+    def _test_archive_deleted_rows_all_cells(self, mock_db_archive,
+                                             mock_purge, purge=False):
+        cell_dbs = nova_fixtures.CellDatabases()
+        cell_dbs.add_cell_database('fake:///db1')
+        cell_dbs.add_cell_database('fake:///db2')
+        cell_dbs.add_cell_database('fake:///db3')
+        self.useFixture(cell_dbs)
+
+        ctxt = context.RequestContext()
+
+        cell_mapping1 = objects.CellMapping(context=ctxt,
+                                            uuid=uuidutils.generate_uuid(),
+                                            database_connection='fake:///db1',
+                                            transport_url='fake:///mq1',
+                                            name='cell1')
+        cell_mapping1.create()
+        cell_mapping2 = objects.CellMapping(context=ctxt,
+                                            uuid=uuidutils.generate_uuid(),
+                                            database_connection='fake:///db2',
+                                            transport_url='fake:///mq2',
+                                            name='cell2')
+        cell_mapping2.create()
+        cell_mapping3 = objects.CellMapping(context=ctxt,
+                                            uuid=uuidutils.generate_uuid(),
+                                            database_connection='fake:///db3',
+                                            transport_url='fake:///mq3',
+                                            name='cell3')
+        cell_mapping3.create()
+        # Archive with max_rows=30, so we test the case that when we are out of
+        # limit, we don't go to the remaining cell.
+        result = self.commands.archive_deleted_rows(30, verbose=True,
+                                                    all_cells=True,
+                                                    purge=purge)
+        mock_db_archive.assert_has_calls([
+            # Called with max_rows=30 but only 15 were archived.
+            mock.call(test.MatchType(context.RequestContext), 30, before=None),
+            # So the total from the last call was 15 and the new max_rows=15
+            # for the next call in the second cell.
+            mock.call(test.MatchType(context.RequestContext), 15, before=None)
+        ])
+        output = self.output.getvalue()
+        expected = '''\
++-----------------+-------------------------+
+| Table           | Number of Rows Archived |
++-----------------+-------------------------+
+| cell1.consoles  | 5                       |
+| cell1.instances | 10                      |
+| cell2.consoles  | 5                       |
+| cell2.instances | 10                      |
++-----------------+-------------------------+
+'''
+        if purge:
+            expected += 'Rows were archived, running purge...\n'
+            mock_purge.assert_called_once_with(purge_all=True, verbose=True,
+                                               all_cells=True)
+        else:
+            mock_purge.assert_not_called()
+        self.assertEqual(expected, output)
+        self.assertEqual(1, result)
+
+    def test_archive_deleted_rows_all_cells(self):
+        self._test_archive_deleted_rows_all_cells()
+
+    def test_archive_deleted_rows_all_cells_purge(self):
+        self._test_archive_deleted_rows_all_cells(purge=True)
+
+    @mock.patch.object(db, 'archive_deleted_rows')
+    def test_archive_deleted_rows_all_cells_until_complete(self,
+                                                           mock_db_archive):
+        # First two calls to archive in each cell return total_rows_archived=15
+        # and the last call returns 0 (nothing left to archive).
+        fake_return = (dict(instances=10, consoles=5), list(), 15)
+        mock_db_archive.side_effect = [fake_return,
+                                       (dict(), list(), 0),
+                                       fake_return,
+                                       (dict(), list(), 0),
+                                       (dict(), list(), 0)]
+        cell_dbs = nova_fixtures.CellDatabases()
+        cell_dbs.add_cell_database('fake:///db1')
+        cell_dbs.add_cell_database('fake:///db2')
+        cell_dbs.add_cell_database('fake:///db3')
+        self.useFixture(cell_dbs)
+
+        ctxt = context.RequestContext()
+
+        cell_mapping1 = objects.CellMapping(context=ctxt,
+                                            uuid=uuidutils.generate_uuid(),
+                                            database_connection='fake:///db1',
+                                            transport_url='fake:///mq1',
+                                            name='cell1')
+        cell_mapping1.create()
+        cell_mapping2 = objects.CellMapping(context=ctxt,
+                                            uuid=uuidutils.generate_uuid(),
+                                            database_connection='fake:///db2',
+                                            transport_url='fake:///mq2',
+                                            name='cell2')
+        cell_mapping2.create()
+        cell_mapping3 = objects.CellMapping(context=ctxt,
+                                            uuid=uuidutils.generate_uuid(),
+                                            database_connection='fake:///db3',
+                                            transport_url='fake:///mq3',
+                                            name='cell3')
+        cell_mapping3.create()
+        # Archive with max_rows=30, so we test that subsequent max_rows are not
+        # reduced when until_complete=True. There is no max total limit.
+        result = self.commands.archive_deleted_rows(30, verbose=True,
+                                                    all_cells=True,
+                                                    until_complete=True)
+        mock_db_archive.assert_has_calls([
+            # Called with max_rows=30 but only 15 were archived.
+            mock.call(test.MatchType(context.RequestContext), 30, before=None),
+            # Called with max_rows=30 but 0 were archived (nothing left to
+            # archive in this cell)
+            mock.call(test.MatchType(context.RequestContext), 30, before=None),
+            # So the total from the last call was 0 and the new max_rows=30
+            # because until_complete=True.
+            mock.call(test.MatchType(context.RequestContext), 30, before=None),
+            # Called with max_rows=30 but 0 were archived (nothing left to
+            # archive in this cell)
+            mock.call(test.MatchType(context.RequestContext), 30, before=None),
+            # Called one final time with max_rows=30
+            mock.call(test.MatchType(context.RequestContext), 30, before=None)
+        ])
+        output = self.output.getvalue()
+        expected = '''\
+Archiving.....complete
++-----------------+-------------------------+
+| Table           | Number of Rows Archived |
++-----------------+-------------------------+
+| cell1.consoles  | 5                       |
+| cell1.instances | 10                      |
+| cell2.consoles  | 5                       |
+| cell2.instances | 10                      |
++-----------------+-------------------------+
+'''
+        self.assertEqual(expected, output)
+        self.assertEqual(1, result)
+
+    @mock.patch.object(db, 'archive_deleted_rows',
+                       return_value=(
+                               dict(instances=10, consoles=5), list(), 15))
+    def _test_archive_deleted_rows(self, mock_db_archive, verbose=False):
         result = self.commands.archive_deleted_rows(20, verbose=verbose)
-        mock_db_archive.assert_called_once_with(20, before=None)
+        mock_db_archive.assert_called_once_with(
+            test.MatchType(context.RequestContext), 20, before=None)
         output = self.output.getvalue()
         if verbose:
             expected = '''\
@@ -429,9 +576,9 @@ class DBCommandsTestCase(test.NoDBTestCase):
                                                  mock_db_archive,
                                                  verbose=False):
         mock_db_archive.side_effect = [
-            ({'instances': 10, 'instance_extra': 5}, list()),
-            ({'instances': 5, 'instance_faults': 1}, list()),
-            ({}, list())]
+            ({'instances': 10, 'instance_extra': 5}, list(), 15),
+            ({'instances': 5, 'instance_faults': 1}, list(), 6),
+            ({}, list(), 0)]
         result = self.commands.archive_deleted_rows(20, verbose=verbose,
                                                     until_complete=True)
         self.assertEqual(1, result)
@@ -450,9 +597,11 @@ Archiving.....complete
             expected = ''
 
         self.assertEqual(expected, self.output.getvalue())
-        mock_db_archive.assert_has_calls([mock.call(20, before=None),
-                                         mock.call(20, before=None),
-                                         mock.call(20, before=None)])
+        mock_db_archive.assert_has_calls([
+            mock.call(test.MatchType(context.RequestContext), 20, before=None),
+            mock.call(test.MatchType(context.RequestContext), 20, before=None),
+            mock.call(test.MatchType(context.RequestContext), 20, before=None),
+        ])
 
     def test_archive_deleted_rows_until_complete_quiet(self):
         self.test_archive_deleted_rows_until_complete(verbose=False)
@@ -465,8 +614,8 @@ Archiving.....complete
                                                 mock_db_purge,
                                                 verbose=True):
         mock_db_archive.side_effect = [
-            ({'instances': 10, 'instance_extra': 5}, list()),
-            ({'instances': 5, 'instance_faults': 1}, list()),
+            ({'instances': 10, 'instance_extra': 5}, list(), 15),
+            ({'instances': 5, 'instance_faults': 1}, list(), 6),
             KeyboardInterrupt]
         result = self.commands.archive_deleted_rows(20, verbose=verbose,
                                                     until_complete=True,
@@ -488,11 +637,71 @@ Rows were archived, running purge...
             expected = ''
 
         self.assertEqual(expected, self.output.getvalue())
-        mock_db_archive.assert_has_calls([mock.call(20, before=None),
-                                             mock.call(20, before=None),
-                                             mock.call(20, before=None)])
+        mock_db_archive.assert_has_calls([
+            mock.call(test.MatchType(context.RequestContext), 20, before=None),
+            mock.call(test.MatchType(context.RequestContext), 20, before=None),
+            mock.call(test.MatchType(context.RequestContext), 20, before=None),
+        ])
         mock_db_purge.assert_called_once_with(mock.ANY, None,
                                               status_fn=mock.ANY)
+
+    @mock.patch.object(db, 'archive_deleted_rows')
+    def test_archive_deleted_rows_until_stopped_cells(self, mock_db_archive,
+                                                      verbose=True):
+        # Test when archive with all_cells=True and until_complete=True,
+        # when hit KeyboardInterrupt, it will directly return and not
+        # process remaining cells.
+        mock_db_archive.side_effect = [
+            ({'instances': 10, 'instance_extra': 5}, list(), 15),
+            KeyboardInterrupt]
+        cell_dbs = nova_fixtures.CellDatabases()
+        cell_dbs.add_cell_database('fake:///db1')
+        cell_dbs.add_cell_database('fake:///db2')
+        cell_dbs.add_cell_database('fake:///db3')
+        self.useFixture(cell_dbs)
+
+        ctxt = context.RequestContext()
+
+        cell_mapping1 = objects.CellMapping(context=ctxt,
+                                            uuid=uuidutils.generate_uuid(),
+                                            database_connection='fake:///db1',
+                                            transport_url='fake:///mq1',
+                                            name='cell1')
+        cell_mapping1.create()
+        cell_mapping2 = objects.CellMapping(context=ctxt,
+                                            uuid=uuidutils.generate_uuid(),
+                                            database_connection='fake:///db2',
+                                            transport_url='fake:///mq2',
+                                            name='cell2')
+        cell_mapping2.create()
+        cell_mapping3 = objects.CellMapping(context=ctxt,
+                                            uuid=uuidutils.generate_uuid(),
+                                            database_connection='fake:///db3',
+                                            transport_url='fake:///mq3',
+                                            name='cell3')
+        cell_mapping3.create()
+        result = self.commands.archive_deleted_rows(20, verbose=verbose,
+                                                    until_complete=True,
+                                                    all_cells=True)
+        self.assertEqual(1, result)
+        if verbose:
+            expected = '''\
+Archiving....stopped
++----------------------+-------------------------+
+| Table                | Number of Rows Archived |
++----------------------+-------------------------+
+| cell1.instance_extra | 5                       |
+| cell1.instances      | 10                      |
++----------------------+-------------------------+
+'''
+        else:
+            expected = ''
+
+        self.assertEqual(expected, self.output.getvalue())
+        mock_db_archive.assert_has_calls([
+            mock.call(test.MatchType(context.RequestContext), 20, before=None),
+            mock.call(test.MatchType(context.RequestContext), 20, before=None)
+        ])
 
     def test_archive_deleted_rows_until_stopped_quiet(self):
         self.test_archive_deleted_rows_until_stopped(verbose=False)
@@ -501,21 +710,23 @@ Rows were archived, running purge...
     @mock.patch.object(objects.CellMappingList, 'get_all')
     def test_archive_deleted_rows_before(self, mock_get_all, mock_db_archive):
         mock_db_archive.side_effect = [
-            ({'instances': 10, 'instance_extra': 5}, list()),
-            ({'instances': 5, 'instance_faults': 1}, list()),
+            ({'instances': 10, 'instance_extra': 5}, list(), 15),
+            ({'instances': 5, 'instance_faults': 1}, list(), 6),
             KeyboardInterrupt]
         result = self.commands.archive_deleted_rows(20, before='2017-01-13')
-        mock_db_archive.assert_called_once_with(20,
+        mock_db_archive.assert_called_once_with(
+                test.MatchType(context.RequestContext), 20,
                 before=datetime.datetime(2017, 1, 13))
         self.assertEqual(1, result)
 
-    @mock.patch.object(db, 'archive_deleted_rows', return_value=({}, []))
+    @mock.patch.object(db, 'archive_deleted_rows', return_value=({}, [], 0))
     @mock.patch.object(objects.CellMappingList, 'get_all')
     def test_archive_deleted_rows_verbose_no_results(self, mock_get_all,
                                                      mock_db_archive):
         result = self.commands.archive_deleted_rows(20, verbose=True,
                                                     purge=True)
-        mock_db_archive.assert_called_once_with(20, before=None)
+        mock_db_archive.assert_called_once_with(
+            test.MatchType(context.RequestContext), 20, before=None)
         output = self.output.getvalue()
         # If nothing was archived, there should be no purge messages
         self.assertIn('Nothing was archived.', output)
@@ -533,9 +744,10 @@ Rows were archived, running purge...
         ctxt = context.RequestContext('fake-user', 'fake_project')
         cell_uuid = uuidutils.generate_uuid()
         cell_mapping = objects.CellMapping(context=ctxt,
-                                            uuid=cell_uuid,
-                                            database_connection='fake:///db',
-                                            transport_url='fake:///mq')
+                                           uuid=cell_uuid,
+                                           database_connection='fake:///db',
+                                           transport_url='fake:///mq',
+                                           name='cell1')
         cell_mapping.create()
         uuids = []
         for i in range(2):
@@ -547,28 +759,32 @@ Rows were archived, running purge...
                                 cell_mapping=cell_mapping, instance_uuid=uuid)\
                                 .create()
 
-        mock_db_archive.return_value = (dict(instances=2, consoles=5), uuids)
+        mock_db_archive.return_value = (
+            dict(instances=2, consoles=5), uuids, 7)
         mock_reqspec_destroy.return_value = 2
         mock_members_destroy.return_value = 0
-        result = self.commands.archive_deleted_rows(20, verbose=verbose)
+        result = self.commands.archive_deleted_rows(20, verbose=verbose,
+                                                    all_cells=True)
 
         self.assertEqual(1, result)
-        mock_db_archive.assert_called_once_with(20, before=None)
+        mock_db_archive.assert_has_calls([
+            mock.call(test.MatchType(context.RequestContext), 20, before=None)
+        ])
         self.assertEqual(1, mock_reqspec_destroy.call_count)
         mock_members_destroy.assert_called_once()
 
         output = self.output.getvalue()
         if verbose:
             expected = '''\
-+-----------------------+-------------------------+
-| Table                 | Number of Rows Archived |
-+-----------------------+-------------------------+
-| consoles              | 5                       |
-| instance_group_member | 0                       |
-| instance_mappings     | 2                       |
-| instances             | 2                       |
-| request_specs         | 2                       |
-+-----------------------+-------------------------+
++------------------------------+-------------------------+
+| Table                        | Number of Rows Archived |
++------------------------------+-------------------------+
+| API_DB.instance_group_member | 0                       |
+| API_DB.instance_mappings     | 2                       |
+| API_DB.request_specs         | 2                       |
+| cell1.consoles               | 5                       |
+| cell1.instances              | 2                       |
++------------------------------+-------------------------+
 '''
             self.assertEqual(expected, output)
         else:

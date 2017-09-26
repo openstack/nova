@@ -105,7 +105,7 @@ class PeriodicNodeRecreateTestCase(test.TestCase,
         # Now that the node2 record was un-soft-deleted, archiving should not
         # remove any compute_nodes.
         LOG.info('Archiving the database.')
-        archived = db_api.archive_deleted_rows(1000)[0]
+        archived = db_api.archive_deleted_rows(max_rows=1000)[0]
         self.assertNotIn('compute_nodes', archived)
         cn2 = objects.ComputeNode.get_by_host_and_nodename(
             ctxt, 'node1', 'node2')

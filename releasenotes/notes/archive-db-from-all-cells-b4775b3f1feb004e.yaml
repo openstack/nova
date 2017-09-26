@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    Support for archiving deleted rows from the database across
+    all cells has been added to the ``nova-manage db archive_deleted_rows``
+    command. Specify the ``--all-cells`` option to run the process across all
+    existing cells. It is only possible to archive all DBs from a node where
+    the ``[api_database]/connection`` option is configured.

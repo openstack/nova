@@ -94,7 +94,8 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
         self.assertTrue(len(instance.system_metadata),
                         'No system_metadata for instance: %s' % server_id)
         # Now try and archive the soft deleted records.
-        results, deleted_instance_uuids = db.archive_deleted_rows(max_rows=100)
+        results, deleted_instance_uuids, archived = \
+            db.archive_deleted_rows(max_rows=100)
         # verify system_metadata was dropped
         self.assertIn('instance_system_metadata', results)
         self.assertEqual(len(instance.system_metadata),
@@ -105,6 +106,7 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
         # by the archive
         self.assertIn('instance_actions', results)
         self.assertIn('instance_actions_events', results)
+        self.assertEqual(sum(results.values()), archived)
 
     def test_archive_deleted_rows_with_undeleted_residue(self):
         # Boots a server, deletes it, and then tries to archive it.
@@ -136,7 +138,8 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
         self.assertTrue(len(instance.system_metadata),
                         'No system_metadata for instance: %s' % server_id)
         # Now try and archive the soft deleted records.
-        results, deleted_instance_uuids = db.archive_deleted_rows(max_rows=100)
+        results, deleted_instance_uuids, archived = \
+            db.archive_deleted_rows(max_rows=100)
         # verify system_metadata was dropped
         self.assertIn('instance_system_metadata', results)
         self.assertEqual(len(instance.system_metadata),
@@ -147,6 +150,7 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
         # by the archive
         self.assertIn('instance_actions', results)
         self.assertIn('instance_actions_events', results)
+        self.assertEqual(sum(results.values()), archived)
 
     def _get_table_counts(self):
         engine = sqlalchemy_api.get_engine()
@@ -165,7 +169,7 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
         server = self._create_server()
         server_id = server['id']
         self._delete_server(server_id)
-        results, deleted_ids = db.archive_deleted_rows(max_rows=1000)
+        results, deleted_ids, archived = db.archive_deleted_rows(max_rows=1000)
         self.assertEqual([server_id], deleted_ids)
 
         lines = []
@@ -178,6 +182,7 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
                                                      None, status_fn=status)
         self.assertNotEqual(0, deleted)
         self.assertNotEqual(0, len(lines))
+        self.assertEqual(sum(results.values()), archived)
         for line in lines:
             self.assertIsNotNone(re.match(r'Deleted [1-9][0-9]* rows from .*',
                                           line))
@@ -190,8 +195,9 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
         server = self._create_server()
         server_id = server['id']
         self._delete_server(server_id)
-        results, deleted_ids = db.archive_deleted_rows(max_rows=1000)
+        results, deleted_ids, archived = db.archive_deleted_rows(max_rows=1000)
         self.assertEqual([server_id], deleted_ids)
+        self.assertEqual(sum(results.values()), archived)
 
         pre_purge_results = self._get_table_counts()
 
@@ -224,9 +230,10 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
         server = self._create_server()
         server_id = server['id']
         self._delete_server(server_id)
-        results, deleted_ids = db.archive_deleted_rows(max_rows=1000)
+        results, deleted_ids, archived = db.archive_deleted_rows(max_rows=1000)
         self.assertEqual([server_id], deleted_ids)
         date = dateutil_parser.parse('oct 21 2015', fuzzy=True)
         admin_context = context.get_admin_context()
         deleted = sqlalchemy_api.purge_shadow_tables(admin_context, date)
         self.assertEqual(0, deleted)
+        self.assertEqual(sum(results.values()), archived)
