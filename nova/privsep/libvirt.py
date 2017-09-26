@@ -210,3 +210,8 @@ def readpty(path):
         LOG.info(_('Ignored error while reading from instance console '
                    'pty: %s'), e)
         return ''
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def xend_probe():
+    processutils.execute('xend', 'status', check_exit_code=True)

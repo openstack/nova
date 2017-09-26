@@ -8,4 +8,5 @@ upgrade:
   - |
     The following commands are no longer required to be listed in your rootwrap
     configuration: cat; chown; cryptsetup; dd; lvcreate; lvremove; lvs; mkdir;
-    mount; ploop; prl_disk_tool; readlink; shred; tee; touch; umount; and vgs.
+    mount; ploop; prl_disk_tool; readlink; shred; tee; touch; umount; vgs;
+    and xend.

@@ -403,10 +403,11 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
                                                              is_block_dev)
                 self.assertEqual(result, expected_result)
 
+    @mock.patch('nova.privsep.libvirt.xend_probe')
     @mock.patch('nova.utils.execute')
-    def test_pick_disk_driver_name_xen(self, mock_execute):
+    def test_pick_disk_driver_name_xen(self, mock_execute, mock_xend_probe):
 
-        def side_effect(*args, **kwargs):
+        def execute_side_effect(*args, **kwargs):
             if args == ('tap-ctl', 'check'):
                 if mock_execute.blktap is True:
                     return ('ok\n', '')
@@ -414,15 +415,17 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
                     return ('some error\n', '')
                 else:
                     raise OSError(2, "No such file or directory")
-            elif args == ('xend', 'status'):
-                if mock_execute.xend is True:
-                    return ('', '')
-                elif mock_execute.xend is False:
-                    raise processutils.ProcessExecutionError("error")
-                else:
-                    raise OSError(2, "No such file or directory")
             raise Exception('Unexpected call')
-        mock_execute.side_effect = side_effect
+        mock_execute.side_effect = execute_side_effect
+
+        def xend_probe_side_effect():
+            if mock_execute.xend is True:
+                return ('', '')
+            elif mock_execute.xend is False:
+                raise processutils.ProcessExecutionError("error")
+            else:
+                raise OSError(2, "No such file or directory")
+        mock_xend_probe.side_effect = xend_probe_side_effect
 
         self.flags(virt_type="xen", group='libvirt')
         versions = [4000000, 4001000, 4002000, 4003000, 4005000]
