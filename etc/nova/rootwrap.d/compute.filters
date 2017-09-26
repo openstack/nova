@@ -182,9 +182,6 @@ xenstore-read: CommandFilter, xenstore-read, root
 # nova/virt/libvirt/utils.py:
 rbd: CommandFilter, rbd, root
 
-# nova/virt/libvirt/utils.py: 'shred', '-n3', '-s%d' % volume_size, path
-shred: CommandFilter, shred, root
-
 # nova/virt/libvirt/volume/volume.py: 'cp', '/dev/stdin', delete_control..
 cp: CommandFilter, cp, root
 

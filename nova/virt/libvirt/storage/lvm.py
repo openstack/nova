@@ -30,7 +30,6 @@ import nova.conf
 from nova import exception
 from nova.i18n import _
 import nova.privsep.fs
-from nova import utils
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
@@ -161,9 +160,7 @@ def clear_volume(path):
 
     :param path: logical volume path
     """
-    volume_clear = CONF.libvirt.volume_clear
-
-    if volume_clear == 'none':
+    if CONF.libvirt.volume_clear == 'none':
         return
 
     volume_clear_size = int(CONF.libvirt.volume_clear_size) * units.Mi
@@ -171,19 +168,14 @@ def clear_volume(path):
     try:
         volume_size = get_volume_size(path)
     except exception.VolumeBDMPathNotFound:
-        LOG.warning('ignoring missing logical volume %(path)s', {'path': path})
+        LOG.warning('Ignoring missing logical volume %(path)s', {'path': path})
         return
 
     if volume_clear_size != 0 and volume_clear_size < volume_size:
         volume_size = volume_clear_size
 
-    cmd = ['shred']
-    if volume_clear == 'zero':
-        cmd.extend(['-n0', '-z'])
-    else:
-        cmd.extend(['-n3'])
-    cmd.extend(['-s%d' % volume_size, path])
-    utils.execute(*cmd, run_as_root=True)
+    nova.privsep.fs.clear(path, volume_size,
+                          shred=(CONF.libvirt.volume_clear == 'shred'))
 
 
 def remove_volumes(paths):
