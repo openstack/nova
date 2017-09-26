@@ -11390,8 +11390,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('nova.privsep.libvirt.last_bytes',
                 return_value=(b'67890', 0))
     @mock.patch('nova.privsep.path.writefile')
-    def test_get_console_output_pty(self, mocked_writefile, mocked_last_bytes,
-                                    mocked_path_exists):
+    @mock.patch('nova.privsep.libvirt.readpty')
+    def test_get_console_output_pty(self, mocked_readfile, mocked_writefile,
+                                    mocked_last_bytes, mocked_path_exists):
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)
 
@@ -11418,12 +11419,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             def fake_lookup(id):
                 return FakeVirtDomain(fake_dom_xml)
 
-            def _fake_flush(self, fake_pty):
-                return 'foo'
+            mocked_readfile.return_value = 'foo'
 
             self.create_fake_libvirt_mock()
             libvirt_driver.LibvirtDriver._conn.lookupByUUIDString = fake_lookup
-            libvirt_driver.LibvirtDriver._flush_libvirt_console = _fake_flush
 
             drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 

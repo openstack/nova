@@ -2819,14 +2819,6 @@ class LibvirtDriver(driver.ComputeDriver):
         timer = loopingcall.FixedIntervalLoopingCall(_wait_for_boot)
         timer.start(interval=0.5).wait()
 
-    def _flush_libvirt_console(self, pty):
-        out, err = utils.execute('dd',
-                                 'if=%s' % pty,
-                                 'iflag=nonblock',
-                                 run_as_root=True,
-                                 check_exit_code=False)
-        return out
-
     def _get_console_output_file(self, instance, console_log):
         bytes_to_read = MAX_CONSOLE_BYTES
         log_data = b""  # The last N read bytes
@@ -2892,7 +2884,8 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.ConsoleNotAvailable()
 
         console_log = self._get_console_log_path(instance)
-        data = self._flush_libvirt_console(pty)
+        data = nova.privsep.libvirt.readpty(pty)
+
         # NOTE(markus_z): The virt_types kvm and qemu are the only ones
         # which create a dedicated file device for the console logging.
         # Other virt_types like xen, lxc, uml, parallels depend on the
