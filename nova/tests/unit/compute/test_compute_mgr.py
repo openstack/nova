@@ -6551,31 +6551,31 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
     @mock.patch.object(objects.ComputeNode,
                        'get_first_node_by_host_for_old_compat')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'remove_provider_from_instance_allocation')
-    def test_rollback_live_migration_handles_dict(self, mock_remove_allocs,
+    def test_rollback_live_migration_handles_dict(self,
                                                   mock_get_node):
         compute = manager.ComputeManager()
         dest_node = objects.ComputeNode(host='foo', uuid=uuids.dest_node)
         mock_get_node.return_value = dest_node
 
+        @mock.patch.object(compute, '_revert_allocation')
         @mock.patch('nova.compute.utils.notify_about_instance_action')
         @mock.patch.object(compute.network_api, 'setup_networks_on_host')
         @mock.patch.object(compute, '_notify_about_instance_usage')
         @mock.patch.object(compute, '_live_migration_cleanup_flags')
         @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
         def _test(mock_bdm, mock_lmcf, mock_notify, mock_nwapi,
-                  mock_notify_about_instance_action):
+                  mock_notify_about_instance_action, mock_ra):
             bdms = objects.BlockDeviceMappingList()
             mock_bdm.return_value = bdms
             mock_lmcf.return_value = False, False
             mock_instance = mock.MagicMock()
+            mock_migration = mock.MagicMock()
             compute._rollback_live_migration(self.context,
                                              mock_instance,
-                                             'foo', {})
-            mock_remove_allocs.assert_called_once_with(
-                mock_instance.uuid, dest_node.uuid, mock_instance.user_id,
-                mock_instance.project_id, test.MatchType(dict))
+                                             'foo',
+                                             {'migration': mock_migration})
+            mock_ra.assert_called_once_with(self.context,
+                                            mock_instance, mock_migration)
             mock_notify_about_instance_action.assert_has_calls([
                 mock.call(self.context, mock_instance, compute.host,
                           action='live_migration_rollback', phase='start',
@@ -6741,6 +6741,91 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
         _do_test()
 
+    def _call_post_live_migration(self, *args, **kwargs):
+        @mock.patch.object(self.compute, 'update_available_resource')
+        @mock.patch.object(self.compute, 'compute_rpcapi')
+        @mock.patch.object(self.compute, '_notify_about_instance_usage')
+        @mock.patch.object(self.compute, 'network_api')
+        @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
+        def _do_call(bdm, nwapi, notify, rpc, update):
+            return self.compute._post_live_migration(self.context,
+                                                     self.instance,
+                                                     'foo',
+                                                     *args, **kwargs)
+        return _do_call()
+
+    def test_post_live_migration_new_allocations(self):
+        # We have a migrate_data with a migration...
+        migration = objects.Migration(uuid=uuids.migration)
+        migration.save = mock.MagicMock()
+        md = objects.LibvirtLiveMigrateData(migration=migration,
+                                            is_shared_instance_path=False,
+                                            is_shared_block_storage=False)
+        with test.nested(
+                mock.patch.object(self.compute.scheduler_client,
+                                  'reportclient'),
+                mock.patch.object(self.compute,
+                                  '_delete_allocation_after_move'),
+        ) as (
+            mock_report, mock_delete,
+        ):
+            # ...and that migration has allocations...
+            mock_report.get_allocations_for_consumer.return_value = (
+                mock.sentinel.allocs)
+            self._call_post_live_migration(migrate_data=md)
+            # ...so we should have called the new style delete
+            mock_delete.assert_called_once_with(self.instance,
+                                                migration,
+                                                self.instance.flavor,
+                                                self.instance.node)
+
+    def test_post_live_migration_old_allocations(self):
+        # We have a migrate_data with a migration...
+        migration = objects.Migration(uuid=uuids.migration)
+        migration.save = mock.MagicMock()
+        md = objects.LibvirtLiveMigrateData(migration=migration,
+                                            is_shared_instance_path=False,
+                                            is_shared_block_storage=False)
+        with test.nested(
+                mock.patch.object(self.compute.scheduler_client,
+                                  'reportclient'),
+                mock.patch.object(self.compute,
+                                  '_delete_allocation_after_move'),
+                mock.patch.object(self.compute,
+                                  '_get_resource_tracker'),
+        ) as (
+            mock_report, mock_delete, mock_rt,
+        ):
+            # ...and that migration does not have allocations...
+            mock_report.get_allocations_for_consumer.return_value = None
+            self._call_post_live_migration(migrate_data=md)
+            # ...so we should have called the old style delete
+            mock_delete.assert_not_called()
+            fn = mock_rt.return_value.delete_allocation_for_migrated_instance
+            fn.assert_called_once_with(self.instance, self.instance.node)
+
+    def test_post_live_migration_legacy(self):
+        # We have no migrate_data...
+        md = None
+        with test.nested(
+                mock.patch.object(self.compute.scheduler_client,
+                                  'reportclient'),
+                mock.patch.object(self.compute,
+                                  '_delete_allocation_after_move'),
+                mock.patch.object(self.compute,
+                                  '_get_resource_tracker'),
+        ) as (
+            mock_report, mock_delete, mock_rt,
+        ):
+            self._call_post_live_migration(migrate_data=md)
+            # ...without migrate_data, no migration allocations check...
+            ga = mock_report.get_allocations_for_consumer
+            self.assertFalse(ga.called)
+            # ...so we should have called the old style delete
+            mock_delete.assert_not_called()
+            fn = mock_rt.return_value.delete_allocation_for_migrated_instance
+            fn.assert_called_once_with(self.instance, self.instance.node)
+
     def test_post_live_migration_cinder_v3_api(self):
         # Because live migration has succeeded, _post_live_migration
         # should call attachment_delete with the original/old attachment_id
@@ -6748,6 +6833,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
         dest_host = 'test_dest_host'
         instance = fake_instance.fake_instance_obj(self.context,
+                                                   node='dest',
                                                    uuid=uuids.instance)
         bdm_id = 1
         volume_id = uuids.volume
@@ -6768,9 +6854,16 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         vol_bdm.attachment_id = uuids.attachment1
         orig_attachment_id = uuids.attachment2
         migrate_data = migrate_data_obj.LiveMigrateData()
+        migrate_data.migration = objects.Migration(uuid=uuids.migration,
+                                                   dest_node=instance.node,
+                                                   source_node='src')
         migrate_data.old_vol_attachment_ids = {volume_id: orig_attachment_id}
         image_bdm.attachment_id = uuids.attachment3
 
+        @mock.patch.object(migrate_data.migration, 'save',
+                           new=lambda: None)
+        @mock.patch.object(compute.reportclient,
+                           'get_allocations_for_consumer_by_provider')
         @mock.patch.object(compute, '_get_resource_tracker')
         @mock.patch.object(vol_bdm, 'save')
         @mock.patch.object(compute, 'update_available_resource')
@@ -6784,7 +6877,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                            'get_by_instance_uuid')
         def _test(mock_get_bdms, mock_net_api, mock_notify, mock_driver,
                   mock_rpc, mock_get_bdm_info, mock_attach_delete,
-                  mock_update_resource, mock_bdm_save, mock_rt):
+                  mock_update_resource, mock_bdm_save, mock_rt, mock_ga):
             mock_rt.return_value = mock.Mock()
             mock_get_bdms.return_value = [vol_bdm, image_bdm]
 

@@ -5968,9 +5968,7 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch.object(fake.FakeDriver, 'get_instance_disk_info')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'pre_live_migration')
     @mock.patch.object(objects.ComputeNode,
-                       'get_first_node_by_host_for_old_compat')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'remove_provider_from_instance_allocation')
+                       'get_by_host_and_nodename')
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'remove_volume_connection')
     @mock.patch.object(compute_rpcapi.ComputeAPI,
@@ -5978,7 +5976,7 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch('nova.objects.Migration.save')
     def test_live_migration_exception_rolls_back(self, mock_save,
                                 mock_rollback, mock_remove,
-                                mock_get_uuid, mock_remove_allocs,
+                                mock_get_uuid,
                                 mock_get_node, mock_pre, mock_get_disk):
         # Confirm exception when pre_live_migration fails.
         c = context.get_admin_context()
@@ -6014,14 +6012,31 @@ class ComputeTestCase(BaseTestCase,
         mock_get_uuid.return_value = fake_bdms
 
         # start test
-        migration = objects.Migration()
-        with mock.patch.object(self.compute.network_api,
-                               'setup_networks_on_host') as mock_setup:
+        migration = objects.Migration(uuid=uuids.migration)
+
+        @mock.patch.object(self.compute.network_api, 'setup_networks_on_host')
+        @mock.patch.object(self.compute, 'reportclient')
+        def do_it(mock_client, mock_setup):
+            mock_client.get_allocations_for_consumer.return_value = {
+                mock.sentinel.source: {
+                    'resources': mock.sentinel.allocs,
+                }
+            }
             self.assertRaises(test.TestingException,
                               self.compute.live_migration,
                               c, dest=dest_host, block_migration=True,
                               instance=instance, migration=migration,
                               migrate_data=migrate_data)
+            mock_setup.assert_called_once_with(c, instance, self.compute.host)
+            mock_client.put_allocations.assert_called_once_with(
+                mock.sentinel.source, instance.uuid,
+                mock.sentinel.allocs,
+                instance.project_id, instance.user_id)
+            mock_client.delete_allocation_for_instance.assert_called_once_with(
+                migration.uuid)
+
+        do_it()
+
         instance.refresh()
 
         self.assertEqual('src_host', instance.host)
@@ -6032,10 +6047,7 @@ class ComputeTestCase(BaseTestCase,
                 block_device_info=block_device_info)
         mock_pre.assert_called_once_with(c,
                 instance, True, 'fake_disk', dest_host, migrate_data)
-        mock_remove_allocs.assert_called_once_with(
-            instance.uuid, dest_node.uuid, instance.user_id,
-            instance.project_id, test.MatchType(dict))
-        mock_setup.assert_called_once_with(c, instance, self.compute.host)
+
         mock_get_uuid.assert_called_with(c, instance.uuid)
         mock_remove.assert_has_calls([
             mock.call(c, instance, uuids.volume_id_1, dest_host),
@@ -6061,13 +6073,15 @@ class ComputeTestCase(BaseTestCase,
         instance.host = self.compute.host
         dest = 'desthost'
 
+        migration = objects.Migration(uuid=uuids.migration,
+                                      source_node=instance.node)
         migrate_data = migrate_data_obj.LibvirtLiveMigrateData(
             is_shared_instance_path=False,
-            is_shared_block_storage=False)
+            is_shared_block_storage=False,
+            migration=migration)
         mock_pre.return_value = migrate_data
 
         # start test
-        migration = objects.Migration()
         with test.nested(
             mock.patch.object(
                 self.compute.network_api, 'migrate_instance_start'),
@@ -6172,19 +6186,24 @@ class ComputeTestCase(BaseTestCase,
                                 'task_state': task_states.MIGRATING,
                                 'power_state': power_state.PAUSED})
 
+        migration_obj = objects.Migration(uuid=uuids.migration,
+                                          source_node=instance.node,
+                                          status='completed')
         migration = {'source_compute': srchost, 'dest_compute': dest, }
         migrate_data = objects.LibvirtLiveMigrateData(
             is_shared_instance_path=False,
             is_shared_block_storage=False,
+            migration=migration_obj,
             block_migration=False)
 
         with test.nested(
             mock.patch.object(
                 self.compute.network_api, 'migrate_instance_start'),
             mock.patch.object(
-                self.compute.network_api, 'setup_networks_on_host')
+                self.compute.network_api, 'setup_networks_on_host'),
+            mock.patch.object(migration_obj, 'save'),
         ) as (
-            mock_migrate, mock_setup
+            mock_migrate, mock_setup, mock_mig_save
         ):
             self.compute._post_live_migration(c, instance, dest,
                                               migrate_data=migrate_data)
@@ -6213,7 +6232,9 @@ class ComputeTestCase(BaseTestCase,
                         'power_state': power_state.PAUSED})
         instance.save()
 
-        migration_obj = objects.Migration()
+        migration_obj = objects.Migration(uuid=uuids.migration,
+                                          source_node=instance.node,
+                                          status='completed')
         migrate_data = migrate_data_obj.LiveMigrateData(
             migration=migration_obj)
 
@@ -6271,11 +6292,13 @@ class ComputeTestCase(BaseTestCase,
         """
         dest = 'desthost'
         srchost = self.compute.host
+        srcnode = 'srcnode'
 
         # creating testdata
         c = context.get_admin_context()
         instance = self._create_fake_instance_obj({
                                         'host': srchost,
+                                        'node': srcnode,
                                         'state_description': 'migrating',
                                         'state': power_state.PAUSED},
                                                   context=c)
@@ -6284,7 +6307,9 @@ class ComputeTestCase(BaseTestCase,
                         'power_state': power_state.PAUSED})
         instance.save()
 
-        migration_obj = objects.Migration()
+        migration_obj = objects.Migration(source_node=srcnode,
+                                          uuid=uuids.migration,
+                                          status='completed')
         migrate_data = migrate_data_obj.LiveMigrateData(
             migration=migration_obj)
 
@@ -6305,12 +6330,14 @@ class ComputeTestCase(BaseTestCase,
                               'clear_events_for_instance'),
             mock.patch.object(self.compute, 'update_available_resource'),
             mock.patch.object(migration_obj, 'save'),
+            mock.patch.object(self.compute, '_get_resource_tracker'),
         ) as (
             post_live_migration, unfilter_instance,
             migrate_instance_start, post_live_migration_at_destination,
             post_live_migration_at_source, setup_networks_on_host,
-            clear_events, update_available_resource, mig_save
+            clear_events, update_available_resource, mig_save, getrt
         ):
+            getrt.return_value.get_node_uuid.return_value = srcnode
             self.compute._post_live_migration(c, instance, dest,
                                               migrate_data=migrate_data)
             update_available_resource.assert_has_calls([mock.call(c)])
@@ -6354,32 +6381,31 @@ class ComputeTestCase(BaseTestCase,
             mock.patch.object(objects.BlockDeviceMappingList,
                               'get_by_instance_uuid'),
             mock.patch.object(self.compute.driver, 'get_volume_connector'),
-            mock.patch.object(cinder.API, 'terminate_connection')
+            mock.patch.object(cinder.API, 'terminate_connection'),
+            mock.patch.object(self.compute, '_delete_allocation_after_move'),
         ) as (
             migrate_instance_start, post_live_migration_at_destination,
             setup_networks_on_host, clear_events_for_instance,
             get_instance_volume_block_device_info, get_by_instance_uuid,
-            get_volume_connector, terminate_connection
+            get_volume_connector, terminate_connection, delete_alloc,
         ):
             get_by_instance_uuid.return_value = bdms
             get_volume_connector.return_value = 'fake-connector'
 
-            self.compute._post_live_migration(c, instance, 'dest_host')
+            self.compute._post_live_migration(c, instance, 'dest_host',
+                                              migrate_data=mock.MagicMock())
 
             terminate_connection.assert_called_once_with(
                     c, uuids.volume_id, 'fake-connector')
 
     @mock.patch.object(objects.ComputeNode,
-                       'get_first_node_by_host_for_old_compat')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'remove_provider_from_instance_allocation')
+                       'get_by_host_and_nodename')
     @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
-    def test_rollback_live_migration(self, mock_bdms, mock_remove_allocs,
-                                     mock_get_node):
+    def test_rollback_live_migration(self, mock_bdms, mock_get_node):
         c = context.get_admin_context()
         instance = mock.MagicMock()
-        migration = mock.MagicMock()
-        migrate_data = {'migration': migration}
+        migration = objects.Migration(uuid=uuids.migration)
+        migrate_data = objects.LibvirtLiveMigrateData(migration=migration)
 
         dest_node = objects.ComputeNode(host='foo', uuid=uuids.dest_node)
         mock_get_node.return_value = dest_node
@@ -6387,15 +6413,14 @@ class ComputeTestCase(BaseTestCase,
         mock_bdms.return_value = bdms
 
         @mock.patch('nova.compute.utils.notify_about_instance_action')
+        @mock.patch.object(migration, 'save')
+        @mock.patch.object(self.compute, '_revert_allocation')
         @mock.patch.object(self.compute, '_live_migration_cleanup_flags')
         @mock.patch.object(self.compute, 'network_api')
-        def _test(mock_nw_api, mock_lmcf, mock_notify):
+        def _test(mock_nw_api, mock_lmcf, mock_ra, mock_mig_save, mock_notify):
             mock_lmcf.return_value = False, False
             self.compute._rollback_live_migration(c, instance, 'foo',
                                                   migrate_data=migrate_data)
-            mock_remove_allocs.assert_called_once_with(
-                instance.uuid, dest_node.uuid, instance.user_id,
-                instance.project_id, test.MatchType(dict))
             mock_notify.assert_has_calls([
                 mock.call(c, instance, self.compute.host,
                           action='live_migration_rollback', phase='start',
@@ -6405,19 +6430,17 @@ class ComputeTestCase(BaseTestCase,
                           bdms=bdms)])
             mock_nw_api.setup_networks_on_host.assert_called_once_with(
                 c, instance, self.compute.host)
+            mock_ra.assert_called_once_with(mock.ANY, instance, migration)
+            mock_mig_save.assert_called_once_with()
         _test()
 
         self.assertEqual('error', migration.status)
         self.assertEqual(0, instance.progress)
-        migration.save.assert_called_once_with()
 
     @mock.patch.object(objects.ComputeNode,
-                       'get_first_node_by_host_for_old_compat')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'remove_provider_from_instance_allocation')
+                       'get_by_host_and_nodename')
     @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
     def test_rollback_live_migration_set_migration_status(self, mock_bdms,
-                                                          mock_remove_allocs,
                                                           mock_get_node):
         c = context.get_admin_context()
         instance = mock.MagicMock()
@@ -6429,17 +6452,16 @@ class ComputeTestCase(BaseTestCase,
         bdms = objects.BlockDeviceMappingList()
         mock_bdms.return_value = bdms
 
+        @mock.patch.object(self.compute, '_revert_allocation')
         @mock.patch('nova.compute.utils.notify_about_instance_action')
         @mock.patch.object(self.compute, '_live_migration_cleanup_flags')
         @mock.patch.object(self.compute, 'network_api')
-        def _test(mock_nw_api, mock_lmcf, mock_notify):
+        def _test(mock_nw_api, mock_lmcf, mock_notify, mock_ra):
             mock_lmcf.return_value = False, False
             self.compute._rollback_live_migration(c, instance, 'foo',
                                                   migrate_data=migrate_data,
                                                   migration_status='fake')
-            mock_remove_allocs.assert_called_once_with(
-                instance.uuid, dest_node.uuid, instance.user_id,
-                instance.project_id, test.MatchType(dict))
+            mock_ra.assert_called_once_with(mock.ANY, instance, migration)
             mock_notify.assert_has_calls([
                 mock.call(c, instance, self.compute.host,
                           action='live_migration_rollback', phase='start',

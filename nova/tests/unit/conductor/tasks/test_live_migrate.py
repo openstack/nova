@@ -60,7 +60,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             servicegroup.API(), scheduler_client.SchedulerClient(),
             self.fake_spec)
 
-    def test_execute_with_destination(self):
+    def test_execute_with_destination(self, new_mode=True):
         dest_node = objects.ComputeNode(hypervisor_hostname='dest_node')
         with test.nested(
             mock.patch.object(self.task, '_check_host_is_up'),
@@ -71,15 +71,27 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                               'claim_resources_on_destination'),
             mock.patch.object(self.migration, 'save'),
             mock.patch.object(self.task.compute_rpcapi, 'live_migration'),
-        ) as (mock_check_up, mock_check_dest, mock_claim, mock_save, mock_mig):
+            mock.patch('nova.conductor.tasks.migrate.'
+                       'replace_allocation_with_migration'),
+            mock.patch('nova.conductor.tasks.live_migrate.'
+                       'should_do_migration_allocation')
+        ) as (mock_check_up, mock_check_dest, mock_claim, mock_save, mock_mig,
+              m_alloc, mock_sda):
             mock_mig.return_value = "bob"
+            m_alloc.return_value = (mock.MagicMock(), mock.sentinel.allocs)
+            mock_sda.return_value = new_mode
 
             self.assertEqual("bob", self.task.execute())
             mock_check_up.assert_called_once_with(self.instance_host)
             mock_check_dest.assert_called_once_with()
+            if new_mode:
+                allocs = mock.sentinel.allocs
+            else:
+                allocs = None
             mock_claim.assert_called_once_with(
                 self.task.scheduler_client.reportclient, self.instance,
-                mock.sentinel.source_node, dest_node)
+                mock.sentinel.source_node, dest_node,
+                source_node_allocations=allocs)
             mock_mig.assert_called_once_with(
                 self.context,
                 host=self.instance_host,
@@ -95,6 +107,15 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                              self.migration.dest_node)
             self.assertEqual(self.task.destination,
                              self.migration.dest_compute)
+            if new_mode:
+                m_alloc.assert_called_once_with(self.context,
+                                                self.instance,
+                                                self.migration)
+            else:
+                m_alloc.assert_not_called()
+
+    def test_execute_with_destination_old_school(self):
+        self.test_execute_with_destination(new_mode=False)
 
     def test_execute_without_destination(self):
         self.destination = None
@@ -105,10 +126,17 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             mock.patch.object(self.task, '_check_host_is_up'),
             mock.patch.object(self.task, '_find_destination'),
             mock.patch.object(self.task.compute_rpcapi, 'live_migration'),
-            mock.patch.object(self.migration, 'save')
-        ) as (mock_check, mock_find, mock_mig, mock_save):
+            mock.patch.object(self.migration, 'save'),
+            mock.patch('nova.conductor.tasks.migrate.'
+                       'replace_allocation_with_migration'),
+            mock.patch('nova.conductor.tasks.live_migrate.'
+                       'should_do_migration_allocation'),
+        ) as (mock_check, mock_find, mock_mig, mock_save, mock_alloc,
+              mock_sda):
             mock_find.return_value = ("found_host", "found_node")
             mock_mig.return_value = "bob"
+            mock_alloc.return_value = (mock.MagicMock(), mock.MagicMock())
+            mock_sda.return_value = True
 
             self.assertEqual("bob", self.task.execute())
             mock_check.assert_called_once_with(self.instance_host)
@@ -124,6 +152,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             self.assertEqual('found_host', self.migration.dest_compute)
             self.assertEqual('found_node', self.migration.dest_node)
             self.assertEqual(self.instance.node, self.migration.source_node)
+            self.assertTrue(mock_alloc.called)
 
     def test_check_instance_is_active_passes_when_paused(self):
         self.task.instance['power_state'] = power_state.PAUSED

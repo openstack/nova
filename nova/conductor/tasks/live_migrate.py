@@ -16,6 +16,7 @@ import six
 
 from nova.compute import power_state
 from nova.conductor.tasks import base
+from nova.conductor.tasks import migrate
 import nova.conf
 from nova import exception
 from nova.i18n import _
@@ -25,6 +26,12 @@ from nova import utils
 
 LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
+
+
+def should_do_migration_allocation(context):
+    minver = objects.Service.get_minimum_version_multi(context,
+                                                       ['nova-compute'])
+    return minver >= 25
 
 
 class LiveMigrationTask(base.TaskBase):
@@ -43,10 +50,22 @@ class LiveMigrationTask(base.TaskBase):
         self.servicegroup_api = servicegroup_api
         self.scheduler_client = scheduler_client
         self.request_spec = request_spec
+        self._source_cn = None
+        self._held_allocations = None
 
     def _execute(self):
         self._check_instance_is_active()
         self._check_host_is_up(self.source)
+
+        if should_do_migration_allocation(self.context):
+            self._source_cn, self._held_allocations = (
+                # NOTE(danms): This may raise various exceptions, which will
+                # propagate to the API and cause a 500. This is what we
+                # want, as it would indicate internal data structure corruption
+                # (such as missing migrations, compute nodes, etc).
+                migrate.replace_allocation_with_migration(self.context,
+                                                          self.instance,
+                                                          self.migration))
 
         if not self.destination:
             # Either no host was specified in the API request and the user
@@ -73,7 +92,9 @@ class LiveMigrationTask(base.TaskBase):
             # ComputeTaskManager.
             scheduler_utils.claim_resources_on_destination(
                 self.scheduler_client.reportclient, self.instance,
-                source_node, dest_node)
+                source_node, dest_node,
+                source_node_allocations=self._held_allocations)
+
             # dest_node is a ComputeNode object, so we need to get the actual
             # node name off it to set in the Migration object below.
             dest_node = dest_node.hypervisor_hostname
@@ -99,7 +120,11 @@ class LiveMigrationTask(base.TaskBase):
         # calls, since this class currently makes no state changes,
         # except to call the compute method, that has no matching
         # rollback call right now.
-        pass
+        if self._held_allocations:
+            migrate.revert_allocation_for_migration(self._source_cn,
+                                                    self.instance,
+                                                    self.migration,
+                                                    self._held_allocations)
 
     def _check_instance_is_active(self):
         if self.instance.power_state not in (power_state.RUNNING,
