@@ -447,8 +447,7 @@ def teardown_container(container_dir, container_root_device=None):
         if container_root_device:
             if 'loop' in container_root_device:
                 LOG.debug("Release loop device %s", container_root_device)
-                utils.execute('losetup', '--detach', container_root_device,
-                              run_as_root=True, attempts=3)
+                nova.privsep.fs.loopremove(container_root_device)
             elif 'nbd' in container_root_device:
                 LOG.debug('Release nbd device %s', container_root_device)
                 utils.execute('qemu-nbd', '-d', container_root_device,

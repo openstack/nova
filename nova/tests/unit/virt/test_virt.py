@@ -182,6 +182,8 @@ class TestDiskImage(test.NoDBTestCase):
 class TestVirtDisk(test.NoDBTestCase):
     def setUp(self):
         super(TestVirtDisk, self).setUp()
+
+        # TODO(mikal): this can probably be removed post privsep cleanup.
         self.executes = []
 
         def fake_execute(*cmd, **kwargs):
@@ -209,8 +211,11 @@ class TestVirtDisk(test.NoDBTestCase):
         self.assertEqual(disk_api.setup_container(image, container_dir),
                          '/dev/fake')
 
+    @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('nova.privsep.fs.loopremove')
     @mock.patch('nova.privsep.fs.umount')
-    def test_lxc_teardown_container(self, mock_umount):
+    def test_lxc_teardown_container(
+            self, mock_umount, mock_loopremove, mock_exist):
 
         def proc_mounts(mount_point):
             mount_points = {
@@ -221,21 +226,22 @@ class TestVirtDisk(test.NoDBTestCase):
             }
             return mount_points[mount_point]
 
-        self.stub_out('os.path.exists', lambda _: True)
         self.stub_out('nova.virt.disk.api._DiskImage._device_for_path',
                       proc_mounts)
         expected_commands = []
 
         disk_api.teardown_container('/mnt/loop/nopart')
-        expected_commands += [('losetup', '--detach', '/dev/loop0')]
+        mock_loopremove.assert_has_calls([mock.call('/dev/loop0')])
+        mock_loopremove.reset_mock()
         mock_umount.assert_has_calls([mock.call('/dev/loop0')])
         mock_umount.reset_mock()
 
         disk_api.teardown_container('/mnt/loop/part')
         expected_commands += [
-                              ('kpartx', '-d', '/dev/loop0'),
-                              ('losetup', '--detach', '/dev/loop0'),
+                              ('kpartx', '-d', '/dev/loop0')
                              ]
+        mock_loopremove.assert_has_calls([mock.call('/dev/loop0')])
+        mock_loopremove.reset_mock()
         mock_umount.assert_has_calls([mock.call('/dev/mapper/loop0p1')])
         mock_umount.reset_mock()
 
@@ -264,25 +270,22 @@ class TestVirtDisk(test.NoDBTestCase):
 
         self.assertEqual(self.executes, expected_commands)
 
-    def test_lxc_teardown_container_with_namespace_cleaned(self):
+    @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('nova.virt.disk.api._DiskImage._device_for_path',
+                return_value=None)
+    @mock.patch('nova.privsep.fs.loopremove')
+    def test_lxc_teardown_container_with_namespace_cleaned(
+            self, mock_loopremove, mock_device_for_path, mock_exists):
 
-        def proc_mounts(mount_point):
-            return None
-
-        self.stub_out('os.path.exists', lambda _: True)
-        self.stub_out('nova.virt.disk.api._DiskImage._device_for_path',
-                      proc_mounts)
         expected_commands = []
 
         disk_api.teardown_container('/mnt/loop/nopart', '/dev/loop0')
-        expected_commands += [
-                              ('losetup', '--detach', '/dev/loop0'),
-                             ]
+        mock_loopremove.assert_has_calls([mock.call('/dev/loop0')])
+        mock_loopremove.reset_mock()
 
         disk_api.teardown_container('/mnt/loop/part', '/dev/loop0')
-        expected_commands += [
-                              ('losetup', '--detach', '/dev/loop0'),
-                             ]
+        mock_loopremove.assert_has_calls([mock.call('/dev/loop0')])
+        mock_loopremove.reset_mock()
 
         disk_api.teardown_container('/mnt/nbd/nopart', '/dev/nbd15')
         expected_commands += [

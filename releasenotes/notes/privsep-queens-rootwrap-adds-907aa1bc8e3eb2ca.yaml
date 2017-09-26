@@ -10,6 +10,6 @@ upgrade:
     internal functionality using privsep.
   - |
     The following commands are no longer required to be listed in your rootwrap
-    configuration: cat; chown; cryptsetup; dd; lvcreate; lvremove; lvs; mkdir;
-    mount; nova-idmapshift; ploop; prl_disk_tool; readlink; shred; tee; touch;
-    umount; vgs; and xend.
+    configuration: cat; chown; cryptsetup; dd; losetup; lvcreate; lvremove;
+    lvs; mkdir; mount; nova-idmapshift; ploop; prl_disk_tool; readlink; shred;
+    tee; touch; umount; vgs; and xend.
