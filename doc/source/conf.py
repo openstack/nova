@@ -123,7 +123,6 @@ _man_pages = [
     ('nova-console', u'Cloud controller fabric'),
     ('nova-consoleauth', u'Cloud controller fabric'),
     ('nova-dhcpbridge', u'Cloud controller fabric'),
-    ('nova-idmapshift', u'Cloud controller fabric'),
     ('nova-manage', u'Cloud controller fabric'),
     ('nova-network', u'Cloud controller fabric'),
     ('nova-novncproxy', u'Cloud controller fabric'),

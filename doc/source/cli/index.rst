@@ -78,7 +78,6 @@ are documented for completeness and debugging if something goes wrong.
    :maxdepth: 1
 
    nova-rootwrap
-   nova-idmapshift
 
 Deprecated Services
 -------------------

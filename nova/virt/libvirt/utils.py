@@ -29,6 +29,7 @@ from oslo_utils import fileutils
 import nova.conf
 from nova.i18n import _
 from nova.objects import fields as obj_fields
+import nova.privsep.idmapshift
 import nova.privsep.libvirt
 from nova import utils
 from nova.virt.disk import api as disk
@@ -243,10 +244,6 @@ def write_to_file(path, contents, umask=None):
             os.umask(saved_umask)
 
 
-def _id_map_to_config(id_map):
-    return "%s:%s:%s" % (id_map.start, id_map.target, id_map.count)
-
-
 def chown_for_id_maps(path, id_maps):
     """Change ownership of file or directory for an id mapped
     environment
@@ -254,14 +251,11 @@ def chown_for_id_maps(path, id_maps):
     :param path: File or directory whose ownership to change
     :param id_maps: List of type LibvirtConfigGuestIDMap
     """
-    uid_maps_str = ','.join([_id_map_to_config(id_map) for id_map in id_maps if
-                             isinstance(id_map,
-                                        vconfig.LibvirtConfigGuestUIDMap)])
-    gid_maps_str = ','.join([_id_map_to_config(id_map) for id_map in id_maps if
-                             isinstance(id_map,
-                                        vconfig.LibvirtConfigGuestGIDMap)])
-    utils.execute('nova-idmapshift', '-i', '-u', uid_maps_str,
-                  '-g', gid_maps_str, path, run_as_root=True)
+    uid_maps = [id_map for id_map in id_maps if
+                isinstance(id_map, vconfig.LibvirtConfigGuestUIDMap)]
+    gid_maps = [id_map for id_map in id_maps if
+                isinstance(id_map, vconfig.LibvirtConfigGuestGIDMap)]
+    nova.privsep.idmapshift.shift(path, uid_maps, gid_maps)
 
 
 def extract_snapshot(disk_path, source_fmt, out_path, dest_fmt):

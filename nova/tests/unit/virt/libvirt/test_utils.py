@@ -35,7 +35,6 @@ from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt import images
-from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import utils as libvirt_utils
 
@@ -517,29 +516,6 @@ disk size: 4.4M
             self.assertEqual(mode & 0o277, 0)
         finally:
             os.unlink(dst_path)
-
-    @mock.patch.object(utils, 'execute')
-    def test_chown_for_id_maps(self, mock_execute):
-        id_maps = [vconfig.LibvirtConfigGuestUIDMap(),
-                   vconfig.LibvirtConfigGuestUIDMap(),
-                   vconfig.LibvirtConfigGuestGIDMap(),
-                   vconfig.LibvirtConfigGuestGIDMap()]
-        id_maps[0].target = 10000
-        id_maps[0].count = 2000
-        id_maps[1].start = 2000
-        id_maps[1].target = 40000
-        id_maps[1].count = 2000
-        id_maps[2].target = 10000
-        id_maps[2].count = 2000
-        id_maps[3].start = 2000
-        id_maps[3].target = 40000
-        id_maps[3].count = 2000
-        libvirt_utils.chown_for_id_maps('/some/path', id_maps)
-        execute_args = ('nova-idmapshift', '-i',
-                        '-u', '0:10000:2000,2000:40000:2000',
-                        '-g', '0:10000:2000,2000:40000:2000',
-                        '/some/path')
-        mock_execute.assert_called_once_with(*execute_args, run_as_root=True)
 
     def _do_test_extract_snapshot(self, mock_execute, src_format='qcow2',
                                   dest_format='raw', out_format='raw'):

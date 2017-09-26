@@ -12,13 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import argparse
-
 import fixtures
 import mock
 from six.moves import StringIO
 
-from nova.cmd import idmapshift
+from nova.privsep import idmapshift
 from nova import test
 
 
@@ -111,32 +109,9 @@ class ShiftPathTestCase(BaseTestCase):
         mock_lstat.assert_has_calls([mock.call('/test/path')])
         mock_lchown.assert_has_calls([mock.call('/test/path', 10000, 10000)])
 
-    @mock.patch('os.lchown')
-    @mock.patch('os.lstat')
-    def test_shift_path_dry_run(self, mock_lstat, mock_lchown):
-        mock_lstat.return_value = FakeStat(0, 0)
-        idmapshift.shift_path('/test/path', self.uid_maps, self.gid_maps,
-                              idmapshift.NOBODY_ID, dict(), dict(),
-                              dry_run=True)
-        mock_lstat.assert_has_calls([mock.call('/test/path')])
-        self.assertEqual(0, len(mock_lchown.mock_calls))
-
-    @mock.patch('os.lchown')
-    @mock.patch('nova.cmd.idmapshift.print_chown')
-    @mock.patch('os.lstat')
-    def test_shift_path_verbose(self, mock_lstat, mock_print, mock_lchown):
-        mock_lstat.return_value = FakeStat(0, 0)
-        idmapshift.shift_path('/test/path', self.uid_maps, self.gid_maps,
-                              idmapshift.NOBODY_ID, dict(), dict(),
-                              verbose=True)
-        mock_lstat.assert_has_calls([mock.call('/test/path')])
-        mock_print_call = mock.call('/test/path', 0, 0, 10000, 10000)
-        mock_print.assert_has_calls([mock_print_call])
-        mock_lchown.assert_has_calls([mock.call('/test/path', 10000, 10000)])
-
 
 class ShiftDirTestCase(BaseTestCase):
-    @mock.patch('nova.cmd.idmapshift.shift_path')
+    @mock.patch('nova.privsep.idmapshift.shift_path')
     @mock.patch('os.path.join')
     @mock.patch('os.walk')
     def test_shift_dir(self, mock_walk, mock_join, mock_shift_path):
@@ -152,32 +127,7 @@ class ShiftDirTestCase(BaseTestCase):
         mock_join.assert_has_calls(mock_join_calls)
 
         args = (self.uid_maps, self.gid_maps, idmapshift.NOBODY_ID)
-        kwargs = dict(dry_run=False, verbose=False,
-                      uid_memo=dict(), gid_memo=dict())
-        shift_path_calls = [mock.call('/', *args, **kwargs)]
-        shift_path_calls += [mock.call('/' + x, *args, **kwargs)
-                             for x in files]
-        mock_shift_path.assert_has_calls(shift_path_calls)
-
-    @mock.patch('nova.cmd.idmapshift.shift_path')
-    @mock.patch('os.path.join')
-    @mock.patch('os.walk')
-    def test_shift_dir_dry_run(self, mock_walk, mock_join, mock_shift_path):
-        mock_walk.return_value = [('/', ['a', 'b'], ['c', 'd'])]
-        mock_join.side_effect = join_side_effect
-
-        idmapshift.shift_dir('/', self.uid_maps, self.gid_maps,
-                             idmapshift.NOBODY_ID, dry_run=True)
-
-        mock_walk.assert_has_calls([mock.call('/')])
-
-        files = ['a', 'b', 'c', 'd']
-        mock_join_calls = [mock.call('/', x) for x in files]
-        mock_join.assert_has_calls(mock_join_calls)
-
-        args = (self.uid_maps, self.gid_maps, idmapshift.NOBODY_ID)
-        kwargs = dict(dry_run=True, verbose=False,
-                      uid_memo=dict(), gid_memo=dict())
+        kwargs = dict(uid_memo=dict(), gid_memo=dict())
         shift_path_calls = [mock.call('/', *args, **kwargs)]
         shift_path_calls += [mock.call('/' + x, *args, **kwargs)
                              for x in files]
@@ -264,7 +214,7 @@ class ConfirmDirTestCase(BaseTestCase):
         self.uid_map_ranges = idmapshift.get_ranges(self.uid_maps)
         self.gid_map_ranges = idmapshift.get_ranges(self.gid_maps)
 
-    @mock.patch('nova.cmd.idmapshift.confirm_path')
+    @mock.patch('nova.privsep.idmapshift.confirm_path')
     @mock.patch('os.path.join')
     @mock.patch('os.walk')
     def test_confirm_dir(self, mock_walk, mock_join, mock_confirm_path):
@@ -286,7 +236,7 @@ class ConfirmDirTestCase(BaseTestCase):
                                for x in files]
         mock_confirm_path.assert_has_calls(confirm_path_calls)
 
-    @mock.patch('nova.cmd.idmapshift.confirm_path')
+    @mock.patch('nova.privsep.idmapshift.confirm_path')
     @mock.patch('os.path.join')
     @mock.patch('os.walk')
     def test_confirm_dir_short_circuit_root(self, mock_walk, mock_join,
@@ -302,7 +252,7 @@ class ConfirmDirTestCase(BaseTestCase):
         confirm_path_calls = [mock.call('/', *args)]
         mock_confirm_path.assert_has_calls(confirm_path_calls)
 
-    @mock.patch('nova.cmd.idmapshift.confirm_path')
+    @mock.patch('nova.privsep.idmapshift.confirm_path')
     @mock.patch('os.path.join')
     @mock.patch('os.walk')
     def test_confirm_dir_short_circuit_file(self, mock_walk, mock_join,
@@ -328,7 +278,7 @@ class ConfirmDirTestCase(BaseTestCase):
                               mock.call('/' + 'a', *args)]
         mock_confirm_path.assert_has_calls(confirm_path_calls)
 
-    @mock.patch('nova.cmd.idmapshift.confirm_path')
+    @mock.patch('nova.privsep.idmapshift.confirm_path')
     @mock.patch('os.path.join')
     @mock.patch('os.walk')
     def test_confirm_dir_short_circuit_dir(self, mock_walk, mock_join,
@@ -358,162 +308,6 @@ class ConfirmDirTestCase(BaseTestCase):
         mock_confirm_path.assert_has_calls(confirm_path_calls)
 
 
-class IDMapTypeTestCase(test.NoDBTestCase):
-    def test_id_map_type(self):
-        result = idmapshift.id_map_type("1:1:1,2:2:2")
-        self.assertEqual([(1, 1, 1), (2, 2, 2)], result)
-
-    def test_id_map_type_not_int(self):
-        self.assertRaises(argparse.ArgumentTypeError, idmapshift.id_map_type,
-                          "a:1:1")
-
-    def test_id_map_type_not_proper_format(self):
-        self.assertRaises(argparse.ArgumentTypeError, idmapshift.id_map_type,
-                          "1:1")
-
-
-class MainTestCase(BaseTestCase):
-    @mock.patch('nova.cmd.idmapshift.shift_dir')
-    @mock.patch('argparse.ArgumentParser')
-    def test_main(self, mock_parser_class, mock_shift_dir):
-        mock_parser = mock.MagicMock()
-        mock_parser.parse_args.return_value = mock_parser
-        mock_parser.idempotent = False
-        mock_parser.confirm = False
-        mock_parser.path = '/test/path'
-        mock_parser.uid = self.uid_maps
-        mock_parser.gid = self.gid_maps
-        mock_parser.nobody = idmapshift.NOBODY_ID
-        mock_parser.dry_run = False
-        mock_parser.verbose = False
-        mock_parser_class.return_value = mock_parser
-
-        idmapshift.main()
-
-        mock_shift_dir_call = mock.call('/test/path', self.uid_maps,
-                                        self.gid_maps, idmapshift.NOBODY_ID,
-                                        dry_run=False, verbose=False)
-        mock_shift_dir.assert_has_calls([mock_shift_dir_call])
-
-    @mock.patch('nova.cmd.idmapshift.shift_dir')
-    @mock.patch('nova.cmd.idmapshift.confirm_dir')
-    @mock.patch('argparse.ArgumentParser')
-    def test_main_confirm_dir_idempotent_unshifted(self, mock_parser_class,
-                                                   mock_confirm_dir,
-                                                   mock_shift_dir):
-        mock_parser = mock.MagicMock()
-        mock_parser.parse_args.return_value = mock_parser
-        mock_parser.idempotent = True
-        mock_parser.confirm = False
-        mock_parser.path = '/test/path'
-        mock_parser.uid = self.uid_maps
-        mock_parser.gid = self.gid_maps
-        mock_parser.nobody = idmapshift.NOBODY_ID
-        mock_parser.dry_run = False
-        mock_parser.verbose = False
-        mock_parser_class.return_value = mock_parser
-        mock_confirm_dir.return_value = False
-
-        idmapshift.main()
-
-        mock_confirm_dir_call = mock.call('/test/path', self.uid_maps,
-                                          self.gid_maps, idmapshift.NOBODY_ID)
-        mock_confirm_dir.assert_has_calls([mock_confirm_dir_call])
-        mock_shift_dir_call = mock.call('/test/path', self.uid_maps,
-                                        self.gid_maps, idmapshift.NOBODY_ID,
-                                        dry_run=False, verbose=False)
-        mock_shift_dir.assert_has_calls([mock_shift_dir_call])
-
-    @mock.patch('nova.cmd.idmapshift.shift_dir')
-    @mock.patch('nova.cmd.idmapshift.confirm_dir')
-    @mock.patch('argparse.ArgumentParser')
-    def test_main_confirm_dir_idempotent_shifted(self, mock_parser_class,
-                                                 mock_confirm_dir,
-                                                 mock_shift_dir):
-        mock_parser = mock.MagicMock()
-        mock_parser.parse_args.return_value = mock_parser
-        mock_parser.idempotent = True
-        mock_parser.confirm = False
-        mock_parser.path = '/test/path'
-        mock_parser.uid = self.uid_maps
-        mock_parser.gid = self.gid_maps
-        mock_parser.nobody = idmapshift.NOBODY_ID
-        mock_parser.dry_run = False
-        mock_parser.verbose = False
-        mock_parser_class.return_value = mock_parser
-        mock_confirm_dir.return_value = True
-
-        try:
-            idmapshift.main()
-        except SystemExit as sys_exit:
-            self.assertEqual(sys_exit.code, 0)
-
-        mock_confirm_dir_call = mock.call('/test/path', self.uid_maps,
-                                          self.gid_maps, idmapshift.NOBODY_ID)
-        mock_confirm_dir.assert_has_calls([mock_confirm_dir_call])
-        mock_shift_dir.assert_has_calls([])
-
-    @mock.patch('nova.cmd.idmapshift.shift_dir')
-    @mock.patch('nova.cmd.idmapshift.confirm_dir')
-    @mock.patch('argparse.ArgumentParser')
-    def test_main_confirm_dir_confirm_unshifted(self, mock_parser_class,
-                                                mock_confirm_dir,
-                                                mock_shift_dir):
-        mock_parser = mock.MagicMock()
-        mock_parser.parse_args.return_value = mock_parser
-        mock_parser.idempotent = False
-        mock_parser.confirm = True
-        mock_parser.exit_on_fail = True
-        mock_parser.path = '/test/path'
-        mock_parser.uid = self.uid_maps
-        mock_parser.gid = self.gid_maps
-        mock_parser.nobody = idmapshift.NOBODY_ID
-        mock_parser.dry_run = False
-        mock_parser.verbose = False
-        mock_parser_class.return_value = mock_parser
-        mock_confirm_dir.return_value = False
-
-        try:
-            idmapshift.main()
-        except SystemExit as sys_exit:
-            self.assertEqual(sys_exit.code, 1)
-
-        mock_confirm_dir_call = mock.call('/test/path', self.uid_maps,
-                                          self.gid_maps, idmapshift.NOBODY_ID)
-        mock_confirm_dir.assert_has_calls([mock_confirm_dir_call])
-        mock_shift_dir.assert_has_calls([])
-
-    @mock.patch('nova.cmd.idmapshift.shift_dir')
-    @mock.patch('nova.cmd.idmapshift.confirm_dir')
-    @mock.patch('argparse.ArgumentParser')
-    def test_main_confirm_dir_confirm_shifted(self, mock_parser_class,
-                                              mock_confirm_dir,
-                                              mock_shift_dir):
-        mock_parser = mock.MagicMock()
-        mock_parser.parse_args.return_value = mock_parser
-        mock_parser.idempotent = False
-        mock_parser.confirm = True
-        mock_parser.exit_on_fail = True
-        mock_parser.path = '/test/path'
-        mock_parser.uid = self.uid_maps
-        mock_parser.gid = self.gid_maps
-        mock_parser.nobody = idmapshift.NOBODY_ID
-        mock_parser.dry_run = False
-        mock_parser.verbose = False
-        mock_parser_class.return_value = mock_parser
-        mock_confirm_dir.return_value = True
-
-        try:
-            idmapshift.main()
-        except SystemExit as sys_exit:
-            self.assertEqual(sys_exit.code, 0)
-
-        mock_confirm_dir_call = mock.call('/test/path', self.uid_maps,
-                                          self.gid_maps, idmapshift.NOBODY_ID)
-        mock_confirm_dir.assert_has_calls([mock_confirm_dir_call])
-        mock_shift_dir.assert_has_calls([])
-
-
 class IntegrationTestCase(BaseTestCase):
     @mock.patch('os.lchown')
     @mock.patch('os.lstat')
@@ -540,7 +334,7 @@ class IntegrationTestCase(BaseTestCase):
         mock_lstat.side_effect = lstat
 
         idmapshift.shift_dir('/tmp/test', self.uid_maps, self.gid_maps,
-                             idmapshift.NOBODY_ID, verbose=True)
+                             idmapshift.NOBODY_ID)
 
         lchown_calls = [
             mock.call('/tmp/test', 10000, 10000),
@@ -553,35 +347,6 @@ class IntegrationTestCase(BaseTestCase):
             mock.call('/tmp/test/d/2', 20090, 20090),
         ]
         mock_lchown.assert_has_calls(lchown_calls)
-
-    @mock.patch('os.lchown')
-    @mock.patch('os.lstat')
-    @mock.patch('os.path.join')
-    @mock.patch('os.walk')
-    def test_integrated_shift_dir_dry_run(self, mock_walk, mock_join,
-                                          mock_lstat, mock_lchown):
-        mock_walk.return_value = [('/tmp/test', ['a', 'b', 'c'], ['d']),
-                                  ('/tmp/test/d', ['1', '2'], [])]
-        mock_join.side_effect = join_side_effect
-
-        def lstat(path):
-            stats = {
-                't': FakeStat(0, 0),
-                'a': FakeStat(0, 0),
-                'b': FakeStat(0, 2),
-                'c': FakeStat(30000, 30000),
-                'd': FakeStat(100, 100),
-                '1': FakeStat(0, 100),
-                '2': FakeStat(100, 100),
-            }
-            return stats[path[-1]]
-
-        mock_lstat.side_effect = lstat
-
-        idmapshift.shift_dir('/tmp/test', self.uid_maps, self.gid_maps,
-                             idmapshift.NOBODY_ID, dry_run=True, verbose=True)
-
-        self.assertEqual(0, len(mock_lchown.mock_calls))
 
     @mock.patch('os.lstat')
     @mock.patch('os.path.join')
