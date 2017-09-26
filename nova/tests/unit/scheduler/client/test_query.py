@@ -37,10 +37,24 @@ class SchedulerQueryClientTestCase(test.NoDBTestCase):
         self.client.select_destinations(
             context=self.context,
             spec_obj=fake_spec,
+            instance_uuids=[fake_spec.instance_uuid],
+            return_objects=True,
+            return_alternates=True,
+        )
+        mock_select_destinations.assert_called_once_with(self.context,
+                fake_spec, [fake_spec.instance_uuid], True, True)
+
+    @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
+    def test_select_destinations_old_call(self, mock_select_destinations):
+        fake_spec = objects.RequestSpec()
+        fake_spec.instance_uuid = uuids.instance
+        self.client.select_destinations(
+            context=self.context,
+            spec_obj=fake_spec,
             instance_uuids=[fake_spec.instance_uuid]
         )
-        mock_select_destinations.assert_called_once_with(
-            self.context, fake_spec, [fake_spec.instance_uuid])
+        mock_select_destinations.assert_called_once_with(self.context,
+                fake_spec, [fake_spec.instance_uuid], False, False)
 
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.update_aggregates')
     def test_update_aggregates(self, mock_update_aggs):

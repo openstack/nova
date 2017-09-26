@@ -1776,6 +1776,12 @@ class LiveMigrationWithOldNovaNotSupported(NovaException):
                 "upgrade to be complete before it is available.")
 
 
+class SelectionObjectsWithOldRPCVersionNotSupported(NovaException):
+    msg_fmt = _("Requests for Selection objects with alternates are not "
+                "supported in select_destinations() before RPC version 4.5; "
+                "version %(version)s requested.")
+
+
 class LiveMigrationURINotAvailable(NovaException):
     msg_fmt = _('No live migration URI configured and no default available '
                 'for "%(virt_type)s" hypervisor virtualization type.')

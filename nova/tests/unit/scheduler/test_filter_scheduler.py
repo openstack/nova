@@ -184,51 +184,27 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             project_id=uuids.project_id,
             instance_group=None)
 
-        host_state1 = mock.Mock(spec=host_manager.HostState,
-                host="fake_host1", nodename="fake_node1", uuid=uuids.cn1,
-                cell_uuid=uuids.cell, limits={})
-        host_state2 = mock.Mock(spec=host_manager.HostState,
-                host="fake_host2", nodename="fake_node2", uuid=uuids.cn2,
-                cell_uuid=uuids.cell, limits={})
-        host_state3 = mock.Mock(spec=host_manager.HostState,
-                host="fake_host3", nodename="fake_node3", uuid=uuids.cn3,
-                cell_uuid=uuids.cell, limits={})
-        all_host_states = [host_state1, host_state2, host_state3]
+        host_state = mock.Mock(spec=host_manager.HostState,
+                host="fake_host", nodename="fake_node", uuid=uuids.cn1,
+                cell_uuid=uuids.cell1, limits={})
+        all_host_states = [host_state]
         mock_get_all_states.return_value = all_host_states
         mock_get_hosts.return_value = all_host_states
         mock_claim.return_value = True
 
         instance_uuids = [uuids.instance]
-        fake_alloc1 = {"allocations": [
+        fake_alloc = {"allocations": [
                 {"resource_provider": {"uuid": uuids.cn1},
                  "resources": {"VCPU": 1,
                                "MEMORY_MB": 1024,
                                "DISK_GB": 100}
                 }]}
-        fake_alloc2 = {"allocations": [
-                {"resource_provider": {"uuid": uuids.cn2},
-                 "resources": {"VCPU": 1,
-                               "MEMORY_MB": 1024,
-                               "DISK_GB": 100}
-                }]}
-        fake_alloc3 = {"allocations": [
-                {"resource_provider": {"uuid": uuids.cn3},
-                 "resources": {"VCPU": 1,
-                               "MEMORY_MB": 1024,
-                               "DISK_GB": 100}
-                }]}
-        alloc_reqs_by_rp_uuid = {uuids.cn1: [fake_alloc1],
-                uuids.cn2: [fake_alloc2], uuids.cn3: [fake_alloc3]}
+        alloc_reqs_by_rp_uuid = {uuids.cn1: [fake_alloc]}
         ctx = mock.Mock()
         selected_hosts = self.driver._schedule(ctx, spec_obj, instance_uuids,
                 alloc_reqs_by_rp_uuid, mock.sentinel.provider_summaries)
 
-        sel1 = objects.Selection.from_host_state(host_state1)
-        sel2 = objects.Selection.from_host_state(host_state2,
-                allocation_request=fake_alloc2)
-        sel3 = objects.Selection.from_host_state(host_state3,
-                allocation_request=fake_alloc3)
-        expected_selection = [[sel1, sel2, sel3]]
+        expected_selection = [[objects.Selection.from_host_state(host_state)]]
         mock_get_all_states.assert_called_once_with(
             ctx.elevated.return_value, spec_obj,
             mock.sentinel.provider_summaries)
@@ -241,7 +217,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.assertEqual(expected_selection, selected_hosts)
 
         # Ensure that we have consumed the resources on the chosen host states
-        host_state1.consume_from_request.assert_called_once_with(spec_obj)
+        host_state.consume_from_request.assert_called_once_with(spec_obj)
 
     def test_schedule_successful_claim(self):
         self._test_schedule_successful_claim()
@@ -356,6 +332,134 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         # Ensure we cleaned up the first successfully-claimed instance
         mock_cleanup.assert_called_once_with([uuids.instance1])
+
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_claim_resources')
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_get_all_host_states')
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_get_sorted_hosts')
+    def test_selection_alloc_requests_for_alts(self, mock_get_hosts,
+            mock_get_all_states, mock_claim):
+        spec_obj = objects.RequestSpec(
+            num_instances=1,
+            flavor=objects.Flavor(memory_mb=512,
+                                  root_gb=512,
+                                  ephemeral_gb=0,
+                                  swap=0,
+                                  vcpus=1),
+            project_id=uuids.project_id,
+            instance_group=None)
+
+        host_state0 = mock.Mock(spec=host_manager.HostState,
+                host="fake_host0", nodename="fake_node0", uuid=uuids.cn0,
+                cell_uuid=uuids.cell, limits={})
+        host_state1 = mock.Mock(spec=host_manager.HostState,
+                host="fake_host1", nodename="fake_node1", uuid=uuids.cn1,
+                cell_uuid=uuids.cell, limits={})
+        host_state2 = mock.Mock(spec=host_manager.HostState,
+                host="fake_host2", nodename="fake_node2", uuid=uuids.cn2,
+                cell_uuid=uuids.cell, limits={})
+        all_host_states = [host_state0, host_state1, host_state2]
+        mock_get_all_states.return_value = all_host_states
+        mock_get_hosts.return_value = all_host_states
+        mock_claim.return_value = True
+
+        instance_uuids = [uuids.instance0]
+        fake_alloc0 = {"allocations": [
+                {"resource_provider": {"uuid": uuids.cn0},
+                 "resources": {"VCPU": 1,
+                               "MEMORY_MB": 1024,
+                               "DISK_GB": 100}
+                }]}
+        fake_alloc1 = {"allocations": [
+                {"resource_provider": {"uuid": uuids.cn1},
+                 "resources": {"VCPU": 1,
+                               "MEMORY_MB": 1024,
+                               "DISK_GB": 100}
+                }]}
+        fake_alloc2 = {"allocations": [
+                {"resource_provider": {"uuid": uuids.cn2},
+                 "resources": {"VCPU": 1,
+                               "MEMORY_MB": 1024,
+                               "DISK_GB": 100}
+                }]}
+        alloc_reqs_by_rp_uuid = {uuids.cn0: [fake_alloc0],
+                uuids.cn1: [fake_alloc1], uuids.cn2: [fake_alloc2]}
+        ctx = mock.Mock()
+        selected_hosts = self.driver._schedule(ctx, spec_obj, instance_uuids,
+                alloc_reqs_by_rp_uuid, mock.sentinel.provider_summaries,
+                return_alternates=True)
+
+        sel0 = objects.Selection.from_host_state(host_state0)
+        sel1 = objects.Selection.from_host_state(host_state1,
+                allocation_request=fake_alloc1)
+        sel2 = objects.Selection.from_host_state(host_state2,
+                allocation_request=fake_alloc2)
+        expected_selection = [[sel0, sel1, sel2]]
+        self.assertEqual(expected_selection, selected_hosts)
+
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_claim_resources')
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_get_all_host_states')
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_get_sorted_hosts')
+    def test_selection_alloc_requests_no_alts(self, mock_get_hosts,
+            mock_get_all_states, mock_claim):
+        spec_obj = objects.RequestSpec(
+            num_instances=1,
+            flavor=objects.Flavor(memory_mb=512,
+                                  root_gb=512,
+                                  ephemeral_gb=0,
+                                  swap=0,
+                                  vcpus=1),
+            project_id=uuids.project_id,
+            instance_group=None)
+
+        host_state0 = mock.Mock(spec=host_manager.HostState,
+                host="fake_host0", nodename="fake_node0", uuid=uuids.cn0,
+                cell_uuid=uuids.cell, limits={})
+        host_state1 = mock.Mock(spec=host_manager.HostState,
+                host="fake_host1", nodename="fake_node1", uuid=uuids.cn1,
+                cell_uuid=uuids.cell, limits={})
+        host_state2 = mock.Mock(spec=host_manager.HostState,
+                host="fake_host2", nodename="fake_node2", uuid=uuids.cn2,
+                cell_uuid=uuids.cell, limits={})
+        all_host_states = [host_state0, host_state1, host_state2]
+        mock_get_all_states.return_value = all_host_states
+        mock_get_hosts.return_value = all_host_states
+        mock_claim.return_value = True
+
+        instance_uuids = [uuids.instance0]
+        fake_alloc0 = {"allocations": [
+                {"resource_provider": {"uuid": uuids.cn0},
+                 "resources": {"VCPU": 1,
+                               "MEMORY_MB": 1024,
+                               "DISK_GB": 100}
+                }]}
+        fake_alloc1 = {"allocations": [
+                {"resource_provider": {"uuid": uuids.cn1},
+                 "resources": {"VCPU": 1,
+                               "MEMORY_MB": 1024,
+                               "DISK_GB": 100}
+                }]}
+        fake_alloc2 = {"allocations": [
+                {"resource_provider": {"uuid": uuids.cn2},
+                 "resources": {"VCPU": 1,
+                               "MEMORY_MB": 1024,
+                               "DISK_GB": 100}
+                }]}
+        alloc_reqs_by_rp_uuid = {uuids.cn0: [fake_alloc0],
+                uuids.cn1: [fake_alloc1], uuids.cn2: [fake_alloc2]}
+        ctx = mock.Mock()
+        selected_hosts = self.driver._schedule(ctx, spec_obj, instance_uuids,
+                alloc_reqs_by_rp_uuid, mock.sentinel.provider_summaries,
+                return_alternates=False)
+
+        sel0 = objects.Selection.from_host_state(host_state0)
+        expected_selection = [[sel0]]
+        self.assertEqual(expected_selection, selected_hosts)
 
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
                 '_claim_resources')
@@ -633,15 +737,12 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         retry = {'hosts': [], 'num_attempts': 1}
         filter_properties = {'retry': retry}
 
-        host_state = host_manager.HostState('host', 'node', uuids.cell)
-        host_state.limits['vcpu'] = 5
+        selection = objects.Selection(service_host="host", nodename="node",
+                cell_uuid=uuids.cell)
         scheduler_utils.populate_filter_properties(filter_properties,
-                host_state)
-
+                selection)
         self.assertEqual(['host', 'node'],
                          filter_properties['retry']['hosts'][0])
-
-        self.assertEqual({'vcpu': 5}, host_state.limits)
 
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
                 '_schedule')
@@ -666,7 +767,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         mock_schedule.assert_called_once_with(self.context, spec_obj,
             [mock.sentinel.instance_uuid], mock.sentinel.alloc_reqs_by_rp_uuid,
-            mock.sentinel.p_sums, mock.sentinel.ar_version)
+            mock.sentinel.p_sums, mock.sentinel.ar_version, False)
         self.assertEqual([[fake_selection]], dests)
 
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
@@ -694,7 +795,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         mock_schedule.assert_called_once_with(self.context, spec_obj,
             [mock.sentinel.instance_uuid], mock.sentinel.alloc_reqs_by_rp_uuid,
-            mock.sentinel.p_sums, mock.sentinel.ar_version)
+            mock.sentinel.p_sums, mock.sentinel.ar_version, False)
         self.assertEqual([[fake_selection]], dests)
 
     @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
@@ -772,7 +873,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 instance_group=None)
 
         dests = self.driver._schedule(self.context, spec_obj,
-                instance_uuids, alloc_reqs, None)
+                instance_uuids, alloc_reqs, None, return_alternates=True)
         self.assertEqual(num_instances, len(dests))
         # Filtering and weighing hosts should be called num_instances + 1 times
         # unless num_instances == 1.
@@ -842,7 +943,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 instance_group=None)
 
         dests = self.driver._schedule(self.context, spec_obj,
-                instance_uuids, alloc_reqs, None)
+                instance_uuids, alloc_reqs, None, return_alternates=True)
         # There should be max_attempts hosts per instance (1 selected, 2 alts)
         self.assertEqual(total_returned, len(dests[0]))
         self.assertEqual(total_returned, len(dests[1]))
@@ -892,7 +993,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 instance_group=None)
 
         dests = self.driver._schedule(self.context, spec_obj,
-                instance_uuids, alloc_reqs, None)
+                instance_uuids, alloc_reqs, None, return_alternates=True)
         self.assertEqual(num_instances, len(dests))
         selected_hosts = [dest[0] for dest in dests]
         # The number returned for each destination should be the less of the
