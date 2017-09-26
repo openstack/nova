@@ -2256,23 +2256,12 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         dest_usages = self._get_provider_usages(dest_rp_uuid)
         # Assert the allocations, created by the scheduler, are cleaned up
         # after the rollback happens.
-        # FIXME: This is bug 1715182 where rollback doesn't remove the
-        # allocations against the dest node. Uncomment once fixed.
-        self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
-        # self.assertFlavorMatchesAllocation(
-        #     {'vcpus': 0, 'ram': 0, 'disk': 0}, dest_usages)
+        self.assertFlavorMatchesAllocation(
+            {'vcpus': 0, 'ram': 0, 'disk': 0}, dest_usages)
 
         allocations = self._get_allocations_by_server_uuid(server['id'])
         # There should only be 1 allocation for the instance on the source node
-        # FIXME: This is bug 1715182 where rollback doesn't remove the
-        # allocations against the dest node. Uncomment once fixed.
-        # self.assertEqual(1, len(allocations))
-        self.assertEqual(2, len(allocations))
-
-        self.assertIn(dest_rp_uuid, allocations)
-        self.assertFlavorMatchesAllocation(
-            self.flavor1, allocations[dest_rp_uuid]['resources'])
-
+        self.assertEqual(1, len(allocations))
         self.assertIn(source_rp_uuid, allocations)
         self.assertFlavorMatchesAllocation(
             self.flavor1, allocations[source_rp_uuid]['resources'])
@@ -2464,14 +2453,8 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         self._run_periodics()
 
         allocations = self._get_allocations_by_server_uuid(server['id'])
-        # Note(lajos katona): After solving bug #1714237 there should be
-        # only 1 allocation:
-        # self.assertEqual(1, len(allocations))
-        self.assertEqual(2, len(allocations))
-
-        # Note(lajos katona): After solving bug #1714237 the destination
-        # resource provider should not be among the allocations:
-        # self.assertNotIn(dest_rp_uuid, allocations)
+        self.assertEqual(1, len(allocations))
+        self.assertNotIn(dest_rp_uuid, allocations)
 
         source_usages = self._get_provider_usages(source_rp_uuid)
         self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
@@ -2480,18 +2463,8 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
 
         dest_usages = self._get_provider_usages(dest_rp_uuid)
-        # Note(lajos katona): After solving bug #1714237 on the destination
-        # there should be zero usage:
-        # self.assertFlavorMatchesAllocation(
-        #    {'ram': 0, 'disk': 0, 'vcpus': 0}, dest_usages)
-        self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
-
-        dest_allocation = allocations[dest_rp_uuid]['resources']
-        # Note(lajos katona): After solving bug #1714237 on the destination
-        # there should be zero allocation:
-        # self.assertFlavorMatchesAllocation(
-        #     {'ram': 0, 'disk': 0, 'vcpus': 0}, dest_allocation)
-        self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
+        self.assertFlavorMatchesAllocation(
+           {'ram': 0, 'disk': 0, 'vcpus': 0}, dest_usages)
 
         self._delete_and_check_allocations(
             server, source_rp_uuid, dest_rp_uuid)
