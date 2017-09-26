@@ -11,12 +11,12 @@
 # under the License.
 
 from oslo_utils import uuidutils
-import testtools
 
+from nova import test
 from nova.tests import uuidsentinel
 
 
-class TestUUIDSentinels(testtools.TestCase):
+class TestUUIDSentinels(test.NoDBTestCase):
     def test_different_sentinel(self):
         uuid1 = uuidsentinel.foobar
         uuid2 = uuidsentinel.barfoo
