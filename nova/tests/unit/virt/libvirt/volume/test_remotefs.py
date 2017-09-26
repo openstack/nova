@@ -25,7 +25,9 @@ class RemoteFSTestCase(test.NoDBTestCase):
     """Remote filesystem operations test case."""
 
     @mock.patch.object(utils, 'execute')
-    def _test_mount_share(self, mock_execute, already_mounted=False):
+    @mock.patch('oslo_utils.fileutils.ensure_tree')
+    def _test_mount_share(self, mock_ensure_tree, mock_execute,
+                          already_mounted=False):
         if already_mounted:
             err_msg = 'Device or resource busy'
             mock_execute.side_effect = [
@@ -36,8 +38,7 @@ class RemoteFSTestCase(test.NoDBTestCase):
             mock.sentinel.export_type,
             options=[mock.sentinel.mount_options])
 
-        mock_execute.assert_any_call('mkdir', '-p',
-                                     mock.sentinel.mount_path)
+        mock_ensure_tree.assert_any_call(mock.sentinel.mount_path)
         mock_execute.assert_any_call('mount', '-t', mock.sentinel.export_type,
                                      mock.sentinel.mount_options,
                                      mock.sentinel.export_path,

@@ -7463,7 +7463,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # has already been created
             if shared_storage:
                 dest = None
-                utils.execute('mkdir', '-p', inst_base)
+                fileutils.ensure_tree(inst_base)
 
             on_execute = lambda process: \
                 self.job_tracker.add_job(instance, process.pid)

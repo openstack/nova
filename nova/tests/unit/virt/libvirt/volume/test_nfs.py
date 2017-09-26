@@ -58,7 +58,8 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         self.useFixture(fixtures.MonkeyPatch('os.path.ismount',
                                          lambda *args, **kwargs: mounted[0]))
 
-    def test_libvirt_nfs_driver(self):
+    @mock.patch('oslo_utils.fileutils.ensure_tree')
+    def test_libvirt_nfs_driver(self, mock_ensure_tree):
         libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_host)
 
         export_string = '192.168.1.1:/nfs/share1'
@@ -78,10 +79,10 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
                                    connection_info['data']['name'])
         self.assertEqual(connection_info['data']['device_path'], device_path)
         expected_commands = [
-            ('mkdir', '-p', export_mnt_base),
             ('mount', '-t', 'nfs', export_string, export_mnt_base),
             ('umount', export_mnt_base),
             ('rmdir', export_mnt_base)]
+        mock_ensure_tree.assert_has_calls([mock.call(export_mnt_base)])
         self.assertEqual(expected_commands, self.executes)
 
     def test_libvirt_nfs_driver_get_config(self):
@@ -100,7 +101,8 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         self.assertEqual('raw', tree.find('./driver').get('type'))
         self.assertEqual('native', tree.find('./driver').get('io'))
 
-    def test_libvirt_nfs_driver_with_opts(self):
+    @mock.patch('oslo_utils.fileutils.ensure_tree')
+    def test_libvirt_nfs_driver_with_opts(self, mock_ensure_tree):
         libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_host)
         export_string = '192.168.1.1:/nfs/share1'
         options = '-o intr,nfsvers=3'
@@ -118,10 +120,10 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
                                          mock.sentinel.instance)
 
         expected_commands = [
-            ('mkdir', '-p', export_mnt_base),
             ('mount', '-t', 'nfs', '-o', 'intr,nfsvers=3',
              export_string, export_mnt_base),
             ('umount', export_mnt_base),
             ('rmdir', export_mnt_base)
         ]
+        mock_ensure_tree.assert_has_calls([mock.call(export_mnt_base)])
         self.assertEqual(expected_commands, self.executes)

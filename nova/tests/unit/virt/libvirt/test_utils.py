@@ -351,14 +351,14 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
     def test_create_ploop_image(self, fs_type,
                                 default_eph_format,
                                 expected_fs_type):
-        with test.nested(mock.patch('nova.utils.execute'),
+        with test.nested(mock.patch('oslo_utils.fileutils.ensure_tree'),
                          mock.patch('nova.privsep.libvirt.ploop_init')
-                         ) as (mock_execute, mock_ploop_init):
+                         ) as (mock_ensure_tree, mock_ploop_init):
             self.flags(default_ephemeral_format=default_eph_format)
             libvirt_utils.create_ploop_image('expanded', '/some/path',
                                              '5G', fs_type)
-            mock_execute.assert_has_calls([
-                mock.call('mkdir', '-p', '/some/path')])
+            mock_ensure_tree.assert_has_calls([
+                mock.call('/some/path')])
             mock_ploop_init.assert_has_calls([
                 mock.call('5G', 'expanded', expected_fs_type,
                           '/some/path/root.hds')])

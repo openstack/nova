@@ -19,6 +19,7 @@ import threading
 
 from oslo_concurrency import processutils
 from oslo_log import log
+from oslo_utils import fileutils
 import six
 
 import nova.conf
@@ -295,7 +296,7 @@ class _HostMountState(object):
                 LOG.debug('Mounting %(mountpoint)s generation %(gen)s',
                           {'mountpoint': mountpoint, 'gen': self.generation})
 
-                utils.execute('mkdir', '-p', mountpoint)
+                fileutils.ensure_tree(mountpoint)
 
                 mount_cmd = ['mount', '-t', fstype]
                 if options is not None:
