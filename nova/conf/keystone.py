@@ -14,6 +14,10 @@
 from keystoneauth1 import loading as ks_loading
 from oslo_config import cfg
 
+from nova.conf import utils as confutils
+
+
+DEFAULT_SERVICE_TYPE = 'identity'
 
 keystone_group = cfg.OptGroup(
     'keystone',
@@ -23,12 +27,14 @@ keystone_group = cfg.OptGroup(
 
 def register_opts(conf):
     conf.register_group(keystone_group)
-
-    ks_loading.register_session_conf_options(conf, keystone_group.name)
+    confutils.register_ksa_opts(conf, keystone_group.name,
+                                DEFAULT_SERVICE_TYPE, include_auth=False)
 
 
 def list_opts():
     return {
         keystone_group: (
-            ks_loading.get_session_conf_options())
+            ks_loading.get_session_conf_options() +
+            confutils.get_ksa_adapter_opts(DEFAULT_SERVICE_TYPE)
+        )
     }
