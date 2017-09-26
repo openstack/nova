@@ -736,6 +736,7 @@ class TestInstanceNotificationSample(
         self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
                          'Unexpected number of notifications: %s' %
                          fake_notifier.VERSIONED_NOTIFICATIONS)
+        self._wait_for_notification('compute.exception')
         self._verify_notification('instance-resize-error',
             replacements={
                 'reservation_id': server['reservation_id'],
