@@ -261,6 +261,7 @@ looking parts of our architecture. These are collected below.
    reference/api-microversion-history.rst
    reference/gmr
    reference/i18n
+   reference/live-migration
    reference/notifications
    reference/policy-enforcement
    reference/rpc
