@@ -120,7 +120,6 @@ For example:
   SERVICE_DIR=$DEST/status
 
   LOGFILE=$DATA_DIR/logs/stack.log
-  SCREEN_LOGDIR=$DATA_DIR/logs
   VERBOSE=True
 
   disable_service n-net
