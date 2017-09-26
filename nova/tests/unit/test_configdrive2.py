@@ -65,10 +65,11 @@ class ConfigDriveTestCase(test.NoDBTestCase):
                 fileutils.delete_if_exists(imagefile)
 
     @mock.patch.object(utils, 'mkfs', return_value=None)
-    @mock.patch.object(utils, 'execute', return_value=None)
+    @mock.patch('nova.privsep.fs.mount', return_value=('', ''))
+    @mock.patch('nova.privsep.fs.umount', return_value=None)
     @mock.patch.object(utils, 'trycmd', return_value=(None, None))
-    def test_create_configdrive_vfat(self, mock_trycmd,
-                                     mock_execute, mock_mkfs):
+    def test_create_configdrive_vfat(self, mock_trycmd, mock_umount,
+                                     mock_mount, mock_mkfs):
         CONF.set_override('config_drive_format', 'vfat')
         imagefile = None
         try:
@@ -79,13 +80,8 @@ class ConfigDriveTestCase(test.NoDBTestCase):
 
             mock_mkfs.assert_called_once_with('vfat', mock.ANY,
                                               label='config-2')
-            mock_trycmd.assert_called_once_with('mount', '-o',
-                                                mock.ANY,
-                                                mock.ANY,
-                                                mock.ANY,
-                                                run_as_root=True)
-            mock_execute.assert_called_once_with('umount', mock.ANY,
-                                                 run_as_root=True)
+            mock_mount.assert_called_once()
+            mock_umount.assert_called_once()
             # NOTE(mikal): we can't check for a VFAT output here because the
             # filesystem creation stuff has been mocked out because it
             # requires root permissions

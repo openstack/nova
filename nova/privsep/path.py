@@ -77,6 +77,13 @@ def utime(path):
     os.utime(path, None)
 
 
+@nova.privsep.sys_admin_pctxt.entrypoint
+def rmdir(path):
+    if not os.path.exists(path):
+        raise exception.FileNotFound(file_path=path)
+    os.rmdir(path)
+
+
 class path(object):
     @staticmethod
     @nova.privsep.sys_admin_pctxt.entrypoint

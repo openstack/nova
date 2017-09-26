@@ -14,6 +14,7 @@
 #    under the License.
 
 
+import mock
 import os
 import tempfile
 import time
@@ -271,13 +272,10 @@ class NbdTestCase(test.NoDBTestCase):
         # No error logged, device consumed
         self.assertFalse(n.get_dev())
 
-    def test_do_mount_need_to_specify_fs_type(self):
+    @mock.patch('nova.privsep.fs.mount', return_value=('', 'broken'))
+    def test_do_mount_need_to_specify_fs_type(self, mock_mount):
         # NOTE(mikal): Bug 1094373 saw a regression where we failed to
         # communicate a failed mount properly.
-        def fake_trycmd(*args, **kwargs):
-            return '', 'broken'
-        self.useFixture(fixtures.MonkeyPatch('nova.utils.trycmd', fake_trycmd))
-
         imgfile = tempfile.NamedTemporaryFile()
         self.addCleanup(imgfile.close)
         tempdir = self.useFixture(fixtures.TempDir()).path

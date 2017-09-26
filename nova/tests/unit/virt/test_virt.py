@@ -209,7 +209,8 @@ class TestVirtDisk(test.NoDBTestCase):
         self.assertEqual(disk_api.setup_container(image, container_dir),
                          '/dev/fake')
 
-    def test_lxc_teardown_container(self):
+    @mock.patch('nova.privsep.fs.umount')
+    def test_lxc_teardown_container(self, mock_umount):
 
         def proc_mounts(mount_point):
             mount_points = {
@@ -226,37 +227,40 @@ class TestVirtDisk(test.NoDBTestCase):
         expected_commands = []
 
         disk_api.teardown_container('/mnt/loop/nopart')
-        expected_commands += [
-                              ('umount', '/dev/loop0'),
-                              ('losetup', '--detach', '/dev/loop0'),
-                             ]
+        expected_commands += [('losetup', '--detach', '/dev/loop0')]
+        mock_umount.assert_has_calls([mock.call('/dev/loop0')])
+        mock_umount.reset_mock()
 
         disk_api.teardown_container('/mnt/loop/part')
         expected_commands += [
-                              ('umount', '/dev/mapper/loop0p1'),
                               ('kpartx', '-d', '/dev/loop0'),
                               ('losetup', '--detach', '/dev/loop0'),
                              ]
+        mock_umount.assert_has_calls([mock.call('/dev/mapper/loop0p1')])
+        mock_umount.reset_mock()
 
         disk_api.teardown_container('/mnt/nbd/nopart')
         expected_commands += [
                               ('blockdev', '--flushbufs', '/dev/nbd15'),
-                              ('umount', '/dev/nbd15'),
                               ('qemu-nbd', '-d', '/dev/nbd15'),
                              ]
+        mock_umount.assert_has_calls([mock.call('/dev/nbd15')])
+        mock_umount.reset_mock()
 
         disk_api.teardown_container('/mnt/nbd/part')
         expected_commands += [
                               ('blockdev', '--flushbufs', '/dev/nbd15'),
-                              ('umount', '/dev/mapper/nbd15p1'),
                               ('kpartx', '-d', '/dev/nbd15'),
                               ('qemu-nbd', '-d', '/dev/nbd15'),
                              ]
+        mock_umount.assert_has_calls([mock.call('/dev/mapper/nbd15p1')])
+        mock_umount.reset_mock()
 
         # NOTE(thomasem): Not adding any commands in this case, because we're
         # not expecting an additional umount for LocalBlockImages. This is to
         # assert that no additional commands are run in this case.
         disk_api.teardown_container('/dev/volume-group/uuid_disk')
+        mock_umount.assert_not_called()
 
         self.assertEqual(self.executes, expected_commands)
 

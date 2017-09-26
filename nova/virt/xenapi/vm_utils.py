@@ -53,6 +53,7 @@ from nova.i18n import _
 from nova.network import model as network_model
 from nova.objects import diagnostics
 from nova.objects import fields as obj_fields
+import nova.privsep.fs
 from nova import utils
 from nova.virt import configdrive
 from nova.virt.disk import api as disk
@@ -2440,12 +2441,11 @@ def _copy_partition(session, src_ref, dst_ref, partition, virtual_size):
                               run_as_root=True)
 
 
-def _mount_filesystem(dev_path, dir):
-    """mounts the device specified by dev_path in dir."""
+def _mount_filesystem(dev_path, mount_point):
+    """mounts the device specified by dev_path in mount_point."""
     try:
-        _out, err = utils.execute('mount',
-                                 '-t', 'ext2,ext3,ext4,reiserfs',
-                                 dev_path, dir, run_as_root=True)
+        _out, err = nova.privsep.fs.mount('ext2,ext3,ext4,reiserfs',
+                                          dev_path, mount_point, None)
     except processutils.ProcessExecutionError as e:
         err = six.text_type(e)
     return err
@@ -2478,7 +2478,7 @@ def _mounted_processing(device, key, net, metadata):
                     disk.inject_data_into_fs(vfs,
                                              key, net, metadata, None, None)
             finally:
-                utils.execute('umount', dev_path, run_as_root=True)
+                nova.privsep.fs.umount(dev_path)
         else:
             LOG.info('Failed to mount filesystem (expected for '
                      'non-linux instances): %s', err)

@@ -10,18 +10,6 @@ kpartx: CommandFilter, kpartx, root
 # nova/virt/xenapi/vm_utils.py: tune2fs, -j, partition_path
 tune2fs: CommandFilter, tune2fs, root
 
-# nova/virt/disk/mount/api.py: 'mount', mapped_device
-# nova/virt/disk/api.py: 'mount', '-o', 'bind', src, target
-# nova/virt/xenapi/vm_utils.py: 'mount', '-t', 'ext2,ext3,ext4,reiserfs'..
-# nova/virt/configdrive.py: 'mount', device, mountdir
-mount: CommandFilter, mount, root
-
-# nova/virt/disk/mount/api.py: 'umount', mapped_device
-# nova/virt/disk/api.py: 'umount' target
-# nova/virt/xenapi/vm_utils.py: 'umount', dev_path
-# nova/virt/configdrive.py: 'umount', mountdir
-umount: CommandFilter, umount, root
-
 # nova/virt/disk/mount/nbd.py: 'qemu-nbd', '-c', device, image
 # nova/virt/disk/mount/nbd.py: 'qemu-nbd', '-d', device
 qemu-nbd: CommandFilter, qemu-nbd, root

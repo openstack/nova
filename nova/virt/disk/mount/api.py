@@ -22,6 +22,7 @@ from oslo_utils import importutils
 
 from nova import exception
 from nova.i18n import _
+import nova.privsep.fs
 from nova import utils
 from nova.virt.image import model as imgmodel
 
@@ -248,8 +249,8 @@ class Mount(object):
         """Mount the device into the file system."""
         LOG.debug("Mount %(dev)s on %(dir)s",
                   {'dev': self.mapped_device, 'dir': self.mount_dir})
-        _out, err = utils.trycmd('mount', self.mapped_device, self.mount_dir,
-                                 discard_warnings=True, run_as_root=True)
+        out, err = nova.privsep.fs.mount(None, self.mapped_device,
+                                         self.mount_dir)
         if err:
             self.error = _('Failed to mount filesystem: %s') % err
             LOG.debug(self.error)
@@ -264,7 +265,7 @@ class Mount(object):
             return
         self.flush_dev()
         LOG.debug("Umount %s", self.mapped_device)
-        utils.execute('umount', self.mapped_device, run_as_root=True)
+        nova.privsep.fs.umount(self.mapped_device)
         self.mounted = False
 
     def flush_dev(self):

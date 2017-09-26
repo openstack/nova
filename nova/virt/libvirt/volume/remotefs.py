@@ -26,6 +26,7 @@ import six
 
 import nova.conf
 from nova.i18n import _
+import nova.privsep.fs
 from nova import utils
 
 LOG = logging.getLogger(__name__)
@@ -44,13 +45,8 @@ def mount_share(mount_path, export_path,
     """
     fileutils.ensure_tree(mount_path)
 
-    mount_cmd = ['mount', '-t', export_type]
-    if options is not None:
-        mount_cmd.extend(options)
-    mount_cmd.extend([export_path, mount_path])
-
     try:
-        utils.execute(*mount_cmd, run_as_root=True)
+        nova.privsep.fs.mount(export_type, export_path, mount_path, options)
     except processutils.ProcessExecutionError as exc:
         if 'Device or resource busy' in six.text_type(exc):
             LOG.warning("%s is already mounted", export_path)
@@ -65,8 +61,7 @@ def unmount_share(mount_path, export_path):
     :param export_path: path of the remote export to be unmounted
     """
     try:
-        utils.execute('umount', mount_path, run_as_root=True,
-                      attempts=3, delay_on_retry=True)
+        nova.privsep.fs.umount(mount_path)
     except processutils.ProcessExecutionError as exc:
         if 'target is busy' in six.text_type(exc):
             LOG.debug("The share %s is still in use.", export_path)

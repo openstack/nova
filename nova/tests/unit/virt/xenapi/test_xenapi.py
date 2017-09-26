@@ -953,8 +953,10 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
     @mock.patch.object(nova.privsep.path, 'makedirs')
     @mock.patch.object(nova.privsep.path, 'chown')
     @mock.patch.object(nova.privsep.path, 'chmod')
-    def test_spawn_netinject_file(self, chmod, chown, mkdir, write_file,
-                                  read_link):
+    @mock.patch.object(nova.privsep.fs, 'mount', return_value=(None, None))
+    @mock.patch.object(nova.privsep.fs, 'umount')
+    def test_spawn_netinject_file(self, umount, mount, chmod, chown, mkdir,
+                                  write_file, read_link):
         self.flags(flat_injected=True)
         db_fakes.stub_out_db_instance_api(self, injected=True)
 
