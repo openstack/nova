@@ -204,6 +204,7 @@ class HypervisorsController(wsgi.Controller):
         return self._index(req, limit=limit, marker=marker, links=True)
 
     @wsgi.Controller.api_version("2.33", "2.52")  # noqa
+    @validation.query_schema(hyper_schema.list_query_schema_v233)
     @extensions.expected_errors((400))
     def index(self, req):
         limit, marker = common.get_limit_and_marker(req)
@@ -233,6 +234,7 @@ class HypervisorsController(wsgi.Controller):
         return self._detail(req, limit=limit, marker=marker, links=True)
 
     @wsgi.Controller.api_version("2.33", "2.52")  # noqa
+    @validation.query_schema(hyper_schema.list_query_schema_v233)
     @extensions.expected_errors((400))
     def detail(self, req):
         limit, marker = common.get_limit_and_marker(req)
