@@ -23,7 +23,6 @@ from oslo_utils import importutils
 from nova import exception
 from nova.i18n import _
 import nova.privsep.fs
-from nova import utils
 from nova.virt.image import model as imgmodel
 
 LOG = logging.getLogger(__name__)
@@ -200,8 +199,7 @@ class Mount(object):
             # Note kpartx can output warnings to stderr and succeed
             # Also it can output failures to stderr and "succeed"
             # So we just go on the existence of the mapped device
-            _out, err = utils.trycmd('kpartx', '-a', self.device,
-                                     run_as_root=True, discard_warnings=True)
+            _out, err = nova.privsep.fs.create_device_maps(self.device)
 
             @loopingcall.RetryDecorator(
                     max_retry_count=MAX_FILE_CHECKS - 1,
@@ -241,7 +239,7 @@ class Mount(object):
             return
         LOG.debug("Unmap dev %s", self.device)
         if self.partition and not self.automapped:
-            utils.execute('kpartx', '-d', self.device, run_as_root=True)
+            nova.privsep.fs.remove_device_maps(self.device)
         self.mapped = False
         self.automapped = False
 
