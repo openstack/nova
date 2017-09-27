@@ -621,10 +621,9 @@ def get_reboot_type(task_state, current_power_state):
     """Checks if the current instance state requires a HARD reboot."""
     if current_power_state != power_state.RUNNING:
         return 'HARD'
-    soft_types = [task_states.REBOOT_STARTED, task_states.REBOOT_PENDING,
-                  task_states.REBOOTING]
-    reboot_type = 'SOFT' if task_state in soft_types else 'HARD'
-    return reboot_type
+    if task_state in task_states.soft_reboot_states:
+        return 'SOFT'
+    return 'HARD'
 
 
 def get_machine_ips():

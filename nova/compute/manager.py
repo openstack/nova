@@ -857,10 +857,8 @@ class ComputeManager(manager.Manager):
             # again, then we've just become a hard reboot. That means the
             # task state for the instance needs to change so that we're in one
             # of the expected task states for a hard reboot.
-            soft_types = [task_states.REBOOT_STARTED,
-                          task_states.REBOOT_PENDING,
-                          task_states.REBOOTING]
-            if instance.task_state in soft_types and reboot_type == 'HARD':
+            if (instance.task_state in task_states.soft_reboot_states and
+                reboot_type == 'HARD'):
                 instance.task_state = task_states.REBOOT_PENDING_HARD
                 instance.save()
 
@@ -3014,14 +3012,11 @@ class ComputeManager(manager.Manager):
         # acknowledge the request made it to the manager
         if reboot_type == "SOFT":
             instance.task_state = task_states.REBOOT_PENDING
-            expected_states = (task_states.REBOOTING,
-                               task_states.REBOOT_PENDING,
-                               task_states.REBOOT_STARTED)
+            expected_states = task_states.soft_reboot_states
         else:
             instance.task_state = task_states.REBOOT_PENDING_HARD
-            expected_states = (task_states.REBOOTING_HARD,
-                               task_states.REBOOT_PENDING_HARD,
-                               task_states.REBOOT_STARTED_HARD)
+            expected_states = task_states.hard_reboot_states
+
         context = context.elevated()
         LOG.info("Rebooting instance", instance=instance)
 
