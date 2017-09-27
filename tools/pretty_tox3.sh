@@ -9,7 +9,7 @@ else
 fi
 
 if [ -z "$TESTRARGS" ]; then
-    ostestr --blacklist_file $blacklist_file
+    stestr run --blacklist-file $blacklist_file
 else
-    ostestr -r "$TESTRARGS"
+    stestr run "$TESTRARGS"
 fi
