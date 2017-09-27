@@ -408,7 +408,7 @@ class HostTestCase(test.NoDBTestCase):
         instance = objects.Instance(id="124", uuid=uuid)
         fake_lookup.return_value = dom
 
-        self.assertEqual(dom, self.host.get_domain(instance))
+        self.assertEqual(dom, self.host._get_domain(instance))
         fake_lookup.assert_called_once_with(uuid)
 
     @mock.patch.object(fakelibvirt.virConnect, "lookupByUUIDString")
@@ -422,7 +422,7 @@ class HostTestCase(test.NoDBTestCase):
             error_domain=fakelibvirt.VIR_FROM_QEMU)
 
         with testtools.ExpectedException(exception.InstanceNotFound):
-            self.host.get_domain(instance)
+            self.host._get_domain(instance)
 
         fake_lookup.assert_called_once_with(uuids.instance)
 

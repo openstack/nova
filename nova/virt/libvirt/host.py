@@ -522,10 +522,9 @@ class Host(object):
         :raises exception.InstanceNotFound: The domain was not found
         :raises exception.InternalError: A libvirt error occurred
         """
-        return libvirt_guest.Guest(self.get_domain(instance))
+        return libvirt_guest.Guest(self._get_domain(instance))
 
-    # TODO(sahid): needs to be private
-    def get_domain(self, instance):
+    def _get_domain(self, instance):
         """Retrieve libvirt domain object for an instance.
 
         All libvirt error handling should be handled in this method and
