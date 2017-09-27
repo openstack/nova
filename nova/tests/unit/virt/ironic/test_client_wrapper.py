@@ -115,15 +115,6 @@ class IronicClientWrapperTestCase(test.NoDBTestCase):
         self.assertEqual(id(first_client), id(second_client))
 
     @mock.patch.object(ironic_client, 'get_client')
-    def test__invalidate_cached_client(self, mock_get_client):
-        mock_get_client.side_effect = get_new_fake_client
-        ironicclient = client_wrapper.IronicClientWrapper()
-        first_client = ironicclient._get_client()
-        ironicclient._invalidate_cached_client()
-        second_client = ironicclient._get_client()
-        self.assertNotEqual(id(first_client), id(second_client))
-
-    @mock.patch.object(ironic_client, 'get_client')
     def test_call_uses_cached_client(self, mock_get_client):
         mock_get_client.side_effect = get_new_fake_client
         ironicclient = client_wrapper.IronicClientWrapper()
