@@ -47,6 +47,7 @@ class AgentController(wsgi.Controller):
     http://wiki.openstack.org/GuestAgent
     http://wiki.openstack.org/GuestAgentXenStoreCommunication
     """
+    @validation.query_schema(schema.index_query)
     @extensions.expected_errors(())
     def index(self, req):
         """Return a list of all agent builds. Filter by hypervisor."""
