@@ -19,7 +19,6 @@ import time
 
 from cinderclient import exceptions as cinder_exception
 from cursive import exception as cursive_exception
-import ddt
 from eventlet import event as eventlet_event
 import mock
 import netaddr
@@ -5385,7 +5384,6 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             self.assertEqual(expected_call, create_error_call)
 
 
-@ddt.ddt
 class ComputeManagerErrorsOutMigrationTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ComputeManagerErrorsOutMigrationTestCase, self).setUp()
@@ -5435,21 +5433,6 @@ class ComputeManagerErrorsOutMigrationTestCase(test.NoDBTestCase):
         self.assertEqual('error', self.migration.status)
         mock_save.assert_called_once_with()
         mock_obj_as_admin.assert_called_once_with()
-
-    @ddt.data('completed', 'finished')
-    @mock.patch.object(objects.Migration, 'save')
-    def test_status_exclusion(self, status, mock_save):
-        # Tests that errors_out_migration doesn't error out migration if the
-        # status is anything other than 'migrating' or 'post-migrating'
-        self.migration.status = status
-
-        def test_function():
-            with manager.errors_out_migration_ctxt(self.migration):
-                raise test.TestingException()
-
-        self.assertRaises(test.TestingException, test_function)
-        self.assertEqual(status, self.migration.status)
-        mock_save.assert_not_called()
 
 
 class ComputeManagerMigrationTestCase(test.NoDBTestCase):
