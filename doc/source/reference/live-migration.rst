@@ -41,6 +41,7 @@
 
         === driver.live_migration (failure) ===
 
+                      Source ->  Source [leftnote = "_rollback_live_migration"];
                       Source ->  Destination [label = "call", note = "remove_volume_connections"];
                       Source <-- Destination;
                       Source ->> Destination [label = "cast", note = "rollback_live_migration_at_destination"];
