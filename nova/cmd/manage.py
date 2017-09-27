@@ -69,6 +69,7 @@ from oslo_utils import importutils
 from oslo_utils import uuidutils
 import prettytable
 
+import six
 import six.moves.urllib.parse as urlparse
 from sqlalchemy.engine import url as sqla_url
 
@@ -642,9 +643,15 @@ class DbCommands(object):
             except exception.CellMappingNotFound:
                 print(_('WARNING: cell0 mapping not found - not'
                         ' syncing cell0.'))
-            except Exception:
-                print(_('ERROR: could not access cell mapping database - has'
-                        ' api db been created?'))
+            except Exception as e:
+                print(_("""ERROR: Could not access cell0.
+Has the nova_api database been created?
+Has the nova_cell0 database been created?
+Has "nova-manage api_db sync" been run?
+Has "nova-manage cell_v2 map_cell0" been run?
+Is [api_database]/connection set in nova.conf?
+Is the cell0 database connection URL correct?
+Error: %s""") % six.text_type(e))
         return migration.db_sync(version)
 
     def version(self):
