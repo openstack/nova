@@ -1702,7 +1702,26 @@ class ServerControllerTestV247(ControllerTest):
 
         req = fakes.HTTPRequest.blank('/fake/servers/detail',
                                       version=self.wsgi_api_version)
-        res_dict = self.controller.detail(req)
+
+        hits = []
+        real_auth = policy.authorize
+
+        # Wrapper for authorize to count the number of times
+        # we authorize for extra-specs
+        def fake_auth(context, action, target):
+            if 'extra-specs' in action:
+                hits.append(1)
+            return real_auth(context, action, target)
+
+        with mock.patch('nova.policy.authorize') as mock_auth:
+            mock_auth.side_effect = fake_auth
+            res_dict = self.controller.detail(req)
+
+        # We should have found more than one servers, but only hit the
+        # policy check once
+        self.assertGreater(len(res_dict['servers']), 1)
+        self.assertEqual(1, len(hits))
+
         for i, s in enumerate(res_dict['servers']):
             self.assertEqual(s['flavor'], expected_flavor)
 
@@ -4093,7 +4112,8 @@ class ServersViewBuilderTest(test.TestCase):
         expected = {"id": "1",
                     "links": [{"rel": "bookmark",
                                "href": flavor_bookmark}]}
-        result = self.view_builder._get_flavor(self.request, self.instance)
+        result = self.view_builder._get_flavor(self.request, self.instance,
+                                               False)
         self.assertEqual(result, expected)
 
     def test_build_server(self):
