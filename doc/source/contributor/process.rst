@@ -69,7 +69,10 @@ used by many OpenStack projects, including the following steps.
 - String Freeze
 
   -  give translators time to translate all our strings
-  -  Note: debug logs are no longer translated
+
+  .. note::
+
+    debug logs are no longer translated
 
 - Dependency Freeze
 
@@ -104,12 +107,15 @@ https://blueprints.launchpad.net/nova/queens and specs at
 https://specs.openstack.org/openstack/nova-specs/specs/queens/index.html
 
 Starting with Liberty, we are keeping a backlog open for submission at all
-times. Note: the focus is on accepting and agreeing problem statements
-as being in scope, rather than queueing up work items for the next
-release. We are still working on a new lightweight process to get out of
-the backlog and approved for a particular release. For more details on
-backlog specs, please see:
-http://specs.openstack.org/openstack/nova-specs/specs/backlog/index.html
+times.
+
+.. note::
+
+  The focus is on accepting and agreeing problem statements as being in scope,
+  rather than queueing up work items for the next release. We are still
+  working on a new lightweight process to get out of the backlog and approved
+  for a particular release. For more details on backlog specs, please see:
+  http://specs.openstack.org/openstack/nova-specs/specs/backlog/index.html
 
 There can be exceptions, usually it's an urgent feature request that
 comes up after the initial deadline. These will generally be discussed

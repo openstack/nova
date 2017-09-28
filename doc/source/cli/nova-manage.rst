@@ -217,9 +217,11 @@ Nova Cells v2
     the properties cannot be set, this will return 2. Otherwise, the exit
     code will be 0.
 
-    NOTE: Updating the transport_url or database_connection fields on
-    a running system will NOT result in all nodes immediately using the
-    new values. Use caution when changing these values.
+    .. note::
+
+      Updating the transport_url or database_connection fields on
+      a running system will NOT result in all nodes immediately using the
+      new values. Use caution when changing these values.
 
 Nova Logs
 ~~~~~~~~~

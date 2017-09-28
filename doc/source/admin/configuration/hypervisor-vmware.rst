@@ -1021,7 +1021,9 @@ To customize the VMware driver, use the configuration option settings below.
 
        This is not the full path - just a folder prefix. This should only be used when a datastore cache is shared between compute nodes.
 
-       Note: This should only be used when the compute nodes are running on same host or they have a shared file system.
+       .. note::
+
+         This should only be used when the compute nodes are running on same host or they have a shared file system.
 
        Possible values:
 
@@ -1035,7 +1037,9 @@ To customize the VMware driver, use the configuration option settings below.
 
        The datastore_regex setting specifies the datastores to use with Compute. For example, datastore_regex="nas.*" selects all the data stores that have a name starting with "nas".
 
-       NOTE: If no regex is given, it just picks the datastore with the most freespace.
+       .. note::
+
+         If no regex is given, it just picks the datastore with the most freespace.
 
        Possible values:
 
