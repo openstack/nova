@@ -69,15 +69,68 @@ Steps
 
 **1. Deploy the API service**
 
-At this time the placement API code is still in Nova alongside the compute
-REST API code (nova-api). So once you have upgraded nova-api to Newton you
-already have the placement API code, you just need to install the service.
-Nova provides a ``nova-placement-api`` WSGI script for running the service
-with Apache.
+At this time the placement API code is still in Nova alongside the compute REST
+API code (nova-api). So once you have upgraded nova-api to Newton you already
+have the placement API code, you just need to install the service.  Nova
+provides a ``nova-placement-api`` WSGI script for running the service with
+Apache, nginx or other WSGI-capable web servers. Depending on what packaging
+solution is used to deploy OpenStack, the WSGI script may be in ``/usr/bin``
+or ``/usr/local/bin``.
 
 .. note:: The placement API service is currently developed within Nova but
         it is designed to be as separate as possible from the existing code so
         that it can eventually be split into a separate project.
+
+``nova-placement-api``, as a standard WSGI script, provides a module level
+``application`` attribute that most WSGI servers expect to find. This means it
+is possible to run it with lots of different servers, providing flexibility in
+the face of different deployment scenarios. Common scenarios include:
+
+* apache2_ with mod_wsgi_
+* apache2 with mod_proxy_uwsgi_
+* nginx_ with uwsgi_
+* nginx with gunicorn_
+
+In all of these scenarios the host, port and mounting path (or prefix) of the
+application is controlled in the web server's configuration, not in the
+configuration (``nova.conf``) of the placement application.
+
+When placement was `first added to DevStack`_ it used the ``mod_wsgi`` style.
+Later it `was updated`_ to use mod_proxy_uwsgi_. Looking at those changes can
+be useful for understanding the relevant options.
+
+DevStack is configured to host placement at ``/placement`` on either the
+default port for http or for https (``80`` or ``443``) depending on whether TLS
+is being used. Using a default port is desirable.
+
+By default, the placement application will get its configuration for settings
+such as the database connection URL from ``/etc/nova/nova.conf``. The directory
+the configuration file will be found in can be changed by setting
+``OS_PLACEMENT_CONFIG_DIR`` in the environment of the process that starts the
+application.
+
+.. note:: When using uwsgi with a front end (e.g., apache2 or nginx) something
+    needs to ensure that the uwsgi process is running. In DevStack this is done
+    with systemd_. This is one of many different ways to manage uwsgi.
+
+This document refrains from declaring a set of installation instructions for
+the placement service. This is because a major point of having a WSGI
+application is to make the deployment as flexible as possible. Because the
+placement API service is itself stateless (all state is in the database), it is
+possible to deploy as many servers as desired behind a load balancing solution
+for robust and simple scaling. If you familiarize yourself with installing
+generic WSGI applications (using the links in the common scenarios list,
+above), those techniques will be applicable here.
+
+.. _apache2: http://httpd.apache.org/
+.. _mod_wsgi: https://modwsgi.readthedocs.io/
+.. _mod_proxy_uwsgi: http://uwsgi-docs.readthedocs.io/en/latest/Apache.html
+.. _nginx: http://nginx.org/
+.. _uwsgi: http://uwsgi-docs.readthedocs.io/en/latest/Nginx.html
+.. _gunicorn: http://gunicorn.org/
+.. _first added to DevStack: https://review.openstack.org/#/c/342362/
+.. _was updated: https://review.openstack.org/#/c/456717/
+.. _systemd: https://review.openstack.org/#/c/448323/
 
 **2. Synchronize the database**
 
@@ -123,18 +176,6 @@ placement-api service.
         upgrading to Ocata. nova.conf on the compute nodes will need to be
         updated in the ``[placement]`` group for credentials to make requests
         from nova-compute to the placement-api service.
-
-References
-~~~~~~~~~~
-
-The following changes were made to devstack (from oldest to newest) to enable
-the placement-api service and can serve as a guide for your own deployment.
-
-https://review.openstack.org/#/c/342362/
-
-https://review.openstack.org/#/c/363335/
-
-https://review.openstack.org/#/c/363724/
 
 
 Upgrade Notes
