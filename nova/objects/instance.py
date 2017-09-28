@@ -776,11 +776,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         # NOTE(alaski): We need to pull system_metadata for the
         # notification.send_update() below.  If we don't there's a KeyError
         # when it tries to extract the flavor.
-        # NOTE(danms): If we have sysmeta, we need flavor since the caller
-        # might be expecting flavor information as a result
         if 'system_metadata' not in expected_attrs:
             expected_attrs.append('system_metadata')
-            expected_attrs.append('flavor')
         old_ref, inst_ref = db.instance_update_and_get_original(
                 context, self.uuid, updates,
                 columns_to_join=_expected_cols(expected_attrs))
@@ -888,7 +885,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     def _load_flavor(self):
         instance = self.__class__.get_by_uuid(
             self._context, uuid=self.uuid,
-            expected_attrs=['flavor', 'system_metadata'])
+            expected_attrs=['flavor'])
 
         # NOTE(danms): Orphan the instance to make sure we don't lazy-load
         # anything below
@@ -896,12 +893,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         self.flavor = instance.flavor
         self.old_flavor = instance.old_flavor
         self.new_flavor = instance.new_flavor
-
-        # NOTE(danms): The query above may have migrated the flavor from
-        # system_metadata. Since we have it anyway, go ahead and refresh
-        # our system_metadata from it so that a save will be accurate.
-        instance.system_metadata.update(self.get('system_metadata', {}))
-        self.system_metadata = instance.system_metadata
 
     def _load_vcpu_model(self, db_vcpu_model=_NO_DATA_SENTINEL):
         if db_vcpu_model is None:
@@ -1100,7 +1091,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             return getattr(self, attr)
         except exception.FlavorNotFound:
             # NOTE(danms): This only happens in the case where we don't
-            # have flavor information in sysmeta or extra, and doing
+            # have flavor information in instance_extra, and doing
             # this triggers a lookup based on our instance_type_id for
             # (very) legacy instances. That legacy code expects a None here,
             # so emulate it for this helper, even though the actual attribute
