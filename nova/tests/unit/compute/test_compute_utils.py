@@ -856,6 +856,23 @@ class ComputeUtilsGetValFromSysMetadata(test.NoDBTestCase):
         self.assertEqual(0, result)
 
 
+class ComputeUtilsRefreshInfoCacheForInstance(test.NoDBTestCase):
+    def test_instance_info_cache_not_found(self):
+        inst = fake_instance.fake_instance_obj('fake-context')
+        net_info = model.NetworkInfo([])
+        info_cache = objects.InstanceInfoCache(network_info=net_info)
+        inst.info_cache = info_cache
+        with mock.patch.object(inst.info_cache, 'refresh',
+                        side_effect=exception.InstanceInfoCacheNotFound(
+                            instance_uuid=inst.uuid)):
+            # we expect that the raised exception is ok
+            with mock.patch.object(compute_utils.LOG, 'debug') as log_mock:
+                compute_utils.refresh_info_cache_for_instance(None, inst)
+                log_mock.assert_called_once_with(
+                    'Can not refresh info_cache because instance '
+                    'was not found', instance=inst)
+
+
 class ComputeUtilsGetRebootTypes(test.NoDBTestCase):
     def setUp(self):
         super(ComputeUtilsGetRebootTypes, self).setUp()
