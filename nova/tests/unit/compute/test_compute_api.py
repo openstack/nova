@@ -5397,6 +5397,62 @@ class Cellsv1DeprecatedTestMixIn(object):
         filters = mock_get.call_args_list[0][0][1]
         self.assertEqual({'project_id': 'foo'}, filters)
 
+    @mock.patch.object(context, 'target_cell')
+    @mock.patch.object(objects.BuildRequestList, 'get_by_filters',
+                       return_value=objects.BuildRequestList(objects=[]))
+    @mock.patch.object(objects.CellMapping, 'get_by_uuid')
+    @mock.patch.object(objects.CellMappingList, 'get_all')
+    def test_get_all_cell0_marker_not_found(self, mock_cm_get_all,
+                                            mock_cell_mapping_get,
+                                            mock_buildreq_get,
+                                            mock_target_cell):
+        """Tests that we handle a MarkerNotFound raised from the cell0 database
+        and continue looking for instances from the normal cell database.
+        """
+
+        cell_instances = self._list_of_instances(2)
+
+        cell_mapping = objects.CellMapping(uuid=objects.CellMapping.CELL0_UUID,
+                                           name='0')
+        mock_cell_mapping_get.return_value = cell_mapping
+        mock_cm_get_all.return_value = [
+            cell_mapping,
+            objects.CellMapping(uuid=uuids.cell1, name='1'),
+        ]
+        marker = uuids.marker
+        cctxt = mock_target_cell.return_value.__enter__.return_value
+
+        with mock.patch.object(self.compute_api,
+                               '_get_instances_by_filters') as mock_inst_get:
+            # simulate calling _get_instances_by_filters twice, once for cell0
+            # which raises a MarkerNotFound and once from the cell DB which
+            # returns two instances
+            mock_inst_get.side_effect = [
+                exception.MarkerNotFound(marker=marker),
+                objects.InstanceList(self.context, objects=cell_instances)]
+
+            instances = self.compute_api.get_all(
+                self.context, search_opts={'foo': 'bar'},
+                limit=10, marker=marker, sort_keys=['baz'],
+                sort_dirs=['desc'])
+
+            if self.cell_type is None:
+                for cm in mock_cm_get_all.return_value:
+                    mock_target_cell.assert_any_call(self.context, cm)
+            inst_get_calls = [mock.call(cctxt, {'foo': 'bar'},
+                                        limit=10, marker=marker,
+                                        expected_attrs=None, sort_keys=['baz'],
+                                        sort_dirs=['desc']),
+                              mock.call(mock.ANY, {'foo': 'bar'},
+                                        limit=10, marker=marker,
+                                        expected_attrs=None, sort_keys=['baz'],
+                                        sort_dirs=['desc'])
+                              ]
+            self.assertEqual(2, mock_inst_get.call_count)
+            mock_inst_get.assert_has_calls(inst_get_calls)
+            for i, instance in enumerate(cell_instances):
+                self.assertEqual(instance, instances[i])
+
 
 class ComputeAPIAPICellUnitTestCase(Cellsv1DeprecatedTestMixIn,
                                     _ComputeAPIUnitTestMixIn,
