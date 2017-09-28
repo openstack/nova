@@ -9031,35 +9031,6 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(len(instances), 1)
         self.assertEqual(instances[0]['uuid'], instance1['uuid'])
 
-    def test_all_instance_metadata(self):
-        self._create_fake_instance_obj({'metadata': {'key1': 'value1'},
-                                                'user_id': 'user1',
-                                                'project_id': 'project1'})
-
-        self._create_fake_instance_obj({'metadata': {'key2': 'value2'},
-                                                'user_id': 'user2',
-                                                'project_id': 'project2'})
-
-        _context = self.context
-        _context.user_id = 'user1'
-        _context.project_id = 'project1'
-        metadata = self.compute_api.get_all_instance_metadata(_context,
-                                                              search_filts=[])
-        self.assertEqual(1, len(metadata))
-        self.assertEqual(metadata[0]['key'], 'key1')
-
-        _context.user_id = 'user2'
-        _context.project_id = 'project2'
-        metadata = self.compute_api.get_all_instance_metadata(_context,
-                                                              search_filts=[])
-        self.assertEqual(1, len(metadata))
-        self.assertEqual(metadata[0]['key'], 'key2')
-
-        _context = context.get_admin_context()
-        metadata = self.compute_api.get_all_instance_metadata(_context,
-                                                              search_filts=[])
-        self.assertEqual(2, len(metadata))
-
     def test_instance_metadata(self):
         meta_changes = [None]
         self.flags(notify_on_state_change='vm_state', group='notifications')

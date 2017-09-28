@@ -3745,22 +3745,6 @@ class API(base.Base):
         """Get all metadata associated with an instance."""
         return self.db.instance_metadata_get(context, instance.uuid)
 
-    def get_all_instance_metadata(self, context, search_filts):
-        return self._get_all_instance_metadata(
-            context, search_filts, metadata_type='metadata')
-
-    def get_all_system_metadata(self, context, search_filts):
-        return self._get_all_instance_metadata(
-            context, search_filts, metadata_type='system_metadata')
-
-    def _get_all_instance_metadata(self, context, search_filts, metadata_type):
-        """Get all metadata."""
-        instances = self._get_instances_by_filters(context, filters={},
-                                                   sort_keys=['created_at'],
-                                                   sort_dirs=['desc'])
-        return utils.filter_and_format_resource_metadata('instance', instances,
-                search_filts, metadata_type)
-
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
                                     vm_states.SUSPENDED, vm_states.STOPPED],
