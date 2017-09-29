@@ -161,9 +161,12 @@ class FakeDriver(driver.ComputeDriver):
         self._mounts = {}
         self._interfaces = {}
         self.active_migrations = {}
+        self._nodes = self._init_nodes()
+
+    def _init_nodes(self):
         if not _FAKE_NODES:
             set_nodes([CONF.host])
-        self._nodes = copy.copy(_FAKE_NODES)
+        return copy.copy(_FAKE_NODES)
 
     def init_host(self, host):
         return
