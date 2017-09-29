@@ -436,6 +436,7 @@ def setup_rt(hostname, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES,
     vd.get_inventory.side_effect = NotImplementedError
     vd.get_host_ip_addr.return_value = _NODENAME
     vd.estimate_instance_overhead.side_effect = estimate_overhead
+    vd.rebalances_nodes = False
 
     with test.nested(
             mock.patch('nova.scheduler.client.SchedulerClient',
@@ -1012,6 +1013,39 @@ class TestInitComputeNode(BaseTestCase):
         self.assertFalse(create_mock.called)
         self.assertTrue(update_mock.called)
 
+    @mock.patch('nova.objects.ComputeNodeList.get_by_hypervisor')
+    @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
+                return_value=objects.PciDeviceList())
+    @mock.patch('nova.objects.ComputeNode.create')
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_update')
+    def test_compute_node_rebalanced(self, update_mock, get_mock, create_mock,
+                                     pci_mock, get_by_hypervisor_mock):
+        self._setup_rt()
+        self.driver_mock.rebalances_nodes = True
+        cn = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
+        cn.host = "old-host"
+
+        def fake_get_all(_ctx, nodename):
+            return [cn]
+
+        get_mock.side_effect = exc.NotFound
+        get_by_hypervisor_mock.side_effect = fake_get_all
+        resources = copy.deepcopy(_VIRT_DRIVER_AVAIL_RESOURCES)
+
+        self.rt._init_compute_node(mock.sentinel.ctx, resources)
+
+        get_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
+                                         _NODENAME)
+        get_by_hypervisor_mock.assert_called_once_with(mock.sentinel.ctx,
+                                                     _NODENAME)
+        create_mock.assert_not_called()
+        update_mock.assert_called_once_with(mock.sentinel.ctx, cn)
+
+        self.assertEqual(_HOSTNAME, self.rt.compute_nodes[_NODENAME].host)
+
+    @mock.patch('nova.objects.ComputeNodeList.get_by_hypervisor')
     @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
                 return_value=objects.PciDeviceList(objects=[]))
     @mock.patch('nova.objects.ComputeNode.create')
@@ -1019,10 +1053,55 @@ class TestInitComputeNode(BaseTestCase):
     @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                 '_update')
     def test_compute_node_created_on_empty(self, update_mock, get_mock,
-                                           create_mock, pci_tracker_mock):
+                                           create_mock, pci_tracker_mock,
+                                           get_by_hypervisor_mock):
+        get_by_hypervisor_mock.return_value = []
+        self._test_compute_node_created(update_mock, get_mock, create_mock,
+                                        pci_tracker_mock,
+                                        get_by_hypervisor_mock)
+
+    @mock.patch('nova.objects.ComputeNodeList.get_by_hypervisor')
+    @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
+                return_value=objects.PciDeviceList(objects=[]))
+    @mock.patch('nova.objects.ComputeNode.create')
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_update')
+    def test_compute_node_created_on_empty_rebalance(self, update_mock,
+                                                     get_mock,
+                                                     create_mock,
+                                                     pci_tracker_mock,
+                                                     get_by_hypervisor_mock):
+        get_by_hypervisor_mock.return_value = []
+        self._test_compute_node_created(update_mock, get_mock, create_mock,
+                                        pci_tracker_mock,
+                                        get_by_hypervisor_mock,
+                                        rebalances_nodes=True)
+
+    @mock.patch('nova.objects.ComputeNodeList.get_by_hypervisor')
+    @mock.patch('nova.objects.PciDeviceList.get_by_compute_node',
+                return_value=objects.PciDeviceList(objects=[]))
+    @mock.patch('nova.objects.ComputeNode.create')
+    @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                '_update')
+    def test_compute_node_created_too_many(self, update_mock, get_mock,
+                                           create_mock, pci_tracker_mock,
+                                           get_by_hypervisor_mock):
+        get_by_hypervisor_mock.return_value = ["fake_node_1", "fake_node_2"]
+        self._test_compute_node_created(update_mock, get_mock, create_mock,
+                                        pci_tracker_mock,
+                                        get_by_hypervisor_mock,
+                                        rebalances_nodes=True)
+
+    def _test_compute_node_created(self, update_mock, get_mock,
+                                   create_mock, pci_tracker_mock,
+                                   get_by_hypervisor_mock,
+                                   rebalances_nodes=False):
         self.flags(cpu_allocation_ratio=1.0, ram_allocation_ratio=1.0,
                    disk_allocation_ratio=1.0)
         self._setup_rt()
+        self.driver_mock.rebalances_nodes = rebalances_nodes
 
         get_mock.side_effect = exc.NotFound
 
@@ -1088,6 +1167,11 @@ class TestInitComputeNode(BaseTestCase):
         cn = self.rt.compute_nodes[_NODENAME]
         get_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
                                          _NODENAME)
+        if rebalances_nodes:
+            get_by_hypervisor_mock.assert_called_once_with(
+                mock.sentinel.ctx, _NODENAME)
+        else:
+            get_by_hypervisor_mock.assert_not_called()
         create_mock.assert_called_once_with()
         self.assertTrue(obj_base.obj_equal_prims(expected_compute, cn))
         pci_tracker_mock.assert_called_once_with(mock.sentinel.ctx,
