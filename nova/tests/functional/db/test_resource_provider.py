@@ -801,13 +801,12 @@ class TestResourceProviderAggregates(test.NoDBTestCase):
             name=uuidsentinel.rp_name
         )
         rp.create()
-        rp_id = rp.id
         start_aggregate_uuids = [uuidsentinel.agg_a, uuidsentinel.agg_b]
         rp.set_aggregates(start_aggregate_uuids)
-        aggs = rp_obj.ResourceProvider._get_aggregates(self.ctx, rp_id)
+        aggs = rp.get_aggregates()
         self.assertEqual(2, len(aggs))
         rp.destroy()
-        aggs = rp_obj.ResourceProvider._get_aggregates(self.ctx, rp_id)
+        aggs = rp.get_aggregates()
         self.assertEqual(0, len(aggs))
 
 
