@@ -91,7 +91,7 @@ class ManagerMeta(profiler.get_traced_meta(), type(PeriodicTasks)):
 class Manager(base.Base, PeriodicTasks):
     __trace_args__ = {"name": "rpc"}
 
-    def __init__(self, host=None, db_driver=None, service_name='undefined'):
+    def __init__(self, host=None, service_name='undefined'):
         if not host:
             host = CONF.host
         self.host = host
@@ -99,7 +99,7 @@ class Manager(base.Base, PeriodicTasks):
         self.service_name = service_name
         self.notifier = rpc.get_notifier(self.service_name, self.host)
         self.additional_endpoints = []
-        super(Manager, self).__init__(db_driver)
+        super(Manager, self).__init__()
 
     def periodic_tasks(self, context, raise_on_error=False):
         """Tasks to be run at a periodic interval."""

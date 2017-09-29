@@ -21,17 +21,6 @@ from nova.conf import paths
 _DEFAULT_SQL_CONNECTION = 'sqlite:///' + paths.state_path_def('nova.sqlite')
 
 
-# NOTE(sdague): we know of at least 1 instance of out of tree usage
-# for this config in RAX. They used this because of performance issues
-# with some queries. We think the right path forward is fixing the
-# SQLA queries to be more performant for everyone.
-db_driver_opt = cfg.StrOpt('db_driver',
-    default='nova.db',
-    deprecated_for_removal=True,
-    deprecated_since='13.0.0',
-    help='The driver to use for database access')
-
-
 # NOTE(markus_z): We cannot simply do:
 # conf.register_opts(oslo_db_options.database_opts, 'api_database')
 # If we reuse a db config option for two different groups ("api_database"
@@ -115,7 +104,6 @@ def enrich_help_text(alt_db_opts):
 
 def register_opts(conf):
     oslo_db_options.set_defaults(conf, connection=_DEFAULT_SQL_CONNECTION)
-    conf.register_opt(db_driver_opt)
     conf.register_opts(api_db_opts, group=api_db_group)
 
 
@@ -128,6 +116,6 @@ def list_opts():
     # in the "sample.conf" file, I omit the listing of the "oslo_db_options"
     # here.
     enrich_help_text(api_db_opts)
-    return {'DEFAULT': [db_driver_opt],
-            api_db_group: api_db_opts,
-            }
+    return {
+        api_db_group: api_db_opts
+    }
