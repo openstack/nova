@@ -388,6 +388,30 @@ def _set_inventory(context, rp, inv_list):
     return exceeded
 
 
+@db_api.api_context_manager.reader
+def _get_provider_by_uuid(context, uuid):
+    """Given a UUID, return a dict of information about the resource provider
+    from the database.
+
+    :raises: NotFound if no such provider was found
+    :param uuid: The UUID to look up
+    """
+    conn = conn = context.session.connection()
+    rpt = sa.alias(_RP_TBL, name="rp")
+    cols = [
+        rpt.c.id,
+        rpt.c.uuid,
+        rpt.c.name,
+        rpt.c.generation,
+    ]
+    sel = sa.select(cols).where(rpt.c.uuid == uuid)
+    res = conn.execute(sel).fetchone()
+    if not res:
+        raise exception.NotFound(
+            'No resource provider with uuid %s found' % uuid)
+    return dict(res)
+
+
 @base.NovaObjectRegistry.register_if(False)
 class ResourceProvider(base.NovaObject):
 
@@ -425,8 +449,13 @@ class ResourceProvider(base.NovaObject):
 
     @classmethod
     def get_by_uuid(cls, context, uuid):
-        db_resource_provider = cls._get_by_uuid_from_db(context, uuid)
-        return cls._from_db_object(context, cls(), db_resource_provider)
+        """Returns a new ResourceProvider object with the supplied UUID.
+
+        :raises NotFound if no such provider could be found
+        :param uuid: UUID of the provider to search for
+        """
+        rp_rec = _get_provider_by_uuid(context, uuid)
+        return cls._from_db_object(context, cls(), rp_rec)
 
     def add_inventory(self, inventory):
         """Add one new Inventory to the resource provider.
@@ -520,17 +549,6 @@ class ResourceProvider(base.NovaObject):
         resource_provider._context = context
         resource_provider.obj_reset_changes()
         return resource_provider
-
-    @staticmethod
-    @db_api.api_context_manager.reader
-    def _get_by_uuid_from_db(context, uuid):
-        result = context.session.query(models.ResourceProvider).filter_by(
-            uuid=uuid).first()
-        if not result:
-            raise exception.NotFound(
-            'No resource provider with uuid %s found'
-            % uuid)
-        return result
 
     @staticmethod
     @db_api.api_context_manager.reader

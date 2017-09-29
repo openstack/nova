@@ -71,8 +71,8 @@ def _fake_ensure_cache(ctxt):
 class TestResourceProviderNoDB(test_objects._LocalTest):
     USES_DB = False
 
-    @mock.patch('nova.objects.resource_provider.ResourceProvider.'
-                '_get_by_uuid_from_db', return_value=_RESOURCE_PROVIDER_DB)
+    @mock.patch('nova.objects.resource_provider._get_provider_by_uuid',
+                return_value=_RESOURCE_PROVIDER_DB)
     def test_object_get_by_uuid(self, mock_db_get):
         resource_provider_object = resource_provider.ResourceProvider.\
             get_by_uuid(mock.sentinel.ctx, _RESOURCE_PROVIDER_UUID)
@@ -130,7 +130,7 @@ class TestResourceProvider(test_objects._LocalTest):
                                                 uuid=_RESOURCE_PROVIDER_UUID,
                                                 name=_RESOURCE_PROVIDER_NAME)
         rp.create()
-        retrieved_rp = resource_provider.ResourceProvider._get_by_uuid_from_db(
+        retrieved_rp = resource_provider.ResourceProvider.get_by_uuid(
             self.context, _RESOURCE_PROVIDER_UUID)
         self.assertEqual(rp.uuid, retrieved_rp.uuid)
         self.assertEqual(rp.name, retrieved_rp.name)
