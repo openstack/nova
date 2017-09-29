@@ -69,7 +69,9 @@ class EventType(NotificationObject):
     # Version 1.17: USAGE is added to NotificationActionField enum
     # Version 1.18: ComputeTask related values have been added to
     #               NotificationActionField enum
-    VERSION = '1.18'
+    # Version 1.19: SELECT_DESTINATIONS is added to the NotificationActionField
+    #               enum
+    VERSION = '1.19'
 
     fields = {
         'object': fields.StringField(nullable=False),

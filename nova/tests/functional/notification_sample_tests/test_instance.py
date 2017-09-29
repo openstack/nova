@@ -273,23 +273,25 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         self._wait_for_notification(
             'instance.live_migration_force_complete.end')
 
-        # 0. instance.live_migration_pre.start
-        # 1. instance.live_migration_pre.end
-        # 2. instance.live_migration_force_complete.start
-        # 3. instance.live_migration_force_complete.end
-        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        # 0. scheduler.select_destinations.start
+        # 1. scheduler.select_destinations.end
+        # 2. instance.live_migration_pre.start
+        # 3. instance.live_migration_pre.end
+        # 4. instance.live_migration_force_complete.start
+        # 5. instance.live_migration_force_complete.end
+        self.assertEqual(6, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
             'instance-live_migration_force_complete-start',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[4])
         self._verify_notification(
             'instance-live_migration_force_complete-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[5])
 
 
 class TestInstanceNotificationSampleWithMultipleComputeOldAttachFlow(
@@ -435,9 +437,13 @@ class TestInstanceNotificationSample(
                           'tags': ['tag'],
                           'trusted_image_certificates': fake_trusted_certs})
 
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        # 0. scheduler.select_destinations.start
+        # 1. scheduler.select_destinations.end
+        # 2. instance-create-start
+        # 3. instance-create-error
+        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
 
-        tb = fake_notifier.VERSIONED_NOTIFICATIONS[1]['payload'][
+        tb = fake_notifier.VERSIONED_NOTIFICATIONS[3]['payload'][
             'nova_object.data']['fault']['nova_object.data']['traceback']
         self.assertIn('raise exception.FlavorDiskTooSmall()', tb)
 
@@ -446,14 +452,14 @@ class TestInstanceNotificationSample(
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
         self._verify_notification(
             'instance-create-error',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id'],
                 'fault.traceback': self.ANY},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
 
         fake_notifier.reset()
 
@@ -825,19 +831,19 @@ class TestInstanceNotificationSample(
         post = {'unshelve': None}
         self.api.post_server_action(server['id'], post)
         self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
-        self.assertEqual(7, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(9, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
             'instance-unshelve-start',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[5])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[7])
         self._verify_notification(
             'instance-unshelve-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[6])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[8])
 
     def _test_suspend_resume_server(self, server):
         post = {'suspend': {}}
@@ -920,6 +926,29 @@ class TestInstanceNotificationSample(
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
 
+    def _build_destination_payload(self):
+        cell1 = self.cell_mappings.get('cell1')
+        return {
+            'nova_object.version': '1.0',
+            'nova_object.namespace': 'nova',
+            'nova_object.name': 'DestinationPayload',
+            'nova_object.data': {
+                'aggregates': None,
+                'cell': {
+                    'nova_object.version': '1.0',
+                    'nova_object.namespace': 'nova',
+                    'nova_object.name': 'CellMappingPayload',
+                    'nova_object.data': {
+                        'database_connection': cell1.database_connection,
+                        'disabled': False,
+                        'name': u'cell1',
+                        'transport_url': u'fake://nowhere/',
+                        'uuid': cell1.uuid
+                    }
+                }
+            }
+        }
+
     def _test_resize_and_revert_server(self, server):
         self.flags(allow_resize_to_same_host=True)
         other_flavor_body = {
@@ -948,9 +977,19 @@ class TestInstanceNotificationSample(
         self.api.post_server_action(server['id'], post)
         self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
 
+        self._pop_and_verify_dest_select_notification(server['id'],
+            replacements={
+                'ignore_hosts': [],
+                'flavor.memory_mb': other_flavor_body['flavor']['ram'],
+                'flavor.name': other_flavor_body['flavor']['name'],
+                'flavor.flavorid': other_flavor_id,
+                'flavor.extra_specs': extra_specs['extra_specs'],
+                'requested_destination': self._build_destination_payload()})
+
         self.assertEqual(7, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         # ignore instance.exists
         fake_notifier.VERSIONED_NOTIFICATIONS.pop(0)
+
         # This list needs to be in order.
         expected_notifications = [
             'instance-resize_prep-start',
@@ -1025,6 +1064,13 @@ class TestInstanceNotificationSample(
         mock_prep_resize.side_effect = _build_resources
         self.api.post_server_action(server['id'], post)
         self._wait_for_notification('instance.resize.error')
+        self._pop_and_verify_dest_select_notification(server['id'],
+            replacements={
+                'ignore_hosts': [],
+                'flavor.name': other_flavor_body['flavor']['name'],
+                'flavor.flavorid': other_flavor_id,
+                'flavor.extra_specs': {},
+                'requested_destination': self._build_destination_payload()})
         # 0: instance-exists
         # 1: instance-resize_prep-start
         # 2: instance-resize-error
@@ -1089,7 +1135,8 @@ class TestInstanceNotificationSample(
         self.api.post_server_action(server['id'], post)
         self._wait_for_state_change(self.api, server, expected_status='ERROR')
         self._wait_for_notification('compute.exception')
-        # There should be the following notifications.
+        # There should be the following notifications after scheduler's
+        # select_destination notifications:
         # 0: instance-exists
         # 1: instance-resize_prep-start
         # 2: instance-resize-error
@@ -1097,6 +1144,13 @@ class TestInstanceNotificationSample(
         # 4: compute.exception
         #    (via the wrap_exception decorator on
         #    the ComputeManager.prep_resize method.)
+        self._pop_and_verify_dest_select_notification(server['id'],
+            replacements={
+                'ignore_hosts': [],
+                'flavor.name': other_flavor_body['flavor']['name'],
+                'flavor.flavorid': other_flavor_id,
+                'flavor.extra_specs': {},
+                'requested_destination': self._build_destination_payload()})
         self.assertEqual(5, len(fake_notifier.VERSIONED_NOTIFICATIONS),
                          'Unexpected number of notifications: %s' %
                          fake_notifier.VERSIONED_NOTIFICATIONS)
@@ -1146,10 +1200,11 @@ class TestInstanceNotificationSample(
 
         fake_notifier.reset()
 
+        image_ref = 'a2459075-d96c-40d5-893e-577ff92e721c'
         post = {
             'rebuild': {
-                'imageRef': 'a2459075-d96c-40d5-893e-577ff92e721c',
-                'metadata': {},
+                'imageRef': image_ref,
+                'metadata': {}
             }
         }
         self.api.post_server_action(server['id'], post)
@@ -1159,6 +1214,22 @@ class TestInstanceNotificationSample(
                                     expected_status='REBUILD')
         self._wait_for_state_change(self.api, server,
                                     expected_status='ACTIVE')
+
+        self._pop_and_verify_dest_select_notification(server['id'],
+            replacements={
+                'image.container_format': 'ami',
+                'image.disk_format': 'ami',
+                'image.id': image_ref,
+                'image.properties': {
+                    'nova_object.data': {},
+                    'nova_object.name': 'ImageMetaPropsPayload',
+                    'nova_object.namespace': 'nova',
+                    'nova_object.version': u'1.0'},
+                'image.size': 58145823,
+                'image.tags': [],
+                'scheduler_hints': {'_nova_check_type': ['rebuild']},
+                'force_hosts': 'compute',
+                'force_nodes': 'fake-mini'})
 
         # 0. instance.rebuild_scheduled
         # 1. instance.exists
@@ -1222,10 +1293,11 @@ class TestInstanceNotificationSample(
 
         fake_notifier.reset()
 
+        image_ref = 'a2459075-d96c-40d5-893e-577ff92e721c'
         rebuild_trusted_certs = ['rebuild-cert-id-1', 'rebuild-cert-id-2']
         post = {
             'rebuild': {
-                'imageRef': 'a2459075-d96c-40d5-893e-577ff92e721c',
+                'imageRef': image_ref,
                 'metadata': {},
                 'trusted_image_certificates': rebuild_trusted_certs,
             }
@@ -1237,6 +1309,22 @@ class TestInstanceNotificationSample(
                                     expected_status='REBUILD')
         self._wait_for_state_change(self.api, server,
                                     expected_status='ACTIVE')
+
+        self._pop_and_verify_dest_select_notification(server['id'],
+            replacements={
+                'image.container_format': 'ami',
+                'image.disk_format': 'ami',
+                'image.id': image_ref,
+                'image.properties': {
+                    'nova_object.data': {},
+                    'nova_object.name': 'ImageMetaPropsPayload',
+                    'nova_object.namespace': 'nova',
+                    'nova_object.version': u'1.0'},
+                'image.size': 58145823,
+                'image.tags': [],
+                'scheduler_hints': {'_nova_check_type': ['rebuild']},
+                'force_hosts': 'compute',
+                'force_nodes': 'fake-mini'})
 
         # 0. instance.rebuild_scheduled
         # 1. instance.exists

@@ -15,6 +15,7 @@
 from nova.notifications.objects import base
 from nova.notifications.objects import flavor as flavor_payload
 from nova.notifications.objects import image as image_payload
+from nova.notifications.objects import server_group as server_group_payload
 from nova.objects import base as nova_base
 from nova.objects import fields
 
@@ -22,14 +23,19 @@ from nova.objects import fields
 @nova_base.NovaObjectRegistry.register_notification
 class RequestSpecPayload(base.NotificationPayloadBase):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Add force_hosts, force_nodes, ignore_hosts, image_meta,
+    #              instance_group, requested_destination, retry,
+    #              scheduler_hints and security_groups fields
+    VERSION = '1.1'
 
     SCHEMA = {
+        'ignore_hosts': ('request_spec', 'ignore_hosts'),
         'instance_uuid': ('request_spec', 'instance_uuid'),
         'project_id': ('request_spec', 'project_id'),
         'user_id': ('request_spec', 'user_id'),
         'availability_zone': ('request_spec', 'availability_zone'),
-        'num_instances': ('request_spec', 'num_instances')
+        'num_instances': ('request_spec', 'num_instances'),
+        'scheduler_hints': ('request_spec', 'scheduler_hints'),
     }
 
     fields = {
@@ -38,12 +44,23 @@ class RequestSpecPayload(base.NotificationPayloadBase):
         'user_id': fields.StringField(nullable=True),
         'availability_zone': fields.StringField(nullable=True),
         'flavor': fields.ObjectField('FlavorPayload', nullable=True),
+        'force_hosts': fields.StringField(nullable=True),
+        'force_nodes': fields.StringField(nullable=True),
+        'ignore_hosts': fields.ListOfStringsField(nullable=True),
+        'image_meta': fields.ObjectField('ImageMetaPayload', nullable=True),
+        'instance_group': fields.ObjectField('ServerGroupPayload',
+            nullable=True),
         'image': fields.ObjectField('ImageMetaPayload', nullable=True),
         'numa_topology': fields.ObjectField('InstanceNUMATopologyPayload',
                                             nullable=True),
         'pci_requests': fields.ObjectField('InstancePCIRequestsPayload',
                                            nullable=True),
-        'num_instances': fields.IntegerField(default=1)
+        'num_instances': fields.IntegerField(default=1),
+        'requested_destination': fields.ObjectField('DestinationPayload',
+            nullable=True),
+        'retry': fields.ObjectField('SchedulerRetriesPayload', nullable=True),
+        'scheduler_hints': fields.DictOfListOfStringsField(nullable=True),
+        'security_groups': fields.ListOfStringsField(),
     }
 
     def __init__(self, request_spec):
@@ -69,6 +86,32 @@ class RequestSpecPayload(base.NotificationPayloadBase):
                 request_spec.pci_requests)
         else:
             self.pci_requests = None
+        if 'requested_destination' in request_spec \
+                and request_spec.requested_destination:
+            self.requested_destination = DestinationPayload(
+                destination=request_spec.requested_destination)
+        else:
+            self.requested_destination = None
+        if 'retry' in request_spec and request_spec.retry:
+            self.retry = SchedulerRetriesPayload(
+                retry=request_spec.retry)
+        else:
+            self.retry = None
+        self.security_groups = [
+            sec_group.identifier for sec_group in request_spec.security_groups]
+        if 'instance_group' in request_spec and request_spec.instance_group:
+            self.instance_group = server_group_payload.ServerGroupPayload(
+                group=request_spec.instance_group)
+        else:
+            self.instance_group = None
+        if 'force_hosts' in request_spec and request_spec.force_hosts:
+            self.force_hosts = request_spec.force_hosts[0]
+        else:
+            self.force_hosts = None
+        if 'force_nodes' in request_spec and request_spec.force_nodes:
+            self.force_nodes = request_spec.force_nodes[0]
+        else:
+            self.force_nodes = None
         self.populate_schema(request_spec=request_spec)
 
 
@@ -224,3 +267,82 @@ class InstancePCIRequestPayload(base.NotificationPayloadBase):
         for pci_request in pci_request_list:
             payloads.append(cls(pci_request))
         return payloads
+
+
+@nova_base.NovaObjectRegistry.register_notification
+class DestinationPayload(base.NotificationPayloadBase):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    SCHEMA = {
+        'aggregates': ('destination', 'aggregates'),
+    }
+
+    fields = {
+        'host': fields.StringField(),
+        'node': fields.StringField(nullable=True),
+        'cell': fields.ObjectField('CellMappingPayload', nullable=True),
+        'aggregates': fields.ListOfStringsField(nullable=True,
+                                                default=None),
+    }
+
+    def __init__(self, destination):
+        super(DestinationPayload, self).__init__()
+        if (destination.obj_attr_is_set('host') and
+                destination.host is not None):
+            self.host = destination.host
+        if (destination.obj_attr_is_set('node') and
+                destination.node is not None):
+            self.node = destination.node
+        if (destination.obj_attr_is_set('cell') and
+                destination.cell is not None):
+            self.cell = CellMappingPayload(destination.cell)
+        self.populate_schema(destination=destination)
+
+
+@nova_base.NovaObjectRegistry.register_notification
+class SchedulerRetriesPayload(base.NotificationPayloadBase):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    SCHEMA = {
+        'num_attempts': ('retry', 'num_attempts'),
+    }
+
+    fields = {
+        'num_attempts': fields.IntegerField(),
+        'hosts': fields.ListOfStringsField(),
+    }
+
+    def __init__(self, retry):
+        super(SchedulerRetriesPayload, self).__init__()
+        self.hosts = []
+        for compute_node in retry.hosts:
+            self.hosts.append(compute_node.hypervisor_hostname)
+        self.populate_schema(retry=retry)
+
+
+@nova_base.NovaObjectRegistry.register_notification
+class CellMappingPayload(base.NotificationPayloadBase):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    SCHEMA = {
+        'uuid': ('cell', 'uuid'),
+        'name': ('cell', 'name'),
+        'transport_url': ('cell', 'transport_url'),
+        'database_connection': ('cell', 'database_connection'),
+        'disabled': ('cell', 'disabled'),
+    }
+
+    fields = {
+        'uuid': fields.UUIDField(),
+        'name': fields.StringField(nullable=True),
+        'transport_url': fields.StringField(),
+        'database_connection': fields.StringField(),
+        'disabled': fields.BooleanField(default=False),
+    }
+
+    def __init__(self, cell):
+        super(CellMappingPayload, self).__init__()
+        self.populate_schema(cell=cell)

@@ -156,6 +156,23 @@ class NotificationSampleTestBase(test.TestCase,
 
         self.assertJsonEqual(sample_obj, notification)
 
+    def _pop_and_verify_dest_select_notification(self,
+            server_id, replacements=None):
+        replacements = replacements or {}
+        replacements['instance_uuid'] = server_id
+        replacements['pci_requests.instance_uuid'] = server_id
+        replacements['flavor.extra_specs'] = self.ANY
+        replacements['numa_topology'] = self.ANY
+        scheduler_expected_notifications = [
+            'scheduler-select_destinations-start',
+            'scheduler-select_destinations-end']
+        self.assertLessEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        for notification in scheduler_expected_notifications:
+            self._verify_notification(
+                notification,
+                replacements=replacements,
+                actual=fake_notifier.VERSIONED_NOTIFICATIONS.pop(0))
+
     def _boot_a_server(self, expected_status='ACTIVE', extra_params=None,
                        scheduler_hints=None, additional_extra_specs=None):
 
@@ -226,6 +243,11 @@ class NotificationSampleTestBase(test.TestCase,
         found_server = self._wait_for_state_change(self.api, created_server,
                                                    expected_status)
         found_server['reservation_id'] = reservation_id
+
+        # Note(elod.illes): let's just pop and verify the dest_select
+        # notifications if we don't have a special case
+        if scheduler_hints is None and expected_status != 'ERROR':
+            self._pop_and_verify_dest_select_notification(found_server['id'])
 
         if found_server['status'] == 'ACTIVE':
             self.api.put_server_tags(found_server['id'], ['tag1'])

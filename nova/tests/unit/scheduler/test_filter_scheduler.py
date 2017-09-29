@@ -83,7 +83,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                   root_gb=512,
                                   ephemeral_gb=0,
                                   swap=0,
-                                  vcpus=1),
+                                  vcpus=1,
+                                  disabled=False,
+                                  is_public=True,
+                                  name="small_flavor"),
             project_id=uuids.project_id,
             instance_group=None, instance_uuid=uuids.instance)
         # Reset the RequestSpec changes so they don't interfere with the
@@ -149,7 +152,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                   root_gb=512,
                                   ephemeral_gb=0,
                                   swap=0,
-                                  vcpus=1),
+                                  vcpus=1,
+                                  disabled=False,
+                                  is_public=True,
+                                  name="small_flavor"),
             project_id=uuids.project_id,
             instance_group=group)
 
@@ -198,7 +204,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                   root_gb=512,
                                   ephemeral_gb=0,
                                   swap=0,
-                                  vcpus=1),
+                                  vcpus=1,
+                                  disabled=False,
+                                  is_public=True,
+                                  name="small_flavor"),
             project_id=uuids.project_id,
             instance_group=None)
 
@@ -268,7 +277,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                   root_gb=512,
                                   ephemeral_gb=0,
                                   swap=0,
-                                  vcpus=1),
+                                  vcpus=1,
+                                  disabled=False,
+                                  is_public=True,
+                                  name="small_flavor"),
             project_id=uuids.project_id,
             instance_group=None)
 
@@ -321,7 +333,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                   root_gb=512,
                                   ephemeral_gb=0,
                                   swap=0,
-                                  vcpus=1),
+                                  vcpus=1,
+                                  disabled=False,
+                                  is_public=True,
+                                  name="small_flavor"),
             project_id=uuids.project_id,
             instance_group=None)
 
@@ -500,7 +515,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                   root_gb=512,
                                   ephemeral_gb=0,
                                   swap=0,
-                                  vcpus=1),
+                                  vcpus=1,
+                                  disabled=False,
+                                  is_public=True,
+                                  name="small_flavor"),
             project_id=uuids.project_id,
             instance_group=ig, instance_uuid=uuids.instance0)
         # Reset the RequestSpec changes so they don't interfere with the
@@ -765,9 +783,16 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                   root_gb=512,
                                   ephemeral_gb=0,
                                   swap=0,
-                                  vcpus=1),
+                                  vcpus=1,
+                                  disabled=False,
+                                  is_public=True,
+                                  name="small_flavor"),
             project_id=uuids.project_id,
-            num_instances=1)
+            num_instances=1,
+            image=None,
+            numa_topology=None,
+            pci_requests=None,
+            instance_uuid=uuids.instance_id)
 
         mock_schedule.return_value = [[fake_selection]]
         dests = self.driver.select_destinations(self.context, spec_obj,
@@ -793,9 +818,16 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                   root_gb=512,
                                   ephemeral_gb=0,
                                   swap=0,
-                                  vcpus=1),
+                                  vcpus=1,
+                                  disabled=False,
+                                  is_public=True,
+                                  name="small_flavor"),
             project_id=uuids.project_id,
-            num_instances=2)
+            num_instances=2,
+            image=None,
+            numa_topology=None,
+            pci_requests=None,
+            instance_uuid=uuids.instance_id)
 
         mock_schedule.return_value = [[fake_selection]]
         dests = self.driver.select_destinations(self.context, spec_obj,
@@ -824,8 +856,12 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                                   root_gb=512,
                                   ephemeral_gb=0,
                                   swap=0,
-                                  vcpus=1),
+                                  vcpus=1,
+                                  disabled=False,
+                                  is_public=True,
+                                  name="small_flavor"),
             project_id=uuids.project_id,
+            instance_uuid=uuids.instance_id,
             instance_group=None)
 
         host_state = mock.Mock(spec=host_manager.HostState, host="fake_host",
@@ -1020,16 +1056,32 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self._test_not_enough_alternates(num_hosts=3, max_attempts=5)
         self._test_not_enough_alternates(num_hosts=20, max_attempts=5)
 
+    @mock.patch('nova.compute.utils.notify_about_scheduler_action')
     @mock.patch.object(filter_scheduler.FilterScheduler, '_schedule')
-    def test_select_destinations_notifications(self, mock_schedule):
+    def test_select_destinations_notifications(self, mock_schedule,
+            mock_notify):
         mock_schedule.return_value = ([[mock.Mock()]], [[mock.Mock()]])
 
         with mock.patch.object(self.driver.notifier, 'info') as mock_info:
+            flavor = objects.Flavor(memory_mb=512,
+                                    root_gb=512,
+                                    ephemeral_gb=0,
+                                    swap=0,
+                                    vcpus=1,
+                                    disabled=False,
+                                    is_public=True,
+                                    name="small_flavor")
             expected = {'num_instances': 1,
-                        'instance_properties': {'uuid': uuids.instance},
-                        'instance_type': {},
+                        'instance_properties': {
+                            'uuid': uuids.instance,
+                            'ephemeral_gb': 0,
+                            'memory_mb': 512,
+                            'vcpus': 1,
+                            'root_gb': 512},
+                        'instance_type': flavor,
                         'image': {}}
             spec_obj = objects.RequestSpec(num_instances=1,
+                                           flavor=flavor,
                                            instance_uuid=uuids.instance)
 
             self.driver.select_destinations(self.context, spec_obj,
@@ -1041,6 +1093,12 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 mock.call(self.context, 'scheduler.select_destinations.end',
                  dict(request_spec=expected))]
             self.assertEqual(expected, mock_info.call_args_list)
+
+            mock_notify.assert_has_calls([
+                mock.call(context=self.context, request_spec=spec_obj,
+                          action='select_destinations', phase='start'),
+                mock.call(context=self.context, request_spec=spec_obj,
+                          action='select_destinations', phase='end')])
 
     def test_get_all_host_states_provider_summaries_is_none(self):
         """Tests that HostManager.get_host_states_by_uuids is called with

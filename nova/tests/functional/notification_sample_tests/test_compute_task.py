@@ -38,19 +38,22 @@ class TestComputeTaskNotificationSample(
                                     'hw:numa_cpus.0': '0',
                                     'hw:numa_mem.0': 512})
         self._wait_for_notification('compute_task.build_instances.error')
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        # 0. scheduler.select_destinations.start
+        # 1. compute_task.rebuild_server.error
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
             'compute_task-build_instances-error',
             replacements={
                 'instance_uuid': server['id'],
                 'request_spec.instance_uuid': server['id'],
+                'request_spec.security_groups': [],
                 'request_spec.numa_topology.instance_uuid': server['id'],
                 'request_spec.pci_requests.instance_uuid': server['id'],
                 'reason.function_name': self.ANY,
                 'reason.module_name': self.ANY,
                 'reason.traceback': self.ANY
             },
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
     def test_rebuild_fault(self):
         server = self._boot_a_server(
@@ -72,20 +75,22 @@ class TestComputeTaskNotificationSample(
         self.admin_api.post_server_action(server['id'], post)
         self._wait_for_notification('compute_task.rebuild_server.error')
         # 0. instance.evacuate
-        # 1. compute_task.rebuild_server.error
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        # 1. scheduler.select_destinations.start
+        # 2. compute_task.rebuild_server.error
+        self.assertEqual(3, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
             'compute_task-rebuild_server-error',
             replacements={
                 'instance_uuid': server['id'],
                 'request_spec.instance_uuid': server['id'],
+                'request_spec.security_groups': [],
                 'request_spec.numa_topology.instance_uuid': server['id'],
                 'request_spec.pci_requests.instance_uuid': server['id'],
                 'reason.function_name': self.ANY,
                 'reason.module_name': self.ANY,
                 'reason.traceback': self.ANY
             },
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
 
     def test_migrate_fault(self):
         server = self._boot_a_server(
@@ -104,16 +109,19 @@ class TestComputeTaskNotificationSample(
                           self.admin_api.post_server_action,
                           server['id'], {'migrate': None})
         self._wait_for_notification('compute_task.migrate_server.error')
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        # 0. scheduler.select_destinations.start
+        # 1. compute_task.migrate_server.error
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
             'compute_task-migrate_server-error',
             replacements={
                 'instance_uuid': server['id'],
                 'request_spec.instance_uuid': server['id'],
+                'request_spec.security_groups': [],
                 'request_spec.numa_topology.instance_uuid': server['id'],
                 'request_spec.pci_requests.instance_uuid': server['id'],
                 'reason.function_name': self.ANY,
                 'reason.module_name': self.ANY,
                 'reason.traceback': self.ANY
             },
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
