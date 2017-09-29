@@ -46,11 +46,11 @@ class Migration(base.NovaPersistentObject, base.NovaObject,
     fields = {
         'id': fields.IntegerField(),
         'uuid': fields.UUIDField(),
-        'source_compute': fields.StringField(nullable=True),
-        'dest_compute': fields.StringField(nullable=True),
-        'source_node': fields.StringField(nullable=True),
-        'dest_node': fields.StringField(nullable=True),
-        'dest_host': fields.StringField(nullable=True),
+        'source_compute': fields.StringField(nullable=True),  # source hostname
+        'dest_compute': fields.StringField(nullable=True),    # dest hostname
+        'source_node': fields.StringField(nullable=True),     # source nodename
+        'dest_node': fields.StringField(nullable=True),       # dest nodename
+        'dest_host': fields.StringField(nullable=True),       # dest host IP
         'old_instance_type_id': fields.IntegerField(nullable=True),
         'new_instance_type_id': fields.IntegerField(nullable=True),
         'instance_uuid': fields.StringField(nullable=True),
