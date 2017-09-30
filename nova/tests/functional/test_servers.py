@@ -2209,6 +2209,77 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         self._delete_and_check_allocations(
             server, source_rp_uuid, dest_rp_uuid)
 
+    @mock.patch('nova.virt.fake.FakeDriver.pre_live_migration',
+                # The actual type of exception here doesn't matter. The point
+                # is that the virt driver raised an exception from the
+                # pre_live_migration method on the destination host.
+                side_effect=test.TestingException(
+                    'test_live_migrate_rollback_cleans_dest_node_allocations'))
+    def test_live_migrate_rollback_cleans_dest_node_allocations(
+            self, mock_pre_live_migration):
+        """Tests the case that when live migration fails, either during the
+        call to pre_live_migration on the destination, or during the actual
+        live migration in the virt driver, the allocations on the destination
+        node are rolled back since the instance is still on the source node.
+        """
+        source_hostname = self.compute1.host
+        dest_hostname = self.compute2.host
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        server = self._boot_and_check_allocations(
+            self.flavor1, source_hostname)
+
+        post = {
+            'os-migrateLive': {
+                'host': dest_hostname,
+                'block_migration': True,
+            }
+        }
+        self.api.post_server_action(server['id'], post)
+        # The compute manager will put the migration record into error status
+        # when pre_live_migration fails, so wait for that to happen.
+        migration = self._wait_for_migration_status(server, 'error')
+        # The _rollback_live_migration method in the compute manager will reset
+        # the task_state on the instance, so wait for that to happen.
+        server = self._wait_for_server_parameter(
+            self.api, server, {'OS-EXT-STS:task_state': None})
+
+        self.assertEqual(source_hostname, migration['source_compute'])
+        self.assertEqual(dest_hostname, migration['dest_compute'])
+
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        # Since the instance didn't move, assert the allocations are still
+        # on the source node.
+        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+        # Assert the allocations, created by the scheduler, are cleaned up
+        # after the rollback happens.
+        # FIXME: This is bug 1715182 where rollback doesn't remove the
+        # allocations against the dest node. Uncomment once fixed.
+        self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+        # self.assertFlavorMatchesAllocation(
+        #     {'vcpus': 0, 'ram': 0, 'disk': 0}, dest_usages)
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        # There should only be 1 allocation for the instance on the source node
+        # FIXME: This is bug 1715182 where rollback doesn't remove the
+        # allocations against the dest node. Uncomment once fixed.
+        # self.assertEqual(1, len(allocations))
+        self.assertEqual(2, len(allocations))
+
+        self.assertIn(dest_rp_uuid, allocations)
+        self.assertFlavorMatchesAllocation(
+            self.flavor1, allocations[dest_rp_uuid]['resources'])
+
+        self.assertIn(source_rp_uuid, allocations)
+        self.assertFlavorMatchesAllocation(
+            self.flavor1, allocations[source_rp_uuid]['resources'])
+
+        self._delete_and_check_allocations(
+            server, source_rp_uuid, dest_rp_uuid)
+
     def test_rescheduling_when_migrating_instance(self):
         """Tests that allocations are removed from the destination node by
         the compute service when a cold migrate / resize fails and a reschedule
