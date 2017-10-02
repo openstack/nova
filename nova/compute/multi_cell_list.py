@@ -72,8 +72,9 @@ class CrossCellLister(object):
     implement this if you need to efficiently list your data type from
     cell databases.
     """
-    def __init__(self, sort_ctx):
+    def __init__(self, sort_ctx, cells=None):
         self.sort_ctx = sort_ctx
+        self.cells = cells
 
     @property
     @abc.abstractmethod
@@ -245,7 +246,11 @@ class CrossCellLister(object):
         # that here gracefully. The below routine will provide sentinels
         # to indicate that, which will crash the merge below, but we don't
         # handle this anywhere yet anyway.
-        results = context.scatter_gather_all_cells(ctx, do_query)
+        if self.cells:
+            results = context.scatter_gather_cells(ctx, self.cells, 60,
+                                                   do_query)
+        else:
+            results = context.scatter_gather_all_cells(ctx, do_query)
 
         # If a limit was provided, it was passed to the per-cell query
         # routines.  That means we have NUM_CELLS * limit items across
