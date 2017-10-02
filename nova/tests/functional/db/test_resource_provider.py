@@ -62,7 +62,6 @@ class ResourceProviderBaseCase(test.NoDBTestCase):
         inv_dict = inv_dict or DISK_INVENTORY
         disk_inv = rp_obj.Inventory(context=self.ctx,
                 resource_provider=rp, **inv_dict)
-        disk_inv.create()
         inv_list = rp_obj.InventoryList(objects=[disk_inv])
         rp.set_inventory(inv_list)
         alloc = rp_obj.Allocation(self.ctx, resource_provider=rp,
@@ -150,7 +149,9 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
             resource_provider=resource_provider,
             **DISK_INVENTORY
         )
-        disk_inventory.create()
+        inv_list = rp_obj.InventoryList(context=self.ctx,
+                                        objects=[disk_inventory])
+        resource_provider.set_inventory(inv_list)
         inventories = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
             self.ctx, resource_provider.uuid)
         self.assertEqual(1, len(inventories))
@@ -158,58 +159,6 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         inventories = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
             self.ctx, resource_provider.uuid)
         self.assertEqual(0, len(inventories))
-
-    def test_create_inventory_with_uncreated_provider(self):
-        resource_provider = rp_obj.ResourceProvider(
-            context=self.ctx,
-            uuid=uuidsentinel.inventory_resource_provider
-        )
-        disk_inventory = rp_obj.Inventory(
-            context=self.ctx,
-            resource_provider=resource_provider,
-            **DISK_INVENTORY
-        )
-        self.assertRaises(exception.ObjectActionError,
-                          disk_inventory.create)
-
-    def test_create_and_update_inventory(self):
-        resource_provider = rp_obj.ResourceProvider(
-            context=self.ctx,
-            uuid=uuidsentinel.inventory_resource_provider,
-            name='foo',
-        )
-        resource_provider.create()
-        resource_class = fields.ResourceClass.DISK_GB
-        disk_inventory = rp_obj.Inventory(
-            context=self.ctx,
-            resource_provider=resource_provider,
-            **DISK_INVENTORY
-        )
-        disk_inventory.create()
-
-        self.assertEqual(resource_class, disk_inventory.resource_class)
-        self.assertEqual(resource_provider,
-                         disk_inventory.resource_provider)
-        self.assertEqual(DISK_INVENTORY['allocation_ratio'],
-                         disk_inventory.allocation_ratio)
-        self.assertEqual(DISK_INVENTORY['total'],
-                         disk_inventory.total)
-
-        disk_inventory.total = 32
-        disk_inventory.save()
-
-        inventories = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
-            self.ctx, resource_provider.uuid)
-
-        self.assertEqual(1, len(inventories))
-        self.assertEqual(32, inventories[0].total)
-
-        inventories[0].total = 33
-        inventories[0].save()
-        reloaded_inventories = (
-            rp_obj.InventoryList.get_all_by_resource_provider_uuid(
-            self.ctx, resource_provider.uuid))
-        self.assertEqual(33, reloaded_inventories[0].total)
 
     def test_set_inventory_unknown_resource_class(self):
         """Test attempting to set inventory to an unknown resource class raises
@@ -558,13 +507,44 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         rp.create()
         inv = rp_obj.Inventory(context=self.ctx, resource_provider=rp,
                 **DISK_INVENTORY)
-        inv.create()
+        inv_list = rp_obj.InventoryList(context=self.ctx, objects=[inv])
+        rp.set_inventory(inv_list)
         expected_gen = rp.generation + 1
         alloc = rp_obj.Allocation(context=self.ctx, resource_provider=rp,
                 **DISK_ALLOCATION)
         alloc_list = rp_obj.AllocationList(self.ctx, objects=[alloc])
         alloc_list.create_all()
         self.assertEqual(expected_gen, rp.generation)
+
+    def test_get_all_by_resource_provider_multiple_providers(self):
+        rp1 = rp_obj.ResourceProvider(context=self.ctx,
+                uuid=uuidsentinel.cn1, name='cn1')
+        rp1.create()
+        rp2 = rp_obj.ResourceProvider(context=self.ctx,
+                uuid=uuidsentinel.cn2, name='cn2')
+        rp2.create()
+
+        for rp in (rp1, rp2):
+            disk_inv = rp_obj.Inventory(context=self.ctx, resource_provider=rp,
+                **DISK_INVENTORY)
+            ip_inv = rp_obj.Inventory(context=self.ctx, resource_provider=rp,
+                total=10,
+                reserved=0,
+                min_unit=1,
+                max_unit=2,
+                step_size=1,
+                allocation_ratio=1.0,
+                resource_class=fields.ResourceClass.IPV4_ADDRESS)
+            inv_list = rp_obj.InventoryList(context=self.ctx,
+                objects=[disk_inv, ip_inv])
+            rp.set_inventory(inv_list)
+
+        # Get inventories for the first resource provider and validate
+        # the inventory records have a matching resource provider
+        got_inv = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
+                self.ctx, rp1.uuid)
+        for inv in got_inv:
+            self.assertEqual(rp1.id, inv.resource_provider.id)
 
 
 class ResourceProviderListTestCase(ResourceProviderBaseCase):
@@ -822,7 +802,8 @@ class TestAllocation(ResourceProviderBaseCase):
         resource_class = fields.ResourceClass.DISK_GB
         inv = rp_obj.Inventory(context=self.ctx,
                 resource_provider=resource_provider, **DISK_INVENTORY)
-        inv.create()
+        inv_list = rp_obj.InventoryList(context=self.ctx, objects=[inv])
+        resource_provider.set_inventory(inv_list)
         disk_allocation = rp_obj.Allocation(
             context=self.ctx,
             resource_provider=resource_provider,

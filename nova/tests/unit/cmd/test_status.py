@@ -554,11 +554,12 @@ class TestUpgradeCheckResourceProviders(test.NoDBTestCase):
             name=rp_uuid,
             uuid=rp_uuid)
         rp.create()
-        inventory = rp_obj.Inventory(
+        inv = rp_obj.Inventory(
             context=ctxt,
             resource_provider=rp,
             **inventory)
-        inventory.create()
+        inv_list = rp_obj.InventoryList(objects=[inv])
+        rp.set_inventory(inv_list)
         return rp
 
     def test_check_resource_providers_no_compute_rps_one_compute(self):

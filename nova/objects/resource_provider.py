@@ -1359,22 +1359,6 @@ class _HasAResourceProvider(base.NovaObject):
         return target
 
 
-@db_api.api_context_manager.writer
-def _create_inventory_in_db(context, updates):
-    db_inventory = models.Inventory()
-    db_inventory.update(updates)
-    context.session.add(db_inventory)
-    return db_inventory
-
-
-@db_api.api_context_manager.writer
-def _update_inventory_in_db(context, id_, updates):
-    result = context.session.query(
-        models.Inventory).filter_by(id=id_).update(updates)
-    if not result:
-        raise exception.NotFound()
-
-
 @base.NovaObjectRegistry.register_if(False)
 class Inventory(_HasAResourceProvider):
 
@@ -1394,32 +1378,6 @@ class Inventory(_HasAResourceProvider):
     def capacity(self):
         """Inventory capacity, adjusted by allocation_ratio."""
         return int((self.total - self.reserved) * self.allocation_ratio)
-
-    def create(self):
-        if 'id' in self:
-            raise exception.ObjectActionError(action='create',
-                                              reason='already created')
-        _ensure_rc_cache(self._context)
-        updates = self._make_db(self.obj_get_changes())
-        db_inventory = self._create_in_db(self._context, updates)
-        self._from_db_object(self._context, self, db_inventory)
-
-    def save(self):
-        if 'id' not in self:
-            raise exception.ObjectActionError(action='save',
-                                              reason='not created')
-        _ensure_rc_cache(self._context)
-        updates = self.obj_get_changes()
-        updates.pop('id', None)
-        self._update_in_db(self._context, self.id, updates)
-
-    @staticmethod
-    def _create_in_db(context, updates):
-        return _create_inventory_in_db(context, updates)
-
-    @staticmethod
-    def _update_in_db(context, id_, updates):
-        return _update_inventory_in_db(context, id_, updates)
 
 
 @base.NovaObjectRegistry.register_if(False)
