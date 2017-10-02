@@ -192,19 +192,16 @@ def list_for_resource_provider(req):
     # confirm existence of resource provider so we get a reasonable
     # 404 instead of empty list
     try:
-        resource_provider = rp_obj.ResourceProvider.get_by_uuid(
-            context, uuid)
+        rp = rp_obj.ResourceProvider.get_by_uuid(context, uuid)
     except exception.NotFound as exc:
         raise webob.exc.HTTPNotFound(
             _("Resource provider '%(rp_uuid)s' not found: %(error)s") %
             {'rp_uuid': uuid, 'error': exc})
 
-    allocations = rp_obj.AllocationList.get_all_by_resource_provider_uuid(
-        context, uuid)
+    allocs = rp_obj.AllocationList.get_all_by_resource_provider(context, rp)
 
     allocations_json = jsonutils.dumps(
-        _serialize_allocations_for_resource_provider(
-            allocations, resource_provider))
+        _serialize_allocations_for_resource_provider(allocs, rp))
 
     req.response.status = 200
     req.response.body = encodeutils.to_utf8(allocations_json)

@@ -1669,6 +1669,20 @@ def _ensure_user(conn, external_id):
     return _ensure_lookup_table_entry(conn, _USER_TBL, external_id)
 
 
+@db_api.api_context_manager.reader
+def _get_allocations_by_provider_id(ctx, rp_id):
+    allocs = sa.alias(_ALLOC_TBL, name="a")
+    cols = [
+        allocs.c.resource_class_id,
+        allocs.c.consumer_id,
+        allocs.c.used,
+    ]
+    sel = sa.select(cols)
+    sel = sel.where(allocs.c.resource_provider_id == rp_id)
+
+    return [dict(r) for r in ctx.session.execute(sel)]
+
+
 @base.NovaObjectRegistry.register_if(False)
 class AllocationList(base.ObjectListBase, base.NovaObject):
 
@@ -1790,11 +1804,24 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
                 rp.generation = _increment_provider_generation(conn, rp)
 
     @classmethod
-    def get_all_by_resource_provider_uuid(cls, context, rp_uuid):
-        db_allocation_list = cls._get_allocations_from_db(
-            context, resource_provider_uuid=rp_uuid)
-        return base.obj_make_list(
-            context, cls(context), Allocation, db_allocation_list)
+    def get_all_by_resource_provider(cls, context, rp):
+        _ensure_rc_cache(context)
+        db_allocs = _get_allocations_by_provider_id(context, rp.id)
+        # Build up a list of Allocation objects, setting the Allocation object
+        # fields to the same-named database record field we got from
+        # _get_allocations_by_provider_id(). We already have the
+        # ResourceProvider object so we just pass that object to the Allocation
+        # object constructor as-is
+        objs = [
+            Allocation(
+                context, resource_provider=rp,
+                resource_class=_RC_CACHE.string_from_id(
+                    rec['resource_class_id']),
+                **rec)
+            for rec in db_allocs
+        ]
+        alloc_list = cls(context, objects=objs)
+        return alloc_list
 
     @classmethod
     def get_all_by_consumer_id(cls, context, consumer_id):

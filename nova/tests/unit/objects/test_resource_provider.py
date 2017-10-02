@@ -310,19 +310,20 @@ class TestAllocationListNoDB(test_objects._LocalTest):
 
     @mock.patch('nova.objects.resource_provider._ensure_rc_cache',
             side_effect=_fake_ensure_cache)
-    @mock.patch('nova.objects.resource_provider.AllocationList.'
-                '_get_allocations_from_db', return_value=[_ALLOCATION_DB])
+    @mock.patch('nova.objects.resource_provider.'
+                '_get_allocations_by_provider_id',
+                return_value=[_ALLOCATION_DB])
     def test_get_allocations(self, mock_get_allocations_from_db,
             mock_ensure_cache):
         rp = resource_provider.ResourceProvider(id=_RESOURCE_PROVIDER_ID,
                                                 uuid=uuids.resource_provider)
         rp_alloc_list = resource_provider.AllocationList
-        allocations = rp_alloc_list.get_all_by_resource_provider_uuid(
-            self.context, rp.uuid)
+        allocations = rp_alloc_list.get_all_by_resource_provider(
+            self.context, rp)
 
         self.assertEqual(1, len(allocations))
-        mock_get_allocations_from_db.assert_called_once_with(
-            self.context, resource_provider_uuid=uuids.resource_provider)
+        mock_get_allocations_from_db.assert_called_once_with(self.context,
+            rp.id)
         self.assertEqual(_ALLOCATION_DB['used'], allocations[0].used)
 
 
