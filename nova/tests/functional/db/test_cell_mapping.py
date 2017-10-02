@@ -14,6 +14,7 @@ from oslo_utils import uuidutils
 
 from nova import context
 from nova import exception
+from nova import objects
 from nova.objects import cell_mapping
 from nova import test
 from nova.tests import fixtures
@@ -118,3 +119,47 @@ class CellMappingListTestCase(test.NoDBTestCase):
                                                                 disabled=True)
         self.assertEqual(1, len(mappings))
         self.assertEqual(disabled_mapping['uuid'], mappings[0].uuid)
+
+    def test_get_by_project_id(self):
+        ctxt = context.RequestContext()
+        cell1 = objects.CellMapping.get_by_uuid(ctxt, create_mapping().uuid)
+        cell2 = objects.CellMapping.get_by_uuid(ctxt, create_mapping().uuid)
+        cell3 = objects.CellMapping.get_by_uuid(ctxt, create_mapping().uuid)
+        cells = [cell1, cell2, cell3]
+
+        # Proj1 is all in one cell
+        for i in range(0, 5):
+            uuid = uuidutils.generate_uuid()
+            im = objects.InstanceMapping(context=ctxt,
+                                         instance_uuid=uuid,
+                                         cell_mapping=cell1,
+                                         project_id='proj1')
+            im.create()
+
+        # Proj2 is in the first two cells
+        for i in range(0, 5):
+            uuid = uuidutils.generate_uuid()
+            cell = cells[i % 2]
+            im = objects.InstanceMapping(context=ctxt,
+                                         instance_uuid=uuid,
+                                         cell_mapping=cell,
+                                         project_id='proj2')
+            im.create()
+
+        # One mapping has no cell because it's a BuildRequest
+        im = objects.InstanceMapping(context=ctxt,
+                                     instance_uuid=uuidutils.generate_uuid(),
+                                     cell_mapping=None,
+                                     project_id='proj2')
+        im.create()
+
+        # Proj1 should only be in cell1 and we should only get back
+        # a single mapping for it
+        cells = objects.CellMappingList.get_by_project_id(ctxt, 'proj1')
+        self.assertEqual(1, len(cells))
+        self.assertEqual(cell1.uuid, cells[0].uuid)
+
+        cells = objects.CellMappingList.get_by_project_id(ctxt, 'proj2')
+        self.assertEqual(2, len(cells))
+        self.assertEqual(sorted([cell1.uuid, cell2.uuid]),
+                         sorted([cm.uuid for cm in cells]))
