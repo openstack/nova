@@ -1453,26 +1453,16 @@ class Allocation(_HasAResourceProvider):
         'used': fields.IntegerField(),
     }
 
-    @staticmethod
-    @db_api.api_context_manager.writer
-    def _destroy(context, id):
-        result = context.session.query(models.Allocation).filter_by(
-            id=id).delete()
-        if not result:
-            raise exception.NotFound()
 
-    def destroy(self):
-        self._destroy(self._context, self.id)
-
-
-def _delete_current_allocs(conn, consumer_id):
+@db_api.api_context_manager.writer
+def _delete_allocations_for_consumer(ctx, consumer_id):
     """Deletes any existing allocations that correspond to the allocations to
     be written. This is wrapped in a transaction, so if the write subsequently
     fails, the deletion will also be rolled back.
     """
     del_sql = _ALLOC_TBL.delete().where(
         _ALLOC_TBL.c.consumer_id == consumer_id)
-    conn.execute(del_sql)
+    ctx.session.execute(del_sql)
 
 
 def _check_capacity_exceeded(conn, allocs):
@@ -1689,13 +1679,6 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
     }
 
     @staticmethod
-    @db_api.api_context_manager.writer
-    def _delete_allocations(context, allocations):
-        for allocation in allocations:
-            allocation._context = context
-            allocation.destroy()
-
-    @staticmethod
     @db_api.api_context_manager.reader
     def _get_allocations_from_db(context, resource_provider_uuid=None,
                                  consumer_id=None):
@@ -1780,7 +1763,7 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
         with conn.begin():
             # First delete any existing allocations for that rp/consumer combo.
             consumer_id = allocs[0].consumer_id
-            _delete_current_allocs(conn, consumer_id)
+            _delete_allocations_for_consumer(context, consumer_id)
             # If there are any allocations with string resource class names
             # that don't exist this will raise a ResourceClassNotFound
             # exception.
@@ -1827,7 +1810,10 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
         self._set_allocations(self._context, self.objects)
 
     def delete_all(self):
-        self._delete_allocations(self._context, self.objects)
+        # Allocations can only have a single consumer, so take advantage of
+        # that fact and do an efficient batch delete
+        consumer_uuid = self.objects[0].consumer_id
+        _delete_allocations_for_consumer(self._context, consumer_uuid)
 
     def __repr__(self):
         strings = [repr(x) for x in self.objects]
