@@ -1380,6 +1380,24 @@ class Inventory(_HasAResourceProvider):
         return int((self.total - self.reserved) * self.allocation_ratio)
 
 
+@db_api.api_context_manager.reader
+def _get_inventory_by_provider_id(ctx, rp_id):
+    inv = sa.alias(_INV_TBL, name="i")
+    cols = [
+        inv.c.resource_class_id,
+        inv.c.total,
+        inv.c.reserved,
+        inv.c.min_unit,
+        inv.c.max_unit,
+        inv.c.step_size,
+        inv.c.allocation_ratio,
+    ]
+    sel = sa.select(cols)
+    sel = sel.where(inv.c.resource_provider_id == rp_id)
+
+    return [dict(r) for r in ctx.session.execute(sel)]
+
+
 @base.NovaObjectRegistry.register_if(False)
 class InventoryList(base.ObjectListBase, base.NovaObject):
 
@@ -1403,20 +1421,25 @@ class InventoryList(base.ObjectListBase, base.NovaObject):
             if inv_rec.resource_class == res_class:
                 return inv_rec
 
-    @staticmethod
-    @db_api.api_context_manager.reader
-    def _get_all_by_resource_provider(context, rp_uuid):
-        return context.session.query(models.Inventory).\
-            join(models.Inventory.resource_provider).\
-            options(contains_eager('resource_provider')).\
-            filter(models.ResourceProvider.uuid == rp_uuid).all()
-
     @classmethod
-    def get_all_by_resource_provider_uuid(cls, context, rp_uuid):
-        db_inventory_list = cls._get_all_by_resource_provider(context,
-                                                              rp_uuid)
-        return base.obj_make_list(context, cls(context), Inventory,
-                                  db_inventory_list)
+    def get_all_by_resource_provider(cls, context, rp):
+        _ensure_rc_cache(context)
+        db_inv = _get_inventory_by_provider_id(context, rp.id)
+        # Build up a list of Inventory objects, setting the Inventory object
+        # fields to the same-named database record field we got from
+        # _get_inventory_by_provider_id(). We already have the ResourceProvider
+        # object so we just pass that object to the Inventory object
+        # constructor as-is
+        objs = [
+            Inventory(
+                context, resource_provider=rp,
+                resource_class=_RC_CACHE.string_from_id(
+                    rec['resource_class_id']),
+                **rec)
+            for rec in db_inv
+        ]
+        inv_list = cls(context, objects=objs)
+        return inv_list
 
 
 @base.NovaObjectRegistry.register_if(False)
