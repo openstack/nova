@@ -26,7 +26,6 @@ from oslo_log import log as logging
 import six
 import sqlalchemy as sa
 from sqlalchemy import func
-from sqlalchemy.orm import contains_eager
 from sqlalchemy import sql
 from sqlalchemy.sql import null
 
@@ -1683,6 +1682,26 @@ def _get_allocations_by_provider_id(ctx, rp_id):
     return [dict(r) for r in ctx.session.execute(sel)]
 
 
+@db_api.api_context_manager.reader
+def _get_allocations_by_consumer_uuid(ctx, consumer_uuid):
+    allocs = sa.alias(_ALLOC_TBL, name="a")
+    rp = sa.alias(_RP_TBL, name="rp")
+    cols = [
+        allocs.c.resource_provider_id,
+        rp.c.name.label("resource_provider_name"),
+        rp.c.uuid.label("resource_provider_uuid"),
+        rp.c.generation.label("resource_provider_generation"),
+        allocs.c.resource_class_id,
+        allocs.c.consumer_id,
+        allocs.c.used,
+    ]
+    join = sa.join(allocs, rp, allocs.c.resource_provider_id == rp.c.id)
+    sel = sa.select(cols).select_from(join)
+    sel = sel.where(allocs.c.consumer_id == consumer_uuid)
+
+    return [dict(r) for r in ctx.session.execute(sel)]
+
+
 @base.NovaObjectRegistry.register_if(False)
 class AllocationList(base.ObjectListBase, base.NovaObject):
 
@@ -1691,21 +1710,6 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
         'project_id': fields.StringField(nullable=True),
         'user_id': fields.StringField(nullable=True),
     }
-
-    @staticmethod
-    @db_api.api_context_manager.reader
-    def _get_allocations_from_db(context, resource_provider_uuid=None,
-                                 consumer_id=None):
-        query = (context.session.query(models.Allocation)
-                 .join(models.Allocation.resource_provider)
-                 .options(contains_eager('resource_provider')))
-        if resource_provider_uuid:
-            query = query.filter(
-                models.ResourceProvider.uuid == resource_provider_uuid)
-        if consumer_id:
-            query = query.filter(
-                models.Allocation.consumer_id == consumer_id)
-        return query.all()
 
     def _ensure_consumer_project_user(self, conn, consumer_id):
         """Examines the project_id, user_id of the object along with the
@@ -1825,10 +1829,31 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
 
     @classmethod
     def get_all_by_consumer_id(cls, context, consumer_id):
-        db_allocation_list = cls._get_allocations_from_db(
-            context, consumer_id=consumer_id)
-        return base.obj_make_list(
-            context, cls(context), Allocation, db_allocation_list)
+        _ensure_rc_cache(context)
+        db_allocs = _get_allocations_by_consumer_uuid(context, consumer_id)
+        # Build up a list of Allocation objects, setting the Allocation object
+        # fields to the same-named database record field we got from
+        # _get_allocations_by_consumer_id().
+        #
+        # NOTE(jaypipes):  Unlike with get_all_by_resource_provider(), we do
+        # NOT already have the ResourceProvider object so we construct a new
+        # ResourceProvider object below by looking at the resource provider
+        # fields returned by _get_allocations_by_consumer_id().
+        objs = [
+            Allocation(
+                context, resource_provider=ResourceProvider(
+                    context,
+                    id=rec['resource_provider_id'],
+                    uuid=rec['resource_provider_uuid'],
+                    name=rec['resource_provider_name'],
+                    generation=rec['resource_provider_generation']),
+                resource_class=_RC_CACHE.string_from_id(
+                    rec['resource_class_id']),
+                **rec)
+            for rec in db_allocs
+        ]
+        alloc_list = cls(context, objects=objs)
+        return alloc_list
 
     def create_all(self):
         """Create the supplied allocations."""
