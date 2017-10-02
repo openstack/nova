@@ -134,7 +134,7 @@ class AgentController(wsgi.Controller):
     # TODO(oomichi): Here should be 201(Created) instead of 200 by v2.1
     # +microversions because the creation of a resource agent finishes
     # when returning a response.
-    @extensions.expected_errors((400, 409))
+    @extensions.expected_errors(409)
     @wsgi.response(200)
     @validation.schema(schema.create)
     def create(self, req, body):

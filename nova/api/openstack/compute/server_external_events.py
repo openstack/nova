@@ -63,7 +63,7 @@ class ServerExternalEventsController(wsgi.Controller):
 
         return instances
 
-    @extensions.expected_errors((400, 403, 404))
+    @extensions.expected_errors((403, 404))
     @wsgi.response(200)
     @validation.schema(server_external_events.create, '2.1', '2.50')
     @validation.schema(server_external_events.create_v251, '2.51')

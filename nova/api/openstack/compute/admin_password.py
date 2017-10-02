@@ -36,7 +36,7 @@ class AdminPasswordController(wsgi.Controller):
     # a response.
     @wsgi.action('changePassword')
     @wsgi.response(202)
-    @extensions.expected_errors((400, 404, 409, 501))
+    @extensions.expected_errors((404, 409, 501))
     @validation.schema(admin_password.change_password)
     def change_password(self, req, id, body):
         context = req.environ['nova.context']
