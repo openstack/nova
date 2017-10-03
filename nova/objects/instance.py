@@ -1570,3 +1570,14 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
                               'ram': <count across user>}}
         """
         return cls._get_counts_in_db(context, project_id, user_id=user_id)
+
+    @staticmethod
+    @db_api.pick_context_manager_reader
+    def _get_count_by_hosts(context, hosts):
+        return context.session.query(models.Instance).\
+            filter_by(deleted=0).\
+            filter(models.Instance.host.in_(hosts)).count()
+
+    @classmethod
+    def get_count_by_hosts(cls, context, hosts):
+        return cls._get_count_by_hosts(context, hosts)

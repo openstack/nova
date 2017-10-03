@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    ``PUT /os-aggregates/{aggregate_id}`` and
+    ``POST /os-aggregates/{aggregate_id}/action`` (for set_metadata action) will
+    now return HTTP 400 for availability zone renaming if the hosts of
+    the aggregate have any instances.
