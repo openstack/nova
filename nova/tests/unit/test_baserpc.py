@@ -35,7 +35,6 @@ class BaseAPITestCase(test.TestCase):
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id,
                                               self.project_id)
-        self.conductor = self.start_service('conductor')
         self.compute = self.start_service('compute')
         self.base_rpcapi = baserpc.BaseAPI(compute_rpcapi.RPC_TOPIC)
 
