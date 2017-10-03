@@ -458,6 +458,11 @@ Rebuilds a server.
 
 Specify the ``rebuild`` action in the request body.
 
+.. note:: There is a `known limitation`_ where the root disk is not
+   replaced for volume-backed instances during a rebuild.
+
+.. _known limitation: https://bugs.launchpad.net/nova/+bug/1482040
+
 Normal response codes: 202
 
 Error response codes: badRequest(400), unauthorized(401), forbidden(403),
