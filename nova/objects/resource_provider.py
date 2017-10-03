@@ -1319,55 +1319,8 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
                                   ResourceProvider, resource_providers)
 
 
-class _HasAResourceProvider(base.NovaObject):
-    """Code shared between Inventory and Allocation
-
-    Both contain a ResourceProvider.
-    """
-
-    @staticmethod
-    def _make_db(updates):
-        try:
-            resource_provider = updates.pop('resource_provider')
-            updates['resource_provider_id'] = resource_provider.id
-        except (KeyError, NotImplementedError):
-            raise exception.ObjectActionError(
-                action='create',
-                reason='resource_provider required')
-        try:
-            rc_str = updates.pop('resource_class')
-        except KeyError:
-            raise exception.ObjectActionError(
-                action='create',
-                reason='resource_class required')
-        updates['resource_class_id'] = _RC_CACHE.id_from_string(rc_str)
-        return updates
-
-    @staticmethod
-    def _from_db_object(context, target, source):
-        _ensure_rc_cache(context)
-        for field in target.fields:
-            if field not in ('resource_provider', 'resource_class'):
-                setattr(target, field, source[field])
-
-        if 'resource_class' not in target:
-            rc_str = _RC_CACHE.string_from_id(source['resource_class_id'])
-            target.resource_class = rc_str
-        if ('resource_provider' not in target and
-                'resource_provider' in source):
-            target.resource_provider = ResourceProvider()
-            ResourceProvider._from_db_object(
-                context,
-                target.resource_provider,
-                source['resource_provider'])
-
-        target._context = context
-        target.obj_reset_changes()
-        return target
-
-
 @base.NovaObjectRegistry.register_if(False)
-class Inventory(_HasAResourceProvider):
+class Inventory(base.NovaObject):
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -1450,7 +1403,7 @@ class InventoryList(base.ObjectListBase, base.NovaObject):
 
 
 @base.NovaObjectRegistry.register_if(False)
-class Allocation(_HasAResourceProvider):
+class Allocation(base.NovaObject):
 
     fields = {
         'id': fields.IntegerField(),
