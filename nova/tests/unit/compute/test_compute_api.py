@@ -3181,6 +3181,8 @@ class _ComputeAPIUnitTestMixIn(object):
         _checks_for_create_and_rebuild.assert_called_once_with(self.context,
                 None, image, flavor, {}, [], None)
         self.assertNotEqual(orig_system_metadata, instance.system_metadata)
+        bdm_get_by_instance_uuid.assert_called_once_with(
+            self.context, instance.uuid)
 
     @mock.patch.object(objects.RequestSpec, 'save')
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
