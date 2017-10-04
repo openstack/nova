@@ -11493,7 +11493,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 drvr._ensure_console_log_for_instance,
                 mock.ANY)
 
-    @mock.patch('nova.privsep.libvirt.last_bytes',
+    @mock.patch('nova.privsep.path.last_bytes',
                 return_value=(b'67890', 0))
     def test_get_console_output_file(self, mock_last_bytes):
         with utils.tempdir() as tmpdir:
@@ -11575,7 +11575,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual('', output)
 
     @mock.patch('os.path.exists', return_value=True)
-    @mock.patch('nova.privsep.libvirt.last_bytes',
+    @mock.patch('nova.privsep.path.last_bytes',
                 return_value=(b'67890', 0))
     @mock.patch('nova.privsep.path.writefile')
     @mock.patch('nova.privsep.libvirt.readpty')
@@ -11682,7 +11682,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         def mock_last_bytes(path, count):
             with fake_libvirt_utils.file_open(path) as flo:
-                return nova.privsep.libvirt._last_bytes_inner(flo, count)
+                return nova.privsep.path._last_bytes_inner(flo, count)
 
         xml = """
         <domain type='kvm'>
@@ -11712,7 +11712,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     libvirt_driver.MAX_CONSOLE_BYTES = bytes_to_read
                     with mock.patch('os.path.exists',
                                     side_effect=mock_path_exists):
-                        with mock.patch('nova.privsep.libvirt.last_bytes',
+                        with mock.patch('nova.privsep.path.last_bytes',
                                         side_effect=mock_last_bytes):
                             log_data = drvr.get_console_output(self.context,
                                                                instance)

@@ -2839,7 +2839,7 @@ class LibvirtDriver(driver.ComputeDriver):
         path = console_log
 
         while bytes_to_read > 0 and os.path.exists(path):
-            read_log_data, remaining = nova.privsep.libvirt.last_bytes(
+            read_log_data, remaining = nova.privsep.path.last_bytes(
                                         path, bytes_to_read)
             # We need the log file content in chronological order,
             # that's why we *prepend* the log data.
