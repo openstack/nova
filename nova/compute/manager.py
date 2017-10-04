@@ -5414,8 +5414,10 @@ class ComputeManager(manager.Manager):
         :param dest_check_data: result of check_can_live_migrate_destination
         :returns: a dict containing migration info
         """
-        is_volume_backed = compute_utils.is_volume_backed_instance(ctxt,
-                                                                      instance)
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+            ctxt, instance.uuid)
+        is_volume_backed = compute_utils.is_volume_backed_instance(
+            ctxt, instance, bdms)
         # TODO(tdurakov): remove dict to object conversion once RPC API version
         # is bumped to 5.x
         got_migrate_data_object = isinstance(dest_check_data,
@@ -5426,7 +5428,7 @@ class ComputeManager(manager.Manager):
                     dest_check_data)
         dest_check_data.is_volume_backed = is_volume_backed
         block_device_info = self._get_instance_block_device_info(
-                            ctxt, instance, refresh_conn_info=False)
+                            ctxt, instance, refresh_conn_info=False, bdms=bdms)
         result = self.driver.check_can_live_migrate_source(ctxt, instance,
                                                            dest_check_data,
                                                            block_device_info)

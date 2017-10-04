@@ -2271,6 +2271,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             # Cinder-initiated call, we don't call migrate_volume_completion.
             migrate_volume_completion.assert_not_called()
 
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     @mock.patch.object(fake_driver.FakeDriver,
                        'check_can_live_migrate_source')
     @mock.patch.object(manager.ComputeManager,
@@ -2278,7 +2279,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     @mock.patch.object(compute_utils, 'is_volume_backed_instance')
     @mock.patch.object(compute_utils, 'EventReporter')
     def test_check_can_live_migrate_source(self, mock_event, mock_volume,
-                                           mock_get_inst, mock_check):
+                                           mock_get_inst, mock_check,
+                                           mock_get_bdms):
+        fake_bdms = objects.BlockDeviceMappingList()
+        mock_get_bdms.return_value = fake_bdms
         is_volume_backed = 'volume_backed'
         dest_check_data = migrate_data_obj.LiveMigrateData()
         db_instance = fake_instance.fake_db_instance()
@@ -2297,9 +2301,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         mock_check.assert_called_once_with(self.context, instance,
                                            dest_check_data,
                                            {'block_device_mapping': 'fake'})
-        mock_volume.assert_called_once_with(self.context, instance)
+        mock_volume.assert_called_once_with(self.context, instance, fake_bdms)
         mock_get_inst.assert_called_once_with(self.context, instance,
-                                              refresh_conn_info=False)
+                                              refresh_conn_info=False,
+                                              bdms=fake_bdms)
 
         self.assertTrue(dest_check_data.is_volume_backed)
 
@@ -5912,7 +5917,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         self.assertIsInstance(compute._live_migration_semaphore,
                               compute_utils.UnlimitedSemaphore)
 
-    def test_check_migrate_source_converts_object(self):
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
+    def test_check_migrate_source_converts_object(self, mock_get_bdms):
         # NOTE(danms): Make sure that we legacy-ify any data objects
         # the drivers give us back, if we were passed a non-object
         data = migrate_data_obj.LiveMigrateData(is_volume_backed=False)
@@ -5925,7 +5931,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             mock_cclms.return_value = data
             self.assertIsInstance(
                 compute.check_can_live_migrate_source(
-                    self.context, {'uuid': uuids.instance}, {}),
+                    self.context, objects.Instance(uuid=uuids.instance), {}),
                 dict)
             self.assertIsInstance(mock_cclms.call_args_list[0][0][2],
                                   migrate_data_obj.LiveMigrateData)
