@@ -2752,7 +2752,9 @@ class API(base.Base):
         self._check_auto_disk_config(image=image, **kwargs)
 
         flavor = instance.get_flavor()
-        root_bdm = compute_utils.get_root_bdm(context, instance)
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+            context, instance.uuid)
+        root_bdm = compute_utils.get_root_bdm(context, instance, bdms)
         self._checks_for_create_and_rebuild(context, image_id, image,
                 flavor, metadata, files_to_inject, root_bdm)
 
@@ -2803,9 +2805,6 @@ class API(base.Base):
         # wipe out the old image properties that we're storing as instance
         # system metadata... and copy in the properties for the new image.
         orig_sys_metadata = _reset_image_metadata()
-
-        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                context, instance.uuid)
 
         self._record_action_start(context, instance, instance_actions.REBUILD)
 
