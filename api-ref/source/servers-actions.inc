@@ -458,12 +458,9 @@ Rebuilds a server.
 
 Specify the ``rebuild`` action in the request body.
 
-To rebuild the server with preservation of the ephemeral partition,
-set the ``preserve_ephemeral`` parameter to ``true``.
-
 Normal response codes: 202
 
-Error response codes: badRequest(400),unauthorized(401), forbidden(403),
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
 itemNotFound(404), conflict(409)
 
 Request
