@@ -166,29 +166,41 @@ class APIValidationTestCase(test.NoDBTestCase):
 
 class FormatCheckerTestCase(test.NoDBTestCase):
 
-    def test_format_checker_failed(self):
+    def _format_checker(self, format, value, error_message):
         format_checker = validators.FormatChecker()
         exc = self.assertRaises(jsonschema_exc.FormatError,
-                                format_checker.check, "   ", "name")
+                                format_checker.check, value, format)
         self.assertIsInstance(exc.cause, exception.InvalidName)
-        self.assertEqual("An invalid 'name' value was provided. The name must "
-                         "be: printable characters. "
-                         "Can not start or end with whitespace.",
+        self.assertEqual(error_message,
                          exc.cause.format_message())
 
-    def test_format_checker_failed_with_non_string(self):
-        checks = ["name", "name_with_leading_trailing_spaces",
-                  "cell_name", "cell_name_with_leading_trailing_spaces"]
-        format_checker = validators.FormatChecker()
+    def test_format_checker_failed_with_non_string_name(self):
+        error_message = ("An invalid 'name' value was provided. The name must "
+                         "be: printable characters. "
+                         "Can not start or end with whitespace.")
+        self._format_checker("name", "   ", error_message)
+        self._format_checker("name", None, error_message)
 
-        for check in checks:
-            exc = self.assertRaises(jsonschema_exc.FormatError,
-                                    format_checker.check, None, "name")
-            self.assertIsInstance(exc.cause, exception.InvalidName)
-            self.assertEqual("An invalid 'name' value was provided. The name "
-                             "must be: printable characters. "
-                             "Can not start or end with whitespace.",
-                             exc.cause.format_message())
+    def test_format_checker_failed_with_non_string_cell_name(self):
+        error_message = ("An invalid 'name' value was provided. "
+                         "The name must be: printable characters except "
+                         "!, ., @. Can not start or end with whitespace.")
+        self._format_checker("cell_name", None, error_message)
+
+    def test_format_checker_failed_name_with_leading_trailing_spaces(self):
+        error_message = ("An invalid 'name' value was provided. "
+                         "The name must be: printable characters with at "
+                         "least one non space character")
+        self._format_checker("name_with_leading_trailing_spaces",
+                             None, error_message)
+
+    def test_format_checker_failed_cell_name_with_leading_trailing_spaces(
+            self):
+        error_message = ("An invalid 'name' value was provided. "
+                         "The name must be: printable characters except"
+                         " !, ., @, with at least one non space character")
+        self._format_checker("cell_name_with_leading_trailing_spaces",
+                             None, error_message)
 
 
 class MicroversionsSchemaTestCase(APIValidationTestCase):
