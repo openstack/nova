@@ -4623,6 +4623,8 @@ project_id_query_server:
   description: |
     Filter the list of servers by the given project ID.
 
+    This filter only works when the ``all_tenants=1`` filter is also specified.
+
     .. note::
 
        'tenant_id' can also be requested which is alias of 'project_id'
