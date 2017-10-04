@@ -1209,10 +1209,11 @@ class CellV2Commands(object):
             marker = instances[-1].uuid
         return marker
 
-    @args('--cell_uuid', metavar='<cell_uuid>', required=True,
-            help='Unmigrated instances will be mapped to the cell with the '
-                 'uuid provided.')
-    @args('--max-count', metavar='<max_count>',
+    @args('--cell_uuid', metavar='<cell_uuid>', dest='cell_uuid',
+          required=True,
+          help='Unmigrated instances will be mapped to the cell with the '
+               'uuid provided.')
+    @args('--max-count', metavar='<max_count>', dest='max_count',
           help='Maximum number of instances to map')
     def map_instances(self, cell_uuid, max_count=None):
         """Map instances into the provided cell.
