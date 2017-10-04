@@ -89,6 +89,7 @@ from nova.pci import whitelist
 from nova import rpc
 from nova import safe_utils
 from nova.scheduler import client as scheduler_client
+from nova.scheduler import utils as scheduler_utils
 from nova import utils
 from nova.virt import block_device as driver_block_device
 from nova.virt import configdrive
@@ -505,6 +506,7 @@ class ComputeManager(manager.Manager):
             openstack_driver.is_neutron_security_groups())
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
         self.scheduler_client = scheduler_client.SchedulerClient()
+        self.reportclient = self.scheduler_client.reportclient
         self._resource_tracker = None
         self.instance_events = InstanceEvents()
         self._sync_power_pool = eventlet.GreenPool(
@@ -2753,8 +2755,8 @@ class ComputeManager(manager.Manager):
         #
         # For scenarios #2 and #3, we must do rebuild claim as server is
         # being evacuated to a different node.
+        rt = self._get_resource_tracker()
         if recreate or scheduled_node is not None:
-            rt = self._get_resource_tracker()
             rebuild_claim = rt.rebuild_claim
         else:
             rebuild_claim = claims.NopClaim
@@ -2813,6 +2815,9 @@ class ComputeManager(manager.Manager):
                 self._notify_instance_rebuild_error(context, instance, e)
             except Exception as e:
                 self._set_migration_status(migration, 'failed')
+                if recreate or scheduled_node is not None:
+                    rt.delete_allocation_for_evacuated_instance(
+                        instance, scheduled_node, node_type='destination')
                 self._notify_instance_rebuild_error(context, instance, e)
                 raise
             else:
@@ -3567,6 +3572,9 @@ class ComputeManager(manager.Manager):
             rt = self._get_resource_tracker()
             rt.drop_move_claim(context, instance, migration.source_node,
                                old_instance_type, prefix='old_')
+            self._delete_allocation_after_move(instance, migration,
+                                               old_instance_type,
+                                               migration.source_node)
             instance.drop_migration_context()
 
             # NOTE(mriedem): The old_vm_state could be STOPPED but the user
@@ -3592,6 +3600,28 @@ class ComputeManager(manager.Manager):
             self._notify_about_instance_usage(
                 context, instance, "resize.confirm.end",
                 network_info=network_info)
+
+    def _delete_allocation_after_move(self, instance, migration, flavor,
+                                      nodename):
+        # NOTE(jaypipes): This sucks, but due to the fact that confirm_resize()
+        # only runs on the source host and revert_resize() runs on the
+        # destination host, we need to do this here. Basically, what we're
+        # doing here is grabbing the existing allocations for this instance
+        # from the placement API, dropping the resources in the doubled-up
+        # allocation set that refer to the source host UUID and calling PUT
+        # /allocations back to the placement API. The allocation that gets
+        # PUT'd back to placement will only include the destination host and
+        # any shared providers in the case of a confirm_resize operation and
+        # the source host and shared providers for a revert_resize operation..
+        my_resources = scheduler_utils.resources_from_flavor(instance, flavor)
+        rt = self._get_resource_tracker()
+        cn_uuid = rt.get_node_uuid(nodename)
+        res = self.reportclient.remove_provider_from_instance_allocation(
+            instance.uuid, cn_uuid, instance.user_id,
+            instance.project_id, my_resources)
+        if not res:
+            LOG.error("Failed to save manipulated allocation",
+                      instance=instance)
 
     @wrap_exception()
     @reverts_task_state
@@ -3650,6 +3680,9 @@ class ComputeManager(manager.Manager):
 
             rt = self._get_resource_tracker()
             rt.drop_move_claim(context, instance, instance.node)
+            self._delete_allocation_after_move(instance, migration,
+                                               instance.flavor,
+                                               instance.node)
 
             # RPC cast back to the source host to finish the revert there.
             self.compute_rpcapi.finish_revert_resize(context, instance,

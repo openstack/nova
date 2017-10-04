@@ -3578,13 +3578,16 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                        '_do_rebuild_instance_with_claim')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     @mock.patch.object(manager.ComputeManager, '_notify_about_instance_usage')
-    def _test_rebuild_ex(self, instance, exc, mock_notify_about_instance_usage,
-                         mock_notify, mock_rebuild, mock_set):
+    def _test_rebuild_ex(self, instance, exc,
+                         mock_notify_about_instance_usage,
+                         mock_notify, mock_rebuild, mock_set,
+                         recreate=False, scheduled_node=None):
 
         mock_rebuild.side_effect = exc
 
         self.compute.rebuild_instance(self.context, instance, None, None, None,
-                                      None, None, None, None)
+                                      None, None, None, recreate,
+                                      scheduled_node=scheduled_node)
         mock_set.assert_called_once_with(None, 'failed')
         mock_notify_about_instance_usage.assert_called_once_with(
             mock.ANY, instance, 'rebuild.error', fault=mock_rebuild.side_effect
@@ -3604,6 +3607,34 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         ex = exception.InstanceNotFound(instance_id=instance.uuid)
         self._test_rebuild_ex(instance, ex)
 
+    @mock.patch('nova.compute.utils.add_instance_fault_from_exc')
+    @mock.patch.object(manager.ComputeManager,
+                       '_error_out_instance_on_exception')
+    def test_rebuild_driver_error_same_host(self, mock_error, mock_aiffe):
+        instance = fake_instance.fake_instance_obj(self.context)
+        ex = test.TestingException('foo')
+        with mock.patch.object(self.compute, '_get_resource_tracker') as mrt:
+            self.assertRaises(test.TestingException,
+                              self._test_rebuild_ex, instance, ex)
+            rt = mrt.return_value
+            self.assertFalse(
+                rt.delete_allocation_for_evacuated_instance.called)
+
+    @mock.patch('nova.compute.utils.add_instance_fault_from_exc')
+    @mock.patch.object(manager.ComputeManager,
+                       '_error_out_instance_on_exception')
+    def test_rebuild_driver_error_evacuate(self, mock_error, mock_aiffe):
+        instance = fake_instance.fake_instance_obj(self.context)
+        ex = test.TestingException('foo')
+        with mock.patch.object(self.compute, '_get_resource_tracker') as mrt:
+            self.assertRaises(test.TestingException,
+                              self._test_rebuild_ex, instance, ex,
+                              recreate=True, scheduled_node='foo')
+            rt = mrt.return_value
+            delete_alloc = rt.delete_allocation_for_evacuated_instance
+            delete_alloc.assert_called_once_with(instance, 'foo',
+                                                 node_type='destination')
+
     def test_rebuild_node_not_updated_if_not_recreate(self):
         node = uuidutils.generate_uuid()  # ironic node uuid
         instance = fake_instance.fake_instance_obj(self.context, node=node)
@@ -3612,7 +3643,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock.patch.object(self.compute, '_get_compute_info'),
             mock.patch.object(self.compute, '_do_rebuild_instance_with_claim'),
             mock.patch.object(objects.Instance, 'save'),
-            mock.patch.object(self.compute, '_set_migration_status')
+            mock.patch.object(self.compute, '_set_migration_status'),
         ) as (mock_get, mock_rebuild, mock_save, mock_set):
             self.compute.rebuild_instance(self.context, instance, None, None,
                                           None, None, None, None, False)
@@ -3630,7 +3661,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock.patch.object(self.compute, '_get_compute_info'),
             mock.patch.object(self.compute, '_do_rebuild_instance_with_claim'),
             mock.patch.object(objects.Instance, 'save'),
-            mock.patch.object(self.compute, '_set_migration_status')
+            mock.patch.object(self.compute, '_set_migration_status'),
         ) as (mock_rt, mock_get, mock_rebuild, mock_save, mock_set):
             mock_get.return_value.hypervisor_hostname = 'new-node'
             self.compute.rebuild_instance(self.context, instance, None, None,
@@ -5688,6 +5719,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
         @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
                     'drop_move_claim')
+        @mock.patch.object(self.compute, '_delete_allocation_after_move')
         @mock.patch('nova.compute.rpcapi.ComputeAPI.finish_revert_resize')
         @mock.patch.object(self.instance, 'revert_migration_context')
         @mock.patch.object(self.compute.network_api, 'get_instance_nw_info')
@@ -5716,6 +5748,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                              mock_get_instance_nw_info,
                              mock_revert_migration_context,
                              mock_finish_revert,
+                             mock_delete_allocation,
                              mock_drop_move_claim):
 
             self.instance.migration_context = objects.MigrationContext()
@@ -5728,6 +5761,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                        reservations=None)
             mock_drop_move_claim.assert_called_once_with(self.context,
                 self.instance, self.instance.node)
+            mock_delete_allocation.assert_called_once_with(
+                self.instance, self.migration, self.instance.flavor,
+                self.instance.node)
             self.assertIsNotNone(self.instance.migration_context)
 
         @mock.patch('nova.objects.Service.get_minimum_version',
@@ -5764,6 +5800,50 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
         do_revert_resize()
         do_finish_revert_resize()
+
+    def test_confirm_resize_deletes_allocations(self):
+        @mock.patch.object(self.migration, 'save')
+        @mock.patch.object(self.compute, '_notify_about_instance_usage')
+        @mock.patch.object(self.compute, 'network_api')
+        @mock.patch.object(self.compute.driver, 'confirm_migration')
+        @mock.patch.object(self.compute, '_get_resource_tracker')
+        @mock.patch.object(self.compute, '_delete_allocation_after_move')
+        @mock.patch.object(self.instance, 'drop_migration_context')
+        @mock.patch.object(self.instance, 'save')
+        def do_confirm_resize(mock_save, mock_drop, mock_delete, mock_get_rt,
+                              mock_confirm, mock_nwapi, mock_notify,
+                              mock_mig_save):
+            self.instance.migration_context = objects.MigrationContext()
+            self.migration.source_compute = self.instance['host']
+            self.migration.source_node = self.instance['node']
+            self.compute._confirm_resize(self.context, self.instance,
+                                         self.migration)
+            mock_delete.assert_called_once_with(self.instance, self.migration,
+                                                self.instance.old_flavor,
+                                                self.migration.source_node)
+
+        do_confirm_resize()
+
+    @mock.patch('nova.scheduler.utils.resources_from_flavor')
+    def test_delete_allocation_after_move(self, mock_resources):
+        @mock.patch.object(self.compute, '_get_resource_tracker')
+        @mock.patch.object(self.compute, 'reportclient')
+        def do_it(mock_rc, mock_grt):
+            instance = mock.MagicMock()
+            self.compute._delete_allocation_after_move(instance,
+                                                       mock.sentinel.migration,
+                                                       mock.sentinel.flavor,
+                                                       mock.sentinel.node)
+            mock_resources.assert_called_once_with(instance,
+                                                   mock.sentinel.flavor)
+            rt = mock_grt.return_value
+            rt.get_node_uuid.assert_called_once_with(mock.sentinel.node)
+            remove = mock_rc.remove_provider_from_instance_allocation
+            remove.assert_called_once_with(
+                instance.uuid, rt.get_node_uuid.return_value,
+                instance.user_id, instance.project_id,
+                mock_resources.return_value)
+        do_it()
 
     def test_consoles_enabled(self):
         self.flags(enabled=False, group='vnc')

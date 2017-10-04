@@ -31,7 +31,6 @@ from nova.objects import base as obj_base
 from nova.objects import fields as obj_fields
 from nova.objects import pci_device
 from nova.pci import manager as pci_manager
-from nova.scheduler import utils as sched_utils
 from nova import test
 from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_pci_device as fake_pci_device
@@ -1915,15 +1914,6 @@ class TestResize(BaseTestCase):
             ignore=['stats']
         ))
 
-        cn = self.rt.compute_nodes[_NODENAME]
-        cn_uuid = cn.uuid
-        rc = self.sched_client_mock.reportclient
-        remove_method = rc.remove_provider_from_instance_allocation
-        expected_resources = sched_utils.resources_from_flavor(instance,
-            flavor)
-        remove_method.assert_called_once_with(instance.uuid, cn_uuid,
-            instance.user_id, instance.project_id, expected_resources)
-
     def test_instance_build_resize_revert(self):
         self._test_instance_build_resize(revert=True)
 
@@ -2036,8 +2026,7 @@ class TestResize(BaseTestCase):
         self.assertEqual(request, pci_req_mock.return_value.requests[0])
         alloc_mock.assert_called_once_with(instance)
 
-    @mock.patch('nova.scheduler.utils.resources_from_flavor')
-    def test_drop_move_claim_on_revert(self, mock_resources):
+    def test_drop_move_claim_on_revert(self):
         self._setup_rt()
         cn = _COMPUTE_NODE_FIXTURES[0].obj_clone()
         self.rt.compute_nodes[_NODENAME] = cn
@@ -2071,9 +2060,6 @@ class TestResize(BaseTestCase):
                 self.rt.drop_move_claim(ctx, instance, _NODENAME)
                 mock_pci_free_device.assert_called_once_with(
                     pci_dev, mock.ANY)
-                # Check that we grabbed resourced for the right flavor...
-                mock_resources.assert_called_once_with(instance,
-                    instance.flavor)
 
     @mock.patch('nova.objects.Service.get_minimum_version',
                 return_value=22)

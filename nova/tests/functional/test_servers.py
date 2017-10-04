@@ -1839,8 +1839,9 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
 
     def test_evacuate_rebuild_on_dest_fails(self):
         """Tests that the allocations on the destination node are cleaned up
-        by the drop_move_claim in the ResourceTracker automatically when
-        the claim is made but the actual rebuild via the driver fails.
+        automatically when the claim is made but the actual rebuild
+        via the driver fails.
+
         """
         source_hostname = self.compute1.host
         dest_hostname = self.compute2.host
