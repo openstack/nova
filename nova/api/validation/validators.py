@@ -34,7 +34,7 @@ from nova.i18n import _
 
 @jsonschema.FormatChecker.cls_checks('regex')
 def _validate_regex_format(instance):
-    if not isinstance(instance, six.text_type):
+    if not instance or not isinstance(instance, six.text_type):
         return False
     try:
         re.compile(instance)
