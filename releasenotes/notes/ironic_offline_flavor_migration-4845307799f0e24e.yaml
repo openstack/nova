@@ -1,0 +1,9 @@
+---
+other:
+  - |
+    The ironic driver will automatically migrate instance flavors for resource classes
+    at runtime. If you are not able to run the compute and ironic services at pike because
+    you are automating an upgrade past this release, you can use the
+    ``nova-manage db ironic_flavor_migration`` to push the migration manually. This is only
+    for advanced users taking on the risk of automating the process of upgrading through
+    pike and is not recommended for normal users.

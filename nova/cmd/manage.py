@@ -99,6 +99,7 @@ from nova import quota
 from nova import rpc
 from nova import utils
 from nova import version
+from nova.virt import ironic
 
 CONF = nova.conf.CONF
 
@@ -861,6 +862,102 @@ Error: %s""") % six.text_type(e))
         print(t)
 
         return ran and 1 or 0
+
+    @args('--resource_class', metavar='<class>', required=True,
+          help='Ironic node class to set on instances')
+    @args('--host', metavar='<host>', required=False,
+          help='Compute service name to migrate nodes on')
+    @args('--node', metavar='<node>', required=False,
+          help='Ironic node UUID to migrate (all on the host if omitted)')
+    @args('--all', action='store_true', default=False, dest='all_hosts',
+          help='Run migrations for all ironic hosts and nodes')
+    @args('--verbose', action='store_true', default=False,
+          help='Print information about migrations being performed')
+    def ironic_flavor_migration(self, resource_class, host=None, node=None,
+                                all_hosts=False, verbose=False):
+        """Migrate flavor information for ironic instances.
+
+        This will manually push the instance flavor migration required
+        for ironic-hosted instances in Pike. The best way to accomplish
+        this migration is to run your ironic computes normally in Pike.
+        However, if you need to push the migration manually, then use
+        this.
+
+        This is idempotent, but not trivial to start/stop/resume. It is
+        recommended that you do this with care and not from a script
+        assuming it is trivial.
+
+        Running with --all may generate a large amount of DB traffic
+        all at once. Running at least one host at a time is recommended
+        for batching.
+
+        Return values:
+
+        0: All work is completed (or none is needed)
+        1: Specified host and/or node is not found, or no ironic nodes present
+        2: Internal accounting error shows more than one instance per node
+        3: Invalid combination of required arguments
+        """
+        if not resource_class:
+            # Note that if --resource_class is not specified on the command
+            # line it will actually result in a return code of 2, but we
+            # leave 3 here for testing purposes.
+            print(_('A resource_class is required for all modes of operation'))
+            return 3
+
+        ctx = context.get_admin_context()
+
+        if all_hosts:
+            if host or node:
+                print(_('--all with --host and/or --node does not make sense'))
+                return 3
+            cns = objects.ComputeNodeList.get_by_hypervisor_type(ctx, 'ironic')
+        elif host and node:
+            try:
+                cn = objects.ComputeNode.get_by_host_and_nodename(ctx, host,
+                                                                  node)
+                cns = [cn]
+            except exception.ComputeHostNotFound:
+                cns = []
+        elif host:
+            try:
+                cns = objects.ComputeNodeList.get_all_by_host(ctx, host)
+            except exception.ComputeHostNotFound:
+                cns = []
+        else:
+            print(_('Either --all, --host, or --host and --node are required'))
+            return 3
+
+        if len(cns) == 0:
+            print(_('No ironic compute nodes found that match criteria'))
+            return 1
+
+        # Check that we at least got one ironic compute and we can pretty
+        # safely assume the rest are
+        if cns[0].hypervisor_type != 'ironic':
+            print(_('Compute node(s) specified is not of type ironic'))
+            return 1
+
+        for cn in cns:
+            # NOTE(danms): The instance.node is the
+            # ComputeNode.hypervisor_hostname, which in the case of ironic is
+            # the node uuid. Since only one instance can be on a node in
+            # ironic, do another sanity check here to make sure we look legit.
+            inst = objects.InstanceList.get_by_filters(
+                ctx, {'node': cn.hypervisor_hostname,
+                      'deleted': False})
+            if len(inst) > 1:
+                print(_('Ironic node %s has multiple instances? '
+                        'Something is wrong.') % cn.hypervisor_hostname)
+                return 2
+            elif len(inst) == 1:
+                result = ironic.IronicDriver._pike_flavor_migration_for_node(
+                    ctx, resource_class, inst[0].uuid)
+                if result and verbose:
+                    print(_('Migrated instance %(uuid)s on node %(node)s') % {
+                        'uuid': inst[0].uuid,
+                        'node': cn.hypervisor_hostname})
+        return 0
 
 
 class ApiDbCommands(object):
