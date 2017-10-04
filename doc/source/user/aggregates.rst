@@ -65,6 +65,9 @@ between aggregates and availability zones:
   moved to another aggregate or when the user would like to migrate the
   instance.
 
+.. note:: Availablity zone name must NOT contain ':' since it is used by admin
+  users to specify hosts where instances are launched in server creation.
+  See :doc:`Select hosts where instances are launched </admin/availability-zones>` for more detail.
 
 Xen Pool Host Aggregates
 ------------------------

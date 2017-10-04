@@ -232,6 +232,12 @@ class AggregateTestCaseV21(test.NoDBTestCase):
                                      {"name": "test",
                                       "availability_zone": "x" * 256}})
 
+    def test_create_with_availability_zone_invalid(self):
+        self.assertRaises(self.bad_request, self.controller.create,
+                          self.req, body={"aggregate":
+                                     {"name": "test",
+                                      "availability_zone": "bad:az"}})
+
     def test_create_availability_zone_with_leading_trailing_spaces(self):
         self.assertRaises(self.bad_request, self.controller.create,
                           self.req, body={"aggregate":
@@ -372,6 +378,11 @@ class AggregateTestCaseV21(test.NoDBTestCase):
         self.assertRaises(self.bad_request, self.controller.update,
                           self.req, "2", body=test_metadata)
 
+    def test_update_with_availability_zone_invalid(self):
+        test_metadata = {"aggregate": {"availability_zone": "bad:az"}}
+        self.assertRaises(self.bad_request, self.controller.update,
+                          self.req, "2", body=test_metadata)
+
     def test_update_with_empty_availability_zone(self):
         test_metadata = {"aggregate": {"availability_zone": ""}}
         self.assertRaises(self.bad_request, self.controller.update,
@@ -481,6 +492,10 @@ class AggregateTestCaseV21(test.NoDBTestCase):
     def test_add_host_with_invalid_format_host(self):
         self.assertRaises(self.bad_request, eval(self.add_host),
                 self.req, "1", body={"add_host": {"host": "a" * 300}})
+
+    def test_add_host_with_invalid_name_host(self):
+        self.assertRaises(self.bad_request, eval(self.add_host),
+                self.req, "1", body={"add_host": {"host": "bad:host"}})
 
     def test_add_host_with_multiple_hosts(self):
         self.assertRaises(self.bad_request, eval(self.add_host),

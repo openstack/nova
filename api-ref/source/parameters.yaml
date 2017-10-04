@@ -1305,7 +1305,8 @@ aggregate_az_optional:
   description: |
     The availability zone of the host aggregate. You should use a custom
     availability zone rather than the default returned by the
-    os-availability-zone API.
+    os-availability-zone API. The availability zone must not include ':'
+    in its name.
   in: body
   required: false
   type: string
