@@ -154,22 +154,17 @@ class APITestCase(test.NoDBTestCase):
 
     @mock.patch.object(api, 'can_resize_image', autospec=True,
                        return_value=True)
-    @mock.patch.object(utils, 'execute', autospec=True)
-    def test_extend_ploop(self, mock_execute, mock_can_resize_image):
+    @mock.patch('nova.privsep.libvirt.ploop_resize')
+    def test_extend_ploop(self, mock_ploop_resize, mock_can_resize_image):
         imgfile = tempfile.NamedTemporaryFile()
         self.addCleanup(imgfile.close)
         imgsize = 10 * units.Gi
-        imgsize_mb = str(imgsize // units.Mi) + 'M'
         image = imgmodel.LocalFileImage(imgfile, imgmodel.FORMAT_PLOOP)
 
         api.extend(image, imgsize)
         mock_can_resize_image.assert_called_once_with(image.path,
                                                       imgsize)
-        mock_execute.assert_called_once_with('prl_disk_tool', 'resize',
-                                             '--size', imgsize_mb,
-                                             '--resize_partition',
-                                             '--hdd', imgfile,
-                                             run_as_root=True)
+        mock_ploop_resize.assert_called_once_with(imgfile, imgsize)
 
     @mock.patch.object(api, 'can_resize_image', autospec=True,
                        return_value=True)

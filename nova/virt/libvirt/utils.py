@@ -28,6 +28,7 @@ from oslo_log import log as logging
 import nova.conf
 from nova.i18n import _
 from nova.objects import fields as obj_fields
+import nova.privsep.libvirt
 from nova import utils
 from nova.virt.disk import api as disk
 from nova.virt import images
@@ -105,13 +106,7 @@ def create_ploop_image(disk_format, path, size, fs_type):
                   disk.FS_FORMAT_EXT4
     utils.execute('mkdir', '-p', path)
     disk_path = os.path.join(path, 'root.hds')
-    utils.execute('ploop', 'init', '-s', size, '-f', disk_format, '-t',
-                  fs_type, disk_path, run_as_root=True, check_exit_code=True)
-    # Add read access for all users, because "ploop init" creates
-    # disk with rw rights only for root. OpenStack user should have access
-    # to the disk to request info via "qemu-img info"
-    utils.execute('chmod', '-R', 'a+r', path,
-                  run_as_root=True, check_exit_code=True)
+    nova.privsep.libvirt.ploop_init(size, disk_format, fs_type, disk_path)
 
 
 def pick_disk_driver_name(hypervisor_version, is_block_dev=False):

@@ -20,8 +20,10 @@ libvirt specific routines.
 import binascii
 import errno
 import os
+import stat
 
 from oslo_concurrency import processutils
+from oslo_utils import units
 
 import nova.privsep
 
@@ -87,6 +89,57 @@ def dmcrypt_delete_volume(target):
     :param target: name of the mapped logical device
     """
     processutils.execute('cryptsetup', 'remove', target)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def ploop_init(size, disk_format, fs_type, disk_path):
+    """Initialize ploop disk, make it readable for non-root user
+
+    :param disk_format: data allocation format (raw or expanded)
+    :param fs_type: filesystem (ext4, ext3, none)
+    :param disk_path: ploop image file
+    """
+    processutils.execute('ploop', 'init', '-s', size, '-f', disk_format, '-t',
+                         fs_type, disk_path, run_as_root=True,
+                         check_exit_code=True)
+
+    # Add read access for all users, because "ploop init" creates
+    # disk with rw rights only for root. OpenStack user should have access
+    # to the disk to request info via "qemu-img info"
+    # TODO(mikal): this is a faithful rendition of the pre-privsep code from
+    # the libvirt driver, but it seems undesirable to me. It would be good to
+    # create the loop file with the right owner or group such that we don't
+    # need to have it world readable. I don't have access to a system to test
+    # this on however.
+    st = os.stat(disk_path)
+    os.chmod(disk_path, st.st_mode | stat.S_IROTH)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def ploop_resize(disk_path, size):
+    """Resize ploop disk
+
+    :param disk_path: ploop image file
+    :param size: new size (in bytes)
+    """
+    processutils.execute('prl_disk_tool', 'resize',
+                         '--size', '%dM' % (size // units.Mi),
+                         '--resize_partition',
+                         '--hdd', disk_path,
+                         run_as_root=True, check_exit_code=True)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def ploop_restore_descriptor(image_dir, base_delta, fmt):
+    """Restore ploop disk descriptor XML
+
+    :param image_dir: path to where descriptor XML is created
+    :param base_delta: ploop image file containing the data
+    :param fmt: ploop data allocation format (raw or expanded)
+    """
+    processutils.execute('ploop', 'restore-descriptor', '-f', fmt,
+                         image_dir, base_delta,
+                         run_as_root=True, check_exit_code=True)
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint

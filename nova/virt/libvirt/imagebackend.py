@@ -33,6 +33,7 @@ import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import image
+import nova.privsep.libvirt
 import nova.privsep.path
 from nova import utils
 from nova.virt.disk import api as disk
@@ -1071,8 +1072,9 @@ class Ploop(Image):
             fileutils.ensure_tree(target)
             image_path = os.path.join(target, "root.hds")
             libvirt_utils.copy_image(base, image_path)
-            utils.execute('ploop', 'restore-descriptor', '-f', self.pcs_format,
-                          target, image_path)
+            nova.privsep.libvirt.ploop_restore_descriptor(target,
+                                                          image_path,
+                                                          self.pcs_format)
             if size:
                 self.resize_image(size)
 

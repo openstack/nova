@@ -1712,9 +1712,9 @@ class PloopTestCase(_ImageTestCase, test.NoDBTestCase):
                        return_value=2048)
     @mock.patch.object(imagebackend.utils, 'synchronized')
     @mock.patch.object(fake_libvirt_utils, 'copy_image')
-    @mock.patch.object(imagebackend.utils, 'execute')
+    @mock.patch('nova.privsep.libvirt.ploop_restore_descriptor')
     @mock.patch.object(imagebackend.disk, 'extend')
-    def test_create_image(self, mock_extend, mock_execute,
+    def test_create_image(self, mock_extend, mock_ploop_restore_descriptor,
                           mock_copy, mock_sync, mock_get):
         mock_sync.side_effect = lambda *a, **kw: self._fake_deco
         fn = mock.MagicMock()
@@ -1724,9 +1724,9 @@ class PloopTestCase(_ImageTestCase, test.NoDBTestCase):
         image.create_image(fn, self.TEMPLATE_PATH, 2048, image_id=None)
 
         mock_copy.assert_called_once_with(self.TEMPLATE_PATH, img_path)
-        mock_execute.assert_called_once_with("ploop", "restore-descriptor",
-                                             "-f", "raw",
-                                             self.PATH, img_path)
+        mock_ploop_restore_descriptor.assert_called_once_with(self.PATH,
+                                                              img_path,
+                                                              "raw")
         self.assertTrue(mock_sync.called)
         fn.assert_called_once_with(target=self.TEMPLATE_PATH, image_id=None)
         mock_extend.assert_called_once_with(

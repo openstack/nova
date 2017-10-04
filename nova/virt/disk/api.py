@@ -33,11 +33,11 @@ if os.name != 'nt':
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
-from oslo_utils import units
 
 import nova.conf
 from nova import exception
 from nova.i18n import _
+import nova.privsep.libvirt
 from nova import utils
 from nova.virt.disk.mount import api as mount
 from nova.virt.disk.vfs import api as vfs
@@ -157,17 +157,11 @@ def extend(image, size):
     if not isinstance(image, imgmodel.LocalImage):
         return
 
-    if (image.format == imgmodel.FORMAT_PLOOP):
-        if not can_resize_image(image.path, size):
-            return
-
-        utils.execute('prl_disk_tool', 'resize',
-                      '--size', '%dM' % (size // units.Mi),
-                      '--resize_partition',
-                      '--hdd', image.path, run_as_root=True)
+    if not can_resize_image(image.path, size):
         return
 
-    if not can_resize_image(image.path, size):
+    if (image.format == imgmodel.FORMAT_PLOOP):
+        nova.privsep.libvirt.ploop_resize(image.path, size)
         return
 
     utils.execute('qemu-img', 'resize', image.path, size)
