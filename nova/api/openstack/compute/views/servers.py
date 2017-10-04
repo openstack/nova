@@ -26,7 +26,6 @@ from nova.api.openstack.compute.views import images as views_images
 from nova import context as nova_context
 from nova import exception
 from nova import objects
-from nova.objects import base as obj_base
 from nova.policies import flavor_extra_specs as fes_policies
 from nova import utils
 
@@ -223,12 +222,7 @@ class ViewBuilder(common.ViewBuilder):
 
     @staticmethod
     def _get_metadata(instance):
-        # FIXME(danms): Transitional support for objects
-        metadata = instance.get('metadata')
-        if isinstance(instance, obj_base.NovaObject):
-            return metadata or {}
-        else:
-            return utils.instance_meta(instance)
+        return instance.metadata or {}
 
     @staticmethod
     def _get_vm_status(instance):
