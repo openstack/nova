@@ -5,5 +5,5 @@ upgrade:
     rootwrap configuration.
   - |
     The following commands are no longer required to be listed in your rootwrap
-    configuration: cat; chown; cryptsetup; ploop; prl_disk_tool; readlink;
+    configuration: cat; chown; cryptsetup; dd; ploop; prl_disk_tool; readlink;
     tee; touch.

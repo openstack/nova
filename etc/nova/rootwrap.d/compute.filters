@@ -85,9 +85,6 @@ mm-ctl: CommandFilter, mm-ctl, root
 # nova/network/linux_net.py: 'ovs-ofctl', ....
 ovs-ofctl: CommandFilter, ovs-ofctl, root
 
-# nova/virt/libvirt/driver.py: 'dd', if=%s % virsh_output, ...
-dd: CommandFilter, dd, root
-
 # nova/virt/xenapi/volume_utils.py: 'iscsiadm', '-m', ...
 iscsiadm: CommandFilter, iscsiadm, root
 

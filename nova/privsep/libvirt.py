@@ -23,9 +23,14 @@ import os
 import stat
 
 from oslo_concurrency import processutils
+from oslo_log import log as logging
 from oslo_utils import units
 
+from nova.i18n import _
 import nova.privsep
+
+
+LOG = logging.getLogger(__name__)
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
@@ -162,3 +167,46 @@ def disable_ipv6(interface):
     """Disable ipv6 for a bridge."""
     with open('/proc/sys/net/ipv6/conf/%s/disable_ipv' % interface, 'w') as f:
         f.write('1')
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def readpty(path):
+    # TODO(mikal): I'm not a huge fan that we don't enforce a valid pty path
+    # here, but I haven't come up with a great way of doing that.
+
+    # NOTE(mikal): I am deliberately not catching the ImportError
+    # exception here... Some platforms (I'm looking at you Windows)
+    # don't have a fcntl and we may as well let them know that
+    # with an ImportError, not that they should be calling this at all.
+    import fcntl
+
+    try:
+        with open(path, 'r') as f:
+            current_flags = fcntl.fcntl(f.fileno(), fcntl.F_GETFL)
+            fcntl.fcntl(f.fileno(), fcntl.F_SETFL,
+                        current_flags | os.O_NONBLOCK)
+
+            return f.read()
+
+    except Exception as e:
+        # NOTE(mikal): dear internet, I see you looking at me with your
+        # judging eyes. There's a story behind why we do this. You see, the
+        # previous implementation did this:
+        #
+        # out, err = utils.execute('dd',
+        #                          'if=%s' % pty,
+        #                          'iflag=nonblock',
+        #                          run_as_root=True,
+        #                          check_exit_code=False)
+        # return out
+        #
+        # So, it never checked stderr or the return code of the process it
+        # ran to read the pty. Doing something better than that has turned
+        # out to be unexpectedly hard because there are a surprisingly large
+        # variety of errors which appear to be thrown when doing this read.
+        #
+        # Therefore for now we log the errors, but keep on rolling. Volunteers
+        # to help clean this up are welcome and will receive free beverages.
+        LOG.info(_('Ignored error while reading from instance console '
+                   'pty: %s'), e)
+        return ''
