@@ -730,13 +730,13 @@ class TestInstanceNotificationSample(
         mock_reschedule.side_effect = _build_resources
         self.api.post_server_action(server['id'], post)
         self._wait_for_state_change(self.api, server, expected_status='ERROR')
+        self._wait_for_notification('compute.exception')
         # There should be two notifications, one for the instance.resize.error
         # and one for the compute.exception via the wrap_exception decorator on
         # the ComputeManager.prep_resize method.
         self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
                          'Unexpected number of notifications: %s' %
                          fake_notifier.VERSIONED_NOTIFICATIONS)
-        self._wait_for_notification('compute.exception')
         self._verify_notification('instance-resize-error',
             replacements={
                 'reservation_id': server['reservation_id'],
