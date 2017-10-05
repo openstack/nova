@@ -9956,7 +9956,8 @@ class ComputeAPITestCase(BaseTestCase):
                 mock.call(self.context, instance, self.compute.host,
                           action='interface_attach', phase='start')])
 
-    def test_detach_interface(self):
+    @mock.patch.object(compute_utils, 'notify_about_instance_action')
+    def test_detach_interface(self, mock_notify):
         nwinfo, port_id = self.test_attach_interface()
         self.stub_out('nova.network.api.API.'
                        'deallocate_port_for_instance',
@@ -9968,6 +9969,11 @@ class ComputeAPITestCase(BaseTestCase):
             nwinfo)
         self.compute.detach_interface(self.context, instance, port_id)
         self.assertEqual(self.compute.driver._interfaces, {})
+        mock_notify.assert_has_calls([
+            mock.call(self.context, instance, self.compute.host,
+                      action='interface_detach', phase='start'),
+            mock.call(self.context, instance, self.compute.host,
+                      action='interface_detach', phase='end')])
 
     def test_detach_interface_failed(self):
         nwinfo, port_id = self.test_attach_interface()
@@ -9979,15 +9985,19 @@ class ComputeAPITestCase(BaseTestCase):
             nwinfo)
 
         with test.nested(
+            mock.patch.object(compute_utils, 'notify_about_instance_action'),
             mock.patch.object(self.compute.driver, 'detach_interface',
                 side_effect=exception.NovaException('detach_failed')),
             mock.patch.object(self.compute.network_api,
                               'deallocate_port_for_instance')) as (
-            mock_detach, mock_deallocate):
+            mock_notify, mock_detach, mock_deallocate):
             self.assertRaises(exception.InterfaceDetachFailed,
                               self.compute.detach_interface, self.context,
                               instance, port_id)
             self.assertFalse(mock_deallocate.called)
+            mock_notify.assert_has_calls([
+                mock.call(self.context, instance, self.compute.host,
+                          action='interface_detach', phase='start')])
 
     @mock.patch.object(compute_manager.LOG, 'warning')
     def test_detach_interface_deallocate_port_for_instance_failed(self,
@@ -10006,12 +10016,13 @@ class ComputeAPITestCase(BaseTestCase):
         # NovaExceptions.
         error = neutron_exceptions.PortNotFoundClient()
         with test.nested(
+            mock.patch.object(compute_utils, 'notify_about_instance_action'),
             mock.patch.object(self.compute.driver, 'detach_interface'),
             mock.patch.object(self.compute.network_api,
                               'deallocate_port_for_instance',
                               side_effect=error),
             mock.patch.object(self.compute, '_instance_update')) as (
-            mock_detach, mock_deallocate, mock_instance_update):
+            mock_notify, mock_detach, mock_deallocate, mock_instance_update):
             ex = self.assertRaises(neutron_exceptions.PortNotFoundClient,
                                    self.compute.detach_interface, self.context,
                                    instance, port_id)
@@ -10019,6 +10030,9 @@ class ComputeAPITestCase(BaseTestCase):
         mock_deallocate.assert_called_once_with(
             self.context, instance, port_id)
         self.assertEqual(1, warn_mock.call_count)
+        mock_notify.assert_has_calls([
+            mock.call(self.context, instance, self.compute.host,
+                      action='interface_detach', phase='start')])
 
     def test_attach_volume(self):
         fake_bdm = fake_block_device.FakeDbBlockDeviceDict(

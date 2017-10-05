@@ -5384,6 +5384,12 @@ class ComputeManager(manager.Manager):
         if condemned is None:
             raise exception.PortNotFound(_("Port %s is not "
                                            "attached") % port_id)
+
+        compute_utils.notify_about_instance_action(
+            context, instance, self.host,
+            action=fields.NotificationAction.INTERFACE_DETACH,
+            phase=fields.NotificationPhase.START)
+
         try:
             self.driver.detach_interface(context, instance, condemned)
         except exception.NovaException as ex:
@@ -5403,6 +5409,11 @@ class ComputeManager(manager.Manager):
                                 'for instance. Error: %(error)s',
                                 {'port_id': port_id, 'error': ex},
                                 instance=instance)
+
+        compute_utils.notify_about_instance_action(
+            context, instance, self.host,
+            action=fields.NotificationAction.INTERFACE_DETACH,
+            phase=fields.NotificationPhase.END)
 
     def _get_compute_info(self, context, host):
         return objects.ComputeNode.get_first_node_by_host_for_old_compat(

@@ -149,7 +149,7 @@ class TestInstanceNotificationSample(
             self._test_unrescue_server,
             self._test_soft_delete_server,
             self._test_attach_volume_error,
-            self._test_interface_attach,
+            self._test_interface_attach_and_detach,
         ]
 
         for action in actions:
@@ -1145,7 +1145,7 @@ class TestInstanceNotificationSample(
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
-    def _test_interface_attach(self, server):
+    def _test_interface_attach_and_detach(self, server):
         post = {
             'interfaceAttachment': {
                 'net_id': fixtures.NeutronFixture.network_1['id']
@@ -1162,6 +1162,27 @@ class TestInstanceNotificationSample(
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
         self._verify_notification(
             'instance-interface_attach-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+
+        fake_notifier.reset()
+        self.assertEqual(0, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+
+        self.api.detach_interface(
+            server['id'],
+            fixtures.NeutronFixture.port_2['id'])
+        self._wait_for_notification('instance.interface_detach.end')
+        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-interface_detach-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+        self._verify_notification(
+            'instance-interface_detach-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},

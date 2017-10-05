@@ -834,7 +834,7 @@ class NotificationAction(BaseNovaEnum):
     LIVE_MIGRATION_ROLLBACK_DEST = 'live_migration_rollback_dest'
     LIVE_MIGRATION_ROLLBACK = 'live_migration_rollback'
     REBUILD = 'rebuild'
-    REMOVE_FIXED_IP = 'remove_fixed_ip'
+    INTERFACE_DETACH = 'interface_detach'
     RESIZE_CONFIRM = 'resize_confirm'
     RESIZE_PREP = 'resize_prep'
     RESIZE_REVERT = 'resize_revert'
@@ -852,7 +852,7 @@ class NotificationAction(BaseNovaEnum):
            VOLUME_DETACH, CREATE, EVACUATE, RESIZE_FINISH,
            LIVE_MIGRATION_ABORT, LIVE_MIGRATION_POST_DEST, LIVE_MIGRATION_POST,
            LIVE_MIGRATION_PRE, LIVE_MIGRATION_ROLLBACK,
-           LIVE_MIGRATION_ROLLBACK_DEST, REBUILD, REMOVE_FIXED_IP,
+           LIVE_MIGRATION_ROLLBACK_DEST, REBUILD, INTERFACE_DETACH,
            RESIZE_CONFIRM, RESIZE_PREP, RESIZE_REVERT, SHELVE_OFFLOAD,
            SOFT_DELETE, TRIGGER_CRASH_DUMP, UNRESCUE, UNSHELVE, ADD_HOST,
            REMOVE_HOST)
