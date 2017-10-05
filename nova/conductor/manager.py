@@ -916,12 +916,12 @@ class ComputeTaskManager(base.Base):
                 with obj_target_cell(instance, cell):
                     instance.create()
 
-            # send a state update notification for the initial create to
-            # show it going from non-existent to BUILDING
-            notifications.send_update_with_states(context, instance, None,
-                    vm_states.BUILDING, None, None, service="conductor")
-
             with obj_target_cell(instance, cell):
+                # send a state update notification for the initial create to
+                # show it going from non-existent to BUILDING
+                # This can lazy-load attributes on instance.
+                notifications.send_update_with_states(context, instance, None,
+                        vm_states.BUILDING, None, None, service="conductor")
                 objects.InstanceAction.action_start(
                     context, instance.uuid, instance_actions.CREATE,
                     want_result=False)
