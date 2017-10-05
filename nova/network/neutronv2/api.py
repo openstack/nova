@@ -41,6 +41,7 @@ from nova.pci import whitelist as pci_whitelist
 from nova.policies import servers as servers_policies
 from nova import profiler
 from nova import service_auth
+from nova import utils
 
 CONF = nova.conf.CONF
 
@@ -159,13 +160,35 @@ def get_client(context, admin=False):
         # an admin token so log an error
         raise exception.Unauthorized()
 
-    return ClientWrapper(
-        clientv20.Client(session=_SESSION,
-                         auth=auth_plugin,
-                         endpoint_override=CONF.neutron.url,
-                         region_name=CONF.neutron.region_name,
-                         global_request_id=context.global_id),
-        admin=admin or context.is_admin)
+    client_args = dict(session=_SESSION,
+                       auth=auth_plugin,
+                       global_request_id=context.global_request_id)
+
+    if CONF.neutron.url:
+        # TODO(efried): Remove in Rocky
+        client_args = dict(client_args,
+                           endpoint_override=CONF.neutron.url,
+                           # NOTE(efried): The legacy behavior was to default
+                           # region_name in the conf.
+                           region_name=CONF.neutron.region_name or 'RegionOne')
+    else:
+        # The new way
+        # NOTE(efried): We build an adapter
+        #               to pull conf options
+        #               to pass to neutronclient
+        #               which uses them to build an Adapter.
+        # This should be unwound at some point.
+        adap = utils.get_ksa_adapter(
+            'network', ksa_auth=auth_plugin, ksa_session=_SESSION)
+        client_args = dict(client_args,
+                           service_type=adap.service_type,
+                           service_name=adap.service_name,
+                           interface=adap.interface,
+                           region_name=adap.region_name,
+                           endpoint_override=adap.endpoint_override)
+
+    return ClientWrapper(clientv20.Client(**client_args),
+                         admin=admin or context.is_admin)
 
 
 def _is_not_duplicate(item, items, items_list_name, instance):

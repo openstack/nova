@@ -122,6 +122,36 @@ class TestNeutronClient(test.NoDBTestCase):
         super(TestNeutronClient, self).setUp()
         neutronapi.reset_state()
 
+    def test_ksa_adapter_loading_defaults(self):
+        """No 'url' triggers ksa loading path with defaults."""
+        my_context = context.RequestContext('userid',
+                                            uuids.my_tenant,
+                                            auth_token='token')
+        cl = neutronapi.get_client(my_context)
+        self.assertEqual('network', cl.httpclient.service_type)
+        self.assertIsNone(cl.httpclient.service_name)
+        self.assertEqual(['internal', 'public'], cl.httpclient.interface)
+        self.assertIsNone(cl.httpclient.region_name)
+        self.assertIsNone(cl.httpclient.endpoint_override)
+
+    def test_ksa_adapter_loading(self):
+        """Test ksa loading path with specified values."""
+        self.flags(group='neutron',
+                   service_type='st',
+                   service_name='sn',
+                   valid_interfaces='admin',
+                   region_name='RegionTwo',
+                   endpoint_override='eo')
+        my_context = context.RequestContext('userid',
+                                            uuids.my_tenant,
+                                            auth_token='token')
+        cl = neutronapi.get_client(my_context)
+        self.assertEqual('st', cl.httpclient.service_type)
+        self.assertEqual('sn', cl.httpclient.service_name)
+        self.assertEqual(['admin'], cl.httpclient.interface)
+        self.assertEqual('RegionTwo', cl.httpclient.region_name)
+        self.assertEqual('eo', cl.httpclient.endpoint_override)
+
     def test_withtoken(self):
         self.flags(url='http://anyhost/', group='neutron')
         self.flags(timeout=30, group='neutron')
@@ -131,8 +161,9 @@ class TestNeutronClient(test.NoDBTestCase):
         cl = neutronapi.get_client(my_context)
 
         self.assertEqual(CONF.neutron.url, cl.httpclient.endpoint_override)
-        self.assertEqual(my_context.auth_token,
-                         cl.httpclient.auth.auth_token)
+        # Specifying 'url' defaults 'region_name'
+        self.assertEqual('RegionOne', cl.httpclient.region_name)
+        self.assertEqual(my_context.auth_token, cl.httpclient.auth.auth_token)
         self.assertEqual(CONF.neutron.timeout, cl.httpclient.session.timeout)
 
     def test_withouttoken(self):
