@@ -4507,9 +4507,17 @@ class ComputeManager(manager.Manager):
                                   network_info=network_info,
                                   block_device_info=block_device_info)
         except Exception:
-            with excutils.save_and_reraise_exception():
+            with excutils.save_and_reraise_exception(logger=LOG):
                 LOG.exception('Instance failed to spawn',
                               instance=instance)
+                # Cleanup allocations created by the scheduler on this host
+                # since we failed to spawn the instance. We do this both if
+                # the instance claim failed with ComputeResourcesUnavailable
+                # or if we did claim but the spawn failed, because aborting the
+                # instance claim will not remove the allocations.
+                rt.reportclient.delete_allocation_for_instance(instance.uuid)
+                # FIXME: Umm, shouldn't we be rolling back volume connections
+                # and port bindings?
 
         if image:
             instance.image_ref = shelved_image_ref
