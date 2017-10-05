@@ -526,6 +526,48 @@ class CinderApiTestCase(test.NoDBTestCase):
         mock_volumes.detach.assert_called_once_with('id1', 'fakeid')
 
     @mock.patch('nova.volume.cinder.cinderclient')
+    def test_attachment_get(self, mock_cinderclient):
+        mock_attachment = mock.MagicMock()
+        mock_cinderclient.return_value = \
+            mock.MagicMock(attachments=mock_attachment)
+
+        attachment_id = uuids.attachment
+        self.api.attachment_get(self.ctx, attachment_id)
+
+        mock_cinderclient.assert_called_once_with(self.ctx, '3.44',
+                                                  skip_version_check=True)
+        mock_attachment.show.assert_called_once_with(attachment_id)
+
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_attachment_get_failed(self, mock_cinderclient):
+        mock_cinderclient.return_value.attachments.show.side_effect = (
+                cinder_exception.NotFound(404, '404'))
+
+        attachment_id = uuids.attachment
+        ex = self.assertRaises(exception.VolumeAttachmentNotFound,
+                               self.api.attachment_get,
+                               self.ctx,
+                               attachment_id)
+
+        self.assertEqual(404, ex.code)
+        self.assertIn(attachment_id, six.text_type(ex))
+
+    @mock.patch('nova.volume.cinder.cinderclient',
+                side_effect=exception.CinderAPIVersionNotAvailable(
+                    version='3.44'))
+    def test_attachment_get_unsupported_api_version(self, mock_cinderclient):
+        """Tests that CinderAPIVersionNotAvailable is passed back.
+
+        If microversion 3.44 isn't available that should result in a
+        CinderAPIVersionNotAvailable exception.
+        """
+        self.assertRaises(exception.CinderAPIVersionNotAvailable,
+                          self.api.attachment_get,
+                          self.ctx, uuids.attachment_id)
+        mock_cinderclient.assert_called_once_with(self.ctx, '3.44',
+                                                  skip_version_check=True)
+
+    @mock.patch('nova.volume.cinder.cinderclient')
     def test_initialize_connection(self, mock_cinderclient):
         connection_info = {'foo': 'bar'}
         mock_cinderclient.return_value.volumes. \
