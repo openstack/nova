@@ -474,11 +474,63 @@ NUMA topology
      greater than the available number of CPUs or memory respectively, an
      exception is raised.
 
+.. _extra-specs-realtime-policy:
+
+CPU real-time policy
+  For the libvirt driver, you can state that one or more of your instance
+  virtual CPUs (vCPUs), though not all of them, run with a real-time policy.
+  When used on a correctly configured host, this provides stronger guarantees
+  for worst case scheduler latency for vCPUs and is a requirement for certain
+  applications.
+
+  .. todo::
+
+     Document the required steps to configure hosts and guests. There are a lot
+     of things necessary, from isolating hosts and configuring the
+     ``vcpu_pin_set`` nova configuration option on the host, to choosing a
+     correctly configured guest image.
+
+  .. important::
+
+     While most of your instance vCPUs can run with a real-time policy, you must
+     mark at least one vCPU as non-real-time, to be used for both non-real-time
+     guest processes and emulator overhead (housekeeping) processes.
+
+  .. important::
+
+     To use this extra spec, you must enable pinned CPUs. Refer to
+     :ref:`CPU policy <extra-specs-cpu-policy>` for more information.
+
+  .. code:: console
+
+     $ openstack flavor set FLAVOR-NAME \
+         --property hw:cpu_realtime=CPU-REALTIME-POLICY \
+         --property hw:cpu_realtime_mask=CPU-REALTIME-MASK
+
+  Where:
+
+  CPU-REALTIME-POLICY (enum):
+    One of:
+
+    - ``no``: (default) The guest vCPUs will not have a real-time policy
+    - ``yes``: The guest vCPUs will have a real-time policy
+
+  CPU-REALTIME-MASK (coremask):
+    A coremask indicating which vCPUs **will not** have a real-time policy. This
+    should start with a ``^``. For example, a value of ``^0-1`` indicates that
+    all vCPUs *except* vCPUs ``0`` and ``1`` will have a real-time policy.
+
+  .. note::
+
+     The ``hw:cpu_realtime_mask`` option is only valid if ``hw:cpu_realtime``
+     is set to ``yes``.
+
 Emulator threads policy
   For the libvirt driver, you can assign a separate pCPU to an instance that
   will be used for emulator threads, which are emulator processes not directly
   related to the guest OS. This pCPU will used in addition to the pCPUs used
-  for the guest. This is generally required for use with a real-time OS.
+  for the guest. This is generally required for use with a :ref:`real-time
+  workload <extra-specs-realtime-policy>`.
 
   .. important::
 
