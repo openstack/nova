@@ -9,6 +9,9 @@ increase security. For more information, see the `OpenStack Security Guide
 Trusted compute pools
 ~~~~~~~~~~~~~~~~~~~~~
 
+.. note:: The ``TrustedFilter`` was deprecated in the 16.0.0 Pike release and
+  will be removed in the 17.0.0 Queens release.
+
 Administrators can designate a group of compute hosts as trusted using trusted
 compute pools. The trusted hosts use hardware-based security features, such as
 the Intel Trusted Execution Technology (TXT), to provide an additional level of
