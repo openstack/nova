@@ -1173,6 +1173,7 @@ class SchedulerReportClient(object):
         if r:
             LOG.info(_LI('Deleted allocation for instance %s'),
                      uuid)
+            return True
         else:
             # Check for 404 since we don't need to log a warning if we tried to
             # delete something which doesn't actually exist.
@@ -1183,6 +1184,7 @@ class SchedulerReportClient(object):
                     {'uuid': uuid,
                      'code': r.status_code,
                      'text': r.text})
+            return False
 
     def update_instance_allocation(self, compute_node, instance, sign):
         if sign > 0:

@@ -5631,7 +5631,13 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                     revert_migration_context,
                     mock_finish_revert):
 
-            self.migration.source_compute = self.instance['host']
+            # NOTE(danms): Before a revert, the instance is "on"
+            # the destination host/node
+            self.migration.uuid = uuids.migration
+            self.migration.source_compute = 'src'
+            self.migration.source_node = 'srcnode'
+            self.migration.dest_compute = self.instance.host
+            self.migration.dest_node = self.instance.node
 
             # Inform compute that instance uses non-shared or shared storage
             _is_instance_storage_shared.return_value = is_shared
@@ -5825,13 +5831,14 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         do_confirm_resize()
 
     @mock.patch('nova.scheduler.utils.resources_from_flavor')
-    def test_delete_allocation_after_move(self, mock_resources):
+    def test_delete_allocation_after_move_legacy(self, mock_resources):
         @mock.patch.object(self.compute, '_get_resource_tracker')
         @mock.patch.object(self.compute, 'reportclient')
         def do_it(mock_rc, mock_grt):
             instance = mock.MagicMock()
+            migration = mock.MagicMock()
             self.compute._delete_allocation_after_move(instance,
-                                                       mock.sentinel.migration,
+                                                       migration,
                                                        mock.sentinel.flavor,
                                                        mock.sentinel.node)
             mock_resources.assert_called_once_with(instance,
@@ -5844,6 +5851,100 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                 instance.user_id, instance.project_id,
                 mock_resources.return_value)
         do_it()
+
+    @mock.patch('nova.scheduler.utils.resources_from_flavor')
+    def test_delete_allocation_after_move_confirm_by_migration(self, mock_rff):
+        mock_rff.return_value = {}
+
+        @mock.patch.object(self.compute, '_get_resource_tracker')
+        @mock.patch.object(self.compute, 'reportclient')
+        def doit(new_rules, mock_report, mock_rt):
+            mock_report.delete_allocation_for_instance.return_value = new_rules
+            self.migration.source_node = 'src'
+            self.migration.uuid = uuids.migration
+            self.migration.status = 'confirmed'
+            self.compute._delete_allocation_after_move(self.instance,
+                                                       self.migration,
+                                                       mock.sentinel.flavor,
+                                                       'src')
+            mock_report.delete_allocation_for_instance.assert_called_once_with(
+                self.migration.uuid)
+
+            old = mock_report.remove_provider_from_instance_allocation
+            if new_rules:
+                self.assertFalse(old.called)
+            else:
+                self.assertTrue(old.called)
+
+        # Allocations by migration, no legacy cleanup
+        doit(True)
+
+        # No allocations by migration, legacy cleanup
+        doit(False)
+
+    @mock.patch('nova.scheduler.utils.resources_from_flavor')
+    def test_delete_allocation_after_move_fail_by_migration(self, mock_rff):
+        mock_rff.return_value = {}
+
+        @mock.patch.object(self.compute, '_get_resource_tracker')
+        @mock.patch.object(self.compute, 'reportclient')
+        def doit(new_rules, mock_report, mock_rt):
+            mock_report.get_allocations_for_instance.return_value = new_rules
+            self.migration.source_node = 'src'
+            self.migration.uuid = uuids.migration
+            self.migration.status = 'failed'
+            self.compute._delete_allocation_after_move(self.instance,
+                                                       self.migration,
+                                                       mock.sentinel.flavor,
+                                                       'src')
+            self.assertFalse(mock_report.delete_allocation_for_instance.called)
+            mock_report.get_allocations_for_instance.assert_called_once_with(
+                mock_rt().get_node_uuid.return_value, self.migration)
+
+            old = mock_report.remove_provider_from_instance_allocation
+            if new_rules:
+                self.assertFalse(old.called)
+            else:
+                self.assertTrue(old.called)
+
+        # Allocations by migration, no legacy cleanup
+        doit(True)
+
+        # No allocations by migration, legacy cleanup
+        doit(False)
+
+    @mock.patch('nova.scheduler.utils.resources_from_flavor')
+    def test_delete_allocation_after_move_revert_by_migration(self, mock_rff):
+        mock_rff.return_value = {}
+
+        @mock.patch.object(self.compute, '_get_resource_tracker')
+        @mock.patch.object(self.compute, 'reportclient')
+        def doit(new_rules, mock_report, mock_rt):
+            a = new_rules and {'allocations': 'fake'} or {}
+            mock_report.get_allocations_for_instance.return_value = a
+            self.migration.source_node = 'src'
+            self.migration.dest_node = 'dst'
+            self.migration.uuid = uuids.migration
+            self.compute._delete_allocation_after_move(self.instance,
+                                                       self.migration,
+                                                       mock.sentinel.flavor,
+                                                       'dst')
+            self.assertFalse(mock_report.delete_allocation_for_instance.called)
+            cn_uuid = mock_rt().get_node_uuid.return_value
+            ga = mock_report.get_allocations_for_instance
+            ga.assert_called_once_with(cn_uuid, self.migration)
+
+            old = mock_report.remove_provider_from_instance_allocation
+            if new_rules:
+                self.assertFalse(old.called)
+            else:
+                self.assertTrue(old.called)
+
+        # Allocations by migration, no legacy cleanup
+        doit(True)
+
+        # No allocations by migration, legacy cleanup
+        doit(False)
 
     def test_consoles_enabled(self):
         self.flags(enabled=False, group='vnc')
