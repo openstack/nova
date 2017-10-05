@@ -11,6 +11,7 @@
 #    under the License.
 
 import copy
+import time
 
 from keystoneauth1 import exceptions as ks_exc
 import mock
@@ -1367,6 +1368,64 @@ class TestAggregates(SchedulerReportClientTestCase):
         self.assertEqual(uuids.request_id,
                         log_mock.call_args[0][1]['placement_req_id'])
         self.assertIsNone(result)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_aggregates')
+    def test_refresh_aggregate_map_no_last(self, mock_get):
+        """Test that refresh aggregate map is called when the map is
+        stale.
+        """
+        uuid = uuids.compute_node
+        self.client._refresh_aggregate_map(uuid)
+        mock_get.assert_called_once_with(uuid)
+        self.assertIn(uuid, self.client.aggregate_refresh_time)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_aggregates')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_aggregate_map_stale')
+    def test_refresh_aggregate_map_not_stale(self, mock_stale, mock_get):
+        """Test that refresh aggregate map is not called when the map is
+        not stale.
+        """
+        mock_stale.return_value = False
+        uuid = uuids.compute_node
+        self.client._refresh_aggregate_map(uuid)
+        mock_get.assert_not_called()
+        self.assertFalse(self.client.aggregate_refresh_time)
+
+    @mock.patch.object(report.LOG, 'debug')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_aggregates')
+    def test_refresh_aggregate_map_time(self, mock_get, log_mock):
+        """Test that refresh aggregate map is called when the map is
+        stale.
+        """
+        uuid = uuids.compute_node
+        mock_get.return_value = set([])
+
+        # Called a first time because aggregate_refresh_time is empty.
+        now = time.time()
+        self.client._refresh_aggregate_map(uuid)
+        mock_get.assert_called_once_with(uuid)
+        log_mock.assert_called_once_with(
+                'Refreshing aggregate associations for resource '
+                'provider %s, aggregates: %s', uuid, 'None')
+        self.assertIn(uuid, self.client.aggregate_refresh_time)
+
+        # Clear call count.
+        mock_get.reset_mock()
+
+        with mock.patch('time.time') as mock_future:
+            # Not called a second time because not enough time has passed.
+            mock_future.return_value = now + report.AGGREGATE_REFRESH / 2
+            self.client._refresh_aggregate_map(uuid)
+            mock_get.assert_not_called()
+
+            # Called because time has passed.
+            mock_future.return_value = now + report.AGGREGATE_REFRESH + 1
+            self.client._refresh_aggregate_map(uuid)
+            mock_get.assert_called_once_with(uuid)
 
 
 class TestComputeNodeToInventoryDict(test.NoDBTestCase):
