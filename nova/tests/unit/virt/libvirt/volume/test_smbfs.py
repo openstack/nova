@@ -29,7 +29,8 @@ class LibvirtSMBFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         self.flags(smbfs_mount_point_base=self.mnt_base, group='libvirt')
 
     @mock.patch.object(libvirt_utils, 'is_mounted')
-    def test_libvirt_smbfs_driver(self, mock_is_mounted):
+    @mock.patch('oslo_utils.fileutils.ensure_tree')
+    def test_libvirt_smbfs_driver(self, mock_ensure_tree, mock_is_mounted):
         mock_is_mounted.return_value = False
 
         libvirt_driver = smbfs.LibvirtSMBFSVolumeDriver(self.fake_host)
@@ -45,10 +46,10 @@ class LibvirtSMBFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
                                          mock.sentinel.instance)
 
         expected_commands = [
-            ('mkdir', '-p', export_mnt_base),
             ('mount', '-t', 'cifs', '-o', 'username=guest',
              export_string, export_mnt_base),
             ('umount', export_mnt_base)]
+        mock_ensure_tree.assert_has_calls([mock.call(export_mnt_base)])
         self.assertEqual(expected_commands, self.executes)
 
     @mock.patch.object(libvirt_utils, 'is_mounted', return_value=True)
@@ -84,7 +85,9 @@ class LibvirtSMBFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         self._assertFileTypeEquals(tree, file_path)
 
     @mock.patch.object(libvirt_utils, 'is_mounted')
-    def test_libvirt_smbfs_driver_with_opts(self, mock_is_mounted):
+    @mock.patch('oslo_utils.fileutils.ensure_tree')
+    def test_libvirt_smbfs_driver_with_opts(self, mock_ensure_tree,
+                                            mock_is_mounted):
         mock_is_mounted.return_value = False
 
         libvirt_driver = smbfs.LibvirtSMBFSVolumeDriver(self.fake_host)
@@ -102,8 +105,8 @@ class LibvirtSMBFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
                                          mock.sentinel.instance)
 
         expected_commands = [
-            ('mkdir', '-p', export_mnt_base),
             ('mount', '-t', 'cifs', '-o', 'user=guest,uid=107,gid=105',
              export_string, export_mnt_base),
             ('umount', export_mnt_base)]
+        mock_ensure_tree.assert_has_calls([mock.call(export_mnt_base)])
         self.assertEqual(expected_commands, self.executes)

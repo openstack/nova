@@ -20,6 +20,7 @@ import tempfile
 
 from oslo_concurrency import processutils
 from oslo_log import log as logging
+from oslo_utils import fileutils
 from oslo_utils import importutils
 import six
 
@@ -41,7 +42,7 @@ def mount_share(mount_path, export_path,
     :export_type: remote export type (e.g. cifs, nfs, etc.)
     :options: A list containing mount options
     """
-    utils.execute('mkdir', '-p', mount_path)
+    fileutils.ensure_tree(mount_path)
 
     mount_cmd = ['mount', '-t', export_type]
     if options is not None:

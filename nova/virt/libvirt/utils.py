@@ -24,6 +24,7 @@ import re
 
 from oslo_concurrency import processutils
 from oslo_log import log as logging
+from oslo_utils import fileutils
 
 import nova.conf
 from nova.i18n import _
@@ -104,7 +105,7 @@ def create_ploop_image(disk_format, path, size, fs_type):
     if not fs_type:
         fs_type = CONF.default_ephemeral_format or \
                   disk.FS_FORMAT_EXT4
-    utils.execute('mkdir', '-p', path)
+    fileutils.ensure_tree(path)
     disk_path = os.path.join(path, 'root.hds')
     nova.privsep.libvirt.ploop_init(size, disk_format, fs_type, disk_path)
 
