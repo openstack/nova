@@ -113,6 +113,9 @@ r="$r|(?:.*id\-682cb127\-e5bb\-4f53\-87ce\-cb9003604442.*)"
 r="$r|(?:.*id\-9c9fae77\-4feb\-402f\-8450\-bf1c8b609713.*)"
 # tempest.api.compute.servers.test_disk_config.ServerDiskConfigTestJSON.test_rebuild_server_with_manual_disk_config
 r="$r|(?:.*id\-bef56b09\-2e8c\-4883\-a370\-4950812f430e.*)"
+# NOTE(mriedem): cells v1 api doesn't route os-server-external-events
+# tempest.api.volume.test_volumes_extend.VolumesExtendAttachedTest.test_extend_attached_volume
+r="$r|(?:.*id\-301f5a30\-1c6f\-4ea0\-be1a\-91fd28d44354.*)"
 r="$r).*$"
 
 export DEVSTACK_GATE_TEMPEST_REGEX="$r"
