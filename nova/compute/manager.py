@@ -5329,6 +5329,12 @@ class ComputeManager(manager.Manager):
             self.driver.capabilities.get('supports_tagged_attach_interface',
                                          False)):
             raise exception.NetworkInterfaceTaggedAttachNotSupported()
+
+        compute_utils.notify_about_instance_action(
+            context, instance, self.host,
+            action=fields.NotificationAction.INTERFACE_ATTACH,
+            phase=fields.NotificationPhase.START)
+
         bind_host_id = self.driver.network_binding_host_id(context, instance)
         network_info = self.network_api.allocate_port_for_instance(
             context, instance, port_id, network_id, requested_ip,
@@ -5357,6 +5363,11 @@ class ComputeManager(manager.Manager):
                             {'port_id': port_id}, instance=instance)
             raise exception.InterfaceAttachFailed(
                 instance_uuid=instance.uuid)
+
+        compute_utils.notify_about_instance_action(
+            context, instance, self.host,
+            action=fields.NotificationAction.INTERFACE_ATTACH,
+            phase=fields.NotificationPhase.END)
 
         return network_info[0]
 

@@ -816,7 +816,7 @@ class NotificationAction(BaseNovaEnum):
     REBOOT = 'reboot'
     SHUTDOWN = 'shutdown'
     SNAPSHOT = 'snapshot'
-    ADD_FIXED_IP = 'add_fixed_ip'
+    INTERFACE_ATTACH = 'interface_attach'
     SHELVE = 'shelve'
     RESUME = 'resume'
     RESTORE = 'restore'
@@ -847,7 +847,7 @@ class NotificationAction(BaseNovaEnum):
     REMOVE_HOST = 'remove_host'
 
     ALL = (UPDATE, EXCEPTION, DELETE, PAUSE, UNPAUSE, RESIZE, VOLUME_SWAP,
-           SUSPEND, POWER_ON, REBOOT, SHUTDOWN, SNAPSHOT, ADD_FIXED_IP,
+           SUSPEND, POWER_ON, REBOOT, SHUTDOWN, SNAPSHOT, INTERFACE_ATTACH,
            POWER_OFF, SHELVE, RESUME, RESTORE, EXISTS, RESCUE, VOLUME_ATTACH,
            VOLUME_DETACH, CREATE, EVACUATE, RESIZE_FINISH,
            LIVE_MIGRATION_ABORT, LIVE_MIGRATION_POST_DEST, LIVE_MIGRATION_POST,

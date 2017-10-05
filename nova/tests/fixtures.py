@@ -19,6 +19,7 @@ from __future__ import absolute_import
 
 import collections
 from contextlib import contextmanager
+import copy
 import logging as std_logging
 import os
 import warnings
@@ -1099,7 +1100,6 @@ class NeutronFixture(fixtures.Fixture):
         'tenant_id': tenant_id
     }
 
-    # This port is only used if the fixture is created with multiple_ports=True
     port_2 = {
         'id': '88dae9fa-0dc6-49e3-8c29-3abc41e99ac9',
         'network_id': network_1['id'],
@@ -1164,10 +1164,14 @@ class NeutronFixture(fixtures.Fixture):
         "qbg_params": None
     }]
 
-    def __init__(self, test, multiple_ports=False):
+    def __init__(self, test):
         super(NeutronFixture, self).__init__()
         self.test = test
-        self.multiple_ports = multiple_ports
+        self._ports = [copy.deepcopy(NeutronFixture.port_1)]
+        self._extensions = []
+        self._networks = [NeutronFixture.network_1]
+        self._subnets = [NeutronFixture.subnet_1]
+        self._floatingips = []
 
     def setUp(self):
         super(NeutronFixture, self).setUp()
@@ -1202,35 +1206,54 @@ class NeutronFixture(fixtures.Fixture):
             'get_instances_security_groups_bindings',
             lambda *args, **kwargs: {})
 
-        mock_neutron_client = mock.Mock()
-        mock_neutron_client.list_extensions.return_value = {'extensions': []}
+        self.test.stub_out('nova.network.neutronv2.api.get_client',
+                           lambda *args, **kwargs: self)
 
-        def stub_show_port(port_id, *args, **kwargs):
-            if port_id == NeutronFixture.port_1['id']:
-                return {'port': NeutronFixture.port_1}
-            if port_id == NeutronFixture.port_2['id']:
-                return {'port': NeutronFixture.port_2}
+    def _get_first_id_match(self, id, list):
+        filtered_list = [p for p in list if p['id'] == id]
+        if len(filtered_list) > 0:
+            return filtered_list[0]
+        else:
+            return None
+
+    def list_extensions(self, *args, **kwargs):
+        return copy.deepcopy({'extensions': self._extensions})
+
+    def show_port(self, port_id, **_params):
+        port = self._get_first_id_match(port_id, self._ports)
+        if port is None:
             raise exception.PortNotFound(port_id=port_id)
+        return {'port': port}
 
-        mock_neutron_client.show_port.side_effect = stub_show_port
-        mock_neutron_client.list_networks.return_value = {
-            'networks': [NeutronFixture.network_1]}
+    def delete_port(self, port, **_params):
+        for current_port in self._ports:
+            if current_port['id'] == port:
+                self._ports.remove(current_port)
 
-        def stub_list_ports(*args, **kwargs):
-            ports = {'ports': [NeutronFixture.port_1]}
-            if self.multiple_ports:
-                ports['ports'].append(NeutronFixture.port_2)
-            return ports
+    def list_networks(self, retrieve_all=True, **_params):
+        return copy.deepcopy({'networks': self._networks})
 
-        mock_neutron_client.list_ports.side_effect = stub_list_ports
-        mock_neutron_client.list_subnets.return_value = {
-            'subnets': [NeutronFixture.subnet_1]}
-        mock_neutron_client.list_floatingips.return_value = {'floatingips': []}
-        mock_neutron_client.update_port.side_effect = stub_show_port
+    def list_ports(self, retrieve_all=True, **_params):
+        return copy.deepcopy({'ports': self._ports})
 
-        self.test.stub_out(
-            'nova.network.neutronv2.api.get_client',
-            lambda *args, **kwargs: mock_neutron_client)
+    def list_subnets(self, retrieve_all=True, **_params):
+        return copy.deepcopy({'subnets': self._subnets})
+
+    def list_floatingips(self, retrieve_all=True, **_params):
+        return copy.deepcopy({'floatingips': self._floatingips})
+
+    def create_port(self, *args, **kwargs):
+        self._ports.append(copy.deepcopy(NeutronFixture.port_2))
+        return copy.deepcopy({'port': NeutronFixture.port_2})
+
+    def update_port(self, port_id, body=None):
+        new_port = self._get_first_id_match(port_id, self._ports)
+
+        if body is not None:
+            for k, v in body['port'].items():
+                new_port[k] = v
+
+        return {'port': new_port}
 
 
 class _NoopConductor(object):

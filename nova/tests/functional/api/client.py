@@ -421,6 +421,9 @@ class TestOpenStackClient(object):
         return self.api_get('/servers/%s/os-interface' %
                             (server_id)).body['interfaceAttachments']
 
+    def attach_interface(self, server_id, post):
+        return self.api_post('/servers/%s/os-interface' % server_id, post)
+
     def detach_interface(self, server_id, port_id):
         return self.api_delete('/servers/%s/os-interface/%s' %
                                (server_id, port_id))
