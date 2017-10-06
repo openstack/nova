@@ -5342,6 +5342,8 @@ class ComputeManager(manager.Manager):
         if len(network_info) != 1:
             LOG.error('allocate_port_for_instance returned %(ports)s '
                       'ports', {'ports': len(network_info)})
+            # TODO(elod.illes): an instance.interface_attach.error notification
+            # should be sent here
             raise exception.InterfaceAttachFailed(
                     instance_uuid=instance.uuid)
         image_meta = objects.ImageMeta.from_instance(instance)
@@ -5361,6 +5363,13 @@ class ComputeManager(manager.Manager):
             except Exception:
                 LOG.warning("deallocate port %(port_id)s failed",
                             {'port_id': port_id}, instance=instance)
+
+            compute_utils.notify_about_instance_action(
+                context, instance, self.host,
+                action=fields.NotificationAction.INTERFACE_ATTACH,
+                phase=fields.NotificationPhase.ERROR,
+                exception=ex)
+
             raise exception.InterfaceAttachFailed(
                 instance_uuid=instance.uuid)
 
