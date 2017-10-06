@@ -16,8 +16,10 @@ import datetime
 
 import mock
 
+from nova import context as nova_context
 from nova.notifications import base
 from nova import test
+from nova.tests import uuidsentinel as uuids
 from nova import utils
 
 
@@ -78,3 +80,25 @@ class TestSendInstanceUpdateNotification(test.NoDBTestCase):
 
         mock_get_notifier.return_value.info.assert_called_once_with(
             mock.sentinel.ctxt, 'compute.instance.update', mock.ANY)
+
+
+class TestBandwidthUsage(test.NoDBTestCase):
+    @mock.patch('nova.context.RequestContext.elevated')
+    @mock.patch('nova.network.API')
+    @mock.patch('nova.objects.BandwidthUsageList.get_by_uuids')
+    def test_context_elevated(self, mock_get_bw_usage, mock_nw_api,
+                              mock_elevated):
+        context = nova_context.RequestContext('fake', 'fake')
+        # We need this to not be a NovaObject so the old school
+        # get_instance_nw_info will run.
+        instance = {'uuid': uuids.instance}
+        audit_start = 'fake'
+
+        base.bandwidth_usage(context, instance, audit_start)
+
+        network_api = mock_nw_api.return_value
+        network_api.get_instance_nw_info.assert_called_once_with(
+            mock_elevated.return_value, instance)
+        mock_get_bw_usage.assert_called_once_with(
+            mock_elevated.return_value, [uuids.instance], audit_start)
+        mock_elevated.assert_called_once_with(read_deleted='yes')

@@ -223,7 +223,7 @@ def send_instance_update_notification(context, instance, old_vm_state=None,
     payload["audit_period_ending"] = null_safe_isotime(audit_end)
 
     # add bw usage info:
-    bw = bandwidth_usage(instance, audit_start)
+    bw = bandwidth_usage(context, instance, audit_start)
     payload["bandwidth"] = bw
 
     # add old display name if it is changed
@@ -299,12 +299,12 @@ def audit_period_bounds(current_period=False):
     return (audit_start, audit_end)
 
 
-def bandwidth_usage(instance_ref, audit_start,
+def bandwidth_usage(context, instance_ref, audit_start,
         ignore_missing_network_data=True):
     """Get bandwidth usage information for the instance for the
     specified audit period.
     """
-    admin_context = nova.context.get_admin_context(read_deleted='yes')
+    admin_context = context.elevated(read_deleted='yes')
 
     def _get_nwinfo_old_skool():
         """Support for getting network info without objects."""

@@ -281,7 +281,7 @@ def notify_usage_exists(notifier, context, instance_ref, current_period=False,
 
     audit_start, audit_end = notifications.audit_period_bounds(current_period)
 
-    bw = notifications.bandwidth_usage(instance_ref, audit_start,
+    bw = notifications.bandwidth_usage(context, instance_ref, audit_start,
             ignore_missing_network_data)
 
     if system_metadata is None:
