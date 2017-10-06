@@ -5963,6 +5963,19 @@ class ComputeManager(manager.Manager):
             Contains the status we want to set for the migration object
 
         """
+        # Remove allocations created in Placement for the dest node.
+        # NOTE(mriedem): The migrate_data.migration object does not have the
+        # dest_node (or dest UUID) set, so we have to lookup the destination
+        # ComputeNode with only the hostname.
+        dest_node = objects.ComputeNode.get_first_node_by_host_for_old_compat(
+            context, dest, use_slave=True)
+        reportclient = self.scheduler_client.reportclient
+        resources = scheduler_utils.resources_from_flavor(
+            instance, instance.flavor)
+        reportclient.remove_provider_from_instance_allocation(
+            instance.uuid, dest_node.uuid, instance.user_id,
+            instance.project_id, resources)
+
         instance.task_state = None
         instance.progress = 0
         instance.save(expected_task_state=[task_states.MIGRATING])

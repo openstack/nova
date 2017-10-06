@@ -6071,8 +6071,15 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
         _test()
 
-    def test_rollback_live_migration_handles_dict(self):
+    @mock.patch.object(objects.ComputeNode,
+                       'get_first_node_by_host_for_old_compat')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'remove_provider_from_instance_allocation')
+    def test_rollback_live_migration_handles_dict(self, mock_remove_allocs,
+                                                  mock_get_node):
         compute = manager.ComputeManager()
+        dest_node = objects.ComputeNode(host='foo', uuid=uuids.dest_node)
+        mock_get_node.return_value = dest_node
 
         @mock.patch('nova.compute.utils.notify_about_instance_action')
         @mock.patch.object(compute.network_api, 'setup_networks_on_host')
@@ -6081,12 +6088,15 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
         def _test(mock_bdm, mock_lmcf, mock_notify, mock_nwapi,
                   mock_notify_about_instance_action):
-            mock_bdm.return_value = []
+            mock_bdm.return_value = objects.BlockDeviceMappingList()
             mock_lmcf.return_value = False, False
             mock_instance = mock.MagicMock()
             compute._rollback_live_migration(self.context,
                                              mock_instance,
                                              'foo', {})
+            mock_remove_allocs.assert_called_once_with(
+                mock_instance.uuid, dest_node.uuid, mock_instance.user_id,
+                mock_instance.project_id, test.MatchType(dict))
             mock_notify_about_instance_action.assert_has_calls([
                 mock.call(self.context, mock_instance, compute.host,
                           action='live_migration_rollback', phase='start'),

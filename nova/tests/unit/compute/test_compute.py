@@ -5867,6 +5867,10 @@ class ComputeTestCase(BaseTestCase,
 
     @mock.patch.object(fake.FakeDriver, 'get_instance_disk_info')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'pre_live_migration')
+    @mock.patch.object(objects.ComputeNode,
+                       'get_first_node_by_host_for_old_compat')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'remove_provider_from_instance_allocation')
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'remove_volume_connection')
     @mock.patch.object(compute_rpcapi.ComputeAPI,
@@ -5874,7 +5878,8 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch('nova.objects.Migration.save')
     def test_live_migration_exception_rolls_back(self, mock_save,
                                 mock_rollback, mock_remove,
-                                mock_get_uuid, mock_pre, mock_get_disk):
+                                mock_get_uuid, mock_remove_allocs,
+                                mock_get_node, mock_pre, mock_get_disk):
         # Confirm exception when pre_live_migration fails.
         c = context.get_admin_context()
 
@@ -5884,7 +5889,9 @@ class ComputeTestCase(BaseTestCase,
         updated_instance = self._create_fake_instance_obj(
                                                {'host': 'fake-dest-host'})
         dest_host = updated_instance['host']
-        fake_bdms = [
+        dest_node = objects.ComputeNode(host=dest_host, uuid=uuids.dest_node)
+        mock_get_node.return_value = dest_node
+        fake_bdms = objects.BlockDeviceMappingList(objects=[
                 objects.BlockDeviceMapping(
                     **fake_block_device.FakeDbBlockDeviceDict(
                         {'volume_id': uuids.volume_id_1,
@@ -5895,7 +5902,7 @@ class ComputeTestCase(BaseTestCase,
                         {'volume_id': uuids.volume_id_2,
                          'source_type': 'volume',
                          'destination_type': 'volume'}))
-        ]
+        ])
         migrate_data = migrate_data_obj.XenapiLiveMigrateData(
             block_migration=True)
 
@@ -5925,6 +5932,9 @@ class ComputeTestCase(BaseTestCase,
                 block_device_info=block_device_info)
         mock_pre.assert_called_once_with(c,
                 instance, True, 'fake_disk', dest_host, migrate_data)
+        mock_remove_allocs.assert_called_once_with(
+            instance.uuid, dest_node.uuid, instance.user_id,
+            instance.project_id, test.MatchType(dict))
         mock_setup.assert_called_once_with(c, instance, self.compute.host)
         mock_get_uuid.assert_called_with(c, instance.uuid)
         mock_remove.assert_has_calls([
@@ -6259,14 +6269,21 @@ class ComputeTestCase(BaseTestCase,
             terminate_connection.assert_called_once_with(
                     c, uuids.volume_id, 'fake-connector')
 
+    @mock.patch.object(objects.ComputeNode,
+                       'get_first_node_by_host_for_old_compat')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'remove_provider_from_instance_allocation')
     @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
-    def test_rollback_live_migration(self, mock_bdms):
+    def test_rollback_live_migration(self, mock_bdms, mock_remove_allocs,
+                                     mock_get_node):
         c = context.get_admin_context()
         instance = mock.MagicMock()
         migration = mock.MagicMock()
         migrate_data = {'migration': migration}
 
-        mock_bdms.return_value = []
+        dest_node = objects.ComputeNode(host='foo', uuid=uuids.dest_node)
+        mock_get_node.return_value = dest_node
+        mock_bdms.return_value = objects.BlockDeviceMappingList()
 
         @mock.patch('nova.compute.utils.notify_about_instance_action')
         @mock.patch.object(self.compute, '_live_migration_cleanup_flags')
@@ -6275,6 +6292,9 @@ class ComputeTestCase(BaseTestCase,
             mock_lmcf.return_value = False, False
             self.compute._rollback_live_migration(c, instance, 'foo',
                                                   migrate_data=migrate_data)
+            mock_remove_allocs.assert_called_once_with(
+                instance.uuid, dest_node.uuid, instance.user_id,
+                instance.project_id, test.MatchType(dict))
             mock_notify.assert_has_calls([
                 mock.call(c, instance, self.compute.host,
                           action='live_migration_rollback', phase='start'),
@@ -6288,14 +6308,22 @@ class ComputeTestCase(BaseTestCase,
         self.assertEqual(0, instance.progress)
         migration.save.assert_called_once_with()
 
+    @mock.patch.object(objects.ComputeNode,
+                       'get_first_node_by_host_for_old_compat')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'remove_provider_from_instance_allocation')
     @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
-    def test_rollback_live_migration_set_migration_status(self, mock_bdms):
+    def test_rollback_live_migration_set_migration_status(self, mock_bdms,
+                                                          mock_remove_allocs,
+                                                          mock_get_node):
         c = context.get_admin_context()
         instance = mock.MagicMock()
         migration = mock.MagicMock()
         migrate_data = {'migration': migration}
 
-        mock_bdms.return_value = []
+        dest_node = objects.ComputeNode(host='foo', uuid=uuids.dest_node)
+        mock_get_node.return_value = dest_node
+        mock_bdms.return_value = objects.BlockDeviceMappingList()
 
         @mock.patch('nova.compute.utils.notify_about_instance_action')
         @mock.patch.object(self.compute, '_live_migration_cleanup_flags')
@@ -6305,6 +6333,9 @@ class ComputeTestCase(BaseTestCase,
             self.compute._rollback_live_migration(c, instance, 'foo',
                                                   migrate_data=migrate_data,
                                                   migration_status='fake')
+            mock_remove_allocs.assert_called_once_with(
+                instance.uuid, dest_node.uuid, instance.user_id,
+                instance.project_id, test.MatchType(dict))
             mock_notify.assert_has_calls([
                 mock.call(c, instance, self.compute.host,
                           action='live_migration_rollback', phase='start'),
