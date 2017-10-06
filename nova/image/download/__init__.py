@@ -41,4 +41,14 @@ def load_transfer_modules():
             else:
                 module_dictionary[scheme] = mgr.driver
 
+    if module_dictionary:
+        LOG.warning('The nova.image.download.modules extension point is '
+                    'deprecated for removal starting in the 17.0.0 Queens '
+                    'release and may be removed as early as the 18.0.0 Rocky '
+                    'release. It is not maintained and there is no indication '
+                    'of its use in production clouds. If you are using this '
+                    'extension point, please make the nova development team '
+                    'aware by contacting us in the #openstack-nova freenode '
+                    'IRC channel or on the openstack-dev mailing list.')
+
     return module_dictionary
