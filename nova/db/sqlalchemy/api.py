@@ -38,8 +38,10 @@ import six
 from six.moves import range
 import sqlalchemy as sa
 from sqlalchemy import and_
+from sqlalchemy import Boolean
 from sqlalchemy.exc import NoSuchTableError
 from sqlalchemy.ext.compiler import compiles
+from sqlalchemy import Integer
 from sqlalchemy import MetaData
 from sqlalchemy import or_
 from sqlalchemy.orm import aliased
@@ -51,6 +53,7 @@ from sqlalchemy.orm import undefer
 from sqlalchemy.schema import Table
 from sqlalchemy import sql
 from sqlalchemy.sql.expression import asc
+from sqlalchemy.sql.expression import cast
 from sqlalchemy.sql.expression import desc
 from sqlalchemy.sql.expression import UpdateBase
 from sqlalchemy.sql import false
@@ -2297,13 +2300,74 @@ def instance_get_by_sort_filters(context, sort_keys, sort_dirs, values):
 
     This returns just a uuid of the instance that matched.
     """
-    query = context.session.query(models.Instance.uuid)
+
+    model = models.Instance
+    query = context.session.query(model.uuid)
+
+    # NOTE(danms): Below is a re-implementation of our
+    # oslo_db.sqlalchemy.utils.paginate_query() utility. We can't use that
+    # directly because it does not return the marker and we need it to.
+    # The below is basically the same algorithm, stripped down to just what
+    # we need, and augmented with the filter criteria required for us to
+    # get back the instance that would correspond to our query.
+
+    # This is our position in sort_keys,sort_dirs,values for the loop below
+    key_index = 0
+
+    # We build a list of criteria to apply to the query, which looks
+    # approximately like this (assuming all ascending):
+    #
+    #  OR(row.key1 > val1,
+    #     AND(row.key1 == val1, row.key2 > val2),
+    #     AND(row.key1 == val1, row.key2 == val2, row.key3 >= val3),
+    #  )
+    #
+    # The final key is compared with the "or equal" variant so that
+    # a complete match instance is still returned.
+    criteria = []
+
     for skey, sdir, val in zip(sort_keys, sort_dirs, values):
-        col = getattr(models.Instance, skey)
-        if sdir == 'asc':
-            query = query.filter(col >= val).order_by(col)
+        # Apply ordering to our query for the key, direction we're processing
+        if sdir == 'desc':
+            query = query.order_by(desc(getattr(model, skey)))
         else:
-            query = query.filter(col <= val).order_by(col.desc())
+            query = query.order_by(asc(getattr(model, skey)))
+
+        # Build a list of equivalence requirements on keys we've already
+        # processed through the loop. In other words, if we're adding
+        # key2 > val2, make sure that key1 == val1
+        crit_attrs = []
+        for equal_attr in range(0, key_index):
+            crit_attrs.append(
+                (getattr(model, sort_keys[equal_attr]) == values[equal_attr]))
+
+        model_attr = getattr(model, skey)
+        if isinstance(model_attr.type, Boolean):
+            model_attr = cast(model_attr, Integer)
+            val = int(val)
+
+        if skey == sort_keys[-1]:
+            # If we are the last key, then we should use or-equal to
+            # allow a complete match to be returned
+            if sdir == 'asc':
+                crit = (model_attr >= val)
+            else:
+                crit = (model_attr <= val)
+        else:
+            # If we're not the last key, then strict greater or less than
+            # so we order strictly.
+            if sdir == 'asc':
+                crit = (model_attr > val)
+            else:
+                crit = (model_attr < val)
+
+        # AND together all the above
+        crit_attrs.append(crit)
+        criteria.append(and_(*crit_attrs))
+        key_index += 1
+
+    # OR together all the ANDs
+    query = query.filter(or_(*criteria))
 
     # We can't raise InstanceNotFound because we don't have a uuid to
     # be looking for, so just return nothing if no match.
