@@ -31,7 +31,8 @@ class InstanceListTestCase(test.TestCase):
         self.num_instances = 3
         self.instances = []
 
-        dt = datetime.datetime(1985, 10, 25, 1, 21, 0)
+        start = datetime.datetime(1985, 10, 25, 1, 21, 0)
+        dt = start
         spread = datetime.timedelta(minutes=10)
 
         self.cells = objects.CellMappingList.get_all(self.context)
@@ -45,6 +46,7 @@ class InstanceListTestCase(test.TestCase):
                         context=cctx,
                         project_id=self.context.project_id,
                         user_id=self.context.user_id,
+                        created_at=start,
                         launched_at=dt,
                         instance_type_id=i,
                         hostname='%s-inst%i' % (cell.name, i))
@@ -164,6 +166,11 @@ class InstanceListTestCase(test.TestCase):
                 break
             insts.extend(batch)
             page += 1
+            if page > len(self.instances) * 2:
+                # Do this sanity check in case we introduce (or find) another
+                # repeating page bug like #1721791. Without this we loop
+                # until timeout, which is less obvious.
+                raise Exception('Infinite paging loop')
 
         # We should have requested exactly (or one more unlimited) pages
         self.assertIn(page, (pages, pages + 1))
@@ -172,11 +179,12 @@ class InstanceListTestCase(test.TestCase):
         found = [x[sort_by] for x in insts]
         had = [x[sort_by] for x in self.instances]
 
-        if sort_by == 'launched_at':
+        if sort_by in ('launched_at', 'created_at'):
             # We're comparing objects and database entries, so we need to
             # squash the tzinfo of the object ones so we can compare
             had = [x.replace(tzinfo=None) for x in had]
 
+        self.assertEqual(len(had), len(found))
         self.assertEqual(sorted(had), found)
 
     def test_get_sorted_with_limit_marker_stable(self):
@@ -218,6 +226,14 @@ class InstanceListTestCase(test.TestCase):
         fields.
         """
         self._test_get_sorted_with_limit_marker(sort_by='launched_at')
+
+    def test_get_sorted_with_limit_marker_datetime_same(self):
+        """Test sorted by created_at.
+
+        This tests that we can do all of this, but with datetime
+        fields that are identical.
+        """
+        self._test_get_sorted_with_limit_marker(sort_by='created_at')
 
     def test_get_sorted_with_deleted_marker(self):
         marker = self.instances[1]['uuid']
@@ -376,7 +392,8 @@ class TestInstanceListObjects(test.TestCase):
         self.num_instances = 3
         self.instances = []
 
-        dt = datetime.datetime(1985, 10, 25, 1, 21, 0)
+        start = datetime.datetime(1985, 10, 25, 1, 21, 0)
+        dt = start
         spread = datetime.timedelta(minutes=10)
 
         cells = objects.CellMappingList.get_all(self.context)
@@ -390,6 +407,7 @@ class TestInstanceListObjects(test.TestCase):
                         context=cctx,
                         project_id=self.context.project_id,
                         user_id=self.context.user_id,
+                        created_at=start,
                         launched_at=dt,
                         instance_type_id=i,
                         hostname='%s-inst%i' % (cell.name, i))
@@ -451,3 +469,20 @@ class TestInstanceListObjects(test.TestCase):
         # actual faults
         self.assertEqual(2, len([inst for inst in insts
                                  if inst.fault]))
+
+    def test_get_instance_objects_sorted_paged(self):
+        """Query a full first page and ensure an empty second one.
+
+        This uses created_at which is enforced to be the same across
+        each instance by setUp(). This will help make sure we still
+        have a stable ordering, even when we only claim to care about
+        created_at.
+        """
+        instp1 = instance_list.get_instance_objects_sorted(
+            self.context, {}, None, None, [],
+            ['created_at'], ['asc'])
+        self.assertEqual(len(self.instances), len(instp1))
+        instp2 = instance_list.get_instance_objects_sorted(
+            self.context, {}, None, instp1[-1]['uuid'], [],
+            ['created_at'], ['asc'])
+        self.assertEqual(0, len(instp2))

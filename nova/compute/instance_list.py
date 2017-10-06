@@ -114,6 +114,17 @@ def get_instances_sorted(ctx, filters, limit, marker, columns_to_join,
         sort_keys = ['created_at', 'id']
         sort_dirs = ['asc', 'asc']
 
+    if 'uuid' not in sort_keys:
+        # Historically the default sort includes 'id' (see above), which
+        # should give us a stable ordering. Since we're striping across
+        # cell databases here, many sort_keys arrangements will yield
+        # nothing unique across all the databases to give us a stable
+        # ordering, which can mess up expected client pagination behavior.
+        # So, throw uuid into the sort_keys at the end if it's not already
+        # there to keep us repeatable.
+        sort_keys = copy.copy(sort_keys) + ['uuid']
+        sort_dirs = copy.copy(sort_dirs) + ['asc']
+
     sort_ctx = InstanceSortContext(sort_keys, sort_dirs)
 
     if marker:
