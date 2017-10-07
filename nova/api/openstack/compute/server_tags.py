@@ -152,7 +152,7 @@ class ServerTagsController(wsgi.Controller):
         return response
 
     @wsgi.Controller.api_version("2.26")
-    @extensions.expected_errors((400, 404, 409))
+    @extensions.expected_errors((404, 409))
     @validation.schema(schema.update_all)
     def update_all(self, req, server_id, body):
         context = req.environ["nova.context"]

@@ -681,7 +681,7 @@ class ServersController(wsgi.Controller):
         else:
             self.compute_api.delete(context, instance)
 
-    @extensions.expected_errors((400, 404))
+    @extensions.expected_errors(404)
     @validation.schema(schema_server_update_v20, '2.0', '2.0')
     @validation.schema(schema_server_update, '2.1', '2.18')
     @validation.schema(schema_server_update_v219, '2.19')
