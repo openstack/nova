@@ -1811,9 +1811,7 @@ class ComputeManager(manager.Manager):
             limits = {}
 
         if node is None:
-            node = self.driver.get_available_nodes(refresh=True)[0]
-            LOG.debug('No node specified, defaulting to %s', node,
-                      instance=instance)
+            node = self._get_nodename(instance, refresh=True)
 
         try:
             with timeutils.StopWatch() as timer:
@@ -3871,9 +3869,7 @@ class ComputeManager(manager.Manager):
         calling back to conductor to start the process over again.
         """
         if node is None:
-            node = self.driver.get_available_nodes(refresh=True)[0]
-            LOG.debug("No node specified, defaulting to %s", node,
-                      instance=instance)
+            node = self._get_nodename(instance, refresh=True)
 
         # NOTE(melwitt): Remove this in version 5.0 of the RPC API
         # Code downstream may expect extra_specs to be populated since it
@@ -4576,9 +4572,7 @@ class ComputeManager(manager.Manager):
         scrubbed_keys = self._unshelve_instance_key_scrub(instance)
 
         if node is None:
-            node = self.driver.get_available_nodes()[0]
-            LOG.debug('No node specified, defaulting to %s', node,
-                      instance=instance)
+            node = self._get_nodename(instance)
 
         rt = self._get_resource_tracker()
         limits = filter_properties.get('limits', {})
@@ -6787,6 +6781,16 @@ class ComputeManager(manager.Manager):
                     LOG.warning("Periodic reclaim failed to delete "
                                 "instance: %s",
                                 e, instance=instance)
+
+    def _get_nodename(self, instance, refresh=False):
+        """Helper method to get the name of the first available node
+        on this host. This method should not be used with any operations
+        on ironic instances since it does not handle multiple nodes.
+        """
+        node = self.driver.get_available_nodes(refresh=refresh)[0]
+        LOG.debug("No node specified, defaulting to %s", node,
+                  instance=instance)
+        return node
 
     def update_available_resource_for_node(self, context, nodename):
 
