@@ -160,12 +160,14 @@ Nova Cells v2
     uuid are shown. Use the --verbose option to see transport url and
     database connection details.
 
-``nova-manage cell_v2 delete_cell --cell_uuid <cell_uuid>``
+``nova-manage cell_v2 delete_cell [--force] --cell_uuid <cell_uuid>``
 
-    Delete an empty cell by the given uuid. Returns 0 if the empty cell is
-    found and deleted successfully, 1 if a cell with that uuid could not be
-    found, 2 if host mappings were found for the cell (cell not empty), and
-    3 if there are instances mapped to the cell (cell not empty).
+    Delete a cell by the given uuid. Returns 0 if the empty cell is
+    found and deleted successfully or the cell that has hosts is found and
+    the cell and the hosts are deleted successfully with ``--force`` option,
+    1 if a cell with that uuid could not be found, 2 if host mappings were
+    found for the cell (cell not empty) without ``--force`` option, and 3
+    if there are instances mapped to the cell (cell not empty).
 
 ``nova-manage cell_v2 update_cell --cell_uuid <cell_uuid> [--name <cell_name>] [--transport-url <transport_url>] [--database_connection <database_connection>]``
 
@@ -181,6 +183,14 @@ Nova Cells v2
     NOTE: Updating the transport_url or database_connection fields on
     a running system will NOT result in all nodes immediately using the
     new values. Use caution when changing these values.
+
+``nova-manage cell_v2 delete_host --cell_uuid <cell_uuid> --host <host>``
+
+    Delete a host by the given host name and the given cell uuid. Returns 0
+    if the empty host is found and deleted successfully, 1 if a cell with
+    that uuid could not be found, 2 if a host with that name could not be
+    found, 3 if a host with that name is not in a cell with that uuid, 4 if
+    a host with that name has instances (host not empty).
 
 Nova Logs
 ~~~~~~~~~
