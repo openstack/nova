@@ -53,9 +53,7 @@ class LiveMigrationTask(base.TaskBase):
             # wants the scheduler to pick a destination host, or a host was
             # specified but is not forcing it, so they want the scheduler
             # filters to run on the specified host, like a scheduler hint.
-            self.destination = self._find_destination()
-            self.migration.dest_compute = self.destination
-            self.migration.save()
+            self.destination, dest_node = self._find_destination()
         else:
             # This is the case that the user specified the 'force' flag when
             # live migrating with a specific destination host so the scheduler
@@ -76,6 +74,14 @@ class LiveMigrationTask(base.TaskBase):
             scheduler_utils.claim_resources_on_destination(
                 self.scheduler_client.reportclient, self.instance,
                 source_node, dest_node)
+            # dest_node is a ComputeNode object, so we need to get the actual
+            # node name off it to set in the Migration object below.
+            dest_node = dest_node.hypervisor_hostname
+
+        self.migration.source_node = self.instance.node
+        self.migration.dest_node = dest_node
+        self.migration.dest_compute = self.destination
+        self.migration.save()
 
         # TODO(johngarbutt) need to move complexity out of compute manager
         # TODO(johngarbutt) disk_over_commit?
@@ -305,7 +311,7 @@ class LiveMigrationTask(base.TaskBase):
                 # those before moving on.
                 self._remove_host_allocations(host, hoststate['nodename'])
                 host = None
-        return host
+        return host, hoststate['nodename']
 
     def _remove_host_allocations(self, host, node):
         """Removes instance allocations against the given host from Placement

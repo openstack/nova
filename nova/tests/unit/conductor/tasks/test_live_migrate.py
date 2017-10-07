@@ -61,15 +61,17 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             self.fake_spec)
 
     def test_execute_with_destination(self):
+        dest_node = objects.ComputeNode(hypervisor_hostname='dest_node')
         with test.nested(
             mock.patch.object(self.task, '_check_host_is_up'),
             mock.patch.object(self.task, '_check_requested_destination',
                               return_value=(mock.sentinel.source_node,
-                                            mock.sentinel.dest_node)),
+                                            dest_node)),
             mock.patch.object(scheduler_utils,
                               'claim_resources_on_destination'),
+            mock.patch.object(self.migration, 'save'),
             mock.patch.object(self.task.compute_rpcapi, 'live_migration'),
-        ) as (mock_check_up, mock_check_dest, mock_claim, mock_mig):
+        ) as (mock_check_up, mock_check_dest, mock_claim, mock_save, mock_mig):
             mock_mig.return_value = "bob"
 
             self.assertEqual("bob", self.task.execute())
@@ -77,7 +79,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             mock_check_dest.assert_called_once_with()
             mock_claim.assert_called_once_with(
                 self.task.scheduler_client.reportclient, self.instance,
-                mock.sentinel.source_node, mock.sentinel.dest_node)
+                mock.sentinel.source_node, dest_node)
             mock_mig.assert_called_once_with(
                 self.context,
                 host=self.instance_host,
@@ -86,6 +88,13 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 block_migration=self.block_migration,
                 migration=self.migration,
                 migrate_data=None)
+            self.assertTrue(mock_save.called)
+            # make sure the source/dest fields were set on the migration object
+            self.assertEqual(self.instance.node, self.migration.source_node)
+            self.assertEqual(dest_node.hypervisor_hostname,
+                             self.migration.dest_node)
+            self.assertEqual(self.task.destination,
+                             self.migration.dest_compute)
 
     def test_execute_without_destination(self):
         self.destination = None
@@ -98,7 +107,7 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             mock.patch.object(self.task.compute_rpcapi, 'live_migration'),
             mock.patch.object(self.migration, 'save')
         ) as (mock_check, mock_find, mock_mig, mock_save):
-            mock_find.return_value = "found_host"
+            mock_find.return_value = ("found_host", "found_node")
             mock_mig.return_value = "bob"
 
             self.assertEqual("bob", self.task.execute())
@@ -113,6 +122,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 migrate_data=None)
             self.assertTrue(mock_save.called)
             self.assertEqual('found_host', self.migration.dest_compute)
+            self.assertEqual('found_node', self.migration.dest_node)
+            self.assertEqual(self.instance.node, self.migration.source_node)
 
     def test_check_instance_is_active_passes_when_paused(self):
         self.task.instance['power_state'] = power_state.PAUSED
@@ -294,12 +305,12 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.fake_spec.reset_forced_destinations()
         self.task.scheduler_client.select_destinations(
             self.context, self.fake_spec, [self.instance.uuid]).AndReturn(
-                        [{'host': 'host1'}])
+                        [{'host': 'host1', 'nodename': 'node1'}])
         self.task._check_compatible_with_source_hypervisor("host1")
         self.task._call_livem_checks_on_host("host1")
 
         self.mox.ReplayAll()
-        self.assertEqual("host1", self.task._find_destination())
+        self.assertEqual(("host1", "node1"), self.task._find_destination())
 
         # Make sure the request_spec was updated to include the cell
         # mapping.
@@ -326,9 +337,9 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                     check_compat, call_livem_checks):
             get_image.return_value = "image"
             from_components.return_value = another_spec
-            select_dest.return_value = [{'host': 'host1'}]
+            select_dest.return_value = [{'host': 'host1', 'nodename': 'node1'}]
 
-            self.assertEqual("host1", task._find_destination())
+            self.assertEqual(("host1", "node1"), task._find_destination())
 
             get_image.assert_called_once_with(self.instance.system_metadata)
             setup_ig.assert_called_once_with(self.context, another_spec)
@@ -354,12 +365,12 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         scheduler_utils.setup_instance_group(self.context, self.fake_spec)
         self.task.scheduler_client.select_destinations(self.context,
                 self.fake_spec, [self.instance.uuid]).AndReturn(
-                        [{'host': 'host1'}])
+                        [{'host': 'host1', 'nodename': 'node1'}])
         self.task._check_compatible_with_source_hypervisor("host1")
         self.task._call_livem_checks_on_host("host1")
 
         self.mox.ReplayAll()
-        self.assertEqual("host1", self.task._find_destination())
+        self.assertEqual(("host1", "node1"), self.task._find_destination())
 
     def _test_find_destination_retry_hypervisor_raises(self, error):
         self.mox.StubOutWithMock(utils, 'get_image_from_system_metadata')
@@ -381,14 +392,14 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
         self.task.scheduler_client.select_destinations(self.context,
                 self.fake_spec, [self.instance.uuid]).AndReturn(
-                        [{'host': 'host2'}])
+                        [{'host': 'host2', 'nodename': 'node2'}])
         self.task._check_compatible_with_source_hypervisor("host2")
         self.task._call_livem_checks_on_host("host2")
 
         self.mox.ReplayAll()
         with mock.patch.object(self.task,
                                '_remove_host_allocations') as remove_allocs:
-            self.assertEqual("host2", self.task._find_destination())
+            self.assertEqual(("host2", "node2"), self.task._find_destination())
         # Should have removed allocations for the first host.
         remove_allocs.assert_called_once_with('host1', 'node1')
 
@@ -422,14 +433,14 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
         self.task.scheduler_client.select_destinations(self.context,
                 self.fake_spec, [self.instance.uuid]).AndReturn(
-                        [{'host': 'host2'}])
+                        [{'host': 'host2', 'nodename': 'node2'}])
         self.task._check_compatible_with_source_hypervisor("host2")
         self.task._call_livem_checks_on_host("host2")
 
         self.mox.ReplayAll()
         with mock.patch.object(self.task,
                                '_remove_host_allocations') as remove_allocs:
-            self.assertEqual("host2", self.task._find_destination())
+            self.assertEqual(("host2", "node2"), self.task._find_destination())
         # Should have removed allocations for the first host.
         remove_allocs.assert_called_once_with('host1', 'node1')
 
@@ -455,14 +466,14 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
         self.task.scheduler_client.select_destinations(self.context,
                 self.fake_spec, [self.instance.uuid]).AndReturn(
-                        [{'host': 'host2'}])
+                        [{'host': 'host2', 'nodename': 'node2'}])
         self.task._check_compatible_with_source_hypervisor("host2")
         self.task._call_livem_checks_on_host("host2")
 
         self.mox.ReplayAll()
         with mock.patch.object(self.task,
                                '_remove_host_allocations') as remove_allocs:
-            self.assertEqual("host2", self.task._find_destination())
+            self.assertEqual(("host2", "node2"), self.task._find_destination())
         # Should have removed allocations for the first host.
         remove_allocs.assert_called_once_with('host1', 'node1')
 
