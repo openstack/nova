@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    The ``delete_host`` command has been added in ``nova-manage cell_v2``
+    to delete a host from a cell (host mappings).
+    The ``force`` option has been added in ``nova-manage cell_v2 delete_cell``.
+    If the ``force`` option is specified, a cell can be deleted
+    even if the cell has hosts.
