@@ -2385,8 +2385,7 @@ class API(base.Base):
         # Only subtract from limit if it is not None
         limit = (limit - len(build_req_instances)) if limit else limit
 
-        fields = ['metadata', 'system_metadata', 'info_cache',
-                  'security_groups']
+        fields = ['metadata', 'info_cache', 'security_groups']
         if expected_attrs:
             fields.extend(expected_attrs)
 
@@ -2498,8 +2497,11 @@ class API(base.Base):
     def _get_instances_by_filters(self, context, filters,
                                   limit=None, marker=None, expected_attrs=None,
                                   sort_keys=None, sort_dirs=None):
-        fields = ['metadata', 'system_metadata', 'info_cache',
-                  'security_groups']
+        # We could arguably avoid joining on security_groups if we're using
+        # neutron (which is the default) but if you're using neutron then the
+        # security_group_instance_association table should be empty anyway
+        # and the DB should optimize out that join, making it insignificant.
+        fields = ['metadata', 'info_cache', 'security_groups']
         if expected_attrs:
             fields.extend(expected_attrs)
         return objects.InstanceList.get_by_filters(

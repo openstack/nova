@@ -4626,8 +4626,7 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_buildreq_get.assert_called_once_with(
                 self.context, {'foo': 'bar'}, limit=None, marker='fake-marker',
                 sort_keys=['baz'], sort_dirs=['desc'])
-            fields = ['metadata', 'system_metadata', 'info_cache',
-                      'security_groups']
+            fields = ['metadata', 'info_cache', 'security_groups']
             mock_inst_get.assert_called_once_with(
                 self.context, {'foo': 'bar'}, None, 'fake-marker',
                 fields, ['baz'], ['desc'])
@@ -4662,8 +4661,7 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_buildreq_get.assert_called_once_with(
                 self.context, {'foo': 'bar'}, limit=None, marker='fake-marker',
                 sort_keys=['baz'], sort_dirs=['desc'])
-            fields = ['metadata', 'system_metadata', 'info_cache',
-                      'security_groups']
+            fields = ['metadata', 'info_cache', 'security_groups']
             mock_inst_get.assert_called_once_with(
                 self.context, {'foo': 'bar'}, None, 'fake-marker',
                 fields, ['baz'], ['desc'])
@@ -4698,8 +4696,7 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_buildreq_get.assert_called_once_with(
                 self.context, {'foo': 'bar'}, limit=10, marker='fake-marker',
                 sort_keys=['baz'], sort_dirs=['desc'])
-            fields = ['metadata', 'system_metadata', 'info_cache',
-                      'security_groups']
+            fields = ['metadata', 'info_cache', 'security_groups']
             mock_inst_get.assert_called_once_with(
                 self.context, {'foo': 'bar'}, 8, 'fake-marker',
                 fields, ['baz'], ['desc'])
@@ -4736,8 +4733,7 @@ class _ComputeAPIUnitTestMixIn(object):
             if self.cell_type is None:
                 for cm in mock_cm_get_all.return_value:
                     mock_target_cell.assert_any_call(self.context, cm)
-            fields = ['metadata', 'system_metadata', 'info_cache',
-                      'security_groups']
+            fields = ['metadata', 'info_cache', 'security_groups']
             mock_inst_get.assert_called_once_with(
                 mock.ANY, {'foo': 'bar'},
                 8, 'fake-marker',
