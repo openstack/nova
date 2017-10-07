@@ -13,6 +13,7 @@
 import collections
 import re
 
+from os_brick import initiator
 from os_brick.initiator import connector
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -57,7 +58,7 @@ class LibvirtVZStorageVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
         # Call the factory here so we can support
         # more than x86 architectures.
         self.connector = connector.InitiatorConnector.factory(
-            'vzstorage', utils.get_root_helper(),
+            initiator.VZSTORAGE, utils.get_root_helper(),
             vzstorage_mount_point_base=CONF.libvirt.vzstorage_mount_point_base)
 
     def _get_mount_point_base(self):

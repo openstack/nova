@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from os_brick import initiator
 from os_brick.initiator import connector
 
 import nova.conf
@@ -29,7 +30,7 @@ class LibvirtHGSTVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         super(LibvirtHGSTVolumeDriver,
               self).__init__(host, is_block_dev=True)
         self.connector = connector.InitiatorConnector.factory(
-            'HGST', utils.get_root_helper(),
+            initiator.HGST, utils.get_root_helper(),
             device_scan_attempts=CONF.libvirt.num_volume_scan_tries)
 
     def get_config(self, connection_info, disk_info):
