@@ -352,7 +352,7 @@ def _get_fault_and_priority_from_exc(exception):
 @rpc.if_notifications_enabled
 def notify_about_instance_action(context, instance, host, action, phase=None,
                                  source=fields.NotificationSource.COMPUTE,
-                                 exception=None):
+                                 exception=None, bdms=None):
     """Send versioned notification about the action made on the instance
     :param instance: the instance which the action performed on
     :param host: the host emitting the notification
@@ -360,11 +360,14 @@ def notify_about_instance_action(context, instance, host, action, phase=None,
     :param phase: the phase of the action
     :param source: the source of the notification
     :param exception: the thrown exception (used in error notifications)
+    :param bdms: BlockDeviceMappingList object for the instance. If it is not
+                provided then we will load it from the db if so configured
     """
     fault, priority = _get_fault_and_priority_from_exc(exception)
     payload = instance_notification.InstanceActionPayload(
             instance=instance,
-            fault=fault)
+            fault=fault,
+            bdms=bdms)
     notification = instance_notification.InstanceActionNotification(
             context=context,
             priority=priority,

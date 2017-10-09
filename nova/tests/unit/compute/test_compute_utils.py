@@ -491,13 +491,23 @@ class UsageInfoTestCase(test.TestCase):
 
     def test_notify_about_instance_action(self):
         instance = create_instance(self.context)
+        bdms = block_device_obj.block_device_make_list(
+            self.context,
+            [fake_block_device.FakeDbBlockDeviceDict(
+                {'source_type': 'volume',
+                 'device_name': '/dev/vda',
+                 'instance_uuid': 'f8000000-0000-0000-0000-000000000000',
+                 'destination_type': 'volume',
+                 'boot_index': 0,
+                 'volume_id': 'de8836ac-d75e-11e2-8271-5254009297d6'})])
 
         compute_utils.notify_about_instance_action(
             self.context,
             instance,
             host='fake-compute',
             action='delete',
-            phase='start')
+            phase='start',
+            bdms=bdms)
 
         self.assertEqual(len(fake_notifier.VERSIONED_NOTIFICATIONS), 1)
         notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
@@ -522,6 +532,15 @@ class UsageInfoTestCase(test.TestCase):
             self.assertIn(attr, payload, "Key %s not in payload" % attr)
 
         self.assertEqual(payload['image_uuid'], uuids.fake_image_ref)
+        self.assertEqual(1, len(payload['block_devices']))
+        payload_bdm = payload['block_devices'][0]['nova_object.data']
+        self.assertEqual(
+            {'boot_index': 0,
+             'delete_on_termination': False,
+             'device_name': '/dev/vda',
+             'tag': None,
+             'volume_id': 'de8836ac-d75e-11e2-8271-5254009297d6'},
+            payload_bdm)
 
     def test_notify_about_instance_create(self):
         keypair = objects.KeyPair(name='my-key', user_id='fake', type='ssh',

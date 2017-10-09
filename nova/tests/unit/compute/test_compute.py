@@ -5235,9 +5235,9 @@ class ComputeTestCase(BaseTestCase,
                     clean_shutdown=clean_shutdown)
             mock_notify_action.assert_has_calls([
                 mock.call(self.context, instance, 'fake-mini',
-                      action='resize', phase='start'),
+                      action='resize', phase='start', bdms='fake_bdms'),
                 mock.call(self.context, instance, 'fake-mini',
-                      action='resize', phase='end')])
+                      action='resize', phase='end', bdms='fake_bdms')])
             mock_get_instance_vol_bdinfo.assert_called_once_with(
                     self.context, instance, bdms='fake_bdms')
             mock_terminate_vol_conn.assert_called_once_with(self.context,
@@ -6283,7 +6283,8 @@ class ComputeTestCase(BaseTestCase,
 
         dest_node = objects.ComputeNode(host='foo', uuid=uuids.dest_node)
         mock_get_node.return_value = dest_node
-        mock_bdms.return_value = objects.BlockDeviceMappingList()
+        bdms = objects.BlockDeviceMappingList()
+        mock_bdms.return_value = bdms
 
         @mock.patch('nova.compute.utils.notify_about_instance_action')
         @mock.patch.object(self.compute, '_live_migration_cleanup_flags')
@@ -6297,9 +6298,11 @@ class ComputeTestCase(BaseTestCase,
                 instance.project_id, test.MatchType(dict))
             mock_notify.assert_has_calls([
                 mock.call(c, instance, self.compute.host,
-                          action='live_migration_rollback', phase='start'),
+                          action='live_migration_rollback', phase='start',
+                          bdms=bdms),
                 mock.call(c, instance, self.compute.host,
-                          action='live_migration_rollback', phase='end')])
+                          action='live_migration_rollback', phase='end',
+                          bdms=bdms)])
             mock_nw_api.setup_networks_on_host.assert_called_once_with(
                 c, instance, self.compute.host)
         _test()
@@ -6323,7 +6326,8 @@ class ComputeTestCase(BaseTestCase,
 
         dest_node = objects.ComputeNode(host='foo', uuid=uuids.dest_node)
         mock_get_node.return_value = dest_node
-        mock_bdms.return_value = objects.BlockDeviceMappingList()
+        bdms = objects.BlockDeviceMappingList()
+        mock_bdms.return_value = bdms
 
         @mock.patch('nova.compute.utils.notify_about_instance_action')
         @mock.patch.object(self.compute, '_live_migration_cleanup_flags')
@@ -6338,9 +6342,11 @@ class ComputeTestCase(BaseTestCase,
                 instance.project_id, test.MatchType(dict))
             mock_notify.assert_has_calls([
                 mock.call(c, instance, self.compute.host,
-                          action='live_migration_rollback', phase='start'),
+                          action='live_migration_rollback', phase='start',
+                          bdms=bdms),
                 mock.call(c, instance, self.compute.host,
-                          action='live_migration_rollback', phase='end')])
+                          action='live_migration_rollback', phase='end',
+                          bdms=bdms)])
             mock_nw_api.setup_networks_on_host.assert_called_once_with(
                 c, instance, self.compute.host)
         _test()
@@ -12002,19 +12008,19 @@ class EvacuateHostTestCase(BaseTestCase):
             if vm_states_is_stopped:
                 mock_notify.assert_has_calls([
                     mock.call(ctxt, self.inst, self.inst.host,
-                              action='rebuild', phase='start'),
+                              action='rebuild', phase='start', bdms=bdms),
                     mock.call(ctxt, self.inst, self.inst.host,
                               action='power_off', phase='start'),
                     mock.call(ctxt, self.inst, self.inst.host,
                               action='power_off', phase='end'),
                     mock.call(ctxt, self.inst, self.inst.host,
-                              action='rebuild', phase='end')])
+                              action='rebuild', phase='end', bdms=bdms)])
             else:
                 mock_notify.assert_has_calls([
                     mock.call(ctxt, self.inst, self.inst.host,
-                              action='rebuild', phase='start'),
+                              action='rebuild', phase='start', bdms=bdms),
                     mock.call(ctxt, self.inst, self.inst.host,
-                              action='rebuild', phase='end')])
+                              action='rebuild', phase='end', bdms=bdms)])
 
             mock_setup_networks_on_host.assert_called_once_with(
                 ctxt, self.inst, self.inst.host)
