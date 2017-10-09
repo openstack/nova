@@ -95,7 +95,6 @@ wrap_exception = functools.partial(exception_wrapper.wrap_exception,
                                    binary='nova-api')
 CONF = nova.conf.CONF
 
-MAX_USERDATA_SIZE = 65535
 RO_SECURITY_GROUPS = ['default']
 
 AGGREGATE_ACTION_UPDATE = 'Update'
@@ -770,13 +769,6 @@ class API(base.Base):
             raise exception.FlavorNotFound(flavor_id=instance_type['id'])
 
         if user_data:
-            l = len(user_data)
-            if l > MAX_USERDATA_SIZE:
-                # NOTE(mikal): user_data is stored in a text column, and
-                # the database might silently truncate if its over length.
-                raise exception.InstanceUserDataTooLarge(
-                    length=l, maxsize=MAX_USERDATA_SIZE)
-
             try:
                 base64utils.decode_as_bytes(user_data)
             except (base64.binascii.Error, TypeError):

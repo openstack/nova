@@ -584,7 +584,6 @@ class ServersController(wsgi.Controller):
                 exception.MultiplePortsNotApplicable,
                 exception.InvalidFixedIpAndMaxCountRequest,
                 exception.InstanceUserDataMalformed,
-                exception.InstanceUserDataTooLarge,
                 exception.PortNotFound,
                 exception.FixedIpAlreadyInUse,
                 exception.SecurityGroupNotFound,

@@ -2885,14 +2885,13 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._test_create_extra, params)
 
-    @mock.patch.object(compute_api.API, 'create')
-    def test_create_instance_raise_user_data_too_large(self, mock_create):
-        mock_create.side_effect = exception.InstanceUserDataTooLarge(
-            maxsize=1, length=2)
-
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller.create,
-                          self.req, body=self.body)
+    def test_create_instance_raise_user_data_too_large(self):
+        self.body['server']['user_data'] = (b'1' * 65536)
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller.create,
+                               self.req, body=self.body)
+        # Make sure the failure was about user_data and not something else.
+        self.assertIn('user_data', six.text_type(ex))
 
     def test_create_instance_with_network_with_no_subnet(self):
         network = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'

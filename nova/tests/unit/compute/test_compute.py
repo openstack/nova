@@ -8261,19 +8261,6 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(pre_build_len,
                          len(db.instance_get_all(self.context)))
 
-    def test_create_with_large_user_data(self):
-        # Test an instance type with too much user data.
-
-        inst_type = flavors.get_default_flavor()
-
-        self.fake_image['min_ram'] = 2
-        self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
-                      self.fake_show)
-
-        self.assertRaises(exception.InstanceUserDataTooLarge,
-            self.compute_api.create, self.context, inst_type,
-            self.fake_image['id'], user_data=(b'1' * 65536))
-
     def test_create_with_malformed_user_data(self):
         # Test an instance type with malformed user data.
 
