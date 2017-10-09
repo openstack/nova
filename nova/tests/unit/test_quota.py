@@ -364,9 +364,6 @@ class FakeDriver(object):
     def destroy_all_by_project(self, context, project_id):
         self.called.append(('destroy_all_by_project', context, project_id))
 
-    def expire(self, context):
-        self.called.append(('expire', context))
-
 
 class BaseResourceTestCase(test.TestCase):
     def test_no_flag(self):
@@ -835,16 +832,6 @@ class QuotaEngineTestCase(test.TestCase):
 
         self.assertEqual(driver.called, [
                 ('destroy_all_by_project', context, 'test_project'),
-                ])
-
-    def test_expire(self):
-        context = FakeContext(None, None)
-        driver = FakeDriver()
-        quota_obj = self._make_quota_obj(driver)
-        quota_obj.expire(context)
-
-        self.assertEqual(driver.called, [
-                ('expire', context),
                 ])
 
     def test_resources(self):

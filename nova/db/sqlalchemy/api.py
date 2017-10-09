@@ -4108,22 +4108,6 @@ def quota_destroy_all_by_project(context, project_id):
         soft_delete(synchronize_session=False)
 
 
-@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
-@pick_context_manager_writer
-def reservation_expire(context):
-    current_time = timeutils.utcnow()
-    reservation_query = model_query(
-        context, models.Reservation, read_deleted="no").\
-        filter(models.Reservation.expire < current_time)
-
-    for reservation in reservation_query.join(models.QuotaUsage).all():
-        if reservation.delta >= 0:
-            reservation.usage.reserved -= reservation.delta
-            context.session.add(reservation.usage)
-
-    return reservation_query.soft_delete(synchronize_session=False)
-
-
 ###################
 
 
