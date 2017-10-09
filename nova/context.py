@@ -419,9 +419,11 @@ def scatter_gather_cells(context, cell_mappings, timeout, fn, *args, **kwargs):
     queue = eventlet.queue.LightQueue()
     results = {}
 
-    def gather_result(cell_uuid, fn, *args, **kwargs):
+    def gather_result(cell_mapping, fn, context, *args, **kwargs):
+        cell_uuid = cell_mapping.uuid
         try:
-            result = fn(*args, **kwargs)
+            with target_cell(context, cell_mapping) as cctxt:
+                result = fn(cctxt, *args, **kwargs)
         except Exception:
             LOG.exception('Error gathering result from cell %s', cell_uuid)
             result = raised_exception_sentinel
@@ -429,10 +431,9 @@ def scatter_gather_cells(context, cell_mappings, timeout, fn, *args, **kwargs):
         queue.put((cell_uuid, result))
 
     for cell_mapping in cell_mappings:
-        with target_cell(context, cell_mapping) as cctxt:
-            greenthreads.append((cell_mapping.uuid,
-                                 utils.spawn(gather_result, cell_mapping.uuid,
-                                             fn, cctxt, *args, **kwargs)))
+        greenthreads.append((cell_mapping.uuid,
+                             utils.spawn(gather_result, cell_mapping,
+                                         fn, context, *args, **kwargs)))
 
     with eventlet.timeout.Timeout(timeout, exception.CellTimeout):
         try:

@@ -307,21 +307,35 @@ class ContextTestCase(test.NoDBTestCase):
     @mock.patch('nova.context.target_cell')
     @mock.patch('nova.objects.InstanceList.get_by_filters')
     def test_scatter_gather_cells(self, mock_get_inst, mock_target_cell):
-        self.useFixture(nova_fixtures.SpawnIsSynchronousFixture())
         ctxt = context.get_context()
         mapping = objects.CellMapping(database_connection='fake://db',
                                       transport_url='fake://mq',
                                       uuid=uuids.cell)
         mappings = objects.CellMappingList(objects=[mapping])
 
+        # Use a mock manager to assert call order across mocks.
+        manager = mock.Mock()
+        manager.attach_mock(mock_get_inst, 'get_inst')
+        manager.attach_mock(mock_target_cell, 'target_cell')
+
         filters = {'deleted': False}
         context.scatter_gather_cells(
             ctxt, mappings, 60, objects.InstanceList.get_by_filters, filters,
             sort_dir='foo')
 
-        mock_get_inst.assert_called_once_with(
+        # NOTE(melwitt): This only works without the SpawnIsSynchronous fixture
+        # because when the spawn is treated as synchronous and the thread
+        # function is called immediately, it will occur inside the target_cell
+        # context manager scope when it wouldn't with a real spawn.
+
+        # Assert that InstanceList.get_by_filters was called before the
+        # target_cell context manager exited.
+        get_inst_call = mock.call.get_inst(
             mock_target_cell.return_value.__enter__.return_value, filters,
             sort_dir='foo')
+        expected_calls = [get_inst_call,
+                          mock.call.target_cell().__exit__(None, None, None)]
+        manager.assert_has_calls(expected_calls)
 
     @mock.patch('nova.context.LOG.warning')
     @mock.patch('eventlet.timeout.Timeout')
