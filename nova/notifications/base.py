@@ -24,7 +24,6 @@ from oslo_context import context as common_context
 from oslo_log import log
 from oslo_utils import excutils
 from oslo_utils import timeutils
-import six
 
 import nova.conf
 import nova.context
@@ -79,21 +78,6 @@ def notify_decorator(name, fn):
 
         return fn(*args, **kwarg)
     return wrapped_func
-
-
-def send_api_fault(url, status, exception):
-    """Send an api.fault notification."""
-
-    if not CONF.notifications.notify_on_api_faults:
-        return
-
-    payload = {'url': url, 'exception': six.text_type(exception),
-               'status': status}
-
-    rpc.get_notifier('api').error(common_context.get_current() or
-                                  nova.context.get_admin_context(),
-                                  'api.fault',
-                                  payload)
 
 
 def send_update(context, old_instance, new_instance, service="compute",

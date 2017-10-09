@@ -260,7 +260,6 @@ class LegacyValidatingNotifier(object):
         'aggregate.updatemetadata.start',
         'aggregate.updateprop.end',
         'aggregate.updateprop.start',
-        'api.fault',
         'compute.instance.create.end',
         'compute.instance.create.error',
         'compute.instance.create_ip.end',

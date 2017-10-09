@@ -45,16 +45,6 @@ Possible values:
 * "vm_and_task_state" - notifications on VM and task state changes
 """),
 
-    cfg.BoolOpt(
-        'notify_on_api_faults',
-        default=False,
-        deprecated_group='DEFAULT',
-        deprecated_name='notify_api_faults',
-        help="""
-If enabled, send api.fault notifications on caught exceptions in the
-API service.
-"""),
-
     cfg.StrOpt(
         'default_level',
         default='INFO',
