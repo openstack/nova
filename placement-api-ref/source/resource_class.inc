@@ -123,7 +123,10 @@ Delete the resource class identified by `{name}`.
 
 Normal Response Codes: 204
 
-Error response codes: itemNotFound(404), conflict(409)
+Error response codes: badRequest(400), itemNotFound(404), conflict(409)
+
+A `400 BadRequest` response code will be returned if trying
+to delete a standard resource class.
 
 A `409 Conflict` response code will be returned if there exist
 inventories for the resource class.
