@@ -718,10 +718,6 @@ class ComputeManager(manager.Manager):
 
     def _complete_deletion(self, context, instance, bdms,
                            system_meta):
-        # ensure block device mappings are not leaked
-        for bdm in bdms:
-            bdm.destroy()
-
         self._update_resource_tracker(context, instance)
 
         rt = self._get_resource_tracker()
