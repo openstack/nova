@@ -137,6 +137,8 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 kwargs['cast'] = False
             else:
                 kwargs['do_cast'] = False
+        elif method == 'prep_resize' and 'migration' not in expected_args:
+            del expected_kwargs['migration']
         if 'host' in kwargs:
             host = kwargs['host']
         elif 'instances' in kwargs:
@@ -482,14 +484,16 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 migrate_data=None, version='4.8')
 
     def test_prep_resize(self):
-        self._test_compute_api('prep_resize', 'cast',
+        expected_args = {'migration': 'migration'}
+        self._test_compute_api('prep_resize', 'cast', expected_args,
                 instance=self.fake_instance_obj,
                 instance_type=self.fake_flavor_obj,
                 image='fake_image', host='host',
                 reservations=list('fake_res'),
                 request_spec='fake_spec',
                 filter_properties={'fakeprop': 'fakeval'},
-                node='node', clean_shutdown=True, version='4.1')
+                migration='migration',
+                node='node', clean_shutdown=True, version='4.18')
         self.flags(compute='4.0', group='upgrade_levels')
         expected_args = {'instance_type': self.fake_flavor}
         self._test_compute_api('prep_resize', 'cast', expected_args,
@@ -499,6 +503,7 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 reservations=list('fake_res'),
                 request_spec='fake_spec',
                 filter_properties={'fakeprop': 'fakeval'},
+                migration='migration',
                 node='node', clean_shutdown=True, version='4.0')
 
     def test_reboot_instance(self):

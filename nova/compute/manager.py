@@ -117,13 +117,18 @@ def errors_out_migration_ctxt(migration):
         yield
     except Exception:
         with excutils.save_and_reraise_exception():
-            migration.status = 'error'
-            try:
-                with migration.obj_as_admin():
-                    migration.save()
-            except Exception:
-                LOG.debug('Error setting migration status for instance %s.',
-                          migration.instance_uuid, exc_info=True)
+            if migration:
+                # We may have been passed None for our migration if we're
+                # receiving from an older client. The migration will be
+                # errored via the legacy path.
+                migration.status = 'error'
+                try:
+                    with migration.obj_as_admin():
+                        migration.save()
+                except Exception:
+                    LOG.debug(
+                        'Error setting migration status for instance %s.',
+                        migration.instance_uuid, exc_info=True)
 
 
 @utils.expects_func_args('migration')
@@ -481,7 +486,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='4.17')
+    target = messaging.Target(version='4.18')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to an instance during power off.  The overall
@@ -3812,7 +3817,7 @@ class ComputeManager(manager.Manager):
                     context, instance, "resize.revert.end")
 
     def _prep_resize(self, context, image, instance, instance_type,
-                     filter_properties, node, clean_shutdown=True):
+                     filter_properties, node, migration, clean_shutdown=True):
 
         if not filter_properties:
             filter_properties = {}
@@ -3843,7 +3848,8 @@ class ComputeManager(manager.Manager):
         limits = filter_properties.get('limits', {})
         rt = self._get_resource_tracker()
         with rt.resize_claim(context, instance, instance_type, node,
-                             image_meta=image, limits=limits) as claim:
+                             migration, image_meta=image,
+                             limits=limits) as claim:
             LOG.info('Migrating', instance=instance)
             # RPC cast to the source host to start the actual resize/migration.
             self.compute_rpcapi.resize_instance(
@@ -3856,7 +3862,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def prep_resize(self, context, image, instance, instance_type,
                     reservations, request_spec, filter_properties, node,
-                    clean_shutdown):
+                    clean_shutdown, migration=None):
         """Initiates the process of moving a running instance to another host.
 
         Possibly changes the VCPU, RAM and disk size in the process.
@@ -3877,7 +3883,8 @@ class ComputeManager(manager.Manager):
         if not isinstance(instance_type, objects.Flavor):
             instance_type = objects.Flavor.get_by_id(context,
                                                      instance_type['id'])
-        with self._error_out_instance_on_exception(context, instance):
+        with self._error_out_instance_on_exception(context, instance), \
+                 errors_out_migration_ctxt(migration):
             compute_utils.notify_usage_exists(self.notifier, context, instance,
                                               current_period=True)
             self._notify_about_instance_usage(
@@ -3886,7 +3893,7 @@ class ComputeManager(manager.Manager):
             try:
                 self._prep_resize(context, image, instance,
                                   instance_type, filter_properties,
-                                  node, clean_shutdown)
+                                  node, migration, clean_shutdown)
             except Exception:
                 failed = True
                 # try to re-schedule the resize elsewhere:

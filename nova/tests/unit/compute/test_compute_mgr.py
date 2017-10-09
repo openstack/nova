@@ -6392,6 +6392,58 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         self.assertFalse(do_cleanup)
         self.assertFalse(destroy_disks)
 
+    @mock.patch('nova.objects.InstanceFault.create')
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch('nova.compute.utils.notify_usage_exists')
+    @mock.patch('nova.compute.utils.notify_about_instance_usage')
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                new=lambda *a: False)
+    def test_prep_resize_errors_migration(self, mock_niu, mock_notify,
+                                          mock_save,
+                                          mock_if):
+        migration = mock.MagicMock()
+        flavor = objects.Flavor(name='flavor', id=1)
+
+        @mock.patch.object(self.compute, '_reschedule')
+        @mock.patch.object(self.compute, '_prep_resize')
+        @mock.patch.object(self.compute, '_get_resource_tracker')
+        def doit(mock_grt, mock_pr, mock_r):
+            mock_r.return_value = False
+            mock_pr.side_effect = test.TestingException
+
+            instance = objects.Instance(uuid=uuids.instance,
+                                        host='host',
+                                        node='node',
+                                        vm_state='active',
+                                        task_state=None)
+
+            self.assertRaises(test.TestingException,
+                              self.compute.prep_resize,
+                              self.context, mock.sentinel.image,
+                              instance, flavor,
+                              mock.sentinel.reservations,
+                              mock.sentinel.request_spec,
+                              {}, 'node', False,
+                              migration=migration)
+
+            # Make sure we set migration status to failed
+            self.assertEqual(migration.status, 'error')
+
+            # Run it again with migration=None and make sure we don't choke
+            self.assertRaises(test.TestingException,
+                              self.compute.prep_resize,
+                              self.context, mock.sentinel.image,
+                              instance, flavor,
+                              mock.sentinel.reservations,
+                              mock.sentinel.request_spec,
+                              {}, 'node', False,
+                              migration=None)
+
+            # Make sure we only called save once (kinda obviously must be true)
+            migration.save.assert_called_once_with()
+
+        doit()
+
 
 class ComputeManagerInstanceUsageAuditTestCase(test.TestCase):
     def setUp(self):

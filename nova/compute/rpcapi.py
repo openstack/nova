@@ -328,6 +328,7 @@ class ComputeAPI(object):
         * 4.15 - Add tag argument to reserve_block_device_name()
         * 4.16 - Add tag argument to attach_interface()
         * 4.17 - Add new_attachment_id to swap_volume.
+        * 4.18 - Add migration to prep_resize()
     '''
 
     VERSION_ALIASES = {
@@ -755,7 +756,7 @@ class ComputeAPI(object):
     # TODO(melwitt): Remove the reservations parameter in version 5.0 of the
     # RPC API.
     def prep_resize(self, ctxt, instance, image, instance_type, host,
-                    reservations=None, request_spec=None,
+                    migration, reservations=None, request_spec=None,
                     filter_properties=None, node=None,
                     clean_shutdown=True):
         image_p = jsonutils.to_primitive(image)
@@ -766,9 +767,13 @@ class ComputeAPI(object):
                     'request_spec': request_spec,
                     'filter_properties': filter_properties,
                     'node': node,
+                    'migration': migration,
                     'clean_shutdown': clean_shutdown}
-        version = '4.1'
         client = self.router.client(ctxt)
+        version = '4.18'
+        if not client.can_send_version(version):
+            version = '4.1'
+            del msg_args['migration']
         if not client.can_send_version(version):
             version = '4.0'
             msg_args['instance_type'] = objects_base.obj_to_primitive(
