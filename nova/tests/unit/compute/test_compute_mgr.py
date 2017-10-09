@@ -6416,7 +6416,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                               {}, 'node', False,
                               migration=migration)
 
-            # Make sure we set migration status to failed
+            # Make sure we set migration status to error
             self.assertEqual(migration.status, 'error')
 
             # Run it again with migration=None and make sure we don't choke
