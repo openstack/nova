@@ -10791,48 +10791,120 @@ class SortMarkerHelper(test.TestCase):
 
         values = {
             'key_name': ['dan', 'dan', 'taylor', 'jax'],
-            'memory_mb': [512, 1024, 2048, 256],
+            'memory_mb': [512, 1024, 512, 256],
             'launched_at': [launched + td(1), launched - td(256),
                             launched + td(32), launched - td(5000)],
         }
 
         for i in range(0, 4):
             inst = {'user_id': self.context.user_id,
-                    'project_id': self.context.project_id}
+                    'project_id': self.context.project_id,
+                    'auto_disk_config': bool(i % 2),
+                    'vcpus': 1}
             for key in values:
                 inst[key] = values[key].pop(0)
             db_instance = db.instance_create(self.context, inst)
             self.instances.append(db_instance)
 
-    def test_thing(self):
-        # Pull out the first instance sorted by our desired key
-        first = db.instance_get_all_by_filters_sort(self.context, {}, limit=1,
-                                                    sort_keys=['memory_mb'],
-                                                    sort_dirs=['asc'])
-        marker = first[0]['uuid']
+    def test_with_one_key(self):
+        """Test instance_get_by_sort_filters() with one sort key."""
+        # If we sort ascending by key_name and our marker was something
+        # just after jax, taylor would be the next one.
+        marker = db.instance_get_by_sort_filters(
+            self.context,
+            ['key_name'], ['asc'], ['jaxz'])
+        self.assertEqual(self.instances[2]['uuid'], marker)
 
-        # Starting with the marker, page through one at a time looking for the
-        # instance that would match if the previous marker was our marker.
-        values_found = [marker]
-        while True:
-            marker_inst = db.instance_get_by_uuid(self.context, marker)
+    def _test_with_multiple_keys(self, sort_keys, sort_dirs, value_fn):
+        """Test instance_get_by_sort_filters() with multiple sort keys.
 
+        Since this returns the marker it's looking for, it's actually really
+        hard to test this like we normally would with pagination, i.e. marching
+        through the instances in order. Attempting to do so covered up a bug
+        in this previously.
+
+        So, for a list of marker values, query and assert we get the instance
+        we expect.
+        """
+
+        # For the query below, ordering memory_mb asc, key_name desc,
+        # The following is the expected ordering of the instances we
+        # have to test:
+        #
+        #   256-jax
+        #   512-taylor
+        #   512-dan
+        #   1024-dan
+
+        steps = [
+            (200, 'foo', 3),  # all less than 256-jax
+            (256, 'xyz', 3),  # name comes before jax
+            (256, 'jax', 3),  # all equal to 256-jax
+            (256, 'abc', 2),  # name after jax
+            (500, 'foo', 2),  # all greater than 256-jax
+            (512, 'xyz', 2),  # name before taylor and dan
+            (512, 'mno', 0),  # name after taylor, before dan-512
+            (512, 'abc', 1),  # name after dan-512
+            (999, 'foo', 1),  # all greater than 512-taylor
+            (1024, 'xyz', 1),  # name before dan
+            (1024, 'abc', None),  # name after dan
+            (2048, 'foo', None),  # all greater than 1024-dan
+        ]
+
+        for mem, name, expected in steps:
             marker = db.instance_get_by_sort_filters(
                 self.context,
-                ['memory_mb'],
-                ['asc'],
-                [marker_inst['memory_mb'] + 1,
-                 marker_inst['key_name'] + 'z'])
-            if not marker:
-                break
-            values_found.append(marker)
+                sort_keys,
+                sort_dirs,
+                value_fn(mem, name))
+            if expected is None:
+                self.assertIsNone(marker)
+            else:
+                expected_inst = self.instances[expected]
+                got_inst = [inst for inst in self.instances
+                            if inst['uuid'] == marker][0]
+                self.assertEqual(
+                    expected_inst['uuid'],
+                    marker,
+                    'marker %s-%s expected %s-%s got %s-%s' % (
+                        mem, name,
+                        expected_inst['memory_mb'], expected_inst['key_name'],
+                        got_inst['memory_mb'], got_inst['key_name']))
 
-        # Make sure we found everything
-        self.assertEqual(set([x['uuid'] for x in self.instances]),
-                         set(values_found))
+    def test_with_two_keys(self):
+        """Test instance_get_by_sort_filters() with two sort_keys."""
+        self._test_with_multiple_keys(
+            ['memory_mb', 'key_name'],
+            ['asc', 'desc'],
+            lambda mem, name: [mem, name])
+
+    def test_with_three_keys(self):
+        """Test instance_get_by_sort_filters() with three sort_keys.
+
+        This inserts another key in the middle of memory_mb,key_name
+        which is always equal in all the test instances. We do this
+        to make sure that we are only including the equivalence fallback
+        on the final sort_key, otherwise we might stall out in the
+        middle of a series of instances with equivalent values for
+        a key in the middle of sort_keys.
+        """
+        self._test_with_multiple_keys(
+            ['memory_mb', 'vcpus', 'key_name'],
+            ['asc', 'asc', 'desc'],
+            lambda mem, name: [mem, 1, name])
 
     def test_no_match(self):
         marker = db.instance_get_by_sort_filters(self.context,
                                                  ['memory_mb'], ['asc'],
                                                  [4096])
         self.assertIsNone(marker)
+
+    def test_by_bool(self):
+        """Verify that we can use booleans in sort_keys."""
+        # If we sort ascending by auto_disk_config, the first one
+        # with True for that value would be the second instance we
+        # create, because bool(1 % 2) == True.
+        marker = db.instance_get_by_sort_filters(
+            self.context,
+            ['auto_disk_config', 'id'], ['asc', 'asc'], [True, 2])
+        self.assertEqual(self.instances[1]['uuid'], marker)
