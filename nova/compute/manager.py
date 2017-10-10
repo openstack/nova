@@ -1938,7 +1938,8 @@ class ComputeManager(manager.Manager):
                 extra_usage_info={'image_name': image_name})
         compute_utils.notify_about_instance_create(
             context, instance, self.host,
-            phase=fields.NotificationPhase.START)
+            phase=fields.NotificationPhase.START,
+            bdms=block_device_mapping)
 
         # NOTE(mikal): cache the keystone roles associated with the instance
         # at boot time for later reference
@@ -1985,14 +1986,16 @@ class ComputeManager(manager.Manager):
                     'create.error', fault=e)
                 compute_utils.notify_about_instance_create(
                     context, instance, self.host,
-                    phase=fields.NotificationPhase.ERROR, exception=e)
+                    phase=fields.NotificationPhase.ERROR, exception=e,
+                    bdms=block_device_mapping)
         except exception.ComputeResourcesUnavailable as e:
             LOG.debug(e.format_message(), instance=instance)
             self._notify_about_instance_usage(context, instance,
                     'create.error', fault=e)
             compute_utils.notify_about_instance_create(
                     context, instance, self.host,
-                    phase=fields.NotificationPhase.ERROR, exception=e)
+                    phase=fields.NotificationPhase.ERROR, exception=e,
+                    bdms=block_device_mapping)
             raise exception.RescheduledException(
                     instance_uuid=instance.uuid, reason=e.format_message())
         except exception.BuildAbortException as e:
@@ -2002,7 +2005,8 @@ class ComputeManager(manager.Manager):
                     'create.error', fault=e)
                 compute_utils.notify_about_instance_create(
                     context, instance, self.host,
-                    phase=fields.NotificationPhase.ERROR, exception=e)
+                    phase=fields.NotificationPhase.ERROR, exception=e,
+                    bdms=block_device_mapping)
         except (exception.FixedIpLimitExceeded,
                 exception.NoMoreNetworks, exception.NoMoreFixedIps) as e:
             LOG.warning('No more network or fixed IP to be allocated',
@@ -2011,7 +2015,8 @@ class ComputeManager(manager.Manager):
                     'create.error', fault=e)
             compute_utils.notify_about_instance_create(
                     context, instance, self.host,
-                    phase=fields.NotificationPhase.ERROR, exception=e)
+                    phase=fields.NotificationPhase.ERROR, exception=e,
+                    bdms=block_device_mapping)
             msg = _('Failed to allocate the network(s) with error %s, '
                     'not rescheduling.') % e.format_message()
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
@@ -2026,7 +2031,8 @@ class ComputeManager(manager.Manager):
                     'create.error', fault=e)
             compute_utils.notify_about_instance_create(
                     context, instance, self.host,
-                    phase=fields.NotificationPhase.ERROR, exception=e)
+                    phase=fields.NotificationPhase.ERROR, exception=e,
+                    bdms=block_device_mapping)
             msg = _('Failed to allocate the network(s), not rescheduling.')
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=msg)
@@ -2043,7 +2049,8 @@ class ComputeManager(manager.Manager):
                     'create.error', fault=e)
             compute_utils.notify_about_instance_create(
                     context, instance, self.host,
-                    phase=fields.NotificationPhase.ERROR, exception=e)
+                    phase=fields.NotificationPhase.ERROR, exception=e,
+                    bdms=block_device_mapping)
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=e.format_message())
         except Exception as e:
@@ -2051,7 +2058,8 @@ class ComputeManager(manager.Manager):
                     'create.error', fault=e)
             compute_utils.notify_about_instance_create(
                     context, instance, self.host,
-                    phase=fields.NotificationPhase.ERROR, exception=e)
+                    phase=fields.NotificationPhase.ERROR, exception=e,
+                    bdms=block_device_mapping)
             raise exception.RescheduledException(
                     instance_uuid=instance.uuid, reason=six.text_type(e))
 
@@ -2085,14 +2093,16 @@ class ComputeManager(manager.Manager):
                     'create.error', fault=e)
                 compute_utils.notify_about_instance_create(
                     context, instance, self.host,
-                    phase=fields.NotificationPhase.ERROR, exception=e)
+                    phase=fields.NotificationPhase.ERROR, exception=e,
+                    bdms=block_device_mapping)
 
         self._update_scheduler_instance_info(context, instance)
         self._notify_about_instance_usage(context, instance, 'create.end',
                 extra_usage_info={'message': _('Success')},
                 network_info=network_info)
         compute_utils.notify_about_instance_create(context, instance,
-                self.host, phase=fields.NotificationPhase.END)
+                self.host, phase=fields.NotificationPhase.END,
+                bdms=block_device_mapping)
 
     @contextlib.contextmanager
     def _build_resources(self, context, instance, requested_networks,
