@@ -275,6 +275,9 @@ class ComputeTaskAPI(object):
     1.16 - Added schedule_and_build_instances
     1.17 - Added tags to schedule_and_build_instances()
     1.18 - Added request_spec to build_instances().
+    1.19 - build_instances() now gets a 'host_lists' parameter that represents
+           potential alternate hosts for retries within a cell for each
+           instance.
     """
 
     def __init__(self):
@@ -329,39 +332,42 @@ class ComputeTaskAPI(object):
     def build_instances(self, context, instances, image, filter_properties,
             admin_password, injected_files, requested_networks,
             security_groups, block_device_mapping, legacy_bdm=True,
-            request_spec=None):
+            request_spec=None, host_lists=None):
         image_p = jsonutils.to_primitive(image)
-        version = '1.18'
-        send_reqspec = True
+        kwargs = {"instances": instances, "image": image_p,
+                  "filter_properties": filter_properties,
+                  "admin_password": admin_password,
+                  "injected_files": injected_files,
+                  "requested_networks": requested_networks,
+                  "security_groups": security_groups,
+                  "request_spec": request_spec,
+                  "host_lists": host_lists}
+        version = '1.19'
         if not self.client.can_send_version(version):
-            send_reqspec = False
+            version = '1.18'
+            kwargs.pop("host_lists")
+        if not self.client.can_send_version(version):
             version = '1.10'
+            kwargs.pop("request_spec")
         if not self.client.can_send_version(version):
             version = '1.9'
             if 'instance_type' in filter_properties:
                 flavor = filter_properties['instance_type']
                 flavor_p = objects_base.obj_to_primitive(flavor)
-                filter_properties = dict(filter_properties,
-                                         instance_type=flavor_p)
-        kw = {'instances': instances, 'image': image_p,
-               'filter_properties': filter_properties,
-               'admin_password': admin_password,
-               'injected_files': injected_files,
-               'requested_networks': requested_networks,
-               'security_groups': security_groups}
-        if send_reqspec:
-            kw['request_spec'] = request_spec
+                kwargs["filter_properties"] = dict(filter_properties,
+                                                   instance_type=flavor_p)
         if not self.client.can_send_version(version):
             version = '1.8'
-            kw['requested_networks'] = kw['requested_networks'].as_tuples()
+            nets = kwargs['requested_networks'].as_tuples()
+            kwargs['requested_networks'] = nets
         if not self.client.can_send_version('1.7'):
             version = '1.5'
             bdm_p = objects_base.obj_to_primitive(block_device_mapping)
-            kw.update({'block_device_mapping': bdm_p,
-                       'legacy_bdm': legacy_bdm})
+            kwargs.update({'block_device_mapping': bdm_p,
+                           'legacy_bdm': legacy_bdm})
 
         cctxt = self.client.prepare(version=version)
-        cctxt.cast(context, 'build_instances', **kw)
+        cctxt.cast(context, 'build_instances', **kwargs)
 
     def schedule_and_build_instances(self, context, build_requests,
                                      request_specs,

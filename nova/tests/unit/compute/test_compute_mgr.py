@@ -73,6 +73,7 @@ from nova.volume import cinder
 
 
 CONF = nova.conf.CONF
+fake_host_list = [mock.sentinel.host1]
 
 
 class ComputeManagerUnitTestCase(test.NoDBTestCase):
@@ -4365,7 +4366,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 requested_networks=self.requested_networks,
                 security_groups=self.security_groups,
                 block_device_mapping=self.block_device_mapping, node=self.node,
-                limits=self.limits)
+                limits=self.limits, host_list=fake_host_list)
 
         self._assert_build_instance_hook_called(mock_hooks,
                                                 build_results.ACTIVE)
@@ -4396,7 +4397,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     port_id=uuids.port_instance)],
                 security_groups=self.security_groups,
                 block_device_mapping=self.block_device_mapping, node=self.node,
-                limits=self.limits)
+                limits=self.limits, host_list=fake_host_list)
         requested_network = mock_build_and_run.call_args[0][5][0]
         self.assertEqual('fake_network_id', requested_network.network_id)
         self.assertEqual('10.0.0.1', str(requested_network.address))
@@ -4431,7 +4432,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 requested_networks=self.requested_networks,
                 security_groups=self.security_groups,
                 block_device_mapping=self.block_device_mapping, node=self.node,
-                limits=self.limits)
+                limits=self.limits, host_list=fake_host_list)
 
         self._instance_action_events(mock_start, mock_finish)
         self._assert_build_instance_update(mock_save)
@@ -4480,7 +4481,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     requested_networks=self.requested_networks,
                     security_groups=self.security_groups,
                     block_device_mapping=self.block_device_mapping,
-                    node=self.node, limits=self.limits)
+                    node=self.node, limits=self.limits,
+                    host_list=fake_host_list)
 
         self._assert_build_instance_hook_called(mock_hooks,
                                                 build_results.RESCHEDULED)
@@ -4498,7 +4500,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 [self.instance], self.image, self.filter_properties,
                 self.admin_pass, self.injected_files, self.requested_networks,
                 self.security_groups, self.block_device_mapping,
-                request_spec={})
+                request_spec={}, host_lists=[fake_host_list])
 
     @mock.patch.object(manager.ComputeManager, '_shutdown_instance')
     @mock.patch.object(manager.ComputeManager, '_build_networks_for_instance')
@@ -4569,7 +4571,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 requested_networks=self.requested_networks,
                 security_groups=self.security_groups,
                 block_device_mapping=self.block_device_mapping, node=self.node,
-                limits=self.limits)
+                limits=self.limits, host_list=fake_host_list)
 
         mock_build_and_run.assert_called_once_with(self.context,
             instance,
@@ -4583,7 +4585,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             [instance], self.image, self.filter_properties,
             self.admin_pass, self.injected_files, self.requested_networks,
             self.security_groups, self.block_device_mapping,
-            request_spec={})
+            request_spec={}, host_lists=[fake_host_list])
 
     @mock.patch.object(manager.ComputeManager, '_build_and_run_instance')
     @mock.patch.object(conductor_api.ComputeTaskAPI, 'build_instances')
@@ -4625,7 +4627,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             requested_networks=self.requested_networks,
             security_groups=self.security_groups,
             block_device_mapping=self.block_device_mapping, node=self.node,
-            limits=self.limits)
+            limits=self.limits, host_list=fake_host_list)
 
         mock_build_and_run.assert_called_once_with(self.context,
             instance,
@@ -4639,7 +4641,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             [instance], self.image, self.filter_properties,
             self.admin_pass, self.injected_files, self.requested_networks,
             self.security_groups, self.block_device_mapping,
-            request_spec={})
+            request_spec={}, host_lists=[fake_host_list])
 
     @mock.patch.object(objects.InstanceActionEvent,
                        'event_finish_with_failure')
@@ -4668,7 +4670,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 requested_networks=self.requested_networks,
                 security_groups=self.security_groups,
                 block_device_mapping=self.block_device_mapping, node=self.node,
-                limits=self.limits)
+                limits=self.limits, host_list=fake_host_list)
 
         self._assert_build_instance_hook_called(mock_hooks,
                 build_results.FAILED)
@@ -4721,7 +4723,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     requested_networks=self.requested_networks,
                     security_groups=self.security_groups,
                     block_device_mapping=self.block_device_mapping,
-                    node=self.node, limits=self.limits)
+                    node=self.node, limits=self.limits,
+                    host_list=fake_host_list)
 
         self._assert_build_instance_hook_called(mock_hooks,
                                                 build_results.RESCHEDULED)
@@ -4740,7 +4743,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 [self.instance], self.image, self.filter_properties,
                 self.admin_pass, self.injected_files, self.requested_networks,
                 self.security_groups, self.block_device_mapping,
-                request_spec={})
+                request_spec={}, host_lists=[fake_host_list])
 
     @mock.patch.object(objects.InstanceActionEvent,
                        'event_finish_with_failure')
@@ -4770,7 +4773,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 requested_networks=self.requested_networks,
                 security_groups=self.security_groups,
                 block_device_mapping=self.block_device_mapping, node=self.node,
-                limits=self.limits)
+                limits=self.limits, host_list=fake_host_list)
 
         self._assert_build_instance_hook_called(mock_hooks,
                                                 build_results.RESCHEDULED)
@@ -4789,7 +4792,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 [self.instance], self.image, self.filter_properties,
                 self.admin_pass, self.injected_files, self.requested_networks,
                 self.security_groups, self.block_device_mapping,
-                request_spec={})
+                request_spec={}, host_lists=[fake_host_list])
 
     @mock.patch.object(objects.InstanceActionEvent,
                        'event_finish_with_failure')
@@ -4820,7 +4823,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 requested_networks=self.requested_networks,
                 security_groups=self.security_groups,
                 block_device_mapping=self.block_device_mapping, node=self.node,
-                limits=self.limits)
+                limits=self.limits, host_list=fake_host_list)
 
         self._assert_build_instance_hook_called(mock_hooks,
                                                 build_results.FAILED)
@@ -5163,7 +5166,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     requested_networks=self.requested_networks,
                     security_groups=self.security_groups,
                     block_device_mapping=self.block_device_mapping,
-                    node=self.node, limits=self.limits)
+                    node=self.node, limits=self.limits,
+                    host_list=fake_host_list)
 
         self._instance_action_events(mock_start, mock_finish)
         self._assert_build_instance_update(mock_save, reschedule_update=True)
@@ -5177,7 +5181,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.image, self.filter_properties, self.admin_pass,
                 self.injected_files, self.requested_networks,
                 self.security_groups, self.block_device_mapping,
-                request_spec={})
+                request_spec={}, host_lists=[fake_host_list])
         mock_nil.assert_called_once_with(self.instance)
         mock_clean.assert_called_once_with(self.context, self.instance,
                 self.compute.host)

@@ -201,7 +201,9 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         selected_hosts = self.driver._schedule(ctx, spec_obj, instance_uuids,
                 alloc_reqs_by_rp_uuid, mock.sentinel.provider_summaries)
 
-        expected_selection = [[objects.Selection.from_host_state(host_state)]]
+        sel_obj = objects.Selection.from_host_state(host_state,
+                allocation_request=fake_alloc)
+        expected_selection = [[sel_obj]]
         mock_get_all_states.assert_called_once_with(
             ctx.elevated.return_value, spec_obj,
             mock.sentinel.provider_summaries)
@@ -387,7 +389,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 alloc_reqs_by_rp_uuid, mock.sentinel.provider_summaries,
                 return_alternates=True)
 
-        sel0 = objects.Selection.from_host_state(host_state0)
+        sel0 = objects.Selection.from_host_state(host_state0,
+                allocation_request=fake_alloc0)
         sel1 = objects.Selection.from_host_state(host_state1,
                 allocation_request=fake_alloc1)
         sel2 = objects.Selection.from_host_state(host_state2,
@@ -452,7 +455,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 alloc_reqs_by_rp_uuid, mock.sentinel.provider_summaries,
                 return_alternates=False)
 
-        sel0 = objects.Selection.from_host_state(host_state0)
+        sel0 = objects.Selection.from_host_state(host_state0,
+                allocation_request=fake_alloc0)
         expected_selection = [[sel0]]
         self.assertEqual(expected_selection, selected_hosts)
 

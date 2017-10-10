@@ -345,7 +345,14 @@ class FilterScheduler(driver.Scheduler):
         selections_to_return = []
         for selected_host in selected_hosts:
             # This is the list of hosts for one particular instance.
-            selection = objects.Selection.from_host_state(selected_host)
+            if alloc_reqs_by_rp_uuid:
+                selected_alloc_req = alloc_reqs_by_rp_uuid.get(
+                        selected_host.uuid)[0]
+            else:
+                selected_alloc_req = None
+            selection = objects.Selection.from_host_state(selected_host,
+                    allocation_request=selected_alloc_req,
+                    allocation_request_version=allocation_request_version)
             selected_plus_alts = [selection]
             cell_uuid = selected_host.cell_uuid
             # This will populate the alternates with many of the same unclaimed

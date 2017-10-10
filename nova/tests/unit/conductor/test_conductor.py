@@ -65,10 +65,40 @@ from nova import utils
 CONF = conf.CONF
 
 
+fake_alloc1 = {"allocations": [
+        {"resource_provider": {"uuid": uuids.host1},
+         "resources": {"VCPU": 1,
+                       "MEMORY_MB": 1024,
+                       "DISK_GB": 100}
+        }]}
+fake_alloc2 = {"allocations": [
+        {"resource_provider": {"uuid": uuids.host2},
+         "resources": {"VCPU": 1,
+                       "MEMORY_MB": 1024,
+                       "DISK_GB": 100}
+        }]}
+fake_alloc3 = {"allocations": [
+        {"resource_provider": {"uuid": uuids.host3},
+         "resources": {"VCPU": 1,
+                       "MEMORY_MB": 1024,
+                       "DISK_GB": 100}
+        }]}
+fake_alloc_json1 = jsonutils.dumps(fake_alloc1)
+fake_alloc_json2 = jsonutils.dumps(fake_alloc2)
+fake_alloc_json3 = jsonutils.dumps(fake_alloc3)
+fake_alloc_version = "1.23"
 fake_selection1 = objects.Selection(service_host="host1", nodename="node1",
-        cell_uuid=uuids.cell, limits=None)
+        cell_uuid=uuids.cell, limits=None, allocation_request=fake_alloc_json1,
+        allocation_request_version=fake_alloc_version)
 fake_selection2 = objects.Selection(service_host="host2", nodename="node2",
-        cell_uuid=uuids.cell, limits=None)
+        cell_uuid=uuids.cell, limits=None, allocation_request=fake_alloc_json2,
+        allocation_request_version=fake_alloc_version)
+fake_selection3 = objects.Selection(service_host="host3", nodename="node3",
+        cell_uuid=uuids.cell, limits=None, allocation_request=fake_alloc_json3,
+        allocation_request_version=fake_alloc_version)
+fake_host_lists1 = [[fake_selection1]]
+fake_host_lists2 = [[fake_selection1], [fake_selection2]]
+fake_host_lists_alt = [[fake_selection1, fake_selection2, fake_selection3]]
 
 
 class FakeContext(context.RequestContext):
@@ -422,9 +452,10 @@ class _BaseTaskTestCase(object):
                 'instance_type': instance_type_p,
                 'num_instances': 2}
         filter_properties = {'retry': {'num_attempts': 1, 'hosts': []}}
+        sched_return = copy.deepcopy(fake_host_lists2)
         self.conductor_manager._schedule_instances(self.context,
                 fake_spec, [uuids.fake, uuids.fake], return_alternates=True
-                ).AndReturn([[fake_selection1], [fake_selection2]])
+                ).AndReturn(sched_return)
         db.block_device_mapping_get_all_by_instance(self.context,
                 instances[0].uuid).AndReturn([])
         filter_properties2 = {'retry': {'num_attempts': 1,
@@ -442,7 +473,7 @@ class _BaseTaskTestCase(object):
                 requested_networks=None,
                 security_groups='security_groups',
                 block_device_mapping=mox.IgnoreArg(),
-                node='node1', limits=None)
+                node='node1', limits=None, host_list=sched_return[0])
         db.block_device_mapping_get_all_by_instance(self.context,
                 instances[1].uuid).AndReturn([])
         filter_properties3 = {'limits': {},
@@ -460,7 +491,7 @@ class _BaseTaskTestCase(object):
                 requested_networks=None,
                 security_groups='security_groups',
                 block_device_mapping=mox.IgnoreArg(),
-                node='node2', limits=None)
+                node='node2', limits=None, host_list=sched_return[1])
         self.mox.ReplayAll()
 
         # build_instances() is a cast, we need to wait for it to complete
@@ -477,7 +508,7 @@ class _BaseTaskTestCase(object):
                 requested_networks=None,
                 security_groups='security_groups',
                 block_device_mapping='block_device_mapping',
-                legacy_bdm=False)
+                legacy_bdm=False, host_lists=None)
         mock_getaz.assert_has_calls([
             mock.call(self.context, 'host1'),
             mock.call(self.context, 'host2')])
@@ -670,6 +701,62 @@ class _BaseTaskTestCase(object):
             mock.call(self.context, instances[1].uuid)])
         self.assertFalse(mock_get_by_host.called)
 
+    @mock.patch("nova.scheduler.utils.claim_resources", return_value=False)
+    @mock.patch.object(objects.Instance, 'save')
+    def test_build_instances_exhaust_host_list(self, _mock_save, mock_claim):
+        # A list of three alternate hosts for one instance
+        host_lists = copy.deepcopy(fake_host_lists_alt)
+        instance = fake_instance.fake_instance_obj(self.context)
+        image = {'fake-data': 'should_pass_silently'}
+        expected_claim_count = len(host_lists[0])
+
+        # build_instances() is a cast, we need to wait for it to complete
+        self.useFixture(cast_as_call.CastAsCall(self))
+        # Since claim_resources() is mocked to always return False, we will run
+        # out of alternate hosts, and MaxRetriesExceeded should be raised.
+        self.assertRaises(exc.MaxRetriesExceeded,
+                self.conductor.build_instances, context=self.context,
+                instances=[instance], image=image, filter_properties={},
+                admin_password='admin_password',
+                injected_files='injected_files', requested_networks=None,
+                security_groups='security_groups',
+                block_device_mapping=None, legacy_bdm=None,
+                host_lists=host_lists)
+        self.assertEqual(expected_claim_count, mock_claim.call_count)
+
+    @mock.patch.object(conductor_manager.ComputeTaskManager,
+            '_destroy_build_request')
+    @mock.patch.object(conductor_manager.LOG, 'debug')
+    @mock.patch("nova.scheduler.utils.claim_resources", return_value=True)
+    @mock.patch.object(objects.Instance, 'save')
+    def test_build_instances_logs_selected_and_alts(self, _mock_save,
+            mock_claim, mock_debug, mock_destroy):
+        # A list of three alternate hosts for one instance
+        host_lists = copy.deepcopy(fake_host_lists_alt)
+        expected_host = host_lists[0][0]
+        expected_alts = host_lists[0][1:]
+        instance = fake_instance.fake_instance_obj(self.context)
+        image = {'fake-data': 'should_pass_silently'}
+
+        # build_instances() is a cast, we need to wait for it to complete
+        self.useFixture(cast_as_call.CastAsCall(self))
+        with mock.patch.object(self.conductor_manager.compute_rpcapi,
+                'build_and_run_instance'):
+            self.conductor.build_instances(context=self.context,
+                    instances=[instance], image=image, filter_properties={},
+                    admin_password='admin_password',
+                    injected_files='injected_files', requested_networks=None,
+                    security_groups='security_groups',
+                    block_device_mapping=None, legacy_bdm=None,
+                    host_lists=host_lists)
+        # The last LOG.debug call should record the selected host name and the
+        # list of alternates.
+        last_call = mock_debug.call_args_list[-1][0]
+        self.assertIn(expected_host.service_host, last_call)
+        expected_alt_hosts = [(alt.service_host, alt.nodename)
+                for alt in expected_alts]
+        self.assertIn(expected_alt_hosts, last_call)
+
     @mock.patch.object(objects.BuildRequest, 'get_by_instance_uuid')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
@@ -804,7 +891,8 @@ class _BaseTaskTestCase(object):
                               requested_networks=None,
                               security_groups='security_groups',
                               block_device_mapping='block_device_mapping',
-                              legacy_bdm=False)
+                              legacy_bdm=False,
+                              host_lists=None)
 
         do_test()
 
@@ -849,8 +937,11 @@ class _BaseTaskTestCase(object):
                 requested_networks=None,
                 security_groups='security_groups',
                 block_device_mapping='block_device_mapping',
-                legacy_bdm=False)
+                legacy_bdm=False, host_lists=None)
 
+            expected_build_run_host_list = copy.copy(fake_host_lists1[0])
+            if expected_build_run_host_list:
+                expected_build_run_host_list.pop(0)
             mock_build_and_run.assert_called_once_with(
                 self.context,
                 instance=mock.ANY,
@@ -866,7 +957,8 @@ class _BaseTaskTestCase(object):
                 security_groups='security_groups',
                 block_device_mapping=test.MatchType(
                     objects.BlockDeviceMappingList),
-                node='node1', limits=None)
+                node='node1', limits=None,
+                host_list=expected_build_run_host_list)
             mock_pop_inst_map.assert_not_called()
             mock_destroy_build_req.assert_not_called()
 
@@ -2396,9 +2488,11 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 mox.IgnoreArg()).AndReturn(spec)
         filter_properties = {'retry': {'num_attempts': 1, 'hosts': []}}
         inst_uuids = [inst.uuid for inst in instances]
+
+        sched_return = copy.deepcopy(fake_host_lists2)
         self.conductor_manager._schedule_instances(self.context,
                 fake_spec, inst_uuids, return_alternates=True).AndReturn(
-                [[fake_selection1], [fake_selection2]])
+                sched_return)
         instances[0].save().AndRaise(
                 exc.InstanceNotFound(instance_id=instances[0].uuid))
         instances[1].save()
@@ -2415,7 +2509,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 requested_networks=None,
                 security_groups='security_groups',
                 block_device_mapping=mox.IsA(objects.BlockDeviceMappingList),
-                node='node2', limits=None)
+                node='node2', limits=None, host_list=[])
         self.mox.ReplayAll()
 
         # build_instances() is a cast, we need to wait for it to complete
@@ -2430,7 +2524,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 requested_networks=None,
                 security_groups='security_groups',
                 block_device_mapping='block_device_mapping',
-                legacy_bdm=False)
+                legacy_bdm=False, host_lists=None)
         # RequestSpec.from_primitives is called once before we call the
         # scheduler to select_destinations and then once per instance that
         # gets build in the compute.
@@ -2496,7 +2590,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                     requested_networks=None,
                     security_groups='security_groups',
                     block_device_mapping=mock.ANY,
-                    node='node2', limits=None)
+                    node='node2', limits=None, host_list=[])
 
     @mock.patch('nova.objects.Instance.save')
     def test_build_instances_max_retries_exceeded(self, mock_save):
@@ -2828,7 +2922,7 @@ class ConductorTaskRPCAPITestCase(_BaseTaskTestCase,
         cctxt_mock = mock.MagicMock()
 
         @mock.patch.object(self.conductor.client, 'can_send_version',
-                           return_value=True)
+                           side_effect=(False, True, True, True, True))
         @mock.patch.object(self.conductor.client, 'prepare',
                            return_value=cctxt_mock)
         def _test(prepare_mock, can_send_mock):
@@ -2859,7 +2953,7 @@ class ConductorTaskRPCAPITestCase(_BaseTaskTestCase,
         cctxt_mock = mock.MagicMock()
 
         @mock.patch.object(self.conductor.client, 'can_send_version',
-                           side_effect=(False, True, True, True))
+                           side_effect=(False, False, True, True, True))
         @mock.patch.object(self.conductor.client, 'prepare',
                            return_value=cctxt_mock)
         def _test(prepare_mock, can_send_mock):

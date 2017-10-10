@@ -21,6 +21,7 @@ import functools
 from oslo_config import cfg
 from oslo_log import log as logging
 import oslo_messaging as messaging
+from oslo_serialization import jsonutils
 from oslo_utils import excutils
 from oslo_utils import versionutils
 import six
@@ -218,7 +219,7 @@ class ComputeTaskManager(base.Base):
     may involve coordinating activities on multiple compute nodes.
     """
 
-    target = messaging.Target(namespace='compute_task', version='1.18')
+    target = messaging.Target(namespace='compute_task', version='1.19')
 
     def __init__(self):
         super(ComputeTaskManager, self).__init__()
@@ -227,6 +228,7 @@ class ComputeTaskManager(base.Base):
         self.network_api = network.API()
         self.servicegroup_api = servicegroup.API()
         self.scheduler_client = scheduler_client.SchedulerClient()
+        self.report_client = self.scheduler_client.reportclient
         self.notifier = rpc.get_notifier('compute', CONF.host)
 
     def reset(self):
@@ -516,7 +518,7 @@ class ComputeTaskManager(base.Base):
     def build_instances(self, context, instances, image, filter_properties,
             admin_password, injected_files, requested_networks,
             security_groups, block_device_mapping=None, legacy_bdm=True,
-            request_spec=None):
+            request_spec=None, host_lists=None):
         # TODO(ndipanov): Remove block_device_mapping and legacy_bdm in version
         #                 2.0 of the RPC API.
         # TODO(danms): Remove this in version 2.0 of the RPC API
@@ -548,6 +550,11 @@ class ComputeTaskManager(base.Base):
             # work on a RequestSpec object rather than filter_properties.
             request_spec = request_spec.to_legacy_request_spec_dict()
 
+        # 'host_lists' will be None in one of two cases: when running cellsv1,
+        # or during a reschedule from a pre-Queens compute. In all other cases,
+        # it will be a list of lists, though the lists may be empty if there
+        # are no more hosts left in a rescheduling situation.
+        is_reschedule = host_lists is not None
         try:
             # check retry policy. Rather ugly use of instances[0]...
             # but if we've exceeded max retries... then we really only
@@ -559,8 +566,22 @@ class ComputeTaskManager(base.Base):
             instance_uuids = [instance.uuid for instance in instances]
             spec_obj = objects.RequestSpec.from_primitives(
                     context, request_spec, filter_properties)
-            host_lists = self._schedule_instances(context, spec_obj,
-                    instance_uuids, return_alternates=True)
+            LOG.debug("Rescheduling: %s", is_reschedule)
+            if is_reschedule:
+                # Make sure that we have a host, as we may have exhausted all
+                # our alternates
+                if not host_lists[0]:
+                    # We have an empty list of hosts, so this instance has
+                    # failed to build.
+                    msg = ("Exhausted all hosts available for retrying build "
+                           "failures for instance %(instance_uuid)s." %
+                           {"instance_uuid": instances[0].uuid})
+                    raise exception.MaxRetriesExceeded(reason=msg)
+            else:
+                # This is not a reschedule, so we need to call the scheduler to
+                # get appropriate hosts for the request.
+                host_lists = self._schedule_instances(context, spec_obj,
+                        instance_uuids, return_alternates=True)
         except Exception as exc:
             num_attempts = filter_properties.get(
                 'retry', {}).get('num_attempts', 1)
@@ -585,8 +606,45 @@ class ComputeTaskManager(base.Base):
                     context, instance, requested_networks)
             return
 
+        elevated = context.elevated()
         for (instance, host_list) in six.moves.zip(instances, host_lists):
-            host = host_list[0]
+            host = host_list.pop(0)
+            if is_reschedule:
+                # If this runs in the superconductor, the first instance will
+                # already have its resources claimed in placement. If this is a
+                # retry, though, this is running in the cell conductor, and we
+                # need to claim first to ensure that the alternate host still
+                # has its resources available. Note that there are schedulers
+                # that don't support Placement, so must assume that the host is
+                # still available.
+                host_available = False
+                while host and not host_available:
+                    if host.allocation_request:
+                        alloc_req = jsonutils.loads(host.allocation_request)
+                    else:
+                        alloc_req = None
+                    if alloc_req:
+                        host_available = scheduler_utils.claim_resources(
+                                elevated, self.report_client, spec_obj,
+                                instance.uuid, alloc_req,
+                                host.allocation_request_version)
+                    else:
+                        # Some deployments use different schedulers that do not
+                        # use Placement, so they will not have an
+                        # allocation_request to claim with. For those cases,
+                        # there is no concept of claiming, so just assume that
+                        # the host is valid.
+                        host_available = True
+                    if not host_available:
+                        # Insufficient resources remain on that host, so
+                        # discard it and try the next.
+                        host = host_list.pop(0) if host_list else None
+                if not host_available:
+                    # No more available hosts for retrying the build.
+                    msg = ("Exhausted all hosts available for retrying build "
+                           "failures for instance %(instance_uuid)s." %
+                           {"instance_uuid": instance.uuid})
+                    raise exception.MaxRetriesExceeded(reason=msg)
             instance.availability_zone = (
                 availability_zones.get_host_availability_zone(context,
                         host.service_host))
@@ -634,6 +692,10 @@ class ComputeTaskManager(base.Base):
                         inst_mapping.destroy()
                     return
 
+            alts = [(alt.service_host, alt.nodename) for alt in host_list]
+            LOG.debug("Selected host: %s; Selected node: %s; Alternates: %s",
+                    host.service_host, host.nodename, alts, instance=instance)
+
             self.compute_rpcapi.build_and_run_instance(context,
                     instance=instance, host=host.service_host, image=image,
                     request_spec=local_reqspec,
@@ -643,7 +705,7 @@ class ComputeTaskManager(base.Base):
                     requested_networks=requested_networks,
                     security_groups=security_groups,
                     block_device_mapping=bdms, node=host.nodename,
-                    limits=host.limits)
+                    limits=host.limits, host_list=host_list)
 
     def _schedule_instances(self, context, request_spec,
                             instance_uuids=None, return_alternates=False):
@@ -803,8 +865,7 @@ class ComputeTaskManager(base.Base):
         # in the API.
         try:
             scheduler_utils.claim_resources_on_destination(
-                self.scheduler_client.reportclient, instance,
-                source_node, dest_node)
+                self.report_client, instance, source_node, dest_node)
         except exception.NoValidHost as ex:
             with excutils.save_and_reraise_exception():
                 self._set_vm_state_and_notify(
@@ -1134,7 +1195,10 @@ class ComputeTaskManager(base.Base):
             cell = cell_mapping_cache[instance.uuid]
             # host_list is a list of one or more Selection objects, the first
             # of which has been selected and its resources claimed.
-            host = host_list[0]
+            host = host_list.pop(0)
+            alts = [(alt.service_host, alt.nodename) for alt in host_list]
+            LOG.debug("Selected host: %s; Selected node: %s; Alternates: %s",
+                    host.service_host, host.nodename, alts, instance=instance)
             filter_props = request_spec.to_legacy_filter_properties_dict()
             scheduler_utils.populate_retry(filter_props, instance.uuid)
             scheduler_utils.populate_filter_properties(filter_props,
@@ -1192,7 +1256,7 @@ class ComputeTaskManager(base.Base):
                     security_groups=legacy_secgroups,
                     block_device_mapping=instance_bdms,
                     host=host.service_host, node=host.nodename,
-                    limits=host.limits)
+                    limits=host.limits, host_list=host_list)
 
     def _cleanup_build_artifacts(self, context, exc, instances, build_requests,
                                  request_specs, cell_mapping_cache):

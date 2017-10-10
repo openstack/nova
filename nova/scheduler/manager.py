@@ -116,7 +116,8 @@ class SchedulerManager(manager.Manager):
                                                            request_spec,
                                                            filter_properties)
         resources = utils.resources_from_request_spec(spec_obj)
-        alloc_reqs_by_rp_uuid, provider_summaries = None, None
+        alloc_reqs_by_rp_uuid, provider_summaries, allocation_request_version \
+            = None, None, None
         if self.driver.USES_ALLOCATION_CANDIDATES:
             res = self.placement_client.get_allocation_candidates(resources)
             if res is None:
@@ -144,7 +145,7 @@ class SchedulerManager(manager.Manager):
                         rp_uuid = rr['resource_provider']['uuid']
                         alloc_reqs_by_rp_uuid[rp_uuid].append(ar)
 
-        # Only return alteranates if both return_objects and return_alternates
+        # Only return alternates if both return_objects and return_alternates
         # are True.
         return_alternates = return_alternates and return_objects
         selections = self.driver.select_destinations(ctxt, spec_obj,
