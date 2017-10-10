@@ -202,7 +202,6 @@ def _compute_states_payload(instance, old_vm_state=None,
     return states_payload
 
 
-@rpc.if_notifications_enabled
 def send_instance_update_notification(context, instance, old_vm_state=None,
             old_task_state=None, new_vm_state=None, new_task_state=None,
             service="compute", host=None, old_display_name=None):
