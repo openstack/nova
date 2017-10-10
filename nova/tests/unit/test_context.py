@@ -102,14 +102,16 @@ class ContextTestCase(test.NoDBTestCase):
                 {u'type': u'compute', u'name': u'nova'},
                 {u'type': u's3', u'name': u's3'},
                 {u'type': u'image', u'name': u'glance'},
-                {u'type': u'volume', u'name': u'cinder'},
+                {u'type': u'volumev3', u'name': u'cinderv3'},
                 {u'type': u'ec2', u'name': u'ec2'},
                 {u'type': u'object-store', u'name': u'swift'},
                 {u'type': u'identity', u'name': u'keystone'},
+                {u'type': u'block-storage', u'name': u'cinder'},
                 {u'type': None, u'name': u'S_withouttype'},
                 {u'type': u'vo', u'name': u'S_partofvolume'}]
 
-        volume_catalog = [{u'type': u'volume', u'name': u'cinder'}]
+        volume_catalog = [{u'type': u'volumev3', u'name': u'cinderv3'},
+                          {u'type': u'block-storage', u'name': u'cinder'}]
         ctxt = context.RequestContext('111', '222',
                 service_catalog=service_catalog)
         self.assertEqual(volume_catalog, ctxt.service_catalog)
