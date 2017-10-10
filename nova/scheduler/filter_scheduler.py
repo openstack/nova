@@ -209,8 +209,14 @@ class FilterScheduler(driver.Scheduler):
                     continue
 
                 alloc_reqs = alloc_reqs_by_rp_uuid[cn_uuid]
-                if self._claim_resources(elevated, spec_obj, instance_uuid,
-                        alloc_reqs,
+                # TODO(jaypipes): Loop through all allocation_requests instead
+                # of just trying the first one. For now, since we'll likely
+                # want to order the allocation_requests in the future based on
+                # information in the provider summaries, we'll just try to
+                # claim resources using the first allocation_request
+                alloc_req = alloc_reqs[0]
+                if utils.claim_resources(elevated, self.placement_client,
+                        spec_obj, instance_uuid, alloc_req,
                         allocation_request_version=allocation_request_version):
                     claimed_host = host
                     break
@@ -280,62 +286,6 @@ class FilterScheduler(driver.Scheduler):
         LOG.debug("Cleaning up allocations for %s", instance_uuids)
         for uuid in instance_uuids:
             self.placement_client.delete_allocation_for_instance(uuid)
-
-    def _claim_resources(self, ctx, spec_obj, instance_uuid, alloc_reqs,
-            allocation_request_version=None):
-        """Given an instance UUID (representing the consumer of resources), the
-        HostState object for the host that was chosen for the instance, and a
-        list of allocation_request JSON objects, attempt to claim resources for
-        the instance in the placement API. Returns True if the claim process
-        was successful, False otherwise.
-
-        :param ctx: The RequestContext object
-        :param spec_obj: The RequestSpec object
-        :param instance_uuid: The UUID of the consuming instance
-        :param cn_uuid: UUID of the host to allocate against
-        :param alloc_reqs: A list of allocation_request JSON objects that
-                           allocate against (at least) the compute host
-                           selected by the _schedule() method. These
-                           allocation_requests were constructed from a call to
-                           the GET /allocation_candidates placement API call.
-                           Each allocation_request satisfies the original
-                           request for resources and can be supplied as-is
-                           (along with the project and user ID to the placement
-                           API's PUT /allocations/{consumer_uuid} call to claim
-                           resources for the instance
-        :param allocation_request_version: The microversion used to request the
-                                           allocations.
-        """
-
-        if utils.request_is_rebuild(spec_obj):
-            # NOTE(danms): This is a rebuild-only scheduling request, so we
-            # should not be doing any extra claiming
-            LOG.debug('Not claiming resources in the placement API for '
-                      'rebuild-only scheduling of instance %(uuid)s',
-                      {'uuid': instance_uuid})
-            return True
-
-        LOG.debug("Attempting to claim resources in the placement API for "
-                  "instance %s", instance_uuid)
-
-        project_id = spec_obj.project_id
-
-        # NOTE(jaypipes): So, the RequestSpec doesn't store the user_id,
-        # only the project_id, so we need to grab the user information from
-        # the context. Perhaps we should consider putting the user ID in
-        # the spec object?
-        user_id = ctx.user_id
-
-        # TODO(jaypipes): Loop through all allocation_requests instead of just
-        # trying the first one. For now, since we'll likely want to order the
-        # allocation_requests in the future based on information in the
-        # provider summaries, we'll just try to claim resources using the first
-        # allocation_request
-        alloc_req = alloc_reqs[0]
-
-        return self.placement_client.claim_resources(instance_uuid,
-                alloc_req, project_id, user_id,
-                allocation_request_version=allocation_request_version)
 
     def _legacy_find_hosts(self, num_instances, spec_obj, hosts, num_alts):
         """Some schedulers do not do claiming, or we can sometimes not be able
