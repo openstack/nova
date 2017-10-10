@@ -816,6 +816,7 @@ class ComputeDriver(object):
         :param network_info: instance network information
         :param disk_info: instance disk information
         :param migrate_data: a LiveMigrateData object
+        :returns: migrate_data modified by the driver
         """
         raise NotImplementedError()
 
