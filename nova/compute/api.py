@@ -4718,6 +4718,13 @@ class AggregateAPI(base.Base):
                 raise exception.ComputeHostNotFound(host=host_name)
 
         aggregate = objects.Aggregate.get_by_id(context, aggregate_id)
+
+        compute_utils.notify_about_aggregate_action(
+            context=context,
+            aggregate=aggregate,
+            action=fields_obj.NotificationAction.ADD_HOST,
+            phase=fields_obj.NotificationPhase.START)
+
         self.is_safe_to_update_az(context, aggregate.metadata,
                                   hosts=[host_name], aggregate=aggregate)
 
@@ -4731,6 +4738,12 @@ class AggregateAPI(base.Base):
         compute_utils.notify_about_aggregate_update(context,
                                                     "addhost.end",
                                                     aggregate_payload)
+        compute_utils.notify_about_aggregate_action(
+            context=context,
+            aggregate=aggregate,
+            action=fields_obj.NotificationAction.ADD_HOST,
+            phase=fields_obj.NotificationPhase.END)
+
         return aggregate
 
     @wrap_exception()

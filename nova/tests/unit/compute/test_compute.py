@@ -11344,9 +11344,10 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         self.assertRaises(exception.InvalidAggregateActionDelete,
                           self.api.delete_aggregate, self.context, aggr.id)
 
+    @mock.patch('nova.compute.utils.notify_about_aggregate_action')
     @mock.patch.object(availability_zones,
                        'update_host_availability_zone_cache')
-    def test_add_host_to_aggregate(self, mock_az):
+    def test_add_host_to_aggregate(self, mock_az, mock_notify):
         # Ensure we can add a host to an aggregate.
         values = _create_service_entries(self.context)
         fake_zone = values[0][0]
@@ -11373,6 +11374,12 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                          'aggregate.addhost.end')
         self.assertEqual(len(aggr.hosts), 1)
         mock_az.assert_called_once_with(self.context, fake_host)
+
+        mock_notify.assert_has_calls([
+            mock.call(context=self.context, aggregate=aggr,
+                      action='add_host', phase='start'),
+            mock.call(context=self.context, aggregate=aggr,
+                      action='add_host', phase='end')])
 
     def test_add_host_to_aggr_with_no_az(self):
         values = _create_service_entries(self.context)
@@ -11607,9 +11614,11 @@ class ComputeAPIAggrCallsSchedulerTestCase(test.NoDBTestCase):
             self.api.delete_aggregate(self.context, 1)
         delete_aggregate.assert_called_once_with(self.context, agg)
 
+    @mock.patch('nova.compute.utils.notify_about_aggregate_action')
     @mock.patch('nova.compute.rpcapi.ComputeAPI.add_aggregate_host')
     @mock.patch.object(scheduler_client.SchedulerClient, 'update_aggregates')
-    def test_add_host_to_aggregate(self, update_aggregates, mock_add_agg):
+    def test_add_host_to_aggregate(self, update_aggregates, mock_add_agg,
+                                   mock_notify):
         self.api.is_safe_to_update_az = mock.Mock()
         self.api._update_az_cache_for_host = mock.Mock()
         agg = objects.Aggregate(name='fake', metadata={})
