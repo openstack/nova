@@ -1951,6 +1951,20 @@ class LibvirtDriver(driver.ComputeDriver):
                         root_disk.snapshot_extract(out_path, image_format)
                     LOG.info("Snapshot extracted, beginning image upload",
                              instance=instance)
+                except libvirt.libvirtError as ex:
+                    error_code = ex.get_error_code()
+                    if error_code == libvirt.VIR_ERR_NO_DOMAIN:
+                        LOG.info('Instance %(instance_name)s disappeared '
+                                 'while taking snapshot of it: [Error Code '
+                                 '%(error_code)s] %(ex)s',
+                                 {'instance_name': instance.name,
+                                  'error_code': error_code,
+                                  'ex': ex},
+                                 instance=instance)
+                        raise exception.InstanceNotFound(
+                            instance_id=instance.uuid)
+                    else:
+                        raise
                 finally:
                     self._snapshot_domain(context, live_snapshot, virt_dom,
                                           state, instance)

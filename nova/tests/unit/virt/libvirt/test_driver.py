@@ -20467,6 +20467,24 @@ class LibvirtSnapshotTests(_BaseSnapshotTests):
         self._test_snapshot(disk_format='qcow2',
                             extra_properties=extra_properties)
 
+    @mock.patch.object(host.Host, 'get_guest')
+    @mock.patch.object(host.Host, 'write_instance_config')
+    def test_failing_domain_not_found(self, mock_write_config, mock_get_guest):
+        self.flags(disable_libvirt_livesnapshot=False, group='workarounds')
+        mock_dev = mock.Mock(spec=libvirt_guest.BlockDevice)
+        mock_guest = mock.Mock(spec=libvirt_guest.Guest)
+        mock_guest.get_power_state.return_value = power_state.RUNNING
+        mock_guest.get_block_device.return_value = mock_dev
+        mock_guest._domain = mock.Mock()
+        mock_get_guest.return_value = mock_guest
+        ex = fakelibvirt.make_libvirtError(
+                fakelibvirt.libvirtError,
+                "No such domain",
+                error_code=fakelibvirt.VIR_ERR_NO_DOMAIN)
+        mock_dev.rebase.side_effect = ex
+        self.assertRaises(exception.InstanceNotFound, self._test_snapshot,
+                          disk_format='qcow2')
+
     @mock.patch.object(rbd_utils, 'RBDDriver')
     @mock.patch.object(rbd_utils, 'rbd')
     def test_raw_with_rbd_clone(self, mock_rbd, mock_driver):
