@@ -15,21 +15,28 @@
 from keystoneauth1 import loading as ks_loading
 from oslo_config import cfg
 
+from nova.conf import utils as confutils
+
+
+DEFAULT_SERVICE_TYPE = 'image'
+
 glance_group = cfg.OptGroup(
     'glance',
     title='Glance Options',
     help='Configuration options for the Image service')
 
 glance_opts = [
-    # NOTE(sdague): there is intentionally no default here. This
-    # requires configuration. Eventually this will come from the
-    # service catalog, however we don't have a good path there atm.
-    # TODO(raj_singh): Add "required=True" flag to this option.
+    # NOTE(sdague/efried): there is intentionally no default here. This
+    # requires configuration if ksa adapter config is not used.
     cfg.ListOpt('api_servers',
         help="""
 List of glance api servers endpoints available to nova.
 
 https is used for ssl-based glance api servers.
+
+NOTE: The preferred mechanism for endpoint discovery is via keystoneauth1
+loading options. Only use api_servers if you need multiple endpoints and are
+unable to use a load balancer for some reason.
 
 Possible values:
 
@@ -130,28 +137,29 @@ Related options:
          help='Enable or disable debug logging with glanceclient.')
 ]
 
+deprecated_ksa_opts = {
+    'insecure': [cfg.DeprecatedOpt('api_insecure', group=glance_group.name)],
+    'cafile': [cfg.DeprecatedOpt('ca_file', group="ssl")],
+    'certfile': [cfg.DeprecatedOpt('cert_file', group="ssl")],
+    'keyfile': [cfg.DeprecatedOpt('key_file', group="ssl")],
+}
+
 
 def register_opts(conf):
     conf.register_group(glance_group)
     conf.register_opts(glance_opts, group=glance_group)
 
-    deprecated = {
-        'insecure': [cfg.DeprecatedOpt('api_insecure',
-                        group=glance_group.name)],
-        'cafile': [cfg.DeprecatedOpt('ca_file',
-                        group="ssl")],
-        'certfile': [cfg.DeprecatedOpt('cert_file',
-                        group="ssl")],
-        'keyfile': [cfg.DeprecatedOpt('key_file',
-                        group="ssl")],
-    }
-    ks_loading.register_session_conf_options(conf, glance_group.name,
-                                             deprecated)
+    confutils.register_ksa_opts(conf, glance_group, DEFAULT_SERVICE_TYPE,
+                                deprecated_opts=deprecated_ksa_opts)
 
 
 def list_opts():
-    return {
-        glance_group: (
-            glance_opts +
-            ks_loading.get_session_conf_options())
+    return {glance_group: (
+        glance_opts +
+        ks_loading.get_session_conf_options() +
+        ks_loading.get_auth_plugin_conf_options('password') +
+        ks_loading.get_auth_plugin_conf_options('v2password') +
+        ks_loading.get_auth_plugin_conf_options('v3password') +
+        confutils.get_ksa_adapter_opts(DEFAULT_SERVICE_TYPE,
+                                       deprecated_opts=deprecated_ksa_opts))
     }

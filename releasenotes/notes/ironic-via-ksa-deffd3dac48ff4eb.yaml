@@ -1,0 +1,11 @@
+---
+upgrade:
+  - |
+    Nova now uses keystoneauth1 configuration to set up communication with the
+    baremetal service.  Use keystoneauth1 loading parameters for auth, Session,
+    and Adapter setup in the ``[ironic]`` conf section.  This includes using
+    ``endpoint_override`` in favor of ``api_endpoint``.
+deprecations:
+  - |
+    Configuration option ``[ironic]api_endpoint`` is deprecated in favor of
+    ``[ironic]endpoint_override``.

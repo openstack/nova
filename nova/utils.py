@@ -33,7 +33,9 @@ import tempfile
 import time
 
 import eventlet
+from keystoneauth1 import loading as ks_loading
 import netaddr
+from os_service_types import service_types
 from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
 from oslo_context import context as common_context
@@ -86,6 +88,8 @@ VIM_IMAGE_ATTRIBUTES = (
 )
 
 _FILE_CACHE = {}
+
+_SERVICE_TYPES = service_types.ServiceTypes()
 
 
 def get_root_helper():
@@ -1262,3 +1266,57 @@ def isotime(at=None):
 
 def strtime(at):
     return at.strftime("%Y-%m-%dT%H:%M:%S.%f")
+
+
+def get_ksa_adapter(service_type, ksa_auth=None, ksa_session=None,
+                    min_version=None, max_version=None):
+    """Construct a keystoneauth1 Adapter for a given service type.
+
+    We expect to find a conf group whose name corresponds to the service_type's
+    project according to the service-types-authority.  That conf group must
+    provide at least ksa adapter options.  Depending how the result is to be
+    used, ksa auth and/or session options may also be required, or the relevant
+    parameter supplied.
+
+    :param service_type: String name of the service type for which the Adapter
+                         is to be constructed.
+    :param ksa_auth: A keystoneauth1 auth plugin. If not specified, we attempt
+                     to find one in ksa_session.  Failing that, we attempt to
+                     load one from the conf.
+    :param ksa_session: A keystoneauth1 Session.  If not specified, we attempt
+                        to load one from the conf.
+    :param min_version: The minimum major version of the adapter's endpoint,
+                        intended to be used as the lower bound of a range with
+                        max_version.
+                        If min_version is given with no max_version it is as
+                        if max version is 'latest'.
+    :param max_version: The maximum major version of the adapter's endpoint,
+                        intended to be used as the upper bound of a range with
+                        min_version.
+    :return: A keystoneauth1 Adapter object for the specified service_type.
+    :raise: ConfGroupForServiceTypeNotFound If no conf group name could be
+            found for the specified service_type.  This should be considered a
+            bug.
+    """
+    # Get the conf group corresponding to the service type.
+    confgrp = _SERVICE_TYPES.get_project_name(service_type)
+    if not confgrp:
+        raise exception.ConfGroupForServiceTypeNotFound(stype=service_type)
+
+    # Ensure we have an auth.
+    # NOTE(efried): This could be None, and that could be okay - e.g. if the
+    # result is being used for get_endpoint() and the conf only contains
+    # endpoint_override.
+    if not ksa_auth:
+        if ksa_session and ksa_session.auth:
+            ksa_auth = ksa_session.auth
+        else:
+            ksa_auth = ks_loading.load_auth_from_conf_options(CONF, confgrp)
+
+    if not ksa_session:
+        ksa_session = ks_loading.load_session_from_conf_options(
+            CONF, confgrp, auth=ksa_auth)
+
+    return ks_loading.load_adapter_from_conf_options(
+        CONF, confgrp, session=ksa_session, auth=ksa_auth,
+        min_version=min_version, max_version=max_version)

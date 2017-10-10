@@ -47,6 +47,7 @@ import nova.image.download as image_xfers
 from nova import objects
 from nova.objects import fields
 from nova import service_auth
+from nova import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -106,22 +107,33 @@ def generate_identity_headers(context, status='Confirmed'):
 
 
 def get_api_servers():
-    """Shuffle a list of CONF.glance.api_servers and return an iterator
-    that will cycle through the list, looping around to the beginning
-    if necessary.
+    """Shuffle a list of service endpoints and return an iterator that will
+    cycle through the list, looping around to the beginning if necessary.
     """
+    # NOTE(efried): utils.get_ksa_adapter().get_endpoint() is the preferred
+    # mechanism for endpoint discovery. Only use `api_servers` if you really
+    # need to shuffle multiple endpoints.
     api_servers = []
+    if CONF.glance.api_servers:
+        for api_server in CONF.glance.api_servers:
+            if '//' not in api_server:
+                api_server = 'http://' + api_server
+                # NOTE(sdague): remove in O.
+                LOG.warning("No protocol specified in for api_server '%s', "
+                            "please update [glance] api_servers with fully "
+                            "qualified url including scheme (http / https)",
+                            api_server)
+            api_servers.append(api_server)
+        random.shuffle(api_servers)
+    else:
+        # TODO(efried): Plumb in a reasonable auth from callers' contexts
+        ksa_adap = utils.get_ksa_adapter(
+            nova.conf.glance.DEFAULT_SERVICE_TYPE,
+            min_version='2.0', max_version='2.latest')
+        # TODO(efried): Use ksa_adap.get_endpoint() when bug #1707995 is fixed.
+        api_servers.append(ksa_adap.endpoint_override or
+                           ksa_adap.get_endpoint_data().catalog_url)
 
-    for api_server in CONF.glance.api_servers:
-        if '//' not in api_server:
-            api_server = 'http://' + api_server
-            # NOTE(sdague): remove in O.
-            LOG.warning("No protocol specified in for api_server '%s', "
-                        "please update [glance] api_servers with fully "
-                        "qualified url including scheme (http / https)",
-                        api_server)
-        api_servers.append(api_server)
-    random.shuffle(api_servers)
     return itertools.cycle(api_servers)
 
 
