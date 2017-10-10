@@ -1001,13 +1001,15 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         retval = self.commands.map_cell_and_hosts()
         self.assertEqual(0, retval)
 
-    def test_map_instances(self):
+    @mock.patch.object(context, 'target_cell')
+    def test_map_instances(self, mock_target_cell):
         ctxt = context.RequestContext('fake-user', 'fake_project')
         cell_uuid = uuidutils.generate_uuid()
         cell_mapping = objects.CellMapping(
                 ctxt, uuid=cell_uuid, name='fake',
                 transport_url='fake://', database_connection='fake://')
         cell_mapping.create()
+        mock_target_cell.return_value.__enter__.return_value = ctxt
         instance_uuids = []
         for i in range(3):
             uuid = uuidutils.generate_uuid()
@@ -1022,14 +1024,19 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
                     uuid)
             self.assertEqual(ctxt.project_id, inst_mapping.project_id)
             self.assertEqual(cell_mapping.uuid, inst_mapping.cell_mapping.uuid)
+        mock_target_cell.assert_called_once_with(
+            test.MatchType(context.RequestContext),
+            test.MatchObjPrims(cell_mapping))
 
-    def test_map_instances_duplicates(self):
+    @mock.patch.object(context, 'target_cell')
+    def test_map_instances_duplicates(self, mock_target_cell):
         ctxt = context.RequestContext('fake-user', 'fake_project')
         cell_uuid = uuidutils.generate_uuid()
         cell_mapping = objects.CellMapping(
                 ctxt, uuid=cell_uuid, name='fake',
                 transport_url='fake://', database_connection='fake://')
         cell_mapping.create()
+        mock_target_cell.return_value.__enter__.return_value = ctxt
         instance_uuids = []
         for i in range(3):
             uuid = uuidutils.generate_uuid()
@@ -1051,14 +1058,19 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         mappings = objects.InstanceMappingList.get_by_project_id(ctxt,
                 ctxt.project_id)
         self.assertEqual(3, len(mappings))
+        mock_target_cell.assert_called_once_with(
+            test.MatchType(context.RequestContext),
+            test.MatchObjPrims(cell_mapping))
 
-    def test_map_instances_two_batches(self):
+    @mock.patch.object(context, 'target_cell')
+    def test_map_instances_two_batches(self, mock_target_cell):
         ctxt = context.RequestContext('fake-user', 'fake_project')
         cell_uuid = uuidutils.generate_uuid()
         cell_mapping = objects.CellMapping(
                 ctxt, uuid=cell_uuid, name='fake',
                 transport_url='fake://', database_connection='fake://')
         cell_mapping.create()
+        mock_target_cell.return_value.__enter__.return_value = ctxt
         instance_uuids = []
         # Batch size is 50 in map_instances
         for i in range(60):
@@ -1074,14 +1086,20 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
             inst_mapping = objects.InstanceMapping.get_by_instance_uuid(ctxt,
                     uuid)
             self.assertEqual(ctxt.project_id, inst_mapping.project_id)
+        self.assertEqual(2, mock_target_cell.call_count)
+        mock_target_cell.assert_called_with(
+            test.MatchType(context.RequestContext),
+            test.MatchObjPrims(cell_mapping))
 
-    def test_map_instances_max_count(self):
+    @mock.patch.object(context, 'target_cell')
+    def test_map_instances_max_count(self, mock_target_cell):
         ctxt = context.RequestContext('fake-user', 'fake_project')
         cell_uuid = uuidutils.generate_uuid()
         cell_mapping = objects.CellMapping(
                 ctxt, uuid=cell_uuid, name='fake',
                 transport_url='fake://', database_connection='fake://')
         cell_mapping.create()
+        mock_target_cell.return_value.__enter__.return_value = ctxt
         instance_uuids = []
         for i in range(6):
             uuid = uuidutils.generate_uuid()
@@ -1102,14 +1120,19 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
             self.assertRaises(exception.InstanceMappingNotFound,
                     objects.InstanceMapping.get_by_instance_uuid, ctxt,
                     uuid)
+        mock_target_cell.assert_called_once_with(
+            test.MatchType(context.RequestContext),
+            test.MatchObjPrims(cell_mapping))
 
-    def test_map_instances_marker_deleted(self):
+    @mock.patch.object(context, 'target_cell')
+    def test_map_instances_marker_deleted(self, mock_target_cell):
         ctxt = context.RequestContext('fake-user', 'fake_project')
         cell_uuid = uuidutils.generate_uuid()
         cell_mapping = objects.CellMapping(
                 ctxt, uuid=cell_uuid, name='fake',
                 transport_url='fake://', database_connection='fake://')
         cell_mapping.create()
+        mock_target_cell.return_value.__enter__.return_value = ctxt
         instance_uuids = []
         for i in range(6):
             uuid = uuidutils.generate_uuid()
@@ -1134,6 +1157,17 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
             inst_mapping = objects.InstanceMapping.get_by_instance_uuid(ctxt,
                     uuid)
             self.assertEqual(ctxt.project_id, inst_mapping.project_id)
+        self.assertEqual(2, mock_target_cell.call_count)
+        mock_target_cell.assert_called_with(
+            test.MatchType(context.RequestContext),
+            test.MatchObjPrims(cell_mapping))
+
+    def test_map_instances_validate_cell_uuid(self):
+        # create a random cell_uuid which is invalid
+        cell_uuid = uuidutils.generate_uuid()
+        # check that it raises an exception
+        self.assertRaises(exception.CellMappingNotFound,
+            self.commands.map_instances, cell_uuid)
 
     def test_map_cell0(self):
         ctxt = context.RequestContext()
@@ -1219,14 +1253,14 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         cell_uuid = uuidsentinel.cell
 
         @mock.patch('nova.db.migration.db_sync')
+        @mock.patch.object(context, 'target_cell')
         @mock.patch.object(uuidutils, 'generate_uuid',
                 return_value=cell_uuid)
-        def _test(mock_gen_uuid, mock_db_sync):
+        def _test(mock_gen_uuid, mock_target_cell, mock_db_sync):
             if cell0_sync_fail:
                 mock_db_sync.side_effect = db_exc.DBError
             result = self.commands.simple_cell_setup(transport_url)
-            mock_db_sync.assert_called_once_with(
-                None, context=test.MatchType(context.RequestContext))
+            mock_db_sync.assert_called()
             return result
 
         r = _test()
