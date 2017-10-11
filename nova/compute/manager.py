@@ -3042,7 +3042,7 @@ class ComputeManager(manager.Manager):
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
             context, instance.uuid)
         block_device_info = self._get_instance_block_device_info(
-            context, instance, bdms)
+            context, instance, bdms=bdms)
 
         network_info = self.network_api.get_instance_nw_info(context, instance)
 
@@ -4377,7 +4377,7 @@ class ComputeManager(manager.Manager):
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
             context, instance.uuid)
         block_device_info = self._get_instance_block_device_info(
-            context, instance, bdms)
+            context, instance, bdms=bdms)
 
         compute_utils.notify_about_instance_action(context, instance,
             self.host, action=fields.NotificationAction.RESUME,
