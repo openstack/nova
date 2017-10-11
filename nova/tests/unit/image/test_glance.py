@@ -395,7 +395,7 @@ class TestGlanceClientWrapperRetries(test.NoDBTestCase):
         super(TestGlanceClientWrapperRetries, self).setUp()
         self.ctx = context.RequestContext('fake', 'fake')
         api_servers = [
-            'host1:9292',
+            'http://host1:9292',
             'https://host2:9293',
             'http://host3:9294'
         ]
@@ -1575,20 +1575,15 @@ class TestGlanceApiServers(test.NoDBTestCase):
 
     def test_get_api_servers_multiple(self):
         """Test get_api_servers via `api_servers` conf option."""
-        glance_servers = ['10.0.1.1:9292',
+        glance_servers = ['http://10.0.1.1:9292',
                           'https://10.0.0.1:9293',
                           'http://10.0.2.2:9294']
-        expected_servers = ['http://10.0.1.1:9292',
-                          'https://10.0.0.1:9293',
-                          'http://10.0.2.2:9294']
+        expected_servers = set(glance_servers)
         self.flags(api_servers=glance_servers, group='glance')
         api_servers = glance.get_api_servers()
-        i = 0
-        for server in api_servers:
-            i += 1
-            self.assertIn(server, expected_servers)
-            if i > 2:
-                break
+        # In len(expected_servers) cycles, we should get all the endpoints
+        self.assertEqual(expected_servers,
+                         {next(api_servers) for _ in expected_servers})
 
     @mock.patch('keystoneauth1.adapter.Adapter.get_endpoint_data')
     def test_get_api_servers_get_ksa_adapter(self, mock_epd):
