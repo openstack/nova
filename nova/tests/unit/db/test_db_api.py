@@ -10886,6 +10886,7 @@ class SortMarkerHelper(test.TestCase):
         marker = db.instance_get_by_sort_filters(self.context,
                                                  ['memory_mb'], ['asc'],
                                                  [4096])
+        # None of our instances have >= 4096mb, so nothing matches
         self.assertIsNone(marker)
 
     def test_by_bool(self):

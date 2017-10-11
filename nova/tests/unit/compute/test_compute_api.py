@@ -5023,9 +5023,10 @@ class Cellsv1DeprecatedTestMixIn(object):
             mock_buildreq_get.assert_called_once_with(
                 self.context, {'foo': 'bar'}, limit=None, marker='fake-marker',
                 sort_keys=['baz'], sort_dirs=['desc'])
+            fields = ['metadata', 'info_cache', 'security_groups']
             mock_inst_get.assert_called_once_with(
                 self.context, {'foo': 'bar'}, limit=None, marker='fake-marker',
-                expected_attrs=None, sort_keys=['baz'], sort_dirs=['desc'])
+                fields=fields, sort_keys=['baz'], sort_dirs=['desc'])
             for i, instance in enumerate(build_req_instances + cell_instances):
                 self.assertEqual(instance, instances[i])
 
@@ -5057,9 +5058,10 @@ class Cellsv1DeprecatedTestMixIn(object):
             mock_buildreq_get.assert_called_once_with(
                 self.context, {'foo': 'bar'}, limit=None, marker='fake-marker',
                 sort_keys=['baz'], sort_dirs=['desc'])
+            fields = ['metadata', 'info_cache', 'security_groups']
             mock_inst_get.assert_called_once_with(
                 self.context, {'foo': 'bar'}, limit=None, marker='fake-marker',
-                expected_attrs=None, sort_keys=['baz'], sort_dirs=['desc'])
+                fields=fields, sort_keys=['baz'], sort_dirs=['desc'])
             for i, instance in enumerate(build_req_instances + cell_instances):
                 self.assertEqual(instance, instances[i])
 
@@ -5091,9 +5093,10 @@ class Cellsv1DeprecatedTestMixIn(object):
             mock_buildreq_get.assert_called_once_with(
                 self.context, {'foo': 'bar'}, limit=10, marker='fake-marker',
                 sort_keys=['baz'], sort_dirs=['desc'])
+            fields = ['metadata', 'info_cache', 'security_groups']
             mock_inst_get.assert_called_once_with(
                 self.context, {'foo': 'bar'}, limit=8, marker='fake-marker',
-                expected_attrs=None, sort_keys=['baz'], sort_dirs=['desc'])
+                fields=fields, sort_keys=['baz'], sort_dirs=['desc'])
             for i, instance in enumerate(build_req_instances + cell_instances):
                 self.assertEqual(instance, instances[i])
 
@@ -5140,13 +5143,14 @@ class Cellsv1DeprecatedTestMixIn(object):
             if self.cell_type is None:
                 for cm in mock_cm_get_all.return_value:
                     mock_target_cell.assert_any_call(self.context, cm)
+            fields = ['metadata', 'info_cache', 'security_groups']
             inst_get_calls = [mock.call(cctxt, {'foo': 'bar'},
                                         limit=8, marker='fake-marker',
-                                        expected_attrs=None, sort_keys=['baz'],
+                                        fields=fields, sort_keys=['baz'],
                                         sort_dirs=['desc']),
                               mock.call(mock.ANY, {'foo': 'bar'},
                                         limit=6, marker=None,
-                                        expected_attrs=None, sort_keys=['baz'],
+                                        fields=fields, sort_keys=['baz'],
                                         sort_dirs=['desc'])
                               ]
             self.assertEqual(2, mock_inst_get.call_count)
@@ -5211,13 +5215,14 @@ class Cellsv1DeprecatedTestMixIn(object):
             if self.cell_type is None:
                 for cm in mock_cm_get_all.return_value:
                     mock_target_cell.assert_any_call(self.context, cm)
+            fields = ['metadata', 'info_cache', 'security_groups']
             inst_get_calls = [mock.call(cctxt, {'foo': 'bar'},
                                         limit=10, marker=marker,
-                                        expected_attrs=None, sort_keys=['baz'],
+                                        fields=fields, sort_keys=['baz'],
                                         sort_dirs=['desc']),
                               mock.call(mock.ANY, {'foo': 'bar'},
                                         limit=10, marker=marker,
-                                        expected_attrs=None, sort_keys=['baz'],
+                                        fields=fields, sort_keys=['baz'],
                                         sort_dirs=['desc'])
                               ]
             self.assertEqual(2, mock_inst_get.call_count)

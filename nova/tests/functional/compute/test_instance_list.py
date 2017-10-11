@@ -134,7 +134,8 @@ class InstanceListTestCase(test.TestCase):
                                                    5, None,
                                                    [], ['uuid'], ['asc'])
         uuids = [inst['uuid'] for inst in insts]
-        self.assertEqual(sorted(uuids)[:5], uuids)
+        had_uuids = [inst.uuid for inst in self.instances]
+        self.assertEqual(sorted(had_uuids)[:5], uuids)
         self.assertEqual(5, len(uuids))
 
     def test_get_sorted_with_large_limit(self):
@@ -145,24 +146,47 @@ class InstanceListTestCase(test.TestCase):
         self.assertEqual(sorted(uuids), uuids)
         self.assertEqual(len(self.instances), len(uuids))
 
-    def _test_get_sorted_with_limit_marker(self, sort_by, pages=2, pagesize=2):
+    def _test_get_sorted_with_limit_marker(self, sort_by, pages=2, pagesize=2,
+                                           sort_dir='asc'):
+        """Get multiple pages by a sort key and validate the results.
+
+        This requests $pages of $pagesize, followed by a final page with
+        no limit, and a final-final page which should be empty. It validates
+        that we got a consistent set of results no patter where the page
+        boundary is, that we got all the results after the unlimited query,
+        and that the final page comes back empty when we use the last
+        instance as a marker.
+        """
         insts = []
 
         page = 0
         while True:
             if page >= pages:
+                # We've requested the specified number of limited (by pagesize)
+                # pages, so request a penultimate page with no limit which
+                # should always finish out the result.
                 limit = None
             else:
+                # Request a limited-size page for the first $pages pages.
                 limit = pagesize
+
             if insts:
+                # If we're not on the first page, use the last instance we
+                # received as the marker
                 marker = insts[-1]['uuid']
             else:
+                # No marker for the first page
                 marker = None
+
             batch = list(
                 instance_list.get_instances_sorted(self.context, {},
                                                    limit, marker,
-                                                   [], [sort_by], ['asc']))
+                                                   [], [sort_by], [sort_dir]))
             if not batch:
+                # This should only happen when we've pulled the last empty
+                # page because we used the marker of the last instance. If
+                # we end up with a non-deterministic ordering, we'd loop
+                # forever.
                 break
             insts.extend(batch)
             page += 1
@@ -185,7 +209,10 @@ class InstanceListTestCase(test.TestCase):
             had = [x.replace(tzinfo=None) for x in had]
 
         self.assertEqual(len(had), len(found))
-        self.assertEqual(sorted(had), found)
+        if sort_dir == 'asc':
+            self.assertEqual(sorted(had), found)
+        else:
+            self.assertEqual(list(reversed(sorted(had))), found)
 
     def test_get_sorted_with_limit_marker_stable(self):
         """Test sorted by hostname.
@@ -194,6 +221,14 @@ class InstanceListTestCase(test.TestCase):
         """
         self._test_get_sorted_with_limit_marker(sort_by='hostname')
 
+    def test_get_sorted_with_limit_marker_stable_reverse(self):
+        """Test sorted by hostname.
+
+        This will be a stable sort that won't change on each run.
+        """
+        self._test_get_sorted_with_limit_marker(sort_by='hostname',
+                                                sort_dir='desc')
+
     def test_get_sorted_with_limit_marker_stable_different_pages(self):
         """Test sorted by hostname with different page sizes.
 
@@ -201,6 +236,15 @@ class InstanceListTestCase(test.TestCase):
         """
         self._test_get_sorted_with_limit_marker(sort_by='hostname',
                                                 pages=3, pagesize=1)
+
+    def test_get_sorted_with_limit_marker_stable_different_pages_reverse(self):
+        """Test sorted by hostname with different page sizes.
+
+        Just do the above with page seams in different places.
+        """
+        self._test_get_sorted_with_limit_marker(sort_by='hostname',
+                                                pages=3, pagesize=1,
+                                                sort_dir='desc')
 
     def test_get_sorted_with_limit_marker_random(self):
         """Test sorted by uuid.
