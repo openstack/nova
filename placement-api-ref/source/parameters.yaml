@@ -33,6 +33,7 @@ member_of:
     A comma-separated list of strings representing aggregate uuids.
     The returned resource providers must be associated with at
     least one of the aggregates identified by uuid.
+  min_version: 1.3
 project_id: &project_id
   type: string
   in: query
@@ -49,7 +50,7 @@ resource_provider_uuid_query:
   <<: *resource_provider_uuid_path
   in: query
   required: false
-resources_query: &resources_query
+resources_query:
   type: string
   in: query
   required: false
@@ -59,9 +60,17 @@ resources_query: &resources_query
     capacity to serve::
 
         resources=VCPU:4,DISK_GB:64,MEMORY_MB:2048
+  min_version: 1.4
 resources_query_required:
-  <<: *resources_query
+  type: string
+  in: query
   required: true
+  description: |
+    A comma-separated list of strings indicating an amount of
+    resource of a specified class that a provider must have the
+    capacity to serve::
+
+        resources=VCPU:4,DISK_GB:64,MEMORY_MB:2048
 trait_associated:
   type: string
   in: query
