@@ -274,7 +274,8 @@ class TestUtils(test.NoDBTestCase):
         dest_node = objects.ComputeNode(uuid=uuids.dest_node, host='dest-host')
 
         @mock.patch.object(reportclient,
-                           'get_allocations_for_instance', return_value={})
+                           'get_allocations_for_consumer_by_provider',
+                           return_value={})
         @mock.patch.object(reportclient,
                            'claim_resources',
                            new_callable=mock.NonCallableMock)
@@ -282,7 +283,7 @@ class TestUtils(test.NoDBTestCase):
             utils.claim_resources_on_destination(
                 reportclient, instance, source_node, dest_node)
             mock_get_allocs.assert_called_once_with(
-                uuids.source_node, instance)
+                uuids.source_node, instance.uuid)
 
         test()
 
@@ -314,7 +315,7 @@ class TestUtils(test.NoDBTestCase):
         }
 
         @mock.patch.object(reportclient,
-                           'get_allocations_for_instance',
+                           'get_allocations_for_consumer_by_provider',
                            return_value=source_res_allocs)
         @mock.patch.object(reportclient,
                            'claim_resources', return_value=False)
@@ -323,7 +324,7 @@ class TestUtils(test.NoDBTestCase):
                               utils.claim_resources_on_destination,
                               reportclient, instance, source_node, dest_node)
             mock_get_allocs.assert_called_once_with(
-                uuids.source_node, instance)
+                uuids.source_node, instance.uuid)
             mock_claim.assert_called_once_with(
                 instance.uuid, dest_alloc_request,
                 instance.project_id, instance.user_id)
@@ -356,7 +357,7 @@ class TestUtils(test.NoDBTestCase):
         }
 
         @mock.patch.object(reportclient,
-                           'get_allocations_for_instance',
+                           'get_allocations_for_consumer_by_provider',
                            return_value=source_res_allocs)
         @mock.patch.object(reportclient,
                            'claim_resources', return_value=True)
@@ -364,7 +365,7 @@ class TestUtils(test.NoDBTestCase):
             utils.claim_resources_on_destination(
                 reportclient, instance, source_node, dest_node)
             mock_get_allocs.assert_called_once_with(
-                uuids.source_node, instance)
+                uuids.source_node, instance.uuid)
             mock_claim.assert_called_once_with(
                 instance.uuid, dest_alloc_request,
                 instance.project_id, instance.user_id)

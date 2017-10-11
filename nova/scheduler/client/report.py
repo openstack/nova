@@ -935,22 +935,29 @@ class SchedulerReportClient(object):
             self._delete_inventory(compute_node.uuid)
 
     @safe_connect
-    def get_allocations_for_instance(self, rp_uuid, instance):
-        url = '/allocations/%s' % instance.uuid
+    def get_allocations_for_consumer(self, consumer):
+        url = '/allocations/%s' % consumer
         resp = self.get(url)
         if not resp:
             return {}
         else:
-            # NOTE(cdent): This trims to just the allocations being
-            # used on this resource provider. In the future when there
-            # are shared resources there might be other providers.
-            return resp.json()['allocations'].get(
-                rp_uuid, {}).get('resources', {})
+            return resp.json()['allocations']
+
+    def get_allocations_for_consumer_by_provider(self, rp_uuid, consumer):
+        # NOTE(cdent): This trims to just the allocations being
+        # used on this resource provider. In the future when there
+        # are shared resources there might be other providers.
+        allocations = self.get_allocations_for_consumer(consumer)
+        if allocations is None:
+            # safe_connect can return None on 404
+            allocations = {}
+        return allocations.get(
+            rp_uuid, {}).get('resources', {})
 
     def _allocate_for_instance(self, rp_uuid, instance):
         my_allocations = _instance_to_allocations_dict(instance)
-        current_allocations = self.get_allocations_for_instance(rp_uuid,
-                                                                instance)
+        current_allocations = self.get_allocations_for_consumer_by_provider(
+            rp_uuid, instance.uuid)
         if current_allocations == my_allocations:
             allocstr = ','.join(['%s=%s' % (k, v)
                                  for k, v in my_allocations.items()])

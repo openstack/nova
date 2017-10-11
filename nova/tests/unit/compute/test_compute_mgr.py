@@ -5895,7 +5895,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(self.compute, '_get_resource_tracker')
         @mock.patch.object(self.compute, 'reportclient')
         def doit(new_rules, mock_report, mock_rt):
-            mock_report.get_allocations_for_instance.return_value = new_rules
+            ga = mock_report.get_allocations_for_consumer_by_provider
+            ga.return_value = new_rules
             self.migration.source_node = 'src'
             self.migration.uuid = uuids.migration
             self.migration.status = 'failed'
@@ -5904,8 +5905,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                                        mock.sentinel.flavor,
                                                        'src')
             self.assertFalse(mock_report.delete_allocation_for_instance.called)
-            mock_report.get_allocations_for_instance.assert_called_once_with(
-                mock_rt().get_node_uuid.return_value, self.migration)
+            ga.assert_called_once_with(
+                mock_rt().get_node_uuid.return_value, self.migration.uuid)
 
             old = mock_report.remove_provider_from_instance_allocation
             if new_rules:
@@ -5927,7 +5928,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(self.compute, 'reportclient')
         def doit(new_rules, mock_report, mock_rt):
             a = new_rules and {'allocations': 'fake'} or {}
-            mock_report.get_allocations_for_instance.return_value = a
+            ga = mock_report.get_allocations_for_consumer_by_provider
+            ga.return_value = a
             self.migration.source_node = 'src'
             self.migration.dest_node = 'dst'
             self.migration.uuid = uuids.migration
@@ -5937,8 +5939,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                                        'dst')
             self.assertFalse(mock_report.delete_allocation_for_instance.called)
             cn_uuid = mock_rt().get_node_uuid.return_value
-            ga = mock_report.get_allocations_for_instance
-            ga.assert_called_once_with(cn_uuid, self.migration)
+            ga.assert_called_once_with(cn_uuid, self.migration.uuid)
 
             old = mock_report.remove_provider_from_instance_allocation
             if new_rules:
