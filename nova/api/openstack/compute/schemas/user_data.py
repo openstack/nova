@@ -12,18 +12,22 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+common_user_data = {
+    'type': 'string',
+    'format': 'base64',
+    'maxLength': 65535
+}
+
+
 server_create = {
-    'user_data': {
-        'type': 'string',
-        'format': 'base64'
-    },
+    'user_data': common_user_data
 }
 
 
 server_create_v20 = {
     'user_data': {
         'oneOf': [
-            {'type': 'string', 'format': 'base64'},
+            common_user_data,
             {'type': 'null'},
         ],
     },

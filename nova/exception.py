@@ -1525,12 +1525,6 @@ class InterfaceDetachFailed(Invalid):
                 "%(instance_uuid)s")
 
 
-class InstanceUserDataTooLarge(NovaException):
-    msg_fmt = _("User data too large. User data must be no larger than "
-                "%(maxsize)s bytes once base64 encoded. Your data is "
-                "%(length)d bytes")
-
-
 class InstanceUserDataMalformed(NovaException):
     msg_fmt = _("User data needs to be valid base 64.")
 
