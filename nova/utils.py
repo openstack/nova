@@ -1295,8 +1295,7 @@ def get_ksa_adapter(service_type, ksa_auth=None, ksa_session=None,
                         min_version.
     :return: A keystoneauth1 Adapter object for the specified service_type.
     :raise: ConfGroupForServiceTypeNotFound If no conf group name could be
-            found for the specified service_type.  This should be considered a
-            bug.
+            found for the specified service_type.
     """
     # Get the conf group corresponding to the service type.
     confgrp = _SERVICE_TYPES.get_project_name(service_type)
