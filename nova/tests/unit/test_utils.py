@@ -1373,7 +1373,7 @@ class GetKSAAdapterTestCase(test.NoDBTestCase):
             min_version=None, max_version=None)
 
     def test_load_auth_and_session(self):
-        ret = utils.get_ksa_adapter('volumev2')
+        ret = utils.get_ksa_adapter('volumev3')
         # Returned the result of load_adapter_from_conf_options
         self.assertEqual(self.load_adap.return_value, ret)
         # Had to load the auth
