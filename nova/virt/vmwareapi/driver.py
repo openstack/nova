@@ -512,7 +512,8 @@ class VMwareAPISession(api.VMwareAPISession):
                  retry_count=CONF.vmware.api_retry_count,
                  scheme="https",
                  cacert=CONF.vmware.ca_file,
-                 insecure=CONF.vmware.insecure):
+                 insecure=CONF.vmware.insecure,
+                 pool_size=CONF.vmware.connection_pool_size):
         super(VMwareAPISession, self).__init__(
                 host=host_ip,
                 port=host_port,
@@ -523,7 +524,8 @@ class VMwareAPISession(api.VMwareAPISession):
                 scheme=scheme,
                 create_session=True,
                 cacert=cacert,
-                insecure=insecure)
+                insecure=insecure,
+                pool_size=pool_size)
 
     def _is_vim_object(self, module):
         """Check if the module is a VIM Object instance."""
