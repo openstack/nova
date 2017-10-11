@@ -1109,12 +1109,14 @@ class ComputeTaskManager(base.Base):
             scheduler_utils.populate_retry(filter_props, instance.uuid)
             scheduler_utils.populate_filter_properties(filter_props,
                                                        host)
-            # send a state update notification for the initial create to
-            # show it going from non-existent to BUILDING
-            notifications.send_update_with_states(context, instance, None,
-                    vm_states.BUILDING, None, None, service="conductor")
-
+            # TODO(melwitt): Maybe we should set_target_cell on the contexts
+            # once we map to a cell, and remove these separate with statements.
             with obj_target_cell(instance, cell) as cctxt:
+                # send a state update notification for the initial create to
+                # show it going from non-existent to BUILDING
+                # This can lazy-load attributes on instance.
+                notifications.send_update_with_states(cctxt, instance, None,
+                        vm_states.BUILDING, None, None, service="conductor")
                 objects.InstanceAction.action_start(
                     cctxt, instance.uuid, instance_actions.CREATE,
                     want_result=False)
