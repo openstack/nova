@@ -2539,6 +2539,67 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         # instance that no longer exists.
         rc.delete_allocation_for_instance.assert_called_once_with(uuids.inst0)
 
+    def test_remove_deleted_instances_allocations_known_instance(self):
+        """Tests the case that actively tracked instances for the
+        given node do not have their allocations removed.
+        """
+        rc = self.rt.reportclient
+        self.rt.tracked_instances = {
+            uuids.known: objects.Instance(uuid=uuids.known)}
+        allocs = {
+            uuids.known: {
+                'resources': {
+                    'VCPU': 1,
+                    'MEMORY_MB': 2048,
+                    'DISK_GB': 20
+                }
+            }
+        }
+        rc.get_allocations_for_resource_provider = mock.MagicMock(
+            return_value=allocs)
+        rc.delete_allocation_for_instance = mock.MagicMock()
+        cn = self.rt.compute_nodes[_NODENAME]
+        # Call the method.
+        self.rt._remove_deleted_instances_allocations(mock.sentinel.ctx, cn)
+        # We don't delete the allocation because the node is tracking the
+        # instance and has allocations for it.
+        rc.delete_allocation_for_instance.assert_not_called()
+
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    def test_remove_deleted_instances_allocations_unknown_instance(
+            self, mock_inst_get):
+        """Tests the case that an instance is found with allocations for
+        this host/node but is not in the dict of tracked instances. The
+        allocations are not removed for the instance since we don't know
+        how this happened or what to do.
+        """
+        instance = _INSTANCE_FIXTURES[0]
+        mock_inst_get.return_value = instance
+        rc = self.rt.reportclient
+        # No tracked instances on this node.
+        self.rt.tracked_instances = {}
+        # But there is an allocation for an instance on this node.
+        allocs = {
+            instance.uuid: {
+                'resources': {
+                    'VCPU': 1,
+                    'MEMORY_MB': 2048,
+                    'DISK_GB': 20
+                }
+            }
+        }
+        rc.get_allocations_for_resource_provider = mock.MagicMock(
+            return_value=allocs)
+        rc.delete_allocation_for_instance = mock.MagicMock()
+        cn = self.rt.compute_nodes[_NODENAME]
+        # Call the method.
+        self.rt._remove_deleted_instances_allocations(mock.sentinel.ctx, cn)
+        # We don't delete the allocation because we're not sure what to do.
+        # NOTE(mriedem): This is not actually the behavior we want. This is
+        # testing the current behavior but in the future when we get smart
+        # and figure things out, this should actually be an error.
+        rc.delete_allocation_for_instance.assert_not_called()
+
     def test_delete_allocation_for_shelve_offloaded_instance(self):
         instance = _INSTANCE_FIXTURES[0].obj_clone()
         instance.uuid = uuids.inst0
