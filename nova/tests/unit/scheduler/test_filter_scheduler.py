@@ -527,7 +527,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
     def test_select_destinations_match_num_instances(self, mock_schedule):
         """Tests that the select_destinations() method returns the list of
         hosts from the _schedule() method when the number of returned hosts
-        equals the num_instances on the spec object
+        equals the number of instance UUIDs passed in.
         """
         spec_obj = objects.RequestSpec(
             flavor=objects.Flavor(memory_mb=512,
@@ -541,11 +541,41 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         mock_schedule.return_value = [mock.sentinel.hs1]
 
         dests = self.driver.select_destinations(self.context, spec_obj,
-            mock.sentinel.instance_uuids, mock.sentinel.alloc_reqs_by_rp_uuid,
+            [mock.sentinel.instance_uuid], mock.sentinel.alloc_reqs_by_rp_uuid,
             mock.sentinel.p_sums)
 
         mock_schedule.assert_called_once_with(self.context, spec_obj,
-            mock.sentinel.instance_uuids, mock.sentinel.alloc_reqs_by_rp_uuid,
+            [mock.sentinel.instance_uuid], mock.sentinel.alloc_reqs_by_rp_uuid,
+            mock.sentinel.p_sums)
+
+        self.assertEqual([mock.sentinel.hs1], dests)
+
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_schedule')
+    def test_select_destinations_for_move_ops(self, mock_schedule):
+        """Tests that the select_destinations() method verifies the number of
+        hosts returned from the _schedule() method against the number of
+        instance UUIDs passed as a parameter and not against the RequestSpec
+        num_instances field since the latter could be wrong in case of a move
+        operation.
+        """
+        spec_obj = objects.RequestSpec(
+            flavor=objects.Flavor(memory_mb=512,
+                                  root_gb=512,
+                                  ephemeral_gb=0,
+                                  swap=0,
+                                  vcpus=1),
+            project_id=uuids.project_id,
+            num_instances=2)
+
+        mock_schedule.return_value = [mock.sentinel.hs1]
+
+        dests = self.driver.select_destinations(self.context, spec_obj,
+            [mock.sentinel.instance_uuid], mock.sentinel.alloc_reqs_by_rp_uuid,
+            mock.sentinel.p_sums)
+
+        mock_schedule.assert_called_once_with(self.context, spec_obj,
+            [mock.sentinel.instance_uuid], mock.sentinel.alloc_reqs_by_rp_uuid,
             mock.sentinel.p_sums)
 
         self.assertEqual([mock.sentinel.hs1], dests)
@@ -571,8 +601,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.assertRaises(exception.NoValidHost,
             self.driver.select_destinations, self.context, spec_obj,
-            mock.sentinel.instance_uuids, mock.sentinel.alloc_reqs_by_rp_uuid,
-            mock.sentinel.p_sums)
+            [mock.sentinel.instance_uuid1, mock.sentinel.instance_uuid2],
+            mock.sentinel.alloc_reqs_by_rp_uuid, mock.sentinel.p_sums)
 
         # Verify that the host state object has been marked as not updated so
         # it's picked up in the next pull from the DB for compute node objects

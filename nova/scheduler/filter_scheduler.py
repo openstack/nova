@@ -78,7 +78,12 @@ class FilterScheduler(driver.Scheduler):
             context, 'scheduler.select_destinations.start',
             dict(request_spec=spec_obj.to_legacy_request_spec_dict()))
 
-        num_instances = spec_obj.num_instances
+        # NOTE(sbauza): The RequestSpec.num_instances field contains the number
+        # of instances created when the RequestSpec was used to first boot some
+        # instances. This is incorrect when doing a move or resize operation,
+        # so prefer the length of instance_uuids unless it is None.
+        num_instances = (len(instance_uuids) if instance_uuids
+                         else spec_obj.num_instances)
         selected_hosts = self._schedule(context, spec_obj, instance_uuids,
             alloc_reqs_by_rp_uuid, provider_summaries)
 

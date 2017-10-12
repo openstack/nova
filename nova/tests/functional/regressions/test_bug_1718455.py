@@ -36,7 +36,7 @@ class TestLiveMigrateOneOfConcurrentlyCreatedInstances(
     which is the number of instances created concurrently.
 
     That test will create 2 concurrent instances and verify that when
-    live-migrating one of them, we end up with a NoValidHost exception.
+    live-migrating one of them, we end up with a correct move operation.
     """
 
     microversion = 'latest'
@@ -109,7 +109,8 @@ class TestLiveMigrateOneOfConcurrentlyCreatedInstances(
                     return migration
             time.sleep(0.5)
         self.fail('Timed out waiting for migration with status "%s" for '
-                  'instance: %s' % (expected_status, server['id']))
+                  'instance: %s. Current instance migrations: %s' %
+                  (expected_status, server['id'], migrations))
 
     def test_live_migrate_one_multi_created_instance(self):
         # Boot two servers in a multi-create request
@@ -131,13 +132,13 @@ class TestLiveMigrateOneOfConcurrentlyCreatedInstances(
         # we need to lookup the migrations API.
         self.api.post_server_action(server['id'], post)
 
-        # Poll the migration until it fails
-        migration = self._wait_for_migration_status(server, 'error')
+        # Poll the migration until it is done.
+        migration = self._wait_for_migration_status(server, 'completed')
 
         self.assertEqual('live-migration', migration['migration_type'])
         self.assertEqual(original_host, migration['source_compute'])
 
-        # Verify that the migration failed as the instance is still on the
-        # source node.
+        # Verify that the migration succeeded as the instance is now on the
+        # destination node.
         server = self.api.get_server(server['id'])
-        self.assertEqual(original_host, server['OS-EXT-SRV-ATTR:host'])
+        self.assertEqual(target_host, server['OS-EXT-SRV-ATTR:host'])
