@@ -534,6 +534,11 @@ def migration_get(context, migration_id):
     return IMPL.migration_get(context, migration_id)
 
 
+def migration_get_by_uuid(context, migration_uuid):
+    """Finds a migration by the migration uuid."""
+    return IMPL.migration_get_by_uuid(context, migration_uuid)
+
+
 def migration_get_by_id_and_instance(context, migration_id, instance_uuid):
     """Finds a migration by the migration id and the instance uuid."""
     return IMPL.migration_get_by_id_and_instance(context,

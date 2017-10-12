@@ -1478,7 +1478,7 @@ class MigrationTestCase(test.TestCase):
 
     def _create(self, status='migrating', source_compute='host1',
                 source_node='a', dest_compute='host2', dest_node='b',
-                system_metadata=None, migration_type=None):
+                system_metadata=None, migration_type=None, uuid=None):
 
         values = {'host': source_compute}
         instance = db.instance_create(self.ctxt, values)
@@ -1489,7 +1489,7 @@ class MigrationTestCase(test.TestCase):
         values = {'status': status, 'source_compute': source_compute,
                   'source_node': source_node, 'dest_compute': dest_compute,
                   'dest_node': dest_node, 'instance_uuid': instance['uuid'],
-                  'migration_type': migration_type}
+                  'migration_type': migration_type, 'uuid': uuid}
         db.migration_create(self.ctxt, values)
         return values
 
@@ -1537,6 +1537,48 @@ class MigrationTestCase(test.TestCase):
         for migration in migrations:
             instance = migration['instance']
             self.assertEqual(migration['instance_uuid'], instance['uuid'])
+
+    def test_migration_get_by_uuid(self):
+        migration1 = self._create(uuid=uuidsentinel.migration1_uuid)
+        self._create(uuid=uuidsentinel.other_uuid)
+        real_migration1 = db.migration_get_by_uuid(
+            self.ctxt, uuidsentinel.migration1_uuid)
+        for key in migration1:
+            self.assertEqual(migration1[key], real_migration1[key])
+
+    def test_migration_get_by_uuid_soft_deleted_and_deleted(self):
+        migration1 = self._create(uuid=uuidsentinel.migration1_uuid)
+
+        @sqlalchemy_api.pick_context_manager_writer
+        def soft_delete_it(context):
+            sqlalchemy_api.model_query(context, models.Migration).\
+                filter_by(uuid=uuidsentinel.migration1_uuid).\
+                soft_delete()
+
+        @sqlalchemy_api.pick_context_manager_writer
+        def delete_it(context):
+            sqlalchemy_api.model_query(context, models.Migration,
+                                       read_deleted="yes").\
+                filter_by(uuid=uuidsentinel.migration1_uuid).\
+                delete()
+
+        soft_delete_it(self.ctxt)
+        soft_deletd_migration1 = db.migration_get_by_uuid(
+            self.ctxt, uuidsentinel.migration1_uuid)
+        for key in migration1:
+            self.assertEqual(migration1[key], soft_deletd_migration1[key])
+        delete_it(self.ctxt)
+        self.assertRaises(exception.MigrationNotFound,
+                          db.migration_get_by_uuid, self.ctxt,
+                          uuidsentinel.migration1_uuid)
+
+    def test_migration_get_by_uuid_not_found(self):
+        """Asserts that MigrationNotFound is raised if a migration is not
+        found by a given uuid.
+        """
+        self.assertRaises(exception.MigrationNotFound,
+                          db.migration_get_by_uuid, self.ctxt,
+                          uuidsentinel.migration_not_found)
 
     def test_get_migrations_by_filters(self):
         filters = {"status": "migrating", "host": "host3",
