@@ -1,0 +1,10 @@
+---
+issues:
+  - |
+    Nova does not support running the nova-api service under mod_wsgi or uwsgi
+    in Ocata. There are some experimental scripts that have been available
+    for years which allow you do to this, but doing so in Ocata results in
+    possible failures to list and show instance details in a cells v2 setup.
+    See `bug 1661360`_ for details.
+
+    .. _bug 1661360: https://bugs.launchpad.net/nova/+bug/1661360
