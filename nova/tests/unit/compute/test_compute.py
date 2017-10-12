@@ -3102,7 +3102,7 @@ class ComputeTestCase(BaseTestCase,
                                   reboot_type=reboot_type)
 
         self.assertEqual(expected_call_info, reboot_call_info)
-        mock_get_blk.assert_called_once_with(econtext, instance, bdms)
+        mock_get_blk.assert_called_once_with(econtext, instance, bdms=bdms)
         mock_get_nw.assert_called_once_with(econtext, instance)
         mock_notify_usage.assert_has_calls(notify_call_list)
         mock_notify_action.assert_has_calls(notify_action_call_list)
