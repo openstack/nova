@@ -425,7 +425,14 @@ def target_cell(context, cell_mapping):
     :param context: The RequestContext to add connection information
     :param cell_mapping: An objects.CellMapping object or None
     """
-    cctxt = copy.copy(context)
+    # Create a sanitized copy of context by serializing and deserializing it
+    # (like we would do over RPC). This help ensure that we have a clean
+    # copy of the context with all the tracked attributes, but without any
+    # of the hidden/private things we cache on a context. We do this to avoid
+    # unintentional sharing of cached thread-local data across threads.
+    # Specifically, this won't include any oslo_db-set transaction context, or
+    # any existing cell targeting.
+    cctxt = RequestContext.from_dict(context.to_dict())
     set_target_cell(cctxt, cell_mapping)
     yield cctxt
 
