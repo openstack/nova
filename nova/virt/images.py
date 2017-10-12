@@ -19,6 +19,7 @@
 Handling of VM disk images.
 """
 
+import operator
 import os
 
 from oslo_concurrency import processutils
@@ -42,6 +43,11 @@ QEMU_IMG_LIMITS = processutils.ProcessLimits(
     cpu_time=30,
     address_space=1 * units.Gi)
 
+# This is set by the libvirt driver on startup. The version is used to
+# determine what flags need to be set on the command line.
+QEMU_VERSION = None
+QEMU_VERSION_REQ_SHARED = 2010000
+
 
 def qemu_img_info(path, format=None):
     """Return an object containing the parsed output from qemu-img info."""
@@ -60,6 +66,10 @@ def qemu_img_info(path, format=None):
         cmd = ('env', 'LC_ALL=C', 'LANG=C', 'qemu-img', 'info', path)
         if format is not None:
             cmd = cmd + ('-f', format)
+        # Check to see if the qemu version is >= 2.10 because if so, we need
+        # to add the --force-share flag.
+        if QEMU_VERSION and operator.ge(QEMU_VERSION, QEMU_VERSION_REQ_SHARED):
+            cmd = cmd + ('--force-share',)
         out, err = utils.execute(*cmd, prlimit=QEMU_IMG_LIMITS)
     except processutils.ProcessExecutionError as exp:
         # this means we hit prlimits, make the exception more specific
