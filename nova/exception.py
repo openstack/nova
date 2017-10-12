@@ -970,7 +970,7 @@ class ServiceNotFound(NotFound):
 
 class ConfGroupForServiceTypeNotFound(ServiceNotFound):
     msg_fmt = _("No conf group name could be found for service type "
-                "%(stype)s.  Please report this bug.")
+                "%(stype)s.")
 
 
 class ServiceBinaryExists(NovaException):
