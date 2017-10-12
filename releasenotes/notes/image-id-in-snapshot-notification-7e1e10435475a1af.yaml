@@ -1,0 +1,14 @@
+---
+features:
+  - |
+    The payload of the ``instance.snapshot.start`` and
+    ``instance.snapshot.end`` notifications have been extended with the
+    ``snapshot_image_id`` field that contains the image id of the snapshot
+    created. This change also causes that the type of the payload object has
+    been changed from ``InstanceActionPayload`` version 1.5 to
+    ``InstanceActionSnapshotPayload`` version 1.6. See the
+    `notification dev reference`_ for the sample file of
+    ``instance.snapshot.start`` as an example.
+
+    .. _notification dev reference: https://docs.openstack.org/developer/nova/notifications.html
+

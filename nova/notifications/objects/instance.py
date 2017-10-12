@@ -516,3 +516,34 @@ class InstanceCreateNotification(base.NotificationBase):
     fields = {
         'payload': fields.ObjectField('InstanceCreatePayload')
     }
+
+
+@base.notification_sample('instance-snapshot-start.json')
+@base.notification_sample('instance-snapshot-end.json')
+@nova_base.NovaObjectRegistry.register_notification
+class InstanceActionSnapshotNotification(base.NotificationBase):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'payload': fields.ObjectField('InstanceActionSnapshotPayload')
+    }
+
+
+@nova_base.NovaObjectRegistry.register_notification
+class InstanceActionSnapshotPayload(InstanceActionPayload):
+    # Version 1.6: Initial version. It starts at version 1.6 as
+    #              instance.snapshot.start and .end notifications are switched
+    #              from using InstanceActionPayload 1.5 to this new payload and
+    #              also it added a new field so we wanted to keep the version
+    #              number increasing to signal the change.
+    VERSION = '1.6'
+    fields = {
+        'snapshot_image_id': fields.UUIDField(),
+    }
+
+    def __init__(self, instance, fault, snapshot_image_id):
+        super(InstanceActionSnapshotPayload, self).__init__(
+                instance=instance,
+                fault=fault)
+        self.snapshot_image_id = snapshot_image_id
