@@ -1670,44 +1670,24 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
 
         # start up the source compute
-        # NOTE(gibi): This is bug 1721652. The restart should go through
-        # without exception.
-        self.assertRaises(KeyError, self._restart_compute_service,
-                          self.compute1)
+        self._restart_compute_service(self.compute1)
 
         self.admin_api.put_service(
             source_compute_id, {'forced_down': 'false'})
 
-        # NOTE(gibi): This is bug 1721652. After the source host is started up
-        # the allocation should be cleaned.
         source_usages = self._get_provider_usages(source_rp_uuid)
-        self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+        self.assertEqual({'VCPU': 0,
+                          'MEMORY_MB': 0,
+                          'DISK_GB': 0},
+                         source_usages)
 
         dest_usages = self._get_provider_usages(dest_rp_uuid)
         self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
 
         allocations = self._get_allocations_by_server_uuid(server['id'])
-        self.assertEqual(2, len(allocations))
+        self.assertEqual(1, len(allocations))
         dest_allocation = allocations[dest_rp_uuid]['resources']
         self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
-        source_allocation = allocations[source_rp_uuid]['resources']
-        self.assertFlavorMatchesAllocation(self.flavor1, source_allocation)
-
-        # NOTE(gibi): Once the bug 1721652 is fixed this should be the expected
-        # behavior
-        # source_usages = self._get_provider_usages(source_rp_uuid)
-        # self.assertEqual({'VCPU': 0,
-        #                   'MEMORY_MB': 0,
-        #                   'DISK_GB': 0},
-        #                  source_usages)
-        #
-        # dest_usages = self._get_provider_usages(dest_rp_uuid)
-        # self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
-        #
-        # allocations = self._get_allocations_by_server_uuid(server['id'])
-        # self.assertEqual(1, len(allocations))
-        # dest_allocation = allocations[dest_rp_uuid]['resources']
-        # self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
 
         self._delete_and_check_allocations(
             server, source_rp_uuid, dest_rp_uuid)
