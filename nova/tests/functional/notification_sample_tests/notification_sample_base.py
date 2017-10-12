@@ -216,12 +216,13 @@ class NotificationSampleTestBase(test.TestCase,
     def _wait_for_notifications(self, event_type, expected_count, timeout=1.0):
         notifications = fake_notifier.wait_for_versioned_notifications(
                 event_type, n_events=expected_count, timeout=timeout)
+        msg = ''.join('\n%s' % notif for notif in notifications)
+
         self.assertEqual(expected_count, len(notifications),
                          'Unexpected number of %s notifications '
                          'within the given timeout. '
                          'Expected %d, got %d: %s' %
-                         (event_type, expected_count, len(notifications),
-                          notifications))
+                         (event_type, expected_count, len(notifications), msg))
         return notifications
 
     def _attach_volume_to_server(self, server, volume_id):
