@@ -1455,17 +1455,6 @@ class Allocation(_HasAResourceProvider):
 
     @staticmethod
     @db_api.api_context_manager.writer
-    def _create_in_db(context, updates):
-        db_allocation = models.Allocation()
-        db_allocation.update(updates)
-        context.session.add(db_allocation)
-        # We may be in a nested context manager so must flush so the
-        # caller receives an id.
-        context.session.flush()
-        return db_allocation
-
-    @staticmethod
-    @db_api.api_context_manager.writer
     def _destroy(context, id):
         result = context.session.query(models.Allocation).filter_by(
             id=id).delete()
