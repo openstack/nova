@@ -96,6 +96,7 @@ class MetadataRequestHandler(wsgi.Application):
             req.response.content_type = base.MIME_TYPE_TEXT_PLAIN
             return req.response
 
+        LOG.debug('Metadata request headers: %s', req.headers)
         if CONF.neutron.service_metadata_proxy:
             if req.headers.get('X-Metadata-Provider'):
                 meta_data = self._handle_instance_id_request_from_lb(req)
@@ -253,7 +254,8 @@ class MetadataRequestHandler(wsgi.Application):
 
         instance_id, tenant_id = self._get_instance_id_from_lb(
             provider_id, instance_address)
-
+        LOG.debug('Instance %s with address %s matches provider %s',
+                  instance_id, remote_address, provider_id)
         return self._get_meta_by_instance_id(instance_id, tenant_id,
                                              instance_address)
 
