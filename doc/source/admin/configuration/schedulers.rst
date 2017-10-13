@@ -1119,7 +1119,7 @@ the aggregate. Then, you add the ``node1``, and ``node2`` compute nodes to it.
    | created_at        | 2016-12-22T07:31:13.000000                       |
    | deleted           | False                                            |
    | deleted_at        | None                                             |
-   | hosts             | [u'node2']                                       |
+   | hosts             | [u'node1', u'node2']                             |
    | id                | 1                                                |
    | metadata          | {u'ssd': u'true', u'availability_zone': u'nova'} |
    | name              | fast-io                                          |
