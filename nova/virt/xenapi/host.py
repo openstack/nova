@@ -220,6 +220,110 @@ class HostState(object):
 
         return passthrough_devices
 
+    def _get_vgpu_stats(self):
+        """Invoke XenAPI to get the stats for VGPUs.
+
+        The return value is a dict which has GPU groups' uuid as
+        the keys:
+            dict(grp_uuid_1=dict_vgpu_stats_in_grp_1,
+                 grp_uuid_2=dict_vgpu_stats_in_grp_2,
+                 ...,
+                 grp_uuid_n=dict_vgpu_stats_in_grp_n)
+        The `dict_vgpu_stats_in_grp_x` is a dict represents the
+        vGPU stats in GPU group x. For details, please refer to
+        the return value of the function of _get_vgpu_stats_in_group().
+        """
+        if not CONF.devices.enabled_vgpu_types:
+            return {}
+
+        vgpu_stats = {}
+
+        # NOTE(jianghuaw): If there are multiple vGPU types enabled in
+        # the configure option, we only choose the first one so that
+        # we support only one vGPU type per compute node at the moment.
+        # Once we switch to use the nested resource providers, we will
+        # remove these lines to allow multiple vGPU types within multiple
+        # GPU groups (each group has a different vGPU type enabled).
+        if len(CONF.devices.enabled_vgpu_types) > 1:
+            LOG.warning('XenAPI only supports one GPU type per compute node,'
+                        ' only first type will be used.')
+        cfg_enabled_types = CONF.devices.enabled_vgpu_types[:1]
+
+        vgpu_grp_refs = self._session.call_xenapi('GPU_group.get_all')
+        for ref in vgpu_grp_refs:
+            grp_uuid = self._session.call_xenapi('GPU_group.get_uuid', ref)
+            stat = self._get_vgpu_stats_in_group(ref, cfg_enabled_types)
+            if stat:
+                vgpu_stats[grp_uuid] = stat
+
+        LOG.debug("Returning vGPU stats: %s", vgpu_stats)
+
+        return vgpu_stats
+
+    def _get_vgpu_stats_in_group(self, grp_ref, vgpu_types):
+        """Get stats for the specified vGPU types in a GPU group.
+
+        NOTE(Jianghuaw): In XenAPI, a GPU group is the minimal unit
+        from where to create a vGPU for an instance. So here, we
+        report vGPU resources for a particular GPU group. When we use
+        nested resource providers to represent the vGPU resources,
+        each GPU group will be a child resource provider under the
+        compute node.
+
+        The return value is a dict. For example:
+        {'uuid': '6444c6ee-3a49-42f5-bebb-606b52175e67',
+         'total': 7,
+         'max_heads': '1',
+         'type_name': 'Intel GVT-g',
+         }
+        """
+        type_refs_in_grp = self._session.call_xenapi(
+            'GPU_group.get_enabled_VGPU_types', grp_ref)
+
+        type_names_in_grp = {self._session.call_xenapi(
+                                 'VGPU_type.get_model_name',
+                                 type_ref): type_ref
+                             for type_ref in type_refs_in_grp}
+        # Get the vGPU types enabled both in this GPU group and in the
+        # nova conf.
+        enabled_types = set(vgpu_types) & set(type_names_in_grp)
+        if not enabled_types:
+            return
+
+        stat = {}
+        # Get the sorted enabled types, so that we can always choose the same
+        # type when there are multiple enabled vGPU types.
+        sorted_types = sorted(enabled_types)
+        chosen_type = sorted_types[0]
+        if len(sorted_types) > 1:
+            LOG.warning('XenAPI only supports one vGPU type per GPU group,'
+                        ' but enabled multiple vGPU types: %(available)s.'
+                        ' Choosing the first one: %(chosen)s.',
+                       dict(available=sorted_types,
+                            chosen=chosen_type))
+        type_ref = type_names_in_grp[chosen_type]
+        type_uuid = self._session.call_xenapi('VGPU_type.get_uuid', type_ref)
+        stat['uuid'] = type_uuid
+        stat['type_name'] = chosen_type
+        stat['max_heads'] = int(self._session.call_xenapi(
+            'VGPU_type.get_max_heads', type_ref))
+
+        stat['total'] = self._get_total_vgpu_in_grp(grp_ref, type_ref)
+        return stat
+
+    def _get_total_vgpu_in_grp(self, grp_ref, type_ref):
+        """Get the total capacity of vGPUs in the group."""
+        pgpu_recs = self._session.call_xenapi(
+            'PGPU.get_all_records_where', 'field "GPU_group" = "%s"' % grp_ref)
+
+        total = 0
+        for pgpu_ref in pgpu_recs:
+            pgpu_rec = pgpu_recs[pgpu_ref]
+            if type_ref in pgpu_rec['enabled_VGPU_types']:
+                cap = pgpu_rec['supported_VGPU_max_capacities'][type_ref]
+                total += int(cap)
+        return total
+
     def get_host_stats(self, refresh=False):
         """Return the current state of the host. If 'refresh' is
         True, run the update first.
@@ -309,6 +413,7 @@ class HostState(object):
                 vcpus_used = vcpus_used + int(vm_rec['VCPUs_max'])
             data['vcpus_used'] = vcpus_used
             data['pci_passthrough_devices'] = self._get_passthrough_devices()
+            data['vgpu_stats'] = self._get_vgpu_stats()
             self._stats = data
 
 

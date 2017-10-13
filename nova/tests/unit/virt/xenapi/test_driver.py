@@ -67,7 +67,15 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
                 },
                 'vcpus_used': 10,
                 'pci_passthrough_devices': '',
-                'host_other-config': {'iscsi_iqn': 'someiqn'}}
+                'host_other-config': {'iscsi_iqn': 'someiqn'},
+                'vgpu_stats': {
+                    'c8328467-badf-43d8-8e28-0e096b0f88b1':
+                        {'uuid': '6444c6ee-3a49-42f5-bebb-606b52175e67',
+                         'total': 7,
+                         'max_heads': 1,
+                         'type_name': 'Intel GVT-g',
+                         },
+                     }}
 
     def test_available_resource(self):
         driver = self._get_driver()
