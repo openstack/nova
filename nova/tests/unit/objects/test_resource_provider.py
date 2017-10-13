@@ -145,22 +145,23 @@ class TestInventoryNoDB(test_objects._LocalTest):
     USES_DB = False
 
     @mock.patch('nova.objects.resource_provider._ensure_rc_cache',
-            side_effect=_fake_ensure_cache)
-    @mock.patch('nova.objects.resource_provider.InventoryList.'
-                '_get_all_by_resource_provider')
+                side_effect=_fake_ensure_cache)
+    @mock.patch('nova.objects.resource_provider._get_inventory_by_provider_id')
     def test_get_all_by_resource_provider(self, mock_get, mock_ensure_cache):
         expected = [dict(_INVENTORY_DB,
-                         resource_provider=dict(_RESOURCE_PROVIDER_DB)),
+                         resource_provider_id=_RESOURCE_PROVIDER_ID),
                     dict(_INVENTORY_DB,
                          id=_INVENTORY_DB['id'] + 1,
-                         resource_provider=dict(_RESOURCE_PROVIDER_DB))]
+                         resource_provider_id=_RESOURCE_PROVIDER_ID)]
         mock_get.return_value = expected
-        rp_inv_list = resource_provider.InventoryList
-        objs = rp_inv_list.get_all_by_resource_provider_uuid(
-            self.context, _RESOURCE_PROVIDER_DB['uuid'])
+        rp = resource_provider.ResourceProvider(id=_RESOURCE_PROVIDER_ID,
+                                                uuid=_RESOURCE_PROVIDER_UUID)
+        objs = resource_provider.InventoryList.get_all_by_resource_provider(
+            self.context, rp)
         self.assertEqual(2, len(objs))
         self.assertEqual(_INVENTORY_DB['id'], objs[0].id)
         self.assertEqual(_INVENTORY_DB['id'] + 1, objs[1].id)
+        self.assertEqual(_RESOURCE_PROVIDER_ID, objs[0].resource_provider.id)
 
     def test_non_negative_handling(self):
         # NOTE(cdent): Just checking, useless to be actually

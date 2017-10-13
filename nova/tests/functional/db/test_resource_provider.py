@@ -152,12 +152,12 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         inv_list = rp_obj.InventoryList(context=self.ctx,
                                         objects=[disk_inventory])
         resource_provider.set_inventory(inv_list)
-        inventories = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
-            self.ctx, resource_provider.uuid)
+        inventories = rp_obj.InventoryList.get_all_by_resource_provider(
+            self.ctx, resource_provider)
         self.assertEqual(1, len(inventories))
         resource_provider.destroy()
-        inventories = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
-            self.ctx, resource_provider.uuid)
+        inventories = rp_obj.InventoryList.get_all_by_resource_provider(
+            self.ctx, resource_provider)
         self.assertEqual(0, len(inventories))
 
     def test_set_inventory_unknown_resource_class(self):
@@ -324,8 +324,8 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         self.assertEqual(saved_generation + 1, rp.generation)
         saved_generation = rp.generation
 
-        new_inv_list = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
-                self.ctx, uuidsentinel.rp_uuid)
+        new_inv_list = rp_obj.InventoryList.get_all_by_resource_provider(
+                self.ctx, rp)
         self.assertEqual(2, len(new_inv_list))
         resource_classes = [inv.resource_class for inv in new_inv_list]
         self.assertIn(fields.ResourceClass.VCPU, resource_classes)
@@ -339,8 +339,8 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         self.assertEqual(saved_generation + 1, rp.generation)
         saved_generation = rp.generation
 
-        new_inv_list = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
-                self.ctx, uuidsentinel.rp_uuid)
+        new_inv_list = rp_obj.InventoryList.get_all_by_resource_provider(
+                self.ctx, rp)
         self.assertEqual(1, len(new_inv_list))
         resource_classes = [inv.resource_class for inv in new_inv_list]
         self.assertNotIn(fields.ResourceClass.VCPU, resource_classes)
@@ -363,8 +363,8 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         self.assertEqual(saved_generation + 1, rp.generation)
         saved_generation = rp.generation
 
-        new_inv_list = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
-                self.ctx, uuidsentinel.rp_uuid)
+        new_inv_list = rp_obj.InventoryList.get_all_by_resource_provider(
+                self.ctx, rp)
         self.assertEqual(1, len(new_inv_list))
         self.assertEqual(2048, new_inv_list[0].total)
 
@@ -391,22 +391,22 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         self.assertEqual(saved_generation + 1, rp.generation)
         saved_generation = rp.generation
 
-        new_inv_list = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
-                self.ctx, uuidsentinel.rp_uuid)
+        new_inv_list = rp_obj.InventoryList.get_all_by_resource_provider(
+                self.ctx, rp)
         result = new_inv_list.find(fields.ResourceClass.DISK_GB)
         self.assertIsNone(result)
         self.assertRaises(exception.NotFound, rp.delete_inventory,
                           fields.ResourceClass.DISK_GB)
 
         # check inventory list is empty
-        inv_list = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
-                self.ctx, uuidsentinel.rp_uuid)
+        inv_list = rp_obj.InventoryList.get_all_by_resource_provider(
+                self.ctx, rp)
         self.assertEqual(0, len(inv_list))
 
         # add some inventory
         rp.add_inventory(vcpu_inv)
-        inv_list = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
-                self.ctx, uuidsentinel.rp_uuid)
+        inv_list = rp_obj.InventoryList.get_all_by_resource_provider(
+                self.ctx, rp)
         self.assertEqual(1, len(inv_list))
 
         # generation has bumped
@@ -477,8 +477,8 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
             self.ctx, rp.uuid)
         self.assertEqual(allocation.used, usages[0].usage)
 
-        inv_list = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
-            self.ctx, rp.uuid)
+        inv_list = rp_obj.InventoryList.get_all_by_resource_provider(
+            self.ctx, rp)
         self.assertEqual(new_total, inv_list[0].total)
         mock_log.warning.assert_called_once_with(
             mock.ANY, {'uuid': rp.uuid, 'resource': 'DISK_GB'})
@@ -541,8 +541,8 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
 
         # Get inventories for the first resource provider and validate
         # the inventory records have a matching resource provider
-        got_inv = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
-                self.ctx, rp1.uuid)
+        got_inv = rp_obj.InventoryList.get_all_by_resource_provider(
+                self.ctx, rp1)
         for inv in got_inv:
             self.assertEqual(rp1.id, inv.resource_provider.id)
 

@@ -286,17 +286,15 @@ def get_inventories(req):
     context = req.environ['placement.context']
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     try:
-        resource_provider = rp_obj.ResourceProvider.get_by_uuid(
-            context, uuid)
+        rp = rp_obj.ResourceProvider.get_by_uuid(context, uuid)
     except exception.NotFound as exc:
         raise webob.exc.HTTPNotFound(
             _("No resource provider with uuid %(uuid)s found : %(error)s") %
              {'uuid': uuid, 'error': exc})
 
-    inventories = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
-        context, resource_provider.uuid)
+    inv_list = rp_obj.InventoryList.get_all_by_resource_provider(context, rp)
 
-    return _send_inventories(req.response, resource_provider, inventories)
+    return _send_inventories(req.response, rp, inv_list)
 
 
 @wsgi_wrapper.PlacementWsgify
@@ -310,18 +308,22 @@ def get_inventory(req):
     context = req.environ['placement.context']
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     resource_class = util.wsgi_path_item(req.environ, 'resource_class')
+    try:
+        rp = rp_obj.ResourceProvider.get_by_uuid(context, uuid)
+    except exception.NotFound as exc:
+        raise webob.exc.HTTPNotFound(
+            _("No resource provider with uuid %(uuid)s found : %(error)s") %
+             {'uuid': uuid, 'error': exc})
 
-    resource_provider = rp_obj.ResourceProvider.get_by_uuid(
-        context, uuid)
-    inventory = rp_obj.InventoryList.get_all_by_resource_provider_uuid(
-        context, resource_provider.uuid).find(resource_class)
+    inv_list = rp_obj.InventoryList.get_all_by_resource_provider(context, rp)
+    inventory = inv_list.find(resource_class)
 
     if not inventory:
         raise webob.exc.HTTPNotFound(
             _('No inventory of class %(class)s for %(rp_uuid)s') %
-            {'class': resource_class, 'rp_uuid': resource_provider.uuid})
+            {'class': resource_class, 'rp_uuid': uuid})
 
-    return _send_inventory(req.response, resource_provider, inventory)
+    return _send_inventory(req.response, rp, inventory)
 
 
 @wsgi_wrapper.PlacementWsgify
