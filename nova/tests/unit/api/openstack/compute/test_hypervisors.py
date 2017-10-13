@@ -846,6 +846,63 @@ class HypervisorsTestV233(HypervisorsTestV228):
         self.assertRaises(exc.HTTPBadRequest,
                           self.controller.index, req)
 
+    def test_index_pagination_with_invalid_non_int_limit(self):
+        req = self._get_request(True,
+                                '/v2/1234/os-hypervisors?limit=-9')
+        self.assertRaises(exception.ValidationError,
+                          self.controller.index, req)
+
+    def test_index_pagination_with_invalid_string_limit(self):
+        req = self._get_request(True,
+                                '/v2/1234/os-hypervisors?limit=abc')
+        self.assertRaises(exception.ValidationError,
+                          self.controller.index, req)
+
+    def test_index_duplicate_query_parameters_with_invalid_string_limit(self):
+        req = self._get_request(
+            True,
+            '/v2/1234/os-hypervisors/?limit=1&limit=abc')
+        self.assertRaises(exception.ValidationError,
+                          self.controller.index, req)
+
+    def test_index_duplicate_query_parameters_validation(self):
+        expected = [{
+           'hypervisor_hostname': 'hyper2',
+           'id': 2,
+           'state': 'up',
+           'status': 'enabled'}
+        ]
+        params = {
+            'limit': 1,
+            'marker': 1,
+        }
+
+        for param, value in params.items():
+            req = self._get_request(
+                use_admin_context=True,
+                url='/os-hypervisors?marker=1&%s=%s&%s=%s' %
+                    (param, value, param, value))
+            result = self.controller.index(req)
+            self.assertEqual(expected, result['hypervisors'])
+
+    def test_index_pagination_with_additional_filter(self):
+        expected = {
+            'hypervisors': [
+                {'hypervisor_hostname': 'hyper2',
+                 'id': 2,
+                 'state': 'up',
+                 'status': 'enabled'}
+            ],
+            'hypervisors_links': [
+                {'href': 'http://localhost/v2/hypervisors?limit=1&marker=2',
+                 'rel': 'next'}
+            ]
+        }
+        req = self._get_request(
+            True, '/v2/1234/os-hypervisors?limit=1&marker=1&additional=3')
+        result = self.controller.index(req)
+        self.assertEqual(expected, result)
+
     def test_detail_pagination(self):
         req = self._get_request(
             True, '/v2/1234/os-hypervisors/detail?limit=1&marker=1')
@@ -892,6 +949,106 @@ class HypervisorsTestV233(HypervisorsTestV228):
                                 '/v2/1234/os-hypervisors/detail?marker=99999')
         self.assertRaises(exc.HTTPBadRequest,
                           self.controller.detail, req)
+
+    def test_detail_pagination_with_invalid_string_limit(self):
+        req = self._get_request(True,
+                                '/v2/1234/os-hypervisors/detail?limit=abc')
+        self.assertRaises(exception.ValidationError,
+                          self.controller.detail, req)
+
+    def test_detail_duplicate_query_parameters_with_invalid_string_limit(self):
+        req = self._get_request(
+            True,
+            '/v2/1234/os-hypervisors/detail?limit=1&limit=abc')
+        self.assertRaises(exception.ValidationError,
+                          self.controller.detail, req)
+
+    def test_detail_duplicate_query_parameters_validation(self):
+        expected = [
+                {'cpu_info': {'arch': 'x86_64',
+                              'features': [],
+                              'model': '',
+                              'topology': {'cores': 1,
+                                           'sockets': 1,
+                                           'threads': 1},
+                              'vendor': 'fake'},
+                'current_workload': 2,
+                'disk_available_least': 100,
+                'free_disk_gb': 125,
+                'free_ram_mb': 5120,
+                'host_ip': netaddr.IPAddress('2.2.2.2'),
+                'hypervisor_hostname': 'hyper2',
+                'hypervisor_type': 'xen',
+                'hypervisor_version': 3,
+                'id': 2,
+                'local_gb': 250,
+                'local_gb_used': 125,
+                'memory_mb': 10240,
+                'memory_mb_used': 5120,
+                'running_vms': 2,
+                'service': {'disabled_reason': None,
+                            'host': 'compute2',
+                            'id': 2},
+                'state': 'up',
+                'status': 'enabled',
+                'vcpus': 4,
+                'vcpus_used': 2}
+        ]
+
+        params = {
+            'limit': 1,
+            'marker': 1,
+        }
+
+        for param, value in params.items():
+            req = self._get_request(
+                use_admin_context=True,
+                url='/os-hypervisors/detail?marker=1&%s=%s&%s=%s' %
+                    (param, value, param, value))
+            result = self.controller.detail(req)
+            self.assertEqual(expected, result['hypervisors'])
+
+    def test_detail_pagination_with_additional_filter(self):
+        link = 'http://localhost/v2/hypervisors/detail?limit=1&marker=2'
+        expected = {
+            'hypervisors': [
+                {'cpu_info': {'arch': 'x86_64',
+                              'features': [],
+                              'model': '',
+                              'topology': {'cores': 1,
+                                           'sockets': 1,
+                                           'threads': 1},
+                              'vendor': 'fake'},
+                'current_workload': 2,
+                'disk_available_least': 100,
+                'free_disk_gb': 125,
+                'free_ram_mb': 5120,
+                'host_ip': netaddr.IPAddress('2.2.2.2'),
+                'hypervisor_hostname': 'hyper2',
+                'hypervisor_type': 'xen',
+                'hypervisor_version': 3,
+                'id': 2,
+                'local_gb': 250,
+                'local_gb_used': 125,
+                'memory_mb': 10240,
+                'memory_mb_used': 5120,
+                'running_vms': 2,
+                'service': {'disabled_reason': None,
+                            'host': 'compute2',
+                            'id': 2},
+                'state': 'up',
+                'status': 'enabled',
+                'vcpus': 4,
+                'vcpus_used': 2}
+            ],
+            'hypervisors_links': [{
+                'href': link,
+                'rel': 'next'}]
+        }
+        req = self._get_request(
+            True, '/v2/1234/os-hypervisors/detail?limit=1&marker=1&unknown=2')
+        result = self.controller.detail(req)
+        self.assertEqual(expected, result)
 
 
 class HypervisorsTestV252(HypervisorsTestV233):
@@ -1231,6 +1388,30 @@ class HypervisorsTestV253(HypervisorsTestV252):
         self.assertRaises(exc.HTTPBadRequest,
                           self.controller.detail, req)
 
+    def test_detail_pagination_with_additional_filter(self):
+        req = self._get_request(
+            True, '/v2/1234/os-hypervisors/detail?limit=1&marker=9&unknown=2')
+        self.assertRaises(exception.ValidationError,
+                          self.controller.detail, req)
+
+    def test_detail_duplicate_query_parameters_validation(self):
+        """Tests that the list Detail query parameter schema enforces only a
+        single entry for any query parameter.
+        """
+        params = {
+            'limit': 1,
+            'marker': uuids.marker,
+            'hypervisor_hostname_pattern': 'foo',
+            'with_servers': 'true'
+        }
+        for param, value in params.items():
+            req = self._get_request(
+                use_admin_context=True,
+                url='/os-hypervisors/detail?%s=%s&%s=%s' %
+                    (param, value, param, value))
+            self.assertRaises(exception.ValidationError,
+                              self.controller.detail, req)
+
     def test_index_pagination(self):
         """Tests index paging with uuid markers."""
         req = self._get_request(
@@ -1259,7 +1440,13 @@ class HypervisorsTestV253(HypervisorsTestV252):
         self.assertRaises(exc.HTTPBadRequest,
                           self.controller.index, req)
 
-    def test_list_duplicate_query_parameters_validation(self):
+    def test_index_pagination_with_additional_filter(self):
+        req = self._get_request(
+            True, '/v2/1234/os-hypervisors/?limit=1&marker=9&unknown=2')
+        self.assertRaises(exception.ValidationError,
+                          self.controller.index, req)
+
+    def test_index_duplicate_query_parameters_validation(self):
         """Tests that the list query parameter schema enforces only a single
         entry for any query parameter.
         """

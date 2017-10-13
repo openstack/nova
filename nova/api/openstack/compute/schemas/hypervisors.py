@@ -14,6 +14,15 @@
 
 from nova.api.validation import parameter_types
 
+list_query_schema_v233 = {
+    'type': 'object',
+    'properties': parameter_types.pagination_parameters,
+    # NOTE(gmann): This is kept True to keep backward compatibility.
+    # As of now Schema validation stripped out the additional parameters and
+    # does not raise 400. In microversion 2.53, the additional parameters
+    # are not allowed.
+    'additionalProperties': True
+}
 
 list_query_schema_v253 = {
     'type': 'object',
