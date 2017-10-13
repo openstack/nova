@@ -61,7 +61,6 @@ from nova.db.sqlalchemy import utils as db_utils
 from nova import exception
 from nova import objects
 from nova.objects import fields
-from nova import quota
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_console_auth_token
@@ -116,23 +115,10 @@ def _make_compute_node(host, node, hv_type, service_id):
     return compute_node_dict
 
 
-def _quota_reserve(context, project_id, user_id):
-    """Create sample Quota, QuotaUsage and Reservation objects.
-
-    There is no method db.quota_usage_create(), so we have to use
-    db.quota_reserve() for creating QuotaUsage objects.
-
-    Returns reservations uuids.
-
-    """
-    def get_sync(resource, usage):
-        def sync(elevated, project_id, user_id):
-            return {resource: usage}
-        return sync
+def _quota_create(context, project_id, user_id):
+    """Create sample Quota objects."""
     quotas = {}
     user_quotas = {}
-    resources = {}
-    deltas = {}
     for i in range(3):
         resource = 'resource%d' % i
         if i == 2:
@@ -149,16 +135,6 @@ def _quota_reserve(context, project_id, user_id):
             user_quotas[resource] = db.quota_create(context, project_id,
                                                     resource, i + 1,
                                                     user_id=user_id).hard_limit
-        sync_name = '_sync_%s' % resource
-        resources[resource] = quota.ReservableResource(
-            resource, sync_name, 'quota_res_%d' % i)
-        deltas[resource] = i
-        setattr(sqlalchemy_api, sync_name, get_sync(resource, i))
-        sqlalchemy_api.QUOTA_SYNC_FUNCTIONS[sync_name] = getattr(
-            sqlalchemy_api, sync_name)
-    return db.quota_reserve(context, resources, quotas, user_quotas, deltas,
-                    timeutils.utcnow(), CONF.quota.until_refresh,
-                    datetime.timedelta(days=1), project_id, user_id)
 
 
 class DbTestCase(test.TestCase):
@@ -1814,147 +1790,6 @@ class InstanceSystemMetadataTestCase(test.TestCase):
                           {'key': 'value'}, True)
 
 
-class RefreshUsageTestCase(test.TestCase):
-    """Tests for the db.api.quota_usage_refresh method. """
-
-    def setUp(self):
-        super(RefreshUsageTestCase, self).setUp()
-        self.ctxt = context.get_admin_context()
-        self.project_id = 'project1'
-        self.user_id = 'user1'
-
-    def _quota_refresh(self, keys):
-        """Refresh the in_use count on the QuotaUsage objects.
-           The QuotaUsage objects are created if they don't exist.
-        """
-        def get_sync(resource, usage):
-            def sync(elevated, project_id, user_id):
-                return {resource: usage}
-            return sync
-
-        resources = {}
-        for i in range(4):
-            resource = 'resource%d' % i
-            if i == 2:
-                # test for project level resources
-                resource = 'fixed_ips'
-            if i == 3:
-                # test for project level resources
-                resource = 'floating_ips'
-
-            sync_name = '_sync_%s' % resource
-            resources[resource] = quota.ReservableResource(
-                resource, sync_name, 'quota_res_%d' % i)
-            setattr(sqlalchemy_api, sync_name, get_sync(resource, i + 1))
-            sqlalchemy_api.QUOTA_SYNC_FUNCTIONS[sync_name] = getattr(
-                sqlalchemy_api, sync_name)
-
-        db.quota_usage_refresh(self.ctxt, resources, keys,
-                               until_refresh=3,
-                               max_age=0,
-                               project_id=self.project_id,
-                               user_id=self.user_id)
-
-    def _compare_resource_usages(self, keys, expected, project_id,
-                                 user_id = None):
-        for key in keys:
-            actual = db.quota_usage_get(self.ctxt, project_id, key, user_id)
-            self.assertEqual(expected['project_id'], actual.project_id)
-            self.assertEqual(expected['user_id'], actual.user_id)
-            self.assertEqual(key, actual.resource)
-            self.assertEqual(expected[key]['in_use'], actual.in_use)
-            self.assertEqual(expected[key]['reserved'], actual.reserved)
-            self.assertEqual(expected[key]['until_refresh'],
-                             actual.until_refresh)
-
-    def test_refresh_created_project_usages(self):
-        # The refresh will create the usages and then sync
-        # in_use from 0 to 3 for fixed_ips and 0 to 4 for floating_ips.
-        keys = ['fixed_ips', 'floating_ips']
-        self._quota_refresh(keys)
-        expected = {'project_id': self.project_id,
-                    # User ID will be none for per-project resources
-                    'user_id': None,
-                    'fixed_ips': {'in_use': 3, 'reserved': 0,
-                                  'until_refresh': 3},
-                    'floating_ips': {'in_use': 4, 'reserved': 0,
-                                     'until_refresh': 3}}
-        self._compare_resource_usages(keys, expected, self.project_id,
-                                      self.user_id)
-
-    def test_refresh_created_user_usages(self):
-        # The refresh will create the usages and then sync
-        # in_use from 0 to 1 for resource0 and 0 to 2 for resource1.
-        keys = ['resource0', 'resource1']
-        self._quota_refresh(keys)
-        expected = {'project_id': self.project_id,
-                    'user_id': self.user_id,
-                    'resource0': {'in_use': 1, 'reserved': 0,
-                                  'until_refresh': 3},
-                    'resource1': {'in_use': 2, 'reserved': 0,
-                                  'until_refresh': 3}}
-        self._compare_resource_usages(keys, expected, self.project_id,
-                                      self.user_id)
-
-
-class ReservationTestCase(test.TestCase, ModelsObjectComparatorMixin):
-
-    """Tests for db.api.reservation_* methods."""
-
-    def setUp(self):
-        super(ReservationTestCase, self).setUp()
-        self.ctxt = context.get_admin_context()
-
-        self.reservations = _quota_reserve(self.ctxt, 'project1', 'user1')
-        usage = db.quota_usage_get(self.ctxt, 'project1', 'resource1', 'user1')
-
-        self.values = {'uuid': 'sample-uuid',
-                'project_id': 'project1',
-                'user_id': 'user1',
-                'resource': 'resource1',
-                'delta': 42,
-                'expire': timeutils.utcnow() + datetime.timedelta(days=1),
-                'usage': {'id': usage.id}}
-
-    def test_reservation_commit(self):
-        expected = {'project_id': 'project1', 'user_id': 'user1',
-                'resource0': {'reserved': 0, 'in_use': 0},
-                'resource1': {'reserved': 1, 'in_use': 1},
-                'fixed_ips': {'reserved': 2, 'in_use': 2}}
-        self.assertEqual(expected, db.quota_usage_get_all_by_project_and_user(
-                                            self.ctxt, 'project1', 'user1'))
-        _reservation_get(self.ctxt, self.reservations[0])
-        db.reservation_commit(self.ctxt, self.reservations, 'project1',
-                              'user1')
-        self.assertRaises(exception.ReservationNotFound,
-            _reservation_get, self.ctxt, self.reservations[0])
-        expected = {'project_id': 'project1', 'user_id': 'user1',
-                'resource0': {'reserved': 0, 'in_use': 0},
-                'resource1': {'reserved': 0, 'in_use': 2},
-                'fixed_ips': {'reserved': 0, 'in_use': 4}}
-        self.assertEqual(expected, db.quota_usage_get_all_by_project_and_user(
-                                            self.ctxt, 'project1', 'user1'))
-
-    def test_reservation_rollback(self):
-        expected = {'project_id': 'project1', 'user_id': 'user1',
-                'resource0': {'reserved': 0, 'in_use': 0},
-                'resource1': {'reserved': 1, 'in_use': 1},
-                'fixed_ips': {'reserved': 2, 'in_use': 2}}
-        self.assertEqual(expected, db.quota_usage_get_all_by_project_and_user(
-                                            self.ctxt, 'project1', 'user1'))
-        _reservation_get(self.ctxt, self.reservations[0])
-        db.reservation_rollback(self.ctxt, self.reservations, 'project1',
-                                'user1')
-        self.assertRaises(exception.ReservationNotFound,
-            _reservation_get, self.ctxt, self.reservations[0])
-        expected = {'project_id': 'project1', 'user_id': 'user1',
-                'resource0': {'reserved': 0, 'in_use': 0},
-                'resource1': {'reserved': 0, 'in_use': 1},
-                'fixed_ips': {'reserved': 0, 'in_use': 2}}
-        self.assertEqual(expected, db.quota_usage_get_all_by_project_and_user(
-                                            self.ctxt, 'project1', 'user1'))
-
-
 class SecurityGroupRuleTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def setUp(self):
         super(SecurityGroupRuleTestCase, self).setUp()
@@ -2285,23 +2120,6 @@ class SecurityGroupTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
         self.assertEqual(1, len(security_groups))
         self.assertEqual("default", security_groups[0]["name"])
-
-        usage = db.quota_usage_get(self.ctxt,
-                                   self.ctxt.project_id,
-                                   'security_groups',
-                                   self.ctxt.user_id)
-        self.assertEqual(1, usage.in_use)
-
-    def test_security_group_ensure_default_until_refresh(self):
-        self.flags(until_refresh=2, group='quota')
-        self.ctxt.project_id = 'fake'
-        self.ctxt.user_id = 'fake'
-        db.security_group_ensure_default(self.ctxt)
-        usage = db.quota_usage_get(self.ctxt,
-                                   self.ctxt.project_id,
-                                   'security_groups',
-                                   self.ctxt.user_id)
-        self.assertEqual(2, usage.until_refresh)
 
     @mock.patch.object(db.sqlalchemy.api, '_security_group_get_by_names')
     def test_security_group_ensure_default_called_concurrently(self, sg_mock):
@@ -7521,294 +7339,28 @@ class QuotaTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertRaises(exception.ProjectQuotaNotFound,
             db.quota_get, self.ctxt, 'project1', 'resource1')
 
-    def test_quota_reserve_all_resources(self):
-        quotas = {}
-        deltas = {}
-        reservable_resources = {}
-        for i, resource in enumerate(quota.resources):
-            if isinstance(resource, quota.ReservableResource):
-                quotas[resource.name] = db.quota_create(self.ctxt, 'project1',
-                                                        resource.name,
-                                                        100).hard_limit
-                deltas[resource.name] = i
-                reservable_resources[resource.name] = resource
-
-        usages = {'instances': 3, 'cores': 6, 'ram': 9}
-        instances = []
-        for i in range(3):
-            instances.append(db.instance_create(self.ctxt,
-                             {'vcpus': 2, 'memory_mb': 3,
-                             'project_id': 'project1'}))
-
-        usages['fixed_ips'] = 2
-        network = db.network_create_safe(self.ctxt, {})
-        for i in range(2):
-            address = '192.168.0.%d' % i
-            db.fixed_ip_create(self.ctxt, {'project_id': 'project1',
-                                           'address': address,
-                                           'network_id': network['id']})
-            db.fixed_ip_associate(self.ctxt, address,
-                                  instances[0].uuid, network['id'])
-
-        usages['floating_ips'] = 5
-        for i in range(5):
-            db.floating_ip_create(self.ctxt, {'project_id': 'project1'})
-
-        usages['security_groups'] = 3
-        for i in range(3):
-            db.security_group_create(self.ctxt, {'project_id': 'project1'})
-
-        usages['server_groups'] = 4
-        for i in range(4):
-            db.instance_group_create(self.ctxt, {'uuid': str(i),
-                                                 'project_id': 'project1'})
-
-        reservations_uuids = db.quota_reserve(self.ctxt, reservable_resources,
-                                              quotas, quotas, deltas, None,
-                                              None, None, 'project1')
-        resources_names = list(reservable_resources.keys())
-        for reservation_uuid in reservations_uuids:
-            reservation = _reservation_get(self.ctxt, reservation_uuid)
-            usage = db.quota_usage_get(self.ctxt, 'project1',
-                                       reservation.resource)
-            self.assertEqual(usage.in_use, usages[reservation.resource],
-                             'Resource: %s' % reservation.resource)
-            self.assertEqual(usage.reserved, deltas[reservation.resource])
-            self.assertIn(reservation.resource, resources_names)
-            resources_names.remove(reservation.resource)
-        self.assertEqual(len(resources_names), 0)
-
     def test_quota_destroy_all_by_project(self):
-        reservations = _quota_reserve(self.ctxt, 'project1', 'user1')
+        _quota_create(self.ctxt, 'project1', 'user1')
         db.quota_destroy_all_by_project(self.ctxt, 'project1')
         self.assertEqual(db.quota_get_all_by_project(self.ctxt, 'project1'),
                             {'project_id': 'project1'})
         self.assertEqual(db.quota_get_all_by_project_and_user(self.ctxt,
                             'project1', 'user1'),
                             {'project_id': 'project1', 'user_id': 'user1'})
-        self.assertEqual(db.quota_usage_get_all_by_project(
-                            self.ctxt, 'project1'),
-                            {'project_id': 'project1'})
-        for r in reservations:
-            self.assertRaises(exception.ReservationNotFound,
-                            _reservation_get, self.ctxt, r)
 
     def test_quota_destroy_all_by_project_and_user(self):
-        reservations = _quota_reserve(self.ctxt, 'project1', 'user1')
+        _quota_create(self.ctxt, 'project1', 'user1')
         db.quota_destroy_all_by_project_and_user(self.ctxt, 'project1',
                                                  'user1')
         self.assertEqual(db.quota_get_all_by_project_and_user(self.ctxt,
                             'project1', 'user1'),
                             {'project_id': 'project1',
                              'user_id': 'user1'})
-        self.assertEqual(db.quota_usage_get_all_by_project_and_user(
-                            self.ctxt, 'project1', 'user1'),
-                            {'project_id': 'project1',
-                             'user_id': 'user1',
-                             'fixed_ips': {'in_use': 2, 'reserved': 2}})
-        for r in reservations:
-            self.assertRaises(exception.ReservationNotFound,
-                            _reservation_get, self.ctxt, r)
-
-    def test_quota_usage_get_nonexistent(self):
-        self.assertRaises(exception.QuotaUsageNotFound, db.quota_usage_get,
-            self.ctxt, 'p1', 'nonexitent_resource')
-
-    def test_quota_usage_get(self):
-        _quota_reserve(self.ctxt, 'p1', 'u1')
-        quota_usage = db.quota_usage_get(self.ctxt, 'p1', 'resource0')
-        expected = {'resource': 'resource0', 'project_id': 'p1',
-                    'in_use': 0, 'reserved': 0, 'total': 0}
-        for key, value in expected.items():
-            self.assertEqual(value, quota_usage[key])
-
-    def test_quota_usage_get_all_by_project(self):
-        _quota_reserve(self.ctxt, 'p1', 'u1')
-        expected = {'project_id': 'p1',
-                    'resource0': {'in_use': 0, 'reserved': 0},
-                    'resource1': {'in_use': 1, 'reserved': 1},
-                    'fixed_ips': {'in_use': 2, 'reserved': 2}}
-        self.assertEqual(expected, db.quota_usage_get_all_by_project(
-                         self.ctxt, 'p1'))
-
-    def test_quota_usage_get_all_by_project_and_user(self):
-        _quota_reserve(self.ctxt, 'p1', 'u1')
-        expected = {'project_id': 'p1',
-                    'user_id': 'u1',
-                    'resource0': {'in_use': 0, 'reserved': 0},
-                    'resource1': {'in_use': 1, 'reserved': 1},
-                    'fixed_ips': {'in_use': 2, 'reserved': 2}}
-        self.assertEqual(expected, db.quota_usage_get_all_by_project_and_user(
-                         self.ctxt, 'p1', 'u1'))
-
-    def test_get_project_user_quota_usages_in_order(self):
-        _quota_reserve(self.ctxt, 'p1', 'u1')
-
-        @sqlalchemy_api.pick_context_manager_reader
-        def test(context):
-            with mock.patch.object(query.Query, 'order_by') as order_mock:
-                sqlalchemy_api._get_project_user_quota_usages(
-                    context, 'p1', 'u1')
-                self.assertTrue(order_mock.called)
-
-        test(self.ctxt)
-
-    def test_quota_usage_update_nonexistent(self):
-        self.assertRaises(exception.QuotaUsageNotFound, db.quota_usage_update,
-            self.ctxt, 'p1', 'u1', 'resource', in_use=42)
-
-    def test_quota_usage_update(self):
-        _quota_reserve(self.ctxt, 'p1', 'u1')
-        db.quota_usage_update(self.ctxt, 'p1', 'u1', 'resource0', in_use=42,
-                              reserved=43)
-        quota_usage = db.quota_usage_get(self.ctxt, 'p1', 'resource0', 'u1')
-        expected = {'resource': 'resource0', 'project_id': 'p1',
-                    'user_id': 'u1', 'in_use': 42, 'reserved': 43, 'total': 85}
-        for key, value in expected.items():
-            self.assertEqual(value, quota_usage[key])
 
     def test_quota_create_exists(self):
         db.quota_create(self.ctxt, 'project1', 'resource1', 41)
         self.assertRaises(exception.QuotaExists, db.quota_create, self.ctxt,
                           'project1', 'resource1', 42)
-
-
-class QuotaReserveNoDbTestCase(test.NoDBTestCase):
-    """Tests quota reserve/refresh operations using mock."""
-
-    def test_create_quota_usage_if_missing_not_created(self):
-        # Tests that QuotaUsage isn't created if it's already in user_usages.
-        resource = 'fake-resource'
-        project_id = 'fake-project'
-        user_id = 'fake_user'
-        session = mock.sentinel
-        quota_usage = mock.sentinel
-        user_usages = {resource: quota_usage}
-        with mock.patch.object(sqlalchemy_api, '_quota_usage_create') as quc:
-            self.assertFalse(sqlalchemy_api._create_quota_usage_if_missing(
-                                user_usages, resource, None,
-                                project_id, user_id, session))
-        self.assertFalse(quc.called)
-
-    def _test_create_quota_usage_if_missing_created(self, per_project_quotas):
-        # Tests that the QuotaUsage is created.
-        user_usages = {}
-        if per_project_quotas:
-            resource = sqlalchemy_api.PER_PROJECT_QUOTAS[0]
-        else:
-            resource = 'fake-resource'
-        project_id = 'fake-project'
-        user_id = 'fake_user'
-        session = mock.sentinel
-        quota_usage = mock.sentinel
-        with mock.patch.object(sqlalchemy_api, '_quota_usage_create',
-                               return_value=quota_usage) as quc:
-            self.assertTrue(sqlalchemy_api._create_quota_usage_if_missing(
-                                user_usages, resource, None,
-                                project_id, user_id, session))
-        self.assertEqual(quota_usage, user_usages[resource])
-        # Now test if the QuotaUsage was created with a user_id or not.
-        if per_project_quotas:
-            quc.assert_called_once_with(
-                project_id, None, resource, 0, 0, None, session)
-        else:
-            quc.assert_called_once_with(
-                project_id, user_id, resource, 0, 0, None, session)
-
-    def test_create_quota_usage_if_missing_created_per_project_quotas(self):
-        self._test_create_quota_usage_if_missing_created(True)
-
-    def test_create_quota_usage_if_missing_created_user_quotas(self):
-        self._test_create_quota_usage_if_missing_created(False)
-
-    def test_is_quota_refresh_needed_in_use(self):
-        # Tests when a quota refresh is needed based on the in_use value.
-        for in_use in range(-1, 1):
-            # We have to set until_refresh=None otherwise mock will give it
-            # a value which runs some code we don't want.
-            quota_usage = mock.MagicMock(in_use=in_use, until_refresh=None)
-            if in_use < 0:
-                self.assertTrue(sqlalchemy_api._is_quota_refresh_needed(
-                                                    quota_usage, max_age=0))
-            else:
-                self.assertFalse(sqlalchemy_api._is_quota_refresh_needed(
-                                                    quota_usage, max_age=0))
-
-    def test_is_quota_refresh_needed_until_refresh_none(self):
-        quota_usage = mock.MagicMock(in_use=0, until_refresh=None)
-        self.assertFalse(sqlalchemy_api._is_quota_refresh_needed(quota_usage,
-                                                                 max_age=0))
-
-    def test_is_quota_refresh_needed_until_refresh_not_none(self):
-        # Tests different values for the until_refresh counter.
-        for until_refresh in range(3):
-            quota_usage = mock.MagicMock(in_use=0, until_refresh=until_refresh)
-            refresh = sqlalchemy_api._is_quota_refresh_needed(quota_usage,
-                                                              max_age=0)
-            until_refresh -= 1
-            if until_refresh <= 0:
-                self.assertTrue(refresh)
-            else:
-                self.assertFalse(refresh)
-            self.assertEqual(until_refresh, quota_usage.until_refresh)
-
-    def test_refresh_quota_usages(self):
-        quota_usage = mock.Mock(spec=models.QuotaUsage)
-        quota_usage.in_use = 5
-        quota_usage.until_refresh = None
-        sqlalchemy_api._refresh_quota_usages(quota_usage, until_refresh=5,
-                                             in_use=6)
-        self.assertEqual(6, quota_usage.in_use)
-        self.assertEqual(5, quota_usage.until_refresh)
-
-    def test_calculate_overquota_no_delta(self):
-        deltas = {'foo': -1}
-        user_quotas = {'foo': 10}
-        overs = sqlalchemy_api._calculate_overquota({}, user_quotas, deltas,
-                                                    {}, {})
-        self.assertFalse(overs)
-
-    def test_calculate_overquota_unlimited_user_quota(self):
-        deltas = {'foo': 1}
-        project_quotas = {'foo': -1}
-        user_quotas = {'foo': -1}
-        project_usages = {'foo': {'total': 10}}
-        user_usages = {'foo': {'total': 10}}
-        overs = sqlalchemy_api._calculate_overquota(
-            project_quotas, user_quotas, deltas, project_usages, user_usages)
-        self.assertFalse(overs)
-
-    def test_calculate_overquota_unlimited_project_quota(self):
-        deltas = {'foo': 1}
-        project_quotas = {'foo': -1}
-        user_quotas = {'foo': 1}
-        project_usages = {'foo': {'total': 0}}
-        user_usages = {'foo': {'total': 0}}
-        overs = sqlalchemy_api._calculate_overquota(
-            project_quotas, user_quotas, deltas, project_usages, user_usages)
-        self.assertFalse(overs)
-
-    def _test_calculate_overquota(self, resource, project_usages, user_usages):
-        deltas = {resource: 1}
-        project_quotas = {resource: 10}
-        user_quotas = {resource: 10}
-        overs = sqlalchemy_api._calculate_overquota(
-            project_quotas, user_quotas, deltas, project_usages, user_usages)
-        self.assertEqual(resource, overs[0])
-
-    def test_calculate_overquota_per_project_quota_overquota(self):
-        # In this test, user quotas are fine but project quotas are over.
-        resource = 'foo'
-        project_usages = {resource: {'total': 10}}
-        user_usages = {resource: {'total': 5}}
-        self._test_calculate_overquota(resource, project_usages, user_usages)
-
-    def test_calculate_overquota_per_user_quota_overquota(self):
-        # In this test, project quotas are fine but user quotas are over.
-        resource = 'foo'
-        project_usages = {resource: {'total': 5}}
-        user_usages = {resource: {'total': 10}}
-        self._test_calculate_overquota(resource, project_usages, user_usages)
 
 
 class QuotaClassTestCase(test.TestCase, ModelsObjectComparatorMixin):
@@ -7866,11 +7418,6 @@ class QuotaClassTestCase(test.TestCase, ModelsObjectComparatorMixin):
     def test_quota_class_update_nonexistent(self):
         self.assertRaises(exception.QuotaClassNotFound, db.quota_class_update,
                                 self.ctxt, 'class name', 'resource', 42)
-
-    def test_refresh_quota_usages(self):
-        quota_usages = mock.Mock()
-        sqlalchemy_api._refresh_quota_usages(quota_usages, until_refresh=5,
-                                             in_use=6)
 
 
 class S3ImageTestCase(test.TestCase):

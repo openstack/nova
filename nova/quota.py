@@ -17,18 +17,15 @@
 """Quotas for resources per project."""
 
 import copy
-import datetime
 
 from oslo_log import log as logging
 from oslo_utils import importutils
-from oslo_utils import timeutils
 import six
 
 import nova.conf
 from nova import context as nova_context
 from nova import db
 from nova import exception
-from nova.i18n import _LE
 from nova import objects
 from nova import utils
 
@@ -180,10 +177,8 @@ class DbQuotaDriver(object):
         """
         usages = {}
         for resource in resources.values():
-            # NOTE(melwitt): This is to keep things working while we're in the
-            # middle of converting ReservableResources to CountableResources.
-            # We should skip resources that are not countable and eventually
-            # when there are no more ReservableResources, we won't need this.
+            # NOTE(melwitt): We should skip resources that are not countable,
+            # such as AbsoluteResources.
             if not isinstance(resource, CountableResource):
                 continue
             if resource.name in usages:
@@ -372,33 +367,6 @@ class DbQuotaDriver(object):
                         int(value['in_use']))
                 settable_quotas[key] = {'minimum': minimum, 'maximum': -1}
         return settable_quotas
-
-    def _get_syncable_resources(self, resources, user_id=None):
-        """Given a list of resources, retrieve the syncable resources
-        scoped to a project or a user.
-
-        A resource is syncable if it has a function to sync the quota
-        usage record with the actual usage of the project or user.
-
-        :param resources: A dictionary of the registered resources.
-        :param user_id: Optional. If user_id is specified, user-scoped
-                        resources will be returned. Otherwise,
-                        project-scoped resources will be returned.
-        :returns: A list of resource names scoped to a project or
-                  user that can be sync'd.
-        """
-        syncable_resources = []
-        per_project_resources = db.quota_get_per_project_resources()
-        for key, value in resources.items():
-            if isinstance(value, ReservableResource):
-                # Resources are either project-scoped or user-scoped
-                project_scoped = (user_id is None and
-                                  key in per_project_resources)
-                user_scoped = (user_id is not None and
-                               key not in per_project_resources)
-                if project_scoped or user_scoped:
-                    syncable_resources.append(key)
-        return syncable_resources
 
     def _get_quotas(self, context, resources, keys, project_id=None,
                     user_id=None, project_quotas=None):
@@ -662,227 +630,6 @@ class DbQuotaDriver(object):
                                       quotas=quotas_exceeded, usages={},
                                       headroom=headroom)
 
-    def reserve(self, context, resources, deltas, expire=None,
-                project_id=None, user_id=None):
-        """Check quotas and reserve resources.
-
-        For counting quotas--those quotas for which there is a usage
-        synchronization function--this method checks quotas against
-        current usage and the desired deltas.
-
-        This method will raise a QuotaResourceUnknown exception if a
-        given resource is unknown or if it does not have a usage
-        synchronization function.
-
-        If any of the proposed values is over the defined quota, an
-        OverQuota exception will be raised with the sorted list of the
-        resources which are too high.  Otherwise, the method returns a
-        list of reservation UUIDs which were created.
-
-        :param context: The request context, for access checks.
-        :param resources: A dictionary of the registered resources.
-        :param deltas: A dictionary of the proposed delta changes.
-        :param expire: An optional parameter specifying an expiration
-                       time for the reservations.  If it is a simple
-                       number, it is interpreted as a number of
-                       seconds and added to the current time; if it is
-                       a datetime.timedelta object, it will also be
-                       added to the current time.  A datetime.datetime
-                       object will be interpreted as the absolute
-                       expiration time.  If None is specified, the
-                       default expiration time set by
-                       --default-reservation-expire will be used (this
-                       value will be treated as a number of seconds).
-        :param project_id: Specify the project_id if current context
-                           is admin and admin wants to impact on
-                           common user's tenant.
-        :param user_id: Specify the user_id if current context
-                        is admin and admin wants to impact on
-                        common user.
-        """
-        _valid_method_call_check_resources(deltas, 'reserve', resources)
-
-        # Set up the reservation expiration
-        if expire is None:
-            expire = CONF.quota.reservation_expire
-        if isinstance(expire, six.integer_types):
-            expire = datetime.timedelta(seconds=expire)
-        if isinstance(expire, datetime.timedelta):
-            expire = timeutils.utcnow() + expire
-        if not isinstance(expire, datetime.datetime):
-            raise exception.InvalidReservationExpiration(expire=expire)
-
-        # If project_id is None, then we use the project_id in context
-        if project_id is None:
-            project_id = context.project_id
-            LOG.debug('Reserving resources using context.project_id: %s',
-                      project_id)
-        # If user_id is None, then we use the project_id in context
-        if user_id is None:
-            user_id = context.user_id
-            LOG.debug('Reserving resources using context.user_id: %s',
-                      user_id)
-
-        LOG.debug('Attempting to reserve resources for project %(project_id)s '
-                  'and user %(user_id)s. Deltas: %(deltas)s',
-                  {'project_id': project_id, 'user_id': user_id,
-                   'deltas': deltas})
-
-        # Get the applicable quotas.
-        # NOTE(Vek): We're not worried about races at this point.
-        #            Yes, the admin may be in the process of reducing
-        #            quotas, but that's a pretty rare thing.
-        project_quotas = objects.Quotas.get_all_by_project(context, project_id)
-        LOG.debug('Quota limits for project %(project_id)s: '
-                  '%(project_quotas)s', {'project_id': project_id,
-                                         'project_quotas': project_quotas})
-
-        quotas = self._get_quotas(context, resources, deltas.keys(),
-                                  project_id=project_id,
-                                  project_quotas=project_quotas)
-        LOG.debug('Quotas for project %(project_id)s after resource sync: '
-                  '%(quotas)s', {'project_id': project_id, 'quotas': quotas})
-        user_quotas = self._get_quotas(context, resources, deltas.keys(),
-                                       project_id=project_id,
-                                       user_id=user_id,
-                                       project_quotas=project_quotas)
-        LOG.debug('Quotas for project %(project_id)s and user %(user_id)s '
-                  'after resource sync: %(quotas)s',
-                  {'project_id': project_id, 'user_id': user_id,
-                   'quotas': user_quotas})
-
-        # NOTE(Vek): Most of the work here has to be done in the DB
-        #            API, because we have to do it in a transaction,
-        #            which means access to the session.  Since the
-        #            session isn't available outside the DBAPI, we
-        #            have to do the work there.
-        return db.quota_reserve(context, resources, quotas, user_quotas,
-                                deltas, expire,
-                                CONF.quota.until_refresh, CONF.quota.max_age,
-                                project_id=project_id, user_id=user_id)
-
-    def commit(self, context, reservations, project_id=None, user_id=None):
-        """Commit reservations.
-
-        :param context: The request context, for access checks.
-        :param reservations: A list of the reservation UUIDs, as
-                             returned by the reserve() method.
-        :param project_id: Specify the project_id if current context
-                           is admin and admin wants to impact on
-                           common user's tenant.
-        :param user_id: Specify the user_id if current context
-                        is admin and admin wants to impact on
-                        common user.
-        """
-        # If project_id is None, then we use the project_id in context
-        if project_id is None:
-            project_id = context.project_id
-        # If user_id is None, then we use the user_id in context
-        if user_id is None:
-            user_id = context.user_id
-
-        db.reservation_commit(context, reservations, project_id=project_id,
-                              user_id=user_id)
-
-    def rollback(self, context, reservations, project_id=None, user_id=None):
-        """Roll back reservations.
-
-        :param context: The request context, for access checks.
-        :param reservations: A list of the reservation UUIDs, as
-                             returned by the reserve() method.
-        :param project_id: Specify the project_id if current context
-                           is admin and admin wants to impact on
-                           common user's tenant.
-        :param user_id: Specify the user_id if current context
-                        is admin and admin wants to impact on
-                        common user.
-        """
-        # If project_id is None, then we use the project_id in context
-        if project_id is None:
-            project_id = context.project_id
-        # If user_id is None, then we use the user_id in context
-        if user_id is None:
-            user_id = context.user_id
-
-        db.reservation_rollback(context, reservations, project_id=project_id,
-                                user_id=user_id)
-
-    def usage_reset(self, context, resources):
-        """Reset the usage records for a particular user on a list of
-        resources.  This will force that user's usage records to be
-        refreshed the next time a reservation is made.
-
-        Note: this does not affect the currently outstanding
-        reservations the user has; those reservations must be
-        committed or rolled back (or expired).
-
-        :param context: The request context, for access checks.
-        :param resources: A list of the resource names for which the
-                          usage must be reset.
-        """
-
-        # We need an elevated context for the calls to
-        # quota_usage_update()
-        elevated = context.elevated()
-
-        for resource in resources:
-            try:
-                # Reset the usage to -1, which will force it to be
-                # refreshed
-                db.quota_usage_update(elevated, context.project_id,
-                                      context.user_id,
-                                      resource, in_use=-1)
-            except exception.QuotaUsageNotFound:
-                # That means it'll be refreshed anyway
-                pass
-
-    def usage_refresh(self, context, resources, project_id=None,
-                      user_id=None, resource_names=None):
-        """Refresh the usage records for a particular project and user
-        on a list of resources.  This will force usage records to be
-        sync'd immediately to the actual usage.
-
-        This method will raise a QuotaUsageRefreshNotAllowed exception if a
-        usage refresh is not allowed on a resource for the given project
-        or user.
-
-        :param context: The request context, for access checks.
-        :param resources: A dictionary of the registered resources.
-        :param project_id: Optional: Project whose resources to
-                           refresh.  If not set, then the project_id
-                           is taken from the context.
-        :param user_id: Optional: User whose resources to refresh.
-                        If not set, then the user_id is taken from the
-                        context.
-        :param resources_names: Optional: A list of the resource names
-                                for which the usage must be refreshed.
-                                If not specified, then all the usages
-                                for the project and user will be refreshed.
-        """
-
-        if project_id is None:
-            project_id = context.project_id
-        if user_id is None:
-            user_id = context.user_id
-
-        syncable_resources = self._get_syncable_resources(resources, user_id)
-
-        if resource_names:
-            for res_name in resource_names:
-                if res_name not in syncable_resources:
-                    raise exception.QuotaUsageRefreshNotAllowed(
-                                                  resource=res_name,
-                                                  project_id=project_id,
-                                                  user_id=user_id,
-                                                  syncable=syncable_resources)
-        else:
-            resource_names = syncable_resources
-
-        return db.quota_usage_refresh(context, resources, resource_names,
-                                      CONF.quota.until_refresh,
-                                      CONF.quota.max_age,
-                                      project_id=project_id, user_id=user_id)
-
     def destroy_all_by_project_and_user(self, context, project_id, user_id):
         """Destroy all quotas associated with a project and user.
 
@@ -1092,117 +839,6 @@ class NoopQuotaDriver(object):
         """
         pass
 
-    def reserve(self, context, resources, deltas, expire=None,
-                project_id=None, user_id=None):
-        """Check quotas and reserve resources.
-
-        For counting quotas--those quotas for which there is a usage
-        synchronization function--this method checks quotas against
-        current usage and the desired deltas.
-
-        This method will raise a QuotaResourceUnknown exception if a
-        given resource is unknown or if it does not have a usage
-        synchronization function.
-
-        If any of the proposed values is over the defined quota, an
-        OverQuota exception will be raised with the sorted list of the
-        resources which are too high.  Otherwise, the method returns a
-        list of reservation UUIDs which were created.
-
-        :param context: The request context, for access checks.
-        :param resources: A dictionary of the registered resources.
-        :param deltas: A dictionary of the proposed delta changes.
-        :param expire: An optional parameter specifying an expiration
-                       time for the reservations.  If it is a simple
-                       number, it is interpreted as a number of
-                       seconds and added to the current time; if it is
-                       a datetime.timedelta object, it will also be
-                       added to the current time.  A datetime.datetime
-                       object will be interpreted as the absolute
-                       expiration time.  If None is specified, the
-                       default expiration time set by
-                       --default-reservation-expire will be used (this
-                       value will be treated as a number of seconds).
-        :param project_id: Specify the project_id if current context
-                           is admin and admin wants to impact on
-                           common user's tenant.
-        :param user_id: Specify the user_id if current context
-                        is admin and admin wants to impact on
-                        common user.
-        """
-        return []
-
-    def commit(self, context, reservations, project_id=None, user_id=None):
-        """Commit reservations.
-
-        :param context: The request context, for access checks.
-        :param reservations: A list of the reservation UUIDs, as
-                             returned by the reserve() method.
-        :param project_id: Specify the project_id if current context
-                           is admin and admin wants to impact on
-                           common user's tenant.
-        :param user_id: Specify the user_id if current context
-                        is admin and admin wants to impact on
-                        common user.
-        """
-        pass
-
-    def rollback(self, context, reservations, project_id=None, user_id=None):
-        """Roll back reservations.
-
-        :param context: The request context, for access checks.
-        :param reservations: A list of the reservation UUIDs, as
-                             returned by the reserve() method.
-        :param project_id: Specify the project_id if current context
-                           is admin and admin wants to impact on
-                           common user's tenant.
-        :param user_id: Specify the user_id if current context
-                        is admin and admin wants to impact on
-                        common user.
-        """
-        pass
-
-    def usage_reset(self, context, resources):
-        """Reset the usage records for a particular user on a list of
-        resources.  This will force that user's usage records to be
-        refreshed the next time a reservation is made.
-
-        Note: this does not affect the currently outstanding
-        reservations the user has; those reservations must be
-        committed or rolled back (or expired).
-
-        :param context: The request context, for access checks.
-        :param resources: A list of the resource names for which the
-                          usage must be reset.
-        """
-        pass
-
-    def usage_refresh(self, context, resources, project_id=None, user_id=None,
-                      resource_names=None):
-        """Refresh the usage records for a particular project and user
-        on a list of resources.  This will force usage records to be
-        sync'd immediately to the actual usage.
-
-        This method will raise a QuotaUsageRefreshNotAllowed exception if a
-        usage refresh is not allowed on a resource for the given project
-        or user.
-
-        :param context: The request context, for access checks.
-        :param resources: A dictionary of the registered resources.
-        :param project_id: Optional: Project whose resources to
-                           refresh.  If not set, then the project_id
-                           is taken from the context.
-        :param user_id: Optional: User whose resources to refresh.
-                        If not set, then the user_id is taken from the
-                        context.
-        :param resources_names: Optional: A list of the resource names
-                                for which the usage must be refreshed.
-                                If not specified, then all the usages
-                                for the project and user will be refreshed.
-        """
-
-        pass
-
     def destroy_all_by_project_and_user(self, context, project_id, user_id):
         """Destroy all quotas associated with a project and user.
 
@@ -1292,44 +928,6 @@ class BaseResource(object):
             return CONF[self.flag]
 
         return CONF.quota[self.flag] if self.flag else -1
-
-
-class ReservableResource(BaseResource):
-    """Describe a reservable resource."""
-    valid_method = 'reserve'
-
-    def __init__(self, name, sync, flag=None):
-        """Initializes a ReservableResource.
-
-        Reservable resources are those resources which directly
-        correspond to objects in the database, i.e., instances,
-        cores, etc.
-
-        Usage synchronization function must be associated with each
-        object. This function will be called to determine the current
-        counts of one or more resources. This association is done in
-        database backend.
-
-        The usage synchronization function will be passed three
-        arguments: an admin context, the project ID, and an opaque
-        session object, which should in turn be passed to the
-        underlying database function.  Synchronization functions
-        should return a dictionary mapping resource names to the
-        current in_use count for those resources; more than one
-        resource and resource count may be returned.  Note that
-        synchronization functions may be associated with more than one
-        ReservableResource.
-
-        :param name: The name of the resource, i.e., "volumes".
-        :param sync: A dbapi methods name which returns a dictionary
-                     to resynchronize the in_use count for one or more
-                     resources, as described above.
-        :param flag: The name of the flag or configuration option
-                     which specifies the default value of the quota
-                     for this resource.
-        """
-        super(ReservableResource, self).__init__(name, flag=flag)
-        self.sync = sync
 
 
 class AbsoluteResource(BaseResource):
@@ -1616,141 +1214,6 @@ class QuotaEngine(object):
         return self._driver.limit_check_project_and_user(
             context, self._resources, project_values=project_values,
             user_values=user_values, project_id=project_id, user_id=user_id)
-
-    def reserve(self, context, expire=None, project_id=None, user_id=None,
-                **deltas):
-        """Check quotas and reserve resources.
-
-        For counting quotas--those quotas for which there is a usage
-        synchronization function--this method checks quotas against
-        current usage and the desired deltas.  The deltas are given as
-        keyword arguments, and current usage and other reservations
-        are factored into the quota check.
-
-        This method will raise a QuotaResourceUnknown exception if a
-        given resource is unknown or if it does not have a usage
-        synchronization function.
-
-        If any of the proposed values is over the defined quota, an
-        OverQuota exception will be raised with the sorted list of the
-        resources which are too high.  Otherwise, the method returns a
-        list of reservation UUIDs which were created.
-
-        :param context: The request context, for access checks.
-        :param expire: An optional parameter specifying an expiration
-                       time for the reservations.  If it is a simple
-                       number, it is interpreted as a number of
-                       seconds and added to the current time; if it is
-                       a datetime.timedelta object, it will also be
-                       added to the current time.  A datetime.datetime
-                       object will be interpreted as the absolute
-                       expiration time.  If None is specified, the
-                       default expiration time set by
-                       --default-reservation-expire will be used (this
-                       value will be treated as a number of seconds).
-        :param project_id: Specify the project_id if current context
-                           is admin and admin wants to impact on
-                           common user's tenant.
-        """
-
-        reservations = self._driver.reserve(context, self._resources, deltas,
-                                            expire=expire,
-                                            project_id=project_id,
-                                            user_id=user_id)
-
-        LOG.debug("Created reservations %s", reservations)
-
-        return reservations
-
-    def commit(self, context, reservations, project_id=None, user_id=None):
-        """Commit reservations.
-
-        :param context: The request context, for access checks.
-        :param reservations: A list of the reservation UUIDs, as
-                             returned by the reserve() method.
-        :param project_id: Specify the project_id if current context
-                           is admin and admin wants to impact on
-                           common user's tenant.
-        """
-
-        try:
-            self._driver.commit(context, reservations, project_id=project_id,
-                                user_id=user_id)
-        except Exception:
-            # NOTE(Vek): Ignoring exceptions here is safe, because the
-            # usage resynchronization and the reservation expiration
-            # mechanisms will resolve the issue.  The exception is
-            # logged, however, because this is less than optimal.
-            LOG.exception(_LE("Failed to commit reservations %s"),
-                          reservations)
-            return
-        LOG.debug("Committed reservations %s", reservations)
-
-    def rollback(self, context, reservations, project_id=None, user_id=None):
-        """Roll back reservations.
-
-        :param context: The request context, for access checks.
-        :param reservations: A list of the reservation UUIDs, as
-                             returned by the reserve() method.
-        :param project_id: Specify the project_id if current context
-                           is admin and admin wants to impact on
-                           common user's tenant.
-        """
-
-        try:
-            self._driver.rollback(context, reservations, project_id=project_id,
-                                  user_id=user_id)
-        except Exception:
-            # NOTE(Vek): Ignoring exceptions here is safe, because the
-            # usage resynchronization and the reservation expiration
-            # mechanisms will resolve the issue.  The exception is
-            # logged, however, because this is less than optimal.
-            LOG.exception(_LE("Failed to roll back reservations %s"),
-                          reservations)
-            return
-        LOG.debug("Rolled back reservations %s", reservations)
-
-    def usage_reset(self, context, resources):
-        """Reset the usage records for a particular user on a list of
-        resources.  This will force that user's usage records to be
-        refreshed the next time a reservation is made.
-
-        Note: this does not affect the currently outstanding
-        reservations the user has; those reservations must be
-        committed or rolled back (or expired).
-
-        :param context: The request context, for access checks.
-        :param resources: A list of the resource names for which the
-                          usage must be reset.
-        """
-
-        self._driver.usage_reset(context, resources)
-
-    def usage_refresh(self, context, project_id=None, user_id=None,
-                      resource_names=None):
-        """Refresh the usage records for a particular project and user
-        on a list of resources.  This will force usage records to be
-        sync'd immediately to the actual usage.
-
-        This method will raise a QuotaUsageRefreshNotAllowed exception if a
-        usage refresh is not allowed on a resource for the given project
-        or user.
-
-        :param context: The request context, for access checks.
-        :param project_id: Optional:  Project whose resources to
-                           refresh.  If not set, then the project_id
-                           is taken from the context.
-        :param user_id: Optional: User whose resources to refresh.
-                        If not set, then the user_id is taken from the
-                        context.
-        :param resources_names: Optional: A list of the resource names
-                                for which the usage must be refreshed.
-                                If not specified, then all the usages
-                                for the project and user will be refreshed.
-        """
-
-        self._driver.usage_refresh(context, self._resources, project_id,
-                                   user_id, resource_names)
 
     def destroy_all_by_project_and_user(self, context, project_id, user_id):
         """Destroy all quotas, usages, and reservations associated with a
