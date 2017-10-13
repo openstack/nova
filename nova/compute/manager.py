@@ -3789,6 +3789,8 @@ class ComputeManager(manager.Manager):
             instance.node = migration.source_node
             instance.save()
 
+            self._revert_allocation(context, instance, migration)
+
             self.network_api.setup_networks_on_host(context, instance,
                                                     migration.source_compute)
             migration_p = obj_base.obj_to_primitive(migration)
@@ -3832,6 +3834,57 @@ class ComputeManager(manager.Manager):
 
             self._notify_about_instance_usage(
                     context, instance, "resize.revert.end")
+
+    def _revert_allocation(self, context, instance, migration):
+        """Revert an allocation that is held by migration to our instance."""
+
+        # Fetch the original allocation that the instance had on the source
+        # node, which are now held by the migration
+        orig_alloc = self.reportclient.get_allocations_for_consumer(
+            migration.uuid)
+        if not orig_alloc:
+            # NOTE(danms): This migration did not do per-migration allocation
+            # accounting, so nothing to do here.
+            LOG.info('Old-style migration %(mig)s is being reverted; '
+                     'no migration claims found on original node '
+                     'to swap.',
+                     {'mig': migration.uuid},
+                     instance=instance)
+            return False
+
+        if len(orig_alloc) > 1:
+            # NOTE(danms): This may change later if we have other allocations
+            # against other providers that need to be held by the migration
+            # as well. Perhaps something like shared storage resources that
+            # will actually be duplicated during a resize type operation.
+            LOG.error('New-style migration %(mig)s has allocations against '
+                      'more than one provider %(rps)s. This should not be '
+                      'possible, but reverting it anyway.',
+                      {'mig': migration.uuid,
+                       'rps': ','.join(orig_alloc.keys())},
+                      instance=instance)
+
+        # We only have a claim against one provider, it is the source node
+        cn_uuid = list(orig_alloc.keys())[0]
+
+        # Get just the resources part of the one allocation we need below
+        orig_alloc = orig_alloc[cn_uuid].get('resources', {})
+
+        # FIXME(danms): Since we don't have an atomic operation to adjust
+        # allocations for multiple consumers, we have to have space on the
+        # source for double the claim before we delete the old one
+        # FIXME(danms): This method is flawed in that it asssumes allocations
+        # against only one provider. So, this may overwite allocations against
+        # a shared provider, if we had one.
+        LOG.info('Swapping old allocation on %(node)s held by migration '
+                 '%(mig)s for instance',
+                 {'node': cn_uuid, 'mig': migration.uuid},
+                 instance=instance)
+        self.reportclient.put_allocations(cn_uuid, instance.uuid, orig_alloc,
+                                          instance.project_id,
+                                          instance.user_id)
+        self.reportclient.delete_allocation_for_instance(migration.uuid)
+        return True
 
     def _prep_resize(self, context, image, instance, instance_type,
                      filter_properties, node, migration, clean_shutdown=True):
@@ -3922,13 +3975,19 @@ class ComputeManager(manager.Manager):
                 if failed:
                     # Since we hit a failure, we're either rescheduling or dead
                     # and either way we need to cleanup any allocations created
-                    # by the scheduler for the destination node. Note that for
-                    # a resize to the same host, the scheduler will merge the
-                    # flavors, so here we'd be subtracting the new flavor from
-                    # the allocated resources on this node.
-                    rt = self._get_resource_tracker()
-                    rt.delete_allocation_for_failed_resize(
-                        instance, node, instance_type)
+                    # by the scheduler for the destination node.
+                    if migration and not self._revert_allocation(
+                            context, instance, migration):
+                        # We did not do a migration-based
+                        # allocation. Note that for a resize to the
+                        # same host, the scheduler will merge the
+                        # flavors, so here we'd be subtracting the new
+                        # flavor from the allocated resources on this
+                        # node.
+                        # FIXME(danms): Remove this in Rocky
+                        rt = self._get_resource_tracker()
+                        rt.delete_allocation_for_failed_resize(
+                            instance, node, instance_type)
 
                 extra_usage_info = dict(
                         new_instance_type=instance_type.name,
