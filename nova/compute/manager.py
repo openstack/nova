@@ -3642,8 +3642,9 @@ class ComputeManager(manager.Manager):
                 # We're reverting (or failed) on the source, so we
                 # need to check if our migration holds a claim and if
                 # so, avoid doing the legacy behavior below.
-                mig_allocs = self.reportclient.get_allocations_for_instance(
-                    cn_uuid, migration)
+                mig_allocs = (
+                    self.reportclient.get_allocations_for_consumer_by_provider(
+                        cn_uuid, migration.uuid))
                 if mig_allocs:
                     LOG.info(_('Source node %(node)s reverted migration '
                                '%(mig)s; not deleting migration-based '
@@ -3656,8 +3657,9 @@ class ComputeManager(manager.Manager):
             # made it past the check above), so we need to check to
             # see if the source did migration-based allocation
             # accounting
-            allocs = self.reportclient.get_allocations_for_instance(
-                cn_uuid, migration)
+            allocs = (
+                self.reportclient.get_allocations_for_consumer_by_provider(
+                    cn_uuid, migration.uuid))
             if allocs:
                 # NOTE(danms): The source did migration-based allocation
                 # accounting, so we should let the source node rejigger
