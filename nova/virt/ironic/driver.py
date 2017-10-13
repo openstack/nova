@@ -995,7 +995,8 @@ class IronicDriver(virt_driver.ComputeDriver):
                 return base64.b64encode(compressed.read())
 
     def spawn(self, context, instance, image_meta, injected_files,
-              admin_password, network_info=None, block_device_info=None):
+              admin_password, allocations, network_info=None,
+              block_device_info=None):
         """Deploy an instance.
 
         :param context: The security context.
@@ -1005,6 +1006,10 @@ class IronicDriver(virt_driver.ComputeDriver):
         :param injected_files: User files to inject into instance.
         :param admin_password: Administrator password to set in
             instance.
+        :param allocations: Information about resources allocated to the
+                            instance via placement, of the form returned by
+                            SchedulerReportClient.get_allocations_for_consumer.
+                            Ignored by this driver.
         :param network_info: Instance network information.
         :param block_device_info: Instance block device
             information.
@@ -1498,7 +1503,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         self.unplug_vifs(instance, [vif])
 
     def rebuild(self, context, instance, image_meta, injected_files,
-                admin_password, bdms, detach_block_devices,
+                admin_password, allocations, bdms, detach_block_devices,
                 attach_block_devices, network_info=None,
                 recreate=False, block_device_info=None,
                 preserve_ephemeral=False):
@@ -1521,6 +1526,10 @@ class IronicDriver(virt_driver.ComputeDriver):
             by this driver.
         :param admin_password: Administrator password to set in
             instance. Ignored by this driver.
+        :param allocations: Information about resources allocated to the
+                            instance via placement, of the form returned by
+                            SchedulerReportClient.get_allocations_for_consumer.
+                            Ignored by this driver.
         :param bdms: block-device-mappings to use for rebuild. Ignored
             by this driver.
         :param detach_block_devices: function to detach block devices. See

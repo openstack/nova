@@ -388,7 +388,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                               instance_type_updates=instance_type_updates)
         self.assertIsNone(vm_util.vm_ref_cache_get(self.uuid))
         self.conn.spawn(self.context, self.instance, self.image,
-                        injected_files=[], admin_password=None,
+                        injected_files=[], admin_password=None, allocations={},
                         network_info=self.network_info,
                         block_device_info=bdi)
         self._check_vm_record(num_instances=num_instances,
@@ -1145,7 +1145,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
 
         block_device_info = {'block_device_mapping': root_disk}
         self.conn.spawn(self.context, self.instance, self.image,
-                        injected_files=[], admin_password=None,
+                        injected_files=[], admin_password=None, allocations={},
                         network_info=self.network_info,
                         block_device_info=block_device_info)
 
@@ -1171,7 +1171,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         mock_info_get_mapping.return_value = root_disk
         block_device_info = {'mount_device': 'vda'}
         self.conn.spawn(self.context, self.instance, self.image,
-                        injected_files=[], admin_password=None,
+                        injected_files=[], admin_password=None, allocations={},
                         network_info=self.network_info,
                         block_device_info=block_device_info)
 

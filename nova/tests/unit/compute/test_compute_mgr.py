@@ -3686,7 +3686,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             return {'block_device_mapping': 'shared_block_storage'}
 
         def _spawn(context, instance, image_meta, injected_files,
-              admin_password, network_info=None, block_device_info=None):
+                   admin_password, allocations, network_info=None,
+                   block_device_info=None):
             self.assertEqual(block_device_info['block_device_mapping'],
                              'shared_block_storage')
 
@@ -3719,6 +3720,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                [],
                                                admin_password='new_pass',
                                                bdms=[],
+                                               allocations={},
                                                detach_block_devices=_detach,
                                                attach_block_devices=_attach,
                                                network_info=None,
@@ -4079,6 +4081,21 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     self.compute.driver)
         self.compute._resource_tracker = fake_rt
 
+        self.allocations = [{
+            "resource_provider": {
+                "uuid": uuids.rp1,
+            },
+            "resources": {
+                "VCPU": 1,
+                "MEMORY_MB": 512,
+            },
+        }]
+        self.mock_get_allocs = self.useFixture(
+            fixtures.fixtures.MockPatch(
+                'nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocations_for_consumer')).mock
+        self.mock_get_allocs.return_value = self.allocations
+
     def _do_build_instance_update(self, mock_save, reschedule_update=False):
         mock_save.return_value = self.instance
         if reschedule_update:
@@ -4305,7 +4322,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             try_deallocate_networks=False)
         mock_spawn.assert_called_once_with(self.context, self.instance,
             test.MatchType(objects.ImageMeta), self.injected_files,
-            self.admin_pass, network_info=self.network_info,
+            self.admin_pass, self.allocations, network_info=self.network_info,
             block_device_info=self.block_device_info)
 
     @mock.patch.object(manager.ComputeManager, '_build_and_run_instance')
@@ -4763,7 +4780,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             self.requested_networks, try_deallocate_networks=False)
         mock_spawn.assert_called_once_with(
             self.context, self.instance, test.MatchType(objects.ImageMeta),
-            self.injected_files, self.admin_pass,
+            self.injected_files, self.admin_pass, self.allocations,
             network_info=self.network_info,
             block_device_info=self.block_device_info)
 
@@ -4893,7 +4910,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
             spawn.assert_has_calls([mock.call(self.context, self.instance,
                 test.MatchType(objects.ImageMeta),
-                self.injected_files, self.admin_pass,
+                self.injected_files, self.admin_pass, self.allocations,
                 network_info=self.network_info,
                 block_device_info=self.block_device_info)])
 
@@ -5102,6 +5119,27 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             _build_networks.assert_has_calls(
                     [mock.call(self.context, self.instance,
                         self.requested_networks, self.security_groups)])
+
+    @mock.patch('nova.network.model.NetworkInfoAsyncWrapper.wait')
+    @mock.patch.object(manager.ComputeManager, '_build_networks_for_instance')
+    @mock.patch('nova.objects.Instance.save')
+    def test_build_resources_aborts_on_failed_allocations_get(
+            self, mock_save, mock_bn, mock_net_wait):
+        mock_bn.return_value = self.network_info
+        mock_save.return_value = self.instance
+        self.mock_get_allocs.side_effect = exception.NotFound()
+
+        try:
+            with self.compute._build_resources(
+                    self.context, self.instance, self.requested_networks,
+                    self.security_groups, self.image,
+                    self.block_device_mapping):
+                pass
+        except Exception as e:
+            self.assertIsInstance(e, exception.BuildAbortException)
+
+        self.mock_get_allocs.assert_called_once_with(self.instance.uuid)
+        mock_net_wait.assert_called_once_with(do_raise=False)
 
     @mock.patch.object(manager.ComputeManager, '_build_networks_for_instance')
     @mock.patch.object(manager.ComputeManager, '_shutdown_instance')

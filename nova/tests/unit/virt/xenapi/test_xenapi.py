@@ -766,7 +766,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
         image_meta = objects.ImageMeta.from_dict(
             IMAGE_FIXTURES[image_ref]["image_meta"])
         self.conn.spawn(self.context, instance, image_meta, injected_files,
-                        'herp', network_info, block_device_info)
+                        'herp', {}, network_info, block_device_info)
         self.create_vm_record(self.conn, os_type, instance['name'])
         self.check_vm_record(self.conn, instance_type_id, check_injection)
         self.assertEqual(instance['os_type'], os_type)
@@ -1022,7 +1022,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
         self.mox.ReplayAll()
         image_meta = objects.ImageMeta.from_dict(
             IMAGE_FIXTURES[IMAGE_MACHINE]["image_meta"])
-        self.conn.spawn(self.context, instance, image_meta, [], 'herp', '')
+        self.conn.spawn(self.context, instance, image_meta, [], 'herp', {}, '')
 
     def test_spawn_vlanmanager(self):
         self.flags(network_manager='nova.network.manager.VlanManager',
@@ -1528,7 +1528,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
              'disk_format': 'vhd'})
         if spawn:
             self.conn.spawn(self.context, instance, image_meta, [], 'herp',
-                            network_info)
+                            {}, network_info)
         if obj:
             return instance
         return base.obj_to_primitive(instance)

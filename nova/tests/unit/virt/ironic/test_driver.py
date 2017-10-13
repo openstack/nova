@@ -1011,7 +1011,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
         image_meta = ironic_utils.get_test_image_meta()
 
-        self.driver.spawn(self.ctx, instance, image_meta, [], None)
+        self.driver.spawn(self.ctx, instance, image_meta, [], None, {})
 
         mock_node.get.assert_called_once_with(
             node_uuid, fields=ironic_driver._NODE_FIELDS)
@@ -1085,7 +1085,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         fake_looping_call.wait.side_effect = deploy_exc
         self.assertRaises(
             exception.InstanceDeployFailure,
-            self.driver.spawn, self.ctx, instance, None, [], None)
+            self.driver.spawn, self.ctx, instance, None, [], None, {})
         self.assertEqual(0, mock_destroy.call_count)
 
     def _test_add_instance_info_to_node(self, mock_update=None,
@@ -1307,7 +1307,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         image_meta = ironic_utils.get_test_image_meta()
 
         self.assertRaises(exception.ValidationError, self.driver.spawn,
-                          self.ctx, instance, image_meta, [], None)
+                          self.ctx, instance, image_meta, [], None, {})
         mock_node.get.assert_called_once_with(
             node_uuid, fields=ironic_driver._NODE_FIELDS)
         mock_avti.assert_called_once_with(self.ctx, instance, None)
@@ -1337,7 +1337,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
         mock_sf.side_effect = TestException()
         self.assertRaises(TestException, self.driver.spawn,
-                          self.ctx, instance, image_meta, [], None)
+                          self.ctx, instance, image_meta, [], None, {})
 
         mock_node.get.assert_called_once_with(
             node_uuid, fields=ironic_driver._NODE_FIELDS)
@@ -1372,7 +1372,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         with mock.patch.object(self.driver, '_cleanup_deploy',
                                autospec=True) as mock_cleanup_deploy:
             self.assertRaises(TestException, self.driver.spawn,
-                              self.ctx, instance, image_meta, [], None)
+                              self.ctx, instance, image_meta, [], None, {})
 
         mock_node.get.assert_called_once_with(
                 node_uuid, fields=ironic_driver._NODE_FIELDS)
@@ -1401,7 +1401,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
         mock_node.set_provision_state.side_effect = exception.NovaException()
         self.assertRaises(exception.NovaException, self.driver.spawn,
-                          self.ctx, instance, image_meta, [], None)
+                          self.ctx, instance, image_meta, [], None, {})
 
         mock_node.get.assert_called_once_with(
             node_uuid, fields=ironic_driver._NODE_FIELDS)
@@ -1430,7 +1430,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_node.set_provision_state.side_effect = ironic_exception.BadRequest
         self.assertRaises(ironic_exception.BadRequest,
                           self.driver.spawn,
-                          self.ctx, instance, image_meta, [], None)
+                          self.ctx, instance, image_meta, [], None, {})
 
         mock_node.get.assert_called_once_with(
             node_uuid, fields=ironic_driver._NODE_FIELDS)
@@ -1466,7 +1466,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         fake_net_info = utils.get_test_network_info()
         self.assertRaises(ironic_exception.BadRequest,
                           self.driver.spawn, self.ctx, instance,
-                          image_meta, [], None, fake_net_info)
+                          image_meta, [], None, {}, fake_net_info)
         self.assertEqual(0, mock_destroy.call_count)
 
     @mock.patch.object(configdrive, 'required_by')
@@ -1492,7 +1492,7 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_node.set_provision_state.return_value = mock.MagicMock()
         image_meta = ironic_utils.get_test_image_meta()
 
-        self.driver.spawn(self.ctx, instance, image_meta, [], None)
+        self.driver.spawn(self.ctx, instance, image_meta, [], None, {})
         self.assertTrue(mock_save.called)
         self.assertEqual('/dev/sda1', instance.default_ephemeral_device)
 
@@ -1977,8 +1977,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
 
         self.driver.rebuild(
             context=self.ctx, instance=instance, image_meta=image_meta,
-            injected_files=None, admin_password=None, bdms=None,
-            detach_block_devices=None, attach_block_devices=None,
+            injected_files=None, admin_password=None, allocations={},
+            bdms=None, detach_block_devices=None, attach_block_devices=None,
             preserve_ephemeral=preserve)
 
         mock_save.assert_called_once_with(
@@ -2033,8 +2033,9 @@ class IronicDriverTestCase(test.NoDBTestCase):
             self.assertRaises(exception.InstanceDeployFailure,
                 self.driver.rebuild,
                 context=self.ctx, instance=instance, image_meta=image_meta,
-                injected_files=None, admin_password=None, bdms=None,
-                detach_block_devices=None, attach_block_devices=None)
+                injected_files=None, admin_password=None, allocations={},
+                bdms=None, detach_block_devices=None,
+                attach_block_devices=None)
 
     @mock.patch.object(FAKE_CLIENT.node, 'get')
     def test_network_binding_host_id(self, mock_get):

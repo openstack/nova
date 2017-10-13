@@ -258,6 +258,12 @@ class BaseTestCase(test.TestCase):
         # Just to make long lines short
         self.rt = self.compute._get_resource_tracker()
 
+        self.mock_get_allocs = self.useFixture(
+            fixtures.fixtures.MockPatch(
+                'nova.scheduler.client.report.SchedulerReportClient.'
+                'get_allocations_for_consumer')).mock
+        self.mock_get_allocs.return_value = {}
+
     def tearDown(self):
         ctxt = context.get_admin_context()
         fake_image.FakeImageService_reset()
@@ -2884,7 +2890,8 @@ class ComputeTestCase(BaseTestCase,
         ]
 
         def _spawn(cls, context, instance, image_meta, injected_files,
-                   admin_password, network_info, block_device_info):
+                   admin_password, allocations, network_info,
+                   block_device_info):
             self.assertEqual(self.decoded_files, injected_files)
 
         self.stub_out('nova.virt.fake.FakeDriver.spawn', _spawn)
@@ -12203,7 +12210,7 @@ class EvacuateHostTestCase(BaseTestCase):
             test.MatchType(context.RequestContext),
             test.MatchType(objects.Instance),
             test.MatchType(objects.ImageMeta),
-            mock.ANY, 'newpass',
+            mock.ANY, 'newpass', mock.ANY,
             network_info=mock.ANY,
             block_device_info=mock.ANY)
 
@@ -12221,7 +12228,7 @@ class EvacuateHostTestCase(BaseTestCase):
             test.MatchType(context.RequestContext),
             test.MatchType(objects.Instance),
             test.MatchType(objects.ImageMeta),
-            mock.ANY, 'newpass',
+            mock.ANY, 'newpass', mock.ANY,
             network_info=mock.ANY,
             block_device_info=mock.ANY)
 
@@ -12259,7 +12266,7 @@ class EvacuateHostTestCase(BaseTestCase):
             test.MatchType(context.RequestContext),
             test.MatchType(objects.Instance),
             mock_image_meta.return_value,
-            mock.ANY, 'newpass',
+            mock.ANY, 'newpass', mock.ANY,
             network_info=mock.ANY,
             block_device_info=mock.ANY)
 
@@ -12277,7 +12284,7 @@ class EvacuateHostTestCase(BaseTestCase):
             test.MatchType(context.RequestContext),
             test.MatchType(objects.Instance),
             mock_image_meta.return_value,
-            mock.ANY, 'newpass',
+            mock.ANY, 'newpass', mock.ANY,
             network_info=mock.ANY,
             block_device_info=mock.ANY)
 
@@ -12350,7 +12357,7 @@ class EvacuateHostTestCase(BaseTestCase):
 
         # NOTE(ndipanov): Make sure that we pass the topology from the context
         def fake_spawn(context, instance, image_meta, injected_files,
-                       admin_password, network_info=None,
+                       admin_password, allocations, network_info=None,
                        block_device_info=None):
             self.assertIsNone(instance.numa_topology)
 
@@ -12375,8 +12382,11 @@ class ComputeInjectedFilesTestCase(BaseTestCase):
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
 
     def _spawn(self, context, instance, image_meta, injected_files,
-               admin_password, nw_info, block_device_info, db_api=None):
+               admin_password, allocations, nw_info, block_device_info,
+               db_api=None):
         self.assertEqual(self.expected, injected_files)
+        self.assertEqual(self.mock_get_allocs.return_value, allocations)
+        self.mock_get_allocs.assert_called_once_with(instance.uuid)
 
     def _test(self, injected_files, decoded_files):
         self.expected = decoded_files

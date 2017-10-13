@@ -1970,12 +1970,13 @@ class ComputeManager(manager.Manager):
                             task_states.BLOCK_DEVICE_MAPPING)
                     block_device_info = resources['block_device_info']
                     network_info = resources['network_info']
+                    allocs = resources['allocations']
                     LOG.debug('Start spawning the instance on the hypervisor.',
                               instance=instance)
                     with timeutils.StopWatch() as timer:
                         self.driver.spawn(context, instance, image_meta,
                                           injected_files, admin_password,
-                                          network_info=network_info,
+                                          allocs, network_info=network_info,
                                           block_device_info=block_device_info)
                     LOG.info('Took %0.2f seconds to spawn the instance on '
                              'the hypervisor.', timer.elapsed(),
@@ -2168,6 +2169,19 @@ class ComputeManager(manager.Manager):
             msg = _('Failure prepping block device.')
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=msg)
+
+        try:
+            resources['allocations'] = (
+                self.reportclient.get_allocations_for_consumer(instance.uuid))
+        except Exception:
+            LOG.exception('Failure retrieving placement allocations',
+                          instance=instance)
+            # Make sure the async call finishes
+            if network_info is not None:
+                network_info.wait(do_raise=False)
+            msg = _('Failure retrieving placement allocations')
+            raise exception.BuildAbortException(instance_uuid=instance.uuid,
+                                                reason=msg)
 
         try:
             yield resources
@@ -2671,8 +2685,8 @@ class ComputeManager(manager.Manager):
             migration.save()
 
     def _rebuild_default_impl(self, context, instance, image_meta,
-                              injected_files, admin_password, bdms,
-                              detach_block_devices, attach_block_devices,
+                              injected_files, admin_password, allocations,
+                              bdms, detach_block_devices, attach_block_devices,
                               network_info=None,
                               recreate=False, block_device_info=None,
                               preserve_ephemeral=False):
@@ -2701,7 +2715,8 @@ class ComputeManager(manager.Manager):
 
         with instance.mutated_migration_context():
             self.driver.spawn(context, instance, image_meta, injected_files,
-                              admin_password, network_info=network_info,
+                              admin_password, allocations,
+                              network_info=network_info,
                               block_device_info=new_block_device_info)
 
     def _notify_instance_rebuild_error(self, context, instance, error, bdms):
@@ -2939,6 +2954,9 @@ class ComputeManager(manager.Manager):
             self.network_api.setup_instance_network_on_host(
                     context, instance, self.host)
 
+        allocations = self.reportclient.get_allocations_for_consumer(
+            instance.uuid)
+
         network_info = instance.get_network_info()
         if bdms is None:
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
@@ -2962,6 +2980,7 @@ class ComputeManager(manager.Manager):
             image_meta=image_meta,
             injected_files=files,
             admin_password=new_pass,
+            allocations=allocations,
             bdms=bdms,
             detach_block_devices=detach_block_devices,
             attach_block_devices=self._prep_block_device,
@@ -4681,6 +4700,9 @@ class ComputeManager(manager.Manager):
         rt = self._get_resource_tracker()
         limits = filter_properties.get('limits', {})
 
+        allocations = self.reportclient.get_allocations_for_consumer(
+            instance.uuid)
+
         shelved_image_ref = instance.image_ref
         if image:
             instance.image_ref = image['id']
@@ -4698,6 +4720,7 @@ class ComputeManager(manager.Manager):
                 self.driver.spawn(context, instance, image_meta,
                                   injected_files=[],
                                   admin_password=None,
+                                  allocations=allocations,
                                   network_info=network_info,
                                   block_device_info=block_device_info)
         except Exception:
