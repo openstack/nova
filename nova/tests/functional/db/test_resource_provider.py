@@ -822,8 +822,8 @@ class TestAllocation(ResourceProviderBaseCase):
                          disk_allocation.consumer_id)
         self.assertIsInstance(disk_allocation.id, int)
 
-        allocations = rp_obj.AllocationList.get_all_by_resource_provider_uuid(
-            self.ctx, resource_provider.uuid)
+        allocations = rp_obj.AllocationList.get_all_by_resource_provider(
+            self.ctx, resource_provider)
 
         self.assertEqual(1, len(allocations))
 
@@ -832,8 +832,8 @@ class TestAllocation(ResourceProviderBaseCase):
 
         allocations.delete_all()
 
-        allocations = rp_obj.AllocationList.get_all_by_resource_provider_uuid(
-            self.ctx, resource_provider.uuid)
+        allocations = rp_obj.AllocationList.get_all_by_resource_provider(
+            self.ctx, resource_provider)
 
         self.assertEqual(0, len(allocations))
 
@@ -918,13 +918,13 @@ class TestAllocation(ResourceProviderBaseCase):
             ])
         alloc_list.create_all()
 
-        src_allocs = rp_obj.AllocationList.get_all_by_resource_provider_uuid(
-            self.ctx, cn_source.uuid)
+        src_allocs = rp_obj.AllocationList.get_all_by_resource_provider(
+            self.ctx, cn_source)
 
         self.assertEqual(2, len(src_allocs))
 
-        dest_allocs = rp_obj.AllocationList.get_all_by_resource_provider_uuid(
-            self.ctx, cn_dest.uuid)
+        dest_allocs = rp_obj.AllocationList.get_all_by_resource_provider(
+            self.ctx, cn_dest)
 
         self.assertEqual(2, len(dest_allocs))
 
@@ -956,13 +956,13 @@ class TestAllocation(ResourceProviderBaseCase):
             ])
         new_alloc_list.create_all()
 
-        src_allocs = rp_obj.AllocationList.get_all_by_resource_provider_uuid(
-            self.ctx, cn_source.uuid)
+        src_allocs = rp_obj.AllocationList.get_all_by_resource_provider(
+            self.ctx, cn_source)
 
         self.assertEqual(0, len(src_allocs))
 
-        dest_allocs = rp_obj.AllocationList.get_all_by_resource_provider_uuid(
-            self.ctx, cn_dest.uuid)
+        dest_allocs = rp_obj.AllocationList.get_all_by_resource_provider(
+            self.ctx, cn_dest)
 
         self.assertEqual(2, len(dest_allocs))
 
@@ -971,23 +971,10 @@ class TestAllocation(ResourceProviderBaseCase):
 
         self.assertEqual(2, len(consumer_allocs))
 
-    def test_get_allocations_from_db(self):
-        rp, allocation = self._make_allocation()
-        allocations = rp_obj.AllocationList._get_allocations_from_db(
-            self.ctx, rp.uuid)
-        self.assertEqual(1, len(allocations))
-        self.assertEqual(rp.id, allocations[0].resource_provider_id)
-        self.assertEqual(allocation.resource_provider.id,
-                         allocations[0].resource_provider_id)
-
-        allocations = rp_obj.AllocationList._get_allocations_from_db(
-            self.ctx, uuidsentinel.bad_rp_uuid)
-        self.assertEqual(0, len(allocations))
-
     def test_get_all_by_resource_provider(self):
         rp, allocation = self._make_allocation()
-        allocations = rp_obj.AllocationList.get_all_by_resource_provider_uuid(
-            self.ctx, rp.uuid)
+        allocations = rp_obj.AllocationList.get_all_by_resource_provider(
+            self.ctx, rp)
         self.assertEqual(1, len(allocations))
         self.assertEqual(rp.id, allocations[0].resource_provider.id)
         self.assertEqual(allocation.resource_provider.id,
