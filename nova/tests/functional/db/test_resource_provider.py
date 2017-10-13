@@ -830,7 +830,7 @@ class TestAllocation(ResourceProviderBaseCase):
         self.assertEqual(DISK_ALLOCATION['used'],
                         allocations[0].used)
 
-        allocations[0].destroy()
+        allocations.delete_all()
 
         allocations = rp_obj.AllocationList.get_all_by_resource_provider_uuid(
             self.ctx, resource_provider.uuid)
@@ -970,18 +970,6 @@ class TestAllocation(ResourceProviderBaseCase):
             self.ctx, uuidsentinel.instance)
 
         self.assertEqual(2, len(consumer_allocs))
-
-    def test_destroy(self):
-        rp, allocation = self._make_allocation()
-        allocations = rp_obj.AllocationList.get_all_by_resource_provider_uuid(
-            self.ctx, rp.uuid)
-        self.assertEqual(1, len(allocations))
-        rp_obj.Allocation._destroy(self.ctx, allocation.id)
-        allocations = rp_obj.AllocationList.get_all_by_resource_provider_uuid(
-            self.ctx, rp.uuid)
-        self.assertEqual(0, len(allocations))
-        self.assertRaises(exception.NotFound, rp_obj.Allocation._destroy,
-                          self.ctx, allocation.id)
 
     def test_get_allocations_from_db(self):
         rp, allocation = self._make_allocation()
