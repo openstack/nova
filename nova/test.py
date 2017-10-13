@@ -210,6 +210,9 @@ class TestCase(testtools.TestCase):
     USES_DB_SELF = False
     REQUIRES_LOCKING = False
 
+    # Setting to True makes the test use the RPCFixture.
+    STUB_RPC = True
+
     # The number of non-cell0 cells to create. This is only used in the
     # base class when USES_DB is True.
     NUMBER_OF_CELLS = 1
@@ -251,7 +254,9 @@ class TestCase(testtools.TestCase):
                                 group='oslo_concurrency')
 
         self.useFixture(conf_fixture.ConfFixture(CONF))
-        self.useFixture(nova_fixtures.RPCFixture('nova.test'))
+
+        if self.STUB_RPC:
+            self.useFixture(nova_fixtures.RPCFixture('nova.test'))
 
         # we cannot set this in the ConfFixture as oslo only registers the
         # notification opts at the first instantiation of a Notifier that
