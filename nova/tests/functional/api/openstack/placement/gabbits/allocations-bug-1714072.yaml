@@ -11,7 +11,9 @@ defaults:
         x-auth-token: admin
         accept: application/json
         content-type: application/json
-        openstack-api-version: placement latest
+        # Default to <= 1.11 so the PUT /allocations in here that use the
+        # older list-ish format continue to work.
+        openstack-api-version: placement 1.11
 
 tests:
 
@@ -56,6 +58,38 @@ tests:
           - resource_provider:
                 uuid: $HISTORY['get resource provider'].$RESPONSE['$.uuid']
             resources: {}
+      project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
+      user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
+  status: 400
+  response_strings:
+      - does not have enough properties
+
+# The next two tests confirm that the bug identified by
+# this file's name is not present in the PUT /allocations/{consumer_uuid}
+# format added by microversion 1.12.
+
+- name: put a successful dictish allocation
+  PUT: /allocations/c9f0186b-64f8-44fb-b6c9-83008d8d6940
+  request_headers:
+      openstack-api-version: placement 1.12
+  data:
+      allocations:
+          $HISTORY['get resource provider'].$RESPONSE['$.uuid']:
+              resources:
+                VCPU: 1
+                MEMORY_MB: 1
+      project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
+      user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
+  status: 204
+
+- name: fail with empty resources dictish
+  PUT: /allocations/c9f0186b-64f8-44fb-b6c9-83008d8d6940
+  request_headers:
+      openstack-api-version: placement 1.12
+  data:
+      allocations:
+          $HISTORY['get resource provider'].$RESPONSE['$.uuid']:
+              resources: {}
       project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
       user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
   status: 400

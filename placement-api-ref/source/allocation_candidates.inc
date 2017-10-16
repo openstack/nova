@@ -31,8 +31,26 @@ Request
 
   - resources: resources_query_required
 
-Response
---------
+Response (microversions 1.12 - )
+--------------------------------
+
+.. rest_parameters:: parameters.yaml
+
+  - allocation_requests: allocation_requests
+  - provider_summaries: provider_summaries
+  - allocations: allocations_by_resource_provider
+  - resources: resources
+  - capacity: capacity
+  - used: used
+
+Response Example (microversions 1.12 - )
+----------------------------------------
+
+.. literalinclude:: get-allocation_candidates-1.12.json
+   :language: javascript
+
+Response (microversions 1.10 - 1.11)
+------------------------------------
 
 .. rest_parameters:: parameters.yaml
 
@@ -45,8 +63,8 @@ Response
   - capacity: capacity
   - used: used
 
-Response Example
-----------------
+Response Example (microversions 1.10 - 1.11)
+--------------------------------------------
 
 .. literalinclude:: get-allocation_candidates.json
    :language: javascript

@@ -9,7 +9,9 @@ defaults:
         x-auth-token: admin
         accept: application/json
         content-type: application/json
-        openstack-api-version: placement latest
+        # We need version 1.11 as the PUT /allocations below is
+        # using the < 1.12 data format.
+        openstack-api-version: placement 1.11
 
 tests:
 

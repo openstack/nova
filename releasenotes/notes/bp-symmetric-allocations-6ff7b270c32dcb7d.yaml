@@ -1,0 +1,11 @@
+---
+features:
+  - |
+    The 1.12 version of the placement API changes handling of the `PUT
+    /allocations/{consumer_uuid}` request to use a dict-based structure for
+    the JSON request body to make it more aligned with the response body of
+    `GET /allocations/{consumer_uuid}`. Because `PUT` requires `user_id`
+    and `project_id` in the request body, these fields are added to the
+    `GET` response. In addition, the response body for
+    ``GET /allocation_candidates`` is updated so the allocations in the
+    ``alocation_requests`` object work with the new `PUT` format.

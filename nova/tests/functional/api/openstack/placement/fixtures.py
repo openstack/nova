@@ -148,6 +148,7 @@ class AllocationFixture(APIFixture):
 
         # Create some VCPU inventory and allocations.
         consumer_id = uuidutils.generate_uuid()
+        os.environ['CONSUMER_ID'] = consumer_id
         inventory = rp_obj.Inventory(
             self.context, resource_provider=rp,
             resource_class='VCPU', total=10,

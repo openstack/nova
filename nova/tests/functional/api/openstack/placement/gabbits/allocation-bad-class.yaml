@@ -7,7 +7,9 @@ defaults:
         x-auth-token: admin
         accept: application/json
         content-type: application/json
-        openstack-api-version: placement latest
+        # Using <= 1.11 allows the PUT /allocations/{uuid} below
+        # to work with the older request form.
+        openstack-api-version: placement 1.11
 
 tests:
 

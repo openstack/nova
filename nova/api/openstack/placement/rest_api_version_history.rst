@@ -159,3 +159,16 @@ for resources.
 The ``/resource_providers/{rp_uuid}/allocations`` endpoint has been available
 since version 1.0, but was not listed in the ``links`` section of the
 ``GET /resource_providers`` response.  The link is included as of version 1.11.
+
+1.12 PUT dict format to /allocations/{consumer_uuid}
+----------------------------------------------------
+
+In version 1.12 the request body of a ``PUT /allocations/{consumer_uuid}``
+is expected to have an `object` for the ``allocations`` property, not as
+`array` as with earlier microversions. This puts the request body more in
+alignment with the structure of the ``GET /allocations/{consumer_uuid}``
+response body. Because the `PUT` request requires `user_id` and
+`project_id` in the request body, these fields are added to the `GET`
+response. In addition, the response body for ``GET /allocation_candidates``
+is updated so the allocations in the ``alocation_requests`` object work
+with the new `PUT` format.

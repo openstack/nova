@@ -1,0 +1,115 @@
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        accept: application/json
+        content-type: application/json
+        openstack-api-version: placement 1.12
+
+tests:
+
+- name: put an allocation listish
+  PUT: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
+  data:
+      allocations:
+          - resource_provider:
+                uuid: $ENVIRON['RP_UUID']
+            resources:
+                DISK_GB: 10
+      project_id: $ENVIRON['PROJECT_ID']
+      user_id: $ENVIRON['USER_ID']
+  status: 400
+  response_strings:
+      - JSON does not validate
+
+- name: put resource provider not uuid
+  PUT: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
+  data:
+      allocations:
+          nice_house_friend:
+              resources:
+                  VCPU: 1
+                  DISK_GB: 20
+      project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
+      user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
+  status: 400
+  response_strings:
+      - JSON does not validate
+      - does not match any of the regexes
+
+- name: put resource class not valid
+  PUT: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
+  data:
+      allocations:
+          $ENVIRON['RP_UUID']:
+              resources:
+                vcpu: 1
+                DISK_GB: 20
+      project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
+      user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
+  status: 400
+  response_strings:
+      - JSON does not validate
+      - does not match any of the regexes
+
+- name: put empty allocations
+  PUT: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
+  data:
+      allocations: {}
+      project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
+      user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
+  status: 400
+  response_strings:
+      - JSON does not validate
+      - does not have enough properties
+
+- name: create the resource provider
+  POST: /resource_providers
+  request_headers:
+      content-type: application/json
+  data:
+      name: $ENVIRON['RP_NAME']
+      uuid: $ENVIRON['RP_UUID']
+  status: 201
+
+- name: set some inventory
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_provider_generation: 0
+      inventories:
+          DISK_GB:
+            total: 2048
+            min_unit: 10
+            max_unit: 1024
+          VCPU:
+            total: 96
+  status: 200
+
+- name: put an allocation dictish
+  PUT: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
+  data:
+      allocations:
+          $ENVIRON['RP_UUID']:
+              resources:
+                VCPU: 1
+                DISK_GB: 20
+      project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
+      user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
+  status: 204
+
+- name: get that allocation
+  GET: $LAST_URL
+
+- name: put that same allocation back
+  PUT: $LAST_URL
+  data:
+      # there's a generation in allocations, ignored
+      allocations: $RESPONSE['$.allocations']
+      # project_id and user_id not in the get response so we add it
+      project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
+      user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
+  status: 204

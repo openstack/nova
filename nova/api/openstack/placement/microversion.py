@@ -49,6 +49,9 @@ VERSIONS = [
     '1.9',  # Adds GET /usages
     '1.10',  # Adds GET /allocation_candidates resource endpoint
     '1.11',  # Adds 'allocations' link to the GET /resource_providers response
+    '1.12',  # Add project_id and user_id to GET /allocations/{consumer_uuid}
+             # and PUT to /allocations/{consumer_uuid} in the same dict form
+             # as GET
 ]
 
 

@@ -45,7 +45,47 @@ _GET_SCHEMA_1_10 = {
 }
 
 
-def _transform_allocation_requests(alloc_reqs):
+def _transform_allocation_requests_dict(alloc_reqs):
+    """Turn supplied list of AllocationRequest objects into a list of
+    allocations dicts keyed by resource provider uuid of resources involved
+    in the allocation request. The returned results are intended to be used
+    as the body of a PUT /allocations/{consumer_uuid} HTTP request at
+    micoversion 1.12 (and beyond). The JSON objects look like the following:
+
+    [
+        {
+            "allocations": {
+                $rp_uuid1: {
+                    "resources": {
+                        "MEMORY_MB": 512
+                        ...
+                    }
+                },
+                $rp_uuid2: {
+                    "resources": {
+                        "DISK_GB": 1024
+                        ...
+                    }
+                }
+            },
+        },
+        ...
+    ]
+    """
+    results = []
+
+    for ar in alloc_reqs:
+        # A default dict of {$rp_uuid: "resources": {})
+        rp_resources = collections.defaultdict(lambda: dict(resources={}))
+        for rr in ar.resource_requests:
+            res_dict = rp_resources[rr.resource_provider.uuid]['resources']
+            res_dict[rr.resource_class] = rr.amount
+        results.append(dict(allocations=rp_resources))
+
+    return results
+
+
+def _transform_allocation_requests_list(alloc_reqs):
     """Turn supplied list of AllocationRequest objects into a list of dicts of
     resources involved in the allocation request. The returned results is
     intended to be able to be used as the body of a PUT
@@ -132,7 +172,7 @@ def _transform_provider_summaries(p_sums):
     }
 
 
-def _transform_allocation_candidates(alloc_cands):
+def _transform_allocation_candidates(alloc_cands, want_version):
     """Turn supplied AllocationCandidates object into a dict containing
     allocation requests and provider summaries.
 
@@ -141,7 +181,12 @@ def _transform_allocation_candidates(alloc_cands):
         'provider_summaries': <PROVIDER_SUMMARIES>,
     }
     """
-    a_reqs = _transform_allocation_requests(alloc_cands.allocation_requests)
+    if want_version.matches((1, 12)):
+        a_reqs = _transform_allocation_requests_dict(
+            alloc_cands.allocation_requests)
+    else:
+        a_reqs = _transform_allocation_requests_list(
+            alloc_cands.allocation_requests)
     p_sums = _transform_provider_summaries(alloc_cands.provider_summaries)
     return {
         'allocation_requests': a_reqs,
@@ -160,6 +205,7 @@ def list_allocation_candidates(req):
     a collection of allocation requests and provider summaries
     """
     context = req.environ['placement.context']
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     schema = _GET_SCHEMA_1_10
     util.validate_query_params(req, schema)
 
@@ -173,7 +219,7 @@ def list_allocation_candidates(req):
             {'error': exc})
 
     response = req.response
-    trx_cands = _transform_allocation_candidates(cands)
+    trx_cands = _transform_allocation_candidates(cands, want_version)
     json_data = jsonutils.dumps(trx_cands)
     response.body = encodeutils.to_utf8(json_data)
     response.content_type = 'application/json'
