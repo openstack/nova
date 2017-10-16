@@ -453,7 +453,7 @@ class _TestInstanceObject(object):
         mock_db_instance_update_and_get_original.assert_called_once_with(
             self.context, fake_uuid, expected_updates,
             columns_to_join=['info_cache', 'security_groups',
-                             'system_metadata', 'extra', 'extra.flavor']
+                             'system_metadata']
         )
         if cell_type == 'api':
             mock_cells_rpcapi_CellsAPI.return_value.instance_update_from_api \
@@ -523,7 +523,7 @@ class _TestInstanceObject(object):
             columns_to_join=['info_cache', 'security_groups'])
         mock_update_and_get.assert_called_once_with(self.context, fake_uuid,
             expected_updates, columns_to_join=['info_cache', 'security_groups',
-            'system_metadata', 'extra', 'extra.flavor'])
+            'system_metadata'])
         mock_send.assert_called_once_with(self.context, mock.ANY, mock.ANY)
 
     @mock.patch('nova.db.instance_extra_update_by_uuid')
@@ -732,8 +732,7 @@ class _TestInstanceObject(object):
                 mock.call(self.context, inst.uuid,
                     {'vm_state': 'foo', 'task_state': 'bar',
                      'cell_name': 'foo!bar@baz'},
-                    columns_to_join=['tags', 'system_metadata',
-                                     'extra', 'extra.flavor']),
+                    columns_to_join=['tags', 'system_metadata']),
                 mock.call(self.context, inst.uuid,
                     {'vm_state': 'bar', 'task_state': 'foo'},
                     columns_to_join=['system_metadata', 'tags'])]
