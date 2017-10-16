@@ -5180,8 +5180,7 @@ class LibvirtDriver(driver.ComputeDriver):
                          destroy_disks=destroy_disks)
 
     def _create_domain_and_network(self, context, xml, instance, network_info,
-                                   block_device_info=None,
-                                   power_on=True, reboot=False,
+                                   block_device_info=None, power_on=True,
                                    vifs_already_plugged=False,
                                    post_xml_callback=None,
                                    destroy_disks_on_failure=False):
@@ -5193,7 +5192,7 @@ class LibvirtDriver(driver.ComputeDriver):
         for vol in block_device_mapping:
             connection_info = vol['connection_info']
 
-            if (not reboot and 'data' in connection_info and
+            if ('data' in connection_info and
                     'volume_id' in connection_info['data']):
                 volume_id = connection_info['data']['volume_id']
                 encryption = encryptors.get_encryption_metadata(
