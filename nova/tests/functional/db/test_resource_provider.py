@@ -1314,6 +1314,14 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
         self.assertEqual(1, len(usage_list))
         self.assertEqual(200, usage_list[0].usage)
 
+        # List allocations and confirm project and user
+        allocation_list = rp_obj.AllocationList.get_all_by_consumer_id(
+            self.ctx, other_consumer_uuid)
+        self.assertEqual(1, len(allocation_list))
+        allocation = allocation_list[0]
+        self.assertEqual(self.ctx.project_id, allocation.project_id)
+        self.assertEqual(uuidsentinel.other_user, allocation.user_id)
+
     def test_create_and_clear(self):
         """Test that a used of 0 in an allocation wipes allocations."""
         consumer_uuid = uuidsentinel.consumer
