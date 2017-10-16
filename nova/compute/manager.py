@@ -979,25 +979,7 @@ class ComputeManager(manager.Manager):
                   instance=instance)
 
         if expect_running and CONF.resume_guests_state_on_host_boot:
-            LOG.info('Rebooting instance after nova-compute restart.',
-                     instance=instance)
-
-            block_device_info = \
-                self._get_instance_block_device_info(context, instance)
-
-            try:
-                self.driver.resume_state_on_host_boot(
-                    context, instance, net_info, block_device_info)
-            except NotImplementedError:
-                LOG.warning('Hypervisor driver does not support '
-                            'resume guests', instance=instance)
-            except Exception:
-                # NOTE(vish): The instance failed to resume, so we set the
-                #             instance to error and attempt to continue.
-                LOG.warning('Failed to resume instance',
-                            instance=instance)
-                self._set_instance_obj_error_state(context, instance)
-
+            self._resume_guests_state(context, instance, net_info)
         elif drv_state == power_state.RUNNING:
             # VMwareAPI drivers will raise an exception
             try:
@@ -1006,6 +988,25 @@ class ComputeManager(manager.Manager):
             except NotImplementedError:
                 LOG.debug('Hypervisor driver does not support '
                           'firewall rules', instance=instance)
+
+    def _resume_guests_state(self, context, instance, net_info):
+        LOG.info('Rebooting instance after nova-compute restart.',
+                 instance=instance)
+        block_device_info = \
+            self._get_instance_block_device_info(context, instance)
+
+        try:
+            self.driver.resume_state_on_host_boot(
+                context, instance, net_info, block_device_info)
+        except NotImplementedError:
+            LOG.warning('Hypervisor driver does not support '
+                        'resume guests', instance=instance)
+        except Exception:
+            # NOTE(vish): The instance failed to resume, so we set the
+            #             instance to error and attempt to continue.
+            LOG.warning('Failed to resume instance',
+                        instance=instance)
+            self._set_instance_obj_error_state(context, instance)
 
     def _retry_reboot(self, context, instance, current_power_state):
         current_task_state = instance.task_state
