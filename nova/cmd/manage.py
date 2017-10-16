@@ -1422,10 +1422,11 @@ class CellV2Commands(object):
 
     def _get_and_map_instances(self, ctxt, cell_mapping, limit, marker):
         filters = {}
-        instances = objects.InstanceList.get_by_filters(
-                ctxt.elevated(read_deleted='yes'), filters,
-                sort_key='created_at', sort_dir='asc', limit=limit,
-                marker=marker)
+        with context.target_cell(ctxt, cell_mapping) as cctxt:
+            instances = objects.InstanceList.get_by_filters(
+                    cctxt.elevated(read_deleted='yes'), filters,
+                    sort_key='created_at', sort_dir='asc', limit=limit,
+                    marker=marker)
 
         for instance in instances:
             try:
@@ -1453,9 +1454,9 @@ class CellV2Commands(object):
     def map_instances(self, cell_uuid, max_count=None):
         """Map instances into the provided cell.
 
-        This assumes that Nova on this host is still configured to use the nova
-        database not just the nova-api database. Instances in the nova database
-        will be queried from oldest to newest and mapped to the provided cell.
+        Instances in the nova database of the provided cell (nova database
+        info is obtained from the nova-api database) will be queried from
+        oldest to newest and if unmapped, will be mapped to the provided cell.
         A max-count can be set on the number of instance to map in a single
         run. Repeated runs of the command will start from where the last run
         finished so it is not necessary to increase max-count to finish. An
