@@ -13,35 +13,36 @@ Nova Scheduler
 :Manual section: 1
 :Manual group: cloud computing
 
-SYNOPSIS
+Synopsis
 ========
 
   nova-scheduler [options]
 
-DESCRIPTION
+Description
 ===========
 
-Nova Scheduler picks a compute node to run a VM instance.
+`nova-scheduler` is a server daemon that serves the Nova Scheduler service,
+which is responsible for picking a compute node to run a given instance on.
 
-OPTIONS
+Options
 =======
 
  **General options**
 
-FILES
-========
+Files
+=====
 
-* /etc/nova/nova.conf
-* /etc/nova/policy.json
-* /etc/nova/rootwrap.conf
-* /etc/nova/rootwrap.d/
+* ``/etc/nova/nova.conf``
+* ``/etc/nova/policy.json``
+* ``/etc/nova/rootwrap.conf``
+* ``/etc/nova/rootwrap.d/``
 
-SEE ALSO
+See Also
 ========
 
 * `OpenStack Nova <https://docs.openstack.org/nova/latest/>`__
 
-BUGS
+Bugs
 ====
 
-* Nova bugs are managed at Launchpad `Bugs : Nova <https://bugs.launchpad.net/nova>`__
+* Nova bugs are managed at `Launchpad <https://bugs.launchpad.net/nova>`__

@@ -2,9 +2,9 @@
 nova-spicehtml5proxy
 ====================
 
---------------------------------------------------------
-Websocket Proxy for OpenStack Nova SPICE HTML5 consoles.
---------------------------------------------------------
+-------------------------------------------------------
+Websocket Proxy for OpenStack Nova SPICE HTML5 consoles
+-------------------------------------------------------
 
 :Author: openstack@lists.openstack.org
 :Date:   2012-09-27
@@ -13,36 +13,37 @@ Websocket Proxy for OpenStack Nova SPICE HTML5 consoles.
 :Manual section: 1
 :Manual group: cloud computing
 
-SYNOPSIS
+Synopsis
 ========
 
   nova-spicehtml5proxy [options]
 
-DESCRIPTION
+Description
 ===========
 
-Websocket proxy that is compatible with OpenStack Nova
-SPICE HTML5 consoles.
+`nova-spicehtml5proxy` is a server daemon that serves the Nova SPICE HTML5
+Websocket Proxy service, which provides a websocket proxy that is compatible
+with OpenStack Nova SPICE HTML5 consoles.
 
-OPTIONS
+Options
 =======
 
  **General options**
 
-FILES
-========
+Files
+=====
 
-* /etc/nova/nova.conf
-* /etc/nova/policy.json
-* /etc/nova/rootwrap.conf
-* /etc/nova/rootwrap.d/
+* ``/etc/nova/nova.conf``
+* ``/etc/nova/policy.json``
+* ``/etc/nova/rootwrap.conf``
+* ``/etc/nova/rootwrap.d/``
 
-SEE ALSO
+See Also
 ========
 
 * `OpenStack Nova <https://docs.openstack.org/nova/latest/>`__
 
-BUGS
+Bugs
 ====
 
-* Nova bugs are managed at Launchpad `Bugs : Nova <https://bugs.launchpad.net/nova>`__
+* Nova bugs are managed at `Launchpad <https://bugs.launchpad.net/nova>`__

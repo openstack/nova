@@ -13,38 +13,38 @@ Server for the OpenStack Compute APIs
 :Manual section: 1
 :Manual group: cloud computing
 
-SYNOPSIS
+Synopsis
 ========
 
   nova-api  [options]
 
-DESCRIPTION
+Description
 ===========
 
-nova-api is a server daemon that serves the metadata and compute APIs in
+`nova-api` is a server daemon that serves the metadata and compute APIs in
 separate greenthreads
 
-OPTIONS
+Options
 =======
 
  **General options**
 
-FILES
-========
+Files
+=====
 
-* /etc/nova/nova.conf
-* /etc/nova/api-paste.ini
-* /etc/nova/policy.json
-* /etc/nova/rootwrap.conf
-* /etc/nova/rootwrap.d/
+* ``/etc/nova/nova.conf``
+* ``/etc/nova/api-paste.ini``
+* ``/etc/nova/policy.json``
+* ``/etc/nova/rootwrap.conf``
+* ``/etc/nova/rootwrap.d/``
 
-SEE ALSO
+See Also
 ========
 
 * `OpenStack Nova <https://docs.openstack.org/nova/latest/>`__
 * `Using WSGI with Nova <https://docs.openstack.org/nova/latest/user/wsgi.html>`__
 
-BUGS
+Bugs
 ====
 
-* Nova bugs are managed at Launchpad `Bugs : Nova <https://bugs.launchpad.net/nova>`__
+* Nova bugs are managed at `Launchpad <https://bugs.launchpad.net/nova>`__

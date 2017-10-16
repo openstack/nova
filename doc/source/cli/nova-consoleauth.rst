@@ -2,9 +2,9 @@
 nova-consoleauth
 ================
 
--------------------------------------------
+----------------------------------
 Nova Console Authentication Server
--------------------------------------------
+----------------------------------
 
 :Author: openstack@lists.openstack.org
 :Date:   2012-09-27
@@ -13,35 +13,36 @@ Nova Console Authentication Server
 :Manual section: 1
 :Manual group: cloud computing
 
-SYNOPSIS
+Synopsis
 ========
 
   nova-consoleauth [options]
 
-DESCRIPTION
+Description
 ===========
 
-Provides Authentication for nova consoles
+`nova-consoleauth` is a server daemon that serves the Nova Console Auth
+service, which provides authentication for Nova consoles.
 
-OPTIONS
+Options
 =======
 
  **General options**
 
-FILES
-========
+Files
+=====
 
-* /etc/nova/nova.conf
-* /etc/nova/policy.json
-* /etc/nova/rootwrap.conf
-* /etc/nova/rootwrap.d/
+* ``/etc/nova/nova.conf``
+* ``/etc/nova/policy.json``
+* ``/etc/nova/rootwrap.conf``
+* ``/etc/nova/rootwrap.d/``
 
-SEE ALSO
+See Also
 ========
 
 * `OpenStack Nova <https://docs.openstack.org/nova/latest/>`__
 
-BUGS
+Bugs
 ====
 
-* Nova bugs are managed at Launchpad `Bugs : Nova <https://bugs.launchpad.net/nova>`__
+* Nova bugs are managed at `Launchpad <https://bugs.launchpad.net/nova>`__

@@ -2,9 +2,9 @@
 nova-xvpvncproxy
 ================
 
------------------------------
+----------------------------
 XVP VNC Console Proxy Server
------------------------------
+----------------------------
 
 :Author: openstack@lists.openstack.org
 :Date:   2012-09-27
@@ -13,35 +13,37 @@ XVP VNC Console Proxy Server
 :Manual section: 1
 :Manual group: cloud computing
 
-SYNOPSIS
+Synopsis
 ========
 
   nova-xvpvncproxy  [options]
 
-DESCRIPTION
+Description
 ===========
 
-XVP VNC Console Proxy Server
+`nova-xvpvncproxy` is a server daemon that serves the Nova XVP VNC Console
+Proxy service, which provides an XVP-based VNC Console Proxy for use with the
+Xen hypervisor.
 
-OPTIONS
+Options
 =======
 
  **General options**
 
-FILES
-========
+Files
+=====
 
-* /etc/nova/nova.conf
-* /etc/nova/policy.json
-* /etc/nova/rootwrap.conf
-* /etc/nova/rootwrap.d/
+* ``/etc/nova/nova.conf``
+* ``/etc/nova/policy.json``
+* ``/etc/nova/rootwrap.conf``
+* ``/etc/nova/rootwrap.d/``
 
-SEE ALSO
+See Also
 ========
 
 * `OpenStack Nova <https://docs.openstack.org/nova/latest/>`__
 
-BUGS
+Bugs
 ====
 
-* Nova bugs are managed at Launchpad `Bugs : Nova <https://bugs.launchpad.net/nova>`__
+* Nova bugs are managed at `Launchpad <https://bugs.launchpad.net/nova>`__

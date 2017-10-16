@@ -3,7 +3,7 @@ nova-manage
 ===========
 
 -------------------------------------------
-control and manage cloud computer instances
+Control and manage cloud computer instances
 -------------------------------------------
 
 :Author: openstack@lists.openstack.org
@@ -13,27 +13,32 @@ control and manage cloud computer instances
 :Manual section: 1
 :Manual group: cloud computing
 
-SYNOPSIS
+Synopsis
 ========
 
   nova-manage <category> <action> [<args>]
 
-DESCRIPTION
+Description
 ===========
 
-nova-manage controls cloud computing instances by managing shell selection, vpn connections, and floating IP address configuration. More information about OpenStack Nova is at https://docs.openstack.org/developer/nova.
+`nova-manage` controls cloud computing instances by managing various admin-only
+aspects of Nova.
 
-OPTIONS
+Options
 =======
 
-The standard pattern for executing a nova-manage command is:
-``nova-manage <category> <command> [<args>]``
+The standard pattern for executing a nova-manage command is::
 
-Run without arguments to see a list of available command categories:
-``nova-manage``
+  nova-manage <category> <command> [<args>]
 
-You can also run with a category argument such as user to see a list of all commands in that category:
-``nova-manage db``
+Run without arguments to see a list of available command categories::
+
+  nova-manage
+
+You can also run with a category argument such as user to see a list of all
+commands in that category::
+
+  nova-manage db
 
 These sections describe the available categories and arguments for nova-manage.
 
@@ -172,56 +177,56 @@ Nova Cells v2
 ``nova-manage cell_v2 create_cell [--name <cell_name>] [--transport-url <transport_url>] [--database_connection <database_connection>] [--verbose]``
 
     Create a cell mapping to the database connection and message queue
-    transport url. If a database_connection is not specified, it will use
-    the one defined by ``[database]/connection`` in the configuration file
-    passed to nova-manage. If a transport_url is not specified, it will use
-    the one defined by ``[DEFAULT]/transport_url`` in the configuration file.
-    The verbose option will print out the resulting cell mapping uuid.
-    Returns 0 if the cell mapping was successfully created, 1 if the
-    transport url or database connection was missing, and 2 if a cell is
-    already using that transport url and database connection combination.
+    transport url. If a database_connection is not specified, it will use the
+    one defined by ``[database]/connection`` in the configuration file passed
+    to nova-manage. If a transport_url is not specified, it will use the one
+    defined by ``[DEFAULT]/transport_url`` in the configuration file.  The
+    verbose option will print out the resulting cell mapping uuid.  Returns 0
+    if the cell mapping was successfully created, 1 if the transport url or
+    database connection was missing, and 2 if a cell is already using that
+    transport url and database connection combination.
 
 ``nova-manage cell_v2 discover_hosts [--cell_uuid <cell_uuid>] [--verbose] [--strict]``
 
     Searches cells, or a single cell, and maps found hosts. This command will
-    check the database for each cell (or a single one if passed in) and map
-    any hosts which are not currently mapped. If a host is already mapped
-    nothing will be done. You need to re-run this command each time you add
-    more compute hosts to a cell (otherwise the scheduler will never place
-    instances there and the API will not list the new hosts). If the strict
-    option is provided the command will only be considered successful if an
-    unmapped host is discovered (exit code 0). Any other case is considered a
-    failure (exit code 1).
+    check the database for each cell (or a single one if passed in) and map any
+    hosts which are not currently mapped. If a host is already mapped nothing
+    will be done. You need to re-run this command each time you add more
+    compute hosts to a cell (otherwise the scheduler will never place instances
+    there and the API will not list the new hosts). If the strict option is
+    provided the command will only be considered successful if an unmapped host
+    is discovered (exit code 0). Any other case is considered a failure (exit
+    code 1).
 
 ``nova-manage cell_v2 list_cells [--verbose]``
 
     Lists the v2 cells in the deployment. By default only the cell name and
-    uuid are shown. Use the --verbose option to see transport url and
-    database connection details.
+    uuid are shown. Use the --verbose option to see transport url and database
+    connection details.
 
 ``nova-manage cell_v2 delete_cell --cell_uuid <cell_uuid>``
 
     Delete an empty cell by the given uuid. Returns 0 if the empty cell is
     found and deleted successfully, 1 if a cell with that uuid could not be
-    found, 2 if host mappings were found for the cell (cell not empty), and
-    3 if there are instances mapped to the cell (cell not empty).
+    found, 2 if host mappings were found for the cell (cell not empty), and 3
+    if there are instances mapped to the cell (cell not empty).
 
 ``nova-manage cell_v2 update_cell --cell_uuid <cell_uuid> [--name <cell_name>] [--transport-url <transport_url>] [--database_connection <database_connection>]``
 
     Updates the properties of a cell by the given uuid. If a
     database_connection is not specified, it will attempt to use the one
     defined by ``[database]/connection`` in the configuration file.  If a
-    transport_url is not specified, it will attempt to use the one defined
-    by ``[DEFAULT]/transport_url`` in the configuration file. If the cell
-    is not found by uuid, this command will return an exit code of 1. If
-    the properties cannot be set, this will return 2. Otherwise, the exit
-    code will be 0.
+    transport_url is not specified, it will attempt to use the one defined by
+    ``[DEFAULT]/transport_url`` in the configuration file. If the cell is not
+    found by uuid, this command will return an exit code of 1. If the
+    properties cannot be set, this will return 2. Otherwise, the exit code will
+    be 0.
 
     .. note::
 
-      Updating the transport_url or database_connection fields on
-      a running system will NOT result in all nodes immediately using the
-      new values. Use caution when changing these values.
+      Updating the ``transport_url`` or ``database_connection`` fields on a
+      running system will NOT result in all nodes immediately using the new
+      values.  Use caution when changing these values.
 
 Nova Logs
 ~~~~~~~~~
@@ -305,15 +310,12 @@ Nova Project
     This command has been deprecated and is now a no-op since quota usage is
     counted from resources instead of being tracked separately.
 
-SEE ALSO
+See Also
 ========
 
 * `OpenStack Nova <https://docs.openstack.org/nova/latest/>`__
 
-BUGS
+Bugs
 ====
 
-* Nova bugs are managed at Launchpad `Bugs : Nova <https://bugs.launchpad.net/nova>`__
-
-
-
+* Nova bugs are managed at `Launchpad <https://bugs.launchpad.net/nova>`__
