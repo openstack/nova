@@ -1285,7 +1285,20 @@ class LibvirtDriver(driver.ComputeDriver):
                 # allow writing to existing external volume file. Use
                 # VIR_DOMAIN_BLOCK_REBASE_COPY_DEV if it's a block device to
                 # make sure XML is generated correctly (bug 1691195)
-                copy_dev = conf.source_type == 'block'
+                # NOTE(mriedem): VIR_DOMAIN_BLOCK_REBASE_COPY_DEV was
+                # introduced in libvirt 1.2.9 and since we support >= 1.2.1
+                # we have to guard against the flag not being available.
+                if hasattr(libvirt, 'VIR_DOMAIN_BLOCK_REBASE_COPY_DEV'):
+                    copy_dev = conf.source_type == 'block'
+                else:
+                    copy_dev = False
+                    # Leave a breadcrumb.
+                    if conf.source_type == 'block':
+                        LOG.warning(_LW(
+                            'Rebasing a block device using libvirt < 1.2.9 '
+                            'where the VIR_DOMAIN_BLOCK_REBASE_COPY_DEV '
+                            'flag is not available. This may lead to failures '
+                            'later if the volume is swapped again.'))
                 dev.rebase(conf.source_path, copy=True, reuse_ext=True,
                            copy_dev=copy_dev)
                 while not dev.is_job_complete():

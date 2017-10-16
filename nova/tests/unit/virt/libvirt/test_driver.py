@@ -14837,6 +14837,51 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                 srcfile, 1 * units.Gi / units.Ki)
             mock_define.assert_called_once_with(xmldoc)
 
+    @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
+    def test_swap_volume_block_old_libvirt(self, mock_is_job_complete):
+        """If the swapped volume is type="block", make sure that we don't give
+        libvirt the VIR_DOMAIN_BLOCK_REBASE_COPY_DEV flag if the version
+        of libvirt is so old that it doesn't have that flag (bug 1724039)
+        """
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+
+        mock_dom = mock.MagicMock()
+        guest = libvirt_guest.Guest(mock_dom)
+
+        with mock.patch.object(drvr._conn, 'defineXML',
+                               create=True) as mock_define:
+            xmldoc = "<domain/>"
+            srcfile = "/first/path"
+            dstfile = "/second/path"
+
+            mock_dom.XMLDesc.return_value = xmldoc
+            mock_dom.isPersistent.return_value = True
+            mock_is_job_complete.return_value = True
+
+            # Temporarily remove the global.
+            copy_dev = libvirt_driver.libvirt.VIR_DOMAIN_BLOCK_REBASE_COPY_DEV
+            delattr(libvirt_driver.libvirt, 'VIR_DOMAIN_BLOCK_REBASE_COPY_DEV')
+            try:
+                drvr._swap_volume(guest, srcfile,
+                                  mock.MagicMock(source_type='block',
+                                                 source_path=dstfile),
+                                  1)
+            finally:
+                # Reset the global.
+                libvirt_driver.libvirt.VIR_DOMAIN_BLOCK_REBASE_COPY_DEV = \
+                    copy_dev
+
+            mock_dom.XMLDesc.assert_called_once_with(
+                flags=(fakelibvirt.VIR_DOMAIN_XML_INACTIVE |
+                       fakelibvirt.VIR_DOMAIN_XML_SECURE))
+            mock_dom.blockRebase.assert_called_once_with(
+                srcfile, dstfile, 0, flags=(
+                    fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_COPY |
+                    fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT))
+            mock_dom.blockResize.assert_called_once_with(
+                srcfile, 1 * units.Gi / units.Ki)
+            mock_define.assert_called_once_with(xmldoc)
+
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._swap_volume')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_config')
