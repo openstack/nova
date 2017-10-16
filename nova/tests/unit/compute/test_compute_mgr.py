@@ -1783,6 +1783,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                                       db_instance)
         e = exception.InterfaceAttachFailed(instance_uuid=f_instance.uuid)
 
+        @mock.patch.object(compute_utils, 'EventReporter')
         @mock.patch.object(compute_utils, 'notify_about_instance_action')
         @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
         @mock.patch.object(self.compute.network_api,
@@ -1790,7 +1791,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                            side_effect=e)
         @mock.patch.object(self.compute, '_instance_update',
                            side_effect=lambda *a, **k: {})
-        def do_test(update, meth, add_fault, notify):
+        def do_test(update, meth, add_fault, notify, event):
             self.assertRaises(exception.InterfaceAttachFailed,
                               self.compute.attach_interface,
                               self.context, f_instance, 'net_id', 'port_id',
@@ -1798,6 +1799,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             add_fault.assert_has_calls([
                     mock.call(self.context, f_instance, e,
                               mock.ANY)])
+            event.assert_called_once_with(
+                self.context, 'compute_attach_interface',
+                f_instance.uuid)
 
         with mock.patch.dict(self.compute.driver.capabilities,
                              supports_attach_interface=True):
@@ -1807,18 +1811,24 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         # Test that the fault methods are invoked when a detach fails
 
         # Build test data that will cause a PortNotFound exception
-        f_instance = mock.MagicMock()
-        f_instance.info_cache = mock.MagicMock()
-        f_instance.info_cache.network_info = []
+        nw_info = network_model.NetworkInfo([])
+        info_cache = objects.InstanceInfoCache(network_info=nw_info,
+                                               instance_uuid=uuids.instance)
+        f_instance = objects.Instance(id=3, uuid=uuids.instance,
+                                      info_cache=info_cache)
 
+        @mock.patch.object(compute_utils, 'EventReporter')
         @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
         @mock.patch.object(self.compute, '_set_instance_obj_error_state')
-        def do_test(meth, add_fault):
+        def do_test(meth, add_fault, event):
             self.assertRaises(exception.PortNotFound,
                               self.compute.detach_interface,
                               self.context, f_instance, 'port_id')
             add_fault.assert_has_calls(
                    [mock.call(self.context, f_instance, mock.ANY, mock.ANY)])
+            event.assert_called_once_with(
+                self.context, 'compute_detach_interface',
+                f_instance.uuid)
 
         do_test()
 

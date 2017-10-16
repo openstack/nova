@@ -5469,6 +5469,7 @@ class ComputeManager(manager.Manager):
             pass
 
     @wrap_exception()
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def attach_interface(self, context, instance, network_id, port_id,
                          requested_ip, tag=None):
@@ -5532,6 +5533,7 @@ class ComputeManager(manager.Manager):
         return network_info[0]
 
     @wrap_exception()
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def detach_interface(self, context, instance, port_id):
         """Detach a network adapter from an instance."""

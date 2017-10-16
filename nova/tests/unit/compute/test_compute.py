@@ -9823,11 +9823,7 @@ class ComputeAPITestCase(BaseTestCase):
 
     @mock.patch.object(compute_utils, 'notify_about_instance_action')
     def test_attach_interface(self, mock_notify):
-        new_type = flavors.get_flavor_by_flavor_id('4')
-        instance = objects.Instance(image_ref=uuids.image_instance,
-                                    system_metadata={},
-                                    flavor=new_type,
-                                    host='fake-host')
+        instance = self._create_fake_instance_obj()
         nwinfo = [fake_network_cache_model.new_vif()]
         network_id = nwinfo[0]['network']['id']
         port_id = nwinfo[0]['id']
@@ -9845,7 +9841,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(vif['id'], network_id)
         mock_allocate.assert_called_once_with(
             self.context, instance, port_id, network_id, req_ip,
-            bind_host_id='fake-host', tag=None)
+            bind_host_id='fake-mini', tag=None)
         mock_notify.assert_has_calls([
             mock.call(self.context, instance, self.compute.host,
                       action='interface_attach', phase='start'),
@@ -9855,11 +9851,7 @@ class ComputeAPITestCase(BaseTestCase):
 
     @mock.patch.object(compute_utils, 'notify_about_instance_action')
     def test_interface_tagged_attach(self, mock_notify):
-        new_type = flavors.get_flavor_by_flavor_id('4')
-        instance = objects.Instance(image_ref=uuids.image_instance,
-                                    system_metadata={},
-                                    flavor=new_type,
-                                    host='fake-host')
+        instance = self._create_fake_instance_obj()
         nwinfo = [fake_network_cache_model.new_vif()]
         network_id = nwinfo[0]['network']['id']
         port_id = nwinfo[0]['id']
@@ -9878,7 +9870,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual(vif['id'], network_id)
         mock_allocate.assert_called_once_with(
             self.context, instance, port_id, network_id, req_ip,
-            bind_host_id='fake-host', tag='foo')
+            bind_host_id='fake-mini', tag='foo')
         mock_notify.assert_has_calls([
             mock.call(self.context, instance, self.compute.host,
                       action='interface_attach', phase='start'),
@@ -9947,7 +9939,7 @@ class ComputeAPITestCase(BaseTestCase):
         self.stub_out('nova.network.api.API.'
                        'deallocate_port_for_instance',
                        lambda a, b, c, d: [])
-        instance = objects.Instance()
+        instance = self._create_fake_instance_obj()
         instance.info_cache = objects.InstanceInfoCache.new(
             self.context, uuids.info_cache_instance)
         instance.info_cache.network_info = network_model.NetworkInfo.hydrate(
@@ -9962,7 +9954,7 @@ class ComputeAPITestCase(BaseTestCase):
 
     def test_detach_interface_failed(self):
         nwinfo, port_id = self.test_attach_interface()
-        instance = objects.Instance(id=42)
+        instance = self._create_fake_instance_obj()
         instance['uuid'] = uuids.info_cache_instance
         instance.info_cache = objects.InstanceInfoCache.new(
             self.context, uuids.info_cache_instance)
@@ -9990,7 +9982,7 @@ class ComputeAPITestCase(BaseTestCase):
         # Tests that when deallocate_port_for_instance fails we log the failure
         # before exiting compute.detach_interface.
         nwinfo, port_id = self.test_attach_interface()
-        instance = objects.Instance(id=42, uuid=uuids.fake)
+        instance = self._create_fake_instance_obj()
         instance.info_cache = objects.InstanceInfoCache.new(
             self.context, uuids.info_cache_instance)
         instance.info_cache.network_info = network_model.NetworkInfo.hydrate(

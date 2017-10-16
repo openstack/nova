@@ -60,3 +60,5 @@ TRIGGER_CRASH_DUMP = 'trigger_crash_dump'
 # is used for tracking this asynchronous operation so the user/admin can know
 # when it is done in case they need/want to reboot the guest operating system.
 EXTEND_VOLUME = 'extend_volume'
+ATTACH_INTERFACE = 'attach_interface'
+DETACH_INTERFACE = 'detach_interface'
