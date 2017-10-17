@@ -661,6 +661,30 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.assertThat(test_bdm['connection_info'],
                         matchers.DictMatches(expected_conn_info))
 
+    def test_refresh_connection_info_with_attachment_id(self):
+        """Tests refreshing connection info when the DriverVolumeBlockDevice
+        has a new style attachment_id set, which is a call to attachment_get
+        rather than initialize_connection.
+        """
+        test_bdm = self.driver_classes['volume'](self.volume_bdm)
+        test_bdm['attachment_id'] = uuids.attachment_id
+        connection_info = {'data': {'multipath_id': 'fake_multipath_id'}}
+        fake_attachment = dict(connection_info=connection_info)
+        expected_conn_info = {'data': {'multipath_id': 'fake_multipath_id'},
+                              'serial': self.volume_bdm.volume_id}
+
+        with mock.patch('nova.volume.cinder.API') as volume_api:
+            with mock.patch.object(test_bdm, 'save') as bdm_save:
+                volume_api.attachment_get.return_value = fake_attachment
+                test_bdm.refresh_connection_info(
+                    self.context, mock.sentinel.instance, volume_api,
+                    mock.sentinel.virt_driver)
+
+        volume_api.attachment_get.assert_called_once_with(
+            self.context, uuids.attachment_id)
+        self.assertDictEqual(expected_conn_info, test_bdm['connection_info'])
+        bdm_save.assert_called_once_with()
+
     def test_snapshot_attach_no_volume(self):
         no_volume_snapshot = self.snapshot_bdm_dict.copy()
         no_volume_snapshot['volume_id'] = None

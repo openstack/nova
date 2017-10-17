@@ -441,10 +441,16 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
         if not self['connection_info']:
             return
 
-        connector = virt_driver.get_volume_connector(instance)
-        connection_info = volume_api.initialize_connection(context,
-                                                           self.volume_id,
-                                                           connector)
+        if not self['attachment_id']:
+            connector = virt_driver.get_volume_connector(instance)
+            connection_info = volume_api.initialize_connection(context,
+                                                               self.volume_id,
+                                                               connector)
+        else:
+            attachment_ref = volume_api.attachment_get(context,
+                                                       self['attachment_id'])
+            connection_info = attachment_ref['connection_info']
+
         if 'serial' not in connection_info:
             connection_info['serial'] = self.volume_id
         self._preserve_multipath_id(connection_info)
