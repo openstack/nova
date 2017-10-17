@@ -14,9 +14,9 @@
 
 import collections
 import operator
+import webob
 
 import mock
-import webob
 
 # import the handlers to load up handler decorators
 import nova.api.openstack.placement.handler  # noqa
@@ -26,6 +26,16 @@ from nova import test
 
 def handler():
     return True
+
+
+class TestMicroversionFindMethod(test.NoDBTestCase):
+    def test_method_405(self):
+        self.assertRaises(webob.exc.HTTPMethodNotAllowed,
+                          microversion._find_method, handler, '1.1', 405)
+
+    def test_method_404(self):
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          microversion._find_method, handler, '1.1', 404)
 
 
 class TestMicroversionDecoration(test.NoDBTestCase):
@@ -74,7 +84,7 @@ class TestMicroversionIntersection(test.NoDBTestCase):
     # if you add two different versions of method 'foobar' the
     # number only goes up by one if no other version foobar yet
     # exists. This operates as a simple sanity check.
-    TOTAL_VERSIONED_METHODS = 16
+    TOTAL_VERSIONED_METHODS = 19
 
     def test_methods_versioned(self):
         methods_data = microversion.VERSIONED_METHODS
@@ -122,40 +132,6 @@ class TestMicroversionIntersection(test.NoDBTestCase):
             self.assertFalse(
                 self._check_intersection(method_info),
                 'method %s has intersecting versioned handlers' % method_name)
-
-
-class TestMicroversionUtility(test.NoDBTestCase):
-
-    req = webob.Request.blank('/', method="GET")
-    req.accept = 'application/json'
-
-    def test_raise_405_out_of_date_version(self):
-        version_obj = microversion.parse_version_string('1.4')
-        self.req.environ['placement.microversion'] = version_obj
-        self.assertRaises(webob.exc.HTTPMethodNotAllowed,
-             microversion.raise_http_status_code_if_not_version,
-             self.req, 405, (1, 5))
-
-    def test_raise_405_out_of_date_version_max(self):
-        version_obj = microversion.parse_version_string('1.4')
-        self.req.environ['placement.microversion'] = version_obj
-        self.assertRaises(webob.exc.HTTPMethodNotAllowed,
-             microversion.raise_http_status_code_if_not_version,
-             self.req, 405, (1, 2), '1.3')
-
-    def test_raise_keyerror_out_of_date_version_tuple(self):
-        version_obj = microversion.parse_version_string('1.4')
-        self.req.environ['placement.microversion'] = version_obj
-        self.assertRaises(KeyError,
-             microversion.raise_http_status_code_if_not_version,
-             self.req, 999, (1, 5))
-
-    def test_raise_keyerror_out_of_date_version_string(self):
-        version_obj = microversion.parse_version_string('1.4')
-        self.req.environ['placement.microversion'] = version_obj
-        self.assertRaises(KeyError,
-             microversion.raise_http_status_code_if_not_version,
-             self.req, 999, '1.5')
 
 
 class MicroversionSequentialTest(test.NoDBTestCase):

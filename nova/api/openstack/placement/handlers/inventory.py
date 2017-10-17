@@ -387,6 +387,7 @@ def set_inventories(req):
 
 
 @wsgi_wrapper.PlacementWsgify
+@microversion.version_handler('1.5', status_code=405)
 def delete_inventories(req):
     """DELETE all inventory for a resource provider.
 
@@ -395,7 +396,6 @@ def delete_inventories(req):
     On success return a 204 No content.
     Return 405 Method Not Allowed if the wanted microversion does not match.
     """
-    microversion.raise_http_status_code_if_not_version(req, 405, (1, 5))
     context = req.environ['placement.context']
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     resource_provider = rp_obj.ResourceProvider.get_by_uuid(
