@@ -653,6 +653,12 @@ class ComputeManager(manager.Manager):
         local_instances = self._get_instances_on_driver(context)
         evacuated = [inst for inst in local_instances
                      if inst.uuid in evacuations]
+
+        # NOTE(gibi): We are called from init_host and at this point the
+        # compute_nodes of the resource tracker has not been populated yet so
+        # we cannot rely on the resource tracker here.
+        compute_nodes = {}
+
         for instance in evacuated:
             migration = evacuations[instance.uuid]
             LOG.info('Deleting instance as it has been evacuated from '
@@ -676,9 +682,28 @@ class ComputeManager(manager.Manager):
                                 network_info,
                                 bdi, destroy_disks)
 
-            rt = self._get_resource_tracker()
-            rt.delete_allocation_for_evacuated_instance(
-                instance, migration.source_node)
+            # delete the allocation of the evacuated instance from this host
+            if migration.source_node not in compute_nodes:
+                try:
+                    cn_uuid = objects.ComputeNode.get_by_host_and_nodename(
+                        context, self.host, migration.source_node).uuid
+                    compute_nodes[migration.source_node] = cn_uuid
+                except exception.ComputeHostNotFound:
+                    LOG.error("Failed to clean allocation of evacuated "
+                              "instance as the source node %s is not found",
+                              migration.source_node, instance=instance)
+                    continue
+            cn_uuid = compute_nodes[migration.source_node]
+
+            my_resources = scheduler_utils.resources_from_flavor(
+                instance, instance.flavor)
+            res = self.reportclient.remove_provider_from_instance_allocation(
+                instance.uuid, cn_uuid, instance.user_id,
+                instance.project_id, my_resources)
+            if not res:
+                LOG.error("Failed to clean allocation of evacuated instance "
+                          "on the source node %s",
+                          cn_uuid, instance=instance)
 
             migration.status = 'completed'
             migration.save()
