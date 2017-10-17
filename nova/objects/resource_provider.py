@@ -1331,31 +1331,21 @@ def _get_all_with_shared(ctx, resources):
         joiner = sa.join
         if sps:
             joiner = sa.outerjoin
-        inv_join = joiner(
-            rp_link, it,
-            sa.and_(
-                jc,
-                # Add a join condition winnowing this copy of inventories table
-                # to only the resource class being analyzed in this loop...
-                it.c.resource_class_id == rc_id,
-            ),
-        )
+        # Add a join condition winnowing this copy of inventories table
+        # to only the resource class being analyzed in this loop...
+        inv_join = joiner(rp_link, it,
+            sa.and_(jc, it.c.resource_class_id == rc_id))
         lastij = it
-        usage_join = sa.outerjoin(
-            inv_join, ut,
-            it.c.resource_provider_id == ut.c.resource_provider_id,
-        )
+        usage_join = sa.outerjoin(inv_join, ut,
+            it.c.resource_provider_id == ut.c.resource_provider_id)
         join_chain = usage_join
 
         usage_cond = sa.and_(
-            (
-            (sql.func.coalesce(ut.c.used, 0) + amount) <=
-            (it.c.total - it.c.reserved) * it.c.allocation_ratio
-            ),
+            ((sql.func.coalesce(ut.c.used, 0) + amount) <=
+             (it.c.total - it.c.reserved) * it.c.allocation_ratio),
             it.c.min_unit <= amount,
             it.c.max_unit >= amount,
-            amount % it.c.step_size == 0,
-        )
+            amount % it.c.step_size == 0)
         if not sps:
             where_conds.append(usage_cond)
         else:
@@ -1366,24 +1356,19 @@ def _get_all_with_shared(ctx, resources):
                     it.c.resource_provider_id != sa.null(),
                     usage_cond,
                 ),
-                sharing.c.resource_provider_id != sa.null(),
-            )
+                sharing.c.resource_provider_id != sa.null())
             where_conds.append(cond)
 
             # We need to add the "butterfly" join now that produces the set of
             # resource providers associated with a provider that is sharing the
             # resource via an aggregate
-            shared_join = sa.outerjoin(
-                join_chain, shared,
-                rpt.c.id == shared.c.resource_provider_id,
-            )
-            sharing_join = sa.outerjoin(
-                shared_join, sharing,
+            shared_join = sa.outerjoin(join_chain, shared,
+                rpt.c.id == shared.c.resource_provider_id)
+            sharing_join = sa.outerjoin(shared_join, sharing,
                 sa.and_(
                     shared.c.aggregate_id == sharing.c.aggregate_id,
                     sharing.c.resource_provider_id.in_(sps),
-                ),
-            )
+                ))
             join_chain = sharing_join
 
     sel = sel.select_from(join_chain)
