@@ -1,0 +1,7 @@
+---
+upgrade:
+  - |
+    A new ``keystone`` config section is added so that you can
+    set session link attributes for communicating with keystone. This
+    allows the use of custom certificates to secure the link between
+    Nova and Keystone.
