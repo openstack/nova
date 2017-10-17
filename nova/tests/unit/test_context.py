@@ -276,6 +276,26 @@ class ContextTestCase(test.NoDBTestCase):
         self.assertEqual(mock.sentinel.db_conn, ctxt.db_connection)
         self.assertEqual(mock.sentinel.mq_conn, ctxt.mq_connection)
 
+    @mock.patch('nova.context.set_target_cell')
+    def test_target_cell_regenerates(self, mock_set):
+        ctxt = context.RequestContext('fake', 'fake')
+        # Set a non-tracked property on the context to make sure it
+        # does not make it to the targeted one (like a copy would do)
+        ctxt.sentinel = mock.sentinel.parent
+        with context.target_cell(ctxt, mock.sentinel.cm) as cctxt:
+            # Should be a different object
+            self.assertIsNot(cctxt, ctxt)
+
+            # Should not have inherited the non-tracked property
+            self.assertFalse(hasattr(cctxt, 'sentinel'),
+                             'Targeted context was copied from original')
+
+            # Set another non-tracked property
+            cctxt.sentinel = mock.sentinel.child
+
+        # Make sure we didn't pollute the original context
+        self.assertNotEqual(ctxt.sentinel, mock.sentinel.child)
+
     def test_get_context(self):
         ctxt = context.get_context()
         self.assertIsNone(ctxt.user_id)
