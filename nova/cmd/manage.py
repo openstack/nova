@@ -672,7 +672,7 @@ class DbCommands(object):
         pass
 
     @staticmethod
-    def print_dict(dct, dict_property="Property", dict_value='Value'):
+    def _print_dict(dct, dict_property="Property", dict_value='Value'):
         """Print a `dict` as a table of two columns.
 
         :param dct: `dict` to print
@@ -792,8 +792,8 @@ Error: %s""") % six.text_type(e))
                 sys.stdout.write('.')
         if verbose:
             if table_to_rows_archived:
-                self.print_dict(table_to_rows_archived, _('Table'),
-                                dict_value=_('Number of Rows Archived'))
+                self._print_dict(table_to_rows_archived, _('Table'),
+                                 dict_value=_('Number of Rows Archived'))
             else:
                 print(_('Nothing was archived.'))
         # NOTE(danms): Return nonzero if we archived something
@@ -1170,7 +1170,7 @@ class CellCommands(object):
                    'release.')
 
     @staticmethod
-    def parse_server_string(server_str):
+    def _parse_server_string(server_str):
         """Parses the given server_string and returns a tuple of host and port.
         If it's not a combination of host part and port, the port element is an
         empty string. If the input is invalid expression, return a tuple of two
@@ -1208,7 +1208,7 @@ class CellCommands(object):
             hosts = broker_hosts.split(',')
             for host in hosts:
                 host = host.strip()
-                broker_hostname, broker_port = self.parse_server_string(host)
+                broker_hostname, broker_port = self._parse_server_string(host)
                 if not broker_port:
                     msg = _('Invalid broker_hosts value: %s. It should be'
                             ' in hostname:port format') % host
