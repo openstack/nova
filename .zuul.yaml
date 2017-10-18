@@ -95,7 +95,8 @@
       Pike, the service user token functionality was added. This job is also
       unique in that it runs the post_test_hook from the nova repo, which runs
       post-test scripts to ensure those scripts are still working,
-      e.g. archive_deleted_rows.
+      e.g. archive_deleted_rows. In Queens, this job started testing the
+      TLS console proxy code in the libvirt driver.
     # TODO(mriedem): Make this voting once bug 1747511 is fixed.
     voting: false
     run: playbooks/legacy/nova-next/run.yaml
