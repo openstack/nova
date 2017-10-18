@@ -123,7 +123,8 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
   </devices>
 </domain>"""
         doc = etree.fromstring(xml)
-        res = etree.tostring(migration._update_serial_xml(doc, data))
+        res = etree.tostring(migration._update_serial_xml(doc, data),
+                             encoding='unicode')
         new_xml = xml.replace("127.0.0.1", "127.0.0.100").replace(
             "2000", "2001")
         self.assertThat(res, matchers.XMLMatches(new_xml))
@@ -145,7 +146,8 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
   </devices>
 </domain>"""
         doc = etree.fromstring(xml)
-        res = etree.tostring(migration._update_serial_xml(doc, data))
+        res = etree.tostring(migration._update_serial_xml(doc, data),
+                             encoding='unicode')
         new_xml = xml.replace("127.0.0.1", "127.0.0.100").replace(
             "2001", "299").replace("2002", "300")
 
@@ -170,7 +172,8 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
   </devices>
 </domain>"""
         doc = etree.fromstring(xml)
-        res = etree.tostring(migration._update_serial_xml(doc, data))
+        res = etree.tostring(migration._update_serial_xml(doc, data),
+                             encoding='unicode')
         new_xml = xml.replace("127.0.0.1", "127.0.0.100")
         self.assertThat(res, matchers.XMLMatches(new_xml))
 
@@ -189,7 +192,8 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
   </devices>
 </domain>"""
         doc = etree.fromstring(xml)
-        res = etree.tostring(migration._update_graphics_xml(doc, data))
+        res = etree.tostring(migration._update_graphics_xml(doc, data),
+                             encoding='unicode')
         new_xml = xml.replace("127.0.0.1", "127.0.0.100")
         new_xml = new_xml.replace("127.0.0.2", "127.0.0.200")
         self.assertThat(res, matchers.XMLMatches(new_xml))
@@ -238,7 +242,7 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
         get_volume_config = mock.MagicMock(return_value=conf)
         doc = etree.fromstring(xml)
         res = etree.tostring(migration._update_volume_xml(
-            doc, data, get_volume_config))
+            doc, data, get_volume_config), encoding='unicode')
         new_xml = xml.replace('ip-1.2.3.4:3260-iqn.abc.12345.opst-lun-X',
                               'ip-1.2.3.4:3260-iqn.cde.67890.opst-lun-Z')
         self.assertThat(res, matchers.XMLMatches(new_xml))
@@ -253,7 +257,8 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
   </perf>
 </domain>"""
         doc = etree.fromstring(xml)
-        res = etree.tostring(migration._update_perf_events_xml(doc, data))
+        res = etree.tostring(migration._update_perf_events_xml(doc, data),
+                             encoding='unicode')
 
         self.assertThat(res, matchers.XMLMatches("""<domain>
   <perf>
@@ -266,7 +271,8 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
         xml = """<domain>
 </domain>"""
         doc = etree.fromstring(xml)
-        res = etree.tostring(migration._update_perf_events_xml(doc, data))
+        res = etree.tostring(migration._update_perf_events_xml(doc, data),
+                             encoding='unicode')
 
         self.assertThat(res, matchers.XMLMatches("""<domain>
 <perf><event enabled="yes" name="cmt"/></perf></domain>"""))
@@ -280,7 +286,8 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
   </perf>
 </domain>"""
         doc = etree.fromstring(xml)
-        res = etree.tostring(migration._update_perf_events_xml(doc, data))
+        res = etree.tostring(migration._update_perf_events_xml(doc, data),
+                             encoding='unicode')
 
         self.assertThat(res, matchers.XMLMatches("""<domain>
   <perf>
@@ -296,7 +303,8 @@ class UtilityMigrationTestCase(test.NoDBTestCase):
   </perf>
 </domain>"""
         doc = etree.fromstring(xml)
-        res = etree.tostring(migration._update_perf_events_xml(doc, data))
+        res = etree.tostring(migration._update_perf_events_xml(doc, data),
+                             encoding='unicode')
 
         self.assertThat(res, matchers.XMLMatches("""<domain>
   <perf>

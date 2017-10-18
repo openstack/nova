@@ -47,7 +47,7 @@ class LibvirtConfigTest(LibvirtConfigBaseTest):
         root = obj.format_dom()
         root.append(obj._text_node("foo", "bar"))
 
-        xml = etree.tostring(root)
+        xml = etree.tostring(root, encoding='unicode')
         self.assertXmlEqual(xml, "<demo><foo>bar</foo></demo>")
 
     def test_config_text_unicode(self):
@@ -55,14 +55,14 @@ class LibvirtConfigTest(LibvirtConfigBaseTest):
         root = obj.format_dom()
         root.append(obj._text_node('foo', u'\xF0\x9F\x92\xA9'))
         self.assertXmlEqual('<demo><foo>&#240;&#159;&#146;&#169;</foo></demo>',
-                            etree.tostring(root))
+                            etree.tostring(root, encoding='unicode'))
 
     def test_config_text_node_name_attr(self):
         obj = config.LibvirtConfigObject(root_name='demo')
         root = obj.format_dom()
         root.append(obj._text_node('foo', 'bar', name='foobar'))
         self.assertXmlEqual('<demo><foo name="foobar">bar</foo></demo>',
-                            etree.tostring(root))
+                            etree.tostring(root, encoding='unicode'))
 
     def test_config_parse(self):
         inxml = "<demo><foo/></demo>"

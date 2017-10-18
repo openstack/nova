@@ -82,7 +82,7 @@ def get_updated_guest_xml(guest, migrate_data, get_volume_config):
     xml_doc = _update_serial_xml(xml_doc, migrate_data)
     xml_doc = _update_volume_xml(xml_doc, migrate_data, get_volume_config)
     xml_doc = _update_perf_events_xml(xml_doc, migrate_data)
-    return etree.tostring(xml_doc)
+    return etree.tostring(xml_doc, encoding='unicode')
 
 
 def _update_graphics_xml(xml_doc, migrate_data):
