@@ -26,12 +26,16 @@
     - shell:
         # TODO(mriedem): Consider setting USE_PYTHON3=True here to make this
         # job run under python 3.5 which is a "next" type thing.
+
+        # Enable TLS between the noVNC proxy & compute nodes; this requires
+        # the tls-proxy service to be enabled.
         cmd: |
           set -e
           set -x
           cat << 'EOF' >>"/tmp/dg-local.conf"
           [[local|localrc]]
           NOVA_USE_SERVICE_TOKEN=True
+          NOVA_CONSOLE_PROXY_COMPUTE_TLS=True
 
           EOF
         executable: /bin/bash
@@ -42,6 +46,8 @@
         cmd: |
           set -e
           set -x
+          # tls-proxy is needed to initialize the CA and cert.
+          export ENABLED_SERVICES=tls-proxy
           export PYTHONUNBUFFERED=true
           # Yes we want to run Tempest.
           export DEVSTACK_GATE_TEMPEST=1
