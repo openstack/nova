@@ -61,14 +61,11 @@ server status is one of the following values:
 -  ``SHELVED_OFFLOADED``: The shelved server is offloaded (removed from the
    compute host) and it needs unshelved action to be used again.
 
--  ``SHUTOFF``: The server was powered down by the user,
-   but not through the OpenStack Compute API. For example, the user
-   issued a ``shutdown -h`` command from within the server. If
-   the OpenStack Compute manager detects that the VM was powered down,
-   it transitions the server to the SHUTOFF status. If you use
-   the OpenStack Compute API to restart the server, it might
-   be deleted first, depending on the value in the
-   *``shutdown_terminate``* database field on the Instance model.
+-  ``SHUTOFF``: The server was powered down by the user, either through the
+   OpenStack Compute API or from within the server. For example, the user
+   issued a ``shutdown -h`` command from within the server. If the OpenStack
+   Compute manager detects that the VM was powered down, it transitions the
+   server to the SHUTOFF status.
 
 -  ``SOFT_DELETED``: The server is marked as deleted but will remain in the
    cloud for some configurable amount of time. While soft-deleted, an
