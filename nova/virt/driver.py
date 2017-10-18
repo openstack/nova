@@ -132,6 +132,8 @@ class ComputeDriver(object):
         "supports_extend_volume": False,
     }
 
+    requires_allocation_refresh = False
+
     def __init__(self, virtapi):
         self.virtapi = virtapi
         self._compute_event_callback = None

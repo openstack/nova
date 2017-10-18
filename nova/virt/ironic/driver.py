@@ -135,6 +135,12 @@ class IronicDriver(virt_driver.ComputeDriver):
                     "supports_attach_interface": True
                     }
 
+    # Needed for exiting instances to have allocations for custom resource
+    # class resources
+    # TODO(johngarbutt) we should remove this once the resource class
+    # migration has been completed.
+    requires_allocation_refresh = True
+
     def __init__(self, virtapi, read_only=False):
         super(IronicDriver, self).__init__(virtapi)
         global ironic
