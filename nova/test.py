@@ -421,6 +421,26 @@ class TestCase(testtools.TestCase):
 
         return svc.service
 
+    def restart_compute_service(self, compute):
+        """Restart a compute service in a realistic way.
+
+        :param:compute: the nova-compute service to be restarted
+        """
+
+        # NOTE(gibi): The service interface cannot be used to simulate a real
+        # service restart as the manager object will not be recreated after a
+        # service.stop() and service.start() therefore the manager state will
+        # survive. For example the resource tracker will not be recreated after
+        # a stop start. The service.kill() call cannot help as it deletes
+        # the service from the DB which is unrealistic and causes that some
+        # operation that refers to the killed host (e.g. evacuate) fails.
+        # So this helper method tries to simulate a better compute service
+        # restart by cleaning up some of the internal state of the compute
+        # manager.
+        compute.stop()
+        compute.manager._resource_tracker = None
+        compute.start()
+
     def assertJsonEqual(self, expected, observed, message=''):
         """Asserts that 2 complex data structures are json equivalent.
 
