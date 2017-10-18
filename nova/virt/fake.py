@@ -182,7 +182,8 @@ class FakeDriver(driver.ComputeDriver):
         pass
 
     def spawn(self, context, instance, image_meta, injected_files,
-              admin_password, network_info=None, block_device_info=None):
+              admin_password, allocations, network_info=None,
+              block_device_info=None):
         uuid = instance.uuid
         state = power_state.RUNNING
         flavor = instance.flavor
@@ -621,7 +622,8 @@ class FakeRescheduleDriver(FakeDriver):
     rescheduled = {}
 
     def spawn(self, context, instance, image_meta, injected_files,
-              admin_password, network_info=None, block_device_info=None):
+              admin_password, allocations, network_info=None,
+              block_device_info=None):
         if not self.rescheduled.get(instance.uuid, False):
             # We only reschedule on the first time something hits spawn().
             self.rescheduled[instance.uuid] = True
@@ -629,7 +631,7 @@ class FakeRescheduleDriver(FakeDriver):
                 reason='FakeRescheduleDriver')
         super(FakeRescheduleDriver, self).spawn(
             context, instance, image_meta, injected_files,
-            admin_password, network_info, block_device_info)
+            admin_password, allocations, network_info, block_device_info)
 
 
 class FakeBuildAbortDriver(FakeDriver):
@@ -637,7 +639,8 @@ class FakeBuildAbortDriver(FakeDriver):
     BuildAbortException so no reschedule is attempted.
     """
     def spawn(self, context, instance, image_meta, injected_files,
-              admin_password, network_info=None, block_device_info=None):
+              admin_password, allocations, network_info=None,
+              block_device_info=None):
         raise exception.BuildAbortException(
             instance_uuid=instance.uuid, reason='FakeBuildAbortDriver')
 
@@ -647,11 +650,12 @@ class FakeUnshelveSpawnFailDriver(FakeDriver):
     VirtualInterfaceCreateException when unshelving an offloaded instance.
     """
     def spawn(self, context, instance, image_meta, injected_files,
-              admin_password, network_info=None, block_device_info=None):
+              admin_password, allocations, network_info=None,
+              block_device_info=None):
         if instance.vm_state == vm_states.SHELVED_OFFLOADED:
             raise exception.VirtualInterfaceCreateException(
                 'FakeUnshelveSpawnFailDriver')
         # Otherwise spawn normally during the initial build.
         super(FakeUnshelveSpawnFailDriver, self).spawn(
             context, instance, image_meta, injected_files,
-            admin_password, network_info, block_device_info)
+            admin_password, allocations, network_info, block_device_info)

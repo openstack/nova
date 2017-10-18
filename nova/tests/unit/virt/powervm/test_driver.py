@@ -123,7 +123,8 @@ class TestPowerVMDriver(test.NoDBTestCase):
                                                  instance=True)
         mock_ftsk = pvm_tx.FeedTask('fake', [mock.Mock(spec=pvm_vios.VIOS)])
         mock_bldftsk.return_value = mock_ftsk
-        self.drv.spawn('context', self.inst, 'img_meta', 'files', 'password')
+        self.drv.spawn(
+            'context', self.inst, 'img_meta', 'files', 'password', {})
         mock_crt_lpar.assert_called_once_with(self.adp, 'sys', self.inst)
         mock_bldftsk.assert_called_once_with(
             self.adp, xag={pvm_const.XAG.VIO_SMAP, pvm_const.XAG.VIO_FMAP})

@@ -133,6 +133,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
         self.conn.spawn(self.context, self.test_instance, self.image,
                         injected_files=injected_files,
                         admin_password=admin_password,
+                        allocations={},
                         network_info=self.network_info,
                         block_device_info=block_device_info)
 

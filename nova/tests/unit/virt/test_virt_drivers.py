@@ -247,7 +247,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
             '1.1.1.1'
         image_meta = test_utils.get_test_image_object(None, instance_ref)
         self.connection.spawn(self.ctxt, instance_ref, image_meta,
-                              [], 'herp', network_info=network_info)
+                              [], 'herp', {}, network_info=network_info)
         return instance_ref, network_info
 
     @catch_notimplementederror

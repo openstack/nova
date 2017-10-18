@@ -10609,7 +10609,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
             del mock_orig_libvirt.VIR_CONNECT_BASELINE_CPU_EXPAND_FEATURES
 
-            drvr.spawn(self.context, instance, image_meta, [], 'herp',
+            drvr.spawn(self.context, instance, image_meta, [], 'herp', {},
                        network_info=network_info)
 
             mock_get_info.assert_called_once_with(instance)
@@ -10655,8 +10655,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_create_domain_and_network.side_effect = \
             fake_create_domain_and_network
 
-        drvr.spawn(self.context, instance,
-                   image_meta, [], None)
+        drvr.spawn(self.context, instance, image_meta, [], None, {})
 
         # We should have imported 'disk.config'
         config_disk = fake_backend.disks['disk.config']
@@ -10683,7 +10682,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         fake_backend = self.useFixture(fake_imagebackend.ImageBackendFixture())
 
-        drvr.spawn(self.context, instance, image_meta, [], None)
+        drvr.spawn(self.context, instance, image_meta, [], None, {})
 
         # We should have created a root disk and an ephemeral disk
         self.assertEqual(['disk', 'disk.local'],
@@ -10714,7 +10713,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock_get_info.return_value = hw_running
 
             drvr.spawn(self.context, instance,
-                       image_meta, [], None,
+                       image_meta, [], None, {},
                        block_device_info=block_device_info)
 
         # Return a sorted list of created disks
@@ -10835,7 +10834,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock.patch('nova.virt.disk.api.teardown_container'),
             mock.patch.object(objects.Instance, 'save')):
 
-            drvr.spawn(self.context, inst_obj, image_meta, [], None,
+            drvr.spawn(self.context, inst_obj, image_meta, [], None, {},
                        network_info=[],
                        block_device_info=block_device_info)
             self.assertEqual('/dev/nbd1',
@@ -10884,7 +10883,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         with mock.patch.object(drvr, '_get_connection',
                                return_value=mock_connection):
-            drvr.spawn(self.context, instance, image_meta, [], None)
+            drvr.spawn(self.context, instance, image_meta, [], None, {})
 
     def _test_create_image_plain(self, os_type='', filename='', mkfs=False):
         gotFiles = []
