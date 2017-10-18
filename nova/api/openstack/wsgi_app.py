@@ -41,16 +41,18 @@ def _get_config_files(env=None):
 
 
 def _setup_service(host, name):
+    binary = name if name.startswith('nova-') else "nova-%s" % name
+
     ctxt = context.get_admin_context()
     service_ref = objects.Service.get_by_host_and_binary(
-        ctxt, host, name)
+        ctxt, host, binary)
     if service_ref:
         service._update_service_ref(service_ref)
     else:
         try:
             service_obj = objects.Service(ctxt)
             service_obj.host = host
-            service_obj.binary = 'nova-%s' % name
+            service_obj.binary = binary
             service_obj.topic = None
             service_obj.report_count = 0
             service_obj.create()
