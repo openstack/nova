@@ -307,9 +307,6 @@ class ComputeTaskManager(base.Base):
         task = self._build_cold_migrate_task(context, instance, flavor,
                                              request_spec,
                                              reservations, clean_shutdown)
-        # TODO(sbauza): Provide directly the RequestSpec object once
-        # _set_vm_state_and_notify() accepts it
-        legacy_spec = request_spec.to_legacy_request_spec_dict()
         try:
             task.execute()
         except exception.NoValidHost as ex:
@@ -319,7 +316,7 @@ class ComputeTaskManager(base.Base):
             updates = {'vm_state': vm_state, 'task_state': None}
             self._set_vm_state_and_notify(context, instance.uuid,
                                           'migrate_server',
-                                          updates, ex, legacy_spec)
+                                          updates, ex, request_spec)
 
             # if the flavor IDs match, it's migrate; otherwise resize
             if flavor.id == instance.instance_type_id:
@@ -335,14 +332,14 @@ class ComputeTaskManager(base.Base):
                 updates = {'vm_state': vm_state, 'task_state': None}
                 self._set_vm_state_and_notify(context, instance.uuid,
                                               'migrate_server',
-                                              updates, ex, legacy_spec)
+                                              updates, ex, request_spec)
         except Exception as ex:
             with excutils.save_and_reraise_exception():
                 updates = {'vm_state': instance.vm_state,
                            'task_state': None}
                 self._set_vm_state_and_notify(context, instance.uuid,
                                               'migrate_server',
-                                              updates, ex, legacy_spec)
+                                              updates, ex, request_spec)
         # NOTE(sbauza): Make sure we persist the new flavor in case we had
         # a successful scheduler call if and only if nothing bad happened
         if request_spec.obj_what_changed():
@@ -540,8 +537,7 @@ class ComputeTaskManager(base.Base):
             # but if we've exceeded max retries... then we really only
             # have a single instance.
             # TODO(sbauza): Provide directly the RequestSpec object
-            # when _set_vm_state_and_notify() and populate_retry()
-            # accept it
+            # when populate_retry() accepts it
             request_spec = scheduler_utils.build_request_spec(
                 context, image, instances)
             scheduler_utils.populate_retry(
@@ -754,13 +750,6 @@ class ComputeTaskManager(base.Base):
                     context, host, use_slave=True))
         except exception.ComputeHostNotFound as ex:
             with excutils.save_and_reraise_exception():
-                # TODO(mriedem): This ugly RequestSpec handling should be
-                # tucked away in _set_vm_state_and_notify.
-                if request_spec:
-                    request_spec = \
-                        request_spec.to_legacy_request_spec_dict()
-                else:
-                    request_spec = {}
                 self._set_vm_state_and_notify(
                     context, instance.uuid, 'rebuild_server',
                     {'vm_state': instance.vm_state,
@@ -784,13 +773,6 @@ class ComputeTaskManager(base.Base):
                 source_node, dest_node)
         except exception.NoValidHost as ex:
             with excutils.save_and_reraise_exception():
-                # TODO(mriedem): This ugly RequestSpec handling should be
-                # tucked away in _set_vm_state_and_notify.
-                if request_spec:
-                    request_spec = \
-                        request_spec.to_legacy_request_spec_dict()
-                else:
-                    request_spec = {}
                 self._set_vm_state_and_notify(
                     context, instance.uuid, 'rebuild_server',
                     {'vm_state': instance.vm_state,
@@ -843,8 +825,6 @@ class ComputeTaskManager(base.Base):
                     # NOTE(sbauza): We were unable to find an original
                     # RequestSpec object - probably because the instance is old
                     # We need to mock that the old way
-                    # TODO(sbauza): Provide directly the RequestSpec object
-                    # when _set_vm_state_and_notify() accepts it
                     filter_properties = {'ignore_hosts': [instance.host]}
                     request_spec = scheduler_utils.build_request_spec(
                             context, image_ref, [instance])
@@ -870,7 +850,6 @@ class ComputeTaskManager(base.Base):
                     if migration:
                         migration.status = 'error'
                         migration.save()
-                    request_spec = request_spec.to_legacy_request_spec_dict()
                     with excutils.save_and_reraise_exception():
                         self._set_vm_state_and_notify(context, instance.uuid,
                                 'rebuild_server',
@@ -986,7 +965,6 @@ class ComputeTaskManager(base.Base):
                 instances_by_uuid[instance.uuid] = instance
 
         updates = {'vm_state': vm_states.ERROR, 'task_state': None}
-        legacy_spec = request_spec.to_legacy_request_spec_dict()
         for instance in instances_by_uuid.values():
             with obj_target_cell(instance, cell0) as cctxt:
                 instance.create()
@@ -994,7 +972,7 @@ class ComputeTaskManager(base.Base):
                 # now in cell0.
                 self._set_vm_state_and_notify(
                     cctxt, instance.uuid, 'build_instances', updates,
-                    exc, legacy_spec)
+                    exc, request_spec)
                 try:
                     # We don't need the cell0-targeted context here because the
                     # instance mapping is in the API DB.
@@ -1174,12 +1152,11 @@ class ComputeTaskManager(base.Base):
             if instance is None:
                 continue
             updates = {'vm_state': vm_states.ERROR, 'task_state': None}
-            legacy_spec = request_spec.to_legacy_request_spec_dict()
             cell = cell_mapping_cache[instance.uuid]
             with try_target_cell(context, cell) as cctxt:
                 self._set_vm_state_and_notify(cctxt, instance.uuid,
                                               'build_instances', updates, exc,
-                                              legacy_spec)
+                                              request_spec)
 
             # TODO(mnaser): The cell mapping should already be populated by
             #               this point to avoid setting it below here.
