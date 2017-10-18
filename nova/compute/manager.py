@@ -694,12 +694,8 @@ class ComputeManager(manager.Manager):
                     continue
             cn_uuid = compute_nodes[migration.source_node]
 
-            my_resources = scheduler_utils.resources_from_flavor(
-                instance, instance.flavor)
-            res = self.reportclient.remove_provider_from_instance_allocation(
-                instance.uuid, cn_uuid, instance.user_id,
-                instance.project_id, my_resources)
-            if not res:
+            if not scheduler_utils.remove_allocation_from_compute(
+                    instance, cn_uuid, self.reportclient):
                 LOG.error("Failed to clean allocation of evacuated instance "
                           "on the source node %s",
                           cn_uuid, instance=instance)
@@ -3776,11 +3772,8 @@ class ComputeManager(manager.Manager):
         # PUT'd back to placement will only include the destination host and
         # any shared providers in the case of a confirm_resize operation and
         # the source host and shared providers for a revert_resize operation..
-        my_resources = scheduler_utils.resources_from_flavor(instance, flavor)
-        res = self.reportclient.remove_provider_from_instance_allocation(
-            instance.uuid, cn_uuid, instance.user_id,
-            instance.project_id, my_resources)
-        if not res:
+        if not scheduler_utils.remove_allocation_from_compute(
+                instance, cn_uuid, self.reportclient, flavor):
             LOG.error("Failed to save manipulated allocation",
                       instance=instance)
 

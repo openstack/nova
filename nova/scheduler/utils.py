@@ -798,3 +798,27 @@ def claim_resources(ctx, client, spec_obj, instance_uuid, alloc_req,
 
     return client.claim_resources(instance_uuid, alloc_req, project_id,
             user_id, allocation_request_version=allocation_request_version)
+
+
+def remove_allocation_from_compute(instance, compute_node_uuid, reportclient,
+                                   flavor=None):
+    """Removes the instance allocation from the compute host.
+
+    :param instance: the instance object owning the allocation
+    :param compute_node_uuid: the UUID of the compute node where the allocation
+                              needs to be removed
+    :param reportclient: the SchedulerReportClient instances to be used to
+                         communicate with Placement
+    :param flavor: If provided then it is used to calculate the amount of
+                   resource that needs to be removed. If not provided then
+                   instance.flavor will be used
+    :return: True if the removal was successful, False otherwise
+    """
+
+    if not flavor:
+        flavor = instance.flavor
+
+    my_resources = resources_from_flavor(instance, flavor)
+    return reportclient.remove_provider_from_instance_allocation(
+        instance.uuid, compute_node_uuid, instance.user_id,
+        instance.project_id, my_resources)
