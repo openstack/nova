@@ -1,7 +1,8 @@
 # Tests of allocations API
 #
-# TODO(cdent): Where in the process is the consumer id being
-# validated?
+# Note(cdent): Consumer ids are not validated against anything to
+# confirm that they are associated with anything real. This is
+# by design.
 
 
 fixtures:
@@ -238,7 +239,7 @@ tests:
       max_unit: 8
   status: 201
 
-- name: multiple allocations 
+- name: multiple allocations
   PUT: /allocations/833f0885-f78c-4788-bb2b-3607b0656be7
   request_headers:
       content-type: application/json
@@ -278,24 +279,15 @@ tests:
 - name: check allocations by consumer id
   GET: /allocations/833f0885-f78c-4788-bb2b-3607b0656be7
   response_json_paths:
-      # TODO(cdent): Can't currently do substitution on the left hand
-      # side of json path in gabbi, a bug has been made. In the
-      # meantime we have to jump over it. This works because we only
-      # have one resource provider in this output.
-      $.allocations..generation: 7
-      $.allocations..resources.DISK_GB: 20
-      $.allocations..resources.VCPU: 4
+      $.allocations["$ENVIRON['RP_UUID']"].generation: 7
+      $.allocations["$ENVIRON['RP_UUID']"].resources.DISK_GB: 20
+      $.allocations["$ENVIRON['RP_UUID']"].resources.VCPU: 4
 
 - name: check allocations by different consumer id
   GET: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958
   response_json_paths:
-      # TODO(cdent): Can't currently do substitution on the left hand
-      # side of json path in gabbi, a bug has been made. In the
-      # meantime we have to jump over the resource provider (which
-      # we don't know as a static value). This works because we only
-      # have one resource provider in this output.
-      $.allocations..generation: 7
-      $.allocations..DISK_GB: 10
+      $.allocations["$ENVIRON['RP_UUID']"].generation: 7
+      $.allocations["$ENVIRON['RP_UUID']"].resources.DISK_GB: 10
 
 # create another two resource providers to test retrieving
 # allocations
