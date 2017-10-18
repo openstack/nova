@@ -58,6 +58,10 @@ List allocations
 List all allocation records for the consumer identified by
 `{consumer_uuid}` on all the resource providers it is consuming.
 
+.. note:: When listing allocations for a consumer uuid that has no
+          allocations a dict with an empty value is returned
+          ``{"allocations": {}}``.
+
 .. rest_method:: GET /allocations/{consumer_uuid}
 
 Normal Response Codes: 200
