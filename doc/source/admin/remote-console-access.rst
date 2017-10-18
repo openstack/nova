@@ -3,15 +3,15 @@ Configure remote console access
 ===============================
 
 To provide a remote console or remote desktop access to guest virtual machines,
-use VNC or SPICE HTML5 through either the OpenStack dashboard or the command
-line. Best practice is to select one or the other to run.
+use VNC, SPICE HTML5 or Serial through either the OpenStack dashboard or the
+command line. Best practice is to select only one of them to run.
 
 .. _about-nova-consoleauth:
 
 About nova-consoleauth
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Both client proxies leverage a shared service to manage token authentication
+The client proxies leverage a shared service to manage token authentication
 called ``nova-consoleauth``. This service must be running for either proxy to
 work. Many proxies of either type can be run against a single
 ``nova-consoleauth`` service in a cluster configuration.
@@ -323,3 +323,49 @@ Frequently asked questions about VNC access to virtual machines
   A: Make sure the ``base_url`` match your TLS setting. If you are using https
   console connections, make sure that the value of ``novncproxy_base_url`` is
   set explicitly where the ``nova-novncproxy`` service is running.
+
+Serial Console
+~~~~~~~~~~~~~~
+
+The *serial console* feature  [1]_ in nova is an alternative for graphical
+consoles like *VNC*, *SPICE*, *RDP*. The example below uses these nodes:
+
+* controller node with IP ``192.168.50.100``
+* compute node 1 with IP ``192.168.50.104``
+* compute node 2 with IP ``192.168.50.105``
+
+Here's the general flow of actions:
+
+.. figure:: figures/serial-console-flow.svg
+   :width: 100%
+   :alt: The serial console flow
+
+1. The user requests a serial console connection string for an instance
+   from the REST API.
+2. The `nova-api` service asks the `nova-compute` service, which manages
+   that instance, to fulfill that request.
+3. That connection string gets used by the user to connect to the
+   `nova-serialproxy` service.
+4. The `nova-serialproxy` service then proxies the console interaction
+   to the port of the compute node where the instance is running. That
+   port gets forwarded by the hypervisor into the KVM guest.
+
+The config options for those nodes, which are in the section
+``[serial_console]`` of your ``nova.conf``, are not intuitive at first.
+Keep these things in mind:
+
+* The ``serialproxy_host`` is the address the `nova-serialproxy` service
+  listens to for incoming connections (see step 3).
+* The ``serialproxy_port`` value must be the very same as in the URI
+  of ``base_url``.
+* The ``base_url`` on the compute node will be part of the response the user
+  will get when asking for a serial console connection string (see step 1
+  from above). This means it needs to be an URL the user can connect to.
+* The ``proxyclient_address`` on the compute node will be used by the
+  `nova-serialproxy` service to determine where to connect to for
+  proxying the console interaction.
+
+References
+~~~~~~~~~~
+
+.. [1] https://specs.openstack.org/openstack/nova-specs/specs/juno/implemented/serial-ports.html
