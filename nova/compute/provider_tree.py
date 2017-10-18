@@ -18,6 +18,8 @@ changes for resources on the hypervisor or baremetal node. As such, there are
 no remoteable methods nor is there any interaction with the nova.db modules.
 """
 
+import copy
+
 from oslo_concurrency import lockutils
 from oslo_log import log as logging
 from oslo_utils import uuidutils
@@ -43,9 +45,11 @@ class _Provider(object):
         # Contains a dict, keyed by uuid of child resource providers having
         # this provider as a parent
         self.children = {}
+        # dict of inventory records, keyed by resource class
+        self.inventory = {}
 
-    def _find(self, search, search_key):
-        if getattr(self, search_key) == search:
+    def find(self, search):
+        if self.name == search or self.uuid == search:
             return self
         if search in self.children:
             return self.children[search]
@@ -55,16 +59,10 @@ class _Provider(object):
                 # just check for a child name match
                 if child.name == search:
                     return child
-                subchild = child._find(search, search_key)
+                subchild = child.find(search)
                 if subchild:
                     return subchild
         return None
-
-    def find_by_uuid(self, uuid):
-        return self._find(uuid, 'uuid')
-
-    def find_by_name(self, name):
-        return self._find(name, 'name')
 
     def add_child(self, provider):
         self.children[provider.uuid] = provider
@@ -72,6 +70,38 @@ class _Provider(object):
     def remove_child(self, provider):
         if provider.uuid in self.children:
             del self.children[provider.uuid]
+
+    def has_inventory_changed(self, new):
+        """Returns whether the inventory has changed for the provider."""
+        cur = self.inventory
+        if set(cur) != set(new):
+            return True
+        for key, cur_rec in cur.items():
+            new_rec = new[key]
+            for rec_key, cur_val in cur_rec.items():
+                if rec_key not in new_rec:
+                    # Deliberately don't want to compare missing keys in the
+                    # inventory record. For instance, we will be passing in
+                    # fields like allocation_ratio in the current dict but the
+                    # resource tracker may only pass in the total field. We
+                    # want to return that inventory didn't change when the
+                    # total field values are the same even if the
+                    # allocation_ratio field is missing from the new record.
+                    continue
+                if new_rec[rec_key] != cur_val:
+                    return True
+        return False
+
+    def update_inventory(self, inventory, generation):
+        """Update the stored inventory for the provider along with a resource
+        provider generation to set the provider to. The method returns whether
+        the inventory has changed.
+        """
+        self.generation = generation
+        if self.has_inventory_changed(inventory):
+            self.inventory = copy.deepcopy(inventory)
+            return True
+        return False
 
 
 class ProviderTree(object):
@@ -90,12 +120,13 @@ class ProviderTree(object):
     def remove(self, name_or_uuid):
         """Safely removes the provider identified by the supplied name_or_uuid
         parameter and all of its children from the tree.
+
+        :raises ValueError if name_or_uuid points to a non-existing provider.
+        :param name_or_uuid: Either name or UUID of the resource provider to
+                             remove from the tree.
         """
         with self.lock:
             found = self._find_with_lock(name_or_uuid)
-            if not found:
-                raise ValueError(_("No such provider %s") % name_or_uuid)
-
             if found.parent_uuid:
                 parent = self._find_with_lock(found.parent_uuid)
                 parent.remove_child(found)
@@ -104,39 +135,48 @@ class ProviderTree(object):
 
     def new_root(self, name, uuid, generation):
         """Adds a new root provider to the tree."""
+
         with self.lock:
-            if self._find_with_lock(uuid) is not None:
-                raise ValueError(
-                    _("Provider %s already exists as a root.") % uuid
-                )
+            exists = True
+            try:
+                self._find_with_lock(uuid)
+            except ValueError:
+                exists = False
+
+            if exists:
+                err = _("Provider %s already exists as a root.")
+                raise ValueError(err % uuid)
 
             p = _Provider(name, uuid, generation)
             self.roots.append(p)
             return p
 
     def _find_with_lock(self, name_or_uuid):
-        if uuidutils.is_uuid_like(name_or_uuid):
-            getter = 'find_by_uuid'
-        else:
-            getter = 'find_by_name'
         for root in self.roots:
-            fn = getattr(root, getter)
-            found = fn(name_or_uuid)
+            found = root.find(name_or_uuid)
             if found:
                 return found
-        return None
+        raise ValueError(_("No such provider %s") % name_or_uuid)
 
     def find(self, name_or_uuid):
+        """Search for a provider with the given name or UUID.
+
+        :raises ValueError if name_or_uuid points to a non-existing provider.
+        :param name_or_uuid: Either name or UUID of the resource provider to
+                             search for.
+        """
         with self.lock:
             return self._find_with_lock(name_or_uuid)
 
     def exists(self, name_or_uuid):
         """Given either a name or a UUID, return True if the tree contains the
-        child provider, False otherwise.
+        provider, False otherwise.
         """
-        with self.lock:
-            found = self._find_with_lock(name_or_uuid)
-        return found is not None
+        try:
+            self.find(name_or_uuid)
+            return True
+        except ValueError:
+            return False
 
     def new_child(self, name, parent_uuid, uuid=None, generation=None):
         """Creates a new child provider with the given name and uuid under the
@@ -148,9 +188,43 @@ class ProviderTree(object):
         """
         with self.lock:
             parent = self._find_with_lock(parent_uuid)
-            if not parent:
-                raise ValueError(_("No such parent %s") % parent_uuid)
-
             p = _Provider(name, uuid, generation, parent_uuid)
             parent.add_child(p)
             return p
+
+    def has_inventory_changed(self, name_or_uuid, inventory):
+        """Returns True if the supplied inventory is different for the provider
+        with the supplied name or UUID.
+
+        :raises: ValueError if a provider with name_or_uuid was not found in
+                 the tree.
+        :param name_or_uuid: Either name or UUID of the resource provider to
+                             update inventory for.
+        :param inventory: dict, keyed by resource class, of inventory
+                          information.
+        """
+        with self.lock:
+            provider = self._find_with_lock(name_or_uuid)
+            return provider.has_inventory_changed(inventory)
+
+    def update_inventory(self, name_or_uuid, inventory, generation):
+        """Given a name or UUID of a provider and a dict of inventory resource
+        records, update the provider's inventory and set the provider's
+        generation.
+
+        :returns: True if the inventory has changed.
+
+        :note: The provider's generation is always set to the supplied
+               generation, even if there were no changes to the inventory.
+
+        :raises: ValueError if a provider with name_or_uuid was not found in
+                 the tree.
+        :param name_or_uuid: Either name or UUID of the resource provider to
+                             update inventory for.
+        :param inventory: dict, keyed by resource class, of inventory
+                          information.
+        :param generation: The resource provider generation to set
+        """
+        with self.lock:
+            provider = self._find_with_lock(name_or_uuid)
+            return provider.update_inventory(inventory, generation)

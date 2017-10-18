@@ -114,3 +114,80 @@ class TestProviderTree(test.NoDBTestCase):
         self.assertFalse(pt.exists(pf1_uuid))
         self.assertFalse(pt.exists(cell0_uuid))
         self.assertFalse(pt.exists(uuids.cn1))
+
+    def test_has_inventory_changed_no_existing_rp(self):
+        cns = self.compute_nodes
+        pt = provider_tree.ProviderTree(cns)
+        self.assertRaises(
+            ValueError,
+            pt.has_inventory_changed,
+            uuids.non_existing_rp,
+            {}
+        )
+
+    def test_update_inventory_no_existing_rp(self):
+        cns = self.compute_nodes
+        pt = provider_tree.ProviderTree(cns)
+        self.assertRaises(
+            ValueError,
+            pt.update_inventory,
+            uuids.non_existing_rp,
+            {},
+            1,
+        )
+
+    def test_has_inventory_changed(self):
+        cn = self.compute_node1
+        cns = self.compute_nodes
+        pt = provider_tree.ProviderTree(cns)
+        rp_gen = 1
+
+        cn_inv = {
+            'VCPU': {
+                'total': 8,
+                'reserved': 0,
+                'min_unit': 1,
+                'max_unit': 8,
+                'step_size': 1,
+                'allocation_ratio': 16.0,
+            },
+            'MEMORY_MB': {
+                'total': 1024,
+                'reserved': 512,
+                'min_unit': 64,
+                'max_unit': 1024,
+                'step_size': 64,
+                'allocation_ratio': 1.5,
+            },
+            'DISK_GB': {
+                'total': 1000,
+                'reserved': 100,
+                'min_unit': 10,
+                'max_unit': 1000,
+                'step_size': 10,
+                'allocation_ratio': 1.0,
+            },
+        }
+        self.assertTrue(pt.has_inventory_changed(cn.uuid, cn_inv))
+        self.assertTrue(pt.update_inventory(cn.uuid, cn_inv, rp_gen))
+
+        # Updating with the same inventory info should return False
+        self.assertFalse(pt.has_inventory_changed(cn.uuid, cn_inv))
+        self.assertFalse(pt.update_inventory(cn.uuid, cn_inv, rp_gen))
+
+        cn_inv['VCPU']['total'] = 6
+        self.assertTrue(pt.has_inventory_changed(cn.uuid, cn_inv))
+        self.assertTrue(pt.update_inventory(cn.uuid, cn_inv, rp_gen))
+
+        self.assertFalse(pt.has_inventory_changed(cn.uuid, cn_inv))
+        self.assertFalse(pt.update_inventory(cn.uuid, cn_inv, rp_gen))
+
+        # Deleting a key in the new record should NOT result in changes being
+        # recorded...
+        del cn_inv['VCPU']['allocation_ratio']
+        self.assertFalse(pt.has_inventory_changed(cn.uuid, cn_inv))
+        self.assertFalse(pt.update_inventory(cn.uuid, cn_inv, rp_gen))
+
+        del cn_inv['MEMORY_MB']
+        self.assertTrue(pt.has_inventory_changed(cn.uuid, cn_inv))
+        self.assertTrue(pt.update_inventory(cn.uuid, cn_inv, rp_gen))
