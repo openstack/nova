@@ -71,6 +71,7 @@ Possible values:
 * Any string that represents zero or more versions, separated by spaces.
 """),
     cfg.ListOpt('vendordata_providers',
+        item_type=cfg.types.String(choices=['StaticJSON', 'DynamicJSON']),
         default=['StaticJSON'],
         deprecated_group="DEFAULT",
         help="""
