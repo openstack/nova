@@ -1971,7 +1971,9 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
             'shelveOffload': {}
         }
         self.api.post_server_action(server['id'], req)
-        self._wait_for_state_change(self.api, server, 'SHELVED_OFFLOADED')
+        self._wait_for_server_parameter(
+            self.api, server, {'status': 'SHELVED_OFFLOADED',
+                               'OS-EXT-SRV-ATTR:host': None})
         source_usages = self._get_provider_usages(source_rp_uuid)
         self.assertEqual({'VCPU': 0,
                           'MEMORY_MB': 0,
@@ -2523,7 +2525,9 @@ class ServerUnshelveSpawnFailTests(ProviderUsageBaseTestCase):
         # shelve offload the server
         self.flags(shelved_offload_time=0)
         self.api.post_server_action(server['id'], {'shelve': None})
-        self._wait_for_state_change(self.api, server, 'SHELVED_OFFLOADED')
+        self._wait_for_server_parameter(
+            self.api, server, {'status': 'SHELVED_OFFLOADED',
+                               'OS-EXT-SRV-ATTR:host': None})
 
         # assert allocations were removed from the host
         usages = self._get_provider_usages(rp_uuid)
