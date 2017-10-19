@@ -1721,15 +1721,26 @@ class CellV2Commands(object):
         print(t)
         return 0
 
+    @args('--force', action='store_true', default=False,
+          help=_('Delete hosts that belong to the cell as well.'))
     @args('--cell_uuid', metavar='<cell_uuid>', dest='cell_uuid',
           required=True, help=_('The uuid of the cell to delete.'))
-    def delete_cell(self, cell_uuid):
+    def delete_cell(self, cell_uuid, force=False):
         """Delete an empty cell by the given uuid.
 
-        If the cell is not found by uuid or it is not empty (it has host or
-        instance mappings) this command will return a non-zero exit code.
+        This command will return a non-zero exit code in the following cases.
 
-        Returns 0 if the empty cell is found and deleted successfully.
+        * The cell is not found by uuid.
+        * It has hosts and force is False.
+        * It has instance mappings.
+
+        If force is True and the cell has host, hosts are deleted as well.
+
+        Returns 0 in the following cases.
+
+        * The empty cell is found and deleted successfully.
+        * The cell has hosts and force is True and the cell and the hosts are
+          deleted successfully.
         """
         ctxt = context.get_admin_context()
         # Find the CellMapping given the uuid.
@@ -1742,7 +1753,7 @@ class CellV2Commands(object):
         # Check to see if there are any HostMappings for this cell.
         host_mappings = objects.HostMappingList.get_by_cell_id(
             ctxt, cell_mapping.id)
-        if host_mappings:
+        if host_mappings and not force:
             print(_('There are existing hosts mapped to cell with uuid %s.') %
                   cell_uuid)
             return 2
@@ -1754,6 +1765,10 @@ class CellV2Commands(object):
             print(_('There are existing instances mapped to cell with '
                     'uuid %s.') % cell_uuid)
             return 3
+
+        # Delete hosts mapped to the cell.
+        for host_mapping in host_mappings:
+            host_mapping.destroy()
 
         # There are no hosts or instances mapped to the cell so delete it.
         cell_mapping.destroy()
@@ -1806,6 +1821,52 @@ class CellV2Commands(object):
             print(_('Unable to update CellMapping: %s') % e)
             return 2
 
+        return 0
+
+    @args('--cell_uuid', metavar='<cell_uuid>', dest='cell_uuid',
+          required=True, help=_('The uuid of the cell.'))
+    @args('--host', metavar='<host>', dest='host',
+          required=True, help=_('The host to delete.'))
+    def delete_host(self, cell_uuid, host):
+        """Delete a host in a cell (host mappings) by the given host name
+
+        This command will return a non-zero exit code in the following cases.
+
+        * The cell is not found by uuid.
+        * The host is not found by host name.
+        * The host is not in the cell.
+        * The host has instances.
+
+        Returns 0 if the host is deleted successfully.
+        """
+        ctxt = context.get_admin_context()
+        # Find the CellMapping given the uuid.
+        try:
+            cell_mapping = objects.CellMapping.get_by_uuid(ctxt, cell_uuid)
+        except exception.CellMappingNotFound:
+            print(_('Cell with uuid %s was not found.') % cell_uuid)
+            return 1
+
+        try:
+            host_mapping = objects.HostMapping.get_by_host(ctxt, host)
+        except exception.HostMappingNotFound:
+            print(_('The host %s was not found.') % host)
+            return 2
+
+        if host_mapping.cell_mapping.uuid != cell_mapping.uuid:
+            print(_('The host %(host)s was not found '
+                    'in the cell %(cell_uuid)s.') % {'host': host,
+                                                     'cell_uuid': cell_uuid})
+            return 3
+
+        with context.target_cell(ctxt, cell_mapping) as cctxt:
+            instances = objects.InstanceList.get_by_host(cctxt, host)
+
+        if instances:
+            print(_('There are instances on the host %s.') % host)
+            return 4
+
+        host_mapping.destroy()
         return 0
 
 
