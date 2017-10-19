@@ -1005,7 +1005,7 @@ class ResourceTracker(object):
                 continue
 
     def _update_usage_from_instance(self, context, instance, nodename,
-            is_removed=False, has_ocata_computes=False):
+            is_removed=False, require_allocation_refresh=False):
         """Update usage for a single instance."""
 
         uuid = instance['uuid']
@@ -1033,10 +1033,9 @@ class ResourceTracker(object):
                 self.pci_tracker.update_pci_for_instance(context,
                                                          instance,
                                                          sign=sign)
-            if has_ocata_computes:
-                LOG.debug("We're on a Pike compute host in a deployment "
-                          "with Ocata compute hosts. Auto-correcting "
-                          "allocations to handle Ocata-style assumptions.")
+            if require_allocation_refresh:
+                LOG.debug("Auto-correcting allocations to handle Ocata "
+                          "assumptions.")
                 self.reportclient.update_instance_allocation(cn, instance,
                                                              sign)
             else:
@@ -1130,10 +1129,16 @@ class ResourceTracker(object):
             context, 'nova-compute')
         has_ocata_computes = compute_version < 22
 
+        # Some drivers (ironic) still need the allocations to be
+        # fixed up, as they transition the way their inventory is reported.
+        require_allocation_refresh = (
+            has_ocata_computes or
+            self.driver.requires_allocation_refresh)
+
         for instance in instances:
             if instance.vm_state not in vm_states.ALLOW_RESOURCE_REMOVAL:
                 self._update_usage_from_instance(context, instance, nodename,
-                    has_ocata_computes=has_ocata_computes)
+                    require_allocation_refresh=require_allocation_refresh)
 
     def _remove_deleted_instances_allocations(self, context, cn,
                                               migrations):

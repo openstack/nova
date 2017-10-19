@@ -2694,6 +2694,40 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         self.assertEqual(-1024, cn.free_ram_mb)
         self.assertEqual(-1, cn.free_disk_gb)
 
+    def test_update_usage_from_instances_refreshes_ironic(self):
+        self.rt.driver.requires_allocation_refresh = True
+
+        @mock.patch.object(self.rt,
+                           '_remove_deleted_instances_allocations')
+        @mock.patch.object(self.rt, '_update_usage_from_instance')
+        @mock.patch('nova.objects.Service.get_minimum_version',
+                    return_value=22)
+        def test(version_mock, uufi, rdia):
+            self.rt._update_usage_from_instances('ctxt', [self.instance],
+                                                 _NODENAME)
+
+            uufi.assert_called_once_with('ctxt', self.instance, _NODENAME,
+                                         require_allocation_refresh=True)
+
+        test()
+
+    def test_update_usage_from_instances_no_refresh(self):
+        self.rt.driver.requires_allocation_refresh = False
+
+        @mock.patch.object(self.rt,
+                           '_remove_deleted_instances_allocations')
+        @mock.patch.object(self.rt, '_update_usage_from_instance')
+        @mock.patch('nova.objects.Service.get_minimum_version',
+                    return_value=22)
+        def test(version_mock, uufi, rdia):
+            self.rt._update_usage_from_instances('ctxt', [self.instance],
+                                                 _NODENAME)
+
+            uufi.assert_called_once_with('ctxt', self.instance, _NODENAME,
+                                         require_allocation_refresh=False)
+
+        test()
+
     @mock.patch('nova.scheduler.utils.resources_from_flavor')
     def test_delete_allocation_for_evacuated_instance(
             self, mock_resource_from_flavor):
