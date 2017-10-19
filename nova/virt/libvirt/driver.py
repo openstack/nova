@@ -7066,15 +7066,24 @@ class LibvirtDriver(driver.ComputeDriver):
         # Disconnect from volume server
         block_device_mapping = driver.block_device_info_get_mapping(
                 block_device_info)
-        connector = self.get_volume_connector(instance)
         volume_api = self._volume_api
         for vol in block_device_mapping:
-            # Retrieve connection info from Cinder's initialize_connection API.
-            # The info returned will be accurate for the source server.
             volume_id = vol['connection_info']['serial']
-            connection_info = volume_api.initialize_connection(context,
-                                                               volume_id,
-                                                               connector)
+            if vol['attachment_id'] is None:
+                # Cinder v2 api flow: Retrieve connection info from Cinder's
+                # initialize_connection API. The info returned will be
+                # accurate for the source server.
+                connector = self.get_volume_connector(instance)
+                connection_info = volume_api.initialize_connection(
+                    context, volume_id, connector)
+            else:
+                # cinder v3.44 api flow: Retrieve the connection_info for
+                # the old attachment from cinder.
+                old_attachment_id = \
+                    migrate_data.old_vol_attachment_ids[volume_id]
+                old_attachment = volume_api.attachment_get(
+                    context, old_attachment_id)
+                connection_info = old_attachment['connection_info']
 
             # TODO(leeantho) The following multipath_id logic is temporary
             # and will be removed in the future once os-brick is updated

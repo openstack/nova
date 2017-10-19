@@ -29,6 +29,10 @@ class LiveMigrateData(obj_base.NovaObject):
     fields = {
         'is_volume_backed': fields.BooleanField(),
         'migration': fields.ObjectField('Migration'),
+        # old_vol_attachment_ids is a dict used to store the old attachment_ids
+        # for each volume so they can be restored on a migration rollback. The
+        # key is the volume_id, and the value is the attachment_id.
+        'old_vol_attachment_ids': fields.DictOfStringsField(),
     }
 
     def to_legacy_dict(self, pre_migration_result=False):
@@ -110,7 +114,8 @@ class LibvirtLiveMigrateData(LiveMigrateData):
     # Version 1.2: Added 'serial_listen_ports' to allow live migration with
     #              serial console.
     # Version 1.3: Added 'supported_perf_events'
-    VERSION = '1.3'
+    # Version 1.4: Added old_vol_attachment_ids
+    VERSION = '1.4'
 
     fields = {
         'filename': fields.StringField(),
@@ -135,6 +140,9 @@ class LibvirtLiveMigrateData(LiveMigrateData):
         super(LibvirtLiveMigrateData, self).obj_make_compatible(
             primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 4):
+            if 'old_vol_attachment_ids' in primitive:
+                del primitive['old_vol_attachment_ids']
         if target_version < (1, 3):
             if 'supported_perf_events' in primitive:
                 del primitive['supported_perf_events']
@@ -223,7 +231,8 @@ class LibvirtLiveMigrateData(LiveMigrateData):
 class XenapiLiveMigrateData(LiveMigrateData):
     # Version 1.0: Initial version
     # Version 1.1: Added vif_uuid_map
-    VERSION = '1.1'
+    # Version 1.2: Added old_vol_attachment_ids
+    VERSION = '1.2'
 
     fields = {
         'block_migration': fields.BooleanField(nullable=True),
@@ -275,6 +284,9 @@ class XenapiLiveMigrateData(LiveMigrateData):
         super(XenapiLiveMigrateData, self).obj_make_compatible(
             primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 2):
+            if 'old_vol_attachment_ids' in primitive:
+                del primitive['old_vol_attachment_ids']
         if target_version < (1, 1):
             if 'vif_uuid_map' in primitive:
                 del primitive['vif_uuid_map']
@@ -284,7 +296,8 @@ class XenapiLiveMigrateData(LiveMigrateData):
 class HyperVLiveMigrateData(LiveMigrateData):
     # Version 1.0: Initial version
     # Version 1.1: Added is_shared_instance_path
-    VERSION = '1.1'
+    # Version 1.2: Added old_vol_attachment_ids
+    VERSION = '1.2'
 
     fields = {'is_shared_instance_path': fields.BooleanField()}
 
@@ -292,6 +305,9 @@ class HyperVLiveMigrateData(LiveMigrateData):
         super(HyperVLiveMigrateData, self).obj_make_compatible(
             primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 2):
+            if 'old_vol_attachment_ids' in primitive:
+                del primitive['old_vol_attachment_ids']
         if target_version < (1, 1):
             if 'is_shared_instance_path' in primitive:
                 del primitive['is_shared_instance_path']
@@ -313,7 +329,8 @@ class HyperVLiveMigrateData(LiveMigrateData):
 class PowerVMLiveMigrateData(LiveMigrateData):
     # Version 1.0: Initial version
     # Version 1.1: Added the Virtual Ethernet Adapter VLAN mappings.
-    VERSION = '1.1'
+    # Version 1.2: Added old_vol_attachment_ids
+    VERSION = '1.2'
 
     fields = {
         'host_mig_data': fields.DictOfNullableStringsField(),
@@ -330,6 +347,9 @@ class PowerVMLiveMigrateData(LiveMigrateData):
         super(PowerVMLiveMigrateData, self).obj_make_compatible(
             primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 2):
+            if 'old_vol_attachment_ids' in primitive:
+                del primitive['old_vol_attachment_ids']
         if target_version < (1, 1):
             if 'vea_vlan_mappings' in primitive:
                 del primitive['vea_vlan_mappings']
