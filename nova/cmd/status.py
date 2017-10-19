@@ -195,10 +195,7 @@ class UpgradeCommands(object):
         """Checks to see if the placement API is ready for scheduling.
 
         Checks to see that the placement API service is registered in the
-        service catalog and that we can make requests against it. Also checks
-        that there are compute nodes registered with the placement service
-        as resource providers so that when the Ocata nova-scheduler code starts
-        handling requests it has somewhere to send those builds.
+        service catalog and that we can make requests against it.
         """
         try:
             versions = self._placement_get("/")
