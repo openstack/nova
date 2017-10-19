@@ -735,17 +735,19 @@ class BlockDevice(object):
             end=status['end'])
 
     def rebase(self, base, shallow=False, reuse_ext=False,
-               copy=False, relative=False):
+               copy=False, relative=False, copy_dev=False):
         """Rebases block to new base
 
         :param shallow: Limit copy to top of source backing chain
         :param reuse_ext: Reuse existing external file of a copy
         :param copy: Start a copy job
         :param relative: Keep backing chain referenced using relative names
+        :param copy_dev: Treat the destination as type="block"
         """
         flags = shallow and libvirt.VIR_DOMAIN_BLOCK_REBASE_SHALLOW or 0
         flags |= reuse_ext and libvirt.VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT or 0
         flags |= copy and libvirt.VIR_DOMAIN_BLOCK_REBASE_COPY or 0
+        flags |= copy_dev and libvirt.VIR_DOMAIN_BLOCK_REBASE_COPY_DEV or 0
         flags |= relative and libvirt.VIR_DOMAIN_BLOCK_REBASE_RELATIVE or 0
         return self._guest._domain.blockRebase(
             self._disk, base, self.REBASE_DEFAULT_BANDWIDTH, flags=flags)
