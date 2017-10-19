@@ -733,9 +733,11 @@ class IronicDriverTestCase(test.NoDBTestCase):
         expected_uuids = [n['uuid'] for n in node_dicts if n['expected']]
         self.assertEqual(sorted(expected_uuids), sorted(available_nodes))
 
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_node_resources_unavailable', return_value=False)
     @mock.patch.object(ironic_driver.IronicDriver, '_node_resource')
     @mock.patch.object(ironic_driver.IronicDriver, '_node_from_cache')
-    def test_get_inventory_no_rc(self, mock_nfc, mock_nr):
+    def test_get_inventory_no_rc(self, mock_nfc, mock_nr, mock_res_unavail):
         """Ensure that when node.resource_class is missing, that we return the
         legacy VCPU, MEMORY_MB and DISK_GB resources for inventory.
         """
@@ -779,11 +781,14 @@ class IronicDriverTestCase(test.NoDBTestCase):
         }
         mock_nfc.assert_called_once_with(mock.sentinel.nodename)
         mock_nr.assert_called_once_with(mock_nfc.return_value)
+        mock_res_unavail.assert_called_once_with(mock_nfc.return_value)
         self.assertEqual(expected, result)
 
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_node_resources_unavailable', return_value=False)
     @mock.patch.object(ironic_driver.IronicDriver, '_node_resource')
     @mock.patch.object(ironic_driver.IronicDriver, '_node_from_cache')
-    def test_get_inventory_with_rc(self, mock_nfc, mock_nr):
+    def test_get_inventory_with_rc(self, mock_nfc, mock_nr, mock_res_unavail):
         """Ensure that when node.resource_class is present, that we return the
         legacy VCPU, MEMORY_MB and DISK_GB resources for inventory in addition
         to the custom resource class inventory record.
@@ -836,11 +841,51 @@ class IronicDriverTestCase(test.NoDBTestCase):
         }
         mock_nfc.assert_called_once_with(mock.sentinel.nodename)
         mock_nr.assert_called_once_with(mock_nfc.return_value)
+        mock_res_unavail.assert_called_once_with(mock_nfc.return_value)
         self.assertEqual(expected, result)
 
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_node_resources_unavailable', return_value=False)
     @mock.patch.object(ironic_driver.IronicDriver, '_node_resource')
     @mock.patch.object(ironic_driver.IronicDriver, '_node_from_cache')
-    def test_get_inventory_with_rc_occupied(self, mock_nfc, mock_nr):
+    def test_get_inventory_only_rc(self, mock_nfc, mock_nr, mock_res_unavail):
+        """Ensure that when node.resource_class is present, that we return the
+        legacy VCPU, MEMORY_MB and DISK_GB resources for inventory in addition
+        to the custom resource class inventory record.
+        """
+        mock_nr.return_value = {
+            'vcpus': 0,
+            'vcpus_used': 0,
+            'memory_mb': 0,
+            'memory_mb_used': 0,
+            'local_gb': 0,
+            'local_gb_used': 0,
+            'resource_class': 'iron-nfv',
+        }
+
+        result = self.driver.get_inventory(mock.sentinel.nodename)
+
+        expected = {
+            'CUSTOM_IRON_NFV': {
+                'total': 1,
+                'reserved': 0,
+                'min_unit': 1,
+                'max_unit': 1,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+        }
+        mock_nfc.assert_called_once_with(mock.sentinel.nodename)
+        mock_nr.assert_called_once_with(mock_nfc.return_value)
+        mock_res_unavail.assert_called_once_with(mock_nfc.return_value)
+        self.assertEqual(expected, result)
+
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_node_resources_unavailable', return_value=False)
+    @mock.patch.object(ironic_driver.IronicDriver, '_node_resource')
+    @mock.patch.object(ironic_driver.IronicDriver, '_node_from_cache')
+    def test_get_inventory_with_rc_occupied(self, mock_nfc, mock_nr,
+                                            mock_res_unavail):
         """Ensure that when a node is used, we report the inventory matching
         the consumed resources.
         """
@@ -892,27 +937,19 @@ class IronicDriverTestCase(test.NoDBTestCase):
         }
         mock_nfc.assert_called_once_with(mock.sentinel.nodename)
         mock_nr.assert_called_once_with(mock_nfc.return_value)
+        mock_res_unavail.assert_called_once_with(mock_nfc.return_value)
         self.assertEqual(expected, result)
 
-    @mock.patch.object(ironic_driver.IronicDriver, '_node_resource')
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_node_resources_unavailable', return_value=True)
     @mock.patch.object(ironic_driver.IronicDriver, '_node_from_cache')
-    def test_get_inventory_disabled_node(self, mock_nfc, mock_nr):
-        """Ensure that when vcpus == 0 (which happens when a node is disabled),
-        that get_inventory() returns an empty dict.
+    def test_get_inventory_disabled_node(self, mock_nfc, mock_res_unavail):
+        """Ensure that when a node is disabled, that get_inventory() returns
+        an empty dict.
         """
-        mock_nr.return_value = {
-            'vcpus': 0,
-            'vcpus_used': 0,
-            'memory_mb': 0,
-            'memory_mb_used': 0,
-            'local_gb': 0,
-            'local_gb_used': 0,
-            'resource_class': None,
-        }
-
         result = self.driver.get_inventory(mock.sentinel.nodename)
         mock_nfc.assert_called_once_with(mock.sentinel.nodename)
-        mock_nr.assert_called_once_with(mock_nfc.return_value)
+        mock_res_unavail.assert_called_once_with(mock_nfc.return_value)
         self.assertEqual({}, result)
 
     @mock.patch.object(FAKE_CLIENT.node, 'get')

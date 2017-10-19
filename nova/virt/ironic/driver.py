@@ -760,16 +760,13 @@ class IronicDriver(virt_driver.ComputeDriver):
         """
         # nodename is the ironic node's UUID.
         node = self._node_from_cache(nodename)
-        info = self._node_resource(node)
         # TODO(jaypipes): Completely remove the reporting of VCPU, MEMORY_MB,
         # and DISK_GB resource classes in early Queens when Ironic nodes will
         # *always* return the custom resource class that represents the
         # baremetal node class in an atomic, singular unit.
-        if info['vcpus'] == 0:
-            # NOTE(jaypipes): The driver can return 0-valued vcpus when the
-            # node is "disabled".  In the future, we should detach inventory
-            # accounting from the concept of a node being disabled or not. The
-            # two things don't really have anything to do with each other.
+        if self._node_resources_unavailable(node):
+            # TODO(dtantsur): report resources as reserved instead of reporting
+            # an empty inventory
             LOG.debug('Node %(node)s is not ready for a deployment, '
                       'reporting an empty inventory for it. Node\'s '
                       'provision state is %(prov)s, power state is '
@@ -778,32 +775,23 @@ class IronicDriver(virt_driver.ComputeDriver):
                        'power': node.power_state, 'maint': node.maintenance})
             return {}
 
-        result = {
-            obj_fields.ResourceClass.VCPU: {
-                'total': info['vcpus'],
-                'reserved': 0,
-                'min_unit': 1,
-                'max_unit': info['vcpus'],
-                'step_size': 1,
-                'allocation_ratio': 1.0,
-            },
-            obj_fields.ResourceClass.MEMORY_MB: {
-                'total': info['memory_mb'],
-                'reserved': 0,
-                'min_unit': 1,
-                'max_unit': info['memory_mb'],
-                'step_size': 1,
-                'allocation_ratio': 1.0,
-            },
-            obj_fields.ResourceClass.DISK_GB: {
-                'total': info['local_gb'],
-                'reserved': 0,
-                'min_unit': 1,
-                'max_unit': info['local_gb'],
-                'step_size': 1,
-                'allocation_ratio': 1.0,
-            },
-        }
+        info = self._node_resource(node)
+        result = {}
+        for rc, field in [(obj_fields.ResourceClass.VCPU, 'vcpus'),
+                          (obj_fields.ResourceClass.MEMORY_MB, 'memory_mb'),
+                          (obj_fields.ResourceClass.DISK_GB, 'local_gb')]:
+            # NOTE(dtantsur): any of these fields can be zero starting with
+            # the Pike release.
+            if info[field]:
+                result[rc] = {
+                    'total': info[field],
+                    'reserved': 0,
+                    'min_unit': 1,
+                    'max_unit': info[field],
+                    'step_size': 1,
+                    'allocation_ratio': 1.0,
+                }
+
         rc_name = info.get('resource_class')
         if rc_name is not None:
             # TODO(jaypipes): Raise an exception in Queens if Ironic doesn't
