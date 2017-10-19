@@ -804,6 +804,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                         'Driver capabilities for '
                         '\'supports_extend_volume\' '
                         'is invalid')
+        self.assertFalse(drvr.requires_allocation_refresh,
+                         'Driver does not need allocation refresh')
 
     def create_fake_libvirt_mock(self, **kwargs):
         """Defining mocks for LibvirtDriver(libvirt is not used)."""
