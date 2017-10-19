@@ -664,6 +664,10 @@ class GuestTestCase(test.NoDBTestCase):
         self.guest.migrate_configure_max_downtime(1000)
         self.domain.migrateSetMaxDowntime.assert_called_once_with(1000)
 
+    def test_migrate_configure_max_speed(self):
+        self.guest.migrate_configure_max_speed(1000)
+        self.domain.migrateSetMaxSpeed.assert_called_once_with(1000)
+
 
 class GuestBlockTestCase(test.NoDBTestCase):
 
