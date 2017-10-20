@@ -17,20 +17,19 @@ import mock
 from oslo_concurrency import processutils
 
 from nova import test
-from nova import utils
 from nova.virt.libvirt.volume import remotefs
 
 
 class RemoteFSTestCase(test.NoDBTestCase):
     """Remote filesystem operations test case."""
 
-    @mock.patch.object(utils, 'execute')
     @mock.patch('oslo_utils.fileutils.ensure_tree')
-    def _test_mount_share(self, mock_ensure_tree, mock_execute,
+    @mock.patch('nova.privsep.fs.mount')
+    def _test_mount_share(self, mock_mount, mock_ensure_tree,
                           already_mounted=False):
         if already_mounted:
             err_msg = 'Device or resource busy'
-            mock_execute.side_effect = [
+            mock_mount.side_effect = [
                 None, processutils.ProcessExecutionError(err_msg)]
 
         remotefs.mount_share(
@@ -39,11 +38,11 @@ class RemoteFSTestCase(test.NoDBTestCase):
             options=[mock.sentinel.mount_options])
 
         mock_ensure_tree.assert_any_call(mock.sentinel.mount_path)
-        mock_execute.assert_any_call('mount', '-t', mock.sentinel.export_type,
-                                     mock.sentinel.mount_options,
-                                     mock.sentinel.export_path,
-                                     mock.sentinel.mount_path,
-                                     run_as_root=True)
+        mock_mount.assert_has_calls(
+            [mock.call(mock.sentinel.export_type,
+                       mock.sentinel.export_path,
+                       mock.sentinel.mount_path,
+                       [mock.sentinel.mount_options])])
 
     def test_mount_new_share(self):
         self._test_mount_share()
@@ -51,14 +50,13 @@ class RemoteFSTestCase(test.NoDBTestCase):
     def test_mount_already_mounted_share(self):
         self._test_mount_share(already_mounted=True)
 
-    @mock.patch.object(utils, 'execute')
-    def test_unmount_share(self, mock_execute):
+    @mock.patch('nova.privsep.fs.umount')
+    def test_unmount_share(self, mock_umount):
         remotefs.unmount_share(
             mock.sentinel.mount_path, mock.sentinel.export_path)
 
-        mock_execute.assert_any_call('umount', mock.sentinel.mount_path,
-                                     run_as_root=True, attempts=3,
-                                     delay_on_retry=True)
+        mock_umount.assert_has_calls(
+            [mock.call(mock.sentinel.mount_path)])
 
     @mock.patch('tempfile.mkdtemp', return_value='/tmp/Mercury')
     @mock.patch('nova.utils.execute')

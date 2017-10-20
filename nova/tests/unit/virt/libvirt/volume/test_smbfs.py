@@ -30,7 +30,10 @@ class LibvirtSMBFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
 
     @mock.patch.object(libvirt_utils, 'is_mounted')
     @mock.patch('oslo_utils.fileutils.ensure_tree')
-    def test_libvirt_smbfs_driver(self, mock_ensure_tree, mock_is_mounted):
+    @mock.patch('nova.privsep.fs.mount')
+    @mock.patch('nova.privsep.fs.umount')
+    def test_libvirt_smbfs_driver(self, mock_umount, mock_mount,
+                                  mock_ensure_tree, mock_is_mounted):
         mock_is_mounted.return_value = False
 
         libvirt_driver = smbfs.LibvirtSMBFSVolumeDriver(self.fake_host)
@@ -45,15 +48,16 @@ class LibvirtSMBFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         libvirt_driver.disconnect_volume(connection_info, "vde",
                                          mock.sentinel.instance)
 
-        expected_commands = [
-            ('mount', '-t', 'cifs', '-o', 'username=guest',
-             export_string, export_mnt_base),
-            ('umount', export_mnt_base)]
         mock_ensure_tree.assert_has_calls([mock.call(export_mnt_base)])
-        self.assertEqual(expected_commands, self.executes)
+        mock_mount.assert_has_calls(
+            [mock.call('cifs', export_string, export_mnt_base,
+                       ['-o', 'username=guest'])])
+        mock_umount.assert_has_calls([mock.call(export_mnt_base)])
 
     @mock.patch.object(libvirt_utils, 'is_mounted', return_value=True)
-    def test_libvirt_smbfs_driver_already_mounted(self, mock_is_mounted):
+    @mock.patch('nova.privsep.fs.umount')
+    def test_libvirt_smbfs_driver_already_mounted(self, mock_umount,
+                                                  mock_is_mounted):
         libvirt_driver = smbfs.LibvirtSMBFSVolumeDriver(self.fake_host)
         export_string = '//192.168.1.1/volumes'
         export_mnt_base = os.path.join(self.mnt_base,
@@ -66,9 +70,7 @@ class LibvirtSMBFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         libvirt_driver.disconnect_volume(connection_info, "vde",
                                          mock.sentinel.instance)
 
-        expected_commands = [
-            ('umount', export_mnt_base)]
-        self.assertEqual(expected_commands, self.executes)
+        mock_umount.assert_has_calls([mock.call(export_mnt_base)])
 
     def test_libvirt_smbfs_driver_get_config(self):
         libvirt_driver = smbfs.LibvirtSMBFSVolumeDriver(self.fake_host)
@@ -86,8 +88,10 @@ class LibvirtSMBFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
 
     @mock.patch.object(libvirt_utils, 'is_mounted')
     @mock.patch('oslo_utils.fileutils.ensure_tree')
-    def test_libvirt_smbfs_driver_with_opts(self, mock_ensure_tree,
-                                            mock_is_mounted):
+    @mock.patch('nova.privsep.fs.mount')
+    @mock.patch('nova.privsep.fs.umount')
+    def test_libvirt_smbfs_driver_with_opts(self, mock_umount, mock_mount,
+                                            mock_ensure_tree, mock_is_mounted):
         mock_is_mounted.return_value = False
 
         libvirt_driver = smbfs.LibvirtSMBFSVolumeDriver(self.fake_host)
@@ -104,9 +108,8 @@ class LibvirtSMBFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         libvirt_driver.disconnect_volume(connection_info, "vde",
                                          mock.sentinel.instance)
 
-        expected_commands = [
-            ('mount', '-t', 'cifs', '-o', 'user=guest,uid=107,gid=105',
-             export_string, export_mnt_base),
-            ('umount', export_mnt_base)]
         mock_ensure_tree.assert_has_calls([mock.call(export_mnt_base)])
-        self.assertEqual(expected_commands, self.executes)
+        mock_mount.assert_has_calls(
+            [mock.call('cifs', export_string, export_mnt_base,
+                       ['-o', 'user=guest,uid=107,gid=105'])])
+        mock_umount.assert_has_calls([mock.call(export_mnt_base)])

@@ -12,7 +12,6 @@
 
 import os
 
-import fixtures
 import mock
 
 from nova.tests.unit.virt.libvirt.volume import test_volume
@@ -35,31 +34,13 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         m.host_up(self.fake_host)
         self.flags(nfs_mount_point_base=self.mnt_base, group='libvirt')
 
-        # Caution: this is also faked by the superclass
-        orig_execute = utils.execute
-
-        mounted = [False]
-
-        def fake_execute(*cmd, **kwargs):
-            orig_execute(*cmd, **kwargs)
-
-            if cmd[0] == 'mount':
-                mounted[0] = True
-
-            if cmd[0] == 'umount':
-                mounted[0] = False
-
-        self.useFixture(fixtures.MonkeyPatch('nova.utils.execute',
-                                             fake_execute))
-
-        # Mock ismount to return the current mount state
-        # N.B. This is only valid for tests which mount and unmount a single
-        # directory.
-        self.useFixture(fixtures.MonkeyPatch('os.path.ismount',
-                                         lambda *args, **kwargs: mounted[0]))
-
     @mock.patch('oslo_utils.fileutils.ensure_tree')
-    def test_libvirt_nfs_driver(self, mock_ensure_tree):
+    @mock.patch('nova.privsep.fs.mount')
+    @mock.patch('os.path.ismount', side_effect=[False, True, False])
+    @mock.patch('nova.privsep.fs.umount')
+    @mock.patch('nova.privsep.path.rmdir')
+    def test_libvirt_nfs_driver(self, mock_rmdir, mock_umount, mock_ismount,
+                                mock_mount, mock_ensure_tree):
         libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_host)
 
         export_string = '192.168.1.1:/nfs/share1'
@@ -78,12 +59,11 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         device_path = os.path.join(export_mnt_base,
                                    connection_info['data']['name'])
         self.assertEqual(connection_info['data']['device_path'], device_path)
-        expected_commands = [
-            ('mount', '-t', 'nfs', export_string, export_mnt_base),
-            ('umount', export_mnt_base),
-            ('rmdir', export_mnt_base)]
         mock_ensure_tree.assert_has_calls([mock.call(export_mnt_base)])
-        self.assertEqual(expected_commands, self.executes)
+        mock_mount.assert_has_calls([mock.call('nfs', export_string,
+                                               export_mnt_base, [])])
+        mock_umount.assert_has_calls([mock.call(export_mnt_base)])
+        mock_rmdir.assert_has_calls([mock.call(export_mnt_base)])
 
     def test_libvirt_nfs_driver_get_config(self):
         libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_host)
@@ -102,7 +82,13 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         self.assertEqual('native', tree.find('./driver').get('io'))
 
     @mock.patch('oslo_utils.fileutils.ensure_tree')
-    def test_libvirt_nfs_driver_with_opts(self, mock_ensure_tree):
+    @mock.patch('nova.privsep.fs.mount')
+    @mock.patch('os.path.ismount', side_effect=[False, True, False])
+    @mock.patch('nova.privsep.fs.umount')
+    @mock.patch('nova.privsep.path.rmdir')
+    def test_libvirt_nfs_driver_with_opts(self, mock_rmdir, mock_umount,
+                                          mock_ismount, mock_mount,
+                                          mock_ensure_tree):
         libvirt_driver = nfs.LibvirtNFSVolumeDriver(self.fake_host)
         export_string = '192.168.1.1:/nfs/share1'
         options = '-o intr,nfsvers=3'
@@ -119,11 +105,9 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         libvirt_driver.disconnect_volume(connection_info, "vde",
                                          mock.sentinel.instance)
 
-        expected_commands = [
-            ('mount', '-t', 'nfs', '-o', 'intr,nfsvers=3',
-             export_string, export_mnt_base),
-            ('umount', export_mnt_base),
-            ('rmdir', export_mnt_base)
-        ]
         mock_ensure_tree.assert_has_calls([mock.call(export_mnt_base)])
-        self.assertEqual(expected_commands, self.executes)
+        mock_mount.assert_has_calls([mock.call('nfs', export_string,
+                                               export_mnt_base,
+                                               ['-o', 'intr,nfsvers=3'])])
+        mock_umount.assert_has_calls([mock.call(export_mnt_base)])
+        mock_rmdir.assert_has_calls([mock.call(export_mnt_base)])
