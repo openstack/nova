@@ -17,7 +17,6 @@ import mock
 import testtools
 import webob.exc
 
-from nova.api.openstack import api_version_request as api_version
 from nova.api.openstack.compute import hosts as os_hosts_v21
 from nova.compute import power_state
 from nova.compute import vm_states
@@ -129,12 +128,6 @@ def _create_instance_dict(**kwargs):
     return inst
 
 
-class FakeRequestWithNovaZone(object):
-    environ = {"nova.context": context_maker.get_admin_context()}
-    GET = {"zone": "nova"}
-    api_version_request = api_version.APIVersionRequest('2.1')
-
-
 class HostTestCaseV21(test.TestCase):
     """Test Case for hosts."""
     validation_ex = exception.ValidationError
@@ -177,6 +170,49 @@ class HostTestCaseV21(test.TestCase):
         self.assertIn('hosts', result)
         hosts = result['hosts']
         self.assertEqual(fake_hosts.HOST_LIST, hosts)
+
+    def test_list_host_with_multi_filter(self):
+        query_string = 'zone=nova1&zone=nova'
+        req = fakes.HTTPRequest.blank('', use_admin_context=True,
+                                      query_string=query_string)
+        result = self.controller.index(req)
+        self.assertIn('hosts', result)
+        hosts = result['hosts']
+        self.assertEqual(fake_hosts.HOST_LIST_NOVA_ZONE, hosts)
+
+    def test_list_host_query_allow_negative_int_as_string(self):
+        req = fakes.HTTPRequest.blank('', use_admin_context=True,
+                                      query_string='zone=-1')
+        result = self.controller.index(req)
+        self.assertIn('hosts', result)
+        hosts = result['hosts']
+        self.assertEqual([], hosts)
+
+    def test_list_host_query_allow_int_as_string(self):
+        req = fakes.HTTPRequest.blank('', use_admin_context=True,
+                                      query_string='zone=123')
+        result = self.controller.index(req)
+        self.assertIn('hosts', result)
+        hosts = result['hosts']
+        self.assertEqual([], hosts)
+
+    def test_list_host_with_unknown_filter(self):
+        query_string = 'unknown_filter=abc'
+        req = fakes.HTTPRequest.blank('', use_admin_context=True,
+                                      query_string=query_string)
+        result = self.controller.index(req)
+        self.assertIn('hosts', result)
+        hosts = result['hosts']
+        self.assertEqual(fake_hosts.HOST_LIST, hosts)
+
+    def test_list_host_with_hypervisor_and_additional_filter(self):
+        query_string = 'zone=nova&additional_filter=nova2'
+        req = fakes.HTTPRequest.blank('', use_admin_context=True,
+                                      query_string=query_string)
+        result = self.controller.index(req)
+        self.assertIn('hosts', result)
+        hosts = result['hosts']
+        self.assertEqual(fake_hosts.HOST_LIST_NOVA_ZONE, hosts)
 
     def test_disable_host(self):
         self._test_host_update('host_c1', 'status', 'disable', 'disabled')
@@ -383,7 +419,10 @@ class HostTestCaseV21(test.TestCase):
                               self.controller.show, self.req, s_ref['host'])
 
     def test_list_hosts_with_zone(self):
-        result = self.controller.index(FakeRequestWithNovaZone())
+        query_string = 'zone=nova'
+        req = fakes.HTTPRequest.blank('', use_admin_context=True,
+                                      query_string=query_string)
+        result = self.controller.index(req)
         self.assertIn('hosts', result)
         hosts = result['hosts']
         self.assertEqual(fake_hosts.HOST_LIST_NOVA_ZONE, hosts)

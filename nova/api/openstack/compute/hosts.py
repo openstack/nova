@@ -40,6 +40,7 @@ class HostController(wsgi.Controller):
         super(HostController, self).__init__()
 
     @wsgi.Controller.api_version("2.1", "2.42")
+    @validation.query_schema(hosts.index_query)
     @extensions.expected_errors(())
     def index(self, req):
         """Returns a dict in the format
