@@ -153,7 +153,7 @@ def _instance_to_allocations_dict(instance):
 
 def _move_operation_alloc_request(source_allocs, dest_alloc_req):
     """Given existing allocations for a source host and a new allocation
-    request for a destination host, return a new allocation request that
+    request for a destination host, return a new allocation_request that
     contains resources claimed against both source and destination, accounting
     for shared providers.
 
@@ -163,10 +163,10 @@ def _move_operation_alloc_request(source_allocs, dest_alloc_req):
 
     :param source_allocs: Dict, keyed by resource provider UUID, of resources
                           allocated on the source host
-    :param dest_alloc_request: The allocation request for resources against the
+    :param dest_alloc_request: The allocation_request for resources against the
                                destination host
     """
-    LOG.debug("Doubling-up allocation request for move operation.")
+    LOG.debug("Doubling-up allocation_request for move operation.")
     # Remove any allocations against resource providers that are
     # already allocated against on the source host (like shared storage
     # providers)
@@ -205,7 +205,7 @@ def _move_operation_alloc_request(source_allocs, dest_alloc_req):
                     scheduler_utils.merge_resources(current_alloc['resources'],
                                                     alloc['resources'])
 
-    LOG.debug("New allocation request containing both source and "
+    LOG.debug("New allocation_request containing both source and "
               "destination hosts in move operation: %s", new_alloc_req)
     return new_alloc_req
 
@@ -330,16 +330,16 @@ class SchedulerReportClient(object):
     def get_allocation_candidates(self, resources):
         """Returns a tuple of (allocation_requests, provider_summaries).
 
-        The allocation requests are a collection of potential JSON objects that
+        The allocation_requests are a collection of potential JSON objects that
         can be passed to the PUT /allocations/{consumer_uuid} Placement REST
         API to claim resources against one or more resource providers that meet
         the requested resource constraints.
 
         The provider summaries is a dict, keyed by resource provider UUID, of
         inventory and capacity information for any resource provider involved
-        in the allocation requests.
+        in the allocation_requests.
 
-        :returns: A tuple with a list of allocation request dicts and a dict of
+        :returns: A tuple with a list of allocation_request dicts and a dict of
                   provider information or (None, None) if the request failed
 
         :param resources: A dict, keyed by resource class name, of requested
@@ -1009,7 +1009,7 @@ class SchedulerReportClient(object):
                               placement's PUT /allocations API
         :param project_id: The project_id associated with the allocations.
         :param user_id: The user_id associated with the allocations.
-        :param attempt: The attempt at claiming this allocation request (used
+        :param attempt: The attempt at claiming this allocation_request (used
                         in recursive retries)
         :returns: True if the allocations were created, False otherwise.
         """
