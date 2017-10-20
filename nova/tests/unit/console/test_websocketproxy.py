@@ -14,11 +14,10 @@
 
 """Tests for nova websocketproxy."""
 
-
 import mock
-
 import socket
 
+from nova.console.securityproxy import base
 from nova.console import websocketproxy
 from nova import exception
 from nova import test
@@ -32,7 +31,9 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         self.flags(allowed_origins=['allowed-origin-example-1.net',
                                     'allowed-origin-example-2.net'],
                    group='console')
+        self.server = websocketproxy.NovaWebSocketProxy()
         self.wh = websocketproxy.NovaProxyRequestHandlerBase()
+        self.wh.server = self.server
         self.wh.socket = mock.MagicMock()
         self.wh.msg = mock.MagicMock()
         self.wh.do_proxy = mock.MagicMock()
@@ -393,3 +394,82 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
         check_token.assert_called_with(mock.ANY, token="123-456-789")
         self.wh.socket.assert_called_with('node1', 10000, connect=True)
         self.wh.do_proxy.assert_called_with('<socket>')
+
+
+class NovaWebsocketSecurityProxyTestCase(test.NoDBTestCase):
+
+    def setUp(self):
+        super(NovaWebsocketSecurityProxyTestCase, self).setUp()
+
+        self.flags(allowed_origins=['allowed-origin-example-1.net',
+                                    'allowed-origin-example-2.net'],
+                   group='console')
+
+        self.server = websocketproxy.NovaWebSocketProxy(
+            security_proxy=mock.MagicMock(
+                spec=base.SecurityProxy)
+        )
+
+        self.wh = websocketproxy.NovaProxyRequestHandlerBase()
+        self.wh.server = self.server
+        self.wh.path = "http://127.0.0.1/?token=123-456-789"
+        self.wh.socket = mock.MagicMock()
+        self.wh.msg = mock.MagicMock()
+        self.wh.do_proxy = mock.MagicMock()
+        self.wh.headers = mock.MagicMock()
+
+        def get_header(header):
+            if header == 'cookie':
+                return 'token="123-456-789"'
+            elif header == 'Origin':
+                return 'https://example.net:6080'
+            elif header == 'Host':
+                return 'example.net:6080'
+            else:
+                return
+
+        self.wh.headers.get = get_header
+
+    @mock.patch('nova.console.websocketproxy.TenantSock.close')
+    @mock.patch('nova.console.websocketproxy.TenantSock.finish_up')
+    @mock.patch('nova.consoleauth.rpcapi.ConsoleAuthAPI.check_token',
+                return_value=True)
+    def test_proxy_connect_ok(self, check_token, mock_finish, mock_close):
+        check_token.return_value = {
+            'host': 'node1',
+            'port': '10000',
+            'console_type': 'novnc',
+            'access_url': 'https://example.net:6080'
+        }
+
+        sock = mock.MagicMock(
+            spec=websocketproxy.TenantSock)
+        self.server.security_proxy.connect.return_value = sock
+
+        self.wh.new_websocket_client()
+
+        self.wh.do_proxy.assert_called_with(sock)
+        mock_finish.assert_called_with()
+        self.assertEqual(len(mock_close.calls), 0)
+
+    @mock.patch('nova.console.websocketproxy.TenantSock.close')
+    @mock.patch('nova.console.websocketproxy.TenantSock.finish_up')
+    @mock.patch('nova.consoleauth.rpcapi.ConsoleAuthAPI.check_token',
+                return_value=True)
+    def test_proxy_connect_err(self, check_token, mock_finish, mock_close):
+        check_token.return_value = {
+            'host': 'node1',
+            'port': '10000',
+            'console_type': 'novnc',
+            'access_url': 'https://example.net:6080'
+        }
+
+        ex = exception.SecurityProxyNegotiationFailed("Wibble")
+        self.server.security_proxy.connect.side_effect = ex
+
+        self.assertRaises(exception.SecurityProxyNegotiationFailed,
+                          self.wh.new_websocket_client)
+
+        self.assertEqual(len(self.wh.do_proxy.calls), 0)
+        mock_close.assert_called_with()
+        self.assertEqual(len(mock_finish.calls), 0)

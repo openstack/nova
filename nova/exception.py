@@ -1763,6 +1763,10 @@ class RequestedVRamTooHigh(NovaException):
                 "than the maximum allowed by flavor %(max_vram)d.")
 
 
+class SecurityProxyNegotiationFailed(NovaException):
+    msg_fmt = _("Failed to negotiate security type with server: %(reason)s")
+
+
 class InvalidWatchdogAction(Invalid):
     msg_fmt = _("Provided watchdog action (%(action)s) is not supported.")
 
