@@ -1393,9 +1393,21 @@ class CellV2Commands(object):
         instance_mappings = objects.InstanceMappingList.get_by_cell_id(
             ctxt, cell_mapping.id)
         if instance_mappings:
-            print(_('There are existing instances mapped to cell with '
-                    'uuid %s.') % cell_uuid)
-            return 3
+            with context.target_cell(ctxt, cell_mapping) as cctxt:
+                instances = objects.InstanceList.get_all(cctxt)
+            if instances:
+                # There are instances in the cell.
+                print(_('There are existing instances mapped to cell with '
+                        'uuid %s.') % cell_uuid)
+                return 3
+            # There are no instances in the cell but the records remains
+            # in the 'instance_mappings' table.
+            print(_("There are instance mappings to cell with uuid %s, "
+                    "but all instances have been deleted "
+                    "in the cell.") % cell_uuid)
+            print(_("So execute 'nova-manage db archive_deleted_rows' to "
+                    "delete the instance mappings."))
+            return 4
 
         # Delete hosts mapped to the cell.
         for host_mapping in host_mappings:

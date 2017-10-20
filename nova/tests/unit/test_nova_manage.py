@@ -1691,10 +1691,14 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         output = self.output.getvalue().strip()
         self.assertIn('There are existing hosts mapped to cell', output)
 
-    def test_delete_cell_instance_mappings_exist(self):
+    @mock.patch.object(objects.InstanceList, 'get_all')
+    def test_delete_cell_instance_mappings_exist_with_instances(
+        self, mock_get_all):
         """Tests trying to delete a cell which has instance mappings."""
         cell_uuid = uuidutils.generate_uuid()
         ctxt = context.get_admin_context()
+        mock_get_all.return_value = [objects.Instance(
+            ctxt, uuid=uuidsentinel.instance)]
         # create the cell mapping
         cm = objects.CellMapping(
             context=ctxt, uuid=cell_uuid, database_connection='fake:///db',
@@ -1708,6 +1712,31 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         self.assertEqual(3, self.commands.delete_cell(cell_uuid))
         output = self.output.getvalue().strip()
         self.assertIn('There are existing instances mapped to cell', output)
+
+    @mock.patch.object(objects.InstanceList, 'get_all',
+                       return_value=[])
+    def test_delete_cell_instance_mappings_exist_without_instances(
+        self, mock_get_all):
+        """Tests trying to delete a cell which has instance mappings."""
+        cell_uuid = uuidutils.generate_uuid()
+        ctxt = context.get_admin_context()
+        # create the cell mapping
+        cm = objects.CellMapping(
+            context=ctxt, uuid=cell_uuid, database_connection='fake:///db',
+            transport_url='fake:///mq')
+        cm.create()
+        # create an instance mapping in this cell
+        im = objects.InstanceMapping(
+            context=ctxt, instance_uuid=uuidutils.generate_uuid(),
+            cell_mapping=cm, project_id=uuidutils.generate_uuid())
+        im.create()
+        self.assertEqual(4, self.commands.delete_cell(cell_uuid))
+        output = self.output.getvalue().strip()
+        self.assertIn('There are instance mappings to cell with uuid', output)
+        self.assertIn('but all instances have been deleted in the cell.',
+                      output)
+        self.assertIn("So execute 'nova-manage db archive_deleted_rows' to "
+                      "delete the instance mappings.", output)
 
     def test_delete_cell_success_without_host_mappings(self):
         """Tests trying to delete an empty cell."""

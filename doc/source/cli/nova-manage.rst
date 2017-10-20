@@ -213,7 +213,9 @@ Nova Cells v2
     the cell and the hosts are deleted successfully with ``--force`` option,
     1 if a cell with that uuid could not be found, 2 if host mappings were
     found for the cell (cell not empty) without ``--force`` option, and 3
-    if there are instances mapped to the cell (cell not empty).
+    if there are instances mapped to the cell (cell not empty), 4 if there are
+    instance mappings to the cell but all instances have been deleted
+    in the cell.
 
 ``nova-manage cell_v2 list_hosts [--cell_uuid <cell_uuid>]``
 
