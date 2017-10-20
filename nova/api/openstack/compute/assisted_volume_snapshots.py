@@ -63,6 +63,7 @@ class AssistedVolumeSnapshotsController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
     @wsgi.response(204)
+    @validation.query_schema(assisted_volume_snapshots.delete_query)
     @extensions.expected_errors((400, 404))
     def delete(self, req, id):
         """Delete a snapshot."""
