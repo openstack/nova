@@ -352,10 +352,14 @@ class FilterScheduler(driver.Scheduler):
 
     def _get_alternate_hosts(self, selected_hosts, spec_obj, hosts, index,
                              num_to_return):
-        # The selected_hosts have all had resources 'claimed' via
-        # _consume_selected_host, so we need to filter/weigh and sort the
-        # hosts again to get an accurate count for alternates.
-        hosts = self._get_sorted_hosts(spec_obj, hosts, index)
+        # We only need to filter/weigh the hosts again if we're dealing with
+        # more than one instance since the single selected host will get
+        # filtered out of the list of alternates below.
+        if index > 0:
+            # The selected_hosts have all had resources 'claimed' via
+            # _consume_selected_host, so we need to filter/weigh and sort the
+            # hosts again to get an accurate count for alternates.
+            hosts = self._get_sorted_hosts(spec_obj, hosts, index)
         # This is the overall list of values to be returned. There will be one
         # item per instance, and that item will be a list of HostState objects
         # representing the selected host along with alternates from the same

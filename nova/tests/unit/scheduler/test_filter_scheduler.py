@@ -658,6 +658,12 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         dests = self.driver._schedule(self.context, spec_obj,
                 instance_uuids, alloc_reqs, None)
         self.assertEqual(num_instances, len(dests))
+        # Filtering and weighing hosts should be called num_instances + 1 times
+        # unless num_instances == 1.
+        self.assertEqual(num_instances + 1 if num_instances > 1 else 1,
+                         mock_sorted.call_count,
+                         'Unexpected number of calls to filter hosts for %s '
+                         'instances.' % num_instances)
         selected_hosts = [dest[0] for dest in dests]
         for dest in dests:
             self.assertEqual(total_returned, len(dest))
