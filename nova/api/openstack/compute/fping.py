@@ -23,8 +23,10 @@ from webob import exc
 from nova.api.openstack.api_version_request \
     import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas import fping as schema
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import compute
 import nova.conf
 from nova.i18n import _
@@ -68,6 +70,7 @@ class FpingController(wsgi.Controller):
         return ret
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @validation.query_schema(schema.index_query)
     @extensions.expected_errors(503)
     def index(self, req):
         context = req.environ["nova.context"]
