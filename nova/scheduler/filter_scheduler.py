@@ -55,11 +55,11 @@ class FilterScheduler(driver.Scheduler):
         :param instance_uuids: List of UUIDs, one for each value of the spec
                                object's num_instances attribute
         :param alloc_reqs_by_rp_uuid: Optional dict, keyed by resource provider
-                                      UUID, of the allocation requests that may
+                                      UUID, of the allocation_requests that may
                                       be used to claim resources against
                                       matched hosts. If None, indicates either
                                       the placement API wasn't reachable or
-                                      that there were no allocation requests
+                                      that there were no allocation_requests
                                       returned by the placement API. If the
                                       latter, the provider_summaries will be an
                                       empty dict, not None.
@@ -124,11 +124,11 @@ class FilterScheduler(driver.Scheduler):
         :param spec_obj: The RequestSpec object
         :param instance_uuids: List of instance UUIDs to place or move.
         :param alloc_reqs_by_rp_uuid: Optional dict, keyed by resource provider
-                                      UUID, of the allocation requests that may
+                                      UUID, of the allocation_requests that may
                                       be used to claim resources against
                                       matched hosts. If None, indicates either
                                       the placement API wasn't reachable or
-                                      that there were no allocation requests
+                                      that there were no allocation_requests
                                       returned by the placement API. If the
                                       latter, the provider_summaries will be an
                                       empty dict, not None.
@@ -201,14 +201,14 @@ class FilterScheduler(driver.Scheduler):
 
                 # Attempt to claim the resources against one or more resource
                 # providers, looping over the sorted list of possible hosts
-                # looking for an allocation request that contains that host's
+                # looking for an allocation_request that contains that host's
                 # resource provider UUID
                 claimed_host = None
                 for host in hosts:
                     cn_uuid = host.uuid
                     if cn_uuid not in alloc_reqs_by_rp_uuid:
                         LOG.debug("Found host state %s that wasn't in "
-                                  "allocation requests. Skipping.", cn_uuid)
+                                  "allocation_requests. Skipping.", cn_uuid)
                         continue
 
                     alloc_reqs = alloc_reqs_by_rp_uuid[cn_uuid]
@@ -252,7 +252,7 @@ class FilterScheduler(driver.Scheduler):
     def _claim_resources(self, ctx, spec_obj, instance_uuid, alloc_reqs):
         """Given an instance UUID (representing the consumer of resources), the
         HostState object for the host that was chosen for the instance, and a
-        list of allocation request JSON objects, attempt to claim resources for
+        list of allocation_request JSON objects, attempt to claim resources for
         the instance in the placement API. Returns True if the claim process
         was successful, False otherwise.
 
@@ -260,7 +260,7 @@ class FilterScheduler(driver.Scheduler):
         :param spec_obj: The RequestSpec object
         :param instance_uuid: The UUID of the consuming instance
         :param cn_uuid: UUID of the host to allocate against
-        :param alloc_reqs: A list of allocation request JSON objects that
+        :param alloc_reqs: A list of allocation_request JSON objects that
                            allocate against (at least) the compute host
                            selected by the _schedule() method. These allocation
                            requests were constructed from a call to the GET
@@ -282,11 +282,11 @@ class FilterScheduler(driver.Scheduler):
         # the spec object?
         user_id = ctx.user_id
 
-        # TODO(jaypipes): Loop through all allocation requests instead of just
+        # TODO(jaypipes): Loop through all allocation_requests instead of just
         # trying the first one. For now, since we'll likely want to order the
-        # allocation requests in the future based on information in the
+        # allocation_requests in the future based on information in the
         # provider summaries, we'll just try to claim resources using the first
-        # allocation request
+        # allocation_request
         alloc_req = alloc_reqs[0]
 
         return self.placement_client.claim_resources(instance_uuid,
