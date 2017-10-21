@@ -53,8 +53,8 @@ class _FakeImageService(object):
                  'disk_format': 'raw',
                  'size': '25165824',
                  'properties': {
-                    'kernel_id': CONF.null_kernel,
-                    'ramdisk_id': CONF.null_kernel,
+                    'kernel_id': 'nokernel',
+                    'ramdisk_id': 'nokernel',
                     'architecture': obj_fields.Architecture.X86_64}}
 
         image2 = {'id': 'a2459075-d96c-40d5-893e-577ff92e721c',
@@ -68,8 +68,8 @@ class _FakeImageService(object):
                  'container_format': 'ami',
                  'disk_format': 'ami',
                  'size': '58145823',
-                 'properties': {'kernel_id': CONF.null_kernel,
-                                'ramdisk_id': CONF.null_kernel}}
+                 'properties': {'kernel_id': 'nokernel',
+                                'ramdisk_id': 'nokernel'}}
 
         image3 = {'id': '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
                  'name': 'fakeimage123456',
@@ -82,8 +82,8 @@ class _FakeImageService(object):
                  'container_format': 'bare',
                  'disk_format': 'raw',
                  'size': '83594576',
-                 'properties': {'kernel_id': CONF.null_kernel,
-                                'ramdisk_id': CONF.null_kernel}}
+                 'properties': {'kernel_id': 'nokernel',
+                                'ramdisk_id': 'nokernel'}}
 
         image4 = {'id': 'cedef40a-ed67-4d10-800e-17455edce175',
                  'name': 'fakeimage123456',
@@ -96,8 +96,8 @@ class _FakeImageService(object):
                  'container_format': 'ami',
                  'disk_format': 'ami',
                  'size': '84035174',
-                 'properties': {'kernel_id': CONF.null_kernel,
-                                'ramdisk_id': CONF.null_kernel}}
+                 'properties': {'kernel_id': 'nokernel',
+                                'ramdisk_id': 'nokernel'}}
 
         image5 = {'id': 'c905cedb-7281-47e4-8a62-f26bc5fc4c77',
                  'name': 'fakeimage123456',
@@ -126,8 +126,8 @@ class _FakeImageService(object):
                  'disk_format': 'vhd',
                  'size': '49163826',
                  'properties': {
-                    'kernel_id': CONF.null_kernel,
-                    'ramdisk_id': CONF.null_kernel,
+                    'kernel_id': 'nokernel',
+                    'ramdisk_id': 'nokernel',
                     'architecture': obj_fields.Architecture.X86_64,
                     'auto_disk_config': 'False'}}
 
@@ -143,8 +143,8 @@ class _FakeImageService(object):
                  'disk_format': 'vhd',
                  'size': '74185822',
                  'properties': {
-                    'kernel_id': CONF.null_kernel,
-                    'ramdisk_id': CONF.null_kernel,
+                    'kernel_id': 'nokernel',
+                    'ramdisk_id': 'nokernel',
                     'architecture': obj_fields.Architecture.X86_64,
                     'auto_disk_config': 'True'}}
 

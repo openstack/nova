@@ -53,8 +53,8 @@ class TestServerGet(test.TestCase):
                  'container_format': 'raw',
                  'disk_format': 'raw',
                  'size': '25165824',
-                 'properties': {'kernel_id': CONF.null_kernel,
-                                'ramdisk_id': CONF.null_kernel,
+                 'properties': {'kernel_id': 'nokernel',
+                                'ramdisk_id': 'nokernel',
                                 'architecture': 'x64'}}
         self.image_id = image_service.create(None, image)['id']
         self.flavor_id = self.api.get_flavors()[0]['id']

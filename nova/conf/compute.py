@@ -69,23 +69,6 @@ Possible values:
   need them.
 * Default list: cache_in_nova, bittorrent
 """),
-    cfg.StrOpt('null_kernel',
-        default='nokernel',
-        deprecated_for_removal=True,
-        deprecated_since='15.0.0',
-        deprecated_reason="""
-When an image is booted with the property 'kernel_id' with the value
-'nokernel', Nova assumes the image doesn't require an external kernel and
-ramdisk. This option allows user to change the API behaviour which should not
-be allowed and this value "nokernel" should be hard coded.
-""",
-        help="""
-This option is used to decide when an image should have no external
-ramdisk or kernel. By default this is set to 'nokernel', so when an
-image is booted with the property 'kernel_id' with the value
-'nokernel', Nova assumes the image doesn't require an external kernel
-and ramdisk.
-"""),
     cfg.StrOpt('multi_instance_display_name_template',
         default='%(name)s-%(count)d',
         deprecated_for_removal=True,

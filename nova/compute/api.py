@@ -408,13 +408,14 @@ class API(base.Base):
                                    image):
         """Choose kernel and ramdisk appropriate for the instance.
 
-        The kernel and ramdisk can be chosen in one of three ways:
+        The kernel and ramdisk can be chosen in one of two ways:
 
             1. Passed in with create-instance request.
 
-            2. Inherited from image.
+            2. Inherited from image metadata.
 
-            3. Forced to None by using `null_kernel` FLAG.
+        If inherited from image metadata, and if that image metadata value is
+        set to 'nokernel', both kernel and ramdisk will default to None.
         """
         # Inherit from image if not specified
         image_properties = image.get('properties', {})
@@ -425,8 +426,8 @@ class API(base.Base):
         if ramdisk_id is None:
             ramdisk_id = image_properties.get('ramdisk_id')
 
-        # Force to None if using null_kernel
-        if kernel_id == str(CONF.null_kernel):
+        # Force to None if kernel_id indicates that a kernel is not to be used
+        if kernel_id == 'nokernel':
             kernel_id = None
             ramdisk_id = None
 
