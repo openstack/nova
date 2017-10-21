@@ -197,8 +197,8 @@ def find_disk_dev_for_disk_bus(mapping, bus,
 
 def is_disk_bus_valid_for_virt(virt_type, disk_bus):
     valid_bus = {
-        'qemu': ['virtio', 'scsi', 'ide', 'usb', 'fdc'],
-        'kvm': ['virtio', 'scsi', 'ide', 'usb', 'fdc'],
+        'qemu': ['virtio', 'scsi', 'ide', 'usb', 'fdc', 'sata'],
+        'kvm': ['virtio', 'scsi', 'ide', 'usb', 'fdc', 'sata'],
         'xen': ['xen', 'ide'],
         'uml': ['uml'],
         'lxc': ['lxc'],

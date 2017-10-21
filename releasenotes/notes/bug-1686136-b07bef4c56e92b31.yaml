@@ -1,0 +1,7 @@
+---
+other:
+  - Adds 'sata' as a valid disk bus for qemu and kvm hypervisors.
+    Setting the 'hw_disk_bus' custom property on glance images allows for
+    selecting the type of disk bus e.g. VIRTIO/IDE/SCSI. Some Linux (custom)
+    images require use of SATA bus rather than any other that seem to be
+    allowed.
