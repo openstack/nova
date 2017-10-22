@@ -163,13 +163,10 @@ def list_allocation_candidates(req):
     schema = _GET_SCHEMA_1_10
     util.validate_query_params(req, schema)
 
-    resources = util.normalize_resources_qs_param(req.GET['resources'])
-    filters = {
-        'resources': resources,
-    }
+    requests = util.parse_qs_request_groups(req.GET)
 
     try:
-        cands = rp_obj.AllocationCandidates.get_by_filters(context, filters)
+        cands = rp_obj.AllocationCandidates.get_by_requests(context, requests)
     except exception.ResourceClassNotFound as exc:
         raise webob.exc.HTTPBadRequest(
             _('Invalid resource class in resources parameter: %(error)s') %
