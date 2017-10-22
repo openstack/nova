@@ -12,6 +12,7 @@
 """Utility methods for placement API."""
 
 import functools
+import re
 
 import jsonschema
 from oslo_middleware import request_id
@@ -19,10 +20,18 @@ from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 import webob
 
+from nova.api.openstack.placement import lib as placement_lib
 # NOTE(cdent): avoid cyclical import conflict between util and
 # microversion
 import nova.api.openstack.placement.microversion
 from nova.i18n import _
+
+
+# Querystring-related constants
+_QS_RESOURCES = 'resources'
+_QS_REQUIRED = 'required'
+_QS_KEY_PATTERN = re.compile(
+    r"^(%s)([1-9][0-9]*)?$" % '|'.join((_QS_RESOURCES, _QS_REQUIRED)))
 
 
 # NOTE(cdent): This registers a FormatChecker on the jsonschema
@@ -257,3 +266,132 @@ def normalize_resources_qs_param(qs):
             raise webob.exc.HTTPBadRequest(msg)
         result[rc_name] = amount
     return result
+
+
+def normalize_traits_qs_param(val):
+    """Parse a traits query string parameter value.
+
+    Note that this method doesn't know or care about the query parameter key,
+    which may currently be of the form `required`, `required123`, etc., but
+    which may someday also include `preferred`, etc.
+
+    This method currently does no format validation of trait strings, other
+    than to ensure they're not zero-length.
+
+    :param val: A traits query parameter value: a comma-separated string of
+                trait names.
+    :return: A set of trait names.
+    :raises `webob.exc.HTTPBadRequest` if the val parameter is not in the
+            expected format.
+    """
+    ret = set(substr.strip() for substr in val.split(','))
+    if not all(trait for trait in ret):
+        msg = _('Malformed traits parameter. Expected query string value '
+                'of the form: HW_CPU_X86_VMX,CUSTOM_MAGIC. '
+                'Got: "%s"') % val
+        raise webob.exc.HTTPBadRequest(msg)
+    return ret
+
+
+def parse_qs_request_groups(qsdict):
+    """Parse numbered resources and traits groupings out of a querystring dict.
+
+    The input qsdict represents a query string of the form:
+
+    ?resources=$RESOURCE_CLASS_NAME:$AMOUNT,$RESOURCE_CLASS_NAME:$AMOUNT
+    &required=$TRAIT_NAME,$TRAIT_NAME
+    &resources1=$RESOURCE_CLASS_NAME:$AMOUNT,RESOURCE_CLASS_NAME:$AMOUNT
+    &required1=$TRAIT_NAME,$TRAIT_NAME
+    &resources2=$RESOURCE_CLASS_NAME:$AMOUNT,RESOURCE_CLASS_NAME:$AMOUNT
+    &required2=$TRAIT_NAME,$TRAIT_NAME
+
+    These are parsed in groups according to the numeric suffix of the key.
+    For each group, a RequestGroup instance is created containing that group's
+    resources and required traits.  For the (single) group with no suffix, the
+    RequestGroup.use_same_provider attribute is False; for the numbered groups
+    it is True.
+
+    The return is a list of these RequestGroup instances.
+
+    As an example, if qsdict represents the query string:
+
+    ?resources=VCPU:2,MEMORY_MB:1024,DISK_GB=50
+    &required=HW_CPU_X86_VMX,CUSTOM_STORAGE_RAID
+    &resources1=SRIOV_NET_VF:2
+    &required1=CUSTOM_PHYSNET_PUBLIC,CUSTOM_SWITCH_A
+    &resources2=SRIOV_NET_VF:1
+    &required2=CUSTOM_PHYSNET_PRIVATE
+
+    ...the return value will be:
+
+    [ RequestGroup(
+          use_same_provider=False,
+          resources={
+              "VCPU": 2,
+              "MEMORY_MB": 1024,
+              "DISK_GB" 50,
+          },
+          required_traits=[
+              "HW_CPU_X86_VMX",
+              "CUSTOM_STORAGE_RAID",
+          ],
+      ),
+      RequestGroup(
+          use_same_provider=True,
+          resources={
+              "SRIOV_NET_VF": 2,
+          },
+          required_traits=[
+              "CUSTOM_PHYSNET_PUBLIC",
+              "CUSTOM_SWITCH_A",
+          ],
+      ),
+      RequestGroup(
+          use_same_provider=True,
+          resources={
+              "SRIOV_NET_VF": 1,
+          },
+          required_traits=[
+              "CUSTOM_PHYSNET_PRIVATE",
+          ],
+      ),
+    ]
+
+    :param qsdict: The MultiDict representing the querystring on a GET.
+    :return: A list of RequestGroup instances.
+    :raises `webob.exc.HTTPBadRequest` if any value is malformed, or if a
+            trait list is given without corresponding resources.
+    """
+    # Temporary dict of the form: { suffix: RequestGroup }
+    by_suffix = {}
+
+    def get_request_group(suffix):
+        if suffix not in by_suffix:
+            rq_grp = placement_lib.RequestGroup(use_same_provider=bool(suffix))
+            by_suffix[suffix] = rq_grp
+        return by_suffix[suffix]
+
+    for key, val in qsdict.items():
+        match = _QS_KEY_PATTERN.match(key)
+        if not match:
+            continue
+        # `prefix` is 'resources' or 'required'
+        # `suffix` is an integer string, or None
+        prefix, suffix = match.groups()
+        request_group = get_request_group(suffix or '')
+        if prefix == _QS_RESOURCES:
+            request_group.resources = normalize_resources_qs_param(val)
+        elif prefix == _QS_REQUIRED:
+            request_group.required_traits = normalize_traits_qs_param(val)
+
+    # Ensure any group with 'required' also has 'resources'.
+    orphans = [('required%s' % suff) for suff, group in by_suffix.items()
+               if group.required_traits and not group.resources]
+    if orphans:
+        msg = _('All traits parameters must be associated with resources.  '
+                'Found the following orphaned traits keys: %s')
+        raise webob.exc.HTTPBadRequest(msg % ', '.join(orphans))
+
+    # NOTE(efried): The sorting is not necessary for the API, but it makes
+    # testing easier.
+    return [by_suffix[suff] for suff in sorted(by_suffix)]
