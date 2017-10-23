@@ -3789,6 +3789,9 @@ class LibvirtDriver(driver.ComputeDriver):
             vol['connection_info'] = connection_info
             vol.save()
 
+        for d in devices:
+            self._set_cache_mode(d)
+
         if scsi_controller:
             devices.append(scsi_controller)
 
