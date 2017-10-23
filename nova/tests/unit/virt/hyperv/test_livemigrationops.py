@@ -17,6 +17,7 @@ import mock
 from os_win import exceptions as os_win_exc
 from oslo_config import cfg
 
+from nova import exception
 from nova.objects import migrate_data as migrate_data_obj
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.hyperv import test_base
@@ -227,3 +228,13 @@ class LiveMigrationOpsTestCase(test_base.HyperVBaseTestCase):
             block_migration=mock.sentinel.BLOCK_INFO)
         mock_plug_vifs.assert_called_once_with(mock.sentinel.instance,
                                                mock.sentinel.NET_INFO)
+
+    def test_check_can_live_migrate_destination_exception(self):
+        mock_instance = fake_instance.fake_instance_obj(self.context)
+        mock_check = self._pathutils.check_remote_instances_dir_shared
+        mock_check.side_effect = exception.FileNotFound(file_path='C:\\baddir')
+        self.assertRaises(
+            exception.MigrationPreCheckError,
+            self._livemigrops.check_can_live_migrate_destination,
+            mock.sentinel.context, mock_instance, mock.sentinel.src_comp_info,
+            mock.sentinel.dest_comp_info)

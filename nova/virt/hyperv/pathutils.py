@@ -14,6 +14,7 @@
 #    under the License.
 
 import os
+import six
 import tempfile
 import time
 
@@ -181,11 +182,15 @@ class PathUtils(pathutils.PathUtils):
         LOG.debug("Checking if %(src_dir)s and %(dest_dir)s point "
                   "to the same location.",
                   dict(src_dir=src_dir, dest_dir=dest_dir))
-        with tempfile.NamedTemporaryFile(dir=dest_dir) as tmp_file:
-            src_path = os.path.join(src_dir,
-                                    os.path.basename(tmp_file.name))
 
-            shared_storage = os.path.exists(src_path)
+        try:
+            with tempfile.NamedTemporaryFile(dir=dest_dir) as tmp_file:
+                src_path = os.path.join(src_dir,
+                                        os.path.basename(tmp_file.name))
+                shared_storage = os.path.exists(src_path)
+        except OSError as e:
+            raise exception.FileNotFound(six.text_type(e))
+
         return shared_storage
 
     def check_remote_instances_dir_shared(self, dest):

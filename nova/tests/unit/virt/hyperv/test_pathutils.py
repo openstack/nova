@@ -196,6 +196,20 @@ class PathUtilsTestCase(test_base.HyperVBaseTestCase):
         mock_named_tempfile.assert_called_once_with(dir=fake_dest_dir)
         mock_exists.assert_called_once_with(expected_src_tmp_path)
 
+    @mock.patch('os.path.exists')
+    @mock.patch('tempfile.NamedTemporaryFile')
+    def test_check_dirs_shared_storage_exception(self, mock_named_tempfile,
+                                                 mock_exists):
+        fake_src_dir = 'fake_src_dir'
+        fake_dest_dir = 'fake_dest_dir'
+
+        mock_exists.return_value = True
+        mock_named_tempfile.side_effect = OSError('not exist')
+
+        self.assertRaises(exception.FileNotFound,
+            self._pathutils.check_dirs_shared_storage,
+            fake_src_dir, fake_dest_dir)
+
     @mock.patch.object(pathutils.PathUtils, 'check_dirs_shared_storage')
     @mock.patch.object(pathutils.PathUtils, 'get_instances_dir')
     def test_check_remote_instances_shared(self, mock_get_instances_dir,
