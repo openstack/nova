@@ -129,8 +129,7 @@ def pick_disk_driver_name(hypervisor_version, is_block_dev=False):
             # 4002000 == 4.2.0
             if hypervisor_version >= 4002000:
                 try:
-                    utils.execute('xend', 'status',
-                                  run_as_root=True, check_exit_code=True)
+                    nova.privsep.libvirt.xend_probe()
                 except OSError as exc:
                     if exc.errno == errno.ENOENT:
                         LOG.debug("xend is not found")
