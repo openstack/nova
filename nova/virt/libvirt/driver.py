@@ -3592,6 +3592,9 @@ class LibvirtDriver(driver.ComputeDriver):
             vol['connection_info'] = connection_info
             vol.save()
 
+        for d in devices:
+            self._set_cache_mode(d)
+
         if image_meta.properties.get('hw_scsi_model'):
             hw_scsi_model = image_meta.properties.hw_scsi_model
             scsi_controller = vconfig.LibvirtConfigGuestController()
