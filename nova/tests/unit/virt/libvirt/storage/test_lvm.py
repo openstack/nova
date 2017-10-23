@@ -16,6 +16,7 @@
 import mock
 from oslo_concurrency import processutils
 from oslo_config import cfg
+from oslo_utils import units
 
 from nova import exception
 from nova import test
@@ -56,8 +57,8 @@ class LvmTestCase(test.NoDBTestCase):
         self.assertRaises(processutils.ProcessExecutionError,
                           lvm.get_volume_size, '/dev/foo')
 
-    @mock.patch('nova.utils.execute')
-    def test_lvm_clear(self, mock_execute):
+    @mock.patch('nova.privsep.fs.clear')
+    def test_lvm_clear(self, mock_clear):
         def fake_lvm_size(path):
             return lvm_size
 
@@ -65,53 +66,49 @@ class LvmTestCase(test.NoDBTestCase):
                       fake_lvm_size)
 
         # Test zeroing volumes works
+        CONF.set_override('volume_clear', 'zero', 'libvirt')
         lvm_size = 1024
         lvm.clear_volume('/dev/v1')
-        mock_execute.assert_has_calls(
-            [mock.call('shred', '-n0', '-z', '-s1024', '/dev/v1',
-                       run_as_root=True)])
-        mock_execute.reset_mock()
+        mock_clear.assert_has_calls([
+            mock.call('/dev/v1', 1024, shred=False)])
+        mock_clear.reset_mock()
 
         # Test volume_clear_size limits the size
         lvm_size = 10485761
         CONF.set_override('volume_clear_size', '1', 'libvirt')
         lvm.clear_volume('/dev/v7')
-        mock_execute.assert_has_calls(
-            [mock.call('shred', '-n0', '-z', '-s1048576', '/dev/v7',
-                       run_as_root=True)])
-        mock_execute.reset_mock()
+        mock_clear.assert_has_calls(
+            [mock.call('/dev/v7', 1048576, shred=False)])
+        mock_clear.reset_mock()
 
         CONF.set_override('volume_clear_size', '2', 'libvirt')
         lvm_size = 1048576
         lvm.clear_volume('/dev/v9')
-        mock_execute.assert_has_calls(
-            [mock.call('shred', '-n0', '-z', '-s1048576', '/dev/v9',
-                       run_as_root=True)])
-        mock_execute.reset_mock()
+        mock_clear.assert_has_calls(
+            [mock.call('/dev/v9', 1048576, shred=False)])
+        mock_clear.reset_mock()
 
         # Test volume_clear=shred
         CONF.set_override('volume_clear', 'shred', 'libvirt')
         CONF.set_override('volume_clear_size', '0', 'libvirt')
         lvm_size = 1048576
         lvm.clear_volume('/dev/va')
-        mock_execute.assert_has_calls(
-            [mock.call('shred', '-n3', '-s1048576', '/dev/va',
-                       run_as_root=True)])
-        mock_execute.reset_mock()
+        mock_clear.assert_has_calls([
+            mock.call('/dev/va', 1048576, shred=True)])
+        mock_clear.reset_mock()
 
         CONF.set_override('volume_clear', 'shred', 'libvirt')
         CONF.set_override('volume_clear_size', '1', 'libvirt')
         lvm_size = 10485761
         lvm.clear_volume('/dev/vb')
-        mock_execute.assert_has_calls(
-            [mock.call('shred', '-n3', '-s1048576', '/dev/vb',
-                       run_as_root=True)])
-        mock_execute.reset_mock()
+        mock_clear.assert_has_calls([
+            mock.call('/dev/vb', 1 * units.Mi, shred=True)])
+        mock_clear.reset_mock()
 
         # Test volume_clear=none does nothing
         CONF.set_override('volume_clear', 'none', 'libvirt')
         lvm.clear_volume('/dev/vc')
-        mock_execute.assert_not_called()
+        mock_clear.assert_not_called()
 
     @mock.patch('nova.privsep.fs.blockdev_size',
                 side_effect=processutils.ProcessExecutionError(

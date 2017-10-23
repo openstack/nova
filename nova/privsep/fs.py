@@ -76,3 +76,14 @@ def lvremove(path):
 @nova.privsep.sys_admin_pctxt.entrypoint
 def blockdev_size(path):
     return processutils.execute('blockdev', '--getsize64', path)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def clear(path, volume_size, shred=False):
+    cmd = ['shred']
+    if shred:
+        cmd.extend(['-n3'])
+    else:
+        cmd.extend(['-n0', '-z'])
+    cmd.extend(['-s%d' % volume_size, path])
+    processutils.execute(*cmd)
