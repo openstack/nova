@@ -1461,6 +1461,19 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         self.assertEqual(1, ephemeral[0].volume_size)
 
+        cells = objects.CellMappingList.get_all(self.context)
+
+        # NOTE(danms): Assert that we created the InstanceAction in the
+        # correct cell
+        for cell in cells:
+            with context.target_cell(self.context, cell):
+                actions = objects.InstanceActionList.get_by_instance_uuid(
+                    self.context, instance_uuid)
+                if cell.name == 'cell1':
+                    self.assertEqual(1, len(actions))
+                else:
+                    self.assertEqual(0, len(actions))
+
     @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
     @mock.patch('nova.objects.HostMapping.get_by_host')
