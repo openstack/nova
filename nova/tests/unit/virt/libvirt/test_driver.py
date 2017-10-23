@@ -4947,6 +4947,49 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         self.assertEqual(10000, cfg.cputune.shares)
         self.assertEqual(20000, cfg.cputune.period)
 
+    def _test_get_guest_config_disk_cachemodes(self, images_type):
+        # Verify that the configured cachemodes are propagated to the device
+        # configurations.
+        if images_type == 'flat':
+            cachemode = 'file=directsync'
+        elif images_type == 'lvm':
+            cachemode = 'block=writethrough'
+        elif images_type == 'rbd':
+            cachemode = 'network=writeback'
+        self.flags(disk_cachemodes=[cachemode], group='libvirt')
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+        cfg = drvr._get_guest_config(instance_ref, [],
+                                     image_meta, disk_info)
+        for d in cfg.devices:
+            if isinstance(d, vconfig.LibvirtConfigGuestDisk):
+                expected = cachemode.split('=')
+                self.assertEqual(expected[0], d.source_type)
+                self.assertEqual(expected[1], d.driver_cache)
+
+    def test_get_guest_config_disk_cachemodes_file(self):
+        self.flags(images_type='flat', group='libvirt')
+        self._test_get_guest_config_disk_cachemodes('flat')
+
+    def test_get_guest_config_disk_cachemodes_block(self):
+        self.flags(images_type='lvm', group='libvirt')
+        self.flags(images_volume_group='vols', group='libvirt')
+        self._test_get_guest_config_disk_cachemodes('lvm')
+
+    @mock.patch.object(rbd_utils, 'rbd')
+    @mock.patch.object(rbd_utils, 'rados')
+    @mock.patch.object(rbd_utils.RBDDriver, 'get_mon_addrs',
+                       return_value=(mock.Mock(), mock.Mock()))
+    def test_get_guest_config_disk_cachemodes_network(
+            self, mock_get_mon_addrs, mock_rados, mock_rbd):
+        self.flags(images_type='rbd', group='libvirt')
+        self._test_get_guest_config_disk_cachemodes('rbd')
+
     @mock.patch.object(
         host.Host, "is_cpu_control_policy_capable", return_value=True)
     def test_get_guest_config_with_bogus_cpu_quota(self, is_able):
