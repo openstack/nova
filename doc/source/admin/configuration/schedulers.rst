@@ -986,16 +986,16 @@ aggregate-related commands.
 nova aggregate-list
   Print a list of all aggregates.
 
-nova aggregate-create <name> [availability-zone]
+nova aggregate-create <name> [<availability-zone>]
   Create a new aggregate named ``<name>``, and optionally in availability zone
-  ``[availability-zone]`` if specified. The command returns the ID of the newly
-  created aggregate. Hosts can be made available to multiple host aggregates.
-  Be careful when adding a host to an additional host aggregate when the host
-  is also in an availability zone. Pay attention when using the :command:`nova
-  aggregate-set-metadata` and :command:`nova aggregate-update` commands to
-  avoid user confusion when they boot instances in different availability
-  zones.  An error occurs if you cannot add a particular host to an aggregate
-  zone for which it is not intended.
+  ``[<availability-zone>]`` if specified. The command returns the ID of the
+  newly created aggregate. Hosts can be made available to multiple host
+  aggregates. Be careful when adding a host to an additional host aggregate
+  when the host is also in an availability zone. Pay attention when using the
+  :command:`nova aggregate-set-metadata` and :command:`nova aggregate-update`
+  commands to avoid user confusion when they boot instances in different
+  availability zones.  An error occurs if you cannot add a particular host to
+  an aggregate zone for which it is not intended.
 
 nova aggregate-delete <aggregate>
   Delete an aggregate with its ``<id>`` or ``<name>``.
@@ -1014,14 +1014,26 @@ nova aggregate-set-metadata <aggregate> <key=value> [<key=value> ...]
   Add or update metadata (key-value pairs) associated with the aggregate with
   its ``<id>`` or ``<name>``.
 
-nova aggregate-update <id> <name> [<availability_zone>]
-  Update the name and availability zone (optional) for the aggregate.
+nova aggregate-update [--name <name>] [--availability-zone <availability-zone>] <aggregate>
+  Update the name and/or availability zone for the aggregate.
 
 nova host-list
-  List all hosts by service.
+  List all hosts by service. It has been depricated since microversion 2.43.
+  Use :command:`nova hypervisor-list` instead.
 
-nova host-update --maintenance [enable | disable]
-  Put/resume host into/from maintenance.
+nova hypervisor-list [--matching <hostname>] [--marker <marker>] [--limit <limit>]
+  List hypervisors.
+
+nova host-update [--status <enable|disable>] [--maintenance <enable|disable>] <hostname>
+  Put/resume host into/from maintenance. It has been depricated since
+  microversion 2.43. To enable or disable a service,
+  use :command:`nova service-enable` or :command:`nova service-disable` instead.
+
+nova service-enable <id>
+  Enable the service.
+
+nova service-disable [--reason <reason>] <id>
+  Disable the service.
 
 .. note::
 
