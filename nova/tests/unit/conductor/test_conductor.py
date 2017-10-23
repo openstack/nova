@@ -1429,10 +1429,11 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             objects=[bdm])
         self.params = params
 
+    @mock.patch('nova.notifications.send_update_with_states')
     @mock.patch('nova.compute.rpcapi.ComputeAPI.build_and_run_instance')
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
     def test_schedule_and_build_instances(self, select_destinations,
-                                          build_and_run_instance):
+                                          build_and_run_instance, mock_notify):
         select_destinations.return_value = [{'host': 'fake-host',
                                              'nodename': 'fake-nodename',
                                              'limits': None}]
@@ -1448,6 +1449,20 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         self.start_service('compute', host='fake-host')
         build_and_run_instance.side_effect = _build_and_run_instance
+
+        # NOTE(melwitt): This won't work with call_args because the call
+        # arguments are recorded as references and not as copies of objects.
+        # So even though the notify method was called with Instance._context
+        # targeted, by the time we assert with call_args, the target_cell
+        # context manager has already exited and the referenced Instance
+        # object's _context.db_connection has been restored to None.
+        def fake_notify(ctxt, instance, *args, **kwargs):
+            # Assert the instance object is targeted when going through the
+            # notification code.
+            self.assertIsNotNone(instance._context.db_connection)
+
+        mock_notify.side_effect = fake_notify
+
         self.conductor.schedule_and_build_instances(**params)
         self.assertTrue(build_and_run_instance.called)
 
