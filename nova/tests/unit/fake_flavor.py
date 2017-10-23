@@ -29,7 +29,8 @@ def fake_db_flavor(**updates):
         'disabled': False,
         'is_public': True,
         'extra_specs': {},
-        'projects': []
+        'projects': [],
+        'description': None
         }
 
     for name, field in objects.Flavor.fields.items():

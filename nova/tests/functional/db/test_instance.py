@@ -10,6 +10,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_utils import uuidutils
+
 from nova.compute import vm_states
 from nova import context
 from nova import objects
@@ -40,3 +42,34 @@ class InstanceObjectTestCase(test.TestCase):
             self.context, self.context.project_id, self.context.user_id,
             vm_states.ACTIVE)
         self.assertEqual(1, count)
+
+    def test_embedded_instance_flavor_description_is_not_persisted(self):
+        """The instance.flavor.description field will not be exposed out
+        of the REST API when showing server details, so we want to make
+        sure the embedded instance.flavor.description is not persisted with
+        the instance_extra.flavor information.
+        """
+        # Create a flavor with a description.
+        flavorid = uuidutils.generate_uuid()
+        flavor = objects.Flavor(context.get_admin_context(),
+                                name=flavorid, flavorid=flavorid,
+                                memory_mb=2048, vcpus=2,
+                                description='do not persist me in an instance')
+        flavor.create()
+
+        # Now create the instance with that flavor.
+        instance = self._create_instance(flavor=flavor)
+
+        # Make sure the embedded flavor.description is nulled out.
+        self.assertIsNone(instance.flavor.description)
+
+        # Now set the flavor on the instance again to make sure save() does
+        # not persist the flavor.description value.
+        instance.flavor = flavor
+        self.assertIn('flavor', list(instance.obj_what_changed()))
+        instance.save()
+
+        # Get the instance from the database since our old version is dirty.
+        instance = objects.Instance.get_by_uuid(
+            self.context, instance.uuid, expected_attrs=['flavor'])
+        self.assertIsNone(instance.flavor.description)

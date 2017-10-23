@@ -105,6 +105,7 @@ class _ComputeAPIUnitTestMixIn(object):
                   'created_at': datetime.datetime(2012, 1, 19, 18,
                                                   49, 30, 877329),
                   'updated_at': None,
+                  'description': None
                  }
         if updates:
             flavor.update(updates)

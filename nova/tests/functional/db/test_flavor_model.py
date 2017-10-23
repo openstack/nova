@@ -32,6 +32,9 @@ class FlavorTablesCompareTestCase(test.NoDBTestCase):
         flavors = api_models.Flavors()
         instance_types = models.InstanceTypes()
         columns_flavors = self._get_columns_list(flavors)
+        # The description column is only in the API database so we have to
+        # exclude it from this check.
+        columns_flavors.remove('description')
         columns_instance_types = self._get_columns_list(instance_types)
         self.assertTrue(self._check_column_list(columns_flavors,
                                                 columns_instance_types))

@@ -190,6 +190,7 @@ class Flavors(API_BASE):
     vcpu_weight = Column(Integer)
     disabled = Column(Boolean, default=False)
     is_public = Column(Boolean, default=True)
+    description = Column(Text)
 
 
 class FlavorExtraSpecs(API_BASE):

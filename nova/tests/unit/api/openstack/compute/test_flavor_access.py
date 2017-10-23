@@ -44,7 +44,8 @@ def generate_flavor(flavorid, ispublic):
         'disabled': False,
         'extra_specs': {},
         'vcpu_weight': None,
-        'is_public': bool(ispublic)
+        'is_public': bool(ispublic),
+        'description': None
     }
 
 

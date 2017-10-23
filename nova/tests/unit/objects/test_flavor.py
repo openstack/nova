@@ -16,7 +16,9 @@ import datetime
 
 import mock
 from oslo_db import exception as db_exc
+from oslo_utils import uuidutils
 
+from nova import context as nova_context
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
 from nova import exception
@@ -41,6 +43,7 @@ fake_flavor = {
     'disabled': False,
     'is_public': True,
     'extra_specs': {'foo': 'bar'},
+    'description': None
     }
 
 
@@ -320,6 +323,47 @@ class TestFlavor(test_objects._LocalTest, _TestFlavor):
         flavor.save()
         flavor = objects.Flavor.get_by_id(self.context, db_flavor['id'])
         self.assertEqual({'marty': 'mcfly'}, flavor.extra_specs)
+
+    # NOTE(mriedem): There is no remotable method for updating the description
+    # in a flavor so we test this local-only.
+    @mock.patch('nova.objects.Flavor._send_notification')
+    def test_description(self, mock_notify):
+        # Create a flavor with a description.
+        ctxt = nova_context.get_admin_context()
+        flavorid = uuidutils.generate_uuid()
+        dict_flavor = dict(fake_flavor, name=flavorid, flavorid=flavorid)
+        del dict_flavor['id']
+        flavor = flavor_obj.Flavor(ctxt, **dict_flavor)
+        flavor.description = 'rainbows and unicorns'
+        flavor.create()
+        mock_notify.assert_called_once_with('create')
+        # Lookup the flavor to make sure the description is set.
+        flavor = flavor_obj.Flavor.get_by_flavor_id(ctxt, flavorid)
+        self.assertEqual('rainbows and unicorns', flavor.description)
+
+        # Now reset the flavor.description since it's nullable=True.
+        mock_notify.reset_mock()
+        self.assertEqual(0, len(flavor.obj_what_changed()),
+                         flavor.obj_what_changed())
+        flavor.description = None
+        self.assertEqual(['description'], list(flavor.obj_what_changed()),
+                         flavor.obj_what_changed())
+        old_updated_at = flavor.updated_at
+        flavor.save()
+        # Make sure we reloaded the flavor from the database.
+        self.assertNotEqual(old_updated_at, flavor.updated_at)
+        mock_notify.assert_called_once_with('update')
+        self.assertEqual(0, len(flavor.obj_what_changed()),
+                         flavor.obj_what_changed())
+        # Lookup the flavor to make sure the description is gone.
+        flavor = flavor_obj.Flavor.get_by_flavor_id(ctxt, flavorid)
+        self.assertIsNone(flavor.description)
+
+        # Test compatibility.
+        flavor.description = 'flavor descriptions are not backward compatible'
+        flavor_primitive = flavor.obj_to_primitive()
+        flavor.obj_make_compatible(flavor_primitive, '1.1')
+        self.assertNotIn('description', flavor_primitive)
 
 
 class TestFlavorRemote(test_objects._RemoteTest, _TestFlavor):

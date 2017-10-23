@@ -539,6 +539,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 'old': old,
                 'new': new,
             }
+            self._nullify_flavor_description(flavor_info)
             updates['extra']['flavor'] = jsonutils.dumps(flavor_info)
         keypairs = updates.pop('keypairs', None)
         if keypairs is not None:
@@ -625,6 +626,22 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         # NOTE(gibi): tags are not saved through the instance
         pass
 
+    @staticmethod
+    def _nullify_flavor_description(flavor_info):
+        """Helper method to nullify descriptions from a set of primitive
+        flavors.
+
+        Note that we don't remove the flavor description since that would
+        make the versioned notification FlavorPayload have to handle the field
+        not being set on the embedded instance.flavor.
+
+        :param dict: dict of primitive flavor objects where the values are the
+            flavors which get persisted in the instance_extra.flavor table.
+        """
+        for flavor in flavor_info.values():
+            if flavor and 'description' in flavor['nova_object.data']:
+                flavor['nova_object.data']['description'] = None
+
     def _save_flavor(self, context):
         if not any([x in self.obj_what_changed() for x in
                     ('flavor', 'old_flavor', 'new_flavor')]):
@@ -636,6 +653,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             'new': (self.new_flavor and
                     self.new_flavor.obj_to_primitive() or None),
         }
+        self._nullify_flavor_description(flavor_info)
         self._extra_values_to_save['flavor'] = jsonutils.dumps(flavor_info)
         self.obj_reset_changes(['flavor', 'old_flavor', 'new_flavor'])
 

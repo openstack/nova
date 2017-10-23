@@ -362,6 +362,7 @@ def stub_out_db_instance_api(test, injected=True):
                          'disabled': False,
                          'is_public': True,
                          'extra_specs': {},
+                         'description': None
                         }
         if updates:
             instance_type.update(updates)

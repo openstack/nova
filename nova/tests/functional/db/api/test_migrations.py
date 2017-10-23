@@ -643,6 +643,9 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
             'consumers_project_id_user_id_uuid_idx',
         )
 
+    def _check_050(self, engine, data):
+        self.assertColumnExists(engine, 'flavors', 'description')
+
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
                                       test_base.DbTestCase,
