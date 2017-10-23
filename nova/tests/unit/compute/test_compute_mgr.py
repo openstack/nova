@@ -58,6 +58,7 @@ from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_network_cache_model
+from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_instance_fault
 from nova.tests.unit.objects import test_instance_info_cache
 from nova.tests import uuidsentinel as uuids
@@ -5529,6 +5530,8 @@ class ComputeManagerErrorsOutMigrationTestCase(test.NoDBTestCase):
 class ComputeManagerMigrationTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ComputeManagerMigrationTestCase, self).setUp()
+        fake_notifier.stub_notifier(self)
+        self.addCleanup(fake_notifier.reset)
         self.compute = manager.ComputeManager()
         self.context = context.RequestContext(fakes.FAKE_USER_ID,
                                               fakes.FAKE_PROJECT_ID)
@@ -5956,31 +5959,35 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         _test()
 
     def test_live_migration_force_complete_succeeded(self):
-
-        instance = objects.Instance(uuid=uuids.fake)
         migration = objects.Migration()
         migration.status = 'running'
         migration.id = 0
 
-        @mock.patch.object(self.compute, '_notify_about_instance_usage')
+        @mock.patch('nova.image.glance.generate_image_url',
+                    return_value='fake-url')
         @mock.patch.object(objects.Migration, 'get_by_id',
                            return_value=migration)
         @mock.patch.object(self.compute.driver,
                            'live_migration_force_complete')
-        def _do_test(force_complete, get_by_id, _notify_about_instance_usage):
+        def _do_test(force_complete, get_by_id, gen_img_url):
             self.compute.live_migration_force_complete(
-                self.context, instance, migration.id)
+                self.context, self.instance, migration.id)
 
-            force_complete.assert_called_once_with(instance)
+            force_complete.assert_called_once_with(self.instance)
 
-            _notify_usage_calls = [
-                mock.call(self.context, instance,
-                          'live.migration.force.complete.start'),
-                mock.call(self.context, instance,
-                          'live.migration.force.complete.end')
-            ]
-
-            _notify_about_instance_usage.assert_has_calls(_notify_usage_calls)
+            self.assertEqual(2, len(fake_notifier.NOTIFICATIONS))
+            self.assertEqual(
+                'compute.instance.live.migration.force.complete.start',
+                fake_notifier.NOTIFICATIONS[0].event_type)
+            self.assertEqual(
+                self.instance.uuid,
+                fake_notifier.NOTIFICATIONS[0].payload['instance_id'])
+            self.assertEqual(
+                'compute.instance.live.migration.force.complete.end',
+                fake_notifier.NOTIFICATIONS[1].event_type)
+            self.assertEqual(
+                self.instance.uuid,
+                fake_notifier.NOTIFICATIONS[1].payload['instance_id'])
 
         _do_test()
 
