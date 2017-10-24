@@ -15,6 +15,7 @@
 
 """Libvirt volume driver for HyperScale."""
 
+from os_brick import initiator
 from os_brick.initiator import connector
 from oslo_log import log as logging
 
@@ -36,7 +37,7 @@ class LibvirtHyperScaleVolumeDriver(libvirt_volume.LibvirtVolumeDriver):
     def __init__(self, connection):
         super(LibvirtHyperScaleVolumeDriver, self).__init__(connection)
         self.connector = connector.InitiatorConnector.factory(
-            'VERITAS_HYPERSCALE', utils.get_root_helper())
+            initiator.VERITAS_HYPERSCALE, utils.get_root_helper())
 
     def connect_volume(self, connection_info, disk_info, instance):
         # The os-brick connector may raise BrickException.

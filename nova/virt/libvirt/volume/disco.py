@@ -15,6 +15,7 @@
 
 """Libvirt volume driver for DISCO."""
 
+from os_brick import initiator
 from os_brick.initiator import connector
 
 import nova.conf
@@ -36,7 +37,7 @@ class LibvirtDISCOVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         super(LibvirtDISCOVolumeDriver, self).__init__(host,
                                                        is_block_dev=False)
         self.connector = connector.InitiatorConnector.factory(
-            'DISCO', utils.get_root_helper(),
+            initiator.DISCO, utils.get_root_helper(),
             device_scan_attempts=CONF.libvirt.num_volume_scan_tries)
 
     def get_config(self, connection_info, disk_info):

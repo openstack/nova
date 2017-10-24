@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from os_brick import initiator
 from os_brick.initiator import connector
 from oslo_log import log as logging
 
@@ -31,7 +32,7 @@ class LibvirtAOEVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         # Call the factory here so we can support
         # more than x86 architectures.
         self.connector = connector.InitiatorConnector.factory(
-            'AOE', utils.get_root_helper(),
+            initiator.AOE, utils.get_root_helper(),
             device_scan_attempts=CONF.libvirt.num_aoe_discover_tries)
 
     def get_config(self, connection_info, disk_info):

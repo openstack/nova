@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from os_brick import initiator
 from os_brick.initiator import connector
 from oslo_log import log as logging
 
@@ -26,7 +27,7 @@ class LibvirtDRBDVolumeDriver(libvirt_volume.LibvirtVolumeDriver):
     def __init__(self, host):
         super(LibvirtDRBDVolumeDriver, self).__init__(host)
         self.connector = connector.InitiatorConnector.factory(
-            connector.DRBD, utils.get_root_helper())
+            initiator.DRBD, utils.get_root_helper())
 
     def connect_volume(self, connection_info, disk_info, instance):
         """Connect the volume.
