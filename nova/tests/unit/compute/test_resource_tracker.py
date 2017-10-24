@@ -33,6 +33,7 @@ from nova.objects import pci_device
 from nova.pci import manager as pci_manager
 from nova.scheduler import utils as sched_utils
 from nova import test
+from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_pci_device as fake_pci_device
 from nova.tests import uuidsentinel as uuids
 
@@ -2698,8 +2699,10 @@ class ComputeMonitorTestCase(BaseTestCase):
             u'Cannot get the metrics from %(mon)s; error: %(exc)s', mock.ANY)
         self.assertEqual(0, len(metrics))
 
-    @mock.patch('nova.rpc.get_notifier')
-    def test_get_host_metrics(self, rpc_mock):
+    def test_get_host_metrics(self):
+        fake_notifier.stub_notifier(self)
+        self.addCleanup(fake_notifier.reset)
+
         class FakeCPUMonitor(monitor_base.MonitorBase):
 
             NOW_TS = timeutils.utcnow()
@@ -2722,7 +2725,6 @@ class ComputeMonitorTestCase(BaseTestCase):
         self.rt.monitors = [FakeCPUMonitor(None)]
 
         metrics = self.rt._get_host_metrics(self.context, _NODENAME)
-        rpc_mock.assert_called_once_with(service='compute', host=_NODENAME)
 
         expected_metrics = [
             {
@@ -2740,8 +2742,18 @@ class ComputeMonitorTestCase(BaseTestCase):
             'nodename': _NODENAME,
         }
 
-        rpc_mock.return_value.info.assert_called_once_with(
-            self.context, 'compute.metrics.update', payload)
+        self.assertEqual(1, len(fake_notifier.NOTIFICATIONS))
+        msg = fake_notifier.NOTIFICATIONS[0]
+        self.assertEqual('compute.metrics.update', msg.event_type)
+        for p_key in payload:
+            if p_key == 'metrics':
+                self.assertIn(p_key, msg.payload)
+                self.assertEqual(1, len(msg.payload['metrics']))
+                # make sure the expected metrics match the actual metrics
+                self.assertDictEqual(expected_metrics[0],
+                                     msg.payload['metrics'][0])
+            else:
+                self.assertEqual(payload[p_key], msg.payload[p_key])
 
         self.assertEqual(metrics, expected_metrics)
 
