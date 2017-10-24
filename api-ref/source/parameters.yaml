@@ -1302,7 +1302,8 @@ aggregate_az:
   type: string
 aggregate_az_optional:
   description: |
-    The availability zone of the host aggregate.
+    The availability zone of the host aggregate. The availability zone must
+    not include ':' in its name.
   in: body
   required: false
   type: string
