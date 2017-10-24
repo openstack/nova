@@ -364,6 +364,31 @@ class _TestBlockDeviceMappingObject(object):
                                          destination_type='local')
         self.assertFalse(bdm.is_volume)
 
+    def test_obj_load_attr_not_instance(self):
+        """Tests that lazy-loading something other than the instance field
+        results in an error.
+        """
+        bdm = objects.BlockDeviceMapping(self.context, **self.fake_bdm())
+        self.assertRaises(exception.ObjectActionError,
+                          bdm.obj_load_attr, 'invalid')
+
+    def test_obj_load_attr_orphaned(self):
+        """Tests that lazy-loading the instance field on an orphaned BDM
+        results in an error.
+        """
+        bdm = objects.BlockDeviceMapping(context=None, **self.fake_bdm())
+        self.assertRaises(exception.OrphanedObjectError, bdm.obj_load_attr,
+                          'instance')
+
+    @mock.patch.object(objects.Instance, 'get_by_uuid',
+                       return_value=objects.Instance(uuid=uuids.instance))
+    def test_obj_load_attr_instance(self, mock_inst_get_by_uuid):
+        """Tests lazy-loading the instance field."""
+        bdm = objects.BlockDeviceMapping(self.context, **self.fake_bdm())
+        self.assertEqual(mock_inst_get_by_uuid.return_value, bdm.instance)
+        mock_inst_get_by_uuid.assert_called_once_with(
+            self.context, bdm.instance_uuid)
+
     def test_obj_make_compatible_pre_1_17(self):
         values = {'source_type': 'volume', 'volume_id': 'fake-vol-id',
                   'destination_type': 'volume',
