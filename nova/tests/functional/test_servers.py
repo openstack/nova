@@ -2379,6 +2379,70 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         # allocation which just leaves us with the original flavor.
         self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
 
+    def _mock_live_migration(self, context, instance, dest,
+                             post_method, recover_method,
+                             block_migration=False, migrate_data=None):
+        while self._migrating:
+            time.sleep(0.5)
+
+        post_method(context, instance, dest, block_migration,
+                    migrate_data)
+
+    def _mock_force_complete(self, instance):
+        self._migrating = False
+
+    @mock.patch('nova.virt.fake.FakeDriver.live_migration')
+    @mock.patch('nova.virt.fake.FakeDriver.live_migration_force_complete')
+    def test_live_migrate_force_complete(self, mock_force_complete,
+                                         mock_live_migration):
+        self._migrating = True
+        mock_force_complete.side_effect = self._mock_force_complete
+        mock_live_migration.side_effect = self._mock_live_migration
+        # Note(lajos katona): By mocking the live_migration we simulate
+        # the libvirt driver and the real migration that takes time.
+        source_hostname = self.compute1.host
+        dest_hostname = self.compute2.host
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+        dest_rp_uuid = self._get_provider_uuid_by_host(dest_hostname)
+
+        server = self._boot_and_check_allocations(
+            self.flavor1, source_hostname)
+
+        post = {
+            'os-migrateLive': {
+                'host': dest_hostname,
+                'block_migration': True,
+            }
+        }
+        self.api.post_server_action(server['id'], post)
+
+        migration = self._wait_for_migration_status(server, 'running')
+        self.api.force_complete_migration(server['id'],
+                                          migration['id'])
+
+        self._wait_for_server_parameter(self.api, server,
+                                        {'OS-EXT-SRV-ATTR:host': dest_hostname,
+                                         'status': 'ACTIVE'})
+
+        self._run_periodics()
+
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertFlavorMatchesAllocation(
+            {'ram': 0, 'disk': 0, 'vcpus': 0}, source_usages)
+
+        dest_usages = self._get_provider_usages(dest_rp_uuid)
+        self.assertFlavorMatchesAllocation(self.flavor1, dest_usages)
+
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations))
+        self.assertNotIn(source_rp_uuid, allocations)
+
+        dest_allocation = allocations[dest_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(self.flavor1, dest_allocation)
+
+        self._delete_and_check_allocations(
+            server, source_rp_uuid, dest_rp_uuid)
+
 
 class ServerRescheduleTests(ProviderUsageBaseTestCase):
     """Tests server create scenarios which trigger a reschedule during
