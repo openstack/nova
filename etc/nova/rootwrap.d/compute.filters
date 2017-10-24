@@ -14,10 +14,6 @@ tune2fs: CommandFilter, tune2fs, root
 # nova/virt/disk/mount/nbd.py: 'qemu-nbd', '-d', device
 qemu-nbd: CommandFilter, qemu-nbd, root
 
-# nova/virt/disk/mount/loop.py: 'losetup', '--find', '--show', image
-# nova/virt/disk/mount/loop.py: 'losetup', '--detach', device
-losetup: CommandFilter, losetup, root
-
 # nova/virt/disk/vfs/localfs.py: 'blkid', '-o', 'value', '-s', 'TYPE', device
 blkid: CommandFilter, blkid, root
 

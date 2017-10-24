@@ -16,7 +16,7 @@
 from oslo_log import log as logging
 
 from nova.i18n import _
-from nova import utils
+import nova.privsep.fs
 from nova.virt.disk.mount import api
 
 LOG = logging.getLogger(__name__)
@@ -27,9 +27,7 @@ class LoopMount(api.Mount):
     mode = 'loop'
 
     def _inner_get_dev(self):
-        out, err = utils.trycmd('losetup', '--find', '--show',
-                                self.image.path,
-                                run_as_root=True)
+        out, err = nova.privsep.fs.loopsetup(self.image.path)
         if err:
             self.error = _('Could not attach image to loopback: %s') % err
             LOG.info('Loop mount error: %s', self.error)
@@ -57,7 +55,6 @@ class LoopMount(api.Mount):
         # thus leaking a loop device unless the losetup --detach is retried:
         # https://lkml.org/lkml/2012/9/28/62
         LOG.debug("Release loop device %s", self.device)
-        utils.execute('losetup', '--detach', self.device, run_as_root=True,
-                      attempts=3)
+        nova.privsep.fs.loopremove(self.device)
         self.linked = False
         self.device = None

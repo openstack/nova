@@ -87,3 +87,13 @@ def clear(path, volume_size, shred=False):
         cmd.extend(['-n0', '-z'])
     cmd.extend(['-s%d' % volume_size, path])
     processutils.execute(*cmd)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def loopsetup(path):
+    return processutils.execute('losetup', '--find', '--show', path)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def loopremove(device):
+    return processutils.execute('losetup', '--detach', device, attempts=3)
