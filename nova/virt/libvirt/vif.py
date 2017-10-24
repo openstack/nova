@@ -579,17 +579,17 @@ class LibvirtGenericVIFDriver(object):
         v1_name, v2_name = self.get_veth_pair_names(vif['id'])
 
         if not linux_net.device_exists(br_name):
-            utils.execute('brctl', 'addbr', br_name, run_as_root=True)
-            utils.execute('brctl', 'setfd', br_name, 0, run_as_root=True)
-            utils.execute('brctl', 'stp', br_name, 'off', run_as_root=True)
+            nova.privsep.libvirt.add_bridge(br_name)
+            nova.privsep.libvirt.zero_bridge_forward_delay(br_name)
+            nova.privsep.libvirt.disable_bridge_stp(br_name)
             nova.privsep.libvirt.disable_multicast_snooping(br_name)
             nova.privsep.libvirt.disable_ipv6(br_name)
 
         if not linux_net.device_exists(v2_name):
             mtu = vif['network'].get_meta('mtu')
             linux_net._create_veth_pair(v1_name, v2_name, mtu)
-            utils.execute('ip', 'link', 'set', br_name, 'up', run_as_root=True)
-            utils.execute('brctl', 'addif', br_name, v1_name, run_as_root=True)
+            nova.privsep.libvirt.toggle_interface(br_name, 'up')
+            nova.privsep.libvirt.bridge_add_interface(br_name, v1_name)
             linux_net.create_ivs_vif_port(v2_name, iface_id,
                                           vif['address'], instance.uuid)
 
@@ -790,10 +790,9 @@ class LibvirtGenericVIFDriver(object):
             br_name = self.get_br_name(vif['id'])
             v1_name, v2_name = self.get_veth_pair_names(vif['id'])
 
-            utils.execute('brctl', 'delif', br_name, v1_name, run_as_root=True)
-            utils.execute('ip', 'link', 'set', br_name, 'down',
-                          run_as_root=True)
-            utils.execute('brctl', 'delbr', br_name, run_as_root=True)
+            nova.privsep.libvirt.bridge_delete_interface(br_name, v1_name)
+            nova.privsep.libvirt.toggle_interface(br_name, 'down')
+            nova.privsep.libvirt.delete_bridge(br_name)
             linux_net.delete_ivs_vif_port(v2_name)
         except processutils.ProcessExecutionError:
             LOG.exception(_("Failed while unplugging vif"), instance=instance)
