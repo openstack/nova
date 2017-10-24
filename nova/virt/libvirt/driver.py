@@ -296,6 +296,9 @@ PERF_EVENTS_CPU_FLAG_MAPPING = {'cmt': 'cmt',
                                 'mbmt': 'mbm_total',
                                }
 
+# Mediated devices support
+MIN_LIBVIRT_MDEV_SUPPORT = (3, 4, 0)
+
 
 class LibvirtDriver(driver.ComputeDriver):
     capabilities = {
@@ -5400,6 +5403,37 @@ class LibvirtDriver(driver.ComputeDriver):
             greenthread.sleep(0)
         return total
 
+    def _get_supported_vgpu_types(self):
+        if not CONF.devices.enabled_vgpu_types:
+            return []
+        # TODO(sbauza): Move this check up to compute_manager.init_host
+        if len(CONF.devices.enabled_vgpu_types) > 1:
+            LOG.warning('libvirt only supports one GPU type per compute node,'
+                        ' only first type will be used.')
+        requested_types = CONF.devices.enabled_vgpu_types[:1]
+        return requested_types
+
+    def _get_vgpu_total(self):
+        """Returns the number of total available vGPUs for any GPU type that is
+        enabled with the enabled_vgpu_types CONF option.
+        """
+        requested_types = self._get_supported_vgpu_types()
+        # Bail out early if operator doesn't care about providing vGPUs
+        if not requested_types:
+            return 0
+        # Filter how many available mdevs we can create for all the supported
+        # types.
+        mdev_capable_devices = self._get_mdev_capable_devices(requested_types)
+        vgpus = 0
+        for dev in mdev_capable_devices:
+            for _type in dev['types']:
+                vgpus += dev['types'][_type]['availableInstances']
+        # Count the already created (but possibly not assigned to a guest)
+        # mdevs for all the supported types
+        mediated_devices = self._get_mediated_devices(requested_types)
+        vgpus += len(mediated_devices)
+        return vgpus
+
     def _get_instance_capabilities(self):
         """Get hypervisor instance capabilities
 
@@ -5584,6 +5618,81 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return jsonutils.dumps(pci_info)
 
+    def _get_mdev_capabilities_for_dev(self, devname, types=None):
+        """Returns a dict of MDEV capable device with the ID as first key
+        and then a list of supported types, each of them being a dict.
+
+        :param types: Only return those specific types.
+        """
+        virtdev = self._host.device_lookup_by_name(devname)
+        xmlstr = virtdev.XMLDesc(0)
+        cfgdev = vconfig.LibvirtConfigNodeDevice()
+        cfgdev.parse_str(xmlstr)
+
+        device = {
+            "dev_id": cfgdev.name,
+            "types": {},
+        }
+        for mdev_cap in cfgdev.pci_capability.mdev_capability:
+            for cap in mdev_cap.mdev_types:
+                if not types or cap['type'] in types:
+                    device["types"].update({cap['type']: {
+                        'availableInstances': cap['availableInstances'],
+                        'name': cap['name'],
+                        'deviceAPI': cap['deviceAPI']}})
+        return device
+
+    def _get_mdev_capable_devices(self, types=None):
+        """Get host devices supporting mdev types.
+
+        Obtain devices information from libvirt and returns a list of
+        dictionaries.
+
+        :param types: Filter only devices supporting those types.
+        """
+        if not self._host.has_min_version(MIN_LIBVIRT_MDEV_SUPPORT):
+            return []
+        dev_names = self._host.list_mdev_capable_devices() or []
+        mdev_capable_devices = []
+        for name in dev_names:
+            device = self._get_mdev_capabilities_for_dev(name, types)
+            if not device["types"]:
+                continue
+            mdev_capable_devices.append(device)
+        return mdev_capable_devices
+
+    def _get_mediated_device_information(self, devname):
+        """Returns a dict of a mediated device."""
+        virtdev = self._host.device_lookup_by_name(devname)
+        xmlstr = virtdev.XMLDesc(0)
+        cfgdev = vconfig.LibvirtConfigNodeDevice()
+        cfgdev.parse_str(xmlstr)
+
+        device = {
+            "dev_id": cfgdev.name,
+            "type": cfgdev.mdev_information.type,
+            "iommu_group": cfgdev.mdev_information.iommu_group,
+        }
+        return device
+
+    def _get_mediated_devices(self, types=None):
+        """Get host mediated devices.
+
+        Obtain devices information from libvirt and returns a list of
+        dictionaries.
+
+        :param types: Filter only devices supporting those types.
+        """
+        if not self._host.has_min_version(MIN_LIBVIRT_MDEV_SUPPORT):
+            return []
+        dev_names = self._host.list_mediated_devices() or []
+        mediated_devices = []
+        for name in dev_names:
+            device = self._get_mediated_device_information(name)
+            if not types or device["type"] in types:
+                mediated_devices.append(device)
+        return mediated_devices
+
     def _has_numa_support(self):
         # This means that the host can support LibvirtConfigGuestNUMATune
         # and the nodeset field in LibvirtConfigGuestMemoryBackingPage
@@ -5745,6 +5854,19 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_gb = int(self._get_local_gb_info()['total'])
         memory_mb = int(self._host.get_memory_mb_total())
         vcpus = self._get_vcpu_total()
+
+        # NOTE(sbauza): For the moment, the libvirt driver only supports
+        # providing the total number of virtual GPUs for a single GPU type. If
+        # you have multiple physical GPUs, each of them providing multiple GPU
+        # types, libvirt will return the total sum of virtual GPUs
+        # corresponding to the single type passed in enabled_vgpu_types
+        # configuration option. Eg. if you have 2 pGPUs supporting 'nvidia-35',
+        # each of them having 16 available instances, the total here will be
+        # 32.
+        # If one of the 2 pGPUs doesn't support 'nvidia-35', it won't be used.
+        # TODO(sbauza): Use ProviderTree and traits to make a better world.
+        vgpus = self._get_vgpu_total()
+
         # NOTE(jaypipes): We leave some fields like allocation_ratio and
         # reserved out of the returned dicts here because, for now at least,
         # the RT injects those values into the inventory dict based on the
@@ -5769,6 +5891,16 @@ class LibvirtDriver(driver.ComputeDriver):
                 'step_size': 1,
             },
         }
+
+        if vgpus > 0:
+            # Only provide VGPU resource classes if the driver supports it.
+            result[fields.ResourceClass.VGPU] = {
+                'total': vgpus,
+                'min_unit': 1,
+                'max_unit': vgpus,
+                'step_size': 1,
+                }
+
         return result
 
     def get_available_resource(self, nodename):
