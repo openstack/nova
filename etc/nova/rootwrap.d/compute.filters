@@ -137,9 +137,6 @@ brctl: CommandFilter, brctl, root
 # nova/virt/xenapi/vm_utils.py: 'mkswap'
 mkswap: CommandFilter, mkswap, root
 
-# nova/virt/libvirt/utils.py: 'nova-idmapshift'
-nova-idmapshift: CommandFilter, nova-idmapshift, root
-
 # nova/virt/xenapi/vm_utils.py: 'mkfs'
 # nova/utils.py: 'mkfs', fs, path, label
 mkfs: CommandFilter, mkfs, root
