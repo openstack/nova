@@ -716,7 +716,8 @@ def get_sr_path(session, sr_ref=None):
     return os.path.join(CONF.xenserver.sr_base_path, sr_uuid)
 
 
-def destroy_cached_images(session, sr_ref, all_cached=False, dry_run=False):
+def destroy_cached_images(session, sr_ref, all_cached=False, dry_run=False,
+                          keep_days=0):
     """Destroy used or unused cached images.
 
     A cached image that is being used by at least one VM is said to be 'used'.
@@ -728,6 +729,10 @@ def destroy_cached_images(session, sr_ref, all_cached=False, dry_run=False):
 
     The default behavior of this function is to destroy only 'unused' cached
     images. To destroy all cached images, use the `all_cached=True` kwarg.
+
+    `keep_days` is used to destroy images based on when they were created.
+    Only the images which were created `keep_days` ago will be deleted if the
+    argument has been set.
     """
     cached_images = _find_cached_images(session, sr_ref)
     destroyed = set()
@@ -738,7 +743,8 @@ def destroy_cached_images(session, sr_ref, all_cached=False, dry_run=False):
             destroy_vdi(session, vdi_ref)
         destroyed.add(vdi_uuid)
 
-    for vdi_ref in cached_images.values():
+    for vdi_dict in cached_images.values():
+        vdi_ref = vdi_dict['vdi_ref']
         vdi_uuid = session.call_xenapi('VDI.get_uuid', vdi_ref)
 
         if all_cached:
@@ -760,13 +766,22 @@ def destroy_cached_images(session, sr_ref, all_cached=False, dry_run=False):
             if len(children) > 1:
                 continue
 
-        destroy_cached_vdi(vdi_uuid, vdi_ref)
+        cached_time = vdi_dict.get('cached_time')
+        if cached_time is not None:
+            if (int(time.time()) - int(cached_time)) / (3600 * 24) \
+               >= keep_days:
+                destroy_cached_vdi(vdi_uuid, vdi_ref)
+        else:
+            LOG.debug("vdi %s can't be destroyed because the cached time is"
+                      " not specified", vdi_uuid)
 
     return destroyed
 
 
 def _find_cached_images(session, sr_ref):
-    """Return a dict(uuid=vdi_ref) representing all cached images."""
+    """Return a dict {image_id: {'vdi_ref': vdi_ref, 'cached_time':
+    cached_time}} representing all cached images.
+    """
     cached_images = {}
     for vdi_ref, vdi_rec in _get_all_vdis_in_sr(session, sr_ref):
         try:
@@ -774,7 +789,9 @@ def _find_cached_images(session, sr_ref):
         except KeyError:
             continue
 
-        cached_images[image_id] = vdi_ref
+        cached_time = vdi_rec['other_config'].get('cached-time')
+        cached_images[image_id] = {'vdi_ref': vdi_ref,
+                                   'cached_time': cached_time}
 
     return cached_images
 
@@ -1226,6 +1243,10 @@ def _create_cached_image(context, session, instance, name_label,
                                 'root')
             session.call_xenapi('VDI.add_to_other_config',
                                 cache_vdi_ref, 'image-id', str(image_id))
+            session.call_xenapi('VDI.add_to_other_config',
+                                cache_vdi_ref,
+                                'cached-time',
+                                str(int(time.time())))
 
         if CONF.use_cow_images:
             new_vdi_ref = _clone_vdi(session, cache_vdi_ref)

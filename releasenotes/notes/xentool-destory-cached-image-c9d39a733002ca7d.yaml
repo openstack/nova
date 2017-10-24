@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    For the XenAPI driver, in order to delete cached images based on when they
+    were created, a new ``--keep-days DAYS`` option is added to the
+    ``destroy_cached_images`` script to delete cached images which were created
+    at least ``DAYS`` days ago. By default, all unused cached images will be
+    deleted when the script is run if they have ``cached_time``.
