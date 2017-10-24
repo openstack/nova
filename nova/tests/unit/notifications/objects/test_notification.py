@@ -377,7 +377,7 @@ notification_object_data = {
     'ExceptionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'ExceptionPayload': '1.0-27db46ee34cd97e39f2643ed92ad0cc5',
     'FlavorNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'FlavorPayload': '1.3-6335e626893d7df5f96f87e6731fef56',
+    'FlavorPayload': '1.4-2e7011b8b4e59167fe8b7a0a81f0d452',
     'InstanceActionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'InstanceActionPayload': '1.5-fb2804ce9b681bfb217e729153c22611',
     'InstanceActionVolumeNotification': '1.0-a73147b93b520ff0061865849d3dfa56',

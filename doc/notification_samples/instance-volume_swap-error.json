@@ -47,11 +47,12 @@
                     "projects": null,
                     "swap": 0,
                     "is_public": true,
-                    "vcpu_weight": 0
+                    "vcpu_weight": 0,
+                    "description":null
                 },
                 "nova_object.name": "FlavorPayload",
                 "nova_object.namespace": "nova",
-                "nova_object.version": "1.3"
+                "nova_object.version": "1.4"
             },
             "host": "compute",
             "host_name": "some-server",

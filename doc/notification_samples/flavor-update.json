@@ -2,7 +2,7 @@
     "priority": "INFO",
     "payload": {
         "nova_object.namespace": "nova",
-        "nova_object.version": "1.3",
+        "nova_object.version": "1.4",
         "nova_object.name": "FlavorPayload",
         "nova_object.data": {
             "name": "test_flavor",
@@ -20,7 +20,8 @@
             "is_public": false,
             "root_gb": 10,
             "vcpu_weight": 0,
-            "flavorid": "a22d5517-147c-4147-a0d1-e698df5cd4e3"
+            "flavorid": "a22d5517-147c-4147-a0d1-e698df5cd4e3",
+            "description":null
         }
     },
     "event_type": "flavor.update",

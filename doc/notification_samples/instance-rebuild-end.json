@@ -21,7 +21,7 @@
             "reservation_id": "r-wczvhcla",
             "flavor": {
                 "nova_object.namespace": "nova",
-                "nova_object.version": "1.3",
+                "nova_object.version": "1.4",
                 "nova_object.data": {
                     "disabled": false,
                     "ephemeral_gb": 0,
@@ -35,7 +35,8 @@
                     "rxtx_factor": 1.0,
                     "swap": 0,
                     "vcpu_weight": 0,
-                    "vcpus": 1
+                    "vcpus": 1,
+                    "description":null
                 },
                 "nova_object.name": "FlavorPayload"
             },
