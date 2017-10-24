@@ -451,3 +451,7 @@ class TestOpenStackClient(object):
         return self.api_post(
             '/servers/%s/migrations/%s/action' % (server_id, migration_id),
             {'force_complete': None})
+
+    def delete_migration(self, server_id, migration_id):
+        return self.api_delete(
+            '/servers/%s/migrations/%s' % (server_id, migration_id))
