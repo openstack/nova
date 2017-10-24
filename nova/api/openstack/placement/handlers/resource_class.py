@@ -111,12 +111,10 @@ def delete_resource_class(req):
         rc.destroy()
     except exception.ResourceClassCannotDeleteStandard as exc:
         raise webob.exc.HTTPBadRequest(
-            _('Cannot delete standard resource class %(rp_name)s: %(error)s') %
-            {'rp_name': name, 'error': exc})
+            _('Error in delete resource class: %(error)s') % {'error': exc})
     except exception.ResourceClassInUse as exc:
         raise webob.exc.HTTPConflict(
-            _('Unable to delete resource class %(rp_name)s: %(error)s') %
-            {'rp_name': name, 'error': exc})
+            _('Error in delete resource class: %(error)s') % {'error': exc})
     req.response.status = 204
     req.response.content_type = None
     return req.response

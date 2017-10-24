@@ -55,7 +55,7 @@ tests:
   DELETE: /resource_classes/CUSTOM_GOLD
   status: 409
   response_strings:
-      - Unable to delete resource class
+      - Error in delete resource class
       - Class is in use in inventory
 
 - name: delete the allocation
@@ -66,7 +66,7 @@ tests:
   DELETE: /resource_classes/CUSTOM_GOLD
   status: 409
   response_strings:
-      - Unable to delete resource class
+      - Error in delete resource class
       - Class is in use in inventory
 
 - name: delete the inventory
