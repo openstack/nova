@@ -369,6 +369,7 @@ def populate_filter_properties(filter_properties, host_state):
     been selected by the scheduling process.
     """
     if isinstance(host_state, dict):
+        # TODO(edleafe): remove support for dicts
         host = host_state['host']
         nodename = host_state['nodename']
         limits = host_state['limits']

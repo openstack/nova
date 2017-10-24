@@ -51,49 +51,85 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         filtered = self.driver._filter_hosts(hosts, spec_obj=spec_obj)
         self.assertEqual(filtered, hosts)
 
-    @mock.patch('random.choice')
-    def test_select_destinations(self, mock_random_choice):
-        all_hosts = ['host1', 'host2', 'host3', 'host4']
-
-        def _return_hosts(*args, **kwargs):
-            return all_hosts
-
-        mock_random_choice.side_effect = ['host3', 'host2']
-        self.stub_out('nova.scheduler.chance.ChanceScheduler.hosts_up',
-                      _return_hosts)
-
+    @mock.patch("nova.scheduler.chance.ChanceScheduler.hosts_up")
+    def test_select_destinations(self, mock_hosts_up):
+        mock_hosts_up.return_value = ['host1', 'host2', 'host3', 'host4']
         spec_obj = objects.RequestSpec(num_instances=2, ignore_hosts=None)
         dests = self.driver.select_destinations(self.context, spec_obj,
                 [uuids.instance1, uuids.instance2], {},
-                mock.sentinel.p_sums)
+                mock.sentinel.provider_summaries)
 
         self.assertEqual(2, len(dests))
-        (host, node) = (dests[0].host, dests[0].nodename)
-        self.assertEqual('host3', host)
-        self.assertIsNone(node)
-        (host, node) = (dests[1].host, dests[1].nodename)
-        self.assertEqual('host2', host)
-        self.assertIsNone(node)
+        # Test that different hosts were returned
+        self.assertIsNot(dests[0], dests[1])
 
-        calls = [mock.call(all_hosts), mock.call(all_hosts)]
-        self.assertEqual(calls, mock_random_choice.call_args_list)
-
-    def test_select_destinations_no_valid_host(self):
-
-        def _return_hosts(*args, **kwargs):
-            return ['host1', 'host2']
-
-        def _return_no_host(*args, **kwargs):
-            return []
-
-        self.stub_out('nova.scheduler.chance.ChanceScheduler.hosts_up',
-                      _return_hosts)
-        self.stub_out('nova.scheduler.chance.ChanceScheduler._filter_hosts',
-                      _return_no_host)
+    @mock.patch("nova.scheduler.chance.ChanceScheduler._filter_hosts")
+    @mock.patch("nova.scheduler.chance.ChanceScheduler.hosts_up")
+    def test_select_destinations_no_valid_host(self, mock_hosts_up,
+            mock_filter):
+        mock_hosts_up.return_value = ['host1', 'host2', 'host3', 'host4']
+        mock_filter.return_value = []
 
         spec_obj = objects.RequestSpec(num_instances=1)
         spec_obj.instance_uuid = uuids.instance
         self.assertRaises(exception.NoValidHost,
                           self.driver.select_destinations, self.context,
                           spec_obj, [spec_obj.instance_uuid], {},
-                          mock.sentinel.p_sums)
+                          mock.sentinel.provider_summaries)
+
+    @mock.patch("nova.scheduler.chance.ChanceScheduler.hosts_up")
+    def test_schedule_success_single_instance(self, mock_hosts_up):
+        hosts = ["host%s" % i for i in range(20)]
+        mock_hosts_up.return_value = hosts
+        spec_obj = objects.RequestSpec(num_instances=1, ignore_hosts=None)
+        spec_obj.instance_uuid = uuids.instance
+        # Set the max_attempts to 2
+        attempts = 2
+        expected = attempts
+        self.flags(max_attempts=attempts, group="scheduler")
+        result = self.driver._schedule(self.context, "compute", spec_obj,
+                [spec_obj.instance_uuid])
+        self.assertEqual(1, len(result))
+        for host_list in result:
+            self.assertEqual(expected, len(host_list))
+
+        # Now set max_attempts to a number larger than the available hosts. It
+        # should return a host_list containing only as many hosts as there are
+        # to choose from.
+        attempts = len(hosts) + 1
+        expected = len(hosts)
+        self.flags(max_attempts=attempts, group="scheduler")
+        result = self.driver._schedule(self.context, "compute", spec_obj,
+                [spec_obj.instance_uuid])
+        self.assertEqual(1, len(result))
+        for host_list in result:
+            self.assertEqual(expected, len(host_list))
+
+    @mock.patch("nova.scheduler.chance.ChanceScheduler.hosts_up")
+    def test_schedule_success_multiple_instances(self, mock_hosts_up):
+        hosts = ["host%s" % i for i in range(20)]
+        mock_hosts_up.return_value = hosts
+        num_instances = 4
+        spec_obj = objects.RequestSpec(num_instances=num_instances,
+                ignore_hosts=None)
+        instance_uuids = [getattr(uuids, "inst%s" % i)
+                for i in range(num_instances)]
+        spec_obj.instance_uuid = instance_uuids[0]
+        # Set the max_attempts to 2
+        attempts = 2
+        self.flags(max_attempts=attempts, group="scheduler")
+        result = self.driver._schedule(self.context, "compute", spec_obj,
+                instance_uuids)
+        self.assertEqual(num_instances, len(result))
+        for host_list in result:
+            self.assertEqual(attempts, len(host_list))
+        # Verify that none of the selected hosts appear as alternates
+        # Set the max_attempts to 5 to get 4 alternates per instance
+        attempts = 4
+        self.flags(max_attempts=attempts, group="scheduler")
+        result = self.driver._schedule(self.context, "compute", spec_obj,
+                instance_uuids)
+        selected = [host_list[0] for host_list in result]
+        for host_list in result:
+            for sel in selected:
+                self.assertNotIn(sel, host_list[1:])

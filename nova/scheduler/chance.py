@@ -50,7 +50,7 @@ class ChanceScheduler(driver.Scheduler):
         hosts = [host for host in hosts if host not in ignore_hosts]
         return hosts
 
-    def _schedule(self, context, topic, spec_obj):
+    def _schedule(self, context, topic, spec_obj, instance_uuids):
         """Picks a host that is up at random."""
 
         elevated = context.elevated()
@@ -64,24 +64,55 @@ class ChanceScheduler(driver.Scheduler):
             msg = _("Could not find another compute")
             raise exception.NoValidHost(reason=msg)
 
-        return random.choice(hosts)
+        num_instances = len(instance_uuids)
+        selected_host_lists = []
+        # If possible, we'd like to return distinct hosts for each instance.
+        # But when there are fewer available hosts than requested instances, we
+        # will need to return some duplicates.
+        if len(hosts) >= num_instances:
+            selected_hosts = random.sample(hosts, num_instances)
+        else:
+            selected_hosts = [random.choice(hosts)
+                    for i in range(num_instances)]
+
+        # We can't return dupes as alternates, since alternates are used when
+        # building to the selected host fails.
+        alts_per_instance = min(len(hosts), CONF.scheduler.max_attempts)
+        for sel_host in selected_hosts:
+            sel_plus_alts = [sel_host]
+            while len(sel_plus_alts) < alts_per_instance:
+                candidate = random.choice(hosts)
+                if (candidate not in sel_plus_alts) and (
+                        candidate not in selected_hosts):
+                    # We don't want to include a selected host as an alternate,
+                    # as it will have a high likelihood of not having enough
+                    # resources left after it has an instance built on it.
+                    sel_plus_alts.append(candidate)
+            selected_host_lists.append(sel_plus_alts)
+        return selected_host_lists
 
     def select_destinations(self, context, spec_obj, instance_uuids,
             alloc_reqs_by_rp_uuid, provider_summaries):
-        """Selects random destinations."""
+        """Selects random destinations. Returns a list of HostState objects."""
         num_instances = spec_obj.num_instances
-        # NOTE(timello): Returns a list of dicts with 'host', 'nodename' and
-        # 'limits' as keys for compatibility with filter_scheduler.
         # TODO(danms): This needs to be extended to support multiple cells
         # and limiting the destination scope to a single requested cell
         dests = []
-        for i in range(num_instances):
-            host = self._schedule(context, compute_rpcapi.RPC_TOPIC,
-                                  spec_obj)
-            host_state = self.host_manager.host_state_cls(host, None, None)
-            dests.append(host_state)
+        host_cls = self.host_manager.host_state_cls
+        host_lists = self._schedule(context, compute_rpcapi.RPC_TOPIC,
+                spec_obj, instance_uuids)
+        for idx in range(len(instance_uuids)):
+            host_list = host_lists[idx]
+            host_states = [host_cls(host, None, None)
+                    for host in host_list]
+            dests.append(host_states)
 
         if len(dests) < num_instances:
             reason = _('There are not enough hosts available.')
             raise exception.NoValidHost(reason=reason)
-        return dests
+        # Don't change the return value in this patch. A later patch in this
+        # series will change all the method signatures to accept the new return
+        # data structure. This temporary value mimics the current return value
+        # of a list of hosts, one per instance.
+        temp_ret = [dest[0] for dest in dests]
+        return temp_ret

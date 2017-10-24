@@ -68,7 +68,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             instance_group=None)
 
         host_state = mock.Mock(spec=host_manager.HostState,
-            host=mock.sentinel.host, uuid=uuids.cn1)
+                host=mock.sentinel.host, uuid=uuids.cn1, cell_uuid=uuids.cell)
         all_host_states = [host_state]
         mock_get_all_states.return_value = all_host_states
         mock_get_hosts.return_value = all_host_states
@@ -160,7 +160,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             instance_group=None)
 
         host_state = mock.Mock(spec=host_manager.HostState,
-            host=mock.sentinel.host, uuid=uuids.cn1)
+            host=mock.sentinel.host, uuid=uuids.cn1, cell_uuid=uuids.cell1)
         all_host_states = [host_state]
         mock_get_all_states.return_value = all_host_states
         mock_get_hosts.return_value = all_host_states
@@ -171,19 +171,18 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             uuids.cn1: [mock.sentinel.alloc_req],
         }
         ctx = mock.Mock()
-        selected_hosts = self.driver._schedule(ctx, spec_obj,
-            instance_uuids, alloc_reqs_by_rp_uuid,
-            mock.sentinel.provider_summaries)
+        selected_hosts = self.driver._schedule(ctx, spec_obj, instance_uuids,
+                alloc_reqs_by_rp_uuid, mock.sentinel.provider_summaries)
 
         mock_get_all_states.assert_called_once_with(
             ctx.elevated.return_value, spec_obj,
             mock.sentinel.provider_summaries)
-        mock_get_hosts.assert_called_once_with(spec_obj, all_host_states, 0)
+        mock_get_hosts.assert_called()
         mock_claim.assert_called_once_with(ctx.elevated.return_value, spec_obj,
             uuids.instance, [mock.sentinel.alloc_req])
 
         self.assertEqual(len(selected_hosts), 1)
-        self.assertEqual([host_state], selected_hosts)
+        self.assertEqual([[host_state]], selected_hosts)
 
         # Ensure that we have consumed the resources on the chosen host states
         host_state.consume_from_request.assert_called_once_with(spec_obj)
@@ -222,7 +221,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             instance_group=None)
 
         host_state = mock.Mock(spec=host_manager.HostState,
-            host=mock.sentinel.host, uuid=uuids.cn1)
+            host=mock.sentinel.host, uuid=uuids.cn1, cell_uuid=uuids.cell1)
         all_host_states = [host_state]
         mock_get_all_states.return_value = all_host_states
         mock_get_hosts.return_value = all_host_states
@@ -275,12 +274,13 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             instance_group=None)
 
         host_state = mock.Mock(spec=host_manager.HostState,
-            host=mock.sentinel.host, uuid=uuids.cn1)
+            host=mock.sentinel.host, uuid=uuids.cn1, cell_uuid=uuids.cell1)
         all_host_states = [host_state]
         mock_get_all_states.return_value = all_host_states
         mock_get_hosts.side_effect = [
-            all_host_states,  # first return all the hosts (only one)
-            [],  # then act as if no more hosts were found that meet criteria
+            all_host_states,  # first instance: return all the hosts (only one)
+            [],  # second: act as if no more hosts that meet criteria
+            all_host_states,  # the final call when creating alternates
         ]
         mock_claim.return_value = True
 
@@ -320,9 +320,9 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             instance_group=ig)
 
         hs1 = mock.Mock(spec=host_manager.HostState, host='host1',
-            uuid=uuids.cn1)
+            uuid=uuids.cn1, cell_uuid=uuids.cell1)
         hs2 = mock.Mock(spec=host_manager.HostState, host='host2',
-            uuid=uuids.cn2)
+            uuid=uuids.cn2, cell_uuid=uuids.cell2)
         all_host_states = [hs1, hs2]
         mock_get_all_states.return_value = all_host_states
         mock_claim.return_value = True
@@ -335,7 +335,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # Simulate host 1 and host 2 being randomly returned first by
         # _get_sorted_hosts() in the two iterations for each instance in
         # num_instances
-        mock_get_hosts.side_effect = ([hs2, hs1], [hs1, hs2])
+        mock_get_hosts.side_effect = ([hs2, hs1], [hs1, hs2],
+                                      [hs2, hs1], [hs1, hs2])
         instance_uuids = [
             getattr(uuids, 'instance%d' % x) for x in range(num_instances)
         ]
@@ -376,8 +377,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         host manager's filtering and weighing routines
         """
         self.flags(host_subset_size=2, group='filter_scheduler')
-        hs1 = mock.Mock(spec=host_manager.HostState, host='host1')
-        hs2 = mock.Mock(spec=host_manager.HostState, host='host2')
+        hs1 = mock.Mock(spec=host_manager.HostState, host='host1',
+                cell_uuid=uuids.cell1)
+        hs2 = mock.Mock(spec=host_manager.HostState, host='host2',
+                cell_uuid=uuids.cell2)
         all_host_states = [hs1, hs2]
 
         mock_weighed.return_value = [
@@ -408,8 +411,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         1, that we always pick the first host in the weighed host
         """
         self.flags(host_subset_size=1, group='filter_scheduler')
-        hs1 = mock.Mock(spec=host_manager.HostState, host='host1')
-        hs2 = mock.Mock(spec=host_manager.HostState, host='host2')
+        hs1 = mock.Mock(spec=host_manager.HostState, host='host1',
+                cell_uuid=uuids.cell1)
+        hs2 = mock.Mock(spec=host_manager.HostState, host='host2',
+                cell_uuid=uuids.cell2)
         all_host_states = [hs1, hs2]
 
         mock_weighed.return_value = [
@@ -438,8 +443,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         number of weighed hosts.
         """
         self.flags(host_subset_size=20, group='filter_scheduler')
-        hs1 = mock.Mock(spec=host_manager.HostState, host='host1')
-        hs2 = mock.Mock(spec=host_manager.HostState, host='host2')
+        hs1 = mock.Mock(spec=host_manager.HostState, host='host1',
+                cell_uuid=uuids.cell1)
+        hs2 = mock.Mock(spec=host_manager.HostState, host='host2',
+                cell_uuid=uuids.cell2)
         all_host_states = [hs1, hs2]
 
         mock_weighed.return_value = [
@@ -538,7 +545,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             project_id=uuids.project_id,
             num_instances=1)
 
-        mock_schedule.return_value = [mock.sentinel.hs1]
+        mock_schedule.return_value = [[mock.sentinel.hs1]]
 
         dests = self.driver.select_destinations(self.context, spec_obj,
             [mock.sentinel.instance_uuid], mock.sentinel.alloc_reqs_by_rp_uuid,
@@ -568,7 +575,9 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             project_id=uuids.project_id,
             num_instances=2)
 
-        mock_schedule.return_value = [mock.sentinel.hs1]
+        host_state = mock.Mock(spec=host_manager.HostState,
+                cell_uuid=uuids.cell)
+        mock_schedule.return_value = [[host_state]]
 
         dests = self.driver.select_destinations(self.context, spec_obj,
             [mock.sentinel.instance_uuid], mock.sentinel.alloc_reqs_by_rp_uuid,
@@ -578,7 +587,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             [mock.sentinel.instance_uuid], mock.sentinel.alloc_reqs_by_rp_uuid,
             mock.sentinel.p_sums)
 
-        self.assertEqual([mock.sentinel.hs1], dests)
+        self.assertEqual([host_state], dests)
 
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
                 '_schedule')
@@ -596,8 +605,9 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             project_id=uuids.project_id,
             num_instances=2)
 
-        host_state = mock.Mock(spec=host_manager.HostState)
-        mock_schedule.return_value = [host_state]
+        host_state = mock.Mock(spec=host_manager.HostState,
+                cell_uuid=uuids.cell)
+        mock_schedule.return_value = [[host_state]]
 
         self.assertRaises(exception.NoValidHost,
             self.driver.select_destinations, self.context, spec_obj,
@@ -608,9 +618,181 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # it's picked up in the next pull from the DB for compute node objects
         self.assertIsNone(host_state.updated)
 
+    @mock.patch("nova.scheduler.host_manager.HostState.consume_from_request")
+    @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
+                "_claim_resources")
+    @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
+                "_get_sorted_hosts")
+    @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
+                "_get_all_host_states")
+    def _test_alternates_returned(self, mock_get_all_hosts, mock_sorted,
+            mock_claim, mock_consume, num_instances=2, num_alternates=2):
+        all_host_states = []
+        alloc_reqs = {}
+        for num in range(10):
+            host_name = "host%s" % num
+            hs = host_manager.HostState(host_name, "node%s" % num,
+                    uuids.cell)
+            hs.uuid = getattr(uuids, host_name)
+            all_host_states.append(hs)
+            alloc_reqs[hs.uuid] = {}
+
+        mock_get_all_hosts.return_value = all_host_states
+        mock_sorted.return_value = all_host_states
+        mock_claim.return_value = True
+        total_returned = num_alternates + 1
+        self.flags(max_attempts=total_returned, group="scheduler")
+        instance_uuids = [getattr(uuids, "inst%s" % num)
+                for num in range(num_instances)]
+
+        spec_obj = objects.RequestSpec(
+                num_instances=num_instances,
+                flavor=objects.Flavor(memory_mb=512,
+                                      root_gb=512,
+                                      ephemeral_gb=0,
+                                      swap=0,
+                                      vcpus=1),
+                project_id=uuids.project_id,
+                instance_group=None)
+
+        dests = self.driver._schedule(self.context, spec_obj,
+                instance_uuids, alloc_reqs, None)
+        self.assertEqual(num_instances, len(dests))
+        selected_hosts = [dest[0] for dest in dests]
+        for dest in dests:
+            self.assertEqual(total_returned, len(dest))
+            # Verify that there are no duplicates among a destination
+            self.assertEqual(len(dest), len(set(dest)))
+            # Verify that none of the selected hosts appear in the alternates.
+            for alt in dest[1:]:
+                self.assertNotIn(alt, selected_hosts)
+
+    def test_alternates_returned(self):
+        self._test_alternates_returned(num_instances=1, num_alternates=1)
+        self._test_alternates_returned(num_instances=3, num_alternates=0)
+        self._test_alternates_returned(num_instances=1, num_alternates=4)
+        self._test_alternates_returned(num_instances=2, num_alternates=3)
+        self._test_alternates_returned(num_instances=8, num_alternates=8)
+
+    @mock.patch("nova.scheduler.host_manager.HostState.consume_from_request")
+    @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
+                "_claim_resources")
+    @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
+                "_get_sorted_hosts")
+    @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
+                "_get_all_host_states")
+    def test_alternates_same_cell(self, mock_get_all_hosts, mock_sorted,
+            mock_claim, mock_consume):
+        """Tests getting alternates plus claims where the hosts are spread
+        across two cells.
+        """
+        all_host_states = []
+        alloc_reqs = {}
+        for num in range(10):
+            host_name = "host%s" % num
+            cell_uuid = uuids.cell1 if num % 2 else uuids.cell2
+            hs = host_manager.HostState(host_name, "node%s" % num,
+                    cell_uuid)
+            hs.uuid = getattr(uuids, host_name)
+            all_host_states.append(hs)
+            alloc_reqs[hs.uuid] = {}
+
+        mock_get_all_hosts.return_value = all_host_states
+        # There are two instances so _get_sorted_hosts is called once per
+        # instance and then once again before picking alternates.
+        mock_sorted.side_effect = [all_host_states,
+                                   list(reversed(all_host_states)),
+                                   all_host_states]
+        mock_claim.return_value = True
+        total_returned = 3
+        self.flags(max_attempts=total_returned, group="scheduler")
+        instance_uuids = [uuids.inst1, uuids.inst2]
+        num_instances = len(instance_uuids)
+
+        spec_obj = objects.RequestSpec(
+                num_instances=num_instances,
+                flavor=objects.Flavor(memory_mb=512,
+                                      root_gb=512,
+                                      ephemeral_gb=0,
+                                      swap=0,
+                                      vcpus=1),
+                project_id=uuids.project_id,
+                instance_group=None)
+
+        dests = self.driver._schedule(self.context, spec_obj,
+                instance_uuids, alloc_reqs, None)
+        # There should be max_attempts hosts per instance (1 selected, 2 alts)
+        self.assertEqual(total_returned, len(dests[0]))
+        self.assertEqual(total_returned, len(dests[1]))
+        # Verify that the two selected hosts are not in the same cell.
+        self.assertNotEqual(dests[0][0].cell_uuid, dests[1][0].cell_uuid)
+        for dest in dests:
+            selected_host = dest[0]
+            selected_cell_uuid = selected_host.cell_uuid
+            for alternate in dest[1:]:
+                self.assertEqual(alternate.cell_uuid, selected_cell_uuid)
+
+    @mock.patch("nova.scheduler.host_manager.HostState.consume_from_request")
+    @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
+                "_claim_resources")
+    @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
+                "_get_sorted_hosts")
+    @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
+                "_get_all_host_states")
+    def _test_not_enough_alternates(self, mock_get_all_hosts, mock_sorted,
+            mock_claim, mock_consume, num_hosts, max_attempts):
+        all_host_states = []
+        alloc_reqs = {}
+        for num in range(num_hosts):
+            host_name = "host%s" % num
+            hs = host_manager.HostState(host_name, "node%s" % num,
+                    uuids.cell)
+            hs.uuid = getattr(uuids, host_name)
+            all_host_states.append(hs)
+            alloc_reqs[hs.uuid] = {}
+
+        mock_get_all_hosts.return_value = all_host_states
+        mock_sorted.return_value = all_host_states
+        mock_claim.return_value = True
+        # Set the total returned to more than the number of available hosts
+        self.flags(max_attempts=max_attempts, group="scheduler")
+        instance_uuids = [uuids.inst1, uuids.inst2]
+        num_instances = len(instance_uuids)
+
+        spec_obj = objects.RequestSpec(
+                num_instances=num_instances,
+                flavor=objects.Flavor(memory_mb=512,
+                                      root_gb=512,
+                                      ephemeral_gb=0,
+                                      swap=0,
+                                      vcpus=1),
+                project_id=uuids.project_id,
+                instance_group=None)
+
+        dests = self.driver._schedule(self.context, spec_obj,
+                instance_uuids, alloc_reqs, None)
+        self.assertEqual(num_instances, len(dests))
+        selected_hosts = [dest[0] for dest in dests]
+        # The number returned for each destination should be the less of the
+        # number of available host and the max_attempts setting.
+        expected_number = min(num_hosts, max_attempts)
+        for dest in dests:
+            self.assertEqual(expected_number, len(dest))
+            # Verify that there are no duplicates among a destination
+            self.assertEqual(len(dest), len(set(dest)))
+            # Verify that none of the selected hosts appear in the alternates.
+            for alt in dest[1:]:
+                self.assertNotIn(alt, selected_hosts)
+
+    def test_not_enough_alternates(self):
+        self._test_not_enough_alternates(num_hosts=100, max_attempts=5)
+        self._test_not_enough_alternates(num_hosts=5, max_attempts=5)
+        self._test_not_enough_alternates(num_hosts=3, max_attempts=5)
+        self._test_not_enough_alternates(num_hosts=20, max_attempts=5)
+
     @mock.patch.object(filter_scheduler.FilterScheduler, '_schedule')
     def test_select_destinations_notifications(self, mock_schedule):
-        mock_schedule.return_value = [mock.Mock()]
+        mock_schedule.return_value = [[mock.Mock()]]
 
         with mock.patch.object(self.driver.notifier, 'info') as mock_info:
             expected = {'num_instances': 1,
