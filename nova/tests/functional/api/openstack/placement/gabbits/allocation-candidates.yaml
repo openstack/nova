@@ -24,6 +24,13 @@ tests:
       openstack-api-version: placement 1.8
   status: 404
 
+- name: get allocation candidates empty resources
+  GET: /allocation_candidates?resources=
+  status: 400
+  response_strings:
+      - Badly formed resources parameter. Expected resources query string parameter in form
+      - 'Got: empty string.'
+
 - name: get allocation candidates no resources
   GET: /allocation_candidates
   status: 400

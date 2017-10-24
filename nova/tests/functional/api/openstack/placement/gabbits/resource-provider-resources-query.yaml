@@ -94,6 +94,13 @@ tests:
   response_json_paths:
       $.errors[0].title: Bad Request
 
+- name: list resource providers providing empty resources
+  GET: /resource_providers?resources=
+  status: 400
+  response_strings:
+      - Badly formed resources parameter. Expected resources query string parameter in form
+      - 'Got: empty string.'
+
 - name: list resource providers providing disk resources
   GET: /resource_providers?resources=DISK_GB:500
   response_json_paths:
