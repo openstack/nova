@@ -351,6 +351,17 @@ class TestResourceClass(TestString):
         self.to_primitive_values = self.coerce_good_values[0:1]
         self.from_primitive_values = self.coerce_good_values[0:1]
 
+    def test_normalize_name(self):
+        values = [
+            ("foo", "CUSTOM_FOO"),
+            ("VCPU", "CUSTOM_VCPU"),
+            ("CUSTOM_BOB", "CUSTOM_CUSTOM_BOB"),
+            ("CUSTM_BOB", "CUSTOM_CUSTM_BOB"),
+        ]
+        for test_value, expected in values:
+            result = fields.ResourceClass.normalize_name(test_value)
+            self.assertEqual(expected, result)
+
 
 class TestInteger(TestField):
     def setUp(self):
