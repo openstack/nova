@@ -23,6 +23,7 @@ from keystoneauth1 import loading as keystone
 from oslo_log import log as logging
 from six.moves.urllib import parse
 
+from nova.compute import provider_tree
 from nova.compute import utils as compute_utils
 import nova.conf
 from nova import exception
@@ -234,10 +235,9 @@ class SchedulerReportClient(object):
     """Client class for updating the scheduler."""
 
     def __init__(self):
-        # A dict, keyed by the resource provider UUID, of ResourceProvider
-        # objects that will have their inventories and allocations tracked by
-        # the placement API for the compute host
-        self._resource_providers = {}
+        # An object that contains a nova-compute-side cache of resource
+        # provider and inventory information
+        self._provider_tree = provider_tree.ProviderTree()
         # A dict, keyed by resource provider UUID, of sets of aggregate UUIDs
         # the provider is associated with
         self._provider_aggregate_map = {}
@@ -253,9 +253,8 @@ class SchedulerReportClient(object):
     @utils.synchronized(PLACEMENT_CLIENT_SEMAPHORE)
     def _create_client(self):
         """Create the HTTP session accessing the placement service."""
-        # Flush _resource_providers and aggregates so we start from a
-        # clean slate.
-        self._resource_providers = {}
+        # Flush provider tree and aggregates so we start from a clean slate.
+        self._provider_tree = provider_tree.ProviderTree()
         self._provider_aggregate_map = {}
         self.aggregate_refresh_time = {}
         auth_plugin = keystone.load_auth_from_conf_options(
@@ -489,66 +488,74 @@ class SchedulerReportClient(object):
                 'placement_req_id': placement_req_id,
             }
             LOG.error(msg, args)
+            return None
 
     def _ensure_resource_provider(self, uuid, name=None):
         """Ensures that the placement API has a record of a resource provider
         with the supplied UUID. If not, creates the resource provider record in
-        the placement API for the supplied UUID, optionally passing in a name
-        for the resource provider.
+        the placement API for the supplied UUID, passing in a name for the
+        resource provider.
 
-        The found or created resource provider object is returned from this
-        method. If the resource provider object for the supplied uuid was not
-        found and the resource provider record could not be created in the
-        placement API, we return None.
+        If found or created, an object representing the provider (and potential
+        child providers) is returned from this method. If the resource provider
+        for the supplied uuid was not found and the resource provider record
+        could not be created in the placement API, we return None.
+
+        If this method returns a non-None value, callers are assured both that
+        the placement API contains a record of the provider and the local tree
+        of resource provider information contains a record of the provider.
 
         :param uuid: UUID identifier for the resource provider to ensure exists
         :param name: Optional name for the resource provider if the record
                      does not exist. If empty, the name is set to the UUID
                      value
         """
-        if uuid in self._resource_providers:
+        try:
+            rp = self._provider_tree.find(uuid)
             self._refresh_aggregate_map(uuid)
-            return self._resource_providers[uuid]
+            return rp
+        except ValueError:
+            pass
 
+        # No local information about the resource provider in our tree. Check
+        # the placement API.
         rp = self._get_resource_provider(uuid)
         if rp is None:
             name = name or uuid
             rp = self._create_resource_provider(uuid, name)
             if rp is None:
-                return
-        self._resource_providers[uuid] = rp
+                return None
+
         # If there had been no resource provider record, force refreshing
         # the aggregate map.
         self._refresh_aggregate_map(uuid, force=True)
-        return rp
+
+        return self._provider_tree.new_root(rp['name'], uuid, rp['generation'])
 
     def _get_inventory(self, rp_uuid):
         url = '/resource_providers/%s/inventories' % rp_uuid
         result = self.get(url)
         if not result:
-            return {'inventories': {}}
+            return None
         return result.json()
 
-    def _get_inventory_and_update_provider_generation(self, rp_uuid):
+    def _refresh_and_get_inventory(self, rp_uuid):
         """Helper method that retrieves the current inventory for the supplied
-        resource provider according to the placement API. If the cached
-        generation of the resource provider is not the same as the generation
-        returned from the placement API, we update the cached generation.
+        resource provider according to the placement API.
+
+        If the cached generation of the resource provider is not the same as
+        the generation returned from the placement API, we update the cached
+        generation and attempt to update inventory if any exists, otherwise
+        return empty inventories.
         """
         curr = self._get_inventory(rp_uuid)
+        if curr is None:
+            return None
 
-        # Update our generation immediately, if possible. Even if there
-        # are no inventories we should always have a generation but let's
-        # be careful.
-        server_gen = curr.get('resource_provider_generation')
-        if server_gen:
-            my_rp = self._resource_providers[rp_uuid]
-            if server_gen != my_rp['generation']:
-                LOG.debug('Updating our resource provider generation '
-                          'from %(old)i to %(new)i',
-                          {'old': my_rp['generation'],
-                           'new': server_gen})
-            my_rp['generation'] = server_gen
+        cur_gen = curr['resource_provider_generation']
+        if cur_gen:
+            curr_inv = curr['inventories']
+            self._provider_tree.update_inventory(rp_uuid, curr_inv, cur_gen)
         return curr
 
     def _refresh_aggregate_map(self, rp_uuid, force=False):
@@ -589,15 +596,21 @@ class SchedulerReportClient(object):
         :returns: True if the inventory was updated (or did not need to be),
                   False otherwise.
         """
-        curr = self._get_inventory_and_update_provider_generation(rp_uuid)
+        # TODO(jaypipes): Should we really be calling the placement API to get
+        # the current inventory for every resource provider each and every time
+        # update_resource_stats() is called? :(
+        curr = self._refresh_and_get_inventory(rp_uuid)
+        if curr is None:
+            return False
+
+        cur_gen = curr['resource_provider_generation']
 
         # Check to see if we need to update placement's view
-        if inv_data == curr.get('inventories', {}):
+        if not self._provider_tree.has_inventory_changed(rp_uuid, inv_data):
             return True
 
-        cur_rp_gen = self._resource_providers[rp_uuid]['generation']
         payload = {
-            'resource_provider_generation': cur_rp_gen,
+            'resource_provider_generation': cur_gen,
             'inventories': inv_data,
         }
         url = '/resource_providers/%s/inventories' % rp_uuid
@@ -605,10 +618,10 @@ class SchedulerReportClient(object):
         if result.status_code == 409:
             LOG.info(_LI('[%(placement_req_id)s] Inventory update conflict '
                          'for %(resource_provider_uuid)s with generation ID '
-                         '%(generation_id)s'),
+                         '%(generation)s'),
                      {'placement_req_id': get_placement_request_id(result),
                       'resource_provider_uuid': rp_uuid,
-                      'generation_id': cur_rp_gen})
+                      'generation': cur_gen})
             # NOTE(jaypipes): There may be cases when we try to set a
             # provider's inventory that results in attempting to delete an
             # inventory record for a resource class that has an active
@@ -647,7 +660,7 @@ class SchedulerReportClient(object):
 
             # Invalidate our cache and re-fetch the resource provider
             # to be sure to get the latest generation.
-            del self._resource_providers[rp_uuid]
+            self._provider_tree.remove(rp_uuid)
             # NOTE(jaypipes): We don't need to pass a name parameter to
             # _ensure_resource_provider() because we know the resource provider
             # record already exists. We're just reloading the record here.
@@ -686,7 +699,7 @@ class SchedulerReportClient(object):
         updated_inventories_result = result.json()
         new_gen = updated_inventories_result['resource_provider_generation']
 
-        self._resource_providers[rp_uuid]['generation'] = new_gen
+        self._provider_tree.update_inventory(rp_uuid, inv_data, new_gen)
         LOG.debug('Updated inventory for %s at generation %i',
                   rp_uuid, new_gen)
         return True
@@ -694,7 +707,7 @@ class SchedulerReportClient(object):
     @safe_connect
     def _update_inventory(self, rp_uuid, inv_data):
         for attempt in (1, 2, 3):
-            if rp_uuid not in self._resource_providers:
+            if not self._provider_tree.exists(rp_uuid):
                 # NOTE(danms): Either we failed to fetch/create the RP
                 # on our first attempt, or a previous attempt had to
                 # invalidate the cache, and we were unable to refresh
@@ -715,7 +728,10 @@ class SchedulerReportClient(object):
         First attempt to DELETE the inventory using microversion 1.5. If
         this results in a 406, fail over to a PUT.
         """
-        curr = self._get_inventory_and_update_provider_generation(rp_uuid)
+        if not self._provider_tree.has_inventory(rp_uuid):
+            return None
+
+        curr = self._refresh_and_get_inventory(rp_uuid)
 
         # Check to see if we need to update placement's view
         if not curr.get('inventories', {}):
@@ -728,10 +744,10 @@ class SchedulerReportClient(object):
                   "records.")
         LOG.info(msg, rp_uuid)
 
+        cur_gen = curr['resource_provider_generation']
         url = '/resource_providers/%s/inventories' % rp_uuid
         r = self.delete(url, version="1.5")
         placement_req_id = get_placement_request_id(r)
-        cur_rp_gen = self._resource_providers[rp_uuid]['generation']
         msg_args = {
             'rp_uuid': rp_uuid,
             'placement_req_id': placement_req_id,
@@ -744,7 +760,7 @@ class SchedulerReportClient(object):
             LOG.debug('Falling back to placement API microversion 1.0 '
                       'for deleting all inventory for a resource provider.')
             payload = {
-                'resource_provider_generation': cur_rp_gen,
+                'resource_provider_generation': cur_gen,
                 'inventories': {},
             }
             r = self.put(url, payload)
@@ -755,7 +771,7 @@ class SchedulerReportClient(object):
                 updated_inv = r.json()
                 new_gen = updated_inv['resource_provider_generation']
 
-                self._resource_providers[rp_uuid]['generation'] = new_gen
+                self._provider_tree.update_inventory(rp_uuid, {}, new_gen)
                 msg_args['generation'] = new_gen
                 LOG.info(_LI("[%(placement_req_id)s] Deleted all inventory "
                              "for resource provider %(rp_uuid)s at generation "
@@ -764,7 +780,7 @@ class SchedulerReportClient(object):
                 return
 
         if r.status_code == 204:
-            self._resource_providers[rp_uuid]['generation'] = cur_rp_gen + 1
+            self._provider_tree.update_inventory(rp_uuid, {}, cur_gen + 1)
             LOG.info(_LI("[%(placement_req_id)s] Deleted all inventory for "
                          "resource provider %(rp_uuid)s."),
                      msg_args)
@@ -776,7 +792,7 @@ class SchedulerReportClient(object):
                       "deleted by another thread when trying to delete "
                       "inventory. Ignoring.",
                       msg_args)
-            self._resource_providers.pop(rp_uuid, None)
+            self._provider_tree.remove(rp_uuid)
             self._provider_aggregate_map.pop(rp_uuid, None)
             return
         elif r.status_code == 409:
@@ -1259,7 +1275,10 @@ class SchedulerReportClient(object):
         if resp:
             LOG.info(_LI("Deleted resource provider %s"), rp_uuid)
             # clean the caches
-            self._resource_providers.pop(rp_uuid, None)
+            try:
+                self._provider_tree.remove(rp_uuid)
+            except ValueError:
+                pass
             self._provider_aggregate_map.pop(rp_uuid, None)
         else:
             # Check for 404 since we don't need to log a warning if we tried to
