@@ -32,6 +32,7 @@ from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import exception
+from nova.i18n import _
 from nova import objects
 from nova.objects import base as obj_base
 from nova import rpc
@@ -110,7 +111,7 @@ class RPCClientCellsProxy(object):
         version = kwargs.pop('version', None)
 
         if kwargs:
-            raise ValueError("Unsupported kwargs: %s" % kwargs.keys())
+            raise ValueError(_("Unsupported kwargs: %s") % kwargs.keys())
 
         if server:
             ret._server = server
