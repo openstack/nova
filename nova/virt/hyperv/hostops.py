@@ -158,11 +158,17 @@ class HostOps(object):
                  cpu_topology['cores'] *
                  cpu_topology['threads'])
 
+        # NOTE(claudiub): free_hdd_gb only refers to the currently free
+        # physical storage, it doesn't take into consideration the virtual
+        # sizes of the VMs' dynamic disks. This means that the VMs' disks can
+        # expand beyond the free_hdd_gb's value, and instances will still be
+        # scheduled to this compute node.
         dic = {'vcpus': vcpus,
                'memory_mb': total_mem_mb,
                'memory_mb_used': used_mem_mb,
                'local_gb': total_hdd_gb,
                'local_gb_used': used_hdd_gb,
+               'disk_available_least': free_hdd_gb,
                'hypervisor_type': "hyperv",
                'hypervisor_version': self._get_hypervisor_version(),
                'hypervisor_hostname': platform.node(),
