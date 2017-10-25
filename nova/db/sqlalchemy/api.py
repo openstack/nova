@@ -4391,8 +4391,17 @@ def migration_get_in_progress_by_instance(context, instance_uuid,
 
 
 @pick_context_manager_reader
-def migration_get_all_by_filters(context, filters):
+def migration_get_all_by_filters(context, filters,
+                                 sort_keys=None, sort_dirs=None,
+                                 limit=None, marker=None):
+    if limit == 0:
+        return []
+
     query = model_query(context, models.Migration)
+    if 'changes-since' in filters:
+        changes_since = timeutils.normalize_time(filters['changes-since'])
+        query = query. \
+            filter(models.Migration.updated_at >= changes_since)
     if "status" in filters:
         status = filters["status"]
         status = [status] if isinstance(status, six.string_types) else status
@@ -4411,9 +4420,25 @@ def migration_get_all_by_filters(context, filters):
         hidden = filters["hidden"]
         query = query.filter(models.Migration.hidden == hidden)
     if "instance_uuid" in filters:
-        uuid = filters["instance_uuid"]
-        query = query.filter(models.Migration.instance_uuid == uuid)
-    return query.all()
+        instance_uuid = filters["instance_uuid"]
+        query = query.filter(models.Migration.instance_uuid == instance_uuid)
+    if marker:
+        try:
+            marker = migration_get_by_uuid(context, marker)
+        except exception.MigrationNotFound:
+            raise exception.MarkerNotFound(marker=marker)
+    if limit or marker or sort_keys or sort_dirs:
+        # Default sort by desc(['created_at', 'id'])
+        sort_keys, sort_dirs = process_sort_params(sort_keys, sort_dirs,
+                                                   default_dir='desc')
+        return sqlalchemyutils.paginate_query(query,
+                                              models.Migration,
+                                              limit=limit,
+                                              sort_keys=sort_keys,
+                                              marker=marker,
+                                              sort_dirs=sort_dirs).all()
+    else:
+        return query.all()
 
 
 @pick_context_manager_writer

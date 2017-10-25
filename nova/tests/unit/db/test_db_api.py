@@ -1454,7 +1454,8 @@ class MigrationTestCase(test.TestCase):
 
     def _create(self, status='migrating', source_compute='host1',
                 source_node='a', dest_compute='host2', dest_node='b',
-                system_metadata=None, migration_type=None, uuid=None):
+                system_metadata=None, migration_type=None, uuid=None,
+                created_at=None, updated_at=None):
 
         values = {'host': source_compute}
         instance = db.instance_create(self.ctxt, values)
@@ -1466,6 +1467,10 @@ class MigrationTestCase(test.TestCase):
                   'source_node': source_node, 'dest_compute': dest_compute,
                   'dest_node': dest_node, 'instance_uuid': instance['uuid'],
                   'migration_type': migration_type, 'uuid': uuid}
+        if created_at:
+            values['created_at'] = created_at
+        if updated_at:
+            values['updated_at'] = updated_at
         db.migration_create(self.ctxt, values)
         return values
 
@@ -1698,6 +1703,74 @@ class MigrationTestCase(test.TestCase):
         self.assertRaises(exception.MigrationNotFoundForInstance,
                           db.migration_get_by_id_and_instance, self.ctxt,
                           '500', '501')
+
+    def _create_3_migration_after_time(self, time=None):
+        time = time or timeutils.utcnow()
+        tmp_time = time + datetime.timedelta(days=1)
+        after_1hour = datetime.timedelta(hours=1)
+        self._create(uuid=uuidsentinel.uuid_time1, created_at=tmp_time,
+                     updated_at=tmp_time + after_1hour)
+        tmp_time = time + datetime.timedelta(days=2)
+        self._create(uuid=uuidsentinel.uuid_time2, created_at=tmp_time,
+                     updated_at=tmp_time + after_1hour)
+        tmp_time = time + datetime.timedelta(days=3)
+        self._create(uuid=uuidsentinel.uuid_time3, created_at=tmp_time,
+                     updated_at=tmp_time + after_1hour)
+
+    def test_get_migrations_by_filters_with_limit(self):
+        migrations = db.migration_get_all_by_filters(self.ctxt, {}, limit=3)
+        self.assertEqual(3, len(migrations))
+
+    def test_get_migrations_by_filters_with_limit_marker(self):
+        self._create_3_migration_after_time()
+        # order by created_at, desc: time3, time2, time1
+        migrations = db.migration_get_all_by_filters(
+            self.ctxt, {}, limit=2, marker=uuidsentinel.uuid_time3)
+        # time3 as marker: time2, time1
+        self.assertEqual(2, len(migrations))
+        self.assertEqual(migrations[0]['uuid'], uuidsentinel.uuid_time2)
+        self.assertEqual(migrations[1]['uuid'], uuidsentinel.uuid_time1)
+        # time3 as marker, limit 2: time3, time2
+        migrations = db.migration_get_all_by_filters(
+            self.ctxt, {}, limit=1, marker=uuidsentinel.uuid_time3)
+        self.assertEqual(1, len(migrations))
+        self.assertEqual(migrations[0]['uuid'], uuidsentinel.uuid_time2)
+
+    def test_get_migrations_by_filters_with_limit_marker_sort(self):
+        self._create_3_migration_after_time()
+        # order by created_at, desc: time3, time2, time1
+        migrations = db.migration_get_all_by_filters(
+            self.ctxt, {}, limit=2, marker=uuidsentinel.uuid_time3)
+        # time2, time1
+        self.assertEqual(2, len(migrations))
+        self.assertEqual(migrations[0]['uuid'], uuidsentinel.uuid_time2)
+        self.assertEqual(migrations[1]['uuid'], uuidsentinel.uuid_time1)
+
+        # order by updated_at, desc: time1, time2, time3
+        migrations = db.migration_get_all_by_filters(
+            self.ctxt, {}, sort_keys=['updated_at'], sort_dirs=['asc'],
+            limit=2, marker=uuidsentinel.uuid_time1)
+        # time2, time3
+        self.assertEqual(2, len(migrations))
+        self.assertEqual(migrations[0]['uuid'], uuidsentinel.uuid_time2)
+        self.assertEqual(migrations[1]['uuid'], uuidsentinel.uuid_time3)
+
+    def test_get_migrations_by_filters_with_not_found_marker(self):
+        self.assertRaises(exception.MarkerNotFound,
+                          db.migration_get_all_by_filters, self.ctxt, {},
+                          marker=uuidsentinel.not_found_marker)
+
+    def test_get_migrations_by_filters_with_changes_since(self):
+        changes_time = timeutils.utcnow(with_timezone=True)
+        self._create_3_migration_after_time(changes_time)
+        after_1day_2hours = datetime.timedelta(days=1, hours=2)
+        filters = {"changes-since": changes_time + after_1day_2hours}
+        migrations = db.migration_get_all_by_filters(
+            self.ctxt, filters,
+            sort_keys=['updated_at'], sort_dirs=['asc'])
+        self.assertEqual(2, len(migrations))
+        self.assertEqual(migrations[0]['uuid'], uuidsentinel.uuid_time2)
+        self.assertEqual(migrations[1]['uuid'], uuidsentinel.uuid_time3)
 
 
 class ModelsObjectComparatorMixin(object):

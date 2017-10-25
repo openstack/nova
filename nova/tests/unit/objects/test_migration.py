@@ -215,7 +215,9 @@ class _TestMigrationObject(object):
         self.assertEqual(2, len(migrations))
         for index, db_migration in enumerate(db_migrations):
             self.compare_obj(migrations[index], db_migration)
-        mock_get.assert_called_once_with(ctxt, filters)
+        mock_get.assert_called_once_with(ctxt, filters,
+                                         sort_dirs=None, sort_keys=None,
+                                         limit=None, marker=None)
 
     def test_migrate_old_resize_record(self):
         db_migration = dict(fake_db_migration(), migration_type=None)
