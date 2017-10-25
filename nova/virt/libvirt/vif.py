@@ -660,8 +660,7 @@ class LibvirtGenericVIFDriver(object):
         port_id = vif['id']
         try:
             linux_net.create_tap_dev(dev)
-            utils.execute('mm-ctl', '--bind-port', port_id, dev,
-                          run_as_root=True)
+            nova.privsep.libvirt.plug_midonet_vif(port_id, dev)
         except processutils.ProcessExecutionError:
             LOG.exception(_("Failed while plugging vif"), instance=instance)
 
@@ -852,8 +851,7 @@ class LibvirtGenericVIFDriver(object):
         dev = self.get_vif_devname(vif)
         port_id = vif['id']
         try:
-            utils.execute('mm-ctl', '--unbind-port', port_id,
-                          run_as_root=True)
+            nova.privsep.libvirt.unplug_midonet_vif(port_id)
             linux_net.delete_net_dev(dev)
         except processutils.ProcessExecutionError:
             LOG.exception(_("Failed while unplugging vif"), instance=instance)
