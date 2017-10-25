@@ -17,6 +17,7 @@ import os
 
 import iso8601
 import mock
+from oslo_serialization import jsonutils
 from oslo_versionedobjects import exception as ovo_exc
 import six
 
@@ -605,6 +606,18 @@ class TestNetworkModel(TestField):
         networkinfo.append(network_model.VIF(id=456))
         self.assertEqual('NetworkModel(123,456)',
                          self.field.stringify(networkinfo))
+
+
+class TestNetworkVIFModel(TestField):
+    def setUp(self):
+        super(TestNetworkVIFModel, self).setUp()
+        model = network_model.VIF('6c197bc7-820c-40d5-8aff-7116b993e793')
+        primitive = jsonutils.dumps(model)
+        self.field = fields.Field(fields.NetworkVIFModel())
+        self.coerce_good_values = [(model, model), (primitive, model)]
+        self.coerce_bad_values = [[], 'foo']
+        self.to_primitive_values = [(model, primitive)]
+        self.from_primitive_values = [(primitive, model)]
 
 
 class TestNotificationPriority(TestField):

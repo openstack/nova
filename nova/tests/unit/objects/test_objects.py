@@ -1089,7 +1089,7 @@ object_data = {
     'FloatingIPList': '1.12-e4debd21fddb12cf40d36f737225fa9d',
     'HostMapping': '1.0-1a3390a696792a552ab7bd31a77ba9ac',
     'HostMappingList': '1.1-18ac2bfb8c1eb5545bed856da58a79bc',
-    'HyperVLiveMigrateData': '1.3-dae75414c337d3bfd7e4fbf7f74a3c04',
+    'HyperVLiveMigrateData': '1.4-e265780e6acfa631476c8170e8d6fce0',
     'HVSpec': '1.2-de06bcec472a2f04966b855a49c46b41',
     'IDEDeviceBus': '1.0-29d4c9f27ac44197f01b6ac1b7e16502',
     'ImageMeta': '1.8-642d1b2eb3e880a367f37d72dd76162d',
@@ -1114,7 +1114,7 @@ object_data = {
     'InstancePCIRequest': '1.2-6344dd8bd1bf873e7325c07afe47f774',
     'InstancePCIRequests': '1.1-65e38083177726d806684cb1cc0136d2',
     'LibvirtLiveMigrateBDMInfo': '1.1-5f4a68873560b6f834b74e7861d71aaf',
-    'LibvirtLiveMigrateData': '1.8-7806711ede43f4d0afd246d045b7d726',
+    'LibvirtLiveMigrateData': '1.9-7082cc7dd48ca49df71fe3846521b2f3',
     'KeyPair': '1.4-1244e8d1b103cc69d038ed78ab3a8cc6',
     'KeyPairList': '1.3-94aad3ac5c938eef4b5e83da0212f506',
     'MemoryDiagnostics': '1.0-2c995ae0f2223bb0f8e523c5cc0b83da',
@@ -1139,7 +1139,7 @@ object_data = {
     'PciDeviceList': '1.3-52ff14355491c8c580bdc0ba34c26210',
     'PciDevicePool': '1.1-3f5ddc3ff7bfa14da7f6c7e9904cc000',
     'PciDevicePoolList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
-    'PowerVMLiveMigrateData': '1.3-79c635ecf61d1d70b5b9fa04bf778a91',
+    'PowerVMLiveMigrateData': '1.4-a745f4eda16b45e1bc5686a0c498f27e',
     'Quotas': '1.3-40fcefe522111dddd3e5e6155702cf4e',
     'QuotasNoOp': '1.3-347a039fc7cfee7b225b68b5181e0733',
     'RequestSpec': '1.10-afe714bc445ab7cb791150a775f3b779',
@@ -1160,6 +1160,7 @@ object_data = {
     'TagList': '1.1-55231bdb671ecf7641d6a2e9109b5d8e',
     'TrustedCerts': '1.0-dcf528851e0f868c77ee47e90563cda7',
     'USBDeviceBus': '1.0-e4c7dd6032e46cd74b027df5eb2d4750',
+    'VIFMigrateData': '1.0-cb15282b25a039ab35046ed705eb931d',
     'VirtCPUFeature': '1.0-ea2464bdd09084bd388e5f61d5d4fc86',
     'VirtCPUModel': '1.0-5e1864af9227f698326203d7249796b5',
     'VirtCPUTopology': '1.0-fc694de72e20298f7c6bab1083fd4563',
@@ -1167,7 +1168,7 @@ object_data = {
     'VirtualInterfaceList': '1.0-9750e2074437b3077e46359102779fc6',
     'VolumeUsage': '1.0-6c8190c46ce1469bb3286a1f21c2e475',
     'XenDeviceBus': '1.0-272a4f899b24e31e42b2b9a7ed7e9194',
-    'XenapiLiveMigrateData': '1.3-46659bb17e85ae74dce5e7eeef551e5f',
+    'XenapiLiveMigrateData': '1.4-7dc9417e921b2953faa6751f18785f3f',
 }
 
 
