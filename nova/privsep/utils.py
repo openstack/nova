@@ -27,6 +27,7 @@ import os
 from oslo_log import log as logging
 from oslo_utils import excutils
 
+from nova import utils as nova_utils
 
 LOG = logging.getLogger(__name__)
 
@@ -37,7 +38,9 @@ def supports_direct_io(dirpath):
         LOG.debug("This python runtime does not support direct I/O")
         return False
 
-    testfile = os.path.join(dirpath, ".directio.test")
+    file_name = "%s.%s" % (".directio.test",
+                           nova_utils.generate_random_string())
+    testfile = os.path.join(dirpath, file_name)
 
     hasDirectIO = True
     fd = None
