@@ -1422,11 +1422,6 @@ class LibvirtDriver(driver.ComputeDriver):
                                                              live=live)
             wait_for_detach()
 
-            if encryption:
-                encryptor = self._get_volume_encryptor(connection_info,
-                                                       encryption)
-                encryptor.detach_volume(**encryption)
-
         except exception.InstanceNotFound:
             # NOTE(zhaoqin): If the instance does not exist, _lookup_by_name()
             #                will throw InstanceNotFound exception. Need to
@@ -1434,7 +1429,11 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.warning("During detach_volume, instance disappeared.",
                         instance=instance)
         except exception.DeviceNotFound:
-            raise exception.DiskNotFound(location=disk_dev)
+            # We should still try to disconnect logical device from
+            # host, an error might have happened during a previous
+            # call.
+            LOG.info("Device %s not found in instance.",
+                     disk_dev, instance=instance)
         except libvirt.libvirtError as ex:
             # NOTE(vish): This is called to cleanup volumes after live
             #             migration, so we should still disconnect even if
@@ -1446,6 +1445,26 @@ class LibvirtDriver(driver.ComputeDriver):
                             instance=instance)
             else:
                 raise
+
+        try:
+            if encryption:
+                encryptor = self._get_volume_encryptor(connection_info,
+                                                       encryption)
+                encryptor.detach_volume(**encryption)
+        except processutils.ProcessExecutionError as e:
+            # cryptsetup returns 4 when attempting to destroy a non-existent
+            # dm-crypt device. We assume here that the caller hasn't specified
+            # the wrong device, and that it doesn't exist because it has
+            # already been destroyed.
+            if e.exit_code == 4:
+                LOG.debug("Ignoring exit code 4, volume already destroyed")
+            else:
+                with excutils.save_and_reraise_exception():
+                    LOG.warning("Could not disconnect encrypted volume "
+                                "%(volume)s. If dm-crypt device is still "
+                                "active it will have to be destroyed manually "
+                                "for cleanup to succeed.",
+                                {'volume': disk_dev})
 
         self._disconnect_volume(connection_info, disk_dev, instance)
 
