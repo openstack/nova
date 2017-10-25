@@ -168,6 +168,20 @@ class _TestInstanceMappingListObject(object):
                          comparators={
                              'cell_mapping': self._check_cell_map_value})
 
+    @mock.patch.object(instance_mapping.InstanceMappingList,
+                                        '_destroy_bulk_in_db')
+    def test_destroy_bulk(self, destroy_bulk_in_db):
+        uuids_to_be_deleted = []
+        for i in range(0, 5):
+            uuid = uuidutils.generate_uuid()
+            uuids_to_be_deleted.append(uuid)
+        destroy_bulk_in_db.return_value = 5
+        result = objects.InstanceMappingList.destroy_bulk(self.context,
+                                            uuids_to_be_deleted)
+        destroy_bulk_in_db.assert_called_once_with(self.context,
+                                            uuids_to_be_deleted)
+        self.assertEqual(5, result)
+
 
 class TestInstanceMappingListObject(test_objects._LocalTest,
                                     _TestInstanceMappingListObject):
