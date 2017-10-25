@@ -37,6 +37,7 @@ from oslo_serialization import jsonutils
 import nova.conf
 from nova import exception
 from nova.i18n import _
+import nova.privsep.fs
 import nova.privsep.libvirt
 from nova import utils
 from nova.virt.disk.mount import api as mount
@@ -450,8 +451,7 @@ def teardown_container(container_dir, container_root_device=None):
                 nova.privsep.fs.loopremove(container_root_device)
             elif 'nbd' in container_root_device:
                 LOG.debug('Release nbd device %s', container_root_device)
-                utils.execute('qemu-nbd', '-d', container_root_device,
-                              run_as_root=True)
+                nova.privsep.fs.nbd_disconnect(container_root_device)
             else:
                 LOG.debug('No release necessary for block device %s',
                           container_root_device)

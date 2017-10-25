@@ -18,10 +18,13 @@ import random
 import re
 import time
 
+from oslo_concurrency import processutils
 from oslo_log import log as logging
+import six
 
 import nova.conf
 from nova.i18n import _
+import nova.privsep.fs
 from nova import utils
 from nova.virt.disk.mount import api
 
@@ -76,9 +79,11 @@ class NbdMount(api.Mount):
         # already in use.
         LOG.debug('Get nbd device %(dev)s for %(imgfile)s',
                   {'dev': device, 'imgfile': self.image.path})
-        _out, err = utils.trycmd('qemu-nbd', '-c', device,
-                                 self.image.path,
-                                 run_as_root=True)
+        try:
+            _out, err = nova.privsep.fs.nbd_connect(device, self.image.path)
+        except processutils.ProcessExecutionError as exc:
+            err = six.text_type(exc)
+
         if err:
             self.error = _('qemu-nbd error: %s') % err
             LOG.info('NBD mount error: %s', self.error)
@@ -97,8 +102,11 @@ class NbdMount(api.Mount):
             LOG.info('NBD mount error: %s', self.error)
 
             # Cleanup
-            _out, err = utils.trycmd('qemu-nbd', '-d', device,
-                                     run_as_root=True)
+            try:
+                _out, err = nova.privsep.fs.nbd_disconnect(device)
+            except processutils.ProcessExecutionError as exc:
+                err = six.text_type(exc)
+
             if err:
                 LOG.warning('Detaching from erroneous nbd device returned '
                             'error: %s', err)
@@ -116,7 +124,7 @@ class NbdMount(api.Mount):
         if not self.linked:
             return
         LOG.debug('Release nbd device %s', self.device)
-        utils.execute('qemu-nbd', '-d', self.device, run_as_root=True)
+        nova.privsep.fs.nbd_disconnect(self.device)
         self.linked = False
         self.device = None
 

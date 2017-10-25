@@ -97,3 +97,13 @@ def loopsetup(path):
 @nova.privsep.sys_admin_pctxt.entrypoint
 def loopremove(device):
     return processutils.execute('losetup', '--detach', device, attempts=3)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def nbd_connect(device, image):
+    return processutils.execute('qemu-nbd', '-c', device, image)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def nbd_disconnect(device):
+    return processutils.execute('qemu-nbd', '-d', device)
