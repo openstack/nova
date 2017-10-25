@@ -35,7 +35,7 @@ class TestUtils(test.NoDBTestCase):
     def _test_resources_from_request_spec(self, flavor, expected):
         fake_spec = objects.RequestSpec(flavor=flavor)
         resources = utils.resources_from_request_spec(fake_spec)
-        self.assertEqual(expected, resources)
+        self.assertResourceRequestsEqual(expected, resources)
 
     def test_resources_from_request_spec(self):
         flavor = objects.Flavor(vcpus=1,
@@ -43,9 +43,15 @@ class TestUtils(test.NoDBTestCase):
                                 root_gb=10,
                                 ephemeral_gb=5,
                                 swap=0)
-        expected_resources = {'VCPU': 1,
-                              'MEMORY_MB': 1024,
-                              'DISK_GB': 15}
+        expected_resources = utils.ResourceRequest()
+        expected_resources._rg_by_id[None] = plib.RequestGroup(
+            use_same_provider=False,
+            resources={
+                'VCPU': 1,
+                'MEMORY_MB': 1024,
+                'DISK_GB': 15,
+            }
+        )
         self._test_resources_from_request_spec(flavor, expected_resources)
 
     def test_resources_from_request_spec_with_no_disk(self):
@@ -54,8 +60,14 @@ class TestUtils(test.NoDBTestCase):
                                 root_gb=0,
                                 ephemeral_gb=0,
                                 swap=0)
-        expected_resources = {'VCPU': 1,
-                              'MEMORY_MB': 1024}
+        expected_resources = utils.ResourceRequest()
+        expected_resources._rg_by_id[None] = plib.RequestGroup(
+            use_same_provider=False,
+            resources={
+                'VCPU': 1,
+                'MEMORY_MB': 1024,
+            }
+        )
         self._test_resources_from_request_spec(flavor, expected_resources)
 
     def test_get_resources_from_request_spec_custom_resource_class(self):
@@ -65,10 +77,16 @@ class TestUtils(test.NoDBTestCase):
                                 ephemeral_gb=5,
                                 swap=0,
                                 extra_specs={"resources:CUSTOM_TEST_CLASS": 1})
-        expected_resources = {"VCPU": 1,
-                              "MEMORY_MB": 1024,
-                              "DISK_GB": 15,
-                              "CUSTOM_TEST_CLASS": 1}
+        expected_resources = utils.ResourceRequest()
+        expected_resources._rg_by_id[None] = plib.RequestGroup(
+            use_same_provider=False,
+            resources={
+                "VCPU": 1,
+                "MEMORY_MB": 1024,
+                "DISK_GB": 15,
+                "CUSTOM_TEST_CLASS": 1,
+            }
+        )
         self._test_resources_from_request_spec(flavor, expected_resources)
 
     def test_get_resources_from_request_spec_override_flavor_amounts(self):
@@ -81,9 +99,15 @@ class TestUtils(test.NoDBTestCase):
                                     "resources:VCPU": 99,
                                     "resources:MEMORY_MB": 99,
                                     "resources:DISK_GB": 99})
-        expected_resources = {"VCPU": 99,
-                              "MEMORY_MB": 99,
-                              "DISK_GB": 99}
+        expected_resources = utils.ResourceRequest()
+        expected_resources._rg_by_id[None] = plib.RequestGroup(
+            use_same_provider=False,
+            resources={
+                "VCPU": 99,
+                "MEMORY_MB": 99,
+                "DISK_GB": 99,
+            }
+        )
         self._test_resources_from_request_spec(flavor, expected_resources)
 
     def test_get_resources_from_request_spec_remove_flavor_amounts(self):
@@ -95,7 +119,13 @@ class TestUtils(test.NoDBTestCase):
                                 extra_specs={
                                     "resources:VCPU": 0,
                                     "resources:DISK_GB": 0})
-        expected_resources = {"MEMORY_MB": 1024}
+        expected_resources = utils.ResourceRequest()
+        expected_resources._rg_by_id[None] = plib.RequestGroup(
+            use_same_provider=False,
+            resources={
+                "MEMORY_MB": 1024,
+            }
+        )
         self._test_resources_from_request_spec(flavor, expected_resources)
 
     def test_get_resources_from_request_spec_vgpu(self):
@@ -107,11 +137,17 @@ class TestUtils(test.NoDBTestCase):
                                 extra_specs={
                                     "resources:VGPU": 1,
                                     "resources:VGPU_DISPLAY_HEAD": 1})
-        expected_resources = {"VCPU": 1,
-                              "MEMORY_MB": 1024,
-                              "DISK_GB": 10,
-                              "VGPU": 1,
-                              "VGPU_DISPLAY_HEAD": 1}
+        expected_resources = utils.ResourceRequest()
+        expected_resources._rg_by_id[None] = plib.RequestGroup(
+            use_same_provider=False,
+            resources={
+                "VCPU": 1,
+                "MEMORY_MB": 1024,
+                "DISK_GB": 10,
+                "VGPU": 1,
+                "VGPU_DISPLAY_HEAD": 1,
+            }
+        )
         self._test_resources_from_request_spec(flavor, expected_resources)
 
     def test_get_resources_from_request_spec_bad_std_resource_class(self):
@@ -131,34 +167,67 @@ class TestUtils(test.NoDBTestCase):
                     "'%(key)s' in extra_specs.")
             self.assertEqual(args[1], {"key": "DOESNT_EXIST"})
 
-    def test_get_resources_from_request_spec_bad_value(self):
-        flavor = objects.Flavor(vcpus=1,
-                                memory_mb=1024,
-                                root_gb=10,
-                                ephemeral_gb=5,
-                                swap=0,
-                                extra_specs={
-                                    "resources:MEMORY_MB": "bogus"})
-        fake_spec = objects.RequestSpec(flavor=flavor)
-        with mock.patch("nova.scheduler.utils.LOG.warning") as mock_log:
-            utils.resources_from_request_spec(fake_spec)
-            mock_log.assert_called_once()
+    def test_get_resources_from_request_spec_granular(self):
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=0, swap=0,
+            extra_specs={'resources1:VGPU': '1',
+                         'resources1:VGPU_DISPLAY_HEAD': '2',
+                         # Replace
+                         'resources3:VCPU': '2',
+                         # Stay separate (don't sum)
+                         'resources42:SRIOV_NET_VF': '1',
+                         'resources24:SRIOV_NET_VF': '2',
+                         # Ignore
+                         'some:bogus': 'value',
+                         # Custom in the unnumbered group (merge with DISK_GB)
+                         'resources:CUSTOM_THING': '123',
+                         # Traits make it through
+                         'trait3:CUSTOM_SILVER': 'required',
+                         'trait3:CUSTOM_GOLD': 'required',
+                         # Delete standard
+                         'resources86:MEMORY_MB': '0',
+                         # Standard and custom zeroes don't make it through
+                         'resources:IPV4_ADDRESS': '0',
+                         'resources:CUSTOM_FOO': '0',
+                         # Bogus values don't make it through
+                         'resources1:MEMORY_MB': 'bogus'})
+        expected_resources = utils.ResourceRequest()
+        expected_resources._rg_by_id[None] = plib.RequestGroup(
+            use_same_provider=False,
+            resources={
+                'DISK_GB': 10,
+                'CUSTOM_THING': 123,
+            }
+        )
+        expected_resources._rg_by_id['1'] = plib.RequestGroup(
+            resources={
+                'VGPU': 1,
+                'VGPU_DISPLAY_HEAD': 2,
+            }
+        )
+        expected_resources._rg_by_id['3'] = plib.RequestGroup(
+            resources={
+                'VCPU': 2,
+            },
+            required_traits={
+                'CUSTOM_GOLD',
+                'CUSTOM_SILVER',
+            }
+        )
+        expected_resources._rg_by_id['24'] = plib.RequestGroup(
+            resources={
+                'SRIOV_NET_VF': 2,
+            },
+        )
+        expected_resources._rg_by_id['42'] = plib.RequestGroup(
+            resources={
+                'SRIOV_NET_VF': 1,
+            }
+        )
+        self._test_resources_from_request_spec(flavor, expected_resources)
 
-    def test_get_resources_from_request_spec_zero_cust_amt(self):
-        flavor = objects.Flavor(vcpus=1,
-                                memory_mb=1024,
-                                root_gb=10,
-                                ephemeral_gb=5,
-                                swap=0,
-                                extra_specs={
-                                    "resources:CUSTOM_TEST_CLASS": 0})
-        fake_spec = objects.RequestSpec(flavor=flavor)
-        with mock.patch("nova.scheduler.utils.LOG.warning") as mock_log:
-            utils.resources_from_request_spec(fake_spec)
-            mock_log.assert_called_once()
-
-    @mock.patch("nova.scheduler.utils._process_extra_specs")
-    def test_process_extra_specs_called(self, mock_proc):
+    @mock.patch("nova.scheduler.utils.ResourceRequest.from_extra_specs")
+    def test_process_extra_specs_granular_called(self, mock_proc):
         flavor = objects.Flavor(vcpus=1,
                                 memory_mb=1024,
                                 root_gb=10,
@@ -169,8 +238,8 @@ class TestUtils(test.NoDBTestCase):
         utils.resources_from_request_spec(fake_spec)
         mock_proc.assert_called_once()
 
-    @mock.patch("nova.scheduler.utils._process_extra_specs")
-    def test_process_extra_specs_not_called(self, mock_proc):
+    @mock.patch("nova.scheduler.utils.ResourceRequest.from_extra_specs")
+    def test_process_extra_specs_granular_not_called(self, mock_proc):
         flavor = objects.Flavor(vcpus=1,
                                 memory_mb=1024,
                                 root_gb=10,
@@ -224,14 +293,31 @@ class TestUtils(test.NoDBTestCase):
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)
     def test_resources_from_flavor_with_override(self, mock_is_bfv):
-        flavor = objects.Flavor(vcpus=1, memory_mb=1024, root_gb=10,
-                                ephemeral_gb=5, swap=1024,
-                                extra_specs={'resources:VCPU': '2'})
+        flavor = objects.Flavor(
+            vcpus=1, memory_mb=1024, root_gb=10, ephemeral_gb=5, swap=1024,
+            extra_specs={
+                # Replace
+                'resources:VCPU': '2',
+                # Sum up
+                'resources42:SRIOV_NET_VF': '1',
+                'resources24:SRIOV_NET_VF': '2',
+                # Ignore
+                'some:bogus': 'value',
+                # Custom
+                'resources:CUSTOM_THING': '123',
+                # Ignore
+                'trait:CUSTOM_GOLD': 'required',
+                # Delete standard
+                'resources86:MEMORY_MB': 0,
+                # Standard and custom zeroes don't make it through
+                'resources:IPV4_ADDRESS': 0,
+                'resources:CUSTOM_FOO': 0})
         instance = objects.Instance()
         expected = {
             'VCPU': 2,
-            'MEMORY_MB': 1024,
             'DISK_GB': 16,
+            'CUSTOM_THING': 123,
+            'SRIOV_NET_VF': 3,
         }
         actual = utils.resources_from_flavor(instance, flavor)
         self.assertEqual(expected, actual)

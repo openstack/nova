@@ -24,6 +24,7 @@ from nova import exception
 from nova import objects
 from nova.objects import fields
 from nova.scheduler.client import report
+from nova.scheduler import utils as scheduler_utils
 from nova import test
 from nova.tests import uuidsentinel as uuids
 
@@ -1174,7 +1175,14 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             'allocation_requests': mock.sentinel.alloc_reqs,
             'provider_summaries': mock.sentinel.p_sums,
         }
-        resources = {'VCPU': 1, 'MEMORY_MB': 1024}
+        resources = scheduler_utils.ResourceRequest.from_extra_specs({
+            'resources:VCPU': '1',
+            'resources:MEMORY_MB': '1024',
+            'resources1:DISK_GB': '30',
+            'trait:CUSTOM_TRAIT1': 'required',
+            'trait:CUSTOM_TRAIT2': 'preferred',
+        })
+
         resp_mock.json.return_value = json_data
         self.ks_adap_mock.get.return_value = resp_mock
 
@@ -1193,9 +1201,12 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         resp_mock = mock.Mock(status_code=404)
         self.ks_adap_mock.get.return_value = resp_mock
 
-        res = self.client.get_allocation_candidates({'foo': 'bar'})
+        resources = scheduler_utils.ResourceRequest.from_extra_specs(
+            {'resources:MEMORY_MB': '1024'})
 
-        expected_url = '/allocation_candidates?resources=foo%3Abar'
+        res = self.client.get_allocation_candidates(resources)
+
+        expected_url = '/allocation_candidates?resources=MEMORY_MB%3A1024'
         self.ks_adap_mock.get.assert_called_once_with(
             expected_url, raise_exc=False, microversion='1.10')
         self.assertIsNone(res[0])

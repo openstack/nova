@@ -327,9 +327,16 @@ class SchedulerReportClient(object):
         :returns: A tuple with a list of allocation_request dicts and a dict of
                   provider information or (None, None) if the request failed
 
-        :param resources: A dict, keyed by resource class name, of requested
-                          amounts of those resources
+        :param nova.scheduler.utils.ResourceRequest resources:
+            A ResourceRequest object representing the requested resources and
+            traits from the request spec.
         """
+        # TODO(efried): For now, just use the unnumbered group to retain
+        # existing behavior.  Once the GET /allocation_candidates API is
+        # prepped to accept the whole shebang, we'll join up all the resources
+        # and traits in the query string (via a new method on ResourceRequest).
+        resources = resources.get_request_group(None).resources
+
         resource_query = ",".join(
             sorted("%s:%s" % (rc, amount)
             for (rc, amount) in resources.items()))
