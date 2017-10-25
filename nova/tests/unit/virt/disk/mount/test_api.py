@@ -36,13 +36,6 @@ class MountTestCase(test.NoDBTestCase):
         mount.map_dev()
         return mount
 
-    @mock.patch('nova.utils.trycmd')
-    def _test_map_dev_with_trycmd(self, partition, trycmd):
-        trycmd.return_value = [None, None]
-        mount = self._test_map_dev(partition)
-        self.assertEqual(1, trycmd.call_count)  # don't care about args
-        return mount
-
     def _exists_effect(self, data):
         def exists_effect(filename):
             try:
@@ -72,36 +65,42 @@ class MountTestCase(test.NoDBTestCase):
         self.assertFalse(mount.mapped)
 
     @mock.patch('os.path.exists')
-    def test_map_dev_good(self, exists):
-        exists.side_effect = self._exists_effect({
+    @mock.patch('nova.privsep.fs.create_device_maps',
+                return_value=(None, None))
+    def test_map_dev_good(self, mock_create_maps, mock_exists):
+        mock_exists.side_effect = self._exists_effect({
             ORIG_DEVICE: True,
             AUTOMAP_PARTITION: False,
             MAP_PARTITION: [False, True]})
-        mount = self._test_map_dev_with_trycmd(PARTITION)
-        self._check_calls(exists, [ORIG_DEVICE, AUTOMAP_PARTITION], 2)
+        mount = self._test_map_dev(PARTITION)
+        self._check_calls(mock_exists, [ORIG_DEVICE, AUTOMAP_PARTITION], 2)
         self.assertEqual("", mount.error)
         self.assertTrue(mount.mapped)
 
     @mock.patch('os.path.exists')
-    def test_map_dev_error(self, exists):
-        exists.side_effect = self._exists_effect({
+    @mock.patch('nova.privsep.fs.create_device_maps',
+                return_value=(None, None))
+    def test_map_dev_error(self, mock_create_maps, mock_exists):
+        mock_exists.side_effect = self._exists_effect({
             ORIG_DEVICE: True,
             AUTOMAP_PARTITION: False,
             MAP_PARTITION: False})
-        mount = self._test_map_dev_with_trycmd(PARTITION)
-        self._check_calls(exists, [ORIG_DEVICE, AUTOMAP_PARTITION],
+        mount = self._test_map_dev(PARTITION)
+        self._check_calls(mock_exists, [ORIG_DEVICE, AUTOMAP_PARTITION],
                 api.MAX_FILE_CHECKS + 1)
         self.assertNotEqual("", mount.error)
         self.assertFalse(mount.mapped)
 
     @mock.patch('os.path.exists')
-    def test_map_dev_error_then_pass(self, exists):
-        exists.side_effect = self._exists_effect({
+    @mock.patch('nova.privsep.fs.create_device_maps',
+                return_value=(None, None))
+    def test_map_dev_error_then_pass(self, mock_create_maps, mock_exists):
+        mock_exists.side_effect = self._exists_effect({
             ORIG_DEVICE: True,
             AUTOMAP_PARTITION: False,
             MAP_PARTITION: [False, False, True]})
-        mount = self._test_map_dev_with_trycmd(PARTITION)
-        self._check_calls(exists, [ORIG_DEVICE, AUTOMAP_PARTITION], 3)
+        mount = self._test_map_dev(PARTITION)
+        self._check_calls(mock_exists, [ORIG_DEVICE, AUTOMAP_PARTITION], 3)
         self.assertEqual("", mount.error)
         self.assertTrue(mount.mapped)
 

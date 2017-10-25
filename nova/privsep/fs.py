@@ -107,3 +107,13 @@ def nbd_connect(device, image):
 @nova.privsep.sys_admin_pctxt.entrypoint
 def nbd_disconnect(device):
     return processutils.execute('qemu-nbd', '-d', device)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def create_device_maps(device):
+    return processutils.execute('kpartx', '-a', device)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def remove_device_maps(device):
+    return processutils.execute('kpartx', '-d', device)

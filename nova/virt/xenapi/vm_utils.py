@@ -973,9 +973,7 @@ def _make_partition(session, dev, partition_start, partition_end):
     partition_path = utils.make_dev_path(dev, partition=1)
     if session.is_local_connection:
         # Need to refresh the partitions
-        utils.trycmd('kpartx', '-a', dev_path,
-                     run_as_root=True,
-                     discard_warnings=True)
+        nova.privsep.fs.create_device_maps(dev_path)
 
         # Sometimes the partition gets created under /dev/mapper, depending
         # on the setup in dom0.

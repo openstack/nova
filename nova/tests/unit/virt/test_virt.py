@@ -215,9 +215,10 @@ class TestVirtDisk(test.NoDBTestCase):
     @mock.patch('nova.privsep.fs.loopremove')
     @mock.patch('nova.privsep.fs.umount')
     @mock.patch('nova.privsep.fs.nbd_disconnect')
+    @mock.patch('nova.privsep.fs.remove_device_maps')
     def test_lxc_teardown_container(
-            self, mock_nbd_disconnect, mock_umount, mock_loopremove,
-            mock_exist):
+            self, mock_remove_maps, mock_nbd_disconnect, mock_umount,
+            mock_loopremove, mock_exist):
 
         def proc_mounts(mount_point):
             mount_points = {
@@ -239,13 +240,12 @@ class TestVirtDisk(test.NoDBTestCase):
         mock_umount.reset_mock()
 
         disk_api.teardown_container('/mnt/loop/part')
-        expected_commands += [
-                              ('kpartx', '-d', '/dev/loop0')
-                             ]
         mock_loopremove.assert_has_calls([mock.call('/dev/loop0')])
         mock_loopremove.reset_mock()
         mock_umount.assert_has_calls([mock.call('/dev/mapper/loop0p1')])
         mock_umount.reset_mock()
+        mock_remove_maps.assert_has_calls([mock.call('/dev/loop0')])
+        mock_remove_maps.reset_mock()
 
         disk_api.teardown_container('/mnt/nbd/nopart')
         expected_commands += [
@@ -259,12 +259,13 @@ class TestVirtDisk(test.NoDBTestCase):
         disk_api.teardown_container('/mnt/nbd/part')
         expected_commands += [
                               ('blockdev', '--flushbufs', '/dev/nbd15'),
-                              ('kpartx', '-d', '/dev/nbd15'),
                              ]
         mock_nbd_disconnect.assert_has_calls([mock.call('/dev/nbd15')])
         mock_umount.assert_has_calls([mock.call('/dev/mapper/nbd15p1')])
         mock_nbd_disconnect.reset_mock()
         mock_umount.reset_mock()
+        mock_remove_maps.assert_has_calls([mock.call('/dev/nbd15')])
+        mock_remove_maps.reset_mock()
 
         # NOTE(thomasem): Not adding any commands in this case, because we're
         # not expecting an additional umount for LocalBlockImages. This is to
