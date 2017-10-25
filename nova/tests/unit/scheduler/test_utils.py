@@ -90,6 +90,22 @@ class TestUtils(test.NoDBTestCase):
         expected_resources = {"MEMORY_MB": 1024}
         self._test_resources_from_request_spec(flavor, expected_resources)
 
+    def test_get_resources_from_request_spec_vgpu(self):
+        flavor = objects.Flavor(vcpus=1,
+                                memory_mb=1024,
+                                root_gb=10,
+                                ephemeral_gb=0,
+                                swap=0,
+                                extra_specs={
+                                    "resources:VGPU": 1,
+                                    "resources:VGPU_DISPLAY_HEAD": 1})
+        expected_resources = {"VCPU": 1,
+                              "MEMORY_MB": 1024,
+                              "DISK_GB": 10,
+                              "VGPU": 1,
+                              "VGPU_DISPLAY_HEAD": 1}
+        self._test_resources_from_request_spec(flavor, expected_resources)
+
     def test_get_resources_from_request_spec_bad_std_resource_class(self):
         flavor = objects.Flavor(vcpus=1,
                                 memory_mb=1024,

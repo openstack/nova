@@ -84,7 +84,7 @@ def build_request_spec(ctxt, image, instances, instance_type=None):
 
 
 def _process_extra_specs(extra_specs, resources):
-    """Check the flavor's extra_specs for custom resource information.
+    """Check the flavor's extra_specs for resource override information.
     These will be a dict that is generated from the flavor; and in the
     flavor, the extra_specs entries will be in the format of either:
 
@@ -96,7 +96,8 @@ def _process_extra_specs(extra_specs, resources):
     ...to remove that resource class from the request.
 
         resources:$STANDARD_RESOURCE_CLASS=$N
-    ...to override the flavor's value for that resource class with $N
+    ...to add standard resource class (e.g. VGPU) to the request,
+    or to override the flavor's value for that resource class with $N
     """
     resource_specs = {key.split("resources:", 1)[-1]: val
             for key, val in extra_specs.items()
@@ -117,6 +118,7 @@ def _process_extra_specs(extra_specs, resources):
                     "'%(val)s' for key %(key)s.", {"key": key, "val": val})
             return None
 
+    # Accept custom resource classes to be asked
     for custom_key in custom_keys:
         custom_val = validate_int(custom_key)
         if custom_val is not None:
@@ -127,8 +129,11 @@ def _process_extra_specs(extra_specs, resources):
                         {"key": custom_key, "val": custom_val})
                 continue
             resources[custom_key] = custom_val
+
+    # Accept all standard resource classes to be overrided whether they exist
+    # as flavor fields or not.
     for std_key in std_keys:
-        if std_key not in resources:
+        if std_key not in set(resources).union(fields.ResourceClass.STANDARD):
             LOG.warning("Received an invalid ResourceClass '%(key)s' in "
                     "extra_specs.", {"key": std_key})
             continue
