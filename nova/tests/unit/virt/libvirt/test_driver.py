@@ -6913,8 +6913,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 mock_disconnect_volume.assert_called_with(
                     None, connection_info, instance, encryption=None)
 
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
     @mock.patch('nova.virt.libvirt.host.Host._get_domain')
-    def test_detach_volume_disk_not_found(self, mock_get_domain):
+    def test_detach_volume_disk_not_found(self, mock_get_domain,
+                                          mock_disconnect_volume):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance = objects.Instance(**self.test_instance)
         mock_xml_without_disk = """<domain>
@@ -6930,10 +6932,41 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_dom.info.return_value = [power_state.RUNNING, 512, 512, 2, 1234,
                                       5678]
         mock_get_domain.return_value = mock_dom
-        self.assertRaises(exception.DiskNotFound, drvr.detach_volume,
-                          connection_info, instance, '/dev/vdc')
+
+        drvr.detach_volume(connection_info, instance, '/dev/vdc')
 
         mock_get_domain.assert_called_once_with(instance)
+        mock_disconnect_volume.assert_called_once_with(
+            None, connection_info, instance, encryption=None)
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
+    @mock.patch('nova.virt.libvirt.host.Host._get_domain')
+    def test_detach_volume_disk_not_found_encryption(self, mock_get_domain,
+                                                     mock_disconnect_volume,
+                                                     mock_get_encryptor):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(**self.test_instance)
+        mock_xml_without_disk = """<domain>
+  <devices>
+  </devices>
+</domain>"""
+        mock_dom = mock.MagicMock(return_value=mock_xml_without_disk)
+        encryption = mock.MagicMock()
+
+        connection_info = {"driver_volume_type": "fake",
+                           "data": {"device_path": "/fake",
+                                    "access_mode": "rw"}}
+
+        mock_dom.info.return_value = [power_state.RUNNING, 512, 512, 2, 1234,
+                                      5678]
+        mock_get_domain.return_value = mock_dom
+
+        drvr.detach_volume(connection_info, instance, '/dev/vdc',
+                           encryption)
+
+        mock_disconnect_volume.assert_called_once_with(
+            None, connection_info, instance, encryption=encryption)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_driver')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
