@@ -316,15 +316,29 @@ def is_enough_free_mem(session, instance):
 
 
 def _should_retry_unplug_vbd(err):
-    # Retry if unplug failed with DEVICE_DETACH_REJECTED
-    # For reasons which we don't understand,
-    # we're seeing the device still in use, even when all processes
-    # using the device should be dead.
-    # Since XenServer 6.2, we also need to retry if we get
-    # INTERNAL_ERROR, as that error goes away when you retry.
-    return (err == 'DEVICE_DETACH_REJECTED'
-            or
-            err == 'INTERNAL_ERROR')
+    """Retry if failed with some specific errors.
+
+    The retrable errors include:
+    1. DEVICE_DETACH_REJECTED
+       For reasons which we don't understand, we're seeing the device
+       still in use, even when all processes using the device should
+       be dead.
+    2. INTERNAL_ERROR
+       Since XenServer 6.2, we also need to retry if we get INTERNAL_ERROR,
+       as that error goes away when you retry.
+    3. VM_MISSING_PV_DRIVERS
+       NOTE(jianghuaw): It requires some time for PV(Paravirtualization)
+       driver to be connected at VM booting, so retry if unplug failed
+       with VM_MISSING_PV_DRIVERS.
+    """
+
+    can_retry_errs = (
+        'DEVICE_DETACH_REJECTED',
+        'INTERNAL_ERROR',
+        'VM_MISSING_PV_DRIVERS',
+    )
+
+    return err in can_retry_errs
 
 
 def unplug_vbd(session, vbd_ref, this_vm_ref):

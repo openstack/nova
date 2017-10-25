@@ -913,6 +913,11 @@ class UnplugVbdTestCase(VMUtilsTestBase):
         self._test_uplug_vbd_retries(mock_sleep,
                                      "INTERNAL_ERROR")
 
+    @mock.patch.object(greenthread, 'sleep')
+    def test_uplug_vbd_retries_on_missing_pv_drivers_error(self, mock_sleep):
+        self._test_uplug_vbd_retries(mock_sleep,
+                                     "VM_MISSING_PV_DRIVERS")
+
 
 class VDIOtherConfigTestCase(VMUtilsTestBase):
     """Tests to ensure that the code is populating VDI's `other_config`
