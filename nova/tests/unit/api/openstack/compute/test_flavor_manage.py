@@ -18,11 +18,13 @@ from oslo_serialization import jsonutils
 import six
 import webob
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack.compute import flavor_access as flavor_access_v21
 from nova.api.openstack.compute import flavor_manage as flavormanage_v21
 from nova.compute import flavors
 from nova import db
 from nova import exception
+from nova import objects
 from nova import policy
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -45,6 +47,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
     controller = flavormanage_v21.FlavorManageController()
     validation_error = exception.ValidationError
     base_url = '/v2/fake/flavors'
+    microversion = '2.1'
 
     def setUp(self):
         super(FlavorManageTestV21, self).setUp()
@@ -66,7 +69,8 @@ class FlavorManageTestV21(test.NoDBTestCase):
         self.expected_flavor = self.request_body
 
     def _get_http_request(self, url=''):
-        return fakes.HTTPRequest.blank(url)
+        return fakes.HTTPRequest.blank(url, version=self.microversion,
+                                       use_admin_context=True)
 
     @property
     def app(self):
@@ -126,6 +130,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
     def _create_flavor_success_case(self, body, req=None):
         req = req if req else self._get_http_request(url=self.base_url)
         req.headers['Content-Type'] = 'application/json'
+        req.headers['X-OpenStack-Nova-API-Version'] = self.microversion
         req.method = 'POST'
         req.body = jsonutils.dump_as_bytes(body)
         res = req.get_response(self.app)
@@ -293,7 +298,7 @@ class FlavorManageTestV21(test.NoDBTestCase):
         }
 
         def fake_create(name, memory_mb, vcpus, root_gb, ephemeral_gb,
-                        flavorid, swap, rxtx_factor, is_public):
+                        flavorid, swap, rxtx_factor, is_public, description):
             raise exception.FlavorExists(name=name)
 
         self.stub_out('nova.compute.flavors.create', fake_create)
@@ -312,6 +317,111 @@ class FlavorManageTestV21(test.NoDBTestCase):
                           512, 2, None, 1, 1234, 512, 1, True)
         self.assertRaises(exception.InvalidInput, flavors.create, "abcdef",
                           "test_memory_mb", 2, None, 1, 1234, 512, 1, True)
+
+    def test_create_with_description(self):
+        """With microversion <2.55 this should return a failure."""
+        self.request_body['flavor']['description'] = 'invalid'
+        ex = self.assertRaises(
+            self.validation_error, self.controller._create,
+            self._get_http_request(), body=self.request_body)
+        self.assertIn('description', six.text_type(ex))
+
+    def test_flavor_update_description(self):
+        """With microversion <2.55 this should return a failure."""
+        flavor = self._create_flavor_success_case(self.request_body)['flavor']
+        self.assertRaises(
+            exception.VersionNotFoundForAPIMethod, self.controller._update,
+            self._get_http_request(), flavor['id'],
+            body={'flavor': {'description': 'nope'}})
+
+
+class FlavorManageTestV2_55(FlavorManageTestV21):
+    microversion = '2.55'
+
+    def setUp(self):
+        super(FlavorManageTestV2_55, self).setUp()
+        # Send a description in POST /flavors requests.
+        self.request_body['flavor']['description'] = 'test description'
+
+    def test_create_with_description(self):
+        # test_create already tests this.
+        pass
+
+    @mock.patch('nova.objects.Flavor.get_by_flavor_id')
+    @mock.patch('nova.objects.Flavor.save')
+    def test_flavor_update_description(self, mock_flavor_save, mock_get):
+        """Tests updating a flavor description."""
+        # First create a flavor.
+        flavor = self._create_flavor_success_case(self.request_body)['flavor']
+        self.assertEqual('test description', flavor['description'])
+        mock_get.return_value = objects.Flavor(
+            flavorid=flavor['id'], name=flavor['name'],
+            memory_mb=flavor['ram'], vcpus=flavor['vcpus'],
+            root_gb=flavor['disk'], swap=flavor['swap'],
+            ephemeral_gb=flavor['OS-FLV-EXT-DATA:ephemeral'],
+            disabled=flavor['OS-FLV-DISABLED:disabled'],
+            is_public=flavor['os-flavor-access:is_public'],
+            description=flavor['description'])
+        # Now null out the flavor description.
+        flavor = self.controller._update(
+            self._get_http_request(), flavor['id'],
+            body={'flavor': {'description': None}})['flavor']
+        self.assertIsNone(flavor['description'])
+        mock_get.assert_called_once_with(
+            test.MatchType(fakes.FakeRequestContext), flavor['id'])
+        mock_flavor_save.assert_called_once_with()
+
+    @mock.patch('nova.objects.Flavor.get_by_flavor_id',
+                side_effect=exception.FlavorNotFound(flavor_id='notfound'))
+    def test_flavor_update_not_found(self, mock_get):
+        """Tests that a 404 is returned if the flavor is not found."""
+        self.assertRaises(webob.exc.HTTPNotFound,
+                          self.controller._update,
+                          self._get_http_request(), 'notfound',
+                          body={'flavor': {'description': None}})
+
+    def test_flavor_update_missing_description(self):
+        """Tests that a schema validation error is raised if no description
+        is provided in the update request body.
+        """
+        self.assertRaises(self.validation_error,
+                          self.controller._update,
+                          self._get_http_request(), 'invalid',
+                          body={'flavor': {}})
+
+    def test_create_with_invalid_description(self):
+        # NOTE(mriedem): Intentionally not using ddt for this since ddt will
+        # create a test name that has 65536 'a's in the name which blows up
+        # the console output.
+        for description in ('bad !@#!$%\x00 description',   # printable chars
+                            'a' * 65536):                   # maxLength
+            self.request_body['flavor']['description'] = description
+            self.assertRaises(self.validation_error, self.controller._create,
+                              self._get_http_request(), body=self.request_body)
+
+    @mock.patch('nova.objects.Flavor.get_by_flavor_id')
+    @mock.patch('nova.objects.Flavor.save')
+    def test_update_with_invalid_description(self, mock_flavor_save, mock_get):
+        # First create a flavor.
+        flavor = self._create_flavor_success_case(self.request_body)['flavor']
+        self.assertEqual('test description', flavor['description'])
+        mock_get.return_value = objects.Flavor(
+            flavorid=flavor['id'], name=flavor['name'],
+            memory_mb=flavor['ram'], vcpus=flavor['vcpus'],
+            root_gb=flavor['disk'], swap=flavor['swap'],
+            ephemeral_gb=flavor['OS-FLV-EXT-DATA:ephemeral'],
+            disabled=flavor['OS-FLV-DISABLED:disabled'],
+            is_public=flavor['os-flavor-access:is_public'],
+            description=flavor['description'])
+        # NOTE(mriedem): Intentionally not using ddt for this since ddt will
+        # create a test name that has 65536 'a's in the name which blows up
+        # the console output.
+        for description in ('bad !@#!$%\x00 description',   # printable chars
+                            'a' * 65536):                   # maxLength
+            self.request_body['flavor']['description'] = description
+            self.assertRaises(self.validation_error, self.controller._update,
+                              self._get_http_request(), flavor['id'],
+                              body={'flavor': {'description': description}})
 
 
 class PrivateFlavorManageTestV21(test.TestCase):
@@ -574,3 +684,17 @@ class FlavorManagerPolicyEnforcementV21(test.TestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % delete_flavor_policy,
             exc.format_message())
+
+    def test_flavor_update_non_admin_fails(self):
+        """Tests that trying to update a flavor as a non-admin fails due
+        to the default policy.
+        """
+        self.req.api_version_request = api_version_request.APIVersionRequest(
+            '2.55')
+        exc = self.assertRaises(
+            exception.PolicyNotAuthorized,
+            self.controller._update, self.req, 'fake_id',
+            body={"flavor": {"description": "not authorized"}})
+        self.assertEqual(
+            "Policy doesn't allow os_compute_api:os-flavor-manage:update to "
+            "be performed.", exc.format_message())

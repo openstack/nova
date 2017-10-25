@@ -87,6 +87,13 @@ class FlavorActionController(wsgi.Controller):
 
             self._extend_flavor(resp_obj.obj['flavor'], db_flavor)
 
+    @wsgi.extends(action='update')
+    def update(self, req, id, body, resp_obj):
+        context = req.environ['nova.context']
+        if context.can(fa_policies.BASE_POLICY_NAME, fatal=False):
+            db_flavor = req.get_db_flavor(resp_obj.obj['flavor']['id'])
+            self._extend_flavor(resp_obj.obj['flavor'], db_flavor)
+
     @extensions.expected_errors((400, 403, 404, 409))
     @wsgi.action("addTenantAccess")
     @validation.schema(flavor_access.add_tenant_access)

@@ -53,6 +53,16 @@ flavor_manage_policies = [
             }
         ]),
     policy.DocumentedRuleDefault(
+        POLICY_ROOT % 'update',
+        base.RULE_ADMIN_API,
+        "Update a flavor",
+        [
+            {
+                'method': 'PUT',
+                'path': '/flavors/{flavor_id}'
+            }
+        ]),
+    policy.DocumentedRuleDefault(
         POLICY_ROOT % 'delete',
         BASE_POLICY_RULE,
         "Delete a flavor",

@@ -16,6 +16,7 @@
 from oslo_utils import strutils
 import webob
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.views import flavors as flavors_view
 from nova.api.openstack import extensions
@@ -57,7 +58,9 @@ class FlavorsController(wsgi.Controller):
         except exception.FlavorNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
-        return self._view_builder.show(req, flavor)
+        include_description = api_version_request.is_supported(
+            req, flavors_view.FLAVOR_DESCRIPTION_MICROVERSION)
+        return self._view_builder.show(req, flavor, include_description)
 
     def _parse_is_public(self, is_public):
         """Parse is_public into something usable."""

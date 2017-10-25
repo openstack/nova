@@ -40,6 +40,10 @@ flavor_rxtx_policies = [
                 'method': 'POST',
                 'path': '/flavors'
             },
+            {
+                'method': 'PUT',
+                'path': '/flavors/{flavor_id}'
+            },
         ]),
 ]
 

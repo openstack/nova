@@ -716,6 +716,7 @@ FLAVORS = {
         vcpu_weight=None,
         disabled=False,
         is_public=True,
+        description=None
     ),
     '2': objects.Flavor(
         id=2,
@@ -730,6 +731,7 @@ FLAVORS = {
         vcpu_weight=None,
         disabled=True,
         is_public=True,
+        description='flavor 2 description'
     ),
 }
 

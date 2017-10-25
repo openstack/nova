@@ -42,6 +42,10 @@ class FlavorRxtxController(wsgi.Controller):
     def create(self, req, resp_obj, body):
         return self._show(req, resp_obj)
 
+    @wsgi.extends(action='update')
+    def update(self, req, id, body, resp_obj):
+        return self._show(req, resp_obj)
+
     @wsgi.extends
     def detail(self, req, resp_obj):
         context = req.environ['nova.context']

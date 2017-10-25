@@ -65,3 +65,37 @@ create = {
 create_v20 = copy.deepcopy(create)
 create_v20['properties']['flavor']['properties']['name'] = (parameter_types.
     name_with_leading_trailing_spaces)
+
+
+# 2.55 adds an optional description field with a max length of 65535 since the
+# backing database column is a TEXT column which is 64KiB.
+flavor_description = {
+    'type': ['string', 'null'], 'minLength': 0, 'maxLength': 65535,
+    'pattern': parameter_types.valid_description_regex,
+}
+
+
+create_v2_55 = copy.deepcopy(create)
+create_v2_55['properties']['flavor']['properties']['description'] = (
+    flavor_description)
+
+
+update_v2_55 = {
+    'type': 'object',
+    'properties': {
+        'flavor': {
+            'type': 'object',
+            'properties': {
+                'description': flavor_description
+            },
+            # Since the only property that can be specified on update is the
+            # description field, it is required. If we allow updating other
+            # flavor attributes in a later microversion, we should reconsider
+            # what is required.
+            'required': ['description'],
+            'additionalProperties': False,
+        },
+    },
+    'required': ['flavor'],
+    'additionalProperties': False,
+}

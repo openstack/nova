@@ -42,14 +42,12 @@ Response
    - flavors: flavors
    - id: flavor_id_body
    - name: flavor_name
+   - description: flavor_description_resp
    - links: links
 
-**Example List Flavors**
+**Example List Flavors (v2.55)**
 
-Showing all the default flavors of a Liberty era Nova installation
-that was not customized by the site operators.
-
-.. literalinclude:: ../../doc/api_samples/flavors/flavors-list-resp.json
+.. literalinclude:: ../../doc/api_samples/flavors/v2.55/flavors-list-resp.json
    :language: javascript
 
 Create Flavor
@@ -74,6 +72,7 @@ Request
 
    - flavor: flavor
    - name: flavor_name
+   - description: flavor_description
    - id: flavor_id_body_create
    - ram: flavor_ram
    - disk: flavor_disk
@@ -83,9 +82,9 @@ Request
    - rxtx_factor: flavor_rxtx_factor_in
    - os-flavor-access:is_public: flavor_is_public_in
 
-**Example Create Flavor**
+**Example Create Flavor (v2.55)**
 
-.. literalinclude:: ../../doc/api_samples/flavor-manage/flavor-create-post-req.json
+.. literalinclude:: ../../doc/api_samples/flavor-manage/v2.55/flavor-create-post-req.json
    :language: javascript
 
 Response
@@ -95,6 +94,7 @@ Response
 
    - flavor: flavor
    - name: flavor_name
+   - description: flavor_description_resp
    - id: flavor_id_body
    - ram: flavor_ram
    - disk: flavor_disk
@@ -107,9 +107,9 @@ Response
    - os-flavor-access:is_public: flavor_is_public
 
 
-**Example Create Flavor**
+**Example Create Flavor (v2.55)**
 
-.. literalinclude:: ../../doc/api_samples/flavor-manage/flavor-create-post-resp.json
+.. literalinclude:: ../../doc/api_samples/flavor-manage/v2.55/flavor-create-post-resp.json
    :language: javascript
 
 List Flavors With Details
@@ -144,6 +144,7 @@ Response
 
    - flavors: flavors
    - name: flavor_name
+   - description: flavor_description_resp
    - id: flavor_id_body
    - ram: flavor_ram
    - disk: flavor_disk
@@ -155,9 +156,9 @@ Response
    - rxtx_factor: flavor_rxtx_factor
    - os-flavor-access:is_public: flavor_is_public
 
-**Example List Flavors With Details**
+**Example List Flavors With Details (v2.55)**
 
-.. literalinclude:: ../../doc/api_samples/flavors/flavors-detail-resp.json
+.. literalinclude:: ../../doc/api_samples/flavors/v2.55/flavors-detail-resp.json
    :language: javascript
 
 Show Flavor Details
@@ -185,6 +186,7 @@ Response
 
    - flavor: flavor
    - name: flavor_name
+   - description: flavor_description_resp
    - id: flavor_id_body
    - ram: flavor_ram
    - disk: flavor_disk
@@ -196,9 +198,65 @@ Response
    - rxtx_factor: flavor_rxtx_factor
    - os-flavor-access:is_public: flavor_is_public
 
-**Example Show Flavor Details**
+**Example Show Flavor Details (v2.55)**
 
-.. literalinclude:: ../../doc/api_samples/flavors/flavor-get-resp.json
+.. literalinclude:: ../../doc/api_samples/flavors/v2.55/flavor-get-resp.json
+   :language: javascript
+
+Update Flavor Description
+=========================
+
+.. rest_method:: PUT /flavors/{flavor_id}
+
+Updates a flavor description.
+
+This API is available starting with microversion 2.55.
+
+Policy defaults enable only users with the administrative role to
+perform this operation. Cloud providers can change these permissions
+through the ``policy.json`` file.
+
+Normal response codes: 200
+
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
+
+Request
+-------
+
+.. rest_parameters:: parameters.yaml
+
+   - flavor_id: flavor_id
+   - flavor: flavor
+   - description: flavor_description_required
+
+**Example Update Flavor Description (v2.55)**
+
+.. literalinclude:: ../../doc/api_samples/flavor-manage/v2.55/flavor-update-req.json
+   :language: javascript
+
+Response
+--------
+
+.. rest_parameters:: parameters.yaml
+
+   - flavor: flavor
+   - name: flavor_name
+   - description: flavor_description_resp
+   - id: flavor_id_body
+   - ram: flavor_ram
+   - disk: flavor_disk
+   - vcpus: flavor_cpus
+   - links: links
+   - OS-FLV-EXT-DATA:ephemeral: flavor_ephem_disk
+   - OS-FLV-DISABLED:disabled: flavor_disabled
+   - swap: flavor_swap
+   - rxtx_factor: flavor_rxtx_factor
+   - os-flavor-access:is_public: flavor_is_public
+
+
+**Example Update Flavor Description (v2.55)**
+
+.. literalinclude:: ../../doc/api_samples/flavor-manage/v2.55/flavor-update-resp.json
    :language: javascript
 
 Delete Flavor

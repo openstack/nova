@@ -71,6 +71,10 @@ to a flavor via an os-flavor-access API.
                 'method': 'POST',
                 'path': '/flavors'
             },
+            {
+                'method': 'PUT',
+                'path': '/flavors/{flavor_id}'
+            },
         ]),
 ]
 

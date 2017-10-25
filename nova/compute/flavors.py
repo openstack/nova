@@ -69,7 +69,7 @@ system_metadata_flavor_extra_props = [
 
 
 def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
-           swap=0, rxtx_factor=1.0, is_public=True):
+           swap=0, rxtx_factor=1.0, is_public=True, description=None):
     """Creates flavors."""
     if not flavorid:
         flavorid = uuidutils.generate_uuid()
@@ -81,6 +81,7 @@ def create(name, memory, vcpus, root_gb, ephemeral_gb=0, flavorid=None,
         'ephemeral_gb': ephemeral_gb,
         'swap': swap,
         'rxtx_factor': rxtx_factor,
+        'description': description
     }
 
     if isinstance(name, six.string_types):

@@ -2365,6 +2365,29 @@ flavor_cpus_2_47:
   type: integer
   description: |
     The number of virtual CPUs that were allocated to the server.
+flavor_description:
+  type: string
+  in: body
+  required: false
+  min_version: 2.55
+  description: |
+    A free form description of the flavor. Limited to 65535 characters
+    in length. Only printable characters are allowed.
+flavor_description_required:
+  type: string
+  in: body
+  required: true
+  min_version: 2.55
+  description: |
+    A free form description of the flavor. Limited to 65535 characters
+    in length. Only printable characters are allowed.
+flavor_description_resp:
+  description: |
+    The description of the flavor.
+  in: body
+  required: true
+  type: string
+  min_version: 2.55
 flavor_disabled:
   in: body
   required: false

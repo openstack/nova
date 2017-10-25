@@ -13,15 +13,18 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.api.openstack import api_version_request
 from nova.api.openstack import common
+
+FLAVOR_DESCRIPTION_MICROVERSION = '2.55'
 
 
 class ViewBuilder(common.ViewBuilder):
 
     _collection_name = "flavors"
 
-    def basic(self, request, flavor):
-        return {
+    def basic(self, request, flavor, include_description=False):
+        flavor_dict = {
             "flavor": {
                 "id": flavor["flavorid"],
                 "name": flavor["name"],
@@ -31,7 +34,12 @@ class ViewBuilder(common.ViewBuilder):
             },
         }
 
-    def show(self, request, flavor):
+        if include_description:
+            flavor_dict['flavor']['description'] = flavor.description
+
+        return flavor_dict
+
+    def show(self, request, flavor, include_description=False):
         flavor_dict = {
             "flavor": {
                 "id": flavor["flavorid"],
@@ -48,19 +56,29 @@ class ViewBuilder(common.ViewBuilder):
             },
         }
 
+        if include_description:
+            flavor_dict['flavor']['description'] = flavor.description
+
         return flavor_dict
 
     def index(self, request, flavors):
         """Return the 'index' view of flavors."""
         coll_name = self._collection_name
-        return self._list_view(self.basic, request, flavors, coll_name)
+        include_description = api_version_request.is_supported(
+            request, FLAVOR_DESCRIPTION_MICROVERSION)
+        return self._list_view(self.basic, request, flavors, coll_name,
+                               include_description=include_description)
 
     def detail(self, request, flavors):
         """Return the 'detail' view of flavors."""
         coll_name = self._collection_name + '/detail'
-        return self._list_view(self.show, request, flavors, coll_name)
+        include_description = api_version_request.is_supported(
+            request, FLAVOR_DESCRIPTION_MICROVERSION)
+        return self._list_view(self.show, request, flavors, coll_name,
+                               include_description=include_description)
 
-    def _list_view(self, func, request, flavors, coll_name):
+    def _list_view(self, func, request, flavors, coll_name,
+                   include_description=False):
         """Provide a view for a list of flavors.
 
         :param func: Function used to format the flavor data
@@ -68,10 +86,13 @@ class ViewBuilder(common.ViewBuilder):
         :param flavors: List of flavors in dictionary format
         :param coll_name: Name of collection, used to generate the next link
                           for a pagination query
+        :param include_description: If the flavor.description should be
+                                    included in the response dict.
 
         :returns: Flavor reply data in dictionary format
         """
-        flavor_list = [func(request, flavor)["flavor"] for flavor in flavors]
+        flavor_list = [func(request, flavor, include_description)["flavor"]
+                       for flavor in flavors]
         flavors_links = self._get_collection_links(request,
                                                    flavors,
                                                    coll_name,

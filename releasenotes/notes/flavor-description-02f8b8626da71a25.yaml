@@ -1,0 +1,17 @@
+---
+features:
+  - |
+    Microversion 2.55 adds a ``description`` field to the flavor resource in
+    the following APIs:
+
+    * ``GET /flavors``
+    * ``GET /flavors/detail``
+    * ``GET /flavors/{flavor_id}``
+    * ``POST /flavors``
+    * ``PUT /flavors/{flavor_id}``
+
+    The embedded flavor description will not be included in server
+    representations.
+
+    A new policy rule ``os_compute_api:os-flavor-manage:update`` is added
+    to control access to the ``PUT /flavors/{flavor_id}`` API.

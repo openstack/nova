@@ -313,6 +313,7 @@ class RealRolePolicyTestCase(test.NoDBTestCase):
 "os_compute_api:os-flavor-extra-specs:delete",
 "os_compute_api:os-flavor-manage",
 "os_compute_api:os-flavor-manage:create",
+"os_compute_api:os-flavor-manage:update",
 "os_compute_api:os-flavor-manage:delete",
 "os_compute_api:os-floating-ips-bulk",
 "os_compute_api:os-floating-ip-dns:domain:delete",

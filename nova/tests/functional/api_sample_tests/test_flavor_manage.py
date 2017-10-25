@@ -37,3 +37,12 @@ class FlavorManageSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
         response = self._do_delete("flavors/10")
         self.assertEqual(202, response.status_code)
         self.assertEqual('', response.text)
+
+
+class FlavorManageSampleJsonTests2_55(FlavorManageSampleJsonTests):
+    microversion = '2.55'
+    scenarios = [('v2_55', {'api_major_version': 'v2.1'})]
+
+    def test_update_flavor_description(self):
+        response = self._do_put("flavors/1", "flavor-update-req", {})
+        self._verify_response("flavor-update-resp", {}, response, 200)

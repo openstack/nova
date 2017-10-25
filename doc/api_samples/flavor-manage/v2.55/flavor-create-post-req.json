@@ -1,0 +1,11 @@
+{
+    "flavor": {
+        "name": "test_flavor",
+        "ram": 1024,
+        "vcpus": 2,
+        "disk": 10,
+        "id": "10",
+        "rxtx_factor": 2.0,
+        "description": "test description"
+    }
+}

@@ -429,6 +429,7 @@ ROUTE_LIST = (
     }),
     ('/flavors/{id}', {
         'GET': [flavor_controller, 'show'],
+        'PUT': [flavor_controller, 'update'],
         'DELETE': [flavor_controller, 'delete']
     }),
     ('/flavors/{id}/action', {

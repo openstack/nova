@@ -688,3 +688,16 @@ uniqueness across cells. This microversion brings the following changes:
 ----
 
   Allow the user to set the server key pair while rebuilding.
+
+2.55
+----
+
+Adds a ``description`` field to the flavor resource in the following APIs:
+
+* ``GET /flavors``
+* ``GET /flavors/detail``
+* ``GET /flavors/{flavor_id}``
+* ``POST /flavors``
+* ``PUT /flavors/{flavor_id}``
+
+The embedded flavor description will not be included in server representations.
