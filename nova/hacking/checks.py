@@ -604,7 +604,7 @@ def check_config_option_in_central_place(logical_line, filename):
     conf_exceptions = [
         # CLI opts are allowed to be outside of nova/conf directory
         'nova/cmd/manage.py',
-        'nova/cmd/policy_check.py',
+        'nova/cmd/policy.py',
         'nova/cmd/status.py',
         # config options should not be declared in tests, but there is
         # another checker for it (N320)
