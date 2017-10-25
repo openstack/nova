@@ -145,26 +145,3 @@ class TestFlavorNotification(test.TestCase):
         self.assertEqual(['foo'], flavor_obj.projects)
         # Since projects is loaded we shouldn't try to lazy-load it.
         self._verify_notification(flavor_obj, flavor, "DELETE")
-
-    def test_obj_make_compatible(self):
-        flavor = copy.deepcopy(fake_flavor)
-        flavorid = '1'
-        flavor['flavorid'] = flavorid
-        flavor['id'] = flavorid
-        flavor_obj = objects.Flavor(context=self.ctxt, **flavor)
-        flavor_payload = flavor_notification.FlavorPayload(flavor_obj)
-        primitive = flavor_payload.obj_to_primitive()
-        self.assertIn('name', primitive['nova_object.data'])
-        self.assertIn('swap', primitive['nova_object.data'])
-        self.assertIn('rxtx_factor', primitive['nova_object.data'])
-        self.assertIn('vcpu_weight', primitive['nova_object.data'])
-        self.assertIn('disabled', primitive['nova_object.data'])
-        self.assertIn('is_public', primitive['nova_object.data'])
-        flavor_payload.obj_make_compatible(primitive['nova_object.data'],
-                                           '1.0')
-        self.assertNotIn('name', primitive['nova_object.data'])
-        self.assertNotIn('swap', primitive['nova_object.data'])
-        self.assertNotIn('rxtx_factor', primitive['nova_object.data'])
-        self.assertNotIn('vcpu_weight', primitive['nova_object.data'])
-        self.assertNotIn('disabled', primitive['nova_object.data'])
-        self.assertNotIn('is_public', primitive['nova_object.data'])

@@ -10,8 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_utils import versionutils
-
 from nova.notifications.objects import base
 from nova.objects import base as nova_base
 from nova.objects import fields
@@ -83,24 +81,3 @@ class FlavorPayload(base.NotificationPayloadBase):
             flavor = flavor.obj_clone()
             flavor._context = None
         self.populate_schema(flavor=flavor)
-
-    def obj_make_compatible(self, primitive, target_version):
-        super(FlavorPayload, self).obj_make_compatible(primitive,
-                                                       target_version)
-        target_version = versionutils.convert_version_to_tuple(target_version)
-        if target_version < (1, 1):
-            primitive.pop('name', None)
-            primitive.pop('swap', None)
-            primitive.pop('rxtx_factor', None)
-            primitive.pop('vcpu_weight', None)
-            primitive.pop('disabled', None)
-            primitive.pop('is_public', None)
-        if target_version < (1, 2):
-            primitive.pop('extra_specs', None)
-            primitive.pop('projects', None)
-        if target_version < (1, 3):
-            if 'projects' not in primitive or primitive['projects'] is None:
-                primitive['projects'] = []
-            if ('extra_specs' not in primitive or
-                    primitive['extra_specs'] is None):
-                primitive['extra_specs'] = {}
