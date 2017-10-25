@@ -392,6 +392,8 @@ class ProjectCommandsTestCase(test.TestCase):
 
 
 class DBCommandsTestCase(test.NoDBTestCase):
+    USES_DB_SELF = True
+
     def setUp(self):
         super(DBCommandsTestCase, self).setUp()
         self.output = StringIO()
@@ -406,7 +408,7 @@ class DBCommandsTestCase(test.NoDBTestCase):
         self.assertEqual(2, self.commands.archive_deleted_rows(large_number))
 
     @mock.patch.object(db, 'archive_deleted_rows',
-                       return_value=dict(instances=10, consoles=5))
+                       return_value=(dict(instances=10, consoles=5), list()))
     def _test_archive_deleted_rows(self, mock_db_archive, verbose=False):
         result = self.commands.archive_deleted_rows(20, verbose=verbose)
         mock_db_archive.assert_called_once_with(20)
@@ -437,9 +439,9 @@ class DBCommandsTestCase(test.NoDBTestCase):
     def test_archive_deleted_rows_until_complete(self, mock_db_archive,
                                                  verbose=False):
         mock_db_archive.side_effect = [
-            {'instances': 10, 'instance_extra': 5},
-            {'instances': 5, 'instance_faults': 1},
-            {}]
+            ({'instances': 10, 'instance_extra': 5}, list()),
+            ({'instances': 5, 'instance_faults': 1}, list()),
+            ({}, list())]
         result = self.commands.archive_deleted_rows(20, verbose=verbose,
                                                     until_complete=True)
         self.assertEqual(1, result)
@@ -469,8 +471,8 @@ Archiving.....complete
     def test_archive_deleted_rows_until_stopped(self, mock_db_archive,
                                                 verbose=True):
         mock_db_archive.side_effect = [
-            {'instances': 10, 'instance_extra': 5},
-            {'instances': 5, 'instance_faults': 1},
+            ({'instances': 10, 'instance_extra': 5}, list()),
+            ({'instances': 5, 'instance_faults': 1}, list()),
             KeyboardInterrupt]
         result = self.commands.archive_deleted_rows(20, verbose=verbose,
                                                     until_complete=True)
@@ -497,13 +499,61 @@ Archiving.....stopped
     def test_archive_deleted_rows_until_stopped_quiet(self):
         self.test_archive_deleted_rows_until_stopped(verbose=False)
 
-    @mock.patch.object(db, 'archive_deleted_rows', return_value={})
+    @mock.patch.object(db, 'archive_deleted_rows', return_value=({}, []))
     def test_archive_deleted_rows_verbose_no_results(self, mock_db_archive):
         result = self.commands.archive_deleted_rows(20, verbose=True)
         mock_db_archive.assert_called_once_with(20)
         output = self.output.getvalue()
         self.assertIn('Nothing was archived.', output)
         self.assertEqual(0, result)
+
+    @mock.patch.object(db, 'archive_deleted_rows')
+    @mock.patch.object(objects.RequestSpec, 'destroy_bulk')
+    def test_archive_deleted_rows_and_instance_mappings_and_request_specs(self,
+                                mock_destroy, mock_db_archive, verbose=True):
+        self.useFixture(nova_fixtures.Database())
+        self.useFixture(nova_fixtures.Database(database='api'))
+
+        ctxt = context.RequestContext('fake-user', 'fake_project')
+        cell_uuid = uuidutils.generate_uuid()
+        cell_mapping = objects.CellMapping(context=ctxt,
+                                            uuid=cell_uuid,
+                                            database_connection='fake:///db',
+                                            transport_url='fake:///mq')
+        cell_mapping.create()
+        uuids = []
+        for i in range(2):
+            uuid = uuidutils.generate_uuid()
+            uuids.append(uuid)
+            objects.Instance(ctxt, project_id=ctxt.project_id, uuid=uuid)\
+                                .create()
+            objects.InstanceMapping(ctxt, project_id=ctxt.project_id,
+                                cell_mapping=cell_mapping, instance_uuid=uuid)\
+                                .create()
+
+        mock_db_archive.return_value = (dict(instances=2, consoles=5), uuids)
+        mock_destroy.return_value = 2
+        result = self.commands.archive_deleted_rows(20, verbose=verbose)
+
+        self.assertEqual(1, result)
+        mock_db_archive.assert_called_once_with(20)
+        self.assertEqual(1, mock_destroy.call_count)
+
+        output = self.output.getvalue()
+        if verbose:
+            expected = '''\
++-------------------+-------------------------+
+| Table             | Number of Rows Archived |
++-------------------+-------------------------+
+| consoles          | 5                       |
+| instance_mappings | 2                       |
+| instances         | 2                       |
+| request_specs     | 2                       |
++-------------------+-------------------------+
+'''
+            self.assertEqual(expected, output)
+        else:
+            self.assertEqual(0, len(output))
 
     @mock.patch.object(migration, 'db_null_instance_uuid_scan',
                        return_value={'foo': 0})
@@ -1312,10 +1362,14 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         self.assertEqual(2, r)
 
     @mock.patch('nova.objects.InstanceMapping.get_by_instance_uuid')
-    def test_instance_verify_has_all_mappings(self, mock_get):
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    @mock.patch.object(context, 'target_cell')
+    def test_instance_verify_has_all_mappings(self, mock_target_cell,
+                                                mock_get2, mock_get1):
         cm = objects.CellMapping(name='foo', uuid=uuidsentinel.cel)
         im = objects.InstanceMapping(cell_mapping=cm)
-        mock_get.return_value = im
+        mock_get1.return_value = im
+        mock_get2.return_value = None
         r = self.commands.verify_instance(uuidsentinel.instance)
         self.assertEqual(0, r)
 
@@ -1324,6 +1378,39 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         # and reasonably verify that path
         self.assertEqual(1, self.commands.verify_instance(uuidsentinel.foo,
                                                           quiet=True))
+
+    @mock.patch.object(context, 'target_cell')
+    def test_instance_verify_has_instance_mapping_but_no_instance(self,
+                                                    mock_target_cell):
+        ctxt = context.RequestContext('fake-user', 'fake_project')
+        cell_uuid = uuidutils.generate_uuid()
+        cell_mapping = objects.CellMapping(context=ctxt,
+                                            uuid=cell_uuid,
+                                            database_connection='fake:///db',
+                                            transport_url='fake:///mq')
+        cell_mapping.create()
+        mock_target_cell.return_value.__enter__.return_value = ctxt
+        uuid = uuidutils.generate_uuid()
+        objects.Instance(ctxt, project_id=ctxt.project_id, uuid=uuid).create()
+        objects.InstanceMapping(ctxt, project_id=ctxt.project_id,
+                                cell_mapping=cell_mapping, instance_uuid=uuid)\
+                                .create()
+        # a scenario where an instance is deleted, but not archived.
+        inst = objects.Instance.get_by_uuid(ctxt, uuid)
+        inst.destroy()
+        r = self.commands.verify_instance(uuid)
+        self.assertEqual(3, r)
+        self.assertIn('has been deleted', self.output.getvalue())
+        # a scenario where there is only the instance mapping but no instance
+        # like when an instance has been archived but the instance mapping
+        # was not deleted.
+        uuid = uuidutils.generate_uuid()
+        objects.InstanceMapping(ctxt, project_id=ctxt.project_id,
+                                cell_mapping=cell_mapping, instance_uuid=uuid)\
+                                .create()
+        r = self.commands.verify_instance(uuid)
+        self.assertEqual(4, r)
+        self.assertIn('has been archived', self.output.getvalue())
 
     def _return_compute_nodes(self, ctxt, num=1):
         nodes = []

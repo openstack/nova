@@ -769,11 +769,12 @@ Error: %s""") % six.text_type(e))
             return 2
 
         table_to_rows_archived = {}
+        deleted_instance_uuids = []
         if until_complete and verbose:
             sys.stdout.write(_('Archiving') + '..')  # noqa
         while True:
             try:
-                run = db.archive_deleted_rows(max_rows)
+                run, deleted_instance_uuids = db.archive_deleted_rows(max_rows)
             except KeyboardInterrupt:
                 run = {}
                 if until_complete and verbose:
@@ -782,6 +783,16 @@ Error: %s""") % six.text_type(e))
             for k, v in run.items():
                 table_to_rows_archived.setdefault(k, 0)
                 table_to_rows_archived[k] += v
+            if deleted_instance_uuids:
+                table_to_rows_archived.setdefault('instance_mappings', 0)
+                table_to_rows_archived.setdefault('request_specs', 0)
+                ctxt = context.get_admin_context()
+                deleted_mappings = objects.InstanceMappingList.destroy_bulk(
+                                            ctxt, deleted_instance_uuids)
+                table_to_rows_archived['instance_mappings'] += deleted_mappings
+                deleted_specs = objects.RequestSpec.destroy_bulk(
+                                            ctxt, deleted_instance_uuids)
+                table_to_rows_archived['request_specs'] += deleted_specs
             if not until_complete:
                 break
             elif not run:
@@ -1598,14 +1609,15 @@ class CellV2Commands(object):
 
         This prints one of three strings (and exits with a code) indicating
         whether the instance is successfully mapped to a cell (0), is unmapped
-        due to an incomplete upgrade (1), or unmapped due to normally transient
-        state (2).
+        due to an incomplete upgrade (1), unmapped due to normally transient
+        state (2), it is a deleted instance which has instance mapping (3),
+        or it is an archived instance which still has an instance mapping (4).
         """
         def say(string):
             if not quiet:
                 print(string)
 
-        ctxt = context.RequestContext()
+        ctxt = context.get_admin_context()
         try:
             mapping = objects.InstanceMapping.get_by_instance_uuid(
                 ctxt, uuid)
@@ -1618,6 +1630,28 @@ class CellV2Commands(object):
             say('Instance %s is not mapped to a cell' % uuid)
             return 2
         else:
+            with context.target_cell(ctxt, mapping.cell_mapping) as cctxt:
+                try:
+                    instance = objects.Instance.get_by_uuid(cctxt, uuid)
+                except exception.InstanceNotFound:
+                    try:
+                        el_ctx = cctxt.elevated(read_deleted='yes')
+                        instance = objects.Instance.get_by_uuid(el_ctx, uuid)
+                        # instance is deleted
+                        if instance:
+                            say('The instance with uuid %s has been deleted.'
+                                % uuid)
+                            say('Execute `nova-manage db archive_deleted_rows`'
+                                'command to archive this deleted instance and'
+                                'remove its instance_mapping.')
+                            return 3
+                    except exception.InstanceNotFound:
+                        # instance is archived
+                        say('The instance with uuid %s has been archived.'
+                            % uuid)
+                        say('However its instance_mapping remains.')
+                        return 4
+            # instance is alive and mapped to a cell
             say('Instance %s is in cell: %s (%s)' % (
                 uuid,
                 mapping.cell_mapping.name,

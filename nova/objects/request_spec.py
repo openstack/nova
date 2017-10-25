@@ -519,6 +519,17 @@ class RequestSpec(base.NovaObject):
     def destroy(self):
         self._destroy_in_db(self._context, self.instance_uuid)
 
+    @staticmethod
+    @db.api_context_manager.writer
+    def _destroy_bulk_in_db(context, instance_uuids):
+        return context.session.query(api_models.RequestSpec).filter(
+                api_models.RequestSpec.instance_uuid.in_(instance_uuids)).\
+                delete(synchronize_session=False)
+
+    @classmethod
+    def destroy_bulk(cls, context, instance_uuids):
+        return cls._destroy_bulk_in_db(context, instance_uuids)
+
     def reset_forced_destinations(self):
         """Clears the forced destination fields from the RequestSpec object.
 

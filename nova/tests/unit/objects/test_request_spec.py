@@ -564,6 +564,19 @@ class _TestRequestSpecObject(object):
         destroy_in_db.assert_called_once_with(req_obj._context,
                                               req_obj.instance_uuid)
 
+    @mock.patch.object(request_spec.RequestSpec, '_destroy_bulk_in_db')
+    def test_destroy_bulk(self, destroy_bulk_in_db):
+        uuids_to_be_deleted = []
+        for i in range(0, 5):
+            uuid = uuidutils.generate_uuid()
+            uuids_to_be_deleted.append(uuid)
+        destroy_bulk_in_db.return_value = 5
+        result = objects.RequestSpec.destroy_bulk(self.context,
+                                            uuids_to_be_deleted)
+        destroy_bulk_in_db.assert_called_once_with(self.context,
+                                            uuids_to_be_deleted)
+        self.assertEqual(5, result)
+
     def test_reset_forced_destinations(self):
         req_obj = fake_request_spec.fake_spec_obj()
         # Making sure the fake object has forced hosts and nodes

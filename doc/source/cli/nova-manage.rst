@@ -169,10 +169,12 @@ Nova Cells v2
     the cells v2 environment is properly setup, specifically in terms of the
     cell, host, and instance mapping records required. Returns 0 when the
     instance is successfully mapped to a cell, 1 if the instance is not
-    mapped to a cell (see the ``map_instances`` command), and 2 if the cell
+    mapped to a cell (see the ``map_instances`` command), 2 if the cell
     mapping is missing (see the ``map_cell_and_hosts`` command if you are
     upgrading from a cells v1 environment, and the ``simple_cell_setup`` if
-    you are upgrading from a non-cells v1 environment).
+    you are upgrading from a non-cells v1 environment), 3 if it is a deleted
+    instance which has instance mapping, and 4 if it is an archived instance
+    which still has an instance mapping.
 
 ``nova-manage cell_v2 create_cell [--name <cell_name>] [--transport-url <transport_url>] [--database_connection <database_connection>] [--verbose]``
 

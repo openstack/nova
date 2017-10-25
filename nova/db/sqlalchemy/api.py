@@ -6513,11 +6513,12 @@ def _archive_deleted_rows_for_table(tablename, max_rows):
 
     shadow_tablename = _SHADOW_TABLE_PREFIX + tablename
     rows_archived = 0
+    deleted_instance_uuids = []
     try:
         shadow_table = Table(shadow_tablename, metadata, autoload=True)
     except NoSuchTableError:
         # No corresponding shadow table; skip it.
-        return rows_archived
+        return rows_archived, deleted_instance_uuids
 
     if tablename == "dns_domains":
         # We have one table (dns_domains) where the key is called
@@ -6571,10 +6572,24 @@ def _archive_deleted_rows_for_table(tablename, max_rows):
                           order_by(column).limit(max_rows)
 
     delete_statement = DeleteFromSelect(table, query_delete, column)
+
+    # NOTE(tssurya): In order to facilitate the deletion of records from
+    # instance_mappings table in the nova_api DB, the rows of deleted instances
+    # from the instances table are stored prior to their deletion from
+    # the instances table. Basically the uuids of the archived instances
+    # are queried and returned.
+    if tablename == "instances":
+        query_delete = query_delete.column(table.c.uuid)
+        rows = conn.execute(query_delete).fetchall()
+        deleted_instance_uuids = [r[1] for r in rows]
+
     try:
         # Group the insert and delete in a transaction.
         with conn.begin():
             conn.execute(insert)
+            if tablename == "instances":
+                delete_statement = table.delete().where(table.c.uuid.in_(
+                                                deleted_instance_uuids))
             result_delete = conn.execute(delete_statement)
         rows_archived = result_delete.rowcount
     except db_exc.DBReferenceError as ex:
@@ -6593,7 +6608,7 @@ def _archive_deleted_rows_for_table(tablename, max_rows):
                                              conn, limit)
         rows_archived += extra
 
-    return rows_archived
+    return rows_archived, deleted_instance_uuids
 
 
 def archive_deleted_rows(max_rows=None):
@@ -6613,26 +6628,31 @@ def archive_deleted_rows(max_rows=None):
 
     """
     table_to_rows_archived = {}
+    deleted_instance_uuids = []
     total_rows_archived = 0
     meta = MetaData(get_engine(use_slave=True))
     meta.reflect()
     # Reverse sort the tables so we get the leaf nodes first for processing.
     for table in reversed(meta.sorted_tables):
         tablename = table.name
+        rows_archived = 0
         # skip the special sqlalchemy-migrate migrate_version table and any
         # shadow tables
         if (tablename == 'migrate_version' or
                 tablename.startswith(_SHADOW_TABLE_PREFIX)):
             continue
-        rows_archived = _archive_deleted_rows_for_table(
-            tablename, max_rows=max_rows - total_rows_archived)
+        rows_archived,\
+        deleted_instance_uuid = _archive_deleted_rows_for_table(
+                tablename, max_rows=max_rows - total_rows_archived)
         total_rows_archived += rows_archived
+        if tablename == 'instances':
+            deleted_instance_uuids = deleted_instance_uuid
         # Only report results for tables that had updates.
         if rows_archived:
             table_to_rows_archived[tablename] = rows_archived
         if total_rows_archived >= max_rows:
             break
-    return table_to_rows_archived
+    return table_to_rows_archived, deleted_instance_uuids
 
 
 @pick_context_manager_writer
