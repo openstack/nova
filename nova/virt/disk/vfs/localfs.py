@@ -23,8 +23,8 @@ from oslo_utils import excutils
 
 from nova import exception
 from nova.i18n import _
+import nova.privsep.fs
 import nova.privsep.path
-from nova import utils
 from nova.virt.disk.mount import api as mount_api
 from nova.virt.disk.vfs import api as vfs
 
@@ -142,10 +142,6 @@ class VFSLocalFS(vfs.VFS):
 
     def get_image_fs(self):
         if self.mount.device or self.mount.get_dev():
-            out, err = utils.execute('blkid', '-o',
-                                     'value', '-s',
-                                     'TYPE', self.mount.device,
-                                     run_as_root=True,
-                                     check_exit_code=[0, 2])
+            out, err = nova.privsep.fs.get_filesystem_type(self.mount.device)
             return out.strip()
         return ""

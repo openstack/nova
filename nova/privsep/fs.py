@@ -117,3 +117,9 @@ def create_device_maps(device):
 @nova.privsep.sys_admin_pctxt.entrypoint
 def remove_device_maps(device):
     return processutils.execute('kpartx', '-d', device)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def get_filesystem_type(device):
+    return processutils.execute('blkid', '-o', 'value', '-s', 'TYPE', device,
+                                check_exit_code=[0, 2])

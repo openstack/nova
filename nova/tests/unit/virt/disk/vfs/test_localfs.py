@@ -167,8 +167,9 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
                                  uid=getpwnam.return_value.pw_uid,
                                  gid=getgrnam.return_value.gr_gid)
 
-    @mock.patch.object(nova.utils, 'execute')
-    def test_get_format_fs(self, execute):
+    @mock.patch('nova.privsep.fs.get_filesystem_type',
+                return_value=('ext3\n', ''))
+    def test_get_format_fs(self, mock_type):
         vfs = vfsimpl.VFSLocalFS(self.rawfile)
         vfs.setup = mock.MagicMock()
         vfs.teardown = mock.MagicMock()
@@ -187,17 +188,12 @@ class VirtDiskVFSLocalFSTest(test.NoDBTestCase):
 
         vfs.setup.side_effect = fake_setup
         vfs.teardown.side_effect = fake_teardown
-        execute.return_value = ('ext3\n', '')
 
         vfs.setup()
         self.assertEqual('ext3', vfs.get_image_fs())
         vfs.teardown()
         vfs.mount.get_dev.assert_called_once_with()
-        execute.assert_called_once_with('blkid', '-o',
-                                        'value', '-s',
-                                        'TYPE', '/dev/xyz',
-                                        run_as_root=True,
-                                        check_exit_code=[0, 2])
+        mock_type.assert_called_once_with('/dev/xyz')
 
     @mock.patch.object(tempfile, 'mkdtemp')
     @mock.patch.object(nbd, 'NbdMount')
