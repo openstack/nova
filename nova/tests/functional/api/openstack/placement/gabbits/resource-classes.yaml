@@ -40,7 +40,7 @@ tests:
   GET: /resource_classes
   response_json_paths:
   response_json_paths:
-      $.resource_classes.`len`: 10  #  Number of standard resource classes
+      $.resource_classes.`len`: 12  #  Number of standard resource classes
       $.resource_classes[0].name: VCPU
 
 - name: non admin forbidden
@@ -117,9 +117,9 @@ tests:
 - name: list resource classes after addition of custom res class
   GET: /resource_classes
   response_json_paths:
-      $.resource_classes.`len`: 11  # 10 standard plus 1 custom
-      $.resource_classes[10].name: $ENVIRON['CUSTOM_RES_CLASS']
-      $.resource_classes[10].links[?rel = "self"].href: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
+      $.resource_classes.`len`: 13  # 12 standard plus 1 custom
+      $.resource_classes[12].name: $ENVIRON['CUSTOM_RES_CLASS']
+      $.resource_classes[12].links[?rel = "self"].href: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
 
 - name: update standard resource class bad json
   PUT: /resource_classes/VCPU

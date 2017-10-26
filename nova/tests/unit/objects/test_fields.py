@@ -346,6 +346,8 @@ class TestResourceClass(TestString):
             ('NUMA_THREAD', 'NUMA_THREAD'),
             ('NUMA_MEMORY_MB', 'NUMA_MEMORY_MB'),
             ('IPV4_ADDRESS', 'IPV4_ADDRESS'),
+            ('VGPU', 'VGPU'),
+            ('VGPU_DISPLAY_HEAD', 'VGPU_DISPLAY_HEAD'),
         ]
         self.coerce_bad_values = [object(), dict()]
         self.to_primitive_values = self.coerce_good_values[0:1]

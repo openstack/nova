@@ -475,12 +475,14 @@ class ResourceClass(StringField):
     NUMA_THREAD = 'NUMA_THREAD'
     NUMA_MEMORY_MB = 'NUMA_MEMORY_MB'
     IPV4_ADDRESS = 'IPV4_ADDRESS'
+    VGPU = 'VGPU'
+    VGPU_DISPLAY_HEAD = 'VGPU_DISPLAY_HEAD'
 
     # The ordering here is relevant. If you must add a value, only
     # append.
     STANDARD = (VCPU, MEMORY_MB, DISK_GB, PCI_DEVICE, SRIOV_NET_VF,
                 NUMA_SOCKET, NUMA_CORE, NUMA_THREAD, NUMA_MEMORY_MB,
-                IPV4_ADDRESS)
+                IPV4_ADDRESS, VGPU, VGPU_DISPLAY_HEAD)
 
     # This is the set of standard resource classes that existed before
     # we opened up for custom resource classes in version 1.1 of various
