@@ -305,8 +305,8 @@ class Instance(BASE, NovaBase, models.SoftDeleteMixin):
     # An instance may have moved to another host by live migration.
     launched_on = Column(MediumText())
 
-    # NOTE(jdillaman): locked deprecated in favor of locked_by,
-    # to be removed in Icehouse
+    # locked is superseded by locked_by and locked is not really
+    # necessary but still used in API code so it remains.
     locked = Column(Boolean)
     locked_by = Column(Enum('owner', 'admin'))
 
