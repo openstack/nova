@@ -285,10 +285,10 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
             raise exception.OrphanedObjectError(method='obj_load_attr',
                                                 objtype=self.obj_name())
 
-        LOG.debug("Lazy-loading '%(attr)s' on %(name)s uuid %(uuid)s",
+        LOG.debug("Lazy-loading '%(attr)s' on %(name)s using uuid %(uuid)s",
                   {'attr': attrname,
                    'name': self.obj_name(),
-                   'uuid': self.uuid,
+                   'uuid': self.instance_uuid,
                    })
         self.instance = objects.Instance.get_by_uuid(self._context,
                                                      self.instance_uuid)
