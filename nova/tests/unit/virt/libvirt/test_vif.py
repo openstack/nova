@@ -1020,28 +1020,24 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         d = vif.LibvirtGenericVIFDriver()
         d.unplug(self.instance, self.vif_ivs)
 
-    def test_unplug_iovisor(self):
+    @mock.patch('nova.privsep.libvirt.unplug_plumgrid_vif',
+                side_effect=processutils.ProcessExecutionError)
+    def test_unplug_iovisor(self, mock_unplug):
         d = vif.LibvirtGenericVIFDriver()
-        with mock.patch.object(utils, 'execute') as execute:
-            execute.side_effect = processutils.ProcessExecutionError
-            d.unplug(self.instance, self.vif_iovisor)
+        d.unplug(self.instance, self.vif_iovisor)
 
     @mock.patch('nova.network.linux_net.device_exists')
-    def test_plug_iovisor(self, device_exists):
+    @mock.patch('nova.privsep.libvirt.plug_plumgrid_vif')
+    def test_plug_iovisor(self, mock_plug, device_exists):
         device_exists.return_value = True
         d = vif.LibvirtGenericVIFDriver()
-        with mock.patch.object(utils, 'execute') as execute:
-            d.plug(self.instance, self.vif_iovisor)
-            execute.assert_has_calls([
-                mock.call('ifc_ctl', 'gateway', 'add_port',
-                          'tap-xxx-yyy-zzz', run_as_root=True),
-                mock.call('ifc_ctl', 'gateway', 'ifup',
-                          'tap-xxx-yyy-zzz',
-                          'access_vm', self.vif_iovisor['id'],
-                          self.vif_iovisor['address'],
-                          'pgtag2=%s' % self.vif_iovisor['network']['id'],
-                          'pgtag1=%s' % self.instance.project_id,
-                          run_as_root=True)])
+        d.plug(self.instance, self.vif_iovisor)
+        mock_plug.assert_has_calls(
+            [mock.call('tap-xxx-yyy-zzz',
+                       self.vif_iovisor['id'],
+                       self.vif_iovisor['address'],
+                       self.vif_iovisor['network']['id'],
+                       self.instance.project_id)])
 
     def test_unplug_vrouter_with_details(self):
         d = vif.LibvirtGenericVIFDriver()

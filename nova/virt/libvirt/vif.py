@@ -676,12 +676,8 @@ class LibvirtGenericVIFDriver(object):
         net_id = vif['network']['id']
         tenant_id = instance.project_id
         try:
-            utils.execute('ifc_ctl', 'gateway', 'add_port', dev,
-                          run_as_root=True)
-            utils.execute('ifc_ctl', 'gateway', 'ifup', dev,
-                          'access_vm', iface_id, vif['address'],
-                          'pgtag2=%s' % net_id, 'pgtag1=%s' % tenant_id,
-                          run_as_root=True)
+            nova.privsep.libvirt.plug_plumgrid_vif(
+                dev, iface_id, vif['address'], net_id, tenant_id)
         except processutils.ProcessExecutionError:
             LOG.exception(_("Failed while plugging vif"), instance=instance)
 
@@ -872,10 +868,7 @@ class LibvirtGenericVIFDriver(object):
         """
         dev = self.get_vif_devname(vif)
         try:
-            utils.execute('ifc_ctl', 'gateway', 'ifdown',
-                          dev, run_as_root=True)
-            utils.execute('ifc_ctl', 'gateway', 'del_port', dev,
-                          run_as_root=True)
+            nova.privsep.libvirt.unplug_plumgrid_vif(dev)
             linux_net.delete_net_dev(dev)
         except processutils.ProcessExecutionError:
             LOG.exception(_("Failed while unplugging vif"), instance=instance)

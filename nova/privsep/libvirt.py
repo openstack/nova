@@ -242,6 +242,20 @@ def unplug_midonet_vif(port_id):
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
+def plug_plumgrid_vif(dev, iface_id, vif_address, net_id, tenant_id):
+    processutils.execute('ifc_ctl', 'gateway', 'add_port', dev)
+    processutils.execute('ifc_ctl', 'gateway', 'ifup', dev,
+                         'access_vm', iface_id, vif_address,
+                         'pgtag2=%s' % net_id, 'pgtag1=%s' % tenant_id)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def unplug_plumgrid_vif(dev):
+    processutils.execute('ifc_ctl', 'gateway', 'ifdown', dev)
+    processutils.execute('ifc_ctl', 'gateway', 'del_port', dev)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
 def disable_multicast_snooping(interface):
     """Disable multicast snooping for a bridge."""
     with open('/sys/class/net/%s/bridge/multicast_snooping' % interface,
