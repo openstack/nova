@@ -4497,7 +4497,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_build.assert_called_once_with(self.context,
                 [self.instance], self.image, self.filter_properties,
                 self.admin_pass, self.injected_files, self.requested_networks,
-                self.security_groups, self.block_device_mapping)
+                self.security_groups, self.block_device_mapping,
+                request_spec={})
 
     @mock.patch.object(manager.ComputeManager, '_shutdown_instance')
     @mock.patch.object(manager.ComputeManager, '_build_networks_for_instance')
@@ -4581,7 +4582,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_build_ins.assert_called_once_with(self.context,
             [instance], self.image, self.filter_properties,
             self.admin_pass, self.injected_files, self.requested_networks,
-            self.security_groups, self.block_device_mapping)
+            self.security_groups, self.block_device_mapping,
+            request_spec={})
 
     @mock.patch.object(manager.ComputeManager, '_build_and_run_instance')
     @mock.patch.object(conductor_api.ComputeTaskAPI, 'build_instances')
@@ -4636,7 +4638,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_build_ins.assert_called_once_with(self.context,
             [instance], self.image, self.filter_properties,
             self.admin_pass, self.injected_files, self.requested_networks,
-            self.security_groups, self.block_device_mapping)
+            self.security_groups, self.block_device_mapping,
+            request_spec={})
 
     @mock.patch.object(objects.InstanceActionEvent,
                        'event_finish_with_failure')
@@ -4736,7 +4739,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_build.assert_called_once_with(self.context,
                 [self.instance], self.image, self.filter_properties,
                 self.admin_pass, self.injected_files, self.requested_networks,
-                self.security_groups, self.block_device_mapping)
+                self.security_groups, self.block_device_mapping,
+                request_spec={})
 
     @mock.patch.object(objects.InstanceActionEvent,
                        'event_finish_with_failure')
@@ -4784,7 +4788,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_build.assert_called_once_with(self.context,
                 [self.instance], self.image, self.filter_properties,
                 self.admin_pass, self.injected_files, self.requested_networks,
-                self.security_groups, self.block_device_mapping)
+                self.security_groups, self.block_device_mapping,
+                request_spec={})
 
     @mock.patch.object(objects.InstanceActionEvent,
                        'event_finish_with_failure')
@@ -5171,7 +5176,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_build.assert_called_once_with(self.context, [self.instance],
                 self.image, self.filter_properties, self.admin_pass,
                 self.injected_files, self.requested_networks,
-                self.security_groups, self.block_device_mapping)
+                self.security_groups, self.block_device_mapping,
+                request_spec={})
         mock_nil.assert_called_once_with(self.instance)
         mock_clean.assert_called_once_with(self.context, self.instance,
                 self.compute.host)

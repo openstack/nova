@@ -274,6 +274,7 @@ class ComputeTaskAPI(object):
     1.15 - Added live_migrate_instance
     1.16 - Added schedule_and_build_instances
     1.17 - Added tags to schedule_and_build_instances()
+    1.18 - Added request_spec to build_instances().
     """
 
     def __init__(self):
@@ -327,9 +328,14 @@ class ComputeTaskAPI(object):
 
     def build_instances(self, context, instances, image, filter_properties,
             admin_password, injected_files, requested_networks,
-            security_groups, block_device_mapping, legacy_bdm=True):
+            security_groups, block_device_mapping, legacy_bdm=True,
+            request_spec=None):
         image_p = jsonutils.to_primitive(image)
-        version = '1.10'
+        version = '1.18'
+        send_reqspec = True
+        if not self.client.can_send_version(version):
+            send_reqspec = False
+            version = '1.10'
         if not self.client.can_send_version(version):
             version = '1.9'
             if 'instance_type' in filter_properties:
@@ -343,6 +349,8 @@ class ComputeTaskAPI(object):
                'injected_files': injected_files,
                'requested_networks': requested_networks,
                'security_groups': security_groups}
+        if send_reqspec:
+            kw['request_spec'] = request_spec
         if not self.client.can_send_version(version):
             version = '1.8'
             kw['requested_networks'] = kw['requested_networks'].as_tuples()

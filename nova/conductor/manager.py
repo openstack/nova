@@ -218,7 +218,7 @@ class ComputeTaskManager(base.Base):
     may involve coordinating activities on multiple compute nodes.
     """
 
-    target = messaging.Target(namespace='compute_task', version='1.17')
+    target = messaging.Target(namespace='compute_task', version='1.18')
 
     def __init__(self):
         super(ComputeTaskManager, self).__init__()
@@ -515,7 +515,8 @@ class ComputeTaskManager(base.Base):
     # (which go to the cell conductor and thus are always cell-specific).
     def build_instances(self, context, instances, image, filter_properties,
             admin_password, injected_files, requested_networks,
-            security_groups, block_device_mapping=None, legacy_bdm=True):
+            security_groups, block_device_mapping=None, legacy_bdm=True,
+            request_spec=None):
         # TODO(ndipanov): Remove block_device_mapping and legacy_bdm in version
         #                 2.0 of the RPC API.
         # TODO(danms): Remove this in version 2.0 of the RPC API
@@ -532,14 +533,27 @@ class ComputeTaskManager(base.Base):
             flavor = objects.Flavor.get_by_id(context, flavor['id'])
             filter_properties = dict(filter_properties, instance_type=flavor)
 
-        request_spec = {}
+        # Older computes will not send a request_spec during reschedules, nor
+        # will the API send the request_spec if using cells v1, so we need
+        # to check and build our own if one is not provided.
+        if request_spec is None:
+            request_spec = scheduler_utils.build_request_spec(
+                image, instances)
+        else:
+            # TODO(mriedem): This is annoying but to populate the local
+            # request spec below using the filter_properties, we have to pass
+            # in a primitive version of the request spec. Yes it's inefficient
+            # and we can remove it once the populate_retry and
+            # populate_filter_properties utility methods are converted to
+            # work on a RequestSpec object rather than filter_properties.
+            request_spec = request_spec.to_legacy_request_spec_dict()
+
         try:
             # check retry policy. Rather ugly use of instances[0]...
             # but if we've exceeded max retries... then we really only
             # have a single instance.
             # TODO(sbauza): Provide directly the RequestSpec object
             # when populate_retry() accepts it
-            request_spec = scheduler_utils.build_request_spec(image, instances)
             scheduler_utils.populate_retry(
                 filter_properties, instances[0].uuid)
             instance_uuids = [instance.uuid for instance in instances]
@@ -579,6 +593,13 @@ class ComputeTaskManager(base.Base):
             local_filter_props = copy.deepcopy(filter_properties)
             scheduler_utils.populate_filter_properties(local_filter_props,
                 host)
+            # Populate the request_spec with the local_filter_props information
+            # like retries and limits. Note that at this point the request_spec
+            # could have come from a compute via reschedule and it would
+            # already have some things set, like scheduler_hints.
+            local_reqspec = objects.RequestSpec.from_primitives(
+                context, request_spec, local_filter_props)
+
             # The block_device_mapping passed from the api doesn't contain
             # instance specific information
             bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
@@ -607,7 +628,7 @@ class ComputeTaskManager(base.Base):
 
             self.compute_rpcapi.build_and_run_instance(context,
                     instance=instance, host=host.service_host, image=image,
-                    request_spec=request_spec,
+                    request_spec=local_reqspec,
                     filter_properties=local_filter_props,
                     admin_password=admin_password,
                     injected_files=injected_files,
