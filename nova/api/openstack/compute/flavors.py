@@ -18,9 +18,11 @@ import webob
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
+from nova.api.openstack.compute.schemas import flavors as schema
 from nova.api.openstack.compute.views import flavors as flavors_view
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova.compute import flavors
 from nova import exception
 from nova.i18n import _
@@ -35,12 +37,14 @@ class FlavorsController(wsgi.Controller):
 
     _view_builder_class = flavors_view.ViewBuilder
 
+    @validation.query_schema(schema.index_query)
     @extensions.expected_errors(400)
     def index(self, req):
         """Return all flavors in brief."""
         limited_flavors = self._get_flavors(req)
         return self._view_builder.index(req, limited_flavors)
 
+    @validation.query_schema(schema.index_query)
     @extensions.expected_errors(400)
     def detail(self, req):
         """Return all flavors in detail."""
