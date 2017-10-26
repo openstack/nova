@@ -42,8 +42,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
 
         with mock.patch.object(flavors, 'extract_flavor') as mock_extract:
             mock_extract.return_value = instance_type
-            request_spec = scheduler_utils.build_request_spec(self.context,
-                                                              None,
+            request_spec = scheduler_utils.build_request_spec(None,
                                                               [instance])
             mock_extract.assert_called_once_with({'uuid': uuids.instance})
         self.assertEqual({}, request_spec['image'])
@@ -54,8 +53,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
 
         with mock.patch.object(instance, 'get_flavor') as mock_get:
             mock_get.return_value = instance_type
-            request_spec = scheduler_utils.build_request_spec(self.context,
-                                                              None,
+            request_spec = scheduler_utils.build_request_spec(None,
                                                               [instance])
             mock_get.assert_called_once_with()
         self.assertIsInstance(request_spec['instance_properties'], dict)

@@ -180,11 +180,23 @@ class ResourceRequest(object):
         self._clean_empties()
 
 
-def build_request_spec(ctxt, image, instances, instance_type=None):
+def build_request_spec(image, instances, instance_type=None):
     """Build a request_spec for the scheduler.
 
     The request_spec assumes that all instances to be scheduled are the same
     type.
+
+    :param image: optional primitive image meta dict
+    :param instances: list of instances; objects will be converted to
+        primitives
+    :param instance_type: optional flavor; objects will be converted to
+        primitives
+    :return: dict with the following keys::
+
+        'image': the image dict passed in or {}
+        'instance_properties': primitive version of the first instance passed
+        'instance_type': primitive version of the instance_type or None
+        'num_instances': the number of instances passed in
     """
     instance = instances[0]
     if instance_type is None:
@@ -218,6 +230,9 @@ def build_request_spec(ctxt, image, instances, instance_type=None):
             'instance_properties': instance,
             'instance_type': instance_type,
             'num_instances': len(instances)}
+    # NOTE(mriedem): obj_to_primitive above does not serialize everything
+    # in an object, like datetime fields, so we need to still call to_primitive
+    # to recursively serialize the items in the request_spec dict.
     return jsonutils.to_primitive(request_spec)
 
 

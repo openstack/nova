@@ -539,8 +539,7 @@ class ComputeTaskManager(base.Base):
             # have a single instance.
             # TODO(sbauza): Provide directly the RequestSpec object
             # when populate_retry() accepts it
-            request_spec = scheduler_utils.build_request_spec(
-                context, image, instances)
+            request_spec = scheduler_utils.build_request_spec(image, instances)
             scheduler_utils.populate_retry(
                 filter_properties, instances[0].uuid)
             instance_uuids = [instance.uuid for instance in instances]
@@ -668,7 +667,7 @@ class ComputeTaskManager(base.Base):
                         # old. We need to mock that the old way
                         filter_properties = {}
                         request_spec = scheduler_utils.build_request_spec(
-                            context, image, [instance])
+                            image, [instance])
                     else:
                         # NOTE(sbauza): Force_hosts/nodes needs to be reset
                         # if we want to make sure that the next destination
@@ -831,7 +830,7 @@ class ComputeTaskManager(base.Base):
                     image_meta = nova_object.obj_to_primitive(
                         instance.image_meta)
                     request_spec = scheduler_utils.build_request_spec(
-                            context, image_meta, [instance])
+                        image_meta, [instance])
                     request_spec = objects.RequestSpec.from_primitives(
                         context, request_spec, filter_properties)
                 else:
