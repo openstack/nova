@@ -1650,8 +1650,8 @@ config_drive:
     setting provides information about a drive that the instance can mount at boot
     time. The instance reads files from the drive to get information that is normally
     available through the metadata service. This metadata is different from the user
-    data. Not all cloud providers enable the ``config_drive``. Read more in the OpenStack
-    End User Guide.
+    data. Not all cloud providers enable the ``config_drive``. Read more in the
+    `OpenStack End User Guide <https://docs.openstack.org/nova/latest/user/config-drive.html>`_.
   in: body
   required: false
   type: boolean
