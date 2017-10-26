@@ -1284,7 +1284,7 @@ class ComputeManager(manager.Manager):
         return [_decode(f) for f in injected_files]
 
     def _validate_instance_group_policy(self, context, instance,
-            filter_properties):
+                                        scheduler_hints):
         # NOTE(russellb) Instance group policy is enforced by the scheduler.
         # However, there is a race condition with the enforcement of
         # the policy.  Since more than one instance may be scheduled at the
@@ -1293,11 +1293,15 @@ class ComputeManager(manager.Manager):
         # multiple instances with an affinity policy could end up on different
         # hosts.  This is a validation step to make sure that starting the
         # instance here doesn't violate the policy.
-
-        scheduler_hints = filter_properties.get('scheduler_hints') or {}
         group_hint = scheduler_hints.get('group')
         if not group_hint:
             return
+
+        # The RequestSpec stores scheduler_hints as key=list pairs so we need
+        # to check the type on the value and pull the single entry out. The
+        # API request schema validates that the 'group' hint is a single value.
+        if isinstance(group_hint, list):
+            group_hint = group_hint[0]
 
         @utils.synchronized(group_hint)
         def _do_validation(context, instance, group_hint):
@@ -1844,7 +1848,7 @@ class ComputeManager(manager.Manager):
                 self._build_and_run_instance(context, instance, image,
                         decoded_files, admin_password, requested_networks,
                         security_groups, block_device_mapping, node, limits,
-                        filter_properties)
+                        filter_properties, request_spec)
             LOG.info('Took %0.2f seconds to build instance.',
                      timer.elapsed(), instance=instance)
             return build_results.ACTIVE
@@ -1893,6 +1897,9 @@ class ComputeManager(manager.Manager):
             instance.task_state = task_states.SCHEDULING
             instance.save()
 
+            # TODO(mriedem): Pass the request_spec back to conductor so that
+            # it gets to the next chosen host during the reschedule and we
+            # can hopefully eventually get rid of the legacy filter_properties.
             self.compute_task_api.build_instances(context, [instance],
                     image, filter_properties, admin_password,
                     injected_files, requested_networks, security_groups,
@@ -1950,9 +1957,29 @@ class ComputeManager(manager.Manager):
                     return True
         return False
 
+    @staticmethod
+    def _get_scheduler_hints(filter_properties, request_spec=None):
+        """Helper method to get scheduler hints.
+
+        This method prefers to get the hints out of the request spec, but that
+        might not be provided. Conductor will pass request_spec down to the
+        first compute chosen for a build but older computes will not pass
+        the request_spec to conductor's build_instances method for a
+        a reschedule, so if we're on a host via a retry, request_spec may not
+        be provided so we need to fallback to use the filter_properties
+        to get scheduler hints.
+        """
+        hints = {}
+        if request_spec is not None and 'scheduler_hints' in request_spec:
+            hints = request_spec.scheduler_hints
+        if not hints:
+            hints = filter_properties.get('scheduler_hints') or {}
+        return hints
+
     def _build_and_run_instance(self, context, instance, image, injected_files,
             admin_password, requested_networks, security_groups,
-            block_device_mapping, node, limits, filter_properties):
+            block_device_mapping, node, limits, filter_properties,
+            request_spec=None):
 
         image_name = image.get('name')
         self._notify_about_instance_usage(context, instance, 'create.start',
@@ -1970,13 +1997,15 @@ class ComputeManager(manager.Manager):
         self._check_device_tagging(requested_networks, block_device_mapping)
 
         try:
+            scheduler_hints = self._get_scheduler_hints(filter_properties,
+                                                        request_spec)
             rt = self._get_resource_tracker()
             with rt.instance_claim(context, instance, node, limits):
                 # NOTE(russellb) It's important that this validation be done
                 # *after* the resource tracker instance claim, as that is where
                 # the host is set on the instance.
                 self._validate_instance_group_policy(context, instance,
-                        filter_properties)
+                                                     scheduler_hints)
                 image_meta = objects.ImageMeta.from_dict(image)
                 with self._build_resources(context, instance,
                         requested_networks, security_groups, image_meta,

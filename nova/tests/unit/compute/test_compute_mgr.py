@@ -4193,6 +4193,31 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 mock.call(self.context, inst_obj, 'fake-mini',
                           action='soft_delete', phase='end')])
 
+    def test_get_scheduler_hints(self):
+        # 1. No hints and no request_spec.
+        self.assertEqual({}, self.compute._get_scheduler_hints({}))
+        # 2. Hints come from the filter_properties.
+        hints = {'foo': 'bar'}
+        filter_properties = {'scheduler_hints': hints}
+        self.assertEqual(
+            hints, self.compute._get_scheduler_hints(filter_properties))
+        # 3. Hints come from filter_properties because reqspec is empty.
+        reqspec = objects.RequestSpec.from_primitives(self.context, {}, {})
+        self.assertEqual(
+            hints, self.compute._get_scheduler_hints(
+                filter_properties, reqspec))
+        # 4. Hints come from the request spec.
+        reqspec_hints = {'boo': 'baz'}
+        reqspec = objects.RequestSpec.from_primitives(
+            self.context, {}, {'scheduler_hints': reqspec_hints})
+        # The RequestSpec unconditionally stores hints as a key=list
+        # unlike filter_properties which just stores whatever came in from
+        # the API request.
+        expected_reqspec_hints = {'boo': ['baz']}
+        self.assertDictEqual(
+            expected_reqspec_hints, self.compute._get_scheduler_hints(
+                filter_properties, reqspec))
+
 
 class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def setUp(self):
@@ -4312,7 +4337,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.image, self.injected_files, self.admin_pass,
                 self.requested_networks, self.security_groups,
                 self.block_device_mapping, self.node, self.limits,
-                self.filter_properties)
+                self.filter_properties, {})
 
     # This test when sending an icehouse compatible rpc call to juno compute
     # node, NetworkRequest object can load from three items tuple.
@@ -4378,7 +4403,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.image, self.injected_files, self.admin_pass,
                 self.requested_networks, self.security_groups,
                 self.block_device_mapping, self.node, self.limits,
-                self.filter_properties)
+                self.filter_properties, {})
         mock_clean_net.assert_called_once_with(self.context, self.instance,
                 self.requested_networks)
         mock_clean_vol.assert_called_once_with(self.context,
@@ -4427,7 +4452,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.image, self.injected_files, self.admin_pass,
                 self.requested_networks, self.security_groups,
                 self.block_device_mapping, self.node, self.limits,
-                self.filter_properties)
+                self.filter_properties, {})
         mock_clean.assert_called_once_with(self.context, self.instance,
                 self.compute.host)
         mock_nil.assert_called_once_with(self.instance)
@@ -4512,7 +4537,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             self.image, self.injected_files, self.admin_pass,
             self.requested_networks, self.security_groups,
             self.block_device_mapping, self.node, self.limits,
-            self.filter_properties)
+            self.filter_properties, {})
         mock_cleanup_network.assert_called_once_with(
             self.context, instance, self.compute.host)
         mock_build_ins.assert_called_once_with(self.context,
@@ -4567,7 +4592,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             self.image, self.injected_files, self.admin_pass,
             self.requested_networks, self.security_groups,
             self.block_device_mapping, self.node, self.limits,
-            self.filter_properties)
+            self.filter_properties, {})
         mock_cleanup_network.assert_called_once_with(
             self.context, instance, self.requested_networks)
         mock_build_ins.assert_called_once_with(self.context,
@@ -4611,7 +4636,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_build_run.assert_called_once_with(self.context, self.instance,
                 self.image, self.injected_files, self.admin_pass,
                 self.requested_networks, self.security_groups,
-                self.block_device_mapping, self.node, self.limits, {})
+                self.block_device_mapping, self.node, self.limits, {}, {})
         mock_clean_net.assert_called_once_with(self.context, self.instance,
                 self.requested_networks)
         mock_clean_vol.assert_called_once_with(self.context,
@@ -4665,7 +4690,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.image, self.injected_files, self.admin_pass,
                 self.requested_networks, self.security_groups,
                 self.block_device_mapping, self.node, self.limits,
-                self.filter_properties)
+                self.filter_properties, {})
         mock_deallocate.assert_called_once_with(self.instance)
         mock_clean_inst.assert_called_once_with(self.context, self.instance,
                 self.compute.host)
@@ -4713,7 +4738,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.image, self.injected_files, self.admin_pass,
                 self.requested_networks, self.security_groups,
                 self.block_device_mapping, self.node, self.limits,
-                self.filter_properties)
+                self.filter_properties, {})
         mock_deallocate.assert_called_once_with(self.instance)
         mock_clean.assert_called_once_with(self.context, self.instance,
                 self.requested_networks)
@@ -4773,7 +4798,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.image, self.injected_files, self.admin_pass,
                 self.requested_networks, self.security_groups,
                 self.block_device_mapping, self.node, self.limits,
-                self.filter_properties)
+                self.filter_properties, {})
         mock_clean_net.assert_called_once_with(self.context, self.instance,
                 self.requested_networks)
 
@@ -5034,7 +5059,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                     self.limits, self.filter_properties)
 
             _validate_instance_group_policy.assert_called_once_with(
-                    self.context, self.instance, self.filter_properties)
+                    self.context, self.instance, {})
             _build_networks_for_instance.assert_has_calls(
                     [mock.call(self.context, self.instance,
                         self.requested_networks, self.security_groups)])
@@ -5188,22 +5213,32 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     @mock.patch('nova.objects.InstanceGroup.get_by_hint')
     def test_validate_policy_honors_workaround_disabled(self, mock_get):
         instance = objects.Instance(uuid=uuids.instance)
-        filter_props = {'scheduler_hints': {'group': 'foo'}}
+        hints = {'group': 'foo'}
         mock_get.return_value = objects.InstanceGroup(policies=[])
         self.compute._validate_instance_group_policy(self.context,
-                                                     instance,
-                                                     filter_props)
+                                                     instance, hints)
         mock_get.assert_called_once_with(self.context, 'foo')
 
     @mock.patch('nova.objects.InstanceGroup.get_by_hint')
     def test_validate_policy_honors_workaround_enabled(self, mock_get):
         self.flags(disable_group_policy_check_upcall=True, group='workarounds')
         instance = objects.Instance(uuid=uuids.instance)
-        filter_props = {'scheduler_hints': {'group': 'foo'}}
+        hints = {'group': 'foo'}
         self.compute._validate_instance_group_policy(self.context,
-                                                     instance,
-                                                     filter_props)
+                                                     instance, hints)
         self.assertFalse(mock_get.called)
+
+    @mock.patch('nova.objects.InstanceGroup.get_by_hint')
+    def test_validate_instance_group_policy_handles_hint_list(self, mock_get):
+        """Tests that _validate_instance_group_policy handles getting
+        scheduler_hints from a RequestSpec which stores the hints as a key=list
+        pair.
+        """
+        instance = objects.Instance(uuid=uuids.instance)
+        hints = {'group': [uuids.group_hint]}
+        self.compute._validate_instance_group_policy(self.context,
+                                                     instance, hints)
+        mock_get.assert_called_once_with(self.context, uuids.group_hint)
 
     def test_failed_bdm_prep_from_delete_raises_unexpected(self):
         with test.nested(
