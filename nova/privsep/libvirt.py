@@ -256,6 +256,25 @@ def unplug_plumgrid_vif(dev):
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
+def plug_contrail_vif(instance, vif, ip_addr, ip6_addr, ptype):
+    cmd_args = ('--oper=add --uuid=%s --instance_uuid=%s --vn_uuid=%s '
+                '--vm_project_uuid=%s --ip_address=%s --ipv6_address=%s'
+                ' --vm_name=%s --mac=%s --tap_name=%s --port_type=%s '
+                '--tx_vlan_id=%d --rx_vlan_id=%d'
+                % (vif['id'], instance.uuid, vif['network']['id'],
+                   instance.project_id, ip_addr, ip6_addr,
+                   instance.display_name, vif['address'],
+                   vif['devname'], ptype, -1, -1))
+    processutils.execute('vrouter-port-control', cmd_args)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def unplug_contrail_vif(vif):
+    cmd_args = ('--oper=delete --uuid=%s' % (vif['id']))
+    processutils.execute('vrouter-port-control', cmd_args)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
 def disable_multicast_snooping(interface):
     """Disable multicast snooping for a bridge."""
     with open('/sys/class/net/%s/bridge/multicast_snooping' % interface,

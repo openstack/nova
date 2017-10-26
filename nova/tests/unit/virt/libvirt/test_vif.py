@@ -1039,16 +1039,14 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                        self.vif_iovisor['network']['id'],
                        self.instance.project_id)])
 
-    def test_unplug_vrouter_with_details(self):
+    @mock.patch('nova.privsep.libvirt.unplug_contrail_vif')
+    def test_unplug_vrouter_with_details(self, mock_unplug_contrail):
         d = vif.LibvirtGenericVIFDriver()
-        with mock.patch.object(utils, 'execute') as execute:
-            d.unplug(self.instance, self.vif_vrouter)
-            execute.assert_called_once_with(
-                'vrouter-port-control',
-                '--oper=delete --uuid=vif-xxx-yyy-zzz',
-                run_as_root=True)
+        d.unplug(self.instance, self.vif_vrouter)
+        mock_unplug_contrail.assert_called_once_with(self.vif_vrouter)
 
-    def test_plug_vrouter_with_details(self):
+    @mock.patch('nova.privsep.libvirt.plug_contrail_vif')
+    def test_plug_vrouter_with_details(self, mock_plug_contrail):
         d = vif.LibvirtGenericVIFDriver()
         instance = mock.Mock()
         instance.name = 'instance-name'
@@ -1062,23 +1060,14 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                 mock.call('ip', 'tuntap', 'add', 'tap-xxx-yyy-zzz', 'mode',
                     'tap', run_as_root=True, check_exit_code=[0, 2, 254]),
                 mock.call('ip', 'link', 'set', 'tap-xxx-yyy-zzz', 'up',
-                    run_as_root=True, check_exit_code=[0, 2, 254]),
-                mock.call('vrouter-port-control',
-                    '--oper=add --uuid=vif-xxx-yyy-zzz '
-                    '--instance_uuid=46a4308b-e75a-4f90-a34a-650c86ca18b2 '
-                    '--vn_uuid=network-id-xxx-yyy-zzz '
-                    '--vm_project_uuid=b168ea26fa0c49c1a84e1566d9565fa5 '
-                    '--ip_address=0.0.0.0 '
-                    '--ipv6_address=None '
-                    '--vm_name=instance1 '
-                    '--mac=ca:fe:de:ad:be:ef '
-                    '--tap_name=tap-xxx-yyy-zzz '
-                    '--port_type=NovaVMPort '
-                    '--tx_vlan_id=-1 '
-                    '--rx_vlan_id=-1', run_as_root=True)])
+                    run_as_root=True, check_exit_code=[0, 2, 254])])
+            mock_plug_contrail.called_once_with(
+               instance, self.vif_vrouter, '0.0.0.0', None, 'NovaVMPort')
 
     @mock.patch('nova.network.linux_net.create_tap_dev')
-    def test_plug_vrouter_with_details_multiqueue(self, mock_create_tap_dev):
+    @mock.patch('nova.privsep.libvirt.plug_contrail_vif')
+    def test_plug_vrouter_with_details_multiqueue(
+            self, mock_plug_contrail, mock_create_tap_dev):
         d = vif.LibvirtGenericVIFDriver()
         instance = mock.Mock()
         instance.name = 'instance-name'
@@ -1088,24 +1077,12 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         instance.image_meta = objects.ImageMeta.from_dict({
             'properties': {'hw_vif_multiqueue_enabled': True}})
         instance.flavor.vcpus = 2
-        with mock.patch.object(utils, 'execute') as execute:
-            d.plug(instance, self.vif_vrouter)
-            mock_create_tap_dev.assert_called_once_with('tap-xxx-yyy-zzz',
-                                                        multiqueue=True)
-            execute.assert_called_once_with(
-                'vrouter-port-control',
-                '--oper=add --uuid=vif-xxx-yyy-zzz '
-                '--instance_uuid=46a4308b-e75a-4f90-a34a-650c86ca18b2 '
-                '--vn_uuid=network-id-xxx-yyy-zzz '
-                '--vm_project_uuid=b168ea26fa0c49c1a84e1566d9565fa5 '
-                '--ip_address=0.0.0.0 '
-                '--ipv6_address=None '
-                '--vm_name=instance1 '
-                '--mac=ca:fe:de:ad:be:ef '
-                '--tap_name=tap-xxx-yyy-zzz '
-                '--port_type=NovaVMPort '
-                '--tx_vlan_id=-1 '
-                '--rx_vlan_id=-1', run_as_root=True)
+        d.plug(instance, self.vif_vrouter)
+        mock_create_tap_dev.assert_called_once_with('tap-xxx-yyy-zzz',
+                                                    multiqueue=True)
+
+        mock_plug_contrail.assert_called_once_with(
+            instance, self.vif_vrouter, '0.0.0.0', None, 'NovaVMPort')
 
     def test_ivs_ethernet_driver(self):
         d = vif.LibvirtGenericVIFDriver()
