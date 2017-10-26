@@ -1450,7 +1450,48 @@ class Allocation(_HasAResourceProvider):
         'consumer_id': fields.UUIDField(),
         'resource_class': fields.ResourceClassField(),
         'used': fields.IntegerField(),
+        # The following two fields are allowed to be set to None to
+        # support Allocations that were created before the fields were
+        # required.
+        'project_id': fields.StringField(nullable=True),
+        'user_id': fields.StringField(nullable=True),
     }
+
+    def ensure_consumer_project_user(self, conn):
+        """Examines the project_id, user_id of the object along with the
+        supplied consumer_id and ensures that if project_id and user_id
+        are set that there are records in the consumers, projects, and
+        users table for these entities.
+        """
+        # If project_id and user_id are not set then silently
+        # move on. This allows microversion <1.8 to continue to work. Since
+        # then the fields are required and the enforcement is at the HTTP
+        # API layer.
+        if not ('project_id' in self and
+                self.project_id is not None and
+                'user_id' in self and
+                self.user_id is not None):
+            return
+        # Grab the project internal ID if it exists in the projects table
+        pid = _ensure_project(conn, self.project_id)
+        # Grab the user internal ID if it exists in the users table
+        uid = _ensure_user(conn, self.user_id)
+
+        # Add the consumer if it doesn't already exist
+        sel_stmt = sa.select([_CONSUMER_TBL.c.uuid]).where(
+            _CONSUMER_TBL.c.uuid == self.consumer_id)
+        result = conn.execute(sel_stmt).fetchall()
+        if not result:
+            try:
+                conn.execute(_CONSUMER_TBL.insert().values(
+                    uuid=self.consumer_id,
+                    project_id=pid,
+                    user_id=uid))
+            except db_exc.DBDuplicateEntry:
+                # We assume at this time that a consumer project/user can't
+                # change, so if we get here, we raced and should just pass
+                # if the consumer already exists.
+                pass
 
 
 @db_api.api_context_manager.writer
@@ -1707,41 +1748,7 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
 
     fields = {
         'objects': fields.ListOfObjectsField('Allocation'),
-        'project_id': fields.StringField(nullable=True),
-        'user_id': fields.StringField(nullable=True),
     }
-
-    def _ensure_consumer_project_user(self, conn, consumer_id):
-        """Examines the project_id, user_id of the object along with the
-        supplied consumer_id and ensures that there are records in the
-        consumers, projects, and users table for these entities.
-
-        :param consumer_id: Comes from the Allocation object being processed
-        """
-        if (self.obj_attr_is_set('project_id') and
-                self.project_id is not None and
-                self.obj_attr_is_set('user_id') and
-                self.user_id is not None):
-            # Grab the project internal ID if it exists in the projects table
-            pid = _ensure_project(conn, self.project_id)
-            # Grab the user internal ID if it exists in the users table
-            uid = _ensure_user(conn, self.user_id)
-
-            # Add the consumer if it doesn't already exist
-            sel_stmt = sa.select([_CONSUMER_TBL.c.uuid]).where(
-                _CONSUMER_TBL.c.uuid == consumer_id)
-            result = conn.execute(sel_stmt).fetchall()
-            if not result:
-                try:
-                    conn.execute(_CONSUMER_TBL.insert().values(
-                        uuid=consumer_id,
-                        project_id=pid,
-                        user_id=uid))
-                except db_exc.DBDuplicateEntry:
-                    # We assume at this time that a consumer project/user can't
-                    # change, so if we get here, we raced and should just pass
-                    # if the consumer already exists.
-                    pass
 
     @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
     @db_api.api_context_manager.writer
@@ -1779,22 +1786,29 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
         # objects are used at the end of the allocation transaction as a guard
         # against concurrent updates.
         with conn.begin():
-            # First delete any existing allocations for that rp/consumer combo.
-            consumer_id = allocs[0].consumer_id
-            _delete_allocations_for_consumer(context, consumer_id)
+            # First delete any existing allocations for this consumer. This
+            # must be done before checking capacity.
+            for alloc in allocs:
+                consumer_id = alloc.consumer_id
+                _delete_allocations_for_consumer(context, consumer_id)
             # If there are any allocations with string resource class names
             # that don't exist this will raise a ResourceClassNotFound
             # exception.
             before_gens = _check_capacity_exceeded(conn, allocs)
-            self._ensure_consumer_project_user(conn, consumer_id)
-            # Now add the allocations that were passed in.
+            seen_consumers = set()
             for alloc in allocs:
+                consumer_id = alloc.consumer_id
+                # Only set consumer <-> project/user association if we
+                # haven't set it already.
+                if consumer_id not in seen_consumers:
+                    alloc.ensure_consumer_project_user(conn)
+                    seen_consumers.add(consumer_id)
                 rp = alloc.resource_provider
                 rc_id = _RC_CACHE.id_from_string(alloc.resource_class)
                 ins_stmt = _ALLOC_TBL.insert().values(
                         resource_provider_id=rp.id,
                         resource_class_id=rc_id,
-                        consumer_id=alloc.consumer_id,
+                        consumer_id=consumer_id,
                         used=alloc.used)
                 result = conn.execute(ins_stmt)
                 alloc.id = result.lastrowid

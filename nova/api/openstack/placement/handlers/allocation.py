@@ -236,15 +236,13 @@ def _set_allocations(req, schema):
                 resource_provider=resource_provider,
                 consumer_id=consumer_uuid,
                 resource_class=resource_class,
+                project_id=data.get('project_id'),
+                user_id=data.get('user_id'),
                 used=resources[resource_class])
             allocation_objects.append(allocation)
 
     allocations = rp_obj.AllocationList(
-        context,
-        objects=allocation_objects,
-        project_id=data.get('project_id'),
-        user_id=data.get('user_id'),
-    )
+        context, objects=allocation_objects)
 
     try:
         allocations.create_all()
