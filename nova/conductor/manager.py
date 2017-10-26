@@ -712,8 +712,11 @@ class ComputeTaskManager(base.Base):
                     # RequestSpec object - probably because the instance is old
                     # We need to mock that the old way
                     filter_properties = {'ignore_hosts': [instance.host]}
+                    # build_request_spec expects a primitive image dict
+                    image_meta = nova_object.obj_to_primitive(
+                        instance.image_meta)
                     request_spec = scheduler_utils.build_request_spec(
-                            context, image_ref, [instance])
+                            context, image_meta, [instance])
                 elif recreate:
                     # NOTE(sbauza): Augment the RequestSpec object by excluding
                     # the source host for avoiding the scheduler to pick it
