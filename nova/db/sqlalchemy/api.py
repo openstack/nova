@@ -924,8 +924,7 @@ def floating_ip_get_pools(context):
 
 
 @require_context
-@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True,
-                           retry_on_request=True)
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 @pick_context_manager_writer
 def floating_ip_allocate_address(context, project_id, pool,
                                  auto_assigned=False):
@@ -1253,8 +1252,7 @@ def dnsdomain_get_all(context):
 ###################
 
 
-@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True,
-                           retry_on_request=True)
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 @pick_context_manager_writer
 def fixed_ip_associate(context, address, instance_uuid, network_id=None,
                        reserved=False, virtual_interface_id=None):
@@ -1303,8 +1301,7 @@ def fixed_ip_associate(context, address, instance_uuid, network_id=None,
     return fixed_ip_ref
 
 
-@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True,
-                           retry_on_request=True)
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 @pick_context_manager_writer
 def fixed_ip_associate_pool(context, network_id, instance_uuid=None,
                             host=None, virtual_interface_id=None):
@@ -3389,8 +3386,7 @@ def network_get_all_by_host(context, host):
     return _network_get_query(context).filter(host_filter).all()
 
 
-@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True,
-                           retry_on_request=True)
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 @pick_context_manager_writer
 def network_set_host(context, network_id, host_id):
     network_ref = _network_get_query(context).\
