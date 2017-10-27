@@ -349,7 +349,14 @@ class TestResourceClass(test.NoDBTestCase):
         self.assertIn('name is required', str(exc))
 
 
-class TestTraitSync(test_objects._LocalTest):
+class TestTraits(test.NoDBTestCase):
+
+    def setUp(self):
+        super(TestTraits, self).setUp()
+        self.user_id = 'fake-user'
+        self.project_id = 'fake-project'
+        self.context = context.RequestContext(self.user_id, self.project_id)
+
     @mock.patch("nova.objects.resource_provider._trait_sync")
     def test_sync_flag(self, mock_sync):
         synced = nova.objects.resource_provider._TRAITS_SYNCED
@@ -358,3 +365,16 @@ class TestTraitSync(test_objects._LocalTest):
         nova.objects.resource_provider._ensure_trait_sync(self.context)
         synced = nova.objects.resource_provider._TRAITS_SYNCED
         self.assertTrue(synced)
+
+    @mock.patch('nova.objects.resource_provider.ResourceProvider.'
+                'obj_reset_changes')
+    @mock.patch('nova.objects.resource_provider._set_traits')
+    def test_set_traits_resets_changes(self, mock_set_traits, mock_reset):
+        trait = resource_provider.Trait(name="HW_CPU_X86_AVX2")
+        traits = resource_provider.TraitList(objects=[trait])
+
+        rp = resource_provider.ResourceProvider(self.context, name='cn1',
+            uuid=uuids.cn1)
+        rp.set_traits(traits)
+        mock_set_traits.assert_called_once_with(self.context, rp, traits)
+        mock_reset.assert_called_once_with()

@@ -495,6 +495,45 @@ def _get_traits_by_provider_id(context, rp_id):
     return [dict(r) for r in conn.execute(sel).fetchall()]
 
 
+@db_api.api_context_manager.writer
+def _set_traits(context, rp, traits):
+    """Given a ResourceProvider object and a TraitList object, replaces the set
+    of traits associated with the resource provider.
+
+    :param rp: The ResourceProvider object to set traits against
+    :param traits: A TraitList object or list of Trait objects
+    """
+    existing_traits = _get_traits_by_provider_id(context, rp.id)
+    traits_dict = {trait.name: trait for trait in traits}
+    existing_traits_dict = {trait['name']: trait for trait in existing_traits}
+
+    to_add_names = set(traits_dict) - set(existing_traits_dict)
+    to_delete_names = set(existing_traits_dict) - set(traits_dict)
+    to_delete_ids = [existing_traits_dict[name]['id']
+                        for name in to_delete_names]
+
+    conn = context.session.connection()
+    with conn.begin():
+        # TODO(jaypipes): Break these out into separate functions for deleting
+        # and adding traits
+        if to_delete_names:
+            context.session.query(models.ResourceProviderTrait).filter(
+                sa.and_(
+                    models.ResourceProviderTrait.trait_id.in_(
+                        to_delete_ids),
+                    (models.ResourceProviderTrait.resource_provider_id ==
+                     rp.id)
+                )
+            ).delete(synchronize_session='fetch')
+        if to_add_names:
+            for name in to_add_names:
+                rp_trait = models.ResourceProviderTrait()
+                rp_trait.trait_id = traits_dict[name].id
+                rp_trait.resource_provider_id = rp.id
+                context.session.add(rp_trait)
+        rp.generation = _increment_provider_generation(conn, rp)
+
+
 @base.NovaObjectRegistry.register_if(False)
 class ResourceProvider(base.NovaObject):
 
@@ -587,6 +626,16 @@ class ResourceProvider(base.NovaObject):
         """
         _set_aggregates(self._context, self.id, aggregate_uuids)
 
+    def set_traits(self, traits):
+        """Replaces the set of traits associated with the resource provider
+        with the given list of Trait objects.
+
+        :param traits: A list of Trait objects representing the traits to
+                       associate with the provider.
+        """
+        _set_traits(self._context, self, traits)
+        self.obj_reset_changes()
+
     @staticmethod
     @db_api.api_context_manager.writer
     def _create_in_db(context, updates):
@@ -632,45 +681,6 @@ class ResourceProvider(base.NovaObject):
         resource_provider._context = context
         resource_provider.obj_reset_changes()
         return resource_provider
-
-    @staticmethod
-    @db_api.api_context_manager.writer
-    def _set_traits_to_db(context, rp, _id, traits):
-        existing_traits = _get_traits_by_provider_id(context, _id)
-        traits_dict = {trait.name: trait for trait in traits}
-        existing_traits_dict = {
-            trait['name']: trait for trait in existing_traits
-        }
-
-        to_add_names = (set(traits_dict.keys()) -
-            set(existing_traits_dict.keys()))
-        to_delete_names = (set(existing_traits_dict.keys()) -
-            set(traits_dict.keys()))
-        to_delete_ids = [existing_traits_dict[name]['id']
-                            for name in to_delete_names]
-
-        conn = context.session.connection()
-        with conn.begin():
-            if to_delete_names:
-                context.session.query(models.ResourceProviderTrait).filter(
-                    sa.and_(
-                        models.ResourceProviderTrait.trait_id.in_(
-                            to_delete_ids),
-                        (models.ResourceProviderTrait.resource_provider_id ==
-                         _id)
-                    )
-                ).delete(synchronize_session='fetch')
-            if to_add_names:
-                for name in to_add_names:
-                    rp_trait = models.ResourceProviderTrait()
-                    rp_trait.trait_id = traits_dict[name].id
-                    rp_trait.resource_provider_id = _id
-                    context.session.add(rp_trait)
-            rp.generation = _increment_provider_generation(conn, rp)
-
-    @base.remotable
-    def set_traits(self, traits):
-        self._set_traits_to_db(self._context, self, self.id, traits)
 
 
 @db_api.api_context_manager.reader
