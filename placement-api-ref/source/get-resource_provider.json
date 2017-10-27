@@ -20,6 +20,10 @@
         {
             "href": "/placement/resource_providers/3b4005be-d64b-456f-ba36-0ffd02718868/traits",
             "rel": "traits"
+        },
+        {
+            "href": "/placement/resource_providers/3b4005be-d64b-456f-ba36-0ffd02718868/allocations",
+            "rel": "allocations"
         }
     ],
     "name": "Ceph Storage Pool",

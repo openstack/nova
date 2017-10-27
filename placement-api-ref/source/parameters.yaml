@@ -230,6 +230,9 @@ resource_provider_links:
 
     .. note:: Trait relationship link is available starting from version 1.6.
 
+    .. note:: Allocations relationship link is available starting from version
+              1.11.
+
 resource_provider_name:
   type: string
   in: body
