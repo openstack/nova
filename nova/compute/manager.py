@@ -5673,10 +5673,11 @@ class ComputeManager(manager.Manager):
         :param context: security context
         :param instance: dict of instance data
         :param block_migration: if true, prepare for block migration
+        :param disk: disk info of instance
         :param migrate_data: A dict or LiveMigrateData object holding data
                              required for live migration without shared
                              storage.
-
+        :returns: migrate_data containing additional migration info
         """
         LOG.debug('pre_live_migration data is %s', migrate_data)
         # TODO(tdurakov): remove dict to object conversion once RPC API version
@@ -6269,6 +6270,8 @@ class ComputeManager(manager.Manager):
 
         :param context: security context
         :param instance: a nova.objects.instance.Instance object sent over rpc
+        :param destroy_disks: whether to destroy volumes or not
+        :param migrate_data: contains migration info
         """
         network_info = self.network_api.get_instance_nw_info(context, instance)
         self._notify_about_instance_usage(
