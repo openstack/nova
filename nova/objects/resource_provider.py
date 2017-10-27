@@ -482,6 +482,19 @@ def _set_aggregates(context, rp_id, provided_aggregates):
         conn.execute(insert_aggregates)
 
 
+@db_api.api_context_manager.reader
+def _get_traits_by_provider_id(context, rp_id):
+    t = sa.alias(_TRAIT_TBL, name='t')
+    rpt = sa.alias(_RP_TRAIT_TBL, name='rpt')
+
+    conn = context.session.connection()
+    join_cond = sa.and_(t.c.id == rpt.c.trait_id,
+                        rpt.c.resource_provider_id == rp_id)
+    join = sa.join(t, rpt, join_cond)
+    sel = sa.select([t.c.id, t.c.name]).select_from(join)
+    return [dict(r) for r in conn.execute(sel).fetchall()]
+
+
 @base.NovaObjectRegistry.register_if(False)
 class ResourceProvider(base.NovaObject):
 
@@ -621,34 +634,19 @@ class ResourceProvider(base.NovaObject):
         return resource_provider
 
     @staticmethod
-    @db_api.api_context_manager.reader
-    def _get_traits_from_db(context, _id):
-        db_traits = context.session.query(models.Trait).join(
-            models.ResourceProviderTrait,
-            sa.and_(
-                models.Trait.id == models.ResourceProviderTrait.trait_id,
-                models.ResourceProviderTrait.resource_provider_id == _id
-            )).all()
-        return db_traits
-
-    @base.remotable
-    def get_traits(self):
-        db_traits = self._get_traits_from_db(self._context, self.id)
-        return base.obj_make_list(self._context, TraitList(self._context),
-            Trait, db_traits)
-
-    @staticmethod
     @db_api.api_context_manager.writer
     def _set_traits_to_db(context, rp, _id, traits):
-        existing_traits = ResourceProvider._get_traits_from_db(context, _id)
+        existing_traits = _get_traits_by_provider_id(context, _id)
         traits_dict = {trait.name: trait for trait in traits}
-        existing_traits_dict = {trait.name: trait for trait in existing_traits}
+        existing_traits_dict = {
+            trait['name']: trait for trait in existing_traits
+        }
 
         to_add_names = (set(traits_dict.keys()) -
             set(existing_traits_dict.keys()))
         to_delete_names = (set(existing_traits_dict.keys()) -
             set(traits_dict.keys()))
-        to_delete_ids = [existing_traits_dict[name].id
+        to_delete_ids = [existing_traits_dict[name]['id']
                             for name in to_delete_names]
 
         conn = context.session.connection()
@@ -2285,6 +2283,14 @@ class TraitList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def get_all(cls, context, filters=None):
         db_traits = cls._get_all_from_db(context, filters)
+        return base.obj_make_list(context, cls(context), Trait, db_traits)
+
+    @classmethod
+    def get_all_by_resource_provider(cls, context, rp):
+        """Returns a TraitList containing Trait objects for any trait
+        associated with the supplied resource provider.
+        """
+        db_traits = _get_traits_by_provider_id(context, rp.id)
         return base.obj_make_list(context, cls(context), Trait, db_traits)
 
 

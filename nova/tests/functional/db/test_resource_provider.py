@@ -1782,7 +1782,9 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
             trait_objs.append(t)
 
         rp.set_traits(trait_objs)
-        self._assert_traits(trait_names, rp.get_traits())
+
+        rp_traits = rp_obj.TraitList.get_all_by_resource_provider(self.ctx, rp)
+        self._assert_traits(trait_names, rp_traits)
         self.assertEqual(rp.generation, generation + 1)
         generation = rp.generation
 
@@ -1791,7 +1793,8 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
             filters={'name_in': trait_names})
         self._assert_traits(trait_names, updated_traits)
         rp.set_traits(updated_traits)
-        self._assert_traits(trait_names, rp.get_traits())
+        rp_traits = rp_obj.TraitList.get_all_by_resource_provider(self.ctx, rp)
+        self._assert_traits(trait_names, rp_traits)
         self.assertEqual(rp.generation, generation + 1)
 
     def test_set_traits_for_correct_resource_provider(self):
@@ -1823,14 +1826,22 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
         rp2.set_traits([t])
 
         # Ensure the association
-        self._assert_traits(['CUSTOM_TRAIT_A'], rp1.get_traits())
-        self._assert_traits(['CUSTOM_TRAIT_A'], rp2.get_traits())
+        rp1_traits = rp_obj.TraitList.get_all_by_resource_provider(
+            self.ctx, rp1)
+        rp2_traits = rp_obj.TraitList.get_all_by_resource_provider(
+            self.ctx, rp2)
+        self._assert_traits(['CUSTOM_TRAIT_A'], rp1_traits)
+        self._assert_traits(['CUSTOM_TRAIT_A'], rp2_traits)
 
         # Detach the trait from one of ResourceProvider, and ensure the
         # trait association with another ResourceProvider still exists.
         rp1.set_traits([])
-        self._assert_traits([], rp1.get_traits())
-        self._assert_traits(['CUSTOM_TRAIT_A'], rp2.get_traits())
+        rp1_traits = rp_obj.TraitList.get_all_by_resource_provider(
+            self.ctx, rp1)
+        rp2_traits = rp_obj.TraitList.get_all_by_resource_provider(
+            self.ctx, rp2)
+        self._assert_traits([], rp1_traits)
+        self._assert_traits(['CUSTOM_TRAIT_A'], rp2_traits)
 
     def test_trait_delete_in_use(self):
         rp = rp_obj.ResourceProvider(

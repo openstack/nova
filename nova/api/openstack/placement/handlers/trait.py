@@ -198,12 +198,21 @@ def list_traits_for_resource_provider(req):
     context = req.environ['placement.context']
     uuid = util.wsgi_path_item(req.environ, 'uuid')
 
-    resource_provider = rp_obj.ResourceProvider.get_by_uuid(
-        context, uuid)
+    # Resource provider object is needed for two things: If it is
+    # NotFound we'll get a 404 here, which needs to happen because
+    # get_all_by_resource_provider can return an empty list.
+    # It is also needed for the generation, used in the outgoing
+    # representation.
+    try:
+        rp = rp_obj.ResourceProvider.get_by_uuid(context, uuid)
+    except exception.NotFound as exc:
+        raise webob.exc.HTTPNotFound(
+            _("No resource provider with uuid %(uuid)s found: %(error)s") %
+             {'uuid': uuid, 'error': exc})
 
-    response_body = _serialize_traits(resource_provider.get_traits())
-    response_body[
-        "resource_provider_generation"] = resource_provider.generation
+    traits = rp_obj.TraitList.get_all_by_resource_provider(context, rp)
+    response_body = _serialize_traits(traits)
+    response_body["resource_provider_generation"] = rp.generation
 
     req.response.status = 200
     req.response.body = encodeutils.to_utf8(jsonutils.dumps(response_body))
