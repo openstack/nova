@@ -5815,11 +5815,7 @@ servers_multiple_create_name:
   required: true
   type: string
   description: |
-    A base name for creating unique names during multiple create. A
-    unique string will be appended to the end of this base name for
-    every server created.
-    The server names become ``{name}-1``, ``{name}-2``, ``{name}-3``,
-    etc.
+    A base name for creating unique names during multiple create.
 service:
   description: |
     Object representing a compute service.
