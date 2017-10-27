@@ -1,25 +1,8 @@
 {
     "event_type":"instance.reboot.error",
     "payload":{
-        "nova_object.data":{
-            "architecture": "x86_64",
-            "availability_zone": "nova",
-            "block_devices": [{
-                "nova_object.data": {
-                    "boot_index": null,
-                    "delete_on_termination": false,
-                    "device_name": "/dev/sdb",
-                    "tag": null,
-                    "volume_id": "a07f71dc-8151-4e7d-a0cc-cd24a3f11113"
-                },
-                "nova_object.name": "BlockDevicePayload",
-                "nova_object.namespace": "nova",
-                "nova_object.version": "1.0"
-            }],
-            "created_at":"2012-10-29T13:42:11Z",
-            "deleted_at":null,
-            "display_name":"some-server",
-            "display_description":"some-server",
+        "$ref":"common_payloads/InstanceActionPayload.json#",
+        "nova_object.data": {
             "fault": {
                 "nova_object.data": {
                     "exception": "UnsupportedVirtType",
@@ -31,68 +14,8 @@
                 "nova_object.namespace": "nova",
                 "nova_object.version": "1.0"
             },
-            "host":"compute",
-            "host_name":"some-server",
-            "ip_addresses": [{
-                "nova_object.name": "IpPayload",
-                "nova_object.namespace": "nova",
-                "nova_object.version": "1.0",
-                "nova_object.data": {
-                    "mac": "fa:16:3e:4c:2c:30",
-                    "address": "192.168.1.3",
-                    "port_uuid": "ce531f90-199f-48c0-816c-13e38010b442",
-                    "meta": {},
-                    "version": 4,
-                    "label": "private-network",
-                    "device_name": "tapce531f90-19"
-                }
-            }],
-            "auto_disk_config":"MANUAL",
-            "key_name": "my-key",
-            "kernel_id":"",
-            "launched_at":"2012-10-29T13:42:11Z",
-            "image_uuid": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
-            "metadata":{},
-            "locked":false,
-            "node":"fake-mini",
-            "os_type":null,
-            "progress":0,
-            "ramdisk_id":"",
-            "reservation_id":"r-npxv0e40",
-            "state":"active",
-            "task_state":"reboot_started_hard",
-            "power_state":"running",
-            "tenant_id":"6f70656e737461636b20342065766572",
-            "terminated_at":null,
-            "flavor": {
-                "nova_object.name": "FlavorPayload",
-                "nova_object.data": {
-                    "flavorid": "a22d5517-147c-4147-a0d1-e698df5cd4e3",
-                    "name": "test_flavor",
-                    "projects": null,
-                    "root_gb": 1,
-                    "vcpus": 1,
-                    "ephemeral_gb": 0,
-                    "memory_mb": 512,
-                    "disabled": false,
-                    "rxtx_factor": 1.0,
-                    "extra_specs": {
-                        "hw:watchdog_action": "disabled"
-                    },
-                    "swap": 0,
-                    "is_public": true,
-                    "vcpu_weight": 0
-                },
-                "nova_object.version": "1.3",
-                "nova_object.namespace": "nova"
-            },
-            "updated_at": "2012-10-29T13:42:11Z",
-            "user_id":"fake",
-            "uuid":"178b0921-8f85-4257-88b6-2e743b5a975c"
-        },
-        "nova_object.name":"InstanceActionPayload",
-        "nova_object.namespace":"nova",
-        "nova_object.version":"1.5"
+            "task_state":"reboot_started_hard"
+        }
     },
     "priority":"ERROR",
     "publisher_id":"nova-compute:compute"
