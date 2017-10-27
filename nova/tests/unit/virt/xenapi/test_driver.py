@@ -24,6 +24,7 @@ from nova.virt import driver
 from nova.virt import fake
 from nova.virt import xenapi
 from nova.virt.xenapi import driver as xenapi_driver
+from nova.virt.xenapi import host
 
 
 class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
@@ -235,3 +236,33 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
         mock_rollback.assert_called_once_with('fake_instance',
                                               'fake_network_info',
                                               'fake_block_device')
+
+    @mock.patch.object(host.HostState, 'get_host_stats')
+    def test_get_inventory(self, mock_get_stats):
+        expected_inv = {
+            obj_fields.ResourceClass.VCPU: {
+                'total': 50,
+                'min_unit': 1,
+                'max_unit': 50,
+                'step_size': 1,
+            },
+            obj_fields.ResourceClass.MEMORY_MB: {
+                'total': 3,
+                'min_unit': 1,
+                'max_unit': 3,
+                'step_size': 1,
+            },
+            obj_fields.ResourceClass.DISK_GB: {
+                'total': 5,
+                'min_unit': 1,
+                'max_unit': 5,
+                'step_size': 1,
+            },
+        }
+
+        mock_get_stats.side_effect = self.host_stats
+        drv = self._get_driver()
+        inv = drv.get_inventory(mock.sentinel.nodename)
+
+        mock_get_stats.assert_called_once_with(refresh=True)
+        self.assertEqual(expected_inv, inv)
