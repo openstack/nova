@@ -3183,6 +3183,7 @@ class _ComputeAPIUnitTestMixIn(object):
         bdm_get_by_instance_uuid.assert_called_once_with(
             self.context, instance.uuid)
 
+    @mock.patch.object(objects.RequestSpec, 'save')
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(objects.Instance, 'get_flavor')
@@ -3194,7 +3195,7 @@ class _ComputeAPIUnitTestMixIn(object):
     def test_rebuild_change_image(self, _record_action_start,
             _checks_for_create_and_rebuild, _check_auto_disk_config,
             _get_image, bdm_get_by_instance_uuid, get_flavor, instance_save,
-            req_spec_get_by_inst_uuid):
+            req_spec_get_by_inst_uuid, req_spec_save):
         orig_system_metadata = {}
         get_flavor.return_value = test_flavor.fake_flavor
         orig_image_href = 'orig_image'
@@ -3241,8 +3242,15 @@ class _ComputeAPIUnitTestMixIn(object):
                     injected_files=files_to_inject, image_ref=new_image_href,
                     orig_image_ref=orig_image_href,
                     orig_sys_metadata=orig_system_metadata, bdms=bdms,
-                    preserve_ephemeral=False, host=instance.host,
+                    preserve_ephemeral=False, host=None,
                     request_spec=fake_spec, kwargs={})
+            # assert the request spec was modified so the scheduler picks
+            # the existing instance host/node
+            req_spec_save.assert_called_once_with()
+            self.assertIn('requested_destination', fake_spec)
+            requested_destination = fake_spec.requested_destination
+            self.assertEqual(instance.host, requested_destination.host)
+            self.assertEqual(instance.node, requested_destination.node)
 
         _check_auto_disk_config.assert_called_once_with(image=new_image)
         _checks_for_create_and_rebuild.assert_called_once_with(self.context,

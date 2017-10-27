@@ -2949,9 +2949,24 @@ class API(base.Base):
         # sure that all our instances are currently migrated to have an
         # attached RequestSpec object but let's consider that the operator only
         # half migrated all their instances in the meantime.
+        host = instance.host
         try:
             request_spec = objects.RequestSpec.get_by_instance_uuid(
                 context, instance.uuid)
+            # If a new image is provided on rebuild, we will need to run
+            # through the scheduler again, but we want the instance to be
+            # rebuilt on the same host it's already on.
+            if orig_image_ref != image_href:
+                request_spec.requested_destination = objects.Destination(
+                    host=instance.host,
+                    node=instance.node)
+                # We have to modify the request spec that goes to the scheduler
+                # to contain the new image. We persist this since we've already
+                # changed the instance.image_ref above so we're being
+                # consistent.
+                request_spec.image = objects.ImageMeta.from_dict(image)
+                request_spec.save()
+                host = None     # This tells conductor to call the scheduler.
         except exception.RequestSpecNotFound:
             # Some old instances can still have no RequestSpec object attached
             # to them, we need to support the old way
@@ -2961,7 +2976,7 @@ class API(base.Base):
                 new_pass=admin_password, injected_files=files_to_inject,
                 image_ref=image_href, orig_image_ref=orig_image_ref,
                 orig_sys_metadata=orig_sys_metadata, bdms=bdms,
-                preserve_ephemeral=preserve_ephemeral, host=instance.host,
+                preserve_ephemeral=preserve_ephemeral, host=host,
                 request_spec=request_spec,
                 kwargs=kwargs)
 
