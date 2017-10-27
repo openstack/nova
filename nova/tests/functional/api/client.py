@@ -300,6 +300,16 @@ class TestOpenStackClient(object):
     def delete_image(self, image_id):
         return self.api_delete('/images/%s' % image_id)
 
+    def put_image_meta_key(self, image_id, key, value):
+        """Creates or updates a given image metadata key/value pair."""
+        req_body = {
+            'meta': {
+                key: value
+            }
+        }
+        return self.api_put('/images/%s/metadata/%s' % (image_id, key),
+                            req_body)
+
     def get_flavor(self, flavor_id):
         return self.api_get('/flavors/%s' % flavor_id).body['flavor']
 

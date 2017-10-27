@@ -22,6 +22,7 @@ from oslo_log import log as logging
 from oslo_utils import timeutils
 
 from nova.compute import api as compute_api
+from nova.compute import instance_actions
 from nova.compute import rpcapi
 from nova import context
 from nova import exception
@@ -33,6 +34,7 @@ from nova.tests.functional import integrated_helpers
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_network
+import nova.tests.unit.image.fake
 from nova import volume
 
 
@@ -823,3 +825,71 @@ class ServerTestV220(ServersTestBase):
             self.assertTrue(mock_clean_vols.called)
 
         self._delete_server(server_id)
+
+
+class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
+                            integrated_helpers.InstanceHelperMixin):
+    api_major_version = 'v2.1'
+    # We have to cap the microversion at 2.38 because that's the max we
+    # can use to update image metadata via our compute images proxy API.
+    microversion = '2.38'
+
+    # We need the ImagePropertiesFilter so override the base class setup
+    # which configures to use the chance_scheduler.
+    def _setup_scheduler_service(self):
+        self.flags(scheduler_default_filters=['ImagePropertiesFilter'])
+        return self.start_service('scheduler')
+
+    def test_rebuild_with_image_novalidhost(self):
+        """Creates a server with an image that is valid for the single compute
+        that we have. Then rebuilds the server, passing in an image with
+        metadata that does not fit the single compute which should result in
+        a NoValidHost error. The ImagePropertiesFilter filter is enabled by
+        default so that should filter out the host based on the image meta.
+        """
+        server_req_body = {
+            'server': {
+                # We hard-code from a fake image since we can't get images
+                # via the compute /images proxy API with microversion > 2.35.
+                'imageRef': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
+                'flavorRef': '1',   # m1.tiny from DefaultFlavorsFixture,
+                'name': 'test_rebuild_with_image_novalidhost',
+                # We don't care about networking for this test. This requires
+                # microversion >= 2.37.
+                'networks': 'none'
+            }
+        }
+        server = self.api.post_server(server_req_body)
+        self._wait_for_state_change(self.api, server, 'ACTIVE')
+        # Now update the image metadata to be something that won't work with
+        # the fake compute driver we're using since the fake driver has an
+        # "x86_64" architecture.
+        rebuild_image_ref = (
+            nova.tests.unit.image.fake.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID)
+        self.api.put_image_meta_key(
+            rebuild_image_ref, 'hw_architecture', 'unicore32')
+        # Now rebuild the server with that updated image and it should result
+        # in a NoValidHost failure from the scheduler.
+        rebuild_req_body = {
+            'rebuild': {
+                'imageRef': rebuild_image_ref
+            }
+        }
+        # Since we're using the CastAsCall fixture, the NoValidHost error
+        # should actually come back to the API and result in a 500 error.
+        # Normally the user would get a 202 response because nova-api RPC casts
+        # to nova-conductor which RPC calls the scheduler which raises the
+        # NoValidHost. We can mimic the end user way to figure out the failure
+        # by looking for the failed 'rebuild' instance action event.
+        self.api.api_post('/servers/%s/action' % server['id'],
+                          rebuild_req_body, check_response_status=[500])
+        # Look for the failed rebuild action.
+        self._wait_for_action_fail_completion(
+            server, instance_actions.REBUILD, 'rebuild_server',
+            # Before microversion 2.51 events are only returned for instance
+            # actions if you're an admin.
+            self.api_fixture.admin_api)
+        # Unfortunately the server's image_ref is updated to be the new image
+        # even though the rebuild should not work.
+        server = self.api.get_server(server['id'])
+        self.assertEqual(rebuild_image_ref, server['image']['id'])
