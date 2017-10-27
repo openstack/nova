@@ -899,7 +899,11 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         script = node.find("script")
         self.assertIsNone(script)
 
-    def test_unplug_ivs_ethernet(self):
+    @mock.patch('nova.privsep.libvirt.bridge_delete_interface')
+    @mock.patch('nova.privsep.libvirt.toggle_interface')
+    @mock.patch('nova.privsep.libvirt.delete_bridge')
+    def test_unplug_ivs_ethernet(self, delete_bridge, toggle_interface,
+                                 bridge_delete_interface):
         d = vif.LibvirtGenericVIFDriver()
         with mock.patch.object(linux_net, 'delete_ivs_vif_port') as delete:
             delete.side_effect = processutils.ProcessExecutionError
@@ -949,72 +953,72 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         self._test_hw_veb_op(d.unplug, 0)
 
     def test_plug_ivs_hybrid(self):
-        calls = {
-            'device_exists': [mock.call('qbrvif-xxx-yyy'),
-                              mock.call('qvovif-xxx-yyy')],
-            '_create_veth_pair': [mock.call('qvbvif-xxx-yyy',
-                                            'qvovif-xxx-yyy', None)],
-            'execute': [mock.call('brctl', 'addbr', 'qbrvif-xxx-yyy',
-                                  run_as_root=True),
-                        mock.call('brctl', 'setfd', 'qbrvif-xxx-yyy', 0,
-                                  run_as_root=True),
-                        mock.call('brctl', 'stp', 'qbrvif-xxx-yyy', 'off',
-                                  run_as_root=True),
-                        mock.call('ip', 'link', 'set', 'qbrvif-xxx-yyy', 'up',
-                                  run_as_root=True),
-                        mock.call('brctl', 'addif', 'qbrvif-xxx-yyy',
-                                  'qvbvif-xxx-yyy', run_as_root=True)],
-            'create_ivs_vif_port': [mock.call('qvovif-xxx-yyy', 'aaa-bbb-ccc',
-                                    'ca:fe:de:ad:be:ef',
-                                    'f0000000-0000-0000-0000-000000000001')],
-            'disable_ipv6': [mock.call('qbrvif-xxx-yyy')],
-            'multicast_snoop': [mock.call('qbrvif-xxx-yyy')]
-        }
         with test.nested(
                 mock.patch.object(linux_net, 'device_exists',
                                   return_value=False),
-                mock.patch.object(utils, 'execute'),
                 mock.patch.object(linux_net, '_create_veth_pair'),
                 mock.patch.object(linux_net, 'create_ivs_vif_port'),
                 mock.patch.object(os.path, 'exists', return_value=True),
                 mock.patch('nova.privsep.libvirt.disable_multicast_snooping'),
-                mock.patch('nova.privsep.libvirt.disable_ipv6')
-        ) as (device_exists, execute, _create_veth_pair, create_ivs_vif_port,
-              path_exists, disable_ipv6, disable_multicast_snooping):
+                mock.patch('nova.privsep.libvirt.disable_ipv6'),
+                mock.patch('nova.privsep.libvirt.add_bridge'),
+                mock.patch('nova.privsep.libvirt.zero_bridge_forward_delay'),
+                mock.patch('nova.privsep.libvirt.disable_bridge_stp'),
+                mock.patch('nova.privsep.libvirt.toggle_interface'),
+                mock.patch('nova.privsep.libvirt.bridge_add_interface')
+        ) as (device_exists, _create_veth_pair, create_ivs_vif_port,
+              path_exists, disable_multicast_snooping, disable_ipv6,
+              add_bridge, zero_bridge_forward_delay, disable_bridge_stp,
+              toggle_interface, bridge_add_interface):
             d = vif.LibvirtGenericVIFDriver()
             d.plug(self.instance, self.vif_ivs)
-            device_exists.assert_has_calls(calls['device_exists'])
-            _create_veth_pair.assert_has_calls(calls['_create_veth_pair'])
-            execute.assert_has_calls(calls['execute'])
-            create_ivs_vif_port.assert_has_calls(calls['create_ivs_vif_port'])
+
+            device_exists.assert_has_calls([mock.call('qbrvif-xxx-yyy'),
+                                            mock.call('qvovif-xxx-yyy')])
+            _create_veth_pair.assert_has_calls(
+                [mock.call('qvbvif-xxx-yyy', 'qvovif-xxx-yyy', None)])
+            create_ivs_vif_port.assert_has_calls(
+                [mock.call('qvovif-xxx-yyy', 'aaa-bbb-ccc',
+                           'ca:fe:de:ad:be:ef',
+                           'f0000000-0000-0000-0000-000000000001')])
+
             disable_multicast_snooping.assert_has_calls(
-                calls['multicast_snoop'])
-            disable_ipv6.assert_has_calls(calls['disable_ipv6'])
+                [mock.call('qbrvif-xxx-yyy')])
+            disable_ipv6.assert_has_calls([mock.call('qbrvif-xxx-yyy')])
+            add_bridge.assert_has_calls([mock.call('qbrvif-xxx-yyy')])
+            zero_bridge_forward_delay.assert_has_calls(
+                [mock.call('qbrvif-xxx-yyy')])
+            disable_bridge_stp.assert_has_calls([mock.call('qbrvif-xxx-yyy')])
+            toggle_interface.assert_has_calls(
+                [mock.call('qbrvif-xxx-yyy', 'up')])
+            bridge_add_interface.assert_has_calls(
+                [mock.call('qbrvif-xxx-yyy', 'qvbvif-xxx-yyy')])
 
     def test_unplug_ivs_hybrid(self):
-        calls = {
-            'execute': [mock.call('brctl', 'delif', 'qbrvif-xxx-yyy',
-                                  'qvbvif-xxx-yyy', run_as_root=True),
-                        mock.call('ip', 'link', 'set',
-                                  'qbrvif-xxx-yyy', 'down', run_as_root=True),
-                        mock.call('brctl', 'delbr',
-                                  'qbrvif-xxx-yyy', run_as_root=True)],
-            'delete_ivs_vif_port': [mock.call('qvovif-xxx-yyy')]
-        }
         with test.nested(
                 mock.patch.object(utils, 'execute'),
-                mock.patch.object(linux_net, 'delete_ivs_vif_port')
-        ) as (execute, delete_ivs_vif_port):
+                mock.patch.object(linux_net, 'delete_ivs_vif_port'),
+                mock.patch('nova.privsep.libvirt.bridge_delete_interface'),
+                mock.patch('nova.privsep.libvirt.toggle_interface'),
+                mock.patch('nova.privsep.libvirt.delete_bridge')
+        ) as (execute, delete_ivs_vif_port, bridge_delete_interface,
+              toggle_interface, delete_bridge):
             d = vif.LibvirtGenericVIFDriver()
             d.unplug(self.instance, self.vif_ivs)
-            execute.assert_has_calls(calls['execute'])
-            delete_ivs_vif_port.assert_has_calls(calls['delete_ivs_vif_port'])
 
-    def test_unplug_ivs_hybrid_bridge_does_not_exist(self):
+            delete_ivs_vif_port.assert_has_calls([mock.call('qvovif-xxx-yyy')])
+
+            bridge_delete_interface.assert_has_calls(
+                [mock.call('qbrvif-xxx-yyy', 'qvbvif-xxx-yyy')])
+            toggle_interface.assert_has_calls(
+                [mock.call('qbrvif-xxx-yyy', 'down')])
+            delete_bridge.assert_has_calls([mock.call('qbrvif-xxx-yyy')])
+
+    @mock.patch('nova.privsep.libvirt.bridge_delete_interface',
+                side_effect=processutils.ProcessExecutionError)
+    def test_unplug_ivs_hybrid_bridge_does_not_exist(self, bdi):
         d = vif.LibvirtGenericVIFDriver()
-        with mock.patch.object(utils, 'execute') as execute:
-            execute.side_effect = processutils.ProcessExecutionError
-            d.unplug(self.instance, self.vif_ivs)
+        d.unplug(self.instance, self.vif_ivs)
 
     def test_unplug_iovisor(self):
         d = vif.LibvirtGenericVIFDriver()
