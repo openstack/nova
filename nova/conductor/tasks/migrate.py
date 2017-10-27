@@ -239,17 +239,21 @@ class MigrationTask(base.TaskBase):
                 cell=instance_mapping.cell_mapping)
 
         migration = self._preallocate_migration()
+        # For now, don't request alternates. A later patch in the series will
+        # modify migration to use alternates instead of calling the scheduler
+        # again.
+        selection_lists = self.scheduler_client.select_destinations(
+                self.context, self.request_spec, [self.instance.uuid],
+                return_objects=True, return_alternates=False)
+        # We only need the first item in the first list, as there is only one
+        # instance, and we don't care about any alternates.
+        selection = selection_lists[0][0]
 
-        hosts = self.scheduler_client.select_destinations(
-            self.context, self.request_spec, [self.instance.uuid])
-        host_state = hosts[0]
-
-        scheduler_utils.populate_filter_properties(legacy_props,
-                                                   host_state)
+        scheduler_utils.populate_filter_properties(legacy_props, selection)
         # context is not serializable
         legacy_props.pop('context', None)
 
-        (host, node) = (host_state['host'], host_state['nodename'])
+        (host, node) = (selection.service_host, selection.nodename)
 
         self.instance.availability_zone = (
             availability_zones.get_host_availability_zone(

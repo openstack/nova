@@ -194,6 +194,8 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
             expected_limits = None
         elif no_limits:
             expected_limits = {}
+        elif isinstance(fake_limits, objects.SchedulerLimits):
+            expected_limits = fake_limits.to_dict()
         else:
             expected_limits = fake_limits
         self.assertEqual(expected_limits,

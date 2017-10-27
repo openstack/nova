@@ -152,10 +152,6 @@ class SchedulerManager(manager.Manager):
                 allocation_request_version, return_alternates)
         # If `return_objects` is False, we need to convert the selections to
         # the older format, which is a list of host state dicts.
-        # NOTE(edleafe): since the RPC calling side is not yet updated in this
-        # patch, return_objects will always be False. This prevents sending the
-        # new Selection objects back until a later patch where the calling RPC
-        # will be changed.
         if not return_objects:
             selection_dicts = [sel[0].to_dict() for sel in selections]
             return jsonutils.to_primitive(selection_dicts)

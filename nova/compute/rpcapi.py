@@ -796,6 +796,9 @@ class ComputeAPI(object):
             recreate=False, on_shared_storage=False, host=None, node=None,
             preserve_ephemeral=False, migration=None, limits=None,
             kwargs=None):
+        # NOTE(edleafe): compute nodes can only use the dict form of limits.
+        if isinstance(limits, objects.SchedulerLimits):
+            limits = limits.to_dict()
         # NOTE(danms): kwargs is only here for cells compatibility, don't
         # actually send it to compute
         extra = {'preserve_ephemeral': preserve_ephemeral,
@@ -1114,7 +1117,9 @@ class ComputeAPI(object):
             filter_properties, admin_password=None, injected_files=None,
             requested_networks=None, security_groups=None,
             block_device_mapping=None, node=None, limits=None):
-
+        # NOTE(edleafe): compute nodes can only use the dict form of limits.
+        if isinstance(limits, objects.SchedulerLimits):
+            limits = limits.to_dict()
         version = '4.0'
         cctxt = self.router.client(ctxt).prepare(
                 server=host, version=version)

@@ -212,8 +212,12 @@ class RequestSpec(base.NovaObject):
             # Set the value anyway to avoid any call to obj_attr_is_set for it
             self.instance_group = None
 
-    def _from_limits(self, limits_dict):
-        self.limits = SchedulerLimits.from_dict(limits_dict)
+    def _from_limits(self, limits):
+        if isinstance(limits, dict):
+            self.limits = SchedulerLimits.from_dict(limits)
+        else:
+            # Already a SchedulerLimits object.
+            self.limits = limits
 
     def _from_hints(self, hints_dict):
         if hints_dict is None:

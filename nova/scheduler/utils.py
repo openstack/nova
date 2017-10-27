@@ -497,9 +497,11 @@ def populate_filter_properties(filter_properties, selection):
     else:
         host = selection.service_host
         nodename = selection.nodename
-        limits = selection.limits if "limits" in selection else {}
-        # 'limits' can also be None, so handle that as an empty dict
-        limits = limits or {}
+        # Need to convert SchedulerLimits object to older dict format.
+        if "limits" in selection and selection.limits is not None:
+            limits = selection.limits.to_dict()
+        else:
+            limits = {}
     # Adds a retry entry for the selected compute host and node:
     _add_retry_host(filter_properties, host, nodename)
 
