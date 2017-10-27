@@ -514,13 +514,9 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         super(CellsComputeAPITestCase, self).test_populate_instance_for_create(
             num_instances=2)
 
-    def test_multi_instance_display_name_default(self):
-        self._multi_instance_display_name_default(cells_enabled=True)
-
-    def test_multi_instance_display_name_template(self):
+    def test_multi_instance_display_name(self):
         super(CellsComputeAPITestCase,
-              self).test_multi_instance_display_name_template(
-                  cells_enabled=True)
+              self).test_multi_instance_display_name(cells_enabled=True)
 
 
 class CellsShelveComputeAPITestCase(test_shelve.ShelveComputeAPITestCase):

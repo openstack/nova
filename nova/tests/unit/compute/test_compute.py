@@ -9670,40 +9670,30 @@ class ComputeAPITestCase(BaseTestCase):
         for instance in refs:
             self.assertEqual(instance['reservation_id'], resv_id)
 
-    def test_multi_instance_display_name_template(self, cells_enabled=False):
-        num_instances = 2
-        self.flags(multi_instance_display_name_template='%(name)s')
-        (refs, resv_id) = self.compute_api.create(self.context,
+    def test_single_instance_display_name(self):
+        """Verify building one instance doesn't do anything funky with
+        the display and host names.
+        """
+        # TODO(stephenfin): Remove cells_enabled parameter when we removed
+        # cells v1
+        num_instances = 1
+        refs, _ = self.compute_api.create(self.context,
                 flavors.get_default_flavor(),
                 image_href=uuids.image_href_id,
                 min_count=num_instances, max_count=num_instances,
                 display_name='x')
-        for i in range(num_instances):
-            hostname = None if cells_enabled else 'x'
-            self.assertEqual(refs[i]['display_name'], 'x')
-            self.assertEqual(refs[i]['hostname'], hostname)
+        name = 'x'
+        self.assertEqual(refs[0]['display_name'], name)
+        self.assertEqual(refs[0]['hostname'], name)
 
-        self.flags(multi_instance_display_name_template='%(name)s-%(count)d')
-        self._multi_instance_display_name_default(cells_enabled=cells_enabled)
-
-        self.flags(multi_instance_display_name_template='%(name)s-%(uuid)s')
-        (refs, resv_id) = self.compute_api.create(self.context,
-                flavors.get_default_flavor(),
-                image_href=uuids.image_href_id,
-                min_count=num_instances, max_count=num_instances,
-                display_name='x')
-        for i in range(num_instances):
-            name = 'x' if cells_enabled else 'x-%s' % refs[i]['uuid']
-            hostname = None if cells_enabled else name
-            self.assertEqual(refs[i]['display_name'], name)
-            self.assertEqual(refs[i]['hostname'], hostname)
-
-    def test_multi_instance_display_name_default(self):
-        self._multi_instance_display_name_default()
-
-    def _multi_instance_display_name_default(self, cells_enabled=False):
+    def test_multi_instance_display_name(self, cells_enabled=False):
+        """Verify building two instances at once results in a unique
+        display and host name.
+        """
+        # TODO(stephenfin): Remove cells_enabled parameter when we removed
+        # cells v1
         num_instances = 2
-        (refs, resv_id) = self.compute_api.create(self.context,
+        refs, _ = self.compute_api.create(self.context,
                 flavors.get_default_flavor(),
                 image_href=uuids.image_href_id,
                 min_count=num_instances, max_count=num_instances,

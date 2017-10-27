@@ -75,25 +75,6 @@ Possible values:
                 img_signature_certificate_uuid
 
 """),
-    cfg.StrOpt('multi_instance_display_name_template',
-        default='%(name)s-%(count)d',
-        deprecated_for_removal=True,
-        deprecated_since='15.0.0',
-        deprecated_reason="""
-This config changes API behaviour. All changes in API behaviour should be
-discoverable.
-""",
-        help="""
-When creating multiple instances with a single request using the
-os-multiple-create API extension, this template will be used to build
-the display name for each instance. The benefit is that the instances
-end up with different hostnames. Example display names when creating
-two VM's: name-1, name-2.
-
-Possible values:
-
-* Valid keys for the template are: name, uuid, count.
-"""),
     cfg.IntOpt('max_local_block_devices',
         default=3,
         help="""
@@ -1105,10 +1086,6 @@ Possible values:
   default)
 * A string with a list of named database columns, for example ``%(id)d``
   or ``%(uuid)s`` or ``%(hostname)s``.
-
-Related options:
-
-* not to be confused with: ``multi_instance_display_name_template``
 """),
 ]
 
