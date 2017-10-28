@@ -1794,10 +1794,11 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
         # objects are used at the end of the allocation transaction as a guard
         # against concurrent updates.
         with conn.begin():
-            # First delete any existing allocations for this consumer. This
-            # must be done before checking capacity.
-            for alloc in allocs:
-                consumer_id = alloc.consumer_id
+            # First delete any existing allocations for any consumers. This
+            # provides a clean slate for the consumers mentioned in the list of
+            # allocations being manipulated.
+            consumer_ids = set(alloc.consumer_id for alloc in allocs)
+            for consumer_id in consumer_ids:
                 _delete_allocations_for_consumer(context, consumer_id)
             # Don't check capacity when alloc.used is zero. Zero is not a
             # valid amount when making an allocation (the minimum consumption
