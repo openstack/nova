@@ -123,34 +123,33 @@ class TestPlacementCheck(test.NoDBTestCase):
         self.assertIn('No credentials specified', res.details)
 
     @mock.patch.object(keystone, "load_auth_from_conf_options")
-    @mock.patch.object(session.Session, 'get')
+    @mock.patch.object(session.Session, 'request')
     def _test_placement_get_interface(
             self, expected_interface, mock_get, mock_auth):
 
-        def fake_get(path, *a, **kw):
+        def fake_request(path, method, *a, **kw):
             self.assertEqual(mock.sentinel.path, path)
+            self.assertEqual('GET', method)
             self.assertIn('endpoint_filter', kw)
             self.assertEqual(expected_interface,
                              kw['endpoint_filter']['interface'])
             return mock.Mock(autospec='requests.models.Response')
 
-        mock_get.side_effect = fake_get
+        mock_get.side_effect = fake_request
         self.cmd._placement_get(mock.sentinel.path)
         mock_auth.assert_called_once_with(status.CONF, 'placement')
         self.assertTrue(mock_get.called)
 
-    @mock.patch.object(keystone, "load_auth_from_conf_options")
-    @mock.patch.object(session.Session, 'get')
-    def test_placement_get_interface_default(self, mock_get, mock_auth):
-        """Tests that None is specified for interface by default."""
-        self._test_placement_get_interface(None)
+    def test_placement_get_interface_default(self):
+        """Tests that we try internal, then public interface by default."""
+        self._test_placement_get_interface(['internal', 'public'])
 
-    @mock.patch.object(keystone, "load_auth_from_conf_options")
-    @mock.patch.object(session.Session, 'get')
-    def test_placement_get_interface_internal(self, mock_get, mock_auth):
+    def test_placement_get_interface_internal(self):
         """Tests that "internal" is specified for interface when configured."""
-        self.flags(os_interface='internal', group='placement')
-        self._test_placement_get_interface('internal')
+        # TODO(efried): Test that the deprecated opts (e.g. os_interface) still
+        #               work once bug #1709728 is resolved.
+        self.flags(valid_interfaces='internal', group='placement')
+        self._test_placement_get_interface(['internal'])
 
     @mock.patch.object(status.UpgradeCommands, "_placement_get")
     def test_invalid_auth(self, get):

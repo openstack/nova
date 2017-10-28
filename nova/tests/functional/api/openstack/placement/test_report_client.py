@@ -11,6 +11,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from keystoneauth1 import adapter
 from keystoneauth1 import session
 import mock
 import requests
@@ -41,11 +42,10 @@ class NoAuthReportClient(report.SchedulerReportClient):
             'x-auth-token': 'admin',
             'OpenStack-API-Version': 'placement latest',
         }
-        self._client = session.Session(
-            auth=None,
-            session=request_session,
-            additional_headers=headers,
-        )
+        self._client = adapter.Adapter(
+            session.Session(auth=None, session=request_session,
+                            additional_headers=headers),
+            service_type='placement')
 
 
 class SchedulerReportClientTests(test.TestCase):

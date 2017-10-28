@@ -1299,8 +1299,14 @@ def get_ksa_adapter(service_type, ksa_auth=None, ksa_session=None,
     """
     # Get the conf group corresponding to the service type.
     confgrp = _SERVICE_TYPES.get_project_name(service_type)
-    if not confgrp:
-        raise exception.ConfGroupForServiceTypeNotFound(stype=service_type)
+    if not confgrp or not hasattr(CONF, confgrp):
+        # Try the service type as the conf group.  This is necessary for e.g.
+        # placement, while it's still part of the nova project.
+        # Note that this might become the first thing we try if/as we move to
+        # using service types for conf group names in general.
+        confgrp = service_type
+        if not confgrp or not hasattr(CONF, confgrp):
+            raise exception.ConfGroupForServiceTypeNotFound(stype=service_type)
 
     # Ensure we have an auth.
     # NOTE(efried): This could be None, and that could be okay - e.g. if the
