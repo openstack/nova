@@ -257,28 +257,6 @@ class FlavorAccessTestV21(test.NoDBTestCase):
         result = self.flavor_controller.index(req)
         self._verify_flavor_list(result['flavors'], expected['flavors'])
 
-    def test_show(self):
-        resp = FakeResponse()
-        self.flavor_action_controller.show(self.req, resp, '0')
-        self.assertEqual({'id': '0', 'os-flavor-access:is_public': True},
-                         resp.obj['flavor'])
-        self.flavor_action_controller.show(self.req, resp, '2')
-        self.assertEqual({'id': '0', 'os-flavor-access:is_public': False},
-                         resp.obj['flavor'])
-
-    def test_detail(self):
-        resp = FakeResponse()
-        self.flavor_action_controller.detail(self.req, resp)
-        self.assertEqual([{'id': '0', 'os-flavor-access:is_public': True},
-                          {'id': '2', 'os-flavor-access:is_public': False}],
-                         resp.obj['flavors'])
-
-    def test_create(self):
-        resp = FakeResponse()
-        self.flavor_action_controller.create(self.req, {}, resp)
-        self.assertEqual({'id': '0', 'os-flavor-access:is_public': True},
-                         resp.obj['flavor'])
-
     def test_add_tenant_access(self):
         def stub_add_flavor_access(context, flavor_id, projectid):
             self.assertEqual(3, flavor_id, "flavor_id")
@@ -422,21 +400,6 @@ class FlavorAccessPolicyEnforcementV21(test.NoDBTestCase):
         self.assertEqual(
             "Policy doesn't allow %s to be performed." % rule_name,
             exc.format_message())
-
-    def test_extend_create_policy_failed(self):
-        rule_name = "os_compute_api:os-flavor-access"
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        self.act_controller.create(self.req, None, None)
-
-    def test_extend_show_policy_failed(self):
-        rule_name = "os_compute_api:os-flavor-access"
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        self.act_controller.show(self.req, None, None)
-
-    def test_extend_detail_policy_failed(self):
-        rule_name = "os_compute_api:os-flavor-access"
-        self.policy.set_rules({rule_name: "project:non_fake"})
-        self.act_controller.detail(self.req, None)
 
     def test_index_policy_failed(self):
         rule_name = "os_compute_api:os-flavor-access"

@@ -361,6 +361,7 @@ class FlavorManageTestV2_55(FlavorManageTestV21):
             ephemeral_gb=flavor['OS-FLV-EXT-DATA:ephemeral'],
             disabled=flavor['OS-FLV-DISABLED:disabled'],
             is_public=flavor['os-flavor-access:is_public'],
+            rxtx_factor=flavor['rxtx_factor'],
             description=flavor['description'])
         # Now null out the flavor description.
         flavor = self.controller._update(
@@ -535,7 +536,8 @@ class FlavorManagerPolicyEnforcementV21(test.TestCase):
         default_flavor_policy = "os_compute_api:os-flavor-manage"
         create_flavor_policy = "os_compute_api:os-flavor-manage:create"
         rules = {default_flavor_policy: 'is_admin:True',
-                 create_flavor_policy: 'rule:%s' % default_flavor_policy}
+                 create_flavor_policy: 'rule:%s' % default_flavor_policy,
+                 "os_compute_api:os-flavor-access": "project:non_fake"}
         self.policy.set_rules(rules)
         body = {
             "flavor": {

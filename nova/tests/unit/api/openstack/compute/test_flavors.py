@@ -91,6 +91,8 @@ class FlavorsTestV21(test.TestCase):
                 "ram": fakes.FLAVORS['1'].memory_mb,
                 "disk": fakes.FLAVORS['1'].root_gb,
                 "vcpus": fakes.FLAVORS['1'].vcpus,
+                "os-flavor-access:is_public": True,
+                "rxtx_factor": 1.0,
                 "links": [
                     {
                         "rel": "self",
@@ -121,6 +123,8 @@ class FlavorsTestV21(test.TestCase):
                 "ram": fakes.FLAVORS['1'].memory_mb,
                 "disk": fakes.FLAVORS['1'].root_gb,
                 "vcpus": fakes.FLAVORS['1'].vcpus,
+                "os-flavor-access:is_public": True,
+                "rxtx_factor": 1.0,
                 "links": [
                     {
                         "rel": "self",
@@ -237,6 +241,8 @@ class FlavorsTestV21(test.TestCase):
                 "ram": fakes.FLAVORS['1'].memory_mb,
                 "disk": fakes.FLAVORS['1'].root_gb,
                 "vcpus": fakes.FLAVORS['1'].vcpus,
+                "os-flavor-access:is_public": True,
+                "rxtx_factor": 1.0,
                 "links": [
                     {
                         "rel": "self",
@@ -360,6 +366,8 @@ class FlavorsTestV21(test.TestCase):
                     "ram": fakes.FLAVORS['1'].memory_mb,
                     "disk": fakes.FLAVORS['1'].root_gb,
                     "vcpus": fakes.FLAVORS['1'].vcpus,
+                    "os-flavor-access:is_public": True,
+                    "rxtx_factor": 1.0,
                     "links": [
                         {
                             "rel": "self",
@@ -379,6 +387,8 @@ class FlavorsTestV21(test.TestCase):
                     "ram": fakes.FLAVORS['2'].memory_mb,
                     "disk": fakes.FLAVORS['2'].root_gb,
                     "vcpus": fakes.FLAVORS['2'].vcpus,
+                    "os-flavor-access:is_public": True,
+                    "rxtx_factor": '',
                     "links": [
                         {
                             "rel": "self",
@@ -490,6 +500,8 @@ class FlavorsTestV21(test.TestCase):
                     "ram": fakes.FLAVORS['2'].memory_mb,
                     "disk": fakes.FLAVORS['2'].root_gb,
                     "vcpus": fakes.FLAVORS['2'].vcpus,
+                    "os-flavor-access:is_public": True,
+                    "rxtx_factor": '',
                     "links": [
                         {
                             "rel": "self",
@@ -513,6 +525,54 @@ class FlavorsTestV2_55(FlavorsTestV21):
     """Run the same tests as we would for v2.1 but with a description."""
     microversion = '2.55'
     expect_description = True
+
+
+class FlavorsPolicyEnforcementV21(test.NoDBTestCase):
+
+    def setUp(self):
+        super(FlavorsPolicyEnforcementV21, self).setUp()
+        self.flavor_controller = flavors_v21.FlavorsController()
+        fakes.stub_out_flavor_get_by_flavor_id(self)
+        fakes.stub_out_flavor_get_all(self)
+        self.req = fakes.HTTPRequest.blank('')
+
+    def test_show_flavor_access_policy_failed(self):
+        rule_name = "os_compute_api:os-flavor-access"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        resp = self.flavor_controller.show(self.req, '1')
+        self.assertNotIn('os-flavor-access:is_public', resp['flavor'])
+
+    def test_detail_flavor_access_policy_failed(self):
+        rule_name = "os_compute_api:os-flavor-access"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        resp = self.flavor_controller.detail(self.req)
+        self.assertNotIn('os-flavor-access:is_public', resp['flavors'][0])
+
+    def test_show_flavor_rxtx_policy_failed(self):
+        rule_name = "os_compute_api:os-flavor-rxtx"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        resp = self.flavor_controller.show(self.req, '1')
+        self.assertNotIn('rxtx_factor', resp['flavor'])
+
+    def test_detail_flavor_rxtx_policy_failed(self):
+        rule_name = "os_compute_api:os-flavor-rxtx"
+        self.policy.set_rules({rule_name: "project:non_fake"})
+        resp = self.flavor_controller.detail(self.req)
+        self.assertNotIn('rxtx_factor', resp['flavors'][0])
+
+    def test_create_flavor_extended_policy_failed(self):
+        rules = {"os_compute_api:os-flavor-rxtx": "project:non_fake",
+                 "os_compute_api:os-flavor-access": "project:non_fake"}
+        self.policy.set_rules(rules)
+        resp = self.flavor_controller.detail(self.req)
+        self.assertNotIn('rxtx_factor', resp['flavors'][0])
+
+    def test_update_flavor_extended_policy_failed(self):
+        rules = {"os_compute_api:os-flavor-rxtx": "project:non_fake",
+                 "os_compute_api:os-flavor-access": "project:non_fake"}
+        self.policy.set_rules(rules)
+        resp = self.flavor_controller.detail(self.req)
+        self.assertNotIn('rxtx_factor', resp['flavors'][0])
 
 
 class DisabledFlavorsWithRealDBTestV21(test.TestCase):
