@@ -495,42 +495,74 @@ def _get_traits_by_provider_id(context, rp_id):
     return [dict(r) for r in conn.execute(sel).fetchall()]
 
 
+def _add_traits_to_provider(conn, rp_id, to_add):
+    """Adds trait associations to the provider with the supplied ID.
+
+    :param conn: DB connection to use.
+    :param rp_id: Internal ID of the resource provider on which to add
+                  trait associations
+    :param to_add: set() containing internal trait IDs for traits to add
+    """
+    for trait_id in to_add:
+        try:
+            ins_stmt = _RP_TRAIT_TBL.insert().values(
+                resource_provider_id=rp_id,
+                trait_id=trait_id)
+            conn.execute(ins_stmt)
+        except db_exc.DBDuplicateEntry:
+            # Another thread already set this trait for this provider. Ignore
+            # this for now (but ConcurrentUpdateDetected will end up being
+            # raised almost assuredly when we go to increment the resource
+            # provider's generation later, but that's also fine)
+            pass
+
+
+def _delete_traits_from_provider(conn, rp_id, to_delete):
+    """Deletes trait associations from the provider with the supplied ID and
+    set() of internal trait IDs.
+
+    :param conn: DB connection to use.
+    :param rp_id: Internal ID of the resource provider from which to delete
+                  trait associations
+    :param to_delete: set() containing internal trait IDs for traits to
+                      delete
+    """
+    del_stmt = _RP_TRAIT_TBL.delete().where(
+        sa.and_(
+            _RP_TRAIT_TBL.c.resource_provider_id == rp_id,
+            _RP_TRAIT_TBL.c.trait_id.in_(to_delete)))
+    conn.execute(del_stmt)
+
+
 @db_api.api_context_manager.writer
 def _set_traits(context, rp, traits):
     """Given a ResourceProvider object and a TraitList object, replaces the set
     of traits associated with the resource provider.
 
+    :raises: ConcurrentUpdateDetected if the resource provider's traits or
+             inventory was changed in between the time when we first started to
+             set traits and the end of this routine.
+
     :param rp: The ResourceProvider object to set traits against
     :param traits: A TraitList object or list of Trait objects
     """
+    # Get the internal IDs of our existing traits
     existing_traits = _get_traits_by_provider_id(context, rp.id)
-    traits_dict = {trait.name: trait for trait in traits}
-    existing_traits_dict = {trait['name']: trait for trait in existing_traits}
+    existing_traits = set(rec['id'] for rec in existing_traits)
+    want_traits = set(trait.id for trait in traits)
 
-    to_add_names = set(traits_dict) - set(existing_traits_dict)
-    to_delete_names = set(existing_traits_dict) - set(traits_dict)
-    to_delete_ids = [existing_traits_dict[name]['id']
-                        for name in to_delete_names]
+    to_add = want_traits - existing_traits
+    to_delete = existing_traits - want_traits
+
+    if not to_add and not to_delete:
+        return
 
     conn = context.session.connection()
     with conn.begin():
-        # TODO(jaypipes): Break these out into separate functions for deleting
-        # and adding traits
-        if to_delete_names:
-            context.session.query(models.ResourceProviderTrait).filter(
-                sa.and_(
-                    models.ResourceProviderTrait.trait_id.in_(
-                        to_delete_ids),
-                    (models.ResourceProviderTrait.resource_provider_id ==
-                     rp.id)
-                )
-            ).delete(synchronize_session='fetch')
-        if to_add_names:
-            for name in to_add_names:
-                rp_trait = models.ResourceProviderTrait()
-                rp_trait.trait_id = traits_dict[name].id
-                rp_trait.resource_provider_id = rp.id
-                context.session.add(rp_trait)
+        if to_delete:
+            _delete_traits_from_provider(conn, rp.id, to_delete)
+        if to_add:
+            _add_traits_to_provider(conn, rp.id, to_add)
         rp.generation = _increment_provider_generation(conn, rp)
 
 
