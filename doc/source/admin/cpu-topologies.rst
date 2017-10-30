@@ -323,7 +323,7 @@ instance topology, run:
 
 .. code-block:: console
 
-   $ openstack flavor set m1.large --property=hw:cpu_max_sockets=2
+   $ openstack flavor set m1.large --property hw:cpu_max_sockets=2
 
 For more information about the syntax for ``hw:cpu_max_sockets``,
 ``hw:cpu_max_cores``, and ``hw:cpu_max_threads``, refer to the
