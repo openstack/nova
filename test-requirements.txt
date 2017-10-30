@@ -36,3 +36,6 @@ reno>=2.5.0 # Apache-2.0
 
 # placement functional tests
 wsgi-intercept>=1.4.1 # MIT License
+
+# redirect tests in docs
+whereto>=0.3.0  # Apache-2.0
