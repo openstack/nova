@@ -63,12 +63,12 @@ Request
   - uuid: resource_provider_uuid_path
   - resource_class: resource_class_path
   - resource_provider_generation: resource_provider_generation
+  - total: total
   - allocation_ratio: allocation_ratio_opt
   - max_unit: max_unit_opt
   - min_unit: min_unit_opt
   - reserved: reserved_opt
   - step_size: step_size_opt
-  - total: total
 
 Request example
 ---------------

@@ -24,10 +24,10 @@ of all filters are merged with a boolean `AND`.
 
 .. rest_parameters:: parameters.yaml
 
-  - resources: resources_query
-  - member_of: member_of
-  - uuid: resource_provider_uuid_query
   - name: resource_provider_name_query
+  - uuid: resource_provider_uuid_query
+  - member_of: member_of
+  - resources: resources_query
 
 Response
 --------
