@@ -1215,6 +1215,9 @@ class _BaseTaskTestCase(object):
             self.conductor_manager.rebuild_instance(context=self.context,
                                             instance=inst_obj,
                                             **rebuild_args)
+            bs_mock.assert_called_once_with(
+                self.context, obj_base.obj_to_primitive(inst_obj.image_meta),
+                [inst_obj])
             fp_mock.assert_called_once_with(self.context, request_spec,
                                             filter_properties)
             select_dest_mock.assert_called_once_with(self.context, fake_spec,
