@@ -11,8 +11,8 @@ non-live-migration options.
 
 The instructions below cover shared-storage and volume-backed migration.  To
 block-migrate instances, add the command-line option
-:command:``--block-migrate`` to the :command:``nova live-migration`` command,
-and :command:``--block-migration`` to the :command:``openstack server migrate``
+``-block-migrate`` to the :command:`nova live-migration` command,
+and ``--block-migration`` to the :command:`openstack server migrate`
 command.
 
 .. _section-manual-selection-of-dest:
