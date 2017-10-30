@@ -1120,7 +1120,7 @@ class LibvirtDriver(driver.ComputeDriver):
             enforce_multipath=True,
             host=CONF.host)
 
-    def _cleanup_resize(self, instance, network_info):
+    def _cleanup_resize(self, context, instance, network_info):
         inst_base = libvirt_utils.get_instance_path(instance)
         target = inst_base + '_resize'
 
@@ -1146,7 +1146,12 @@ class LibvirtDriver(driver.ComputeDriver):
         # NOTE(mjozefcz):
         # self.image_backend.image for some backends recreates instance
         # directory and image disk.info - remove it here if exists
-        if os.path.exists(inst_base) and not root_disk.exists():
+        # Do not remove inst_base for volume-backed instances since that
+        # could potentially remove the files on the destination host
+        # if using shared storage.
+        if (os.path.exists(inst_base) and not root_disk.exists() and
+                not compute_utils.is_volume_backed_instance(
+                    context, instance)):
             try:
                 shutil.rmtree(inst_base)
             except OSError as e:
@@ -7584,7 +7589,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
     def confirm_migration(self, context, migration, instance, network_info):
         """Confirms a resize, destroying the source VM."""
-        self._cleanup_resize(instance, network_info)
+        self._cleanup_resize(context, instance, network_info)
 
     @staticmethod
     def _get_io_devices(xml_doc):
