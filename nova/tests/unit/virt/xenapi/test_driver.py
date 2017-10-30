@@ -266,6 +266,12 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
                 'max_unit': 5,
                 'step_size': 1,
             },
+            obj_fields.ResourceClass.VGPU: {
+                'total': 7,
+                'min_unit': 1,
+                'max_unit': 1,
+                'step_size': 1,
+            },
         }
 
         mock_get_stats.side_effect = self.host_stats
@@ -274,3 +280,45 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
 
         mock_get_stats.assert_called_once_with(refresh=True)
         self.assertEqual(expected_inv, inv)
+
+    @mock.patch.object(host.HostState, 'get_host_stats')
+    def test_get_inventory_no_vgpu(self, mock_get_stats):
+        # Test when there are no vGPU resources in the inventory.
+        host_stats = self.host_stats()
+        host_stats.update(vgpu_stats={})
+        mock_get_stats.return_value = host_stats
+
+        drv = self._get_driver()
+        inv = drv.get_inventory(mock.sentinel.nodename)
+
+        # check if the inventory data does NOT contain VGPU.
+        self.assertNotIn(obj_fields.ResourceClass.VGPU, inv)
+
+    def test_get_vgpu_total_single_grp(self):
+        # Test when only one group included in the host_stats.
+        vgpu_stats = {
+            'grp_uuid_1': {
+                'total': 7
+            }
+        }
+
+        drv = self._get_driver()
+        vgpu_total = drv._get_vgpu_total(vgpu_stats)
+
+        self.assertEqual(7, vgpu_total)
+
+    def test_get_vgpu_total_multiple_grps(self):
+        # Test when multiple groups included in the host_stats.
+        vgpu_stats = {
+            'grp_uuid_1': {
+                'total': 7
+            },
+            'grp_uuid_2': {
+                'total': 4
+            }
+        }
+
+        drv = self._get_driver()
+        vgpu_total = drv._get_vgpu_total(vgpu_stats)
+
+        self.assertEqual(11, vgpu_total)

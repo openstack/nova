@@ -404,6 +404,16 @@ class XenAPIDriver(driver.ComputeDriver):
                 'username': CONF.xenserver.connection_username,
                 'password': CONF.xenserver.connection_password}
 
+    def _get_vgpu_total(self, vgpu_stats):
+        # NOTE(jianghuaw): Now we only enable one vGPU type in one
+        # compute node. So normally vgpu_stats should contain only
+        # one GPU group. If there are multiple GPU groups, they
+        # must contain the same vGPU type. So just add them up.
+        total = 0
+        for grp_id in vgpu_stats:
+            total += vgpu_stats[grp_id]['total']
+        return total
+
     def get_inventory(self, nodename):
         """Return a dict, keyed by resource class, of inventory information for
         the supplied node.
@@ -413,6 +423,7 @@ class XenAPIDriver(driver.ComputeDriver):
         vcpus = host_stats['host_cpu_info']['cpu_count']
         memory_mb = int(host_stats['host_memory_total'] / units.Mi)
         disk_gb = int(host_stats['disk_total'] / units.Gi)
+        vgpus = self._get_vgpu_total(host_stats['vgpu_stats'])
 
         result = {
             fields.ResourceClass.VCPU: {
@@ -434,6 +445,20 @@ class XenAPIDriver(driver.ComputeDriver):
                 'step_size': 1,
             },
         }
+        if vgpus > 0:
+            # Only create inventory for vGPU when driver can supply vGPUs.
+            # At the moment, XenAPI can support up to one vGPU per VM,
+            # so max_unit is 1.
+            result.update(
+                {
+                    fields.ResourceClass.VGPU: {
+                        'total': vgpus,
+                        'min_unit': 1,
+                        'max_unit': 1,
+                        'step_size': 1,
+                    }
+                }
+            )
         return result
 
     def get_available_resource(self, nodename):
