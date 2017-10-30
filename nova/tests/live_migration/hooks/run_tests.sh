@@ -41,25 +41,24 @@ echo '2. NFS testing is skipped due to setup failures with Ubuntu 16.04'
 #run_tempest  "NFS shared storage test" "live_migration"
 #nfs_teardown
 
-# NOTE(mriedem): devstack in Pike defaults to using systemd but the old side
-# for grenade is using screen and that follows through to the new side. Since
-# the restart scripts are hard-coded to assume systemd in this job, they will
-# fail if the services weren't started under systemd. So we have to skip this
-# for grenade jobs in Pike until the bug is fixed to handle restarting services
-# running under screen or systemd, or until Queens is our master branch.
-# The GRENADE_OLD_BRANCH variable is exported from devstack-gate, not in the
-# devstack local.conf.
-if [[ "$GRENADE_OLD_BRANCH" == "stable/ocata" ]]; then
-    # TODO(mriedem): Remove this in Queens if we haven't fixed the bug yet.
-    echo '3. Grenade testing with Ceph is disabled until bug 1691769 is fixed or Queens.'
-else
-    echo '3. test with Ceph for root + ephemeral disks'
-    prepare_ceph
-    GLANCE_API_CONF=${GLANCE_API_CONF:-/etc/glance/glance-api.conf}
-    configure_and_start_glance
-    configure_and_start_nova
-    run_tempest "Ceph nova&glance test" "^.*test_live_migration(?!.*(test_volume_backed_live_migration))"
+echo '3. test with Ceph for root + ephemeral disks'
+prepare_ceph
+GLANCE_API_CONF=${GLANCE_API_CONF:-/etc/glance/glance-api.conf}
+configure_and_start_glance
+
+# Deal with grenade craziness...
+if [ "$GRENADE_OLD_BRANCH" ]; then
+    # NOTE(mriedem): Grenade runs in singleconductor mode, so it won't use
+    # /etc/nova/nova-cpu.conf so we have to overwrite NOVA_CPU_CONF which is
+    # read in configure_and_start_nova.
+    if ! is_service_enabled n-super-cond; then
+        NOVA_CPU_CONF=$NOVA_CONF
+    fi
 fi
+
+configure_and_start_nova
+run_tempest "Ceph nova&glance test" "^.*test_live_migration(?!.*(test_volume_backed_live_migration))"
+
 set +e
 #echo '4. test with Ceph for volumes and root + ephemeral disk'
 
