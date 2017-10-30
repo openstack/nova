@@ -945,15 +945,17 @@ class UnlimitedSemaphore(object):
 
 
 @contextlib.contextmanager
-def notify_about_instance_delete(notifier, context, instance):
+def notify_about_instance_delete(notifier, context, instance,
+                                 delete_type='delete'):
     # Pre-load system_metadata because if this context is around an
     # instance.destroy(), lazy-loading it later would result in an
     # InstanceNotFound error.
     system_metadata = instance.system_metadata
     try:
         notify_about_instance_usage(notifier, context, instance,
-                                    "delete.start")
+                                    "%s.start" % delete_type)
         yield
     finally:
-        notify_about_instance_usage(notifier, context, instance, "delete.end",
+        notify_about_instance_usage(notifier, context, instance,
+                                    "%s.end" % delete_type,
                                     system_metadata=system_metadata)

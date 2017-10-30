@@ -1869,14 +1869,12 @@ class API(base.Base):
                                  == vm_states.SHELVED_OFFLOADED)
             if not instance.host and not shelved_offloaded:
                 try:
-                    compute_utils.notify_about_instance_usage(
+                    with compute_utils.notify_about_instance_delete(
                             self.notifier, context, instance,
-                            "%s.start" % delete_type)
-                    instance.destroy()
-                    compute_utils.notify_about_instance_usage(
-                            self.notifier, context, instance,
-                            "%s.end" % delete_type,
-                            system_metadata=instance.system_metadata)
+                            delete_type
+                            if delete_type != 'soft_delete'
+                            else 'delete'):
+                        instance.destroy()
                     LOG.info('Instance deleted and does not have host '
                              'field, its vm_state is %(state)s.',
                              {'state': instance.vm_state},
@@ -2033,38 +2031,37 @@ class API(base.Base):
         else:
             LOG.warning("instance's host %s is down, deleting from "
                         "database", instance.host, instance=instance)
-        compute_utils.notify_about_instance_usage(
-            self.notifier, context, instance, "%s.start" % delete_type)
+        with compute_utils.notify_about_instance_delete(
+                self.notifier, context, instance,
+                delete_type if delete_type != 'soft_delete' else 'delete'):
 
-        elevated = context.elevated()
-        if self.cell_type != 'api':
-            # NOTE(liusheng): In nova-network multi_host scenario,deleting
-            # network info of the instance may need instance['host'] as
-            # destination host of RPC call. If instance in SHELVED_OFFLOADED
-            # state, instance['host'] is None, here, use shelved_host as host
-            # to deallocate network info and reset instance['host'] after that.
-            # Here we shouldn't use instance.save(), because this will mislead
-            # user who may think the instance's host has been changed, and
-            # actually, the instance.host is always None.
-            orig_host = instance.host
-            try:
-                if instance.vm_state == vm_states.SHELVED_OFFLOADED:
-                    sysmeta = getattr(instance,
-                                      obj_base.get_attrname('system_metadata'))
-                    instance.host = sysmeta.get('shelved_host')
-                self.network_api.deallocate_for_instance(elevated,
-                                                         instance)
-            finally:
-                instance.host = orig_host
+            elevated = context.elevated()
+            if self.cell_type != 'api':
+                # NOTE(liusheng): In nova-network multi_host scenario,deleting
+                # network info of the instance may need instance['host'] as
+                # destination host of RPC call. If instance in
+                # SHELVED_OFFLOADED state, instance['host'] is None, here, use
+                # shelved_host as host to deallocate network info and reset
+                # instance['host'] after that. Here we shouldn't use
+                # instance.save(), because this will mislead user who may think
+                # the instance's host has been changed, and actually, the
+                # instance.host is always None.
+                orig_host = instance.host
+                try:
+                    if instance.vm_state == vm_states.SHELVED_OFFLOADED:
+                        sysmeta = getattr(instance,
+                                          obj_base.get_attrname(
+                                              'system_metadata'))
+                        instance.host = sysmeta.get('shelved_host')
+                    self.network_api.deallocate_for_instance(elevated,
+                                                             instance)
+                finally:
+                    instance.host = orig_host
 
-        # cleanup volumes
-        self._local_cleanup_bdm_volumes(bdms, instance, context)
-        cb(context, instance, bdms, local=True)
-        sys_meta = instance.system_metadata
-        instance.destroy()
-        compute_utils.notify_about_instance_usage(
-            self.notifier, context, instance, "%s.end" % delete_type,
-            system_metadata=sys_meta)
+            # cleanup volumes
+            self._local_cleanup_bdm_volumes(bdms, instance, context)
+            cb(context, instance, bdms, local=True)
+            instance.destroy()
 
     def _do_delete(self, context, instance, bdms, local=False):
         if local:

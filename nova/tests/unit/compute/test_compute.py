@@ -4413,6 +4413,8 @@ class ComputeTestCase(BaseTestCase,
                       _get_an_exception)
         self.stub_out('nova.compute.manager.ComputeManager.'
                        '_notify_about_instance_usage', _get_an_exception)
+        self.stub_out('nova.compute.utils.'
+                       'notify_about_instance_delete', _get_an_exception)
 
         func = getattr(self.compute, operation)
 
