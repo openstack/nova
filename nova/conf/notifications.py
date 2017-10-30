@@ -32,17 +32,22 @@ ALL_OPTS = [
         choices=(None, 'vm_state', 'vm_and_task_state'),
         deprecated_group='DEFAULT',
         help="""
-If set, send compute.instance.update notifications on instance state
-changes.
+If set, send compute.instance.update notifications on
+instance state changes.
 
-Please refer to https://wiki.openstack.org/wiki/SystemUsageData for
+Please refer to
+https://docs.openstack.org/nova/latest/reference/notifications.html for
 additional information on notifications.
 
 Possible values:
 
 * None - no notifications
-* "vm_state" - notifications on VM state changes
-* "vm_and_task_state" - notifications on VM and task state changes
+* "vm_state" - notifications are sent with VM state transition information in
+  the ``old_state`` and ``state`` fields. The ``old_task_state`` and
+  ``new_task_state`` fields will be set to the current task_state of the
+  instance.
+* "vm_and_task_state" - notifications are sent with VM and task state
+  transition information.
 """),
 
     cfg.BoolOpt(
