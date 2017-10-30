@@ -4436,7 +4436,19 @@ os-stop:
 os:scheduler_hints:
   description: |
     The dictionary of data to send to the scheduler. Alternatively, you can specify
-    ``OS-SCH-HNT:scheduler_hints`` as the string.
+    ``OS-SCH-HNT:scheduler_hints`` as the key in the request body.
+
+    There are a few caveats with scheduler hints:
+
+    * The request validation schema is per hint. For example, some require a
+      single string value, and some accept a list of values.
+    * Hints are only used based on the cloud scheduler configuration, which
+      varies per deployment.
+    * Hints are pluggable per deployment, meaning that a cloud can have custom
+      hints which may not be available in another cloud.
+
+    For these reasons, it is important to consult each cloud's user
+    documentation to know what is available for scheduler hints.
   in: body
   required: false
   type: object
