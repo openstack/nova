@@ -22,6 +22,7 @@ import sys
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
+from six.moves.urllib import parse
 
 from nova.api.openstack.placement import lib as placement_lib
 from nova.compute import flavors
@@ -56,6 +57,8 @@ class ResourceRequest(object):
     def __init__(self):
         # { ident: RequestGroup }
         self._rg_by_id = {}
+        self._group_policy = None
+        self._limit = CONF.scheduler.max_placement_results
 
     def __str__(self):
         return ', '.join(sorted(
@@ -84,7 +87,7 @@ class ResourceRequest(object):
             LOG.warning(
                 "Resource amounts must be nonnegative integers. Received "
                 "'%(val)s' for key resources%(groupid)s.",
-                {"groupid": groupid, "val": amount})
+                {"groupid": groupid or '', "val": amount})
             return
         self.get_request_group(groupid).resources[rclass] = amount
 
@@ -100,9 +103,18 @@ class ResourceRequest(object):
             LOG.warning(
                 "Only (%(tvals)s) traits are supported. Received '%(val)s' "
                 "for key trait%(groupid)s.",
-                {"tvals": ', '.join(trait_vals), "groupid": groupid,
+                {"tvals": ', '.join(trait_vals), "groupid": groupid or '',
                  "val": trait_type})
         return
+
+    def _add_group_policy(self, policy):
+        # The only valid values for group_policy are 'none' and 'isolate'.
+        if policy not in ('none', 'isolate'):
+            LOG.warning(
+                "Invalid group_policy '%s'. Valid values are 'none' and "
+                "'isolate'.", policy)
+            return
+        self._group_policy = policy
 
     @classmethod
     def from_extra_specs(cls, extra_specs, req=None):
@@ -114,18 +126,27 @@ class ResourceRequest(object):
             "trait:$TRAIT_NAME": "required"
             "trait$N:$TRAIT_NAME": "required"
 
+        Does *not* yet handle member_of[$N].
+
         :param extra_specs: The flavor extra_specs dict.
         :param req: the ResourceRequest object to add the requirements to or
                None to create a new ResourceRequest
         :return: A ResourceRequest object representing the resources and
                  required traits in the extra_specs.
         """
+        # TODO(efried): Handle member_of[$N], which will need to be reconciled
+        # with destination.aggregates handling in resources_from_request_spec
+
         if req is not None:
             ret = req
         else:
             ret = cls()
 
         for key, val in extra_specs.items():
+            if key == 'group_policy':
+                ret._add_group_policy(val)
+                continue
+
             match = cls.XS_KEYPAT.match(key)
             if not match:
                 continue
@@ -216,6 +237,51 @@ class ResourceRequest(object):
                 if resource_dict[rclass] == 0:
                     resource_dict.pop(rclass)
         self._clean_empties()
+
+    def to_querystring(self):
+        """Produce a querystring of the form expected by
+        GET /allocation_candidates.
+        """
+        # NOTE(efried): The sorting herein is not necessary for the API; it is
+        # to make testing easier and logging/debugging predictable.
+        def to_queryparams(request_group, suffix):
+            res = request_group.resources
+            required_traits = request_group.required_traits
+            forbidden_traits = request_group.forbidden_traits
+            aggregates = request_group.member_of
+
+            resource_query = ",".join(
+                sorted("%s:%s" % (rc, amount)
+                       for (rc, amount) in res.items()))
+            qs_params = [('resources%s' % suffix, resource_query)]
+
+            # Assemble required and forbidden traits, allowing for either/both
+            # to be empty.
+            required_val = ','.join(
+                sorted(required_traits) +
+                ['!%s' % ft for ft in sorted(forbidden_traits)])
+            if required_val:
+                qs_params.append(('required%s' % suffix, required_val))
+            if aggregates:
+                aggs = []
+                # member_ofN is a list of lists.  We need a tuple of
+                # ('member_ofN', 'in:uuid,uuid,...') for each inner list.
+                for agglist in aggregates:
+                    aggs.append(('member_of%s' % suffix,
+                                 'in:' + ','.join(sorted(agglist))))
+                qs_params.extend(sorted(aggs))
+            return qs_params
+
+        qparams = [('limit', self._limit)]
+        if self._group_policy is not None:
+            qparams.append(('group_policy', self._group_policy))
+        for ident, rg in self._rg_by_id.items():
+            # [('resourcesN', 'rclass:amount,rclass:amount,...'),
+            #  ('requiredN', 'trait_name,!trait_name,...'),
+            #  ('member_ofN', 'in:uuid,uuid,...'),
+            #  ('member_ofN', 'in:uuid,uuid,...')]
+            qparams.extend(to_queryparams(rg, ident or ''))
+        return parse.urlencode(sorted(qparams))
 
 
 def build_request_spec(image, instances, instance_type=None):
