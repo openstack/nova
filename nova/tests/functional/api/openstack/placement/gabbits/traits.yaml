@@ -5,7 +5,7 @@ fixtures:
 defaults:
     request_headers:
         x-auth-token: admin
-        OpenStack-API-Version: placement latest
+        openstack-api-version: placement latest
 
 tests:
 

@@ -7,7 +7,7 @@ defaults:
         x-auth-token: admin
         content-type: application/json
         accept: application/json
-        OpenStack-API-Version: placement latest
+        openstack-api-version: placement latest
 
 tests:
 
@@ -41,7 +41,7 @@ tests:
 - name: list resource providers providing resources filter before API 1.4
   GET: /resource_providers?resources=VCPU:1
   request_headers:
-      OpenStack-API-Version: placement 1.3
+      openstack-api-version: placement 1.3
   status: 400
   response_strings:
       - 'Invalid query string parameters'

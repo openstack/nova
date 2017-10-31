@@ -14,7 +14,7 @@ defaults:
         x-auth-token: admin
         content-type: application/json
         accept: application/json
-        OpenStack-API-Version: placement latest
+        openstack-api-version: placement latest
 
 tests:
 

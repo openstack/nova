@@ -5,14 +5,14 @@ defaults:
     request_headers:
         x-auth-token: admin
         accept: application/json
-        OpenStack-API-Version: placement latest
+        openstack-api-version: placement latest
 
 tests:
 
 - name: test microversion masks entire resource-classes endpoint with 404
   GET: /resource_classes
   request_headers:
-    OpenStack-API-Version: placement 1.1
+    openstack-api-version: placement 1.1
     content-type: application/json
   status: 404
   response_json_paths:
@@ -22,7 +22,7 @@ tests:
   desc: we want to get a 404 before a 415
   POST: /resource_classes
   request_headers:
-    OpenStack-API-Version: placement 1.1
+    openstack-api-version: placement 1.1
     content-type: text/plain
   data: data
   status: 404
@@ -31,7 +31,7 @@ tests:
   desc: we want to get a 415 when bad content type
   POST: /resource_classes
   request_headers:
-    OpenStack-API-Version: placement 1.2
+    openstack-api-version: placement 1.2
     content-type: text/plain
   data: data
   status: 415
@@ -125,7 +125,7 @@ tests:
   PUT: /resource_classes/VCPU
   request_headers:
     content-type: application/json
-    OpenStack-API-Version: placement 1.6
+    openstack-api-version: placement 1.6
   data:
       name: VCPU_ALTERNATE
   status: 400
@@ -139,7 +139,7 @@ tests:
   PUT: /resource_classes/VCPU
   request_headers:
     content-type: application/json
-    OpenStack-API-Version: placement 1.6
+    openstack-api-version: placement 1.6
   data:
       name: $ENVIRON['CUSTOM_RES_CLASS']
   status: 400
@@ -152,7 +152,7 @@ tests:
   PUT: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
   request_headers:
     content-type: application/json
-    OpenStack-API-Version: placement 1.6
+    openstack-api-version: placement 1.6
   data:
       name: VCPU
   status: 400
@@ -173,7 +173,7 @@ tests:
   PUT: /resource_classes/CUSTOM_NFV_FOO
   request_headers:
     content-type: application/json
-    OpenStack-API-Version: placement 1.6
+    openstack-api-version: placement 1.6
   data:
       name: $ENVIRON['CUSTOM_RES_CLASS']
   status: 409
@@ -187,7 +187,7 @@ tests:
   PUT: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
   request_headers:
     content-type: application/json
-    OpenStack-API-Version: placement 1.6
+    openstack-api-version: placement 1.6
   data:
       name: CUSTOM_NFV_BAR
   status: 200
@@ -252,7 +252,7 @@ tests:
   PUT: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
   request_headers:
       content-type: application/json
-      OpenStack-API-Version: placement 1.6
+      openstack-api-version: placement 1.6
   data:
       name: *name_exceeds_max_length_check
   status: 400
