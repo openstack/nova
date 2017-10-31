@@ -17,6 +17,7 @@
 import collections
 
 import mock
+from oslo_utils import units
 from oslo_utils import uuidutils
 from oslo_vmware import exceptions as vexc
 from oslo_vmware.objects import datastore as ds_obj
@@ -68,21 +69,32 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         hardware.numCpuThreads = 16
         hardware.vendor = "Intel"
         hardware.cpuModel = "Intel(R) Xeon(R)"
+        hardware.memorySize = 4 * units.Gi
 
         runtime_host_1 = fake.DataObject()
         runtime_host_1.connectionState = "connected"
         runtime_host_1.inMaintenanceMode = False
 
+        quickstats_1 = fake.DataObject()
+        quickstats_1.overallMemoryUsage = 512
+
+        quickstats_2 = fake.DataObject()
+        quickstats_2.overallMemoryUsage = 512
+
         runtime_host_2 = fake.DataObject()
         runtime_host_2.connectionState = connection_state
         runtime_host_2.inMaintenanceMode = maintenance_mode
 
-        prop_list_host_1 = [fake.Prop(name="hardware_summary", val=hardware),
-                            fake.Prop(name="runtime_summary",
-                                      val=runtime_host_1)]
-        prop_list_host_2 = [fake.Prop(name="hardware_summary", val=hardware),
-                            fake.Prop(name="runtime_summary",
-                                      val=runtime_host_2)]
+        prop_list_host_1 = [fake.Prop(name="summary.hardware", val=hardware),
+                            fake.Prop(name="summary.runtime",
+                                      val=runtime_host_1),
+                            fake.Prop(name="summary.quickStats",
+                                      val=quickstats_1)]
+        prop_list_host_2 = [fake.Prop(name="summary.hardware", val=hardware),
+                            fake.Prop(name="summary.runtime",
+                                      val=runtime_host_2),
+                            fake.Prop(name="summary.quickStats",
+                                      val=quickstats_2)]
 
         fake_objects = fake.FakeRetrieveResult()
         fake_objects.add_object(fake.ObjectContent("prop_list_host1",
@@ -90,29 +102,25 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         fake_objects.add_object(fake.ObjectContent("prop_list_host1",
                                                    prop_list_host_2))
 
-        respool_resource_usage = fake.DataObject()
-        respool_resource_usage.maxUsage = 5368709120
-        respool_resource_usage.overallUsage = 2147483648
-
         def fake_call_method(*args):
             if "get_object_properties_dict" in args:
                 return prop_dict
             elif "get_properties_for_a_collection_of_objects" in args:
                 return fake_objects
             else:
-                return respool_resource_usage
+                raise Exception('unexpected method call')
 
         session = fake.FakeSession()
         with mock.patch.object(session, '_call_method', fake_call_method):
             result = vm_util.get_stats_from_cluster(session, "cluster1")
-            mem_info = {}
             if connection_state == "connected" and not maintenance_mode:
-                vcpus = 32
+                num_hosts = 2
             else:
-                vcpus = 16
-            mem_info['total'] = 5120
-            mem_info['free'] = 3072
-            expected_stats = {'vcpus': vcpus, 'mem': mem_info}
+                num_hosts = 1
+            expected_stats = {'vcpus': num_hosts * 16,
+                              'mem': {'total': num_hosts * 4096,
+                                      'free': num_hosts * 4096 -
+                                              num_hosts * 512}}
             self.assertEqual(expected_stats, result)
 
     def test_get_stats_from_cluster_hosts_connected_and_active(self):

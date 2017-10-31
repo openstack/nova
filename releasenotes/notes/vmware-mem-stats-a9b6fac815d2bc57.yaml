@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    Fixes how memory stats are reported for VMware. The total memory for the
+    vCenter cluster managed by Nova should be the aggregated sum of total
+    memory of each ESX host in the cluster. This is more accurate than using
+    the available memory of the resource pool associated to the cluster.
