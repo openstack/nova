@@ -94,6 +94,33 @@ def safe_connect(f):
     return wrapper
 
 
+class Retry(Exception):
+    def __init__(self, operation, reason):
+        self.operation = operation
+        self.reason = reason
+
+
+def retries(f):
+    """Decorator to retry a call three times if it raises Retry
+
+    Note that this returns the actual value of the inner call on success
+    or returns False if all the retries fail.
+    """
+    @functools.wraps(f)
+    def wrapper(self, *a, **k):
+        for retry in range(0, 3):
+            try:
+                return f(self, *a, **k)
+            except Retry as e:
+                LOG.debug(
+                    'Unable to %(op)s because %(reason)s; retrying...',
+                    {'op': e.operation, 'reason': e.reason})
+        LOG.error('Failed scheduler client operation %s: out of retries',
+                  f.__name__)
+        return False
+    return wrapper
+
+
 def _compute_node_to_inventory_dict(compute_node):
     """Given a supplied `objects.ComputeNode` object, return a dict, keyed
     by resource class, of various inventory information.
@@ -1125,6 +1152,7 @@ class SchedulerReportClient(object):
         return r.status_code == 204
 
     @safe_connect
+    @retries
     def put_allocations(self, rp_uuid, consumer_uuid, alloc_data, project_id,
                         user_id):
         """Creates allocation records for the supplied instance UUID against
@@ -1141,6 +1169,8 @@ class SchedulerReportClient(object):
         :param project_id: The project_id associated with the allocations.
         :param user_id: The user_id associated with the allocations.
         :returns: True if the allocations were created, False otherwise.
+        :raises: Retry if the operation should be retried due to a concurrent
+                 update.
         """
         payload = {
             'allocations': [
@@ -1164,12 +1194,20 @@ class SchedulerReportClient(object):
             payload.pop('user_id')
             r = self.put(url, payload)
         if r.status_code != 204:
-            LOG.warning(
-                'Unable to submit allocation for instance '
+            # NOTE(jaypipes): Yes, it sucks doing string comparison like this
+            # but we have no error codes, only error messages.
+            if 'concurrently updated' in r.text:
+                reason = ('another process changed the resource providers '
+                          'involved in our attempt to put allocations for '
+                          'consumer %s' % consumer_uuid)
+                raise Retry('put_allocations', reason)
+            else:
+                LOG.warning(
+                    'Unable to submit allocation for instance '
                     '%(uuid)s (%(code)i %(text)s)',
-                {'uuid': consumer_uuid,
-                 'code': r.status_code,
-                 'text': r.text})
+                    {'uuid': consumer_uuid,
+                     'code': r.status_code,
+                     'text': r.text})
         return r.status_code == 204
 
     @safe_connect
