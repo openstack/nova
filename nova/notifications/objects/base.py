@@ -52,7 +52,8 @@ class EventType(NotificationObject):
     #              NotificationActionField enum
     # Version 1.7: REMOVE_FIXED_IP replaced with INTERFACE_DETACH in
     #              NotificationActionField enum
-    VERSION = '1.7'
+    # Version 1.8: IMPORT value is added to NotificationActionField enum
+    VERSION = '1.8'
 
     fields = {
         'object': fields.StringField(nullable=False),
