@@ -12,6 +12,8 @@
 
 import collections
 import copy
+import itertools
+
 # NOTE(cdent): The resource provider objects are designed to never be
 # used over RPC. Remote manipulation is done with the placement HTTP
 # API. The 'remotable' decorators should not be used, the objects should
@@ -2621,6 +2623,176 @@ def _allocation_request_for_provider(ctx, requested_resources, rp_uuid):
     return AllocationRequest(ctx, resource_requests=resource_requests)
 
 
+def _alloc_candidates_no_shared(ctx, requested_resources, rp_ids):
+    """Returns a tuple of (allocation requests, provider summaries) for a
+    supplied set of requested resource amounts and resource providers. The
+    supplied resource providers have capacity to satisfy ALL of the resources
+    in the requested resources.
+
+    This is an optimized code path for the common scenario when no sharing
+    providers exist in the system for any requested resource. In this scenario,
+    we can more efficiently build the list of AllocationRequest and
+    ProviderSummary objects due to not having to determine requests for some
+    shared and some non-shared resources.
+
+    :param ctx: nova.context.Context object
+    :param requested_resources: dict, keyed by resource class ID, of amounts
+                                being requested for that resource class
+    :param rp_ids: List of resource provider IDs for providers that matched the
+                   requested resources
+    """
+    if not rp_ids:
+        return [], []
+    # Grab usage summaries for each provider and resource class requested
+    requested_rc_ids = list(requested_resources)
+    usages = _get_usages_by_provider_and_rc(ctx, rp_ids, requested_rc_ids)
+
+    # Get a dict, keyed by resource provider internal ID, of ProviderSummary
+    # objects for all providers
+    summaries = _build_provider_summaries(ctx, usages)
+
+    # Next, build up a list of allocation requests. These allocation requests
+    # are AllocationRequest objects, containing resource provider UUIDs,
+    # resource class names and amounts to consume from that resource provider
+    alloc_requests = []
+    for rp_id in rp_ids:
+        rp_summary = summaries[rp_id]
+        rp_uuid = rp_summary.resource_provider.uuid
+        req_obj = _allocation_request_for_provider(ctx, requested_resources,
+                                                   rp_uuid)
+        alloc_requests.append(req_obj)
+    return alloc_requests, list(summaries.values())
+
+
+def _alloc_candidates_with_shared(ctx, requested_resources, ns_rp_ids,
+                                  sharing):
+    """Returns a tuple of (allocation requests, provider summaries) for a
+    supplied set of requested resource amounts and resource providers.
+
+    The allocation requests will contain resource providers that EITHER have
+    all the resources to satisfy each requested resource amount OR can satisfy
+    some of the requested resources AND are associated by aggregate to a
+    resource provider that shares the missing resources with it.
+
+    :param ctx: nova.context.Context object
+    :param requested_resources: dict, keyed by resource class ID, of amounts
+                                being requested for that resource class
+    :param ns_rp_ids: List of resource provider IDs for providers that EITHER
+                      match all of the requested resources or are associated
+                      with sharing providers that can satisfy missing requested
+                      resources. In other words, this is the list of resource
+                      provider IDs for all providers that are NOT sharing a
+                      resource.
+    :param sharing: dict, keyed by resource class ID, of a set of resource
+                    provider IDs that share that resource class
+    """
+    # We need to grab usage information for all the providers identified as
+    # potentially fulfilling part of the resource request. This includes
+    # non-sharing providers returned from the call to _get_all_with_shared() as
+    # well as all the providers of shared resources. Here, we simply grab a
+    # unique set of all those resource provider internal IDs by set union'ing
+    # them together
+    all_rp_ids = set(ns_rp_ids)
+    for rps in sharing.values():
+        all_rp_ids |= set(rps)
+
+    # Short out if no providers have been found at this point.
+    if not all_rp_ids:
+        return [], []
+
+    # Grab usage summaries for each provider (local or sharing) and resource
+    # class requested
+    requested_rc_ids = list(requested_resources)
+    usages = _get_usages_by_provider_and_rc(ctx, all_rp_ids, requested_rc_ids)
+
+    # Get a dict, keyed by resource provider internal ID, of ProviderSummary
+    # objects for all providers involved in the request
+    summaries = _build_provider_summaries(ctx, usages)
+
+    # Next, build up a list of allocation requests. These allocation requests
+    # are AllocationRequest objects, containing resource provider UUIDs,
+    # resource class names and amounts to consume from that resource provider
+    alloc_requests = []
+
+    # Build a dict, keyed by resource class ID, of AllocationRequestResource
+    # objects that represent each resource provider for a shared resource
+    sharing_resource_requests = _shared_allocation_request_resources(
+        ctx, requested_resources, sharing, summaries)
+
+    for ns_rp_id in ns_rp_ids:
+        if ns_rp_id not in summaries:
+            # This resource provider is not providing any resources that have
+            # been requested. This means that this resource provider has some
+            # requested resources shared *with* it but the allocation of the
+            # requested resource will not be made against it. Since this
+            # provider won't actually have an allocation request written for
+            # it, we just ignore it and continue
+            continue
+        # NOTE(jaypipes): The "ns_" prefix for variables in this code block
+        # indicates the variable is something related to the non-sharing
+        # provider involved in the request
+        ns_rp_summary = summaries[ns_rp_id]
+        ns_rp_uuid = ns_rp_summary.resource_provider.uuid
+        ns_resources = set(
+            rc_id for rc_id in requested_resources
+            if _RC_CACHE.string_from_id(rc_id) in [
+                res.resource_class for res in ns_rp_summary.resources
+            ]
+        )
+        shared_resources = set(
+            rc_id for rc_id in requested_resources
+            if _RC_CACHE.string_from_id(rc_id) not in [
+                res.resource_class for res in ns_rp_summary.resources
+            ]
+        )
+        # Determine if the non-sharing provider actually has all the
+        # resources requested. If not, we need to add an AllocationRequest
+        # alternative containing this resource for each sharing provider.
+        # NOTE(jaypipes): If a provider has inventory for a resource class and
+        # ALSO has that resource class shared with it, we currently ALWAYS take
+        # the non-shared inventory.
+        # See: https://bugs.launchpad.net/nova/+bug/1724613
+        has_all = len(shared_resources) == 0
+        if has_all:
+            req = _allocation_request_for_provider(ctx, requested_resources,
+                                                   ns_rp_uuid)
+            alloc_requests.append(req)
+            continue
+
+        has_none = len(ns_resources) == 0
+        if has_none:
+            # This resource provider doesn't actually provide any requested
+            # resource. It only has requested resources shared *with* it.
+            # We do not list this provider in allocation_requests but do
+            # list it in provider_summaries.
+            continue
+
+        # Add an AllocationRequest that includes resources from the
+        # non-sharing provider AND shared resources from each sharing
+        # provider of that resource class. This is where we construct all the
+        # possible permutations of non-shared resources and shared resources.
+        ns_res_requests = [
+            AllocationRequestResource(
+                ctx, resource_provider=ResourceProvider(ctx, uuid=ns_rp_uuid),
+                resource_class=_RC_CACHE.string_from_id(rc_id),
+                amount=amount,
+            ) for rc_id, amount in requested_resources.items()
+            if rc_id in ns_resources
+        ]
+        # A list of lists of AllocationRequestResource objects for each type of
+        # shared resource class
+        shared_request_groups = [
+            sharing_resource_requests[shared_rc_id]
+            for shared_rc_id in shared_resources
+        ]
+        for shared_res_requests in itertools.product(*shared_request_groups):
+            resource_requests = ns_res_requests + list(shared_res_requests)
+            req = AllocationRequest(ctx, resource_requests=resource_requests)
+            alloc_requests.append(req)
+
+    return alloc_requests, list(summaries.values())
+
+
 @base.NovaObjectRegistry.register_if(False)
 class AllocationCandidates(base.NovaObject):
     """The AllocationCandidates object is a collection of possible allocations
@@ -2657,8 +2829,6 @@ class AllocationCandidates(base.NovaObject):
             provider_summaries=provider_summaries,
         )
 
-    # TODO(jaypipes): See what we can pull out of here into helper functions to
-    # minimize the complexity of this method.
     @staticmethod
     @db_api.api_context_manager.reader
     def _get_by_requests(context, requests):
@@ -2698,143 +2868,19 @@ class AllocationCandidates(base.NovaObject):
         if not have_sharing:
             # We know there's no sharing providers, so we can more efficiently
             # get a list of resource provider IDs that have ALL the requested
-            # resources.
+            # resources and more efficiently construct the allocation requests
             # NOTE(jaypipes): When we start handling nested providers, we may
             # add new code paths or modify this code path to return root
             # provider IDs of provider trees instead of the resource provider
             # IDs.
-            non_sharing_rp_ids = _get_provider_ids_matching_all(
-                context, resources)
-        else:
-            # We get the list of resource providers that either have the
-            # requested resources or are associated with the providers that
-            # share one or more of the requested resource(s)
-            non_sharing_rp_ids = [r[0] for r in _get_all_with_shared(
-                context, resources)]
+            rp_ids = _get_provider_ids_matching_all(context, resources)
+            return _alloc_candidates_no_shared(context, resources, rp_ids)
 
-        # non_sharing_rp_ids contains a list of resource provider IDs that
-        # EITHER have all the requested resources themselves OR have some
-        # resources and are related to a provider that is sharing some
-        # resources with it. In other words, this is the list of resource
-        # provider IDs that are NOT sharing resources.
-
-        # We need to grab usage information for all the providers identified as
-        # potentially fulfilling part of the resource request. This includes
-        # non-sharing providers returned from the above call to either
-        # _get_all_with_shared() or _get_provider_ids_matching_all() as well as
-        # all the providers of shared resources. Here, we simply grab a unique
-        # set of all those resource provider internal IDs by set union'ing them
-        # together
-        all_rp_ids = set(non_sharing_rp_ids)
-        for rps in sharing_providers.values():
-            all_rp_ids |= set(rps)
-
-        # Short out if no providers have been found at this point.
-        if not all_rp_ids:
-            return [], []
-
-        # Grab usage summaries for each provider (local or sharing) and
-        # resource class requested
-        usages = _get_usages_by_provider_and_rc(
-            context,
-            all_rp_ids,
-            list(resources.keys()),
-        )
-
-        # Get a dict, keyed by resource provider internal ID, of
-        # ProviderSummary objects for all providers involved in the request
-        summaries = _build_provider_summaries(context, usages)
-
-        # Next, build up a list of allocation requests. These allocation
-        # requests are AllocationRequest objects, containing resource provider
-        # UUIDs, resource class names and amounts to consume from that resource
-        # provider
-        alloc_request_objs = []
-
-        # Build a dict, keyed by resource class ID, of
-        # AllocationRequestResource objects that represent each resource
-        # provider for a shared resource
-        sharing_resource_requests = _shared_allocation_request_resources(
-            context, resources, sharing_providers, summaries)
-
-        for rp_id in non_sharing_rp_ids:
-            if rp_id not in summaries:
-                # This resource provider is not providing any resources that
-                # have been requested. This means that this resource provider
-                # has some requested resources shared *with* it but the
-                # allocation of the requested resource will not be made against
-                # it. Since this provider won't actually have an allocation
-                # request written for it, we just ignore it and continue
-                continue
-            rp_summary = summaries[rp_id]
-            rp_uuid = rp_summary.resource_provider.uuid
-            local_resources = set(
-                rc_id for rc_id in resources.keys()
-                if _RC_CACHE.string_from_id(rc_id) in [
-                    res.resource_class for res in rp_summary.resources
-                ]
-            )
-            shared_resources = set(
-                rc_id for rc_id in resources.keys()
-                if _RC_CACHE.string_from_id(rc_id) not in [
-                    res.resource_class for res in rp_summary.resources
-                ]
-            )
-            # Determine if the root provider actually has all the resources
-            # requested. If not, we need to add an AllocationRequest
-            # alternative containing this resource for each sharing provider
-            has_all = len(shared_resources) == 0
-            if has_all:
-                req_obj = _allocation_request_for_provider(context, resources,
-                                                           rp_uuid)
-                alloc_request_objs.append(req_obj)
-                continue
-
-            has_none = len(local_resources) == 0
-            if has_none:
-                # This resource provider doesn't actually provide any requested
-                # resource. It only has requested resources shared *with* it.
-                # We do not list this provider in allocation_requests but do
-                # list it in provider_summaries.
-                continue
-
-            # If there are no resource providers sharing resources involved in
-            # this request, there's no point building a set of allocation
-            # requests that involve resource providers other than the "root
-            # providers" that have all the local resources on them
-            if not sharing_resource_requests:
-                continue
-
-            # add an AllocationRequest that includes local resources from the
-            # root provider and shared resources from each sharing provider of
-            # that resource class
-            non_shared_resources = local_resources - shared_resources
-            non_shared_requests = [
-                AllocationRequestResource(
-                    context,
-                    resource_provider=ResourceProvider(
-                        context,
-                        uuid=rp_uuid,
-                    ),
-                    resource_class=_RC_CACHE.string_from_id(rc_id),
-                    amount=amount,
-                ) for rc_id, amount in resources.items()
-                if rc_id in non_shared_resources
-            ]
-            sharing_request_tuples = zip(
-                sharing_resource_requests[shared_rc_id]
-                for shared_rc_id in shared_resources
-            )
-            # sharing_request_tuples will now contain a list of tuples with the
-            # tuples being AllocationRequestResource objects for each provider
-            # of a shared resource
-            for shared_request_tuple in sharing_request_tuples:
-                shared_requests = list(*shared_request_tuple)
-                resource_requests = non_shared_requests + shared_requests
-                req_obj = AllocationRequest(
-                    context,
-                    resource_requests=resource_requests,
-                )
-                alloc_request_objs.append(req_obj)
-
-        return alloc_request_objs, list(summaries.values())
+        # rp_ids contains a list of resource provider IDs that EITHER have all
+        # the requested resources themselves OR have some resources and are
+        # related to a provider that is sharing some resources with it. In
+        # other words, this is the list of resource provider IDs that are NOT
+        # sharing resources.
+        rp_ids = [r[0] for r in _get_all_with_shared(context, resources)]
+        return _alloc_candidates_with_shared(context, resources, rp_ids,
+                                             sharing_providers)

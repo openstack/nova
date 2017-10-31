@@ -725,30 +725,14 @@ class AllocationCandidatesTestCase(ProviderDBHelperTestCase):
             )]
         )
 
-        # TODO(efried): Bug https://bugs.launchpad.net/nova/+bug/1730730
         # We expect two candidates: one that gets all the resources from ss1;
         # and one that gets the DISK_GB from ss2 and the rest from ss1:
-        # expected = [
-        #     [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
-        #      ('ss1', fields.ResourceClass.SRIOV_NET_VF, 1),
-        #      ('ss1', fields.ResourceClass.DISK_GB, 1500)],
-        #     [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
-        #      ('ss1', fields.ResourceClass.SRIOV_NET_VF, 1),
-        #      ('ss2', fields.ResourceClass.DISK_GB, 1500)],
-        # ]
-        # But here's what we're actually seeing:
-        # One with all the resources coming from ss1
         expected = [
             [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
              ('ss1', fields.ResourceClass.SRIOV_NET_VF, 1),
              ('ss1', fields.ResourceClass.DISK_GB, 1500)],
-        # One with the DISK_GB coming from ss2 and IPV4_ADDRESS coming from ss1
             [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
+             ('ss1', fields.ResourceClass.SRIOV_NET_VF, 1),
              ('ss2', fields.ResourceClass.DISK_GB, 1500)],
-        # One with the DISK_GB coming from ss2 and SRIOV_NET_VF coming from ss1
-            [('ss1', fields.ResourceClass.SRIOV_NET_VF, 1),
-             ('ss2', fields.ResourceClass.DISK_GB, 1500)],
-        # Of special brokenness are those last two, which don't even have all
-        # of the requested resources:
         ]
         self._validate_allocation_requests(expected, alloc_cands)
