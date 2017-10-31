@@ -9,6 +9,8 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+from oslo_utils import uuidutils
+
 from nova.api.openstack.placement import lib as placement_lib
 from nova import context
 from nova import exception
@@ -39,6 +41,17 @@ def _set_traits(rp, *traits):
     rp.set_traits(rp_obj.TraitList(objects=tlist))
 
 
+def _allocate_from_provider(rp, rc, used):
+    # NOTE(efried): Always use a random consumer UUID - we don't want to
+    # override any existing allocations from the test case.
+    rp_obj.AllocationList(
+        rp._context, objects=[
+            rp_obj.Allocation(
+                rp._context, resource_provider=rp, resource_class=rc,
+                consumer_id=uuidutils.generate_uuid(), used=used)]
+    ).create_all()
+
+
 def _provider_uuids_from_iterable(objs):
     """Return the set of resource_provider.uuid from an iterable.
 
@@ -61,7 +74,174 @@ def _find_summary_for_resource(p_sum, rc_name):
             return resource
 
 
-class AllocationCandidatesTestCase(test.NoDBTestCase):
+class ProviderDBHelperTestCase(test.NoDBTestCase):
+
+    USES_DB_SELF = True
+
+    def setUp(self):
+        super(ProviderDBHelperTestCase, self).setUp()
+        self.useFixture(fixtures.Database())
+        self.api_db = self.useFixture(fixtures.Database(database='api'))
+        self.ctx = context.RequestContext('fake-user', 'fake-project')
+        self.requested_resources = {
+            fields.ResourceClass.VCPU: 1,
+            fields.ResourceClass.MEMORY_MB: 64,
+            fields.ResourceClass.DISK_GB: 1500,
+        }
+        # For debugging purposes, populated by _create_provider and used by
+        # _validate_allocation_requests to make failure results more readable.
+        self.rp_uuid_to_name = {}
+
+    def _create_provider(self, name, *aggs):
+        rp = rp_obj.ResourceProvider(self.ctx, name=name,
+                                     uuid=getattr(uuids, name))
+        rp.create()
+        if aggs:
+            rp.set_aggregates(aggs)
+        self.rp_uuid_to_name[rp.uuid] = name
+        return rp
+
+    def test_get_provider_ids_matching_all(self):
+        # These RPs are named based on whether we expect them to be 'incl'uded
+        # or 'excl'uded in the result.
+
+        # No inventory records.  This one should never show up in a result.
+        self._create_provider('no_inventory')
+
+        # Inventory of adequate CPU and memory, no allocations against it.
+        excl_big_cm_noalloc = self._create_provider('big_cm_noalloc')
+        _add_inventory(excl_big_cm_noalloc, fields.ResourceClass.VCPU, 15)
+        _add_inventory(excl_big_cm_noalloc, fields.ResourceClass.MEMORY_MB,
+                       4096, max_unit=2048)
+
+        # Adequate inventory, no allocations against it.
+        incl_biginv_noalloc = self._create_provider('biginv_noalloc')
+        _add_inventory(incl_biginv_noalloc, fields.ResourceClass.VCPU, 15)
+        _add_inventory(incl_biginv_noalloc, fields.ResourceClass.MEMORY_MB,
+                       4096, max_unit=2048)
+        _add_inventory(incl_biginv_noalloc, fields.ResourceClass.DISK_GB, 2000)
+
+        # No allocations, but inventory unusable.  Try to hit all the possible
+        # reasons for exclusion.
+        # VCPU min_unit too high
+        excl_badinv_min_unit = self._create_provider('badinv_min_unit')
+        _add_inventory(excl_badinv_min_unit, fields.ResourceClass.VCPU, 12,
+                       min_unit=6)
+        _add_inventory(excl_badinv_min_unit, fields.ResourceClass.MEMORY_MB,
+                       4096, max_unit=2048)
+        _add_inventory(excl_badinv_min_unit, fields.ResourceClass.DISK_GB,
+                       2000)
+        # MEMORY_MB max_unit too low
+        excl_badinv_max_unit = self._create_provider('badinv_max_unit')
+        _add_inventory(excl_badinv_max_unit, fields.ResourceClass.VCPU, 15)
+        _add_inventory(excl_badinv_max_unit, fields.ResourceClass.MEMORY_MB,
+                       4096, max_unit=512)
+        _add_inventory(excl_badinv_max_unit, fields.ResourceClass.DISK_GB,
+                       2000)
+        # DISK_GB unsuitable step_size
+        excl_badinv_step_size = self._create_provider('badinv_step_size')
+        _add_inventory(excl_badinv_step_size, fields.ResourceClass.VCPU, 15)
+        _add_inventory(excl_badinv_step_size, fields.ResourceClass.MEMORY_MB,
+                       4096, max_unit=2048)
+        _add_inventory(excl_badinv_step_size, fields.ResourceClass.DISK_GB,
+                       2000, step_size=7)
+        # Not enough total VCPU
+        excl_badinv_total = self._create_provider('badinv_total')
+        _add_inventory(excl_badinv_total, fields.ResourceClass.VCPU, 4)
+        _add_inventory(excl_badinv_total, fields.ResourceClass.MEMORY_MB,
+                       4096, max_unit=2048)
+        _add_inventory(excl_badinv_total, fields.ResourceClass.DISK_GB, 2000)
+        # Too much reserved MEMORY_MB
+        excl_badinv_reserved = self._create_provider('badinv_reserved')
+        _add_inventory(excl_badinv_reserved, fields.ResourceClass.VCPU, 15)
+        _add_inventory(excl_badinv_reserved, fields.ResourceClass.MEMORY_MB,
+                       4096, max_unit=2048, reserved=3500)
+        _add_inventory(excl_badinv_reserved, fields.ResourceClass.DISK_GB,
+                       2000)
+        # DISK_GB allocation ratio blows it up
+        excl_badinv_alloc_ratio = self._create_provider('badinv_alloc_ratio')
+        _add_inventory(excl_badinv_alloc_ratio, fields.ResourceClass.VCPU, 15)
+        _add_inventory(excl_badinv_alloc_ratio, fields.ResourceClass.MEMORY_MB,
+                       4096, max_unit=2048)
+        _add_inventory(excl_badinv_alloc_ratio, fields.ResourceClass.DISK_GB,
+                       2000, allocation_ratio=0.5)
+
+        # Inventory consumed in one RC, but available in the others
+        excl_1invunavail = self._create_provider('1invunavail')
+        _add_inventory(excl_1invunavail, fields.ResourceClass.VCPU, 10)
+        _allocate_from_provider(excl_1invunavail, fields.ResourceClass.VCPU, 7)
+        _add_inventory(excl_1invunavail, fields.ResourceClass.MEMORY_MB, 4096)
+        _allocate_from_provider(excl_1invunavail,
+                                fields.ResourceClass.MEMORY_MB, 1024)
+        _add_inventory(excl_1invunavail, fields.ResourceClass.DISK_GB, 2000)
+        _allocate_from_provider(excl_1invunavail,
+                                fields.ResourceClass.DISK_GB, 400)
+
+        # Inventory all consumed
+        excl_allused = self._create_provider('allused')
+        _add_inventory(excl_allused, fields.ResourceClass.VCPU, 10)
+        _allocate_from_provider(excl_allused, fields.ResourceClass.VCPU, 7)
+        _add_inventory(excl_allused, fields.ResourceClass.MEMORY_MB, 4000)
+        _allocate_from_provider(excl_allused,
+                                fields.ResourceClass.MEMORY_MB, 1500)
+        _allocate_from_provider(excl_allused,
+                                fields.ResourceClass.MEMORY_MB, 2000)
+        _add_inventory(excl_allused, fields.ResourceClass.DISK_GB, 1500)
+        _allocate_from_provider(excl_allused, fields.ResourceClass.DISK_GB, 1)
+
+        # Inventory available in requested classes, but unavailable in others
+        incl_extra_full = self._create_provider('extra_full')
+        _add_inventory(incl_extra_full, fields.ResourceClass.VCPU, 20)
+        _allocate_from_provider(incl_extra_full, fields.ResourceClass.VCPU, 15)
+        _add_inventory(incl_extra_full, fields.ResourceClass.MEMORY_MB, 4096)
+        _allocate_from_provider(incl_extra_full,
+                                fields.ResourceClass.MEMORY_MB, 1024)
+        _add_inventory(incl_extra_full, fields.ResourceClass.DISK_GB, 2000)
+        _allocate_from_provider(incl_extra_full, fields.ResourceClass.DISK_GB,
+                                400)
+        _add_inventory(incl_extra_full, fields.ResourceClass.PCI_DEVICE, 4)
+        _allocate_from_provider(incl_extra_full,
+                                fields.ResourceClass.PCI_DEVICE, 1)
+        _allocate_from_provider(incl_extra_full,
+                                fields.ResourceClass.PCI_DEVICE, 3)
+
+        # Inventory available in a unrequested classes, not in requested ones
+        excl_extra_avail = self._create_provider('extra_avail')
+        # Incompatible step size
+        _add_inventory(excl_extra_avail, fields.ResourceClass.VCPU, 10,
+                       step_size=3)
+        # Not enough left after reserved + used
+        _add_inventory(excl_extra_avail, fields.ResourceClass.MEMORY_MB, 4096,
+                       max_unit=2048, reserved=2048)
+        _allocate_from_provider(excl_extra_avail,
+                                fields.ResourceClass.MEMORY_MB, 1040)
+        # Allocation ratio math
+        _add_inventory(excl_extra_avail, fields.ResourceClass.DISK_GB, 2000,
+                       allocation_ratio=0.5)
+        _add_inventory(excl_extra_avail, fields.ResourceClass.IPV4_ADDRESS, 48)
+        custom_special = rp_obj.ResourceClass(self.ctx, name='CUSTOM_SPECIAL')
+        custom_special.create()
+        _add_inventory(excl_extra_avail, 'CUSTOM_SPECIAL', 100)
+        _allocate_from_provider(excl_extra_avail, 'CUSTOM_SPECIAL', 99)
+
+        resources = {
+            fields.ResourceClass.STANDARD.index(fields.ResourceClass.VCPU): 5,
+            fields.ResourceClass.STANDARD.index(
+                fields.ResourceClass.MEMORY_MB): 1024,
+            fields.ResourceClass.STANDARD.index(
+                fields.ResourceClass.DISK_GB): 1500
+        }
+
+        # Run it!
+        res = rp_obj._get_provider_ids_matching_all(self.ctx, resources)
+
+        # We should get all the incl_* RPs
+        expected = [incl_biginv_noalloc, incl_extra_full]
+
+        self.assertEqual(set(rp.id for rp in expected), set(res))
+
+
+class AllocationCandidatesTestCase(ProviderDBHelperTestCase):
     """Tests a variety of scenarios with both shared and non-shared resource
     providers that the AllocationCandidates.get_by_requests() method returns a
     set of alternative allocation requests and provider summaries that may be
@@ -69,13 +249,8 @@ class AllocationCandidatesTestCase(test.NoDBTestCase):
     resources against providers.
     """
 
-    USES_DB_SELF = True
-
     def setUp(self):
         super(AllocationCandidatesTestCase, self).setUp()
-        self.useFixture(fixtures.Database())
-        self.api_db = self.useFixture(fixtures.Database(database='api'))
-        self.ctx = context.RequestContext('fake-user', 'fake-project')
         self.requested_resources = {
             fields.ResourceClass.VCPU: 1,
             fields.ResourceClass.MEMORY_MB: 64,
@@ -91,15 +266,6 @@ class AllocationCandidatesTestCase(test.NoDBTestCase):
                 use_same_provider=False,
                 resources=self.requested_resources)]
         return rp_obj.AllocationCandidates.get_by_requests(self.ctx, requests)
-
-    def _create_provider(self, name, *aggs):
-        rp = rp_obj.ResourceProvider(self.ctx, name=name,
-                                     uuid=getattr(uuids, name))
-        rp.create()
-        if aggs:
-            rp.set_aggregates(aggs)
-        self.rp_uuid_to_name[rp.uuid] = name
-        return rp
 
     def _validate_allocation_requests(self, expected, candidates):
         """Assert correctness of allocation requests in allocation candidates.

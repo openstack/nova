@@ -2100,7 +2100,9 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
         )
         cn2.create()
 
-        # Populate the two compute node providers with inventory, sans DISK_GB
+        # Populate the two compute node providers with inventory.  One has
+        # DISK_GB.  Both should be excluded from the result (one doesn't have
+        # the requested resource; but neither is a sharing provider).
         for cn in (cn1, cn2):
             vcpu = rp_obj.Inventory(
                 resource_provider=cn,
@@ -2122,7 +2124,21 @@ class SharedProviderTestCase(ResourceProviderBaseCase):
                 step_size=64,
                 allocation_ratio=1.5,
             )
-            inv_list = rp_obj.InventoryList(objects=[vcpu, memory_mb])
+            if cn is cn1:
+                disk_gb = rp_obj.Inventory(
+                    resource_provider=cn,
+                    resource_class=fields.ResourceClass.DISK_GB,
+                    total=2000,
+                    reserved=0,
+                    min_unit=10,
+                    max_unit=100,
+                    step_size=10,
+                    allocation_ratio=1.0,
+                )
+                inv_list = rp_obj.InventoryList(objects=[vcpu, memory_mb,
+                                                         disk_gb])
+            else:
+                inv_list = rp_obj.InventoryList(objects=[vcpu, memory_mb])
             cn.set_inventory(inv_list)
 
         # Create the shared storage pool

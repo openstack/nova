@@ -2424,6 +2424,100 @@ def _get_usages_by_provider_and_rc(ctx, rp_ids, rc_ids):
     return ctx.session.execute(query).fetchall()
 
 
+@db_api.api_context_manager.reader
+def _get_provider_ids_matching_all(ctx, resources):
+    """Returns a list of resource provider internal IDs that have available
+    inventory to satisfy all the supplied requests for resources.
+
+    :note: This function is used for scenarios that do NOT involve sharing
+    providers. It also only looks at individual resource providers, not
+    provider trees.
+
+    :param ctx: Session context to use
+    :param resources: A dict, keyed by resource class ID, of the amount
+                      requested of that resource class.
+    """
+    rpt = sa.alias(_RP_TBL, name="rp")
+
+    rc_name_map = {
+        rc_id: _RC_CACHE.string_from_id(rc_id).lower()
+        for rc_id in resources.keys()
+    }
+
+    # Dict, keyed by resource class ID, of an aliased table object for the
+    # inventories table winnowed to only that resource class.
+    inv_tables = {
+        rc_id: sa.alias(_INV_TBL, name='inv_%s' % rc_name_map[rc_id])
+        for rc_id in resources.keys()
+    }
+
+    # Dict, keyed by resource class ID, of a derived table (subquery in the
+    # FROM clause or JOIN) against the allocations table winnowed to only that
+    # resource class, grouped by resource provider.
+    usage_tables = {
+        rc_id: sa.alias(
+            sa.select([
+                _ALLOC_TBL.c.resource_provider_id,
+                sql.func.sum(_ALLOC_TBL.c.used).label('used'),
+            ]).where(
+                _ALLOC_TBL.c.resource_class_id == rc_id
+            ).group_by(
+                _ALLOC_TBL.c.resource_provider_id
+            ),
+            name='usage_%s' % rc_name_map[rc_id],
+        )
+        for rc_id in resources.keys()
+    }
+
+    sel = sa.select([rpt.c.id])
+
+    # List of the WHERE conditions we build up by iterating over the requested
+    # resources
+    where_conds = []
+
+    # The chain of joins that we eventually pass to select_from()
+    join_chain = rpt
+
+    for rc_id, amount in resources.items():
+        inv_by_rc = inv_tables[rc_id]
+        usage_by_rc = usage_tables[rc_id]
+
+        # We can do a more efficient INNER JOIN because we don't have shared
+        # resource providers to deal with
+        rp_inv_join = sa.join(
+            join_chain, inv_by_rc,
+            sa.and_(
+                inv_by_rc.c.resource_provider_id == rpt.c.id,
+                # Add a join condition winnowing this copy of inventories table
+                # to only the resource class being analyzed in this loop...
+                inv_by_rc.c.resource_class_id == rc_id,
+            ),
+        )
+        rp_inv_usage_join = sa.outerjoin(
+            rp_inv_join, usage_by_rc,
+            inv_by_rc.c.resource_provider_id ==
+                usage_by_rc.c.resource_provider_id,
+        )
+        join_chain = rp_inv_usage_join
+
+        usage_cond = sa.and_(
+            (
+            (sql.func.coalesce(usage_by_rc.c.used, 0) + amount) <=
+            (inv_by_rc.c.total - inv_by_rc.c.reserved) *
+                inv_by_rc.c.allocation_ratio
+            ),
+            inv_by_rc.c.min_unit <= amount,
+            inv_by_rc.c.max_unit >= amount,
+            amount % inv_by_rc.c.step_size == 0,
+        )
+        where_conds.append(usage_cond)
+
+    sel = sel.select_from(join_chain)
+    sel = sel.where(sa.and_(*where_conds))
+
+    return [r[0] for r in ctx.session.execute(sel)]
+
+
 @base.NovaObjectRegistry.register_if(False)
 class AllocationCandidates(base.NovaObject):
     """The AllocationCandidates object is a collection of possible allocations
@@ -2484,26 +2578,56 @@ class AllocationCandidates(base.NovaObject):
             for key, value in resources.items()
         }
 
-        roots = [r[0] for r in _get_all_with_shared(context, resources)]
-
-        if not roots:
-            return [], []
-
-        # Contains a set of resource provider IDs for each resource class
-        # requested
+        # Contains a set of resource provider IDs that share some inventory for
+        # each resource class requested. We do this here as an optimization. If
+        # we have no sharing providers, the SQL to find matching providers for
+        # the requested resources is much simpler.
+        # TODO(jaypipes): Consider caching this for some amount of time since
+        # sharing providers generally don't change often and here we aren't
+        # concerned with how *much* inventory/capacity the sharing provider
+        # has, only that it is sharing *some* inventory of a particular
+        # resource class.
         sharing_providers = {
             rc_id: _get_providers_with_shared_capacity(context, rc_id, amount)
             for rc_id, amount in resources.items()
         }
+        have_sharing = any(sharing_providers.values())
+        if not have_sharing:
+            # We know there's no sharing providers, so we can more efficiently
+            # get a list of resource provider IDs that have ALL the requested
+            # resources.
+            # NOTE(jaypipes): When we start handling nested providers, we may
+            # add new code paths or modify this code path to return root
+            # provider IDs of provider trees instead of the resource provider
+            # IDs.
+            non_sharing_rp_ids = _get_provider_ids_matching_all(
+                context, resources)
+        else:
+            # We get the list of resource providers that either have the
+            # requested resources or are associated with the providers that
+            # share one or more of the requested resource(s)
+            non_sharing_rp_ids = [r[0] for r in _get_all_with_shared(
+                context, resources)]
+
+        # non_sharing_rp_ids contains a list of resource provider IDs that
+        # EITHER have all the requested resources themselves OR have some
+        # resources and are related to a provider that is sharing some
+        # resources with it. In other words, this is the list of resource
+        # provider IDs that are NOT sharing resources.
+
         # We need to grab usage information for all the providers identified as
         # potentially fulfilling part of the resource request. This includes
         # "root providers" returned from _get_all_with_shared() as well as all
         # the providers of shared resources. Here, we simply grab a unique set
         # of all those resource provider internal IDs by set union'ing them
         # together
-        all_rp_ids = set(roots)
+        all_rp_ids = set(non_sharing_rp_ids)
         for rps in sharing_providers.values():
             all_rp_ids |= set(rps)
+
+        # Short out if no providers have been found at this point.
+        if not all_rp_ids:
+            return [], []
 
         # Grab usage summaries for each provider (local or sharing) and
         # resource class requested
@@ -2567,8 +2691,8 @@ class AllocationCandidates(base.NovaObject):
                 )
                 sharing_resource_requests[shared_rc_id].append(sharing_res_req)
 
-        for root_rp_id in roots:
-            if root_rp_id not in summaries:
+        for rp_id in non_sharing_rp_ids:
+            if rp_id not in summaries:
                 # This resource provider is not providing any resources that
                 # have been requested. This means that this resource provider
                 # has some requested resources shared *with* it but the
@@ -2576,15 +2700,15 @@ class AllocationCandidates(base.NovaObject):
                 # it. Since this provider won't actually have an allocation
                 # request written for it, we just ignore it and continue
                 continue
-            root_summary = summaries[root_rp_id]
-            root_rp_uuid = root_summary['uuid']
+            rp_summary = summaries[rp_id]
+            rp_uuid = rp_summary['uuid']
             local_resources = set(
                 rc_id for rc_id in resources.keys()
-                if rc_id in root_summary['resources']
+                if rc_id in rp_summary['resources']
             )
             shared_resources = set(
                 rc_id for rc_id in resources.keys()
-                if rc_id not in root_summary['resources']
+                if rc_id not in rp_summary['resources']
             )
             # Determine if the root provider actually has all the resources
             # requested. If not, we need to add an AllocationRequest
@@ -2596,7 +2720,7 @@ class AllocationCandidates(base.NovaObject):
                         context,
                         resource_provider=ResourceProvider(
                             context,
-                            uuid=root_rp_uuid,
+                            uuid=rp_uuid,
                         ),
                         resource_class=_RC_CACHE.string_from_id(rc_id),
                         amount=amount,
@@ -2633,7 +2757,7 @@ class AllocationCandidates(base.NovaObject):
                     context,
                     resource_provider=ResourceProvider(
                         context,
-                        uuid=root_rp_uuid,
+                        uuid=rp_uuid,
                     ),
                     resource_class=_RC_CACHE.string_from_id(rc_id),
                     amount=amount,
