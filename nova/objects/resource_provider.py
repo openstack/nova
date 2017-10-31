@@ -2602,6 +2602,25 @@ def _shared_allocation_request_resources(ctx, requested_resources, sharing,
     return res_requests
 
 
+def _allocation_request_for_provider(ctx, requested_resources, rp_uuid):
+    """Returns an AllocationRequest object contains AllocationRequestResource
+    objects for each resource class in the supplied requested resources dict.
+
+    :param ctx: nova.context.Context object
+    :param requested_resources: dict, keyed by resource class ID, of amounts
+                                being requested for that resource class
+    :param rp_uuid: UUID of the resource provider supplying the resources
+    """
+    resource_requests = [
+        AllocationRequestResource(
+            ctx, resource_provider=ResourceProvider(ctx, uuid=rp_uuid),
+            resource_class=_RC_CACHE.string_from_id(rc_id),
+            amount=amount,
+        ) for rc_id, amount in requested_resources.items()
+    ]
+    return AllocationRequest(ctx, resource_requests=resource_requests)
+
+
 @base.NovaObjectRegistry.register_if(False)
 class AllocationCandidates(base.NovaObject):
     """The AllocationCandidates object is a collection of possible allocations
@@ -2766,21 +2785,8 @@ class AllocationCandidates(base.NovaObject):
             # alternative containing this resource for each sharing provider
             has_all = len(shared_resources) == 0
             if has_all:
-                resource_requests = [
-                    AllocationRequestResource(
-                        context,
-                        resource_provider=ResourceProvider(
-                            context,
-                            uuid=rp_uuid,
-                        ),
-                        resource_class=_RC_CACHE.string_from_id(rc_id),
-                        amount=amount,
-                    ) for rc_id, amount in resources.items()
-                ]
-                req_obj = AllocationRequest(
-                    context,
-                    resource_requests=resource_requests,
-                )
+                req_obj = _allocation_request_for_provider(context, resources,
+                                                           rp_uuid)
                 alloc_request_objs.append(req_obj)
                 continue
 
