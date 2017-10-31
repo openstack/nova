@@ -811,7 +811,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
             'allocations': {},  # build instance, not move
         }
         self.ks_adap_mock.get.return_value = get_resp_mock
-        resp_mock = mock.Mock(status_code=409)
+        resp_mock = mock.Mock(status_code=409, text='not cool')
         self.ks_adap_mock.put.return_value = resp_mock
         consumer_uuid = uuids.consumer_uuid
         alloc_req = {
@@ -831,7 +831,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         project_id = uuids.project_id
         user_id = uuids.user_id
         res = self.client.claim_resources(consumer_uuid, alloc_req, project_id,
-            user_id, attempt=3)  # attempt=3 prevents falling into retry loop
+            user_id)
 
         expected_url = "/allocations/%s" % consumer_uuid
         expected_payload = copy.deepcopy(alloc_req)
