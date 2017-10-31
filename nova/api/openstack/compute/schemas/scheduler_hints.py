@@ -39,7 +39,7 @@ _hints = {
             ]
         },
         'same_host': {
-            # NOTE: The value of 'different_host' is the set of server
+            # NOTE: The value of 'same_host' is the set of server
             # uuids where a new server is scheduled on the same host.
             'type': ['string', 'array'],
             'items': parameter_types.server_id
