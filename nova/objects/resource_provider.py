@@ -829,6 +829,10 @@ class ResourceProvider(base.NovaObject):
         RPA_model = models.ResourceProviderAggregate
         context.session.query(RPA_model).\
                 filter(RPA_model.resource_provider_id == _id).delete()
+        # delete any trait associations for the resource provider
+        RPT_model = models.ResourceProviderTrait
+        context.session.query(RPT_model).\
+                filter(RPT_model.resource_provider_id == _id).delete()
         # Now delete the RP record
         try:
             result = context.session.query(models.ResourceProvider).\
