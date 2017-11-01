@@ -516,20 +516,18 @@ class AllocationCandidatesTestCase(ProviderDBBase):
         storage pool resource provider and VCPU/MEMORY_MB by the compute node
         providers
         """
-        # The aggregate that will be associated to everything...
-        agg_uuid = uuids.agg
-
         # Create two compute node providers with VCPU, RAM and NO local disk,
         # associated with the aggregate.
-        for name in ('cn1', 'cn2'):
-            cn = self._create_provider(name, agg_uuid)
+        cn1, cn2 = (self._create_provider(name, uuids.agg)
+                    for name in ('cn1', 'cn2'))
+        for cn in (cn1, cn2):
             _add_inventory(cn, fields.ResourceClass.VCPU, 24,
                            allocation_ratio=16.0)
             _add_inventory(cn, fields.ResourceClass.MEMORY_MB, 1024,
                            min_unit=64, allocation_ratio=1.5)
 
         # Create the shared storage pool, asociated with the same aggregate
-        ss = self._create_provider('shared storage', agg_uuid)
+        ss = self._create_provider('shared storage', uuids.agg)
 
         # Give the shared storage pool some inventory of DISK_GB
         _add_inventory(ss, fields.ResourceClass.DISK_GB, 2000, reserved=100,
@@ -637,6 +635,63 @@ class AllocationCandidatesTestCase(ProviderDBBase):
         expected = [[('shared storage', fields.ResourceClass.DISK_GB, 10)]]
         self._validate_allocation_requests(expected, alloc_cands)
 
+        # Now we're going to add a set of required traits into the request mix.
+        # To start off, let's request a required trait that we know has not
+        # been associated yet with any provider, and ensure we get no results
+        alloc_cands = self._get_allocation_candidates([
+            placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources=self.requested_resources,
+                required_traits=set([os_traits.HW_CPU_X86_AVX2]),
+            )],
+        )
+
+        # We have not yet associated the AVX2 trait to any provider, so we
+        # should get zero allocation candidates
+        p_sums = alloc_cands.provider_summaries
+        self.assertEqual(0, len(p_sums))
+
+        # Now, if we then associate the required trait with both of our compute
+        # nodes, we should get back both compute nodes since they both now
+        # satisfy the required traits as well as the resource request
+        avx2_t = rp_obj.Trait.get_by_name(self.ctx, os_traits.HW_CPU_X86_AVX2)
+        cn1.set_traits([avx2_t])
+        cn2.set_traits([avx2_t])
+
+        alloc_cands = self._get_allocation_candidates([
+            placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources=self.requested_resources,
+                required_traits=set([os_traits.HW_CPU_X86_AVX2]),
+            )],
+        )
+
+        p_sums = alloc_cands.provider_summaries
+        # There should be 2 compute node providers and 1 shared storage
+        # provider in the summaries.
+        self.assertEqual(3, len(p_sums))
+
+        self.assertEqual(set([cn1.uuid, cn2.uuid, ss.uuid]),
+                         _provider_uuids_from_iterable(p_sums))
+
+        # Let's check that the traits listed for the compute nodes include the
+        # AVX2 trait
+        cn1_p_sum = _find_summary_for_provider(p_sums, cn1.uuid)
+        self.assertIsNotNone(cn1_p_sum)
+        self.assertEqual(1, len(cn1_p_sum.traits))
+        self.assertEqual(os_traits.HW_CPU_X86_AVX2, cn1_p_sum.traits[0].name)
+        cn2_p_sum = _find_summary_for_provider(p_sums, cn2.uuid)
+        self.assertIsNotNone(cn2_p_sum)
+        self.assertEqual(1, len(cn2_p_sum.traits))
+        self.assertEqual(os_traits.HW_CPU_X86_AVX2, cn2_p_sum.traits[0].name)
+
+        # Double-check that the shared storage provider in the provider
+        # summaries does NOT have the AVX2 trait
+        ss_p_sum = _find_summary_for_provider(p_sums, ss.uuid)
+        self.assertIsNotNone(ss_p_sum)
+        ss_traits = [trait.name for trait in ss_p_sum.traits]
+        self.assertNotIn(os_traits.HW_CPU_X86_AVX2, ss_traits)
+
     def test_local_with_shared_custom_resource(self):
         """Create some resource providers that can satisfy the request for
         resources with local VCPU and MEMORY_MB but rely on a shared resource
@@ -705,35 +760,31 @@ class AllocationCandidatesTestCase(ProviderDBBase):
         self._validate_allocation_requests(expected, alloc_cands)
 
     def test_mix_local_and_shared(self):
-        # The aggregate that will be associated to shared storage pool
-        agg_uuid = uuids.agg
-
         # Create three compute node providers with VCPU and RAM, but only
         # the third compute node has DISK. The first two computes will
         # share the storage from the shared storage pool.
-        for name in ('cn1', 'cn2', 'cn3'):
-            cn = self._create_provider(name)
+        cn1, cn2 = (self._create_provider(name, uuids.agg)
+                    for name in ('cn1', 'cn2'))
+        # cn3 is not associated with the aggregate
+        cn3 = self._create_provider('cn3')
+        for cn in (cn1, cn2, cn3):
             _add_inventory(cn, fields.ResourceClass.VCPU, 24,
                            allocation_ratio=16.0)
             _add_inventory(cn, fields.ResourceClass.MEMORY_MB, 1024,
                            min_unit=64, allocation_ratio=1.5)
-            if name == 'cn3':
-                _add_inventory(cn, fields.ResourceClass.DISK_GB, 2000,
-                               reserved=100, min_unit=10)
-            else:
-                cn.set_aggregates([agg_uuid])
+        # Only cn3 has disk
+        _add_inventory(cn3, fields.ResourceClass.DISK_GB, 2000,
+                       reserved=100, min_unit=10)
 
-        # Create the shared storage pool
-        ss = self._create_provider('shared storage')
+        # Create the shared storage pool in the same aggregate as the first two
+        # compute nodes
+        ss = self._create_provider('shared storage', uuids.agg)
 
         # Give the shared storage pool some inventory of DISK_GB
         _add_inventory(ss, fields.ResourceClass.DISK_GB, 2000, reserved=100,
                        min_unit=10)
 
         _set_traits(ss, "MISC_SHARES_VIA_AGGREGATE")
-
-        # Put the ss RP in the same aggregate as the first two compute nodes
-        ss.set_aggregates([agg_uuid])
 
         alloc_cands = self._get_allocation_candidates()
 
@@ -755,6 +806,97 @@ class AllocationCandidatesTestCase(ProviderDBBase):
              ('cn3', fields.ResourceClass.DISK_GB, 1500)],
         ]
         self._validate_allocation_requests(expected, alloc_cands)
+
+        # Now we're going to add a set of required traits into the request mix.
+        # To start off, let's request a required trait that we know has not
+        # been associated yet with any provider, and ensure we get no results
+        alloc_cands = self._get_allocation_candidates([
+            placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources=self.requested_resources,
+                required_traits=set([os_traits.HW_CPU_X86_AVX2]),
+            )],
+        )
+
+        # We have not yet associated the AVX2 trait to any provider, so we
+        # should get zero allocation candidates
+        p_sums = alloc_cands.provider_summaries
+        self.assertEqual(0, len(p_sums))
+        a_reqs = alloc_cands.allocation_requests
+        self.assertEqual(0, len(a_reqs))
+
+        # Now, if we then associate the required trait with all of our compute
+        # nodes, we should get back all compute nodes since they all now
+        # satisfy the required traits as well as the resource request
+        for cn in (cn1, cn2, cn3):
+            _set_traits(cn, os_traits.HW_CPU_X86_AVX2)
+
+        alloc_cands = self._get_allocation_candidates([
+            placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources=self.requested_resources,
+                required_traits=set([os_traits.HW_CPU_X86_AVX2]),
+            )],
+        )
+
+        p_sums = alloc_cands.provider_summaries
+        # There should be 3 compute node providers and 1 shared storage
+        # provider in the summaries.
+        self.assertEqual(4, len(p_sums))
+        expected_prov_uuids = set([cn1.uuid, cn2.uuid, cn3.uuid, ss.uuid])
+        self.assertEqual(expected_prov_uuids,
+                         _provider_uuids_from_iterable(p_sums))
+
+        # Let's check that the traits listed for the compute nodes include the
+        # AVX2 trait
+        cn1_p_sum = _find_summary_for_provider(p_sums, cn1.uuid)
+        self.assertIsNotNone(cn1_p_sum)
+        self.assertEqual(1, len(cn1_p_sum.traits))
+        self.assertEqual(os_traits.HW_CPU_X86_AVX2, cn1_p_sum.traits[0].name)
+        cn2_p_sum = _find_summary_for_provider(p_sums, cn2.uuid)
+        self.assertIsNotNone(cn2_p_sum)
+        self.assertEqual(1, len(cn2_p_sum.traits))
+        self.assertEqual(os_traits.HW_CPU_X86_AVX2, cn2_p_sum.traits[0].name)
+        cn3_p_sum = _find_summary_for_provider(p_sums, cn3.uuid)
+        self.assertIsNotNone(cn3_p_sum)
+        self.assertEqual(1, len(cn3_p_sum.traits))
+        self.assertEqual(os_traits.HW_CPU_X86_AVX2, cn3_p_sum.traits[0].name)
+
+        # Double-check that the shared storage provider in the provider
+        # summaries does NOT have the AVX2 trait
+        ss_p_sum = _find_summary_for_provider(p_sums, ss.uuid)
+        self.assertIsNotNone(ss_p_sum)
+        ss_traits = [trait.name for trait in ss_p_sum.traits]
+        self.assertNotIn(os_traits.HW_CPU_X86_AVX2, ss_traits)
+
+        # We should have a total of 3 allocation requests, representing
+        # potential claims against cn1 and cn2 with shared storage and against
+        # cn3 with all resources
+        a_reqs = alloc_cands.allocation_requests
+        self.assertEqual(3, len(a_reqs))
+
+        # Now, let's add a new wrinkle to the equation and add a required trait
+        # that will ONLY be satisfied by a compute node with local disk that
+        # has SSD drives. Set this trait only on the compute node with local
+        # disk (cn3)
+        _set_traits(cn3, os_traits.HW_CPU_X86_AVX2, os_traits.STORAGE_DISK_SSD)
+
+        alloc_cands = self._get_allocation_candidates([
+            placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources=self.requested_resources,
+                required_traits=set([
+                    os_traits.HW_CPU_X86_AVX2, os_traits.STORAGE_DISK_SSD
+                ]),
+            )],
+        )
+
+        p_sums = alloc_cands.provider_summaries
+        # There should be only cn3 in the returned provider summaries
+        self.assertEqual(1, len(p_sums))
+        expected_prov_uuids = set([cn3.uuid])
+        self.assertEqual(expected_prov_uuids,
+                         _provider_uuids_from_iterable(p_sums))
 
     def test_common_rc(self):
         """Candidates when cn and shared have inventory in the same class."""
@@ -813,28 +955,19 @@ class AllocationCandidatesTestCase(ProviderDBBase):
             ]
         )
 
-        # TODO(efried): Okay, bear with me here:
         # TODO(efried): Bug #1724633: we'd *like* to get no candidates, because
         # there's no single DISK_GB resource with both STORAGE_DISK_SSD and
         # CUSTOM_RAID traits.  So this is the ideal expected value:
-        # expected = []
+        expected = []
         # TODO(efried): But under the design as currently conceived, we would
-        # get the cn + ss candidate, because that combination satisfies both
-        # traits:
+        # expect to get the cn + ss candidate, because that combination
+        # satisfies both traits:
         # expected = [
         #     [('cn', fields.ResourceClass.VCPU, 1),
         #      ('cn', fields.ResourceClass.MEMORY_MB, 64),
         #      ('ss', fields.ResourceClass.DISK_GB, 1500)],
         # ]
-        # TODO(efried): However, until https://review.openstack.org/#/c/479766/
-        # lands, the traits are ignored, so this behaves just like
-        # test_common_rc above, which is subject to bug #1724613:
-        expected = [
-            [('cn', fields.ResourceClass.VCPU, 1),
-             ('cn', fields.ResourceClass.MEMORY_MB, 64),
-             ('cn', fields.ResourceClass.DISK_GB, 1500)],
-        ]
-
+        # So we're getting the right value, but we really shouldn't be.
         self._validate_allocation_requests(expected, alloc_cands)
 
     def test_all_sharing_providers(self):

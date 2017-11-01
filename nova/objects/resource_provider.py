@@ -2691,6 +2691,27 @@ def _get_usages_by_provider_and_rc(ctx, rp_ids, rc_ids):
 
 
 @db_api.api_context_manager.reader
+def _get_provider_ids_having_any_trait(ctx, traits):
+    """Returns a list of resource provider internal IDs that have ANY of the
+    supplied traits.
+
+    :param ctx: Session context to use
+    :param traits: A map, keyed by trait string name, of trait internal IDs, at
+                   least one of which each provider must have associated with
+                   it.
+    :raise ValueError: If traits is empty or None.
+    """
+    if not traits:
+        raise ValueError('traits must not be empty')
+
+    rptt = sa.alias(_RP_TRAIT_TBL, name="rpt")
+    sel = sa.select([rptt.c.resource_provider_id])
+    sel = sel.where(rptt.c.trait_id.in_(traits.values()))
+    sel = sel.group_by(rptt.c.resource_provider_id)
+    return [r[0] for r in ctx.session.execute(sel)]
+
+
+@db_api.api_context_manager.reader
 def _get_provider_ids_having_all_traits(ctx, required_traits):
     """Returns a list of resource provider internal IDs that have ALL of the
     required traits.
@@ -2980,8 +3001,8 @@ def _alloc_candidates_no_shared(ctx, requested_resources, rp_ids):
     return alloc_requests, list(summaries.values())
 
 
-def _alloc_candidates_with_shared(ctx, requested_resources, ns_rp_ids,
-                                  sharing):
+def _alloc_candidates_with_shared(ctx, requested_resources, required_traits,
+                                  ns_rp_ids, sharing):
     """Returns a tuple of (allocation requests, provider summaries) for a
     supplied set of requested resource amounts and resource providers.
 
@@ -2993,6 +3014,10 @@ def _alloc_candidates_with_shared(ctx, requested_resources, ns_rp_ids,
     :param ctx: nova.context.Context object
     :param requested_resources: dict, keyed by resource class ID, of amounts
                                 being requested for that resource class
+    :param required_traits: A map, keyed by trait string name, of required
+                            trait internal IDs that each *allocation request's
+                            set of providers* must *collectively* have
+                            associated with them
     :param ns_rp_ids: List of resource provider IDs for providers that EITHER
                       match all of the requested resources or are associated
                       with sharing providers that can satisfy missing requested
@@ -3021,10 +3046,13 @@ def _alloc_candidates_with_shared(ctx, requested_resources, ns_rp_ids,
     requested_rc_ids = list(requested_resources)
     usages = _get_usages_by_provider_and_rc(ctx, all_rp_ids, requested_rc_ids)
 
+    # Get a dict, keyed by resource provider internal ID, of trait string names
+    # that provider has associated with it
+    prov_traits = _provider_traits(ctx, all_rp_ids)
+
     # Get a dict, keyed by resource provider internal ID, of ProviderSummary
     # objects for all providers involved in the request
-    # TODO(jaypipes): Handle traits for sharing providers scenario
-    summaries = _build_provider_summaries(ctx, usages, {})
+    summaries = _build_provider_summaries(ctx, usages, prov_traits)
 
     # Next, build up a list of allocation requests. These allocation requests
     # are AllocationRequest objects, containing resource provider UUIDs,
@@ -3057,6 +3085,12 @@ def _alloc_candidates_with_shared(ctx, requested_resources, ns_rp_ids,
         )
         shared_resources = set(requested_resources) - ns_resources
 
+        # We need to figure out which traits are NOT provided by the "local"
+        # provider and that would need to be provided by the sharing
+        # provider(s)
+        ns_prov_traits = set(prov_traits.get(ns_rp_id, []))
+        missing_traits = set(required_traits) - ns_prov_traits
+
         # Determine if the non-sharing provider actually has all the
         # resources requested. If not, we need to add an AllocationRequest
         # alternative containing this resource for each sharing provider.
@@ -3066,6 +3100,17 @@ def _alloc_candidates_with_shared(ctx, requested_resources, ns_rp_ids,
         # See: https://bugs.launchpad.net/nova/+bug/1724613
         has_all = len(shared_resources) == 0
         if has_all:
+            # If this resource provider has all the requested resources, then
+            # require that it must also have ALL required traits.
+            # TODO(jaypipes): This is kind of buggy behaviour. We should be
+            # able to consider permutations of non-sharing providers that have
+            # all the resources but have missing required traits with sharing
+            # providers that have those missing traits.
+            if missing_traits:
+                LOG.debug('Excluding non-sharing provider %s: it has all '
+                          'resources but is missing traits (%s).',
+                          ns_rp_uuid, ', '.join(missing_traits))
+                continue
             req = _allocation_request_for_provider(ctx, requested_resources,
                                                    ns_rp_uuid)
             alloc_requests.append(req)
@@ -3098,9 +3143,59 @@ def _alloc_candidates_with_shared(ctx, requested_resources, ns_rp_ids,
             for shared_rc_id in shared_resources
         ]
         for shared_res_requests in itertools.product(*shared_request_groups):
+            # Before we add the allocation request to our list, we first need
+            # to ensure that the sharing providers involved in this allocation
+            # request have all of the traits that the non-sharing providers
+            # don't have
+            sharing_traits = set()
+            for shared_res_req in shared_res_requests:
+                sharing_rp_uuid = shared_res_req.resource_provider.uuid
+                shared_rp_id = None
+                for rp_id, summary in summaries.items():
+                    if summary.resource_provider.uuid == sharing_rp_uuid:
+                        shared_rp_id = rp_id
+                        break
+                share_prov_traits = prov_traits.get(shared_rp_id, [])
+                sharing_traits |= set(share_prov_traits)
+            still_missing_traits = missing_traits - sharing_traits
+            if still_missing_traits:
+                sharing_prov_ids = set()
+                for rp_ids in sharing.values():
+                    for rp_id in rp_ids:
+                        sharing_prov_ids.add(rp_id)
+                LOG.debug('Excluding non-sharing provider %s with sharing '
+                          'providers %s: missing traits %s are not satisfied '
+                          'by sharing providers.',
+                          ns_rp_uuid, sharing_prov_ids,
+                          ','.join(still_missing_traits))
+                continue
+
             resource_requests = ns_res_requests + list(shared_res_requests)
             req = AllocationRequest(ctx, resource_requests=resource_requests)
             alloc_requests.append(req)
+
+    # The process above may have removed some previously-identified resource
+    # providers from being included in the allocation requests due to the
+    # sharing providers not satisfying trait requirements that were missing
+    # from "local providers". So, here, we need to remove any provider
+    # summaries for resource providers that do not appear in any allocation
+    # requests.
+    alloc_req_rp_uuids = set()
+    for ar in alloc_requests:
+        for rr in ar.resource_requests:
+            alloc_req_rp_uuids.add(rr.resource_provider.uuid)
+
+    # Look up the internal ID for each identified rp UUID
+    alloc_req_rp_ids = set()
+    for rp_uuid in alloc_req_rp_uuids:
+        for rp_id, summary in summaries.items():
+            if summary.resource_provider.uuid == rp_uuid:
+                alloc_req_rp_ids.add(rp_id)
+
+    p_sums_ids = set(summaries)
+    eliminated_rp_ids = p_sums_ids - alloc_req_rp_ids
+    for elim_id in eliminated_rp_ids:
+        del summaries[elim_id]
 
     return alloc_requests, list(summaries.values())
 
@@ -3245,11 +3340,20 @@ class AllocationCandidates(base.NovaObject):
                                                     trait_map)
             return _alloc_candidates_no_shared(context, resources, rp_ids)
 
+        if trait_map:
+            trait_rps = _get_provider_ids_having_any_trait(context, trait_map)
+            if not trait_rps:
+                # If there aren't any providers that have any of the required
+                # traits, just exit early...
+                return [], []
+
         # rp_ids contains a list of resource provider IDs that EITHER have all
         # the requested resources themselves OR have some resources and are
         # related to a provider that is sharing some resources with it. In
         # other words, this is the list of resource provider IDs that are NOT
         # sharing resources.
-        rp_ids = [r[0] for r in _get_all_with_shared(context, resources)]
-        return _alloc_candidates_with_shared(context, resources, rp_ids,
-                                             sharing_providers)
+        rps = _get_all_with_shared(context, resources)
+        rp_ids = set([r[0] for r in rps])
+
+        return _alloc_candidates_with_shared(context, resources, trait_map,
+                                             rp_ids, sharing_providers)
