@@ -74,6 +74,14 @@ class ResourceProviderBaseCase(test.NoDBTestCase):
 class ResourceProviderTestCase(ResourceProviderBaseCase):
     """Test resource-provider objects' lifecycles."""
 
+    def test_provider_traits_empty_param(self):
+        self.assertRaises(ValueError, rp_obj._provider_traits,
+                          self.ctx, [])
+
+    def test_trait_ids_from_names_empty_param(self):
+        self.assertRaises(ValueError, rp_obj._trait_ids_from_names,
+                          self.ctx, [])
+
     def test_create_resource_provider_requires_uuid(self):
         resource_provider = rp_obj.ResourceProvider(
             context = self.ctx)
