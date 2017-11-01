@@ -272,9 +272,10 @@ class HostState(object):
 
         The return value is a dict. For example:
         {'uuid': '6444c6ee-3a49-42f5-bebb-606b52175e67',
-         'total': 7,
-         'max_heads': '1',
          'type_name': 'Intel GVT-g',
+         'max_heads': 1,
+         'total': 7,
+         'remaining': 7,
          }
         """
         type_refs_in_grp = self._session.call_xenapi(
@@ -309,6 +310,10 @@ class HostState(object):
             'VGPU_type.get_max_heads', type_ref))
 
         stat['total'] = self._get_total_vgpu_in_grp(grp_ref, type_ref)
+        stat['remaining'] = int(self._session.call_xenapi(
+                                    'GPU_group.get_remaining_capacity',
+                                    grp_ref,
+                                    type_ref))
         return stat
 
     def _get_total_vgpu_in_grp(self, grp_ref, type_ref):

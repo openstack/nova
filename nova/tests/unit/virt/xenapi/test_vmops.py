@@ -326,6 +326,7 @@ class SpawnTestCase(VMOpsTestBase):
                                  'apply_instance_filter')
         self.mox.StubOutWithMock(self.vmops, '_update_last_dom_id')
         self.mox.StubOutWithMock(self.vmops._session, 'call_xenapi')
+        self.mox.StubOutWithMock(self.vmops, '_attach_vgpu')
 
     @staticmethod
     def _new_instance(obj):
@@ -337,7 +338,7 @@ class SpawnTestCase(VMOpsTestBase):
     def _test_spawn(self, name_label_param=None, block_device_info_param=None,
                     rescue=False, include_root_vdi=True, throw_exception=None,
                     attach_pci_dev=False, neutron_exception=False,
-                    network_info=None):
+                    network_info=None, vgpu_info=None):
         self._stub_out_common()
 
         instance = self._new_instance({"name": "dummy", "uuid": "fake_uuid",
@@ -422,6 +423,9 @@ class SpawnTestCase(VMOpsTestBase):
                                           "0/0000:00:00.0")
         else:
             pci_manager.get_instance_pci_devs(instance).AndReturn([])
+
+        self.vmops._attach_vgpu(vm_ref, vgpu_info, instance)
+
         step += 1
         self.vmops._update_instance_progress(context, instance, step, steps)
 
@@ -491,8 +495,8 @@ class SpawnTestCase(VMOpsTestBase):
 
         self.mox.ReplayAll()
         self.vmops.spawn(context, instance, image_meta, injected_files,
-                         admin_password, network_info,
-                         block_device_info_param, name_label_param, rescue)
+                         admin_password, network_info, block_device_info_param,
+                         vgpu_info, name_label_param, rescue)
 
     def test_spawn(self):
         self._test_spawn()
@@ -504,6 +508,11 @@ class SpawnTestCase(VMOpsTestBase):
 
     def test_spawn_with_pci_available_on_the_host(self):
         self._test_spawn(attach_pci_dev=True)
+
+    def test_spawn_with_vgpu(self):
+        vgpu_info = {'grp_uuid': uuids.gpu_group_1,
+                     'vgpu_type_uuid': uuids.vgpu_type_1}
+        self._test_spawn(vgpu_info=vgpu_info)
 
     def test_spawn_performs_rollback_and_throws_exception(self):
         self.assertRaises(test.TestingException, self._test_spawn,
@@ -645,7 +654,8 @@ class SpawnTestCase(VMOpsTestBase):
                           self._test_spawn, neutron_exception=True)
 
     def _test_finish_migration(self, power_on=True, resize_instance=True,
-                               throw_exception=None, booted_from_volume=False):
+                               throw_exception=None, booted_from_volume=False,
+                               vgpu_info=None):
         self._stub_out_common()
         self.mox.StubOutWithMock(volumeops.VolumeOps, "connect_volume")
         self.mox.StubOutWithMock(vm_utils, "import_all_migrated_disks")
@@ -703,6 +713,8 @@ class SpawnTestCase(VMOpsTestBase):
                             None, None)
         self.vmops._attach_mapped_block_devices(instance, block_device_info)
         pci_manager.get_instance_pci_devs(instance).AndReturn([])
+
+        self.vmops._attach_vgpu(vm_ref, vgpu_info, instance)
 
         self.vmops._inject_instance_metadata(instance, vm_ref)
         self.vmops._inject_auto_disk_config(instance, vm_ref)
