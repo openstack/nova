@@ -24,6 +24,7 @@ from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
+from oslo_utils import timeutils
 from oslo_utils import versionutils
 import six
 
@@ -718,9 +719,12 @@ class ComputeTaskManager(base.Base):
     def _schedule_instances(self, context, request_spec,
                             instance_uuids=None, return_alternates=False):
         scheduler_utils.setup_instance_group(context, request_spec)
-        host_lists = self.scheduler_client.select_destinations(context,
-                request_spec, instance_uuids, return_objects=True,
-                return_alternates=return_alternates)
+        with timeutils.StopWatch() as timer:
+            host_lists = self.scheduler_client.select_destinations(context,
+                    request_spec, instance_uuids, return_objects=True,
+                    return_alternates=return_alternates)
+        LOG.debug('Took %0.2f seconds to select destinations for %s '
+                  'instance(s).', timer.elapsed(), len(instance_uuids))
         return host_lists
 
     @targets_cell
