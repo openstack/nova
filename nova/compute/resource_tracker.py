@@ -1156,6 +1156,7 @@ class ResourceTracker(object):
         known_instances = set(self.tracked_instances.keys())
         allocations = self.reportclient.get_allocations_for_resource_provider(
                 cn.uuid) or {}
+        read_deleted_context = context.elevated(read_deleted='yes')
         for instance_uuid, alloc in allocations.items():
             if instance_uuid in known_instances:
                 LOG.debug("Instance %s actively managed on this compute host "
@@ -1163,9 +1164,23 @@ class ResourceTracker(object):
                           instance_uuid, alloc)
                 continue
             try:
-                instance = objects.Instance.get_by_uuid(context, instance_uuid,
+                instance = objects.Instance.get_by_uuid(read_deleted_context,
+                                                        instance_uuid,
                                                         expected_attrs=[])
             except exception.InstanceNotFound:
+                # The instance isn't even in the database. Either the scheduler
+                # _just_ created an allocation for it and we're racing with the
+                # creation in the cell database, or the instance was deleted
+                # and fully archived before we got a chance to run this. The
+                # former is far more likely than the latter. Avoid deleting
+                # allocations for a building instance here.
+                LOG.info("Instance %(uuid)s has allocations against this "
+                         "compute host but is not found in the database.",
+                         {'uuid': instance_uuid},
+                         exc_info=False)
+                continue
+
+            if instance.deleted:
                 # The instance is gone, so we definitely want to remove
                 # allocations associated with it.
                 # NOTE(jaypipes): This will not be true if/when we support
