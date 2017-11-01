@@ -47,13 +47,11 @@ def replace_allocation_with_migration(context, instance, migration):
     orig_alloc = reportclient.get_allocations_for_consumer_by_provider(
         source_cn.uuid, instance.uuid)
     if not orig_alloc:
-        LOG.error('Unable to find existing allocations for instance',
+        LOG.error('Unable to find existing allocations for instance on '
+                  'source compute node: %s', source_cn.uuid,
                   instance=instance)
-        # A generic error like this will just error out the migration
-        # and do any rollback required
-        raise exception.InstanceUnacceptable(
-            instance_id=instance.uuid,
-            reason=_('Instance has no source node allocation'))
+        raise exception.ConsumerAllocationNotFound(
+            consumer_id=instance.uuid, provider_uuid=source_cn.uuid)
 
     # FIXME(danms): Since we don't have an atomic operation to adjust
     # allocations for multiple consumers, we have to have space on the
