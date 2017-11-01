@@ -339,7 +339,8 @@ class FilterScheduler(driver.Scheduler):
             selections_to_return = self._get_alternate_hosts(
                 selected_hosts, spec_obj, hosts, num, num_to_return)
             return selections_to_return
-        return selected_hosts
+        # No alternatives but we still need to return a list of lists of hosts
+        return [[host] for host in selected_hosts]
 
     @staticmethod
     def _consume_selected_host(selected_host, spec_obj):
