@@ -292,6 +292,52 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         log_msg = mock_warn.call_args[0][0]
         self.assertIn("Unable to submit allocation for instance", log_msg)
 
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put')
+    def test_put_allocations_retries_conflict(self, mock_put):
+
+        failed = mock.MagicMock()
+        failed.status_code = 409
+        failed.text = "concurrently updated"
+
+        succeeded = mock.MagicMock()
+        succeeded.status_code = 204
+
+        mock_put.side_effect = (failed, succeeded)
+
+        rp_uuid = mock.sentinel.rp
+        consumer_uuid = mock.sentinel.consumer
+        data = {"MEMORY_MB": 1024}
+        expected_url = "/allocations/%s" % consumer_uuid
+        resp = self.client.put_allocations(rp_uuid, consumer_uuid, data,
+                                           mock.sentinel.project_id,
+                                           mock.sentinel.user_id)
+        self.assertTrue(resp)
+        mock_put.assert_has_calls([
+            mock.call(expected_url, mock.ANY, version='1.8'),
+            mock.call(expected_url, mock.ANY, version='1.8')])
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put')
+    def test_put_allocations_retry_gives_up(self, mock_put):
+
+        failed = mock.MagicMock()
+        failed.status_code = 409
+        failed.text = "concurrently updated"
+
+        mock_put.return_value = failed
+
+        rp_uuid = mock.sentinel.rp
+        consumer_uuid = mock.sentinel.consumer
+        data = {"MEMORY_MB": 1024}
+        expected_url = "/allocations/%s" % consumer_uuid
+        resp = self.client.put_allocations(rp_uuid, consumer_uuid, data,
+                                           mock.sentinel.project_id,
+                                           mock.sentinel.user_id)
+        self.assertFalse(resp)
+        mock_put.assert_has_calls([
+            mock.call(expected_url, mock.ANY, version='1.8'),
+            mock.call(expected_url, mock.ANY, version='1.8'),
+            mock.call(expected_url, mock.ANY, version='1.8')])
+
     def test_claim_resources_success(self):
         get_resp_mock = mock.Mock(status_code=200)
         get_resp_mock.json.return_value = {
