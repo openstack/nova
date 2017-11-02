@@ -10,6 +10,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import testtools
+
 from nova import exception
 from nova import objects
 from nova.tests.unit.objects import test_objects
@@ -89,12 +91,23 @@ class _TestNUMA(object):
                                     mempages=[])
         numacell.pin_cpus(set([2, 3]))
         self.assertEqual(set([4]), numacell.free_cpus)
-        self.assertRaises(exception.CPUPinningUnknown,
-                          numacell.pin_cpus, set([1, 55]))
+
+        expect_msg = (
+            exception.CPUPinningUnknown.msg_fmt % {'requested': "\[1, 55\]",
+                                                   'cpuset': "\[1, 2, 3, 4\]"})
+        with testtools.ExpectedException(exception.CPUPinningUnknown,
+                                         expect_msg):
+            numacell.pin_cpus(set([1, 55]))
+
         self.assertRaises(exception.CPUPinningInvalid,
                           numacell.pin_cpus, set([1, 4]))
-        self.assertRaises(exception.CPUUnpinningUnknown,
-                          numacell.unpin_cpus, set([1, 55]))
+
+        expect_msg = (exception.CPUUnpinningUnknown.msg_fmt %
+                      {'requested': "\[1, 55\]", 'cpuset': "\[1, 2, 3, 4\]"})
+        with testtools.ExpectedException(exception.CPUUnpinningUnknown,
+                                         expect_msg):
+            numacell.unpin_cpus(set([1, 55]))
+
         self.assertRaises(exception.CPUUnpinningInvalid,
                           numacell.unpin_cpus, set([1, 4]))
         numacell.unpin_cpus(set([1, 2, 3]))
