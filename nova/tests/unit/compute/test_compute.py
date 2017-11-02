@@ -2407,9 +2407,10 @@ class ComputeTestCase(BaseTestCase,
 
         self.compute.terminate_instance(self.context, instance, [], [])
 
+    @mock.patch.object(fake.FakeDriver, 'power_off')
     @mock.patch.object(fake.FakeDriver, 'rescue')
     @mock.patch.object(compute_manager.ComputeManager, '_get_rescue_image')
-    def test_rescue_handle_err(self, mock_get, mock_rescue):
+    def test_rescue_handle_err(self, mock_get, mock_rescue, mock_power_off):
         # If the driver fails to rescue, instance state should got to ERROR
         # and the exception should be converted to InstanceNotRescuable
         inst_obj = self._create_fake_instance_obj()
@@ -2432,8 +2433,9 @@ class ComputeTestCase(BaseTestCase,
                                             mock.ANY, 'password')
 
     @mock.patch.object(image_api.API, "get")
+    @mock.patch.object(fake.FakeDriver, 'power_off')
     @mock.patch.object(nova.virt.fake.FakeDriver, "rescue")
-    def test_rescue_with_image_specified(self, mock_rescue,
+    def test_rescue_with_image_specified(self, mock_rescue, mock_power_off,
                                          mock_image_get):
         image_ref = uuids.image_instance
         rescue_image_meta = {}
@@ -2457,9 +2459,10 @@ class ComputeTestCase(BaseTestCase,
         self.compute.terminate_instance(ctxt, instance, [], [])
 
     @mock.patch.object(image_api.API, "get")
+    @mock.patch.object(fake.FakeDriver, 'power_off')
     @mock.patch.object(nova.virt.fake.FakeDriver, "rescue")
     def test_rescue_with_base_image_when_image_not_specified(self,
-            mock_rescue, mock_image_get):
+            mock_rescue, mock_power_off, mock_image_get):
         image_ref = FAKE_IMAGE_REF
         system_meta = {"image_base_image_ref": image_ref}
         rescue_image_meta = {}

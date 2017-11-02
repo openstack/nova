@@ -50,7 +50,7 @@
             "reservation_id":"r-npxv0e40",
             "state":"shelved_offloaded",
             "task_state":"unshelving",
-            "power_state":"running",
+            "power_state":"shutdown",
             "tenant_id":"6f70656e737461636b20342065766572",
             "terminated_at":null,
             "auto_disk_config":"MANUAL",

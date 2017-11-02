@@ -425,7 +425,6 @@ class TestInstanceNotificationSample(
             'instance-power_off-end',
             replacements={
                 'reservation_id': server['reservation_id'],
-                'power_state': 'running',
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 

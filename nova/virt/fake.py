@@ -244,11 +244,17 @@ class FakeDriver(driver.ComputeDriver):
         pass
 
     def power_off(self, instance, timeout=0, retry_interval=0):
-        pass
+        if instance.uuid in self.instances:
+            self.instances[instance.uuid].state = power_state.SHUTDOWN
+        else:
+            raise exception.InstanceNotFound(instance_id=instance.uuid)
 
     def power_on(self, context, instance, network_info,
                  block_device_info=None):
-        pass
+        if instance.uuid in self.instances:
+            self.instances[instance.uuid].state = power_state.RUNNING
+        else:
+            raise exception.InstanceNotFound(instance_id=instance.uuid)
 
     def trigger_crash_dump(self, instance):
         pass
