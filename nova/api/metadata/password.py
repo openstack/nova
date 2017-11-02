@@ -77,4 +77,5 @@ def handle_password(req, meta_data):
         instance.system_metadata.update(convert_password(ctxt, req.body))
         instance.save()
     else:
-        raise exc.HTTPBadRequest()
+        msg = _("GET and POST only are supported.")
+        raise exc.HTTPBadRequest(explanation=msg)
