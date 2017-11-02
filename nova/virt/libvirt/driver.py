@@ -3111,8 +3111,8 @@ class LibvirtDriver(driver.ComputeDriver):
         :param injection_info: Injection info
         """
         # Handles the partition need to be used.
-        LOG.debug('Checking root disk injection %(info)s',
-                  info=str(injection_info), instance=instance)
+        LOG.debug('Checking root disk injection %s',
+                  str(injection_info), instance=instance)
         target_partition = None
         if not instance.kernel_id:
             target_partition = CONF.libvirt.inject_partition
@@ -3142,7 +3142,7 @@ class LibvirtDriver(driver.ComputeDriver):
         metadata = instance.get('metadata')
 
         if any((key, net, metadata, admin_pass, injection_info.files)):
-            LOG.debug('Injecting %(info)s', info=str(injection_info),
+            LOG.debug('Injecting %s', str(injection_info),
                       instance=instance)
             img_id = instance.image_ref
             try:
