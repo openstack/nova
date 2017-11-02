@@ -48,6 +48,7 @@ from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
+from nova.compute.utils import wrap_instance_event
 from nova.compute import vm_states
 from nova import conductor
 import nova.conf
@@ -3558,6 +3559,8 @@ class API(base.Base):
             device_type=device_type, tag=tag)
         try:
             self._check_attach_and_reserve_volume(context, volume_id, instance)
+            self._record_action_start(
+                context, instance, instance_actions.ATTACH_VOLUME)
             self.compute_rpcapi.attach_volume(context, instance, volume_bdm)
         except Exception:
             with excutils.save_and_reraise_exception():
@@ -3577,16 +3580,22 @@ class API(base.Base):
         therefore the actual attachment will be performed once the
         instance will be unshelved.
         """
+        @wrap_instance_event(prefix='api')
+        def attach_volume(self, context, v_id, instance, dev):
+            self.volume_api.attach(context,
+                                   v_id,
+                                   instance.uuid,
+                                   dev)
 
         volume_bdm = self._create_volume_bdm(
             context, instance, device, volume_id, disk_bus=disk_bus,
             device_type=device_type, is_local_creation=True)
         try:
             self._check_attach_and_reserve_volume(context, volume_id, instance)
-            self.volume_api.attach(context,
-                                   volume_id,
-                                   instance.uuid,
-                                   device)
+            self._record_action_start(
+                context, instance,
+                instance_actions.ATTACH_VOLUME)
+            attach_volume(self, context, volume_id, instance, device)
         except Exception:
             with excutils.save_and_reraise_exception():
                 volume_bdm.destroy()
@@ -3641,6 +3650,8 @@ class API(base.Base):
         attachment_id = None
         if attachments and instance.uuid in attachments:
             attachment_id = attachments[instance.uuid]['attachment_id']
+        self._record_action_start(
+            context, instance, instance_actions.DETACH_VOLUME)
         self.compute_rpcapi.detach_volume(context, instance=instance,
                 volume_id=volume['id'], attachment_id=attachment_id)
 
@@ -3653,13 +3664,20 @@ class API(base.Base):
         If the volume has delete_on_termination option set then we call the
         volume api delete as well.
         """
+        @wrap_instance_event(prefix='api')
+        def detach_volume(self, context, instance, bdms):
+            self._local_cleanup_bdm_volumes(bdms, instance, context)
+
         try:
             self.volume_api.begin_detaching(context, volume['id'])
         except exception.InvalidInput as exc:
             raise exception.InvalidVolume(reason=exc.format_message())
         bdms = [objects.BlockDeviceMapping.get_by_volume_id(
                 context, volume['id'], instance.uuid)]
-        self._local_cleanup_bdm_volumes(bdms, instance, context)
+        self._record_action_start(
+            context, instance,
+            instance_actions.DETACH_VOLUME)
+        detach_volume(self, context, instance, bdms)
 
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
@@ -3711,6 +3729,9 @@ class API(base.Base):
             # going to swap to, create a new volume attachment.
             new_attachment_id = self.volume_api.attachment_create(
                 context, new_volume['id'], instance.uuid)['id']
+
+        self._record_action_start(
+            context, instance, instance_actions.SWAP_VOLUME)
 
         try:
             self.compute_rpcapi.swap_volume(

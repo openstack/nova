@@ -381,9 +381,10 @@ class _ComputeAPIUnitTestMixIn(object):
         self.assertEqual(result.volume_id, bdm.volume_id)
         self.assertTrue(bdm_create.called)
 
+    @mock.patch.object(compute_api.API, '_record_action_start')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'reserve_block_device_name')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume')
-    def test_attach_volume(self, mock_attach, mock_reserve):
+    def test_attach_volume(self, mock_attach, mock_reserve, mock_record):
         instance = self._create_instance_obj()
         volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
                                          None, None, None, None, None)
@@ -404,10 +405,14 @@ class _ComputeAPIUnitTestMixIn(object):
                                                               volume['id'])
             mock_attach.assert_called_once_with(self.context,
                                                 instance, fake_bdm)
+            mock_record.assert_called_once_with(
+                self.context, instance, instance_actions.ATTACH_VOLUME)
 
+    @mock.patch.object(compute_api.API, '_record_action_start')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'reserve_block_device_name')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_volume')
-    def test_tagged_volume_attach(self, mock_attach, mock_reserve):
+    def test_tagged_volume_attach(self, mock_attach, mock_reserve,
+                                  mock_record):
         instance = self._create_instance_obj()
         volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
                                          None, None, None, None, None)
@@ -432,6 +437,8 @@ class _ComputeAPIUnitTestMixIn(object):
                                                               volume['id'])
             mock_attach.assert_called_once_with(self.context,
                                                 instance, fake_bdm)
+            mock_record.assert_called_once_with(
+                self.context, instance, instance_actions.ATTACH_VOLUME)
 
     def test_attach_volume_shelved_instance(self):
         instance = self._create_instance_obj()
@@ -2307,6 +2314,7 @@ class _ComputeAPIUnitTestMixIn(object):
             if volumes[uuids.new_volume]['status'] == 'reserved':
                 volumes[uuids.new_volume]['status'] = 'available'
 
+        @mock.patch.object(compute_api.API, '_record_action_start')
         @mock.patch.object(self.compute_api.compute_rpcapi, 'swap_volume',
                            return_value=True)
         @mock.patch.object(self.compute_api.volume_api, 'unreserve_volume',
@@ -2326,7 +2334,7 @@ class _ComputeAPIUnitTestMixIn(object):
         def _do_test(mock_begin_detaching, mock_get_by_volume_and_instance,
                      mock_roll_detaching, mock_attachment_create,
                      mock_reserve_volume, mock_attachment_delete,
-                     mock_unreserve_volume, mock_swap_volume):
+                     mock_unreserve_volume, mock_swap_volume, mock_record):
             bdm = objects.BlockDeviceMapping(
                         **fake_block_device.FakeDbBlockDeviceDict(
                         {'no_device': False, 'volume_id': '1', 'boot_index': 0,
@@ -2383,6 +2391,9 @@ class _ComputeAPIUnitTestMixIn(object):
                 old_volume_id=uuids.old_volume,
                 new_volume_id=uuids.new_volume,
                 new_attachment_id=attachment_id)
+            mock_record.assert_called_once_with(self.context,
+                                                instance,
+                                                instance_actions.SWAP_VOLUME)
 
         _do_test()
 

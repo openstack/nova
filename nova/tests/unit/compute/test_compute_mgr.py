@@ -1832,6 +1832,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         do_test()
 
+    @mock.patch.object(compute_utils, 'EventReporter')
     @mock.patch.object(virt_driver.ComputeDriver, 'get_volume_connector',
                        return_value={})
     @mock.patch.object(manager.ComputeManager, '_instance_update',
@@ -1854,6 +1855,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                           mock_instance_fault_create,
                           mock_instance_update,
                           mock_get_volume_connector,
+                          mock_event,
                           expected_exception=None):
         # This test ensures that volume_id arguments are passed to volume_api
         # and that volume states are OK
@@ -1955,6 +1957,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                         fields.NotificationAction.VOLUME_SWAP,
                                         fields.NotificationPhase.END,
                                         uuids.old_volume, uuids.new_volume)
+        mock_event.assert_called_once_with(self.context,
+                                           'compute_swap_volume',
+                                           instance1.uuid)
 
     def _assert_volume_api(self, context, volume, *args):
         self.assertTrue(uuidutils.is_uuid_like(volume))

@@ -46,6 +46,7 @@ from nova import block_device
 from nova import compute
 from nova.compute import api as compute_api
 from nova.compute import flavors
+from nova.compute import instance_actions
 from nova.compute import manager as compute_manager
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
@@ -393,7 +394,8 @@ class ComputeVolumeTestCase(BaseTestCase):
         self.stub_out('nova.db.block_device_mapping_create', store_cinfo)
         self.stub_out('nova.db.block_device_mapping_update', store_cinfo)
 
-    def test_attach_volume_serial(self):
+    @mock.patch.object(compute_utils, 'EventReporter')
+    def test_attach_volume_serial(self, mock_event):
         fake_bdm = objects.BlockDeviceMapping(context=self.context,
                                               **self.fake_volume)
         with (mock.patch.object(cinder.API, 'get_volume_encryption_metadata',
@@ -401,10 +403,14 @@ class ComputeVolumeTestCase(BaseTestCase):
             instance = self._create_fake_instance_obj()
             self.compute.attach_volume(self.context, instance, bdm=fake_bdm)
             self.assertEqual(self.cinfo.get('serial'), uuids.volume_id)
+            mock_event.assert_called_once_with(
+                self.context, 'compute_attach_volume', instance.uuid)
 
+    @mock.patch.object(compute_utils, 'EventReporter')
     @mock.patch('nova.context.RequestContext.elevated')
     @mock.patch('nova.compute.utils.notify_about_volume_attach_detach')
-    def test_attach_volume_raises(self, mock_notify, mock_elevate):
+    def test_attach_volume_raises(self, mock_notify, mock_elevate,
+                                  mock_event):
         mock_elevate.return_value = self.context
 
         fake_bdm = objects.BlockDeviceMapping(**self.fake_volume)
@@ -436,8 +442,11 @@ class ComputeVolumeTestCase(BaseTestCase):
                           volume_id=uuids.volume_id,
                           exception=expected_exception),
             ])
+            mock_event.assert_called_once_with(
+                self.context, 'compute_attach_volume', instance.uuid)
 
-    def test_detach_volume_api_raises(self):
+    @mock.patch.object(compute_utils, 'EventReporter')
+    def test_detach_volume_api_raises(self, mock_event):
         fake_bdm = objects.BlockDeviceMapping(**self.fake_volume)
         instance = self._create_fake_instance_obj()
 
@@ -454,8 +463,11 @@ class ComputeVolumeTestCase(BaseTestCase):
                     test.TestingException, self.compute.detach_volume,
                     self.context, 'fake', instance, 'fake_id')
             self.assertFalse(mock_destroy.called)
+            mock_event.assert_called_once_with(
+                self.context, 'compute_detach_volume', instance.uuid)
 
-    def test_detach_volume_bdm_destroyed(self):
+    @mock.patch.object(compute_utils, 'EventReporter')
+    def test_detach_volume_bdm_destroyed(self, mock_event):
         # Assert that the BDM is destroyed given a successful call to detach
         # the volume from the instance in Cinder.
         fake_bdm = objects.BlockDeviceMapping(**self.fake_volume)
@@ -475,6 +487,8 @@ class ComputeVolumeTestCase(BaseTestCase):
                                                 instance.uuid,
                                                 uuids.attachment_id)
             self.assertTrue(mock_destroy.called)
+            mock_event.assert_called_once_with(
+                self.context, 'compute_detach_volume', instance.uuid)
 
     def test_await_block_device_created_too_slow(self):
         self.flags(block_device_allocate_retries=2)
@@ -10068,8 +10082,9 @@ class ComputeAPITestCase(BaseTestCase):
         with test.nested(
              mock.patch.object(compute_api.API,
                                '_check_attach_and_reserve_volume'),
-             mock.patch.object(cinder.API, 'attach')
-        ) as (mock_attach_and_reserve, mock_attach):
+             mock.patch.object(cinder.API, 'attach'),
+             mock.patch.object(compute_utils, 'EventReporter')
+        ) as (mock_attach_and_reserve, mock_attach, mock_event):
             self.compute_api._attach_volume_shelved_offloaded(
                     self.context, instance, 'fake-volume-id',
                     '/dev/vdb', 'ide', 'cdrom')
@@ -10080,6 +10095,9 @@ class ComputeAPITestCase(BaseTestCase):
                                                 'fake-volume-id',
                                                 instance.uuid,
                                                 '/dev/vdb')
+            mock_event.assert_called_once_with(
+                self.context, 'api_attach_volume', instance.uuid
+            )
             self.assertTrue(mock_attach.called)
 
     def test_attach_volume_no_device(self):
@@ -10125,7 +10143,8 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertTrue(called.get('fake_rpc_reserve_block_device_name'))
         self.assertTrue(called.get('fake_rpc_attach_volume'))
 
-    def test_detach_volume(self):
+    @mock.patch('nova.compute.api.API._record_action_start')
+    def test_detach_volume(self, mock_record):
         # Ensure volume can be detached from instance
         called = {}
         instance = self._create_fake_instance_obj()
@@ -10147,14 +10166,19 @@ class ComputeAPITestCase(BaseTestCase):
                 instance, volume)
         self.assertTrue(called.get('fake_begin_detaching'))
         self.assertTrue(called.get('fake_rpc_detach_volume'))
+        mock_record.assert_called_once_with(
+            self.context, instance, instance_actions.DETACH_VOLUME)
 
+    @mock.patch('nova.compute.api.API._record_action_start')
+    @mock.patch.object(compute_utils, 'EventReporter')
     @mock.patch.object(nova.volume.cinder.API, 'begin_detaching')
     @mock.patch.object(compute_api.API, '_local_cleanup_bdm_volumes')
     @mock.patch.object(objects.BlockDeviceMapping, 'get_by_volume_id')
     def test_detach_volume_shelved_offloaded(self,
                                              mock_block_dev,
                                              mock_local_cleanup,
-                                             mock_begin_detaching):
+                                             mock_begin_detaching,
+                                             mock_event, mock_record):
 
         mock_block_dev.return_value = [block_device_obj.BlockDeviceMapping(
                                       context=context)]
@@ -10165,6 +10189,11 @@ class ComputeAPITestCase(BaseTestCase):
                                                           volume)
         mock_begin_detaching.assert_called_once_with(self.context,
                                                      volume['id'])
+        mock_record.assert_called_once_with(
+            self.context, instance, instance_actions.DETACH_VOLUME)
+        mock_event.assert_called_once_with(self.context,
+                                           'api_detach_volume',
+                                           instance.uuid)
         self.assertTrue(mock_local_cleanup.called)
 
     @mock.patch.object(nova.volume.cinder.API, 'begin_detaching',

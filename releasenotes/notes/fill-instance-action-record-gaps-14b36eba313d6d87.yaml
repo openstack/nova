@@ -5,3 +5,6 @@ features:
 
     * attach_interface
     * detach_interface
+    * attach_volume
+    * detach_volume
+    * swap_volume

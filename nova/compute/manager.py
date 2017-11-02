@@ -5093,6 +5093,7 @@ class ComputeManager(manager.Manager):
         return do_reserve()
 
     @wrap_exception()
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def attach_volume(self, context, instance, bdm):
         """Attach a volume to an instance."""
@@ -5235,6 +5236,7 @@ class ComputeManager(manager.Manager):
                                 instance=instance)
 
     @wrap_exception()
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def detach_volume(self, context, volume_id, instance, attachment_id=None):
         """Detach a volume from an instance.
@@ -5399,6 +5401,7 @@ class ComputeManager(manager.Manager):
         return (comp_ret, new_cinfo)
 
     @wrap_exception()
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def swap_volume(self, context, old_volume_id, new_volume_id, instance,
                     new_attachment_id=None):
