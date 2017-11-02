@@ -90,7 +90,6 @@ from nova import objects
 from nova.objects import aggregate as aggregate_obj
 from nova.objects import build_request as build_request_obj
 from nova.objects import host_mapping as host_mapping_obj
-from nova.objects import instance as instance_obj
 from nova.objects import instance_group as instance_group_obj
 from nova.objects import keypair as keypair_obj
 from nova.objects import quotas as quotas_obj
@@ -642,8 +641,6 @@ class DbCommands(object):
     """Class for managing the main database."""
 
     online_migrations = (
-        # Added in Newton
-        instance_obj.migrate_instance_keypairs,
         # Added in Newton
         request_spec.migrate_instances_add_request_spec,
         # Added in Newton

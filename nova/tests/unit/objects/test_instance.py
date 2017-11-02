@@ -24,7 +24,6 @@ from nova.cells import rpcapi as cells_rpcapi
 from nova.compute import flavors
 from nova.compute import task_states
 from nova.compute import vm_states
-from nova import context
 from nova import db
 from nova import exception
 from nova.network import model as network_model
@@ -313,25 +312,6 @@ class _TestInstanceObject(object):
         self.assertNotIn('keypairs', inst)
         self.assertEqual('foo', inst.keypairs[0].name)
         self.assertNotIn('keypairs', inst.obj_what_changed())
-
-    @mock.patch('nova.objects.KeyPair.get_by_name')
-    def test_lazy_load_keypairs_from_legacy(self, mock_get):
-        mock_get.return_value = objects.KeyPair(name='foo')
-
-        inst = objects.Instance(context=self.context,
-                                user_id=self.context.user_id,
-                                key_name='foo',
-                                project_id=self.context.project_id)
-        inst.create()
-
-        inst = objects.Instance.get_by_uuid(self.context, inst.uuid)
-        self.assertNotIn('keypairs', inst)
-        self.assertEqual('foo', inst.keypairs[0].name)
-        self.assertIn('keypairs', inst.obj_what_changed())
-        mock_get.assert_called_once_with(self.context,
-                                         inst.user_id,
-                                         inst.key_name,
-                                         localonly=True)
 
     @mock.patch.object(db, 'instance_get_by_uuid')
     def test_get_remote(self, mock_get):
@@ -1995,53 +1975,3 @@ class TestInstanceObjectMisc(test.TestCase):
         self.assertEqual(['metadata', 'system_metadata', 'info_cache',
                          'security_groups', 'pci_devices', 'tags', 'extra',
                          'extra.flavor'], result_list)
-
-    def test_migrate_instance_keypairs(self):
-        ctxt = context.RequestContext('foo', 'bar')
-        key = objects.KeyPair(context=ctxt,
-                              user_id=ctxt.user_id,
-                              name='testkey',
-                              public_key='keydata',
-                              type='ssh')
-        key.create()
-        inst1 = objects.Instance(context=ctxt,
-                                 user_id=ctxt.user_id,
-                                 project_id=ctxt.project_id,
-                                 key_name='testkey')
-        inst1.create()
-        inst2 = objects.Instance(context=ctxt,
-                                 user_id=ctxt.user_id,
-                                 project_id=ctxt.project_id,
-                                 key_name='testkey',
-                                 keypairs=objects.KeyPairList(
-                                     objects=[key]))
-        inst2.create()
-        inst3 = objects.Instance(context=ctxt,
-                                 user_id=ctxt.user_id,
-                                 project_id=ctxt.project_id,
-                                 key_name='missingkey')
-        inst3.create()
-
-        inst4 = objects.Instance(context=ctxt,
-                                 user_id=ctxt.user_id,
-                                 project_id=ctxt.project_id,
-                                 key_name='missingkey')
-        inst4.create()
-        inst4.destroy()
-
-        # NOTE(danms): Add an orphaned instance_extra record for
-        # a totally invalid instance to make sure we don't explode.
-        # See bug 1684861 for more information.
-        db.instance_extra_update_by_uuid(ctxt, 'foo', {})
-
-        hit, done = instance.migrate_instance_keypairs(ctxt, 10)
-        self.assertEqual(3, hit)
-        self.assertEqual(2, done)
-        db_extra = db.instance_extra_get_by_instance_uuid(
-            ctxt, inst1.uuid, ['keypairs'])
-        self.assertIsNotNone(db_extra.keypairs)
-        db_extra = db.instance_extra_get_by_instance_uuid(
-            ctxt, inst3.uuid, ['keypairs'])
-        obj = base.NovaObject.obj_from_primitive(
-            jsonutils.loads(db_extra['keypairs']))
-        self.assertEqual([], obj.objects)

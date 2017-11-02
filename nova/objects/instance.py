@@ -21,7 +21,6 @@ from oslo_serialization import jsonutils
 from oslo_utils import timeutils
 from oslo_utils import versionutils
 from sqlalchemy import or_
-from sqlalchemy.orm import joinedload
 from sqlalchemy.sql import func
 from sqlalchemy.sql import null
 
@@ -938,24 +937,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 self.keypairs = inst.keypairs
                 self.keypairs.obj_reset_changes(recursive=True)
                 self.obj_reset_changes(['keypairs'])
-                return
-
-            # NOTE(danms): We need to load from the old location by name
-            # if we don't have them in extra. Only do this from the main
-            # database as instances were created with keypairs in extra
-            # before keypairs were moved to the api database.
-            self.keypairs = objects.KeyPairList(objects=[])
-            try:
-                key = objects.KeyPair.get_by_name(self._context,
-                                                  self.user_id,
-                                                  self.key_name,
-                                                  localonly=True)
-                self.keypairs.objects.append(key)
-            except exception.KeypairNotFound:
-                pass
-            # NOTE(danms): If we loaded from legacy, we leave the keypairs
-            # attribute dirty in hopes someone else will save it for us
-
+            else:
+                self.keypairs = objects.KeyPairList(objects=[])
+                # NOTE(danms): We leave the keypairs attribute dirty in hopes
+                # someone else will save it for us
         elif db_keypairs:
             self.keypairs = objects.KeyPairList.obj_from_primitive(
                 jsonutils.loads(db_keypairs))
@@ -1451,44 +1436,3 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
                               'ram': <count across user>}}
         """
         return cls._get_counts_in_db(context, project_id, user_id=user_id)
-
-
-@db_api.pick_context_manager_writer
-def _migrate_instance_keypairs(ctxt, count):
-    db_extras = ctxt.session.query(models.InstanceExtra).\
-        options(joinedload('instance')).\
-        filter_by(keypairs=None).\
-        filter_by(deleted=0).\
-        limit(count).\
-        all()
-
-    count_all = len(db_extras)
-    count_hit = 0
-    for db_extra in db_extras:
-        if db_extra.instance is None:
-            LOG.error(
-                ('Instance %(uuid)s has been purged, but an instance_extra '
-                 'record remains for it. Unable to migrate.'),
-                {'uuid': db_extra.instance_uuid})
-            continue
-        key_name = db_extra.instance.key_name
-        keypairs = objects.KeyPairList(objects=[])
-        if key_name:
-            try:
-                key = objects.KeyPair.get_by_name(ctxt,
-                                                  db_extra.instance.user_id,
-                                                  key_name)
-                keypairs.objects.append(key)
-            except exception.KeypairNotFound:
-                LOG.warning(
-                    'Instance %(uuid)s keypair %(keyname)s not found',
-                    {'uuid': db_extra.instance_uuid, 'keyname': key_name})
-        db_extra.keypairs = jsonutils.dumps(keypairs.obj_to_primitive())
-        db_extra.save(ctxt.session)
-        count_hit += 1
-
-    return count_all, count_hit
-
-
-def migrate_instance_keypairs(ctxt, count):
-    return _migrate_instance_keypairs(ctxt, count)
