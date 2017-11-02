@@ -987,8 +987,9 @@ class SchedulerReportClient(object):
     # _allocate_for_instance() method is used which does not perform any
     # checking that a move operation is in place.
     @safe_connect
+    @retries
     def claim_resources(self, consumer_uuid, alloc_request, project_id,
-                        user_id, attempt=0):
+                        user_id):
         """Creates allocation records for the supplied instance UUID against
         the supplied resource providers.
 
@@ -1003,16 +1004,11 @@ class SchedulerReportClient(object):
         end up setting allocations for the instance only on the destination
         host thereby freeing up resources on the source host appropriately.
 
-        :note: This method will attempt to retry a claim that fails with a
-        concurrent update up to 3 times
-
         :param consumer_uuid: The instance's UUID.
         :param alloc_request: The JSON body of the request to make to the
                               placement's PUT /allocations API
         :param project_id: The project_id associated with the allocations.
         :param user_id: The user_id associated with the allocations.
-        :param attempt: The attempt at claiming this allocation_request (used
-                        in recursive retries)
         :returns: True if the allocations were created, False otherwise.
         """
         # Ensure we don't change the supplied alloc request since it's used in
@@ -1037,22 +1033,18 @@ class SchedulerReportClient(object):
         if r.status_code != 204:
             # NOTE(jaypipes): Yes, it sucks doing string comparison like this
             # but we have no error codes, only error messages.
-            if attempt < 3 and 'concurrently updated' in r.text:
-                # Another thread updated one or more of the resource providers
-                # involved in the claim. It's safe to retry the claim
-                # transaction.
-                LOG.debug("Another process changed the resource providers "
-                          "involved in our claim attempt for consumer %s. "
-                          "Retrying claim, attempt: %s", consumer_uuid,
-                          (attempt + 1))
-                return self.claim_resources(consumer_uuid, alloc_request,
-                    project_id, user_id, attempt=(attempt + 1))
-            LOG.warning(
-                'Unable to submit allocation for instance '
-                '%(uuid)s (%(code)i %(text)s)',
-                {'uuid': consumer_uuid,
-                 'code': r.status_code,
-                 'text': r.text})
+            if 'concurrently updated' in r.text:
+                reason = ('another process changed the resource providers '
+                          'involved in our attempt to put allocations for '
+                          'consumer %s' % consumer_uuid)
+                raise Retry('claim_resources', reason)
+            else:
+                LOG.warning(
+                    'Unable to submit allocation for instance '
+                    '%(uuid)s (%(code)i %(text)s)',
+                    {'uuid': consumer_uuid,
+                     'code': r.status_code,
+                     'text': r.text})
         return r.status_code == 204
 
     @safe_connect
