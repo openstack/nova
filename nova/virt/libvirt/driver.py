@@ -53,6 +53,7 @@ from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_service import loopingcall
+from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import fileutils
 from oslo_utils import importutils
@@ -1819,9 +1820,10 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.set_user_password(user, new_pass)
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
+            err_msg = encodeutils.exception_to_unicode(ex)
             msg = (_('Error from libvirt while set password for username '
                      '"%(user)s": [Error Code %(error_code)s] %(ex)s')
-                   % {'user': user, 'error_code': error_code, 'ex': ex})
+                   % {'user': user, 'error_code': error_code, 'ex': err_msg})
             raise exception.InternalError(msg)
 
     def _can_quiesce(self, instance, image_meta):
@@ -1845,10 +1847,11 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest.thaw_filesystems()
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
+            err_msg = encodeutils.exception_to_unicode(ex)
             msg = (_('Error from libvirt while quiescing %(instance_name)s: '
                      '[Error Code %(error_code)s] %(ex)s')
                    % {'instance_name': instance.name,
-                      'error_code': error_code, 'ex': ex})
+                      'error_code': error_code, 'ex': err_msg})
             raise exception.InternalError(msg)
 
     def quiesce(self, context, instance, image_meta):
