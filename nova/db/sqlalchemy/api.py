@@ -4850,7 +4850,15 @@ def migration_get_unconfirmed_by_dest_compute(context, confirm_window,
 
 @pick_context_manager_reader
 def migration_get_in_progress_by_host_and_node(context, host, node):
-
+    # TODO(mriedem): Tracking what various code flows set for
+    # migration status is nutty, since it happens all over the place
+    # and several of the statuses are redundant (done and completed).
+    # We need to define these in an enum somewhere and just update
+    # that one central place that defines what "in progress" means.
+    # NOTE(mriedem): The 'finished' status is not in this list because
+    # 'finished' means a resize is finished on the destination host
+    # and the instance is in VERIFY_RESIZE state, so the end state
+    # for a resize is actually 'confirmed' or 'reverted'.
     return model_query(context, models.Migration).\
             filter(or_(and_(models.Migration.source_compute == host,
                             models.Migration.source_node == node),
@@ -4859,7 +4867,7 @@ def migration_get_in_progress_by_host_and_node(context, host, node):
             filter(~models.Migration.status.in_(['accepted', 'confirmed',
                                                  'reverted', 'error',
                                                  'failed', 'completed',
-                                                 'cancelled'])).\
+                                                 'cancelled', 'done'])).\
             options(joinedload_all('instance.system_metadata')).\
             all()
 
