@@ -59,7 +59,7 @@ class APITestCase(test.NoDBTestCase):
         self.assertTrue(api.is_image_extendable(image))
         mock_exec.assert_called_once_with('e2label', imgfile)
 
-    @mock.patch.object(utils, 'execute', autospec=True)
+    @mock.patch('oslo_concurrency.processutils.execute', autospec=True)
     def test_resize2fs_success(self, mock_exec):
         imgfile = tempfile.NamedTemporaryFile()
         self.addCleanup(imgfile.close)
@@ -70,16 +70,24 @@ class APITestCase(test.NoDBTestCase):
             [mock.call('e2fsck',
                        '-fp',
                        imgfile,
-                       check_exit_code=[0, 1, 2],
-                       run_as_root=False),
+                       check_exit_code=[0, 1, 2]),
              mock.call('resize2fs',
                        imgfile,
-                       check_exit_code=False,
-                       run_as_root=False)])
+                       check_exit_code=False)])
 
-    @mock.patch.object(utils, 'execute', autospec=True,
-                       side_effect=processutils.ProcessExecutionError(
-                           "fs error"))
+    @mock.patch('oslo_concurrency.processutils.execute')
+    @mock.patch('nova.privsep.fs.resize2fs')
+    def test_resize2fs_success_as_root(self, mock_resize, mock_exec):
+        imgfile = tempfile.NamedTemporaryFile()
+        self.addCleanup(imgfile.close)
+
+        api.resize2fs(imgfile, run_as_root=True)
+
+        mock_exec.assert_not_called()
+        mock_resize.assert_called()
+
+    @mock.patch('oslo_concurrency.processutils.execute', autospec=True,
+                side_effect=processutils.ProcessExecutionError("fs error"))
     def test_resize2fs_e2fsck_fails(self, mock_exec):
         imgfile = tempfile.NamedTemporaryFile()
         self.addCleanup(imgfile.close)
@@ -88,8 +96,7 @@ class APITestCase(test.NoDBTestCase):
         mock_exec.assert_called_once_with('e2fsck',
                                           '-fp',
                                           imgfile,
-                                          check_exit_code=[0, 1, 2],
-                                          run_as_root=False)
+                                          check_exit_code=[0, 1, 2])
 
     @mock.patch.object(api, 'can_resize_image', autospec=True,
                        return_value=True)
