@@ -365,7 +365,7 @@ for an eventual extraction and avoid creating unnecessary interdependencies.
 .. _Request: http://docs.webob.org/en/latest/reference.html#request
 .. _Response: http://docs.webob.org/en/latest/#response
 .. _microversions: http://specs.openstack.org/openstack/api-wg/guidelines/microversion_specification.html
-.. _release note: http://docs.openstack.org/developer/reno/usage.html
+.. _release note: https://docs.openstack.org/reno/latest/user/usage.html
 .. _gabbi: https://gabbi.readthedocs.io/
 .. _telemetry: http://specs.openstack.org/openstack/telemetry-specs/specs/kilo/declarative-http-tests.html
 .. _wsgi-intercept: http://wsgi-intercept.readthedocs.io/
