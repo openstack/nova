@@ -17,6 +17,9 @@ import fixtures
 from oslo_middleware import request_id
 import webob
 
+import six.moves.urllib.parse as urlparse
+
+from nova.api.openstack.placement import lib as pl
 from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement import util
 from nova.objects import resource_provider as rp_obj
@@ -363,3 +366,231 @@ class TestNormalizeResourceQsParam(test.NoDBTestCase):
             util.normalize_resources_qs_param,
             qs,
         )
+
+
+class TestNormalizeTraitsQsParam(test.NoDBTestCase):
+
+    def test_one(self):
+        trait = 'HW_CPU_X86_VMX'
+        # Various whitespace permutations
+        for fmt in ('%s', ' %s', '%s ', ' %s ', '  %s  '):
+            self.assertEqual(set([trait]),
+                             util.normalize_traits_qs_param(fmt % trait))
+
+    def test_multiple(self):
+        traits = (
+            'HW_CPU_X86_VMX',
+            'HW_GPU_API_DIRECT3D_V12_0',
+            'HW_NIC_OFFLOAD_RX',
+            'CUSTOM_GOLD',
+            'STORAGE_DISK_SSD',
+        )
+        self.assertEqual(
+            set(traits),
+            util.normalize_traits_qs_param('%s, %s,%s , %s ,  %s  ' % traits))
+
+    def test_400_all_empty(self):
+        for qs in ('', ' ', '   ', ',', ' , , '):
+            self.assertRaises(
+                webob.exc.HTTPBadRequest, util.normalize_traits_qs_param, qs)
+
+    def test_400_some_empty(self):
+        traits = (
+            'HW_NIC_OFFLOAD_RX',
+            'CUSTOM_GOLD',
+            'STORAGE_DISK_SSD',
+        )
+        for fmt in ('%s,,%s,%s', ',%s,%s,%s', '%s,%s,%s,', ' %s , %s ,  , %s'):
+            self.assertRaises(webob.exc.HTTPBadRequest,
+                              util.normalize_traits_qs_param, fmt % traits)
+
+
+class TestParseQsResourcesAndTraits(test.NoDBTestCase):
+
+    @staticmethod
+    def do_parse(qstring):
+        """Converts a querystring to a MultiDict, mimicking request.GET, and
+        runs parse_qs_request_groups on it.
+        """
+        return util.parse_qs_request_groups(webob.multidict.MultiDict(
+            urlparse.parse_qsl(qstring)))
+
+    def assertRequestGroupsEqual(self, expected, observed):
+        self.assertEqual(len(expected), len(observed))
+        for exp, obs in zip(expected, observed):
+            self.assertEqual(vars(exp), vars(obs))
+
+    def test_empty(self):
+        self.assertRequestGroupsEqual([], self.do_parse(''))
+
+    def test_unnumbered_only(self):
+        """Unnumbered resources & traits - no numbered groupings."""
+        qs = ('resources=VCPU:2,MEMORY_MB:2048'
+              '&required=HW_CPU_X86_VMX,CUSTOM_GOLD')
+        expected = [
+            pl.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    'VCPU': 2,
+                    'MEMORY_MB': 2048,
+                },
+                required_traits={
+                    'HW_CPU_X86_VMX',
+                    'CUSTOM_GOLD',
+                },
+            ),
+        ]
+        self.assertRequestGroupsEqual(expected, self.do_parse(qs))
+
+    def test_unnumbered_resources_only(self):
+        """Validate the bit that can be used for 1.10 and earlier."""
+        qs = 'resources=VCPU:2,MEMORY_MB:2048,DISK_GB:5,CUSTOM_MAGIC:123'
+        expected = [
+            pl.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    'VCPU': 2,
+                    'MEMORY_MB': 2048,
+                    'DISK_GB': 5,
+                    'CUSTOM_MAGIC': 123,
+                },
+            ),
+        ]
+        self.assertRequestGroupsEqual(expected, self.do_parse(qs))
+
+    def test_numbered_only(self):
+        # Crazy ordering and nonsequential numbers don't matter.
+        # It's okay to have a 'resources' without a 'required'.
+        # A trait that's repeated shows up in both spots.
+        qs = ('resources1=VCPU:2,MEMORY_MB:2048'
+              '&required42=CUSTOM_GOLD'
+              '&resources99=DISK_GB:5'
+              '&resources42=CUSTOM_MAGIC:123'
+              '&required1=HW_CPU_X86_VMX,CUSTOM_GOLD')
+        expected = [
+            pl.RequestGroup(
+                resources={
+                    'VCPU': 2,
+                    'MEMORY_MB': 2048,
+                },
+                required_traits={
+                    'HW_CPU_X86_VMX',
+                    'CUSTOM_GOLD',
+                },
+            ),
+            pl.RequestGroup(
+                resources={
+                    'CUSTOM_MAGIC': 123,
+                },
+                required_traits={
+                    'CUSTOM_GOLD',
+                },
+            ),
+            pl.RequestGroup(
+                resources={
+                    'DISK_GB': 5,
+                },
+            ),
+        ]
+        self.assertRequestGroupsEqual(expected, self.do_parse(qs))
+
+    def test_numbered_and_unnumbered(self):
+        qs = ('resources=VCPU:3,MEMORY_MB:4096,DISK_GB:10'
+              '&required=HW_CPU_X86_VMX,CUSTOM_MEM_FLASH,STORAGE_DISK_SSD'
+              '&resources1=SRIOV_NET_VF:2'
+              '&required1=CUSTOM_PHYSNET_PRIVATE'
+              '&resources2=SRIOV_NET_VF:1,NET_INGRESS_BYTES_SEC:20000'
+              ',NET_EGRESS_BYTES_SEC:10000'
+              '&required2=CUSTOM_SWITCH_BIG,CUSTOM_PHYSNET_PROD'
+              '&resources3=CUSTOM_MAGIC:123')
+        expected = [
+            pl.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    'VCPU': 3,
+                    'MEMORY_MB': 4096,
+                    'DISK_GB': 10,
+                },
+                required_traits={
+                    'HW_CPU_X86_VMX',
+                    'CUSTOM_MEM_FLASH',
+                    'STORAGE_DISK_SSD',
+                },
+            ),
+            pl.RequestGroup(
+                resources={
+                    'SRIOV_NET_VF': 2,
+                },
+                required_traits={
+                    'CUSTOM_PHYSNET_PRIVATE',
+                },
+            ),
+            pl.RequestGroup(
+                resources={
+                    'SRIOV_NET_VF': 1,
+                    'NET_INGRESS_BYTES_SEC': 20000,
+                    'NET_EGRESS_BYTES_SEC': 10000,
+                },
+                required_traits={
+                    'CUSTOM_SWITCH_BIG',
+                    'CUSTOM_PHYSNET_PROD',
+                },
+            ),
+           pl.RequestGroup(
+               resources={
+                   'CUSTOM_MAGIC': 123,
+               },
+           ),
+        ]
+        self.assertRequestGroupsEqual(expected, self.do_parse(qs))
+
+    def test_400_malformed_resources(self):
+        # Somewhat duplicates TestNormalizeResourceQsParam.test_400*.
+        qs = ('resources=VCPU:0,MEMORY_MB:4096,DISK_GB:10'
+              # Bad ----------^
+              '&required=HW_CPU_X86_VMX,CUSTOM_MEM_FLASH,STORAGE_DISK_SSD'
+              '&resources1=SRIOV_NET_VF:2'
+              '&required1=CUSTOM_PHYSNET_PRIVATE'
+              '&resources2=SRIOV_NET_VF:1,NET_INGRESS_BYTES_SEC:20000'
+              ',NET_EGRESS_BYTES_SEC:10000'
+              '&required2=CUSTOM_SWITCH_BIG,CUSTOM_PHYSNET_PROD'
+              '&resources3=CUSTOM_MAGIC:123')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.do_parse, qs)
+
+    def test_400_malformed_traits(self):
+        # Somewhat duplicates TestNormalizeResourceQsParam.test_400*.
+        qs = ('resources=VCPU:7,MEMORY_MB:4096,DISK_GB:10'
+              '&required=HW_CPU_X86_VMX,CUSTOM_MEM_FLASH,STORAGE_DISK_SSD'
+              '&resources1=SRIOV_NET_VF:2'
+              '&required1=CUSTOM_PHYSNET_PRIVATE'
+              '&resources2=SRIOV_NET_VF:1,NET_INGRESS_BYTES_SEC:20000'
+              ',NET_EGRESS_BYTES_SEC:10000'
+              '&required2=CUSTOM_SWITCH_BIG,CUSTOM_PHYSNET_PROD,'
+              # Bad -------------------------------------------^
+              '&resources3=CUSTOM_MAGIC:123')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.do_parse, qs)
+
+    def test_400_traits_no_resources_unnumbered(self):
+        qs = ('resources9=VCPU:7,MEMORY_MB:4096,DISK_GB:10'
+              # Oops ---^
+              '&required=HW_CPU_X86_VMX,CUSTOM_MEM_FLASH,STORAGE_DISK_SSD'
+              '&resources1=SRIOV_NET_VF:2'
+              '&required1=CUSTOM_PHYSNET_PRIVATE'
+              '&resources2=SRIOV_NET_VF:1,NET_INGRESS_BYTES_SEC:20000'
+              ',NET_EGRESS_BYTES_SEC:10000'
+              '&required2=CUSTOM_SWITCH_BIG,CUSTOM_PHYSNET_PROD'
+              '&resources3=CUSTOM_MAGIC:123')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.do_parse, qs)
+
+    def test_400_traits_no_resources_numbered(self):
+        qs = ('resources=VCPU:7,MEMORY_MB:4096,DISK_GB:10'
+              '&required=HW_CPU_X86_VMX,CUSTOM_MEM_FLASH,STORAGE_DISK_SSD'
+              '&resources11=SRIOV_NET_VF:2'
+              # Oops ----^^
+              '&required1=CUSTOM_PHYSNET_PRIVATE'
+              '&resources20=SRIOV_NET_VF:1,NET_INGRESS_BYTES_SEC:20000'
+              # Oops ----^^
+              ',NET_EGRESS_BYTES_SEC:10000'
+              '&required2=CUSTOM_SWITCH_BIG,CUSTOM_PHYSNET_PROD'
+              '&resources3=CUSTOM_MAGIC:123')
+        self.assertRaises(webob.exc.HTTPBadRequest, self.do_parse, qs)
