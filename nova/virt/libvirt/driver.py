@@ -924,7 +924,8 @@ class LibvirtDriver(driver.ComputeDriver):
                     else:
                         LOG.error('Error from libvirt during undefine. '
                                   'Code=%(errcode)s Error=%(e)s',
-                                  {'errcode': errcode, 'e': e},
+                                  {'errcode': errcode,
+                                   'e': encodeutils.exception_to_unicode(e)},
                                   instance=instance)
         except exception.InstanceNotFound:
             pass
@@ -1003,7 +1004,8 @@ class LibvirtDriver(driver.ComputeDriver):
                         LOG.warning(
                             "Ignoring Volume Error on vol %(vol_id)s "
                             "during delete %(exc)s",
-                            {'vol_id': vol.get('volume_id'), 'exc': exc},
+                            {'vol_id': vol.get('volume_id'),
+                             'exc': encodeutils.exception_to_unicode(exc)},
                             instance=instance)
 
         if destroy_disks:
@@ -1709,7 +1711,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 exception.Forbidden) as e:
             if type(e) != NotImplementedError:
                 LOG.warning('Performing standard snapshot because direct '
-                            'snapshot failed: %(error)s', {'error': e})
+                            'snapshot failed: %(error)s',
+                            {'error': encodeutils.exception_to_unicode(e)})
             failed_snap = metadata.pop('location', None)
             if failed_snap:
                 failed_snap = {'url': str(failed_snap)}
@@ -2414,7 +2417,8 @@ class LibvirtDriver(driver.ComputeDriver):
             try:
                 soft_reboot_success = self._soft_reboot(instance)
             except libvirt.libvirtError as e:
-                LOG.debug("Instance soft reboot failed: %s", e,
+                LOG.debug("Instance soft reboot failed: %s",
+                          encodeutils.exception_to_unicode(e),
                           instance=instance)
                 soft_reboot_success = False
 
@@ -5317,10 +5321,11 @@ class LibvirtDriver(driver.ComputeDriver):
             online_pcpus = self._host.get_online_cpus()
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
+            err_msg = encodeutils.exception_to_unicode(ex)
             LOG.warning(
                 "Couldn't retrieve the online CPUs due to a Libvirt "
                 "error: %(error)s with error code: %(error_code)s",
-                {'error': ex, 'error_code': error_code})
+                {'error': err_msg, 'error_code': error_code})
         if online_pcpus:
             if not (available_ids <= online_pcpus):
                 msg = (_("Invalid vcpu_pin_set config, one or more of the "
@@ -5573,7 +5578,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._list_devices_supported = False
                 LOG.warning("URI %(uri)s does not support "
                             "listDevices: %(error)s",
-                            {'uri': self._uri(), 'error': ex})
+                            {'uri': self._uri(),
+                             'error': encodeutils.exception_to_unicode(ex)})
                 return jsonutils.dumps([])
             else:
                 raise
@@ -6267,7 +6273,8 @@ class LibvirtDriver(driver.ComputeDriver):
         try:
             dom.abortJob()
         except libvirt.libvirtError as e:
-            LOG.error("Failed to cancel migration %s", e, instance=instance)
+            LOG.error("Failed to cancel migration %s",
+                    encodeutils.exception_to_unicode(e), instance=instance)
             raise
 
     def _verify_serial_console_is_disabled(self):
@@ -6575,7 +6582,8 @@ class LibvirtDriver(driver.ComputeDriver):
                         guest.abort_job()
                     except libvirt.libvirtError as e:
                         LOG.warning("Failed to abort migration %s",
-                                    e, instance=instance)
+                                encodeutils.exception_to_unicode(e),
+                                instance=instance)
                         self._clear_empty_migration(instance)
                         raise
 
@@ -7263,7 +7271,7 @@ class LibvirtDriver(driver.ComputeDriver):
                         '%(ex)s',
                         {'instance_name': instance.name,
                          'error_code': error_code,
-                         'ex': ex},
+                         'ex': encodeutils.exception_to_unicode(ex)},
                         instance=instance)
             raise exception.InstanceNotFound(instance_id=instance.uuid)
 
@@ -7332,7 +7340,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     '%(instance_name)s: [Error Code %(error_code)s] %(ex)s',
                     {'instance_name': guest.name,
                      'error_code': error_code,
-                     'ex': ex})
+                     'ex': encodeutils.exception_to_unicode(ex)})
             except OSError as e:
                 if e.errno in (errno.ENOENT, errno.ESTALE):
                     LOG.warning('Periodic task is updating the host stat, '
