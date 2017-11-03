@@ -36,7 +36,7 @@ websockify>=0.8.0 # LGPLv3
 oslo.cache>=1.26.0 # Apache-2.0
 oslo.concurrency>=3.20.0 # Apache-2.0
 oslo.config>=4.6.0 # Apache-2.0
-oslo.context!=2.19.1,>=2.14.0 # Apache-2.0
+oslo.context>=2.19.2 # Apache-2.0
 oslo.log>=3.30.0 # Apache-2.0
 oslo.reports>=1.18.0 # Apache-2.0
 oslo.serialization!=2.19.1,>=2.18.0 # Apache-2.0
