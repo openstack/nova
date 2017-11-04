@@ -2769,6 +2769,15 @@ class AllocationRequestResource(base.VersionedObject):
 class AllocationRequest(base.VersionedObject):
 
     fields = {
+        # UUID of (the root of the tree including) the non-sharing resource
+        # provider associated with this AllocationRequest. Internal use only,
+        # not included when the object is serialized for output.
+        'anchor_root_provider_uuid': fields.UUIDField(),
+        # Whether all AllocationRequestResources in this AllocationRequest are
+        # required to be satisfied by the same provider (based on the
+        # corresponding RequestGroup's use_same_provider attribute). Internal
+        # use only, not included when the object is serialized for output.
+        'use_same_provider': fields.BooleanField(),
         'resource_requests': fields.ListOfObjectsField(
             'AllocationRequestResource'
         ),
@@ -2782,6 +2791,9 @@ class ProviderSummaryResource(base.VersionedObject):
         'resource_class': rc_fields.ResourceClassField(read_only=True),
         'capacity': fields.NonNegativeIntegerField(),
         'used': fields.NonNegativeIntegerField(),
+        # Internal use only; not included when the object is serialized for
+        # output.
+        'max_unit': fields.NonNegativeIntegerField(),
     }
 
 
@@ -2816,6 +2828,7 @@ def _get_usages_by_provider_and_rc(ctx, rp_ids, rc_ids):
     # , inv.total
     # , inv.reserved
     # , inv.allocation_ratio
+    # , inv.max_unit
     # , usage.used
     # FROM resource_providers AS rp
     # JOIN inventories AS inv
@@ -2870,6 +2883,7 @@ def _get_usages_by_provider_and_rc(ctx, rp_ids, rc_ids):
         inv.c.total,
         inv.c.reserved,
         inv.c.allocation_ratio,
+        inv.c.max_unit,
         usage.c.used,
     ]).select_from(usage_join).where(
         sa.and_(rpt.c.id.in_(rp_ids),
@@ -3348,9 +3362,9 @@ def _build_provider_summaries(context, usages, prov_traits):
         if not summary:
             summary = ProviderSummary(
                 context,
-                resource_provider=ResourceProvider(
+                resource_provider=ResourceProvider.get_by_uuid(
                     context,
-                    uuid=rp_uuid,
+                    rp_uuid,
                 ),
                 resources=[],
             )
@@ -3362,6 +3376,7 @@ def _build_provider_summaries(context, usages, prov_traits):
             resource_class=rc_name,
             capacity=cap,
             used=used,
+            max_unit=usage['max_unit'],
         )
         summary.resources.append(rpsr)
         summary.traits = [Trait(context, name=tname) for tname in traits]
@@ -3419,37 +3434,46 @@ def _shared_allocation_request_resources(ctx, ns_rp_id, requested_resources,
     return res_requests
 
 
-def _allocation_request_for_provider(ctx, requested_resources, rp_uuid):
+def _allocation_request_for_provider(ctx, requested_resources, provider):
     """Returns an AllocationRequest object containing AllocationRequestResource
     objects for each resource class in the supplied requested resources dict.
 
     :param ctx: nova.context.RequestContext object
     :param requested_resources: dict, keyed by resource class ID, of amounts
                                 being requested for that resource class
-    :param rp_uuid: UUID of the resource provider supplying the resources
+    :param provider: ResourceProvider object representing the provider of the
+                     resources.
     """
     resource_requests = [
         AllocationRequestResource(
-            ctx, resource_provider=ResourceProvider(ctx, uuid=rp_uuid),
+            ctx, resource_provider=provider,
             resource_class=_RC_CACHE.string_from_id(rc_id),
             amount=amount,
         ) for rc_id, amount in requested_resources.items()
     ]
-    return AllocationRequest(ctx, resource_requests=resource_requests)
+    # NOTE(efried): This method only produces an AllocationRequest with its
+    # anchor in its own tree.  If the provider is a sharing provider, the
+    # caller needs to identify the other anchors with which it might be
+    # associated.
+    return AllocationRequest(
+            ctx, resource_requests=resource_requests,
+            anchor_root_provider_uuid=provider.root_provider_uuid)
 
 
-def _alloc_candidates_no_shared(ctx, requested_resources, rps):
+def _alloc_candidates_single_provider(ctx, requested_resources, rps):
     """Returns a tuple of (allocation requests, provider summaries) for a
     supplied set of requested resource amounts and resource providers. The
     supplied resource providers have capacity to satisfy ALL of the resources
     in the requested resources as well as ALL required traits that were
     requested by the user.
 
-    This is an optimized code path for the common scenario when no sharing
-    providers exist in the system for any requested resource. In this scenario,
-    we can more efficiently build the list of AllocationRequest and
-    ProviderSummary objects due to not having to determine requests for some
-    shared and some non-shared resources.
+    This is used in two circumstances:
+    - To get results for a RequestGroup with use_same_provider=True.
+    - As an optimization when no sharing providers satisfy any of the requested
+      resources, and nested providers are not in play.
+    In these scenarios, we can more efficiently build the list of
+    AllocationRequest and ProviderSummary objects due to not having to
+    determine requests across multiple providers.
 
     :param ctx: nova.context.RequestContext object
     :param requested_resources: dict, keyed by resource class ID, of amounts
@@ -3478,10 +3502,20 @@ def _alloc_candidates_no_shared(ctx, requested_resources, rps):
     alloc_requests = []
     for rp_id in rp_ids:
         rp_summary = summaries[rp_id]
-        rp_uuid = rp_summary.resource_provider.uuid
-        req_obj = _allocation_request_for_provider(ctx, requested_resources,
-                                                   rp_uuid)
+        req_obj = _allocation_request_for_provider(
+                ctx, requested_resources, rp_summary.resource_provider)
         alloc_requests.append(req_obj)
+        # If this is a sharing provider, we have to include an extra
+        # AllocationRequest for every possible anchor.
+        if os_traits.MISC_SHARES_VIA_AGGREGATE in rp_summary.traits:
+            for anchor in _anchors_for_sharing_provider(
+                    ctx, rp_summary.resource_provider.id):
+                # We already added self
+                if anchor == rp_summary.resource_provider.root_provider_uuid:
+                    continue
+                req_obj = copy.deepcopy(req_obj)
+                req_obj.anchor_root_provider_uuid = anchor
+                alloc_requests.append(req_obj)
     return alloc_requests, list(summaries.values())
 
 
@@ -3573,6 +3607,7 @@ def _alloc_candidates_with_shared(ctx, requested_resources, required_traits,
         # provider involved in the request
         ns_rp_summary = summaries[ns_rp_id]
         ns_rp_uuid = ns_rp_summary.resource_provider.uuid
+        anchor_rp_uuid = ns_rp_summary.resource_provider.root_provider_uuid
         ns_resource_class_names = ns_rp_summary.resource_class_names
         ns_resources = set(
             rc_id for rc_id in requested_resources
@@ -3667,7 +3702,8 @@ def _alloc_candidates_with_shared(ctx, requested_resources, required_traits,
                 continue
 
             alloc_prov_ids.append(all_prov_ids)
-            req = AllocationRequest(ctx, resource_requests=list(res_requests))
+            req = AllocationRequest(ctx, resource_requests=list(res_requests),
+                                    anchor_root_provider_uuid=anchor_rp_uuid)
             alloc_requests.append(req)
 
     # The process above may have removed some previously-identified resource
@@ -3791,7 +3827,11 @@ class AllocationCandidates(base.VersionedObject):
         )
 
     @staticmethod
-    @db_api.api_context_manager.reader
+    # TODO(efried): This is only a writer context because it accesses the
+    # resource_providers table via ResourceProvider.get_by_uuid, which does
+    # data migration to populate the root_provider_uuid.  Change this back to a
+    # reader when that migration is no longer happening.
+    @db_api.api_context_manager.writer
     def _get_by_requests(context, requests, limit=None):
         # We first get the list of "root providers" that either have the
         # requested resources or are associated with the providers that
@@ -3856,8 +3896,8 @@ class AllocationCandidates(base.VersionedObject):
                                                 required_trait_map,
                                                 forbidden_trait_map,
                                                 member_of)
-            alloc_request_objs, summary_objs = _alloc_candidates_no_shared(
-                context, resources, rp_ids)
+            alloc_request_objs, summary_objs = (
+                _alloc_candidates_single_provider(context, resources, rp_ids))
         else:
             if required_trait_map:
                 # TODO(cdent): Now that there is also a forbidden_trait_map
