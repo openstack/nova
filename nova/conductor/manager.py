@@ -1053,6 +1053,8 @@ class ComputeTaskManager(base.Base):
                           'was already deleted.', instance=instance)
                 # This is a placeholder in case the quota recheck fails.
                 instances.append(None)
+                rc = self.scheduler_client.reportclient
+                rc.delete_allocation_for_instance(instance.uuid)
                 continue
             else:
                 instance.availability_zone = (
