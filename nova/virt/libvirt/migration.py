@@ -161,15 +161,20 @@ def _update_volume_xml(xml_doc, migrate_data, get_volume_config):
                 # If source and destination have same item, update
                 # the item using destination value.
                 for item_dst in xml_doc2.findall(item_src.tag):
-                    disk_dev.remove(item_src)
-                    item_dst.tail = None
-                    disk_dev.insert(cnt, item_dst)
+                    if item_dst.tag != 'address':
+                        # hw address presented to guest must never change,
+                        # especially during live migration as it can be fatal
+                        disk_dev.remove(item_src)
+                        item_dst.tail = None
+                        disk_dev.insert(cnt, item_dst)
 
             # If destination has additional items, thses items should be
             # added here.
             for item_dst in list(xml_doc2):
-                item_dst.tail = None
-                disk_dev.insert(cnt, item_dst)
+                if item_dst.tag != 'address':
+                    # again, hw address presented to guest must never change
+                    item_dst.tail = None
+                    disk_dev.insert(cnt, item_dst)
     return xml_doc
 
 
