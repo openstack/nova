@@ -374,12 +374,12 @@ class IronicDriverTestCase(test.NoDBTestCase):
                 uuid=node_uuid, instance_uuid=None, properties=props)
 
         result = self.driver._node_resource(node)
-        self.assertEqual(0, result['vcpus'])
-        self.assertEqual(0, result['vcpus_used'])
-        self.assertEqual(0, result['memory_mb'])
-        self.assertEqual(0, result['memory_mb_used'])
-        self.assertEqual(0, result['local_gb'])
-        self.assertEqual(0, result['local_gb_used'])
+        self.assertEqual(props['cpus'], result['vcpus'])
+        self.assertEqual(result['vcpus'], result['vcpus_used'])
+        self.assertEqual(props['memory_mb'], result['memory_mb'])
+        self.assertEqual(result['memory_mb'], result['memory_mb_used'])
+        self.assertEqual(props['local_gb'], result['local_gb'])
+        self.assertEqual(result['local_gb'], result['local_gb_used'])
         self.assertEqual(node_uuid, result['hypervisor_hostname'])
         self.assertEqual(stats, result['stats'])
 
@@ -943,19 +943,66 @@ class IronicDriverTestCase(test.NoDBTestCase):
                        '_node_resources_used', return_value=False)
     @mock.patch.object(ironic_driver.IronicDriver,
                        '_node_resources_unavailable', return_value=True)
+    @mock.patch.object(ironic_driver.IronicDriver, '_node_resource')
     @mock.patch.object(ironic_driver.IronicDriver, '_node_from_cache')
-    def test_update_provider_tree_disabled_node(self, mock_nfc,
+    def test_update_provider_tree_disabled_node(self, mock_nfc, mock_nr,
                                                 mock_res_unavail,
                                                 mock_res_used):
         """Ensure that when a node is disabled, that update_provider_tree()
-        sets inventory to an empty dict.
+        sets inventory with reserved amounts equal to the total amounts.
         """
+        mock_nr.return_value = {
+            'vcpus': 24,
+            'vcpus_used': 0,
+            'memory_mb': 1024,
+            'memory_mb_used': 0,
+            'local_gb': 100,
+            'local_gb_used': 0,
+            'resource_class': 'iron-nfv',
+        }
+
         self.driver.update_provider_tree(self.ptree, mock.sentinel.nodename)
+
+        expected = {
+            fields.ResourceClass.VCPU: {
+                'total': 24,
+                'reserved': 24,
+                'min_unit': 1,
+                'max_unit': 24,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+            fields.ResourceClass.MEMORY_MB: {
+                'total': 1024,
+                'reserved': 1024,
+                'min_unit': 1,
+                'max_unit': 1024,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+            fields.ResourceClass.DISK_GB: {
+                'total': 100,
+                'reserved': 100,
+                'min_unit': 1,
+                'max_unit': 100,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+            'CUSTOM_IRON_NFV': {
+                'total': 1,
+                'reserved': 1,
+                'min_unit': 1,
+                'max_unit': 1,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+        }
         mock_nfc.assert_called_once_with(mock.sentinel.nodename)
-        mock_res_used.assert_called_once_with(mock_nfc.return_value)
+        mock_nr.assert_called_once_with(mock_nfc.return_value)
         mock_res_unavail.assert_called_once_with(mock_nfc.return_value)
+        mock_res_used.assert_called_once_with(mock_nfc.return_value)
         result = self.ptree.data(mock.sentinel.nodename).inventory
-        self.assertEqual({}, result)
+        self.assertEqual(expected, result)
 
     @mock.patch.object(ironic_driver.IronicDriver,
                        '_node_resources_used', return_value=True)
@@ -1678,9 +1725,11 @@ class IronicDriverTestCase(test.NoDBTestCase):
         node = _get_cached_node(driver='fake', provision_state=state)
         instance = fake_instance.fake_instance_obj(self.ctx, node=node.uuid)
         mock_validate_inst.return_value = node
-        self.driver._unprovision(instance, node)
+        with mock.patch.object(self.driver, 'node_cache') as cache_mock:
+            self.driver._unprovision(instance, node)
         mock_validate_inst.assert_called_once_with(instance)
         mock_set_pstate.assert_called_once_with(node.uuid, "deleted")
+        cache_mock.pop.assert_called_once_with(node.uuid, None)
 
     def test__unprovision_cleaning(self):
         self._test__unprovision_instance(state=ironic_states.CLEANING)
