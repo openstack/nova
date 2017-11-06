@@ -255,7 +255,7 @@ class NotificationSampleTestBase(test.TestCase,
             retries += 1
             migrations = self.admin_api.get_active_migrations(server['id'])
             if (len(migrations) > 0 and
-                        migrations[0]['status'] != 'preparing'):
+                    migrations[0]['status'] not in ['queued', 'preparing']):
                 return migrations
             if retries == max_retries:
                 self.fail('The migration table left empty.')

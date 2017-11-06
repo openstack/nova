@@ -5917,9 +5917,17 @@ class ComputeManager(manager.Manager):
 
         self._notify_about_instance_usage(
             context, instance, 'live.migration.abort.start')
+        compute_utils.notify_about_instance_action(
+            context, instance, self.host,
+            action=fields.NotificationAction.LIVE_MIGRATION_ABORT,
+            phase=fields.NotificationPhase.START)
         self.driver.live_migration_abort(instance)
         self._notify_about_instance_usage(
             context, instance, 'live.migration.abort.end')
+        compute_utils.notify_about_instance_action(
+            context, instance, self.host,
+            action=fields.NotificationAction.LIVE_MIGRATION_ABORT,
+            phase=fields.NotificationPhase.END)
 
     def _live_migration_cleanup_flags(self, migrate_data):
         """Determine whether disks or instance path need to be cleaned up after

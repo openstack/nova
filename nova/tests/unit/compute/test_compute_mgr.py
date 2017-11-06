@@ -6782,29 +6782,34 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
     @mock.patch.object(manager.ComputeManager, '_notify_about_instance_usage')
     @mock.patch.object(objects.Migration, 'get_by_id')
     @mock.patch.object(nova.virt.fake.SmallFakeDriver, 'live_migration_abort')
-    def test_live_migration_abort(self, mock_driver,
-                                  mock_get_migration,
-                                  mock_notify):
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    def test_live_migration_abort(self, mock_notify_action, mock_driver,
+                                   mock_get_migration, mock_notify):
         instance = objects.Instance(id=123, uuid=uuids.instance)
         migration = self._get_migration(10, 'running', 'live-migration')
         mock_get_migration.return_value = migration
         self.compute.live_migration_abort(self.context, instance, migration.id)
-
         mock_driver.assert_called_with(instance)
-        _notify_usage_calls = [mock.call(self.context,
-                                         instance,
-                                         'live.migration.abort.start'),
-                               mock.call(self.context,
-                                         instance,
-                                        'live.migration.abort.end')]
-
-        mock_notify.assert_has_calls(_notify_usage_calls)
+        mock_notify.assert_has_calls(
+            [mock.call(self.context, instance,
+                       'live.migration.abort.start'),
+             mock.call(self.context, instance,
+                       'live.migration.abort.end')]
+        )
+        mock_notify_action.assert_has_calls(
+            [mock.call(self.context, instance, 'fake-mini',
+                    action='live_migration_abort', phase='start'),
+             mock.call(self.context, instance, 'fake-mini',
+                    action='live_migration_abort', phase='end')]
+        )
 
     @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
     @mock.patch.object(manager.ComputeManager, '_notify_about_instance_usage')
     @mock.patch.object(objects.Migration, 'get_by_id')
     @mock.patch.object(nova.virt.fake.SmallFakeDriver, 'live_migration_abort')
-    def test_live_migration_abort_not_supported(self, mock_driver,
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    def test_live_migration_abort_not_supported(self, mock_notify_action,
+                                                mock_driver,
                                                 mock_get_migration,
                                                 mock_notify,
                                                 mock_instance_fault):
@@ -6817,10 +6822,14 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                           self.context,
                           instance,
                           migration.id)
+        mock_notify_action.assert_called_once_with(self.context, instance,
+            'fake-mini', action='live_migration_abort', phase='start')
 
     @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
     @mock.patch.object(objects.Migration, 'get_by_id')
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
     def test_live_migration_abort_wrong_migration_state(self,
+                                                        mock_notify_action,
                                                         mock_get_migration,
                                                         mock_instance_fault):
         instance = objects.Instance(id=123, uuid=uuids.instance)
@@ -6831,6 +6840,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                           self.context,
                           instance,
                           migration.id)
+        mock_notify_action.assert_not_called()
 
     def test_live_migration_cleanup_flags_block_migrate_libvirt(self):
         migrate_data = objects.LibvirtLiveMigrateData(
