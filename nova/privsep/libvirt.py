@@ -232,6 +232,16 @@ def unplug_infiniband_vif(fabric, vnic_mac):
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
+def plug_midonet_vif(port_id, dev):
+    processutils.execute('mm-ctl', '--bind-port', port_id, dev)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def unplug_midonet_vif(port_id):
+    processutils.execute('mm-ctl', '--unbind-port', port_id)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
 def disable_multicast_snooping(interface):
     """Disable multicast snooping for a bridge."""
     with open('/sys/class/net/%s/bridge/multicast_snooping' % interface,
