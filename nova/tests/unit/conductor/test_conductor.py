@@ -1762,7 +1762,11 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         select_destinations.return_value = [{'host': 'fake-host',
                                              'nodename': 'nodesarestupid',
                                              'limits': None}]
-        self.conductor.schedule_and_build_instances(**self.params)
+        with mock.patch.object(self.conductor.scheduler_client,
+                               'reportclient') as mock_rc:
+            self.conductor.schedule_and_build_instances(**self.params)
+            mock_rc.delete_allocation_for_instance.assert_called_once_with(
+                inst_uuid)
         # we don't create the instance since the build request is gone
         self.assertFalse(inst_create.called)
         # we don't build the instance since we didn't create it
