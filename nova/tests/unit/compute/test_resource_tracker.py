@@ -107,6 +107,7 @@ _INSTANCE_TYPE_FIXTURES = {
         'rxtx_factor': 0,
         'vcpu_weight': 1,
         'extra_specs': {},
+        'deleted': 0,
     },
     2: {
         'id': 2,
@@ -120,6 +121,7 @@ _INSTANCE_TYPE_FIXTURES = {
         'rxtx_factor': 0,
         'vcpu_weight': 1,
         'extra_specs': {},
+        'deleted': 0,
     },
 }
 
@@ -128,11 +130,11 @@ _INSTANCE_TYPE_OBJ_FIXTURES = {
     1: objects.Flavor(id=1, flavorid='fakeid-1', name='fake1.small',
                       memory_mb=128, vcpus=1, root_gb=1,
                       ephemeral_gb=0, swap=0, rxtx_factor=0,
-                      vcpu_weight=1, extra_specs={}),
+                      vcpu_weight=1, extra_specs={}, deleted=False),
     2: objects.Flavor(id=2, flavorid='fakeid-2', name='fake1.medium',
                       memory_mb=256, vcpus=2, root_gb=5,
                       ephemeral_gb=0, swap=0, rxtx_factor=0,
-                      vcpu_weight=1, extra_specs={}),
+                      vcpu_weight=1, extra_specs={}, deleted=False),
 }
 
 
@@ -192,6 +194,7 @@ _INSTANCE_FIXTURES = [
         flavor = _INSTANCE_TYPE_OBJ_FIXTURES[1],
         old_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[1],
         new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[1],
+        deleted = False,
     ),
     objects.Instance(
         id=2,
@@ -215,6 +218,7 @@ _INSTANCE_FIXTURES = [
         flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2],
         old_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2],
         new_flavor = _INSTANCE_TYPE_OBJ_FIXTURES[2],
+        deleted = False,
     ),
 ]
 
@@ -477,7 +481,7 @@ class TestUpdateAvailableResources(BaseTestCase):
         # parameter that update_available_resource() eventually passes
         # to _update().
         with mock.patch.object(self.rt, '_update') as update_mock:
-            self.rt.update_available_resource(mock.sentinel.ctx, _NODENAME)
+            self.rt.update_available_resource(mock.MagicMock(), _NODENAME)
         return update_mock
 
     @mock.patch('nova.objects.InstancePCIRequests.get_by_instance',
@@ -533,16 +537,16 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         vd = self.driver_mock
         vd.get_available_resource.assert_called_once_with(_NODENAME)
-        get_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
+        get_mock.assert_called_once_with(mock.ANY, _HOSTNAME,
                                          _NODENAME,
                                          expected_attrs=[
                                              'system_metadata',
                                              'numa_topology',
                                              'flavor',
                                              'migration_context'])
-        get_cn_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
+        get_cn_mock.assert_called_once_with(mock.ANY, _HOSTNAME,
                                             _NODENAME)
-        migr_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
+        migr_mock.assert_called_once_with(mock.ANY, _HOSTNAME,
                                           _NODENAME)
 
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
@@ -584,8 +588,7 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         update_mock = self._update_available_resources()
 
-        get_cn_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
-                                            _NODENAME)
+        get_cn_mock.assert_called_once_with(mock.ANY, _HOSTNAME, _NODENAME)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
             'free_disk_gb': 5,  # 6GB avail - 1 GB reserved
@@ -632,8 +635,7 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         update_mock = self._update_available_resources()
 
-        get_cn_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
-                                            _NODENAME)
+        get_cn_mock.assert_called_once_with(mock.ANY, _HOSTNAME, _NODENAME)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
             'free_disk_gb': 5,  # 6 - 1 used
@@ -694,8 +696,7 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         update_mock = self._update_available_resources()
 
-        get_cn_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
-                                            _NODENAME)
+        get_cn_mock.assert_called_once_with(mock.ANY, _HOSTNAME, _NODENAME)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
             'free_disk_gb': 6,
@@ -759,8 +760,7 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         update_mock = self._update_available_resources()
 
-        get_cn_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
-                                            _NODENAME)
+        get_cn_mock.assert_called_once_with(mock.ANY, _HOSTNAME, _NODENAME)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
             'free_disk_gb': 5,
@@ -819,8 +819,7 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         update_mock = self._update_available_resources()
 
-        get_cn_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
-                                            _NODENAME)
+        get_cn_mock.assert_called_once_with(mock.ANY, _HOSTNAME, _NODENAME)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
             'free_disk_gb': 1,
@@ -877,8 +876,7 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         update_mock = self._update_available_resources()
 
-        get_cn_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
-                                            _NODENAME)
+        get_cn_mock.assert_called_once_with(mock.ANY, _HOSTNAME, _NODENAME)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
             'free_disk_gb': 1,
@@ -943,8 +941,7 @@ class TestUpdateAvailableResources(BaseTestCase):
 
         update_mock = self._update_available_resources()
 
-        get_cn_mock.assert_called_once_with(mock.sentinel.ctx, _HOSTNAME,
-                                            _NODENAME)
+        get_cn_mock.assert_called_once_with(mock.ANY, _HOSTNAME, _NODENAME)
         expected_resources = copy.deepcopy(_COMPUTE_NODE_FIXTURES[0])
         vals = {
             # 6 total - 1G existing - 5G new flav - 1G old flav
@@ -1741,7 +1738,7 @@ class TestResize(BaseTestCase):
         mig_context_obj = _MIGRATION_CONTEXT_FIXTURES[instance.uuid]
         instance.migration_context = mig_context_obj
 
-        self.rt.update_available_resource(mock.sentinel.ctx, _NODENAME)
+        self.rt.update_available_resource(mock.MagicMock(), _NODENAME)
 
         migration = objects.Migration(
             id=3,
@@ -1843,7 +1840,7 @@ class TestResize(BaseTestCase):
         ctx = mock.MagicMock()
 
         # Init compute node
-        self.rt.update_available_resource(mock.sentinel.ctx, _NODENAME)
+        self.rt.update_available_resource(mock.MagicMock(), _NODENAME)
         expected = self.rt.compute_nodes[_NODENAME].obj_clone()
 
         instance = _INSTANCE_FIXTURES[0].obj_clone()
@@ -1959,7 +1956,7 @@ class TestResize(BaseTestCase):
         migr_mock.return_value = []
         get_cn_mock.return_value = _COMPUTE_NODE_FIXTURES[0]
 
-        self.rt.update_available_resource(mock.sentinel.ctx, _NODENAME)
+        self.rt.update_available_resource(mock.MagicMock(), _NODENAME)
 
         instance = _INSTANCE_FIXTURES[0].obj_clone()
         instance.task_state = task_states.RESIZE_MIGRATING
@@ -2086,7 +2083,7 @@ class TestResize(BaseTestCase):
         migr_mock.return_value = []
         get_cn_mock.return_value = _COMPUTE_NODE_FIXTURES[0].obj_clone()
 
-        self.rt.update_available_resource(mock.sentinel.ctx, _NODENAME)
+        self.rt.update_available_resource(mock.MagicMock(), _NODENAME)
 
         # Instance #1 is resizing to instance type 2 which has 2 vCPUs, 256MB
         # RAM and 5GB root disk.
@@ -2222,7 +2219,8 @@ class TestRebuild(BaseTestCase):
         migr_mock.return_value = []
         get_cn_mock.return_value = _COMPUTE_NODE_FIXTURES[0].obj_clone()
 
-        self.rt.update_available_resource(mock.sentinel.ctx, _NODENAME)
+        ctx = mock.MagicMock()
+        self.rt.update_available_resource(ctx, _NODENAME)
 
         # Now emulate the evacuate command by calling rebuild_claim() on the
         # resource tracker as the compute manager does, supplying a Migration
@@ -2476,16 +2474,40 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         rc.get_allocations_for_resource_provider = mock.MagicMock(
             return_value=allocs)
         rc.delete_allocation_for_instance = mock.MagicMock()
-        mock_inst_get.side_effect = exc.InstanceNotFound(
-            instance_id=uuids.deleted)
+        mock_inst_get.return_value = objects.Instance(
+            uuid=uuids.deleted, deleted=True)
         cn = self.rt.compute_nodes[_NODENAME]
-        ctx = mock.sentinel.ctx
+        ctx = mock.MagicMock()
         # Call the method.
         self.rt._remove_deleted_instances_allocations(ctx, cn, [])
         # Only one call should be made to delete allocations, and that should
         # be for the first instance created above
         rc.delete_allocation_for_instance.assert_called_once_with(
             uuids.deleted)
+        mock_inst_get.assert_called_once_with(
+            ctx.elevated.return_value,
+            uuids.deleted,
+            expected_attrs=[])
+        ctx.elevated.assert_called_once_with(read_deleted='yes')
+
+    @mock.patch('nova.objects.Instance.get_by_uuid')
+    def test_remove_deleted_instances_allocations_building_instance(self,
+            mock_inst_get):
+        rc = self.rt.reportclient
+        self.rt.tracked_instances = {}
+        allocs = {uuids.deleted: "fake_deleted_instance"}
+        rc.get_allocations_for_resource_provider = mock.MagicMock(
+            return_value=allocs)
+        rc.delete_allocation_for_instance = mock.MagicMock()
+        mock_inst_get.side_effect = exc.InstanceNotFound(
+            instance_id=uuids.deleted)
+        cn = self.rt.compute_nodes[_NODENAME]
+        ctx = mock.MagicMock()
+        # Call the method.
+        self.rt._remove_deleted_instances_allocations(ctx, cn, [])
+        # Instance wasn't found in the database at all, so the allocation
+        # should not have been deleted
+        self.assertFalse(rc.delete_allocation_for_instance.called)
 
     @mock.patch('nova.objects.Instance.get_by_uuid')
     def test_remove_deleted_instances_allocations_ignores_migrations(self,
@@ -2498,10 +2520,10 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         rc.get_allocations_for_resource_provider = mock.MagicMock(
             return_value=allocs)
         rc.delete_allocation_for_instance = mock.MagicMock()
-        mock_inst_get.side_effect = exc.InstanceNotFound(
-            instance_id=uuids.deleted)
+        mock_inst_get.return_value = objects.Instance(
+            uuid=uuids.deleted, deleted=True)
         cn = self.rt.compute_nodes[_NODENAME]
-        ctx = mock.sentinel.ctx
+        ctx = mock.MagicMock()
         # Call the method.
         self.rt._remove_deleted_instances_allocations(
             ctx, cn, [mig])
@@ -2528,7 +2550,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
 
         mock_inst_get.side_effect = get_by_uuid
         cn = self.rt.compute_nodes[_NODENAME]
-        ctx = mock.sentinel.ctx
+        ctx = mock.MagicMock()
         # Call the method.
         self.rt._remove_deleted_instances_allocations(ctx, cn, [])
         # Scheduled instances should not have their allocations removed
@@ -2557,47 +2579,9 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         mock_get.return_value = instance
 
         cn = self.rt.compute_nodes[_NODENAME]
-        ctx = mock.sentinel.ctx
+        ctx = mock.MagicMock()
         self.rt._remove_deleted_instances_allocations(ctx, cn, [])
         mock_delete_allocs.assert_not_called()
-
-    @mock.patch('nova.objects.Instance.get_by_uuid')
-    def test_remove_deleted_instances_allocations_no_instance(self,
-            mock_inst_get):
-        # If for some reason an instance is no longer available, but
-        # there are allocations for it, we want to be sure those
-        # allocations are removed, not that an InstanceNotFound
-        # exception is not caught.  Here we set up some allocations,
-        # one of which is for an instance that can no longer be
-        # found.
-        rc = self.rt.reportclient
-        self.rt.tracked_instances = {}
-        # Create 1 instance
-        instance = _INSTANCE_FIXTURES[0].obj_clone()
-        instance.uuid = uuids.inst0
-        # Mock out the allocation call
-        allocs = {uuids.scheduled: "fake_scheduled_instance",
-                  uuids.inst0: "fake_instance_gone"}
-        rc.get_allocations_for_resource_provider = mock.MagicMock(
-            return_value=allocs)
-        rc.delete_allocation_for_instance = mock.MagicMock()
-
-        def get_by_uuid(ctx, inst_uuid, expected_attrs=None):
-            ret = _INSTANCE_FIXTURES[0].obj_clone()
-            ret.uuid = inst_uuid
-            if inst_uuid == uuids.scheduled:
-                ret.host = None
-                return ret
-            raise exc.InstanceNotFound(instance_id=inst_uuid)
-
-        mock_inst_get.side_effect = get_by_uuid
-        cn = self.rt.compute_nodes[_NODENAME]
-        ctx = mock.sentinel.ctx
-        # Call the method.
-        self.rt._remove_deleted_instances_allocations(ctx, cn, [])
-        # One call should be made to delete allocations, for our
-        # instance that no longer exists.
-        rc.delete_allocation_for_instance.assert_called_once_with(uuids.inst0)
 
     def test_remove_deleted_instances_allocations_known_instance(self):
         """Tests the case that actively tracked instances for the
@@ -2619,9 +2603,9 @@ class TestUpdateUsageFromInstance(BaseTestCase):
             return_value=allocs)
         rc.delete_allocation_for_instance = mock.MagicMock()
         cn = self.rt.compute_nodes[_NODENAME]
+        ctx = mock.MagicMock()
         # Call the method.
-        self.rt._remove_deleted_instances_allocations(mock.sentinel.ctx, cn,
-                                                      [])
+        self.rt._remove_deleted_instances_allocations(ctx, cn, [])
         # We don't delete the allocation because the node is tracking the
         # instance and has allocations for it.
         rc.delete_allocation_for_instance.assert_not_called()
@@ -2653,9 +2637,9 @@ class TestUpdateUsageFromInstance(BaseTestCase):
             return_value=allocs)
         rc.delete_allocation_for_instance = mock.MagicMock()
         cn = self.rt.compute_nodes[_NODENAME]
+        ctx = mock.MagicMock()
         # Call the method.
-        self.rt._remove_deleted_instances_allocations(mock.sentinel.ctx, cn,
-                                                      [])
+        self.rt._remove_deleted_instances_allocations(ctx, cn, [])
         # We don't delete the allocation because we're not sure what to do.
         # NOTE(mriedem): This is not actually the behavior we want. This is
         # testing the current behavior but in the future when we get smart
