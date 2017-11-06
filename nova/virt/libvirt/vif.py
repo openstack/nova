@@ -616,9 +616,9 @@ class LibvirtGenericVIFDriver(object):
         device_id = instance['uuid']
         vnic_mac = vif['address']
         try:
-            utils.execute('ebrctl', 'add-port', vnic_mac, device_id,
-                          fabric, network_model.VIF_TYPE_IB_HOSTDEV,
-                          pci_slot, run_as_root=True)
+            nova.privsep.libvirt.plug_infiniband_vif(
+                vnic_mac, device_id, fabric,
+                network_model.VIF_TYPE_IB_HOSTDEV, pci_slot)
         except processutils.ProcessExecutionError:
             LOG.exception(_("Failed while plugging ib hostdev vif"),
                           instance=instance)
@@ -818,8 +818,7 @@ class LibvirtGenericVIFDriver(object):
             )
         vnic_mac = vif['address']
         try:
-            utils.execute('ebrctl', 'del-port', fabric, vnic_mac,
-                          run_as_root=True)
+            nova.privsep.libvirt.unplug_infiniband_vif(fabric, vnic_mac)
         except Exception:
             LOG.exception(_("Failed while unplugging ib hostdev vif"))
 

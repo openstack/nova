@@ -221,6 +221,17 @@ def bridge_delete_interface(bridge, removeif):
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
+def plug_infiniband_vif(vnic_mac, device_id, fabric, net_model, pci_slot):
+    processutils.execute('ebrctl', 'add-port', vnic_mac, device_id,
+                         fabric, net_model, pci_slot)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def unplug_infiniband_vif(fabric, vnic_mac):
+    processutils.execute('ebrctl', 'del-port', fabric, vnic_mac)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
 def disable_multicast_snooping(interface):
     """Disable multicast snooping for a bridge."""
     with open('/sys/class/net/%s/bridge/multicast_snooping' % interface,

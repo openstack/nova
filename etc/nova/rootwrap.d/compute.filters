@@ -49,9 +49,6 @@ ivs-ctl: CommandFilter, ivs-ctl, root
 # nova/virt/libvirt/vif.py: 'vrouter-port-control', ...
 vrouter-port-control: CommandFilter, vrouter-port-control, root
 
-# nova/virt/libvirt/vif.py: 'ebrctl', ...
-ebrctl: CommandFilter, ebrctl, root
-
 # nova/virt/libvirt/vif.py: 'mm-ctl', ...
 mm-ctl: CommandFilter, mm-ctl, root
 
