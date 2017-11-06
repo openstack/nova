@@ -12,6 +12,7 @@
 
 import mock
 
+from nova.api.openstack.placement import lib as plib
 from nova import context as nova_context
 from nova import exception
 from nova import objects
@@ -23,6 +24,13 @@ from nova.tests import uuidsentinel as uuids
 
 
 class TestUtils(test.NoDBTestCase):
+
+    def assertResourceRequestsEqual(self, expected, observed):
+        ex_by_id = expected._rg_by_id
+        ob_by_id = observed._rg_by_id
+        self.assertEqual(set(ex_by_id), set(ob_by_id))
+        for ident in ex_by_id:
+            self.assertEqual(vars(ex_by_id[ident]), vars(ob_by_id[ident]))
 
     def _test_resources_from_request_spec(self, flavor, expected):
         fake_spec = objects.RequestSpec(flavor=flavor)
@@ -227,6 +235,75 @@ class TestUtils(test.NoDBTestCase):
         }
         actual = utils.resources_from_flavor(instance, flavor)
         self.assertEqual(expected, actual)
+
+    def test_resource_request_from_extra_specs(self):
+        extra_specs = {
+            'resources:VCPU': '2',
+            'resources:MEMORY_MB': '2048',
+            'trait:HW_CPU_X86_AVX': 'required',
+            # Key skipped because no colons
+            'nocolons': '42',
+            'trait:CUSTOM_MAGIC': 'required',
+            # Resource skipped because invalid resource class name
+            'resources86:CUTSOM_MISSPELLED': '86',
+            'resources1:SRIOV_NET_VF': '1',
+            # Resource skipped because non-int-able value
+            'resources86:CUSTOM_FOO': 'seven',
+            # Resource skipped because negative value
+            'resources86:CUSTOM_NEGATIVE': '-7',
+            'resources1:IPV4_ADDRESS': '1',
+            # Trait skipped because unsupported value
+            'trait86:CUSTOM_GOLD': 'preferred',
+            'trait1:CUSTOM_PHYSNET_NET1': 'required',
+            'resources2:SRIOV_NET_VF': '1',
+            'resources2:IPV4_ADDRESS': '2',
+            'trait2:CUSTOM_PHYSNET_NET2': 'required',
+            'trait2:HW_NIC_ACCEL_SSL': 'required',
+            # Groupings that don't quite match the patterns are ignored
+            'resources_5:SRIOV_NET_VF': '7',
+            'traitFoo:HW_NIC_ACCEL_SSL': 'required',
+            # Solo resource, no corresponding traits
+            'resources3:DISK_GB': '5',
+        }
+        # Build up a ResourceRequest from the inside to compare against.
+        expected = utils.ResourceRequest()
+        expected._rg_by_id[None] = plib.RequestGroup(
+            use_same_provider=False,
+            resources={
+                'VCPU': 2,
+                'MEMORY_MB': 2048,
+            },
+            required_traits={
+                'HW_CPU_X86_AVX',
+                'CUSTOM_MAGIC',
+            }
+        )
+        expected._rg_by_id['1'] = plib.RequestGroup(
+            resources={
+                'SRIOV_NET_VF': 1,
+                'IPV4_ADDRESS': 1,
+            },
+            required_traits={
+                'CUSTOM_PHYSNET_NET1',
+            }
+        )
+        expected._rg_by_id['2'] = plib.RequestGroup(
+            resources={
+                'SRIOV_NET_VF': 1,
+                'IPV4_ADDRESS': 2,
+            },
+            required_traits={
+                'CUSTOM_PHYSNET_NET2',
+                'HW_NIC_ACCEL_SSL',
+            }
+        )
+        expected._rg_by_id['3'] = plib.RequestGroup(
+            resources={
+                'DISK_GB': 5,
+            }
+        )
+        self.assertResourceRequestsEqual(
+            expected, utils.ResourceRequest.from_extra_specs(extra_specs))
 
     def test_merge_resources(self):
         resources = {

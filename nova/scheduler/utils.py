@@ -16,12 +16,14 @@
 
 import collections
 import functools
+import re
 import sys
 
 from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 
+from nova.api.openstack.placement import lib as placement_lib
 from nova.compute import flavors
 from nova.compute import utils as compute_utils
 import nova.conf
@@ -40,6 +42,95 @@ CONF = nova.conf.CONF
 
 GroupDetails = collections.namedtuple('GroupDetails', ['hosts', 'policies',
                                                        'members'])
+
+
+class ResourceRequest(object):
+    """Presents a granular resource request via RequestGroup instances."""
+    # extra_specs-specific consts
+    XS_RES_PREFIX = 'resources'
+    XS_TRAIT_PREFIX = 'trait'
+    # Regex patterns for numbered or un-numbered resources/trait keys
+    XS_KEYPAT = re.compile(r"^(%s)([1-9][0-9]*)?:(.*)$" %
+                           '|'.join((XS_RES_PREFIX, XS_TRAIT_PREFIX)))
+
+    def __init__(self):
+        # { ident: RequestGroup }
+        self._rg_by_id = {}
+
+    def get_request_group(self, ident):
+        if ident not in self._rg_by_id:
+            rq_grp = placement_lib.RequestGroup(use_same_provider=bool(ident))
+            self._rg_by_id[ident] = rq_grp
+        return self._rg_by_id[ident]
+
+    def _add_resource(self, groupid, rclass, amount):
+        # Validate the class.
+        if not (rclass.startswith(fields.ResourceClass.CUSTOM_NAMESPACE) or
+                        rclass in fields.ResourceClass.STANDARD):
+            LOG.warning(
+                "Received an invalid ResourceClass '%(key)s' in extra_specs.",
+                {"key": rclass})
+            return
+        # val represents the amount.  Convert to int, or warn and skip.
+        try:
+            amount = int(amount)
+            if amount < 0:
+                raise ValueError()
+        except ValueError:
+            LOG.warning(
+                "Resource amounts must be nonnegative integers. Received "
+                "'%(val)s' for key resources%(groupid)s.",
+                {"groupid": groupid, "val": amount})
+            return
+        self.get_request_group(groupid).resources[rclass] = amount
+
+    def _add_trait(self, groupid, trait_name, trait_type):
+        # Currently the only valid value for a trait entry is 'required'.
+        trait_vals = ('required',)
+        # Ensure the value is supported.
+        if trait_type not in trait_vals:
+            LOG.warning(
+                "Only (%(tvals)s) traits are supported. Received '%(val)s' "
+                "for key trait%(groupid)s.",
+                {"tvals": ', '.join(trait_vals), "groupid": groupid,
+                 "val": trait_type})
+            return
+        self.get_request_group(groupid).required_traits.add(trait_name)
+
+    @classmethod
+    def from_extra_specs(cls, extra_specs):
+        """Processes resources and traits in numbered groupings in extra_specs.
+
+        Examines extra_specs for items of the following forms:
+            "resources:$RESOURCE_CLASS": $AMOUNT
+            "resources$N:$RESOURCE_CLASS": $AMOUNT
+            "trait:$TRAIT_NAME": "required"
+            "trait$N:$TRAIT_NAME": "required"
+
+        :param extra_specs: The flavor extra_specs dict.
+        :return: A ResourceRequest object representing the resources and
+                 required traits in the extra_specs.
+        """
+        ret = cls()
+        for key, val in extra_specs.items():
+            match = cls.XS_KEYPAT.match(key)
+            if not match:
+                continue
+
+            # 'prefix' is 'resources' or 'trait'
+            # 'suffix' is $N or None
+            # 'name' is either the resource class name or the trait name.
+            prefix, suffix, name = match.groups()
+
+            # Process "resources[$N]"
+            if prefix == cls.XS_RES_PREFIX:
+                ret._add_resource(suffix, name, val)
+
+            # Process "trait[$N]"
+            elif prefix == cls.XS_TRAIT_PREFIX:
+                ret._add_trait(suffix, name, val)
+
+        return ret
 
 
 def build_request_spec(ctxt, image, instances, instance_type=None):
