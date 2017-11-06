@@ -132,6 +132,53 @@ class ResourceRequest(object):
 
         return ret
 
+    def resource_groups(self):
+        for rg in self._rg_by_id.values():
+            yield rg.resources
+
+    def merged_resources(self, flavor_resources=None):
+        """Returns a merge of {resource_class: amount} for all resource groups.
+
+        Amounts of the same resource class from different groups are added
+        together.
+
+        :param flavor_resources: A flat dict of {resource_class: amount}.  If
+                                 specified, the resources therein are folded
+                                 into the return dict, such that any resource
+                                 in flavor_resources is included only if that
+                                 resource class does not exist elsewhere in the
+                                 merged ResourceRequest.
+        :return: A dict of the form {resource_class: amount}
+        """
+        ret = collections.defaultdict(lambda: 0)
+        for resource_dict in self.resource_groups():
+            for resource_class, amount in resource_dict.items():
+                ret[resource_class] += amount
+        if flavor_resources:
+            for resource_class, amount in flavor_resources.items():
+                # If it's in there - even if zero - ignore the one from the
+                # flavor.
+                if resource_class not in ret:
+                    ret[resource_class] = amount
+            # Now strip zeros.  This has to be done after the above - we can't
+            # use strip_zeros :(
+            ret = {rc: amt for rc, amt in ret.items() if amt}
+        return dict(ret)
+
+    def _clean_empties(self):
+        """Get rid of any empty ResourceGroup instances."""
+        for ident, rg in list(self._rg_by_id.items()):
+            if not any((rg.resources, rg.required_traits)):
+                self._rg_by_id.pop(ident)
+
+    def strip_zeros(self):
+        """Remove any resources whose amounts are zero."""
+        for resource_dict in self.resource_groups():
+            for rclass in list(resource_dict):
+                if resource_dict[rclass] == 0:
+                    resource_dict.pop(rclass)
+        self._clean_empties()
+
 
 def build_request_spec(ctxt, image, instances, instance_type=None):
     """Build a request_spec for the scheduler.
@@ -174,70 +221,6 @@ def build_request_spec(ctxt, image, instances, instance_type=None):
     return jsonutils.to_primitive(request_spec)
 
 
-def _process_extra_specs(extra_specs, resources):
-    """Check the flavor's extra_specs for resource override information.
-    These will be a dict that is generated from the flavor; and in the
-    flavor, the extra_specs entries will be in the format of either:
-
-        resources:$CUSTOM_RESOURCE_CLASS=$N
-    ...to add a custom resource class to the request, with a positive
-    integer amount of $N
-
-        resources:$STANDARD_RESOURCE_CLASS=0
-    ...to remove that resource class from the request.
-
-        resources:$STANDARD_RESOURCE_CLASS=$N
-    ...to add standard resource class (e.g. VGPU) to the request,
-    or to override the flavor's value for that resource class with $N
-    """
-    resource_specs = {key.split("resources:", 1)[-1]: val
-            for key, val in extra_specs.items()
-            if key.startswith("resources:")}
-    resource_keys = set(resource_specs)
-    custom_keys = set([key for key in resource_keys
-            if key.startswith(fields.ResourceClass.CUSTOM_NAMESPACE)])
-    std_keys = resource_keys - custom_keys
-
-    def validate_int(key):
-        val = resource_specs.get(key)
-        try:
-            # Amounts must be integers
-            return int(val)
-        except ValueError:
-            # Not a valid integer
-            LOG.warning("Resource amounts must be integers. Received "
-                    "'%(val)s' for key %(key)s.", {"key": key, "val": val})
-            return None
-
-    # Accept custom resource classes to be asked
-    for custom_key in custom_keys:
-        custom_val = validate_int(custom_key)
-        if custom_val is not None:
-            if custom_val == 0:
-                # Custom resource values must be positive integers
-                LOG.warning("Resource amounts must be positive integers. "
-                        "Received '%(val)s' for key %(key)s.",
-                        {"key": custom_key, "val": custom_val})
-                continue
-            resources[custom_key] = custom_val
-
-    # Accept all standard resource classes to be overrided whether they exist
-    # as flavor fields or not.
-    for std_key in std_keys:
-        if std_key not in set(resources).union(fields.ResourceClass.STANDARD):
-            LOG.warning("Received an invalid ResourceClass '%(key)s' in "
-                    "extra_specs.", {"key": std_key})
-            continue
-        val = validate_int(std_key)
-        if val is None:
-            # Received an invalid amount. It's already logged, so move on.
-            continue
-        elif val == 0:
-            resources.pop(std_key, None)
-        else:
-            resources[std_key] = val
-
-
 def resources_from_flavor(instance, flavor):
     """Convert a flavor into a set of resources for placement, taking into
     account boot-from-volume instances.
@@ -258,7 +241,14 @@ def resources_from_flavor(instance, flavor):
         fields.ResourceClass.DISK_GB: disk,
     }
     if "extra_specs" in flavor:
-        _process_extra_specs(flavor.extra_specs, resources)
+        # TODO(efried): This method is currently only used from places that
+        # assume the compute node is the only resource provider.  So for now,
+        # we just merge together all the resources specified in the flavor and
+        # pass them along.  This will need to be adjusted when nested and/or
+        # shared RPs are in play.
+        rreq = ResourceRequest.from_extra_specs(flavor.extra_specs)
+        resources = rreq.merged_resources(flavor_resources=resources)
+
     return resources
 
 
@@ -280,13 +270,13 @@ def merge_resources(original_resources, new_resources, sign=1):
 
 
 def resources_from_request_spec(spec_obj):
-    """Given a RequestSpec object, returns a dict, keyed by resource class
-    name, of requested amounts of those resources.
+    """Given a RequestSpec object, returns a ResourceRequest of the resources
+    and traits it represents.
     """
-    resources = {}
-
-    resources[fields.ResourceClass.VCPU] = spec_obj.vcpus
-    resources[fields.ResourceClass.MEMORY_MB] = spec_obj.memory_mb
+    spec_resources = {
+        fields.ResourceClass.VCPU: spec_obj.vcpus,
+        fields.ResourceClass.MEMORY_MB: spec_obj.memory_mb,
+    }
 
     requested_disk_mb = (1024 * (spec_obj.root_gb +
                                  spec_obj.ephemeral_gb) +
@@ -306,11 +296,29 @@ def resources_from_request_spec(spec_obj):
     # NOTE(sbauza): Some flavors provide zero size for disk values, we need
     # to avoid asking for disk usage.
     if requested_disk_gb != 0:
-        resources[fields.ResourceClass.DISK_GB] = requested_disk_gb
-    if "extra_specs" in spec_obj.flavor:
-        _process_extra_specs(spec_obj.flavor.extra_specs, resources)
+        spec_resources[fields.ResourceClass.DISK_GB] = requested_disk_gb
 
-    return resources
+    # Process extra_specs
+    if "extra_specs" in spec_obj.flavor:
+        res_req = ResourceRequest.from_extra_specs(spec_obj.flavor.extra_specs)
+        # If any of the three standard resources above was explicitly given in
+        # the extra_specs - in any group - we need to replace it, or delete it
+        # if it was given as zero.  We'll do this by grabbing a merged version
+        # of the ResourceRequest resources and removing matching items from the
+        # spec_resources.
+        spec_resources = {rclass: amt for rclass, amt in spec_resources.items()
+                          if rclass not in res_req.merged_resources()}
+        # Now we don't need (or want) any remaining zero entries - remove them.
+        res_req.strip_zeros()
+    else:
+        # Start with an empty one
+        res_req = ResourceRequest()
+
+    # Add the (remaining) items from the spec_resources to the sharing group
+    for rclass, amount in spec_resources.items():
+        res_req.get_request_group(None).resources[rclass] = amount
+
+    return res_req
 
 
 # TODO(mriedem): Remove this when select_destinations() in the scheduler takes
