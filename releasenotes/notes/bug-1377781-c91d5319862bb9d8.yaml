@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    Add support for graceful shutdown of VMware instances. The timeout parameter of the power_off
+    method is now considered by the VMware driver. If you specify a timeout greater than 0, the
+    driver calls the appropriate soft shutdown method of the VMware API and only forces a hard
+    shutdown if the soft shutdown did not succeed before the timeout is reached.
