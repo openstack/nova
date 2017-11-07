@@ -531,3 +531,50 @@ class AllocationCandidatesTestCase(test.NoDBTestCase):
         ]
 
         self._validate_allocation_requests(expected, alloc_cands)
+
+    def test_all_sharing_providers(self):
+        ss1 = self._create_provider('ss1', uuids.agg1)
+        _set_traits(ss1, "MISC_SHARES_VIA_AGGREGATE")
+        _add_inventory(ss1, fields.ResourceClass.IPV4_ADDRESS, 24)
+        _add_inventory(ss1, fields.ResourceClass.SRIOV_NET_VF, 16)
+        _add_inventory(ss1, fields.ResourceClass.DISK_GB, 1600)
+
+        ss2 = self._create_provider('ss2', uuids.agg1)
+        _set_traits(ss2, "MISC_SHARES_VIA_AGGREGATE")
+        _add_inventory(ss2, fields.ResourceClass.DISK_GB, 1600)
+
+        alloc_cands = self._get_allocation_candidates(
+            resources={
+                'IPV4_ADDRESS': 2,
+                'SRIOV_NET_VF': 1,
+                'DISK_GB': 1500,
+            }
+        )
+
+        # TODO(efried): Bug https://bugs.launchpad.net/nova/+bug/1730730
+        # We expect two candidates: one that gets all the resources from ss1;
+        # and one that gets the DISK_GB from ss2 and the rest from ss1:
+        # expected = [
+        #     [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
+        #      ('ss1', fields.ResourceClass.SRIOV_NET_VF, 1),
+        #      ('ss1', fields.ResourceClass.DISK_GB, 1500)],
+        #     [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
+        #      ('ss1', fields.ResourceClass.SRIOV_NET_VF, 1),
+        #      ('ss2', fields.ResourceClass.DISK_GB, 1500)],
+        # ]
+        # But here's what we're actually seeing:
+        # One with all the resources coming from ss1
+        expected = [
+            [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
+             ('ss1', fields.ResourceClass.SRIOV_NET_VF, 1),
+             ('ss1', fields.ResourceClass.DISK_GB, 1500)],
+        # One with the DISK_GB coming from ss2 and IPV4_ADDRESS coming from ss1
+            [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
+             ('ss2', fields.ResourceClass.DISK_GB, 1500)],
+        # One with the DISK_GB coming from ss2 and SRIOV_NET_VF coming from ss1
+            [('ss1', fields.ResourceClass.SRIOV_NET_VF, 1),
+             ('ss2', fields.ResourceClass.DISK_GB, 1500)],
+        # Of special brokenness are those last two, which don't even have all
+        # of the requested resources:
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
