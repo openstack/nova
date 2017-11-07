@@ -1105,25 +1105,26 @@ class TestUpdateComputeNode(BaseTestCase):
         self._setup_rt()
 
         # This is the same set of resources as the fixture, deliberately. We
-        # are checking below to see that update_compute_node() is not
-        # needlessly called when the resources don't actually change.
+        # are checking below to see that compute_node.save is not needlessly
+        # called when the resources don't actually change.
         orig_compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()
         self.rt.compute_nodes[_NODENAME] = orig_compute
         self.rt.old_resources[_NODENAME] = orig_compute
 
         new_compute = orig_compute.obj_clone()
 
-        # Here, we check that if we call _update() with the same resources that
-        # are already stored in the resource tracker, that the scheduler client
-        # won't be called again to update those (unchanged) resources for the
-        # compute node
-        ucn_mock = self.sched_client_mock.update_compute_node
         self.rt._update(mock.sentinel.ctx, new_compute)
-        self.assertFalse(ucn_mock.called)
         self.assertFalse(save_mock.called)
+        # Even the compute node is not updated, get_inventory still got called.
+        # And update_compute_node() is also called when get_inventory() is not
+        # implemented.
+        self.driver_mock.get_inventory.assert_called_once_with(_NODENAME)
+        ucn_mock = self.sched_client_mock.update_compute_node
+        ucn_mock.assert_called_once_with(new_compute)
 
     @mock.patch('nova.objects.ComputeNode.save')
     def test_existing_compute_node_updated_diff_updated_at(self, save_mock):
+        # if only updated_at is changed, it won't call compute_node.save()
         self._setup_rt()
         ts1 = timeutils.utcnow()
         ts2 = ts1 + datetime.timedelta(seconds=10)
@@ -1138,13 +1139,14 @@ class TestUpdateComputeNode(BaseTestCase):
         new_compute = orig_compute.obj_clone()
         new_compute.updated_at = ts2
 
-        ucn_mock = self.sched_client_mock.update_compute_node
         self.rt._update(mock.sentinel.ctx, new_compute)
         self.assertFalse(save_mock.called)
-        self.assertFalse(ucn_mock.called)
 
+    @mock.patch('nova.compute.resource_tracker.'
+                '_normalize_inventory_from_cn_obj')
     @mock.patch('nova.objects.ComputeNode.save')
-    def test_existing_compute_node_updated_new_resources(self, save_mock):
+    def test_existing_compute_node_updated_new_resources(self, save_mock,
+                                                         norm_mock):
         self._setup_rt()
 
         orig_compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()
@@ -1160,9 +1162,12 @@ class TestUpdateComputeNode(BaseTestCase):
         new_compute.vcpus_used = 2
         new_compute.local_gb_used = 4
 
-        ucn_mock = self.sched_client_mock.update_compute_node
         self.rt._update(mock.sentinel.ctx, new_compute)
         save_mock.assert_called_once_with()
+        # The get_inventory() is not implemented, it shouldn't call
+        # _normalize_inventory_from_cn_obj but call update_compute_node().
+        self.assertFalse(norm_mock.called)
+        ucn_mock = self.sched_client_mock.update_compute_node
         ucn_mock.assert_called_once_with(new_compute)
 
     @mock.patch('nova.compute.resource_tracker.'
