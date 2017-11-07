@@ -104,7 +104,7 @@ devstack repo:
 
 .. code-block:: bash
 
-  $ sudo dnf -y install git
+  $ sudo dnf install git
   $ git clone git://github.com/openstack-dev/devstack.git
   $ cd devstack
 
