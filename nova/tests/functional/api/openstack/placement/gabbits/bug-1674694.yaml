@@ -1,0 +1,38 @@
+# Test launchpad bug https://bugs.launchpad.net/nova/+bug/1674694
+
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+
+tests:
+
+- name: 404 with application/json
+  GET: /bc8d9d50-7b0d-45ef-839c-e7b5e1c4e8fd
+  request_headers:
+      accept: application/json
+  status: 404
+  response_headers:
+      content-type: application/json
+  response_json_paths:
+      $.errors[0].status: 404
+
+- name: 404 with no accept
+  GET: /bc8d9d50-7b0d-45ef-839c-e7b5e1c4e8fd
+  status: 404
+  response_headers:
+      content-type: application/json
+  response_json_paths:
+      $.errors[0].status: 404
+
+- name: 404 with other accept
+  GET: /bc8d9d50-7b0d-45ef-839c-e7b5e1c4e8fd
+  status: 404
+  request_headers:
+      accept: text/html
+  response_headers:
+      content-type: /text/html/
+  response_strings:
+      - The resource could not be found

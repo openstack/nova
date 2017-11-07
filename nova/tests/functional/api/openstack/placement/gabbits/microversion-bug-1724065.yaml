@@ -1,0 +1,22 @@
+# Test launchpad bug https://bugs.launchpad.net/nova/+bug/1724065
+
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        x-auth-token: user
+
+tests:
+
+# min version from start of placement time is 1.0
+# Without the fix, this results in a 500 with an 'HTTP_ACCEPT'
+# KeyError.
+- name: no accept header and out of range microversion
+  GET: /resource_providers
+  request_headers:
+      openstack-api-version: placement 0.9
+  status: 406
+  response_strings:
+      - Unacceptable version header
+
