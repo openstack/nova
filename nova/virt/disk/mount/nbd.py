@@ -134,5 +134,4 @@ class NbdMount(api.Mount):
         # Without this flush, when a nbd device gets re-used the
         # qemu-nbd intermittently hangs.
         if self.device:
-            utils.execute('blockdev', '--flushbufs',
-                          self.device, run_as_root=True)
+            nova.privsep.fs.blockdev_flush(self.device)
