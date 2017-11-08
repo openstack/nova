@@ -84,7 +84,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         mock_get_hosts.assert_called_once_with(spec_obj, all_host_states, 0)
 
         self.assertEqual(len(selected_hosts), 1)
-        self.assertEqual([host_state], selected_hosts)
+        self.assertEqual([[host_state]], selected_hosts)
 
         # Ensure that we have consumed the resources on the chosen host states
         host_state.consume_from_request.assert_called_once_with(spec_obj)
@@ -133,7 +133,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         mock_get_hosts.assert_called_once_with(spec_obj, all_host_states, 0)
 
         self.assertEqual(len(selected_hosts), 1)
-        self.assertEqual([host_state], selected_hosts)
+        self.assertEqual([[host_state]], selected_hosts)
 
         # Ensure that we have consumed the resources on the chosen host states
         host_state.consume_from_request.assert_called_once_with(spec_obj)
