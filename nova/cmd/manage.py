@@ -1314,6 +1314,17 @@ class CellV2Commands(object):
                   'is not set in the configuration file.')
         return transport_url
 
+    def _non_unique_transport_url_database_connection_checker(self, ctxt,
+                                        transport_url, database_connection):
+        for cell in objects.CellMappingList.get_all(ctxt):
+            if (cell.database_connection == database_connection or
+                cell.transport_url == transport_url):
+                print(_('The specified transport_url and/or '
+                        'database_connection combination already exists '
+                        'for another cell with uuid %s.') % cell.uuid)
+                return True
+        return False
+
     @args('--transport-url', metavar='<transport_url>', dest='transport_url',
           help='The transport url for the cell message queue')
     def simple_cell_setup(self, transport_url=None):
@@ -1691,11 +1702,8 @@ class CellV2Commands(object):
                     'if [database]/connection is not set '
                     'in the configuration file.'))
             return 1
-        if any(cell.database_connection == database_connection
-               and cell.transport_url == transport_url
-               for cell in objects.CellMappingList.get_all(ctxt)):
-            print(_('Cell with the specified transport_url '
-                    'and database_connection combination already exists'))
+        if (self._non_unique_transport_url_database_connection_checker(ctxt,
+            transport_url, database_connection)):
             return 2
         cell_mapping_uuid = uuidutils.generate_uuid()
         cell_mapping = objects.CellMapping(
@@ -1804,7 +1812,9 @@ class CellV2Commands(object):
         """Updates the properties of a cell by the given uuid.
 
         If the cell is not found by uuid, this command will return an exit
-        code of 1. If the properties cannot be set, this will return 2.
+        code of 1. If the provided transport_url or/and database_connection
+        is/are same as another cell, this command will return an exit code
+        of 3. If the properties cannot be set, this will return 2.
         Otherwise, the exit code will be 0.
 
         NOTE: Updating the transport_url or database_connection fields on
@@ -1822,10 +1832,17 @@ class CellV2Commands(object):
             cell_mapping.name = name
 
         transport_url = transport_url or CONF.transport_url
+        db_connection = db_connection or CONF.database.connection
+
+        if (self._non_unique_transport_url_database_connection_checker(ctxt,
+            transport_url, db_connection)):
+                # We use the return code 3 before 2 to avoid changing the
+                # semantic meanings of return codes.
+                return 3
+
         if transport_url:
             cell_mapping.transport_url = transport_url
 
-        db_connection = db_connection or CONF.database.connection
         if db_connection:
             cell_mapping.database_connection = db_connection
 
