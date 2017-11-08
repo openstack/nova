@@ -1182,3 +1182,136 @@ class AllocationCandidatesTestCase(ProviderDBBase):
         ]
 
         self._validate_allocation_requests(expected, alloc_cands)
+
+    def test_rc_split_between_sharing_and_non_sharing(self):
+        # cn1(VCPU,MEM,DISK)   Non-sharing RP with all resources
+        #        | agg1        aggregated with
+        #     ss1(DISK)        a sharing RP that also has some of the resources
+        #                      (common-RC split case)
+        cn1 = self._create_provider('cn1', uuids.agg1)
+        _add_inventory(cn1, fields.ResourceClass.VCPU, 24)
+        _add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)
+        _add_inventory(cn1, fields.ResourceClass.DISK_GB, 2000)
+        ss1 = self._create_provider('ss1', uuids.agg1)
+        _add_inventory(ss1, fields.ResourceClass.DISK_GB, 2000)
+        _set_traits(ss1, 'MISC_SHARES_VIA_AGGREGATE')
+
+        alloc_cands = self._get_allocation_candidates()
+        expected = [
+            # Aggregate 1 should have two permutations: one where the disk
+            # comes from the sharing provider.
+            [('cn1', fields.ResourceClass.VCPU, 1),
+             ('cn1', fields.ResourceClass.MEMORY_MB, 64),
+             ('cn1', fields.ResourceClass.DISK_GB, 1500)],
+            # TODO(efried): We expect the rest of the results to look like:
+            # Bug 1731072 bullet (1) (also bug 1724613)
+            # [('cn1', fields.ResourceClass.VCPU, 1),
+            #  ('cn1', fields.ResourceClass.MEMORY_MB, 64),
+            #  ('ss1', fields.ResourceClass.DISK_GB, 1500)],
+        ]
+
+        self._validate_allocation_requests(expected, alloc_cands)
+
+    def test_rc_not_split_between_sharing_and_non_sharing(self):
+        # cn1(VCPU,MEM)   Non-sharing RP with some of the resources
+        #       | agg1    aggregated with
+        #   ss1(DISK)     sharing RP that has the rest of the resources
+        #
+        #         cn2(VCPU)         Non-sharing with one of the resources;
+        #         / agg2 \          aggregated with multiple sharing providers
+        # ss2_1(MEM)  ss2_2(DISK)   with different resources.
+
+        cn1 = self._create_provider('cn1', uuids.agg1)
+        _add_inventory(cn1, fields.ResourceClass.VCPU, 24)
+        _add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)
+        ss1 = self._create_provider('ss1', uuids.agg1)
+        _add_inventory(ss1, fields.ResourceClass.DISK_GB, 2000)
+        _set_traits(ss1, 'MISC_SHARES_VIA_AGGREGATE')
+
+        # NOTE(gibi): If this set of RPs is removed then this test case does
+        # not reproduce the bug 1731072 bullet (2) below
+        cn2 = self._create_provider('cn2', uuids.agg2)
+        _add_inventory(cn2, fields.ResourceClass.VCPU, 24)
+        ss2_1 = self._create_provider('ss2_1', uuids.agg2)
+        _add_inventory(ss2_1, fields.ResourceClass.MEMORY_MB, 2048)
+        _set_traits(ss2_1, 'MISC_SHARES_VIA_AGGREGATE')
+        ss2_2 = self._create_provider('ss2_2', uuids.agg2)
+        _add_inventory(ss2_2, fields.ResourceClass.DISK_GB, 2000)
+        _set_traits(ss2_2, 'MISC_SHARES_VIA_AGGREGATE')
+
+        alloc_cands = self._get_allocation_candidates()
+        expected = [
+            # Aggregate 2 is always spread out as expectd
+            [('cn2', fields.ResourceClass.VCPU, 1),
+             ('ss2_1', fields.ResourceClass.MEMORY_MB, 64),
+             ('ss2_2', fields.ResourceClass.DISK_GB, 1500)],
+            # # Aggregate 1 always gets disk from the sharing RP
+            # Bug 1731072 bullet (2)
+            # [('cn1', fields.ResourceClass.VCPU, 1),
+            #  ('cn1', fields.ResourceClass.MEMORY_MB, 64),
+            #  ('ss1', fields.ResourceClass.DISK_GB, 1500)],
+            # The next invalid candidate is mixing not connected RPs as
+            # reported in bug #1732707
+            [('cn2', fields.ResourceClass.VCPU, 1),
+             ('ss1', fields.ResourceClass.DISK_GB, 1500),
+             ('ss2_1', fields.ResourceClass.MEMORY_MB, 64)],
+        ]
+
+        self._validate_allocation_requests(expected, alloc_cands)
+
+    def test_multiple_sharing_providers_with_same_rc(self):
+        #       cn1(VCPU,MEM)       Non-sharing with some of the resources;
+        #         / agg1 \          aggregated with multiple sharing providers
+        # ss1_1(DISK)  ss1_2(DISK)  with the same resource.
+        #
+        #         cn2(VCPU)         Non-sharing with one of the resources;
+        #         / agg2 \          aggregated with multiple sharing providers
+        # ss2_1(MEM)  ss2_2(DISK)   with different resources.
+
+        cn1 = self._create_provider('cn1', uuids.agg1)
+        _add_inventory(cn1, fields.ResourceClass.VCPU, 24)
+        _add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)
+        ss1_1 = self._create_provider('ss1_1', uuids.agg1)
+        _add_inventory(ss1_1, fields.ResourceClass.DISK_GB, 2000)
+        _set_traits(ss1_1, 'MISC_SHARES_VIA_AGGREGATE')
+        ss1_2 = self._create_provider('ss1_2', uuids.agg1)
+        _add_inventory(ss1_2, fields.ResourceClass.DISK_GB, 2000)
+        _set_traits(ss1_2, 'MISC_SHARES_VIA_AGGREGATE')
+
+        # NOTE(gibi): If this set of RPs are removed then this test case does
+        # not reproduce the bug 1731072 bullet (3) below
+        cn2 = self._create_provider('cn2', uuids.agg2)
+        _add_inventory(cn2, fields.ResourceClass.VCPU, 24)
+        ss2_1 = self._create_provider('ss2_1', uuids.agg2)
+        _add_inventory(ss2_1, fields.ResourceClass.MEMORY_MB, 2048)
+        _set_traits(ss2_1, 'MISC_SHARES_VIA_AGGREGATE')
+        ss2_2 = self._create_provider('ss2_2', uuids.agg2)
+        _add_inventory(ss2_2, fields.ResourceClass.DISK_GB, 2000)
+        _set_traits(ss2_2, 'MISC_SHARES_VIA_AGGREGATE')
+
+        alloc_cands = self._get_allocation_candidates()
+        expected = [
+            # Aggregate 2 is spread out as expected
+            [('cn2', fields.ResourceClass.VCPU, 1),
+             ('ss2_1', fields.ResourceClass.MEMORY_MB, 64),
+             ('ss2_2', fields.ResourceClass.DISK_GB, 1500)],
+            # # Aggregate 1 has two permutations, one getting the disk from
+            # # each sharing RP
+            # Bug 1731072 bullet (3)
+            # [('cn1', fields.ResourceClass.VCPU, 1),
+            #  ('cn1', fields.ResourceClass.MEMORY_MB, 64),
+            #  ('ss1_1', fields.ResourceClass.DISK_GB, 1500)],
+            # [('cn1', fields.ResourceClass.VCPU, 1),
+            #  ('cn1', fields.ResourceClass.MEMORY_MB, 64),
+            #  ('ss1_2', fields.ResourceClass.DISK_GB, 1500)],
+            # The rest are invalid candidates mixing not connected RPs as
+            # reported in bug #1732707
+            [('cn2', fields.ResourceClass.VCPU, 1),
+             ('ss1_1', fields.ResourceClass.DISK_GB, 1500),
+             ('ss2_1', fields.ResourceClass.MEMORY_MB, 64)],
+            [('cn2', fields.ResourceClass.VCPU, 1),
+             ('ss1_2', fields.ResourceClass.DISK_GB, 1500),
+             ('ss2_1', fields.ResourceClass.MEMORY_MB, 64)],
+        ]
+
+        self._validate_allocation_requests(expected, alloc_cands)
