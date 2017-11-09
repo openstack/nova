@@ -169,8 +169,17 @@ class MigrationsTestCaseV21(test.NoDBTestCase):
             self.assertNotIn('links', mig)
 
         filters = {'host': 'host1', 'status': 'migrating',
-                   'cell_name': 'ChildCell'}
+                   'instance_uuid': uuids.instance1,
+                   'source_compute': 'host1', 'hidden': '0',
+                   'migration_type': 'resize'}
+
+        # python-novaclient actually supports sending this even though it's
+        # not used in the DB API layer and is totally useless. This lets us,
+        # however, test that additionalProperties=True allows it.
+        unknown_filter = {'cell_name': 'ChildCell'}
+
         self.req.GET.update(filters)
+        self.req.GET.update(unknown_filter)
 
         with mock.patch.object(self.controller.compute_api,
                                'get_migrations',
@@ -179,7 +188,40 @@ class MigrationsTestCaseV21(test.NoDBTestCase):
         ):
             response = self.controller.index(self.req)
             self.assertEqual(migrations_in_progress, response)
+            # Only with the filters, and the unknown filter is stripped
             mock_get_migrations.assert_called_once_with(self.context, filters)
+
+    def test_index_query_allow_negative_int_as_string(self):
+        migrations = {'migrations': self._migrations_output()}
+        filters = ['host', 'status', 'cell_name', 'instance_uuid',
+                   'source_compute', 'hidden', 'migration_type']
+
+        with mock.patch.object(self.controller.compute_api,
+                               'get_migrations',
+                               return_value=migrations_obj):
+            for fl in filters:
+                req = fakes.HTTPRequest.blank('/os-migrations',
+                                              use_admin_context=True,
+                                              query_string='%s=-1' % fl)
+                response = self.controller.index(req)
+                self.assertEqual(migrations, response)
+
+    def test_index_query_duplicate_query_parameters(self):
+        migrations = {'migrations': self._migrations_output()}
+        params = {'host': 'host1', 'status': 'migrating',
+                  'cell_name': 'ChildCell', 'instance_uuid': uuids.instance1,
+                  'source_compute': 'host1', 'hidden': '0',
+                  'migration_type': 'resize'}
+
+        with mock.patch.object(self.controller.compute_api,
+                               'get_migrations',
+                               return_value=migrations_obj):
+            for k, v in params.items():
+                req = fakes.HTTPRequest.blank(
+                    '/os-migrations', use_admin_context=True,
+                    query_string='%s=%s&%s=%s' % (k, v, k, v))
+                response = self.controller.index(req)
+                self.assertEqual(migrations, response)
 
 
 class MigrationsTestCaseV223(MigrationsTestCaseV21):
