@@ -209,7 +209,7 @@ class CellsSchedulerTestCase(test.TestCase):
             call_info['target_cell'] = target_cell
             call_info['build_inst_kwargs'] = build_inst_kwargs
 
-        def fake_build_request_spec(ctxt, image, instances):
+        def fake_build_request_spec(image, instances):
             request_spec = {
                     'num_instances': len(instances),
                     'image': image}
@@ -254,7 +254,7 @@ class CellsSchedulerTestCase(test.TestCase):
         def fake_rpc_build_instances(self, ctxt, **build_inst_kwargs):
             call_info['build_inst_kwargs'] = build_inst_kwargs
 
-        def fake_build_request_spec(ctxt, image, instances):
+        def fake_build_request_spec(image, instances):
             request_spec = {
                     'num_instances': len(instances),
                     'image': image}
@@ -304,7 +304,7 @@ class CellsSchedulerTestCase(test.TestCase):
             self.assertEqual(vm_states.ERROR, inst.vm_state)
             call_info['errored_uuids'].append(inst.uuid)
 
-        def fake_build_request_spec(ctxt, image, instances):
+        def fake_build_request_spec(image, instances):
             request_spec = {
                     'num_instances': len(instances),
                     'image': image}
@@ -350,7 +350,7 @@ class CellsSchedulerTestCase(test.TestCase):
             self.assertEqual(vm_states.ERROR, instance['vm_state'])
             call_info['errored_uuids2'].append(instance['uuid'])
 
-        def fake_build_request_spec(ctxt, image, instances):
+        def fake_build_request_spec(image, instances):
             request_spec = {
                     'num_instances': len(instances),
                     'image': image}
@@ -415,7 +415,7 @@ class CellsSchedulerTestCase(test.TestCase):
             call_info['filt_props'] = filt_properties
             return cells
 
-        def fake_build_request_spec(ctxt, image, instances):
+        def fake_build_request_spec(image, instances):
             request_spec = {
                     'num_instances': len(instances),
                     'instance_properties': instances[0],
@@ -534,7 +534,7 @@ class CellsSchedulerTestCase(test.TestCase):
             call_info['weight_props'] = filt_properties
             return [weights.WeightedCell(cells[0], 0.0)]
 
-        def fake_build_request_spec(ctxt, image, instances):
+        def fake_build_request_spec(image, instances):
             request_spec = {
                     'num_instances': len(instances),
                     'instance_properties': instances[0],

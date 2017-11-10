@@ -1045,7 +1045,7 @@ class _BaseTaskTestCase(object):
 
         self.conductor_manager.image_api.get(self.context,
                 'fake_image_id', show_deleted=False).AndReturn('fake_image')
-        scheduler_utils.build_request_spec(self.context, 'fake_image',
+        scheduler_utils.build_request_spec('fake_image',
                 mox.IgnoreArg()).AndReturn('req_spec')
         self.conductor_manager._schedule_instances(self.context,
                 fake_spec, [instance.uuid]).AndReturn(
@@ -1145,7 +1145,7 @@ class _BaseTaskTestCase(object):
         self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
                 'unshelve_instance')
 
-        scheduler_utils.build_request_spec(self.context, None,
+        scheduler_utils.build_request_spec(None,
                 mox.IgnoreArg()).AndReturn('req_spec')
         self.conductor_manager._schedule_instances(self.context,
                 fake_spec, [instance.uuid]).AndReturn(
@@ -1216,8 +1216,7 @@ class _BaseTaskTestCase(object):
                                             instance=inst_obj,
                                             **rebuild_args)
             bs_mock.assert_called_once_with(
-                self.context, obj_base.obj_to_primitive(inst_obj.image_meta),
-                [inst_obj])
+                obj_base.obj_to_primitive(inst_obj.image_meta), [inst_obj])
             fp_mock.assert_called_once_with(self.context, request_spec,
                                             filter_properties)
             select_dest_mock.assert_called_once_with(self.context, fake_spec,
@@ -2418,7 +2417,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.mox.StubOutWithMock(self.conductor_manager.compute_rpcapi,
                 'build_and_run_instance')
 
-        scheduler_utils.build_request_spec(self.context, image,
+        scheduler_utils.build_request_spec(image,
                 mox.IgnoreArg()).AndReturn(spec)
         filter_properties = {'retry': {'num_attempts': 1, 'hosts': []}}
         inst_uuids = [inst.uuid for inst in instances]
