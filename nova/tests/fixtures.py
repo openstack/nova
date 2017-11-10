@@ -1216,13 +1216,6 @@ class NeutronFixture(fixtures.Fixture):
         else:
             return None
 
-    def _filter_ports(self, **_params):
-        ports = copy.deepcopy(self._ports)
-        for opt in _params:
-            filtered_ports = [p for p in ports if p.get(opt) == _params[opt]]
-            ports = filtered_ports
-        return {'ports': ports}
-
     def list_extensions(self, *args, **kwargs):
         return copy.deepcopy({'extensions': self._extensions})
 
@@ -1236,13 +1229,12 @@ class NeutronFixture(fixtures.Fixture):
         for current_port in self._ports:
             if current_port['id'] == port:
                 self._ports.remove(current_port)
-                return
 
     def list_networks(self, retrieve_all=True, **_params):
         return copy.deepcopy({'networks': self._networks})
 
     def list_ports(self, retrieve_all=True, **_params):
-        return self._filter_ports(**_params)
+        return copy.deepcopy({'ports': self._ports})
 
     def list_subnets(self, retrieve_all=True, **_params):
         return copy.deepcopy({'subnets': self._subnets})
