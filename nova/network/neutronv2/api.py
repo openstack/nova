@@ -15,7 +15,6 @@
 #    under the License.
 #
 
-import copy
 import time
 
 from keystoneauth1 import loading as ks_loading
@@ -509,17 +508,7 @@ class API(base_api.NetworkAPI):
                 continue
             port_req_body = {'port': {'device_id': '', 'device_owner': ''}}
             port_req_body['port'][BINDING_HOST_ID] = None
-            port = self._show_port(context, port_id,
-                                   neutron_client=neutron,
-                                   fields=BINDING_PROFILE)
-            port_profile = port.get(BINDING_PROFILE, {})
-            # NOTE: We're doing this to remove the binding information
-            # for the physical device but don't want to overwrite the other
-            # information in the binding profile.
-            for profile_key in ('pci_vendor_info', 'pci_slot'):
-                if profile_key in port_profile:
-                    del port_profile[profile_key]
-            port_req_body['port'][BINDING_PROFILE] = port_profile
+            port_req_body['port'][BINDING_PROFILE] = {}
             if self._has_dns_extension():
                 port_req_body['port']['dns_name'] = ''
             try:
@@ -914,7 +903,7 @@ class API(base_api.NetworkAPI):
             created_port_ids = self._update_ports_for_instance(
                 context, instance,
                 neutron, admin_client, requests_and_created_ports, nets,
-                bind_host_id, available_macs, requested_ports_dict)
+                bind_host_id, available_macs)
 
         #
         # Perform a full update of the network_info_cache,
@@ -939,7 +928,7 @@ class API(base_api.NetworkAPI):
 
     def _update_ports_for_instance(self, context, instance, neutron,
             admin_client, requests_and_created_ports, nets,
-            bind_host_id, available_macs, requested_ports_dict):
+            bind_host_id, available_macs):
         """Update ports from network_requests.
 
         Updates the pre-existing ports and the ones created in
@@ -957,8 +946,6 @@ class API(base_api.NetworkAPI):
         :param nets: a dict of network_id to networks returned from neutron
         :param bind_host_id: a string for port['binding:host_id']
         :param available_macs: a list of available mac addresses
-        :param requested_ports_dict: dict, keyed by port ID, of ports requested
-            by the user
         :returns: tuple with the following::
 
             * list of network dicts in their requested order
@@ -993,11 +980,6 @@ class API(base_api.NetworkAPI):
             zone = 'compute:%s' % instance.availability_zone
             port_req_body = {'port': {'device_id': instance.uuid,
                                       'device_owner': zone}}
-            if (requested_ports_dict and
-                request.port_id in requested_ports_dict and
-                requested_ports_dict[request.port_id].get(BINDING_PROFILE)):
-                port_req_body['port'][BINDING_PROFILE] = (
-                    requested_ports_dict[request.port_id][BINDING_PROFILE])
             try:
                 self._populate_neutron_extension_values(
                     context, instance, request.pci_request_id, port_req_body,
@@ -1095,10 +1077,7 @@ class API(base_api.NetworkAPI):
         if pci_request_id:
             pci_dev = pci_manager.get_instance_pci_devs(
                 instance, pci_request_id).pop()
-            if port_req_body['port'].get(BINDING_PROFILE) is None:
-                port_req_body['port'][BINDING_PROFILE] = {}
-            profile = copy.deepcopy(port_req_body['port'][BINDING_PROFILE])
-            profile.update(self._get_pci_device_profile(pci_dev))
+            profile = self._get_pci_device_profile(pci_dev)
             port_req_body['port'][BINDING_PROFILE] = profile
 
     @staticmethod
