@@ -7136,19 +7136,11 @@ class LibvirtDriver(driver.ComputeDriver):
         :param network_info: instance network information
         :param block_migration: if true, post operation of block_migration.
         """
-        guest = self._host.get_guest(instance)
-
-        # TODO(sahid): In Ocata we have added the migration flag
-        # VIR_MIGRATE_PERSIST_DEST to libvirt, which means that the
-        # guest XML is going to be set in libvirtd on destination node
-        # automatically. However we do not remove that part until P*
-        # because during an upgrade, to ensure migrating instances
-        # from node running Newton is still going to set the guest XML
-        # in libvirtd on destination node.
-
-        # Make sure we define the migrated instance in libvirt
-        xml = guest.get_xml_desc()
-        self._host.write_instance_config(xml)
+        # The source node set the VIR_MIGRATE_PERSIST_DEST flag when live
+        # migrating so the guest xml should already be persisted on the
+        # destination host, so just perform a sanity check to make sure it
+        # made it as expected.
+        self._host.get_guest(instance)
 
     def _get_instance_disk_info_from_config(self, guest_config,
                                             block_device_info):

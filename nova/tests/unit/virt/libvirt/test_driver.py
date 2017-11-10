@@ -14679,16 +14679,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self, mock_get_guest, mock_write_instance_config):
         instance = objects.Instance(id=1, uuid=uuids.instance)
         dom = mock.MagicMock()
-        dom.XMLDesc.return_value = "<domain></domain>"
         guest = libvirt_guest.Guest(dom)
 
         mock_get_guest.return_value = guest
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr.post_live_migration_at_destination(mock.ANY, instance, mock.ANY)
-
-        mock_write_instance_config.assert_called_once_with(
-            "<domain></domain>")
+        # Assert that we don't try to write anything to the destination node
+        # since the source live migrated with the VIR_MIGRATE_PERSIST_DEST flag
+        mock_write_instance_config.assert_not_called()
 
     def test_create_propagates_exceptions(self):
         self.flags(virt_type='lxc', group='libvirt')
