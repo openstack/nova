@@ -382,11 +382,14 @@ class TestNewtonCellsCheck(test.NoDBTestCase):
         self.engine = db_api.get_api_engine()
 
     def _flavor_me(self):
-        flavor = objects.Flavor(context=self.context,
-                                name='foo', memory_mb=123,
-                                vcpus=1, root_gb=1,
-                                flavorid='m1.foo')
-        flavor.create()
+        # We can't use the Flavor object or model to create the flavor because
+        # the model and object have the description field now but at this point
+        # we have not run the migration schema to add the description column.
+        flavors = db_utils.get_table(self.engine, 'flavors')
+        values = dict(name='foo', memory_mb=123,
+                      vcpus=1, root_gb=1,
+                      flavorid='m1.foo', swap=0)
+        flavors.insert().execute(values)
 
     def test_upgrade_with_no_cell_mappings(self):
         self._flavor_me()

@@ -15,6 +15,7 @@
 from oslo_db import exception as db_exc
 from oslo_db.sqlalchemy import utils as sqlalchemyutils
 from oslo_log import log as logging
+from oslo_utils import versionutils
 from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
 from sqlalchemy.sql.expression import asc
@@ -36,6 +37,9 @@ LOG = logging.getLogger(__name__)
 OPTIONAL_FIELDS = ['extra_specs', 'projects']
 # Remove these fields in version 2.0 of the object.
 DEPRECATED_FIELDS = ['deleted', 'deleted_at']
+
+# Non-joined fields which can be updated.
+MUTABLE_FIELDS = set(['description'])
 
 CONF = nova.conf.CONF
 
@@ -197,7 +201,9 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
     # Version 1.0: Initial version
     # Version 1.1: Added save_projects(), save_extra_specs(), removed
     #              remotable from save()
-    VERSION = '1.1'
+    # Version 1.2: Added description field. Note: this field should not be
+    #              persisted with the embedded instance.flavor.
+    VERSION = '1.2'
 
     fields = {
         'id': fields.IntegerField(),
@@ -214,12 +220,19 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         'is_public': fields.BooleanField(),
         'extra_specs': fields.DictOfStringsField(),
         'projects': fields.ListOfStringsField(),
+        'description': fields.StringField(nullable=True)
         }
 
     def __init__(self, *args, **kwargs):
         super(Flavor, self).__init__(*args, **kwargs)
         self._orig_extra_specs = {}
         self._orig_projects = []
+
+    def obj_make_compatible(self, primitive, target_version):
+        super(Flavor, self).obj_make_compatible(primitive, target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 2) and 'description' in primitive:
+            del primitive['description']
 
     @staticmethod
     def _from_db_object(context, flavor, db_flavor, expected_attrs=None):
@@ -473,13 +486,30 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
             self._flavor_extra_specs_del(self._context, self.id, key)
         self.obj_reset_changes(['extra_specs'])
 
+    # NOTE(mriedem): This method is not remotable since we only expect the API
+    # to be able to make updates to a flavor.
+    @db_api.api_context_manager.writer
+    def _save(self, context, values):
+        db_flavor = context.session.query(api_models.Flavors).\
+            filter_by(id=self.id).first()
+        if not db_flavor:
+            raise exception.FlavorNotFound(flavor_id=self.id)
+        db_flavor.update(values)
+        db_flavor.save(context.session)
+        # Refresh ourselves from the DB object so we get the new updated_at.
+        self._from_db_object(context, self, db_flavor)
+        self.obj_reset_changes()
+
     def save(self):
         updates = self.obj_get_changes()
         projects = updates.pop('projects', None)
         extra_specs = updates.pop('extra_specs', None)
         if updates:
-            raise exception.ObjectActionError(
-                action='save', reason='read-only fields were changed')
+            # Only allowed to update from the whitelist of mutable fields.
+            if set(updates.keys()) - MUTABLE_FIELDS:
+                raise exception.ObjectActionError(
+                    action='save', reason='read-only fields were changed')
+            self._save(self._context, updates)
 
         if extra_specs is not None:
             deleted_keys = (set(self._orig_extra_specs.keys()) -
@@ -505,7 +535,8 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
         if added_projects or deleted_projects:
             self.save_projects(added_projects, deleted_projects)
 
-        if added_keys or deleted_keys or added_projects or deleted_projects:
+        if (added_keys or deleted_keys or added_projects or deleted_projects or
+                updates):
             self._send_notification(fields.NotificationAction.UPDATE)
 
     @staticmethod

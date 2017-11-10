@@ -35,6 +35,7 @@ fake_api_flavor = {
     'is_public': True,
     'extra_specs': {'foo': 'bar'},
     'projects': ['project1', 'project2'],
+    'description': None
     }
 
 
