@@ -429,12 +429,39 @@ class TestSecurityGroupsV21(test.TestCase):
     def test_get_security_group_by_instance(self):
         groups = []
         for i, name in enumerate(['default', 'test']):
-            sg = security_group_template(id=i + 1,
-                                         name=name,
-                                         description=name + '-desc',
-                                         rules=[])
+            # Create two rules per group to test that we don't perform
+            # redundant group lookups. For the default group, the rule group_id
+            # is the group itself. For the test group, the rule group_id points
+            # to a non-existent group.
+            group_id = i + 1 if name == 'default' else 'HAS_BEEN_DELETED'
+            rule1 = security_group_rule_template(
+                cidr='10.2.3.125/24', parent_group_id=1, id=99, protocol='TCP',
+                group_id=group_id)
+            rule2 = security_group_rule_template(
+                cidr='10.2.3.126/24', parent_group_id=1, id=77, protocol='UDP',
+                group_id=group_id)
+            sg = security_group_template(
+                id=i + 1, name=name, description=name + '-desc',
+                rules=[rule1, rule2], tenant_id='fake')
             groups.append(sg)
-        expected = {'security_groups': groups}
+
+        # An expected rule here needs to be created as the api returns
+        # different attributes on the rule for a response than what was
+        # passed in.
+        expected_rule1 = security_group_rule_template(
+            ip_range={}, parent_group_id=1, ip_protocol='TCP',
+            group={'name': 'default', 'tenant_id': 'fake'}, id=99)
+        expected_rule2 = security_group_rule_template(
+            ip_range={}, parent_group_id=1, ip_protocol='UDP',
+            group={'name': 'default', 'tenant_id': 'fake'}, id=77)
+        expected_group1 = security_group_template(
+            id=1, name='default', description='default-desc',
+            rules=[expected_rule1, expected_rule2], tenant_id='fake')
+        expected_group2 = security_group_template(
+            id=2, name='test', description='test-desc', rules=[],
+            tenant_id='fake')
+
+        expected = {'security_groups': [expected_group1, expected_group2]}
 
         def return_instance(context, server_id,
                             columns_to_join=None, use_slave=False):
@@ -451,9 +478,24 @@ class TestSecurityGroupsV21(test.TestCase):
         self.stub_out('nova.db.security_group_get_by_instance',
                       return_security_groups)
 
+        # Stub out the security group API get() method to assert that we only
+        # call it at most once per group ID.
+        original_sg_get = self.server_controller.security_group_api.get
+        queried_group_ids = []
+
+        def fake_security_group_api_get(_self, context, name=None, id=None,
+                                        map_exception=False):
+            if id in queried_group_ids:
+                self.fail('Queried security group %s more than once.' % id)
+            queried_group_ids.append(id)
+            return original_sg_get(context, id=id)
+
+        self.stub_out('nova.compute.api.SecurityGroupAPI.get',
+                      fake_security_group_api_get)
+
         res_dict = self.server_controller.index(self.req, FAKE_UUID1)
 
-        self.assertEqual(res_dict, expected)
+        self.assertEqual(expected, res_dict)
 
     @mock.patch('nova.db.instance_get_by_uuid')
     @mock.patch('nova.db.security_group_get_by_instance', return_value=[])
