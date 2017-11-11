@@ -17,7 +17,7 @@ import os
 import six
 import tempfile
 
-import nova.privsep.libvirt
+import nova.privsep.path
 from nova import test
 
 
@@ -30,13 +30,13 @@ class LastBytesTestCase(test.NoDBTestCase):
 
     def test_truncated(self):
         self.f.seek(0, os.SEEK_SET)
-        out, remaining = nova.privsep.libvirt._last_bytes_inner(self.f, 5)
+        out, remaining = nova.privsep.path._last_bytes_inner(self.f, 5)
         self.assertEqual(out, b'67890')
         self.assertGreater(remaining, 0)
 
     def test_read_all(self):
         self.f.seek(0, os.SEEK_SET)
-        out, remaining = nova.privsep.libvirt._last_bytes_inner(self.f, 1000)
+        out, remaining = nova.privsep.path._last_bytes_inner(self.f, 1000)
         self.assertEqual(out, b'1234567890')
         self.assertFalse(remaining > 0)
 
@@ -47,4 +47,4 @@ class LastBytesTestCase(test.NoDBTestCase):
             flo.write(content)
             self.assertEqual(
                 (content, 0),
-                nova.privsep.libvirt._last_bytes_inner(flo, 1000))
+                nova.privsep.path._last_bytes_inner(flo, 1000))

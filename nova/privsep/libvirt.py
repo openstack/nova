@@ -18,7 +18,6 @@ libvirt specific routines.
 """
 
 import binascii
-import errno
 import os
 import stat
 
@@ -31,39 +30,6 @@ import nova.privsep
 
 
 LOG = logging.getLogger(__name__)
-
-
-@nova.privsep.sys_admin_pctxt.entrypoint
-def last_bytes(path, num):
-    # NOTE(mikal): this is implemented in this contrived manner because you
-    # can't mock a decorator in python (they're loaded at file parse time,
-    # and the mock happens later).
-    with open(path, 'rb') as f:
-        return _last_bytes_inner(f, num)
-
-
-def _last_bytes_inner(file_like_object, num):
-    """Return num bytes from the end of the file, and remaining byte count.
-
-    :param file_like_object: The file to read
-    :param num: The number of bytes to return
-
-    :returns: (data, remaining)
-    """
-
-    try:
-        file_like_object.seek(-num, os.SEEK_END)
-    except IOError as e:
-        # seek() fails with EINVAL when trying to go before the start of
-        # the file. It means that num is larger than the file size, so
-        # just go to the start.
-        if e.errno == errno.EINVAL:
-            file_like_object.seek(0, os.SEEK_SET)
-        else:
-            raise
-
-    remaining = file_like_object.tell()
-    return (file_like_object.read(), remaining)
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
