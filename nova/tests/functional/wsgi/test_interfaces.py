@@ -124,6 +124,13 @@ class InterfaceFullstackWithNeutron(test_servers.ServersTestBase):
         found_server = self._wait_for_state_change(created_server, 'BUILD')
         self.assertEqual('ACTIVE', found_server['status'])
 
+        post = {
+            'interfaceAttachment': {
+                'net_id': "3cb9bc59-5699-4588-a4b1-b87f96708bc6"
+            }
+        }
+        self.api.attach_interface(created_server_id, post)
+
         response = self.api.get_port_interfaces(created_server_id)[0]
         port_id = response['port_id']
 
