@@ -525,8 +525,8 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
 
             updated_port = {'security_groups': port['security_groups']}
             try:
-                LOG.info(_LI("Adding security group %(security_group_id)s to "
-                             "port %(port_id)s"),
+                LOG.info(_LI("Removing security group %(security_group_id)s "
+                             "from port %(port_id)s"),
                          {'security_group_id': security_group_id,
                           'port_id': port['id']})
                 neutron.update_port(port['id'], {'port': updated_port})
