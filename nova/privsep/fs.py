@@ -195,3 +195,18 @@ def unprivileged_list_partitions(device):
         partitions.append((num, start, size, fstype, name, flags))
 
     return partitions
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def resize_partition(device, start, end, bootable):
+    return unprivileged_resize_partition(device, start, end, bootable)
+
+
+# NOTE(mikal): this method is deliberately not wrapped in a privsep entrypoint
+def unprivileged_resize_partition(device, start, end, bootable):
+    processutils.execute('parted', '--script', device, 'rm', '1')
+    processutils.execute('parted', '--script', device, 'mkpart',
+                         'primary', '%ds' % start, '%ds' % end)
+    if bootable:
+        processutils.execute('parted', '--script', device,
+                             'set', '1', 'boot', 'on')

@@ -2317,17 +2317,8 @@ def _resize_part_and_fs(dev, start, old_sectors, new_sectors, flags):
                        "enough free space on your disk.")
             raise exception.ResizeError(reason=reason)
 
-    utils.execute('parted', '--script', dev_path, 'rm', '1',
-                  run_as_root=True)
-    utils.execute('parted', '--script', dev_path, 'mkpart',
-                  'primary',
-                  '%ds' % start,
-                  '%ds' % end,
-                  run_as_root=True)
-    if "boot" in flags.lower():
-        utils.execute('parted', '--script', dev_path,
-                      'set', '1', 'boot', 'on',
-                      run_as_root=True)
+    nova.privsep.fs.resize_partition(dev_path, start, end,
+                                     'boot' in flags.lower())
 
     if new_sectors > old_sectors:
         # Resizing up, resize filesystem after partition resize
