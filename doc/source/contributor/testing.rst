@@ -79,7 +79,7 @@ The correct level of unit test coverage is very subjective, and as such we are
 not aiming for a particular percentage of coverage, rather we are aiming for
 good coverage.
 Generally, every code change should have a related unit test:
-http://docs.openstack.org/developer/hacking/#creating-unit-tests
+https://github.com/openstack/nova/blob/master/HACKING.rst#creating-unit-tests
 
 Integration tests
 -----------------
