@@ -454,3 +454,80 @@ class AllocationCandidatesTestCase(test.NoDBTestCase):
              ('cn3', fields.ResourceClass.DISK_GB, 1500)],
         ]
         self._validate_allocation_requests(expected, alloc_cands)
+
+    def test_common_rc(self):
+        """Candidates when cn and shared have inventory in the same class."""
+        cn = self._create_provider('cn', uuids.agg1)
+        _add_inventory(cn, fields.ResourceClass.VCPU, 24)
+        _add_inventory(cn, fields.ResourceClass.MEMORY_MB, 2048)
+        _add_inventory(cn, fields.ResourceClass.DISK_GB, 1600)
+
+        ss = self._create_provider('ss', uuids.agg1)
+        _set_traits(ss, "MISC_SHARES_VIA_AGGREGATE")
+        _add_inventory(ss, fields.ResourceClass.DISK_GB, 1600)
+
+        alloc_cands = self._get_allocation_candidates()
+
+        # One allocation_request should have cn + ss; the other should have
+        # just the cn.
+        expected = [
+            [('cn', fields.ResourceClass.VCPU, 1),
+             ('cn', fields.ResourceClass.MEMORY_MB, 64),
+             ('cn', fields.ResourceClass.DISK_GB, 1500)],
+            # TODO(efried): Due to bug #1724613, the cn + ss candidate is not
+            # returned.  Uncomment this when the bug is fixed.
+            # [('cn', fields.ResourceClass.VCPU, 1),
+            #  ('cn', fields.ResourceClass.MEMORY_MB, 64),
+            #  ('ss', fields.ResourceClass.DISK_GB, 1500)],
+        ]
+
+        self._validate_allocation_requests(expected, alloc_cands)
+
+    def test_common_rc_traits_split(self):
+        """Validate filters when traits are split across cn and shared RPs."""
+        # NOTE(efried): This test case only applies to the scenario where we're
+        # requesting resources via the RequestGroup where
+        # use_same_provider=False
+
+        cn = self._create_provider('cn', uuids.agg1)
+        _add_inventory(cn, fields.ResourceClass.VCPU, 24)
+        _add_inventory(cn, fields.ResourceClass.MEMORY_MB, 2048)
+        _add_inventory(cn, fields.ResourceClass.DISK_GB, 1600)
+        # The compute node's disk is SSD
+        _set_traits(cn, 'HW_CPU_X86_SSE', 'STORAGE_DISK_SSD')
+
+        ss = self._create_provider('ss', uuids.agg1)
+        _add_inventory(ss, fields.ResourceClass.DISK_GB, 1600)
+        # The shared storage's disk is RAID
+        _set_traits(ss, 'MISC_SHARES_VIA_AGGREGATE', 'CUSTOM_RAID')
+
+        alloc_cands = rp_obj.AllocationCandidates.get_by_filters(
+            self.ctx, filters={
+                'resources': self.requested_resources,
+                'traits': ['HW_CPU_X86_SSE', 'STORAGE_DISK_SSD', 'CUSTOM_RAID']
+            }
+        )
+
+        # TODO(efried): Okay, bear with me here:
+        # TODO(efried): Bug #1724633: we'd *like* to get no candidates, because
+        # there's no single DISK_GB resource with both STORAGE_DISK_SSD and
+        # CUSTOM_RAID traits.  So this is the ideal expected value:
+        # expected = []
+        # TODO(efried): But under the design as currently conceived, we would
+        # get the cn + ss candidate, because that combination satisfies both
+        # traits:
+        # expected = [
+        #     [('cn', fields.ResourceClass.VCPU, 1),
+        #      ('cn', fields.ResourceClass.MEMORY_MB, 64),
+        #      ('ss', fields.ResourceClass.DISK_GB, 1500)],
+        # ]
+        # TODO(efried): However, until https://review.openstack.org/#/c/479766/
+        # lands, the traits are ignored, so this behaves just like
+        # test_common_rc above, which is subject to bug #1724613:
+        expected = [
+            [('cn', fields.ResourceClass.VCPU, 1),
+             ('cn', fields.ResourceClass.MEMORY_MB, 64),
+             ('cn', fields.ResourceClass.DISK_GB, 1500)],
+        ]
+
+        self._validate_allocation_requests(expected, alloc_cands)
