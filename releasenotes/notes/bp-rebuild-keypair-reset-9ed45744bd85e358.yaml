@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    A new param ``key_name`` was added to the instance rebuild API (v2.54),
+    then it is able to reset instance key pair. It is worth noting that
+    users within the same project are able to rebuild other user's instances
+    in that project with a new keypair.
+    If set ``key_name`` to None in API body, nova will unset the keypair of
+    instance during rebuild.

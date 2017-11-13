@@ -2160,6 +2160,141 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
             self.controller._stop_server, req, 'test_inst', body)
 
 
+class ServersControllerRebuildTestV254(ServersControllerRebuildInstanceTest):
+
+    def setUp(self):
+        super(ServersControllerRebuildTestV254, self).setUp()
+        fakes.stub_out_key_pair_funcs(self)
+        self.req.api_version_request = \
+            api_version_request.APIVersionRequest('2.54')
+
+    def _test_set_key_name_rebuild(self, set_key_name=True):
+        key_name = "key"
+        fake_get = fakes.fake_compute_get(vm_state=vm_states.ACTIVE,
+                                          key_name=key_name,
+                                          project_id=self.req_project_id,
+                                          user_id=self.req_user_id)
+        with mock.patch.object(compute_api.API, 'get',
+                               side_effect=fake_get):
+            if set_key_name:
+                self.body['rebuild']['key_name'] = key_name
+            self.req.body = jsonutils.dump_as_bytes(self.body)
+            server = self.controller._action_rebuild(
+                self.req, FAKE_UUID,
+                body=self.body).obj['server']
+            self.assertEqual(server['id'], FAKE_UUID)
+            self.assertEqual(server['key_name'], key_name)
+
+    def test_rebuild_accepted_with_keypair_name(self):
+        self._test_set_key_name_rebuild()
+
+    def test_rebuild_key_not_changed(self):
+        self._test_set_key_name_rebuild(set_key_name=False)
+
+    def test_rebuild_invalid_microversion_253(self):
+        self.req.api_version_request = \
+            api_version_request.APIVersionRequest('2.53')
+        body = {
+            "rebuild": {
+                "imageRef": self.image_uuid,
+                "key_name": "key"
+            },
+        }
+        excpt = self.assertRaises(exception.ValidationError,
+                                  self.controller._action_rebuild,
+                                  self.req, FAKE_UUID, body=body)
+        self.assertIn('key_name', six.text_type(excpt))
+
+    def test_rebuild_with_not_existed_keypair_name(self):
+        body = {
+            "rebuild": {
+                "imageRef": self.image_uuid,
+                "key_name": "nonexistentkey"
+            },
+        }
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._action_rebuild,
+                          self.req, FAKE_UUID, body=body)
+
+    def test_rebuild_user_has_no_key_pair(self):
+        def no_key_pair(context, user_id, name):
+            raise exception.KeypairNotFound(user_id=user_id, name=name)
+        self.stub_out('nova.db.key_pair_get', no_key_pair)
+        fake_get = fakes.fake_compute_get(vm_state=vm_states.ACTIVE,
+                                          key_name=None,
+                                          project_id=self.req_project_id,
+                                          user_id=self.req_user_id)
+        with mock.patch.object(compute_api.API, 'get',
+                               side_effect=fake_get):
+            self.body['rebuild']['key_name'] = "a-key-name"
+            self.assertRaises(webob.exc.HTTPBadRequest,
+                              self.controller._action_rebuild,
+                              self.req, FAKE_UUID, body=self.body)
+
+    def test_rebuild_with_non_string_keypair_name(self):
+        body = {
+            "rebuild": {
+                "imageRef": self.image_uuid,
+                "key_name": 12345
+            },
+        }
+        self.assertRaises(exception.ValidationError,
+                          self.controller._action_rebuild,
+                          self.req, FAKE_UUID, body=body)
+
+    def test_rebuild_with_invalid_keypair_name(self):
+        body = {
+            "rebuild": {
+                "imageRef": self.image_uuid,
+                "key_name": "123\0d456"
+            },
+        }
+        self.assertRaises(webob.exc.HTTPBadRequest,
+                          self.controller._action_rebuild,
+                          self.req, FAKE_UUID, body=body)
+
+    def test_rebuild_with_empty_keypair_name(self):
+        body = {
+            "rebuild": {
+                "imageRef": self.image_uuid,
+                "key_name": ''
+            },
+        }
+        self.assertRaises(exception.ValidationError,
+                          self.controller._action_rebuild,
+                          self.req, FAKE_UUID, body=body)
+
+    def test_rebuild_with_none_keypair_name(self):
+        key_name = None
+        fake_get = fakes.fake_compute_get(vm_state=vm_states.ACTIVE,
+                                          key_name=key_name,
+                                          project_id=self.req_project_id,
+                                          user_id=self.req_user_id)
+        with mock.patch.object(compute_api.API, 'get',
+                               side_effect=fake_get):
+            with mock.patch.object(objects.KeyPair, 'get_by_name') as key_get:
+                self.body['rebuild']['key_name'] = key_name
+                self.req.body = jsonutils.dump_as_bytes(self.body)
+                self.controller._action_rebuild(
+                    self.req, FAKE_UUID,
+                    body=self.body)
+                # NOTE: because the api will call _get_server twice. The server
+                # response will always be the same one. So we just use
+                # objects.KeyPair.get_by_name to verify test.
+                key_get.assert_not_called()
+
+    def test_rebuild_with_too_large_keypair_name(self):
+        body = {
+            "rebuild": {
+                "imageRef": self.image_uuid,
+                "key_name": 256 * "k"
+            },
+        }
+        self.assertRaises(exception.ValidationError,
+                          self.controller._action_rebuild,
+                          self.req, FAKE_UUID, body=body)
+
+
 class ServersControllerRebuildTestV219(ServersControllerRebuildInstanceTest):
 
     def setUp(self):

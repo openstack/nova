@@ -128,6 +128,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              The os-services and os-hypervisors APIs now return a uuid in the
              id field, and takes a uuid in requests. PUT and GET requests
              and responses are also changed.
+    * 2.54 - Enable reset key pair while rebuilding instance.
 """
 
 # The minimum and maximum versions of the API supported
@@ -136,7 +137,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.53"
+_MAX_API_VERSION = "2.54"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which related to network, images and baremetal

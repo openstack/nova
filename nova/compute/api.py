@@ -2866,6 +2866,25 @@ class API(base.Base):
         preserve_ephemeral = kwargs.get('preserve_ephemeral', False)
         auto_disk_config = kwargs.get('auto_disk_config')
 
+        if 'key_name' in kwargs:
+            key_name = kwargs.pop('key_name')
+            if key_name:
+                # NOTE(liuyulong): we are intentionally using the user_id from
+                # the request context rather than the instance.user_id because
+                # users own keys but instances are owned by projects, and
+                # another user in the same project can rebuild an instance
+                # even if they didn't create it.
+                key_pair = objects.KeyPair.get_by_name(context,
+                                                       context.user_id,
+                                                       key_name)
+                instance.key_name = key_pair.name
+                instance.key_data = key_pair.public_key
+                instance.keypairs = objects.KeyPairList(objects=[key_pair])
+            else:
+                instance.key_name = None
+                instance.key_data = None
+                instance.keypairs = objects.KeyPairList(objects=[])
+
         image_id, image = self._get_image(context, image_href)
         self._check_auto_disk_config(image=image, **kwargs)
 

@@ -90,9 +90,9 @@ def stub_out_key_pair_funcs(testcase, have_key_pair=True, **kwargs):
                      name='key', public_key='public_key', **kwargs)]
 
     def one_key_pair(context, user_id, name):
-        if name == 'key':
+        if name in ['key', 'new-key']:
             return dict(test_keypair.fake_keypair,
-                        name='key', public_key='public_key', **kwargs)
+                        name=name, public_key='public_key', **kwargs)
         else:
             raise exc.KeypairNotFound(user_id=user_id, name=name)
 
@@ -541,7 +541,8 @@ def stub_instance(id=1, user_id=None, project_id=None, host=None,
                   "flavor": flavorinfo,
               },
         "cleaned": cleaned,
-        "services": services}
+        "services": services,
+        "tags": []}
 
     instance.update(info_cache)
     instance['info_cache']['instance_uuid'] = instance['uuid']
@@ -552,7 +553,7 @@ def stub_instance(id=1, user_id=None, project_id=None, host=None,
 def stub_instance_obj(ctxt, *args, **kwargs):
     db_inst = stub_instance(*args, **kwargs)
     expected = ['metadata', 'system_metadata', 'flavor',
-                'info_cache', 'security_groups']
+                'info_cache', 'security_groups', 'tags']
     inst = objects.Instance._from_db_object(ctxt, objects.Instance(),
                                             db_inst,
                                             expected_attrs=expected)

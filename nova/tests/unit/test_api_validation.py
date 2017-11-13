@@ -988,6 +988,43 @@ class NoneTypeTestCase(APIValidationTestCase):
                                     expected_detail=detail)
 
 
+class NameOrNoneTestCase(APIValidationTestCase):
+
+    post_schema = {
+        'type': 'object',
+        'properties': {
+            'foo': parameter_types.name_or_none
+        }
+    }
+
+    def test_valid(self):
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': None},
+                                   req=FakeRequest()))
+        self.assertEqual('Validation succeeded.',
+                         self.post(body={'foo': '1'},
+                                   req=FakeRequest()))
+
+    def test_validate_fails(self):
+        detail = ("Invalid input for field/attribute foo. Value: 1234. 1234 "
+                  "is not valid under any of the given schemas")
+        self.check_validation_error(self.post, body={'foo': 1234},
+                                    expected_detail=detail)
+
+        detail = ("Invalid input for field/attribute foo. Value: . '' "
+                  "is not valid under any of the given schemas")
+        self.check_validation_error(self.post, body={'foo': ''},
+                                    expected_detail=detail)
+
+        too_long_name = 256 * "k"
+        detail = ("Invalid input for field/attribute foo. Value: %s. "
+                  "'%s' is not valid under any of the "
+                  "given schemas") % (too_long_name, too_long_name)
+        self.check_validation_error(self.post,
+                                    body={'foo': too_long_name},
+                                    expected_detail=detail)
+
+
 class TcpUdpPortTestCase(APIValidationTestCase):
 
     post_schema = {

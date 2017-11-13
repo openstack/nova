@@ -226,6 +226,14 @@ none = {
 }
 
 
+name_or_none = {
+    'oneOf': [
+        {'type': 'string', 'minLength': 1, 'maxLength': 255},
+        {'type': 'null'},
+    ]
+}
+
+
 positive_integer = {
     'type': ['integer', 'string'],
     'pattern': '^[0-9]*$', 'minimum': 1, 'minLength': 1

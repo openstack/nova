@@ -683,3 +683,8 @@ uniqueness across cells. This microversion brings the following changes:
   * ``GET /os-hypervisors/detail``
   * ``GET /os-hypervisors/{hypervisor_id}``
   * ``GET /os-hypervisors/{hypervisor_id}/uptime``
+
+2.54
+----
+
+  Allow the user to set the server key pair while rebuilding.
