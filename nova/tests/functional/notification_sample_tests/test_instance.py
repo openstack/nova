@@ -28,6 +28,7 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         notification_sample_base.NotificationSampleTestBase):
 
     def setUp(self):
+        self.flags(compute_driver='fake.FakeLiveMigrateDriver')
         self.flags(use_neutron=True)
         self.flags(bdms_in_notifications='True', group='notifications')
         super(TestInstanceNotificationSampleWithMultipleCompute, self).setUp()
@@ -87,24 +88,7 @@ class TestInstanceNotificationSampleWithMultipleCompute(
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
-    @mock.patch('nova.virt.fake.FakeDriver.live_migration')
-    def _test_live_migration_abort(self, server, mock_migration):
-        """We need synchronize the migration table (it should not be empty)
-        and the server status (it should be in 'migrating' status). These
-        conditions are met for a really short of time, so we need delaying the
-        live_migration. The migration table is empty when the server switches
-        to 'migrating' status, so we need polling the get_active_migrations,
-        while conditions aren't met.
-        """
-        def _delayed_live_migration(context, instance, dest,
-                       post_method, recover_method, block_migration=False,
-                       migrate_data=None):
-            time.sleep(2)  # make time for abort
-            post_method(context, instance, dest, block_migration,
-                        migrate_data)
-            return
-
-        mock_migration.side_effect = _delayed_live_migration
+    def _test_live_migration_abort(self, server):
         post = {
             "os-migrateLive": {
                 "host": "host2",
@@ -122,7 +106,7 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         self._wait_for_notification('instance.live_migration_abort.start')
         self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
         self._wait_for_notification('instance.live_migration_abort.end')
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
             'instance-live_migration_abort-start',
             replacements={
@@ -135,6 +119,18 @@ class TestInstanceNotificationSampleWithMultipleCompute(
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+        self._verify_notification(
+            'instance-live_migration_rollback-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
+        self._verify_notification(
+            'instance-live_migration_rollback-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
 
 
 class TestInstanceNotificationSample(
