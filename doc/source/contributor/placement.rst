@@ -141,18 +141,23 @@ The rules around when a microversion is needed are the same as for the
 there are a few bits of required housekeeping that must be done in the code:
 
 * Update the ``VERSIONS`` list in
-  `nova.api.openstack.placement.microversion` to indicate the new
+  `nova/api/openstack/placement/microversion.py` to indicate the new
   microversion and give a very brief summary of the added feature.
 * Update `nova/api/openstack/placement/rest_api_version_history.rst`
   to add a more detailed section describing the new microversion.
-* Add a `release note`_ announcing the new or changed feature and
-  the microversion.
+* Add a `release note`_ with a ``features`` section announcing the new or
+  changed feature and the microversion.
 * If the ``version_handler`` decorator (see below) has been used,
   increment ``TOTAL_VERSIONED_METHODS`` in
   `nova/tests/unit/api/openstack/placement/test_microversion.py`.
   This provides a confirmatory check just to make sure you're paying
   attention and as a helpful reminder to do the other things in this
   list.
+* Include functional gabbi tests as appropriate (see `Using Gabbi`_).  At the
+  least, update the ``latest microversion`` test in
+  `nova/tests/functional/api/openstack/placement/gabbits/microversion.yaml`.
+* Update the `API Reference`_ documentation as appropriate.  The source is
+  located under `placement-api-ref/source/`.
 
 In the placement API, microversions only use the modern form of the
 version header::
@@ -375,3 +380,4 @@ for an eventual extraction and avoid creating unnecessary interdependencies.
 .. _JSONPath: http://goessner.net/articles/JsonPath/
 .. _gabbi-run: http://gabbi.readthedocs.io/en/latest/runner.html
 .. _errors: http://specs.openstack.org/openstack/api-wg/guidelines/errors.html
+.. _API Reference: https://developer.openstack.org/api-ref/placement/
