@@ -2891,6 +2891,8 @@ class API(base.Base):
         quiesced = False
         if instance.vm_state == vm_states.ACTIVE:
             try:
+                LOG.info(_LI("Attempting to quiesce instance before volume "
+                             "snapshot."), instance=instance)
                 self.compute_rpcapi.quiesce_instance(context, instance)
                 quiesced = True
             except (exception.InstanceQuiesceNotSupported,
@@ -2908,28 +2910,43 @@ class API(base.Base):
                 context, instance.uuid)
 
         mapping = []
-        for bdm in bdms:
-            if bdm.no_device:
-                continue
+        try:
+            for bdm in bdms:
+                if bdm.no_device:
+                    continue
 
-            if bdm.is_volume:
-                # create snapshot based on volume_id
-                volume = self.volume_api.get(context, bdm.volume_id)
-                # NOTE(yamahata): Should we wait for snapshot creation?
-                #                 Linux LVM snapshot creation completes in
-                #                 short time, it doesn't matter for now.
-                name = _('snapshot for %s') % image_meta['name']
-                LOG.debug('Creating snapshot from volume %s.', volume['id'],
-                          instance=instance)
-                snapshot = self.volume_api.create_snapshot_force(
-                    context, volume['id'], name, volume['display_description'])
-                mapping_dict = block_device.snapshot_from_bdm(snapshot['id'],
-                                                              bdm)
-                mapping_dict = mapping_dict.get_image_mapping()
-            else:
-                mapping_dict = bdm.get_image_mapping()
+                if bdm.is_volume:
+                    # create snapshot based on volume_id
+                    volume = self.volume_api.get(context, bdm.volume_id)
+                    # NOTE(yamahata): Should we wait for snapshot creation?
+                    # Linux LVM snapshot creation completes in short time,
+                    # it doesn't matter for now.
+                    name = _('snapshot for %s') % image_meta['name']
+                    LOG.debug('Creating snapshot from volume %s.',
+                              volume['id'], instance=instance)
+                    snapshot = self.volume_api.create_snapshot_force(
+                        context, volume['id'],
+                        name, volume['display_description'])
+                    mapping_dict = block_device.snapshot_from_bdm(
+                        snapshot['id'], bdm)
+                    mapping_dict = mapping_dict.get_image_mapping()
+                else:
+                    mapping_dict = bdm.get_image_mapping()
 
-            mapping.append(mapping_dict)
+                mapping.append(mapping_dict)
+        # NOTE(tasker): No error handling is done in the above for loop.
+        # This means that if the snapshot fails and throws an exception
+        # the traceback will skip right over the unquiesce needed below.
+        # Here, catch any exception, unquiesce the instance, and raise the
+        # error so that the calling function can do what it needs to in
+        # order to properly treat a failed snap.
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                if quiesced:
+                    LOG.info(_LI("Unquiescing instance after volume snapshot "
+                                 "failure."), instance=instance)
+                    self.compute_rpcapi.unquiesce_instance(
+                        context, instance, mapping)
 
         if quiesced:
             self.compute_rpcapi.unquiesce_instance(context, instance, mapping)

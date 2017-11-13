@@ -2755,7 +2755,8 @@ class _ComputeAPIUnitTestMixIn(object):
                                                           instance)
 
     def _test_snapshot_volume_backed(self, quiesce_required, quiesce_fails,
-                                     vm_state=vm_states.ACTIVE):
+                                     vm_state=vm_states.ACTIVE,
+                                     snapshot_fails=False):
         fake_sys_meta = {'image_min_ram': '11',
                          'image_min_disk': '22',
                          'image_container_format': 'ami',
@@ -2801,6 +2802,8 @@ class _ComputeAPIUnitTestMixIn(object):
             return {'id': volume_id, 'display_description': ''}
 
         def fake_volume_create_snapshot(context, volume_id, name, description):
+            if snapshot_fails:
+                raise exception.OverQuota(overs="snapshots")
             return {'id': '%s-snapshot' % volume_id}
 
         def fake_quiesce_instance(context, instance):
@@ -2850,8 +2853,13 @@ class _ComputeAPIUnitTestMixIn(object):
              'tag': None})
 
         # All the db_only fields and the volume ones are removed
-        self.compute_api.snapshot_volume_backed(
-            self.context, instance, 'test-snapshot')
+        if snapshot_fails:
+            self.assertRaises(exception.OverQuota,
+                              self.compute_api.snapshot_volume_backed,
+                              self.context, instance, "test-snapshot")
+        else:
+            self.compute_api.snapshot_volume_backed(
+                self.context, instance, 'test-snapshot')
 
         self.assertEqual(quiesce_expected, quiesced[0])
         self.assertEqual(quiesce_expected, quiesced[1])
@@ -2889,8 +2897,13 @@ class _ComputeAPIUnitTestMixIn(object):
         quiesced = [False, False]
 
         # Check that the mappings from the image properties are not included
-        self.compute_api.snapshot_volume_backed(
-            self.context, instance, 'test-snapshot')
+        if snapshot_fails:
+            self.assertRaises(exception.OverQuota,
+                              self.compute_api.snapshot_volume_backed,
+                              self.context, instance, "test-snapshot")
+        else:
+            self.compute_api.snapshot_volume_backed(
+                self.context, instance, 'test-snapshot')
 
         self.assertEqual(quiesce_expected, quiesced[0])
         self.assertEqual(quiesce_expected, quiesced[1])
@@ -2900,6 +2913,11 @@ class _ComputeAPIUnitTestMixIn(object):
 
     def test_snapshot_volume_backed_with_quiesce(self):
         self._test_snapshot_volume_backed(True, False)
+
+    def test_snapshot_volume_backed_with_quiesce_create_snap_fails(self):
+        self._test_snapshot_volume_backed(quiesce_required=True,
+                                          quiesce_fails=False,
+                                          snapshot_fails=True)
 
     def test_snapshot_volume_backed_with_quiesce_skipped(self):
         self._test_snapshot_volume_backed(False, True)
