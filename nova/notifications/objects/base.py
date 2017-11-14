@@ -147,7 +147,8 @@ class NotificationPublisher(NotificationObject):
     #         2.1: The type of the source field changed from string to enum.
     #              This only needs a minor bump as the enum uses the possible
     #              values of the previous string field
-    VERSION = '2.1'
+    #         2.2: New enum for source fields added
+    VERSION = '2.2'
 
     fields = {
         'host': fields.StringField(nullable=False),
@@ -161,7 +162,12 @@ class NotificationPublisher(NotificationObject):
 
     @classmethod
     def from_service_obj(cls, service):
-        return cls(host=service.host, source=service.binary)
+        # nova-osapi_compute binary name needs to be translated to nova-api
+        # notification source enum value.
+        source = ("nova-api"
+                  if service.binary == "nova-osapi_compute"
+                  else service.binary)
+        return cls(host=service.host, source=source)
 
 
 @base.NovaObjectRegistry.register_if(False)

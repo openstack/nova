@@ -20,14 +20,11 @@ from nova.tests import fixtures
 from nova.tests.functional.notification_sample_tests \
     import notification_sample_base
 from nova.tests.unit.api.openstack.compute import test_services
+from nova.tests.unit import fake_notifier
 
 
-class TestServiceUpdateNotificationSamplev2_52(
+class TestServiceNotificationBase(
         notification_sample_base.NotificationSampleTestBase):
-
-    # These tests have to be capped at 2.52 since the PUT format changes in
-    # the 2.53 microversion.
-    MAX_MICROVERSION = '2.52'
 
     def _verify_notification(self, sample_file_name, replacements=None,
                              actual=None):
@@ -36,8 +33,15 @@ class TestServiceUpdateNotificationSamplev2_52(
         # after every service version bump.
         if 'version' not in replacements:
             replacements['version'] = service.SERVICE_VERSION
-        base = super(TestServiceUpdateNotificationSamplev2_52, self)
+        base = super(TestServiceNotificationBase, self)
         base._verify_notification(sample_file_name, replacements, actual)
+
+
+class TestServiceUpdateNotificationSamplev2_52(TestServiceNotificationBase):
+
+    # These tests have to be capped at 2.52 since the PUT format changes in
+    # the 2.53 microversion.
+    MAX_MICROVERSION = '2.52'
 
     def setUp(self):
         super(TestServiceUpdateNotificationSamplev2_52, self).setUp()
@@ -133,3 +137,24 @@ class TestServiceUpdateNotificationSampleLatest(
                                                 'disabled': True,
                                                 'disabled_reason': 'test2',
                                                 'uuid': self.service_uuid})
+
+
+class TestServiceNotificationSample(TestServiceNotificationBase):
+
+    def test_service_create(self):
+        self.compute2 = self.start_service('compute', host='host2')
+        self._verify_notification(
+            'service-create',
+            replacements={
+                'uuid':
+                notification_sample_base.NotificationSampleTestBase.ANY})
+
+    def test_service_destroy(self):
+        self.compute2 = self.start_service('compute', host='host2')
+        compute2_service_id = self.admin_api.get_services(
+            host=self.compute2.host, binary='nova-compute')[0]['id']
+        self.admin_api.api_delete('os-services/%s' % compute2_service_id)
+        self._verify_notification(
+            'service-delete',
+            replacements={'uuid': compute2_service_id},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])

@@ -87,6 +87,8 @@ class NotificationSampleTestBase(test.TestCase,
         self.start_service('scheduler')
         self.start_service('network', manager=CONF.network_manager)
         self.compute = self.start_service('compute')
+        # Reset the service create notifications
+        fake_notifier.reset()
 
     def _get_notification_sample(self, sample):
         sample_dir = os.path.dirname(os.path.abspath(__file__))

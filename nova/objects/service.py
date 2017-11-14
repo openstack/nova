@@ -356,6 +356,7 @@ class Service(base.NovaPersistentObject, base.NovaObject,
 
         db_service = db.service_create(self._context, updates)
         self._from_db_object(self._context, self, db_service)
+        self._send_notification(fields.NotificationAction.CREATE)
 
     @base.remotable
     def save(self):
@@ -373,19 +374,23 @@ class Service(base.NovaPersistentObject, base.NovaObject,
         # every other field change. See the comment in save() too.
         if set(updates.keys()).intersection(
                 {'disabled', 'disabled_reason', 'forced_down'}):
-            payload = service_notification.ServiceStatusPayload(self)
-            service_notification.ServiceStatusNotification(
-                publisher=notification.NotificationPublisher.from_service_obj(
-                    self),
-                event_type=notification.EventType(
-                    object='service',
-                    action=fields.NotificationAction.UPDATE),
-                priority=fields.NotificationPriority.INFO,
-                payload=payload).emit(self._context)
+            self._send_notification(fields.NotificationAction.UPDATE)
+
+    def _send_notification(self, action):
+        payload = service_notification.ServiceStatusPayload(self)
+        service_notification.ServiceStatusNotification(
+            publisher=notification.NotificationPublisher.from_service_obj(
+                self),
+            event_type=notification.EventType(
+                object='service',
+                action=action),
+            priority=fields.NotificationPriority.INFO,
+            payload=payload).emit(self._context)
 
     @base.remotable
     def destroy(self):
         db.service_destroy(self._context, self.id)
+        self._send_notification(fields.NotificationAction.DELETE)
 
     @classmethod
     def enable_min_version_cache(cls):

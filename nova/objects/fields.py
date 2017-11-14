@@ -800,8 +800,14 @@ class NotificationSource(BaseNovaEnum):
     API = 'nova-api'
     CONDUCTOR = 'nova-conductor'
     SCHEDULER = 'nova-scheduler'
+    NETWORK = 'nova-network'
+    CONSOLEAUTH = 'nova-consoleauth'
+    CELLS = 'nova-cells'
+    CONSOLE = 'nova-console'
+    METADATA = 'nova-metadata'
 
-    ALL = (API, COMPUTE, CONDUCTOR, SCHEDULER)
+    ALL = (API, COMPUTE, CONDUCTOR, SCHEDULER,
+           NETWORK, CONSOLEAUTH, CELLS, CONSOLE, METADATA)
 
 
 class NotificationAction(BaseNovaEnum):

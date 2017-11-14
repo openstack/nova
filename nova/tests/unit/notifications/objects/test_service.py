@@ -13,6 +13,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import copy
+
 import mock
 from oslo_utils import timeutils
 
@@ -30,8 +32,15 @@ class TestServiceStatusNotification(test.TestCase):
         super(TestServiceStatusNotification, self).setUp()
 
     @mock.patch('nova.notifications.objects.service.ServiceStatusNotification')
-    def _verify_notification(self, service_obj, mock_notification):
-        service_obj.save()
+    def _verify_notification(self, service_obj, action, mock_notification):
+        if action == fields.NotificationAction.CREATE:
+            service_obj.create()
+        elif action == fields.NotificationAction.UPDATE:
+            service_obj.save()
+        elif action == fields.NotificationAction.DELETE:
+            service_obj.destroy()
+        else:
+            raise Exception('Unsupported action: %s' % action)
 
         self.assertTrue(mock_notification.called)
 
@@ -44,8 +53,7 @@ class TestServiceStatusNotification(test.TestCase):
         self.assertEqual(service_obj.binary, publisher.source)
         self.assertEqual(fields.NotificationPriority.INFO, priority)
         self.assertEqual('service', event_type.object)
-        self.assertEqual(fields.NotificationAction.UPDATE,
-                         event_type.action)
+        self.assertEqual(action, event_type.action)
         for field in service_notification.ServiceStatusPayload.SCHEMA:
             if field in fake_service:
                 self.assertEqual(fake_service[field], getattr(payload, field))
@@ -60,7 +68,8 @@ class TestServiceStatusNotification(test.TestCase):
                            'disabled_reason': 'my reason',
                            'forced_down': True}.items():
             setattr(service_obj, key, value)
-            self._verify_notification(service_obj)
+            self._verify_notification(service_obj,
+                                      fields.NotificationAction.UPDATE)
 
     @mock.patch('nova.notifications.objects.service.ServiceStatusNotification')
     @mock.patch('nova.db.service_update')
@@ -75,3 +84,19 @@ class TestServiceStatusNotification(test.TestCase):
             setattr(service_obj, key, value)
             service_obj.save()
             self.assertFalse(mock_notification.called)
+
+    @mock.patch('nova.db.service_create')
+    def test_service_create_with_notification(self, mock_db_service_create):
+        service_obj = objects.Service(context=self.ctxt)
+        service_obj["uuid"] = fake_service["uuid"]
+        mock_db_service_create.return_value = fake_service
+        self._verify_notification(service_obj,
+                                  fields.NotificationAction.CREATE)
+
+    @mock.patch('nova.db.service_destroy')
+    def test_service_destroy_with_notification(self, mock_db_service_destroy):
+        service = copy.deepcopy(fake_service)
+        service.pop("version")
+        service_obj = objects.Service(context=self.ctxt, **service)
+        self._verify_notification(service_obj,
+                                  fields.NotificationAction.DELETE)
