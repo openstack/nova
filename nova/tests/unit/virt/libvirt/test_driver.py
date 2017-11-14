@@ -6466,28 +6466,36 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             connection_info
         )
 
-    @mock.patch.object(volume_drivers.LibvirtFakeVolumeDriver,
-                       'connect_volume')
+    def _fake_libvirt_config_guest_disk(self):
+        fake_config = vconfig.LibvirtConfigGuestDisk()
+        fake_config.source_type = "network"
+        fake_config.source_device = "fake-type"
+        fake_config.driver_name = "qemu"
+        fake_config.driver_format = "raw"
+        fake_config.driver_cache = "none"
+        fake_config.source_protocol = "fake"
+        fake_config.source_name = "fake"
+        fake_config.target_bus = "fake-bus"
+        fake_config.target_dev = "vdb"
+
+        return fake_config
+
     @mock.patch.object(volume_drivers.LibvirtFakeVolumeDriver, 'get_config')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_set_cache_mode')
-    def test_get_volume_config(self, _set_cache_mode,
-                               get_config, connect_volume):
+    def test_get_volume_config(self, _set_cache_mode, get_config):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         connection_info = {'driver_volume_type': 'fake',
                            'data': {'device_path': '/fake',
                                     'access_mode': 'rw'}}
-        bdm = {'device_name': 'vdb',
-               'disk_bus': 'fake-bus',
-               'device_type': 'fake-type'}
-        disk_info = {'bus': bdm['disk_bus'], 'type': bdm['device_type'],
+        disk_info = {'bus': 'fake-bus', 'type': 'fake-type',
                      'dev': 'vdb'}
-        mock_config = mock.MagicMock()
+        config_guest_disk = self._fake_libvirt_config_guest_disk()
 
-        get_config.return_value = mock_config
+        get_config.return_value = copy.deepcopy(config_guest_disk)
         config = drvr._get_volume_config(connection_info, disk_info)
         get_config.assert_called_once_with(connection_info, disk_info)
         _set_cache_mode.assert_called_once_with(config)
-        self.assertEqual(mock_config, config)
+        self.assertEqual(config_guest_disk.to_xml(), config.to_xml())
 
     def test_attach_invalid_volume_type(self):
         self.create_fake_libvirt_mock()
