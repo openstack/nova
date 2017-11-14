@@ -1,0 +1,13 @@
+---
+security:
+  - |
+    `OSSA-2017-005`_: Nova Filter Scheduler bypass through rebuild action
+
+    By rebuilding an instance, an authenticated user may be able to circumvent
+    the FilterScheduler bypassing imposed filters (for example, the
+    ImagePropertiesFilter or the IsolatedHostsFilter). All setups using the
+    FilterScheduler (or CachingScheduler) are affected.
+
+    The fix is in the `nova-api` and `nova-conductor` services.
+
+    .. _OSSA-2017-005: https://security.openstack.org/ossa/OSSA-2017-005.html
