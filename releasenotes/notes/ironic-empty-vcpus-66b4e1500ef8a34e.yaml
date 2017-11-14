@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    Fixes a bug preventing ironic nodes without VCPUs, memory or disk in their
+    properties from being picked by nova.
