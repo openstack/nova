@@ -819,7 +819,8 @@ class ComputeTaskManager(base.Base):
 
             # The host variable is passed in two cases:
             # 1. rebuild - the instance.host is passed to rebuild on the
-            #       same host and bypass the scheduler.
+            #       same host and bypass the scheduler *unless* a new image
+            #       was specified
             # 2. evacuate with specified host and force=True - the specified
             #       host is passed and is meant to bypass the scheduler.
             # NOTE(mriedem): This could be a lot more straight-forward if we
@@ -833,10 +834,13 @@ class ComputeTaskManager(base.Base):
                     self._allocate_for_evacuate_dest_host(
                         context, instance, host, request_spec)
             else:
-                # At this point, either the user is doing a rebuild on the
-                # same host (not evacuate), or they are evacuating and
-                # specified a host but are not forcing it. The API passes
-                # host=None in this case but sets up the
+                # At this point, the user is either:
+                #
+                # 1. Doing a rebuild on the same host (not evacuate) and
+                #    specified a new image.
+                # 2. Evacuating and specified a host but are not forcing it.
+                #
+                # In either case, the API passes host=None but sets up the
                 # RequestSpec.requested_destination field for the specified
                 # host.
                 if not request_spec:
@@ -850,7 +854,7 @@ class ComputeTaskManager(base.Base):
                             context, image_ref, [instance])
                     request_spec = objects.RequestSpec.from_primitives(
                         context, request_spec, filter_properties)
-                else:
+                elif recreate:
                     # NOTE(sbauza): Augment the RequestSpec object by excluding
                     # the source host for avoiding the scheduler to pick it
                     request_spec.ignore_hosts = request_spec.ignore_hosts or []

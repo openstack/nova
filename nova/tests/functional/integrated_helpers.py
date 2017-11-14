@@ -77,10 +77,11 @@ class _IntegratedTestBase(test.TestCase):
         self.flags(use_neutron=self.USE_NEUTRON)
 
         nova.tests.unit.image.fake.stub_out_image_service(self)
-        self._setup_services()
 
         self.useFixture(cast_as_call.CastAsCall(self))
         self.useFixture(nova_fixtures.PlacementFixture())
+
+        self._setup_services()
 
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
 
@@ -270,19 +271,21 @@ class InstanceHelperMixin(object):
             return
 
     def _wait_for_action_fail_completion(
-            self, server, expected_action, event_name):
+            self, server, expected_action, event_name, api=None):
         """Polls instance action events for the given instance, action and
         action event name until it finds the action event with an error
         result.
         """
+        if api is None:
+            api = self.api
         completion_event = None
         for attempt in range(10):
-            actions = self.api.get_instance_actions(server['id'])
+            actions = api.get_instance_actions(server['id'])
             # Look for the migrate action.
             for action in actions:
                 if action['action'] == expected_action:
                     events = (
-                        self.api.api_get(
+                        api.api_get(
                             '/servers/%s/os-instance-actions/%s' %
                             (server['id'], action['request_id'])
                         ).body['instanceAction']['events'])
