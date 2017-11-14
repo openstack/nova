@@ -1545,7 +1545,8 @@ block_device_mapping_v2:
             "volume_size": "25",
             "destination_type": "volume",
             "delete_on_termination": true,
-            "tag": "disk1" }]
+            "tag": "disk1",
+            "disk_bus": "scsi"}]
 
     In microversion 2.32, ``tag`` is an optional string attribute that can
     be used to assign a tag to the block device. This tag is then exposed to
@@ -1986,6 +1987,15 @@ disk_available_least:
   in: body
   required: true
   type: integer
+disk_bus:
+  description: |
+    Disk bus type, some hypervisors (currently only libvirt) support
+    specify this parameter. Some example disk_bus values can be: `ide`,
+    `usb`, `virtio`, `scsi`. This is not an exhaustive list as it depends
+    on the virtualization driver, and may change as more support is added.
+  in: body
+  required: false
+  type: string
 disk_config:
   description: |
     Disk configuration. The value is either:

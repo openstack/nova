@@ -332,6 +332,7 @@ Request
   - block_device_mapping_v2.boot_index: boot_index
   - block_device_mapping_v2.uuid: block_device_uuid
   - block_device_mapping_v2.tag: device_tag_bdm
+  - block_device_mapping_v2.disk_bus: disk_bus
   - config_drive: config_drive
   - key_name: key_name
   - os:scheduler_hints: os:scheduler_hints
