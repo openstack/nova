@@ -527,7 +527,7 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
 
             updated_port = {'security_groups': port['security_groups']}
             try:
-                LOG.info("Adding security group %(security_group_id)s to "
+                LOG.info("Removing security group %(security_group_id)s from "
                          "port %(port_id)s",
                          {'security_group_id': security_group_id,
                           'port_id': port['id']})
