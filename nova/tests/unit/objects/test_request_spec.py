@@ -458,7 +458,8 @@ class _TestRequestSpecObject(object):
                                            disk_gb=10.0,
                                            memory_mb=8192.0),
             instance_group=objects.InstanceGroup(hosts=['fake1'],
-                                                 policies=['affinity']),
+                                                 policies=['affinity'],
+                                                 members=['inst1', 'inst2']),
             scheduler_hints={'foo': ['bar']},
             requested_destination=fake_dest)
         expected = {'ignore_hosts': ['ignoredhost'],
@@ -473,6 +474,7 @@ class _TestRequestSpecObject(object):
                     'group_updated': True,
                     'group_hosts': set(['fake1']),
                     'group_policies': set(['affinity']),
+                    'group_members': set(['inst1', 'inst2']),
                     'scheduler_hints': {'foo': 'bar'},
                     'requested_destination': fake_dest}
         self.assertEqual(expected, spec.to_legacy_filter_properties_dict())

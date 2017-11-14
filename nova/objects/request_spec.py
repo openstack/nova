@@ -316,7 +316,8 @@ class RequestSpec(base.NovaObject):
         # the existing dictionary as a primitive.
         return {'group_updated': True,
                 'group_hosts': set(self.instance_group.hosts),
-                'group_policies': set(self.instance_group.policies)}
+                'group_policies': set(self.instance_group.policies),
+                'group_members': set(self.instance_group.members)}
 
     def to_legacy_request_spec_dict(self):
         """Returns a legacy request_spec dict from the RequestSpec object.
