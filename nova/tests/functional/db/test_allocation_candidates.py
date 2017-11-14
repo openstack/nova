@@ -1105,3 +1105,104 @@ class AllocationCandidatesTestCase(ProviderDBBase):
              ('ss2', fields.ResourceClass.DISK_GB, 1500)],
         ]
         self._validate_allocation_requests(expected, alloc_cands)
+
+    def test_two_non_sharing_connect_to_one_sharing_different_aggregate(self):
+        # Covering the following setup:
+        #
+        #    CN1 (VCPU)        CN2 (VCPU)
+        #        \ agg1        / agg2
+        #         SS1 (DISK_GB)
+        #
+        # It is different from test_mix_local_and_shared as it uses two
+        # different aggregates to connect the two CNs to the share RP
+
+        cn1 = self._create_provider('cn1', uuids.agg1)
+        _add_inventory(cn1, fields.ResourceClass.VCPU, 24)
+        _add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)
+
+        cn2 = self._create_provider('cn2', uuids.agg2)
+        _add_inventory(cn2, fields.ResourceClass.VCPU, 24)
+        _add_inventory(cn2, fields.ResourceClass.MEMORY_MB, 2048)
+
+        ss1 = self._create_provider('ss1', uuids.agg1, uuids.agg2)
+        _set_traits(ss1, "MISC_SHARES_VIA_AGGREGATE")
+        _add_inventory(ss1, fields.ResourceClass.DISK_GB, 1600)
+
+        alloc_cands = self._get_allocation_candidates([
+            placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    'VCPU': 2,
+                    'DISK_GB': 1500,
+                }
+            )]
+        )
+        expected = [
+            [('cn1', fields.ResourceClass.VCPU, 2),
+             ('ss1', fields.ResourceClass.DISK_GB, 1500)],
+            [('cn2', fields.ResourceClass.VCPU, 2),
+             ('ss1', fields.ResourceClass.DISK_GB, 1500)],
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
+
+    def test_two_non_sharing_one_common_and_two_unique_sharing(self):
+        # Covering the following setup:
+        #
+        #    CN1 (VCPU)          CN2 (VCPU)
+        #   / agg3   \ agg1     / agg1   \ agg2
+        #  SS3 (IPV4)   SS1 (DISK_GB)      SS2 (IPV4)
+
+        cn1 = self._create_provider('cn1', uuids.agg1, uuids.agg3)
+        _add_inventory(cn1, fields.ResourceClass.VCPU, 24)
+        _add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)
+
+        cn2 = self._create_provider('cn2', uuids.agg1, uuids.agg2)
+        _add_inventory(cn2, fields.ResourceClass.VCPU, 24)
+        _add_inventory(cn2, fields.ResourceClass.MEMORY_MB, 2048)
+
+        # ss1 is connected to both cn1 and cn2
+        ss1 = self._create_provider('ss1', uuids.agg1)
+        _set_traits(ss1, "MISC_SHARES_VIA_AGGREGATE")
+        _add_inventory(ss1, fields.ResourceClass.DISK_GB, 1600)
+
+        # ss2 only connected to cn2
+        ss2 = self._create_provider('ss2', uuids.agg2)
+        _set_traits(ss2, "MISC_SHARES_VIA_AGGREGATE")
+        _add_inventory(ss2, fields.ResourceClass.IPV4_ADDRESS, 24)
+
+        # ss3 only connected to cn1
+        ss3 = self._create_provider('ss3', uuids.agg3)
+        _set_traits(ss3, "MISC_SHARES_VIA_AGGREGATE")
+        _add_inventory(ss3, fields.ResourceClass.IPV4_ADDRESS, 24)
+
+        alloc_cands = self._get_allocation_candidates([
+            placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    'VCPU': 2,
+                    'DISK_GB': 1500,
+                    'IPV4_ADDRESS': 2,
+                }
+            )]
+        )
+        # NOTE(gibi): We expect two candidates one with cn1, ss1 and ss3
+        # and one with cn2, ss1 and ss2 but we get two invalid combinations as
+        # well. This is reported in bug 1732707
+        expected = [
+            [('cn1', fields.ResourceClass.VCPU, 2),
+             ('ss1', fields.ResourceClass.DISK_GB, 1500),
+             ('ss3', fields.ResourceClass.IPV4_ADDRESS, 2)],
+            [('cn2', fields.ResourceClass.VCPU, 2),
+             ('ss1', fields.ResourceClass.DISK_GB, 1500),
+             ('ss2', fields.ResourceClass.IPV4_ADDRESS, 2)],
+            # 1) cn1 and ss2 are not connected so this is not valid
+            [('cn1', fields.ResourceClass.VCPU, 2),
+             ('ss1', fields.ResourceClass.DISK_GB, 1500),
+             ('ss2', fields.ResourceClass.IPV4_ADDRESS, 2)],
+            # 2) cn2 and ss3 are not connected so this is not valid
+            [('cn2', fields.ResourceClass.VCPU, 2),
+             ('ss1', fields.ResourceClass.DISK_GB, 1500),
+             ('ss3', fields.ResourceClass.IPV4_ADDRESS, 2)],
+        ]
+
+        self._validate_allocation_requests(expected, alloc_cands)
