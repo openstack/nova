@@ -9,6 +9,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+from nova.api.openstack.placement import lib as placement_lib
 from nova import context
 from nova import exception
 from nova.objects import fields
@@ -62,7 +63,7 @@ def _find_summary_for_resource(p_sum, rc_name):
 
 class AllocationCandidatesTestCase(test.NoDBTestCase):
     """Tests a variety of scenarios with both shared and non-shared resource
-    providers that the AllocationCandidates.get_by_filters() method returns a
+    providers that the AllocationCandidates.get_by_requests() method returns a
     set of alternative allocation requests and provider summaries that may be
     used by the scheduler to sort/weigh the options it has for claiming
     resources against providers.
@@ -84,16 +85,12 @@ class AllocationCandidatesTestCase(test.NoDBTestCase):
         # _validate_allocation_requests to make failure results more readable.
         self.rp_uuid_to_name = {}
 
-    def _get_allocation_candidates(self, resources=None):
-        # The resources we will request
-        if resources is None:
-            resources = self.requested_resources
-        return rp_obj.AllocationCandidates.get_by_filters(
-            self.ctx,
-            filters={
-                'resources': resources,
-            },
-        )
+    def _get_allocation_candidates(self, requests=None):
+        if requests is None:
+            requests = [placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources=self.requested_resources)]
+        return rp_obj.AllocationCandidates.get_by_requests(self.ctx, requests)
 
     def _create_provider(self, name, *aggs):
         rp = rp_obj.ResourceProvider(self.ctx, name=name,
@@ -119,7 +116,7 @@ class AllocationCandidatesTestCase(test.NoDBTestCase):
                 ],
                 ...
              ]
-        :param candidates: The result from AllocationCandidates.get_by_filters.
+        :param candidates: The result from AllocationCandidates.get_by_requests
         """
         # Extract/convert allocation requests from candidates
         observed = []
@@ -200,7 +197,7 @@ class AllocationCandidatesTestCase(test.NoDBTestCase):
         # resources in each allocation request, one each for VCPU, RAM, and
         # disk. The amounts of the requests should correspond to the requested
         # resource amounts in the filter:resources dict passed to
-        # AllocationCandidates.get_by_filters().
+        # AllocationCandidates.get_by_requests().
         expected = [
             [('cn1', fields.ResourceClass.VCPU, 1),
              ('cn1', fields.ResourceClass.MEMORY_MB, 64),
@@ -297,7 +294,7 @@ class AllocationCandidatesTestCase(test.NoDBTestCase):
         # resources in each allocation request, one each for VCPU, RAM, and
         # disk. The amounts of the requests should correspond to the requested
         # resource amounts in the filter:resources dict passed to
-        # AllocationCandidates.get_by_filters(). The providers for VCPU and
+        # AllocationCandidates.get_by_requests(). The providers for VCPU and
         # MEMORY_MB should be the compute nodes while the provider for the
         # DISK_GB should be the shared storage pool
         expected = [
@@ -316,9 +313,12 @@ class AllocationCandidatesTestCase(test.NoDBTestCase):
         # #1705071, this resulted in a KeyError
 
         alloc_cands = self._get_allocation_candidates(
-            resources={
-                'DISK_GB': 10,
-            }
+            requests=[placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    'DISK_GB': 10,
+                }
+            )]
         )
 
         # We should only have provider summary information for the sharing
@@ -383,14 +383,15 @@ class AllocationCandidatesTestCase(test.NoDBTestCase):
         }
 
         alloc_cands = self._get_allocation_candidates(
-            resources=requested_resources)
+            requests=[placement_lib.RequestGroup(
+                use_same_provider=False, resources=requested_resources)])
 
         # Verify the allocation requests that are returned. There should be 2
         # allocation requests, one for each compute node, containing 3
         # resources in each allocation request, one each for VCPU, RAM, and
         # MAGIC. The amounts of the requests should correspond to the requested
         # resource amounts in the filter:resources dict passed to
-        # AllocationCandidates.get_by_filters(). The providers for VCPU and
+        # AllocationCandidates.get_by_requests(). The providers for VCPU and
         # MEMORY_MB should be the compute nodes while the provider for the
         # MAGIC should be the shared custom resource provider.
         expected = [
@@ -501,11 +502,15 @@ class AllocationCandidatesTestCase(test.NoDBTestCase):
         # The shared storage's disk is RAID
         _set_traits(ss, 'MISC_SHARES_VIA_AGGREGATE', 'CUSTOM_RAID')
 
-        alloc_cands = rp_obj.AllocationCandidates.get_by_filters(
-            self.ctx, filters={
-                'resources': self.requested_resources,
-                'traits': ['HW_CPU_X86_SSE', 'STORAGE_DISK_SSD', 'CUSTOM_RAID']
-            }
+        alloc_cands = rp_obj.AllocationCandidates.get_by_requests(
+            self.ctx, [
+                placement_lib.RequestGroup(
+                    use_same_provider=False,
+                    resources=self.requested_resources,
+                    required_traits=set(['HW_CPU_X86_SSE', 'STORAGE_DISK_SSD',
+                                         'CUSTOM_RAID'])
+                )
+            ]
         )
 
         # TODO(efried): Okay, bear with me here:
@@ -543,12 +548,15 @@ class AllocationCandidatesTestCase(test.NoDBTestCase):
         _set_traits(ss2, "MISC_SHARES_VIA_AGGREGATE")
         _add_inventory(ss2, fields.ResourceClass.DISK_GB, 1600)
 
-        alloc_cands = self._get_allocation_candidates(
-            resources={
-                'IPV4_ADDRESS': 2,
-                'SRIOV_NET_VF': 1,
-                'DISK_GB': 1500,
-            }
+        alloc_cands = self._get_allocation_candidates(requests=[
+            placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    'IPV4_ADDRESS': 2,
+                    'SRIOV_NET_VF': 1,
+                    'DISK_GB': 1500,
+                }
+            )]
         )
 
         # TODO(efried): Bug https://bugs.launchpad.net/nova/+bug/1730730

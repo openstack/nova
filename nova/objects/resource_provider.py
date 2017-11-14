@@ -2443,24 +2443,17 @@ class AllocationCandidates(base.NovaObject):
     }
 
     @classmethod
-    def get_by_filters(cls, context, filters):
+    def get_by_requests(cls, context, requests):
         """Returns an AllocationCandidates object containing all resource
         providers matching a set of supplied resource constraints, with a set
         of allocation requests constructed from that list of resource
         providers.
 
-        :param filters: A dict of filters containing one or more of the
-                        following keys:
-
-            'resources': A dict, keyed by resource class name, of amounts of
-                         that resource being requested. The resource provider
-                         must either have capacity for the amount being
-                         requested or be associated via aggregate to a provider
-                         that shares this resource and has capacity for the
-                         requested amount.
+        :param requests: List of nova.api.openstack.placement.util.RequestGroup
         """
         _ensure_rc_cache(context)
-        alloc_reqs, provider_summaries = cls._get_by_filters(context, filters)
+        alloc_reqs, provider_summaries = cls._get_by_requests(context,
+                                                              requests)
         return cls(
             context,
             allocation_requests=alloc_reqs,
@@ -2471,13 +2464,19 @@ class AllocationCandidates(base.NovaObject):
     # minimize the complexity of this method.
     @staticmethod
     @db_api.api_context_manager.reader
-    def _get_by_filters(context, filters):
+    def _get_by_requests(context, requests):
         # We first get the list of "root providers" that either have the
         # requested resources or are associated with the providers that
         # share one or more of the requested resource(s)
-        resources = filters.get('resources')
-        if not resources:
-            raise ValueError(_("Supply a resources collection in filters."))
+        # TODO(efried): Handle traits; handle non-sharing groups.
+        # For now, this extracts just the data expected by 1.10 - no API change
+        resources = [request_group.resources for request_group in requests
+                     if not request_group.use_same_provider]
+        if len(resources) != 1:
+            raise ValueError(_("The requests parameter must contain one "
+                               "RequestGroup with use_same_provider=False and "
+                               "nonempty resources."))
+        resources = resources[0]
 
         # Transform resource string names to internal integer IDs
         resources = {
