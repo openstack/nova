@@ -1,0 +1,16 @@
+{
+    "nova_object.version": "1.0",
+    "nova_object.namespace": "nova",
+    "nova_object.name": "ServerGroupPayload",
+    "nova_object.data": {
+        "uuid": "788608ec-ebdc-45c5-bc7f-e5f24ab92c80",
+        "name": "test-server-group",
+        "project_id": "6f70656e737461636b20342065766572",
+        "user_id": "fake",
+        "policies": [
+          "anti-affinity"
+        ],
+        "members": [],
+        "hosts": null
+    }
+}
