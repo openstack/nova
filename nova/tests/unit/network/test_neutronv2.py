@@ -181,9 +181,10 @@ class TestNeutronClient(test.NoDBTestCase):
                                             auth_token='token',
                                             is_admin=False)
         client = neutronapi.get_client(my_context)
-        self.assertRaises(
+        exc = self.assertRaises(
             exception.Forbidden,
             client.create_port)
+        self.assertIsInstance(exc.format_message(), six.text_type)
 
     def test_withtoken_context_is_admin(self):
         self.flags(url='http://anyhost/', group='neutron')

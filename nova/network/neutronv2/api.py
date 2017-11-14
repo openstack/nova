@@ -127,7 +127,7 @@ class ClientWrapper(clientv20.Client):
                           "admin credential located in nova.conf")
                 raise exception.NeutronAdminCredentialConfigurationInvalid()
             except neutron_client_exc.Forbidden as e:
-                raise exception.Forbidden(e)
+                raise exception.Forbidden(six.text_type(e))
             return ret
         return wrapper
 
