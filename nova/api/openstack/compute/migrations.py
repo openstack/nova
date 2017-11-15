@@ -69,7 +69,7 @@ class MigrationsController(wsgi.Controller):
 
     @extensions.expected_errors(())
     def index(self, req):
-        """Return all migrations in progress."""
+        """Return all migrations using the query parameters as filters."""
         context = req.environ['nova.context']
         context.can(migrations_policies.POLICY_ROOT % 'index')
         migrations = self.compute_api.get_migrations(context, req.GET)

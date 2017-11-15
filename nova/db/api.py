@@ -564,7 +564,7 @@ def migration_get_in_progress_by_host_and_node(context, host, node):
 
 
 def migration_get_all_by_filters(context, filters):
-    """Finds all migrations in progress."""
+    """Finds all migrations using the provided filters."""
     return IMPL.migration_get_all_by_filters(context, filters)
 
 
