@@ -341,11 +341,11 @@ Shared storage
 
   An NFS export, visible to all XenServer hosts.
 
-   .. note::
+  .. note::
 
-      For the supported NFS versions, see the `NFS VHD
-      <http://docs.vmd.citrix.com/XenServer/6.0.0/1.0/en_gb/reference.html#id1002701>`_
-      section of the XenServer Administrator's Guide.
+     For the supported NFS versions, see the `NFS VHD
+     <http://docs.vmd.citrix.com/XenServer/6.0.0/1.0/en_gb/reference.html#id1002701>`_
+     section of the XenServer Administrator's Guide.
 
 To use shared storage live migration with XenServer hypervisors, the hosts must
 be joined to a XenServer pool. To create that pool, a host aggregate must be
@@ -411,10 +411,10 @@ Block migration
   The hypervisors must support the Storage XenMotion feature.  See your
   XenServer manual to make sure your edition has this feature.
 
-   .. note::
+  .. note::
 
-      - To use block migration, you must use the ``--block-migrate`` parameter
-        with the live migration command.
+     - To use block migration, you must use the ``--block-migrate`` parameter
+       with the live migration command.
 
-      - Block migration works only with EXT local storage storage repositories,
-        and the server must not have any volumes attached.
+     - Block migration works only with EXT local storage storage repositories,
+       and the server must not have any volumes attached.
