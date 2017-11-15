@@ -734,25 +734,6 @@ def downsize_quota_delta(context, instance):
     return resize_quota_delta(context, new_flavor, old_flavor, 1, -1)
 
 
-def reserve_quota_delta(context, deltas, instance):
-    """If there are deltas to reserve, construct a Quotas object and
-    reserve the deltas for the given project.
-
-    :param context:    The nova request context.
-    :param deltas:     A dictionary of the proposed delta changes.
-    :param instance:   The instance we're operating on, so that
-                       quotas can use the correct project_id/user_id.
-    :return: nova.objects.quotas.Quotas
-    """
-    quotas = objects.Quotas(context=context)
-    if deltas:
-        project_id, user_id = objects.quotas.ids_from_instance(context,
-                                                               instance)
-        quotas.reserve(project_id=project_id, user_id=user_id,
-                       **deltas)
-    return quotas
-
-
 def get_headroom(quotas, usages, deltas):
     headroom = {res: quotas[res] - usages[res]
                 for res in quotas.keys()}
