@@ -982,6 +982,10 @@ class ServerActionsControllerTestV21(test.TestCase):
         snapshot = dict(id=_fake_id('d'))
 
         with test.nested(
+            mock.patch.object(
+                self.controller.compute_api.volume_api, 'get_absolute_limits',
+                return_value={'totalSnapshotsUsed': 0,
+                              'maxTotalSnapshots': 10}),
             mock.patch.object(self.controller.compute_api.compute_rpcapi,
                 'quiesce_instance',
                 side_effect=exception.InstanceQuiesceNotSupported(
@@ -991,7 +995,7 @@ class ServerActionsControllerTestV21(test.TestCase):
             mock.patch.object(self.controller.compute_api.volume_api,
                               'create_snapshot_force',
                               return_value=snapshot),
-        ) as (mock_quiesce, mock_vol_get, mock_vol_create):
+        ) as (mock_get_limits, mock_quiesce, mock_vol_get, mock_vol_create):
 
             if mock_vol_create_side_effect:
                 mock_vol_create.side_effect = mock_vol_create_side_effect
@@ -1086,6 +1090,10 @@ class ServerActionsControllerTestV21(test.TestCase):
         snapshot = dict(id=_fake_id('d'))
 
         with test.nested(
+            mock.patch.object(
+                self.controller.compute_api.volume_api, 'get_absolute_limits',
+                return_value={'totalSnapshotsUsed': 0,
+                              'maxTotalSnapshots': 10}),
             mock.patch.object(self.controller.compute_api.compute_rpcapi,
                 'quiesce_instance',
                 side_effect=exception.InstanceQuiesceNotSupported(
@@ -1095,7 +1103,7 @@ class ServerActionsControllerTestV21(test.TestCase):
             mock.patch.object(self.controller.compute_api.volume_api,
                               'create_snapshot_force',
                               return_value=snapshot),
-        ) as (mock_quiesce, mock_vol_get, mock_vol_create):
+        ) as (mock_get_limits, mock_quiesce, mock_vol_get, mock_vol_create):
 
             response = self.controller._action_create_image(self.req,
                 FAKE_UUID, body=body)
