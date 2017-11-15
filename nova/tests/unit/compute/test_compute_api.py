@@ -4299,12 +4299,6 @@ class _ComputeAPIUnitTestMixIn(object):
         filters = mock_get.call_args_list[0][0][1]
         self.assertEqual({'project_id': 'foo'}, filters)
 
-    def test_metadata_invalid_return_empty_object(self):
-        api = compute_api.API()
-        ret = api.get_all(self.context, search_opts={'metadata': 'foo'})
-        self.assertIsInstance(ret, objects.InstanceList)
-        self.assertEqual(0, len(ret))
-
     def test_populate_instance_names_host_name(self):
         params = dict(display_name="vm1")
         instance = self._create_instance_obj(params=params)
