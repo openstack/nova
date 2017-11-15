@@ -82,36 +82,8 @@ class FilterScheduler(driver.Scheduler):
             context, 'scheduler.select_destinations.start',
             dict(request_spec=spec_obj.to_legacy_request_spec_dict()))
 
-        # NOTE(sbauza): The RequestSpec.num_instances field contains the number
-        # of instances created when the RequestSpec was used to first boot some
-        # instances. This is incorrect when doing a move or resize operation,
-        # so prefer the length of instance_uuids unless it is None.
-        num_instances = (len(instance_uuids) if instance_uuids
-                         else spec_obj.num_instances)
         selected_host_lists = self._schedule(context, spec_obj, instance_uuids,
             alloc_reqs_by_rp_uuid, provider_summaries)
-
-        # Couldn't fulfill the request_spec
-        if len(selected_host_lists) < num_instances:
-            # NOTE(Rui Chen): If multiple creates failed, set the updated time
-            # of selected HostState to None so that these HostStates are
-            # refreshed according to database in next schedule, and release
-            # the resource consumed by instance in the process of selecting
-            # host.
-            for host_list in selected_host_lists:
-                host_list[0].updated = None
-
-            # Log the details but don't put those into the reason since
-            # we don't want to give away too much information about our
-            # actual environment.
-            LOG.debug('There are %(hosts)d hosts available but '
-                      '%(num_instances)d instances requested to build.',
-                      {'hosts': len(selected_host_lists),
-                       'num_instances': num_instances})
-
-            reason = _('There are not enough hosts available.')
-            raise exception.NoValidHost(reason=reason)
-
         self.notifier.info(
             context, 'scheduler.select_destinations.end',
             dict(request_spec=spec_obj.to_legacy_request_spec_dict()))
@@ -214,9 +186,8 @@ class FilterScheduler(driver.Scheduler):
             if not hosts:
                 # NOTE(jaypipes): If we get here, that means not all instances
                 # in instance_uuids were able to be matched to a selected host.
-                # So, let's clean up any already-claimed allocations here
-                # before breaking and returning
-                self._cleanup_allocations(claimed_instance_uuids)
+                # Any allocations will be cleaned up in the
+                # _ensure_sufficient_hosts() call.
                 break
 
             instance_uuid = instance_uuids[num]
@@ -245,8 +216,7 @@ class FilterScheduler(driver.Scheduler):
                 # this request and return an empty list which will cause
                 # select_destinations() to raise NoValidHost
                 LOG.debug("Unable to successfully claim against any host.")
-                self._cleanup_allocations(claimed_instance_uuids)
-                return []
+                break
 
             claimed_instance_uuids.append(instance_uuid)
             claimed_hosts.append(claimed_host)
@@ -255,11 +225,46 @@ class FilterScheduler(driver.Scheduler):
             # the next instance.
             self._consume_selected_host(claimed_host, spec_obj)
 
+        # Check if we were able to fulfill the request. If not, this call will
+        # raise a NoValidHost exception.
+        self._ensure_sufficient_hosts(claimed_hosts, num_instances,
+                claimed_instance_uuids)
+
         # We have selected and claimed hosts for each instance. Now we need to
         # find alternates for each host.
         selections_to_return = self._get_alternate_hosts(
             claimed_hosts, spec_obj, hosts, num, num_to_return)
         return selections_to_return
+
+    def _ensure_sufficient_hosts(self, hosts, required_count,
+            claimed_uuids=None):
+        """Checks that we have selected a host for each requested instance. If
+        not, log this failure, remove allocations for any claimed instances,
+        and raise a NoValidHost exception.
+        """
+        if len(hosts) == required_count:
+            # We have enough hosts.
+            return
+
+        if claimed_uuids:
+            self._cleanup_allocations(claimed_uuids)
+        # NOTE(Rui Chen): If multiple creates failed, set the updated time
+        # of selected HostState to None so that these HostStates are
+        # refreshed according to database in next schedule, and release
+        # the resource consumed by instance in the process of selecting
+        # host.
+        for host in hosts:
+            host.updated = None
+
+        # Log the details but don't put those into the reason since
+        # we don't want to give away too much information about our
+        # actual environment.
+        LOG.debug('There are %(hosts)d hosts available but '
+                  '%(required_count)d instances requested to build.',
+                  {'hosts': len(hosts),
+                   'required_count': required_count})
+        reason = _('There are not enough hosts available.')
+        raise exception.NoValidHost(reason=reason)
 
     def _cleanup_allocations(self, instance_uuids):
         """Removes allocations for the supplied instance UUIDs."""
@@ -340,10 +345,16 @@ class FilterScheduler(driver.Scheduler):
         for num in range(num_instances):
             hosts = self._get_sorted_hosts(spec_obj, hosts, num)
             if not hosts:
-                return []
+                # No hosts left, so break here, and the
+                # _ensure_sufficient_hosts() call below will handle this.
+                break
             selected_host = hosts[0]
             selected_hosts.append(selected_host)
             self._consume_selected_host(selected_host, spec_obj)
+
+        # Check if we were able to fulfill the request. If not, this call will
+        # raise a NoValidHost exception.
+        self._ensure_sufficient_hosts(selected_hosts, num_instances)
 
         if include_alternates:
             selections_to_return = self._get_alternate_hosts(
