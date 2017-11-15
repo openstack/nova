@@ -19,7 +19,7 @@ from nova import test
 from nova.virt.powervm.tasks import storage as tf_stg
 
 
-class TestStorage(test.TestCase):
+class TestStorage(test.NoDBTestCase):
 
     def setUp(self):
         super(TestStorage, self).setUp()

@@ -35,7 +35,7 @@ FAKE_INST_UUID = uuidutils.generate_uuid(dashed=True)
 FAKE_INST_UUID_PVM = vm.get_pvm_uuid(mock.Mock(uuid=FAKE_INST_UUID))
 
 
-class TestSSPDiskAdapter(test.TestCase):
+class TestSSPDiskAdapter(test.NoDBTestCase):
     """Unit Tests for the LocalDisk storage driver."""
 
     def setUp(self):
