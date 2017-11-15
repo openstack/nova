@@ -543,6 +543,23 @@ class API(object):
     def update(self, context, volume_id, fields):
         raise NotImplementedError()
 
+    @translate_cinder_exception
+    def get_absolute_limits(self, context):
+        """Returns quota limit and usage information for the given tenant
+
+        See the <volumev3>/v3/{project_id}/limits API reference for details.
+
+        :param context: The nova RequestContext for the user request. Note
+            that the limit information returned from Cinder is specific to
+            the project_id within this context.
+        :returns: dict of absolute limits
+        """
+        # cinderclient returns a generator of AbsoluteLimit objects, so iterate
+        # over the generator and return a dictionary which is easier for the
+        # nova client-side code to handle.
+        limits = cinderclient(context).limits.get().absolute
+        return {limit.name: limit.value for limit in limits}
+
     @translate_snapshot_exception
     def get_snapshot(self, context, snapshot_id):
         item = cinderclient(context).volume_snapshots.get(snapshot_id)

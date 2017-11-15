@@ -15,6 +15,7 @@
 
 from cinderclient import api_versions as cinder_api_versions
 from cinderclient import exceptions as cinder_exception
+from cinderclient.v2 import limits as cinder_limits
 from keystoneauth1 import loading as ks_loading
 from keystoneclient import exceptions as keystone_exception
 import mock
@@ -751,6 +752,36 @@ class CinderApiTestCase(test.NoDBTestCase):
     def test_update(self):
         self.assertRaises(NotImplementedError,
                           self.api.update, self.ctx, '', '')
+
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_get_absolute_limits_forbidden(self, cinderclient):
+        """Tests to make sure we gracefully handle a Forbidden error raised
+        from python-cinderclient when getting limits.
+        """
+        cinderclient.return_value.limits.get.side_effect = (
+            cinder_exception.Forbidden(403))
+        self.assertRaises(
+            exception.Forbidden, self.api.get_absolute_limits, self.ctx)
+
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_get_absolute_limits(self, cinderclient):
+        """Tests the happy path of getting the absolute limits."""
+        expected_limits = {
+            "totalSnapshotsUsed": 0,
+            "maxTotalBackups": 10,
+            "maxTotalVolumeGigabytes": 1000,
+            "maxTotalSnapshots": 10,
+            "maxTotalBackupGigabytes": 1000,
+            "totalBackupGigabytesUsed": 0,
+            "maxTotalVolumes": 10,
+            "totalVolumesUsed": 0,
+            "totalBackupsUsed": 0,
+            "totalGigabytesUsed": 0
+        }
+        limits_obj = cinder_limits.Limits(None, {'absolute': expected_limits})
+        cinderclient.return_value.limits.get.return_value = limits_obj
+        actual_limits = self.api.get_absolute_limits(self.ctx)
+        self.assertDictEqual(expected_limits, actual_limits)
 
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_get_snapshot(self, mock_cinderclient):
