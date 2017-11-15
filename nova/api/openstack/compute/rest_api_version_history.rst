@@ -687,7 +687,7 @@ uniqueness across cells. This microversion brings the following changes:
 2.54
 ----
 
-  Allow the user to set the server key pair while rebuilding.
+Allow the user to set the server key pair while rebuilding.
 
 2.55
 ----
