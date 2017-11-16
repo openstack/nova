@@ -1865,12 +1865,21 @@ class ComputeManager(manager.Manager):
             retry['exc_reason'] = e.kwargs['reason']
             # NOTE(comstud): Deallocate networks if the driver wants
             # us to do so.
+            # NOTE(mriedem): Always deallocate networking when using Neutron.
+            # This is to unbind any ports that the user supplied in the server
+            # create request, or delete any ports that nova created which were
+            # meant to be bound to this host. This check intentionally bypasses
+            # the result of deallocate_networks_on_reschedule because the
+            # default value in the driver is False, but that method was really
+            # only meant for Ironic and should be removed when nova-network is
+            # removed (since is_neutron() will then always be True).
             # NOTE(vladikr): SR-IOV ports should be deallocated to
             # allow new sriov pci devices to be allocated on a new host.
             # Otherwise, if devices with pci addresses are already allocated
             # on the destination host, the instance will fail to spawn.
             # info_cache.network_info should be present at this stage.
             if (self.driver.deallocate_networks_on_reschedule(instance) or
+                utils.is_neutron() or
                 self.deallocate_sriov_ports_on_reschedule(instance)):
                 self._cleanup_allocated_networks(context, instance,
                         requested_networks)
