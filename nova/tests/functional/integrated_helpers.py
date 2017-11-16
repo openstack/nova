@@ -70,7 +70,6 @@ class _IntegratedTestBase(test.TestCase):
         self.flags(verbose=True)
 
         nova.tests.unit.image.fake.stub_out_image_service(self)
-        self._setup_services()
 
         self.api_fixture = self.useFixture(
             nova_fixtures.OSAPIFixture(self.api_major_version))
@@ -82,7 +81,12 @@ class _IntegratedTestBase(test.TestCase):
         else:
             self.api = self.api_fixture.api
 
+        if hasattr(self, 'microversion'):
+            self.api.microversion = self.microversion
+
         self.useFixture(cast_as_call.CastAsCall(self.stubs))
+
+        self._setup_services()
 
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
 
@@ -96,11 +100,12 @@ class _IntegratedTestBase(test.TestCase):
     def _setup_services(self):
         self.conductor = self.start_service('conductor',
                                             manager=CONF.conductor.manager)
-        self.compute = self._setup_compute_service()
         self.consoleauth = self.start_service('consoleauth')
 
         self.network = self.start_service('network')
         self.scheduler = self._setup_scheduler_service()
+
+        self.compute = self._setup_compute_service()
 
     def get_unused_server_name(self):
         servers = self.api.get_servers()
@@ -231,3 +236,40 @@ class InstanceHelperMixin(object):
         server['flavorRef'] = ('http://fake.server/%s' % flavor_id)
         server['name'] = name
         return server
+
+    def _wait_for_action_fail_completion(
+            self, server, expected_action, event_name, api=None):
+        """Polls instance action events for the given instance, action and
+        action event name until it finds the action event with an error
+        result.
+        """
+        if api is None:
+            api = self.api
+        completion_event = None
+        for attempt in range(10):
+            actions = api.get_instance_actions(server['id'])
+            # Look for the migrate action.
+            for action in actions:
+                if action['action'] == expected_action:
+                    events = (
+                        api.api_get(
+                            '/servers/%s/os-instance-actions/%s' %
+                            (server['id'], action['request_id'])
+                        ).body['instanceAction']['events'])
+                    # Look for the action event being in error state.
+                    for event in events:
+                        if (event['event'] == event_name and
+                                event['result'] is not None and
+                                event['result'].lower() == 'error'):
+                            completion_event = event
+                            # Break out of the events loop.
+                            break
+                    if completion_event:
+                        # Break out of the actions loop.
+                        break
+            # We didn't find the completion event yet, so wait a bit.
+            time.sleep(0.5)
+
+        if completion_event is None:
+            self.fail('Timed out waiting for %s failure event. Current '
+                      'instance actions: %s' % (event_name, actions))

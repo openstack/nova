@@ -673,7 +673,7 @@ class ComputeTaskManager(base.Base):
                     filter_properties = {'ignore_hosts': [instance.host]}
                     request_spec = scheduler_utils.build_request_spec(
                             context, image_ref, [instance])
-                else:
+                elif recreate:
                     # NOTE(sbauza): Augment the RequestSpec object by excluding
                     # the source host for avoiding the scheduler to pick it
                     request_spec.ignore_hosts = request_spec.ignore_hosts or []
@@ -686,6 +686,10 @@ class ComputeTaskManager(base.Base):
                     # when _schedule_instances() and _set_vm_state_and_notify()
                     # accept it
                     filter_properties = request_spec.\
+                        to_legacy_filter_properties_dict()
+                    request_spec = request_spec.to_legacy_request_spec_dict()
+                else:
+                    filter_properties = request_spec. \
                         to_legacy_filter_properties_dict()
                     request_spec = request_spec.to_legacy_request_spec_dict()
                 try:

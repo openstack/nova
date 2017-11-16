@@ -1422,7 +1422,10 @@ class _BaseTaskTestCase(object):
             self.conductor_manager.rebuild_instance(context=self.context,
                                             instance=inst_obj,
                                             **rebuild_args)
-            reset_fd.assert_called_once_with()
+            if rebuild_args['recreate']:
+                reset_fd.assert_called_once_with()
+            else:
+                reset_fd.assert_not_called()
             to_reqspec.assert_called_once_with()
             to_filtprops.assert_called_once_with()
             fp_mock.assert_called_once_with(self.context, request_spec,
