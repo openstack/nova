@@ -19,6 +19,7 @@ from oslo_utils import encodeutils
 import webob
 
 from nova.api.openstack.placement import microversion
+from nova.api.openstack.placement.schemas import inventory as schema
 from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
 from nova import db
@@ -26,77 +27,6 @@ from nova import exception
 from nova.i18n import _
 from nova.objects import resource_provider as rp_obj
 
-RESOURCE_CLASS_IDENTIFIER = "^[A-Z0-9_]+$"
-BASE_INVENTORY_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "resource_provider_generation": {
-            "type": "integer"
-        },
-        "total": {
-            "type": "integer",
-            "maximum": db.MAX_INT,
-            "minimum": 1,
-        },
-        "reserved": {
-            "type": "integer",
-            "maximum": db.MAX_INT,
-            "minimum": 0,
-        },
-        "min_unit": {
-            "type": "integer",
-            "maximum": db.MAX_INT,
-            "minimum": 1
-        },
-        "max_unit": {
-            "type": "integer",
-            "maximum": db.MAX_INT,
-            "minimum": 1
-        },
-        "step_size": {
-            "type": "integer",
-            "maximum": db.MAX_INT,
-            "minimum": 1
-        },
-        "allocation_ratio": {
-            "type": "number",
-            "maximum": db.SQL_SP_FLOAT_MAX
-        },
-    },
-    "required": [
-        "total",
-        "resource_provider_generation"
-    ],
-    "additionalProperties": False
-}
-POST_INVENTORY_SCHEMA = copy.deepcopy(BASE_INVENTORY_SCHEMA)
-POST_INVENTORY_SCHEMA['properties']['resource_class'] = {
-    "type": "string",
-    "pattern": RESOURCE_CLASS_IDENTIFIER,
-}
-POST_INVENTORY_SCHEMA['required'].append('resource_class')
-POST_INVENTORY_SCHEMA['required'].remove('resource_provider_generation')
-PUT_INVENTORY_RECORD_SCHEMA = copy.deepcopy(BASE_INVENTORY_SCHEMA)
-PUT_INVENTORY_RECORD_SCHEMA['required'].remove('resource_provider_generation')
-PUT_INVENTORY_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "resource_provider_generation": {
-            "type": "integer"
-        },
-        "inventories": {
-            "type": "object",
-            "patternProperties": {
-                RESOURCE_CLASS_IDENTIFIER: PUT_INVENTORY_RECORD_SCHEMA,
-            }
-        }
-    },
-    "required": [
-        "resource_provider_generation",
-        "inventories"
-    ],
-    "additionalProperties": False
-}
 
 # NOTE(cdent): We keep our own representation of inventory defaults
 # and output fields, separate from the versioned object to avoid
@@ -229,7 +159,7 @@ def create_inventory(req):
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
-    data = _extract_inventory(req.body, POST_INVENTORY_SCHEMA)
+    data = _extract_inventory(req.body, schema.POST_INVENTORY_SCHEMA)
     resource_class = data.pop('resource_class')
 
     inventory = _make_inventory_object(resource_provider,
@@ -361,7 +291,7 @@ def set_inventories(req):
     resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
 
-    data = _extract_inventories(req.body, PUT_INVENTORY_SCHEMA)
+    data = _extract_inventories(req.body, schema.PUT_INVENTORY_SCHEMA)
     if data['resource_provider_generation'] != resource_provider.generation:
         raise webob.exc.HTTPConflict(
             _('resource provider generation conflict'))
@@ -456,7 +386,7 @@ def update_inventory(req):
     resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
 
-    data = _extract_inventory(req.body, BASE_INVENTORY_SCHEMA)
+    data = _extract_inventory(req.body, schema.BASE_INVENTORY_SCHEMA)
     if data['resource_provider_generation'] != resource_provider.generation:
         raise webob.exc.HTTPConflict(
             _('resource provider generation conflict'))
