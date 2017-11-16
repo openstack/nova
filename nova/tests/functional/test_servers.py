@@ -21,6 +21,7 @@ import mock
 from oslo_log import log as logging
 from oslo_serialization import base64
 from oslo_utils import timeutils
+import six
 
 from nova.compute import api as compute_api
 from nova.compute import instance_actions
@@ -1236,6 +1237,51 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
         allocs = allocs[rp_uuid]['resources']
         # assertFlavorMatchesAllocation(flavor, allocs)
         assertFlavorsMatchAllocation(flavor, flavor, allocs)
+
+    def test_volume_backed_rebuild_different_image(self):
+        """Tests that trying to rebuild a volume-backed instance with a
+        different image than what is in the root disk of the root volume
+        will result in a 400 BadRequest error.
+        """
+        self.useFixture(nova_fixtures.CinderFixture(self))
+        # First create our server as normal.
+        server_req_body = {
+            # There is no imageRef because this is boot from volume.
+            'server': {
+                'flavorRef': '1',  # m1.tiny from DefaultFlavorsFixture,
+                'name': 'test_volume_backed_rebuild_different_image',
+                # We don't care about networking for this test. This requires
+                # microversion >= 2.37.
+                'networks': 'none',
+                'block_device_mapping_v2': [{
+                    'boot_index': 0,
+                    'uuid': nova_fixtures.CinderFixture.IMAGE_BACKED_VOL,
+                    'source_type': 'volume',
+                    'destination_type': 'volume'
+                }]
+            }
+        }
+        server = self.api.post_server(server_req_body)
+        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        # For a volume-backed server, the image ref will be an empty string
+        # in the server response.
+        self.assertEqual('', server['image'])
+
+        # Now rebuild the server with a different image than was used to create
+        # our fake volume.
+        rebuild_image_ref = (
+            nova.tests.unit.image.fake.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID)
+        rebuild_req_body = {
+            'rebuild': {
+                'imageRef': rebuild_image_ref
+            }
+        }
+        resp = self.api.api_post('/servers/%s/action' % server['id'],
+                                 rebuild_req_body, check_response_status=[400])
+        # Assert that we failed because of the image change and not something
+        # else.
+        self.assertIn('Unable to rebuild with a different image for a '
+                      'volume-backed server', six.text_type(resp))
 
 
 class ProviderUsageBaseTestCase(test.TestCase,

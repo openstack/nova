@@ -83,6 +83,6 @@ class RebuildVolumeBackedSameImage(integrated_helpers._IntegratedTestBase,
         }
         server = self.api.api_post('/servers/%s/action' % server['id'],
                                    rebuild_req_body).body['server']
-        # FIXME(mriedem): Once bug 1482040 is fixed, the server image ref
-        # should still be blank for a volume-backed server after the rebuild.
-        self.assertNotEqual('', server['image'])
+        # The server image ref should still be blank for a volume-backed server
+        # after the rebuild.
+        self.assertEqual('', server['image'])

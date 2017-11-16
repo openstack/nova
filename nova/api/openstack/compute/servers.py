@@ -942,6 +942,7 @@ class ServersController(wsgi.Controller):
         except exception.QuotaError as error:
             raise exc.HTTPForbidden(explanation=error.format_message())
         except (exception.ImageNotActive,
+                exception.ImageUnacceptable,
                 exception.FlavorDiskTooSmall,
                 exception.FlavorMemoryTooSmall,
                 exception.InvalidMetadata,

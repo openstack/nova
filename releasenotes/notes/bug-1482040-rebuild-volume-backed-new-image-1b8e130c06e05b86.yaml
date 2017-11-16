@@ -1,0 +1,11 @@
+---
+fixes:
+  - |
+    A fix is made for `bug 1482040`_ where a request to rebuild a volume-backed
+    server with a new image which is different than what is in the root volume
+    will now fail with a `400 Bad Request` response. The compute API would
+    previously return a `202 Accepted` response but the backend compute service
+    does not replace the image in the root disk so the API behavior was always
+    wrong and is now explicit about the failure.
+
+    .. _bug 1482040: https://bugs.launchpad.net/nova/+bug/1482040
