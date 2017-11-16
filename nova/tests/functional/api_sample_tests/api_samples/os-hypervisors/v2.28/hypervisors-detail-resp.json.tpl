@@ -33,7 +33,7 @@
             "running_vms": 0,
             "service": {
                 "host": "%(host_name)s",
-                "id": 2,
+                "id": "%(int:service_id)s",
                 "disabled_reason": null
             },
             "vcpus": 1,
