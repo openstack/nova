@@ -11,8 +11,6 @@
 #    under the License.
 """Traits handlers for Placement API."""
 
-import copy
-
 import jsonschema
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
@@ -20,51 +18,12 @@ from oslo_utils import timeutils
 import webob
 
 from nova.api.openstack.placement import microversion
+from nova.api.openstack.placement.schemas import trait as schema
 from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
 from nova import exception
 from nova.i18n import _
 from nova.objects import resource_provider as rp_obj
-
-TRAIT = {
-    "type": "string",
-    'minLength': 1, 'maxLength': 255,
-}
-
-CUSTOM_TRAIT = copy.deepcopy(TRAIT)
-CUSTOM_TRAIT.update({"pattern": "^CUSTOM_[A-Z0-9_]+$"})
-
-PUT_TRAITS_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "traits": {
-            "type": "array",
-            "items": CUSTOM_TRAIT,
-        }
-    },
-    'required': ['traits'],
-    'additionalProperties': False
-}
-
-SET_TRAITS_FOR_RP_SCHEMA = copy.deepcopy(PUT_TRAITS_SCHEMA)
-SET_TRAITS_FOR_RP_SCHEMA['properties']['traits']['items'] = TRAIT
-SET_TRAITS_FOR_RP_SCHEMA['properties'][
-    'resource_provider_generation'] = {'type': 'integer'}
-SET_TRAITS_FOR_RP_SCHEMA['required'].append('resource_provider_generation')
-
-
-LIST_TRAIT_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "name": {
-            "type": "string"
-        },
-        "associated": {
-            "type": "string",
-        }
-    },
-    "additionalProperties": False
-}
 
 
 def _normalize_traits_qs_param(qs):
@@ -109,7 +68,7 @@ def put_trait(req):
     name = util.wsgi_path_item(req.environ, 'name')
 
     try:
-        jsonschema.validate(name, CUSTOM_TRAIT)
+        jsonschema.validate(name, schema.CUSTOM_TRAIT)
     except jsonschema.ValidationError:
         raise webob.exc.HTTPBadRequest(
             _('The trait is invalid. A valid trait must be no longer than '
@@ -190,7 +149,7 @@ def list_traits(req):
     filters = {}
 
     try:
-        jsonschema.validate(dict(req.GET), LIST_TRAIT_SCHEMA,
+        jsonschema.validate(dict(req.GET), schema.LIST_TRAIT_SCHEMA,
                             format_checker=jsonschema.FormatChecker())
     except jsonschema.ValidationError as exc:
         raise webob.exc.HTTPBadRequest(
@@ -259,7 +218,7 @@ def update_traits_for_resource_provider(req):
     context = req.environ['placement.context']
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     uuid = util.wsgi_path_item(req.environ, 'uuid')
-    data = util.extract_json(req.body, SET_TRAITS_FOR_RP_SCHEMA)
+    data = util.extract_json(req.body, schema.SET_TRAITS_FOR_RP_SCHEMA)
     rp_gen = data['resource_provider_generation']
     traits = data['traits']
     resource_provider = rp_obj.ResourceProvider.get_by_uuid(
