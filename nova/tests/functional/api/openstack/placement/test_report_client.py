@@ -121,6 +121,8 @@ class SchedulerReportClientTests(test.TestCase):
             pam = self.client._provider_aggregate_map
             self.assertIn(self.compute_uuid, pam)
             self.assertEqual(set(), pam[self.compute_uuid])
+            self.assertEqual(
+                [], self.client._get_providers_in_aggregates([uuids.agg]))
 
             # TODO(cdent): change this to use the methods built in
             # to the report client to retrieve inventory?
