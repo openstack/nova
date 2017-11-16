@@ -298,13 +298,22 @@ class _TestRequestSpecObject(object):
         # just making sure that the context is set by the method
         self.assertEqual(ctxt, spec._context)
 
+    def test_from_primitives_with_requested_destination(self):
+        destination = objects.Destination(host='foo')
+        spec_dict = {}
+        filt_props = {'requested_destination': destination}
+        ctxt = context.RequestContext('fake', 'fake')
+        spec = objects.RequestSpec.from_primitives(ctxt, spec_dict, filt_props)
+        self.assertEqual(destination, spec.requested_destination)
+
     def test_from_components(self):
         ctxt = context.RequestContext('fake-user', 'fake-project')
+        destination = objects.Destination(host='foo')
         instance = fake_instance.fake_instance_obj(ctxt)
         image = {'id': uuids.image_id, 'properties': {'mappings': []},
                  'status': 'fake-status', 'location': 'far-away'}
         flavor = fake_flavor.fake_flavor_obj(ctxt)
-        filter_properties = {}
+        filter_properties = {'requested_destination': destination}
         instance_group = None
 
         spec = objects.RequestSpec.from_components(ctxt, instance.uuid, image,
@@ -316,6 +325,7 @@ class _TestRequestSpecObject(object):
                              'Field: %s is not set' % field)
         # just making sure that the context is set by the method
         self.assertEqual(ctxt, spec._context)
+        self.assertEqual(destination, spec.requested_destination)
 
     @mock.patch('nova.objects.RequestSpec._populate_group_info')
     def test_from_components_with_instance_group(self, mock_pgi):
@@ -417,6 +427,7 @@ class _TestRequestSpecObject(object):
         fake_computes_obj = objects.ComputeNodeList(
             objects=[objects.ComputeNode(host='fake1',
                                          hypervisor_hostname='node1')])
+        fake_dest = objects.Destination(host='fakehost')
         spec = objects.RequestSpec(
             ignore_hosts=['ignoredhost'],
             force_hosts=['fakehost'],
@@ -430,7 +441,8 @@ class _TestRequestSpecObject(object):
             instance_group=objects.InstanceGroup(hosts=['fake1'],
                                                  policies=['affinity'],
                                                  members=['inst1', 'inst2']),
-            scheduler_hints={'foo': ['bar']})
+            scheduler_hints={'foo': ['bar']},
+            requested_destination=fake_dest)
         expected = {'ignore_hosts': ['ignoredhost'],
                     'force_hosts': ['fakehost'],
                     'force_nodes': ['fakenode'],
@@ -444,7 +456,8 @@ class _TestRequestSpecObject(object):
                     'group_hosts': set(['fake1']),
                     'group_policies': set(['affinity']),
                     'group_members': set(['inst1', 'inst2']),
-                    'scheduler_hints': {'foo': 'bar'}}
+                    'scheduler_hints': {'foo': 'bar'},
+                    'requested_destination': fake_dest}
         self.assertEqual(expected, spec.to_legacy_filter_properties_dict())
 
     def test_to_legacy_filter_properties_dict_with_nullable_values(self):

@@ -151,5 +151,5 @@ class SchedulerOnlyChecksTargetTest(test.TestCase,
         self._wait_for_state_change(self.api, server, 'ACTIVE')
         server = self.admin_api.get_server(server_id)
 
-        # Unfortunately, the requested host isn't respected.
-        self.assertEqual('host3', server['OS-EXT-SRV-ATTR:host'])
+        # Yeepee, that works!
+        self.assertEqual('host2', server['OS-EXT-SRV-ATTR:host'])
