@@ -1374,6 +1374,58 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.assertEqual(uuids.request_id,
                          logging_mock.call_args[0][1]['placement_req_id'])
 
+    def test_get_providers_in_tree(self):
+        # Ensure _get_providers_in_tree() returns a list of resource
+        # provider dicts if it finds a resource provider record from the
+        # placement API
+        root = uuids.compute_node
+        child = uuids.child
+        resp_mock = mock.Mock(status_code=200)
+        rpjson = [
+            {
+                'uuid': root,
+                'name': 'daddy', 'generation': 42,
+                'parent_provider_uuid': None,
+            },
+            {
+                'uuid': child,
+                'name': 'junior',
+                'generation': 42,
+                'parent_provider_uuid': root,
+            },
+        ]
+        resp_mock.json.return_value = {'resource_providers': rpjson}
+        self.ks_adap_mock.get.return_value = resp_mock
+
+        result = self.client._get_providers_in_tree(root)
+
+        expected_url = '/resource_providers?in_tree=' + root
+        self.ks_adap_mock.get.assert_called_once_with(
+            expected_url, raise_exc=False, microversion='1.14')
+        self.assertEqual(rpjson, result)
+
+    @mock.patch.object(report.LOG, 'error')
+    def test_get_providers_in_tree_error(self, logging_mock):
+        # Ensure _get_providers_in_tree() logs an error and raises if the
+        # placement API call doesn't respond 200
+        resp_mock = mock.Mock(status_code=503)
+        self.ks_adap_mock.get.return_value = resp_mock
+        self.ks_adap_mock.get.return_value.headers = {
+            'x-openstack-request-id': 'req-' + uuids.request_id}
+
+        uuid = uuids.compute_node
+        self.assertRaises(exception.ResourceProviderRetrievalFailed,
+                          self.client._get_providers_in_tree, uuid)
+
+        expected_url = '/resource_providers?in_tree=' + uuid
+        self.ks_adap_mock.get.assert_called_once_with(
+            expected_url, raise_exc=False, microversion='1.14')
+        # A 503 Service Unavailable should trigger an error log that includes
+        # the placement request id
+        self.assertTrue(logging_mock.called)
+        self.assertEqual('req-' + uuids.request_id,
+                         logging_mock.call_args[0][1]['placement_req_id'])
+
     def test_create_resource_provider(self):
         """Test that _create_resource_provider() sends a dict of resource
         provider information without a parent provider UUID.

@@ -423,6 +423,36 @@ class SchedulerReportClient(object):
             raise exception.ResourceProviderRetrievalFailed(uuid=uuid)
 
     @safe_connect
+    def _get_providers_in_tree(self, uuid):
+        """Queries the placement API for a list of the resource providers in
+        the nested tree associated with the specified UUID.
+
+        :param uuid: UUID identifier for the resource provider to look up
+        :return: A list of dicts of resource provider information, which may be
+                 empty if no provider exists with the specified UUID.
+        :raise: ResourceProviderRetrievalFailed on error.
+        """
+        resp = self.get("/resource_providers?in_tree=%s" % uuid,
+                        version=NESTED_PROVIDER_API_VERSION)
+
+        if resp.status_code == 200:
+            return resp.json()['resource_providers']
+
+        # Some unexpected error
+        placement_req_id = get_placement_request_id(resp)
+        msg = ("[%(placement_req_id)s] Failed to retrieve resource provider "
+               "tree from placement API for UUID %(uuid)s. Got "
+               "%(status_code)d: %(err_text)s.")
+        args = {
+            'uuid': uuid,
+            'status_code': resp.status_code,
+            'err_text': resp.text,
+            'placement_req_id': placement_req_id,
+        }
+        LOG.error(msg, args)
+        raise exception.ResourceProviderRetrievalFailed(uuid=uuid)
+
+    @safe_connect
     def _create_resource_provider(self, uuid, name,
                                   parent_provider_uuid=None):
         """Calls the placement API to create a new resource provider record.

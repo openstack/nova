@@ -104,6 +104,8 @@ class SchedulerReportClientTests(test.TestCase):
             # When we start out there are no resource providers.
             rp = self.client._get_resource_provider(self.compute_uuid)
             self.assertIsNone(rp)
+            rps = self.client._get_providers_in_tree(self.compute_uuid)
+            self.assertEqual([], rps)
 
             # Now let's update status for our compute node.
             self.client.update_compute_node(self.compute_node)
@@ -111,6 +113,8 @@ class SchedulerReportClientTests(test.TestCase):
             # So now we have a resource provider
             rp = self.client._get_resource_provider(self.compute_uuid)
             self.assertIsNotNone(rp)
+            rps = self.client._get_providers_in_tree(self.compute_uuid)
+            self.assertEqual(1, len(rps))
 
             # We should also have an empty list set of aggregate UUID
             # associations
