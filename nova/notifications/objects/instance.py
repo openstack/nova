@@ -411,8 +411,6 @@ class InstanceStateUpdatePayload(base.NotificationPayloadBase):
 @base.notification_sample('instance-reboot-error.json')
 @base.notification_sample('instance-shutdown-start.json')
 @base.notification_sample('instance-shutdown-end.json')
-@base.notification_sample('instance-snapshot-start.json')
-@base.notification_sample('instance-snapshot-end.json')
 @base.notification_sample('instance-interface_attach-start.json')
 @base.notification_sample('instance-interface_attach-end.json')
 @base.notification_sample('instance-interface_attach-error.json')

@@ -63,7 +63,7 @@ jQuery(document).ready(function(){
     def _collect_notifications(self):
         self._import_all_notification_packages()
         base.NovaObjectRegistry.register_notification_objects()
-        notifications = []
+        notifications = {}
         ovos = base.NovaObjectRegistry.obj_classes()
         for name, cls in ovos.items():
             cls = cls[0]
@@ -73,10 +73,14 @@ jQuery(document).ready(function(){
                 payload_name = cls.fields['payload'].objname
                 payload_cls = ovos[payload_name][0]
                 for sample in cls.samples:
-                    notifications.append((cls.__name__,
-                                          payload_cls.__name__,
-                                          sample))
-        return sorted(notifications)
+                    if sample in notifications:
+                        raise ValueError('Duplicated usage of %s '
+                                         'sample file detected' % sample)
+
+                    notifications[sample] = ((cls.__name__,
+                                              payload_cls.__name__,
+                                              sample))
+        return sorted(notifications.values())
 
     def _build_markup(self, notifications):
         content = []
