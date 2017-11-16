@@ -11,36 +11,18 @@
 #    under the License.
 """Placement API handlers for resource classes."""
 
-import copy
-
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 from oslo_utils import timeutils
 import webob
 
 from nova.api.openstack.placement import microversion
+from nova.api.openstack.placement.schemas import resource_class as schema
 from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
 from nova import exception
 from nova.i18n import _
 from nova.objects import resource_provider as rp_obj
-
-
-POST_RC_SCHEMA_V1_2 = {
-    "type": "object",
-    "properties": {
-        "name": {
-            "type": "string",
-            "pattern": "^CUSTOM\_[A-Z0-9_]+$",
-            "maxLength": 255,
-        },
-    },
-    "required": [
-        "name"
-    ],
-    "additionalProperties": False,
-}
-PUT_RC_SCHEMA_V1_2 = copy.deepcopy(POST_RC_SCHEMA_V1_2)
 
 
 def _serialize_links(environ, rc):
@@ -80,7 +62,7 @@ def create_resource_class(req):
     header pointing to the newly created resource class.
     """
     context = req.environ['placement.context']
-    data = util.extract_json(req.body, POST_RC_SCHEMA_V1_2)
+    data = util.extract_json(req.body, schema.POST_RC_SCHEMA_V1_2)
 
     try:
         rc = rp_obj.ResourceClass(context, name=data['name'])
@@ -191,7 +173,7 @@ def update_resource_class(req):
     name = util.wsgi_path_item(req.environ, 'name')
     context = req.environ['placement.context']
 
-    data = util.extract_json(req.body, PUT_RC_SCHEMA_V1_2)
+    data = util.extract_json(req.body, schema.PUT_RC_SCHEMA_V1_2)
 
     # The containing application will catch a not found here.
     rc = rp_obj.ResourceClass.get_by_name(context, name)
@@ -230,7 +212,7 @@ def update_resource_class(req):
     context = req.environ['placement.context']
 
     # Use JSON validation to validation resource class name.
-    util.extract_json('{"name": "%s"}' % name, PUT_RC_SCHEMA_V1_2)
+    util.extract_json('{"name": "%s"}' % name, schema.PUT_RC_SCHEMA_V1_2)
 
     status = 204
     try:
