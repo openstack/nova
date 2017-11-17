@@ -1065,6 +1065,14 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
     # can use to update image metadata via our compute images proxy API.
     microversion = '2.38'
 
+    def setUp(self):
+        # We have to use the MediumFakeDriver for test_rebuild_with_new_image
+        # since the scheduler doubles the VCPU allocation until the bug is
+        # fixed.
+        # TODO(mriedem): Remove this once the bug is fixed.
+        self.flags(compute_driver='fake.MediumFakeDriver')
+        super(ServerRebuildTestCase, self).setUp()
+
     # We need the ImagePropertiesFilter so override the base class setup
     # which configures to use the chance_scheduler.
     def _setup_scheduler_service(self):
@@ -1144,6 +1152,100 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
         # even though the rebuild should not work.
         server = self.api.get_server(server['id'])
         self.assertEqual(rebuild_image_ref, server['image']['id'])
+
+    def test_rebuild_with_new_image(self):
+        """Rebuilds a server with a different image which will run it through
+        the scheduler to validate the image is still OK with the compute host
+        that the instance is running on.
+
+        Validates that additional resources are not allocated against the
+        instance.host in Placement due to the rebuild on same host.
+        """
+        admin_api = self.api_fixture.admin_api
+        admin_api.microversion = '2.53'
+
+        def _get_provider_uuid():
+            resp = admin_api.api_get('os-hypervisors').body
+            self.assertEqual(1, len(resp['hypervisors']))
+            return resp['hypervisors'][0]['id']
+
+        def _get_provider_usages(provider_uuid):
+            return self.placement_api.get(
+                '/resource_providers/%s/usages' % provider_uuid).body['usages']
+
+        def _get_allocations_by_server_uuid(server_uuid):
+            return self.placement_api.get(
+                '/allocations/%s' % server_uuid).body['allocations']
+
+        def assertFlavorMatchesAllocation(flavor, allocation):
+            self.assertEqual(flavor['vcpus'], allocation['VCPU'])
+            self.assertEqual(flavor['ram'], allocation['MEMORY_MB'])
+            self.assertEqual(flavor['disk'], allocation['DISK_GB'])
+
+        def assertFlavorsMatchAllocation(old_flavor, new_flavor,
+                                         allocation):
+            self.assertEqual(old_flavor['vcpus'] + new_flavor['vcpus'],
+                             allocation['VCPU'])
+            self.assertEqual(old_flavor['ram'] + new_flavor['ram'],
+                             allocation['MEMORY_MB'])
+            self.assertEqual(old_flavor['disk'] + new_flavor['disk'],
+                             allocation['DISK_GB'])
+
+        rp_uuid = _get_provider_uuid()
+        # make sure we start with no usage on the compute node
+        rp_usages = _get_provider_usages(rp_uuid)
+        self.assertEqual({'VCPU': 0, 'MEMORY_MB': 0, 'DISK_GB': 0}, rp_usages)
+
+        server_req_body = {
+            'server': {
+                # We hard-code from a fake image since we can't get images
+                # via the compute /images proxy API with microversion > 2.35.
+                'imageRef': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
+                'flavorRef': '1',   # m1.tiny from DefaultFlavorsFixture,
+                'name': 'test_rebuild_with_new_image',
+                # We don't care about networking for this test. This requires
+                # microversion >= 2.37.
+                'networks': 'none'
+            }
+        }
+        server = self.api.post_server(server_req_body)
+        self._wait_for_state_change(self.api, server, 'ACTIVE')
+
+        flavor = self.api.api_get('/flavors/1').body['flavor']
+
+        # There should be usage for the server on the compute node now.
+        rp_usages = _get_provider_usages(rp_uuid)
+        assertFlavorMatchesAllocation(flavor, rp_usages)
+        allocs = _get_allocations_by_server_uuid(server['id'])
+        self.assertIn(rp_uuid, allocs)
+        allocs = allocs[rp_uuid]['resources']
+        assertFlavorMatchesAllocation(flavor, allocs)
+
+        rebuild_image_ref = (
+            nova.tests.unit.image.fake.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID)
+        # Now rebuild the server with a different image.
+        rebuild_req_body = {
+            'rebuild': {
+                'imageRef': rebuild_image_ref
+            }
+        }
+        self.api.api_post('/servers/%s/action' % server['id'],
+                          rebuild_req_body)
+        self._wait_for_server_parameter(
+            self.api, server, {'OS-EXT-STS:task_state': None})
+
+        # The usage and allocations should not have changed.
+        rp_usages = _get_provider_usages(rp_uuid)
+        # FIXME(mriedem): This is a bug where the scheduler doubled up the
+        # allocations for the instance even though we're just rebuilding
+        # to the same host. Uncomment this once fixed.
+        # assertFlavorMatchesAllocation(flavor, rp_usages)
+        assertFlavorsMatchAllocation(flavor, flavor, rp_usages)
+        allocs = _get_allocations_by_server_uuid(server['id'])
+        self.assertIn(rp_uuid, allocs)
+        allocs = allocs[rp_uuid]['resources']
+        # assertFlavorMatchesAllocation(flavor, allocs)
+        assertFlavorsMatchAllocation(flavor, flavor, allocs)
 
 
 class ProviderUsageBaseTestCase(test.TestCase,
