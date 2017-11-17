@@ -1,0 +1,20 @@
+---
+fixes:
+  - |
+    The fix for `OSSA-2017-005`_ (CVE-2017-16239) was too far-reaching in that
+    rebuilds can now fail based on scheduling filters that should not apply
+    to rebuild. For example, a rebuild of an instance on a disabled compute
+    host could fail whereas it would not before the fix for CVE-2017-16239.
+    Similarly, rebuilding an instance on a host that is at capacity for vcpu,
+    memory or disk could fail since the scheduler filters would treat it as a
+    new build request even though the rebuild is not claiming *new* resources.
+
+    Therefore this release contains a fix for those regressions in scheduling
+    behavior on rebuild while maintaining the original fix for CVE-2017-16239.
+
+    .. note:: The fix relies on a ``RUN_ON_REBUILD`` variable which is checked
+              for all scheduler filters during a rebuild. The reasoning behind
+              the value for that variable depends on each filter. If you have
+              out-of-tree scheduler filters, you will likely need to assess
+              whether or not they need to override the default value (False)
+              for the new variable.

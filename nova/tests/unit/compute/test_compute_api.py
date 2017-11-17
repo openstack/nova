@@ -3194,6 +3194,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 system_metadata=orig_system_metadata,
                 expected_attrs=['system_metadata'],
                 image_ref=orig_image_href,
+                node='node',
                 vm_mode=fields_obj.VMMode.HVM)
         flavor = instance.get_flavor()
 
@@ -3205,7 +3206,7 @@ class _ComputeAPIUnitTestMixIn(object):
         _get_image.side_effect = get_image
         bdm_get_by_instance_uuid.return_value = bdms
 
-        fake_spec = objects.RequestSpec()
+        fake_spec = objects.RequestSpec(id=1)
         req_spec_get_by_inst_uuid.return_value = fake_spec
 
         with mock.patch.object(self.compute_api.compute_task_api,
@@ -3223,10 +3224,9 @@ class _ComputeAPIUnitTestMixIn(object):
             # assert the request spec was modified so the scheduler picks
             # the existing instance host/node
             req_spec_save.assert_called_once_with()
-            self.assertIn('requested_destination', fake_spec)
-            requested_destination = fake_spec.requested_destination
-            self.assertEqual(instance.host, requested_destination.host)
-            self.assertEqual(instance.node, requested_destination.node)
+            self.assertIn('_nova_check_type', fake_spec.scheduler_hints)
+            self.assertEqual('rebuild',
+                             fake_spec.scheduler_hints['_nova_check_type'][0])
 
         _check_auto_disk_config.assert_called_once_with(image=new_image)
         _checks_for_create_and_rebuild.assert_called_once_with(self.context,

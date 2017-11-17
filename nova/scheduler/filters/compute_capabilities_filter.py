@@ -30,6 +30,8 @@ class ComputeCapabilitiesFilter(filters.BaseHostFilter):
     # Instance type and host capabilities do not change within a request
     run_filter_once_per_request = True
 
+    RUN_ON_REBUILD = False
+
     def _get_capabilities(self, host_state, scope):
         cap = host_state
         for index in range(0, len(scope)):

@@ -1069,6 +1069,16 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
     def _setup_scheduler_service(self):
         return self.start_service('scheduler')
 
+    def _disable_compute_for(self, server):
+        # Refresh to get its host
+        server = self.api.get_server(server['id'])
+        host = server['OS-EXT-SRV-ATTR:host']
+
+        # Disable the service it is on
+        self.api_fixture.admin_api.put_service('disable',
+                                               {'host': host,
+                                                'binary': 'nova-compute'})
+
     def test_rebuild_with_image_novalidhost(self):
         """Creates a server with an image that is valid for the single compute
         that we have. Then rebuilds the server, passing in an image with
@@ -1076,6 +1086,12 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
         a NoValidHost error. The ImagePropertiesFilter filter is enabled by
         default so that should filter out the host based on the image meta.
         """
+
+        fake.set_nodes(['host2'])
+        self.addCleanup(fake.restore_nodes)
+        self.flags(host='host2')
+        self.compute2 = self.start_service('compute', host='host2')
+
         server_req_body = {
             'server': {
                 # We hard-code from a fake image since we can't get images
@@ -1090,6 +1106,11 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
         }
         server = self.api.post_server(server_req_body)
         self._wait_for_state_change(self.api, server, 'ACTIVE')
+
+        # Disable the host we're on so ComputeFilter would have ruled it out
+        # normally
+        self._disable_compute_for(server)
+
         # Now update the image metadata to be something that won't work with
         # the fake compute driver we're using since the fake driver has an
         # "x86_64" architecture.

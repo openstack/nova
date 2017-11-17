@@ -32,6 +32,8 @@ class AggregateImagePropertiesIsolation(filters.BaseHostFilter):
     # Aggregate data and instance type does not change within a request
     run_filter_once_per_request = True
 
+    RUN_ON_REBUILD = True
+
     def host_passes(self, host_state, spec_obj):
         """Checks a host in an aggregate that metadata key/value match
         with image properties.
