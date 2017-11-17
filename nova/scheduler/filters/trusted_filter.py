@@ -229,6 +229,8 @@ class ComputeAttestation(object):
 class TrustedFilter(filters.BaseHostFilter):
     """Trusted filter to support Trusted Compute Pools."""
 
+    RUN_ON_REBUILD = False
+
     def __init__(self):
         self.compute_attestation = ComputeAttestation()
         LOG.warning(_LW('The TrustedFilter is considered experimental '

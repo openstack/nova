@@ -23,6 +23,8 @@ LOG = logging.getLogger(__name__)
 class ExactRamFilter(filters.BaseHostFilter):
     """Exact RAM Filter."""
 
+    RUN_ON_REBUILD = False
+
     def host_passes(self, host_state, spec_obj):
         """Return True if host has the exact amount of RAM available."""
         requested_ram = spec_obj.memory_mb

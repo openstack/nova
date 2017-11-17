@@ -25,6 +25,8 @@ class IsolatedHostsFilter(filters.BaseHostFilter):
     # The configuration values do not change within a request
     run_filter_once_per_request = True
 
+    RUN_ON_REBUILD = True
+
     def host_passes(self, host_state, spec_obj):
         """Result Matrix with 'restrict_isolated_hosts_to_isolated_images' set
         to True::

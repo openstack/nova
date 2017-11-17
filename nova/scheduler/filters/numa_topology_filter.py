@@ -23,6 +23,8 @@ LOG = logging.getLogger(__name__)
 class NUMATopologyFilter(filters.BaseHostFilter):
     """Filter on requested NUMA topology."""
 
+    RUN_ON_REBUILD = True
+
     def _satisfies_cpu_policy(self, host_state, extra_specs, image_props):
         """Check that the host_state provided satisfies any available
         CPU policy requirements.

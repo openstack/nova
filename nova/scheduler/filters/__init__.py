@@ -21,9 +21,27 @@ from nova import filters
 
 class BaseHostFilter(filters.BaseFilter):
     """Base class for host filters."""
-    def _filter_one(self, obj, filter_properties):
+
+    # This is set to True if this filter should be run for rebuild.
+    # For example, with rebuild, we need to ask the scheduler if the
+    # existing host is still legit for a rebuild with the new image and
+    # other parameters. We care about running policy filters (i.e.
+    # ImagePropertiesFilter) but not things that check usage on the
+    # existing compute node, etc.
+    RUN_ON_REBUILD = False
+
+    def _filter_one(self, obj, spec):
         """Return True if the object passes the filter, otherwise False."""
-        return self.host_passes(obj, filter_properties)
+        # Do this here so we don't get scheduler.filters.utils
+        from nova.scheduler import utils
+        if not self.RUN_ON_REBUILD and utils.request_is_rebuild(spec):
+            # If we don't filter, default to passing the host.
+            return True
+        else:
+            # We are either a rebuild filter, in which case we always run,
+            # or this request is not rebuild in which case all filters
+            # should run.
+            return self.host_passes(obj, spec)
 
     def host_passes(self, host_state, filter_properties):
         """Return True if the HostState passes the filter, otherwise False.

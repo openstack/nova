@@ -33,6 +33,8 @@ class AggregateInstanceExtraSpecsFilter(filters.BaseHostFilter):
     # Aggregate data and instance type does not change within a request
     run_filter_once_per_request = True
 
+    RUN_ON_REBUILD = False
+
     def host_passes(self, host_state, spec_obj):
         """Return a list of hosts that can create instance_type
 

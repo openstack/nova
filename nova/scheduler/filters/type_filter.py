@@ -25,6 +25,8 @@ class TypeAffinityFilter(filters.BaseHostFilter):
     (spread) set to 1 (default).
     """
 
+    RUN_ON_REBUILD = False
+
     def host_passes(self, host_state, spec_obj):
         """Dynamically limits hosts to one instance type
 
@@ -47,6 +49,8 @@ class AggregateTypeAffinityFilter(filters.BaseHostFilter):
 
     # Aggregate data does not change within a request
     run_filter_once_per_request = True
+
+    RUN_ON_REBUILD = False
 
     def host_passes(self, host_state, spec_obj):
         instance_type = spec_obj.flavor

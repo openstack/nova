@@ -25,6 +25,8 @@ LOG = logging.getLogger(__name__)
 class ExactCoreFilter(filters.BaseHostFilter):
     """Exact Core Filter."""
 
+    RUN_ON_REBUILD = False
+
     def host_passes(self, host_state, spec_obj):
         """Return True if host has the exact number of CPU cores."""
         if not host_state.vcpus_total:

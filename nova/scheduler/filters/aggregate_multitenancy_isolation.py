@@ -28,6 +28,8 @@ class AggregateMultiTenancyIsolation(filters.BaseHostFilter):
     # Aggregate data and tenant do not change within a request
     run_filter_once_per_request = True
 
+    RUN_ON_REBUILD = False
+
     def host_passes(self, host_state, spec_obj):
         """If a host is in an aggregate that has the metadata key
         "filter_tenant_id" it can only create instances from that tenant(s).
