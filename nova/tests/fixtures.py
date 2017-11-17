@@ -1084,6 +1084,10 @@ class CinderFixture(fixtures.Fixture):
     SWAP_ERR_OLD_VOL = '828419fa-3efb-4533-b458-4267ca5fe9b1'
     SWAP_ERR_NEW_VOL = '9c6d9c2d-7a8f-4c80-938d-3bf062b8d489'
 
+    # This represents a bootable image-backed volume to test
+    # boot-from-volume scenarios.
+    IMAGE_BACKED_VOL = '6ca404f3-d844-4169-bb96-bc792f37de98'
+
     def __init__(self, test):
         super(CinderFixture, self).__init__()
         self.test = test
@@ -1132,7 +1136,7 @@ class CinderFixture(fixtures.Fixture):
             for instance_uuid, volumes in self.attachments.items():
                 if volume_id in volumes:
                     # The volume is attached.
-                    return {
+                    volume = {
                         'status': 'in-use',
                         'display_name': volume_id,
                         'attach_status': 'attached',
@@ -1145,15 +1149,34 @@ class CinderFixture(fixtures.Fixture):
                             }
                         }
                     }
+                    break
+            else:
+                # This is a test that does not care about the actual details.
+                volume = {
+                    'status': 'available',
+                    'display_name': 'TEST2',
+                    'attach_status': 'detached',
+                    'id': volume_id,
+                    'size': 1
+                }
 
-            # This is a test that does not care about the actual details.
-            return {
-                       'status': 'available',
-                       'display_name': 'TEST2',
-                       'attach_status': 'detached',
-                       'id': volume_id,
-                       'size': 1
-                   }
+            # update the status based on existing attachments
+            has_attachment = any(
+                [volume['id'] in attachments
+                 for attachments in self.attachments.values()])
+            volume['status'] = 'attached' if has_attachment else 'detached'
+
+            # Check for our special image-backed volume.
+            if volume_id == self.IMAGE_BACKED_VOL:
+                # Make it a bootable volume.
+                volume['bootable'] = True
+                # Add the image_id metadata.
+                volume['volume_image_metadata'] = {
+                    # There would normally be more image metadata in here...
+                    'image_id': '155d900f-4e14-4e4c-a73d-069cbf4541e6'
+                }
+
+            return volume
 
         def fake_initialize_connection(self, context, volume_id, connector):
             if volume_id == CinderFixture.SWAP_ERR_NEW_VOL:
