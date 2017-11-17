@@ -17,6 +17,7 @@
 """Fixtures for Nova tests."""
 from __future__ import absolute_import
 
+import collections
 import logging as std_logging
 import os
 import warnings
@@ -779,3 +780,176 @@ class NoopConductorFixture(fixtures.Fixture):
             'nova.conductor.ComputeTaskAPI', _NoopConductor))
         self.useFixture(fixtures.MonkeyPatch(
             'nova.conductor.API', _NoopConductor))
+
+
+class CinderFixture(fixtures.Fixture):
+    """A fixture to volume operations"""
+
+    # the default project_id in OSAPIFixtures
+    tenant_id = '6f70656e737461636b20342065766572'
+
+    SWAP_OLD_VOL = 'a07f71dc-8151-4e7d-a0cc-cd24a3f11113'
+    SWAP_NEW_VOL = '227cc671-f30b-4488-96fd-7d0bf13648d8'
+    SWAP_ERR_OLD_VOL = '828419fa-3efb-4533-b458-4267ca5fe9b1'
+    SWAP_ERR_NEW_VOL = '9c6d9c2d-7a8f-4c80-938d-3bf062b8d489'
+
+    # This represents a bootable image-backed volume to test
+    # boot-from-volume scenarios.
+    IMAGE_BACKED_VOL = '6ca404f3-d844-4169-bb96-bc792f37de98'
+
+    def __init__(self, test):
+        super(CinderFixture, self).__init__()
+        self.test = test
+        self.swap_error = False
+        self.swap_volume_instance_uuid = None
+        self.swap_volume_instance_error_uuid = None
+        # This is a map of instance UUIDs mapped to a list of volume IDs.
+        # This map gets updated on attach/detach operations.
+        self.attachments = collections.defaultdict(list)
+
+    def setUp(self):
+        super(CinderFixture, self).setUp()
+
+        def fake_get(self_api, context, volume_id):
+            # Check for the special swap volumes.
+            if volume_id in (CinderFixture.SWAP_OLD_VOL,
+                             CinderFixture.SWAP_ERR_OLD_VOL):
+                volume = {
+                             'status': 'available',
+                             'display_name': 'TEST1',
+                             'attach_status': 'detached',
+                             'id': volume_id,
+                             'size': 1
+                         }
+                if ((self.swap_volume_instance_uuid and
+                     volume_id == CinderFixture.SWAP_OLD_VOL) or
+                    (self.swap_volume_instance_error_uuid and
+                     volume_id == CinderFixture.SWAP_ERR_OLD_VOL)):
+                    instance_uuid = (self.swap_volume_instance_uuid
+                        if volume_id == CinderFixture.SWAP_OLD_VOL
+                        else self.swap_volume_instance_error_uuid)
+
+                    volume.update({
+                        'status': 'in-use',
+                        'attachments': {
+                            instance_uuid: {
+                                'mountpoint': '/dev/vdb',
+                                'attachment_id': volume_id
+                            }
+                        },
+                        'attach_status': 'attached'
+                    })
+                return volume
+
+            # Check to see if the volume is attached.
+            for instance_uuid, volumes in self.attachments.items():
+                if volume_id in volumes:
+                    # The volume is attached.
+                    volume = {
+                        'status': 'in-use',
+                        'display_name': volume_id,
+                        'attach_status': 'attached',
+                        'id': volume_id,
+                        'size': 1,
+                        'attachments': {
+                            instance_uuid: {
+                                'attachment_id': volume_id,
+                                'mountpoint': '/dev/vdb'
+                            }
+                        }
+                    }
+                    break
+            else:
+                # This is a test that does not care about the actual details.
+                volume = {
+                    'status': 'available',
+                    'display_name': 'TEST2',
+                    'attach_status': 'detached',
+                    'id': volume_id,
+                    'size': 1
+                }
+
+            # update the status based on existing attachments
+            has_attachment = any(
+                [volume['id'] in attachments
+                 for attachments in self.attachments.values()])
+            volume['status'] = 'attached' if has_attachment else 'detached'
+
+            # Check for our special image-backed volume.
+            if volume_id == self.IMAGE_BACKED_VOL:
+                # Make it a bootable volume.
+                volume['bootable'] = True
+                # Add the image_id metadata.
+                volume['volume_image_metadata'] = {
+                    # There would normally be more image metadata in here...
+                    'image_id': '155d900f-4e14-4e4c-a73d-069cbf4541e6'
+                }
+
+            return volume
+
+        def fake_initialize_connection(self, context, volume_id, connector):
+            if volume_id == CinderFixture.SWAP_ERR_NEW_VOL:
+                # Return a tuple in order to raise an exception.
+                return ()
+            return {}
+
+        def fake_migrate_volume_completion(self, context, old_volume_id,
+                                           new_volume_id, error):
+            return {'save_volume_id': new_volume_id}
+
+        def fake_unreserve_volume(self_api, context, volume_id):
+            # Signaling that swap_volume has encountered the error
+            # from initialize_connection and is working on rolling back
+            # the reservation on SWAP_ERR_NEW_VOL.
+            self.swap_error = True
+
+        def fake_attach(_self, context, volume_id, instance_uuid,
+                        mountpoint, mode='rw'):
+            # Check to see if the volume is already attached to any server.
+            for instance, volumes in self.attachments.items():
+                if volume_id in volumes:
+                    raise exception.InvalidInput(
+                        reason='Volume %s is already attached to '
+                               'instance %s' % (volume_id, instance))
+            # It's not attached so let's "attach" it.
+            self.attachments[instance_uuid].append(volume_id)
+
+        self.test.stub_out('nova.volume.cinder.API.attach',
+                           fake_attach)
+
+        def fake_detach(_self, context, volume_id, instance_uuid=None,
+                        attachment_id=None):
+            if instance_uuid is not None:
+                # If the volume isn't attached to this instance it will
+                # result in a ValueError which indicates a broken test or
+                # code, so we just let that raise up.
+                self.attachments[instance_uuid].remove(volume_id)
+            else:
+                for instance, volumes in self.attachments.items():
+                    if volume_id in volumes:
+                        volumes.remove(volume_id)
+                        break
+
+        self.test.stub_out('nova.volume.cinder.API.detach', fake_detach)
+
+        self.test.stub_out('nova.volume.cinder.API.begin_detaching',
+                           lambda *args, **kwargs: None)
+        self.test.stub_out('nova.volume.cinder.API.check_attach',
+                           lambda *args, **kwargs: None)
+        self.test.stub_out('nova.volume.cinder.API.check_detach',
+                           lambda *args, **kwargs: None)
+        self.test.stub_out('nova.volume.cinder.API.get',
+                           fake_get)
+        self.test.stub_out('nova.volume.cinder.API.initialize_connection',
+                           fake_initialize_connection)
+        self.test.stub_out(
+            'nova.volume.cinder.API.migrate_volume_completion',
+            fake_migrate_volume_completion)
+        self.test.stub_out('nova.volume.cinder.API.reserve_volume',
+                           lambda *args, **kwargs: None)
+        self.test.stub_out('nova.volume.cinder.API.roll_detaching',
+                           lambda *args, **kwargs: None)
+        self.test.stub_out('nova.volume.cinder.API.terminate_connection',
+                           lambda *args, **kwargs: None)
+        self.test.stub_out('nova.volume.cinder.API.unreserve_volume',
+                           fake_unreserve_volume)
