@@ -23,6 +23,8 @@ LOG = logging.getLogger(__name__)
 class ExactDiskFilter(filters.BaseHostFilter):
     """Exact Disk Filter."""
 
+    RUN_ON_REBUILD = False
+
     def host_passes(self, host_state, spec_obj):
         """Return True if host has the exact amount of disk available."""
         requested_disk = (1024 * (spec_obj.root_gb +

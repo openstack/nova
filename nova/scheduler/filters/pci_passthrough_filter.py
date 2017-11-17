@@ -40,6 +40,8 @@ class PciPassthroughFilter(filters.BaseHostFilter):
 
     """
 
+    RUN_ON_REBUILD = False
+
     def host_passes(self, host_state, spec_obj):
         """Return true if the host has the required PCI devices."""
         pci_requests = spec_obj.pci_requests

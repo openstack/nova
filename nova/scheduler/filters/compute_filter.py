@@ -25,6 +25,8 @@ LOG = logging.getLogger(__name__)
 class ComputeFilter(filters.BaseHostFilter):
     """Filter on active Compute nodes."""
 
+    RUN_ON_REBUILD = False
+
     def __init__(self):
         self.servicegroup_api = servicegroup.API()
 
