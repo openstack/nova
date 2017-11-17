@@ -35,6 +35,8 @@ class ImagePropertiesFilter(filters.BaseHostFilter):
     contained in the image dictionary in the request_spec.
     """
 
+    RUN_ON_REBUILD = True
+
     # Image Properties and Compute Capabilities do not change within
     # a request
     run_filter_once_per_request = True

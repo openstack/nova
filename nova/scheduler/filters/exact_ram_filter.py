@@ -23,6 +23,8 @@ LOG = logging.getLogger(__name__)
 class ExactRamFilter(filters.BaseHostFilter):
     """Exact RAM Filter."""
 
+    RUN_ON_REBUILD = False
+
     def __init__(self, *args, **kwargs):
         super(ExactRamFilter, self).__init__(*args, **kwargs)
         LOG.warning('ExactRamFilter is deprecated in Pike and will be '

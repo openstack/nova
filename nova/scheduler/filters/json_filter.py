@@ -26,6 +26,9 @@ class JsonFilter(filters.BaseHostFilter):
     """Host Filter to allow simple JSON-based grammar for
     selecting hosts.
     """
+
+    RUN_ON_REBUILD = False
+
     def _op_compare(self, args, op):
         """Returns True if the specified operator can successfully
         compare the first item in the args with all the rest. Will

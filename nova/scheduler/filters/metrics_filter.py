@@ -32,6 +32,8 @@ class MetricsFilter(filters.BaseHostFilter):
     these hosts.
     """
 
+    RUN_ON_REBUILD = False
+
     def __init__(self):
         super(MetricsFilter, self).__init__()
         opts = utils.parse_options(CONF.metrics.weight_setting,
