@@ -2518,6 +2518,59 @@ def _get_provider_ids_matching_all(ctx, resources):
     return [r[0] for r in ctx.session.execute(sel)]
 
 
+def _build_provider_summaries(context, usages):
+    """Given a list of dicts of usage information, returns a dict, keyed by
+    resource provider ID, of ProviderSummary objects.
+
+    :param context: nova.context.Context object
+    :param usages: A list of dicts with the following format:
+
+        {
+            'resource_provider_id': <internal resource provider ID>,
+            'resource_provider_uuid': <UUID>,
+            'resource_class_id': <internal resource class ID>,
+            'total': integer,
+            'reserved': integer,
+            'allocation_ratio': float,
+        }
+    """
+    # Build up a dict, keyed by internal resource provider ID, of
+    # ProviderSummary objects containing one or more ProviderSummaryResource
+    # objects representing the resources the provider has inventory for.
+    summaries = {}
+    for usage in usages:
+        rp_id = usage['resource_provider_id']
+        rp_uuid = usage['resource_provider_uuid']
+        rc_id = usage['resource_class_id']
+        # NOTE(jaypipes): usage['used'] may be None due to the LEFT JOIN of
+        # the usages subquery, so we coerce NULL values to 0 here.
+        used = usage['used'] or 0
+        allocation_ratio = usage['allocation_ratio']
+        cap = int((usage['total'] - usage['reserved']) * allocation_ratio)
+
+        summary = summaries.get(rp_id)
+        if not summary:
+            summary = ProviderSummary(
+                context,
+                resource_provider=ResourceProvider(
+                    context,
+                    uuid=rp_uuid,
+                ),
+                resources=[],
+            )
+            summaries[rp_id] = summary
+
+        rc_name = _RC_CACHE.string_from_id(rc_id)
+        rpsr = ProviderSummaryResource(
+            context,
+            resource_class=rc_name,
+            capacity=cap,
+            used=used,
+        )
+        summary.resources.append(rpsr)
+    return summaries
+
+
 @base.NovaObjectRegistry.register_if(False)
 class AllocationCandidates(base.NovaObject):
     """The AllocationCandidates object is a collection of possible allocations
@@ -2617,9 +2670,10 @@ class AllocationCandidates(base.NovaObject):
 
         # We need to grab usage information for all the providers identified as
         # potentially fulfilling part of the resource request. This includes
-        # "root providers" returned from _get_all_with_shared() as well as all
-        # the providers of shared resources. Here, we simply grab a unique set
-        # of all those resource provider internal IDs by set union'ing them
+        # non-sharing providers returned from the above call to either
+        # _get_all_with_shared() or _get_provider_ids_matching_all() as well as
+        # all the providers of shared resources. Here, we simply grab a unique
+        # set of all those resource provider internal IDs by set union'ing them
         # together
         all_rp_ids = set(non_sharing_rp_ids)
         for rps in sharing_providers.values():
@@ -2637,33 +2691,9 @@ class AllocationCandidates(base.NovaObject):
             list(resources.keys()),
         )
 
-        # Build up a dict, keyed by internal resource provider ID, of usage
-        # information from which we will then build both allocation request and
-        # provider summary information
-        summaries = {}
-        for usage in usages:
-            u_rp_id = usage['resource_provider_id']
-            u_rp_uuid = usage['resource_provider_uuid']
-            u_rc_id = usage['resource_class_id']
-            # NOTE(jaypipes): usage['used'] may be None due to the LEFT JOIN of
-            # the usages subquery, so we coerce NULL values to 0 here.
-            used = usage['used'] or 0
-            allocation_ratio = usage['allocation_ratio']
-            cap = int((usage['total'] - usage['reserved']) * allocation_ratio)
-
-            summary = summaries.get(u_rp_id)
-            if not summary:
-                summary = {
-                    'uuid': u_rp_uuid,
-                    'resources': {},
-                    # TODO(jaypipes): Fill in the provider's traits...
-                    'traits': [],
-                }
-                summaries[u_rp_id] = summary
-            summary['resources'][u_rc_id] = {
-                'capacity': cap,
-                'used': used,
-            }
+        # Get a dict, keyed by resource provider internal ID, of
+        # ProviderSummary objects for all providers involved in the request
+        summaries = _build_provider_summaries(context, usages)
 
         # Next, build up a list of allocation requests. These allocation
         # requests are AllocationRequest objects, containing resource provider
@@ -2675,11 +2705,11 @@ class AllocationCandidates(base.NovaObject):
         # AllocationRequestResource objects that represent each resource
         # provider for a shared resource
         sharing_resource_requests = collections.defaultdict(list)
-        for shared_rc_id in sharing_providers.keys():
+        for shared_rc_id in sharing_providers:
             sharing = sharing_providers[shared_rc_id]
             for sharing_rp_id in sharing:
                 sharing_summary = summaries[sharing_rp_id]
-                sharing_rp_uuid = sharing_summary['uuid']
+                sharing_rp_uuid = sharing_summary.resource_provider.uuid
                 sharing_res_req = AllocationRequestResource(
                     context,
                     resource_provider=ResourceProvider(
@@ -2701,14 +2731,18 @@ class AllocationCandidates(base.NovaObject):
                 # request written for it, we just ignore it and continue
                 continue
             rp_summary = summaries[rp_id]
-            rp_uuid = rp_summary['uuid']
+            rp_uuid = rp_summary.resource_provider.uuid
             local_resources = set(
                 rc_id for rc_id in resources.keys()
-                if rc_id in rp_summary['resources']
+                if _RC_CACHE.string_from_id(rc_id) in [
+                    res.resource_class for res in rp_summary.resources
+                ]
             )
             shared_resources = set(
                 rc_id for rc_id in resources.keys()
-                if rc_id not in rp_summary['resources']
+                if _RC_CACHE.string_from_id(rc_id) not in [
+                    res.resource_class for res in rp_summary.resources
+                ]
             )
             # Determine if the root provider actually has all the resources
             # requested. If not, we need to add an AllocationRequest
@@ -2780,32 +2814,4 @@ class AllocationCandidates(base.NovaObject):
                 )
                 alloc_request_objs.append(req_obj)
 
-        # Finally, construct the object representations for the provider
-        # summaries we built above. These summaries may be used by the
-        # scheduler (or any other caller) to sort and weigh for its eventual
-        # placement and claim decisions
-        summary_objs = []
-        for rp_id, summary in summaries.items():
-            rp_uuid = summary['uuid']
-            rps_resources = []
-            for rc_id, usage in summary['resources'].items():
-                rc_name = _RC_CACHE.string_from_id(rc_id)
-                rpsr_obj = ProviderSummaryResource(
-                    context,
-                    resource_class=rc_name,
-                    capacity=usage['capacity'],
-                    used=usage['used'],
-                )
-                rps_resources.append(rpsr_obj)
-
-            summary_obj = ProviderSummary(
-                context,
-                resource_provider=ResourceProvider(
-                    context,
-                    uuid=rp_uuid,
-                ),
-                resources=rps_resources,
-            )
-            summary_objs.append(summary_obj)
-
-        return alloc_request_objs, summary_objs
+        return alloc_request_objs, list(summaries.values())
