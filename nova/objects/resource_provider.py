@@ -2571,6 +2571,37 @@ def _build_provider_summaries(context, usages):
     return summaries
 
 
+def _shared_allocation_request_resources(ctx, requested_resources, sharing,
+                                         summaries):
+    """Returns a dict, keyed by resource class ID, of lists of
+    AllocationRequestResource objects that represent resources that are
+    provided by a sharing provider.
+
+    :param ctx: nova.context.Context object
+    :param requested_resources: dict, keyed by resource class ID, of amounts
+                                being requested for that resource class
+    :param sharing: dict, keyed by resource class ID, of sets of resource
+                    provider IDs that share that resource class and can
+                    contribute to the overall allocation request
+    :param summaries: dict, keyed by resource provider ID, of ProviderSummary
+                      objects containing usage and trait information for
+                      resource providers involved in the overall request
+    """
+    res_requests = collections.defaultdict(list)
+    for rc_id in sharing:
+        for rp_id in sharing[rc_id]:
+            summary = summaries[rp_id]
+            rp_uuid = summary.resource_provider.uuid
+            res_req = AllocationRequestResource(
+                ctx,
+                resource_provider=ResourceProvider(ctx, uuid=rp_uuid),
+                resource_class=_RC_CACHE.string_from_id(rc_id),
+                amount=requested_resources[rc_id],
+            )
+            res_requests[rc_id].append(res_req)
+    return res_requests
+
+
 @base.NovaObjectRegistry.register_if(False)
 class AllocationCandidates(base.NovaObject):
     """The AllocationCandidates object is a collection of possible allocations
@@ -2704,22 +2735,8 @@ class AllocationCandidates(base.NovaObject):
         # Build a dict, keyed by resource class ID, of
         # AllocationRequestResource objects that represent each resource
         # provider for a shared resource
-        sharing_resource_requests = collections.defaultdict(list)
-        for shared_rc_id in sharing_providers:
-            sharing = sharing_providers[shared_rc_id]
-            for sharing_rp_id in sharing:
-                sharing_summary = summaries[sharing_rp_id]
-                sharing_rp_uuid = sharing_summary.resource_provider.uuid
-                sharing_res_req = AllocationRequestResource(
-                    context,
-                    resource_provider=ResourceProvider(
-                        context,
-                        uuid=sharing_rp_uuid,
-                    ),
-                    resource_class=_RC_CACHE.string_from_id(shared_rc_id),
-                    amount=resources[shared_rc_id],
-                )
-                sharing_resource_requests[shared_rc_id].append(sharing_res_req)
+        sharing_resource_requests = _shared_allocation_request_resources(
+            context, resources, sharing_providers, summaries)
 
         for rp_id in non_sharing_rp_ids:
             if rp_id not in summaries:
