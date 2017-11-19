@@ -37,6 +37,7 @@ from oslo_utils import fixture as utils_fixture
 from oslo_utils import timeutils
 from oslo_utils import units
 from oslo_utils import uuidutils
+import six
 import testtools
 from testtools import matchers as testtools_matchers
 
@@ -8602,14 +8603,19 @@ class ComputeAPITestCase(BaseTestCase):
                           "new password")
 
     def test_rebuild_no_image(self):
+        """Tests that rebuild fails if no root BDM is found for an instance
+        without an image_ref (volume-backed instance).
+        """
         instance = self._create_fake_instance_obj(params={'image_ref': ''})
-        instance_uuid = instance.uuid
         self.stub_out('nova.tests.unit.image.fake._FakeImageService.show',
                       self.fake_show)
-        self.compute_api.rebuild(self.context, instance, '', 'new_password')
-
-        instance = db.instance_get_by_uuid(self.context, instance_uuid)
-        self.assertEqual(instance['task_state'], task_states.REBUILDING)
+        # The API request schema validates that a UUID is passed for the
+        # imageRef parameter so we need to provide an image.
+        ex = self.assertRaises(exception.NovaException,
+                               self.compute_api.rebuild, self.context,
+                               instance, self.fake_image['id'], 'new_password')
+        self.assertIn('Unable to find root block device mapping for '
+                      'volume-backed instance', six.text_type(ex))
 
     def test_rebuild_with_deleted_image(self):
         # If we're given a deleted image by glance, we should not be able to
