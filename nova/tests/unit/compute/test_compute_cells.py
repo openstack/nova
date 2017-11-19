@@ -569,13 +569,16 @@ class CellsConductorAPIRPCRedirect(test.NoDBTestCase):
         orig_system_metadata = {}
         instance = fake_instance.fake_instance_obj(self.context,
                 vm_state=vm_states.ACTIVE, cell_name='fake-cell',
-                launched_at=timeutils.utcnow(),
+                launched_at=timeutils.utcnow(), image_ref=uuids.image_id,
                 system_metadata=orig_system_metadata,
                 expected_attrs=['system_metadata'])
         get_flavor.return_value = ''
-        image_href = ''
+        # The API request schema validates that a UUID is passed for the
+        # imageRef parameter so we need to provide an image.
+        image_href = uuids.image_id
         image = {"min_ram": 10, "min_disk": 1,
-                 "properties": {'architecture': 'x86_64'}}
+                 "properties": {'architecture': 'x86_64'},
+                 "id": uuids.image_id}
         admin_pass = ''
         files_to_inject = []
         bdms = objects.BlockDeviceMappingList()
