@@ -11,6 +11,9 @@
 #    under the License.
 """Placement API schemas for getting allocation candidates."""
 
+import copy
+
+
 # Represents the allowed query string parameters to the GET
 # /allocation_candidates API call
 GET_SCHEMA_1_10 = {
@@ -24,4 +27,16 @@ GET_SCHEMA_1_10 = {
         "resources",
     ],
     "additionalProperties": False,
+}
+
+
+# Add limit query parameter.
+GET_SCHEMA_1_16 = copy.deepcopy(GET_SCHEMA_1_10)
+GET_SCHEMA_1_16['properties']['limit'] = {
+    # A query parameter is always a string in webOb, but
+    # we'll handle integer here as well.
+    "type": ["integer", "string"],
+    "pattern": "^[1-9][0-9]*$",
+    "minimum": 1,
+    "minLength": 1
 }

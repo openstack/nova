@@ -57,6 +57,7 @@ VERSIONS = [
     '1.14',  # Adds parent and root provider UUID on resource provider
              # representation and 'in_tree' filter on GET /resource_providers
     '1.15',  # Include last-modified and cache-control headers
+    '1.16',  # Add 'limit' query parameter to GET /allocation_candidates
 ]
 
 

@@ -13,6 +13,7 @@
 import collections
 import copy
 import itertools
+import random
 
 # NOTE(cdent): The resource provider objects are designed to never be
 # used over RPC. Remote manipulation is done with the placement HTTP
@@ -22,6 +23,7 @@ import itertools
 
 import os_traits
 from oslo_concurrency import lockutils
+from oslo_config import cfg
 from oslo_db import api as oslo_db_api
 from oslo_db import exception as db_exc
 from oslo_log import log as logging
@@ -56,6 +58,7 @@ _RC_CACHE = None
 _TRAIT_LOCK = 'trait_sync'
 _TRAITS_SYNCED = False
 
+CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -3266,18 +3269,29 @@ class AllocationCandidates(base.NovaObject):
     }
 
     @classmethod
-    def get_by_requests(cls, context, requests):
+    def get_by_requests(cls, context, requests, limit=None):
         """Returns an AllocationCandidates object containing all resource
         providers matching a set of supplied resource constraints, with a set
         of allocation requests constructed from that list of resource
-        providers.
+        providers. If CONF.placement.randomize_allocation_candidates is True
+        (default is False) then the order of the allocation requests will
+        be randomized.
 
         :param requests: List of nova.api.openstack.placement.util.RequestGroup
+        :param limit: An integer, N, representing the maximum number of
+                      allocation candidates to return. If
+                      CONF.placement.randomize_allocation_candidates is True
+                      this will be a random sampling of N of the available
+                      results. If False then the first N results, in whatever
+                      order the database picked them, will be returned. In
+                      either case if there are fewer than N total results,
+                      all the results will be returned.
         """
         _ensure_rc_cache(context)
         _ensure_trait_sync(context)
         alloc_reqs, provider_summaries = cls._get_by_requests(context,
-                                                              requests)
+                                                              requests,
+                                                              limit)
         return cls(
             context,
             allocation_requests=alloc_reqs,
@@ -3286,7 +3300,7 @@ class AllocationCandidates(base.NovaObject):
 
     @staticmethod
     @db_api.api_context_manager.reader
-    def _get_by_requests(context, requests):
+    def _get_by_requests(context, requests, limit=None):
         # We first get the list of "root providers" that either have the
         # requested resources or are associated with the providers that
         # share one or more of the requested resource(s)
@@ -3339,22 +3353,58 @@ class AllocationCandidates(base.NovaObject):
             # IDs.
             rp_ids = _get_provider_ids_matching_all(context, resources,
                                                     trait_map)
-            return _alloc_candidates_no_shared(context, resources, rp_ids)
+            alloc_request_objs, summary_objs = _alloc_candidates_no_shared(
+                context, resources, rp_ids)
+        else:
+            if trait_map:
+                trait_rps = _get_provider_ids_having_any_trait(context,
+                                                               trait_map)
+                if not trait_rps:
+                    # If there aren't any providers that have any of the
+                    # required traits, just exit early...
+                    return [], []
 
-        if trait_map:
-            trait_rps = _get_provider_ids_having_any_trait(context, trait_map)
-            if not trait_rps:
-                # If there aren't any providers that have any of the required
-                # traits, just exit early...
-                return [], []
+            # rp_ids contains a list of resource provider IDs that EITHER have
+            # all the requested resources themselves OR have some resources
+            # and are related to a provider that is sharing some resources
+            # with it. In other words, this is the list of resource provider
+            # IDs that are NOT sharing resources.
+            rps = _get_all_with_shared(context, resources)
+            rp_ids = set([r[0] for r in rps])
+            alloc_request_objs, summary_objs = _alloc_candidates_with_shared(
+                context, resources, trait_map, rp_ids, sharing_providers)
 
-        # rp_ids contains a list of resource provider IDs that EITHER have all
-        # the requested resources themselves OR have some resources and are
-        # related to a provider that is sharing some resources with it. In
-        # other words, this is the list of resource provider IDs that are NOT
-        # sharing resources.
-        rps = _get_all_with_shared(context, resources)
-        rp_ids = set([r[0] for r in rps])
+        # Limit the number of allocation request objects. We do this after
+        # creating all of them so that we can do a random slice without
+        # needing to mess with the complex sql above or add additional
+        # columns to the DB.
 
-        return _alloc_candidates_with_shared(context, resources, trait_map,
-                                             rp_ids, sharing_providers)
+        # Track the resource provider uuids that we have chosen so that
+        # we can pull out their summaries below.
+        alloc_req_rp_uuids = set()
+        if limit and limit <= len(alloc_request_objs):
+            if CONF.placement.randomize_allocation_candidates:
+                alloc_request_objs = random.sample(alloc_request_objs, limit)
+            else:
+                alloc_request_objs = alloc_request_objs[:limit]
+            # Extract resource provider uuids from the resource requests.
+            for aro in alloc_request_objs:
+                for arr in aro.resource_requests:
+                    alloc_req_rp_uuids.add(arr.resource_provider.uuid)
+        elif CONF.placement.randomize_allocation_candidates:
+            random.shuffle(alloc_request_objs)
+
+        # Limit summaries to only those mentioned in the allocation requests.
+        if limit and limit <= len(alloc_request_objs):
+            kept_summary_objs = []
+            for summary in summary_objs:
+                rp_uuid = summary.resource_provider.uuid
+                # Skip a summary if we are limiting and haven't selected an
+                # allocation request that uses the resource provider.
+                if rp_uuid not in alloc_req_rp_uuids:
+                    continue
+                kept_summary_objs.append(summary)
+        else:
+            kept_summary_objs = summary_objs
+
+        return alloc_request_objs, kept_summary_objs

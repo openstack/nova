@@ -1,0 +1,11 @@
+---
+features:
+  - |
+    Add support, in new placement microversion 1.16, for a ``limit`` query
+    parameter when making a ``GET /allocation_candidates`` request. The
+    parameter accepts an integer value, `N`, which limits the number of
+    candidates returned. A new configuration item
+    ``[placement]/randomize_allocation_candidates``, defaulting to `False`,
+    controls how the limited results are chosen. If `True`, a random sampling
+    of the entire result set is taken, otherwise the first N results are
+    returned.
