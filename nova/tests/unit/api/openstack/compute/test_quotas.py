@@ -295,6 +295,44 @@ class QuotaSetsTestV21(BaseQuotaSetsTest):
         self.controller.update(self._get_http_request(),
                                1234, body={'quota_set': {'networks': 1}})
 
+    def test_duplicate_quota_filter(self):
+        query_string = 'user_id=1&user_id=2'
+        req = fakes.HTTPRequest.blank('', query_string=query_string)
+        self.controller.show(req, 1234)
+        self.controller.update(req, 1234, body={'quota_set': {}})
+        self.controller.detail(req, 1234)
+        self.controller.delete(req, 1234)
+
+    def test_quota_filter_negative_int_as_string(self):
+        req = fakes.HTTPRequest.blank('', query_string='user_id=-1')
+        self.controller.show(req, 1234)
+        self.controller.update(req, 1234, body={'quota_set': {}})
+        self.controller.detail(req, 1234)
+        self.controller.delete(req, 1234)
+
+    def test_quota_filter_int_as_string(self):
+        req = fakes.HTTPRequest.blank('', query_string='user_id=123')
+        self.controller.show(req, 1234)
+        self.controller.update(req, 1234, body={'quota_set': {}})
+        self.controller.detail(req, 1234)
+        self.controller.delete(req, 1234)
+
+    def test_unknown_quota_filter(self):
+        query_string = 'unknown_filter=abc'
+        req = fakes.HTTPRequest.blank('', query_string=query_string)
+        self.controller.show(req, 1234)
+        self.controller.update(req, 1234, body={'quota_set': {}})
+        self.controller.detail(req, 1234)
+        self.controller.delete(req, 1234)
+
+    def test_quota_additional_filter(self):
+        query_string = 'user_id=1&additional_filter=2'
+        req = fakes.HTTPRequest.blank('', query_string=query_string)
+        self.controller.show(req, 1234)
+        self.controller.update(req, 1234, body={'quota_set': {}})
+        self.controller.detail(req, 1234)
+        self.controller.delete(req, 1234)
+
 
 class ExtendedQuotasTestV21(BaseQuotaSetsTest):
     plugin = quotas_v21

@@ -95,6 +95,7 @@ class QuotaSetsController(wsgi.Controller):
     def show(self, req, id):
         return self._show(req, id, FILTERED_QUOTAS)
 
+    @validation.query_schema(quota_sets.query_schema)
     def _show(self, req, id, filtered_quotas):
         context = req.environ['nova.context']
         context.can(qs_policies.POLICY_ROOT % 'show', {'project_id': id})
@@ -116,6 +117,7 @@ class QuotaSetsController(wsgi.Controller):
     def detail(self, req, id):
         return self._detail(req, id, FILTERED_QUOTAS)
 
+    @validation.query_schema(quota_sets.query_schema)
     def _detail(self, req, id, filtered_quotas):
         context = req.environ['nova.context']
         context.can(qs_policies.POLICY_ROOT % 'detail', {'project_id': id})
@@ -139,6 +141,7 @@ class QuotaSetsController(wsgi.Controller):
     def update(self, req, id, body):
         return self._update(req, id, body, FILTERED_QUOTAS)
 
+    @validation.query_schema(quota_sets.query_schema)
     def _update(self, req, id, body, filtered_quotas):
         context = req.environ['nova.context']
         context.can(qs_policies.POLICY_ROOT % 'update', {'project_id': id})
@@ -220,6 +223,7 @@ class QuotaSetsController(wsgi.Controller):
     # +microversions because the resource quota-set has been deleted completely
     # when returning a response.
     @extensions.expected_errors(())
+    @validation.query_schema(quota_sets.query_schema)
     @wsgi.response(202)
     def delete(self, req, id):
         context = req.environ['nova.context']

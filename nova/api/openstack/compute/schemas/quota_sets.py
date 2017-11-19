@@ -68,3 +68,15 @@ update = {
 
 update_v236 = copy.deepcopy(update)
 update_v236['properties']['quota_set']['properties'] = update_quota_set_v236
+
+query_schema = {
+    'type': 'object',
+    'properties': {
+        'user_id': parameter_types.multi_params({'type': 'string'})
+    },
+    # NOTE(gmann): This is kept True to keep backward compatibility.
+    # As of now Schema validation stripped out the additional parameters and
+    # does not raise 400. In the future, we may block the additional parameters
+    # by bump in Microversion.
+    'additionalProperties': True
+}
