@@ -338,6 +338,84 @@ class VolumeApiTestV21(test.NoDBTestCase):
         self.assertIn('Volume 456 could not be found.',
                       encodeutils.safe_decode(resp.body))
 
+    def _test_list_with_invalid_filter(self, url):
+        prefix = '/os-volumes'
+        req = fakes.HTTPRequest.blank(prefix + url)
+        self.assertRaises(exception.ValidationError,
+                          volumes_v21.VolumeController().index,
+                          req)
+
+    def test_list_with_invalid_non_int_limit(self):
+        self._test_list_with_invalid_filter('?limit=-9')
+
+    def test_list_with_invalid_string_limit(self):
+        self._test_list_with_invalid_filter('?limit=abc')
+
+    def test_list_duplicate_query_with_invalid_string_limit(self):
+        self._test_list_with_invalid_filter(
+            '?limit=1&limit=abc')
+
+    def test_detail_list_with_invalid_non_int_limit(self):
+        self._test_list_with_invalid_filter('/detail?limit=-9')
+
+    def test_detail_list_with_invalid_string_limit(self):
+        self._test_list_with_invalid_filter('/detail?limit=abc')
+
+    def test_detail_list_duplicate_query_with_invalid_string_limit(self):
+        self._test_list_with_invalid_filter(
+            '/detail?limit=1&limit=abc')
+
+    def test_list_with_invalid_non_int_offset(self):
+        self._test_list_with_invalid_filter('?offset=-9')
+
+    def test_list_with_invalid_string_offset(self):
+        self._test_list_with_invalid_filter('?offset=abc')
+
+    def test_list_duplicate_query_with_invalid_string_offset(self):
+        self._test_list_with_invalid_filter(
+            '?offset=1&offset=abc')
+
+    def test_detail_list_with_invalid_non_int_offset(self):
+        self._test_list_with_invalid_filter('/detail?offset=-9')
+
+    def test_detail_list_with_invalid_string_offset(self):
+        self._test_list_with_invalid_filter('/detail?offset=abc')
+
+    def test_detail_list_duplicate_query_with_invalid_string_offset(self):
+        self._test_list_with_invalid_filter(
+            '/detail?offset=1&offset=abc')
+
+    def _test_list_duplicate_query_parameters_validation(self, url):
+        params = {
+            'limit': 1,
+            'offset': 1
+        }
+        for param, value in params.items():
+            req = fakes.HTTPRequest.blank(
+                self.url_prefix + url + '?%s=%s&%s=%s' %
+                (param, value, param, value))
+            resp = req.get_response(self.app)
+            self.assertEqual(200, resp.status_int)
+
+    def test_list_duplicate_query_parameters_validation(self):
+        self._test_list_duplicate_query_parameters_validation('/os-volumes')
+
+    def test_detail_list_duplicate_query_parameters_validation(self):
+        self._test_list_duplicate_query_parameters_validation(
+            '/os-volumes/detail')
+
+    def test_list_with_additional_filter(self):
+        req = fakes.HTTPRequest.blank(self.url_prefix +
+            '/os-volumes?limit=1&offset=1&additional=something')
+        resp = req.get_response(self.app)
+        self.assertEqual(200, resp.status_int)
+
+    def test_detail_list_with_additional_filter(self):
+        req = fakes.HTTPRequest.blank(self.url_prefix +
+            '/os-volumes/detail?limit=1&offset=1&additional=something')
+        resp = req.get_response(self.app)
+        self.assertEqual(200, resp.status_int)
+
 
 class VolumeAttachTestsV21(test.NoDBTestCase):
     validation_error = exception.ValidationError
@@ -699,6 +777,58 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         self.assertRaises(webob.exc.HTTPNotFound, self._test_swap,
                           self.attachments,
                           fake_func=fake_swap_volume_for_bdm_not_found)
+
+    def _test_list_with_invalid_filter(self, url):
+        prefix = '/servers/id/os-volume_attachments'
+        req = fakes.HTTPRequest.blank(prefix + url)
+        self.assertRaises(exception.ValidationError,
+                          self.attachments.index,
+                          req,
+                          FAKE_UUID)
+
+    def test_list_with_invalid_non_int_limit(self):
+        self._test_list_with_invalid_filter('?limit=-9')
+
+    def test_list_with_invalid_string_limit(self):
+        self._test_list_with_invalid_filter('?limit=abc')
+
+    def test_list_duplicate_query_with_invalid_string_limit(self):
+        self._test_list_with_invalid_filter(
+            '?limit=1&limit=abc')
+
+    def test_list_with_invalid_non_int_offset(self):
+        self._test_list_with_invalid_filter('?offset=-9')
+
+    def test_list_with_invalid_string_offset(self):
+        self._test_list_with_invalid_filter('?offset=abc')
+
+    def test_list_duplicate_query_with_invalid_string_offset(self):
+        self._test_list_with_invalid_filter(
+            '?offset=1&offset=abc')
+
+    @mock.patch.object(objects.BlockDeviceMappingList,
+                       'get_by_instance_uuid')
+    def test_list_duplicate_query_parameters_validation(self, mock_get):
+        fake_bdms = objects.BlockDeviceMappingList()
+        mock_get.return_value = fake_bdms
+        params = {
+            'limit': 1,
+            'offset': 1
+        }
+        for param, value in params.items():
+            req = fakes.HTTPRequest.blank(
+                '/servers/id/os-volume_attachments' + '?%s=%s&%s=%s' %
+                (param, value, param, value))
+            self.attachments.index(req, FAKE_UUID)
+
+    @mock.patch.object(objects.BlockDeviceMappingList,
+                       'get_by_instance_uuid')
+    def test_list_with_additional_filter(self, mock_get):
+        fake_bdms = objects.BlockDeviceMappingList()
+        mock_get.return_value = fake_bdms
+        req = fakes.HTTPRequest.blank(
+            '/servers/id/os-volume_attachments?limit=1&additional=something')
+        self.attachments.index(req, FAKE_UUID)
 
 
 class VolumeAttachTestsV249(test.NoDBTestCase):

@@ -90,3 +90,20 @@ create_volume_attachment_v249['properties']['volumeAttachment'][
 update_volume_attachment = copy.deepcopy(create_volume_attachment)
 del update_volume_attachment['properties']['volumeAttachment'][
     'properties']['device']
+
+index_query = {
+    'type': 'object',
+    'properties': {
+        'limit': parameter_types.multi_params(
+             parameter_types.non_negative_integer),
+        'offset': parameter_types.multi_params(
+             parameter_types.non_negative_integer)
+    },
+    # NOTE(gmann): This is kept True to keep backward compatibility.
+    # As of now Schema validation stripped out the additional parameters and
+    # does not raise 400. In the future, we may block the additional parameters
+    # by bump in Microversion.
+    'additionalProperties': True
+}
+
+detail_query = index_query

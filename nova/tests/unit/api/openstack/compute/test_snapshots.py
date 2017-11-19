@@ -139,6 +139,86 @@ class SnapshotApiTestV21(test.NoDBTestCase):
         resp_snapshots = resp_dict['snapshots']
         self.assertEqual(1, len(resp_snapshots))
 
+    def _test_list_with_invalid_filter(self, url):
+        prefix = '/os-snapshots'
+        req = fakes.HTTPRequest.blank(prefix + url)
+        controller_list = self.controller.index
+        if 'detail' in url:
+            controller_list = self.controller.detail
+        self.assertRaises(exception.ValidationError,
+                          controller_list, req)
+
+    def test_list_with_invalid_non_int_limit(self):
+        self._test_list_with_invalid_filter('?limit=-9')
+
+    def test_list_with_invalid_string_limit(self):
+        self._test_list_with_invalid_filter('?limit=abc')
+
+    def test_list_duplicate_query_with_invalid_string_limit(self):
+        self._test_list_with_invalid_filter(
+            '?limit=1&limit=abc')
+
+    def test_detail_list_with_invalid_non_int_limit(self):
+        self._test_list_with_invalid_filter('/detail?limit=-9')
+
+    def test_detail_list_with_invalid_string_limit(self):
+        self._test_list_with_invalid_filter('/detail?limit=abc')
+
+    def test_detail_list_duplicate_query_with_invalid_string_limit(self):
+        self._test_list_with_invalid_filter(
+            '/detail?limit=1&limit=abc')
+
+    def test_list_with_invalid_non_int_offset(self):
+        self._test_list_with_invalid_filter('?offset=-9')
+
+    def test_list_with_invalid_string_offset(self):
+        self._test_list_with_invalid_filter('?offset=abc')
+
+    def test_list_duplicate_query_with_invalid_string_offset(self):
+        self._test_list_with_invalid_filter(
+            '?offset=1&offset=abc')
+
+    def test_detail_list_with_invalid_non_int_offset(self):
+        self._test_list_with_invalid_filter('/detail?offset=-9')
+
+    def test_detail_list_with_invalid_string_offset(self):
+        self._test_list_with_invalid_filter('/detail?offset=abc')
+
+    def test_detail_list_duplicate_query_with_invalid_string_offset(self):
+        self._test_list_with_invalid_filter(
+            '/detail?offset=1&offset=abc')
+
+    def _test_list_duplicate_query_parameters_validation(self, url):
+        params = {
+            'limit': 1,
+            'offset': 1
+        }
+        controller_list = self.controller.index
+        if 'detail' in url:
+            controller_list = self.controller.detail
+        for param, value in params.items():
+            req = fakes.HTTPRequest.blank(
+                url + '?%s=%s&%s=%s' %
+                (param, value, param, value))
+            controller_list(req)
+
+    def test_list_duplicate_query_parameters_validation(self):
+        self._test_list_duplicate_query_parameters_validation('/os-snapshots')
+
+    def test_detail_list_duplicate_query_parameters_validation(self):
+        self._test_list_duplicate_query_parameters_validation(
+            '/os-snapshots/detail')
+
+    def test_list_with_additional_filter(self):
+        req = fakes.HTTPRequest.blank(
+            '/os-snapshots?limit=1&offset=1&additional=something')
+        self.controller.index(req)
+
+    def test_detail_list_with_additional_filter(self):
+        req = fakes.HTTPRequest.blank(
+            '/os-snapshots/detail?limit=1&offset=1&additional=something')
+        self.controller.detail(req)
+
 
 class TestSnapshotAPIDeprecation(test.NoDBTestCase):
 
