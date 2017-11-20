@@ -42,8 +42,9 @@ _RE_INV_IN_USE = re.compile("Inventory for (.+) on resource provider "
                             "(.+) in use")
 WARN_EVERY = 10
 PLACEMENT_CLIENT_SEMAPHORE = 'placement_client'
-# Number of seconds between attempts to update a provider's aggregates
-AGGREGATE_REFRESH = 300
+# Number of seconds between attempts to update a provider's aggregates and
+# traits
+ASSOCIATION_REFRESH = 300
 NESTED_PROVIDER_API_VERSION = '1.14'
 POST_ALLOCATIONS_API_VERSION = '1.13'
 
@@ -261,8 +262,8 @@ class SchedulerReportClient(object):
         # An object that contains a nova-compute-side cache of resource
         # provider and inventory information
         self._provider_tree = provider_tree.ProviderTree()
-        # Track the last time we updated the aggregate map.
-        self.aggregate_refresh_time = {}
+        # Track the last time we updated providers' aggregates and traits
+        self.association_refresh_time = {}
         self._client = self._create_client()
         # NOTE(danms): Keep track of how naggy we've been
         self._warn_count = 0
@@ -270,9 +271,9 @@ class SchedulerReportClient(object):
     @utils.synchronized(PLACEMENT_CLIENT_SEMAPHORE)
     def _create_client(self):
         """Create the HTTP session accessing the placement service."""
-        # Flush provider tree and aggregates so we start from a clean slate.
+        # Flush provider tree and associations so we start from a clean slate.
         self._provider_tree = provider_tree.ProviderTree()
-        self.aggregate_refresh_time = {}
+        self.association_refresh_time = {}
         # TODO(mriedem): Perform some version discovery at some point.
         client = utils.get_ksa_adapter('placement')
         # Set accept header on every request to ensure we notify placement
@@ -395,6 +396,35 @@ class SchedulerReportClient(object):
                 'err_text': resp.text,
             }
             LOG.error(msg, args)
+
+    @safe_connect
+    def _get_provider_traits(self, rp_uuid):
+        """Queries the placement API for a resource provider's traits.  Returns
+        a set() of string trait names, or None if no such resource provider was
+        found or there was an error communicating with the placement API.
+
+        :param rp_uuid: UUID of the resource provider to grab traits for.
+        """
+        resp = self.get("/resource_providers/%s/traits" % rp_uuid,
+                        version='1.6')
+
+        if resp.status_code == 200:
+            return set(resp.json()['traits'])
+
+        placement_req_id = get_placement_request_id(resp)
+        if resp.status_code == 404:
+            LOG.warning(
+                "[%(placement_req_id)s] Tried to get a provider's traits, but "
+                "the provider %(uuid)s does not exist.",
+                {'uuid': rp_uuid, 'placement_req_id': placement_req_id})
+        else:
+            LOG.error(
+                "[%(placement_req_id)s] Failed to retrieve traits from "
+                "placement API for resource provider with UUID %(uuid)s. Got "
+                "%(status_code)d: %(err_text)s.",
+                {'placement_req_id': placement_req_id, 'uuid': rp_uuid,
+                 'status_code': resp.status_code, 'err_text': resp.text})
+        return None
 
     @safe_connect
     def _get_resource_provider(self, uuid):
@@ -585,7 +615,7 @@ class SchedulerReportClient(object):
         # parent_provider_uuid on a previously-parent-less provider - so we do
         # NOT handle that scenario here.
         if self._provider_tree.exists(uuid):
-            self._refresh_aggregates(uuid)
+            self._refresh_associations(uuid)
             return uuid
 
         # No local information about the resource provider in our tree. Check
@@ -609,8 +639,8 @@ class SchedulerReportClient(object):
                 generation=rp['generation'])
 
         # If there had been no local resource provider record, force refreshing
-        # the aggregate map.
-        self._refresh_aggregates(uuid, rp['generation'], force=True)
+        # the aggregate & trait caches.
+        self._refresh_associations(uuid, rp['generation'], force=True)
 
         return ret
 
@@ -640,20 +670,22 @@ class SchedulerReportClient(object):
             self._provider_tree.update_inventory(rp_uuid, curr_inv, cur_gen)
         return curr
 
-    def _refresh_aggregates(self, rp_uuid, generation=None, force=False):
-        """Refresh the aggregate map for the provided resource provider uuid.
+    def _refresh_associations(self, rp_uuid, generation=None, force=False):
+        """Refresh the aggregates and traits for the provided resource provider
+        uuid.
 
         Only refresh if there has been no refresh during the lifetime of
-        this process, AGGREGATE_REFRESH seconds have passed, or the force arg
+        this process, ASSOCIATION_REFRESH seconds have passed, or the force arg
         has been set to True.
 
         :param rp_uuid: UUID of the resource provider to check for fresh
-                        aggregates
+                        aggregates and traits
         :param generation: The resource provider generation to set.  If None,
                            the provider's generation is not updated.
         :param force: If True, force the refresh
         """
-        if force or self._aggregate_map_stale(rp_uuid):
+        if force or self._associations_stale(rp_uuid):
+            # Refresh aggregates
             aggs = self._get_provider_aggregates(rp_uuid)
             if aggs is not None:
                 msg = ("Refreshing aggregate associations for resource "
@@ -664,16 +696,29 @@ class SchedulerReportClient(object):
                 # doesn't exist in our _provider_tree.
                 self._provider_tree.update_aggregates(
                     rp_uuid, aggs, generation=generation)
-                self.aggregate_refresh_time[rp_uuid] = time.time()
 
-    def _aggregate_map_stale(self, uuid):
-        """Respond True if aggregates have not been refreshed "recently".
+            # Refresh traits
+            traits = self._get_provider_traits(rp_uuid)
+            if traits is not None:
+                msg = ("Refreshing trait associations for resource "
+                       "provider %s, traits: %s")
+                LOG.debug(msg, rp_uuid, ','.join(traits or ['None']))
+                # NOTE(efried): This will blow up if called for a RP that
+                # doesn't exist in our _provider_tree.
+                self._provider_tree.update_traits(
+                    rp_uuid, traits, generation=generation)
 
-        It is old if aggregate_refresh_time for this uuid is not set
-        or more than AGGREGATE_REFRESH seconds ago.
+            self.association_refresh_time[rp_uuid] = time.time()
+
+    def _associations_stale(self, uuid):
+        """Respond True if aggregates and traits have not been refreshed
+        "recently".
+
+        It is old if association_refresh_time for this uuid is not set
+        or more than ASSOCIATION_REFRESH seconds ago.
         """
-        refresh_time = self.aggregate_refresh_time.get(uuid, 0)
-        return (time.time() - refresh_time) > AGGREGATE_REFRESH
+        refresh_time = self.association_refresh_time.get(uuid, 0)
+        return (time.time() - refresh_time) > ASSOCIATION_REFRESH
 
     def _update_inventory_attempt(self, rp_uuid, inv_data):
         """Update the inventory for this resource provider if needed.
@@ -874,7 +919,7 @@ class SchedulerReportClient(object):
                       "inventory. Ignoring.",
                       msg_args)
             self._provider_tree.remove(rp_uuid)
-            self.aggregate_refresh_time.pop(rp_uuid, None)
+            self.association_refresh_time.pop(rp_uuid, None)
             return
         elif r.status_code == 409:
             rc_str = _extract_inventory_in_use(r.text)
@@ -1435,7 +1480,7 @@ class SchedulerReportClient(object):
                 self._provider_tree.remove(rp_uuid)
             except ValueError:
                 pass
-            self.aggregate_refresh_time.pop(rp_uuid, None)
+            self.association_refresh_time.pop(rp_uuid, None)
         else:
             # Check for 404 since we don't need to log a warning if we tried to
             # delete something which doesn"t actually exist.
