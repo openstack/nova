@@ -30,6 +30,7 @@ from nova.i18n import _
 from nova import rpc
 from nova.scheduler import client
 from nova.scheduler import driver
+from nova.scheduler import utils
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
@@ -290,6 +291,15 @@ class FilterScheduler(driver.Scheduler):
                            API's PUT /allocations/{consumer_uuid} call to claim
                            resources for the instance
         """
+
+        if utils.request_is_rebuild(spec_obj):
+            # NOTE(danms): This is a rebuild-only scheduling request, so we
+            # should not be doing any extra claiming
+            LOG.debug('Not claiming resources in the placement API for '
+                      'rebuild-only scheduling of instance %(uuid)s',
+                      {'uuid': instance_uuid})
+            return True
+
         LOG.debug("Attempting to claim resources in the placement API for "
                   "instance %s", instance_uuid)
 
