@@ -116,7 +116,7 @@ Error response codes: badRequest(400), itemNotFound(404), conflict(409)
 * `400 BadRequest` if the name to delete is standard trait.
 * `404 Not Found` if no such trait exists.
 * `409 Conflict` if the name to delete has associations with any
-   ResourceProvider.
+  ResourceProvider.
 
 Request
 -------
