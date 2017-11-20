@@ -118,11 +118,11 @@ class SchedulerReportClientTests(test.TestCase):
 
             # We should also have an empty list set of aggregate UUID
             # associations
-            pam = self.client._provider_aggregate_map
-            self.assertIn(self.compute_uuid, pam)
-            self.assertEqual(set(), pam[self.compute_uuid])
             self.assertEqual(
                 [], self.client._get_providers_in_aggregates([uuids.agg]))
+            self.assertFalse(
+                self.client._provider_tree.have_aggregates_changed(
+                    self.compute_uuid, []))
 
             # TODO(cdent): change this to use the methods built in
             # to the report client to retrieve inventory?
