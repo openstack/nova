@@ -4491,6 +4491,9 @@ os:scheduler_hints:
     The dictionary of data to send to the scheduler. Alternatively, you can specify
     ``OS-SCH-HNT:scheduler_hints`` as the key in the request body.
 
+    .. note:: This is a top-level key in the request body, not part of the
+      `server` portion of the request body.
+
     There are a few caveats with scheduler hints:
 
     * The request validation schema is per hint. For example, some require a
