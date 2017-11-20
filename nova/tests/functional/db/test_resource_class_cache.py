@@ -10,7 +10,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
 import mock
+
+from oslo_utils import timeutils
 
 from nova.db.sqlalchemy import resource_class_cache as rc_cache
 from nova import exception
@@ -57,6 +60,24 @@ class TestResourceClassCache(test.TestCase):
         standards2 = cache.STANDARDS
         self.assertEqual(id(standards), id(standards2))
 
+    def test_standards_have_time_fields(self):
+        cache = rc_cache.ResourceClassCache(self.context)
+        standards = cache.STANDARDS
+
+        first_standard = standards[0]
+        self.assertIn('updated_at', first_standard)
+        self.assertIn('created_at', first_standard)
+        self.assertIsNone(first_standard['updated_at'])
+        self.assertIsNone(first_standard['created_at'])
+
+    def test_standard_has_time_fields(self):
+        cache = rc_cache.ResourceClassCache(self.context)
+
+        vcpu_class = cache.all_from_string('VCPU')
+        expected = {'id': 0, 'name': 'VCPU', 'updated_at': None,
+                    'created_at': None}
+        self.assertEqual(expected, vcpu_class)
+
     def test_rc_cache_custom(self):
         """Test that non-standard, custom resource classes hit the database and
         return appropriate results, caching the results after a single
@@ -87,6 +108,32 @@ class TestResourceClassCache(test.TestCase):
             self.assertEqual('IRON_NFV', cache.string_from_id(1001))
             self.assertEqual(1001, cache.id_from_string('IRON_NFV'))
             self.assertFalse(sel_mock.called)
+
+        # Verify all fields available from all_from_string
+        iron_nfv_class = cache.all_from_string('IRON_NFV')
+        self.assertEqual(1001, iron_nfv_class['id'])
+        self.assertEqual('IRON_NFV', iron_nfv_class['name'])
+        # updated_at not set on insert
+        self.assertIsNone(iron_nfv_class['updated_at'])
+        self.assertIsInstance(iron_nfv_class['created_at'], datetime.datetime)
+
+        # Update IRON_NFV (this is a no-op but will set updated_at)
+        with self.context.session.connection() as conn:
+            # NOTE(cdent): When using explict SQL that names columns,
+            # the automatic timestamp handling provided by the oslo_db
+            # TimestampMixin is not provided. created_at is a default
+            # but updated_at is an onupdate.
+            upd_stmt = rc_cache._RC_TBL.update().where(
+                rc_cache._RC_TBL.c.id == 1001).values(
+                    name='IRON_NFV', updated_at=timeutils.utcnow())
+            conn.execute(upd_stmt)
+
+        # reset cache
+        cache = rc_cache.ResourceClassCache(self.context)
+
+        iron_nfv_class = cache.all_from_string('IRON_NFV')
+        # updated_at set on update
+        self.assertIsInstance(iron_nfv_class['updated_at'], datetime.datetime)
 
     def test_rc_cache_miss(self):
         """Test that we raise ResourceClassNotFound if an unknown resource

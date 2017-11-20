@@ -79,6 +79,7 @@ remotable_classmethod = ovoo_base.remotable_classmethod
 remotable = ovoo_base.remotable
 obj_make_list = ovoo_base.obj_make_list
 NovaObjectDictCompat = ovoo_base.VersionedObjectDictCompat
+NovaTimestampObject = ovoo_base.TimestampedObject
 
 
 class NovaObject(ovoo_base.VersionedObject):
@@ -137,18 +138,6 @@ class NovaObject(ovoo_base.VersionedObject):
             yield
         finally:
             self._context = original_context
-
-
-class NovaTimestampObject(object):
-    """Mixin class for db backed objects with timestamp fields.
-
-    Sqlalchemy models that inherit from the oslo_db TimestampMixin will include
-    these fields and the corresponding objects will benefit from this mixin.
-    """
-    fields = {
-        'created_at': obj_fields.DateTimeField(nullable=True),
-        'updated_at': obj_fields.DateTimeField(nullable=True),
-        }
 
 
 class NovaPersistentObject(object):
