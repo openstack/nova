@@ -31,6 +31,9 @@ The scheduler host manager to use.
 The host manager manages the in-memory picture of the hosts that the scheduler
 uses. The options values are chosen from the entry points under the namespace
 'nova.scheduler.host_manager' in 'setup.cfg'.
+
+NOTE: The "ironic_host_manager" option is deprecated as of the 17.0.0 Queens
+release.
 """),
     cfg.StrOpt("driver",
         default="filter_scheduler",
@@ -320,6 +323,10 @@ Related options:
     cfg.BoolOpt("use_baremetal_filters",
         deprecated_name="scheduler_use_baremetal_filters",
         deprecated_group="DEFAULT",
+        # NOTE(mriedem): We likely can't remove this option until the
+        # IronicHostManager is removed, and we likely can't remove that
+        # until all filters can at least not fail on ironic nodes, like the
+        # NUMATopologyFilter.
         deprecated_for_removal=True,
         deprecated_reason="""
 These filters were used to overcome some of the baremetal scheduling

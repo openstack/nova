@@ -1,0 +1,14 @@
+---
+deprecations:
+  - |
+    The `IronicHostManager` is now deprecated along with the
+    ``[scheduler]/host_manager`` option of ``ironic_host_manager``.
+
+    As of the 16.0.0 Pike release, the ``ExactRamFilter``, ``ExactCoreFilter``,
+    and ``ExactDiskFilter`` scheduler filters are all deprecated along with
+    the ``[scheduler]/use_baremetal_filters`` and
+    ``[scheduler]/baremental_enabled_filters`` options. Deployments should
+    migrate to using resource classes with baremetal flavors as described in
+    the ironic install guide:
+
+    https://docs.openstack.org/ironic/latest/install/configure-nova-flavors.html#scheduling-based-on-resource-classes
