@@ -1,0 +1,117 @@
+# Confirm the behavior and presence of last-modified headers for resource
+# classes across multiple microversions.
+#
+# We have the following routes, with associated microversion, and bodies.
+#
+#    '/resource_classes': {
+#        'GET': resource_class.list_resource_classes,
+#         v1.2, body
+#        'POST': resource_class.create_resource_class
+#         v1.2, no body
+#    },
+#    '/resource_classes/{name}': {
+#        'GET': resource_class.get_resource_class,
+#         v1.2, body
+#        'PUT': resource_class.update_resource_class,
+#         v1.2, body, but time's arrow
+#         v1.7, no body
+#        'DELETE': resource_class.delete_resource_class,
+#         v1.2, no body
+#    },
+#
+# This means that in 1.15 we only expect last-modified headers for
+# the two GET requests, for the other requests we should confirm it
+# is not there.
+
+fixtures:
+    - APIFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        accept: application/json
+        content-type: application/json
+        openstack-api-version: placement 1.15
+
+tests:
+
+- name: get resource classes
+  desc: last modified is now with standards only
+  GET: /resource_classes
+  response_headers:
+      cache-control: no-cache
+      # Does last-modified look like a legit timestamp?
+      last-modified:  /^\w+, \d+ \w+ \d{4} [\d:]+ GMT$/
+
+- name: create a custom class
+  PUT: /resource_classes/CUSTOM_MOO_MACHINE
+  status: 201
+  response_forbidden_headers:
+      - last-modified
+      - cache-control
+
+- name: get custom class
+  GET: $LAST_URL
+  response_headers:
+      cache-control: no-cache
+      # Does last-modified look like a legit timestamp?
+      last-modified:  /^\w+, \d+ \w+ \d{4} [\d:]+ GMT$/
+
+- name: get standard class
+  GET: /resource_classes/VCPU
+  response_headers:
+      cache-control: no-cache
+      # Does last-modified look like a legit timestamp?
+      last-modified:  /^\w+, \d+ \w+ \d{4} [\d:]+ GMT$/
+
+- name: post a resource class
+  POST: /resource_classes
+  data:
+      name: CUSTOM_ALPHA
+  status: 201
+  response_forbidden_headers:
+      - last-modified
+      - cache-control
+
+- name: get resource classes including custom
+  desc: last modified will still be now with customs because of standards
+  GET: /resource_classes
+  response_headers:
+      cache-control: no-cache
+      # Does last-modified look like a legit timestamp?
+      last-modified:  /^\w+, \d+ \w+ \d{4} [\d:]+ GMT$/
+
+- name: put a resource class 1.6 microversion
+  PUT: /resource_classes/CUSTOM_MOO_MACHINE
+  request_headers:
+      openstack-api-version: placement 1.6
+  data:
+      name: CUSTOM_BETA
+  status: 200
+  response_forbidden_headers:
+      - last-modified
+      - cache-control
+
+- name: get resource classes 1.14 microversion
+  GET: /resource_classes
+  request_headers:
+      openstack-api-version: placement 1.14
+  response_forbidden_headers:
+      - last-modified
+      - cache-control
+
+- name: get standard class 1.14 microversion
+  GET: /resource_classes/VCPU
+  request_headers:
+      openstack-api-version: placement 1.14
+  response_forbidden_headers:
+      - last-modified
+      - cache-control
+
+- name: get custom class 1.14 microversion
+  GET: $LAST_URL
+  request_headers:
+      openstack-api-version: placement 1.14
+  response_forbidden_headers:
+      - last-modified
+      - cache-control

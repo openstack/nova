@@ -16,6 +16,7 @@ import copy
 from oslo_db import exception as db_exc
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
+from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import webob
 
@@ -140,10 +141,15 @@ def _serialize_provider(environ, resource_provider, want_version):
 
 def _serialize_providers(environ, resource_providers, want_version):
     output = []
+    last_modified = None
+    get_last_modified = want_version.matches((1, 15))
     for provider in resource_providers:
+        if get_last_modified:
+            last_modified = util.pick_last_modified(last_modified, provider)
         provider_data = _serialize_provider(environ, provider, want_version)
         output.append(provider_data)
-    return {"resource_providers": output}
+    last_modified = last_modified or timeutils.utcnow(with_timezone=True)
+    return ({"resource_providers": output}, last_modified)
 
 
 @wsgi_wrapper.PlacementWsgify
@@ -219,6 +225,7 @@ def get_resource_provider(req):
     On success return a 200 with an application/json body representing
     the resource provider.
     """
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     # The containing application will catch a not found here.
     context = req.environ['placement.context']
@@ -226,11 +233,15 @@ def get_resource_provider(req):
     resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
 
-    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
-    req.response.body = encodeutils.to_utf8(jsonutils.dumps(
+    response = req.response
+    response.body = encodeutils.to_utf8(jsonutils.dumps(
         _serialize_provider(req.environ, resource_provider, want_version)))
-    req.response.content_type = 'application/json'
-    return req.response
+    response.content_type = 'application/json'
+    if want_version.matches((1, 15)):
+        modified = util.pick_last_modified(None, resource_provider)
+        response.last_modified = modified
+        response.cache_control = 'no-cache'
+    return response
 
 
 @wsgi_wrapper.PlacementWsgify
@@ -287,9 +298,13 @@ def list_resource_providers(req):
             {'error': exc})
 
     response = req.response
-    response.body = encodeutils.to_utf8(jsonutils.dumps(
-        _serialize_providers(req.environ, resource_providers, want_version)))
+    output, last_modified = _serialize_providers(
+        req.environ, resource_providers, want_version)
+    response.body = encodeutils.to_utf8(jsonutils.dumps(output))
     response.content_type = 'application/json'
+    if want_version.matches((1, 15)):
+        response.last_modified = last_modified
+        response.cache_control = 'no-cache'
     return response
 
 
@@ -303,6 +318,7 @@ def update_resource_provider(req):
     """
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     context = req.environ['placement.context']
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
 
     # The containing application will catch a not found here.
     resource_provider = rp_obj.ResourceProvider.get_by_uuid(
@@ -330,8 +346,12 @@ def update_resource_provider(req):
             _('Unable to save resource provider %(rp_uuid)s: %(error)s') %
             {'rp_uuid': uuid, 'error': exc})
 
-    req.response.body = encodeutils.to_utf8(jsonutils.dumps(
+    response = req.response
+    response.status = 200
+    response.body = encodeutils.to_utf8(jsonutils.dumps(
         _serialize_provider(req.environ, resource_provider, want_version)))
-    req.response.status = 200
-    req.response.content_type = 'application/json'
-    return req.response
+    response.content_type = 'application/json'
+    if want_version.matches((1, 15)):
+        response.last_modified = resource_provider.updated_at
+        response.cache_control = 'no-cache'
+    return response

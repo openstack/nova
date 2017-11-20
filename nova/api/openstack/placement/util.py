@@ -17,6 +17,7 @@ import re
 import jsonschema
 from oslo_middleware import request_id
 from oslo_serialization import jsonutils
+from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import webob
 
@@ -122,6 +123,25 @@ def json_error_formatter(body, status, title, environ):
         error_dict['min_version'] = microversion.min_version_string()
 
     return {'errors': [error_dict]}
+
+
+def pick_last_modified(last_modified, obj):
+    """Choose max of last_modified and obj.updated_at or obj.created_at.
+
+    If updated_at is not implemented in `obj` use the current time in UTC.
+    """
+    try:
+        current_modified = (obj.updated_at or obj.created_at)
+    except NotImplementedError:
+        # If updated_at is not implemented, we are looking at objects that
+        # have not come from the database, so "now" is the right modified
+        # time.
+        current_modified = timeutils.utcnow(with_timezone=True)
+    if last_modified:
+        last_modified = max(last_modified, current_modified)
+    else:
+        last_modified = current_modified
+    return last_modified
 
 
 def require_content(content_type):

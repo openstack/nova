@@ -65,6 +65,10 @@ tests:
   request_headers:
       openstack-api-version: placement 1.9
   status: 200
+  # In pre 1.15 microversions cache headers not present
+  response_forbidden_headers:
+      - last-modified
+      - cache-control
   response_json_paths:
       $.usages.DISK_GB: 20
       $.usages.VCPU: 1
@@ -87,3 +91,12 @@ tests:
       $.project_id: $ENVIRON['PROJECT_ID']
       $.user_id: $ENVIRON['USER_ID']
       $.`len`: 3
+
+- name: get total usages with cache headers
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']&user_id=$ENVIRON['ALT_USER_ID']
+  request_headers:
+      openstack-api-version: placement 1.15
+  response_headers:
+      cache-control: no-cache
+      # Does last-modified look like a legit timestamp?
+      last-modified:  /^\w+, \d+ \w+ \d{4} [\d:]+ GMT$/

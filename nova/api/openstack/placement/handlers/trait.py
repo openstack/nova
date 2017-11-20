@@ -16,6 +16,7 @@ import copy
 import jsonschema
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
+from oslo_utils import timeutils
 import webob
 
 from nova.api.openstack.placement import microversion
@@ -85,14 +86,26 @@ def _normalize_traits_qs_param(qs):
     return filters
 
 
-def _serialize_traits(traits):
-    return {'traits': [trait.name for trait in traits]}
+def _serialize_traits(traits, want_version):
+    last_modified = None
+    get_last_modified = want_version.matches((1, 15))
+    trait_names = []
+    for trait in traits:
+        if get_last_modified:
+            last_modified = util.pick_last_modified(last_modified, trait)
+        trait_names.append(trait.name)
+
+    # If there were no traits, set last_modified to now
+    last_modified = last_modified or timeutils.utcnow(with_timezone=True)
+
+    return {'traits': trait_names}, last_modified
 
 
 @wsgi_wrapper.PlacementWsgify
 @microversion.version_handler('1.6')
 def put_trait(req):
     context = req.environ['placement.context']
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     name = util.wsgi_path_item(req.environ, 'name')
 
     try:
@@ -110,10 +123,16 @@ def put_trait(req):
         trait.create()
         req.response.status = 201
     except exception.TraitExists:
+        # Get the trait that already exists to get last-modified time.
+        if want_version.matches((1, 15)):
+            trait = rp_obj.Trait.get_by_name(context, name)
         req.response.status = 204
 
     req.response.content_type = None
     req.response.location = util.trait_url(req.environ, trait)
+    if want_version.matches((1, 15)):
+        req.response.last_modified = trait.created_at
+        req.response.cache_control = 'no-cache'
     return req.response
 
 
@@ -121,16 +140,20 @@ def put_trait(req):
 @microversion.version_handler('1.6')
 def get_trait(req):
     context = req.environ['placement.context']
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     name = util.wsgi_path_item(req.environ, 'name')
 
     try:
-        rp_obj.Trait.get_by_name(context, name)
+        trait = rp_obj.Trait.get_by_name(context, name)
     except exception.TraitNotFound as ex:
         raise webob.exc.HTTPNotFound(
             explanation=ex.format_message())
 
     req.response.status = 204
     req.response.content_type = None
+    if want_version.matches((1, 15)):
+        req.response.last_modified = trait.created_at
+        req.response.cache_control = 'no-cache'
     return req.response
 
 
@@ -163,6 +186,7 @@ def delete_trait(req):
 @util.check_accept('application/json')
 def list_traits(req):
     context = req.environ['placement.context']
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     filters = {}
 
     try:
@@ -185,8 +209,11 @@ def list_traits(req):
 
     traits = rp_obj.TraitList.get_all(context, filters)
     req.response.status = 200
-    req.response.body = encodeutils.to_utf8(
-        jsonutils.dumps(_serialize_traits(traits)))
+    output, last_modified = _serialize_traits(traits, want_version)
+    if want_version.matches((1, 15)):
+        req.response.last_modified = last_modified
+        req.response.cache_control = 'no-cache'
+    req.response.body = encodeutils.to_utf8(jsonutils.dumps(output))
     req.response.content_type = 'application/json'
     return req.response
 
@@ -196,6 +223,7 @@ def list_traits(req):
 @util.check_accept('application/json')
 def list_traits_for_resource_provider(req):
     context = req.environ['placement.context']
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     uuid = util.wsgi_path_item(req.environ, 'uuid')
 
     # Resource provider object is needed for two things: If it is
@@ -211,8 +239,12 @@ def list_traits_for_resource_provider(req):
              {'uuid': uuid, 'error': exc})
 
     traits = rp_obj.TraitList.get_all_by_resource_provider(context, rp)
-    response_body = _serialize_traits(traits)
+    response_body, last_modified = _serialize_traits(traits, want_version)
     response_body["resource_provider_generation"] = rp.generation
+
+    if want_version.matches((1, 15)):
+        req.response.last_modified = last_modified
+        req.response.cache_control = 'no-cache'
 
     req.response.status = 200
     req.response.body = encodeutils.to_utf8(jsonutils.dumps(response_body))
@@ -225,6 +257,7 @@ def list_traits_for_resource_provider(req):
 @util.require_content('application/json')
 def update_traits_for_resource_provider(req):
     context = req.environ['placement.context']
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     data = util.extract_json(req.body, SET_TRAITS_FOR_RP_SCHEMA)
     rp_gen = data['resource_provider_generation']
@@ -248,9 +281,12 @@ def update_traits_for_resource_provider(req):
 
     resource_provider.set_traits(trait_objs)
 
-    response_body = _serialize_traits(trait_objs)
+    response_body, last_modified = _serialize_traits(trait_objs, want_version)
     response_body[
         'resource_provider_generation'] = resource_provider.generation
+    if want_version.matches((1, 15)):
+        req.response.last_modified = last_modified
+        req.response.cache_control = 'no-cache'
     req.response.status = 200
     req.response.body = encodeutils.to_utf8(jsonutils.dumps(response_body))
     req.response.content_type = 'application/json'

@@ -65,12 +65,19 @@ tests:
   status: 200
   response_headers:
       content-type: /application/json/
+      cache-control: no-cache
+      # Does last-modified look like a legit timestamp?
+      last-modified:  /^\w+, \d+ \w+ \d{4} [\d:]+ GMT$/
   response_json_paths:
       $.aggregates[0]: *agg_1
       $.aggregates[1]: *agg_2
 
 - name: get those aggregates
   GET: $LAST_URL
+  response_headers:
+      cache-control: no-cache
+      # Does last-modified look like a legit timestamp?
+      last-modified:  /^\w+, \d+ \w+ \d{4} [\d:]+ GMT$/
   response_json_paths:
       $.aggregates.`len`: 2
 
@@ -117,3 +124,26 @@ tests:
       - JSON does not validate
   response_json_paths:
       $.errors[0].title: Bad Request
+
+# The next two tests confirm that prior to version 1.15 we do
+# not set the cache-control or last-modified headers on either
+# PUT or GET.
+
+- name: put some aggregates v1.14
+  PUT: $LAST_URL
+  request_headers:
+      openstack-api-version: placement 1.14
+  data:
+      - *agg_1
+      - *agg_2
+  response_forbidden_headers:
+      - last-modified
+      - cache-control
+
+- name: get those aggregates v1.14
+  GET: $LAST_URL
+  request_headers:
+      openstack-api-version: placement 1.14
+  response_forbidden_headers:
+      - last-modified
+      - cache-control

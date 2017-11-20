@@ -13,6 +13,7 @@
 
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
+from oslo_utils import timeutils
 
 
 from nova.api.openstack.placement import microversion
@@ -21,6 +22,7 @@ from nova.api.openstack.placement import wsgi_wrapper
 
 @wsgi_wrapper.PlacementWsgify
 def home(req):
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     min_version = microversion.min_version_string()
     max_version = microversion.max_version_string()
     # NOTE(cdent): As sections of the api are added, links can be
@@ -34,4 +36,7 @@ def home(req):
     version_json = jsonutils.dumps({'versions': [version_data]})
     req.response.body = encodeutils.to_utf8(version_json)
     req.response.content_type = 'application/json'
+    if want_version.matches((1, 15)):
+        req.response.cache_control = 'no-cache'
+        req.response.last_modified = timeutils.utcnow(with_timezone=True)
     return req.response

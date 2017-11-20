@@ -197,3 +197,13 @@ A new ``in_tree=<UUID>`` parameter is now available in the ``GET
 /resource-providers`` API call. Supplying a UUID value for the ``in_tree``
 parameter will cause all resource providers within the "provider tree" of the
 provider matching ``<UUID>`` to be returned.
+
+1.15 Add 'last-modified' and 'cache-control' headers
+----------------------------------------------------
+
+Throughout the API, 'last-modified' headers have been added to GET responses
+and those PUT and POST responses that have bodies. The value is either the
+actual last modified time of the most recently modified associated database
+entity or the current time if there is no direct mapping to the database. In
+addition, 'cache-control: no-cache' headers are added where the 'last-modified'
+header has been added to prevent inadvertent caching of resources.

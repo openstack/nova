@@ -13,6 +13,7 @@
 
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
+from oslo_utils import timeutils
 
 from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement import util
@@ -30,11 +31,20 @@ PUT_AGGREGATES_SCHEMA = {
 }
 
 
-def _send_aggregates(response, aggregate_uuids):
+def _send_aggregates(req, aggregate_uuids):
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
+    response = req.response
     response.status = 200
     response.body = encodeutils.to_utf8(
         jsonutils.dumps(_serialize_aggregates(aggregate_uuids)))
     response.content_type = 'application/json'
+    if want_version.matches((1, 15)):
+        req.response.cache_control = 'no-cache'
+        # We never get an aggregate itself, we get the list of aggregates
+        # that are associated with a resource provider. We don't record the
+        # time when that association was made and the time when an aggregate
+        # uuid was created is not relevant, so here we punt and use utcnow.
+        req.response.last_modified = timeutils.utcnow(with_timezone=True)
     return response
 
 
@@ -59,7 +69,7 @@ def get_aggregates(req):
         context, uuid)
     aggregate_uuids = resource_provider.get_aggregates()
 
-    return _send_aggregates(req.response, aggregate_uuids)
+    return _send_aggregates(req, aggregate_uuids)
 
 
 @wsgi_wrapper.PlacementWsgify
@@ -73,4 +83,4 @@ def set_aggregates(req):
     aggregate_uuids = util.extract_json(req.body, PUT_AGGREGATES_SCHEMA)
     resource_provider.set_aggregates(aggregate_uuids)
 
-    return _send_aggregates(req.response, aggregate_uuids)
+    return _send_aggregates(req, aggregate_uuids)
