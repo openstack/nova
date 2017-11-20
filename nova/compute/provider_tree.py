@@ -47,6 +47,8 @@ class _Provider(object):
         self.children = {}
         # dict of inventory records, keyed by resource class
         self.inventory = {}
+        # Set of trait names
+        self.traits = set()
 
     def get_provider_uuids(self):
         """Returns a set of UUIDs of this provider and all its descendants."""
@@ -103,12 +105,8 @@ class _Provider(object):
                     return True
         return False
 
-    def update_inventory(self, inventory, generation):
-        """Update the stored inventory for the provider along with a resource
-        provider generation to set the provider to. The method returns whether
-        the inventory has changed.
-        """
-        if generation != self.generation:
+    def _update_generation(self, generation):
+        if generation is not None and generation != self.generation:
             msg_args = {
                 'rp_uuid': self.uuid,
                 'old': self.generation,
@@ -117,10 +115,42 @@ class _Provider(object):
             LOG.debug("Updating resource provider %(rp_uuid)s generation "
                       "from %(old)s to %(new)s", msg_args)
             self.generation = generation
+
+    def update_inventory(self, inventory, generation):
+        """Update the stored inventory for the provider along with a resource
+        provider generation to set the provider to. The method returns whether
+        the inventory has changed.
+        """
+        self._update_generation(generation)
         if self.has_inventory_changed(inventory):
             self.inventory = copy.deepcopy(inventory)
             return True
         return False
+
+    def have_traits_changed(self, new):
+        """Returns whether the provider's traits have changed."""
+        return set(new) != self.traits
+
+    def update_traits(self, new, generation=None):
+        """Update the stored traits for the provider along with a resource
+        provider generation to set the provider to. The method returns whether
+        the traits have changed.
+        """
+        self._update_generation(generation)
+        if self.have_traits_changed(new):
+            self.traits = set(new)  # create a copy of the new traits
+            return True
+        return False
+
+    def has_traits(self, traits):
+        """Query whether the provider has certain traits.
+
+        :param traits: Iterable of string trait names to look for.
+        :return: True if this provider has *all* of the specified traits; False
+                 if any of the specified traits are absent.  Returns True if
+                 the traits parameter is empty.
+        """
+        return not bool(set(traits) - self.traits)
 
 
 class ProviderTree(object):
@@ -239,7 +269,7 @@ class ProviderTree(object):
         :raises: ValueError if a provider with name_or_uuid was not found in
                  the tree.
         :param name_or_uuid: Either name or UUID of the resource provider to
-                             update inventory for.
+                             query inventory for.
         :param inventory: dict, keyed by resource class, of inventory
                           information.
         """
@@ -268,3 +298,57 @@ class ProviderTree(object):
         with self.lock:
             provider = self._find_with_lock(name_or_uuid)
             return provider.update_inventory(inventory, generation)
+
+    def has_traits(self, name_or_uuid, traits):
+        """Given a name or UUID of a provider, query whether that provider has
+        *all* of the specified traits.
+
+        :raises: ValueError if a provider with name_or_uuid was not found in
+                 the tree.
+        :param name_or_uuid: Either name or UUID of the resource provider to
+                             query for traits.
+        :param traits: Iterable of string trait names to search for.
+        :return: True if this provider has *all* of the specified traits; False
+                 if any of the specified traits are absent.  Returns True if
+                 the traits parameter is empty, even if the provider has no
+                 traits.
+        """
+        with self.lock:
+            provider = self._find_with_lock(name_or_uuid)
+            return provider.has_traits(traits)
+
+    def have_traits_changed(self, name_or_uuid, traits):
+        """Returns True if the specified traits list is different for the
+        provider with the specified name or UUID.
+
+        :raises: ValueError if a provider with name_or_uuid was not found in
+                 the tree.
+        :param name_or_uuid: Either name or UUID of the resource provider to
+                             query traits for.
+        :param traits: Iterable of string trait names to compare against the
+                       provider's traits.
+        """
+        with self.lock:
+            provider = self._find_with_lock(name_or_uuid)
+            return provider.have_traits_changed(traits)
+
+    def update_traits(self, name_or_uuid, traits, generation=None):
+        """Given a name or UUID of a provider and an iterable of string trait
+        names, update the provider's traits and set the provider's generation.
+
+        :returns: True if the traits list has changed.
+
+        :note: The provider's generation is always set to the supplied
+               generation, even if there were no changes to the traits.
+
+        :raises: ValueError if a provider with name_or_uuid was not found in
+                 the tree.
+        :param name_or_uuid: Either name or UUID of the resource provider to
+                             update traits for.
+        :param traits: Iterable of string trait names to set.
+        :param generation: The resource provider generation to set.  If None,
+                           the provider's generation is not changed.
+        """
+        with self.lock:
+            provider = self._find_with_lock(name_or_uuid)
+            return provider.update_traits(traits, generation=generation)
