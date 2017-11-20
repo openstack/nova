@@ -482,7 +482,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         instance.
         """
         ctx = mock.Mock(user_id=uuids.user_id)
-        spec_obj = mock.Mock(project_id=uuids.project_id)
+        spec_obj = objects.RequestSpec(project_id=uuids.project_id)
         instance_uuid = uuids.instance
         alloc_reqs = [mock.sentinel.alloc_req]
 
@@ -494,6 +494,16 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         pc.claim_resources.assert_called_once_with(uuids.instance,
             mock.sentinel.alloc_req, uuids.project_id, uuids.user_id)
         self.assertTrue(res)
+
+    @mock.patch('nova.scheduler.utils.request_is_rebuild')
+    def test_claim_resouces_for_policy_check(self, mock_policy):
+        mock_policy.return_value = True
+        res = self.driver._claim_resources(None, mock.sentinel.spec_obj,
+                                           mock.sentinel.instance_uuid,
+                                           [])
+        self.assertTrue(res)
+        mock_policy.assert_called_once_with(mock.sentinel.spec_obj)
+        self.assertFalse(self.placement_client.claim_resources.called)
 
     def test_add_retry_host(self):
         retry = dict(num_attempts=1, hosts=[])

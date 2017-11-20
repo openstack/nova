@@ -1065,14 +1065,6 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
     # can use to update image metadata via our compute images proxy API.
     microversion = '2.38'
 
-    def setUp(self):
-        # We have to use the MediumFakeDriver for test_rebuild_with_new_image
-        # since the scheduler doubles the VCPU allocation until the bug is
-        # fixed.
-        # TODO(mriedem): Remove this once the bug is fixed.
-        self.flags(compute_driver='fake.MediumFakeDriver')
-        super(ServerRebuildTestCase, self).setUp()
-
     # We need the ImagePropertiesFilter so override the base class setup
     # which configures to use the chance_scheduler.
     def _setup_scheduler_service(self):
@@ -1182,15 +1174,6 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
             self.assertEqual(flavor['ram'], allocation['MEMORY_MB'])
             self.assertEqual(flavor['disk'], allocation['DISK_GB'])
 
-        def assertFlavorsMatchAllocation(old_flavor, new_flavor,
-                                         allocation):
-            self.assertEqual(old_flavor['vcpus'] + new_flavor['vcpus'],
-                             allocation['VCPU'])
-            self.assertEqual(old_flavor['ram'] + new_flavor['ram'],
-                             allocation['MEMORY_MB'])
-            self.assertEqual(old_flavor['disk'] + new_flavor['disk'],
-                             allocation['DISK_GB'])
-
         rp_uuid = _get_provider_uuid()
         # make sure we start with no usage on the compute node
         rp_usages = _get_provider_usages(rp_uuid)
@@ -1236,16 +1219,12 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
 
         # The usage and allocations should not have changed.
         rp_usages = _get_provider_usages(rp_uuid)
-        # FIXME(mriedem): This is a bug where the scheduler doubled up the
-        # allocations for the instance even though we're just rebuilding
-        # to the same host. Uncomment this once fixed.
-        # assertFlavorMatchesAllocation(flavor, rp_usages)
-        assertFlavorsMatchAllocation(flavor, flavor, rp_usages)
+        assertFlavorMatchesAllocation(flavor, rp_usages)
+
         allocs = _get_allocations_by_server_uuid(server['id'])
         self.assertIn(rp_uuid, allocs)
         allocs = allocs[rp_uuid]['resources']
-        # assertFlavorMatchesAllocation(flavor, allocs)
-        assertFlavorsMatchAllocation(flavor, flavor, allocs)
+        assertFlavorMatchesAllocation(flavor, allocs)
 
 
 class ProviderUsageBaseTestCase(test.TestCase,
