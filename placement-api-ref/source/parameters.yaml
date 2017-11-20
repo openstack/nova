@@ -11,6 +11,14 @@ resource_class_path: &resource_class_path
   required: true
   description: >
     The name of one resource class.
+resource_class_path_custom: &resource_class_path_custom
+  type: string
+  in: path
+  required: true
+  description: >
+    The name of one resource class. The name must start with
+    the prefix ``CUSTOM_``. If not, the request returns a ``Bad Request (400)``
+    response code.
 resource_provider_uuid_path: &resource_provider_uuid_path
   type: string
   in: path
@@ -199,6 +207,9 @@ reserved_opt:
   required: false
 resource_class:
   <<: *resource_class_path
+  in: body
+resource_class_custom:
+  <<: *resource_class_path_custom
   in: body
 resource_class_links:
   type: array
