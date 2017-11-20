@@ -227,7 +227,7 @@ this option cannot be enabled in that scenario. See also the
 Filters that the scheduler can use.
 
 An unordered list of the filter classes the nova scheduler may apply.  Only the
-filters specified in the 'scheduler_enabled_filters' option will be used, but
+filters specified in the 'enabled_filters' option will be used, but
 any filter appearing in that option must also be included in this list.
 
 By default, this is set to all filters that are included with nova.
@@ -242,7 +242,7 @@ Possible values:
 
 Related options:
 
-* scheduler_enabled_filters
+* enabled_filters
 """),
     cfg.ListOpt("enabled_filters",
         default=[
@@ -332,7 +332,7 @@ selection.
 Enable baremetal filters.
 
 Set this to True to tell the nova scheduler that it should use the filters
-specified in the 'baremetal_scheduler_enabled_filters' option. If you are not
+specified in the 'baremetal_enabled_filters' option. If you are not
 scheduling baremetal nodes, leave this at the default setting of False.
 
 This option is only used by the FilterScheduler and its subclasses; if you use
@@ -341,8 +341,8 @@ a different scheduler, this option has no effect.
 Related options:
 
 * If this option is set to True, then the filters specified in the
-  'baremetal_scheduler_enabled_filters' are used instead of the filters
-  specified in 'scheduler_enabled_filters'.
+  'baremetal_enabled_filters' are used instead of the filters
+  specified in 'enabled_filters'.
 """),
     cfg.ListOpt("weight_classes",
         default=["nova.scheduler.weights.all_weighers"],
