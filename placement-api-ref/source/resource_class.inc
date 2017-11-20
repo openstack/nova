@@ -69,6 +69,10 @@ Request
 Response
 --------
 
+.. rest_parameters:: parameters.yaml
+
+  - Location: location
+
 No body content is returned on a successful PUT.
 
 Update resource class (microversions 1.2 - 1.6)
