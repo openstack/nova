@@ -30,9 +30,13 @@ member_of:
   in: query
   required: false
   description: >
-    A comma-separated list of strings representing aggregate uuids.
-    The returned resource providers must be associated with at
-    least one of the aggregates identified by uuid.
+    A string representing an aggregate uuid; or the prefix ``in:`` followed by
+    a comma-separated list of strings representing aggregate uuids. The
+    returned resource providers must be associated with at least one of the
+    aggregates identified by uuid::
+
+        member_of=5e08ea53-c4c6-448e-9334-ac4953de3cfa
+        member_of=in:42896e0d-205d-4fe3-bd1e-100924931787,5e08ea53-c4c6-448e-9334-ac4953de3cfa
   min_version: 1.3
 project_id: &project_id
   type: string
