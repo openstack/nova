@@ -11,6 +11,7 @@
 #    under the License.
 
 
+from keystonemiddleware import auth_token
 from oslo_context import context
 from oslo_db.sqlalchemy import enginefacade
 from oslo_log import log as logging
@@ -37,6 +38,9 @@ class NoAuthMiddleware(Middleware):
 
     @webob.dec.wsgify
     def __call__(self, req):
+        if req.environ['PATH_INFO'] == '/':
+            return self.application
+
         if 'X-Auth-Token' not in req.headers:
             return webob.exc.HTTPUnauthorized()
 
@@ -68,9 +72,37 @@ class PlacementKeystoneContext(Middleware):
         ctx = RequestContext.from_environ(
             req.environ, request_id=req_id)
 
-        if ctx.user_id is None:
+        if ctx.user_id is None and req.environ['PATH_INFO'] != '/':
             LOG.debug("Neither X_USER_ID nor X_USER found in request")
             return webob.exc.HTTPUnauthorized()
 
         req.environ['placement.context'] = ctx
         return self.application
+
+
+class PlacementAuthProtocol(auth_token.AuthProtocol):
+    """A wrapper on Keystone auth_token middleware.
+
+    Does not perform verification of authentication tokens
+    for root in the API.
+
+    """
+    def __init__(self, app, conf):
+        self._placement_app = app
+        super(PlacementAuthProtocol, self).__init__(app, conf)
+
+    def __call__(self, environ, start_response):
+        if environ['PATH_INFO'] == '/':
+            return self._placement_app(environ, start_response)
+
+        return super(PlacementAuthProtocol, self).__call__(
+            environ, start_response)
+
+
+def filter_factory(global_conf, **local_conf):
+    conf = global_conf.copy()
+    conf.update(local_conf)
+
+    def auth_filter(app):
+        return PlacementAuthProtocol(app, conf)
+    return auth_filter
