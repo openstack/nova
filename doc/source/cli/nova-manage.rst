@@ -255,33 +255,6 @@ Nova Logs
 
     Displays nova alerts from syslog.
 
-Nova Shell
-~~~~~~~~~~
-
-.. deprecated:: 16.0.0
-
-    This will be removed in 17.0.0 (Queens)
-
-``nova-manage shell bpython``
-
-    Starts a new bpython shell.
-
-``nova-manage shell ipython``
-
-    Starts a new ipython shell.
-
-``nova-manage shell python``
-
-    Starts a new python shell.
-
-``nova-manage shell run``
-
-    Starts a new shell using python.
-
-``nova-manage shell script <path/scriptname>``
-
-    Runs the named script from the specified path with flags set.
-
 Nova Project
 ~~~~~~~~~~~~
 
