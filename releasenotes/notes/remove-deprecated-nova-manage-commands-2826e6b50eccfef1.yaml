@@ -8,5 +8,7 @@ upgrade:
     - ``project``
     - ``account``
     - ``logs``
+    - ``host``
+    - ``agent``
 
     These were previously deprecated in 16.0.0.

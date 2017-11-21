@@ -44,7 +44,6 @@ import six.moves.urllib.parse as urlparse
 from sqlalchemy.engine import url as sqla_url
 
 from nova.api.ec2 import ec2utils
-from nova import availability_zones
 from nova.cmd import common as cmd_common
 import nova.conf
 from nova import config
@@ -378,34 +377,6 @@ class NetworkCommands(object):
             net['host'] = host
 
         db.network_update(admin_context, network['id'], net)
-
-
-class HostCommands(object):
-    """List hosts."""
-
-    # TODO(stephenfin): Remove this during the Queens cycle
-    description = ('DEPRECATED: The host commands are deprecated since '
-                   'Pike as this information is available over the API. They '
-                   'will be removed in an upcoming release.')
-
-    def list(self, zone=None):
-        """Show a list of all physical hosts. Filter by zone.
-        args: [zone]
-        """
-        print("%-25s\t%-15s" % (_('host'),
-                                _('zone')))
-        ctxt = context.get_admin_context()
-        services = db.service_get_all(ctxt)
-        services = availability_zones.set_availability_zones(ctxt, services)
-        if zone:
-            services = [s for s in services if s['availability_zone'] == zone]
-        hosts = []
-        for srv in services:
-            if not [h for h in hosts if h['host'] == srv['host']]:
-                hosts.append(srv)
-
-        for h in hosts:
-            print("%-25s\t%-15s" % (h['host'], h['availability_zone']))
 
 
 class DbCommands(object):
@@ -792,95 +763,6 @@ class ApiDbCommands(object):
     def version(self):
         """Print the current database version."""
         print(migration.db_version(database='api'))
-
-
-class AgentBuildCommands(object):
-    """Class for managing agent builds."""
-
-    # TODO(stephenfin): Remove this during the Queens cycle
-    description = ('DEPRECATED: The agent commands are deprecated since '
-                   'Pike as this information is available over the API. They '
-                   'will be removed in an upcoming release.')
-
-    @args('--os', metavar='<os>', help='os')
-    @args('--architecture', dest='architecture',
-            metavar='<architecture>', help='architecture')
-    @args('--version', metavar='<version>', help='version')
-    @args('--url', metavar='<url>', help='url')
-    @args('--md5hash', metavar='<md5hash>', help='md5hash')
-    @args('--hypervisor', metavar='<hypervisor>',
-            help='hypervisor(default: xen)')
-    def create(self, os, architecture, version, url, md5hash,
-                hypervisor='xen'):
-        """Creates a new agent build."""
-        ctxt = context.get_admin_context()
-        db.agent_build_create(ctxt, {'hypervisor': hypervisor,
-                                     'os': os,
-                                     'architecture': architecture,
-                                     'version': version,
-                                     'url': url,
-                                     'md5hash': md5hash})
-
-    @args('--os', metavar='<os>', help='os')
-    @args('--architecture', dest='architecture',
-            metavar='<architecture>', help='architecture')
-    @args('--hypervisor', metavar='<hypervisor>',
-            help='hypervisor(default: xen)')
-    def delete(self, os, architecture, hypervisor='xen'):
-        """Deletes an existing agent build."""
-        ctxt = context.get_admin_context()
-        agent_build_ref = db.agent_build_get_by_triple(ctxt,
-                                  hypervisor, os, architecture)
-        db.agent_build_destroy(ctxt, agent_build_ref['id'])
-
-    @args('--hypervisor', metavar='<hypervisor>',
-            help='hypervisor(default: None)')
-    def list(self, hypervisor=None):
-        """Lists all agent builds.
-
-        arguments: <none>
-        """
-        fmt = "%-10s  %-8s  %12s  %s"
-        ctxt = context.get_admin_context()
-        by_hypervisor = {}
-        for agent_build in db.agent_build_get_all(ctxt):
-            buildlist = by_hypervisor.get(agent_build.hypervisor)
-            if not buildlist:
-                buildlist = by_hypervisor[agent_build.hypervisor] = []
-
-            buildlist.append(agent_build)
-
-        for key, buildlist in by_hypervisor.items():
-            if hypervisor and key != hypervisor:
-                continue
-
-            print(_('Hypervisor: %s') % key)
-            print(fmt % ('-' * 10, '-' * 8, '-' * 12, '-' * 32))
-            for agent_build in buildlist:
-                print(fmt % (agent_build.os, agent_build.architecture,
-                             agent_build.version, agent_build.md5hash))
-                print('    %s' % agent_build.url)
-
-            print()
-
-    @args('--os', metavar='<os>', help='os')
-    @args('--architecture', dest='architecture',
-            metavar='<architecture>', help='architecture')
-    @args('--version', metavar='<version>', help='version')
-    @args('--url', metavar='<url>', help='url')
-    @args('--md5hash', metavar='<md5hash>', help='md5hash')
-    @args('--hypervisor', metavar='<hypervisor>',
-            help='hypervisor(default: xen)')
-    def modify(self, os, architecture, version, url, md5hash,
-               hypervisor='xen'):
-        """Update an existing agent build."""
-        ctxt = context.get_admin_context()
-        agent_build_ref = db.agent_build_get_by_triple(ctxt,
-                                  hypervisor, os, architecture)
-        db.agent_build_update(ctxt, agent_build_ref['id'],
-                              {'version': version,
-                               'url': url,
-                               'md5hash': md5hash})
 
 
 class CellCommands(object):
@@ -1622,13 +1504,11 @@ class CellV2Commands(object):
 
 
 CATEGORIES = {
-    'agent': AgentBuildCommands,
     'api_db': ApiDbCommands,
     'cell': CellCommands,
     'cell_v2': CellV2Commands,
     'db': DbCommands,
     'floating': FloatingIpCommands,
-    'host': HostCommands,
     'network': NetworkCommands,
 }
 
