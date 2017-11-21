@@ -47,6 +47,7 @@ from nova.pci import manager as pci_manager
 from nova.pci import utils as pci_utils
 from nova.pci import whitelist as pci_whitelist
 from nova import policy
+from nova import service_auth
 from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests import uuidsentinel as uuids
@@ -121,6 +122,7 @@ class TestNeutronClient(test.NoDBTestCase):
     def setUp(self):
         super(TestNeutronClient, self).setUp()
         neutronapi.reset_state()
+        self.addCleanup(service_auth.reset_globals)
 
     def test_withtoken(self):
         self.flags(url='http://anyhost/', group='neutron')
@@ -141,7 +143,8 @@ class TestNeutronClient(test.NoDBTestCase):
                           neutronapi.get_client,
                           my_context)
 
-    def test_non_admin_with_service_token(self):
+    @mock.patch.object(ks_loading, 'load_auth_from_conf_options')
+    def test_non_admin_with_service_token(self, mock_load):
         self.flags(send_service_user_token=True, group='service_user')
 
         my_context = context.RequestContext('userid',
