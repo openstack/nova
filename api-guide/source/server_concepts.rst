@@ -602,7 +602,17 @@ TODO: Add description about how to custom scheduling policy for server booting.
 Server Consoles
 ~~~~~~~~~~~~~~~
 
-TODO: We have multiple endpoints about consoles, we should explain that.
+Server Consoles can also be supplied after server launched.
+There are several server console services available.
+First, users can get the console output from the specified server
+and can limit the lines of console text by setting the length.
+Second, users can access multiple types of remote consoles.
+The user can use novnc, xvpvnc, rdp-html5, spice-html5, serial,
+and webmks(start from microversion 2.8) through either the OpenStack
+dashboard or the command line. Please see `Configure remote console access
+<https://docs.openstack.org/nova/latest/admin/remote-console-access.html>`_.
+Specifically for Xenserver, it provides the ability to create,
+delete, detail, list specified server vnc consoles.
 
 Server networks
 ~~~~~~~~~~~~~~~
