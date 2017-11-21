@@ -3,8 +3,11 @@
 
 build-essential [platform:dpkg test]
 gcc [platform:rpm test]
-gettext [test]
-graphviz [test]
+# gettext and graphviz are needed by doc builds only. For transition,
+# have them in both doc and test.
+# TODO(jaegerandi): Remove test once infra scripts are updated.
+gettext [doc test]
+graphviz [doc test]
 language-pack-en [platform:ubuntu]
 libffi-dev [platform:dpkg test]
 libffi-devel [platform:rpm test]
