@@ -58,41 +58,6 @@ class FlavorAccessController(wsgi.Controller):
 
 class FlavorActionController(wsgi.Controller):
     """The flavor access API controller for the OpenStack API."""
-    def _extend_flavor(self, flavor_rval, flavor_ref):
-        key = "os-flavor-access:is_public"
-        flavor_rval[key] = flavor_ref['is_public']
-
-    @wsgi.extends
-    def show(self, req, resp_obj, id):
-        context = req.environ['nova.context']
-        if context.can(fa_policies.BASE_POLICY_NAME, fatal=False):
-            db_flavor = req.get_db_flavor(id)
-
-            self._extend_flavor(resp_obj.obj['flavor'], db_flavor)
-
-    @wsgi.extends
-    def detail(self, req, resp_obj):
-        context = req.environ['nova.context']
-        if context.can(fa_policies.BASE_POLICY_NAME, fatal=False):
-            flavors = list(resp_obj.obj['flavors'])
-            for flavor_rval in flavors:
-                db_flavor = req.get_db_flavor(flavor_rval['id'])
-                self._extend_flavor(flavor_rval, db_flavor)
-
-    @wsgi.extends(action='create')
-    def create(self, req, body, resp_obj):
-        context = req.environ['nova.context']
-        if context.can(fa_policies.BASE_POLICY_NAME, fatal=False):
-            db_flavor = req.get_db_flavor(resp_obj.obj['flavor']['id'])
-
-            self._extend_flavor(resp_obj.obj['flavor'], db_flavor)
-
-    @wsgi.extends(action='update')
-    def update(self, req, id, body, resp_obj):
-        context = req.environ['nova.context']
-        if context.can(fa_policies.BASE_POLICY_NAME, fatal=False):
-            db_flavor = req.get_db_flavor(resp_obj.obj['flavor']['id'])
-            self._extend_flavor(resp_obj.obj['flavor'], db_flavor)
 
     @extensions.expected_errors((400, 403, 404, 409))
     @wsgi.action("addTenantAccess")
