@@ -9248,7 +9248,7 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         # Archive 2 rows
         results = db.archive_deleted_rows(max_rows=2)
         expected = dict(instance_id_mappings=2)
-        self._assertEqualObjects(expected, results)
+        self._assertEqualObjects(expected, results[0])
         rows = self.conn.execute(qiim).fetchall()
         # Verify we have 4 left in main
         self.assertEqual(len(rows), 4)
@@ -9258,7 +9258,7 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         # Archive 2 more rows
         results = db.archive_deleted_rows(max_rows=2)
         expected = dict(instance_id_mappings=2)
-        self._assertEqualObjects(expected, results)
+        self._assertEqualObjects(expected, results[0])
         rows = self.conn.execute(qiim).fetchall()
         # Verify we have 2 left in main
         self.assertEqual(len(rows), 2)
@@ -9268,7 +9268,7 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         # Try to archive more, but there are no deleted rows left.
         results = db.archive_deleted_rows(max_rows=2)
         expected = dict()
-        self._assertEqualObjects(expected, results)
+        self._assertEqualObjects(expected, results[0])
         rows = self.conn.execute(qiim).fetchall()
         # Verify we still have 2 left in main
         self.assertEqual(len(rows), 2)
@@ -9405,15 +9405,15 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         # The first try to archive console_pools should fail, due to FK.
         num = sqlalchemy_api._archive_deleted_rows_for_table("console_pools",
                                                              max_rows=None)
-        self.assertEqual(num, 0)
+        self.assertEqual(num[0], 0)
         # Then archiving consoles should work.
         num = sqlalchemy_api._archive_deleted_rows_for_table("consoles",
                                                              max_rows=None)
-        self.assertEqual(num, 1)
+        self.assertEqual(num[0], 1)
         # Then archiving console_pools should work.
         num = sqlalchemy_api._archive_deleted_rows_for_table("console_pools",
                                                              max_rows=None)
-        self.assertEqual(num, 1)
+        self.assertEqual(num[0], 1)
         self._assert_shadow_tables_empty_except(
             'shadow_console_pools',
             'shadow_consoles'
@@ -9432,15 +9432,15 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
         # The first try to archive instances should fail, due to FK.
         num = sqlalchemy_api._archive_deleted_rows_for_table("instances",
                                                              max_rows=None)
-        self.assertEqual(0, num)
+        self.assertEqual(0, num[0])
         # Then archiving migrations should work.
         num = sqlalchemy_api._archive_deleted_rows_for_table("migrations",
                                                              max_rows=None)
-        self.assertEqual(1, num)
+        self.assertEqual(1, num[0])
         # Then archiving instances should work.
         num = sqlalchemy_api._archive_deleted_rows_for_table("instances",
                                                              max_rows=None)
-        self.assertEqual(1, num)
+        self.assertEqual(1, num[0])
         self._assert_shadow_tables_empty_except(
             'shadow_instances',
             'shadow_migrations'
