@@ -2,9 +2,10 @@
 upgrade:
   - |
     Nova now uses keystoneauth1 configuration to set up communication with the
-    image service.  Use keystoneauth1 loading parameters for auth, Session, and
+    image service.  Use keystoneauth1 loading parameters for Session and
     Adapter setup in the ``[glance]`` conf section.  This includes using
     ``endpoint_override`` in favor of ``api_servers``.  The
     ``[glance]api_servers`` conf option is still supported, but should only be
     used if you need multiple endpoints and are unable to use a load balancer
-    for some reason.
+    for some reason.  However, note that no configuration is necessary with an
+    appropriate service catalog entry for the image service.

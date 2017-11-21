@@ -149,17 +149,15 @@ def register_opts(conf):
     conf.register_group(glance_group)
     conf.register_opts(glance_opts, group=glance_group)
 
-    confutils.register_ksa_opts(conf, glance_group, DEFAULT_SERVICE_TYPE,
-                                deprecated_opts=deprecated_ksa_opts)
+    confutils.register_ksa_opts(
+        conf, glance_group, DEFAULT_SERVICE_TYPE, include_auth=False,
+        deprecated_opts=deprecated_ksa_opts)
 
 
 def list_opts():
     return {glance_group: (
         glance_opts +
         ks_loading.get_session_conf_options() +
-        ks_loading.get_auth_plugin_conf_options('password') +
-        ks_loading.get_auth_plugin_conf_options('v2password') +
-        ks_loading.get_auth_plugin_conf_options('v3password') +
         confutils.get_ksa_adapter_opts(DEFAULT_SERVICE_TYPE,
                                        deprecated_opts=deprecated_ksa_opts))
     }

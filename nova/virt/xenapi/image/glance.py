@@ -35,7 +35,7 @@ LOG = logging.getLogger(__name__)
 class GlanceStore(object):
     def _call_glance_plugin(self, context, instance, session, fn, image_id,
                             params):
-        glance_api_servers = glance.get_api_servers()
+        glance_api_servers = glance.get_api_servers(context)
         sr_path = vm_utils.get_sr_path(session)
         extra_headers = glance.generate_identity_headers(context)
 

@@ -449,8 +449,8 @@ class UsageInfoTestCase(test.TestCase):
                           "Key %s not in payload" % attr)
         self.assertEqual(payload['image_meta'],
                 {'md_key1': 'val1', 'md_key2': 'val2'})
-        image_ref_url = "%s/images/%s" % (glance.generate_glance_url(),
-                                          uuids.fake_image_ref)
+        image_ref_url = "%s/images/%s" % (
+            glance.generate_glance_url(self.context), uuids.fake_image_ref)
         self.assertEqual(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(self.context, instance, [], [])
 
@@ -485,8 +485,8 @@ class UsageInfoTestCase(test.TestCase):
             self.assertIn(attr, payload, "Key %s not in payload" % attr)
         self.assertEqual(payload['image_meta'],
                 {'md_key1': 'val1', 'md_key2': 'val2'})
-        image_ref_url = "%s/images/%s" % (glance.generate_glance_url(),
-                                          uuids.fake_image_ref)
+        image_ref_url = "%s/images/%s" % (
+            glance.generate_glance_url(self.context), uuids.fake_image_ref)
         self.assertEqual(payload['image_ref_url'], image_ref_url)
 
     def test_notify_about_instance_action(self):
@@ -778,8 +778,8 @@ class UsageInfoTestCase(test.TestCase):
                      'audit_period_ending', 'image_meta'):
             self.assertIn(attr, payload, "Key %s not in payload" % attr)
         self.assertEqual(payload['image_meta'], {})
-        image_ref_url = "%s/images/%s" % (glance.generate_glance_url(),
-                                          uuids.fake_image_ref)
+        image_ref_url = "%s/images/%s" % (
+            glance.generate_glance_url(self.context), uuids.fake_image_ref)
         self.assertEqual(payload['image_ref_url'], image_ref_url)
 
     def test_notify_about_instance_usage(self):
@@ -814,8 +814,8 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEqual(payload['image_meta'],
                 {'md_key1': 'val1', 'md_key2': 'val2'})
         self.assertEqual(payload['image_name'], 'fake_name')
-        image_ref_url = "%s/images/%s" % (glance.generate_glance_url(),
-                                          uuids.fake_image_ref)
+        image_ref_url = "%s/images/%s" % (
+            glance.generate_glance_url(self.context), uuids.fake_image_ref)
         self.assertEqual(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(self.context, instance, [], [])
 

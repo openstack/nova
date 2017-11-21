@@ -33,6 +33,7 @@ import tempfile
 import time
 
 import eventlet
+from keystoneauth1 import exceptions as ks_exc
 from keystoneauth1 import loading as ks_loading
 import netaddr
 from os_service_types import service_types
@@ -1325,3 +1326,56 @@ def get_ksa_adapter(service_type, ksa_auth=None, ksa_session=None,
     return ks_loading.load_adapter_from_conf_options(
         CONF, confgrp, session=ksa_session, auth=ksa_auth,
         min_version=min_version, max_version=max_version)
+
+
+def get_endpoint(ksa_adapter):
+    """Get the endpoint URL represented by a keystoneauth1 Adapter.
+
+    This method is equivalent to what
+
+        ksa_adapter.get_endpoint()
+
+    should do, if it weren't for a panoply of bugs.
+
+    :param ksa_adapter: keystoneauth1.adapter.Adapter, appropriately set up
+                        with an endpoint_override; or service_type, interface
+                        (list) and auth/service_catalog.
+    :return: String endpoint URL.
+    :raise EndpointNotFound: If endpoint discovery fails.
+    """
+    # TODO(efried): This will be unnecessary once bug #1707993 is fixed.
+    # (At least for the non-image case, until 1707995 is fixed.)
+    if ksa_adapter.endpoint_override:
+        return ksa_adapter.endpoint_override
+    # TODO(efried): Remove this once bug #1707995 is fixed.
+    if ksa_adapter.service_type == 'image':
+        try:
+            return ksa_adapter.get_endpoint_data().catalog_url
+        except AttributeError:
+            # ksa_adapter.auth is a _ContextAuthPlugin, which doesn't have
+            # get_endpoint_data.  Fall through to using get_endpoint().
+            pass
+    # TODO(efried): The remainder of this method reduces to
+    # TODO(efried):     return ksa_adapter.get_endpoint()
+    # TODO(efried): once bug #1709118 is fixed.
+    # NOTE(efried): Id9bd19cca68206fc64d23b0eaa95aa3e5b01b676 may also do the
+    #               trick, once it's in a ksa release.
+    # The EndpointNotFound exception happens when _ContextAuthPlugin is in play
+    # because its get_endpoint() method isn't yet set up to handle interface as
+    # a list.  (It could also happen with a real auth if the endpoint isn't
+    # there; but that's covered below.)
+    try:
+        return ksa_adapter.get_endpoint()
+    except ks_exc.EndpointNotFound:
+        pass
+
+    interfaces = list(ksa_adapter.interface)
+    for interface in interfaces:
+        ksa_adapter.interface = interface
+        try:
+            return ksa_adapter.get_endpoint()
+        except ks_exc.EndpointNotFound:
+            pass
+    raise ks_exc.EndpointNotFound(
+        "Could not find requested endpoint for any of the following "
+        "interfaces: %s" % interfaces)

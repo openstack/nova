@@ -394,7 +394,7 @@ def info_from_instance(context, instance, network_info,
         modifications.
 
     """
-    image_ref_url = glance.generate_image_url(instance.image_ref)
+    image_ref_url = glance.generate_image_url(instance.image_ref, context)
 
     instance_type = instance.get_flavor()
     instance_type_name = instance_type.get('name', '')

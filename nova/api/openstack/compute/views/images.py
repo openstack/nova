@@ -132,7 +132,8 @@ class ViewBuilder(common.ViewBuilder):
 
     def _get_alternate_link(self, request, identifier):
         """Create an alternate link for a specific image id."""
-        glance_url = glance.generate_glance_url()
+        glance_url = glance.generate_glance_url(
+            request.environ['nova.context'])
         glance_url = self._update_glance_link_prefix(glance_url)
         return '/'.join([glance_url,
                          self._collection_name,

@@ -97,7 +97,7 @@ class ContextTestCase(test.NoDBTestCase):
                 service_catalog=None)
         self.assertEqual([], ctxt.service_catalog)
 
-    def test_service_catalog_cinder_only(self):
+    def test_service_catalog_filter(self):
         service_catalog = [
                 {u'type': u'compute', u'name': u'nova'},
                 {u'type': u's3', u'name': u's3'},
@@ -110,7 +110,8 @@ class ContextTestCase(test.NoDBTestCase):
                 {u'type': None, u'name': u'S_withouttype'},
                 {u'type': u'vo', u'name': u'S_partofvolume'}]
 
-        volume_catalog = [{u'type': u'volumev3', u'name': u'cinderv3'},
+        volume_catalog = [{u'type': u'image', u'name': u'glance'},
+                          {u'type': u'volumev3', u'name': u'cinderv3'},
                           {u'type': u'block-storage', u'name': u'cinder'}]
         ctxt = context.RequestContext('111', '222',
                 service_catalog=service_catalog)

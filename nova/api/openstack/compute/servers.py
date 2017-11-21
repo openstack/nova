@@ -1023,7 +1023,7 @@ class ServersController(wsgi.Controller):
 
         # build location of newly-created image entity
         image_id = str(image['id'])
-        image_ref = glance.generate_image_url(image_id)
+        image_ref = glance.generate_image_url(image_id, context)
 
         resp = webob.Response(status_int=202)
         resp.headers['Location'] = image_ref

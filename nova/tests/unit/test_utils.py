@@ -20,6 +20,8 @@ import os.path
 import tempfile
 
 import eventlet
+from keystoneauth1 import adapter as ks_adapter
+from keystoneauth1 import exceptions as ks_exc
 from keystoneauth1.identity import base as ks_identity
 from keystoneauth1 import session as ks_session
 import mock
@@ -1385,3 +1387,54 @@ class GetKSAAdapterTestCase(test.NoDBTestCase):
         self.load_adap.assert_called_once_with(
             utils.CONF, 'cinder', session=self.sess, auth=self.auth,
             min_version=None, max_version=None)
+
+
+class GetEndpointTestCase(test.NoDBTestCase):
+    def setUp(self):
+        super(GetEndpointTestCase, self).setUp()
+        self.adap = mock.create_autospec(ks_adapter.Adapter, instance=True)
+        self.adap.endpoint_override = None
+        self.adap.service_type = 'stype'
+        self.adap.interface = ['admin', 'public']
+
+    def test_endpoint_override(self):
+        self.adap.endpoint_override = 'foo'
+        self.assertEqual('foo', utils.get_endpoint(self.adap))
+        self.adap.get_endpoint_data.assert_not_called()
+        self.adap.get_endpoint.assert_not_called()
+
+    def test_image_good(self):
+        self.adap.service_type = 'image'
+        self.adap.get_endpoint_data.return_value.catalog_url = 'url'
+        self.assertEqual('url', utils.get_endpoint(self.adap))
+        self.adap.get_endpoint_data.assert_called_once_with()
+        self.adap.get_endpoint.assert_not_called()
+
+    def test_image_bad(self):
+        self.adap.service_type = 'image'
+        self.adap.get_endpoint_data.side_effect = AttributeError
+        self.adap.get_endpoint.return_value = 'url'
+        self.assertEqual('url', utils.get_endpoint(self.adap))
+        self.adap.get_endpoint_data.assert_called_once_with()
+        self.adap.get_endpoint.assert_called_once_with()
+
+    def test_nonimage_good(self):
+        self.adap.get_endpoint.return_value = 'url'
+        self.assertEqual('url', utils.get_endpoint(self.adap))
+        self.adap.get_endpoint_data.assert_not_called()
+        self.adap.get_endpoint.assert_called_once_with()
+
+    def test_nonimage_try_interfaces(self):
+        self.adap.get_endpoint.side_effect = (ks_exc.EndpointNotFound, 'url')
+        self.assertEqual('url', utils.get_endpoint(self.adap))
+        self.adap.get_endpoint_data.assert_not_called()
+        self.assertEqual(2, self.adap.get_endpoint.call_count)
+        self.assertEqual('admin', self.adap.interface)
+
+    def test_nonimage_try_interfaces_fail(self):
+        self.adap.get_endpoint.side_effect = ks_exc.EndpointNotFound
+        self.assertRaises(ks_exc.EndpointNotFound,
+                          utils.get_endpoint, self.adap)
+        self.adap.get_endpoint_data.assert_not_called()
+        self.assertEqual(3, self.adap.get_endpoint.call_count)
+        self.assertEqual('public', self.adap.interface)
