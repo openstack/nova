@@ -1,15 +1,10 @@
 {
     "priority": "INFO",
     "payload": {
-        "nova_object.version": "1.0",
-        "nova_object.namespace": "nova",
-        "nova_object.name": "KeypairPayload",
+        "$ref": "common_payloads/KeypairPayload.json#",
         "nova_object.data": {
-            "user_id": "fake",
-            "name": "my-key",
             "fingerprint": null,
-            "public_key": null,
-            "type": "ssh"
+            "public_key": null
         }
     },
     "event_type": "keypair.create.start",
