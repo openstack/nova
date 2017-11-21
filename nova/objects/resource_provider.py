@@ -1720,6 +1720,9 @@ def _get_allocations_by_provider_id(ctx, rp_id):
 def _get_allocations_by_consumer_uuid(ctx, consumer_uuid):
     allocs = sa.alias(_ALLOC_TBL, name="a")
     rp = sa.alias(_RP_TBL, name="rp")
+    consumer = sa.alias(_CONSUMER_TBL, name="c")
+    project = sa.alias(_PROJECT_TBL, name="p")
+    user = sa.alias(_USER_TBL, name="u")
     cols = [
         allocs.c.resource_provider_id,
         rp.c.name.label("resource_provider_name"),
@@ -1728,9 +1731,19 @@ def _get_allocations_by_consumer_uuid(ctx, consumer_uuid):
         allocs.c.resource_class_id,
         allocs.c.consumer_id,
         allocs.c.used,
+        project.c.external_id.label("project_id"),
+        user.c.external_id.label("user_id"),
     ]
-    join = sa.join(allocs, rp, allocs.c.resource_provider_id == rp.c.id)
-    sel = sa.select(cols).select_from(join)
+    # Build up the joins of the five tables we need to interact with.
+    rp_join = sa.join(allocs, rp, allocs.c.resource_provider_id == rp.c.id)
+    consumer_join = sa.outerjoin(rp_join, consumer,
+                                 allocs.c.consumer_id == consumer.c.uuid)
+    project_join = sa.outerjoin(consumer_join, project,
+                                consumer.c.project_id == project.c.id)
+    user_join = sa.outerjoin(project_join, user,
+                             consumer.c.user_id == user.c.id)
+
+    sel = sa.select(cols).select_from(user_join)
     sel = sel.where(allocs.c.consumer_id == consumer_uuid)
 
     return [dict(r) for r in ctx.session.execute(sel)]
