@@ -224,26 +224,6 @@ def _db_error(caught_exception):
     sys.exit(1)
 
 
-class QuotaCommands(object):
-    """Class for managing quotas."""
-
-    # TODO(melwitt): Remove this during the Queens cycle
-    description = ('DEPRECATED: The quota commands are deprecated since '
-                   'Pike as quota usage is counted from resources instead '
-                   'of being tracked separately. They will be removed in an '
-                   'upcoming release.')
-
-    @args('--project', dest='project_id', metavar='<Project Id>',
-            help='Project Id', required=True)
-    @args('--user', dest='user_id', metavar='<User Id>',
-            help='User Id')
-    @args('--key', metavar='<key>', help='Key')
-    def refresh(self, project_id, user_id=None, key=None):
-        """DEPRECATED: This command is deprecated and no longer does anything.
-        """
-        pass
-
-
 class ProjectCommands(object):
     """Class for managing projects."""
 
@@ -1917,7 +1897,6 @@ CATEGORIES = {
     'network': NetworkCommands,
     'project': ProjectCommands,
     'shell': ShellCommands,
-    'quota': QuotaCommands,
 }
 
 
