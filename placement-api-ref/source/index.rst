@@ -8,6 +8,10 @@ This is a reference for the Openstack Placement API. To learn more about
 Openstack Placement API concepts, please refer to the
 `Placement Introduction <https://docs.openstack.org/nova/latest/user/placement.html>`_.
 
+The Placement API uses JSON for data exchange.  As such, the ``Content-Type``
+header for APIs sending data payloads in the request body (i.e. ``PUT`` and
+``POST``) must be set to ``application/json`` unless otherwise noted.
+
 .. rest_expand_all::
 
 .. include:: root.inc

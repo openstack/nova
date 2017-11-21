@@ -1,6 +1,23 @@
-========
-Versions
-========
+============
+API Versions
+============
+
+In order to bring new features to users over time, the Placement API
+supports microversioning.  Microversions allow use of certain features on a
+per-request basis via the ``OpenStack-API-Version`` header.  For example, to
+request microversion 1.10, specify the header::
+
+  Openstack-API-Version: placement 1.10
+
+For more details about Microversions, please reference:
+`Microversions
+<https://developer.openstack.org/api-guide/compute/microversions.html>`_
+
+.. note:: The maximum microversion supported by each release varies.
+  Please reference:
+  `REST API Version History
+  <https://docs.openstack.org/nova/latest/user/placement.html#rest-api-version-history>`__
+  for API microversion history details.
 
 List Versions
 =============
