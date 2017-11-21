@@ -20,8 +20,8 @@ service_user = cfg.OptGroup(
     title = 'Service token authentication type options',
     help = """
 Configuration options for service to service authentication using a service
-token. These options allow to send a service token along with the
-user's token when contacting external REST APIs.
+token. These options allow sending a service token along with the user's token
+when contacting external REST APIs.
 """
 )
 
@@ -29,19 +29,16 @@ service_user_opts = [
     cfg.BoolOpt('send_service_user_token',
                 default=False,
                 help="""
-When True, if sending a user token to an REST API, also send a service token.
+When True, if sending a user token to a REST API, also send a service token.
 
-Nova often reuses the user token provided to the nova-api to talk to other
-REST APIs, such as Cinder, Glance and Neutron. It is possible that while the
-user token was valid when the request was made to Nova, the token may expire
-before it reaches the other service. To avoid any failures, and to
-make it clear it is Nova calling the service on the users behalf, we include
-a server token along with the user token. Should the user's token have
-expired, a valid service token ensures the REST API request will still be
-accepted by the keystone middleware.
-
-This feature is currently experimental, and as such is turned off by default
-while full testing and performance tuning of this feature is completed.
+Nova often reuses the user token provided to the nova-api to talk to other REST
+APIs, such as Cinder, Glance and Neutron. It is possible that while the user
+token was valid when the request was made to Nova, the token may expire before
+it reaches the other service. To avoid any failures, and to make it clear it is
+Nova calling the service on the user's behalf, we include a service token along
+with the user token. Should the user's token have expired, a valid service
+token ensures the REST API request will still be accepted by the keystone
+middleware.
 """),
 ]
 
