@@ -370,41 +370,6 @@ class NeutronV2NetworkCommandsTestCase(test.NoDBTestCase):
         self.assertEqual(2, self.commands.modify('192.168.0.1'))
 
 
-class ProjectCommandsTestCase(test.TestCase):
-    def setUp(self):
-        super(ProjectCommandsTestCase, self).setUp()
-        self.output = StringIO()
-        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
-        self.commands = manage.ProjectCommands()
-
-    def test_quota(self):
-        self.commands.quota(project_id='admin',
-                            key='instances',
-                            value='unlimited',
-                           )
-
-        result = self.output.getvalue()
-        print_format = "%-36s %-10s" % ('instances', 'unlimited')
-        self.assertIn(print_format, result)
-
-    def test_quota_update_invalid_key(self):
-        self.assertEqual(2, self.commands.quota('admin', 'volumes1', '10'))
-
-    def test_quota_reserved(self):
-        self.commands.quota(project_id='admin')
-        result = self.output.getvalue()
-        print_format = "%-36s %-10s %-10s %-10s" % ('cores', '20', '0', '0')
-        self.assertIn(print_format, result)
-
-    def test_quota_reserved_noop_driver(self):
-        self.useFixture(nova_fixtures.NoopQuotaDriverFixture())
-        self.commands.quota(project_id='admin')
-        result = self.output.getvalue()
-        print_format = "%-36s %-10s %-10s %-10s" % ('cores', 'unlimited',
-                                                    '-1', '-1')
-        self.assertIn(print_format, result)
-
-
 class DBCommandsTestCase(test.NoDBTestCase):
     USES_DB_SELF = True
 

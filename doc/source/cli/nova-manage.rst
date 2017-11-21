@@ -255,32 +255,6 @@ Nova Logs
 
     Displays nova alerts from syslog.
 
-Nova Project
-~~~~~~~~~~~~
-
-.. deprecated:: 16.0.0
-
-    Much of this information is available over the API, with the exception of
-    the ``quota_usage_refresh`` command. Operators should use the `API`_ for
-    all other operations.
-
-    This command group will be removed in 17.0.0 (Queens). The
-    ``quota_usage_refresh`` subcommand has been deprecated and is now a no-op
-    since quota usage is counted from resources instead of being tracked
-    separately.
-
-.. _API: https://developer.openstack.org/api-ref/compute/#quota-sets-os-quota-sets
-
-``nova-manage project quota <project_id> [--user <user_id>] [--key <key>] [--value <value>]``
-
-    Create, update or display quotas for project/user.  If a key is
-    not specified then the current usages are displayed.
-
-``nova-manage project quota_usage_refresh <project_id> [--user <user_id>] [--key <key>]``
-
-    This command has been deprecated and is now a no-op since quota usage is
-    counted from resources instead of being tracked separately.
-
 See Also
 ========
 
