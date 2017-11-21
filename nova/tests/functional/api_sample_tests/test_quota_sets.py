@@ -83,6 +83,14 @@ class QuotaSetsSampleJsonTests2_36(QuotaSetsSampleJsonTests):
     scenarios = [('v2_36', {'api_major_version': 'v2.1'})]
 
 
+class QuotaSetsSampleJsonTestsV2_57(QuotaSetsSampleJsonTests):
+    """Tests that injected_file* quotas are not in request or response values.
+    starting with microversion 2.57.
+    """
+    microversion = '2.57'
+    scenarios = [('v2_57', {'api_major_version': 'v2.1'})]
+
+
 class NoopQuotaSetsSampleJsonTests(QuotaSetsSampleJsonTests):
     sample_dir = "os-quota-sets-noop"
 

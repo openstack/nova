@@ -44,6 +44,10 @@ the fixed IP address to assign to the server interface.
 
 **Server personality**
 
+.. note:: The use of personality files is deprecated starting with the 2.57
+  microversion. Use ``metadata`` and ``user_data`` to customize a server
+  instance.
+
 To customize the personality of a server instance, you can inject data
 into its file system. For example, you might insert ssh keys, set
 configuration files, or store data that you want to retrieve from inside

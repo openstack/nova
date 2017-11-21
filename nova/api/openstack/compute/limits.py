@@ -32,6 +32,15 @@ from nova import quota
 
 QUOTAS = quota.QUOTAS
 
+# This is a list of limits which needs to filter out from the API response.
+# This is due to the deprecation of network related proxy APIs, the related
+# limit should be removed from the API also.
+FILTERED_LIMITS_2_36 = ['floating_ips', 'security_groups',
+                        'security_group_rules']
+
+FILTERED_LIMITS_2_57 = list(FILTERED_LIMITS_2_36)
+FILTERED_LIMITS_2_57.extend(['injected_files', 'injected_file_content_bytes'])
+
 
 class LimitsController(wsgi.Controller):
     """Controller for accessing limits in the OpenStack API."""
@@ -47,16 +56,22 @@ class LimitsController(wsgi.Controller):
     @extensions.expected_errors(())
     @validation.query_schema(limits.limits_query_schema)
     def index(self, req):
-        return self._index(req, filter_result=True)
+        return self._index(req, FILTERED_LIMITS_2_36)
 
     @wsgi.Controller.api_version(  # noqa
-        MIN_WITHOUT_IMAGE_META_PROXY_API_VERSION)  # noqa
+        MIN_WITHOUT_IMAGE_META_PROXY_API_VERSION, '2.56')  # noqa
     @extensions.expected_errors(())
     @validation.query_schema(limits.limits_query_schema)
     def index(self, req):
-        return self._index(req, filter_result=True, max_image_meta=False)
+        return self._index(req, FILTERED_LIMITS_2_36, max_image_meta=False)
 
-    def _index(self, req, filter_result=False, max_image_meta=True):
+    @wsgi.Controller.api_version('2.57')  # noqa
+    @extensions.expected_errors(())
+    @validation.query_schema(limits.limits_query_schema)
+    def index(self, req):
+        return self._index(req, FILTERED_LIMITS_2_57, max_image_meta=False)
+
+    def _index(self, req, filtered_limits=None, max_image_meta=True):
         """Return all global limit information."""
         context = req.environ['nova.context']
         context.can(limits_policies.BASE_POLICY_NAME)
@@ -66,5 +81,5 @@ class LimitsController(wsgi.Controller):
         abs_limits = {k: v['limit'] for k, v in quotas.items()}
 
         builder = limits_views.ViewBuilder()
-        return builder.build(abs_limits, filter_result=filter_result,
+        return builder.build(abs_limits, filtered_limits=filtered_limits,
                              max_image_meta=max_image_meta)

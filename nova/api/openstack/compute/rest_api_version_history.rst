@@ -715,3 +715,17 @@ The embedded flavor description will not be included in server representations.
   the optional ``host`` string field defaulted to ``null``. If ``host`` is
   set the migrate action verifies the provided host with the nova scheduler
   and uses it as the destination for the migration.
+
+2.57
+----
+
+The 2.57 microversion makes the following changes:
+
+* The ``personality`` parameter is removed from the server create and rebuild
+  APIs.
+* The ``user_data`` parameter is added to the server rebuild API.
+* The ``maxPersonality`` and ``maxPersonalitySize`` limits are excluded from
+  the ``GET /limits`` API response.
+* The ``injected_files``, ``injected_file_content_bytes`` and
+  ``injected_file_path_bytes`` quotas are removed from the ``os-quota-sets``
+  and ``os-quota-class-sets`` APIs.

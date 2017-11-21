@@ -65,3 +65,15 @@ class LimitsV239Test(api_sample_base.ApiSampleTestBaseV21):
         self.api.microversion = self.microversion
         response = self._do_get('limits')
         self._verify_response('limit-get-resp', {}, response, 200)
+
+
+class LimitsV257Test(api_sample_base.ApiSampleTestBaseV21):
+    """Test limits don't return maxPersonality* fields after 2.57."""
+    sample_dir = "limits"
+    microversion = '2.57'
+    scenarios = [('v2_57', {'api_major_version': 'v2.1'})]
+
+    def test_limits_get(self):
+        self.api.microversion = self.microversion
+        response = self._do_get('limits')
+        self._verify_response('limit-get-resp', {}, response, 200)

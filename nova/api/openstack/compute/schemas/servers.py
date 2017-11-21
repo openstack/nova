@@ -14,6 +14,7 @@
 
 import copy
 
+from nova.api.openstack.compute.schemas import user_data
 from nova.api.validation import parameter_types
 from nova.api.validation.parameter_types import multi_params
 from nova.objects import instance
@@ -139,6 +140,11 @@ base_create_v252['properties']['server']['properties']['tags'] = {
 }
 
 
+# 2.57 builds on 2.52 and removes the personality parameter.
+base_create_v257 = copy.deepcopy(base_create_v252)
+base_create_v257['properties']['server']['properties'].pop('personality')
+
+
 base_update = {
     'type': 'object',
     'properties': {
@@ -202,6 +208,18 @@ base_rebuild_v219['properties']['rebuild'][
 base_rebuild_v254 = copy.deepcopy(base_rebuild_v219)
 base_rebuild_v254['properties']['rebuild'][
     'properties']['key_name'] = parameter_types.name_or_none
+
+# 2.57 builds on 2.54 and makes the following changes:
+# 1. Remove the personality parameter.
+# 2. Add the user_data parameter which is nullable so user_data can be reset.
+base_rebuild_v257 = copy.deepcopy(base_rebuild_v254)
+base_rebuild_v257['properties']['rebuild']['properties'].pop('personality')
+base_rebuild_v257['properties']['rebuild']['properties']['user_data'] = ({
+    'oneOf': [
+        user_data.common_user_data,
+        {'type': 'null'}
+    ]
+})
 
 resize = {
     'type': 'object',

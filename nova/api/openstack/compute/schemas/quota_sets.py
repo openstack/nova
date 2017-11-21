@@ -69,6 +69,14 @@ update = {
 update_v236 = copy.deepcopy(update)
 update_v236['properties']['quota_set']['properties'] = update_quota_set_v236
 
+# 2.57 builds on 2.36 and removes injected_file* quotas.
+update_quota_set_v257 = copy.deepcopy(update_quota_set_v236)
+del update_quota_set_v257['injected_files']
+del update_quota_set_v257['injected_file_content_bytes']
+del update_quota_set_v257['injected_file_path_bytes']
+update_v257 = copy.deepcopy(update_v236)
+update_v257['properties']['quota_set']['properties'] = update_quota_set_v257
+
 query_schema = {
     'type': 'object',
     'properties': {

@@ -564,6 +564,7 @@ class QuotaSetsPolicyEnforcementV21(test.NoDBTestCase):
 
 
 class QuotaSetsTestV236(test.NoDBTestCase):
+    microversion = '2.36'
 
     def setUp(self):
         super(QuotaSetsTestV236, self).setUp()
@@ -613,7 +614,7 @@ class QuotaSetsTestV236(test.NoDBTestCase):
             'server_groups': 10
         }
         self.controller = quotas_v21.QuotaSetsController()
-        self.req = fakes.HTTPRequest.blank('', version='2.36')
+        self.req = fakes.HTTPRequest.blank('', version=self.microversion)
 
     def _ensure_filtered_quotas_existed_in_old_api(self):
         res_dict = self.controller.show(self.old_req, 1234)
@@ -666,3 +667,11 @@ class QuotaSetsTestV236(test.NoDBTestCase):
              body={'quota_set': {'cores': 100}})
         for filtered in self.filtered_quotas:
             self.assertNotIn(filtered, res_dict['quota_set'])
+
+
+class QuotaSetsTestV257(QuotaSetsTestV236):
+    microversion = '2.57'
+
+    def setUp(self):
+        super(QuotaSetsTestV257, self).setUp()
+        self.filtered_quotas.extend(quotas_v21.FILTERED_QUOTAS_2_57)

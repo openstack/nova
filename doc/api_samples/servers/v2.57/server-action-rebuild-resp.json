@@ -1,0 +1,61 @@
+{
+    "server": {
+        "accessIPv4": "1.2.3.4",
+        "accessIPv6": "80fe::",
+        "addresses": {
+            "private": [
+                {
+                    "addr": "192.168.0.3",
+                    "version": 4
+                }
+            ]
+        },
+        "adminPass": "seekr3t",
+        "created": "2013-11-14T06:29:00Z",
+        "flavor": {
+            "disk": 1,
+            "ephemeral": 0,
+            "extra_specs": {},
+            "original_name": "m1.tiny",
+            "ram": 512,
+            "swap": 0,
+            "vcpus": 1
+        },
+        "hostId": "28d8d56f0e3a77e20891f455721cbb68032e017045e20aa5dfc6cb66",
+        "id": "a0a80a94-3d81-4a10-822a-daa0cf9e870b",
+        "image": {
+            "id": "70a599e0-31e7-49b7-b260-868f441e862b",
+            "links": [
+                {
+                    "href": "http://openstack.example.com/6f70656e737461636b20342065766572/images/70a599e0-31e7-49b7-b260-868f441e862b",
+                    "rel": "bookmark"
+                }
+            ]
+        },
+        "links": [
+            {
+                "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/servers/a0a80a94-3d81-4a10-822a-daa0cf9e870b",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/6f70656e737461636b20342065766572/servers/a0a80a94-3d81-4a10-822a-daa0cf9e870b",
+                "rel": "bookmark"
+            }
+        ],
+        "locked": false,
+        "metadata": {
+            "meta_var": "meta_val"
+        },
+        "name": "foobar",
+        "key_name": "new-key",
+        "description": "description of foobar",
+        "progress": 0,
+        "status": "ACTIVE",
+        "OS-DCF:diskConfig": "AUTO",
+        "tenant_id": "6f70656e737461636b20342065766572",
+        "updated": "2013-11-14T06:29:02Z",
+        "user_id": "fake",
+        "tags": [],
+        "user_data": "ZWNobyAiaGVsbG8gd29ybGQi"
+    }
+}
