@@ -3528,7 +3528,8 @@ key_name:
   type: string
 key_name_rebuild_req:
   description: |
-    Key pair name for rebuild API.
+    Key pair name for rebuild API. If ``null`` is specified,
+    the existing keypair is unset.
 
     .. note:: Users within the same project are able to rebuild other
               user's instances in that project with a new keypair. Keys
