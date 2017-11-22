@@ -861,8 +861,10 @@ Configure Guest OS
 
 Metadata API
 ------------
-
-TODO
+Nova provides a metadata api for servers to retrieve server specific metadata.
+Neutron ensures this metadata api can be accessed through a predefined ip
+address (169.254.169.254). For more details, see
+`Metadata Service <https://docs.openstack.org/nova/latest/admin/networking-nova.html#metadata-service>`_.
 
 Config Drive
 ------------
