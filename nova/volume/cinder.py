@@ -47,14 +47,29 @@ CONF = nova.conf.CONF
 
 LOG = logging.getLogger(__name__)
 
+_ADMIN_AUTH = None
 _SESSION = None
 
 
 def reset_globals():
     """Testing method to reset globals.
     """
+    global _ADMIN_AUTH
     global _SESSION
+
+    _ADMIN_AUTH = None
     _SESSION = None
+
+
+def _load_auth_plugin(conf):
+    auth_plugin = ks_loading.load_auth_from_conf_options(conf,
+                                    nova.conf.cinder.cinder_group.name)
+
+    if auth_plugin:
+        return auth_plugin
+
+    err_msg = _('Unknown auth type: %s') % conf.cinder.auth_type
+    raise cinder_exception.Unauthorized(401, message=err_msg)
 
 
 def _check_microversion(url, microversion):
@@ -80,15 +95,27 @@ def _check_microversion(url, microversion):
 
 
 def _get_cinderclient_parameters(context):
+    global _ADMIN_AUTH
     global _SESSION
 
     if not _SESSION:
         _SESSION = ks_loading.load_session_from_conf_options(
             CONF, nova.conf.cinder.cinder_group.name)
 
+    # NOTE(lixipeng): Auth token is none when call
+    # cinder API from compute periodic tasks, context
+    # from them generated from 'context.get_admin_context'
+    # which only set is_admin=True but is without token.
+    # So add load_auth_plugin when this condition appear.
+    if context.is_admin and not context.auth_token:
+        if not _ADMIN_AUTH:
+            _ADMIN_AUTH = _load_auth_plugin(CONF)
+        auth = _ADMIN_AUTH
+    else:
+        auth = service_auth.get_auth_plugin(context)
+
     url = None
 
-    auth = service_auth.get_auth_plugin(context)
     service_type, service_name, interface = CONF.cinder.catalog_info.split(':')
 
     service_parameters = {'service_type': service_type,

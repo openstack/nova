@@ -127,7 +127,7 @@ class CinderV1TestCase(test.NoDBTestCase):
         get_endpoint = mock.Mock(
             return_value='http://localhost:8776/v1/%(project_id)s')
         fake_session = mock.Mock(get_endpoint=get_endpoint)
-        ctxt = context.get_admin_context()
+        ctxt = context.get_context()
         with mock.patch.object(cinder, '_SESSION', fake_session):
             self.assertRaises(exception.UnsupportedCinderAPIVersion,
                               cinder.cinderclient, ctxt)
@@ -147,7 +147,7 @@ class CinderV2TestCase(test.NoDBTestCase):
         get_endpoint = mock.Mock(
             return_value='http://localhost:8776/v2/%(project_id)s')
         fake_session = mock.Mock(get_endpoint=get_endpoint)
-        ctxt = context.get_admin_context()
+        ctxt = context.get_context()
         with mock.patch.object(cinder, '_SESSION', fake_session):
             self.assertRaises(exception.UnsupportedCinderAPIVersion,
                               cinder.cinderclient, ctxt)

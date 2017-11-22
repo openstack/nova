@@ -15,6 +15,7 @@
 
 from cinderclient import api_versions as cinder_api_versions
 from cinderclient import exceptions as cinder_exception
+from keystoneauth1 import loading as ks_loading
 from keystoneclient import exceptions as keystone_exception
 import mock
 from oslo_utils import timeutils
@@ -934,3 +935,18 @@ class CinderClientTestCase(test.NoDBTestCase):
                          client.api_version)
         get_volume_api.assert_called_once_with(
             self.mock_session.get_endpoint.return_value)
+
+    @mock.patch.object(ks_loading, 'load_auth_from_conf_options')
+    def test_load_auth_plugin_failed(self, mock_load_from_conf):
+        mock_load_from_conf.return_value = None
+        self.assertRaises(cinder_exception.Unauthorized,
+                          cinder._load_auth_plugin, CONF)
+
+    @mock.patch('nova.volume.cinder._ADMIN_AUTH')
+    def test_admin_context_without_token(self,
+                                         mock_admin_auth):
+
+        mock_admin_auth.return_value = '_FAKE_ADMIN_AUTH'
+        admin_ctx = context.get_admin_context()
+        params = cinder._get_cinderclient_parameters(admin_ctx)
+        self.assertEqual(params[0], mock_admin_auth)
