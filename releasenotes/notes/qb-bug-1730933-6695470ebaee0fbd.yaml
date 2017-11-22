@@ -1,0 +1,11 @@
+---
+features:
+  - |
+    The Quobyte Nova volume driver now supports identifying Quobyte
+    mounts via the mounts fstype field, which is used by Quobyte 2.x
+    clients. The previous behaviour is deprecated and may be removed
+    from the Quobyte clients in the future.
+fixes:
+  - |
+    Fixes a bug that caused Nova to fail on mounting Quobyte volumes
+    whose volume URL contained multiple registries.
