@@ -367,6 +367,53 @@ class SimpleTenantUsageTestV21(test.TestCase):
         self._test_get_tenants_usage_with_one_date(
             'start=%s' % (NOW - datetime.timedelta(5)).isoformat())
 
+    def test_index_additional_query_parameters(self):
+        req = fakes.HTTPRequest.blank('?start=%s&end=%s&additional=1' %
+                (START.isoformat(), STOP.isoformat()),
+                version=self.version)
+        res = self.controller.index(req)
+        self.assertIn('tenant_usages', res)
+
+    def _test_index_duplicate_query_parameters_validation(self, params):
+        for param, value in params.items():
+            req = fakes.HTTPRequest.blank('?start=%s&%s=%s&%s=%s' %
+                    (START.isoformat(), param, value, param, value),
+                    version=self.version)
+
+            res = self.controller.index(req)
+            self.assertIn('tenant_usages', res)
+
+    def test_index_duplicate_query_parameters_validation(self):
+        params = {
+            'start': START.isoformat(),
+            'end': STOP.isoformat(),
+            'detailed': 1
+        }
+        self._test_index_duplicate_query_parameters_validation(params)
+
+    def test_show_additional_query_parameters(self):
+        req = fakes.HTTPRequest.blank('?start=%s&end=%s&additional=1' %
+                (START.isoformat(), STOP.isoformat()),
+                version=self.version)
+        res = self.controller.show(req, 1)
+        self.assertIn('tenant_usage', res)
+
+    def _test_show_duplicate_query_parameters_validation(self, params):
+        for param, value in params.items():
+            req = fakes.HTTPRequest.blank('?start=%s&%s=%s&%s=%s' %
+                    (START.isoformat(), param, value, param, value),
+                    version=self.version)
+
+            res = self.controller.show(req, 1)
+            self.assertIn('tenant_usage', res)
+
+    def test_show_duplicate_query_parameters_validation(self):
+        params = {
+            'start': START.isoformat(),
+            'end': STOP.isoformat()
+        }
+        self._test_show_duplicate_query_parameters_validation(params)
+
 
 class SimpleTenantUsageTestV40(SimpleTenantUsageTestV21):
     version = '2.40'
@@ -382,6 +429,29 @@ class SimpleTenantUsageTestV40(SimpleTenantUsageTestV21):
     def test_next_links_index(self):
         self._test_verify_index(START, STOP,
                                 limit=SERVERS * TENANTS)
+
+    @mock.patch('nova.objects.InstanceList.get_active_by_window_joined',
+                fake_get_active_by_window_joined)
+    def test_index_duplicate_query_parameters_validation(self):
+        params = {
+            'start': START.isoformat(),
+            'end': STOP.isoformat(),
+            'detailed': 1,
+            'limit': 1,
+            'marker': 1
+        }
+        self._test_index_duplicate_query_parameters_validation(params)
+
+    @mock.patch('nova.objects.InstanceList.get_active_by_window_joined',
+                fake_get_active_by_window_joined)
+    def test_show_duplicate_query_parameters_validation(self):
+        params = {
+            'start': START.isoformat(),
+            'end': STOP.isoformat(),
+            'limit': 1,
+            'marker': 1
+        }
+        self._test_show_duplicate_query_parameters_validation(params)
 
 
 class SimpleTenantUsageLimitsTestV21(test.TestCase):
@@ -448,6 +518,36 @@ class SimpleTenantUsageLimitsTestV240(SimpleTenantUsageLimitsTestV21):
         req = self._get_request('?start=%s&end=%s&limit=3&marker=some-marker')
         self.assertRaises(
             webob.exc.HTTPBadRequest, self.controller.index, req)
+
+    def test_index_with_invalid_non_int_limit(self):
+        req = self._get_request('?start=%s&end=%s&limit=-3')
+        self.assertRaises(exception.ValidationError,
+                          self.controller.index, req)
+
+    def test_index_with_invalid_string_limit(self):
+        req = self._get_request('?start=%s&end=%s&limit=abc')
+        self.assertRaises(exception.ValidationError,
+                          self.controller.index, req)
+
+    def test_index_duplicate_query_with_invalid_string_limit(self):
+        req = self._get_request('?start=%s&end=%s&limit=3&limit=abc')
+        self.assertRaises(exception.ValidationError,
+                          self.controller.index, req)
+
+    def test_show_with_invalid_non_int_limit(self):
+        req = self._get_request('?start=%s&end=%s&limit=-3')
+        self.assertRaises(exception.ValidationError,
+                          self.controller.show, req)
+
+    def test_show_with_invalid_string_limit(self):
+        req = self._get_request('?start=%s&end=%s&limit=abc')
+        self.assertRaises(exception.ValidationError,
+                          self.controller.show, req)
+
+    def test_show_duplicate_query_with_invalid_string_limit(self):
+        req = self._get_request('?start=%s&end=%s&limit=3&limit=abc')
+        self.assertRaises(exception.ValidationError,
+                          self.controller.show, req)
 
 
 class SimpleTenantUsageControllerTestV21(test.TestCase):
