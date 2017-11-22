@@ -8,10 +8,6 @@ a physical machine or a container.
 Server status
 ~~~~~~~~~~~~~
 
-TODO: This section's content is old, we need to update the status list.
-The task_state and vm_state which expose to Administrator need description to
-help user to understand the difference.
-
 You can filter the list of servers by image, flavor, name, and status
 through the respective query parameters.
 
@@ -87,13 +83,19 @@ server status is one of the following values:
 -  ``VERIFY_RESIZE``: System is awaiting confirmation that the server is
    operational after a move or resize.
 
-The compute provisioning algorithm has an anti-affinity property that
-attempts to spread customer VMs across hosts. Under certain situations,
-VMs from the same customer might be placed on the same host. hostId
-represents the host your server runs on and can be used to determine
-this scenario if it is relevant to your application.
+Server status is caculated from vm_state and task_state, which
+are exposed to administrators:
 
-.. note:: HostId is unique *per account* and is not globally unique.
+- vm_state describes a VM's current stable (not transition) state. That is, if
+  there is no ongoing compute API calls (running tasks), vm_state should reflect
+  what the customer expect the VM to be. When combined with task states,
+  a better picture can be formed regarding the server's health and progress.
+  Please see: `VM States <https://docs.openstack.org/nova/latest/reference/vm-states.html>`_.
+
+- task_state represents what is happening to the instance at the
+  current moment. These tasks can be generic, such as 'spawning', or specific,
+  such as 'block_device_mapping'. These task states allow for a better view into
+  what a server is doing.
 
 Server creation
 ~~~~~~~~~~~~~~~
