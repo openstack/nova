@@ -594,6 +594,11 @@ class ViewBuilderLinkTest(test.NoDBTestCase):
         proj_id = self.vb._get_project_id(self.request)
         self.assertEqual(self.project_id, proj_id)
 
+    def test_get_project_id_with_none_project_id(self):
+        self.request.environ["nova.context"].project_id = None
+        proj_id = self.vb._get_project_id(self.request)
+        self.assertEqual('', proj_id)
+
     def test_get_next_link(self):
         identifier = "identifier"
         collection = "collection"
