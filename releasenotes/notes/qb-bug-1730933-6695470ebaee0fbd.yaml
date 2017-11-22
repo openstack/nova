@@ -1,0 +1,5 @@
+---
+fixes:
+  - |
+    Fixes a bug that caused Nova to fail on mounting Quobyte volumes
+    whose volume URL contained multiple registries.
