@@ -1,0 +1,15 @@
+---
+features:
+  - |
+    Added a new boolean configuration option
+    ``[filter_scheduler]shuffle_best_same_weighed_hosts`` (default is False).
+
+    Enabling it will spread instances between hosts that have the same weight
+    according to request spec. It is mostly useful when the
+    ``[filter_scheduler]host_subset_size`` option has default value of 1,
+    but available hosts have the same weight (e.g. ironic nodes using resource
+    classes). In this case enabling it will decrease the number of
+    rescheduling events.
+
+    On the other hand, enabling it will make packing of VMs on hypervizors
+    less dence even when host weighing is disabled.

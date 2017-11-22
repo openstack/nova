@@ -400,6 +400,16 @@ class FilterScheduler(driver.Scheduler):
 
         weighed_hosts = self.host_manager.get_weighed_hosts(filtered_hosts,
             spec_obj)
+        if CONF.filter_scheduler.shuffle_best_same_weighed_hosts:
+            # NOTE(pas-ha) Randomize best hosts, relying on weighed_hosts
+            # being already sorted by weight in descending order.
+            # This decreases possible contention and rescheduling attempts
+            # when there is a large number of hosts having the same best
+            # weight, especially so when host_subset_size is 1 (default)
+            best_hosts = [w for w in weighed_hosts
+                          if w.weight == weighed_hosts[0].weight]
+            random.shuffle(best_hosts)
+            weighed_hosts = best_hosts + weighed_hosts[len(best_hosts):]
         # Strip off the WeighedHost wrapper class...
         weighed_hosts = [h.obj for h in weighed_hosts]
 
