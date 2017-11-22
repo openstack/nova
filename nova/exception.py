@@ -338,6 +338,10 @@ class InvalidVolumeAccessMode(Invalid):
     msg_fmt = _("Invalid volume access mode: %(access_mode)s")
 
 
+class StaleVolumeMount(InvalidVolume):
+    msg_fmt = _("The volume mount at %(mount_path)s is unusable.")
+
+
 class InvalidMetadata(Invalid):
     msg_fmt = _("Invalid metadata: %(reason)s")
 

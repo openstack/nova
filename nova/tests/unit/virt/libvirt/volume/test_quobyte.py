@@ -293,13 +293,15 @@ class LibvirtQuobyteVolumeDriverTestCase(
         test_volume.LibvirtVolumeBaseTestCase):
     """Tests the LibvirtQuobyteVolumeDriver class."""
 
+    @mock.patch.object(quobyte, 'umount_volume')
     @mock.patch.object(quobyte, 'validate_volume')
     @mock.patch.object(quobyte, 'mount_volume')
     @mock.patch.object(libvirt_utils, 'is_mounted', return_value=False)
     def test_libvirt_quobyte_driver_mount(self,
                                           mock_is_mounted,
                                           mock_mount_volume,
-                                          mock_validate_volume
+                                          mock_validate_volume,
+                                          mock_umount_volume
                                           ):
         mnt_base = '/mnt'
         self.flags(quobyte_mount_point_base=mnt_base, group='libvirt')
@@ -313,6 +315,9 @@ class LibvirtQuobyteVolumeDriverTestCase(
 
         connection_info = {'data': {'export': export_string,
                                     'name': self.name}}
+        mock_validate_volume.side_effect = [nova_exception.StaleVolumeMount(
+            "This shall fail."), True, True]
+
         libvirt_driver.connect_volume(connection_info, mock.sentinel.instance)
 
         conf = libvirt_driver.get_config(connection_info, self.disk_info)
@@ -324,12 +329,12 @@ class LibvirtQuobyteVolumeDriverTestCase(
                                                   export_mnt_base,
                                                   mock.ANY)
         mock_validate_volume.assert_called_with(export_mnt_base)
+        mock_umount_volume.assert_called_once_with(
+            libvirt_driver._get_mount_path(connection_info))
 
-    @mock.patch.object(quobyte, 'validate_volume')
+    @mock.patch.object(quobyte, 'validate_volume', return_value=True)
     @mock.patch.object(quobyte, 'umount_volume')
-    @mock.patch.object(libvirt_utils, 'is_mounted', return_value=True)
-    def test_libvirt_quobyte_driver_umount(self, mock_is_mounted,
-                                           mock_umount_volume,
+    def test_libvirt_quobyte_driver_umount(self, mock_umount_volume,
                                            mock_validate_volume):
         mnt_base = '/mnt'
         self.flags(quobyte_mount_point_base=mnt_base, group='libvirt')
@@ -352,7 +357,9 @@ class LibvirtQuobyteVolumeDriverTestCase(
         libvirt_driver.disconnect_volume(connection_info,
                                          mock.sentinel.instance)
 
-        mock_validate_volume.assert_called_once_with(export_mnt_base)
+        mock_validate_volume.assert_has_calls([mock.call(export_mnt_base),
+                                               mock.call(export_mnt_base),
+                                               mock.call(export_mnt_base)])
         mock_umount_volume.assert_called_once_with(export_mnt_base)
 
     @mock.patch.object(quobyte, 'validate_volume')
@@ -385,15 +392,14 @@ class LibvirtQuobyteVolumeDriverTestCase(
                                          mock.sentinel.instance)
 
         mock_umount_volume.assert_called_once_with(export_mnt_base)
-        mock_validate_volume.assert_called_once_with(export_mnt_base)
+        mock_validate_volume.assert_has_calls([mock.call(export_mnt_base),
+                                               mock.call(export_mnt_base)])
 
+    @mock.patch.object(quobyte, 'umount_volume')
     @mock.patch.object(quobyte, 'validate_volume')
     @mock.patch.object(quobyte, 'mount_volume')
-    @mock.patch.object(libvirt_utils, 'is_mounted', return_value=False)
-    def test_libvirt_quobyte_driver_qcow2(self, mock_is_mounted,
-                                          mock_mount_volume,
-                                          mock_validate_volume
-                                          ):
+    def test_libvirt_quobyte_driver_qcow2(self, mock_mount_volume,
+                                          mock_validate_volume, mock_umount):
         mnt_base = '/mnt'
         self.flags(quobyte_mount_point_base=mnt_base, group='libvirt')
         libvirt_driver = quobyte.LibvirtQuobyteVolumeDriver(self.fake_host)
@@ -408,6 +414,8 @@ class LibvirtQuobyteVolumeDriverTestCase(
 
         export_mnt_base = os.path.join(mnt_base,
                                        utils.get_hash_str(quobyte_volume))
+        mock_validate_volume.side_effect = [nova_exception.StaleVolumeMount(
+            "This shall fail."), True, True]
 
         libvirt_driver.connect_volume(connection_info, mock.sentinel.instance)
         conf = libvirt_driver.get_config(connection_info, self.disk_info)
@@ -423,6 +431,8 @@ class LibvirtQuobyteVolumeDriverTestCase(
 
         libvirt_driver.disconnect_volume(connection_info,
                                          mock.sentinel.instance)
+        mock_umount.assert_has_calls([mock.call(export_mnt_base),
+                                      mock.call(export_mnt_base)])
 
     @mock.patch.object(libvirt_utils, 'is_mounted', return_value=True)
     def test_libvirt_quobyte_driver_mount_non_quobyte_volume(self,
