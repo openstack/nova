@@ -804,10 +804,22 @@ class ResourceTracker(object):
 
     def _update(self, context, compute_node):
         """Update partial stats locally and populate them to Scheduler."""
-        if not self._resource_change(compute_node):
-            return
+        if self._resource_change(compute_node):
+            # If the compute_node's resource changed, update to DB.
+            # NOTE(jianghuaw): Once we completely move to use get_inventory()
+            # for all resource provider's inv data. We can remove this check.
+            # At the moment we still need this check and save compute_node.
+            compute_node.save()
+
+        # NOTE(jianghuaw): Some resources(e.g. VGPU) are not saved in the
+        # object of compute_node; instead the inventory data for these
+        # resource is reported by driver's get_inventory(). So even there
+        # is no resource change for compute_node as above, we need proceed
+        # to get inventory and use scheduler_client interfaces to update
+        # inventory to placement. It's scheduler_client's responsibility to
+        # ensure the update request to placement only happens when inventory
+        # is changed.
         nodename = compute_node.hypervisor_hostname
-        compute_node.save()
         # Persist the stats to the Scheduler
         try:
             inv_data = self.driver.get_inventory(nodename)
