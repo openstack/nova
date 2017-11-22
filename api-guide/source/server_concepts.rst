@@ -690,7 +690,52 @@ limit.
 Block Device Mapping
 ~~~~~~~~~~~~~~~~~~~~
 
-.. todo:: Add some description about BDM.
+Simply speaking, Block Device Mapping describes how block devices are
+exposed to the server.
+
+For some historical reasons, nova has two ways to mention the block device
+mapping in server creation request body:
+
+- ``block_device_mapping``: This is the legacy way and supports backward
+  compatibility for EC2 API.
+- ``block_device_mapping_v2``: This is the recommended format to specify
+  Block Device Mapping information in server creation request body.
+
+Users cannot mix the two formats in the same request.
+
+For more information, refer to `Block Device Mapping
+<https://docs.openstack.org/nova/latest/user/block-device-mapping.html>`_.
+
+For the full list of ``block_device_mapping_v2`` parameters available when
+creating a server, see the `API reference
+<https://developer.openstack.org/api-ref/compute/?expanded=create-server-detail#create-server>`_.
+
+**Example for block_device_mapping_v2**
+
+This will create a 100GB size volume type block device from an image with UUID
+of ``bb02b1a3-bc77-4d17-ab5b-421d89850fca``. It will be used as the first order
+boot device (``boot_index=0``), and this block device will not be deleted after
+we terminate the server. Note that the ``imageRef`` parameter is not required
+in this case since we are creating a volume-backed server.
+
+.. code-block:: json
+
+    {
+        "server": {
+            "name": "volume-backed-server-test",
+            "flavorRef": "52415800-8b69-11e0-9b19-734f1195ff37",
+            "block_device_mapping_v2": [
+                {
+                    "boot_index": 0,
+                    "uuid": "bb02b1a3-bc77-4d17-ab5b-421d89850fca",
+                    "volume_size": "100",
+                    "source_type": "image",
+                    "destination_type": "volume",
+                    "delete_on_termination": false
+                }
+            ]
+        }
+    }
 
 Scheduler Hints
 ~~~~~~~~~~~~~~~
