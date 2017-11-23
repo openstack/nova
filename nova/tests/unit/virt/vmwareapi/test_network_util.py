@@ -208,3 +208,16 @@ class GetVlanIdAndVswitchForPortgroupTestCase(test.NoDBTestCase):
         response = fake.DataObject()
         response.HostPortGroup = [port_group]
         return response
+
+
+class GetDVSNetworkNameTestCase(test.NoDBTestCase):
+
+    def test__get_name_from_dvs_name(self):
+        vxw = 'vxw-dvs-22-virtualwire-89-sid-5008-'
+        uuid = '2425c130-fd39-45a6-91d8-bf7ebe66b77c'
+        cases = [('name', 'name'),
+                 ('%sname' % vxw, 'name'),
+                 ('%s%s' % (vxw, uuid), uuid)]
+        for (dvsname, expected) in cases:
+            self.assertEqual(expected,
+                             network_util._get_name_from_dvs_name(dvsname))

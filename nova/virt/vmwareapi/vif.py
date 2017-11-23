@@ -139,6 +139,13 @@ def _get_neutron_network(session, cluster, vif):
         network_ref = network_util.get_network_with_the_name(
                 session, network_id, cluster)
         if not network_ref:
+            # We may have a provider network for a portgroup. The portgroup
+            # will have the same name as the network 'label'. This is enforced
+            # when the provider network is created
+            network_id = vif['network']['label']
+            network_ref = network_util.get_network_with_the_name(
+                    session, network_id, cluster)
+        if not network_ref:
             raise exception.NetworkNotFoundForBridge(bridge=network_id)
         if vif.get('details') and vif['details'].get('dvs_port_key'):
             network_ref['dvs_port_key'] = vif['details']['dvs_port_key']
