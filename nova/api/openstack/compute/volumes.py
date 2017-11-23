@@ -132,12 +132,14 @@ class VolumeController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=e.format_message())
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @validation.query_schema(volumes_schema.index_query)
     @extensions.expected_errors(())
     def index(self, req):
         """Returns a summary list of volumes."""
         return self._items(req, entity_maker=_translate_volume_summary_view)
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @validation.query_schema(volumes_schema.detail_query)
     @extensions.expected_errors(())
     def detail(self, req):
         """Returns a detailed list of volumes."""
@@ -262,6 +264,7 @@ class VolumeAttachmentController(wsgi.Controller):
         super(VolumeAttachmentController, self).__init__()
 
     @extensions.expected_errors(404)
+    @validation.query_schema(volumes_schema.index_query)
     def index(self, req, server_id):
         """Returns the list of volume attachments for a given instance."""
         context = req.environ['nova.context']
@@ -501,12 +504,14 @@ class SnapshotController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=e.format_message())
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @validation.query_schema(volumes_schema.index_query)
     @extensions.expected_errors(())
     def index(self, req):
         """Returns a summary list of snapshots."""
         return self._items(req, entity_maker=_translate_snapshot_summary_view)
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @validation.query_schema(volumes_schema.detail_query)
     @extensions.expected_errors(())
     def detail(self, req):
         """Returns a detailed list of snapshots."""
