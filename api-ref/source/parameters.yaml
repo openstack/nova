@@ -1558,7 +1558,7 @@ block_device_mapping_v2:
     with version 2.33. It has been restored in version 2.42.
   in: body
   required: false
-  type: object
+  type: array
 block_device_uuid:
   description: |
     This is the uuid of source resource. The uuid is point to different resource
