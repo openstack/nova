@@ -19,7 +19,6 @@
 """Handles all requests relating to compute resources (e.g. guest VMs,
 networking and storage of VMs, and compute hosts on which they run)."""
 
-import base64
 import collections
 import copy
 import functools
@@ -772,14 +771,7 @@ class API(base.Base):
         if user_data:
             try:
                 base64utils.decode_as_bytes(user_data)
-            except (base64.binascii.Error, TypeError):
-                # TODO(harlowja): reduce the above exceptions caught to
-                # only type error once we get a new oslo.serialization
-                # release that captures and makes only one be output.
-                #
-                # We can eliminate the capture of `binascii.Error` when:
-                #
-                # https://review.openstack.org/#/c/418066/ is released.
+            except TypeError:
                 raise exception.InstanceUserDataMalformed()
 
         # When using Neutron, _check_requested_secgroups will translate and
