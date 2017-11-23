@@ -6333,6 +6333,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
     def test_pre_live_migration_handles_dict(self):
         compute = manager.ComputeManager()
 
+        @mock.patch.object(compute_utils, 'notify_about_instance_action')
         @mock.patch.object(compute, '_notify_about_instance_usage')
         @mock.patch.object(compute, 'network_api')
         @mock.patch.object(compute.driver, 'pre_live_migration')
@@ -6341,7 +6342,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(objects.BlockDeviceMappingList,
                            'get_by_instance_uuid')
         def _test(mock_get_bdms, mock_ivbi, mock_gibdi, mock_plm, mock_nwapi,
-                  mock_notify):
+                  mock_notify, mock_notify_about_inst):
             mock_get_bdms.return_value = []
             instance = fake_instance.fake_instance_obj(self.context,
                                                        uuid=uuids.instance)
@@ -6349,6 +6350,11 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             mock_plm.return_value = migrate_data
             r = compute.pre_live_migration(self.context, instance,
                                            False, {}, {})
+            mock_notify_about_inst.assert_has_calls([
+                mock.call(self.context, instance, 'fake-mini',
+                          action='live_migration_pre', phase='start'),
+                mock.call(self.context, instance, 'fake-mini',
+                          action='live_migration_pre', phase='end')])
             self.assertIsInstance(r, dict)
             self.assertIsInstance(mock_plm.call_args_list[0][0][5],
                                   migrate_data_obj.LiveMigrateData)
@@ -6405,6 +6411,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         migrate_data = migrate_data_obj.LiveMigrateData()
         migrate_data.old_vol_attachment_ids = {}
 
+        @mock.patch.object(compute_utils, 'notify_about_instance_action')
         @mock.patch.object(compute.volume_api, 'attachment_complete')
         @mock.patch.object(vol_bdm, 'save')
         @mock.patch.object(compute, '_notify_about_instance_usage')
@@ -6417,7 +6424,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(compute.volume_api, 'attachment_create')
         def _test(mock_attach, mock_get_bdms, mock_ivbi,
                   mock_gibdi, mock_plm, mock_nwapi, mock_notify,
-                  mock_bdm_save, mock_attach_complete):
+                  mock_bdm_save, mock_attach_complete, mock_notify_about_inst):
 
             mock_get_bdms.return_value = [vol_bdm, image_bdm]
             mock_attach.return_value = {'id': new_attachment_id}
@@ -6427,6 +6434,11 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             r = compute.pre_live_migration(self.context, instance,
                                            False, {}, migrate_data)
 
+            mock_notify_about_inst.assert_has_calls([
+                mock.call(self.context, instance, 'fake-mini',
+                          action='live_migration_pre', phase='start'),
+                mock.call(self.context, instance, 'fake-mini',
+                          action='live_migration_pre', phase='end')])
             self.assertIsInstance(r, migrate_data_obj.LiveMigrateData)
             self.assertIsInstance(mock_plm.call_args_list[0][0][5],
                                   migrate_data_obj.LiveMigrateData)

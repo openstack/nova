@@ -5775,6 +5775,10 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(
                      context, instance, "live_migration.pre.start",
                      network_info=network_info)
+        compute_utils.notify_about_instance_action(
+            context, instance, self.host,
+            action=fields.NotificationAction.LIVE_MIGRATION_PRE,
+            phase=fields.NotificationPhase.START)
 
         migrate_data = self.driver.pre_live_migration(context,
                                        instance,
@@ -5807,6 +5811,11 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(
                      context, instance, "live_migration.pre.end",
                      network_info=network_info)
+        compute_utils.notify_about_instance_action(
+            context, instance, self.host,
+            action=fields.NotificationAction.LIVE_MIGRATION_PRE,
+            phase=fields.NotificationPhase.END)
+
         # TODO(tdurakov): remove dict to object conversion once RPC API version
         # is bumped to 5.x
         if not got_migrate_data_object and migrate_data:
