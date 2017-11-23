@@ -1292,8 +1292,6 @@ class AllocationCandidatesTestCase(ProviderDBBase):
         _add_inventory(ss1, fields.ResourceClass.DISK_GB, 2000)
         _set_traits(ss1, 'MISC_SHARES_VIA_AGGREGATE')
 
-        # NOTE(gibi): If this set of RPs is removed then this test case does
-        # not reproduce the bug 1731072 bullet (2) below
         cn2 = self._create_provider('cn2', uuids.agg2)
         _add_inventory(cn2, fields.ResourceClass.VCPU, 24)
         ss2_1 = self._create_provider('ss2_1', uuids.agg2)
@@ -1305,15 +1303,12 @@ class AllocationCandidatesTestCase(ProviderDBBase):
 
         alloc_cands = self._get_allocation_candidates()
         expected = [
-            # Aggregate 2 is always spread out as expectd
+            [('cn1', fields.ResourceClass.VCPU, 1),
+             ('cn1', fields.ResourceClass.MEMORY_MB, 64),
+             ('ss1', fields.ResourceClass.DISK_GB, 1500)],
             [('cn2', fields.ResourceClass.VCPU, 1),
              ('ss2_1', fields.ResourceClass.MEMORY_MB, 64),
              ('ss2_2', fields.ResourceClass.DISK_GB, 1500)],
-            # # Aggregate 1 always gets disk from the sharing RP
-            # Bug 1731072 bullet (2)
-            # [('cn1', fields.ResourceClass.VCPU, 1),
-            #  ('cn1', fields.ResourceClass.MEMORY_MB, 64),
-            #  ('ss1', fields.ResourceClass.DISK_GB, 1500)],
         ]
 
         self._validate_allocation_requests(expected, alloc_cands)
@@ -1337,8 +1332,6 @@ class AllocationCandidatesTestCase(ProviderDBBase):
         _add_inventory(ss1_2, fields.ResourceClass.DISK_GB, 2000)
         _set_traits(ss1_2, 'MISC_SHARES_VIA_AGGREGATE')
 
-        # NOTE(gibi): If this set of RPs are removed then this test case does
-        # not reproduce the bug 1731072 bullet (3) below
         cn2 = self._create_provider('cn2', uuids.agg2)
         _add_inventory(cn2, fields.ResourceClass.VCPU, 24)
         ss2_1 = self._create_provider('ss2_1', uuids.agg2)
@@ -1350,19 +1343,15 @@ class AllocationCandidatesTestCase(ProviderDBBase):
 
         alloc_cands = self._get_allocation_candidates()
         expected = [
-            # Aggregate 2 is spread out as expected
+            [('cn1', fields.ResourceClass.VCPU, 1),
+             ('cn1', fields.ResourceClass.MEMORY_MB, 64),
+             ('ss1_1', fields.ResourceClass.DISK_GB, 1500)],
+            [('cn1', fields.ResourceClass.VCPU, 1),
+             ('cn1', fields.ResourceClass.MEMORY_MB, 64),
+             ('ss1_2', fields.ResourceClass.DISK_GB, 1500)],
             [('cn2', fields.ResourceClass.VCPU, 1),
              ('ss2_1', fields.ResourceClass.MEMORY_MB, 64),
              ('ss2_2', fields.ResourceClass.DISK_GB, 1500)],
-            # # Aggregate 1 has two permutations, one getting the disk from
-            # # each sharing RP
-            # Bug 1731072 bullet (3)
-            # [('cn1', fields.ResourceClass.VCPU, 1),
-            #  ('cn1', fields.ResourceClass.MEMORY_MB, 64),
-            #  ('ss1_1', fields.ResourceClass.DISK_GB, 1500)],
-            # [('cn1', fields.ResourceClass.VCPU, 1),
-            #  ('cn1', fields.ResourceClass.MEMORY_MB, 64),
-            #  ('ss1_2', fields.ResourceClass.DISK_GB, 1500)],
         ]
 
         self._validate_allocation_requests(expected, alloc_cands)
