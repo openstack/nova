@@ -1129,9 +1129,6 @@ class ProviderUsageBaseTestCase(test.TestCase,
     Subclasses must define a **compute_driver** attribute for the virt driver
     to use.
 
-    Subclasses must define a **computes** dict with host: compute service key
-    value pairs.
-
     This class sets up standard fixtures and controller services but does not
     start any compute services, that is left to the subclass.
     """
@@ -1163,6 +1160,22 @@ class ProviderUsageBaseTestCase(test.TestCase,
 
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
         fake_network.set_stub_network_methods(self)
+
+        self.computes = {}
+
+    def _start_compute(self, host):
+        """Start a nova compute service on the given host
+
+        :param host: the name of the host that will be associated to the
+                     compute service.
+        :return: the nova compute service object
+        """
+        fake.set_nodes([host])
+        self.addCleanup(fake.restore_nodes)
+        self.flags(host=host)
+        compute = self.start_service('compute', host=host)
+        self.computes[host] = compute
+        return compute
 
     def _get_provider_uuid_by_host(self, host):
         # NOTE(gibi): the compute node id is the same as the compute node
@@ -1347,19 +1360,8 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         fake_notifier.stub_notifier(self)
         self.addCleanup(fake_notifier.reset)
 
-        self.computes = {}
-        fake.set_nodes(['host1'])
-        self.flags(host='host1')
-        self.compute1 = self.start_service('compute', host='host1')
-        self.computes[self.compute1.host] = self.compute1
-
-        # NOTE(sbauza): Make sure the FakeDriver returns a different nodename
-        # for the second compute node.
-        fake.set_nodes(['host2'])
-        self.addCleanup(fake.restore_nodes)
-        self.flags(host='host2')
-        self.compute2 = self.start_service('compute', host='host2')
-        self.computes[self.compute2.host] = self.compute2
+        self.compute1 = self._start_compute(host='host1')
+        self.compute2 = self._start_compute(host='host2')
 
         flavors = self.api.get_flavors()
         self.flavor1 = flavors[0]
@@ -2634,19 +2636,8 @@ class ServerRescheduleTests(ProviderUsageBaseTestCase):
 
     def setUp(self):
         super(ServerRescheduleTests, self).setUp()
-        self.computes = {}
-        fake.set_nodes(['host1'])
-        self.flags(host='host1')
-        self.compute1 = self.start_service('compute', host='host1')
-        self.computes[self.compute1.host] = self.compute1
-
-        # NOTE(sbauza): Make sure the FakeDriver returns a different nodename
-        # for the second compute node.
-        fake.set_nodes(['host2'])
-        self.addCleanup(fake.restore_nodes)
-        self.flags(host='host2')
-        self.compute2 = self.start_service('compute', host='host2')
-        self.computes[self.compute2.host] = self.compute2
+        self.compute1 = self._start_compute(host='host1')
+        self.compute2 = self._start_compute(host='host2')
 
         flavors = self.api.get_flavors()
         self.flavor1 = flavors[0]
@@ -2701,11 +2692,7 @@ class ServerBuildAbortTests(ProviderUsageBaseTestCase):
     def setUp(self):
         super(ServerBuildAbortTests, self).setUp()
         # We only need one compute service/host/node for these tests.
-        fake.set_nodes(['host1'])
-        self.flags(host='host1')
-        self.computes = {}
-        self.compute1 = self.start_service('compute', host='host1')
-        self.computes[self.compute1.host] = self.compute1
+        self.compute1 = self._start_compute(host='host1')
 
         flavors = self.api.get_flavors()
         self.flavor1 = flavors[0]
@@ -2744,7 +2731,7 @@ class ServerUnshelveSpawnFailTests(ProviderUsageBaseTestCase):
         # We only need one compute service/host/node for these tests.
         fake.set_nodes(['host1'])
         self.flags(host='host1')
-        self.compute1 = self.start_service('compute', host='host1')
+        self.compute1 = self._start_compute('host1')
 
         flavors = self.api.get_flavors()
         self.flavor1 = flavors[0]
