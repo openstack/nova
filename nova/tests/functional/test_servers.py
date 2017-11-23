@@ -1339,6 +1339,22 @@ class ProviderUsageBaseTestCase(test.TestCase,
             compute.manager.update_available_resource(ctx)
         LOG.info('Finished with periodics')
 
+    def _wait_for_migration_status(self, server, expected_status):
+        """Waits for a migration record with the given status to be found
+        for the given server, else the test fails. The migration record, if
+        found, is returned.
+        """
+        for attempt in range(10):
+            migrations = self.api.api_get('/os-migrations').body['migrations']
+            for migration in migrations:
+                if (migration['instance_uuid'] == server['id'] and
+                        migration['status'].lower() ==
+                        expected_status.lower()):
+                    return migration
+            time.sleep(0.5)
+        self.fail('Timed out waiting for migration with status "%s" for '
+                  'instance: %s' % (expected_status, server['id']))
+
 
 class ServerMovingTests(ProviderUsageBaseTestCase):
     """Tests moving servers while checking the resource allocations and usages
@@ -2262,22 +2278,6 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
 
         self._delete_and_check_allocations(server)
 
-    def _wait_for_migration_status(self, server, expected_status):
-        """Waits for a migration record with the given status to be found
-        for the given server, else the test fails. The migration record, if
-        found, is returned.
-        """
-        for attempt in range(10):
-            migrations = self.api.api_get('/os-migrations').body['migrations']
-            for migration in migrations:
-                if (migration['instance_uuid'] == server['id'] and
-                        migration['status'].lower() ==
-                        expected_status.lower()):
-                    return migration
-            time.sleep(0.5)
-        self.fail('Timed out waiting for migration with status "%s" for '
-                  'instance: %s' % (expected_status, server['id']))
-
     def test_live_migrate_pre_check_fails(self):
         """Tests the case that the LiveMigrationTask in conductor has
         called the scheduler which picked a host and created allocations
@@ -2503,36 +2503,27 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         # allocation which just leaves us with the original flavor.
         self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
 
-    def _mock_live_migration(self, context, instance, dest,
-                             post_method, recover_method,
-                             block_migration=False, migrate_data=None):
-        self._abort_migration = False
-        self._migrating = True
-        while self._migrating:
-            time.sleep(0.5)
 
-        if self._abort_migration:
-            recover_method(context, instance, dest)
-        else:
-            post_method(context, instance, dest, block_migration,
-                        migrate_data)
+class ServerLiveMigrateForceAndAbort(ProviderUsageBaseTestCase):
+    """Test Server live migrations, which delete the migration or
+    force_complete it, and check the allocations after the operations.
 
-    def _mock_force_complete(self, instance):
-        self._migrating = False
+    The test are using fakedriver to handle the force_completion and deletion
+    of live migration.
+    """
 
-    def _mock_live_migration_abort(self, instance):
-        self._abort_migration = True
-        self._migrating = False
+    compute_driver = 'fake.FakeLiveMigrateDriver'
 
-    @mock.patch('nova.virt.fake.FakeDriver.live_migration')
-    @mock.patch('nova.virt.fake.FakeDriver.live_migration_force_complete')
-    def test_live_migrate_force_complete(self, mock_force_complete,
-                                         mock_live_migration):
-        self._migrating = True
-        mock_force_complete.side_effect = self._mock_force_complete
-        mock_live_migration.side_effect = self._mock_live_migration
-        # Note(lajos katona): By mocking the live_migration we simulate
-        # the libvirt driver and the real migration that takes time.
+    def setUp(self):
+        super(ServerLiveMigrateForceAndAbort, self).setUp()
+
+        self.compute1 = self._start_compute(host='host1')
+        self.compute2 = self._start_compute(host='host2')
+
+        flavors = self.api.get_flavors()
+        self.flavor1 = flavors[0]
+
+    def test_live_migrate_force_complete(self):
         source_hostname = self.compute1.host
         dest_hostname = self.compute2.host
         source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
@@ -2575,13 +2566,7 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
 
         self._delete_and_check_allocations(server)
 
-    @mock.patch('nova.virt.fake.FakeDriver.live_migration')
-    @mock.patch('nova.virt.fake.FakeDriver.live_migration_abort')
-    def test_live_migrate_delete(self, mock_live_migration_abort,
-                                 mock_live_migration):
-        mock_live_migration.side_effect = self._mock_live_migration
-        mock_live_migration_abort.side_effect = self._mock_live_migration_abort
-
+    def test_live_migrate_delete(self):
         source_hostname = self.compute1.host
         dest_hostname = self.compute2.host
         source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
