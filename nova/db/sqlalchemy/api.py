@@ -4808,6 +4808,18 @@ def migration_get(context, id):
 
 
 @pick_context_manager_reader
+def migration_get_by_uuid(context, migration_uuid):
+    result = model_query(context, models.Migration, read_deleted="yes").\
+                     filter_by(uuid=migration_uuid).\
+                     first()
+
+    if not result:
+        raise exception.MigrationNotFound(migration_id=migration_uuid)
+
+    return result
+
+
+@pick_context_manager_reader
 def migration_get_by_id_and_instance(context, id, instance_uuid):
     result = model_query(context, models.Migration).\
                      filter_by(id=id).\
