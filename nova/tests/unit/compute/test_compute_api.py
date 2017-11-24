@@ -5072,14 +5072,27 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         self.assertItemsEqual(['default', uuids.secgroup_uuid],
                               security_groups)
 
+    @mock.patch('nova.compute.api.API._record_action_start')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'attach_interface')
-    def test_tagged_interface_attach(self, mock_attach):
+    def test_tagged_interface_attach(self, mock_attach, mock_record):
         instance = self._create_instance_obj()
         self.compute_api.attach_interface(self.context, instance, None, None,
                                           None, tag='foo')
         mock_attach.assert_called_with(self.context, instance=instance,
                                        network_id=None, port_id=None,
                                        requested_ip=None, tag='foo')
+        mock_record.assert_called_once_with(
+            self.context, instance, instance_actions.ATTACH_INTERFACE)
+
+    @mock.patch('nova.compute.api.API._record_action_start')
+    @mock.patch.object(compute_rpcapi.ComputeAPI, 'detach_interface')
+    def test_detach_interface(self, mock_detach, mock_record):
+        instance = self._create_instance_obj()
+        self.compute_api.detach_interface(self.context, instance, None)
+        mock_detach.assert_called_with(self.context, instance=instance,
+                                       port_id=None)
+        mock_record.assert_called_once_with(
+            self.context, instance, instance_actions.DETACH_INTERFACE)
 
 
 class Cellsv1DeprecatedTestMixIn(object):
