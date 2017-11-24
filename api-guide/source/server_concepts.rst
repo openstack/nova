@@ -122,29 +122,25 @@ operations on the server.
 Server query
 ~~~~~~~~~~~~
 
-Nova allows both general user and administrator to filter the server
-query result by using query options.
+There are two APIs for querying servers ``GET /servers`` and
+``GET /servers/detail``. Both of those APIs support filtering the query result
+by using query options.
 
-For general user, ``reservation_id``, ``name``, ``status``, ``image``,
-``flavor``, ``ip``, ``changes-since``, ``ip6 (microversion 2.5)`` are
-supported options to be used. The other options will be ignored by nova
-silently only with a debug log.
+For different user roles, the user has different query options set:
 
-For administrator, there are more fields can be used. The ``all_tenants``
-option allows the servers owned by all tenants to be reported (otherwise
-only the servers associated with the calling tenant are included in
-the response). Additionally, the filter is applied to the database schema
-definition of ``class Instance``, e.g there is a field named 'locked' in
-the schema then the filter can use 'locked' as search options to filter
-servers.
+- For general user, there is limited set of attributes of the servers can be
+  used as query option. ``reservation_id``, ``name``, ``status``, ``image``,
+  ``flavor``, ``ip``, ``changes-since``, ``ip6``, ``tags``, ``tags-any``,
+  ``not-tags``, ``not-tags-any`` are supported options to be used. Other
+  options will be ignored by nova silently.
 
-Also, there are some special options such as ``changes-since`` can
-be used and interpreted by nova.
-
--  **General user & Administrator supported options**
-   General user supported options are listed above and administrator can
-   use almost all the options except the options parameters for sorting
-   and pagination.
+- For administrator, most of the server attributes can be used as query
+  options. Before the Ocata release, the fields in the database schema of
+  server are exposed as query options, which may lead to unexpected API
+  change. After the Ocata release, the definition of the query options and
+  the database schema are decoupled. That is also the reason why the naming of
+  the query options are different from the attribute naming in the servers API
+  response.
 
 .. code::
 
@@ -166,8 +162,6 @@ be used and interpreted by nova.
 
    **Example: General user query server with administrator only options**
 
-.. code::
-
    Request with non-administrator context:
    GET /servers/detail?locked=1
    Note that 'locked' is not returned through API layer
@@ -188,8 +182,6 @@ be used and interpreted by nova.
 
    **Example: Administrator query server with administrator only options**
 
-.. code::
-
    Request with administrator context:
    GET /servers/detail?locked=1
 
@@ -203,17 +195,59 @@ be used and interpreted by nova.
        ]
    }
 
--  **Exact matching and regex matching of the search options**
+There are also some speical query options:
 
-   Depending on the name of a filter, matching for that filter is performed
-   using either exact matching or as regular expression matching.
-   ``project_id``, ``user_id``, ``image_ref``, ``vm_state``,
-   ``instance_type_id``, ``uuid``, ``metadata``, ``host``, ``system_metadata``
-   are the options that are applied by exact matching when filtering.
+- ``changes-since`` returns the servers updated after the given time.
+  Please see: :doc:`polling_changes-since_parameter`
 
-   **Example: User query server using exact matching on host**
+- ``deleted`` returns (or excludes) deleted servers
+
+- ``soft_deleted`` modifies behavior of ‘deleted’ to either include or exclude
+  instances whose vm_state is SOFT_DELETED
+
+- ``all_tenants`` is an administrator query option, which allows the
+  administrator to query the servers in any tenant.
 
 .. code::
+
+   **Example: User query server with special keys changes-since**
+
+   Precondition:
+   GET /servers/detail
+
+   Response:
+   {
+       "servers": [
+           {
+               "name": "t1"
+               "updated": "2015-12-15T15:55:52Z"
+               ...
+           },
+           {
+               "name": "t2",
+               "updated": "2015-12-17T15:55:52Z"
+               ...
+           }
+       ]
+   }
+
+   GET /servers/detail?changes-since='2015-12-16T15:55:52Z'
+
+   Response:
+   {
+       {
+           "name": "t2",
+           "updated": "2015-12-17T15:55:52Z"
+           ...
+       }
+   }
+
+There are two kinds of matching in query options: Exact matching and
+regex matching.
+
+.. code::
+
+   **Example: User query server using exact matching on host**
 
    Precondition:
    Request with administrator context:
@@ -252,8 +286,6 @@ be used and interpreted by nova.
    }
 
    **Example: Query server using regex matching on name**
-
-.. code::
 
    Precondition:
    Request with administrator context:
@@ -307,8 +339,6 @@ be used and interpreted by nova.
    **Example: User query server using exact matching on host and
    regex matching on name**
 
-.. code::
-
    Precondition:
    Request with administrator context:
    GET /servers/detail
@@ -350,28 +380,6 @@ be used and interpreted by nova.
        ]
    }
 
--  **Special keys are used to tweak the query**
-   ``changes-since`` returns instances updated after the given time,
-   ``deleted`` return (or exclude) deleted instances and ``soft_deleted``
-   modify behavior of 'deleted' to either include or exclude instances whose
-   vm_state is SOFT_DELETED. Please see: :doc:`polling_changes-since_parameter`
-
-   **Example: User query server with special keys changes-since**
-
-.. code::
-
-   Precondition:
-   GET /servers/detail
-
-   Response:
-   {
-       "servers": [
-           {
-               "name": "t1"
-               "updated": "2015-12-15T15:55:52Z"
-               ...
-           },
-           {
                "name": "t2",
                "updated": "2015-12-17T15:55:52Z"
                ...
