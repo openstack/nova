@@ -35,6 +35,7 @@ Request
 
   - limit: limit_simple
   - offset: offset_simple
+  - all_tenants: all_tenants_sec_grp_query
 
 Response
 --------

@@ -385,6 +385,15 @@ all_tenants_query:
   in: query
   required: false
   type: integer
+all_tenants_sec_grp_query:
+  description: |
+    Specify the ``all_tenants`` query parameter to list all security
+    groups for all projects. This is only allowed for admin users.
+    Value of this query parameter is not checked, only presence
+    is considered as request for all tenants.
+  in: query
+  required: false
+  type: string
 availability_zone_query_server:
   description: |
     Filter the server list result by server availability zone.
