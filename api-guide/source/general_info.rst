@@ -41,8 +41,12 @@ several key concepts:
 
 -  **Flavor Extra Specs**
 
-   TODO: Short description at here. The detail reference to
-   :doc:`extra_specs_and_properties`
+   Key and value pairs that can be used to describe the specification of
+   the server which more than just about CPU, disk and RAM. For example,
+   it can be used to indicate that the server created by this flavor has
+   PCI devices, etc.
+
+   For more details, please see: :doc:`extra_specs_and_properties`
 
 -  **Image**
 
@@ -55,8 +59,10 @@ several key concepts:
 
 -  **Image Properties**
 
-   TODO: Short description at here. The detail reference to
-   :doc:`extra_specs_and_properties`
+   Key and value pairs that can help end users to determine the requirements
+   of the guest os in the image.
+
+   For more details, please see: :doc:`extra_specs_and_properties`
 
 -  **Key Pair**
 
