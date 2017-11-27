@@ -151,6 +151,8 @@ class TestServiceNotificationSample(TestServiceNotificationBase):
 
     def test_service_destroy(self):
         self.compute2 = self.start_service('compute', host='host2')
+        # This test runs with the latest microversion by default so we get the
+        # service uuid back from the REST API.
         compute2_service_id = self.admin_api.get_services(
             host=self.compute2.host, binary='nova-compute')[0]['id']
         self.admin_api.api_delete('os-services/%s' % compute2_service_id)

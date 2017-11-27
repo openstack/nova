@@ -162,11 +162,7 @@ class NotificationPublisher(NotificationObject):
 
     @classmethod
     def from_service_obj(cls, service):
-        # nova-osapi_compute binary name needs to be translated to nova-api
-        # notification source enum value.
-        source = ("nova-api"
-                  if service.binary == "nova-osapi_compute"
-                  else service.binary)
+        source = fields.NotificationSource.get_source_by_binary(service.binary)
         return cls(host=service.host, source=source)
 
 
