@@ -2363,6 +2363,13 @@ class ProviderSummary(base.NovaObject):
         'traits': fields.ListOfObjectsField('Trait'),
     }
 
+    @property
+    def resource_class_names(self):
+        """Helper property that returns a set() of resource class string names
+        that are included in the provider summary.
+        """
+        return set(res.resource_class for res in self.resources)
+
 
 @db_api.api_context_manager.reader
 def _get_usages_by_provider_and_rc(ctx, rp_ids, rc_ids):
@@ -2799,18 +2806,13 @@ def _alloc_candidates_with_shared(ctx, requested_resources, ns_rp_ids,
         # provider involved in the request
         ns_rp_summary = summaries[ns_rp_id]
         ns_rp_uuid = ns_rp_summary.resource_provider.uuid
+        ns_resource_class_names = ns_rp_summary.resource_class_names
         ns_resources = set(
             rc_id for rc_id in requested_resources
-            if _RC_CACHE.string_from_id(rc_id) in [
-                res.resource_class for res in ns_rp_summary.resources
-            ]
+            if _RC_CACHE.string_from_id(rc_id) in ns_resource_class_names
         )
-        shared_resources = set(
-            rc_id for rc_id in requested_resources
-            if _RC_CACHE.string_from_id(rc_id) not in [
-                res.resource_class for res in ns_rp_summary.resources
-            ]
-        )
+        shared_resources = set(requested_resources) - ns_resources
+
         # Determine if the non-sharing provider actually has all the
         # resources requested. If not, we need to add an AllocationRequest
         # alternative containing this resource for each sharing provider.

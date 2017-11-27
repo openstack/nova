@@ -108,6 +108,22 @@ class TestResourceProviderNoDB(test_objects._LocalTest):
                           obj.create)
 
 
+class TestProviderSummaryNoDB(test_objects._LocalTest):
+    USES_DB = False
+
+    def test_resource_class_names(self):
+        psum = resource_provider.ProviderSummary(mock.sentinel.ctx)
+        disk_psr = resource_provider.ProviderSummaryResource(
+            mock.sentinel.ctx, resource_class=fields.ResourceClass.DISK_GB,
+            capacity=100, used=0)
+        ram_psr = resource_provider.ProviderSummaryResource(
+            mock.sentinel.ctx, resource_class=fields.ResourceClass.MEMORY_MB,
+            capacity=1024, used=0)
+        psum.resources = [disk_psr, ram_psr]
+        expected = set(['DISK_GB', 'MEMORY_MB'])
+        self.assertEqual(expected, psum.resource_class_names)
+
+
 class TestResourceProvider(test_objects._LocalTest):
 
     def test_create_in_db(self):
