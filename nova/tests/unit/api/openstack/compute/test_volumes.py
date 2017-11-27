@@ -19,6 +19,7 @@ import datetime
 import mock
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
+import six
 from six.moves import urllib
 import webob
 from webob import exc
@@ -1080,6 +1081,43 @@ class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
     def test_assisted_delete_instance_not_ready(self):
         api_error = exception.InstanceNotReady(instance_id=FAKE_UUID)
         self._test_assisted_delete_instance_conflict(api_error)
+
+    def test_delete_additional_query_parameters(self):
+        params = {
+            'delete_info': jsonutils.dumps({'volume_id': '1'}),
+            'additional': 123
+        }
+        req = fakes.HTTPRequest.blank(
+                '/v2/fake/os-assisted-volume-snapshots?%s' %
+                urllib.parse.urlencode(params))
+        req.method = 'DELETE'
+        self.controller.delete(req, '5')
+
+    def test_delete_duplicate_query_parameters_validation(self):
+        params = {
+            'delete_info': jsonutils.dumps({'volume_id': '1'}),
+            'delete_info': jsonutils.dumps({'volume_id': '2'})
+        }
+        req = fakes.HTTPRequest.blank(
+                '/v2/fake/os-assisted-volume-snapshots?%s' %
+                urllib.parse.urlencode(params))
+        req.method = 'DELETE'
+        self.controller.delete(req, '5')
+
+    def test_assisted_delete_missing_volume_id(self):
+        params = {
+            'delete_info': jsonutils.dumps({'something_else': '1'}),
+        }
+        req = fakes.HTTPRequest.blank(
+                '/v2/fake/os-assisted-volume-snapshots?%s' %
+                urllib.parse.urlencode(params))
+
+        req.method = 'DELETE'
+        ex = self.assertRaises(webob.exc.HTTPBadRequest,
+                               self.controller.delete, req, '5')
+        # This is the result of a KeyError but the only thing in the message
+        # is the missing key.
+        self.assertIn('volume_id', six.text_type(ex))
 
 
 class TestAssistedVolumeSnapshotsPolicyEnforcementV21(test.NoDBTestCase):
