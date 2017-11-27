@@ -86,9 +86,8 @@ def _trait_sync(ctx):
     """
     # Create a set of all traits in the os_traits library.
     std_traits = set(os_traits.get_traits())
-    conn = ctx.session.connection()
     sel = sa.select([_TRAIT_TBL.c.name])
-    res = conn.execute(sel).fetchall()
+    res = ctx.session.execute(sel).fetchall()
     # Create a set of all traits in the db that are not custom
     # traits.
     db_traits = set(
@@ -105,7 +104,7 @@ def _trait_sync(ctx):
     ]
     if batch_args:
         try:
-            conn.execute(ins, batch_args)
+            ctx.session.execute(ins, batch_args)
             LOG.info("Synced traits from os_traits into API DB: %s",
                      need_sync)
         except db_exc.DBDuplicateEntry:
@@ -136,27 +135,28 @@ def _ensure_trait_sync(ctx):
             _TRAITS_SYNCED = True
 
 
-def _get_current_inventory_resources(conn, rp):
+def _get_current_inventory_resources(ctx, rp):
     """Returns a set() containing the resource class IDs for all resources
     currently having an inventory record for the supplied resource provider.
 
-    :param conn: DB connection to use.
+    :param ctx: `nova.context.RequestContext` that may be used to grab a DB
+                connection.
     :param rp: Resource provider to query inventory for.
     """
     cur_res_sel = sa.select([_INV_TBL.c.resource_class_id]).where(
             _INV_TBL.c.resource_provider_id == rp.id)
-    existing_resources = conn.execute(cur_res_sel).fetchall()
+    existing_resources = ctx.session.execute(cur_res_sel).fetchall()
     return set([r[0] for r in existing_resources])
 
 
-def _delete_inventory_from_provider(conn, rp, to_delete):
+def _delete_inventory_from_provider(ctx, rp, to_delete):
     """Deletes any inventory records from the supplied provider and set() of
     resource class identifiers.
 
     If there are allocations for any of the inventories to be deleted raise
     InventoryInUse exception.
 
-    :param conn: DB connection to use.
+    :param ctx: `nova.context.RequestContext` that contains an oslo_db Session
     :param rp: Resource provider from which to delete inventory.
     :param to_delete: set() containing resource class IDs for records to
                       delete.
@@ -166,7 +166,7 @@ def _delete_inventory_from_provider(conn, rp, to_delete):
              sa.and_(_ALLOC_TBL.c.resource_provider_id == rp.id,
                      _ALLOC_TBL.c.resource_class_id.in_(to_delete))
          ).group_by(_ALLOC_TBL.c.resource_class_id)
-    allocations = conn.execute(allocation_query).fetchall()
+    allocations = ctx.session.execute(allocation_query).fetchall()
     if allocations:
         resource_classes = ', '.join([_RC_CACHE.string_from_id(alloc[0])
                                       for alloc in allocations])
@@ -176,14 +176,14 @@ def _delete_inventory_from_provider(conn, rp, to_delete):
     del_stmt = _INV_TBL.delete().where(sa.and_(
             _INV_TBL.c.resource_provider_id == rp.id,
             _INV_TBL.c.resource_class_id.in_(to_delete)))
-    res = conn.execute(del_stmt)
+    res = ctx.session.execute(del_stmt)
     return res.rowcount
 
 
-def _add_inventory_to_provider(conn, rp, inv_list, to_add):
+def _add_inventory_to_provider(ctx, rp, inv_list, to_add):
     """Inserts new inventory records for the supplied resource provider.
 
-    :param conn: DB connection to use.
+    :param ctx: `nova.context.RequestContext` that contains an oslo_db Session
     :param rp: Resource provider to add inventory to.
     :param inv_list: InventoryList object
     :param to_add: set() containing resource class IDs to search inv_list for
@@ -205,13 +205,13 @@ def _add_inventory_to_provider(conn, rp, inv_list, to_add):
                 max_unit=inv_record.max_unit,
                 step_size=inv_record.step_size,
                 allocation_ratio=inv_record.allocation_ratio)
-        conn.execute(ins_stmt)
+        ctx.session.execute(ins_stmt)
 
 
-def _update_inventory_for_provider(conn, rp, inv_list, to_update):
+def _update_inventory_for_provider(ctx, rp, inv_list, to_update):
     """Updates existing inventory records for the supplied resource provider.
 
-    :param conn: DB connection to use.
+    :param ctx: `nova.context.RequestContext` that contains an oslo_db Session
     :param rp: Resource provider on which to update inventory.
     :param inv_list: InventoryList object
     :param to_update: set() containing resource class IDs to search inv_list
@@ -232,7 +232,7 @@ def _update_inventory_for_provider(conn, rp, inv_list, to_update):
             where(sa.and_(
                 _ALLOC_TBL.c.resource_provider_id == rp.id,
                 _ALLOC_TBL.c.resource_class_id == rc_id))
-        allocations = conn.execute(allocation_query).first()
+        allocations = ctx.session.execute(allocation_query).first()
         if (allocations
             and allocations['usage'] is not None
             and allocations['usage'] > inv_record.capacity):
@@ -246,18 +246,18 @@ def _update_inventory_for_provider(conn, rp, inv_list, to_update):
                         max_unit=inv_record.max_unit,
                         step_size=inv_record.step_size,
                         allocation_ratio=inv_record.allocation_ratio)
-        res = conn.execute(upd_stmt)
+        res = ctx.session.execute(upd_stmt)
         if not res.rowcount:
             raise exception.InventoryWithResourceClassNotFound(
                     resource_class=rc_str)
     return exceeded
 
 
-def _increment_provider_generation(conn, rp):
+def _increment_provider_generation(ctx, rp):
     """Increments the supplied provider's generation value, supplying the
     currently-known generation. Returns whether the increment succeeded.
 
-    :param conn: DB connection to use.
+    :param ctx: `nova.context.RequestContext` that contains an oslo_db Session
     :param rp: `ResourceProvider` whose generation should be updated.
     :returns: The new resource provider generation value if successful.
     :raises nova.exception.ConcurrentUpdateDetected: if another thread updated
@@ -272,7 +272,7 @@ def _increment_provider_generation(conn, rp):
             _RP_TBL.c.generation == rp_gen)).values(
                     generation=(new_generation))
 
-    res = conn.execute(upd_stmt)
+    res = ctx.session.execute(upd_stmt)
     if res.rowcount != 1:
         raise exception.ConcurrentUpdateDetected
     return new_generation
@@ -288,11 +288,9 @@ def _add_inventory(context, rp, inventory):
     _ensure_rc_cache(context)
     rc_id = _RC_CACHE.id_from_string(inventory.resource_class)
     inv_list = InventoryList(objects=[inventory])
-    conn = context.session.connection()
-    with conn.begin():
-        _add_inventory_to_provider(
-            conn, rp, inv_list, set([rc_id]))
-        rp.generation = _increment_provider_generation(conn, rp)
+    _add_inventory_to_provider(
+        context, rp, inv_list, set([rc_id]))
+    rp.generation = _increment_provider_generation(context, rp)
 
 
 @db_api.api_context_manager.writer
@@ -305,11 +303,9 @@ def _update_inventory(context, rp, inventory):
     _ensure_rc_cache(context)
     rc_id = _RC_CACHE.id_from_string(inventory.resource_class)
     inv_list = InventoryList(objects=[inventory])
-    conn = context.session.connection()
-    with conn.begin():
-        exceeded = _update_inventory_for_provider(
-            conn, rp, inv_list, set([rc_id]))
-        rp.generation = _increment_provider_generation(conn, rp)
+    exceeded = _update_inventory_for_provider(
+        context, rp, inv_list, set([rc_id]))
+    rp.generation = _increment_provider_generation(context, rp)
     return exceeded
 
 
@@ -321,14 +317,12 @@ def _delete_inventory(context, rp, resource_class):
             cannot be found in either the standard classes or the DB.
     """
     _ensure_rc_cache(context)
-    conn = context.session.connection()
     rc_id = _RC_CACHE.id_from_string(resource_class)
-    with conn.begin():
-        if not _delete_inventory_from_provider(conn, rp, [rc_id]):
-            raise exception.NotFound(
-                'No inventory of class %s found for delete'
-                % resource_class)
-        rp.generation = _increment_provider_generation(conn, rp)
+    if not _delete_inventory_from_provider(context, rp, [rc_id]):
+        raise exception.NotFound(
+            'No inventory of class %s found for delete'
+            % resource_class)
+    rp.generation = _increment_provider_generation(context, rp)
 
 
 @db_api.api_context_manager.writer
@@ -353,9 +347,8 @@ def _set_inventory(context, rp, inv_list):
             from a provider that has allocations for that resource class.
     """
     _ensure_rc_cache(context)
-    conn = context.session.connection()
 
-    existing_resources = _get_current_inventory_resources(conn, rp)
+    existing_resources = _get_current_inventory_resources(context, rp)
     these_resources = set([_RC_CACHE.id_from_string(r.resource_class)
                            for r in inv_list.objects])
 
@@ -367,25 +360,23 @@ def _set_inventory(context, rp, inv_list):
     to_update = these_resources & existing_resources
     exceeded = []
 
-    with conn.begin():
-        if to_delete:
-            _delete_inventory_from_provider(conn, rp, to_delete)
-        if to_add:
-            _add_inventory_to_provider(conn, rp, inv_list, to_add)
-        if to_update:
-            exceeded = _update_inventory_for_provider(conn, rp, inv_list,
-                                                      to_update)
+    if to_delete:
+        _delete_inventory_from_provider(context, rp, to_delete)
+    if to_add:
+        _add_inventory_to_provider(context, rp, inv_list, to_add)
+    if to_update:
+        exceeded = _update_inventory_for_provider(context, rp, inv_list,
+                                                  to_update)
 
-        # Here is where we update the resource provider's generation value.
-        # If this update updates zero rows, that means that another
-        # thread has updated the inventory for this resource provider
-        # between the time the caller originally read the resource provider
-        # record and inventory information and this point. We raise an
-        # exception here which will rollback the above transaction and
-        # return an error to the caller to indicate that they can attempt
-        # to retry the inventory save after reverifying any capacity
-        # conditions and re-reading the existing inventory information.
-        rp.generation = _increment_provider_generation(conn, rp)
+    # Here is where we update the resource provider's generation value.  If
+    # this update updates zero rows, that means that another thread has updated
+    # the inventory for this resource provider between the time the caller
+    # originally read the resource provider record and inventory information
+    # and this point. We raise an exception here which will rollback the above
+    # transaction and return an error to the caller to indicate that they can
+    # attempt to retry the inventory save after reverifying any capacity
+    # conditions and re-reading the existing inventory information.
+    rp.generation = _increment_provider_generation(context, rp)
 
     return exceeded
 
@@ -398,7 +389,6 @@ def _get_provider_by_uuid(context, uuid):
     :raises: NotFound if no such provider was found
     :param uuid: The UUID to look up
     """
-    conn = conn = context.session.connection()
     rpt = sa.alias(_RP_TBL, name="rp")
     parent = sa.alias(_RP_TBL, name="parent")
     root = sa.alias(_RP_TBL, name="root")
@@ -416,7 +406,7 @@ def _get_provider_by_uuid(context, uuid):
         parent.c.uuid.label("parent_provider_uuid"),
     ]
     sel = sa.select(cols).select_from(rp_to_parent).where(rpt.c.uuid == uuid)
-    res = conn.execute(sel).fetchone()
+    res = context.session.execute(sel).fetchone()
     if not res:
         raise exception.NotFound(
             'No resource provider with uuid %s found' % uuid)
@@ -425,13 +415,12 @@ def _get_provider_by_uuid(context, uuid):
 
 @db_api.api_context_manager.reader
 def _get_aggregates_by_provider_id(context, rp_id):
-    conn = context.session.connection()
     join_statement = sa.join(
         _AGG_TBL, _RP_AGG_TBL, sa.and_(
             _AGG_TBL.c.id == _RP_AGG_TBL.c.aggregate_id,
             _RP_AGG_TBL.c.resource_provider_id == rp_id))
     sel = sa.select([_AGG_TBL.c.uuid]).select_from(join_statement)
-    return [r[0] for r in conn.execute(sel).fetchall()]
+    return [r[0] for r in context.session.execute(sel).fetchall()]
 
 
 @db_api.api_context_manager.writer
@@ -490,8 +479,7 @@ def _set_aggregates(context, rp_id, provided_aggregates):
         insert_aggregates = models.ResourceProviderAggregate.__table__.\
             insert().from_select(['resource_provider_id', 'aggregate_id'],
                                  select_agg_id)
-        conn = context.session.connection()
-        conn.execute(insert_aggregates)
+        context.session.execute(insert_aggregates)
 
 
 @db_api.api_context_manager.reader
@@ -499,18 +487,17 @@ def _get_traits_by_provider_id(context, rp_id):
     t = sa.alias(_TRAIT_TBL, name='t')
     rpt = sa.alias(_RP_TRAIT_TBL, name='rpt')
 
-    conn = context.session.connection()
     join_cond = sa.and_(t.c.id == rpt.c.trait_id,
                         rpt.c.resource_provider_id == rp_id)
     join = sa.join(t, rpt, join_cond)
     sel = sa.select([t.c.id, t.c.name]).select_from(join)
-    return [dict(r) for r in conn.execute(sel).fetchall()]
+    return [dict(r) for r in context.session.execute(sel).fetchall()]
 
 
-def _add_traits_to_provider(conn, rp_id, to_add):
+def _add_traits_to_provider(ctx, rp_id, to_add):
     """Adds trait associations to the provider with the supplied ID.
 
-    :param conn: DB connection to use.
+    :param ctx: `nova.context.RequestContext` that has an oslo_db Session
     :param rp_id: Internal ID of the resource provider on which to add
                   trait associations
     :param to_add: set() containing internal trait IDs for traits to add
@@ -520,7 +507,7 @@ def _add_traits_to_provider(conn, rp_id, to_add):
             ins_stmt = _RP_TRAIT_TBL.insert().values(
                 resource_provider_id=rp_id,
                 trait_id=trait_id)
-            conn.execute(ins_stmt)
+            ctx.session.execute(ins_stmt)
         except db_exc.DBDuplicateEntry:
             # Another thread already set this trait for this provider. Ignore
             # this for now (but ConcurrentUpdateDetected will end up being
@@ -529,11 +516,11 @@ def _add_traits_to_provider(conn, rp_id, to_add):
             pass
 
 
-def _delete_traits_from_provider(conn, rp_id, to_delete):
+def _delete_traits_from_provider(ctx, rp_id, to_delete):
     """Deletes trait associations from the provider with the supplied ID and
     set() of internal trait IDs.
 
-    :param conn: DB connection to use.
+    :param ctx: `nova.context.RequestContext` that has an oslo_db Session
     :param rp_id: Internal ID of the resource provider from which to delete
                   trait associations
     :param to_delete: set() containing internal trait IDs for traits to
@@ -543,7 +530,7 @@ def _delete_traits_from_provider(conn, rp_id, to_delete):
         sa.and_(
             _RP_TRAIT_TBL.c.resource_provider_id == rp_id,
             _RP_TRAIT_TBL.c.trait_id.in_(to_delete)))
-    conn.execute(del_stmt)
+    ctx.session.execute(del_stmt)
 
 
 @db_api.api_context_manager.writer
@@ -569,13 +556,11 @@ def _set_traits(context, rp, traits):
     if not to_add and not to_delete:
         return
 
-    conn = context.session.connection()
-    with conn.begin():
-        if to_delete:
-            _delete_traits_from_provider(conn, rp.id, to_delete)
-        if to_add:
-            _add_traits_to_provider(conn, rp.id, to_add)
-        rp.generation = _increment_provider_generation(conn, rp)
+    if to_delete:
+        _delete_traits_from_provider(context, rp.id, to_delete)
+    if to_add:
+        _add_traits_to_provider(context, rp.id, to_add)
+    rp.generation = _increment_provider_generation(context, rp)
 
 
 @db_api.api_context_manager.reader
@@ -1683,11 +1668,14 @@ class Allocation(base.NovaObject):
         'user_id': fields.StringField(nullable=True),
     }
 
-    def ensure_consumer_project_user(self, conn):
+    def ensure_consumer_project_user(self, ctx):
         """Examines the project_id, user_id of the object along with the
         supplied consumer_id and ensures that if project_id and user_id
         are set that there are records in the consumers, projects, and
         users table for these entities.
+
+        :param ctx: `nova.context.RequestContext` object that has the oslo.db
+                    Session object in it
         """
         # If project_id and user_id are not set then silently
         # move on. This allows microversion <1.8 to continue to work. Since
@@ -1699,17 +1687,17 @@ class Allocation(base.NovaObject):
                 self.user_id is not None):
             return
         # Grab the project internal ID if it exists in the projects table
-        pid = _ensure_project(conn, self.project_id)
+        pid = _ensure_project(ctx, self.project_id)
         # Grab the user internal ID if it exists in the users table
-        uid = _ensure_user(conn, self.user_id)
+        uid = _ensure_user(ctx, self.user_id)
 
         # Add the consumer if it doesn't already exist
         sel_stmt = sa.select([_CONSUMER_TBL.c.uuid]).where(
             _CONSUMER_TBL.c.uuid == self.consumer_id)
-        result = conn.execute(sel_stmt).fetchall()
+        result = ctx.session.execute(sel_stmt).fetchall()
         if not result:
             try:
-                conn.execute(_CONSUMER_TBL.insert().values(
+                ctx.session.execute(_CONSUMER_TBL.insert().values(
                     uuid=self.consumer_id,
                     project_id=pid,
                     user_id=uid))
@@ -1731,7 +1719,7 @@ def _delete_allocations_for_consumer(ctx, consumer_id):
     ctx.session.execute(del_sql)
 
 
-def _check_capacity_exceeded(conn, allocs):
+def _check_capacity_exceeded(ctx, allocs):
     """Checks to see if the supplied allocation records would result in any of
     the inventories involved having their capacity exceeded.
 
@@ -1745,7 +1733,7 @@ def _check_capacity_exceeded(conn, allocs):
     function returns a list of `ResourceProvider` objects that contain the
     generation at the time of the check.
 
-    :param conn: SQLalchemy Connection object to use
+    :param ctx: `nova.context.RequestContext` that has an oslo_db Session
     :param allocs: List of `Allocation` objects to check
     """
     # The SQL generated below looks like this:
@@ -1812,7 +1800,7 @@ def _check_capacity_exceeded(conn, allocs):
     sel = sel.where(
             sa.and_(_RP_TBL.c.uuid.in_(provider_uuids),
                     _INV_TBL.c.resource_class_id.in_(rc_ids)))
-    records = conn.execute(sel)
+    records = ctx.session.execute(sel)
     # Create a map keyed by (rp_uuid, res_class) for the records in the DB
     usage_map = {}
     provs_with_inv = set()
@@ -1887,11 +1875,12 @@ def _check_capacity_exceeded(conn, allocs):
     return res_providers
 
 
-def _ensure_lookup_table_entry(conn, tbl, external_id):
+def _ensure_lookup_table_entry(ctx, tbl, external_id):
     """Ensures the supplied external ID exists in the specified lookup table
     and if not, adds it. Returns the internal ID.
 
-    :param conn: DB connection object to use
+    :param ctx: `nova.context.RequestContext` object that has the oslo.db
+                Session object in it
     :param tbl: The lookup table
     :param external_id: The external project or user identifier
     :type external_id: string
@@ -1900,39 +1889,42 @@ def _ensure_lookup_table_entry(conn, tbl, external_id):
     sel = sa.select([tbl.c.id]).where(
         tbl.c.external_id == external_id
     )
-    res = conn.execute(sel).fetchall()
+    res = ctx.session.execute(sel).fetchall()
     if not res:
         try:
-            res = conn.execute(tbl.insert().values(external_id=external_id))
+            ins_stmt = tbl.insert().values(external_id=external_id)
+            res = ctx.session.execute(ins_stmt)
             return res.inserted_primary_key[0]
         except db_exc.DBDuplicateEntry:
             # Another thread added it just before us, so just read the
             # internal ID that that thread created...
-            res = conn.execute(sel).fetchall()
+            res = ctx.session.execute(sel).fetchall()
 
     return res[0][0]
 
 
-def _ensure_project(conn, external_id):
+def _ensure_project(ctx, external_id):
     """Ensures the supplied external project ID exists in the projects lookup
     table and if not, adds it. Returns the internal project ID.
 
-    :param conn: DB connection object to use
+    :param ctx: `nova.context.RequestContext` object that has the oslo.db
+                Session object in it
     :param external_id: The external project identifier
     :type external_id: string
     """
-    return _ensure_lookup_table_entry(conn, _PROJECT_TBL, external_id)
+    return _ensure_lookup_table_entry(ctx, _PROJECT_TBL, external_id)
 
 
-def _ensure_user(conn, external_id):
+def _ensure_user(ctx, external_id):
     """Ensures the supplied external user ID exists in the users lookup table
     and if not, adds it. Returns the internal user ID.
 
-    :param conn: DB connection object to use
+    :param ctx: `nova.context.RequestContext` object that has the oslo.db
+                Session object in it
     :param external_id: The external user identifier
     :type external_id: string
     """
-    return _ensure_lookup_table_entry(conn, _USER_TBL, external_id)
+    return _ensure_lookup_table_entry(ctx, _USER_TBL, external_id)
 
 
 @db_api.api_context_manager.reader
@@ -2007,13 +1999,18 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
                 inventory will be violated by any one of the allocations.
         """
         _ensure_rc_cache(context)
-        conn = context.session.connection()
-
         # Make sure that all of the allocations are new.
         for alloc in allocs:
             if 'id' in alloc:
                 raise exception.ObjectActionError(action='create',
                                                   reason='already created')
+
+        # First delete any existing allocations for any consumers. This
+        # provides a clean slate for the consumers mentioned in the list of
+        # allocations being manipulated.
+        consumer_ids = set(alloc.consumer_id for alloc in allocs)
+        for consumer_id in consumer_ids:
+            _delete_allocations_for_consumer(context, consumer_id)
 
         # Before writing any allocation records, we check that the submitted
         # allocations do not cause any inventory capacity to be exceeded for
@@ -2024,61 +2021,54 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
         # generation of the resource provider at the time of the check. These
         # objects are used at the end of the allocation transaction as a guard
         # against concurrent updates.
-        with conn.begin():
-            # First delete any existing allocations for any consumers. This
-            # provides a clean slate for the consumers mentioned in the list of
-            # allocations being manipulated.
-            consumer_ids = set(alloc.consumer_id for alloc in allocs)
-            for consumer_id in consumer_ids:
-                _delete_allocations_for_consumer(context, consumer_id)
-            # Don't check capacity when alloc.used is zero. Zero is not a
-            # valid amount when making an allocation (the minimum consumption
-            # of a resource is one) but is used in this method to indicate a
-            # need for removal. Providing 0 is controlled at the HTTP API layer
-            # where PUT /allocations does not allow empty allocations. When
-            # POST /allocations is implemented it will for the special case of
-            # atomically setting and removing different allocations in the same
-            # request. _check_capacity_exceeded will raise a
-            # ResourceClassNotFound # if any allocation is using a resource
-            # class that does not exist.
-            visited_rps = _check_capacity_exceeded(conn,
-                                                   [alloc for alloc in
-                                                    allocs if alloc.used > 0])
-            seen_consumers = set()
-            for alloc in allocs:
-                # If alloc.used is set to zero that is a signal that we don't
-                # want to (re-)create any allocations for this resource class.
-                # _delete_current_allocs has already wiped out allocations so
-                # all that's being done here is adding the resource provider
-                # to visited_rps so its generation will be checked at the end
-                # of the transaction.
-                if alloc.used == 0:
-                    rp = alloc.resource_provider
-                    visited_rps[rp.uuid] = rp
-                    continue
-                consumer_id = alloc.consumer_id
-                # Only set consumer <-> project/user association if we
-                # haven't set it already.
-                if consumer_id not in seen_consumers:
-                    alloc.ensure_consumer_project_user(conn)
-                    seen_consumers.add(consumer_id)
+        #
+        # Don't check capacity when alloc.used is zero. Zero is not a valid
+        # amount when making an allocation (the minimum consumption of a
+        # resource is one) but is used in this method to indicate a need for
+        # removal. Providing 0 is controlled at the HTTP API layer where PUT
+        # /allocations does not allow empty allocations. When POST /allocations
+        # is implemented it will for the special case of atomically setting and
+        # removing different allocations in the same request.
+        # _check_capacity_exceeded will raise a ResourceClassNotFound # if any
+        # allocation is using a resource class that does not exist.
+        visited_rps = _check_capacity_exceeded(context,
+                                               [alloc for alloc in
+                                                allocs if alloc.used > 0])
+        seen_consumers = set()
+        for alloc in allocs:
+            # If alloc.used is set to zero that is a signal that we don't want
+            # to (re-)create any allocations for this resource class.
+            # _delete_current_allocs has already wiped out allocations so all
+            # that's being done here is adding the resource provider to
+            # visited_rps so its generation will be checked at the end of the
+            # transaction.
+            if alloc.used == 0:
                 rp = alloc.resource_provider
-                rc_id = _RC_CACHE.id_from_string(alloc.resource_class)
-                ins_stmt = _ALLOC_TBL.insert().values(
-                        resource_provider_id=rp.id,
-                        resource_class_id=rc_id,
-                        consumer_id=consumer_id,
-                        used=alloc.used)
-                result = conn.execute(ins_stmt)
-                alloc.id = result.lastrowid
+                visited_rps[rp.uuid] = rp
+                continue
+            consumer_id = alloc.consumer_id
+            # Only set consumer <-> project/user association if we haven't set
+            # it already.
+            if consumer_id not in seen_consumers:
+                alloc.ensure_consumer_project_user(context)
+                seen_consumers.add(consumer_id)
+            rp = alloc.resource_provider
+            rc_id = _RC_CACHE.id_from_string(alloc.resource_class)
+            ins_stmt = _ALLOC_TBL.insert().values(
+                    resource_provider_id=rp.id,
+                    resource_class_id=rc_id,
+                    consumer_id=consumer_id,
+                    used=alloc.used)
+            result = context.session.execute(ins_stmt)
+            alloc.id = result.lastrowid
 
-            # Generation checking happens here. If the inventory for
-            # this resource provider changed out from under us,
-            # this will raise a ConcurrentUpdateDetected which can be caught
-            # by the caller to choose to try again. It will also rollback the
-            # transaction so that these changes always happen atomically.
-            for rp in visited_rps.values():
-                rp.generation = _increment_provider_generation(conn, rp)
+        # Generation checking happens here. If the inventory for this resource
+        # provider changed out from under us, this will raise a
+        # ConcurrentUpdateDetected which can be caught by the caller to choose
+        # to try again. It will also rollback the transaction so that these
+        # changes always happen atomically.
+        for rp in visited_rps.values():
+            rp.generation = _increment_provider_generation(context, rp)
 
     @classmethod
     def get_all_by_resource_provider(cls, context, rp):
