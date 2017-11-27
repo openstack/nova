@@ -158,8 +158,9 @@ class _TestServiceObject(object):
         mock_service_create(self.context, {'host': 'fake-host',
                                          'version': fake_service['version']})
 
+    @mock.patch('nova.objects.Service._send_notification')
     @mock.patch.object(db, 'service_update', return_value=fake_service)
-    def test_save(self, mock_service_update):
+    def test_save(self, mock_service_update, mock_notify):
         service_obj = service.Service(context=self.context)
         service_obj.id = 123
         service_obj.host = 'fake-host'
@@ -178,8 +179,9 @@ class _TestServiceObject(object):
         self.assertRaises(ovo_exc.ReadOnlyFieldError, setattr,
                           service_obj, 'id', 124)
 
+    @mock.patch('nova.objects.Service._send_notification')
     @mock.patch.object(db, 'service_destroy')
-    def _test_destroy(self, mock_service_destroy):
+    def _test_destroy(self, mock_service_destroy, mock_notify):
         service_obj = service.Service(context=self.context)
         service_obj.id = 123
         service_obj.destroy()
@@ -385,17 +387,19 @@ class _TestServiceObject(object):
                                                             binaries)
         self.assertEqual(1, minimum)
 
+    @mock.patch('nova.objects.Service._send_notification')
     @mock.patch('nova.db.service_get_minimum_version',
                 return_value={'nova-compute': 2})
-    def test_create_above_minimum(self, mock_get):
+    def test_create_above_minimum(self, mock_get, mock_notify):
         with mock.patch('nova.objects.service.SERVICE_VERSION',
                         new=3):
             objects.Service(context=self.context,
                             binary='nova-compute').create()
 
+    @mock.patch('nova.objects.Service._send_notification')
     @mock.patch('nova.db.service_get_minimum_version',
                 return_value={'nova-compute': 2})
-    def test_create_equal_to_minimum(self, mock_get):
+    def test_create_equal_to_minimum(self, mock_get, mock_notify):
         with mock.patch('nova.objects.service.SERVICE_VERSION',
                         new=2):
             objects.Service(context=self.context,
@@ -525,8 +529,9 @@ class TestServiceVersionCells(test.TestCase):
                 service.create()
             index += 1
 
+    @mock.patch('nova.objects.Service._send_notification')
     @mock.patch('nova.objects.Service._check_minimum_version')
-    def test_version_all_cells(self, mock_check):
+    def test_version_all_cells(self, mock_check, mock_notify):
         self._create_services(16, 16, 13, 16)
         self.assertEqual(13, service.get_minimum_version_all_cells(
             self.context, ['nova-compute']))

@@ -1,0 +1,7 @@
+---
+features:
+  - |
+    Added support for service create and destroy versioned notifications.
+    The ``service.create`` notification will be emitted after the service is
+    created (so the uuid is available) and also send the ``service.delete``
+    notification after the service is deleted.

@@ -18,7 +18,9 @@ from nova.objects import base as nova_base
 from nova.objects import fields
 
 
+@base.notification_sample('service-create.json')
 @base.notification_sample('service-update.json')
+@base.notification_sample('service-delete.json')
 @nova_base.NovaObjectRegistry.register_notification
 class ServiceStatusNotification(base.NotificationBase):
     # Version 1.0: Initial version

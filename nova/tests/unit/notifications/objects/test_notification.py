@@ -397,7 +397,7 @@ notification_object_data = {
     'IpPayload': '1.0-8ecf567a99e516d4af094439a7632d34',
     'KeypairNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'KeypairPayload': '1.0-6daebbbde0e1bf35c1556b1ecd9385c1',
-    'NotificationPublisher': '2.1-9f89fe4abb80f9a7b726e59800c905de',
+    'NotificationPublisher': '2.2-b6ad48126247e10b46b6b0240e52e614',
     'ServerGroupNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'ServerGroupPayload': '1.0-eb4bd1738b4670cfe1b7c30344c143c3',
     'ServiceStatusNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
