@@ -1,0 +1,12 @@
+---
+fixes:
+  - |
+    This release includes a fix for `bug 1733886`_ which was a regression
+    introduced in the 2.36 API microversion where the ``force`` parameter was
+    missing from the ``PUT /os-quota-sets/{tenant_id}`` API request schema so
+    users could not force quota updates with microversion 2.36 or later. The
+    bug is now fixed so that the ``force`` parameter can once again be
+    specified during quota updates. There is no new microversion for this
+    change since it is an admin-only API.
+
+    .. _bug 1733886: https://bugs.launchpad.net/nova/+bug/1733886
