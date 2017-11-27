@@ -2440,7 +2440,36 @@ def _get_usages_by_provider_and_rc(ctx, rp_ids, rc_ids):
 
 
 @db_api.api_context_manager.reader
-def _get_provider_ids_matching_all(ctx, resources):
+def _get_provider_ids_having_all_traits(ctx, required_traits):
+    """Returns a list of resource provider internal IDs that have ALL of the
+    required traits.
+
+    NOTE: Don't call this method with no required_traits.
+
+    :param ctx: Session context to use
+    :param required_traits: A map, keyed by trait string name, of required
+                            trait internal IDs that each provider must have
+                            associated with it
+    :raise ValueError: If required_traits is empty or None.
+    """
+    if not required_traits:
+        raise ValueError('required_traits must not be empty')
+
+    rptt = sa.alias(_RP_TRAIT_TBL, name="rpt")
+    sel = sa.select([rptt.c.resource_provider_id])
+    sel = sel.where(rptt.c.trait_id.in_(required_traits.values()))
+    sel = sel.group_by(rptt.c.resource_provider_id)
+    # Only get the resource providers that have ALL the required traits, so we
+    # need to GROUP BY the resource provider and ensure that the
+    # COUNT(trait_id) is equal to the number of traits we are requiring
+    num_traits = len(required_traits)
+    cond = sa.func.count(rptt.c.trait_id) == num_traits
+    sel = sel.having(cond)
+    return [r[0] for r in ctx.session.execute(sel)]
+
+
+@db_api.api_context_manager.reader
+def _get_provider_ids_matching_all(ctx, resources, required_traits):
     """Returns a list of resource provider internal IDs that have available
     inventory to satisfy all the supplied requests for resources.
 
@@ -2451,7 +2480,16 @@ def _get_provider_ids_matching_all(ctx, resources):
     :param ctx: Session context to use
     :param resources: A dict, keyed by resource class ID, of the amount
                       requested of that resource class.
+    :param required_traits: A map, keyed by trait string name, of required
+                            trait internal IDs that each provider must have
+                            associated with it
     """
+    trait_rps = None
+    if required_traits:
+        trait_rps = _get_provider_ids_having_all_traits(ctx, required_traits)
+        if not trait_rps:
+            return []
+
     rpt = sa.alias(_RP_TBL, name="rp")
 
     rc_name_map = {
@@ -2489,6 +2527,10 @@ def _get_provider_ids_matching_all(ctx, resources):
     # List of the WHERE conditions we build up by iterating over the requested
     # resources
     where_conds = []
+
+    # First filter by the resource providers that had all the required traits
+    if trait_rps:
+        where_conds.append(rpt.c.id.in_(trait_rps))
 
     # The chain of joins that we eventually pass to select_from()
     join_chain = rpt
@@ -2533,9 +2575,10 @@ def _get_provider_ids_matching_all(ctx, resources):
     return [r[0] for r in ctx.session.execute(sel)]
 
 
-def _build_provider_summaries(context, usages):
-    """Given a list of dicts of usage information, returns a dict, keyed by
-    resource provider ID, of ProviderSummary objects.
+def _build_provider_summaries(context, usages, prov_traits):
+    """Given a list of dicts of usage information and a map of providers to
+    their associated string traits, returns a dict, keyed by resource provider
+    ID, of ProviderSummary objects.
 
     :param context: nova.context.Context object
     :param usages: A list of dicts with the following format:
@@ -2548,6 +2591,8 @@ def _build_provider_summaries(context, usages):
             'reserved': integer,
             'allocation_ratio': float,
         }
+    :param prov_traits: A dict, keyed by internal resource provider ID, of
+                        string trait names associated with that provider
     """
     # Build up a dict, keyed by internal resource provider ID, of
     # ProviderSummary objects containing one or more ProviderSummaryResource
@@ -2562,6 +2607,7 @@ def _build_provider_summaries(context, usages):
         used = usage['used'] or 0
         allocation_ratio = usage['allocation_ratio']
         cap = int((usage['total'] - usage['reserved']) * allocation_ratio)
+        traits = prov_traits.get(rp_id) or []
 
         summary = summaries.get(rp_id)
         if not summary:
@@ -2583,6 +2629,7 @@ def _build_provider_summaries(context, usages):
             used=used,
         )
         summary.resources.append(rpsr)
+        summary.traits = [Trait(context, name=tname) for tname in traits]
     return summaries
 
 
@@ -2640,7 +2687,8 @@ def _alloc_candidates_no_shared(ctx, requested_resources, rp_ids):
     """Returns a tuple of (allocation requests, provider summaries) for a
     supplied set of requested resource amounts and resource providers. The
     supplied resource providers have capacity to satisfy ALL of the resources
-    in the requested resources.
+    in the requested resources as well as ALL required traits that were
+    requested by the user.
 
     This is an optimized code path for the common scenario when no sharing
     providers exist in the system for any requested resource. In this scenario,
@@ -2660,9 +2708,13 @@ def _alloc_candidates_no_shared(ctx, requested_resources, rp_ids):
     requested_rc_ids = list(requested_resources)
     usages = _get_usages_by_provider_and_rc(ctx, rp_ids, requested_rc_ids)
 
+    # Get a dict, keyed by resource provider internal ID, of trait string names
+    # that provider has associated with it
+    prov_traits = _provider_traits(ctx, rp_ids)
+
     # Get a dict, keyed by resource provider internal ID, of ProviderSummary
     # objects for all providers
-    summaries = _build_provider_summaries(ctx, usages)
+    summaries = _build_provider_summaries(ctx, usages, prov_traits)
 
     # Next, build up a list of allocation requests. These allocation requests
     # are AllocationRequest objects, containing resource provider UUIDs,
@@ -2720,7 +2772,8 @@ def _alloc_candidates_with_shared(ctx, requested_resources, ns_rp_ids,
 
     # Get a dict, keyed by resource provider internal ID, of ProviderSummary
     # objects for all providers involved in the request
-    summaries = _build_provider_summaries(ctx, usages)
+    # TODO(jaypipes): Handle traits for sharing providers scenario
+    summaries = _build_provider_summaries(ctx, usages, {})
 
     # Next, build up a list of allocation requests. These allocation requests
     # are AllocationRequest objects, containing resource provider UUIDs,
@@ -2806,6 +2859,52 @@ def _alloc_candidates_with_shared(ctx, requested_resources, ns_rp_ids,
     return alloc_requests, list(summaries.values())
 
 
+@db_api.api_context_manager.reader
+def _provider_traits(ctx, rp_ids):
+    """Given a list of resource provider internal IDs, returns a dict, keyed by
+    those provider IDs, of string trait names associated with that provider.
+
+    :raises: ValueError when rp_ids is empty.
+
+    :param ctx: nova.context.Context object
+    :param rp_ids: list of resource provider IDs
+    """
+    if not rp_ids:
+        raise ValueError(_("Expected rp_ids to be a list of resource provider "
+                           "internal IDs, but got an empty list."))
+
+    rptt = sa.alias(_RP_TRAIT_TBL, name='rptt')
+    tt = sa.alias(_TRAIT_TBL, name='t')
+    j = sa.join(rptt, tt, rptt.c.trait_id == tt.c.id)
+    sel = sa.select([rptt.c.resource_provider_id, tt.c.name]).select_from(j)
+    sel = sel.where(rptt.c.resource_provider_id.in_(rp_ids))
+    res = collections.defaultdict(list)
+    for r in ctx.session.execute(sel):
+        res[r[0]].append(r[1])
+    return res
+
+
+@db_api.api_context_manager.reader
+def _trait_ids_from_names(ctx, names):
+    """Given a list of string trait names, returns a dict, keyed by those
+    string names, of the corresponding internal integer trait ID.
+
+    :raises: ValueError when names is empty.
+
+    :param ctx: nova.context.Context object
+    :param names: list of string trait names
+    """
+    if not names:
+        raise ValueError(_("Expected names to be a list of string trait "
+                           "names, but got an empty list."))
+
+    # Avoid SAWarnings about unicode types...
+    unames = map(six.text_type, names)
+    tt = sa.alias(_TRAIT_TBL, name='t')
+    sel = sa.select([tt.c.name, tt.c.id]).where(tt.c.name.in_(unames))
+    return {r[0]: r[1] for r in ctx.session.execute(sel)}
+
+
 @base.NovaObjectRegistry.register_if(False)
 class AllocationCandidates(base.NovaObject):
     """The AllocationCandidates object is a collection of possible allocations
@@ -2834,6 +2933,7 @@ class AllocationCandidates(base.NovaObject):
         :param requests: List of nova.api.openstack.placement.util.RequestGroup
         """
         _ensure_rc_cache(context)
+        _ensure_trait_sync(context)
         alloc_reqs, provider_summaries = cls._get_by_requests(context,
                                                               requests)
         return cls(
@@ -2848,21 +2948,30 @@ class AllocationCandidates(base.NovaObject):
         # We first get the list of "root providers" that either have the
         # requested resources or are associated with the providers that
         # share one or more of the requested resource(s)
-        # TODO(efried): Handle traits; handle non-sharing groups.
-        # For now, this extracts just the data expected by 1.10 - no API change
-        resources = [request_group.resources for request_group in requests
-                     if not request_group.use_same_provider]
-        if len(resources) != 1:
+        # TODO(efried): Handle non-sharing groups.
+        # For now, this extracts just the sharing group's resources & traits.
+        sharing_groups = [request_group for request_group in requests
+                          if not request_group.use_same_provider]
+        if len(sharing_groups) != 1 or not sharing_groups[0].resources:
             raise ValueError(_("The requests parameter must contain one "
                                "RequestGroup with use_same_provider=False and "
                                "nonempty resources."))
-        resources = resources[0]
 
         # Transform resource string names to internal integer IDs
         resources = {
             _RC_CACHE.id_from_string(key): value
-            for key, value in resources.items()
+            for key, value in sharing_groups[0].resources.items()
         }
+
+        traits = sharing_groups[0].required_traits
+        # maps the trait name to the trait internal ID
+        trait_map = {}
+        if traits:
+            trait_map = _trait_ids_from_names(context, traits)
+            # Double-check that we found a trait ID for each requested name
+            if len(trait_map) != len(traits):
+                missing = traits - set(trait_map)
+                raise ValueError(_("Unknown traits requested: %s") % missing)
 
         # Contains a set of resource provider IDs that share some inventory for
         # each resource class requested. We do this here as an optimization. If
@@ -2886,7 +2995,8 @@ class AllocationCandidates(base.NovaObject):
             # add new code paths or modify this code path to return root
             # provider IDs of provider trees instead of the resource provider
             # IDs.
-            rp_ids = _get_provider_ids_matching_all(context, resources)
+            rp_ids = _get_provider_ids_matching_all(context, resources,
+                                                    trait_map)
             return _alloc_candidates_no_shared(context, resources, rp_ids)
 
         # rp_ids contains a list of resource provider IDs that EITHER have all

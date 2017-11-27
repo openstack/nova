@@ -9,6 +9,7 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+import os_traits
 from oslo_utils import uuidutils
 
 from nova.api.openstack.placement import lib as placement_lib
@@ -74,12 +75,12 @@ def _find_summary_for_resource(p_sum, rc_name):
             return resource
 
 
-class ProviderDBHelperTestCase(test.NoDBTestCase):
+class ProviderDBBase(test.NoDBTestCase):
 
     USES_DB_SELF = True
 
     def setUp(self):
-        super(ProviderDBHelperTestCase, self).setUp()
+        super(ProviderDBBase, self).setUp()
         self.useFixture(fixtures.Database())
         self.api_db = self.useFixture(fixtures.Database(database='api'))
         self.ctx = context.RequestContext('fake-user', 'fake-project')
@@ -100,6 +101,9 @@ class ProviderDBHelperTestCase(test.NoDBTestCase):
             rp.set_aggregates(aggs)
         self.rp_uuid_to_name[rp.uuid] = name
         return rp
+
+
+class ProviderDBHelperTestCase(ProviderDBBase):
 
     def test_get_provider_ids_matching_all(self):
         # These RPs are named based on whether we expect them to be 'incl'uded
@@ -233,15 +237,86 @@ class ProviderDBHelperTestCase(test.NoDBTestCase):
         }
 
         # Run it!
-        res = rp_obj._get_provider_ids_matching_all(self.ctx, resources)
+        res = rp_obj._get_provider_ids_matching_all(self.ctx, resources, {})
 
         # We should get all the incl_* RPs
         expected = [incl_biginv_noalloc, incl_extra_full]
 
         self.assertEqual(set(rp.id for rp in expected), set(res))
 
+        # Now request that the providers must have a set of required traits and
+        # that this results in no results returned, since we haven't yet
+        # associated any traits with the providers
+        avx2_t = rp_obj.Trait.get_by_name(self.ctx, os_traits.HW_CPU_X86_AVX2)
+        # _get_provider_ids_matching_all()'s required_traits argument is a map,
+        # keyed by trait name, of the trait internal ID
+        req_traits = {os_traits.HW_CPU_X86_AVX2: avx2_t.id}
+        res = rp_obj._get_provider_ids_matching_all(self.ctx, resources,
+                                                    req_traits)
 
-class AllocationCandidatesTestCase(ProviderDBHelperTestCase):
+        self.assertEqual([], res)
+
+        # OK, now add the trait to one of the providers and verify that
+        # provider now shows up in our results
+        incl_biginv_noalloc.set_traits([avx2_t])
+        res = rp_obj._get_provider_ids_matching_all(self.ctx, resources,
+                                                    req_traits)
+
+        self.assertEqual([incl_biginv_noalloc.id], res)
+
+    def test_get_provider_ids_having_all_traits(self):
+        def run(traitnames, expected_ids):
+            tmap = {}
+            if traitnames:
+                tmap = rp_obj._trait_ids_from_names(self.ctx, traitnames)
+            obs = rp_obj._get_provider_ids_having_all_traits(self.ctx, tmap)
+            self.assertEqual(sorted(expected_ids), sorted(obs))
+
+        # No traits.  This will never be returned, because it's illegal to
+        # invoke the method with no traits.
+        self._create_provider('one')
+
+        # One trait
+        rp2 = self._create_provider('two')
+        _set_traits(rp2, 'HW_CPU_X86_TBM')
+
+        # One the same as rp2
+        rp3 = self._create_provider('three')
+        _set_traits(rp3, 'HW_CPU_X86_TBM', 'HW_CPU_X86_TSX', 'HW_CPU_X86_SGX')
+
+        # Disjoint
+        rp4 = self._create_provider('four')
+        _set_traits(rp4, 'HW_CPU_X86_SSE2', 'HW_CPU_X86_SSE3', 'CUSTOM_FOO')
+
+        # Request with no traits not allowed
+        self.assertRaises(
+            ValueError,
+            rp_obj._get_provider_ids_having_all_traits, self.ctx, None)
+        self.assertRaises(
+            ValueError,
+            rp_obj._get_provider_ids_having_all_traits, self.ctx, {})
+
+        # Common trait returns both RPs having it
+        run(['HW_CPU_X86_TBM'], [rp2.id, rp3.id])
+        # Just the one
+        run(['HW_CPU_X86_TSX'], [rp3.id])
+        run(['HW_CPU_X86_TSX', 'HW_CPU_X86_SGX'], [rp3.id])
+        run(['CUSTOM_FOO'], [rp4.id])
+        # Including the common one still just gets me rp3
+        run(['HW_CPU_X86_TBM', 'HW_CPU_X86_SGX'], [rp3.id])
+        run(['HW_CPU_X86_TBM', 'HW_CPU_X86_TSX', 'HW_CPU_X86_SGX'], [rp3.id])
+        # Can't be satisfied
+        run(['HW_CPU_X86_TBM', 'HW_CPU_X86_TSX', 'CUSTOM_FOO'], [])
+        run(['HW_CPU_X86_TBM', 'HW_CPU_X86_TSX', 'HW_CPU_X86_SGX',
+             'CUSTOM_FOO'], [])
+        run(['HW_CPU_X86_SGX', 'HW_CPU_X86_SSE3'], [])
+        run(['HW_CPU_X86_TBM', 'CUSTOM_FOO'], [])
+        run(['HW_CPU_X86_BMI'], [])
+        rp_obj.Trait(self.ctx, name='CUSTOM_BAR').create()
+        run(['CUSTOM_BAR'], [])
+
+
+class AllocationCandidatesTestCase(ProviderDBBase):
     """Tests a variety of scenarios with both shared and non-shared resource
     providers that the AllocationCandidates.get_by_requests() method returns a
     set of alternative allocation requests and provider summaries that may be
@@ -303,6 +378,22 @@ class AllocationCandidatesTestCase(ProviderDBHelperTestCase):
         # Now we ought to be able to compare them
         self.assertEqual(expected, observed)
 
+    def test_no_resources_in_first_request_group(self):
+        requests = [placement_lib.RequestGroup(use_same_provider=False,
+                                               resources={})]
+        self.assertRaises(ValueError,
+                          rp_obj.AllocationCandidates.get_by_requests,
+                          self.ctx, requests)
+
+    def test_unknown_traits(self):
+        missing = set(['UNKNOWN_TRAIT'])
+        requests = [placement_lib.RequestGroup(
+            use_same_provider=False, resources=self.requested_resources,
+            required_traits=missing)]
+        self.assertRaises(ValueError,
+                          rp_obj.AllocationCandidates.get_by_requests,
+                          self.ctx, requests)
+
     def test_all_local(self):
         """Create some resource providers that can satisfy the request for
         resources with local (non-shared) resources and verify that the
@@ -310,13 +401,14 @@ class AllocationCandidatesTestCase(ProviderDBHelperTestCase):
         each of these resource providers.
         """
         # Create three compute node providers with VCPU, RAM and local disk
-        for name in ('cn1', 'cn2', 'cn3'):
-            cn = self._create_provider(name)
+        cn1, cn2, cn3 = (self._create_provider(name)
+                         for name in ('cn1', 'cn2', 'cn3'))
+        for cn in (cn1, cn2, cn3):
             _add_inventory(cn, fields.ResourceClass.VCPU, 24,
                            allocation_ratio=16.0)
             _add_inventory(cn, fields.ResourceClass.MEMORY_MB, 32768,
                            min_unit=64, step_size=64, allocation_ratio=1.5)
-            total_gb = 1000 if name == 'cn3' else 2000
+            total_gb = 1000 if cn.name == 'cn3' else 2000
             _add_inventory(cn, fields.ResourceClass.DISK_GB, total_gb,
                            reserved=100, min_unit=10, step_size=10,
                            allocation_ratio=1.0)
@@ -373,6 +465,48 @@ class AllocationCandidatesTestCase(ProviderDBHelperTestCase):
              ('cn2', fields.ResourceClass.DISK_GB, 1500)],
         ]
         self._validate_allocation_requests(expected, alloc_cands)
+
+        # Now let's add traits into the mix. Currently, none of the compute
+        # nodes has the AVX2 trait associated with it, so we should get 0
+        # results if we required AVX2
+        alloc_cands = rp_obj.AllocationCandidates.get_by_requests(
+            self.ctx,
+            requests=[placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources=self.requested_resources,
+                required_traits=set([os_traits.HW_CPU_X86_AVX2])
+            )],
+        )
+        self._validate_allocation_requests([], alloc_cands)
+
+        # If we then associate the AVX2 trait to just compute node 2, we should
+        # get back just that compute node in the provider summaries
+        _set_traits(cn2, 'HW_CPU_X86_AVX2')
+
+        alloc_cands = rp_obj.AllocationCandidates.get_by_requests(
+            self.ctx,
+            requests=[placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources=self.requested_resources,
+                required_traits=set([os_traits.HW_CPU_X86_AVX2])
+            )],
+        )
+        # Only cn2 should be in our allocation requests now since that's the
+        # only one with the required trait
+        expected = [
+            [('cn2', fields.ResourceClass.VCPU, 1),
+             ('cn2', fields.ResourceClass.MEMORY_MB, 64),
+             ('cn2', fields.ResourceClass.DISK_GB, 1500)],
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
+        p_sums = alloc_cands.provider_summaries
+        self.assertEqual(1, len(p_sums))
+
+        # And let's verify the provider summary shows the trait
+        cn2_p_sum = _find_summary_for_provider(p_sums, cn2.uuid)
+        self.assertIsNotNone(cn2_p_sum)
+        self.assertEqual(1, len(cn2_p_sum.traits))
+        self.assertEqual(os_traits.HW_CPU_X86_AVX2, cn2_p_sum.traits[0].name)
 
     def test_local_with_shared_disk(self):
         """Create some resource providers that can satisfy the request for
