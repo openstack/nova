@@ -75,3 +75,8 @@ class QuotaSetsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
                                 {})
         return self._verify_response('user-quotas-update-post-resp', {},
                                      response, 200)
+
+
+class QuotaSetsSampleJsonTests2_36(QuotaSetsSampleJsonTests):
+    microversion = '2.36'
+    scenarios = [('v2_36', {'api_major_version': 'v2.1'})]
