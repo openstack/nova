@@ -141,21 +141,21 @@ The rules around when a microversion is needed are the same as for the
 there are a few bits of required housekeeping that must be done in the code:
 
 * Update the ``VERSIONS`` list in
-  `nova/api/openstack/placement/microversion.py` to indicate the new
+  ``nova/api/openstack/placement/microversion.py`` to indicate the new
   microversion and give a very brief summary of the added feature.
-* Update `nova/api/openstack/placement/rest_api_version_history.rst`
+* Update ``nova/api/openstack/placement/rest_api_version_history.rst``
   to add a more detailed section describing the new microversion.
 * Add a `release note`_ with a ``features`` section announcing the new or
   changed feature and the microversion.
 * If the ``version_handler`` decorator (see below) has been used,
   increment ``TOTAL_VERSIONED_METHODS`` in
-  `nova/tests/unit/api/openstack/placement/test_microversion.py`.
+  ``nova/tests/unit/api/openstack/placement/test_microversion.py``.
   This provides a confirmatory check just to make sure you're paying
   attention and as a helpful reminder to do the other things in this
   list.
 * Include functional gabbi tests as appropriate (see `Using Gabbi`_).  At the
   least, update the ``latest microversion`` test in
-  `nova/tests/functional/api/openstack/placement/gabbits/microversion.yaml`.
+  ``nova/tests/functional/api/openstack/placement/gabbits/microversion.yaml``.
 * Update the `API Reference`_ documentation as appropriate.  The source is
   located under `placement-api-ref/source/`.
 
@@ -242,7 +242,7 @@ Most of the handler code in the placement API is tested using `gabbi`_. Some
 utility code is tested with unit tests found in
 `nova/tests/unit/api/openstack/placement/`. The back-end objects are tested
 with a combination of unit and functional tests found in
-`nova/tests/unit/objects/test_resource_provider.py` and
+``nova/tests/unit/objects/test_resource_provider.py`` and
 `nova/tests/functional/db`. Adding unit and non-gabbi functional tests is done
 in the same way as other aspects of nova.
 
@@ -259,20 +259,20 @@ application is run via `wsgi-intercept`_, meaning that real HTTP requests are
 being made over a file handle that appears to Python to be a socket.
 
 In the placement API the YAML files (aka "gabbits") can be found in
-`nova/tests/functional/api/openstack/placement/gabbits`. Fixture definitions are
-in `fixtures.py` in the parent directory. Tests are currently grouped by handlers
-(e.g., `resource-provider.yaml` and `inventory.yaml`). This is not a
+``nova/tests/functional/api/openstack/placement/gabbits``. Fixture definitions are
+in ``fixtures.py`` in the parent directory. Tests are currently grouped by handlers
+(e.g., ``resource-provider.yaml`` and ``inventory.yaml``). This is not a
 requirement and as we increase the number of tests it makes sense to have more
 YAML files with fewer tests, divided up by the arc of API interaction that they
 test.
 
 The gabbi tests are integrated into the functional tox target, loaded via
-`nova/tests/functional/api/openstack/placement/test_placement_api.py`. If you
+``nova/tests/functional/api/openstack/placement/test_placement_api.py``. If you
 want to run just the gabbi tests one way to do so is::
 
     tox -efunctional test_placement_api
 
-If you want to run just one yaml file (in this example `inventory.yaml`)::
+If you want to run just one yaml file (in this example ``inventory.yaml``)::
 
     tox -efunctional placement_api.inventory
 
@@ -304,7 +304,7 @@ overhead, the tests run quickly.
 
 While `fixtures`_ can be used to establish entities that are required for
 tests, creating those entities via the HTTP API results in tests which are more
-descriptive. For example the `inventory.yaml` file creates the resource
+descriptive. For example the ``inventory.yaml`` file creates the resource
 provider to which it will then add inventory. This makes it easy to explore a
 sequence of interactions and a variety of responses with the tests:
 
@@ -342,7 +342,7 @@ developed in a way to limit dependency on the rest of the nova codebase and be
 self-contained:
 
 * Most code is in `nova/api/openstack/placement` except for oslo versioned
-  object code in `nova/objects/resource_provider.py`.
+  object code in ``nova/objects/resource_provider.py``.
 * Database query code is kept within the objects.
 * The methods on the objects are not remotable, as the only intended caller is
   the placement API code.
@@ -356,7 +356,7 @@ addressed if the extraction ever happens):
 * Database models, migrations and tables use the nova api database.
 * The nova `FaultWrapper` middleware is being used.
 * `nova.i18n` package provides the ``_`` and related functions.
-* `nova.conf` is used for configuration.
+* ``nova.conf`` is used for configuration.
 * Unit and functional tests depend on fixtures and other functionality in base
   classes provided by nova.
 
