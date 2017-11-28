@@ -1,5 +1,5 @@
 # variables in path
-consumer_uuid:
+consumer_uuid: &consumer_uuid
   type: string
   in: path
   required: true
@@ -147,19 +147,29 @@ allocations_by_resource_provider:
   required: true
   description: >
     A dictionary of allocations keyed by resource provider uuid.
-allocations_dict:
+allocations_dict: &allocations_dict
   type: object
   in: body
   required: true
   min_version: 1.12
   description: >
     A dictionary of resource allocations keyed by resource provider uuid.
+allocations_dict_empty:
+  <<: *allocations_dict
+  description: >
+    A dictionary of resource allocations keyed by resource provider uuid.
+    If this is an empty object, allocations for this consumer will be
+    removed.
+  min_version: null
 capacity:
   type: integer
   in: body
   required: true
   description: >
     The amount of the resource that the provider can accommodate.
+consumer_uuid_body:
+  <<: *consumer_uuid
+  in: body
 inventories:
   type: object
   in: body

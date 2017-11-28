@@ -14,11 +14,11 @@ defaults:
 
 tests:
 
-- name: get allocations no consumer is 404
+- name: get allocations no consumer is 405
   GET: /allocations
-  status: 404
+  status: 405
   response_json_paths:
-     $.errors[0].title: Not Found
+     $.errors[0].title: Method Not Allowed
 
 - name: get allocations is empty dict
   GET: /allocations/599ffd2d-526a-4b2e-8683-f13ad25f9958

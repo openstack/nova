@@ -172,3 +172,9 @@ response body. Because the `PUT` request requires `user_id` and
 response. In addition, the response body for ``GET /allocation_candidates``
 is updated so the allocations in the ``alocation_requests`` object work
 with the new `PUT` format.
+
+1.13 POST multiple allocations to /allocations
+----------------------------------------------
+
+Version 1.13 gives the ability to set or clear allocations for more than
+one consumer uuid with a request to ``POST /allocations``.

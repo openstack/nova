@@ -80,6 +80,11 @@ class APIFixture(fixture.GabbiFixture):
         os.environ['CUSTOM_RES_CLASS'] = 'CUSTOM_IRON_NFV'
         os.environ['PROJECT_ID'] = uuidutils.generate_uuid()
         os.environ['USER_ID'] = uuidutils.generate_uuid()
+        os.environ['PROJECT_ID_ALT'] = uuidutils.generate_uuid()
+        os.environ['USER_ID_ALT'] = uuidutils.generate_uuid()
+        os.environ['INSTANCE_UUID'] = uuidutils.generate_uuid()
+        os.environ['MIGRATION_UUID'] = uuidutils.generate_uuid()
+        os.environ['CONSUMER_UUID'] = uuidutils.generate_uuid()
 
     def stop_fixture(self):
         self.api_db_fixture.cleanup()
