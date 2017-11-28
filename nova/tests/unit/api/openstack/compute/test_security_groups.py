@@ -658,6 +658,66 @@ class TestSecurityGroupsV21(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest, self.controller.delete,
                           self.req, '1')
 
+    def _test_list_with_invalid_filter(
+        self, url, expected_exception=exception.ValidationError):
+        prefix = '/os-security-groups'
+        req = fakes.HTTPRequest.blank(prefix + url)
+        self.assertRaises(expected_exception,
+                          self.controller.index, req)
+
+    def test_list_with_invalid_non_int_limit(self):
+        self._test_list_with_invalid_filter('?limit=-9')
+
+    def test_list_with_invalid_string_limit(self):
+        self._test_list_with_invalid_filter('?limit=abc')
+
+    def test_list_duplicate_query_with_invalid_string_limit(self):
+        self._test_list_with_invalid_filter(
+            '?limit=1&limit=abc')
+
+    def test_list_with_invalid_non_int_offset(self):
+        self._test_list_with_invalid_filter('?offset=-9')
+
+    def test_list_with_invalid_string_offset(self):
+        self._test_list_with_invalid_filter('?offset=abc')
+
+    def test_list_duplicate_query_with_invalid_string_offset(self):
+        self._test_list_with_invalid_filter(
+            '?offset=1&offset=abc')
+
+    def test_list_duplicate_query_parameters_validation(self):
+        params = {
+            'limit': 1,
+            'offset': 1,
+            'all_tenants': 1
+        }
+
+        for param, value in params.items():
+            req = fakes.HTTPRequest.blank(
+                '/os-security-groups' + '?%s=%s&%s=%s' %
+                (param, value, param, value))
+            self.controller.index(req)
+
+    def test_list_with_additional_filter(self):
+        req = fakes.HTTPRequest.blank(
+            '/os-security-groups?limit=1&offset=1&additional=something')
+        self.controller.index(req)
+
+    def test_list_all_tenants_filter_as_string(self):
+        req = fakes.HTTPRequest.blank(
+            '/os-security-groups?all_tenants=abc')
+        self.controller.index(req)
+
+    def test_list_all_tenants_filter_as_positive_int(self):
+        req = fakes.HTTPRequest.blank(
+            '/os-security-groups?all_tenants=1')
+        self.controller.index(req)
+
+    def test_list_all_tenants_filter_as_negative_int(self):
+        req = fakes.HTTPRequest.blank(
+            '/os-security-groups?all_tenants=-1')
+        self.controller.index(req)
+
     def test_associate_by_non_existing_security_group_name(self):
         self.stub_out('nova.db.instance_get', return_server)
         self.assertEqual(return_server(None, '1'),

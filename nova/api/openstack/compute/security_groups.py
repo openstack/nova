@@ -26,6 +26,7 @@ from nova.api.openstack.compute.schemas import security_groups as \
                                                   schema_security_groups
 from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
+from nova.api import validation
 from nova import compute
 from nova import exception
 from nova.i18n import _
@@ -191,6 +192,7 @@ class SecurityGroupController(SecurityGroupControllerBase, wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=exp.format_message())
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
+    @validation.query_schema(schema_security_groups.index_query)
     @extensions.expected_errors(404)
     def index(self, req):
         """Returns a list of security groups."""

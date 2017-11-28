@@ -36,3 +36,19 @@ server_create = {
 server_create_v20 = copy.deepcopy(server_create)
 server_create_v20['security_groups']['items']['properties']['name'] = (
     parameter_types.name_with_leading_trailing_spaces)
+
+index_query = {
+    'type': 'object',
+    'properties': {
+        'limit': parameter_types.multi_params(
+             parameter_types.non_negative_integer),
+        'offset': parameter_types.multi_params(
+             parameter_types.non_negative_integer),
+        'all_tenants': parameter_types.multi_params({'type': 'string'})
+    },
+    # NOTE(gmann): This is kept True to keep backward compatibility.
+    # As of now Schema validation stripped out the additional parameters and
+    # does not raise 400. In the future, we may block the additional parameters
+    # by bump in Microversion.
+    'additionalProperties': True
+}
