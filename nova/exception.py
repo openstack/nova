@@ -2183,3 +2183,12 @@ class TraitCannotDeleteStandard(Invalid):
 
 class TraitInUse(Invalid):
     msg_fmt = _("The trait %(name)s is in use by a resource provider.")
+
+
+class CannotMigrateWithTargetHost(NovaException):
+    msg_fmt = _("Cannot migrate with target host. Retry without a host "
+                "specified.")
+
+
+class CannotMigrateToSameHost(NovaException):
+    msg_fmt = _("Cannot migrate to the host where the server exists.")

@@ -202,8 +202,13 @@ class MigrationTask(base.TaskBase):
         legacy_spec = self.request_spec.to_legacy_request_spec_dict()
         legacy_props = self.request_spec.to_legacy_filter_properties_dict()
         scheduler_utils.setup_instance_group(self.context, self.request_spec)
-        scheduler_utils.populate_retry(legacy_props,
-                                       self.instance.uuid)
+        # If a target host is set in a requested destination,
+        # 'populate_retry' need not be executed.
+        if not ('requested_destination' in self.request_spec and
+                    self.request_spec.requested_destination and
+                        'host' in self.request_spec.requested_destination):
+            scheduler_utils.populate_retry(legacy_props,
+                                           self.instance.uuid)
 
         # NOTE(sbauza): Force_hosts/nodes needs to be reset
         # if we want to make sure that the next destination
@@ -222,6 +227,13 @@ class MigrationTask(base.TaskBase):
                 self.request_spec.requested_destination):
             self.request_spec.requested_destination.cell = (
                 instance_mapping.cell_mapping)
+            # NOTE(takashin): In the case that the target host is specified,
+            # if the migration is failed, it is not necessary to retry
+            # the cold migration to the same host. So make sure that
+            # reschedule will not occur.
+            if 'host' in self.request_spec.requested_destination:
+                legacy_props.pop('retry', None)
+                self.request_spec.retry = None
         else:
             self.request_spec.requested_destination = objects.Destination(
                 cell=instance_mapping.cell_mapping)
