@@ -99,7 +99,7 @@ Enables, disables a host or put a host in maintenance or normal mode.
   console, and is therefore useless. There are other APIs that allow you to do
   the same thing which are supported across all compute drivers, which would be
   disabling a service and then migrating the instances off that host. See the
-  `Operations Guide <https://docs.openstack.org/ops-guide/ops-maintenance-compute.html>`_
+  `Operations Guide <https://wiki.openstack.org/wiki/OpsGuide/Compute_Node_Failures_and_Maintenance>`_
   for more information on maintenance.
 
 Normal response codes: 200
