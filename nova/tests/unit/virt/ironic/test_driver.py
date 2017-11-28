@@ -2027,30 +2027,90 @@ class IronicDriverTestCase(test.NoDBTestCase):
             test.MatchType(objects.ImageMeta),
             flavor, preserve)
         mock_set_pstate.assert_called_once_with(node_uuid,
-                                                ironic_states.REBUILD)
+                                                ironic_states.REBUILD,
+                                                configdrive=mock.ANY)
         mock_looping.assert_called_once_with(mock_wait_active, instance)
         fake_looping_call.start.assert_called_once_with(
             interval=CONF.ironic.api_retry_interval)
         fake_looping_call.wait.assert_called_once_with()
 
-    def test_rebuild_preserve_ephemeral(self):
+    @mock.patch.object(ironic_driver.IronicDriver, '_generate_configdrive')
+    @mock.patch.object(configdrive, 'required_by')
+    def test_rebuild_preserve_ephemeral(self, mock_required_by,
+                                        mock_configdrive):
+        mock_required_by.return_value = False
         self._test_rebuild(preserve=True)
+        # assert configdrive was not generated
+        mock_configdrive.assert_not_called()
 
-    def test_rebuild_no_preserve_ephemeral(self):
+    @mock.patch.object(ironic_driver.IronicDriver, '_generate_configdrive')
+    @mock.patch.object(configdrive, 'required_by')
+    def test_rebuild_no_preserve_ephemeral(self, mock_required_by,
+                                           mock_configdrive):
+        mock_required_by.return_value = False
         self._test_rebuild(preserve=False)
 
+    @mock.patch.object(ironic_driver.IronicDriver, '_generate_configdrive')
+    @mock.patch.object(configdrive, 'required_by')
+    def test_rebuild_with_configdrive(self, mock_required_by,
+                                      mock_configdrive):
+        mock_required_by.return_value = True
+        self._test_rebuild()
+        # assert configdrive was generated
+        mock_configdrive.assert_called_once_with(
+            self.ctx, mock.ANY, mock.ANY, mock.ANY, extra_md={}, files=None)
+
+    @mock.patch.object(ironic_driver.IronicDriver, '_generate_configdrive')
+    @mock.patch.object(configdrive, 'required_by')
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_add_instance_info_to_node')
+    @mock.patch.object(FAKE_CLIENT.node, 'get')
+    @mock.patch.object(objects.Instance, 'save')
+    def test_rebuild_with_configdrive_failure(self, mock_save, mock_get,
+                                              mock_add_instance_info,
+                                              mock_required_by,
+                                              mock_configdrive):
+        node_uuid = uuidutils.generate_uuid()
+        node = ironic_utils.get_test_node(uuid=node_uuid,
+                                          instance_uuid=self.instance_uuid,
+                                          instance_type_id=5)
+        mock_get.return_value = node
+        mock_required_by.return_value = True
+        mock_configdrive.side_effect = exception.NovaException()
+
+        image_meta = ironic_utils.get_test_image_meta()
+        flavor_id = 5
+        flavor = objects.Flavor(flavor_id=flavor_id, name='baremetal')
+
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                                                   uuid=self.instance_uuid,
+                                                   node=node_uuid,
+                                                   instance_type_id=flavor_id)
+        instance.flavor = flavor
+
+        self.assertRaises(exception.InstanceDeployFailure,
+            self.driver.rebuild,
+            context=self.ctx, instance=instance, image_meta=image_meta,
+            injected_files=None, admin_password=None, allocations={},
+            bdms=None, detach_block_devices=None,
+            attach_block_devices=None)
+
+    @mock.patch.object(ironic_driver.IronicDriver, '_generate_configdrive')
+    @mock.patch.object(configdrive, 'required_by')
     @mock.patch.object(FAKE_CLIENT.node, 'set_provision_state')
     @mock.patch.object(ironic_driver.IronicDriver,
                        '_add_instance_info_to_node')
     @mock.patch.object(FAKE_CLIENT.node, 'get')
     @mock.patch.object(objects.Instance, 'save')
     def test_rebuild_failures(self, mock_save, mock_get,
-                              mock_add_instance_info, mock_set_pstate):
+                              mock_add_instance_info, mock_set_pstate,
+                              mock_required_by, mock_configdrive):
         node_uuid = uuidutils.generate_uuid()
         node = ironic_utils.get_test_node(uuid=node_uuid,
                                           instance_uuid=self.instance_uuid,
                                           instance_type_id=5)
         mock_get.return_value = node
+        mock_required_by.return_value = False
 
         image_meta = ironic_utils.get_test_image_meta()
         flavor_id = 5
