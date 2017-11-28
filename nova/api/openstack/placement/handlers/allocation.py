@@ -91,7 +91,7 @@ ALLOCATION_SCHEMA_V1_12 = {
         "allocations": {
             "type": "object",
             "minProperties": 1,
-            # resource provider id
+            # resource provider uuid
             "patternProperties": {
                 "^[0-9a-fA-F-]{36}$": {
                     "type": "object",

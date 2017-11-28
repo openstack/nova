@@ -151,7 +151,6 @@ allocations_dict: &allocations_dict
   type: object
   in: body
   required: true
-  min_version: 1.12
   description: >
     A dictionary of resource allocations keyed by resource provider uuid.
 allocations_dict_empty:

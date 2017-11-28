@@ -8,4 +8,4 @@ features:
     and `project_id` in the request body, these fields are added to the
     `GET` response. In addition, the response body for
     ``GET /allocation_candidates`` is updated so the allocations in the
-    ``alocation_requests`` object work with the new `PUT` format.
+    ``allocation_requests`` object work with the new `PUT` format.

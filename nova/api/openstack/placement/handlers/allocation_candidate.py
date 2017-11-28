@@ -89,8 +89,9 @@ def _transform_allocation_requests_list(alloc_reqs):
     """Turn supplied list of AllocationRequest objects into a list of dicts of
     resources involved in the allocation request. The returned results is
     intended to be able to be used as the body of a PUT
-    /allocations/{consumer_uuid} HTTP request, so therefore we return a list of
-    JSON objects that looks like the following:
+    /allocations/{consumer_uuid} HTTP request, prior to microversion 1.12,
+    so therefore we return a list of JSON objects that looks like the
+    following:
 
     [
         {
