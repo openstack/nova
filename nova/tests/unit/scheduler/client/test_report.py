@@ -1358,7 +1358,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         resp_mock = mock.Mock(status_code=503)
         self.ks_adap_mock.get.return_value = resp_mock
         self.ks_adap_mock.get.return_value.headers = {
-            'openstack-request-id': uuids.request_id}
+            'x-openstack-request-id': uuids.request_id}
 
         uuid = uuids.compute_node
         self.assertRaises(
@@ -1556,7 +1556,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         name = 'computehost'
         self.ks_adap_mock.post.return_value = mock.Mock(
             status_code=409,
-            headers={'openstack-request-id': uuids.request_id},
+            headers={'x-openstack-request-id': uuids.request_id},
             text='not a name conflict')
 
         get_rp_mock.return_value = mock.sentinel.get_rp
@@ -1897,7 +1897,7 @@ class TestInventory(SchedulerReportClientTestCase):
             }
         }
         mock_delete.return_value.status_code = 204
-        mock_delete.return_value.headers = {'openstack-request-id':
+        mock_delete.return_value.headers = {'x-openstack-request-id':
                                             uuids.request_id}
         result = self.client._delete_inventory(cn.uuid)
         self.assertIsNone(result)
@@ -1954,7 +1954,7 @@ class TestInventory(SchedulerReportClientTestCase):
             'inventories': {
             }
         }
-        mock_put.return_value.headers = {'openstack-request-id':
+        mock_put.return_value.headers = {'x-openstack-request-id':
                                          uuids.request_id}
         result = self.client._delete_inventory(cn.uuid)
         self.assertIsNone(result)
@@ -2026,7 +2026,7 @@ class TestInventory(SchedulerReportClientTestCase):
             'inventories': {
             }
         }
-        mock_put.return_value.headers = {'openstack-request-id':
+        mock_put.return_value.headers = {'x-openstack-request-id':
                                          uuids.request_id}
         self.client._delete_inventory(cn.uuid)
         self.assertTrue(mock_debug.called)
@@ -2060,7 +2060,7 @@ class TestInventory(SchedulerReportClientTestCase):
             }
         }
         mock_delete.return_value.status_code = 409
-        mock_delete.return_value.headers = {'openstack-request-id':
+        mock_delete.return_value.headers = {'x-openstack-request-id':
                                          uuids.request_id}
         rc_str = "VCPU, MEMORY_MB"
         in_use_exc = exception.InventoryInUse(
@@ -2112,7 +2112,7 @@ There was a conflict when trying to complete your request.
             }
         }
         mock_delete.return_value.status_code = 404
-        mock_delete.return_value.headers = {'openstack-request-id':
+        mock_delete.return_value.headers = {'x-openstack-request-id':
                                             uuids.request_id}
         result = self.client._delete_inventory(cn.uuid)
         self.assertIsNone(result)
@@ -2151,7 +2151,7 @@ There was a conflict when trying to complete your request.
             'inventories': {
             }
         }
-        mock_delete.return_value.headers = {'openstack-request-id':
+        mock_delete.return_value.headers = {'x-openstack-request-id':
                                          uuids.request_id}
         result = self.client._delete_inventory(cn.uuid)
         self.assertIsNone(result)
@@ -2467,7 +2467,7 @@ There was a conflict when trying to complete your request.
             'inventories': {},
         }
         mock_put.return_value.status_code = 234
-        mock_put.return_value.headers = {'openstack-request-id':
+        mock_put.return_value.headers = {'x-openstack-request-id':
                                          uuids.request_id}
 
         inv_data = report._compute_node_to_inventory_dict(compute_node)
@@ -2507,7 +2507,7 @@ There was a conflict when trying to complete your request.
         except AttributeError:
             # Thanks py3
             mock_put.return_value.__bool__.return_value = False
-        mock_put.return_value.headers = {'openstack-request-id':
+        mock_put.return_value.headers = {'x-openstack-request-id':
                                          uuids.request_id}
 
         inv_data = report._compute_node_to_inventory_dict(compute_node)
