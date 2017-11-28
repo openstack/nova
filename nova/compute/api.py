@@ -3484,10 +3484,17 @@ class API(base.Base):
             return
 
         context = context.elevated()
-        LOG.debug('Locking', instance=instance)
-        instance.locked = True
-        instance.locked_by = 'owner' if is_owner else 'admin'
-        instance.save()
+        self._record_action_start(context, instance,
+                                  instance_actions.LOCK)
+
+        @wrap_instance_event(prefix='api')
+        def lock(self, context, instance):
+            LOG.debug('Locking', instance=instance)
+            instance.locked = True
+            instance.locked_by = 'owner' if is_owner else 'admin'
+            instance.save()
+
+        lock(self, context, instance)
 
     def is_expected_locked_by(self, context, instance):
         is_owner = instance.project_id == context.project_id
@@ -3500,10 +3507,17 @@ class API(base.Base):
     def unlock(self, context, instance):
         """Unlock the given instance."""
         context = context.elevated()
-        LOG.debug('Unlocking', instance=instance)
-        instance.locked = False
-        instance.locked_by = None
-        instance.save()
+        self._record_action_start(context, instance,
+                                  instance_actions.UNLOCK)
+
+        @wrap_instance_event(prefix='api')
+        def unlock(self, context, instance):
+            LOG.debug('Unlocking', instance=instance)
+            instance.locked = False
+            instance.locked_by = None
+            instance.save()
+
+        unlock(self, context, instance)
 
     @check_instance_lock
     @check_instance_cell

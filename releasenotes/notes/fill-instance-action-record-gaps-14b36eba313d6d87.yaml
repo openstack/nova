@@ -8,3 +8,5 @@ features:
     * attach_volume
     * detach_volume
     * swap_volume
+    * lock
+    * unlock

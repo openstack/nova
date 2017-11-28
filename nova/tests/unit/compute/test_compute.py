@@ -10457,17 +10457,39 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self.compute_api.get(self.context, instance['uuid'])
         self.compute_api.reset_network(self.context, instance)
 
-    def test_lock(self):
+    @mock.patch('nova.context.RequestContext.elevated')
+    @mock.patch('nova.compute.api.API._record_action_start')
+    @mock.patch.object(compute_utils, 'EventReporter')
+    def test_lock(self, mock_event, mock_record, mock_elevate):
+        ctxt = self.context.elevated()
+        mock_elevate.return_value = ctxt
         instance = self._create_fake_instance_obj()
         self.stub_out('nova.network.api.API.deallocate_for_instance',
                        lambda *a, **kw: None)
         self.compute_api.lock(self.context, instance)
+        mock_record.assert_called_once_with(
+            ctxt, instance, instance_actions.LOCK
+        )
+        mock_event.assert_called_once_with(ctxt,
+                                           'api_lock',
+                                           instance.uuid)
 
-    def test_unlock(self):
+    @mock.patch('nova.context.RequestContext.elevated')
+    @mock.patch('nova.compute.api.API._record_action_start')
+    @mock.patch.object(compute_utils, 'EventReporter')
+    def test_unlock(self, mock_event, mock_record, mock_elevate):
+        ctxt = self.context.elevated()
+        mock_elevate.return_value = ctxt
         instance = self._create_fake_instance_obj()
         self.stub_out('nova.network.api.API.deallocate_for_instance',
                        lambda *a, **kw: None)
         self.compute_api.unlock(self.context, instance)
+        mock_record.assert_called_once_with(
+            ctxt, instance, instance_actions.UNLOCK
+        )
+        mock_event.assert_called_once_with(ctxt,
+                                           'api_unlock',
+                                           instance.uuid)
 
     def test_add_remove_security_group(self):
         instance = self._create_fake_instance_obj()
