@@ -68,3 +68,22 @@ tests:
   response_json_paths:
       $.usages.DISK_GB: 20
       $.usages.VCPU: 1
+
+- name: get allocations without project and user
+  GET: /allocations/$ENVIRON['CONSUMER_ID']
+  request_headers:
+      openstack-api-version: placement 1.11
+      accept: application/json
+  response_json_paths:
+      # only one key in the top level object
+      $.`len`: 1
+
+- name: get allocations with project and user
+  GET: /allocations/$ENVIRON['CONSUMER_ID']
+  request_headers:
+      openstack-api-version: placement 1.12
+      accept: application/json
+  response_json_paths:
+      $.project_id: $ENVIRON['PROJECT_ID']
+      $.user_id: $ENVIRON['USER_ID']
+      $.`len`: 3

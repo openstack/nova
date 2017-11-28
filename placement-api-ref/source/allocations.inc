@@ -32,6 +32,8 @@ Response
   - allocations: allocations_by_resource_provider
   - generation: resource_provider_generation
   - resources: resources
+  - project_id: project_id_body_1_12
+  - user_id: user_id_body_1_12
 
 Response Example
 ----------------
@@ -57,8 +59,26 @@ Error response codes: badRequest(400), itemNotFound(404), conflict(409)
   resource providers for any specified resource classes or inventories
   are updated by another thread while attempting the operation.
 
-Request
--------
+Request (microversions 1.12 - )
+-------------------------------
+
+.. rest_parameters:: parameters.yaml
+
+  - consumer_uuid: consumer_uuid
+  - allocations: allocations_dict
+  - resources: resources
+  - project_id: project_id_body
+  - user_id: user_id_body
+  - generation: resource_provider_generation_optional
+
+Request example (microversions 1.12 - )
+---------------------------------------
+
+.. literalinclude:: update-allocations-request-1.12.json
+   :language: javascript
+
+Request (microversions 1.0 - 1.11)
+----------------------------------
 
 .. rest_parameters:: parameters.yaml
 
@@ -67,11 +87,11 @@ Request
   - resources: resources
   - resource_provider: resource_provider_object
   - uuid: resource_provider_uuid
-  - project_id: project_id_body
-  - user_id: user_id_body
+  - project_id: project_id_body_1_8
+  - user_id: user_id_body_1_8
 
-Request example
----------------
+Request example (microversions 1.0 - 1.11)
+------------------------------------------
 
 .. literalinclude:: update-allocations-request.json
    :language: javascript

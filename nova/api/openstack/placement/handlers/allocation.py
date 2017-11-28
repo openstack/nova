@@ -82,8 +82,64 @@ ALLOCATION_SCHEMA_V1_8['properties']['user_id'] = {'type': 'string',
                                                    'maxLength': 255}
 ALLOCATION_SCHEMA_V1_8['required'].extend(['project_id', 'user_id'])
 
+# Update the allocation schema to achieve symmetry with the representation
+# used when GET /allocations/{consumer_uuid} is called.
+# NOTE(cdent): Explicit duplication here for sake of comprehensibility.
+ALLOCATION_SCHEMA_V1_12 = {
+    "type": "object",
+    "properties": {
+        "allocations": {
+            "type": "object",
+            "minProperties": 1,
+            # resource provider id
+            "patternProperties": {
+                "^[0-9a-fA-F-]{36}$": {
+                    "type": "object",
+                    "properties": {
+                        # generation is optional
+                        "generation": {
+                            "type": "integer",
+                        },
+                        "resources": {
+                            "type": "object",
+                            "minProperties": 1,
+                            # resource class
+                            "patternProperties": {
+                                "^[0-9A-Z_]+$": {
+                                    "type": "integer",
+                                    "minimum": 1,
+                                }
+                            },
+                            "additionalProperties": False
+                        }
+                    },
+                    "required": ["resources"],
+                    "additionalProperties": False
+                }
+            },
+            "additionalProperties": False
+        },
+        "project_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+        },
+        "user_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+        }
+    },
+    "required": [
+        "allocations",
+        "project_id",
+        "user_id"
+    ]
+}
 
-def _allocations_dict(allocations, key_fetcher, resource_provider=None):
+
+def _allocations_dict(allocations, key_fetcher, resource_provider=None,
+                      want_version=None):
     """Turn allocations into a dict of resources keyed by key_fetcher."""
     allocation_data = collections.defaultdict(dict)
 
@@ -102,10 +158,17 @@ def _allocations_dict(allocations, key_fetcher, resource_provider=None):
     result = {'allocations': allocation_data}
     if resource_provider:
         result['resource_provider_generation'] = resource_provider.generation
+    else:
+        if allocations and want_version and want_version.matches((1, 12)):
+            # We're looking at a list of allocations by consumer id so
+            # project and user are consistent across the list
+            result['project_id'] = allocations[0].project_id
+            result['user_id'] = allocations[0].user_id
+
     return result
 
 
-def _serialize_allocations_for_consumer(allocations):
+def _serialize_allocations_for_consumer(allocations, want_version=None):
     """Turn a list of allocations into a dict by resource provider uuid.
 
     {
@@ -124,11 +187,15 @@ def _serialize_allocations_for_consumer(allocations):
                     'VCPU': 3
                 }
             }
-        }
+        },
+        # project_id and user_id are added with microverion 1.12
+        'project_id': PROJECT_ID,
+        'user_id': USER_ID
     }
     """
     return _allocations_dict(allocations,
-                             lambda x: x.resource_provider.uuid)
+                             lambda x: x.resource_provider.uuid,
+                             want_version=want_version)
 
 
 def _serialize_allocations_for_resource_provider(allocations,
@@ -161,6 +228,7 @@ def list_for_consumer(req):
     """List allocations associated with a consumer."""
     context = req.environ['placement.context']
     consumer_id = util.wsgi_path_item(req.environ, 'consumer_uuid')
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
 
     # NOTE(cdent): There is no way for a 404 to be returned here,
     # only an empty result. We do not have a way to validate a
@@ -169,7 +237,7 @@ def list_for_consumer(req):
         context, consumer_id)
 
     allocations_json = jsonutils.dumps(
-        _serialize_allocations_for_consumer(allocations))
+        _serialize_allocations_for_consumer(allocations, want_version))
 
     req.response.status = 200
     req.response.body = encodeutils.to_utf8(allocations_json)
@@ -215,12 +283,22 @@ def _set_allocations(req, schema):
     data = util.extract_json(req.body, schema)
     allocation_data = data['allocations']
 
+    # Normalize allocation data to dict.
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
+    if not want_version.matches((1, 12)):
+        allocations_dict = {}
+        # Allocation are list-ish, transform to dict-ish
+        for allocation in allocation_data:
+            resource_provider_uuid = allocation['resource_provider']['uuid']
+            allocations_dict[resource_provider_uuid] = {
+                'resources': allocation['resources']
+            }
+        allocation_data = allocations_dict
+
     # If the body includes an allocation for a resource provider
     # that does not exist, raise a 400.
     allocation_objects = []
-    for allocation in allocation_data:
-        resource_provider_uuid = allocation['resource_provider']['uuid']
-
+    for resource_provider_uuid, allocation in allocation_data.items():
         try:
             resource_provider = rp_obj.ResourceProvider.get_by_uuid(
                 context, resource_provider_uuid)
@@ -276,10 +354,17 @@ def set_allocations(req):
 
 
 @wsgi_wrapper.PlacementWsgify  # noqa
-@microversion.version_handler('1.8')
+@microversion.version_handler('1.8', '1.11')
 @util.require_content('application/json')
 def set_allocations(req):
     return _set_allocations(req, ALLOCATION_SCHEMA_V1_8)
+
+
+@wsgi_wrapper.PlacementWsgify  # noqa
+@microversion.version_handler('1.12')
+@util.require_content('application/json')
+def set_allocations(req):
+    return _set_allocations(req, ALLOCATION_SCHEMA_V1_12)
 
 
 @wsgi_wrapper.PlacementWsgify

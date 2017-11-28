@@ -147,6 +147,13 @@ allocations_by_resource_provider:
   required: true
   description: >
     A dictionary of allocations keyed by resource provider uuid.
+allocations_dict:
+  type: object
+  in: body
+  required: true
+  min_version: 1.12
+  description: >
+    A dictionary of resource allocations keyed by resource provider uuid.
 capacity:
   type: integer
   in: body
@@ -177,9 +184,14 @@ min_unit: &min_unit
 min_unit_opt:
   <<: *min_unit
   required: false
-project_id_body:
+project_id_body: &project_id_body
   <<: *project_id
   in: body
+project_id_body_1_12:
+  <<: *project_id_body
+  min_version: 1.12
+project_id_body_1_8:
+  <<: *project_id_body
   min_version: 1.8
 provider_summaries:
   type: object
@@ -218,13 +230,21 @@ resource_provider_allocations:
   required: true
   description: >
     A dictionary of allocation records keyed by consumer uuid.
-resource_provider_generation:
+resource_provider_generation: &resource_provider_generation
   type: integer
   in: body
   required: true
   description: >
     A consistent view marker that assists with the management of
     concurrent resource provider updates.
+resource_provider_generation_optional:
+  <<: *resource_provider_generation
+  required: false
+  description: >
+    A consistent view marker that assists with the management of
+    concurrent resource provider updates. The value is ignored;
+    it is present to preserve symmetry between read and
+    write representations.
 resource_provider_links:
   type: array
   in: body
@@ -305,10 +325,15 @@ used:
   required: true
   description: >
     The amount of the resource that has been already allocated.
-user_id_body:
+user_id_body: &user_id_body
   <<: *user_id
   in: body
   required: true
+user_id_body_1_12:
+  <<: *user_id_body
+  min_version: 1.12
+user_id_body_1_8:
+  <<: *user_id_body
   min_version: 1.8
 version_id:
   type: string
