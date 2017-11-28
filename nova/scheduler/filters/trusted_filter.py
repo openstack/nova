@@ -230,6 +230,8 @@ class ComputeAttestation(object):
 class TrustedFilter(filters.BaseHostFilter):
     """Trusted filter to support Trusted Compute Pools."""
 
+    RUN_ON_REBUILD = False
+
     def __init__(self):
         self.compute_attestation = ComputeAttestation()
         msg = _LW('The TrustedFilter is deprecated as it has been marked '

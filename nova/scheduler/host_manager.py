@@ -577,8 +577,13 @@ class HostManager(object):
                 _match_forced_hosts(name_to_cls_map, force_hosts)
             if force_nodes:
                 _match_forced_nodes(name_to_cls_map, force_nodes)
-            if force_hosts or force_nodes:
-                # NOTE(deva): Skip filters when forcing host or node
+            check_type = ('scheduler_hints' in spec_obj and
+                          spec_obj.scheduler_hints.get('_nova_check_type'))
+            if not check_type and (force_hosts or force_nodes):
+                # NOTE(deva,dansmith): Skip filters when forcing host or node
+                # unless we've declared the internal check type flag, in which
+                # case we're asking for a specific host and for filtering to
+                # be done.
                 if name_to_cls_map:
                     return name_to_cls_map.values()
                 else:

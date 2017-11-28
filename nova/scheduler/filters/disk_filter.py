@@ -28,6 +28,8 @@ CONF = nova.conf.CONF
 class DiskFilter(filters.BaseHostFilter):
     """Disk Filter with over subscription flag."""
 
+    RUN_ON_REBUILD = False
+
     def _get_disk_allocation_ratio(self, host_state, spec_obj):
         return host_state.disk_allocation_ratio
 
@@ -79,6 +81,8 @@ class AggregateDiskFilter(DiskFilter):
     Fall back to global disk_allocation_ratio if no per-aggregate setting
     found.
     """
+
+    RUN_ON_REBUILD = False
 
     def _get_disk_allocation_ratio(self, host_state, spec_obj):
         aggregate_vals = utils.aggregate_values_from_key(

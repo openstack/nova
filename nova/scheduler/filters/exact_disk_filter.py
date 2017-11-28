@@ -23,6 +23,8 @@ LOG = logging.getLogger(__name__)
 class ExactDiskFilter(filters.BaseHostFilter):
     """Exact Disk Filter."""
 
+    RUN_ON_REBUILD = False
+
     def __init__(self, *args, **kwargs):
         super(ExactDiskFilter, self).__init__(*args, **kwargs)
         LOG.warning('ExactDiskFilter is deprecated in Pike and will be '

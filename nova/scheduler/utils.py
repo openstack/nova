@@ -736,3 +736,16 @@ def retry_on_timeout(retries=1):
     return outer
 
 retry_select_destinations = retry_on_timeout(CONF.scheduler.max_attempts - 1)
+
+
+def request_is_rebuild(spec_obj):
+    """Returns True if request is for a rebuild.
+
+    :param spec_obj: An objects.RequestSpec to examine (or None).
+    """
+    if not spec_obj:
+        return False
+    if 'scheduler_hints' not in spec_obj:
+        return False
+    check_type = spec_obj.scheduler_hints.get('_nova_check_type')
+    return check_type == ['rebuild']
