@@ -79,7 +79,8 @@ class _IntegratedTestBase(test.TestCase):
         nova.tests.unit.image.fake.stub_out_image_service(self)
 
         self.useFixture(cast_as_call.CastAsCall(self))
-        self.useFixture(nova_fixtures.PlacementFixture())
+        placement = self.useFixture(nova_fixtures.PlacementFixture())
+        self.placement_api = placement.api
 
         self._setup_services()
 
