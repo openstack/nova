@@ -145,34 +145,37 @@ class ClientWrapper(clientv20.Client):
         return wrapper
 
 
-def get_client(context, admin=False):
+def _get_auth_plugin(context, admin=False):
     # NOTE(dprince): In the case where no auth_token is present we allow use of
     # neutron admin tenant credentials if it is an admin context.  This is to
     # support some services (metadata API) where an admin context is used
     # without an auth token.
     global _ADMIN_AUTH
-    global _SESSION
-
-    auth_plugin = None
-
-    if not _SESSION:
-        _SESSION = ks_loading.load_session_from_conf_options(
-            CONF, nova.conf.neutron.NEUTRON_GROUP)
-
     if admin or (context.is_admin and not context.auth_token):
         if not _ADMIN_AUTH:
             _ADMIN_AUTH = _load_auth_plugin(CONF)
-        auth_plugin = _ADMIN_AUTH
+        return _ADMIN_AUTH
 
-    elif context.auth_token:
-        auth_plugin = service_auth.get_auth_plugin(context)
+    if context.auth_token:
+        return service_auth.get_auth_plugin(context)
 
-    if not auth_plugin:
-        # We did not get a user token and we should not be using
-        # an admin token so log an error
-        raise exception.Unauthorized()
+    # We did not get a user token and we should not be using
+    # an admin token so log an error
+    raise exception.Unauthorized()
 
-    client_args = dict(session=_SESSION,
+
+def _get_session():
+    global _SESSION
+    if not _SESSION:
+        _SESSION = ks_loading.load_session_from_conf_options(
+            CONF, nova.conf.neutron.NEUTRON_GROUP)
+    return _SESSION
+
+
+def get_client(context, admin=False):
+    auth_plugin = _get_auth_plugin(context, admin=admin)
+    session = _get_session()
+    client_args = dict(session=session,
                        auth=auth_plugin,
                        global_request_id=context.global_request_id)
 
@@ -191,7 +194,7 @@ def get_client(context, admin=False):
         #               which uses them to build an Adapter.
         # This should be unwound at some point.
         adap = utils.get_ksa_adapter(
-            'network', ksa_auth=auth_plugin, ksa_session=_SESSION)
+            'network', ksa_auth=auth_plugin, ksa_session=session)
         client_args = dict(client_args,
                            service_type=adap.service_type,
                            service_name=adap.service_name,
@@ -201,6 +204,25 @@ def get_client(context, admin=False):
 
     return ClientWrapper(clientv20.Client(**client_args),
                          admin=admin or context.is_admin)
+
+
+def _get_ksa_client(context, admin=False):
+    """Returns a keystoneauth Adapter
+
+    This method should only be used if python-neutronclient does not yet
+    provide the necessary API bindings.
+
+    :param context: User request context
+    :param admin: If True, uses the configured credentials, else uses the
+        existing auth_token in the context (the user token).
+    :returns: keystoneauth1 Adapter object
+    """
+    auth_plugin = _get_auth_plugin(context, admin=admin)
+    session = _get_session()
+    client = utils.get_ksa_adapter(
+        'network', ksa_auth=auth_plugin, ksa_session=session)
+    client.additional_headers = {'accept': 'application/json'}
+    return client
 
 
 def _is_not_duplicate(item, items, items_list_name, instance):
@@ -1145,6 +1167,93 @@ class API(base_api.NetworkAPI):
         """
         self._refresh_neutron_extensions_cache(context)
         return constants.PORT_BINDING_EXTENDED in self.extensions
+
+    def bind_ports_to_host(self, context, instance, host,
+                           vnic_type=None, profile=None):
+        """Attempts to bind the ports from the instance on the given host
+
+        If the ports are already actively bound to another host, like the
+        source host during live migration, then the new port bindings will
+        be inactive, assuming $host is the destination host for the live
+        migration.
+
+        In the event of an error, any ports which were successfully bound to
+        the host should have those host bindings removed from the ports.
+
+        This method should not be used if "supports_port_binding_extension"
+        returns False.
+
+        :param context: the user request context
+        :type context: nova.context.RequestContext
+        :param instance: the instance with a set of ports
+        :type instance: nova.objects.Instance
+        :param host: the host on which to bind the ports which
+                     are attached to the instance
+        :type host: str
+        :param vnic_type: optional vnic type string for the host
+                          port binding
+        :type vnic_type: str
+        :param profile: optional vif profile dict for the host port
+                        binding; note that the port binding profile is mutable
+                        via the networking "Port Binding" API so callers that
+                        pass in a profile should ensure they have the latest
+                        version from neutron with their changes merged,
+                        which can be determined using the "revision_number"
+                        attribute of the port.
+        :type profile: dict
+        :raises: PortBindingFailed if any of the ports failed to be bound to
+                 the destination host
+        :returns: dict, keyed by port ID, of a new host port
+                  binding dict per port that was bound
+        """
+        # Get the current ports off the instance. This assumes the cache is
+        # current.
+        network_info = instance.get_network_info()
+        port_ids = [vif['id'] for vif in network_info]
+
+        if not port_ids:
+            # The instance doesn't have any ports so there is nothing to do.
+            LOG.debug('Instance does not have any ports.', instance=instance)
+            return {}
+
+        client = _get_ksa_client(context, admin=True)
+
+        # Now bind each port to the destination host and keep track of each
+        # port that is bound to the resulting binding so we can rollback in
+        # the event of a failure, or return the results if everything is OK.
+        binding = dict(host=host)
+        if vnic_type:
+            binding['vnic_type'] = vnic_type
+        if profile:
+            binding['profile'] = profile
+        data = dict(binding=binding)
+
+        bindings_by_port_id = {}
+        for port_id in port_ids:
+            resp = client.post('/v2.0/ports/%s/bindings' % port_id,
+                               json=data, raise_exc=False)
+            if resp:
+                bindings_by_port_id[port_id] = resp.json()['binding']
+            else:
+                # Something failed, so log the error and rollback any
+                # successful bindings.
+                LOG.error('Binding failed for port %s and host %s. '
+                          'Error: (%s %s)',
+                          port_id, host, resp.status_code, resp.text,
+                          instance=instance)
+                # TODO(mriedem): move this cleanup code to a separate method
+                for rollback_port_id in bindings_by_port_id:
+                    url = '/v2.0/ports/%s/bindings/%s' % (
+                        rollback_port_id, host)
+                    resp = client.delete(url, raise_exc=False)
+                    if resp.status_code >= 400 and resp.status_code != 404:
+                        LOG.warning('Failed to remove binding for port %s on '
+                                    'host %s: (%s %s)', rollback_port_id,
+                                    host, resp.status_code, resp.text,
+                                    instance=instance)
+                raise exception.PortBindingFailed(port_id=port_id)
+
+        return bindings_by_port_id
 
     def _get_pci_device_profile(self, pci_dev):
         dev_spec = self.pci_whitelist.get_devspec(pci_dev)
