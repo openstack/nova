@@ -58,3 +58,23 @@ class Selection(base.NovaObject, ovo_base.ComparableVersionedObject):
                    limits=limits,
                    allocation_request=allocation_request_json,
                    allocation_request_version=allocation_request_version)
+
+    def to_dict(self):
+        if self.limits is not None:
+            limits = self.limits.to_dict()
+        else:
+            limits = {}
+        # The NUMATopologyFilter can set 'numa_topology' in the limits dict to
+        # a NUMATopologyLimits object which we need to convert to a primitive
+        # before this hits jsonutils.to_primitive(). We only check for that
+        # known case specifically as we don't care about handling out of tree
+        # filters or drivers injecting non-serializable things in the limits
+        # dict.
+        numa_limit = limits.get("numa_topology")
+        if numa_limit is not None:
+            limits['numa_topology'] = numa_limit.obj_to_primitive()
+        return {
+            'host': self.service_host,
+            'nodename': self.nodename,
+            'limits': limits,
+        }

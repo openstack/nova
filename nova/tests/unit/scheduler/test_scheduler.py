@@ -267,58 +267,6 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                                                           cell_mapping=cm2)]
         self.manager._discover_hosts_in_cells(mock.sentinel.context)
 
-    def test_selection_obj_to_dict(self):
-        """Tests that _selection_obj_to_dict() method properly converts a
-        Selection object to the corresponding dict.
-        """
-        fake_numa_limit = objects.numa.NUMATopologyLimits(
-                cpu_allocation_ratio=1.0, ram_allocation_ratio=1.0)
-        fake_limit = {"memory_mb": 1024, "disk_gb": 100, "vcpus": 2,
-                "numa_topology": fake_numa_limit}
-        fake_limit_obj = objects.SchedulerLimits.from_dict(fake_limit)
-        sel_obj = objects.Selection(service_host="fakehost",
-                nodename="fakenode", compute_node_uuid=uuids.host,
-                cell_uuid=uuids.cell, limits=fake_limit_obj,
-                allocation_request="fake", allocation_request_version="99.9")
-        expected = {
-                'host': 'fakehost',
-                'nodename': 'fakenode',
-                'limits': {
-                    'disk_gb': 100,
-                    'memory_mb': 1024,
-                    'numa_topology': {
-                    'nova_object.changes': [
-                            'cpu_allocation_ratio',
-                            'ram_allocation_ratio'],
-                    'nova_object.data': {
-                        'cpu_allocation_ratio': 1.0,
-                        'ram_allocation_ratio': 1.0},
-                    'nova_object.name': 'NUMATopologyLimits',
-                    'nova_object.namespace': 'nova',
-                    'nova_object.version': '1.0'}}}
-        result = manager._selection_obj_to_dict(sel_obj)
-        self.assertDictEqual(expected, result)
-
-    def test_selection_obj_to_dict_no_numa(self):
-        """Tests that _selection_obj_to_dict() method properly converts a
-        Selection object to the corresponding dict when the numa_topology field
-        is None.
-        """
-        fake_limit = {"memory_mb": 1024, "disk_gb": 100, "vcpus": 2,
-                "numa_topology": None}
-        fake_limit_obj = objects.SchedulerLimits.from_dict(fake_limit)
-        sel_obj = objects.Selection(service_host="fakehost",
-                nodename="fakenode", compute_node_uuid=uuids.host,
-                cell_uuid=uuids.cell, limits=fake_limit_obj,
-                allocation_request="fake", allocation_request_version="99.9")
-        expected = {"host": "fakehost",
-                "nodename": "fakenode",
-                "limits": {
-                    "disk_gb": 100,
-                    "memory_mb": 1024}}
-        result = manager._selection_obj_to_dict(sel_obj)
-        self.assertDictEqual(expected, result)
-
 
 class SchedulerInitTestCase(test.NoDBTestCase):
     """Test case for base scheduler driver initiation."""
