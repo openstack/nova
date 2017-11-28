@@ -38,9 +38,11 @@ def deploy(conf, project_name):
     if conf.api.auth_strategy == 'noauth2':
         auth_middleware = auth.NoAuthMiddleware
     else:
-        # Do not provide global conf to middleware here.
+        # Do not use 'oslo_config_project' param here as the conf
+        # location may have been overridden earlier in the deployment
+        # process with OS_PLACEMENT_CONFIG_DIR in wsgi.py.
         auth_middleware = auth_token.filter_factory(
-            {}, oslo_config_project=project_name)
+            {}, oslo_config_config=conf)
 
     # Pass in our CORS config, if any, manually as that's a)
     # explicit, b) makes testing more straightfoward, c) let's
