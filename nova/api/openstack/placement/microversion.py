@@ -51,7 +51,8 @@ VERSIONS = [
     '1.11',  # Adds 'allocations' link to the GET /resource_providers response
     '1.12',  # Add project_id and user_id to GET /allocations/{consumer_uuid}
              # and PUT to /allocations/{consumer_uuid} in the same dict form
-             # as GET
+             # as GET. The 'allocation_requests' format in GET
+             # /allocation_candidates is updated to be the same as well.
     '1.13',  # Adds POST /allocations to set allocations for multiple consumers
 ]
 
