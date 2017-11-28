@@ -3526,6 +3526,74 @@ class ComputeTestCase(BaseTestCase,
                                      rotation=1)
         self.assertEqual(2, mock_delete.call_count)
 
+    @mock.patch('nova.image.api.API.get_all')
+    def test_rotate_backups_with_image_delete_failed(self,
+            mock_get_all_images):
+        instance = self._create_fake_instance_obj()
+        instance_uuid = instance['uuid']
+        fake_images = [{
+            'id': uuids.image_id_1,
+            'created_at': timeutils.parse_strtime('2017-01-04T00:00:00.00'),
+            'name': 'fake_name_1',
+            'status': 'active',
+            'properties': {'kernel_id': uuids.kernel_id_1,
+                           'ramdisk_id': uuids.ramdisk_id_1,
+                           'image_type': 'backup',
+                           'backup_type': 'daily',
+                           'instance_uuid': instance_uuid},
+        },
+        {
+            'id': uuids.image_id_2,
+            'created_at': timeutils.parse_strtime('2017-01-03T00:00:00.00'),
+            'name': 'fake_name_2',
+            'status': 'active',
+            'properties': {'kernel_id': uuids.kernel_id_2,
+                           'ramdisk_id': uuids.ramdisk_id_2,
+                           'image_type': 'backup',
+                           'backup_type': 'daily',
+                           'instance_uuid': instance_uuid},
+        },
+        {
+            'id': uuids.image_id_3,
+            'created_at': timeutils.parse_strtime('2017-01-02T00:00:00.00'),
+            'name': 'fake_name_3',
+            'status': 'active',
+            'properties': {'kernel_id': uuids.kernel_id_3,
+                           'ramdisk_id': uuids.ramdisk_id_3,
+                           'image_type': 'backup',
+                           'backup_type': 'daily',
+                           'instance_uuid': instance_uuid},
+        },
+        {
+            'id': uuids.image_id_4,
+            'created_at': timeutils.parse_strtime('2017-01-01T00:00:00.00'),
+            'name': 'fake_name_4',
+            'status': 'active',
+            'properties': {'kernel_id': uuids.kernel_id_4,
+                           'ramdisk_id': uuids.ramdisk_id_4,
+                           'image_type': 'backup',
+                           'backup_type': 'daily',
+                           'instance_uuid': instance_uuid},
+        }]
+
+        mock_get_all_images.return_value = fake_images
+
+        def _check_image_id(context, image_id):
+            self.assertIn(image_id, [uuids.image_id_2, uuids.image_id_3,
+                                     uuids.image_id_4])
+            if image_id == uuids.image_id_3:
+                raise Exception('fake %s delete exception' % image_id)
+            if image_id == uuids.image_id_4:
+                raise exception.ImageDeleteConflict(reason='image is in use')
+
+        with mock.patch.object(nova.image.api.API, 'delete',
+                               side_effect=_check_image_id) as mock_delete:
+            # Fake images 4,3,2 should be rotated in sequence
+            self.compute._rotate_backups(self.context, instance=instance,
+                                         backup_type='daily',
+                                         rotation=1)
+            self.assertEqual(3, mock_delete.call_count)
+
     def test_console_output(self):
         # Make sure we can get console output from instance.
         instance = self._create_fake_instance_obj()

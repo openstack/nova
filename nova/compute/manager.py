@@ -3318,6 +3318,12 @@ class ComputeManager(manager.Manager):
                     LOG.info("Failed to find image %(image_id)s to "
                              "delete", {'image_id': image_id},
                              instance=instance)
+                except (exception.ImageDeleteConflict, Exception) as exc:
+                    LOG.info("Failed to delete image %(image_id)s during "
+                             "deleting excess backups. "
+                             "Continuing for next image.. %(exc)s",
+                             {'image_id': image_id, 'exc': exc},
+                             instance=instance)
 
     @wrap_exception()
     @reverts_task_state

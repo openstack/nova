@@ -527,6 +527,7 @@ class GlanceImageServiceV2(object):
         :raises: ImageNotFound if the image does not exist.
         :raises: NotAuthorized if the user is not an owner.
         :raises: ImageNotAuthorized if the user is not authorized.
+        :raises: ImageDeleteConflict if the image is conflicted to delete.
 
         """
         try:
@@ -535,6 +536,8 @@ class GlanceImageServiceV2(object):
             raise exception.ImageNotFound(image_id=image_id)
         except glanceclient.exc.HTTPForbidden:
             raise exception.ImageNotAuthorized(image_id=image_id)
+        except glanceclient.exc.HTTPConflict as exc:
+            raise exception.ImageDeleteConflict(reason=six.text_type(exc))
         return True
 
 
