@@ -934,10 +934,14 @@ class LibvirtDriver(driver.ComputeDriver):
         if destroy_vifs:
             self._unplug_vifs(instance, network_info, True)
 
-        retry = True
-        while retry:
+        # Continue attempting to remove firewall filters for the instance
+        # until it's done or there is a failure to remove the filters. If
+        # unfilter fails because the instance is not yet shutdown, try to
+        # destroy the guest again and then retry the unfilter.
+        while True:
             try:
                 self.unfilter_instance(instance, network_info)
+                break
             except libvirt.libvirtError as e:
                 try:
                     state = self.get_info(instance).state
@@ -949,7 +953,6 @@ class LibvirtDriver(driver.ComputeDriver):
                                 "it again.", instance=instance)
                     self._destroy(instance)
                 else:
-                    retry = False
                     errcode = e.get_error_code()
                     LOG.exception(_('Error from libvirt during unfilter. '
                                     'Code=%(errcode)s Error=%(e)s'),
@@ -958,10 +961,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     reason = _("Error unfiltering instance.")
                     raise exception.InstanceTerminationFailure(reason=reason)
             except Exception:
-                retry = False
                 raise
-            else:
-                retry = False
 
         # FIXME(wangpan): if the instance is booted again here, such as the
         #                 soft reboot operation boot it here, it will become
