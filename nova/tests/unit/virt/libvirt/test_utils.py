@@ -628,7 +628,8 @@ disk size: 4.4M
         mock_images.assert_called_once_with(
             _context, image_id, target)
 
-    def test_fetch_raw_image(self):
+    @mock.patch('nova.utils.supports_direct_io', return_value=True)
+    def test_fetch_raw_image(self, mock_direct_io):
 
         def fake_execute(*cmd, **kwargs):
             self.executes.append(cmd)
