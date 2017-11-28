@@ -1132,6 +1132,20 @@ class API(base_api.NetworkAPI):
         self._refresh_neutron_extensions_cache(context)
         return constants.SUBSTR_PORT_FILTERING in self.extensions
 
+    def supports_port_binding_extension(self, context):
+        """This is a simple check to see if the neutron "binding-extended"
+        extension exists and is enabled.
+
+        The "binding-extended" extension allows nova to bind a port to multiple
+        hosts at the same time, like during live migration.
+
+        :param context: the user request context
+        :returns: True if the binding-extended API extension is available,
+                  False otherwise
+        """
+        self._refresh_neutron_extensions_cache(context)
+        return constants.PORT_BINDING_EXTENDED in self.extensions
+
     def _get_pci_device_profile(self, pci_dev):
         dev_spec = self.pci_whitelist.get_devspec(pci_dev)
         if dev_spec:
