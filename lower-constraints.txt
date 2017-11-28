@@ -170,3 +170,4 @@ WebOb==1.8.2
 websockify==0.8.0
 wrapt==1.10.11
 wsgi-intercept==1.7.0
+zVMCloudConnector==1.1.1

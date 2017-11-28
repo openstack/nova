@@ -43,6 +43,7 @@ Possible values:
 * ``vmwareapi.VMwareVCDriver``
 * ``hyperv.HyperVDriver``
 * ``powervm.PowerVMDriver``
+* ``zvm.ZVMDriver``
 """),
     cfg.BoolOpt('allow_resize_to_same_host',
         default=False,
