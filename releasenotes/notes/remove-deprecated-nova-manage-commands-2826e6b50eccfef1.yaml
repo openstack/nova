@@ -1,0 +1,8 @@
+---
+upgrade:
+  - |
+    The following ``nova-manage`` commands have been removed.
+
+    - ``quota``
+
+    These were previously deprecated in 16.0.0.

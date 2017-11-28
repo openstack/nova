@@ -282,20 +282,6 @@ Nova Shell
 
     Runs the named script from the specified path with flags set.
 
-.. _nova-manage-quota:
-
-Nova Quota
-~~~~~~~~~~
-
-.. deprecated:: 16.0.0
-
-    This will be removed in 17.0.0 (Queens)
-
-``nova-manage quota refresh``
-
-    This command has been deprecated and is now a no-op since quota usage is
-    counted from resources instead of being tracked separately.
-
 Nova Project
 ~~~~~~~~~~~~
 
