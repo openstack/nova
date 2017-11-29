@@ -34,6 +34,7 @@ class TestProviderTree(test.NoDBTestCase):
 
     def test_tree_ops(self):
         cn1 = self.compute_node1
+        cn2 = self.compute_node2
         cns = self.compute_nodes
         pt = provider_tree.ProviderTree(cns)
 
@@ -50,6 +51,10 @@ class TestProviderTree(test.NoDBTestCase):
         self.assertFalse(pt.exists(uuids.non_existing_rp))
         self.assertFalse(pt.exists('noexist'))
 
+        self.assertEqual(set([cn1.uuid]),
+                         pt.get_provider_uuids(name_or_uuid=cn1.uuid))
+        self.assertEqual(set([cn1.uuid, cn2.uuid]), pt.get_provider_uuids())
+
         numa_cell0_uuid = pt.new_child('numa_cell0', cn1.uuid)
         numa_cell1_uuid = pt.new_child('numa_cell1', cn1.uuid)
 
@@ -62,6 +67,15 @@ class TestProviderTree(test.NoDBTestCase):
         pf1_cell0_uuid = pt.new_child('pf1_cell0', numa_cell0_uuid)
         self.assertTrue(pt.exists(pf1_cell0_uuid))
         self.assertTrue(pt.exists('pf1_cell0'))
+
+        # Now we've got a 3-level tree under cn1 - check provider UUIDs again
+        self.assertEqual(
+            set([cn1.uuid, numa_cell0_uuid, pf1_cell0_uuid, numa_cell1_uuid]),
+            pt.get_provider_uuids(name_or_uuid=cn1.uuid))
+        self.assertEqual(
+            set([cn1.uuid, cn2.uuid, numa_cell0_uuid, pf1_cell0_uuid,
+                 numa_cell1_uuid]),
+            pt.get_provider_uuids())
 
         self.assertRaises(
             ValueError,
