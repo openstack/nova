@@ -3277,6 +3277,9 @@ class API(base.Base):
         instance.task_state = task_states.SHELVING_OFFLOADING
         instance.save(expected_task_state=[None])
 
+        self._record_action_start(context, instance,
+                                  instance_actions.SHELVE_OFFLOAD)
+
         self.compute_rpcapi.shelve_offload_instance(context, instance=instance,
             clean_shutdown=clean_shutdown)
 

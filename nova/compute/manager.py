@@ -4626,6 +4626,7 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @reverts_task_state
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def shelve_offload_instance(self, context, instance, clean_shutdown):
         """Remove a shelved instance from the hypervisor.

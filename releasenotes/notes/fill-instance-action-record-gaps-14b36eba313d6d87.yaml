@@ -10,3 +10,4 @@ features:
     * swap_volume
     * lock
     * unlock
+    * shelveOffload
