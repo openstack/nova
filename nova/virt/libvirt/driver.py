@@ -1832,6 +1832,11 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.set_user_password(user, new_pass)
         except libvirt.libvirtError as ex:
             error_code = ex.get_error_code()
+            if error_code == libvirt.VIR_ERR_AGENT_UNRESPONSIVE:
+                LOG.debug('Failed to set password: QEMU agent unresponsive',
+                          instance_uuid=instance.uuid)
+                raise NotImplementedError()
+
             err_msg = encodeutils.exception_to_unicode(ex)
             msg = (_('Error from libvirt while set password for username '
                      '"%(user)s": [Error Code %(error_code)s] %(ex)s')
