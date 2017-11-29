@@ -2485,7 +2485,8 @@ class _ComputeAPIUnitTestMixIn(object):
 
         _do_test()
 
-    def _test_snapshot_and_backup(self, is_snapshot=True,
+    @mock.patch.object(compute_api.API, '_record_action_start')
+    def _test_snapshot_and_backup(self, mock_record, is_snapshot=True,
                                   with_base_ref=False, min_ram=None,
                                   min_disk=None,
                                   create_fails=False,
@@ -2599,6 +2600,9 @@ class _ComputeAPIUnitTestMixIn(object):
                                         'fake-backup-type',
                                         'fake-rotation',
                                         extra_properties=extra_props)
+                mock_record.assert_called_once_with(self.context,
+                                                    instance,
+                                                    instance_actions.BACKUP)
             self.assertEqual(fake_image, res)
         except test.TestingException:
             got_exc = True

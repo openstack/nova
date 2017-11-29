@@ -11,3 +11,4 @@ features:
     * lock
     * unlock
     * shelveOffload
+    * createBackup
