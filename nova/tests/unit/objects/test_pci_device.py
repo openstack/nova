@@ -249,7 +249,6 @@ class _TestPciDeviceObject(object):
         self.pci_device.status = fields.PciDeviceStatus.ALLOCATED
         self.pci_device.instance_uuid = uuids.instance2
         expected_updates = dict(status=fields.PciDeviceStatus.ALLOCATED,
-                                extra_info='{}',
                                 instance_uuid=uuids.instance2)
         mock_update.return_value = return_dev
         self.pci_device.save()
