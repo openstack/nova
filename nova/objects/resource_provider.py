@@ -27,6 +27,7 @@ from oslo_db import exception as db_exc
 from oslo_log import log as logging
 import six
 import sqlalchemy as sa
+from sqlalchemy import exc as sqla_exc
 from sqlalchemy import func
 from sqlalchemy import sql
 from sqlalchemy.sql import null
@@ -399,13 +400,22 @@ def _get_provider_by_uuid(context, uuid):
     """
     conn = conn = context.session.connection()
     rpt = sa.alias(_RP_TBL, name="rp")
+    parent = sa.alias(_RP_TBL, name="parent")
+    root = sa.alias(_RP_TBL, name="root")
+    # TODO(jaypipes): Change this to an inner join when we are sure all
+    # root_provider_id values are NOT NULL
+    rp_to_root = sa.outerjoin(rpt, root, rpt.c.root_provider_id == root.c.id)
+    rp_to_parent = sa.outerjoin(rp_to_root, parent,
+        rpt.c.parent_provider_id == parent.c.id)
     cols = [
         rpt.c.id,
         rpt.c.uuid,
         rpt.c.name,
         rpt.c.generation,
+        root.c.uuid.label("root_provider_uuid"),
+        parent.c.uuid.label("parent_provider_uuid"),
     ]
-    sel = sa.select(cols).where(rpt.c.uuid == uuid)
+    sel = sa.select(cols).select_from(rp_to_parent).where(rpt.c.uuid == uuid)
     res = conn.execute(sel).fetchone()
     if not res:
         raise exception.NotFound(
@@ -568,14 +578,100 @@ def _set_traits(context, rp, traits):
         rp.generation = _increment_provider_generation(conn, rp)
 
 
+@db_api.api_context_manager.reader
+def _has_child_providers(context, rp_id):
+    """Returns True if the supplied resource provider has any child providers,
+    False otherwise
+    """
+    child_sel = sa.select([_RP_TBL.c.id])
+    child_sel = child_sel.where(_RP_TBL.c.parent_provider_id == rp_id)
+    child_res = context.session.execute(child_sel.limit(1)).fetchone()
+    if child_res:
+        return True
+    return False
+
+
+@db_api.api_context_manager.writer
+def _set_root_provider_id(context, rp_id, root_id):
+    """Simply sets the root_provider_id value for a provider identified by
+    rp_id. Used in online data migration.
+
+    :param rp_id: Internal ID of the provider to update
+    :param root_id: Value to set root provider to
+    """
+    upd = _RP_TBL.update().where(_RP_TBL.c.id == rp_id)
+    upd = upd.values(root_provider_id=root_id)
+    context.session.execute(upd)
+
+
+ProviderIds = collections.namedtuple(
+    'ProviderIds', 'id uuid parent_id parent_uuid root_id root_uuid')
+
+
+def _provider_ids_from_uuid(context, uuid):
+    """Given the UUID of a resource provider, returns a namedtuple
+    (ProviderIds) with the internal ID, the UUID, the parent provider's
+    internal ID, parent provider's UUID, the root provider's internal ID and
+    the root provider UUID.
+
+    :returns: ProviderIds object containing the internal IDs and UUIDs of the
+              provider identified by the supplied UUID
+    :param uuid: The UUID of the provider to look up
+    """
+    # SELECT
+    #   rp.id, rp.uuid,
+    #   parent.id AS parent_id, parent.uuid AS parent_uuid,
+    #   root.id AS root_id, root.uuid AS root_uuid
+    # FROM resource_providers AS rp
+    # LEFT JOIN resource_providers AS parent
+    #   ON rp.parent_provider_id = parent.id
+    # LEFT JOIN resource_providers AS root
+    #   ON rp.root_provider_id = root.id
+    me = sa.alias(_RP_TBL, name="me")
+    parent = sa.alias(_RP_TBL, name="parent")
+    root = sa.alias(_RP_TBL, name="root")
+    cols = [
+        me.c.id,
+        me.c.uuid,
+        parent.c.id.label('parent_id'),
+        parent.c.uuid.label('parent_uuid'),
+        root.c.id.label('root_id'),
+        root.c.uuid.label('root_uuid'),
+    ]
+    # TODO(jaypipes): Change this to an inner join when we are sure all
+    # root_provider_id values are NOT NULL
+    me_to_root = sa.outerjoin(me, root, me.c.root_provider_id == root.c.id)
+    me_to_parent = sa.outerjoin(me_to_root, parent,
+        me.c.parent_provider_id == parent.c.id)
+    sel = sa.select(cols).select_from(me_to_parent)
+    sel = sel.where(me.c.uuid == uuid)
+    res = context.session.execute(sel).fetchone()
+    if not res:
+        return None
+    return ProviderIds(**dict(res))
+
+
 @base.NovaObjectRegistry.register_if(False)
 class ResourceProvider(base.NovaObject):
+    SETTABLE_FIELDS = ('name', 'parent_provider_uuid')
 
     fields = {
         'id': fields.IntegerField(read_only=True),
         'uuid': fields.UUIDField(nullable=False),
         'name': fields.StringField(nullable=False),
         'generation': fields.IntegerField(nullable=False),
+        # UUID of the root provider in a hierarchy of providers. Will be equal
+        # to the uuid field if this provider is the root provider of a
+        # hierarchy. This field is never manually set by the user. Instead, it
+        # is automatically set to either the root provider UUID of the parent
+        # or the UUID of the provider itself if there is no parent. This field
+        # is an optimization field that allows us to very quickly query for all
+        # providers within a particular tree without doing any recursive
+        # querying.
+        'root_provider_uuid': fields.UUIDField(nullable=False),
+        # UUID of the direct parent provider, or None if this provider is a
+        # "root" provider.
+        'parent_provider_uuid': fields.UUIDField(nullable=True, default=None),
     }
 
     def create(self):
@@ -588,20 +684,28 @@ class ResourceProvider(base.NovaObject):
         if 'name' not in self:
             raise exception.ObjectActionError(action='create',
                                               reason='name is required')
+        if 'root_provider_uuid' in self:
+            raise exception.ObjectActionError(
+                action='create',
+                reason=_('root provider UUID cannot be manually set.'))
+
+        self.obj_set_defaults()
         updates = self.obj_get_changes()
-        db_rp = self._create_in_db(self._context, updates)
-        self._from_db_object(self._context, self, db_rp)
+        self._create_in_db(self._context, updates)
+        self.obj_reset_changes()
 
     def destroy(self):
         self._delete(self._context, self.id)
 
     def save(self):
         updates = self.obj_get_changes()
-        if updates and list(updates.keys()) != ['name']:
+        if updates and any(k not in self.SETTABLE_FIELDS
+                           for k in updates.keys()):
             raise exception.ObjectActionError(
                 action='save',
                 reason='Immutable fields changed')
         self._update_in_db(self._context, self.id, updates)
+        self.obj_reset_changes()
 
     @classmethod
     def get_by_uuid(cls, context, uuid):
@@ -670,46 +774,151 @@ class ResourceProvider(base.NovaObject):
         _set_traits(self._context, self, traits)
         self.obj_reset_changes()
 
-    @staticmethod
     @db_api.api_context_manager.writer
-    def _create_in_db(context, updates):
+    def _create_in_db(self, context, updates):
+        parent_id = None
+        root_id = None
+        # User supplied a parent, let's make sure it exists
+        parent_uuid = updates.pop('parent_provider_uuid')
+        if parent_uuid is not None:
+            # Setting parent to ourselves doesn't make any sense
+            if parent_uuid == self.uuid:
+                raise exception.ObjectActionError(
+                        action='create',
+                        reason=_('parent provider UUID cannot be same as '
+                                 'UUID. Please set parent provider UUID to '
+                                 'None if there is no parent.'))
+
+            parent_ids = _provider_ids_from_uuid(context, parent_uuid)
+            if parent_ids is None:
+                raise exception.ObjectActionError(
+                        action='create',
+                        reason=_('parent provider UUID does not exist.'))
+
+            parent_id = parent_ids.id
+            root_id = parent_ids.root_id
+            updates['root_provider_id'] = root_id
+            updates['parent_provider_id'] = parent_id
+            self.root_provider_uuid = parent_ids.root_uuid
+
         db_rp = models.ResourceProvider()
         db_rp.update(updates)
         context.session.add(db_rp)
-        return db_rp
+        context.session.flush()
+
+        self.id = db_rp.id
+        self.generation = db_rp.generation
+
+        if root_id is None:
+            # User did not specify a parent when creating this provider, so the
+            # root_provider_id needs to be set to this provider's newly-created
+            # internal ID
+            db_rp.root_provider_id = db_rp.id
+            context.session.add(db_rp)
+            context.session.flush()
+            self.root_provider_uuid = self.uuid
 
     @staticmethod
     @db_api.api_context_manager.writer
     def _delete(context, _id):
+        # Do a quick check to see if the provider is a parent. If it is, don't
+        # allow deleting the provider. Note that the foreign key constraint on
+        # resource_providers.parent_provider_id will prevent deletion of the
+        # parent within the transaction below. This is just a quick
+        # short-circuit outside of the transaction boundary.
+        if _has_child_providers(context, _id):
+            raise exception.CannotDeleteParentResourceProvider()
+
         # Don't delete the resource provider if it has allocations.
-        rp_allocations = context.session.query(models.Allocation).filter(
-                models.Allocation.resource_provider_id == _id).count()
+        rp_allocations = context.session.query(models.Allocation).\
+             filter(models.Allocation.resource_provider_id == _id).\
+             count()
         if rp_allocations:
             raise exception.ResourceProviderInUse()
         # Delete any inventory associated with the resource provider
         context.session.query(models.Inventory).\
-            filter(models.Inventory.resource_provider_id == _id).delete()
+            filter(models.Inventory.resource_provider_id == _id).\
+            delete(synchronize_session=False)
         # Delete any aggregate associations for the resource provider
         # The name substitution on the next line is needed to satisfy pep8
         RPA_model = models.ResourceProviderAggregate
         context.session.query(RPA_model).\
                 filter(RPA_model.resource_provider_id == _id).delete()
-        # Now delete the RP records
-        result = context.session.query(models.ResourceProvider).\
-                 filter(models.ResourceProvider.id == _id).delete()
+        # Now delete the RP record
+        try:
+            result = context.session.query(models.ResourceProvider).\
+                     filter(models.ResourceProvider.id == _id).\
+                     delete(synchronize_session=False)
+        except sqla_exc.IntegrityError:
+            # NOTE(jaypipes): Another thread snuck in and parented this
+            # resource provider in between the above check for
+            # _has_child_providers() and our attempt to delete the record
+            raise exception.CannotDeleteParentResourceProvider()
         if not result:
             raise exception.NotFound()
 
-    @staticmethod
     @db_api.api_context_manager.writer
-    def _update_in_db(context, id, updates):
+    def _update_in_db(self, context, id, updates):
+        if 'parent_provider_uuid' in updates:
+            # TODO(jaypipes): For now, "re-parenting" and "un-parenting" are
+            # not possible. If the provider already had a parent, we don't
+            # allow changing that parent due to various issues, including:
+            #
+            # * if the new parent is a descendant of this resource provider, we
+            #   introduce the possibility of a loop in the graph, which would
+            #   be very bad
+            # * potentially orphaning heretofore-descendants
+            #
+            # So, for now, let's just prevent re-parenting...
+            my_ids = _provider_ids_from_uuid(context, self.uuid)
+            parent_uuid = updates.pop('parent_provider_uuid')
+            if parent_uuid is not None:
+                parent_ids = _provider_ids_from_uuid(context, parent_uuid)
+                # User supplied a parent, let's make sure it exists
+                if parent_ids is None:
+                    raise exception.ObjectActionError(
+                            action='create',
+                            reason=_('parent provider UUID does not exist.'))
+                if (my_ids.parent_id is not None and
+                        my_ids.parent_id != parent_ids.id):
+                    raise exception.ObjectActionError(
+                            action='update',
+                            reason=_('re-parenting a provider is not '
+                                     'currently allowed.'))
+
+                updates['root_provider_id'] = parent_ids.root_id
+                updates['parent_provider_id'] = parent_ids.id
+                self.root_provider_uuid = parent_ids.root_uuid
+            else:
+                if my_ids.parent_id is not None:
+                    raise exception.ObjectActionError(
+                            action='update',
+                            reason=_('un-parenting a provider is not '
+                                     'currently allowed.'))
+
         db_rp = context.session.query(models.ResourceProvider).filter_by(
             id=id).first()
         db_rp.update(updates)
-        db_rp.save(context.session)
+        try:
+            db_rp.save(context.session)
+        except sqla_exc.IntegrityError:
+            # NOTE(jaypipes): Another thread snuck in and deleted the parent
+            # for this resource provider in between the above check for a valid
+            # parent provider and here...
+            raise exception.ObjectActionError(
+                    action='update',
+                    reason=_('parent provider UUID does not exist.'))
 
     @staticmethod
+    @db_api.api_context_manager.writer  # Needed for online data migration
     def _from_db_object(context, resource_provider, db_resource_provider):
+        # Online data migration to populate root_provider_id
+        # TODO(jaypipes): Remove when all root_provider_id values are NOT NULL
+        if db_resource_provider['root_provider_uuid'] is None:
+            rp_id = db_resource_provider['id']
+            uuid = db_resource_provider['uuid']
+            db_resource_provider['root_provider_uuid'] = uuid
+            _set_root_provider_id(context, rp_id, rp_id)
         for field in resource_provider.fields:
             setattr(resource_provider, field, db_resource_provider[field])
         resource_provider._context = context
@@ -1230,11 +1439,32 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
         # and we want to make sure those class names aren't incorrect.
         resources = {_RC_CACHE.id_from_string(r_name): amount
                      for r_name, amount in resources.items()}
-        query = context.session.query(models.ResourceProvider)
+        rp = sa.alias(_RP_TBL, name="rp")
+        root_rp = sa.alias(_RP_TBL, name="root_rp")
+        parent_rp = sa.alias(_RP_TBL, name="parent_rp")
+
+        cols = [
+            rp.c.id,
+            rp.c.uuid,
+            rp.c.name,
+            rp.c.generation,
+            root_rp.c.uuid.label("root_provider_uuid"),
+            parent_rp.c.uuid.label("parent_provider_uuid"),
+        ]
+
+        # TODO(jaypipes): Convert this to an inner join once all
+        # root_provider_id values are NOT NULL
+        rp_to_root = sa.outerjoin(rp, root_rp,
+            rp.c.root_provider_id == root_rp.c.id)
+        rp_to_parent = sa.outerjoin(rp_to_root, parent_rp,
+            rp.c.parent_provider_id == parent_rp.c.id)
+
+        query = sa.select(cols).select_from(rp_to_parent)
+
         if name:
-            query = query.filter(models.ResourceProvider.name == name)
+            query = query.where(rp.c.name == name)
         if uuid:
-            query = query.filter(models.ResourceProvider.uuid == uuid)
+            query = query.where(rp.c.uuid == uuid)
 
         # If 'member_of' has values join with the PlacementAggregates to
         # get those resource providers that are associated with any of the
@@ -1246,13 +1476,13 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
             resource_provider_id = _RP_AGG_TBL.c.resource_provider_id
             rps_in_aggregates = sa.select(
                 [resource_provider_id]).select_from(join_statement)
-            query = query.filter(models.ResourceProvider.id.in_(
-                rps_in_aggregates))
+            query = query.where(rp.c.id.in_(rps_in_aggregates))
 
         if not resources:
             # Returns quickly the list in case we don't need to check the
             # resource usage
-            return query.all()
+            res = context.session.execute(query).fetchall()
+            return [dict(r) for r in res]
 
         # NOTE(sbauza): In case we want to look at the resource criteria, then
         # the SQL generated from this case looks something like:
@@ -1289,8 +1519,8 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
         # comes from the above filters
 
         # First JOIN between inventories and RPs is here
-        join_clause = _RP_TBL.c.id == _INV_TBL.c.resource_provider_id
-        query = query.join(_INV_TBL, join_clause)
+        inv_join = sa.join(rp_to_parent, _INV_TBL,
+            rp.c.id == _INV_TBL.c.resource_provider_id)
 
         # Now, below is the LEFT JOIN for getting the allocations usage
         usage = sa.select([_ALLOC_TBL.c.resource_provider_id,
@@ -1301,8 +1531,7 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
         usage = usage.group_by(_ALLOC_TBL.c.resource_provider_id,
                                _ALLOC_TBL.c.resource_class_id)
         usage = sa.alias(usage, name='usage')
-        query = query.outerjoin(
-            usage,
+        usage_join = sa.outerjoin(inv_join, usage,
             sa.and_(
                 usage.c.resource_provider_id == (
                     _INV_TBL.c.resource_provider_id),
@@ -1322,13 +1551,15 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
                 amount % _INV_TBL.c.step_size == 0
             )
             for (r_idx, amount) in resources.items()]
-        query = query.filter(sa.or_(*where_clauses))
-        query = query.group_by(_RP_TBL.c.id)
+        query = query.select_from(usage_join)
+        query = query.where(sa.or_(*where_clauses))
+        query = query.group_by(rp.c.id)
         # NOTE(sbauza): Only RPs having all the asked resources can be provided
         query = query.having(sql.func.count(
             sa.distinct(_INV_TBL.c.resource_class_id)) == len(resources))
 
-        return query.all()
+        res = context.session.execute(query).fetchall()
+        return [dict(r) for r in res]
 
     @classmethod
     def get_all_by_filters(cls, context, filters=None):

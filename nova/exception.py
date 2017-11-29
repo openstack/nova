@@ -2065,6 +2065,11 @@ class ResourceClassNotFound(NotFound):
     msg_fmt = _("No such resource class %(resource_class)s.")
 
 
+class CannotDeleteParentResourceProvider(NovaException):
+    msg_fmt = _("Cannot delete resource provider that is a parent of "
+                "another. Delete child providers first.")
+
+
 class ResourceProviderInUse(NovaException):
     msg_fmt = _("Resource provider has allocations.")
 

@@ -16,7 +16,6 @@ import six
 import nova
 from nova import context
 from nova import exception
-from nova import objects
 from nova.objects import fields
 from nova.objects import resource_provider
 from nova import test
@@ -26,9 +25,9 @@ from nova.tests import uuidsentinel as uuids
 
 _RESOURCE_CLASS_NAME = 'DISK_GB'
 _RESOURCE_CLASS_ID = 2
-IPV4_ADDRESS_ID = objects.fields.ResourceClass.STANDARD.index(
+IPV4_ADDRESS_ID = fields.ResourceClass.STANDARD.index(
     fields.ResourceClass.IPV4_ADDRESS)
-VCPU_ID = objects.fields.ResourceClass.STANDARD.index(
+VCPU_ID = fields.ResourceClass.STANDARD.index(
     fields.ResourceClass.VCPU)
 
 _RESOURCE_PROVIDER_ID = 1
@@ -39,7 +38,23 @@ _RESOURCE_PROVIDER_DB = {
     'uuid': _RESOURCE_PROVIDER_UUID,
     'name': _RESOURCE_PROVIDER_NAME,
     'generation': 0,
+    'root_provider_uuid': _RESOURCE_PROVIDER_UUID,
+    'parent_provider_uuid': None,
 }
+
+_RESOURCE_PROVIDER_ID2 = 2
+_RESOURCE_PROVIDER_UUID2 = uuids.resource_provider2
+_RESOURCE_PROVIDER_NAME2 = uuids.resource_name2
+_RESOURCE_PROVIDER_DB2 = {
+    'id': _RESOURCE_PROVIDER_ID2,
+    'uuid': _RESOURCE_PROVIDER_UUID2,
+    'name': _RESOURCE_PROVIDER_NAME2,
+    'generation': 0,
+    'root_provider_uuid': _RESOURCE_PROVIDER_UUID,
+    'parent_provider_uuid': _RESOURCE_PROVIDER_UUID,
+}
+
+
 _INVENTORY_ID = 2
 _INVENTORY_DB = {
     'id': _INVENTORY_ID,
@@ -73,28 +88,6 @@ def _fake_ensure_cache(ctxt):
 class TestResourceProviderNoDB(test_objects._LocalTest):
     USES_DB = False
 
-    @mock.patch('nova.objects.resource_provider._get_provider_by_uuid',
-                return_value=_RESOURCE_PROVIDER_DB)
-    def test_object_get_by_uuid(self, mock_db_get):
-        resource_provider_object = resource_provider.ResourceProvider.\
-            get_by_uuid(mock.sentinel.ctx, _RESOURCE_PROVIDER_UUID)
-        self.assertEqual(_RESOURCE_PROVIDER_ID, resource_provider_object.id)
-        self.assertEqual(_RESOURCE_PROVIDER_UUID,
-                         resource_provider_object.uuid)
-
-    @mock.patch('nova.objects.resource_provider.ResourceProvider.'
-                '_create_in_db', return_value=_RESOURCE_PROVIDER_DB)
-    def test_create(self, mock_db_create):
-        obj = resource_provider.ResourceProvider(context=self.context,
-                                                 uuid=_RESOURCE_PROVIDER_UUID,
-                                                 name=_RESOURCE_PROVIDER_NAME)
-        obj.create()
-        self.assertEqual(_RESOURCE_PROVIDER_UUID, obj.uuid)
-        self.assertIsInstance(obj.id, int)
-        mock_db_create.assert_called_once_with(
-            self.context, {'uuid': _RESOURCE_PROVIDER_UUID,
-                           'name': _RESOURCE_PROVIDER_NAME})
-
     def test_create_id_fail(self):
         obj = resource_provider.ResourceProvider(context=self.context,
                                                  uuid=_RESOURCE_PROVIDER_UUID,
@@ -106,6 +99,17 @@ class TestResourceProviderNoDB(test_objects._LocalTest):
         obj = resource_provider.ResourceProvider(context=self.context)
         self.assertRaises(exception.ObjectActionError,
                           obj.create)
+
+    def test_create_with_root_provider_uuid_fail(self):
+        obj = resource_provider.ResourceProvider(
+            context=self.context,
+            uuid=_RESOURCE_PROVIDER_UUID,
+            name=_RESOURCE_PROVIDER_NAME,
+            root_provider_uuid=_RESOURCE_PROVIDER_UUID,
+        )
+
+        exc = self.assertRaises(exception.ObjectActionError, obj.create)
+        self.assertIn('root provider UUID cannot be manually set', str(exc))
 
 
 class TestProviderSummaryNoDB(test_objects._LocalTest):
@@ -126,18 +130,36 @@ class TestProviderSummaryNoDB(test_objects._LocalTest):
 
 class TestResourceProvider(test_objects._LocalTest):
 
-    def test_create_in_db(self):
-        updates = {'uuid': _RESOURCE_PROVIDER_UUID,
-                   'name': _RESOURCE_PROVIDER_NAME}
-        db_rp = resource_provider.ResourceProvider._create_in_db(
-            self.context, updates)
-        self.assertIsInstance(db_rp.id, int)
-        self.assertEqual(_RESOURCE_PROVIDER_UUID, db_rp.uuid)
-        self.assertEqual(_RESOURCE_PROVIDER_NAME, db_rp.name)
+    def test_create_no_parent(self):
+        rp = resource_provider.ResourceProvider(
+            self.context, uuid=_RESOURCE_PROVIDER_UUID,
+            name=_RESOURCE_PROVIDER_NAME)
+        rp.create()
+        self.assertIsInstance(rp.id, int)
+        self.assertEqual(_RESOURCE_PROVIDER_UUID, rp.uuid)
+        self.assertEqual(_RESOURCE_PROVIDER_NAME, rp.name)
+        self.assertEqual(_RESOURCE_PROVIDER_UUID, rp.root_provider_uuid)
+        self.assertIsNone(rp.parent_provider_uuid)
+
+    def test_create_in_db_with_parent_provider_uuid(self):
+        parent = resource_provider.ResourceProvider(
+            self.context, uuid=uuids.parent, name="parent")
+        parent.create()
+        child = resource_provider.ResourceProvider(
+            self.context, uuid=uuids.child, name="child",
+            parent_provider_uuid=uuids.parent)
+        child.create()
+        self.assertEqual(uuids.child, child.uuid)
+        self.assertEqual(uuids.parent, child.parent_provider_uuid)
+        self.assertEqual(uuids.parent, child.root_provider_uuid)
 
     def test_save_immutable(self):
-        fields = {'id': 1, 'uuid': _RESOURCE_PROVIDER_UUID,
-                  'generation': 1}
+        fields = {
+            'id': 1,
+            'uuid': _RESOURCE_PROVIDER_UUID,
+            'generation': 1,
+            'root_provider_uuid': _RESOURCE_PROVIDER_UUID,
+        }
         for field in fields:
             rp = resource_provider.ResourceProvider(context=self.context)
             setattr(rp, field, fields[field])
@@ -152,6 +174,8 @@ class TestResourceProvider(test_objects._LocalTest):
             self.context, _RESOURCE_PROVIDER_UUID)
         self.assertEqual(rp.uuid, retrieved_rp.uuid)
         self.assertEqual(rp.name, retrieved_rp.name)
+        self.assertEqual(rp.root_provider_uuid,
+                         retrieved_rp.root_provider_uuid)
 
     def test_get_by_uuid_from_db_missing(self):
         self.assertRaises(exception.NotFound,

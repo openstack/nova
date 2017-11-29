@@ -646,6 +646,14 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
     def _check_050(self, engine, data):
         self.assertColumnExists(engine, 'flavors', 'description')
 
+    def _check_051(self, engine, data):
+        for column in ['root_provider_id', 'parent_provider_id']:
+            self.assertColumnExists(engine, 'resource_providers', column)
+        self.assertIndexExists(engine, 'resource_providers',
+            'resource_providers_root_provider_id_idx')
+        self.assertIndexExists(engine, 'resource_providers',
+            'resource_providers_parent_provider_id_idx')
+
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
                                       test_base.DbTestCase,
