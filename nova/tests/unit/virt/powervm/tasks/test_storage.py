@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import fixtures
 import mock
 from pypowervm import exceptions as pvm_exc
 
@@ -26,8 +27,59 @@ class TestStorage(test.TestCase):
 
         self.adapter = mock.Mock()
         self.disk_dvr = mock.MagicMock()
+        self.mock_cfg_drv = self.useFixture(fixtures.MockPatch(
+            'nova.virt.powervm.media.ConfigDrivePowerVM')).mock
+        self.mock_mb = self.mock_cfg_drv.return_value
         self.instance = mock.MagicMock()
         self.context = 'context'
+
+    def test_create_and_connect_cfg_drive(self):
+        # With a specified FeedTask
+        task = tf_stg.CreateAndConnectCfgDrive(
+            self.adapter, self.instance, 'injected_files',
+            'network_info', 'stg_ftsk', admin_pass='admin_pass')
+        task.execute()
+        self.mock_cfg_drv.assert_called_once_with(self.adapter)
+        self.mock_mb.create_cfg_drv_vopt.assert_called_once_with(
+            self.instance, 'injected_files', 'network_info', 'stg_ftsk',
+            admin_pass='admin_pass')
+
+        # Normal revert
+        task.revert('result', 'flow_failures')
+        self.mock_mb.dlt_vopt.assert_called_once_with(self.instance,
+                                                      'stg_ftsk')
+
+        self.mock_mb.reset_mock()
+
+        # Revert when dlt_vopt fails
+        self.mock_mb.dlt_vopt.side_effect = pvm_exc.Error('fake-exc')
+        task.revert('result', 'flow_failures')
+        self.mock_mb.dlt_vopt.assert_called_once()
+
+        self.mock_mb.reset_mock()
+
+        # Revert when media builder not created
+        task.mb = None
+        task.revert('result', 'flow_failures')
+        self.mock_mb.assert_not_called()
+
+    def test_delete_vopt(self):
+        # Test with no FeedTask
+        task = tf_stg.DeleteVOpt(self.adapter, self.instance)
+        task.execute()
+        self.mock_cfg_drv.assert_called_once_with(self.adapter)
+        self.mock_mb.dlt_vopt.assert_called_once_with(
+            self.instance, stg_ftsk=None)
+
+        self.mock_cfg_drv.reset_mock()
+        self.mock_mb.reset_mock()
+
+        # With a specified FeedTask
+        task = tf_stg.DeleteVOpt(self.adapter, self.instance, stg_ftsk='ftsk')
+        task.execute()
+        self.mock_cfg_drv.assert_called_once_with(self.adapter)
+        self.mock_mb.dlt_vopt.assert_called_once_with(
+            self.instance, stg_ftsk='ftsk')
 
     def test_delete_disk(self):
         stor_adpt_mappings = mock.Mock()
