@@ -107,20 +107,19 @@ class TestComputeCapabilitiesFilter(test.NoDBTestCase):
     def test_compute_filter_passes_extra_specs_simple(self):
         self._do_test_compute_filter_extra_specs(
             ecaps={'stats': {'opt1': 1, 'opt2': 2}},
-            especs={'opt1': '1', 'opt2': '2', 'trust:trusted_host': 'true'},
+            especs={'opt1': '1', 'opt2': '2'},
             passes=True)
 
     def test_compute_filter_fails_extra_specs_simple(self):
         self._do_test_compute_filter_extra_specs(
             ecaps={'stats': {'opt1': 1, 'opt2': 2}},
-            especs={'opt1': '1', 'opt2': '222', 'trust:trusted_host': 'true'},
+            especs={'opt1': '1', 'opt2': '222'},
             passes=False)
 
     def test_compute_filter_pass_extra_specs_simple_with_scope(self):
         self._do_test_compute_filter_extra_specs(
             ecaps={'stats': {'opt1': 1, 'opt2': 2}},
-            especs={'capabilities:opt1': '1',
-                    'trust:trusted_host': 'true'},
+            especs={'capabilities:opt1': '1'},
             passes=True)
 
     def test_compute_filter_pass_extra_specs_same_as_scope(self):
@@ -140,15 +139,13 @@ class TestComputeCapabilitiesFilter(test.NoDBTestCase):
     def test_compute_filter_extra_specs_simple_with_wrong_scope(self):
         self._do_test_compute_filter_extra_specs(
             ecaps={'opt1': 1, 'opt2': 2},
-            especs={'wrong_scope:opt1': '1',
-                    'trust:trusted_host': 'true'},
+            especs={'wrong_scope:opt1': '1'},
             passes=True)
 
     def test_compute_filter_extra_specs_pass_multi_level_with_scope(self):
         self._do_test_compute_filter_extra_specs(
             ecaps={'stats': {'opt1': {'a': 1, 'b': {'aa': 2}}, 'opt2': 2}},
-            especs={'opt1:a': '1', 'capabilities:opt1:b:aa': '2',
-                    'trust:trusted_host': 'true'},
+            especs={'opt1:a': '1', 'capabilities:opt1:b:aa': '2'},
             passes=True)
 
     def test_compute_filter_pass_ram_with_backward_compatibility(self):

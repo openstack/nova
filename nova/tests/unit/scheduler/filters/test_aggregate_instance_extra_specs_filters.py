@@ -61,8 +61,6 @@ class TestAggregateInstanceExtraSpecsFilter(test.NoDBTestCase):
             'opt1': '1',
             # Scoped extra spec that applies to this filter
             'aggregate_instance_extra_specs:opt2': '2',
-            # Scoped extra spec that does not apply to this filter
-            'trust:trusted_host': 'true',
         }
         self._do_test_aggregate_filter_extra_specs(especs, passes=True)
 
@@ -73,8 +71,6 @@ class TestAggregateInstanceExtraSpecsFilter(test.NoDBTestCase):
             'opt1': '1',
             # Scoped extra spec that applies to this filter
             'aggregate_instance_extra_specs:opt1': '3',
-            # Scoped extra spec that does not apply to this filter
-            'trust:trusted_host': 'true',
         }
         self._do_test_aggregate_filter_extra_specs(especs, passes=True)
 
@@ -91,7 +87,6 @@ class TestAggregateInstanceExtraSpecsFilter(test.NoDBTestCase):
         agg_mock.return_value = {'opt1': set(['1']), 'opt2': set(['2'])}
         especs = {
             'opt1': '1',
-            'opt2': '222',
-            'trust:trusted_host': 'true'
+            'opt2': '222'
         }
         self._do_test_aggregate_filter_extra_specs(especs, passes=False)
