@@ -42,6 +42,7 @@ Possible values:
 * ``ironic.IronicDriver``
 * ``vmwareapi.VMwareVCDriver``
 * ``hyperv.HyperVDriver``
+* ``powervm.PowerVMDriver``
 """),
     cfg.BoolOpt('allow_resize_to_same_host',
         default=False,
