@@ -194,6 +194,32 @@ class _TestPciDeviceObject(object):
         self.assertEqual(self.pci_device.obj_what_changed(), set())
         mock_get.assert_called_once_with(ctxt, 1)
 
+    @mock.patch.object(db, 'pci_device_get_by_id')
+    @mock.patch.object(objects.PciDevice, 'save')
+    @mock.patch('oslo_utils.uuidutils.generate_uuid')
+    def test_get_by_dev_id_auto_generate_uuid(self, mock_uuid, mock_save,
+                                              mock_get):
+        """Tests loading an old db record which doesn't have a uuid set so
+        the object code auto-generates one and saves the update.
+        """
+        fake_db_dev_no_uuid = copy.deepcopy(fake_db_dev)
+        fake_db_dev_no_uuid['uuid'] = None
+        ctxt = context.get_admin_context()
+        mock_get.return_value = fake_db_dev_no_uuid
+        fake_uuid = '3afad0d9-d2db-46fd-b56b-79f90043de5e'
+        mock_uuid.return_value = fake_uuid
+
+        obj_dev = pci_device.PciDevice.get_by_dev_id(ctxt, 1)
+        self.assertEqual(fake_uuid, obj_dev.uuid)
+        # The obj_what_changed is still dirty from _from_db_object because we
+        # are mocking out save() which would eventually update the pci device
+        # in the database and call _from_db_object again on the updated record,
+        # and _from_db_object would reset the changed fields.
+        self.assertEqual(set(['uuid']), obj_dev.obj_what_changed())
+        mock_get.assert_called_once_with(ctxt, 1)
+        mock_save.assert_called_once_with()
+        mock_uuid.assert_called_once_with()
+
     def test_from_db_obj_pre_1_5_format(self):
         ctxt = context.get_admin_context()
         fake_dev_pre_1_5 = copy.deepcopy(fake_db_dev_old)
