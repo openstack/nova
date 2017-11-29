@@ -64,7 +64,6 @@ class TestSerialConsoleLiveMigrate(test.TestCase):
         self.flags(enabled=False, group="vnc")
         self.flags(enabled=False, group="spice")
         self.flags(use_usb_tablet=False, group="libvirt")
-        self.flags(host="test_compute1")
 
         self.start_service('conductor')
         self.start_service('scheduler')

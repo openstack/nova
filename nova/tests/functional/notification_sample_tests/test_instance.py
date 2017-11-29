@@ -46,7 +46,6 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         # server will boot on host1
         fake.set_nodes(['host2'])
         self.addCleanup(fake.restore_nodes)
-        self.useFixture(fixtures.ConfPatcher(host='host2'))
         self.compute2 = self.start_service('compute', host='host2')
 
         actions = [

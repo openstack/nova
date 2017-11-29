@@ -1288,7 +1288,6 @@ class ProviderUsageBaseTestCase(test.TestCase,
         """
         fake.set_nodes([host])
         self.addCleanup(fake.restore_nodes)
-        self.flags(host=host)
         compute = self.start_service('compute', host=host)
         self.computes[host] = compute
         return compute
@@ -2830,8 +2829,6 @@ class ServerUnshelveSpawnFailTests(ProviderUsageBaseTestCase):
     def setUp(self):
         super(ServerUnshelveSpawnFailTests, self).setUp()
         # We only need one compute service/host/node for these tests.
-        fake.set_nodes(['host1'])
-        self.flags(host='host1')
         self.compute1 = self._start_compute('host1')
 
         flavors = self.api.get_flavors()
