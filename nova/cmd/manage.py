@@ -295,9 +295,15 @@ class ProjectCommands(object):
             quota = QUOTAS.get_user_quotas(ctxt, project_id, user_id)
         else:
             quota = QUOTAS.get_project_quotas(ctxt, project_id)
+        reserved = QUOTAS.get_reserved()
         for key, value in quota.items():
             if value['limit'] is None or value['limit'] < 0:
                 value['limit'] = 'unlimited'
+            # NOTE(melwitt): We've re-architected quotas to eliminate
+            # reservations, so we no longer have a 'reserved' key returned from
+            # get_*_quotas, so set it here to satisfy what's expected from the
+            # command output.
+            value['reserved'] = reserved
             print(print_format % (key, value['limit'], value['in_use'],
                                   value['reserved']))
 

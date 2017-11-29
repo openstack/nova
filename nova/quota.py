@@ -136,7 +136,6 @@ class DbQuotaDriver(object):
                 usage = usages.get(resource.name, {})
                 modified_quotas[resource.name].update(
                     in_use=usage.get('in_use', 0),
-                    reserved=0,
                     )
 
             # Initialize remains quotas with the default limits.
@@ -710,7 +709,6 @@ class NoopQuotaDriver(object):
             quotas[resource.name]['limit'] = -1
             if usages:
                 quotas[resource.name]['in_use'] = -1
-                quotas[resource.name]['reserved'] = -1
             if remains:
                 quotas[resource.name]['remains'] = -1
         return quotas
@@ -1240,6 +1238,11 @@ class QuotaEngine(object):
     @property
     def resources(self):
         return sorted(self._resources.keys())
+
+    def get_reserved(self):
+        if isinstance(self._driver, NoopQuotaDriver):
+            return -1
+        return 0
 
 
 def _keypair_get_count_by_user(context, user_id):

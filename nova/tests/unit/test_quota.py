@@ -978,72 +978,58 @@ class DbQuotaDriverTestCase(test.TestCase):
                 instances=dict(
                     limit=5,
                     in_use=2,
-                    reserved=0,
                     ),
                 cores=dict(
                     limit=10,
                     in_use=4,
-                    reserved=0,
                     ),
                 ram=dict(
                     limit=25 * 1024,
                     in_use=10 * 1024,
-                    reserved=0,
                     ),
                floating_ips=dict(
                     limit=10,
                     in_use=2,
-                    reserved=0,
                     ),
                 fixed_ips=dict(
                     limit=10,
                     in_use=0,
-                    reserved=0,
                     ),
                 metadata_items=dict(
                     limit=64,
                     in_use=0,
-                    reserved=0,
                     ),
                 injected_files=dict(
                     limit=2,
                     in_use=0,
-                    reserved=0,
                     ),
                 injected_file_content_bytes=dict(
                     limit=5 * 1024,
                     in_use=0,
-                    reserved=0,
                     ),
                 injected_file_path_bytes=dict(
                     limit=127,
                     in_use=0,
-                    reserved=0,
                     ),
                 security_groups=dict(
                     limit=10,
                     in_use=0,
-                    reserved=0,
                     ),
                 security_group_rules=dict(
                     limit=20,
                     in_use=1,
-                    reserved=0,
                     ),
                 key_pairs=dict(
                     limit=100,
                     in_use=2,
-                    reserved=0,
                     ),
                 server_groups=dict(
                     limit=10,
                     in_use=0,
-                    reserved=0,
                     ),
                 server_group_members=dict(
                     limit=10,
                     in_use=3,
-                    reserved=0,
                     ),
                 ))
 
@@ -1054,7 +1040,7 @@ class DbQuotaDriverTestCase(test.TestCase):
             self.assertEqual(user_id, 'fake_user')
             self.assertEqual(resource, 'test_resource')
             return dict(
-                test_resource=dict(in_use=20, reserved=10),
+                test_resource=dict(in_use=20),
                 )
         self.stub_out('nova.db.quota_get', fake_quota_get)
 
@@ -1066,7 +1052,7 @@ class DbQuotaDriverTestCase(test.TestCase):
 
         self.assertEqual(self.calls, ['quota_get'])
         self.assertEqual(result, dict(
-            test_resource=dict(in_use=20, reserved=10),
+            test_resource=dict(in_use=20),
             ))
 
     def _stub_get_by_project(self):
@@ -1113,72 +1099,58 @@ class DbQuotaDriverTestCase(test.TestCase):
                 instances=dict(
                     limit=5,
                     in_use=2,
-                    reserved=0,
                     ),
                 cores=dict(
                     limit=10,
                     in_use=4,
-                    reserved=0,
                     ),
                 ram=dict(
                     limit=25 * 1024,
                     in_use=10 * 1024,
-                    reserved=0,
                     ),
                floating_ips=dict(
                     limit=10,
                     in_use=2,
-                    reserved=0,
                     ),
                 fixed_ips=dict(
                     limit=10,
                     in_use=0,
-                    reserved=0,
                     ),
                 metadata_items=dict(
                     limit=64,
                     in_use=0,
-                    reserved=0,
                     ),
                 injected_files=dict(
                     limit=2,
                     in_use=0,
-                    reserved=0,
                     ),
                 injected_file_content_bytes=dict(
                     limit=5 * 1024,
                     in_use=0,
-                    reserved=0,
                     ),
                 injected_file_path_bytes=dict(
                     limit=127,
                     in_use=0,
-                    reserved=0,
                     ),
                 security_groups=dict(
                     limit=10,
                     in_use=0,
-                    reserved=0,
                     ),
                 security_group_rules=dict(
                     limit=20,
                     in_use=1,
-                    reserved=0,
                     ),
                 key_pairs=dict(
                     limit=100,
                     in_use=2,
-                    reserved=0,
                     ),
                 server_groups=dict(
                     limit=10,
                     in_use=0,
-                    reserved=0,
                     ),
                 server_group_members=dict(
                     limit=10,
                     in_use=3,
-                    reserved=0,
                     ),
                 ))
 
@@ -1203,85 +1175,71 @@ class DbQuotaDriverTestCase(test.TestCase):
                 instances=dict(
                     limit=5,
                     in_use=2,
-                    reserved=0,
                     remains=0,
                     ),
                 cores=dict(
                     limit=10,
                     in_use=4,
-                    reserved=0,
                     remains=8,
                     ),
                 ram=dict(
                     limit=25 * 1024,
                     in_use=10 * 1024,
-                    reserved=0,
                     remains=25 * 1024,
                     ),
                 floating_ips=dict(
                     limit=10,
                     in_use=2,
-                    reserved=0,
                     remains=10,
                     ),
                 fixed_ips=dict(
                     limit=10,
                     in_use=0,
-                    reserved=0,
                     remains=10,
                     ),
                 metadata_items=dict(
                     limit=64,
                     in_use=0,
-                    reserved=0,
                     remains=64,
                     ),
                 injected_files=dict(
                     limit=2,
                     in_use=0,
-                    reserved=0,
                     remains=2,
                     ),
                 injected_file_content_bytes=dict(
                     limit=5 * 1024,
                     in_use=0,
-                    reserved=0,
                     remains=5 * 1024,
                     ),
                 injected_file_path_bytes=dict(
                     limit=127,
                     in_use=0,
-                    reserved=0,
                     remains=127,
                     ),
                 security_groups=dict(
                     limit=10,
                     in_use=0,
-                    reserved=0,
                     remains=10,
                     ),
                 security_group_rules=dict(
                     limit=20,
                     in_use=1,
-                    reserved=0,
                     remains=20,
                     ),
                 key_pairs=dict(
                     limit=100,
                     in_use=2,
-                    reserved=0,
                     remains=100,
                     ),
                 server_groups=dict(
                     limit=10,
                     in_use=0,
-                    reserved=0,
                     remains=10,
                     ),
                 server_group_members=dict(
                     limit=10,
                     in_use=3,
-                    reserved=0,
                     remains=10,
                     ),
                 ))
@@ -1306,72 +1264,58 @@ class DbQuotaDriverTestCase(test.TestCase):
                 instances=dict(
                     limit=10,
                     in_use=2,
-                    reserved=0,
                     ),
                 cores=dict(
                     limit=10,
                     in_use=4,
-                    reserved=0,
                     ),
                 ram=dict(
                     limit=50 * 1024,
                     in_use=10 * 1024,
-                    reserved=0,
                     ),
                 floating_ips=dict(
                     limit=10,
                     in_use=2,
-                    reserved=0,
                     ),
                 fixed_ips=dict(
                     limit=10,
                     in_use=0,
-                    reserved=0,
                     ),
                 metadata_items=dict(
                     limit=128,
                     in_use=0,
-                    reserved=0,
                     ),
                 injected_files=dict(
                     limit=2,
                     in_use=0,
-                    reserved=0,
                     ),
                 injected_file_content_bytes=dict(
                     limit=10 * 1024,
                     in_use=0,
-                    reserved=0,
                     ),
                 injected_file_path_bytes=dict(
                     limit=127,
                     in_use=0,
-                    reserved=0,
                     ),
                 security_groups=dict(
                     limit=10,
                     in_use=0,
-                    reserved=0,
                     ),
                 security_group_rules=dict(
                     limit=20,
                     in_use=1,
-                    reserved=0,
                     ),
                 key_pairs=dict(
                     limit=100,
                     in_use=2,
-                    reserved=0,
                     ),
                 server_groups=dict(
                     limit=10,
                     in_use=0,
-                    reserved=0,
                     ),
                 server_group_members=dict(
                     limit=10,
                     in_use=3,
-                    reserved=0,
                     ),
                 ))
 
@@ -1394,72 +1338,58 @@ class DbQuotaDriverTestCase(test.TestCase):
                 instances=dict(
                     limit=5,
                     in_use=2,
-                    reserved=0,
                     ),
                 cores=dict(
                     limit=10,
                     in_use=4,
-                    reserved=0,
                     ),
                 ram=dict(
                     limit=25 * 1024,
                     in_use=10 * 1024,
-                    reserved=0,
                     ),
                floating_ips=dict(
                     limit=10,
                     in_use=2,
-                    reserved=0,
                     ),
                 fixed_ips=dict(
                     limit=10,
                     in_use=0,
-                    reserved=0,
                     ),
                 metadata_items=dict(
                     limit=64,
                     in_use=0,
-                    reserved=0,
                     ),
                 injected_files=dict(
                     limit=2,
                     in_use=0,
-                    reserved=0,
                     ),
                 injected_file_content_bytes=dict(
                     limit=5 * 1024,
                     in_use=0,
-                    reserved=0,
                     ),
                 injected_file_path_bytes=dict(
                     limit=127,
                     in_use=0,
-                    reserved=0,
                     ),
                 security_groups=dict(
                     limit=10,
                     in_use=0,
-                    reserved=0,
                     ),
                 security_group_rules=dict(
                     limit=20,
                     in_use=1,
-                    reserved=0,
                     ),
                 key_pairs=dict(
                     limit=100,
                     in_use=2,
-                    reserved=0,
                     ),
                 server_groups=dict(
                     limit=10,
                     in_use=0,
-                    reserved=0,
                     ),
                 server_group_members=dict(
                     limit=10,
                     in_use=3,
-                    reserved=0,
                     ),
                 ))
 
@@ -1485,72 +1415,58 @@ class DbQuotaDriverTestCase(test.TestCase):
                 instances=dict(
                     limit=5,
                     in_use=2,
-                    reserved=0,
                     ),
                 cores=dict(
                     limit=10,
                     in_use=4,
-                    reserved=0,
                     ),
                 ram=dict(
                     limit=25 * 1024,
                     in_use=10 * 1024,
-                    reserved=0,
                     ),
                 floating_ips=dict(
                     limit=10,
                     in_use=2,
-                    reserved=0,
                     ),
                 fixed_ips=dict(
                     limit=10,
                     in_use=0,
-                    reserved=0,
                     ),
                 metadata_items=dict(
                     limit=64,
                     in_use=0,
-                    reserved=0,
                     ),
                 injected_files=dict(
                     limit=2,
                     in_use=0,
-                    reserved=0,
                     ),
                 injected_file_content_bytes=dict(
                     limit=5 * 1024,
                     in_use=0,
-                    reserved=0,
                     ),
                 injected_file_path_bytes=dict(
                     limit=127,
                     in_use=0,
-                    reserved=0,
                     ),
                 security_groups=dict(
                     limit=10,
                     in_use=0,
-                    reserved=0,
                     ),
                 security_group_rules=dict(
                     limit=20,
                     in_use=1,
-                    reserved=0,
                     ),
                 key_pairs=dict(
                     limit=100,
                     in_use=2,
-                    reserved=0,
                     ),
                 server_groups=dict(
                     limit=10,
                     in_use=0,
-                    reserved=0,
                     ),
                 server_group_members=dict(
                     limit=10,
                     in_use=3,
-                    reserved=0,
                     ),
                 ))
 
@@ -1575,72 +1491,58 @@ class DbQuotaDriverTestCase(test.TestCase):
                 instances=dict(
                     limit=5,
                     in_use=2,
-                    reserved=0,
                     ),
                 cores=dict(
                     limit=10,
                     in_use=4,
-                    reserved=0,
                     ),
                 ram=dict(
                     limit=25 * 1024,
                     in_use=10 * 1024,
-                    reserved=0,
                     ),
                 floating_ips=dict(
                     limit=10,
                     in_use=2,
-                    reserved=0,
                     ),
                 fixed_ips=dict(
                     limit=10,
                     in_use=0,
-                    reserved=0,
                     ),
                 metadata_items=dict(
                     limit=64,
                     in_use=0,
-                    reserved=0,
                     ),
                 injected_files=dict(
                     limit=2,
                     in_use=0,
-                    reserved=0,
                     ),
                 injected_file_content_bytes=dict(
                     limit=5 * 1024,
                     in_use=0,
-                    reserved=0,
                     ),
                 injected_file_path_bytes=dict(
                     limit=127,
                     in_use=0,
-                    reserved=0,
                     ),
                 security_groups=dict(
                     limit=10,
                     in_use=0,
-                    reserved=0,
                     ),
                 security_group_rules=dict(
                     limit=20,
                     in_use=1,
-                    reserved=0,
                     ),
                 key_pairs=dict(
                     limit=100,
                     in_use=2,
-                    reserved=0,
                     ),
                 server_groups=dict(
                     limit=10,
                     in_use=0,
-                    reserved=0,
                     ),
                 server_group_members=dict(
                     limit=10,
                     in_use=3,
-                    reserved=0,
                     ),
                 ))
 
@@ -1665,17 +1567,14 @@ class DbQuotaDriverTestCase(test.TestCase):
                 cores=dict(
                     limit=10,
                     in_use=4,
-                    reserved=0,
                     ),
                injected_files=dict(
                     limit=2,
                     in_use=0,
-                    reserved=0,
                     ),
                 injected_file_path_bytes=dict(
                     limit=127,
                     in_use=0,
-                    reserved=0,
                     ),
                 ))
 
@@ -1698,17 +1597,14 @@ class DbQuotaDriverTestCase(test.TestCase):
                 cores=dict(
                     limit=10,
                     in_use=4,
-                    reserved=0,
                     ),
                injected_files=dict(
                     limit=2,
                     in_use=0,
-                    reserved=0,
                     ),
                 injected_file_path_bytes=dict(
                     limit=127,
                     in_use=0,
-                    reserved=0,
                     ),
                 ))
 
@@ -2286,8 +2182,7 @@ class NoopQuotaDriverTestCase(test.TestCase):
         self.expected_settable_quotas = {}
         for r in quota.QUOTAS._resources:
             self.expected_with_usages[r] = dict(limit=-1,
-                                                in_use=-1,
-                                                reserved=-1)
+                                                in_use=-1)
             self.expected_without_usages[r] = dict(limit=-1)
             self.expected_without_dict[r] = -1
             self.expected_settable_quotas[r] = dict(minimum=0, maximum=-1)

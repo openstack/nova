@@ -255,7 +255,7 @@ class Quotas(base.NovaObject):
     def reserve(self, expire=None, project_id=None, user_id=None,
                 **deltas):
         # Honor the expected attributes even though we're not reserving
-        # anything anymore. This will protect against things exploding if a
+        # anything anymore. This will protect against things exploding if
         # someone has an Ocata compute host running by accident, for example.
         self.reservations = None
         self.project_id = project_id
