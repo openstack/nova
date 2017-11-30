@@ -3756,10 +3756,12 @@ class ServerTestV256Common(ServersTestBase):
             self.addCleanup(fake.restore_nodes)
             self.start_service('compute', host=host)
 
-    def _create_server(self):
+    def _create_server(self, target_host=None):
         server = self._build_minimal_create_server_request(
             image_uuid='a2459075-d96c-40d5-893e-577ff92e721c')
         server.update({'networks': 'auto'})
+        if target_host is not None:
+            server['availability_zone'] = 'nova:%s' % target_host
         post = {'server': server}
         response = self.api.api_post('/servers', post).body
         return response['server']
@@ -3770,6 +3772,43 @@ class ServerTestV256Common(ServersTestBase):
                               'host2': ['host3', 'host1'],
                               'host3': ['host1', 'host2']}
         return target_other_hosts[host]
+
+
+class ServerTestV256MultiCellTestCase(ServerTestV256Common):
+    """Negative test to ensure we fail with ComputeHostNotFound if we try to
+    target a host in another cell from where the instance lives.
+    """
+    NUMBER_OF_CELLS = 2
+
+    def _setup_compute_service(self):
+        # Set up 2 compute services in different cells
+        host_to_cell_mappings = {
+            'host1': 'cell1',
+            'host2': 'cell2'}
+        for host in sorted(host_to_cell_mappings):
+            fake.set_nodes([host])
+            self.addCleanup(fake.restore_nodes)
+            self.start_service('compute', host=host,
+                               cell=host_to_cell_mappings[host])
+
+    def test_migrate_server_to_host_in_different_cell(self):
+        # We target host1 specifically so that we have a predictable target for
+        # the cold migration in cell2.
+        server = self._create_server(target_host='host1')
+        server = self._wait_for_state_change(server, 'BUILD')
+
+        self.assertEqual('host1', server['OS-EXT-SRV-ATTR:host'])
+        ex = self.assertRaises(client.OpenStackApiException,
+                               self.api.post_server_action,
+                               server['id'],
+                               {'migrate': {'host': 'host2'}})
+        # When the API pulls the instance out of cell1, the context is targeted
+        # to cell1, so when the compute API resize() method attempts to lookup
+        # the target host in cell1, it will result in a ComputeHostNotFound
+        # error.
+        self.assertEqual(400, ex.response.status_code)
+        self.assertIn('Compute host host2 could not be found',
+                      six.text_type(ex))
 
 
 class ServerTestV256SingleCellMultiHostTestCase(ServerTestV256Common):
