@@ -99,9 +99,9 @@ def put_trait(req):
         jsonschema.validate(name, CUSTOM_TRAIT)
     except jsonschema.ValidationError:
         raise webob.exc.HTTPBadRequest(
-            _('The trait is invalid. A valid trait must include prefix '
-              '"CUSTOM_" and use following characters: "A"-"Z", "0"-"9" and '
-              '"_"'))
+            _('The trait is invalid. A valid trait must be no longer than '
+              '255 characters, start with the prefix "CUSTOM_" and use '
+              'following characters: "A"-"Z", "0"-"9" and "_"'))
 
     trait = objects.Trait(context)
     trait.name = name
