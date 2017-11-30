@@ -19,10 +19,12 @@ from oslo_utils import uuidutils
 from nova.api.openstack.placement import deploy
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
+from nova.api.openstack.placement import policies
 from nova import conf
 from nova import config
 from nova import context
 from nova.tests import fixtures
+from nova.tests.unit import policy_fixture
 from nova.tests import uuidsentinel as uuids
 
 
@@ -514,3 +516,28 @@ class GranularFixture(APIFixture):
         _add_inventory(shr_net, 'SRIOV_NET_VF', 16)
         _add_inventory(shr_net, 'CUSTOM_NET_MBPS', 40000)
         _set_traits(shr_net, 'MISC_SHARES_VIA_AGGREGATE')
+
+
+class OpenPolicyFixture(APIFixture):
+    """An APIFixture that changes all policy rules to allow non-admins."""
+
+    def start_fixture(self):
+        super(OpenPolicyFixture, self).start_fixture()
+        self.placement_policy_fixture = policy_fixture.PlacementPolicyFixture()
+        self.placement_policy_fixture.setUp()
+        # Get all of the registered rules and set them to '@' to allow any
+        # user to have access. The nova policy "admin_or_owner" concept does
+        # not really apply to most of placement resources since they do not
+        # have a user_id/project_id attribute.
+        rules = {}
+        for rule in policies.list_rules():
+            name = rule.name
+            # Ignore "base" rules for role:admin.
+            if name in ['placement', 'admin_api']:
+                continue
+            rules[name] = '@'
+        self.placement_policy_fixture.set_rules(rules)
+
+    def stop_fixture(self):
+        super(OpenPolicyFixture, self).stop_fixture()
+        self.placement_policy_fixture.cleanUp()

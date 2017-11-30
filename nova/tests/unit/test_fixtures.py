@@ -34,6 +34,7 @@ from nova.objects import base as obj_base
 from nova.objects import service as service_obj
 from nova.tests import fixtures
 from nova.tests.unit import conf_fixture
+from nova.tests.unit import policy_fixture
 from nova import utils
 
 CONF = cfg.CONF
@@ -471,6 +472,13 @@ class TestSingleCellSimpleFixture(testtools.TestCase):
 
 
 class TestPlacementFixture(testtools.TestCase):
+    def setUp(self):
+        super(TestPlacementFixture, self).setUp()
+        # We need ConfFixture since PlacementPolicyFixture reads from config.
+        self.useFixture(conf_fixture.ConfFixture())
+        # We need PlacementPolicyFixture because placement-api checks policy.
+        self.useFixture(policy_fixture.PlacementPolicyFixture())
+
     def test_responds_to_version(self):
         """Ensure the Placement server responds to calls sensibly."""
         placement_fixture = self.useFixture(fixtures.PlacementFixture())

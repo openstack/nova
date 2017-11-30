@@ -31,14 +31,13 @@ tests:
   response_json_paths:
       $.errors[0].title: Forbidden
 
-- name: non admin forbidden non json
-  GET: /resource_providers
+- name: route not found non json
+  GET: /moo
   request_headers:
-      x-auth-token: user
       accept: text/plain
-  status: 403
+  status: 404
   response_strings:
-      - admin required
+      - The resource could not be found
 
 - name: post new resource provider - old microversion
   POST: /resource_providers

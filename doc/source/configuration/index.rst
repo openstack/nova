@@ -20,8 +20,8 @@ Configuration
 * :doc:`Sample Config File <sample-config>`: A sample config
   file with inline documentation.
 
-Policy
-------
+Nova Policy
+-----------
 
 Nova, like most OpenStack projects, uses a policy language to restrict
 permissions on REST API actions.
@@ -29,8 +29,20 @@ permissions on REST API actions.
 * :doc:`Policy Reference <policy>`: A complete reference of all
   policy points in nova and what they impact.
 
-* :doc:`Sample Policy File <sample-policy>`: A sample policy
-  file with inline documentation.
+* :doc:`Sample Policy File <sample-policy>`: A sample nova
+  policy file with inline documentation.
+
+Placement Policy
+----------------
+
+Placement, like most OpenStack projects, uses a policy language to restrict
+permissions on REST API actions.
+
+* :doc:`Policy Reference <placement-policy>`: A complete
+  reference of all policy points in placement and what they impact.
+
+* :doc:`Sample Policy File <sample-placement-policy>`: A sample
+  placement policy file with inline documentation.
 
 
 .. # NOTE(mriedem): This is the section where we hide things that we don't
@@ -43,3 +55,5 @@ permissions on REST API actions.
    sample-config
    policy
    sample-policy
+   placement-policy
+   sample-placement-policy

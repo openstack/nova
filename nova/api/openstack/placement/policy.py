@@ -14,7 +14,10 @@
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_policy import policy
-from oslo_serialization import jsonutils
+from oslo_utils import excutils
+
+from nova.api.openstack.placement import exception
+from nova.api.openstack.placement import policies
 
 
 CONF = cfg.CONF
@@ -22,54 +25,68 @@ LOG = logging.getLogger(__name__)
 _ENFORCER_PLACEMENT = None
 
 
-def placement_init():
-    """Init an Enforcer class for placement policy.
+def reset():
+    """Used to reset the global _ENFORCER_PLACEMENT between test runs."""
+    global _ENFORCER_PLACEMENT
+    if _ENFORCER_PLACEMENT:
+        _ENFORCER_PLACEMENT.clear()
+        _ENFORCER_PLACEMENT = None
 
-    This method uses a different list of policies than other parts of Nova.
-    This is done to facilitate a split out of the placement service later.
-    """
+
+def init():
+    """Init an Enforcer class. Sets the _ENFORCER_PLACEMENT global."""
     global _ENFORCER_PLACEMENT
     if not _ENFORCER_PLACEMENT:
-        # TODO(cdent): Using is_admin everywhere (except /) is
-        # insufficiently flexible for future use case but is
-        # convenient for initial exploration. We will need to
-        # determine how to manage authorization/policy and
-        # implement that, probably per handler.
-        rules = policy.Rules.load(jsonutils.dumps({'placement': 'role:admin'}))
-        # Enforcer is initialized so that the above rule is loaded in and no
-        # policy file is read.
-        # TODO(alaski): Register a default rule rather than loading it in like
-        # this. That requires that a policy file is specified to be read. When
-        # this is split out such that a placement policy file makes sense then
-        # change to rule registration.
-        _ENFORCER_PLACEMENT = policy.Enforcer(CONF, rules=rules,
-                                              use_conf=False)
+        # NOTE(mriedem): We have to explicitly pass in the
+        # [placement]/policy_file path because otherwise oslo_policy defaults
+        # to read the policy file from config option [oslo_policy]/policy_file
+        # which is used by nova. In other words, to have separate policy files
+        # for placement and nova, we have to use separate policy_file options.
+        _ENFORCER_PLACEMENT = policy.Enforcer(
+            CONF, policy_file=CONF.placement.policy_file)
+        _ENFORCER_PLACEMENT.register_defaults(policies.list_rules())
+        _ENFORCER_PLACEMENT.load_rules()
 
 
-def placement_authorize(context, action, target=None):
+def get_enforcer():
+    # This method is used by oslopolicy CLI scripts in order to generate policy
+    # files from overrides on disk and defaults in code. We can just pass an
+    # empty list and let oslo do the config lifting for us.
+    cfg.CONF([], project='nova')
+    init()
+    return _ENFORCER_PLACEMENT
+
+
+def authorize(context, action, target, do_raise=True):
     """Verifies that the action is valid on the target in this context.
 
-       :param context: RequestContext object
-       :param action: string representing the action to be checked
-       :param target: dictionary representing the object of the action
-           for object creation this should be a dictionary representing the
-           location of the object e.g. ``{'project_id': context.project_id}``
-
-       :return: returns a non-False value (not necessarily "True") if
-           authorized, and the exact value False if not authorized.
+    :param context: instance of
+        nova.api.openstack.placement.context.RequestContext
+    :param action: string representing the action to be checked
+        this should be colon separated for clarity, i.e.
+        ``placement:resource_providers:list``
+    :param target: dictionary representing the object of the action;
+        for object creation this should be a dictionary representing the
+        owner of the object e.g. ``{'project_id': context.project_id}``.
+    :param do_raise: if True (the default), raises PolicyNotAuthorized;
+        if False, returns False
+    :raises nova.api.openstack.placement.exception.PolicyNotAuthorized: if
+        verification fails and do_raise is True.
+    :returns: non-False value (not necessarily "True") if authorized, and the
+        exact value False if not authorized and do_raise is False.
     """
-    placement_init()
-    if target is None:
-        target = {'project_id': context.project_id,
-                  'user_id': context.user_id}
+    init()
     credentials = context.to_policy_values()
-    # TODO(alaski): Change this to use authorize() when rules are registered.
-    # noqa the following line because a hacking check disallows using enforce.
-    result = _ENFORCER_PLACEMENT.enforce(action, target, credentials,
-                                         do_raise=False, exc=None,
-                                         action=action)
-    if result is False:
-        LOG.debug('Policy check for %(action)s failed with credentials '
-                  '%(credentials)s',
-                  {'action': action, 'credentials': credentials})
-    return result
+    try:
+        # NOTE(mriedem): The "action" kwarg is for the PolicyNotAuthorized exc.
+        return _ENFORCER_PLACEMENT.authorize(
+            action, target, credentials, do_raise=do_raise,
+            exc=exception.PolicyNotAuthorized, action=action)
+    except policy.PolicyNotRegistered:
+        with excutils.save_and_reraise_exception():
+            LOG.exception('Policy not registered')
+    except Exception:
+        with excutils.save_and_reraise_exception():
+            LOG.debug('Policy check for %(action)s failed with credentials '
+                      '%(credentials)s',
+                      {'action': action, 'credentials': credentials})
