@@ -6611,12 +6611,31 @@ class ComputeManager(manager.Manager):
             if timeutils.is_older_than(shelved_at, CONF.shelved_offload_time):
                 to_gc.append(instance)
 
+        @wrap_exception()
+        @reverts_task_state
+        @wrap_instance_fault
+        def shelve_offload_instance(_self, ctxt, instance):
+
+            @utils.synchronized(instance.uuid)
+            def do_shelve_offload_instance():
+                self._shelve_offload_instance(ctxt, instance,
+                                              clean_shutdown=False)
+            do_shelve_offload_instance()
+
         for instance in to_gc:
             try:
                 instance.task_state = task_states.SHELVING_OFFLOADING
                 instance.save(expected_task_state=(None,))
-                self.shelve_offload_instance(context, instance,
-                                             clean_shutdown=False)
+                # NOTE(Kevin Zheng): We use the _shelve_offload_instance
+                # method to avoid issues with instance actions/events since
+                # the context used in this periodic task will not have a
+                # valid request ID. The inner method used here uses the same
+                # exception and fault handlers and locking scheme as the
+                # top-level shelve_offload_instance method
+                # NOTE(mriedem): This looks weird, but we need to pass self
+                # through to the inner method for the decorators to work
+                # properly.
+                shelve_offload_instance(self, context, instance)
             except Exception:
                 LOG.exception('Periodic task failed to offload instance.',
                               instance=instance)
