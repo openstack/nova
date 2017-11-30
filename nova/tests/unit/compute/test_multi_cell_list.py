@@ -14,6 +14,7 @@ import datetime
 import mock
 
 from nova.compute import instance_list
+from nova.compute import multi_cell_list
 from nova import objects
 from nova import test
 from nova.tests import fixtures
@@ -29,47 +30,36 @@ class TestUtils(test.NoDBTestCase):
         inst2 = {'key0': 'foo', 'key1': 's', 'key2': 123, 'key4': dt2}
 
         # Equal key0, inst == inst2
-        ctx = instance_list.RecordSortContext(['key0'], ['asc'])
+        ctx = multi_cell_list.RecordSortContext(['key0'], ['asc'])
         self.assertEqual(0, ctx.compare_records(inst1, inst2))
 
         # Equal key0, inst == inst2 (direction should not matter)
-        ctx = instance_list.RecordSortContext(['key0'], ['desc'])
+        ctx = multi_cell_list.RecordSortContext(['key0'], ['desc'])
         self.assertEqual(0, ctx.compare_records(inst1, inst2))
 
         # Ascending by key1, inst1 < inst2
-        ctx = instance_list.RecordSortContext(['key1'], ['asc'])
+        ctx = multi_cell_list.RecordSortContext(['key1'], ['asc'])
         self.assertEqual(-1, ctx.compare_records(inst1, inst2))
 
         # Descending by key1, inst2 < inst1
-        ctx = instance_list.RecordSortContext(['key1'], ['desc'])
+        ctx = multi_cell_list.RecordSortContext(['key1'], ['desc'])
         self.assertEqual(1, ctx.compare_records(inst1, inst2))
 
         # Ascending by key2, inst2 < inst1
-        ctx = instance_list.RecordSortContext(['key2'], ['asc'])
+        ctx = multi_cell_list.RecordSortContext(['key2'], ['asc'])
         self.assertEqual(1, ctx.compare_records(inst1, inst2))
 
         # Descending by key2, inst1 < inst2
-        ctx = instance_list.RecordSortContext(['key2'], ['desc'])
+        ctx = multi_cell_list.RecordSortContext(['key2'], ['desc'])
         self.assertEqual(-1, ctx.compare_records(inst1, inst2))
 
         # Ascending by key4, inst1 > inst2
-        ctx = instance_list.RecordSortContext(['key4'], ['asc'])
+        ctx = multi_cell_list.RecordSortContext(['key4'], ['asc'])
         self.assertEqual(1, ctx.compare_records(inst1, inst2))
 
         # Descending by key4, inst1 < inst2
-        ctx = instance_list.RecordSortContext(['key4'], ['desc'])
+        ctx = multi_cell_list.RecordSortContext(['key4'], ['desc'])
         self.assertEqual(-1, ctx.compare_records(inst1, inst2))
-
-    def test_compare_simple_instance_quirks(self):
-        # Ensure uuid,asc is added
-        ctx = instance_list.InstanceSortContext(['key0'], ['asc'])
-        self.assertEqual(['key0', 'uuid'], ctx.sort_keys)
-        self.assertEqual(['asc', 'asc'], ctx.sort_dirs)
-
-        # Ensure defaults are added
-        ctx = instance_list.InstanceSortContext(None, None)
-        self.assertEqual(['created_at', 'id', 'uuid'], ctx.sort_keys)
-        self.assertEqual(['desc', 'desc', 'asc'], ctx.sort_dirs)
 
     def test_compare_multiple(self):
         # key0 should not affect ordering, but key1 should
@@ -78,12 +68,12 @@ class TestUtils(test.NoDBTestCase):
         inst2 = {'key0': 'foo', 'key1': 's', 'key2': 123}
 
         # Should be equivalent to ascending by key1
-        ctx = instance_list.RecordSortContext(['key0', 'key1'],
+        ctx = multi_cell_list.RecordSortContext(['key0', 'key1'],
                                                 ['asc', 'asc'])
         self.assertEqual(-1, ctx.compare_records(inst1, inst2))
 
         # Should be equivalent to descending by key1
-        ctx = instance_list.RecordSortContext(['key0', 'key1'],
+        ctx = multi_cell_list.RecordSortContext(['key0', 'key1'],
                                                 ['asc', 'desc'])
         self.assertEqual(1, ctx.compare_records(inst1, inst2))
 
@@ -92,20 +82,20 @@ class TestUtils(test.NoDBTestCase):
         inst2 = {'key0': 'foo', 'key1': 's', 'key2': 123}
 
         # Should sort by key1
-        ctx = instance_list.RecordSortContext(['key0', 'key1'],
+        ctx = multi_cell_list.RecordSortContext(['key0', 'key1'],
                                                 ['asc', 'asc'])
-        iw1 = instance_list.RecordWrapper(ctx, inst1)
-        iw2 = instance_list.RecordWrapper(ctx, inst2)
+        iw1 = multi_cell_list.RecordWrapper(ctx, inst1)
+        iw2 = multi_cell_list.RecordWrapper(ctx, inst2)
         # Check this both ways to make sure we're comparing against -1
         # and not just nonzero return from cmp()
         self.assertTrue(iw1 < iw2)
         self.assertFalse(iw2 < iw1)
 
         # Should sort reverse by key1
-        ctx = instance_list.RecordSortContext(['key0', 'key1'],
+        ctx = multi_cell_list.RecordSortContext(['key0', 'key1'],
                                                 ['asc', 'desc'])
-        iw1 = instance_list.RecordWrapper(ctx, inst1)
-        iw2 = instance_list.RecordWrapper(ctx, inst2)
+        iw1 = multi_cell_list.RecordWrapper(ctx, inst1)
+        iw2 = multi_cell_list.RecordWrapper(ctx, inst2)
         # Check this both ways to make sure we're comparing against -1
         # and not just nonzero return from cmp()
         self.assertTrue(iw1 > iw2)
@@ -134,6 +124,17 @@ class TestInstanceList(test.NoDBTestCase):
         self.insts = insts
         self.context = mock.sentinel.context
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
+
+    def test_compare_simple_instance_quirks(self):
+        # Ensure uuid,asc is added
+        ctx = instance_list.InstanceSortContext(['key0'], ['asc'])
+        self.assertEqual(['key0', 'uuid'], ctx.sort_keys)
+        self.assertEqual(['asc', 'asc'], ctx.sort_dirs)
+
+        # Ensure defaults are added
+        ctx = instance_list.InstanceSortContext(None, None)
+        self.assertEqual(['created_at', 'id', 'uuid'], ctx.sort_keys)
+        self.assertEqual(['desc', 'desc', 'asc'], ctx.sort_dirs)
 
     @mock.patch('nova.db.instance_get_all_by_filters_sort')
     @mock.patch('nova.objects.CellMappingList.get_all')
