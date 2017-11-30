@@ -190,7 +190,12 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
     @staticmethod
     def _from_db_object(context, pci_device, db_dev):
         for key in pci_device.fields:
-            if key != 'extra_info':
+            if key == 'uuid' and db_dev['uuid'] is None:
+                # Older records might not have a uuid field set in the
+                # database so we need to skip those here and auto-generate
+                # a uuid later below.
+                continue
+            elif key != 'extra_info':
                 setattr(pci_device, key, db_dev[key])
             else:
                 extra_info = db_dev.get("extra_info")
