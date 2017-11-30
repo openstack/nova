@@ -2114,6 +2114,14 @@ class ResourceProviderInUse(NovaException):
     msg_fmt = _("Resource provider has allocations.")
 
 
+class ResourceProviderRetrievalFailed(NovaException):
+    msg_fmt = _("Failed to get resource provider with UUID %(uuid)s")
+
+
+class ResourceProviderCreationFailed(NovaException):
+    msg_fmt = _("Failed to create resource provider %(name)s")
+
+
 class InventoryWithResourceClassNotFound(NotFound):
     msg_fmt = _("No inventory of class %(resource_class)s found.")
 

@@ -301,10 +301,10 @@ class SchedulerReportClient(object):
         """Queries the placement API for a resource provider record with the
         supplied UUID.
 
-        Returns an `objects.ResourceProvider` object if found or None if no
-        such resource provider could be found.
-
         :param uuid: UUID identifier for the resource provider to look up
+        :return: An `objects.ResourceProvider` object if found or None if no
+                 such resource provider could be found.
+        :raise: ResourceProviderRetrievalFailed on error.
         """
         resp = self.get("/resource_providers/%s" % uuid)
         if resp.status_code == 200:
@@ -326,16 +326,18 @@ class SchedulerReportClient(object):
                 'err_text': resp.text,
             }
             LOG.error(msg, args)
+            raise exception.ResourceProviderRetrievalFailed(uuid=uuid)
 
     @safe_connect
     def _create_resource_provider(self, uuid, name):
         """Calls the placement API to create a new resource provider record.
 
-        Returns an `objects.ResourceProvider` object representing the
-        newly-created resource provider object.
-
         :param uuid: UUID of the new resource provider
         :param name: Name of the resource provider
+        :return: An `objects.ResourceProvider` object representing the
+                 newly-created resource provider object.
+        :raise: ResourceProviderCreationFailed or
+                ResourceProviderRetrievalFailed on error.
         """
         url = "/resource_providers"
         payload = {
@@ -353,7 +355,10 @@ class SchedulerReportClient(object):
                     name=name,
                     generation=0,
             )
-        elif resp.status_code == 409:
+
+        # TODO(efried): Push error codes from placement, and use 'em.
+        name_conflict = 'Conflicting resource provider name:'
+        if resp.status_code == 409 and name_conflict not in resp.text:
             # Another thread concurrently created a resource provider with the
             # same UUID. Log a warning and then just return the resource
             # provider object from _get_resource_provider()
@@ -363,16 +368,17 @@ class SchedulerReportClient(object):
             msg = msg.format(uuid)
             LOG.info(msg)
             return self._get_resource_provider(uuid)
-        else:
-            msg = _LE("Failed to create resource provider record in "
-                      "placement API for UUID %(uuid)s. "
-                      "Got %(status_code)d: %(err_text)s.")
-            args = {
-                'uuid': uuid,
-                'status_code': resp.status_code,
-                'err_text': resp.text,
-            }
-            LOG.error(msg, args)
+
+        # A provider with the same *name* already exists, or some other error.
+        msg = _LE("Failed to create resource provider record in placement API "
+                  "for UUID %(uuid)s. Got %(status_code)d: %(err_text)s.")
+        args = {
+            'uuid': uuid,
+            'status_code': resp.status_code,
+            'err_text': resp.text,
+        }
+        LOG.error(msg, args)
+        raise exception.ResourceProviderCreationFailed(name=name)
 
     def _ensure_resource_provider(self, uuid, name=None):
         """Ensures that the placement API has a record of a resource provider
@@ -383,7 +389,11 @@ class SchedulerReportClient(object):
         The found or created resource provider object is returned from this
         method. If the resource provider object for the supplied uuid was not
         found and the resource provider record could not be created in the
-        placement API, we return None.
+        placement API, an exception is raised.
+
+        If this method returns successfully, callers are assured both that
+        the placement API contains a record of the provider and the local cache
+        of resource provider information contains a record of the provider.
 
         :param uuid: UUID identifier for the resource provider to ensure exists
         :param name: Optional name for the resource provider if the record
@@ -406,10 +416,8 @@ class SchedulerReportClient(object):
 
         rp = self._get_resource_provider(uuid)
         if rp is None:
-            name = name or uuid
-            rp = self._create_resource_provider(uuid, name)
-            if rp is None:
-                return
+            rp = self._create_resource_provider(uuid, name or uuid)
+
         msg = "Grabbing aggregate associations for resource provider %s"
         LOG.debug(msg, uuid)
         aggs = self._get_provider_aggregates(uuid)
