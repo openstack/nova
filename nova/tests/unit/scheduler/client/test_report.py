@@ -1019,16 +1019,19 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                 '_get_provider_aggregates')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_resource_provider')
-    def test_ensure_resource_provider_create_none(self, get_rp_mock,
+    def test_ensure_resource_provider_create_fail(self, get_rp_mock,
             get_agg_mock, create_rp_mock):
         # No resource provider exists in the client's cache, and
-        # _create_provider returns None, indicating there was an error with the
+        # _create_provider raises, indicating there was an error with the
         # create call. Ensure we don't populate the resource provider cache
         # with a None value.
         get_rp_mock.return_value = None
-        create_rp_mock.return_value = None
+        create_rp_mock.side_effect = exception.ResourceProviderCreationFailed(
+            name=uuids.compute_node)
 
-        self.client._ensure_resource_provider(uuids.compute_node)
+        self.assertRaises(
+            exception.ResourceProviderCreationFailed,
+            self.client._ensure_resource_provider, uuids.compute_node)
 
         get_rp_mock.assert_called_once_with(uuids.compute_node)
         create_rp_mock.assert_called_once_with(uuids.compute_node,
@@ -1165,7 +1168,9 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             'openstack-request-id': uuids.request_id}
 
         uuid = uuids.compute_node
-        result = self.client._get_resource_provider(uuid)
+        self.assertRaises(
+            exception.ResourceProviderRetrievalFailed,
+            self.client._get_resource_provider, uuid)
 
         expected_url = '/resource_providers/' + uuid
         self.ks_sess_mock.get.assert_called_once_with(expected_url,
@@ -1177,7 +1182,6 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.assertTrue(logging_mock.called)
         self.assertEqual(uuids.request_id,
                         logging_mock.call_args[0][1]['placement_req_id'])
-        self.assertIsNone(result)
 
     def test_create_resource_provider(self):
         # Ensure _create_resource_provider() returns a dict of resource
@@ -1219,10 +1223,10 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         # record.
         uuid = uuids.compute_node
         name = 'computehost'
-        resp_mock = mock.Mock(status_code=409)
-        self.ks_sess_mock.post.return_value = resp_mock
-        self.ks_sess_mock.post.return_value.headers = {
-            'openstack-request-id': uuids.request_id}
+        self.ks_sess_mock.post.return_value = mock.Mock(
+            status_code=409,
+            headers={'openstack-request-id': uuids.request_id},
+            text='not a name conflict')
 
         get_rp_mock.return_value = mock.sentinel.get_rp
 
@@ -1244,6 +1248,18 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.assertEqual(uuids.request_id,
                         logging_mock.call_args[0][1]['placement_req_id'])
 
+    def test_create_resource_provider_name_conflict(self):
+        # When the API call to create the resource provider fails 409 with a
+        # name conflict, we raise an exception.
+        self.ks_sess_mock.post.return_value = mock.Mock(
+            status_code=409,
+            text='<stuff>Conflicting resource provider name: foo already '
+                 'exists.</stuff>')
+
+        self.assertRaises(
+            exception.ResourceProviderCreationFailed,
+            self.client._create_resource_provider, uuids.compute_node, 'foo')
+
     @mock.patch.object(report.LOG, 'error')
     def test_create_resource_provider_error(self, logging_mock):
         # Ensure _create_resource_provider() sets the error flag when trying to
@@ -1256,7 +1272,9 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.ks_sess_mock.post.return_value.headers = {
             'x-openstack-request-id': uuids.request_id}
 
-        result = self.client._create_resource_provider(uuid, name)
+        self.assertRaises(
+            exception.ResourceProviderCreationFailed,
+            self.client._create_resource_provider, uuid, name)
 
         expected_payload = {
             'uuid': uuid,
@@ -1274,7 +1292,6 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.assertTrue(logging_mock.called)
         self.assertEqual(uuids.request_id,
                         logging_mock.call_args[0][1]['placement_req_id'])
-        self.assertFalse(result)
 
 
 class TestAggregates(SchedulerReportClientTestCase):
