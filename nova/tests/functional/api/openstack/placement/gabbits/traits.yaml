@@ -13,13 +13,19 @@ tests:
   PUT: /traits/TRAIT_X
   status: 400
   response_strings:
-    - 'The trait is invalid. A valid trait must include prefix \"CUSTOM_\" and use following characters: \"A\"-\"Z\", \"0\"-\"9\" and \"_\"'
+    - 'The trait is invalid. A valid trait must be no longer than 255 characters, start with the prefix \"CUSTOM_\" and use following characters: \"A\"-\"Z\", \"0\"-\"9\" and \"_\"'
 
 - name: create a trait with invalid characters
   PUT: /traits/CUSTOM_ABC:1
   status: 400
   response_strings:
-    - 'The trait is invalid. A valid trait must include prefix \"CUSTOM_\" and use following characters: \"A\"-\"Z\", \"0\"-\"9\" and \"_\"'
+    - 'The trait is invalid. A valid trait must be no longer than 255 characters, start with the prefix \"CUSTOM_\" and use following characters: \"A\"-\"Z\", \"0\"-\"9\" and \"_\"'
+
+- name: create a trait with name exceed max characters
+  PUT: /traits/CUSTOM_ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNO
+  status: 400
+  response_strings:
+    - 'The trait is invalid. A valid trait must be no longer than 255 characters, start with the prefix \"CUSTOM_\" and use following characters: \"A\"-\"Z\", \"0\"-\"9\" and \"_\"'
 
 - name: create a trait
   PUT: /traits/CUSTOM_TRAIT_1
