@@ -137,11 +137,14 @@ class _IntegratedTestBase(test.TestCase):
     def get_invalid_image(self):
         return uuids.fake
 
-    def _build_minimal_create_server_request(self):
+    def _build_minimal_create_server_request(self, image_uuid=None):
         server = {}
 
-        # We now have a valid imageId
-        server[self._image_ref_parameter] = self.api.get_images()[0]['id']
+        # NOTE(takashin): In API version 2.36, image APIs were deprecated.
+        # In API version 2.36 or greater, self.api.get_images() returns
+        # a 404 error. In that case, 'image_uuid' should be specified.
+        server[self._image_ref_parameter] = (image_uuid or
+                                             self.api.get_images()[0]['id'])
 
         # Set a valid flavorId
         flavor = self.api.get_flavors()[0]

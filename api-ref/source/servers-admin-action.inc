@@ -56,9 +56,14 @@ Migrate Server (migrate Action)
 
 .. rest_method:: POST /servers/{server_id}/action
 
-Migrates a server to a host. The scheduler chooses the host.
+Migrates a server to a host.
 
 Specify the ``migrate`` action in the request body.
+
+Up to microversion 2.55, the scheduler chooses the host.
+Starting from microversion 2.56, the ``host`` parameter is available
+to specify the destination host. If you specify ``null`` or don't specify
+this parameter, the scheduler chooses a host.
 
 Policy defaults enable only users with the administrative role to
 perform this operation. Cloud providers can change these permissions
@@ -76,10 +81,16 @@ Request
 
   - server_id: server_id_path
   - migrate: migrate
+  - host: host_migration_2_56
 
-**Example Migrate Server (migrate Action)**
+**Example Migrate Server (migrate Action) (v2.1)**
 
 .. literalinclude:: ../../doc/api_samples/os-migrate-server/migrate-server.json
+   :language: javascript
+
+**Example Migrate Server (migrate Action) (v2.56)**
+
+.. literalinclude:: ../../doc/api_samples/os-migrate-server/v2.56/migrate-server.json
    :language: javascript
 
 Response

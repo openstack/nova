@@ -130,6 +130,9 @@ REST_API_VERSION_HISTORY = """REST API Version History:
              and responses are also changed.
     * 2.54 - Enable reset key pair while rebuilding instance.
     * 2.55 - Added flavor.description to GET/POST/PUT flavors APIs.
+    * 2.56 - Add a host parameter in migrate request body in order to
+             enable users to specify a target host in cold migration.
+             The target host is checked by the scheduler.
 """
 
 # The minimum and maximum versions of the API supported
@@ -138,7 +141,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.55"
+_MAX_API_VERSION = "2.56"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which are related to network, images and baremetal

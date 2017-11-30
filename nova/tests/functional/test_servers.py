@@ -24,6 +24,7 @@ from oslo_utils import timeutils
 
 from nova.compute import api as compute_api
 from nova.compute import instance_actions
+from nova.compute import manager as compute_manager
 from nova.compute import rpcapi
 from nova import context
 from nova import db
@@ -2992,3 +2993,83 @@ class ServerSoftDeleteTests(ProviderUsageBaseTestCase):
         # Now we want a real delete
         self.flags(reclaim_instance_interval=0)
         self._delete_and_check_allocations(server)
+
+
+class ServerTestV256Common(ServersTestBase):
+    api_major_version = 'v2.1'
+    microversion = '2.56'
+    ADMIN_API = True
+
+    def _create_server(self):
+        server = self._build_minimal_create_server_request(
+            image_uuid='a2459075-d96c-40d5-893e-577ff92e721c')
+        server.update({'networks': 'auto'})
+        post = {'server': server}
+        response = self.api.api_post('/servers', post).body
+        return response['server']
+
+
+class ServerTestV256SingleCellMultiHostTestCase(ServerTestV256Common):
+    """Happy path test where we create a server on one host, migrate it to
+    another host of our choosing and ensure it lands there.
+    """
+    def _setup_compute_service(self):
+        # Set up 3 compute services in the same cell
+        for host in ('host1', 'host2', 'host3'):
+            fake.set_nodes([host])
+            self.addCleanup(fake.restore_nodes)
+            self.start_service('compute', host=host)
+
+    @staticmethod
+    def _get_target_and_other_hosts(host):
+        target_other_hosts = {'host1': ['host2', 'host3'],
+                              'host2': ['host3', 'host1'],
+                              'host3': ['host1', 'host2']}
+        return target_other_hosts[host]
+
+    def test_migrate_server_to_host_in_same_cell(self):
+        server = self._create_server()
+        server = self._wait_for_state_change(server, 'BUILD')
+        source_host = server['OS-EXT-SRV-ATTR:host']
+        target_host = self._get_target_and_other_hosts(source_host)[0]
+        self.api.post_server_action(server['id'],
+                                    {'migrate': {'host': target_host}})
+        # Assert the server is now on the target host.
+        server = self.api.get_server(server['id'])
+        self.assertEqual(target_host, server['OS-EXT-SRV-ATTR:host'])
+
+
+class ServerTestV256RescheduleTestCase(ServerTestV256Common):
+
+    def _setup_compute_service(self):
+        # Set up 3 compute services in the same cell
+        for host in ('host1', 'host2', 'host3'):
+            fake.set_nodes([host])
+            self.addCleanup(fake.restore_nodes)
+            self.start_service('compute', host=host)
+
+    @staticmethod
+    def _get_target_and_other_hosts(host):
+        target_other_hosts = {'host1': ['host2', 'host3'],
+                              'host2': ['host3', 'host1'],
+                              'host3': ['host1', 'host2']}
+        return target_other_hosts[host]
+
+    @mock.patch.object(compute_manager.ComputeManager, '_prep_resize',
+                       side_effect=exception.MigrationError(
+                           reason='Test Exception'))
+    def test_migrate_server_not_reschedule(self, mock_prep_resize):
+        server = self._create_server()
+        found_server = self._wait_for_state_change(server, 'BUILD')
+
+        target_host, other_host = self._get_target_and_other_hosts(
+            found_server['OS-EXT-SRV-ATTR:host'])
+
+        self.assertRaises(client.OpenStackApiException,
+                          self.api.post_server_action,
+                          server['id'],
+                          {'migrate': {'host': target_host}})
+        self.assertEqual(1, mock_prep_resize.call_count)
+        found_server = self.api.get_server(server['id'])
+        # Check that rescheduling is not occurred.
+        self.assertNotEqual(other_host, found_server['OS-EXT-SRV-ATTR:host'])

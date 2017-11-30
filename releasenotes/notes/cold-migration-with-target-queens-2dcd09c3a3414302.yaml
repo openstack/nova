@@ -1,0 +1,4 @@
+---
+features:
+  - When cold migrating a server, the ``host`` parameter is available
+    as of microversion 2.56. The target host is checked by the scheduler.

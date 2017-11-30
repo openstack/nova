@@ -2905,6 +2905,14 @@ host_migration:
   in: body
   required: true
   type: string
+host_migration_2_56:
+  description: |
+    The host to which to migrate the server. If you specify ``null`` or
+    don't specify this parameter, the scheduler chooses a host.
+  in: body
+  required: false
+  type: string
+  min_version: 2.56
 host_name_body:
   description: |
     The name of the host.
@@ -3906,10 +3914,12 @@ metadata_object:
   type: object
 migrate:
   description: |
-    The action.
+    The action to cold migrate a server.
+    This parameter can be ``null``.
+    Up to microversion 2.55, this parameter should be ``null``.
   in: body
   required: true
-  type: string
+  type: object
 migrate_dest_compute:
   description: |
     The target compute for a migration.
