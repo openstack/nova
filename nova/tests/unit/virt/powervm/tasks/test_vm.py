@@ -22,7 +22,7 @@ from nova import test
 from nova.virt.powervm.tasks import vm as tf_vm
 
 
-class TestVMTasks(test.TestCase):
+class TestVMTasks(test.NoDBTestCase):
     def setUp(self):
         super(TestVMTasks, self).setUp()
         self.apt = mock.Mock()
