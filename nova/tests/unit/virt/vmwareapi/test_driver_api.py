@@ -2055,6 +2055,18 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                                                   'find_extension',
                                                   constants.EXTENSION_KEY)
 
+    def test_register_extension_concurrent(self):
+        def fake_call_method(module, method, *args, **kwargs):
+            if method == "find_extension":
+                return None
+            elif method == "register_extension":
+                raise vexc.VimFaultException(['InvalidArgument'], 'error')
+            else:
+                raise Exception()
+        with (mock.patch.object(
+                self.conn._session, '_call_method', fake_call_method)):
+            self.conn._register_openstack_extension()
+
     def test_list_instances(self):
         instances = self.conn.list_instances()
         self.assertEqual(0, len(instances))
