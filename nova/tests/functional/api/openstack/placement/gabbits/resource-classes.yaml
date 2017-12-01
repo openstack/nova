@@ -9,11 +9,22 @@ defaults:
 
 tests:
 
-- name: test microversion masks entire resource-classes endpoint with 404
+- name: test microversion masks resource-classes endpoint for list with 404
   GET: /resource_classes
   request_headers:
     openstack-api-version: placement 1.1
+  status: 404
+  response_json_paths:
+      $.errors[0].title: Not Found
+
+- name: test microversion masks resource-classes endpoint for create with 404
+  desc: we want to get a 404 even if content-type is correct
+  POST: /resource_classes
+  request_headers:
+    openstack-api-version: placement 1.1
     content-type: application/json
+  data:
+      name: CUSTOM_NFV_BAR
   status: 404
   response_json_paths:
       $.errors[0].title: Not Found
@@ -105,6 +116,14 @@ tests:
       $.name: $ENVIRON['CUSTOM_RES_CLASS']
       $.links[?rel = "self"].href: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
 
+- name: test microversion masks resource-classes endpoint for show with 404
+  GET: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
+  request_headers:
+    openstack-api-version: placement 1.1
+  status: 404
+  response_json_paths:
+      $.errors[0].title: Not Found
+
 - name: get resource class works with no accept
   GET: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
   request_headers:
@@ -183,6 +202,29 @@ tests:
   response_json_paths:
       $.errors[0].title: Conflict
 
+- name: test microversion masks resource-classes endpoint for update with 404
+  PUT: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
+  request_headers:
+    openstack-api-version: placement 1.1
+    content-type: application/json
+  data:
+      name: CUSTOM_NFV_BAR
+  status: 404
+  response_json_paths:
+      $.errors[0].title: Not Found
+
+- name: update custom resource class with additional properties
+  PUT: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
+  request_headers:
+    content-type: application/json
+    openstack-api-version: placement 1.6
+  data:
+      name: CUSTOM_NFV_BAR
+      additional: additional
+  status: 400
+  response_strings:
+      - Additional properties are not allowed
+
 - name: update custom resource class
   PUT: /resource_classes/$ENVIRON['CUSTOM_RES_CLASS']
   request_headers:
@@ -202,6 +244,14 @@ tests:
       - Cannot delete standard resource class
   response_json_paths:
       $.errors[0].title: Bad Request
+
+- name: test microversion masks resource-classes endpoint for delete with 404
+  DELETE: /resource_classes/CUSTOM_NFV_BAR
+  request_headers:
+    openstack-api-version: placement 1.1
+  status: 404
+  response_json_paths:
+      $.errors[0].title: Not Found
 
 - name: delete custom resource class
   DELETE: /resource_classes/CUSTOM_NFV_BAR
@@ -260,3 +310,14 @@ tests:
       - "Failed validating 'maxLength'"
   response_json_paths:
       $.errors[0].title: Bad Request
+
+- name: try to create resource class with additional properties
+  POST: /resource_classes
+  request_headers:
+      content-type: application/json
+  data:
+      name: CUSTOM_NFV_BAR
+      additional: additional
+  status: 400
+  response_strings:
+      - Additional properties are not allowed
