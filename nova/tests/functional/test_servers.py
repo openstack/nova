@@ -36,6 +36,7 @@ from nova.tests.functional import integrated_helpers
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_network
+from nova.tests.unit import fake_notifier
 import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
 from nova.virt import fake
@@ -1214,6 +1215,9 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
 
     def setUp(self):
         super(ServerMovingTests, self).setUp()
+        fake_notifier.stub_notifier(self)
+        self.addCleanup(fake_notifier.reset)
+
         fake.set_nodes(['host1'])
         self.flags(host='host1')
         self.compute1 = self.start_service('compute', host='host1')
@@ -1395,6 +1399,12 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         # Check usages after delete
         self.api.delete_server(server['id'])
         self._wait_until_deleted(server)
+        # NOTE(gibi): The resource allocation is deleted after the instance is
+        # destroyed in the db so wait_until_deleted might return before the
+        # the resource are deleted in placement. So we need to wait for the
+        # instance.delete.end notification as that is emitted after the
+        # resources are freed.
+        fake_notifier.wait_for_versioned_notification('instance.delete.end')
 
         source_usages = self._get_provider_usages(source_rp_uuid)
         self.assertEqual({'VCPU': 0,
