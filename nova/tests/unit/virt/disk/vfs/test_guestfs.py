@@ -51,7 +51,7 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         vfs.setup()
 
         if forcetcg:
-            self.assertEqual("force_tcg", vfs.handle.backend_settings)
+            self.assertEqual(["force_tcg"], vfs.handle.backend_settings)
             vfsimpl.force_tcg(False)
         else:
             self.assertIsNone(vfs.handle.backend_settings)

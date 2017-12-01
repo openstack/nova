@@ -53,6 +53,7 @@ class GuestFS(object):
         self.drives = []
 
     def set_backend_settings(self, settings):
+        assert isinstance(settings, list), 'set_backend_settings takes a list'
         self.backend_settings = settings
 
     def close(self):
