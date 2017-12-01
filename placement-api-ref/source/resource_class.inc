@@ -64,7 +64,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - name: resource_class_path
+  - name: resource_class_path_custom
 
 Response
 --------
@@ -92,7 +92,8 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - name: resource_class
+  - name: resource_class_path
+  - name: resource_class_custom
 
 Request example
 ---------------

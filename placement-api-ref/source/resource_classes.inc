@@ -51,7 +51,7 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - name: resource_class
+  - name: resource_class_custom
 
 Request example
 ---------------
