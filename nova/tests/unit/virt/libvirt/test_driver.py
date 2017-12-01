@@ -7354,6 +7354,39 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch.object(libvirt_driver.LibvirtDriver,
         '_create_shared_storage_test_file')
     @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
+    def test_check_can_live_migrate_dest_all_pass_with_over_commit(
+            self, mock_cpu, mock_test_file, mock_svc):
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.vcpu_model = test_vcpu_model.fake_vcpumodel
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        compute_info = {'disk_available_least': -1000,
+                        'local_gb': 100,
+                        'cpu_info': 'asdf',
+                        }
+        filename = "file"
+
+        # _check_cpu_match
+        mock_cpu.return_value = 1
+
+        # mounted_on_same_shared_storage
+        mock_test_file.return_value = filename
+
+        # No need for the src_compute_info
+        return_value = drvr.check_can_live_migrate_destination(self.context,
+                instance_ref, None, compute_info, True, True)
+        return_value.is_volume_backed = False
+        self.assertThat({"filename": "file",
+                         'image_type': 'default',
+                         'disk_available_mb': 102400,
+                         "disk_over_commit": True,
+                         "block_migration": True,
+                         "is_volume_backed": False},
+                        matchers.DictMatches(return_value.to_legacy_dict()))
+
+    @mock.patch.object(objects.Service, 'get_by_compute_host')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+        '_create_shared_storage_test_file')
+    @mock.patch.object(fakelibvirt.Connection, 'compareCPU')
     def test_check_can_live_migrate_dest_all_pass_no_block_migration(
             self, mock_cpu, mock_test_file, mock_svc):
         instance_ref = objects.Instance(**self.test_instance)

@@ -5894,7 +5894,10 @@ class LibvirtDriver(driver.ComputeDriver):
         :param disk_over_commit: if true, allow disk over commit
         :returns: a LibvirtLiveMigrateData object
         """
-        disk_available_gb = dst_compute_info['disk_available_least']
+        if disk_over_commit:
+            disk_available_gb = dst_compute_info['local_gb']
+        else:
+            disk_available_gb = dst_compute_info['disk_available_least']
         disk_available_mb = (
             (disk_available_gb * units.Ki) - CONF.reserved_host_disk_mb)
 
