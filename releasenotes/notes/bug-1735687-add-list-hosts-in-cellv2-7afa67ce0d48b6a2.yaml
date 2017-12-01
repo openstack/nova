@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    Add a ``nova-manage cell_v2 list_hosts`` command for listing hosts
+    in one or all v2 cells.

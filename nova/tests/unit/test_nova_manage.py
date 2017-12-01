@@ -1813,6 +1813,72 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         output = self.output.getvalue().strip()
         self.assertEqual('', output)
 
+    def test_list_hosts(self):
+        ctxt = context.get_admin_context()
+        # create the cell mapping
+        cm1 = objects.CellMapping(
+            context=ctxt, uuid='9e36a3ed-3eb6-4327', name='london',
+            database_connection='fake:///db', transport_url='fake:///mq')
+        cm1.create()
+        cm2 = objects.CellMapping(
+            context=ctxt, uuid='8a3c608c-b275-496c', name='dallas',
+            database_connection='fake:///db', transport_url='fake:///mq')
+        cm2.create()
+        # create a host mapping in another cell
+        hm1 = objects.HostMapping(
+            context=ctxt, host='fake-host-1', cell_mapping=cm1)
+        hm1.create()
+        hm2 = objects.HostMapping(
+            context=ctxt, host='fake-host-2', cell_mapping=cm2)
+        hm2.create()
+        self.assertEqual(0, self.commands.list_hosts())
+        output = self.output.getvalue().strip()
+        self.assertEqual('''\
++-----------+--------------------+-------------+
+| Cell Name |     Cell UUID      |   Hostname  |
++-----------+--------------------+-------------+
+|   london  | 9e36a3ed-3eb6-4327 | fake-host-1 |
+|   dallas  | 8a3c608c-b275-496c | fake-host-2 |
++-----------+--------------------+-------------+''',
+                         output)
+
+    def test_list_hosts_in_cell(self):
+        ctxt = context.get_admin_context()
+        # create the cell mapping
+        cm1 = objects.CellMapping(
+            context=ctxt, uuid='9e36a3ed-3eb6-4327', name='london',
+            database_connection='fake:///db', transport_url='fake:///mq')
+        cm1.create()
+        cm2 = objects.CellMapping(
+            context=ctxt, uuid='8a3c608c-b275-496c', name='dallas',
+            database_connection='fake:///db', transport_url='fake:///mq')
+        cm2.create()
+        # create a host mapping in another cell
+        hm1 = objects.HostMapping(
+            context=ctxt, host='fake-host-1', cell_mapping=cm1)
+        hm1.create()
+        hm2 = objects.HostMapping(
+            context=ctxt, host='fake-host-2', cell_mapping=cm2)
+        hm2.create()
+        self.assertEqual(0, self.commands.list_hosts(
+            cell_uuid='9e36a3ed-3eb6-4327'))
+        output = self.output.getvalue().strip()
+        self.assertEqual('''\
++-----------+--------------------+-------------+
+| Cell Name |     Cell UUID      |   Hostname  |
++-----------+--------------------+-------------+
+|   london  | 9e36a3ed-3eb6-4327 | fake-host-1 |
++-----------+--------------------+-------------+''',
+                         output)
+
+    def test_list_hosts_cell_not_found(self):
+        """Tests trying to delete a host but a specified cell is not found."""
+        self.assertEqual(1, self.commands.list_hosts(
+            cell_uuid=uuidsentinel.cell1))
+        output = self.output.getvalue().strip()
+        self.assertEqual(
+            'Cell with uuid %s was not found.' % uuidsentinel.cell1, output)
+
     def test_delete_host_cell_not_found(self):
         """Tests trying to delete a host but a specified cell is not found."""
         self.assertEqual(1, self.commands.delete_host(uuidsentinel.cell1,

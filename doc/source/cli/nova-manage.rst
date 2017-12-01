@@ -215,6 +215,13 @@ Nova Cells v2
     found for the cell (cell not empty) without ``--force`` option, and 3
     if there are instances mapped to the cell (cell not empty).
 
+``nova-manage cell_v2 list_hosts [--cell_uuid <cell_uuid>]``
+
+    Lists the hosts in one or all v2 cells. By default hosts in all v2 cells
+    are listed. Use the --cell_uuid option to list hosts in a specific cell.
+    If the cell is not found by uuid, this command will return an exit code
+    of 1. Otherwise, the exit code will be 0.
+
 ``nova-manage cell_v2 update_cell --cell_uuid <cell_uuid> [--name <cell_name>] [--transport-url <transport_url>] [--database_connection <database_connection>]``
 
     Updates the properties of a cell by the given uuid. If a
