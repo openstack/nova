@@ -192,7 +192,11 @@ class VFSGuestFS(vfs.VFS):
 
         try:
             if forceTCG:
-                self.handle.set_backend_settings("force_tcg")
+                ret = self.handle.set_backend_settings("force_tcg")
+                if ret != 0:
+                    LOG.warning('Failed to force guestfs TCG mode. '
+                                'guestfs_set_backend_settings returned: %s',
+                                ret)
         except AttributeError as ex:
             # set_backend_settings method doesn't exist in older
             # libguestfs versions, so nothing we can do but ignore
