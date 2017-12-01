@@ -1571,6 +1571,14 @@ class MigrationTestCase(test.TestCase):
             hosts = [migration['source_compute'], migration['dest_compute']]
             self.assertIn(filters["host"], hosts)
 
+    def test_get_migrations_by_uuid_filters(self):
+        mig_uuid1 = self._create(uuid=uuidsentinel.mig_uuid1)
+        filters = {"uuid": [uuidsentinel.mig_uuid1]}
+        mig_get = db.migration_get_all_by_filters(self.ctxt, filters)
+        self.assertEqual(1, len(mig_get))
+        for key in mig_uuid1:
+            self.assertEqual(mig_uuid1[key], mig_get[0][key])
+
     def test_get_migrations_by_filters_with_multiple_statuses(self):
         filters = {"status": ["reverted", "confirmed"],
                    "migration_type": None, "hidden": False}
