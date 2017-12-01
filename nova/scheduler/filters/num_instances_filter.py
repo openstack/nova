@@ -28,6 +28,8 @@ CONF = nova.conf.CONF
 class NumInstancesFilter(filters.BaseHostFilter):
     """Filter out hosts with too many instances."""
 
+    RUN_ON_REBUILD = False
+
     def _get_max_instances_per_host(self, host_state, spec_obj):
         return CONF.filter_scheduler.max_instances_per_host
 

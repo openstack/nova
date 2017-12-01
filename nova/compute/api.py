@@ -2986,16 +2986,27 @@ class API(base.Base):
             # through the scheduler again, but we want the instance to be
             # rebuilt on the same host it's already on.
             if orig_image_ref != image_href:
-                request_spec.requested_destination = objects.Destination(
-                    host=instance.host,
-                    node=instance.node)
                 # We have to modify the request spec that goes to the scheduler
                 # to contain the new image. We persist this since we've already
                 # changed the instance.image_ref above so we're being
                 # consistent.
                 request_spec.image = objects.ImageMeta.from_dict(image)
                 request_spec.save()
-                host = None     # This tells conductor to call the scheduler.
+                if 'scheduler_hints' not in request_spec:
+                    request_spec.scheduler_hints = {}
+                # Nuke the id on this so we can't accidentally save
+                # this hint hack later
+                del request_spec.id
+
+                # NOTE(danms): Passing host=None tells conductor to
+                # call the scheduler. The _nova_check_type hint
+                # requires that the scheduler returns only the same
+                # host that we are currently on and only checks
+                # rebuild-related filters.
+                request_spec.scheduler_hints['_nova_check_type'] = ['rebuild']
+                request_spec.force_hosts = [instance.host]
+                request_spec.force_nodes = [instance.node]
+                host = None
         except exception.RequestSpecNotFound:
             # Some old instances can still have no RequestSpec object attached
             # to them, we need to support the old way
