@@ -380,7 +380,7 @@ class ViewBuilder(object):
         otherwise
         """
         project_id = request.environ["nova.context"].project_id
-        if project_id in request.url:
+        if project_id and project_id in request.url:
             return project_id
         return ''
 
