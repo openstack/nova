@@ -340,23 +340,6 @@ class FakeDriver(object):
         self.called.append(('limit_check_project_and_user', context, resources,
                             project_values, user_values, project_id, user_id))
 
-    def reserve(self, context, resources, deltas, expire=None,
-                project_id=None, user_id=None):
-        self.called.append(('reserve', context, resources, deltas,
-                            expire, project_id, user_id))
-        return self.reservations
-
-    def commit(self, context, reservations, project_id=None, user_id=None):
-        self.called.append(('commit', context, reservations, project_id,
-                            user_id))
-
-    def rollback(self, context, reservations, project_id=None, user_id=None):
-        self.called.append(('rollback', context, reservations, project_id,
-                            user_id))
-
-    def usage_reset(self, context, resources):
-        self.called.append(('usage_reset', context, resources))
-
     def destroy_all_by_project_and_user(self, context, project_id, user_id):
         self.called.append(('destroy_all_by_project_and_user', context,
                             project_id, user_id))
@@ -488,7 +471,7 @@ class BaseResourceTestCase(test.TestCase):
                           quota._valid_method_call_check_resources,
                           resources, 'check', quota.QUOTAS._resources)
 
-    def test_valid_method_call_check_wrong_method_reserve(self):
+    def test_valid_method_call_check_wrong_method(self):
         resources = {'key_pairs': 1}
         engine_resources = {'key_pairs': quota.CountableResource('key_pairs',
                                                                  None,
@@ -496,17 +479,7 @@ class BaseResourceTestCase(test.TestCase):
 
         self.assertRaises(exception.InvalidQuotaMethodUsage,
                           quota._valid_method_call_check_resources,
-                          resources, 'reserve', engine_resources)
-
-    def test_valid_method_call_check_wrong_method_check(self):
-        resources = {'instances': 1}
-        engine_resources = {'instances': quota.ReservableResource('instances',
-                                                                  None,
-                                                                  'instances')}
-
-        self.assertRaises(exception.InvalidQuotaMethodUsage,
-                          quota._valid_method_call_check_resources,
-                          resources, 'check', engine_resources)
+                          resources, 'bogus', engine_resources)
 
 
 class QuotaEngineTestCase(test.TestCase):
@@ -733,84 +706,6 @@ class QuotaEngineTestCase(test.TestCase):
                           dict(test_resource3=2, test_resource4=1),
                           None, None)],
                          driver.called)
-
-    def test_reserve(self):
-        context = FakeContext(None, None)
-        driver = FakeDriver(reservations=[
-                'resv-01', 'resv-02', 'resv-03', 'resv-04',
-                ])
-        quota_obj = self._make_quota_obj(driver)
-        result1 = quota_obj.reserve(context, test_resource1=4,
-                                    test_resource2=3, test_resource3=2,
-                                    test_resource4=1)
-        result2 = quota_obj.reserve(context, expire=3600,
-                                    test_resource1=1, test_resource2=2,
-                                    test_resource3=3, test_resource4=4)
-        result3 = quota_obj.reserve(context, project_id='fake_project',
-                                    test_resource1=1, test_resource2=2,
-                                    test_resource3=3, test_resource4=4)
-
-        self.assertEqual(driver.called, [
-                ('reserve', context, quota_obj._resources, dict(
-                        test_resource1=4,
-                        test_resource2=3,
-                        test_resource3=2,
-                        test_resource4=1,
-                        ), None, None, None),
-                ('reserve', context, quota_obj._resources, dict(
-                        test_resource1=1,
-                        test_resource2=2,
-                        test_resource3=3,
-                        test_resource4=4,
-                        ), 3600, None, None),
-                ('reserve', context, quota_obj._resources, dict(
-                        test_resource1=1,
-                        test_resource2=2,
-                        test_resource3=3,
-                        test_resource4=4,
-                        ), None, 'fake_project', None),
-                ])
-        self.assertEqual(result1, [
-                'resv-01', 'resv-02', 'resv-03', 'resv-04',
-                ])
-        self.assertEqual(result2, [
-                'resv-01', 'resv-02', 'resv-03', 'resv-04',
-                ])
-        self.assertEqual(result3, [
-                'resv-01', 'resv-02', 'resv-03', 'resv-04',
-                ])
-
-    def test_commit(self):
-        context = FakeContext(None, None)
-        driver = FakeDriver()
-        quota_obj = self._make_quota_obj(driver)
-        quota_obj.commit(context, ['resv-01', 'resv-02', 'resv-03'])
-
-        self.assertEqual(driver.called, [
-                ('commit', context, ['resv-01', 'resv-02', 'resv-03'], None,
-                 None),
-                ])
-
-    def test_rollback(self):
-        context = FakeContext(None, None)
-        driver = FakeDriver()
-        quota_obj = self._make_quota_obj(driver)
-        quota_obj.rollback(context, ['resv-01', 'resv-02', 'resv-03'])
-
-        self.assertEqual(driver.called, [
-                ('rollback', context, ['resv-01', 'resv-02', 'resv-03'], None,
-                 None),
-                ])
-
-    def test_usage_reset(self):
-        context = FakeContext(None, None)
-        driver = FakeDriver()
-        quota_obj = self._make_quota_obj(driver)
-        quota_obj.usage_reset(context, ['res1', 'res2', 'res3'])
-
-        self.assertEqual(driver.called, [
-                ('usage_reset', context, ['res1', 'res2', 'res3']),
-                ])
 
     def test_destroy_all_by_project_and_user(self):
         context = FakeContext(None, None)

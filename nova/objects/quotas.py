@@ -63,6 +63,7 @@ class Quotas(base.NovaObject):
     VERSION = '1.3'
 
     fields = {
+        # TODO(melwitt): Remove this field in version 2.0 of the object.
         'reservations': fields.ListOfStringsField(nullable=True),
         'project_id': fields.StringField(nullable=True),
         'user_id': fields.StringField(nullable=True),
@@ -249,54 +250,27 @@ class Quotas(base.NovaObject):
         if not result:
             raise exception.QuotaClassNotFound(class_name=class_name)
 
-    @classmethod
-    def from_reservations(cls, context, reservations, instance=None):
-        """Transitional for compatibility."""
-        if instance is None:
-            project_id = None
-            user_id = None
-        else:
-            project_id, user_id = ids_from_instance(context, instance)
-        quotas = cls()
-        quotas._context = context
-        quotas.reservations = reservations
-        quotas.project_id = project_id
-        quotas.user_id = user_id
-        quotas.obj_reset_changes()
-        return quotas
-
+    # TODO(melwitt): Remove this method in version 2.0 of the object.
     @base.remotable
     def reserve(self, expire=None, project_id=None, user_id=None,
                 **deltas):
-        reservations = quota.QUOTAS.reserve(self._context, expire=expire,
-                                            project_id=project_id,
-                                            user_id=user_id,
-                                            **deltas)
-        self.reservations = reservations
+        # Honor the expected attributes even though we're not reserving
+        # anything anymore. This will protect against things exploding if a
+        # someone has an Ocata compute host running by accident, for example.
+        self.reservations = None
         self.project_id = project_id
         self.user_id = user_id
         self.obj_reset_changes()
 
+    # TODO(melwitt): Remove this method in version 2.0 of the object.
     @base.remotable
     def commit(self):
-        if not self.reservations:
-            return
-        quota.QUOTAS.commit(self._context, self.reservations,
-                            project_id=self.project_id,
-                            user_id=self.user_id)
-        self.reservations = None
-        self.obj_reset_changes()
+        pass
 
+    # TODO(melwitt): Remove this method in version 2.0 of the object.
     @base.remotable
     def rollback(self):
-        """Rollback quotas."""
-        if not self.reservations:
-            return
-        quota.QUOTAS.rollback(self._context, self.reservations,
-                              project_id=self.project_id,
-                              user_id=self.user_id)
-        self.reservations = None
-        self.obj_reset_changes()
+        pass
 
     @base.remotable_classmethod
     def limit_check(cls, context, project_id=None, user_id=None, **values):
@@ -504,13 +478,16 @@ class Quotas(base.NovaObject):
 
 @base.NovaObjectRegistry.register
 class QuotasNoOp(Quotas):
+    # TODO(melwitt): Remove this method in version 2.0 of the object.
     def reserve(context, expire=None, project_id=None, user_id=None,
                 **deltas):
         pass
 
+    # TODO(melwitt): Remove this method in version 2.0 of the object.
     def commit(self, context=None):
         pass
 
+    # TODO(melwitt): Remove this method in version 2.0 of the object.
     def rollback(self, context=None):
         pass
 
