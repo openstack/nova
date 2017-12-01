@@ -416,7 +416,8 @@ Server actions
 -  **Rebuild**
 
    Use this function to remove all data on the server and replaces it
-   with the specified image. Server ID and IP addresses remain the same.
+   with the specified image. Server ID, flavor and IP addresses remain
+   the same.
 
 -  **Evacuate**
 
