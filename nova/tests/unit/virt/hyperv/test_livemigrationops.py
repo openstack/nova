@@ -118,8 +118,10 @@ class LiveMigrationOpsTestCase(test_base.HyperVBaseTestCase):
             self.assertFalse(mock_copy_dvd_disk.called)
 
         mock_live_migr = self._livemigrops._livemigrutils.live_migrate_vm
-        mock_live_migr.assert_called_once_with(mock_instance.name,
-                                               fake_dest)
+        mock_live_migr.assert_called_once_with(
+            mock_instance.name,
+            fake_dest,
+            migrate_disks=not shared_storage)
 
     def test_live_migration(self):
         self._test_live_migration(migrate_data_received=False)
