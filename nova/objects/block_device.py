@@ -104,6 +104,22 @@ class BlockDeviceMapping(base.NovaPersistentObject, base.NovaObject,
         if target_version < (1, 17) and 'tag' in primitive:
             del primitive['tag']
 
+    @classmethod
+    def populate_uuids(cls, context, count):
+        @db_api.pick_context_manager_reader
+        def get_bdms_no_uuid(context):
+            return context.session.query(db_models.BlockDeviceMapping).\
+                    filter_by(uuid=None).limit(count).all()
+
+        db_bdms = get_bdms_no_uuid(context)
+
+        done = 0
+        for db_bdm in db_bdms:
+            cls._create_uuid(context, db_bdm['id'])
+            done += 1
+
+        return done, done
+
     @staticmethod
     @oslo_db_api.wrap_db_retry(max_retries=1, retry_on_deadlock=True)
     def _create_uuid(context, bdm_id):
