@@ -49,7 +49,6 @@ class TestListServersIpFilter(test.TestCase):
         self.start_service('consoleauth')
 
         self.useFixture(cast_as_call.CastAsCall(self))
-        self.useFixture(nova_fixtures.PlacementFixture())
 
         self.image_id = self.api.get_images()[0]['id']
         self.flavor_id = self.api.get_flavors()[0]['id']
