@@ -26,7 +26,6 @@ from nova.compute import provider_tree
 from nova.compute import utils as compute_utils
 import nova.conf
 from nova import exception
-from nova.i18n import _LE, _LI, _LW
 from nova import objects
 from nova.objects import fields
 from nova.scheduler import utils as scheduler_utils
@@ -61,36 +60,32 @@ def safe_connect(f):
         except ks_exc.EndpointNotFound:
             warn_limit(
                 self,
-                _LW('The placement API endpoint not found. Placement is '
-                    'optional in Newton, but required in Ocata. Please '
-                    'enable the placement service before upgrading.'))
+                'The placement API endpoint not found. Placement is optional '
+                'in Newton, but required in Ocata. Please enable the '
+                'placement service before upgrading.')
             # Reset client session so there is a new catalog, which
             # gets cached when keystone is first successfully contacted.
             self._client = self._create_client()
         except ks_exc.MissingAuthPlugin:
             warn_limit(
                 self,
-                _LW('No authentication information found for placement '
-                    'API. Placement is optional in Newton, but required '
-                    'in Ocata. Please enable the placement service '
-                    'before upgrading.'))
+                'No authentication information found for placement API. '
+                'Placement is optional in Newton, but required in Ocata. '
+                'Please enable the placement service before upgrading.')
         except ks_exc.Unauthorized:
             warn_limit(
                 self,
-                _LW('Placement service credentials do not work. '
-                    'Placement is optional in Newton, but required '
-                    'in Ocata. Please enable the placement service '
-                    'before upgrading.'))
+                'Placement service credentials do not work. Placement is '
+                'optional in Newton, but required in Ocata. Please enable the '
+                'placement service before upgrading.')
         except ks_exc.DiscoveryFailure:
             # TODO(_gryf): Looks like DiscoveryFailure is not the only missing
             # exception here. In Pike we should take care about keystoneauth1
             # failures handling globally.
             warn_limit(self,
-                       _LW('Discovering suitable URL for placement API '
-                           'failed.'))
+                       'Discovering suitable URL for placement API failed.')
         except ks_exc.ConnectFailure:
-            msg = _LW('Placement API service is not responding.')
-            LOG.warning(msg)
+            LOG.warning('Placement API service is not responding.')
     return wrapper
 
 
@@ -190,8 +185,8 @@ def _move_operation_alloc_request(source_allocs, dest_alloc_req):
 
     :param source_allocs: Dict, keyed by resource provider UUID, of resources
                           allocated on the source host
-    :param dest_alloc_request: The allocation_request for resources against the
-                               destination host
+    :param dest_alloc_req: The allocation_request for resources against the
+                           destination host
     """
     LOG.debug("Doubling-up allocation_request for move operation.")
     # Remove any allocations against resource providers that are
@@ -376,18 +371,17 @@ class SchedulerReportClient(object):
 
         placement_req_id = get_placement_request_id(resp)
         if resp.status_code == 404:
-            msg = _LW("[%(placement_req_id)s] Tried to get a provider's "
-                      "aggregates; however the provider %(uuid)s does not "
-                      "exist.")
+            msg = ("[%(placement_req_id)s] Tried to get a provider's "
+                   "aggregates; however the provider %(uuid)s does not exist.")
             args = {
                 'uuid': rp_uuid,
                 'placement_req_id': placement_req_id,
             }
             LOG.warning(msg, args)
         else:
-            msg = _LE("[%(placement_req_id)s] Failed to retrieve aggregates "
-                      "from placement API for resource provider with UUID "
-                      "%(uuid)s. Got %(status_code)d: %(err_text)s.")
+            msg = ("[%(placement_req_id)s] Failed to retrieve aggregates from "
+                   "placement API for resource provider with UUID %(uuid)s. "
+                   "Got %(status_code)d: %(err_text)s.")
             args = {
                 'placement_req_id': placement_req_id,
                 'uuid': rp_uuid,
@@ -414,9 +408,9 @@ class SchedulerReportClient(object):
             return None
         else:
             placement_req_id = get_placement_request_id(resp)
-            msg = _LE("[%(placement_req_id)s] Failed to retrieve resource "
-                      "provider record from placement API for UUID %(uuid)s. "
-                      "Got %(status_code)d: %(err_text)s.")
+            msg = ("[%(placement_req_id)s] Failed to retrieve resource "
+                   "provider record from placement API for UUID %(uuid)s. Got "
+                   "%(status_code)d: %(err_text)s.")
             args = {
                 'uuid': uuid,
                 'status_code': resp.status_code,
@@ -443,9 +437,9 @@ class SchedulerReportClient(object):
         resp = self.post(url, payload)
         placement_req_id = get_placement_request_id(resp)
         if resp.status_code == 201:
-            msg = _LI("[%(placement_req_id)s] Created resource provider "
-                      "record via placement API for resource provider with "
-                      "UUID %(uuid)s and name %(name)s.")
+            msg = ("[%(placement_req_id)s] Created resource provider record "
+                   "via placement API for resource provider with UUID "
+                   "%(uuid)s and name %(name)s.")
             args = {
                 'uuid': uuid,
                 'name': name,
@@ -461,9 +455,9 @@ class SchedulerReportClient(object):
             # Another thread concurrently created a resource provider with the
             # same UUID. Log a warning and then just return the resource
             # provider object from _get_resource_provider()
-            msg = _LI("[%(placement_req_id)s] Another thread already created "
-                      "a resource provider with the UUID %(uuid)s. Grabbing "
-                      "that record from the placement API.")
+            msg = ("[%(placement_req_id)s] Another thread already created a "
+                   "resource provider with the UUID %(uuid)s. Grabbing that "
+                   "record from the placement API.")
             args = {
                 'uuid': uuid,
                 'placement_req_id': placement_req_id,
@@ -471,9 +465,9 @@ class SchedulerReportClient(object):
             LOG.info(msg, args)
             return self._get_resource_provider(uuid)
         else:
-            msg = _LE("[%(placement_req_id)s] Failed to create resource "
-                      "provider record in placement API for UUID %(uuid)s. "
-                      "Got %(status_code)d: %(err_text)s.")
+            msg = ("[%(placement_req_id)s] Failed to create resource provider "
+                   "record in placement API for UUID %(uuid)s. Got "
+                   "%(status_code)d: %(err_text)s.")
             args = {
                 'uuid': uuid,
                 'status_code': resp.status_code,
@@ -558,8 +552,8 @@ class SchedulerReportClient(object):
         this process, AGGREGATE_REFRESH seconds have passed, or the force arg
         has been set to True.
 
-        :param uuid: UUID of the resource provider to check for fresh
-                     aggregates
+        :param rp_uuid: UUID of the resource provider to check for fresh
+                        aggregates
         :param force: If True, force the refresh
         """
         if force or self._aggregate_map_stale(rp_uuid):
@@ -609,9 +603,9 @@ class SchedulerReportClient(object):
         url = '/resource_providers/%s/inventories' % rp_uuid
         result = self.put(url, payload)
         if result.status_code == 409:
-            LOG.info(_LI('[%(placement_req_id)s] Inventory update conflict '
-                         'for %(resource_provider_uuid)s with generation ID '
-                         '%(generation)s'),
+            LOG.info('[%(placement_req_id)s] Inventory update conflict for '
+                     '%(resource_provider_uuid)s with generation ID '
+                     '%(generation)s',
                      {'placement_req_id': get_placement_request_id(result),
                       'resource_provider_uuid': rp_uuid,
                       'generation': cur_gen})
@@ -661,9 +655,8 @@ class SchedulerReportClient(object):
             return False
         elif not result:
             placement_req_id = get_placement_request_id(result)
-            LOG.warning(_LW('[%(placement_req_id)s] Failed to update '
-                            'inventory for resource provider '
-                            '%(uuid)s: %(status)i %(text)s'),
+            LOG.warning('[%(placement_req_id)s] Failed to update inventory '
+                        'for resource provider %(uuid)s: %(status)i %(text)s',
                         {'placement_req_id': placement_req_id,
                          'uuid': rp_uuid,
                          'status': result.status_code,
@@ -678,14 +671,13 @@ class SchedulerReportClient(object):
 
         if result.status_code != 200:
             placement_req_id = get_placement_request_id(result)
-            LOG.info(
-                _LI('[%(placement_req_id)s] Received unexpected response code '
-                    '%(code)i while trying to update inventory for resource '
-                    'provider %(uuid)s: %(text)s'),
-                {'placement_req_id': placement_req_id,
-                 'uuid': rp_uuid,
-                 'code': result.status_code,
-                 'text': result.text})
+            LOG.info('[%(placement_req_id)s] Received unexpected response '
+                     'code %(code)i while trying to update inventory for '
+                     'resource provider %(uuid)s: %(text)s',
+                     {'placement_req_id': placement_req_id,
+                      'uuid': rp_uuid,
+                      'code': result.status_code,
+                      'text': result.text})
             return False
 
         # Update our view of the generation for next time
@@ -705,8 +697,7 @@ class SchedulerReportClient(object):
                 # on our first attempt, or a previous attempt had to
                 # invalidate the cache, and we were unable to refresh
                 # it. Bail and try again next time.
-                LOG.warning(_LW(
-                    'Unable to refresh my resource provider record'))
+                LOG.warning('Unable to refresh my resource provider record')
                 return False
             if self._update_inventory_attempt(rp_uuid, inv_data):
                 return True
@@ -732,9 +723,8 @@ class SchedulerReportClient(object):
             LOG.debug(msg, rp_uuid)
             return
 
-        msg = _LI("Resource provider %s reported no inventory but previous "
-                  "inventory was detected. Deleting existing inventory "
-                  "records.")
+        msg = ("Resource provider %s reported no inventory but previous "
+               "inventory was detected. Deleting existing inventory records.")
         LOG.info(msg, rp_uuid)
 
         cur_gen = curr['resource_provider_generation']
@@ -766,17 +756,15 @@ class SchedulerReportClient(object):
 
                 self._provider_tree.update_inventory(rp_uuid, {}, new_gen)
                 msg_args['generation'] = new_gen
-                LOG.info(_LI("[%(placement_req_id)s] Deleted all inventory "
-                             "for resource provider %(rp_uuid)s at generation "
-                             "%(generation)i."),
-                         msg_args)
+                LOG.info("[%(placement_req_id)s] Deleted all inventory for "
+                         "resource provider %(rp_uuid)s at generation "
+                         "%(generation)i.", msg_args)
                 return
 
         if r.status_code == 204:
             self._provider_tree.update_inventory(rp_uuid, {}, cur_gen + 1)
-            LOG.info(_LI("[%(placement_req_id)s] Deleted all inventory for "
-                         "resource provider %(rp_uuid)s."),
-                     msg_args)
+            LOG.info("[%(placement_req_id)s] Deleted all inventory for "
+                     "resource provider %(rp_uuid)s.", msg_args)
             return
         elif r.status_code == 404:
             # This can occur if another thread deleted the inventory and the
@@ -791,16 +779,15 @@ class SchedulerReportClient(object):
         elif r.status_code == 409:
             rc_str = _extract_inventory_in_use(r.text)
             if rc_str is not None:
-                msg = _LW("[%(placement_req_id)s] We cannot delete inventory "
-                          "%(rc_str)s for resource provider %(rp_uuid)s "
-                          "because the inventory is in use.")
+                msg = ("[%(placement_req_id)s] We cannot delete inventory "
+                       "%(rc_str)s for resource provider %(rp_uuid)s because "
+                       "the inventory is in use.")
                 msg_args['rc_str'] = rc_str
                 LOG.warning(msg, msg_args)
                 return
 
-        msg = _LE("[%(placement_req_id)s] Failed to delete inventory for "
-                  "resource provider %(rp_uuid)s. Got error response: "
-                  "%(err)s.")
+        msg = ("[%(placement_req_id)s] Failed to delete inventory for "
+               "resource provider %(rp_uuid)s. Got error response: %(err)s.")
         msg_args['err'] = r.text
         LOG.error(msg, msg_args)
 
@@ -855,9 +842,9 @@ class SchedulerReportClient(object):
                       'for resource class management.')
             return self._get_or_create_resource_class(name)
         else:
-            msg = _LE("Failed to ensure resource class record with "
-                      "placement API for resource class %(rc_name)s. "
-                      "Got %(status_code)d: %(err_text)s.")
+            msg = ("Failed to ensure resource class record with placement API "
+                   "for resource class %(rc_name)s. Got %(status_code)d: "
+                   "%(err_text)s.")
             args = {
                 'rc_name': name,
                 'status_code': response.status_code,
@@ -881,9 +868,9 @@ class SchedulerReportClient(object):
             self._create_resource_class(name)
             return name
         else:
-            msg = _LE("Failed to retrieve resource class record from "
-                      "placement API for resource class %(rc_name)s. "
-                      "Got %(status_code)d: %(err_text)s.")
+            msg = ("Failed to retrieve resource class record from placement "
+                   "API for resource class %(rc_name)s. Got %(status_code)d: "
+                   "%(err_text)s.")
             args = {
                 'rc_name': name,
                 'status_code': resp.status_code,
@@ -906,18 +893,18 @@ class SchedulerReportClient(object):
         }
         resp = self.post(url, payload, version="1.2")
         if 200 <= resp.status_code < 300:
-            msg = _LI("Created resource class record via placement API "
-                      "for resource class %s.")
+            msg = ("Created resource class record via placement API for "
+                   "resource class %s.")
             LOG.info(msg, name)
         elif resp.status_code == 409:
             # Another thread concurrently created a resource class with the
             # same name. Log a warning and then just return
-            msg = _LI("Another thread already created a resource class "
-                      "with the name %s. Returning.")
+            msg = ("Another thread already created a resource class with the "
+                   "name %s. Returning.")
             LOG.info(msg, name)
         else:
-            msg = _LE("Failed to create resource class %(resource_class)s in "
-                      "placement API. Got %(status_code)d: %(err_text)s.")
+            msg = ("Failed to create resource class %(resource_class)s in "
+                   "placement API. Got %(status_code)d: %(err_text)s.")
             args = {
                 'resource_class': name,
                 'status_code': resp.status_code,
@@ -980,8 +967,7 @@ class SchedulerReportClient(object):
         res = self.put_allocations(rp_uuid, instance.uuid, my_allocations,
                                    instance.project_id, instance.user_id)
         if res:
-            LOG.info(_LI('Submitted allocation for instance'),
-                     instance=instance)
+            LOG.info('Submitted allocation for instance', instance=instance)
 
     # NOTE(jaypipes): Currently, this method is ONLY used in two places:
     # 1. By the scheduler to allocate resources on the selected destination
@@ -1214,19 +1200,17 @@ class SchedulerReportClient(object):
         url = '/allocations/%s' % uuid
         r = self.delete(url)
         if r:
-            LOG.info(_LI('Deleted allocation for instance %s'),
-                     uuid)
+            LOG.info('Deleted allocation for instance %s', uuid)
             return True
         else:
             # Check for 404 since we don't need to log a warning if we tried to
             # delete something which doesn't actually exist.
             if r.status_code != 404:
-                LOG.warning(
-                    _LW('Unable to delete allocation for instance '
-                        '%(uuid)s: (%(code)i %(text)s)'),
-                    {'uuid': uuid,
-                     'code': r.status_code,
-                     'text': r.text})
+                LOG.warning('Unable to delete allocation for instance '
+                            '%(uuid)s: (%(code)i %(text)s)',
+                            {'uuid': uuid,
+                             'code': r.status_code,
+                             'text': r.text})
             return False
 
     def update_instance_allocation(self, compute_node, instance, sign):
@@ -1269,7 +1253,7 @@ class SchedulerReportClient(object):
         url = "/resource_providers/%s" % rp_uuid
         resp = self.delete(url)
         if resp:
-            LOG.info(_LI("Deleted resource provider %s"), rp_uuid)
+            LOG.info("Deleted resource provider %s", rp_uuid)
             # clean the caches
             try:
                 self._provider_tree.remove(rp_uuid)
@@ -1280,9 +1264,8 @@ class SchedulerReportClient(object):
             # Check for 404 since we don't need to log a warning if we tried to
             # delete something which doesn"t actually exist.
             if resp.status_code != 404:
-                LOG.warning(
-                    _LW("Unable to delete resource provider "
-                        "%(uuid)s: (%(code)i %(text)s)"),
-                    {"uuid": rp_uuid,
-                     "code": resp.status_code,
-                     "text": resp.text})
+                LOG.warning("Unable to delete resource provider %(uuid)s: "
+                            "(%(code)i %(text)s)",
+                            {"uuid": rp_uuid,
+                             "code": resp.status_code,
+                             "text": resp.text})
