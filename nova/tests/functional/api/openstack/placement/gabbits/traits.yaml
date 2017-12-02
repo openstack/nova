@@ -13,13 +13,13 @@ tests:
   PUT: /traits/TRAIT_X
   status: 400
   response_strings:
-    - 'The trait is invalid. A valid trait must include prefix "CUSTOM_" and use following characters: "A"-"Z", "0"-"9" and "_"'
+    - 'The trait is invalid. A valid trait must include prefix \"CUSTOM_\" and use following characters: \"A\"-\"Z\", \"0\"-\"9\" and \"_\"'
 
 - name: create a trait with invalid characters
   PUT: /traits/CUSTOM_ABC:1
   status: 400
   response_strings:
-    - 'The trait is invalid. A valid trait must include prefix "CUSTOM_" and use following characters: "A"-"Z", "0"-"9" and "_"'
+    - 'The trait is invalid. A valid trait must include prefix \"CUSTOM_\" and use following characters: \"A\"-\"Z\", \"0\"-\"9\" and \"_\"'
 
 - name: create a trait
   PUT: /traits/CUSTOM_TRAIT_1
@@ -93,7 +93,7 @@ tests:
   GET: /traits?name=in_abc
   status: 400
   response_strings:
-    - 'Badly formatted name parameter. Expected name query string parameter in form: ?name=[in|startswith]:[name1,name2|prefix]. Got: "in_abc"'
+    - 'Badly formatted name parameter. Expected name query string parameter in form: ?name=[in|startswith]:[name1,name2|prefix]. Got: \"in_abc\"'
 
 - name: list traits with name=in filter
   GET: /traits?name=in:CUSTOM_TRAIT_1,CUSTOM_TRAIT_2
@@ -177,7 +177,7 @@ tests:
   GET: /traits?associated=xyz
   status: 400
   response_strings:
-    - 'The query parameter "associated" only accepts "true" or "false"'
+    - 'The query parameter \"associated\" only accepts \"true\" or \"false\"'
 
 - name: set traits for resource provider without resource provider generation
   PUT: /resource_providers/$ENVIRON['RP_UUID']/traits
