@@ -22,7 +22,7 @@
             "host_ip": "1.1.1.1",
             "free_disk_gb": 1028,
             "free_ram_mb": 7680,
-            "hypervisor_hostname": "fake-mini",
+            "hypervisor_hostname": "host2",
             "hypervisor_type": "fake",
             "hypervisor_version": 1000,
             "id": "1bb62a04-c576-402c-8147-9e89757a09e3",
