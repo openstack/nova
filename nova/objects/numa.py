@@ -79,7 +79,7 @@ class NUMACell(base.NovaObject):
     def pin_cpus(self, cpus):
         if cpus - self.cpuset:
             raise exception.CPUPinningUnknown(requested=list(cpus),
-                                              cpuset=list(self.pinned_cpus))
+                                              cpuset=list(self.cpuset))
         if self.pinned_cpus & cpus:
             raise exception.CPUPinningInvalid(requested=list(cpus),
                                               free=list(self.cpuset -
@@ -89,7 +89,7 @@ class NUMACell(base.NovaObject):
     def unpin_cpus(self, cpus):
         if cpus - self.cpuset:
             raise exception.CPUUnpinningUnknown(requested=list(cpus),
-                                                cpuset=list(self.pinned_cpus))
+                                                cpuset=list(self.cpuset))
         if (self.pinned_cpus & cpus) != cpus:
             raise exception.CPUUnpinningInvalid(requested=list(cpus),
                                                 pinned=list(self.pinned_cpus))
