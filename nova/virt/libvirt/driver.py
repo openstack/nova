@@ -3953,7 +3953,6 @@ class LibvirtDriver(driver.ComputeDriver):
     @staticmethod
     def _get_scsi_controller(image_meta):
         """Return scsi controller or None based on image meta"""
-        # TODO(sahid): should raise an exception for an invalid controller
         if image_meta.properties.get('hw_scsi_model'):
             hw_scsi_model = image_meta.properties.hw_scsi_model
             scsi_controller = vconfig.LibvirtConfigGuestController()
