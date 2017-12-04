@@ -305,8 +305,11 @@ class SchedulerReportClient(object):
             kwargs['json'] = data
         return self._client.put(url, raise_exc=False, **kwargs)
 
-    def delete(self, url, version=None):
-        return self._client.delete(url, raise_exc=False, microversion=version)
+    def delete(self, url, version=None, global_request_id=None):
+        headers = ({request_id.INBOUND_HEADER: global_request_id}
+                   if global_request_id else {})
+        return self._client.delete(url, raise_exc=False, microversion=version,
+                                   headers=headers)
 
     @safe_connect
     def get_allocation_candidates(self, resources):
@@ -1421,7 +1424,7 @@ class SchedulerReportClient(object):
             for instance in instances:
                 self.delete_allocation_for_instance(instance.uuid)
         url = "/resource_providers/%s" % rp_uuid
-        resp = self.delete(url)
+        resp = self.delete(url, global_request_id=context.global_id)
         if resp:
             LOG.info("Deleted resource provider %s", rp_uuid)
             # clean the caches
