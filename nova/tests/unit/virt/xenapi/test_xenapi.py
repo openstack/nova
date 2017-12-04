@@ -2230,12 +2230,14 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
 
     @mock.patch.object(host.HostState, 'get_disk_used')
     @mock.patch.object(host.HostState, '_get_passthrough_devices')
+    @mock.patch.object(host.HostState, '_get_vgpu_stats')
     @mock.patch.object(jsonutils, 'loads')
     @mock.patch.object(vm_utils, 'list_vms')
     @mock.patch.object(vm_utils, 'scan_default_sr')
     @mock.patch.object(host_management, 'get_host_data')
     def test_update_stats_caches_hostname(self, mock_host_data, mock_scan_sr,
                                           mock_list_vms, mock_loads,
+                                          mock_vgpus_stats,
                                           mock_devices, mock_dis_used):
         data = {'disk_total': 0,
                 'disk_used': 0,
@@ -2266,10 +2268,12 @@ class XenAPIHostTestCase(stubs.XenAPITestBase):
             self.assertEqual(2, mock_host_data.call_count)
             self.assertEqual(2, mock_scan_sr.call_count)
             self.assertEqual(2, mock_devices.call_count)
+            self.assertEqual(2, mock_vgpus_stats.call_count)
             mock_loads.assert_called_with(data)
             mock_host_data.assert_called_with(self.conn._session)
             mock_scan_sr.assert_called_with(self.conn._session)
             mock_devices.assert_called_with()
+            mock_vgpus_stats.assert_called_with()
 
 
 @mock.patch.object(host.HostState, 'update_status')

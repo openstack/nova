@@ -68,7 +68,8 @@ from nova.i18n import _
 
 
 _CLASSES = ['host', 'network', 'session', 'pool', 'SR', 'VBD',
-            'PBD', 'VDI', 'VIF', 'PIF', 'VM', 'VLAN', 'task']
+            'PBD', 'VDI', 'VIF', 'PIF', 'VM', 'VLAN', 'task',
+            'GPU_group', 'PGPU', 'VGPU_type']
 _after_create_functions = {}
 _destroy_functions = {}
 
