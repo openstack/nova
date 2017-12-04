@@ -316,8 +316,8 @@ class InstanceHelperMixin(object):
             self.fail('Timed out waiting for %s failure event. Current '
                       'instance actions: %s' % (event_name, actions))
 
-    def _wait_for_migration_status(self, server, expected_status):
-        """Waits for a migration record with the given status to be found
+    def _wait_for_migration_status(self, server, expected_statuses):
+        """Waits for a migration record with the given statuses to be found
         for the given server, else the test fails. The migration record, if
         found, is returned.
         """
@@ -325,13 +325,13 @@ class InstanceHelperMixin(object):
         if api is None:
             api = self.api
 
+        statuses = [status.lower() for status in expected_statuses]
         for attempt in range(10):
             migrations = api.api_get('/os-migrations').body['migrations']
             for migration in migrations:
                 if (migration['instance_uuid'] == server['id'] and
-                        migration['status'].lower() ==
-                        expected_status.lower()):
+                        migration['status'].lower() in statuses):
                     return migration
             time.sleep(0.5)
         self.fail('Timed out waiting for migration with status "%s" for '
-                  'instance: %s' % (expected_status, server['id']))
+                  'instance: %s' % (expected_statuses, server['id']))

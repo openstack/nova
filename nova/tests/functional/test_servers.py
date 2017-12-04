@@ -2531,7 +2531,7 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
             # clears the task_state. The migration record status is set to
             # 'error', so that's what we need to look for to know when this
             # is done.
-            migration = self._wait_for_migration_status(server, 'error')
+            migration = self._wait_for_migration_status(server, ['error'])
 
         # The source_compute should be set on the migration record, but the
         # destination shouldn't be as we never made it to one.
@@ -2591,7 +2591,7 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         self.api.post_server_action(server['id'], post)
         # The compute manager will put the migration record into error status
         # when pre_live_migration fails, so wait for that to happen.
-        migration = self._wait_for_migration_status(server, 'error')
+        migration = self._wait_for_migration_status(server, ['error'])
         # The _rollback_live_migration method in the compute manager will reset
         # the task_state on the instance, so wait for that to happen.
         server = self._wait_for_server_parameter(
@@ -2859,7 +2859,7 @@ class ServerLiveMigrateForceAndAbort(ProviderUsageBaseTestCase):
         }
         self.api.post_server_action(server['id'], post)
 
-        migration = self._wait_for_migration_status(server, 'running')
+        migration = self._wait_for_migration_status(server, ['running'])
         self.api.force_complete_migration(server['id'],
                                           migration['id'])
 
@@ -2902,7 +2902,7 @@ class ServerLiveMigrateForceAndAbort(ProviderUsageBaseTestCase):
         }
         self.api.post_server_action(server['id'], post)
 
-        migration = self._wait_for_migration_status(server, 'running')
+        migration = self._wait_for_migration_status(server, ['running'])
 
         self.api.delete_migration(server['id'], migration['id'])
         self._wait_for_server_parameter(self.api, server,

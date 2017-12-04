@@ -366,9 +366,6 @@ class _BaseTaskTestCase(object):
         compute_rebuild_args['node'] = node
         compute_rebuild_args['limits'] = limits
 
-        # Args that are passed in to the method but don't get passed to RPC
-        compute_rebuild_args.pop('request_spec')
-
         return rebuild_args, compute_rebuild_args
 
     @mock.patch.object(objects.InstanceMapping, 'get_by_instance_uuid')
@@ -1312,6 +1309,7 @@ class _BaseTaskTestCase(object):
             select_dest_mock.assert_called_once_with(self.context, fake_spec,
                     inst_uuids, return_objects=True, return_alternates=False)
             compute_args['host'] = expected_host
+            compute_args['request_spec'] = fake_spec
             rebuild_mock.assert_called_once_with(self.context,
                                             instance=inst_obj,
                                             **compute_args)
@@ -1469,6 +1467,7 @@ class _BaseTaskTestCase(object):
                     fake_spec, [inst_obj.uuid], return_objects=True,
                     return_alternates=False)
             compute_args['host'] = expected_host
+            compute_args['request_spec'] = fake_spec
             rebuild_mock.assert_called_once_with(self.context,
                                             instance=inst_obj,
                                             **compute_args)

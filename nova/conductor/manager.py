@@ -996,7 +996,8 @@ class ComputeTaskManager(base.Base):
                     on_shared_storage=on_shared_storage,
                     preserve_ephemeral=preserve_ephemeral,
                     migration=migration,
-                    host=host, node=node, limits=limits)
+                    host=host, node=node, limits=limits,
+                    request_spec=request_spec)
 
     # TODO(avolkov): move method to bdm
     @staticmethod
