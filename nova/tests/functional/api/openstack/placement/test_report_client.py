@@ -92,8 +92,8 @@ class SchedulerReportClientTests(test.TestCase):
                 return_value={'x-auth-token': 'admin'})
     @mock.patch('keystoneauth1.session.Session.get_endpoint',
                 return_value='http://localhost:80/placement')
-    def test_client_report_smoke(self, mock_vbi, mock_endpoint, mock_auth,
-                                 mock_cn):
+    def test_client_report_smoke(self, mock_endpoint, mock_auth, mock_cn,
+                                 mock_vbi):
         """Check things go as expected when doing the right things."""
         # TODO(cdent): We should probably also have a test that
         # tests that when allocation or inventory errors happen, we
