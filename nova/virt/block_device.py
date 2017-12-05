@@ -358,17 +358,11 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
         else:
             volume_api.attachment_delete(context, self['attachment_id'])
 
-    @update_db
-    def attach(self, context, instance, volume_api, virt_driver,
-               do_driver_attach=False, **kwargs):
-        volume = volume_api.get(context, self.volume_id)
-        volume_api.check_availability_zone(context, volume,
-                                           instance=instance)
-
+    def _legacy_volume_attach(self, context, volume, connector, instance,
+                              volume_api, virt_driver,
+                              do_driver_attach=False):
         volume_id = volume['id']
-        context = context.elevated()
 
-        connector = virt_driver.get_volume_connector(instance)
         connection_info = volume_api.initialize_connection(context,
                                                            volume_id,
                                                            connector)
@@ -433,6 +427,96 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                     # we should detach the volume. If the attach did not
                     # happen, the detach request will be ignored.
                     volume_api.detach(context, volume_id)
+
+    def _volume_attach(self, context, volume, connector, instance,
+                       volume_api, virt_driver, attachment_id,
+                       do_driver_attach=False):
+        # This is where we actually (finally) make a call down to the device
+        # driver and actually create/establish the connection.  We'll go from
+        # here to block driver-->os-brick and back up.
+
+        volume_id = volume['id']
+        if self.volume_size is None:
+            self.volume_size = volume.get('size')
+
+        LOG.debug("Updating existing volume attachment record: %s",
+                  attachment_id, instance=instance)
+        connection_info = volume_api.attachment_update(
+            context, attachment_id, connector)['connection_info']
+        if 'serial' not in connection_info:
+            connection_info['serial'] = self.volume_id
+        self._preserve_multipath_id(connection_info)
+
+        if do_driver_attach:
+            encryption = encryptors.get_encryption_metadata(
+                context, volume_api, volume_id, connection_info)
+
+            try:
+                virt_driver.attach_volume(
+                        context, connection_info, instance,
+                        self['mount_device'], disk_bus=self['disk_bus'],
+                        device_type=self['device_type'], encryption=encryption)
+            except Exception:
+                with excutils.save_and_reraise_exception():
+                    LOG.exception("Driver failed to attach volume "
+                                      "%(volume_id)s at %(mountpoint)s",
+                                  {'volume_id': volume_id,
+                                   'mountpoint': self['mount_device']},
+                                  instance=instance)
+                    volume_api.attachment_delete(context,
+                                                 attachment_id)
+
+        # NOTE(mriedem): save our current state so connection_info is in
+        # the database before the volume status goes to 'in-use' because
+        # after that we can detach and connection_info is required for
+        # detach.
+        # TODO(mriedem): Technically for the new flow, we shouldn't have to
+        # rely on the BlockDeviceMapping.connection_info since it's stored
+        # with the attachment in Cinder (see refresh_connection_info).
+        # Therefore we should phase out code that relies on the
+        # BDM.connection_info and get it from Cinder if it's needed.
+        self['connection_info'] = connection_info
+        self.save()
+
+        try:
+            # This marks the volume as "in-use".
+            volume_api.attachment_complete(context, attachment_id)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                if do_driver_attach:
+                    # Disconnect the volume from the host.
+                    try:
+                        virt_driver.detach_volume(connection_info,
+                                                  instance,
+                                                  self['mount_device'],
+                                                  encryption=encryption)
+                    except Exception:
+                        LOG.warning("Driver failed to detach volume "
+                                    "%(volume_id)s at %(mount_point)s.",
+                                    {'volume_id': volume_id,
+                                     'mount_point': self['mount_device']},
+                                    exc_info=True, instance=instance)
+                # Delete the attachment to mark the volume as "available".
+                volume_api.attachment_delete(context, self['attachment_id'])
+
+    @update_db
+    def attach(self, context, instance, volume_api, virt_driver,
+               do_driver_attach=False, **kwargs):
+        volume = volume_api.get(context, self.volume_id)
+        volume_api.check_availability_zone(context, volume,
+                                           instance=instance)
+        context = context.elevated()
+        connector = virt_driver.get_volume_connector(instance)
+
+        if not self['attachment_id']:
+            self._legacy_volume_attach(context, volume, connector, instance,
+                                       volume_api, virt_driver,
+                                       do_driver_attach)
+        else:
+            self._volume_attach(context, volume, connector, instance,
+                                volume_api, virt_driver,
+                                self['attachment_id'],
+                                do_driver_attach)
 
     @update_db
     def refresh_connection_info(self, context, instance,
@@ -502,6 +586,9 @@ class DriverSnapshotBlockDevice(DriverVolumeBlockDevice):
 
             self.volume_id = vol['id']
 
+            # TODO(mriedem): Create an attachment to reserve the volume and
+            # make us go down the new-style attach flow.
+
         # Call the volume attach now
         super(DriverSnapshotBlockDevice, self).attach(
             context, instance, volume_api, virt_driver)
@@ -524,6 +611,9 @@ class DriverImageBlockDevice(DriverVolumeBlockDevice):
 
             self.volume_id = vol['id']
 
+            # TODO(mriedem): Create an attachment to reserve the volume and
+            # make us go down the new-style attach flow.
+
         super(DriverImageBlockDevice, self).attach(
             context, instance, volume_api, virt_driver)
 
@@ -544,6 +634,9 @@ class DriverBlankBlockDevice(DriverVolumeBlockDevice):
                 self._call_wait_func(context, wait_func, volume_api, vol['id'])
 
             self.volume_id = vol['id']
+
+            # TODO(mriedem): Create an attachment to reserve the volume and
+            # make us go down the new-style attach flow.
 
         super(DriverBlankBlockDevice, self).attach(
             context, instance, volume_api, virt_driver)

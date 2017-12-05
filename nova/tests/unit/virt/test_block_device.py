@@ -32,6 +32,10 @@ from nova.volume import cinder
 
 
 class TestDriverBlockDevice(test.NoDBTestCase):
+    # This is used to signal if we're dealing with a new style volume
+    # attachment (Cinder v3.44 flow).
+    attachment_id = None
+
     driver_classes = {
         'swap': driver_block_device.DriverSwapBlockDevice,
         'ephemeral': driver_block_device.DriverEphemeralBlockDevice,
@@ -101,7 +105,6 @@ class TestDriverBlockDevice(test.NoDBTestCase):
          'boot_index': 0})
 
     volume_driver_bdm = {
-        'attachment_id': None,
         'mount_device': '/dev/sda1',
         'connection_info': {"fake": "connection_info"},
         'delete_on_termination': False,
@@ -130,7 +133,6 @@ class TestDriverBlockDevice(test.NoDBTestCase):
          'boot_index': -1})
 
     snapshot_driver_bdm = {
-        'attachment_id': None,
         'mount_device': '/dev/sda2',
         'connection_info': {"fake": "connection_info"},
         'delete_on_termination': True,
@@ -159,7 +161,6 @@ class TestDriverBlockDevice(test.NoDBTestCase):
          'boot_index': -1})
 
     image_driver_bdm = {
-        'attachment_id': None,
         'mount_device': '/dev/sda2',
         'connection_info': {"fake": "connection_info"},
         'delete_on_termination': True,
@@ -188,7 +189,6 @@ class TestDriverBlockDevice(test.NoDBTestCase):
          'boot_index': -1})
 
     blank_driver_bdm = {
-        'attachment_id': None,
         'mount_device': '/dev/sda2',
         'connection_info': {"fake": "connection_info"},
         'delete_on_termination': True,
@@ -221,6 +221,14 @@ class TestDriverBlockDevice(test.NoDBTestCase):
             self.context, self.image_bdm_dict)
         self.blank_bdm = fake_block_device.fake_bdm_object(
             self.context, self.blank_bdm_dict)
+
+        # Set the attachment_id on our fake class variables which we have
+        # to do in setUp so that any attachment_id set by a subclass will
+        # be used properly.
+        for name in ('volume', 'snapshot', 'image', 'blank'):
+            for attr in ('%s_bdm', '%s_driver_bdm'):
+                bdm = getattr(self, attr % name)
+                bdm['attachment_id'] = self.attachment_id
 
     def test_no_device_raises(self):
         for name, cls in self.driver_classes.items():
@@ -443,13 +451,20 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                                 fake_volume,
                                 instance=instance).AndRaise(
                                         test.TestingException)
+            # The @update_db decorator will save any changes.
             driver_bdm._bdm_obj.save().AndReturn(None)
             return instance, expected_conn_info
 
         self.virt_driver.get_volume_connector(instance).AndReturn(connector)
-        self.volume_api.initialize_connection(
-            elevated_context, fake_volume['id'],
-            connector).AndReturn(connection_info)
+        if self.attachment_id is None:
+            self.volume_api.initialize_connection(
+                elevated_context, fake_volume['id'],
+                connector).AndReturn(connection_info)
+        else:
+            self.volume_api.attachment_update(
+                elevated_context, self.attachment_id, connector).AndReturn(
+                    {'connection_info': connection_info})
+
         if driver_attach:
             encryptors.get_encryption_metadata(
                     elevated_context, self.volume_api, fake_volume['id'],
@@ -468,34 +483,52 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                         disk_bus=bdm_dict['disk_bus'],
                         device_type=bdm_dict['device_type'],
                         encryption=enc_data).AndRaise(test.TestingException)
-                self.volume_api.terminate_connection(
-                        elevated_context, fake_volume['id'],
-                        connector).AndReturn(None)
+                if self.attachment_id is None:
+                    self.volume_api.terminate_connection(
+                            elevated_context, fake_volume['id'],
+                            connector).AndReturn(None)
+                else:
+                    self.volume_api.attachment_delete(
+                        elevated_context, self.attachment_id).AndReturn(None)
+                # The @update_db decorator will save any changes.
                 driver_bdm._bdm_obj.save().AndReturn(None)
                 return instance, expected_conn_info
 
         if volume_attach:
+            # save updates before marking the volume as in-use
             driver_bdm._bdm_obj.save().AndReturn(None)
             if not fail_volume_attach:
-                self.volume_api.attach(elevated_context, fake_volume['id'],
-                                       uuids.uuid, bdm_dict['device_name'],
-                                        mode=access_mode).AndReturn(None)
+                if self.attachment_id is None:
+                    self.volume_api.attach(elevated_context, fake_volume['id'],
+                                           uuids.uuid, bdm_dict['device_name'],
+                                            mode=access_mode).AndReturn(None)
+                else:
+                    self.volume_api.attachment_complete(
+                        elevated_context, self.attachment_id).AndReturn(None)
             else:
-                self.volume_api.attach(elevated_context, fake_volume['id'],
-                                       uuids.uuid, bdm_dict['device_name'],
-                                        mode=access_mode).AndRaise(
-                                            test.TestingException)
-                if driver_attach:
-                    self.virt_driver.detach_volume(
+                if self.attachment_id is None:
+                    self.volume_api.attach(elevated_context, fake_volume['id'],
+                                           uuids.uuid, bdm_dict['device_name'],
+                                            mode=access_mode).AndRaise(
+                                                test.TestingException)
+                    if driver_attach:
+                        self.virt_driver.detach_volume(
                             expected_conn_info, instance,
                             bdm_dict['device_name'],
                             encryption=enc_data).AndReturn(None)
-                self.volume_api.terminate_connection(
+                    self.volume_api.terminate_connection(
                         elevated_context, fake_volume['id'],
                         connector).AndReturn(None)
-                self.volume_api.detach(elevated_context,
-                                       fake_volume['id']).AndReturn(None)
+                    self.volume_api.detach(elevated_context,
+                                           fake_volume['id']).AndReturn(None)
+                else:
+                    self.volume_api.attachment_complete(
+                        elevated_context, self.attachment_id).AndRaise(
+                            test.TestingException)
+                    self.volume_api.attachment_delete(
+                        elevated_context, self.attachment_id).AndReturn(None)
 
+        # The @update_db decorator will save any changes.
         driver_bdm._bdm_obj.save().AndReturn(None)
         return instance, expected_conn_info
 
@@ -648,10 +681,16 @@ class TestDriverBlockDevice(test.NoDBTestCase):
 
         self.mox.StubOutWithMock(test_bdm._bdm_obj, 'save')
 
-        self.virt_driver.get_volume_connector(instance).AndReturn(connector)
-        self.volume_api.initialize_connection(
-            self.context, test_bdm.volume_id,
-            connector).AndReturn(connection_info)
+        if self.attachment_id is None:
+            self.virt_driver.get_volume_connector(instance).AndReturn(
+                connector)
+            self.volume_api.initialize_connection(
+                self.context, test_bdm.volume_id,
+                connector).AndReturn(connection_info)
+        else:
+            self.volume_api.attachment_get(
+                self.context, self.attachment_id).AndReturn(
+                    {'connection_info': connection_info})
         test_bdm._bdm_obj.save().AndReturn(None)
 
         self.mox.ReplayAll()
@@ -661,36 +700,14 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.assertThat(test_bdm['connection_info'],
                         matchers.DictMatches(expected_conn_info))
 
-    def test_refresh_connection_info_with_attachment_id(self):
-        """Tests refreshing connection info when the DriverVolumeBlockDevice
-        has a new style attachment_id set, which is a call to attachment_get
-        rather than initialize_connection.
-        """
-        test_bdm = self.driver_classes['volume'](self.volume_bdm)
-        test_bdm['attachment_id'] = uuids.attachment_id
-        connection_info = {'data': {'multipath_id': 'fake_multipath_id'}}
-        fake_attachment = dict(connection_info=connection_info)
-        expected_conn_info = {'data': {'multipath_id': 'fake_multipath_id'},
-                              'serial': self.volume_bdm.volume_id}
-
-        with mock.patch('nova.volume.cinder.API') as volume_api:
-            with mock.patch.object(test_bdm, 'save') as bdm_save:
-                volume_api.attachment_get.return_value = fake_attachment
-                test_bdm.refresh_connection_info(
-                    self.context, mock.sentinel.instance, volume_api,
-                    mock.sentinel.virt_driver)
-
-        volume_api.attachment_get.assert_called_once_with(
-            self.context, uuids.attachment_id)
-        self.assertDictEqual(expected_conn_info, test_bdm['connection_info'])
-        bdm_save.assert_called_once_with()
-
     def test_snapshot_attach_no_volume(self):
         no_volume_snapshot = self.snapshot_bdm_dict.copy()
         no_volume_snapshot['volume_id'] = None
         test_bdm = self.driver_classes['snapshot'](
                 fake_block_device.fake_bdm_object(
                         self.context, no_volume_snapshot))
+        # When we create a volume, we attach it using the old flow.
+        self.attachment_id = None
 
         snapshot = {'id': 'fake-volume-id-1',
                     'attach_status': 'detached'}
@@ -721,6 +738,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         test_bdm = self.driver_classes['snapshot'](
                 fake_block_device.fake_bdm_object(
                         self.context, no_volume_snapshot))
+        # When we create a volume, we attach it using the old flow.
+        self.attachment_id = None
 
         snapshot = {'id': 'fake-volume-id-1',
                     'attach_status': 'detached'}
@@ -809,6 +828,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         test_bdm = self.driver_classes['image'](
                 fake_block_device.fake_bdm_object(
                         self.context, no_volume_image))
+        # When we create a volume, we attach it using the old flow.
+        self.attachment_id = None
 
         image = {'id': 'fake-image-id-1'}
         volume = {'id': 'fake-volume-id-2',
@@ -836,6 +857,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         test_bdm = self.driver_classes['image'](
                 fake_block_device.fake_bdm_object(
                         self.context, no_volume_image))
+        # When we create a volume, we attach it using the old flow.
+        self.attachment_id = None
 
         image = {'id': 'fake-image-id-1'}
         volume = {'id': 'fake-volume-id-2',
@@ -1131,3 +1154,10 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         # can't assert_not_called if the method isn't in the spec.
         self.assertFalse(hasattr(test_eph, 'refresh_connection_info'))
         self.assertFalse(hasattr(test_swap, 'refresh_connection_info'))
+
+
+class TestDriverBlockDeviceNewFlow(TestDriverBlockDevice):
+    """Virt block_device tests for the Cinder 3.44 volume attach flow
+    where a volume BDM has an attachment_id.
+    """
+    attachment_id = uuids.attachment_id
