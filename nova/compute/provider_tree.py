@@ -48,6 +48,13 @@ class _Provider(object):
         # dict of inventory records, keyed by resource class
         self.inventory = {}
 
+    def get_provider_uuids(self):
+        """Returns a set of UUIDs of this provider and all its descendants."""
+        ret = set([self.uuid])
+        for child in self.children.values():
+            ret |= child.get_provider_uuids()
+        return ret
+
     def find(self, search):
         if self.name == search or self.uuid == search:
             return self
@@ -128,6 +135,25 @@ class ProviderTree(object):
                 # By definition, all compute nodes are root providers...
                 p = _Provider(cn.hypervisor_hostname, cn.uuid)
                 self.roots.append(p)
+
+    def get_provider_uuids(self, name_or_uuid=None):
+        """Return a set of the UUIDs of all providers (in a subtree).
+
+        :param name_or_uuid: Provider name or UUID representing the root of a
+                             subtree for which to return UUIDs.  If not
+                             specified, the method returns all UUIDs in the
+                             ProviderTree.
+        """
+        if name_or_uuid is not None:
+            with self.lock:
+                return self._find_with_lock(name_or_uuid).get_provider_uuids()
+
+        # If no name_or_uuid, get UUIDs for all providers recursively.
+        ret = set()
+        with self.lock:
+            for root in self.roots:
+                ret |= root.get_provider_uuids()
+        return ret
 
     def remove(self, name_or_uuid):
         """Safely removes the provider identified by the supplied name_or_uuid
