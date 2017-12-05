@@ -145,7 +145,7 @@ def unify_instance(instance):
 class FakeComputeTaskAPI(object):
 
     def resize_instance(self, context, instance, extra_instance_updates,
-                        scheduler_hint, flavor, reservations):
+                        scheduler_hint, flavor, reservationsi, host_list=None):
         pass
 
 
@@ -5526,7 +5526,8 @@ class ComputeTestCase(BaseTestCase,
                 instance=instance,
                 instance_type=new_instance_type_ref,
                 image={}, reservations=[], request_spec={},
-                filter_properties={}, node=None, clean_shutdown=True)
+                filter_properties={}, node=None, clean_shutdown=True,
+                host_list=None)
 
         # Memory usage should increase after the resize as well
         self.assertEqual(self.rt.compute_nodes[NODENAME].memory_mb_used,
@@ -12314,11 +12315,11 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
                                  instance_type=self.instance_type,
                                  reservations=[], request_spec={},
                                  filter_properties={}, node=None,
-                                 clean_shutdown=True)
+                                 clean_shutdown=True, host_list=None)
 
         mock_mig.assert_called_once_with(mock.ANY, mock.ANY)
         mock_res.assert_called_once_with(mock.ANY, None, inst_obj, mock.ANY,
-                                         self.instance_type, {}, {})
+                                         self.instance_type, {}, {}, None)
 
     @mock.patch.object(compute_manager.ComputeManager, "_reschedule")
     @mock.patch('nova.compute.utils.notify_about_instance_action')
@@ -12337,12 +12338,12 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
             exc_info = sys.exc_info()
             self.assertRaises(test.TestingException,
                     self.compute._reschedule_resize_or_reraise, self.context,
-                    None, instance, exc_info, self.instance_type, {}, {})
+                    None, instance, exc_info, self.instance_type, {}, {}, None)
 
             mock_res.assert_called_once_with(
                     self.context, {}, {}, instance,
                     self.compute.compute_task_api.resize_instance, method_args,
-                    task_states.RESIZE_PREP, exc_info)
+                    task_states.RESIZE_PREP, exc_info, host_list=None)
             mock_notify.assert_called_once_with(
                 self.context, instance, 'fake-mini', action='resize',
                 phase='error', exception=mock_res.side_effect)
@@ -12363,12 +12364,12 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
             exc_info = sys.exc_info()
             self.assertRaises(test.TestingException,
                     self.compute._reschedule_resize_or_reraise, self.context,
-                    None, instance, exc_info, self.instance_type, {}, {})
+                    None, instance, exc_info, self.instance_type, {}, {}, None)
 
             mock_res.assert_called_once_with(
                 self.context, {}, {}, instance,
                 self.compute.compute_task_api.resize_instance, method_args,
-                task_states.RESIZE_PREP, exc_info)
+                task_states.RESIZE_PREP, exc_info, host_list=None)
 
     @mock.patch.object(compute_manager.ComputeManager, "_reschedule")
     @mock.patch.object(compute_manager.ComputeManager, "_log_original_error")
@@ -12386,11 +12387,12 @@ class ComputeRescheduleResizeOrReraiseTestCase(BaseTestCase):
 
             self.compute._reschedule_resize_or_reraise(
                     self.context, None, instance, exc_info,
-                    self.instance_type, {}, {})
+                    self.instance_type, {}, {}, None)
 
             mock_res.assert_called_once_with(self.context, {}, {},
                     instance, self.compute.compute_task_api.resize_instance,
-                    method_args, task_states.RESIZE_PREP, exc_info)
+                    method_args, task_states.RESIZE_PREP, exc_info,
+                    host_list=None)
             mock_log.assert_called_once_with(exc_info, instance.uuid)
 
 

@@ -338,6 +338,8 @@ class ComputeAPI(object):
                  representing potential alternate hosts for retries within a
                  cell.
         * 4.20 - Add multiattach argument to reserve_block_device_name().
+        * 4.21 - prep_resize() now gets a 'host_list' parameter representing
+                 potential alternate hosts for retries within a cell.
     '''
 
     VERSION_ALIASES = {
@@ -768,7 +770,7 @@ class ComputeAPI(object):
     def prep_resize(self, ctxt, instance, image, instance_type, host,
                     migration, reservations=None, request_spec=None,
                     filter_properties=None, node=None,
-                    clean_shutdown=True):
+                    clean_shutdown=True, host_list=None):
         image_p = jsonutils.to_primitive(image)
         msg_args = {'instance': instance,
                     'instance_type': instance_type,
@@ -778,9 +780,13 @@ class ComputeAPI(object):
                     'filter_properties': filter_properties,
                     'node': node,
                     'migration': migration,
-                    'clean_shutdown': clean_shutdown}
+                    'clean_shutdown': clean_shutdown,
+                    'host_list': host_list}
         client = self.router.client(ctxt)
-        version = '4.18'
+        version = '4.21'
+        if not client.can_send_version(version):
+            version = '4.18'
+            del msg_args['host_list']
         if not client.can_send_version(version):
             version = '4.1'
             del msg_args['migration']

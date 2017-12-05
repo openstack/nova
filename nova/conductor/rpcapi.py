@@ -278,6 +278,8 @@ class ComputeTaskAPI(object):
     1.19 - build_instances() now gets a 'host_lists' parameter that represents
            potential alternate hosts for retries within a cell for each
            instance.
+    1.20 - migrate_server() now gets a 'host_list' parameter that represents
+           potential alternate hosts for retries within a cell.
     """
 
     def __init__(self):
@@ -303,7 +305,8 @@ class ComputeTaskAPI(object):
     # RPC API.
     def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
                   flavor, block_migration, disk_over_commit,
-                  reservations=None, clean_shutdown=True, request_spec=None):
+                  reservations=None, clean_shutdown=True, request_spec=None,
+                  host_list=None):
         kw = {'instance': instance, 'scheduler_hint': scheduler_hint,
               'live': live, 'rebuild': rebuild, 'flavor': flavor,
               'block_migration': block_migration,
@@ -311,8 +314,12 @@ class ComputeTaskAPI(object):
               'reservations': reservations,
               'clean_shutdown': clean_shutdown,
               'request_spec': request_spec,
+              'host_list': host_list,
               }
-        version = '1.13'
+        version = '1.20'
+        if not self.client.can_send_version(version):
+            del kw['host_list']
+            version = '1.13'
         if not self.client.can_send_version(version):
             del kw['request_spec']
             version = '1.11'

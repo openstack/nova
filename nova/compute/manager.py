@@ -485,7 +485,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='4.20')
+    target = messaging.Target(version='4.21')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to an instance during power off.  The overall
@@ -1330,7 +1330,7 @@ class ComputeManager(manager.Manager):
 
     def _reschedule(self, context, request_spec, filter_properties,
             instance, reschedule_method, method_args, task_state,
-            exc_info=None):
+            exc_info=None, host_list=None):
         """Attempt to re-schedule a compute operation."""
 
         instance_uuid = instance.uuid
@@ -1358,7 +1358,7 @@ class ComputeManager(manager.Manager):
             retry['exc'] = traceback.format_exception_only(exc_info[0],
                                     exc_info[1])
 
-        reschedule_method(context, *method_args)
+        reschedule_method(context, *method_args, host_list=host_list)
         return True
 
     @periodic_task.periodic_task
@@ -4072,7 +4072,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def prep_resize(self, context, image, instance, instance_type,
                     reservations, request_spec, filter_properties, node,
-                    clean_shutdown, migration=None):
+                    clean_shutdown, migration=None, host_list=None):
         """Initiates the process of moving a running instance to another host.
 
         Possibly changes the VCPU, RAM and disk size in the process.
@@ -4123,7 +4123,7 @@ class ComputeManager(manager.Manager):
                 exc_info = sys.exc_info()
                 self._reschedule_resize_or_reraise(context, image, instance,
                         exc_info, instance_type, request_spec,
-                        filter_properties)
+                        filter_properties, host_list)
             finally:
                 extra_usage_info = dict(
                         new_instance_type=instance_type.name,
@@ -4134,7 +4134,7 @@ class ComputeManager(manager.Manager):
                     extra_usage_info=extra_usage_info)
 
     def _reschedule_resize_or_reraise(self, context, image, instance, exc_info,
-            instance_type, request_spec, filter_properties):
+            instance_type, request_spec, filter_properties, host_list):
         """Try to re-schedule the resize or re-raise the original error to
         error out the instance.
         """
@@ -4154,7 +4154,7 @@ class ComputeManager(manager.Manager):
 
             rescheduled = self._reschedule(context, request_spec,
                     filter_properties, instance, reschedule_method,
-                    method_args, task_state, exc_info)
+                    method_args, task_state, exc_info, host_list=host_list)
         except Exception as error:
             rescheduled = False
             LOG.exception("Error trying to reschedule",

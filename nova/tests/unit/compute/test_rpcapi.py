@@ -495,7 +495,8 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 request_spec='fake_spec',
                 filter_properties={'fakeprop': 'fakeval'},
                 migration='migration',
-                node='node', clean_shutdown=True, version='4.18')
+                node='node', clean_shutdown=True, host_list=None,
+                version='4.21')
         self.flags(compute='4.0', group='upgrade_levels')
         expected_args = {'instance_type': self.fake_flavor}
         self._test_compute_api('prep_resize', 'cast', expected_args,

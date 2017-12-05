@@ -110,7 +110,7 @@ def should_do_migration_allocation(context):
 class MigrationTask(base.TaskBase):
     def __init__(self, context, instance, flavor,
                  request_spec, reservations, clean_shutdown, compute_rpcapi,
-                 scheduler_client):
+                 scheduler_client, host_list):
         super(MigrationTask, self).__init__(context, instance)
         self.clean_shutdown = clean_shutdown
         self.request_spec = request_spec
@@ -119,6 +119,8 @@ class MigrationTask(base.TaskBase):
 
         self.compute_rpcapi = compute_rpcapi
         self.scheduler_client = scheduler_client
+        self.reportclient = scheduler_client.reportclient
+        self.host_list = host_list
 
         # Persist things from the happy path so we don't have to look
         # them up if we need to roll back
@@ -132,16 +134,26 @@ class MigrationTask(base.TaskBase):
             # old computes. Let the compute do it (legacy behavior).
             return None
 
-        migration = objects.Migration(context=self.context.elevated())
-        migration.old_instance_type_id = self.instance.flavor.id
-        migration.new_instance_type_id = self.flavor.id
-        migration.status = 'pre-migrating'
-        migration.instance_uuid = self.instance.uuid
-        migration.source_compute = self.instance.host
-        migration.source_node = self.instance.node
-        migration.migration_type = (self.instance.flavor.id != self.flavor.id
-                                    and 'resize' or 'migration')
-        migration.create()
+        # If this is a rescheduled migration, don't create a new record.
+        migration_type = ("resize" if self.instance.flavor.id != self.flavor.id
+                else "migration")
+        filters = {"instance_uuid": self.instance.uuid,
+                   "migration_type": migration_type,
+                   "status": "pre-migrating"}
+        migrations = objects.MigrationList.get_by_filters(self.context,
+                filters).objects
+        if migrations:
+            migration = migrations[0]
+        else:
+            migration = objects.Migration(context=self.context.elevated())
+            migration.old_instance_type_id = self.instance.flavor.id
+            migration.new_instance_type_id = self.flavor.id
+            migration.status = 'pre-migrating'
+            migration.instance_uuid = self.instance.uuid
+            migration.source_compute = self.instance.host
+            migration.source_node = self.instance.node
+            migration.migration_type = migration_type
+            migration.create()
 
         self._migration = migration
 
@@ -194,17 +206,73 @@ class MigrationTask(base.TaskBase):
             self.request_spec.requested_destination = objects.Destination(
                 cell=instance_mapping.cell_mapping)
 
+        # Once _preallocate_migration() is done, the source node allocation is
+        # moved from the instance consumer to the migration record consumer,
+        # and the instance consumer doesn't have any allocations. If this is
+        # the first time through here (not a reschedule), select_destinations
+        # below will allocate resources on the selected destination node for
+        # the instance consumer. If we're rescheduling, host_list is not None
+        # and we'll call claim_resources for the instance and the selected
+        # alternate. If we exhaust our alternates and raise MaxRetriesExceeded,
+        # the rollback() method should revert the allocation swaparoo and move
+        # the source node allocation from the migration record back to the
+        # instance record.
         migration = self._preallocate_migration()
+
         self.request_spec.ensure_project_id(self.instance)
-        # For now, don't request alternates. A later patch in the series will
-        # modify migration to use alternates instead of calling the scheduler
-        # again.
-        selection_lists = self.scheduler_client.select_destinations(
-                self.context, self.request_spec, [self.instance.uuid],
-                return_objects=True, return_alternates=False)
-        # We only need the first item in the first list, as there is only one
-        # instance, and we don't care about any alternates.
-        selection = selection_lists[0][0]
+        # On an initial call to migrate, 'self.host_list' will be None, so we
+        # have to call the scheduler to get a list of acceptable hosts to
+        # migrate to. That list will consist of a selected host, along with
+        # zero or more alternates. On a reschedule, though, the alternates will
+        # be passed to this object and stored in 'self.host_list', so we can
+        # pop the first alternate from the list to use for the destination, and
+        # pass the remaining alternates to the compute.
+        if self.host_list is None:
+            selection_lists = self.scheduler_client.select_destinations(
+                    self.context, self.request_spec, [self.instance.uuid],
+                    return_objects=True, return_alternates=True)
+            # Since there is only ever one instance to migrate per call, we
+            # just need the first returned element.
+            selection_list = selection_lists[0]
+            # The selected host is the first item in the list, with the
+            # alternates being the remainder of the list.
+            selection, self.host_list = selection_list[0], selection_list[1:]
+        else:
+            # This is a reschedule that will use the supplied alternate hosts
+            # in the host_list as destinations. Since the resources on these
+            # alternates may have been consumed and might not be able to
+            # support the migrated instance, we need to first claim the
+            # resources to verify the host still has sufficient availabile
+            # resources.
+            elevated = self.context.elevated()
+            host_available = False
+            while self.host_list and not host_available:
+                selection = self.host_list.pop(0)
+                if selection.allocation_request:
+                    alloc_req = jsonutils.loads(selection.allocation_request)
+                else:
+                    alloc_req = None
+                if alloc_req:
+                    # If this call succeeds, the resources on the destination
+                    # host will be claimed by the instance.
+                    host_available = scheduler_utils.claim_resources(
+                            elevated, self.reportclient, self.request_spec,
+                            self.instance.uuid, alloc_req,
+                            selection.allocation_request_version)
+                else:
+                    # Some deployments use different schedulers that do not
+                    # use Placement, so they will not have an
+                    # allocation_request to claim with. For those cases,
+                    # there is no concept of claiming, so just assume that
+                    # the host is valid.
+                    host_available = True
+            # There are no more available hosts. Raise a MaxRetriesExceeded
+            # exception in that case.
+            if not host_available:
+                reason = ("Exhausted all hosts available for retrying build "
+                          "failures for instance %(instance_uuid)s." %
+                          {"instance_uuid": self.instance.uuid})
+                raise exception.MaxRetriesExceeded(reason=reason)
 
         scheduler_utils.populate_filter_properties(legacy_props, selection)
         # context is not serializable
@@ -222,12 +290,16 @@ class MigrationTask(base.TaskBase):
         # rpc fake driver.
         legacy_spec = jsonutils.loads(jsonutils.dumps(legacy_spec))
 
+        LOG.debug("Calling prep_resize with selected host: %s; "
+                  "Selected node: %s; Alternates: %s", host, node,
+                  self.host_list, instance=self.instance)
         # RPC cast to the destination host to start the migration process.
         self.compute_rpcapi.prep_resize(
             self.context, self.instance, legacy_spec['image'],
             self.flavor, host, migration, self.reservations,
             request_spec=legacy_spec, filter_properties=legacy_props,
-            node=node, clean_shutdown=self.clean_shutdown)
+            node=node, clean_shutdown=self.clean_shutdown,
+            host_list=self.host_list)
 
     def rollback(self):
         if self._migration:

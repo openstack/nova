@@ -400,7 +400,7 @@ class _BaseTaskTestCase(object):
             # converted into 'migrate_server' when doing RPC.
             self.conductor.resize_instance(
                 self.context, inst_obj, {}, scheduler_hint, flavor, [],
-                clean_shutdown)
+                clean_shutdown, host_list=None)
         else:
             self.conductor.migrate_server(
                 self.context, inst_obj, scheduler_hint,
@@ -2197,7 +2197,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                           self.conductor._cold_migrate,
                           self.context, inst_obj,
                           flavor, {}, [resvs],
-                          True, None)
+                          True, None, None)
         metadata_mock.assert_called_with({})
         sig_mock.assert_called_once_with(self.context, fake_spec)
         self.assertEqual(inst_obj.project_id, fake_spec.project_id)
@@ -2249,7 +2249,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                            self.conductor._cold_migrate,
                            self.context, inst_obj,
                            flavor, {}, [resvs],
-                           True, None)
+                           True, None, None)
         metadata_mock.assert_called_with({})
         sig_mock.assert_called_once_with(self.context, fake_spec)
         self.assertEqual(inst_obj.project_id, fake_spec.project_id)
@@ -2284,7 +2284,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             nvh = self.assertRaises(exc.NoValidHost,
                                     self.conductor._cold_migrate, self.context,
                                     inst_obj, flavor, {}, [resvs],
-                                    True, fake_spec)
+                                    True, fake_spec, None)
             self.assertIn('cold migrate', nvh.message)
 
     @mock.patch.object(utils, 'get_image_from_system_metadata')
@@ -2322,7 +2322,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         self.assertRaises(exc.UnsupportedPolicyException,
                           self.conductor._cold_migrate, self.context,
-                          inst_obj, flavor, {}, [resvs], True, None)
+                          inst_obj, flavor, {}, [resvs], True, None, None)
 
         updates = {'vm_state': vm_states.STOPPED, 'task_state': None}
         set_vm_mock.assert_called_once_with(self.context, inst_obj.uuid,
@@ -2376,7 +2376,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.assertRaises(test.TestingException,
                           self.conductor._cold_migrate,
                           self.context, inst_obj, flavor,
-                          {}, [resvs], True, None)
+                          {}, [resvs], True, None, None)
 
         # Filter properties are populated during code execution
         legacy_filter_props = {'retry': {'num_attempts': 1,
@@ -2387,13 +2387,13 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         sig_mock.assert_called_once_with(self.context, fake_spec)
         self.assertEqual(inst_obj.project_id, fake_spec.project_id)
         select_dest_mock.assert_called_once_with(self.context, fake_spec,
-                [inst_obj.uuid], return_objects=True, return_alternates=False)
+                [inst_obj.uuid], return_objects=True, return_alternates=True)
         prep_resize_mock.assert_called_once_with(
             self.context, inst_obj, legacy_request_spec['image'],
             flavor, hosts[0]['host'], None, [resvs],
             request_spec=legacy_request_spec,
             filter_properties=legacy_filter_props,
-            node=hosts[0]['nodename'], clean_shutdown=True)
+            node=hosts[0]['nodename'], clean_shutdown=True, host_list=[])
         notify_mock.assert_called_once_with(self.context, inst_obj.uuid,
                                             'migrate_server', updates,
                                             exc_info, fake_spec)
@@ -2427,7 +2427,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         # the new one
         self.assertNotEqual(flavor, fake_spec.flavor)
         self.conductor._cold_migrate(self.context, inst_obj, flavor, {},
-                                     [resvs], True, fake_spec)
+                                     [resvs], True, fake_spec, None)
 
         # Now the RequestSpec should be updated...
         self.assertEqual(flavor, fake_spec.flavor)
@@ -2464,7 +2464,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             nvh = self.assertRaises(exc.NoValidHost,
                                     self.conductor._cold_migrate, self.context,
                                     inst_obj, flavor_new, {},
-                                    [resvs], True, fake_spec)
+                                    [resvs], True, fake_spec, None)
             self.assertIn('resize', nvh.message)
 
     @mock.patch('nova.objects.BuildRequest.get_by_instance_uuid')
