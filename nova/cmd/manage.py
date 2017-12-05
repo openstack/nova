@@ -723,15 +723,15 @@ Error: %s""") % six.text_type(e))
         """Print the current database version."""
         print(migration.db_version())
 
-    @args('--max_rows', type=int, metavar='<number>', default=1000,
-          help='Maximum number of deleted rows to archive')
+    @args('--max_rows', type=int, metavar='<number>', dest='max_rows',
+          help='Maximum number of deleted rows to archive. Defaults to 1000.')
     @args('--verbose', action='store_true', dest='verbose', default=False,
           help='Print how many rows were archived per table.')
     @args('--until-complete', action='store_true', dest='until_complete',
           default=False,
           help=('Run continuously until all deleted rows are archived. Use '
                 'max_rows as a batch size for each iteration.'))
-    def archive_deleted_rows(self, max_rows, verbose=False,
+    def archive_deleted_rows(self, max_rows=1000, verbose=False,
                              until_complete=False):
         """Move deleted rows from production tables to shadow tables.
 
