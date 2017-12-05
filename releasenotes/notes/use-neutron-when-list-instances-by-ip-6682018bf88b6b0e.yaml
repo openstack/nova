@@ -1,0 +1,6 @@
+---
+features:
+  - When ``IP address substring filtering`` extension
+    is available in Neutron, Nova will proxy the instance
+    list with ``ip`` or ``ip6`` filter to Neutron for
+    better performance.

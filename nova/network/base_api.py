@@ -367,3 +367,6 @@ class NetworkAPI(base.Base):
         :param index: The index on the instance for the VIF.
         """
         pass
+
+    def has_substr_port_filtering_extension(self, context):
+        return False

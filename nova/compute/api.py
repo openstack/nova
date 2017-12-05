@@ -2347,9 +2347,36 @@ class API(base.Base):
         # limit so that it can be applied after the IP filter.
         filter_ip = 'ip6' in filters or 'ip' in filters
         orig_limit = limit
-        if filter_ip and limit:
-            LOG.debug('Removing limit for DB query due to IP filter')
-            limit = None
+        if filter_ip:
+            if self.network_api.has_substr_port_filtering_extension(context):
+                # We're going to filter by IP using Neutron so set filter_ip
+                # to False so we don't attempt post-DB query filtering in
+                # memory below.
+                filter_ip = False
+                instance_uuids = self._ip_filter_using_neutron(context,
+                                                               filters)
+                if instance_uuids:
+                    # Note that 'uuid' is not in the 2.1 GET /servers query
+                    # parameter schema, however, we allow additionalProperties
+                    # so someone could filter instances by uuid, which doesn't
+                    # make a lot of sense but we have to account for it.
+                    if 'uuid' in filters and filters['uuid']:
+                        filter_uuids = filters['uuid']
+                        if isinstance(filter_uuids, list):
+                            instance_uuids.extend(filter_uuids)
+                        else:
+                            # Assume a string. If it's a dict or tuple or
+                            # something, well...that's too bad. This is why
+                            # we have query parameter schema definitions.
+                            if filter_uuids not in instance_uuids:
+                                instance_uuids.append(filter_uuids)
+                    filters['uuid'] = instance_uuids
+                else:
+                    # No matches on the ip filter(s), return an empty list.
+                    return objects.InstanceList()
+            elif limit:
+                LOG.debug('Removing limit for DB query due to IP filter')
+                limit = None
 
         # The ordering of instances will be
         # [sorted instances with no host] + [sorted instances with host].
@@ -2483,6 +2510,26 @@ class API(base.Base):
                 if limit and len(result_objs) == limit:
                     break
         return objects.InstanceList(objects=result_objs)
+
+    def _ip_filter_using_neutron(self, context, filters):
+        ip4_address = filters.get('ip')
+        ip6_address = filters.get('ip6')
+        addresses = [ip4_address, ip6_address]
+        uuids = []
+        for address in addresses:
+            if address:
+                try:
+                    ports = self.network_api.list_ports(
+                        context, fixed_ips='ip_address_substr=' + address,
+                        fields=['device_id'])['ports']
+                    for port in ports:
+                        uuids.append(port['device_id'])
+                except Exception as e:
+                    LOG.error('An error occurred while listing ports '
+                              'with an ip_address filter value of "%s". '
+                              'Error: %s',
+                              address, six.text_type(e))
+        return uuids
 
     def _get_instances_by_filters(self, context, filters,
                                   limit=None, marker=None, fields=None,
