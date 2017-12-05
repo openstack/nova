@@ -161,8 +161,6 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
 
         'launched_on': fields.StringField(nullable=True),
 
-        # NOTE(jdillaman): locked deprecated in favor of locked_by,
-        # to be removed in Icehouse
         'locked': fields.BooleanField(default=False),
         'locked_by': fields.StringField(nullable=True),
 
