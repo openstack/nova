@@ -272,10 +272,11 @@ resource_provider_links:
   description: |
     A list of links associated with one resource provider.
 
-    .. note:: Trait relationship link is available starting from version 1.6.
+    .. note::
 
-    .. note:: Allocations relationship link is available starting from version
-              1.11.
+      Aggregates relationship link is available starting from version 1.1.
+      Traits relationship link is available starting from version 1.6.
+      Allocations relationship link is available starting from version 1.11.
 
 resource_provider_name:
   type: string

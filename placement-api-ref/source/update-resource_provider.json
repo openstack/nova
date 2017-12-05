@@ -20,6 +20,10 @@
         {
             "href": "/placement/resource_providers/33f26ae0-dbf2-485b-a24a-244d8280e29f/traits",
             "rel": "traits"
+        },
+        {
+            "href": "/placement/resource_providers/33f26ae0-dbf2-485b-a24a-244d8280e29f/allocations",
+            "rel": "allocations"
         }
     ],
     "name": "Shared storage",
