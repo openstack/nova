@@ -101,7 +101,7 @@ class FlavorsController(wsgi.Controller):
             try:
                 filters['min_memory_mb'] = int(req.params['minRam'])
             except ValueError:
-                msg = _('Invalid min_ram filter [%s]') % req.params['minRam']
+                msg = _('Invalid minRam filter [%s]') % req.params['minRam']
                 raise webob.exc.HTTPBadRequest(explanation=msg)
 
         if 'minDisk' in req.params:
