@@ -146,7 +146,7 @@ class ProviderTree(object):
                 self.roots.remove(found)
 
     def new_root(self, name, uuid, generation):
-        """Adds a new root provider to the tree."""
+        """Adds a new root provider to the tree, returning its UUID."""
 
         with self.lock:
             exists = True
@@ -159,9 +159,9 @@ class ProviderTree(object):
                 err = _("Provider %s already exists as a root.")
                 raise ValueError(err % uuid)
 
-            p = _Provider(name, uuid, generation)
+            p = _Provider(name, uuid=uuid, generation=generation)
             self.roots.append(p)
-            return p
+            return p.uuid
 
     def _find_with_lock(self, name_or_uuid):
         for root in self.roots:
@@ -170,31 +170,22 @@ class ProviderTree(object):
                 return found
         raise ValueError(_("No such provider %s") % name_or_uuid)
 
-    def find(self, name_or_uuid):
-        """Search for a provider with the given name or UUID.
-
-        :raises ValueError if name_or_uuid points to a non-existing provider.
-        :param name_or_uuid: Either name or UUID of the resource provider to
-                             search for.
-        """
-        with self.lock:
-            return self._find_with_lock(name_or_uuid)
-
     def exists(self, name_or_uuid):
         """Given either a name or a UUID, return True if the tree contains the
         provider, False otherwise.
         """
-        try:
-            self.find(name_or_uuid)
-            return True
-        except ValueError:
-            return False
+        with self.lock:
+            try:
+                self._find_with_lock(name_or_uuid)
+                return True
+            except ValueError:
+                return False
 
     def new_child(self, name, parent_uuid, uuid=None, generation=None):
         """Creates a new child provider with the given name and uuid under the
         given parent.
 
-        :returns: the new provider
+        :returns: the UUID of the new provider
 
         :raises ValueError if parent_uuid points to a non-existing provider.
         """
@@ -202,7 +193,7 @@ class ProviderTree(object):
             parent = self._find_with_lock(parent_uuid)
             p = _Provider(name, uuid, generation, parent_uuid)
             parent.add_child(p)
-            return p
+            return p.uuid
 
     def has_inventory(self, name_or_uuid):
         """Returns True if the provider identified by name_or_uuid has any

@@ -489,10 +489,10 @@ class SchedulerReportClient(object):
         the placement API for the supplied UUID, passing in a name for the
         resource provider.
 
-        If found or created, an object representing the provider (and potential
-        child providers) is returned from this method. If the resource provider
-        for the supplied uuid was not found and the resource provider record
-        could not be created in the placement API, an exception is raised.
+        If found or created, the provider's UUID is returned from this method.
+        If the resource provider for the supplied uuid was not found and the
+        resource provider record could not be created in the placement API, an
+        exception is raised.
 
         If this method returns successfully, callers are assured both that
         the placement API contains a record of the provider and the local tree
@@ -503,12 +503,9 @@ class SchedulerReportClient(object):
                      does not exist. If empty, the name is set to the UUID
                      value
         """
-        try:
-            rp = self._provider_tree.find(uuid)
+        if self._provider_tree.exists(uuid):
             self._refresh_aggregate_map(uuid)
-            return rp
-        except ValueError:
-            pass
+            return uuid
 
         # No local information about the resource provider in our tree. Check
         # the placement API.

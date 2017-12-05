@@ -230,12 +230,41 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
                 },
             }
         generation = generation_override or 1
-        rp = self.client._provider_tree.new_root(
+        rp_uuid = self.client._provider_tree.new_root(
             cn.hypervisor_hostname,
             cn.uuid,
             generation,
         )
-        rp.update_inventory(resources, generation)
+        self.client._provider_tree.update_inventory(rp_uuid, resources,
+                                                    generation)
+
+    def _validate_provider(self, name_or_uuid, **kwargs):
+        """Validates existence and values of a provider in this client's
+        _provider_tree.
+
+        _Provider is deliberately hidden, so this method has to cheat, using
+        private methods to access the _Provider directly.
+
+        :param name_or_uuid: The name or UUID of the provider to validate.
+        :param kwargs: Optional keyword arguments of internal _Provider
+                       attributes whose values are to be validated.
+        """
+        pt = self.client._provider_tree
+        # This locking is overkill, but good form
+        with pt.lock:
+            try:
+                found = pt._find_with_lock(name_or_uuid)
+            except ValueError:
+                self.fail("Provider with name or UUID %s doesn't exist" %
+                          name_or_uuid)
+        # If kwargs provided, their names indicate _Provider attributes
+        for attr, expected in kwargs.items():
+            try:
+                self.assertEqual(getattr(found, attr), expected)
+            except AttributeError:
+                self.fail("Provider with name or UUID %s doesn't have "
+                          "attribute %s (expected value: %s)" %
+                          (name_or_uuid, attr, expected))
 
 
 class TestPutAllocations(SchedulerReportClientTestCase):
@@ -1117,7 +1146,6 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         # No resource provider exists in the client's cache, and
         # _create_provider raises, indicating there was an error with the
         # create call. Ensure we don't populate the resource provider cache
-        # with a None value.
         get_rp_mock.return_value = None
         create_rp_mock.side_effect = exception.ResourceProviderCreationFailed(
             name=uuids.compute_node)
@@ -1688,8 +1716,7 @@ class TestInventory(SchedulerReportClientTestCase):
         self.assertIsNone(result)
         self.assertFalse(mock_delete.called)
         self.assertFalse(mock_extract.called)
-        rp = self.client._provider_tree.find(cn.uuid)
-        self.assertEqual(1, rp.generation)
+        self._validate_provider(cn.uuid, generation=1)
 
     @mock.patch.object(report.LOG, 'info')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -1727,8 +1754,7 @@ class TestInventory(SchedulerReportClientTestCase):
         self.assertTrue(mock_info.called)
         self.assertEqual(uuids.request_id,
                          mock_info.call_args[0][1]['placement_req_id'])
-        rp = self.client._provider_tree.find(cn.uuid)
-        self.assertEqual(44, rp.generation)
+        self._validate_provider(cn.uuid, generation=44)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'put')
@@ -1795,10 +1821,9 @@ class TestInventory(SchedulerReportClientTestCase):
                                          uuids.request_id}
         self.client._delete_inventory(cn.uuid)
         self.assertTrue(mock_debug.called)
-        rp = self.client._provider_tree.find(cn.uuid)
         exp_url = '/resource_providers/%s/inventories' % cn.uuid
         payload = {
-            'resource_provider_generation': rp.generation,
+            'resource_provider_generation': 42,
             'inventories': {},
         }
         mock_put.assert_called_once_with(exp_url, payload)
@@ -1882,7 +1907,7 @@ There was a conflict when trying to complete your request.
                                             uuids.request_id}
         result = self.client._delete_inventory(cn.uuid)
         self.assertIsNone(result)
-        self.assertRaises(ValueError, self.client._provider_tree.find, cn.uuid)
+        self.assertFalse(self.client._provider_tree.exists(cn.uuid))
         self.assertTrue(mock_debug.called)
         self.assertIn('deleted by another thread', mock_debug.call_args[0][0])
         self.assertEqual(uuids.request_id,
@@ -1965,8 +1990,7 @@ There was a conflict when trying to complete your request.
         exp_url = '/resource_providers/%s/inventories' % uuid
         mock_get.assert_called_once_with(exp_url)
         # Updated with the new inventory from the PUT call
-        rp = self.client._provider_tree.find(uuid)
-        self.assertEqual(44, rp.generation)
+        self._validate_provider(uuid, generation=44)
         expected = {
             # Called with the newly-found generation from the existing
             # inventory
@@ -2042,8 +2066,7 @@ There was a conflict when trying to complete your request.
         exp_url = '/resource_providers/%s/inventories' % uuid
         mock_get.assert_called_once_with(exp_url)
         # Updated with the new inventory from the PUT call
-        rp = self.client._provider_tree.find(uuid)
-        self.assertEqual(44, rp.generation)
+        self._validate_provider(uuid, generation=44)
         expected = {
             # Called with the newly-found generation from the existing
             # inventory
@@ -2130,8 +2153,7 @@ There was a conflict when trying to complete your request.
         # No update so put should not be called
         self.assertFalse(mock_put.called)
         # Make sure we updated the generation from the inventory records
-        rp = self.client._provider_tree.find(compute_node.uuid)
-        self.assertEqual(43, rp.generation)
+        self._validate_provider(uuid, generation=43)
 
     @mock.patch.object(report.LOG, 'info')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -2211,7 +2233,7 @@ There was a conflict when trying to complete your request.
         )
 
         # Did NOT invalidate the cache
-        self.assertIsNotNone(self.client._provider_tree.find(uuid))
+        self.assertTrue(self.client._provider_tree.exists(uuid))
 
     @mock.patch.object(report.LOG, 'info')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'

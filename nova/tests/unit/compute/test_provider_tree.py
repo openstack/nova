@@ -50,20 +50,17 @@ class TestProviderTree(test.NoDBTestCase):
         self.assertFalse(pt.exists(uuids.non_existing_rp))
         self.assertFalse(pt.exists('noexist'))
 
-        numa_cell0 = pt.new_child('numa_cell0', cn1.uuid)
-        numa_cell1 = pt.new_child('numa_cell1', cn1.uuid)
+        numa_cell0_uuid = pt.new_child('numa_cell0', cn1.uuid)
+        numa_cell1_uuid = pt.new_child('numa_cell1', cn1.uuid)
 
-        self.assertEqual(numa_cell0, pt.find('numa_cell0'))
-        self.assertEqual(numa_cell0, pt.find(numa_cell0.uuid))
-
-        self.assertTrue(pt.exists(numa_cell0.uuid))
+        self.assertTrue(pt.exists(numa_cell0_uuid))
         self.assertTrue(pt.exists('numa_cell0'))
 
-        self.assertTrue(pt.exists(numa_cell1.uuid))
+        self.assertTrue(pt.exists(numa_cell1_uuid))
         self.assertTrue(pt.exists('numa_cell1'))
 
-        pf1_cell0 = pt.new_child('pf1_cell0', numa_cell0.uuid)
-        self.assertTrue(pt.exists(pf1_cell0.uuid))
+        pf1_cell0_uuid = pt.new_child('pf1_cell0', numa_cell0_uuid)
+        self.assertTrue(pt.exists(pf1_cell0_uuid))
         self.assertTrue(pt.exists('pf1_cell0'))
 
         self.assertRaises(
@@ -98,21 +95,16 @@ class TestProviderTree(test.NoDBTestCase):
             uuids.non_existing_rp,
         )
 
-        # Save numa cell1 uuid since removing will invalidate the object
-        cell0_uuid = numa_cell0.uuid
-        cell1_uuid = numa_cell1.uuid
-        pf1_uuid = pf1_cell0.uuid
-
-        pt.remove(cell1_uuid)
-        self.assertFalse(pt.exists(cell1_uuid))
-        self.assertTrue(pt.exists(pf1_uuid))
-        self.assertTrue(pt.exists(cell0_uuid))
+        pt.remove(numa_cell1_uuid)
+        self.assertFalse(pt.exists(numa_cell1_uuid))
+        self.assertTrue(pt.exists(pf1_cell0_uuid))
+        self.assertTrue(pt.exists(numa_cell0_uuid))
         self.assertTrue(pt.exists(uuids.cn1))
 
         # Now remove the root and check that children no longer exist
         pt.remove(uuids.cn1)
-        self.assertFalse(pt.exists(pf1_uuid))
-        self.assertFalse(pt.exists(cell0_uuid))
+        self.assertFalse(pt.exists(pf1_cell0_uuid))
+        self.assertFalse(pt.exists(numa_cell0_uuid))
         self.assertFalse(pt.exists(uuids.cn1))
 
     def test_has_inventory_changed_no_existing_rp(self):
