@@ -1,0 +1,12 @@
+---
+issues:
+  - In 16.0.0 Pike release, quota limits are checked in a new
+    fashion after change 5c90b25e49d47deb7dc6695333d9d5e46efe8665
+    and a new config option ``[quota]/recheck_quota`` has been
+    added in change eab1d4b5cc6dd424c5c7dfd9989383a8e716cae5 to
+    recheck quota after resource creation to prevent allowing
+    quota to be exceeded as a result of racing requests. These
+    changes could lead to requests blocked by over quota resulting
+    in instances in the ``ERROR`` state, rather than no instance
+    records as before. Refer to https://bugs.launchpad.net/nova/+bug/1716706
+    for detailed bug report.
