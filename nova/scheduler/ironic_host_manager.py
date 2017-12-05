@@ -22,6 +22,7 @@ ram from a host / node as it is supporting Baremetal hosts, which can not be
 subdivided into multiple instances.
 """
 from oslo_log import log as logging
+from oslo_log import versionutils
 
 import nova.conf
 from nova import context as context_module
@@ -87,6 +88,13 @@ class IronicNodeState(host_manager.HostState):
 
 class IronicHostManager(host_manager.HostManager):
     """Ironic HostManager class."""
+
+    def __init__(self):
+        super(IronicHostManager, self).__init__()
+        msg = ('The IronicHostManager is deprecated and may be removed as '
+               'early as the 18.0.0 Rocky release. Deployments need to '
+               'schedule based on resource classes.')
+        versionutils.report_deprecated_feature(LOG, msg)
 
     @staticmethod
     def _is_ironic_compute(compute):
