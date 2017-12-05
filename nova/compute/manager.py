@@ -3851,6 +3851,9 @@ class ComputeManager(manager.Manager):
         with self._error_out_instance_on_exception(context, instance):
             self._notify_about_instance_usage(
                     context, instance, "resize.revert.start")
+            compute_utils.notify_about_instance_action(context, instance,
+                self.host, action=fields.NotificationAction.RESIZE_REVERT,
+                    phase=fields.NotificationPhase.START)
 
             # NOTE(mriedem): delete stashed old_vm_state information; we
             # default to ACTIVE for backwards compatibility if old_vm_state
@@ -3910,6 +3913,9 @@ class ComputeManager(manager.Manager):
 
             self._notify_about_instance_usage(
                     context, instance, "resize.revert.end")
+            compute_utils.notify_about_instance_action(context, instance,
+                self.host, action=fields.NotificationAction.RESIZE_REVERT,
+                    phase=fields.NotificationPhase.END)
 
     def _revert_allocation(self, context, instance, migration):
         """Revert an allocation that is held by migration to our instance."""

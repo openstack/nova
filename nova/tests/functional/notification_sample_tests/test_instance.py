@@ -228,8 +228,7 @@ class TestInstanceNotificationSample(
             self._test_pause_unpause_server,
             self._test_shelve_and_shelve_offload_server,
             self._test_unshelve_server,
-            self._test_resize_server,
-            self._test_revert_server,
+            self._test_resize_and_revert_server,
             self._test_resize_confirm_server,
             self._test_snapshot_server,
             self._test_reboot_server,
@@ -689,7 +688,7 @@ class TestInstanceNotificationSample(
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
 
-    def _test_resize_server(self, server):
+    def _test_resize_and_revert_server(self, server):
         self.flags(allow_resize_to_same_host=True)
         other_flavor_body = {
             'flavor': {
@@ -733,8 +732,24 @@ class TestInstanceNotificationSample(
                     'uuid': server['id']},
                 actual=fake_notifier.VERSIONED_NOTIFICATIONS[idx])
 
+        # the following is the revert server request
         post = {'revertResize': None}
         self.api.post_server_action(server['id'], post)
+        self._wait_for_state_change(self.api, server, 'ACTIVE')
+
+        self.assertEqual(6, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-resize_revert-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[4])
+        self._verify_notification(
+            'instance-resize_revert-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[5])
 
     @mock.patch('nova.compute.manager.ComputeManager._reschedule',
                 return_value=True)
@@ -1107,9 +1122,6 @@ class TestInstanceNotificationSample(
                 'block_devices': block_devices,
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[6])
-
-    def _test_revert_server(self, server):
-        pass
 
     def _test_resize_confirm_server(self, server):
         pass
