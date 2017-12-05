@@ -37,11 +37,17 @@ Create resource class
 
 .. rest_method:: POST /resource_classes
 
-Create a new resource class.
+Create a new resource class. The new class must be a *custom* resource class,
+prefixed with `CUSTOM_` and distinct from the
+`standard <https://docs.openstack.org/os-traits/latest/>`__
+resource classes.
 
 Normal Response Codes: 201
 
 Error response codes: badRequest(400), conflict(409)
+
+A `400 BadRequest` response code will be returned if the resource class
+does not have prefix `CUSTOM_`.
 
 A `409 Conflict` response code will
 be returned if another resource class exists with the provided name.
