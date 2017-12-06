@@ -49,6 +49,8 @@ class _Provider(object):
         self.inventory = {}
         # Set of trait names
         self.traits = set()
+        # Set of aggregate UUIDs
+        self.aggregates = set()
 
     def get_provider_uuids(self):
         """Returns a set of UUIDs of this provider and all its descendants."""
@@ -151,6 +153,31 @@ class _Provider(object):
                  the traits parameter is empty.
         """
         return not bool(set(traits) - self.traits)
+
+    def have_aggregates_changed(self, new):
+        """Returns whether the provider's aggregates have changed."""
+        return set(new) != self.aggregates
+
+    def update_aggregates(self, new, generation=None):
+        """Update the stored aggregates for the provider along with a resource
+        provider generation to set the provider to. The method returns whether
+        the aggregates have changed.
+        """
+        self._update_generation(generation)
+        if self.have_aggregates_changed(new):
+            self.aggregates = set(new)  # create a copy of the new aggregates
+            return True
+        return False
+
+    def in_aggregates(self, aggregates):
+        """Query whether the provider is a member of certain aggregates.
+
+        :param aggregates: Iterable of string aggregate UUIDs to look for.
+        :return: True if this provider is a member of *all* of the specified
+                 aggregates; False if any of the specified aggregates are
+                 absent.  Returns True if the aggregates parameter is empty.
+        """
+        return not bool(set(aggregates) - self.aggregates)
 
 
 class ProviderTree(object):
@@ -352,3 +379,59 @@ class ProviderTree(object):
         with self.lock:
             provider = self._find_with_lock(name_or_uuid)
             return provider.update_traits(traits, generation=generation)
+
+    def in_aggregates(self, name_or_uuid, aggregates):
+        """Given a name or UUID of a provider, query whether that provider is a
+        member of *all* the specified aggregates.
+
+        :raises: ValueError if a provider with name_or_uuid was not found in
+                 the tree.
+        :param name_or_uuid: Either name or UUID of the resource provider to
+                             query for aggregates.
+        :param aggregates: Iterable of string aggregate UUIDs to search for.
+        :return: True if this provider is associated with *all* of the
+                 specified aggregates; False if any of the specified aggregates
+                 are absent.  Returns True if the aggregates parameter is
+                 empty, even if the provider has no aggregate associations.
+        """
+        with self.lock:
+            provider = self._find_with_lock(name_or_uuid)
+            return provider.in_aggregates(aggregates)
+
+    def have_aggregates_changed(self, name_or_uuid, aggregates):
+        """Returns True if the specified aggregates list is different for the
+        provider with the specified name or UUID.
+
+        :raises: ValueError if a provider with name_or_uuid was not found in
+                 the tree.
+        :param name_or_uuid: Either name or UUID of the resource provider to
+                             query aggregates for.
+        :param aggregates: Iterable of string aggregate UUIDs to compare
+                           against the provider's aggregates.
+        """
+        with self.lock:
+            provider = self._find_with_lock(name_or_uuid)
+            return provider.have_aggregates_changed(aggregates)
+
+    def update_aggregates(self, name_or_uuid, aggregates, generation=None):
+        """Given a name or UUID of a provider and an iterable of string
+        aggregate UUIDs, update the provider's aggregates and set the
+        provider's generation.
+
+        :returns: True if the aggregates list has changed.
+
+        :note: The provider's generation is always set to the supplied
+               generation, even if there were no changes to the aggregates.
+
+        :raises: ValueError if a provider with name_or_uuid was not found in
+                 the tree.
+        :param name_or_uuid: Either name or UUID of the resource provider to
+                             update aggregates for.
+        :param aggregates: Iterable of string aggregate UUIDs to set.
+        :param generation: The resource provider generation to set.  If None,
+                           the provider's generation is not changed.
+        """
+        with self.lock:
+            provider = self._find_with_lock(name_or_uuid)
+            return provider.update_aggregates(aggregates,
+                                              generation=generation)
