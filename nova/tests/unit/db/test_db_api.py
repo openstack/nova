@@ -8966,6 +8966,37 @@ class ArchiveTestCase(test.TestCase, ModelsObjectComparatorMixin):
             'shadow_dns_domains',
         )
 
+    def test_archive_deleted_rows_shadow_insertions_equals_deletions(self):
+        # Add 2 rows to table
+        for uuidstr in self.uuidstrs[:2]:
+            ins_stmt = self.instance_id_mappings.insert().values(uuid=uuidstr)
+            self.conn.execute(ins_stmt)
+        # Set both to deleted
+        update_statement = self.instance_id_mappings.update().\
+                where(self.instance_id_mappings.c.uuid.in_(self.uuidstrs[:2]))\
+                .values(deleted=1)
+        self.conn.execute(update_statement)
+        qiim = sql.select([self.instance_id_mappings]).where(self.
+                            instance_id_mappings.c.uuid.in_(self.uuidstrs[:2]))
+        rows = self.conn.execute(qiim).fetchall()
+        # Verify we have 2 in main
+        self.assertEqual(len(rows), 2)
+
+        qsiim = sql.select([self.shadow_instance_id_mappings]).\
+                where(self.shadow_instance_id_mappings.c.uuid.in_(
+                                                            self.uuidstrs[:2]))
+        shadow_rows = self.conn.execute(qsiim).fetchall()
+        # Verify we have 0 in shadow
+        self.assertEqual(len(shadow_rows), 0)
+
+        # Archive the rows
+        db.archive_deleted_rows(max_rows=2)
+
+        main_rows = self.conn.execute(qiim).fetchall()
+        shadow_rows = self.conn.execute(qsiim).fetchall()
+        # Verify the insertions into shadow is same as deletions from main
+        self.assertEqual(len(shadow_rows), len(rows) - len(main_rows))
+
     def _check_sqlite_version_less_than_3_7(self):
         # SQLite doesn't enforce foreign key constraints without a pragma.
         dialect = self.engine.url.get_dialect()
