@@ -1,4 +1,4 @@
-# Copyright 2015, 2017 IBM Corp.
+# Copyright 2015, 2018 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -320,3 +320,35 @@ class TestStorage(test.NoDBTestCase):
         tf.assert_called_once_with(
             name='remove_inst_disk_from_mgmt',
             requires=['stg_elem', 'vios_wrap', 'disk_path'])
+
+    def test_attach_volume(self):
+        vol_dvr = mock.Mock(connection_info={'data': {'volume_id': '1'}})
+
+        task = tf_stg.AttachVolume(vol_dvr)
+        task.execute()
+        vol_dvr.attach_volume.assert_called_once_with()
+
+        task.revert('result', 'flow failures')
+        vol_dvr.reset_stg_ftsk.assert_called_once_with()
+        vol_dvr.detach_volume.assert_called_once_with()
+
+        # Validate args on taskflow.task.Task instantiation
+        with mock.patch('taskflow.task.Task.__init__') as tf:
+            tf_stg.AttachVolume(vol_dvr)
+        tf.assert_called_once_with(name='attach_vol_1')
+
+    def test_detach_volume(self):
+        vol_dvr = mock.Mock(connection_info={'data': {'volume_id': '1'}})
+
+        task = tf_stg.DetachVolume(vol_dvr)
+        task.execute()
+        vol_dvr.detach_volume.assert_called_once_with()
+
+        task.revert('result', 'flow failures')
+        vol_dvr.reset_stg_ftsk.assert_called_once_with()
+        vol_dvr.detach_volume.assert_called_once_with()
+
+        # Validate args on taskflow.task.Task instantiation
+        with mock.patch('taskflow.task.Task.__init__') as tf:
+            tf_stg.DetachVolume(vol_dvr)
+        tf.assert_called_once_with(name='detach_vol_1')

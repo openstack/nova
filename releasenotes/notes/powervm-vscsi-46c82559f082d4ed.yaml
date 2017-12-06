@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    The PowerVM virt driver now supports vSCSI Fibre Channel cinder volumes.
+    PowerVM now supports attaching, detaching, and extending the size of vSCSI
+    FC cinder volumes.

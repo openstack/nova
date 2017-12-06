@@ -1,4 +1,4 @@
-# Copyright 2015, 2017 IBM Corp.
+# Copyright 2015, 2018 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -19,10 +19,90 @@ from taskflow import task
 from taskflow.types import failure as task_fail
 
 from nova import exception
+from nova.virt import block_device
 from nova.virt.powervm import media
 from nova.virt.powervm import mgmt
 
 LOG = logging.getLogger(__name__)
+
+
+class AttachVolume(task.Task):
+
+    """The task to attach a volume to an instance."""
+
+    def __init__(self, vol_drv):
+        """Create the task.
+
+        :param vol_drv: The volume driver. Ties the storage to a connection
+                        type (ex. vSCSI).
+        """
+        self.vol_drv = vol_drv
+        self.vol_id = block_device.get_volume_id(self.vol_drv.connection_info)
+
+        super(AttachVolume, self).__init__(name='attach_vol_%s' % self.vol_id)
+
+    def execute(self):
+        LOG.info('Attaching volume %(vol)s.', {'vol': self.vol_id},
+                 instance=self.vol_drv.instance)
+        self.vol_drv.attach_volume()
+
+    def revert(self, result, flow_failures):
+        LOG.warning('Rolling back attachment for volume %(vol)s.',
+                    {'vol': self.vol_id}, instance=self.vol_drv.instance)
+
+        # Note that the rollback is *instant*.  Resetting the FeedTask ensures
+        # immediate rollback.
+        self.vol_drv.reset_stg_ftsk()
+        try:
+            # We attempt to detach in case we 'partially attached'.  In
+            # the attach scenario, perhaps one of the Virtual I/O Servers
+            # was attached.  This attempts to clear anything out to make sure
+            # the terminate attachment runs smoothly.
+            self.vol_drv.detach_volume()
+        except exception.VolumeDetachFailed:
+            # Does not block due to being in the revert flow.
+            LOG.exception("Unable to detach volume %s during rollback.",
+                          self.vol_id, instance=self.vol_drv.instance)
+
+
+class DetachVolume(task.Task):
+
+    """The task to detach a volume from an instance."""
+
+    def __init__(self, vol_drv):
+        """Create the task.
+
+        :param vol_drv: The volume driver. Ties the storage to a connection
+                        type (ex. vSCSI).
+        """
+        self.vol_drv = vol_drv
+        self.vol_id = self.vol_drv.connection_info['data']['volume_id']
+
+        super(DetachVolume, self).__init__(name='detach_vol_%s' % self.vol_id)
+
+    def execute(self):
+        LOG.info('Detaching volume %(vol)s.',
+                 {'vol': self.vol_id}, instance=self.vol_drv.instance)
+        self.vol_drv.detach_volume()
+
+    def revert(self, result, flow_failures):
+        LOG.warning('Reattaching volume %(vol)s on detach rollback.',
+                    {'vol': self.vol_id}, instance=self.vol_drv.instance)
+
+        # Note that the rollback is *instant*.  Resetting the FeedTask ensures
+        # immediate rollback.
+        self.vol_drv.reset_stg_ftsk()
+        try:
+            # We try to reattach the volume here so that it maintains its
+            # linkage (in the hypervisor) to the VM.  This makes it easier for
+            # operators to understand the linkage between the VMs and volumes
+            # in error scenarios.  This is simply useful for debug purposes
+            # if there is an operational error.
+            self.vol_drv.attach_volume()
+        except exception.VolumeAttachFailed:
+            # Does not block due to being in the revert flow. See above.
+            LOG.exception("Unable to reattach volume %s during rollback.",
+                self.vol_id, instance=self.vol_drv.instance)
 
 
 class CreateDiskForImg(task.Task):
