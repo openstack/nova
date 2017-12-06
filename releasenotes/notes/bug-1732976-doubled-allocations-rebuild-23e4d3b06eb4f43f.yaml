@@ -1,0 +1,18 @@
+---
+security:
+  - |
+    `OSSA-2017-006`_: Nova FilterScheduler doubles resource allocations during
+    rebuild with new image (CVE-2017-17051)
+
+    By repeatedly rebuilding an instance with new images, an authenticated user
+    may consume untracked resources on a hypervisor host leading to a denial of
+    service. This regression was introduced with the fix for `OSSA-2017-005`_
+    (CVE-2017-16239), however, only Nova stable/pike or later deployments with
+    that fix applied and relying on the default FilterScheduler are affected.
+
+    The fix is in the `nova-api` and `nova-scheduler` services.
+
+    .. note:: The fix for errata in `OSSA-2017-005`_ (CVE-2017-16239) will
+              need to be applied in addition to this fix.
+
+    .. _OSSA-2017-006: https://security.openstack.org/ossa/OSSA-2017-006.html
