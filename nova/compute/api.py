@@ -2878,7 +2878,8 @@ class API(base.Base):
         root_bdm = compute_utils.get_root_bdm(context, instance, bdms)
 
         # Check to see if the image is changing and we have a volume-backed
-        # server.
+        # server. The compute doesn't support changing the image in the
+        # root disk of a volume-backed server, so we need to just fail fast.
         is_volume_backed = compute_utils.is_volume_backed_instance(
             context, instance, bdms)
         if is_volume_backed:
@@ -2896,6 +2897,17 @@ class API(base.Base):
             volume = self.volume_api.get(context, root_bdm.volume_id)
             volume_image_metadata = volume.get('volume_image_metadata', {})
             orig_image_ref = volume_image_metadata.get('image_id')
+
+            if orig_image_ref != image_href:
+                # Leave a breadcrumb.
+                LOG.debug('Requested to rebuild instance with a new image %s '
+                          'for a volume-backed server with image %s in its '
+                          'root volume which is not supported.', image_href,
+                          orig_image_ref, instance=instance)
+                msg = _('Unable to rebuild with a different image for a '
+                        'volume-backed server.')
+                raise exception.ImageUnacceptable(
+                    image_id=image_href, reason=msg)
         else:
             orig_image_ref = instance.image_ref
 
@@ -2938,7 +2950,10 @@ class API(base.Base):
         instance.update(options_from_image)
 
         instance.task_state = task_states.REBUILDING
-        instance.image_ref = image_href
+        # An empty instance.image_ref is currently used as an indication
+        # of BFV.  Preserve that over a rebuild to not break users.
+        if not is_volume_backed:
+            instance.image_ref = image_href
         instance.kernel_id = kernel_id or ""
         instance.ramdisk_id = ramdisk_id or ""
         instance.progress = 0
