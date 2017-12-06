@@ -2368,7 +2368,12 @@ class _ComputeAPIUnitTestMixIn(object):
         self._test_swap_volume(expected_exception=AttributeError,
                                attachment_id=uuids.attachment_id)
 
-    def _test_swap_volume(self, expected_exception=None, attachment_id=None):
+    def test_swap_volume_new_vol_already_attached_new_flow(self):
+        self._test_swap_volume(attachment_id=uuids.attachment_id,
+                               volume_already_attached=True)
+
+    def _test_swap_volume(self, expected_exception=None, attachment_id=None,
+                          volume_already_attached=False):
         volumes = self._get_volumes_for_test_swap_volume()
         instance = self._get_instance_for_test_swap_volume()
 
@@ -2402,6 +2407,12 @@ class _ComputeAPIUnitTestMixIn(object):
             if volumes[uuids.new_volume]['status'] == 'reserved':
                 volumes[uuids.new_volume]['status'] = 'available'
 
+        def fake_volume_is_attached(context, instance, volume_id):
+            if volume_already_attached:
+                raise exception.InvalidVolume(reason='Volume already attached')
+            else:
+                pass
+
         @mock.patch.object(compute_api.API, '_record_action_start')
         @mock.patch.object(self.compute_api.compute_rpcapi, 'swap_volume',
                            return_value=True)
@@ -2411,6 +2422,9 @@ class _ComputeAPIUnitTestMixIn(object):
                            side_effect=fake_vol_api_attachment_delete)
         @mock.patch.object(self.compute_api.volume_api, 'reserve_volume',
                            side_effect=fake_vol_api_reserve)
+        @mock.patch.object(self.compute_api,
+                           '_check_volume_already_attached_to_instance',
+                           side_effect=fake_volume_is_attached)
         @mock.patch.object(self.compute_api.volume_api, 'attachment_create',
                            side_effect=fake_vol_api_attachment_create)
         @mock.patch.object(self.compute_api.volume_api, 'roll_detaching',
@@ -2421,8 +2435,9 @@ class _ComputeAPIUnitTestMixIn(object):
                            side_effect=fake_vol_api_begin_detaching)
         def _do_test(mock_begin_detaching, mock_get_by_volume_and_instance,
                      mock_roll_detaching, mock_attachment_create,
-                     mock_reserve_volume, mock_attachment_delete,
-                     mock_unreserve_volume, mock_swap_volume, mock_record):
+                     mock_check_volume_attached, mock_reserve_volume,
+                     mock_attachment_delete, mock_unreserve_volume,
+                     mock_swap_volume, mock_record):
             bdm = objects.BlockDeviceMapping(
                         **fake_block_device.FakeDbBlockDeviceDict(
                         {'no_device': False, 'volume_id': '1', 'boot_index': 0,
@@ -2454,6 +2469,27 @@ class _ComputeAPIUnitTestMixIn(object):
                     mock_unreserve_volume.assert_not_called()
                     mock_attachment_delete.assert_called_once_with(
                         self.context, attachment_id)
+
+                # Assert the call to the rpcapi.
+                mock_swap_volume.assert_called_once_with(
+                    self.context, instance=instance,
+                    old_volume_id=uuids.old_volume,
+                    new_volume_id=uuids.new_volume,
+                    new_attachment_id=attachment_id)
+                mock_record.assert_called_once_with(
+                    self.context, instance, instance_actions.SWAP_VOLUME)
+            elif volume_already_attached:
+                self.assertRaises(exception.InvalidVolume,
+                                  self.compute_api.swap_volume, self.context,
+                                  instance, volumes[uuids.old_volume],
+                                  volumes[uuids.new_volume])
+                self.assertEqual('in-use', volumes[uuids.old_volume]['status'])
+                self.assertEqual('available',
+                                 volumes[uuids.new_volume]['status'])
+                mock_check_volume_attached.assert_called_once_with(
+                    self.context, instance, uuids.new_volume)
+                mock_roll_detaching.assert_called_once_with(self.context,
+                                                            uuids.old_volume)
             else:
                 self.compute_api.swap_volume(self.context, instance,
                                              volumes[uuids.old_volume],
@@ -2466,22 +2502,24 @@ class _ComputeAPIUnitTestMixIn(object):
                     mock_reserve_volume.assert_called_once_with(
                         self.context, uuids.new_volume)
                     mock_attachment_create.assert_not_called()
+                    mock_check_volume_attached.assert_not_called()
                 else:
                     # New style attachment, so reserve was not called and
                     # attachment_create was called.
                     mock_reserve_volume.assert_not_called()
+                    mock_check_volume_attached.assert_called_once_with(
+                        self.context, instance, uuids.new_volume)
                     mock_attachment_create.assert_called_once_with(
                         self.context, uuids.new_volume, instance.uuid)
 
-            # Assert the call to the rpcapi.
-            mock_swap_volume.assert_called_once_with(
-                self.context, instance=instance,
-                old_volume_id=uuids.old_volume,
-                new_volume_id=uuids.new_volume,
-                new_attachment_id=attachment_id)
-            mock_record.assert_called_once_with(self.context,
-                                                instance,
-                                                instance_actions.SWAP_VOLUME)
+                # Assert the call to the rpcapi.
+                mock_swap_volume.assert_called_once_with(
+                    self.context, instance=instance,
+                    old_volume_id=uuids.old_volume,
+                    new_volume_id=uuids.new_volume,
+                    new_attachment_id=attachment_id)
+                mock_record.assert_called_once_with(
+                     self.context, instance, instance_actions.SWAP_VOLUME)
 
         _do_test()
 

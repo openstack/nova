@@ -3633,6 +3633,26 @@ class API(base.Base):
                 device_type=device_type, tag=tag)
         return volume_bdm
 
+    def _check_volume_already_attached_to_instance(self, context, instance,
+                                                   volume_id):
+        """Avoid attaching the same volume to the same instance twice.
+
+           As the new Cinder flow (microversion 3.44) is handling the checks
+           differently and allows to attach the same volume to the same
+           instance twice to enable live_migrate we are checking whether the
+           BDM already exists for this combination for the new flow and fail
+           if it does.
+        """
+
+        try:
+            objects.BlockDeviceMapping.get_by_volume_and_instance(
+                context, volume_id, instance.uuid)
+
+            msg = _("volume %s already attached") % volume_id
+            raise exception.InvalidVolume(reason=msg)
+        except exception.VolumeBDMNotFound:
+            pass
+
     def _check_attach_and_reserve_volume(self, context, volume_id, instance):
         volume = self.volume_api.get(context, volume_id)
         self.volume_api.check_availability_zone(context, volume,
@@ -3819,6 +3839,13 @@ class API(base.Base):
             # we cast to the compute host.
             self.volume_api.reserve_volume(context, new_volume['id'])
         else:
+            try:
+                self._check_volume_already_attached_to_instance(
+                    context, instance, new_volume['id'])
+            except exception.InvalidVolume:
+                with excutils.save_and_reraise_exception():
+                    self.volume_api.roll_detaching(context, old_volume['id'])
+
             # This is a new-style attachment so for the volume that we are
             # going to swap to, create a new volume attachment.
             new_attachment_id = self.volume_api.attachment_create(
