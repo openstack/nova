@@ -294,6 +294,12 @@ class GlanceImageServiceV2(object):
         except Exception:
             _reraise_translated_image_exception(image_id)
 
+        if image_chunks.wrapped is None:
+            # None is a valid return value, but there's nothing we can do with
+            # a image with no associated data
+            raise exception.ImageUnacceptable(image_id=image_id,
+                reason='Image has no associated data')
+
         # Retrieve properties for verification of Glance image signature
         verifier = None
         if CONF.glance.verify_glance_signatures:
