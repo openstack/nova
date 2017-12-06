@@ -3164,14 +3164,14 @@ class API(base.Base):
         host_name can be set in the cold migration case only.
         """
         if host_name is not None:
-            # Check whether host exists or not.
-            node = objects.ComputeNode.get_first_node_by_host_for_old_compat(
-                context, host_name, use_slave=True)
-
             # Cannot migrate to the host where the instance exists
             # because it is useless.
             if host_name == instance.host:
                 raise exception.CannotMigrateToSameHost()
+
+            # Check whether host exists or not.
+            node = objects.ComputeNode.get_first_node_by_host_for_old_compat(
+                context, host_name, use_slave=True)
 
         self._check_auto_disk_config(instance, **extra_instance_updates)
 

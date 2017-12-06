@@ -2063,11 +2063,7 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.compute_api.resize, self.context,
                           fake_inst, host_name='nonexistent_host')
 
-    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host',
-                       return_value=[objects.ComputeNode(
-                           host='fake_host',
-                           hypervisor_hostname='hypervisor_host')])
-    def test_migrate_to_same_host(self, mock_get_all_by_host):
+    def test_migrate_to_same_host(self):
         fake_inst = self._create_instance_obj()
         self.assertRaises(exception.CannotMigrateToSameHost,
                           self.compute_api.resize, self.context,
