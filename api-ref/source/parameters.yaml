@@ -2830,9 +2830,11 @@ group_id:
   type: string
 guest_format:
   description: |
-    Specifies the guest server disk file system format, such as ``ephemeral`` or ``swap``.
+    Specifies the guest server disk file system format, such as ``ext2``,
+    ``ext3``, ``ext4``, ``xfs`` or ``swap``. This parameter affects only
+    the libvirt virt driver.
   in: body
-  required: true
+  required: false
   type: string
 host:
   description: |
