@@ -1343,8 +1343,9 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
         self._test_instance_action_method('inject_network_info',
                                           (), {}, (), {}, False)
 
-    def test_snapshot_instance(self):
-        inst = objects.Instance()
+    @mock.patch.object(objects.InstanceAction, 'action_start')
+    def test_snapshot_instance(self, action_start):
+        inst = objects.Instance(uuid=uuids.instance)
         meth_cls = self.tgt_methods_cls
 
         self.mox.StubOutWithMock(inst, 'refresh')
@@ -1371,6 +1372,9 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
         message.need_response = False
 
         meth_cls.snapshot_instance(message, inst, image_id='image-id')
+        action_start.assert_called_once_with(
+            message.ctxt, inst.uuid, instance_actions.CREATE_IMAGE,
+            want_result=False)
 
     @mock.patch.object(objects.InstanceAction, 'action_start')
     def test_backup_instance(self, action_start):

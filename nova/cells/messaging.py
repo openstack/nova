@@ -909,6 +909,11 @@ class _TargetedMessageMethods(_BaseMessageMethods):
         instance.refresh()
         instance.task_state = task_states.IMAGE_SNAPSHOT_PENDING
         instance.save(expected_task_state=[None])
+
+        objects.InstanceAction.action_start(
+            message.ctxt, instance.uuid, instance_actions.CREATE_IMAGE,
+            want_result=False)
+
         self.compute_rpcapi.snapshot_instance(message.ctxt,
                                               instance,
                                               image_id)

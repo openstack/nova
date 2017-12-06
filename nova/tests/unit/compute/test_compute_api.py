@@ -2594,6 +2594,8 @@ class _ComputeAPIUnitTestMixIn(object):
                 res = self.compute_api.snapshot(self.context, instance,
                                           'fake-name',
                                           extra_properties=extra_props)
+                mock_record.assert_called_once_with(
+                    self.context, instance, instance_actions.CREATE_IMAGE)
             else:
                 res = self.compute_api.backup(self.context, instance,
                                         'fake-name',
@@ -2821,9 +2823,20 @@ class _ComputeAPIUnitTestMixIn(object):
                        fake_unquiesce_instance)
         fake_image.stub_out_image_service(self)
 
-        # No block devices defined
-        self.compute_api.snapshot_volume_backed(
-            self.context, instance, 'test-snapshot')
+        with test.nested(
+                mock.patch.object(compute_api.API, '_record_action_start'),
+                mock.patch.object(compute_utils, 'EventReporter')) as (
+            mock_record, mock_event):
+            # No block devices defined
+            self.compute_api.snapshot_volume_backed(
+                self.context, instance, 'test-snapshot')
+
+        mock_record.assert_called_once_with(self.context,
+                                            instance,
+                                            instance_actions.CREATE_IMAGE)
+        mock_event.assert_called_once_with(self.context,
+                                           'api_snapshot_instance',
+                                           instance.uuid)
 
         bdm = fake_block_device.FakeDbBlockDeviceDict(
                 {'no_device': False, 'volume_id': '1', 'boot_index': 0,
@@ -2843,12 +2856,23 @@ class _ComputeAPIUnitTestMixIn(object):
              'destination_type': 'volume', 'delete_on_termination': False,
              'tag': None})
 
-        # All the db_only fields and the volume ones are removed
-        self.compute_api.snapshot_volume_backed(
-            self.context, instance, 'test-snapshot')
+        with test.nested(
+                mock.patch.object(compute_api.API, '_record_action_start'),
+                mock.patch.object(compute_utils, 'EventReporter')) as (
+                mock_record, mock_event):
+            # All the db_only fields and the volume ones are removed
+            self.compute_api.snapshot_volume_backed(
+                self.context, instance, 'test-snapshot')
 
         self.assertEqual(quiesce_expected, quiesced[0])
         self.assertEqual(quiesce_expected, quiesced[1])
+
+        mock_record.assert_called_once_with(self.context,
+                                            instance,
+                                            instance_actions.CREATE_IMAGE)
+        mock_event.assert_called_once_with(self.context,
+                                           'api_snapshot_instance',
+                                           instance.uuid)
 
         instance.system_metadata['image_mappings'] = jsonutils.dumps(
             [{'virtual': 'ami', 'device': 'vda'},
@@ -2882,12 +2906,24 @@ class _ComputeAPIUnitTestMixIn(object):
 
         quiesced = [False, False]
 
-        # Check that the mappings from the image properties are not included
-        self.compute_api.snapshot_volume_backed(
-            self.context, instance, 'test-snapshot')
+        with test.nested(
+                mock.patch.object(compute_api.API, '_record_action_start'),
+                mock.patch.object(compute_utils, 'EventReporter')) as (
+                mock_record, mock_event):
+            # Check that the mappings from the image properties are not
+            # included
+            self.compute_api.snapshot_volume_backed(
+                self.context, instance, 'test-snapshot')
 
         self.assertEqual(quiesce_expected, quiesced[0])
         self.assertEqual(quiesce_expected, quiesced[1])
+
+        mock_record.assert_called_once_with(self.context,
+                                            instance,
+                                            instance_actions.CREATE_IMAGE)
+        mock_event.assert_called_once_with(self.context,
+                                           'api_snapshot_instance',
+                                           instance.uuid)
 
     def test_snapshot_volume_backed(self):
         self._test_snapshot_volume_backed(False, False)
