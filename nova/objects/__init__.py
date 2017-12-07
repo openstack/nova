@@ -65,6 +65,7 @@ def register_all():
     __import__('nova.objects.quotas')
     __import__('nova.objects.security_group')
     __import__('nova.objects.security_group_rule')
+    __import__('nova.objects.selection')
     __import__('nova.objects.service')
     __import__('nova.objects.task_log')
     __import__('nova.objects.vcpu_model')
