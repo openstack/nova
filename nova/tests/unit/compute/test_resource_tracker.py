@@ -1201,7 +1201,7 @@ class TestUpdateComputeNode(BaseTestCase):
         # implemented.
         self.driver_mock.get_inventory.assert_called_once_with(_NODENAME)
         ucn_mock = self.sched_client_mock.update_compute_node
-        ucn_mock.assert_called_once_with(new_compute)
+        ucn_mock.assert_called_once_with(mock.sentinel.ctx, new_compute)
 
     @mock.patch('nova.objects.ComputeNode.save')
     def test_existing_compute_node_updated_diff_updated_at(self, save_mock):
@@ -1249,7 +1249,7 @@ class TestUpdateComputeNode(BaseTestCase):
         # _normalize_inventory_from_cn_obj but call update_compute_node().
         self.assertFalse(norm_mock.called)
         ucn_mock = self.sched_client_mock.update_compute_node
-        ucn_mock.assert_called_once_with(new_compute)
+        ucn_mock.assert_called_once_with(mock.sentinel.ctx, new_compute)
 
     @mock.patch('nova.compute.resource_tracker.'
                 '_normalize_inventory_from_cn_obj')
@@ -1282,6 +1282,7 @@ class TestUpdateComputeNode(BaseTestCase):
         self.rt._update(mock.sentinel.ctx, new_compute)
         save_mock.assert_called_once_with()
         sifp_mock.assert_called_once_with(
+            mock.sentinel.ctx,
             new_compute.uuid,
             new_compute.hypervisor_hostname,
             mock.sentinel.inv_data,
