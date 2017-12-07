@@ -2572,7 +2572,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         # Only one call should be made to delete allocations, and that should
         # be for the first instance created above
         rc.delete_allocation_for_instance.assert_called_once_with(
-            uuids.deleted)
+            ctx, uuids.deleted)
         mock_inst_get.assert_called_once_with(
             ctx.elevated.return_value,
             uuids.deleted,
@@ -2619,7 +2619,7 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         # Only one call should be made to delete allocations, and that should
         # be for the first instance created above
         rc.delete_allocation_for_instance.assert_called_once_with(
-            uuids.deleted)
+            ctx, uuids.deleted)
 
     @mock.patch('nova.objects.Instance.get_by_uuid')
     def test_remove_deleted_instances_allocations_scheduled_instance(self,
@@ -2739,11 +2739,13 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         instance = _INSTANCE_FIXTURES[0].obj_clone()
         instance.uuid = uuids.inst0
 
-        self.rt.delete_allocation_for_shelve_offloaded_instance(instance)
+        self.rt.delete_allocation_for_shelve_offloaded_instance(
+            mock.sentinel.ctx, instance)
 
         rc = self.rt.reportclient
         mock_remove_allocation = rc.delete_allocation_for_instance
-        mock_remove_allocation.assert_called_once_with(instance.uuid)
+        mock_remove_allocation.assert_called_once_with(
+            mock.sentinel.ctx, instance.uuid)
 
     def test_update_usage_from_instances_goes_negative(self):
         # NOTE(danms): The resource tracker _should_ report negative resources

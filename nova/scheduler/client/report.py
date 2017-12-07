@@ -1372,9 +1372,9 @@ class SchedulerReportClient(object):
         return r.status_code == 204
 
     @safe_connect
-    def delete_allocation_for_instance(self, uuid):
+    def delete_allocation_for_instance(self, context, uuid):
         url = '/allocations/%s' % uuid
-        r = self.delete(url)
+        r = self.delete(url, global_request_id=context.global_id)
         if r:
             LOG.info('Deleted allocation for instance %s', uuid)
             return True
@@ -1389,11 +1389,12 @@ class SchedulerReportClient(object):
                              'text': r.text})
             return False
 
-    def update_instance_allocation(self, compute_node, instance, sign):
+    def update_instance_allocation(self, context, compute_node, instance,
+                                   sign):
         if sign > 0:
             self._allocate_for_instance(compute_node.uuid, instance)
         else:
-            self.delete_allocation_for_instance(instance.uuid)
+            self.delete_allocation_for_instance(context, instance.uuid)
 
     @safe_connect
     def get_allocations_for_resource_provider(self, rp_uuid):
@@ -1425,7 +1426,7 @@ class SchedulerReportClient(object):
             instances = objects.InstanceList.get_by_host_and_node(context,
                     host, nodename)
             for instance in instances:
-                self.delete_allocation_for_instance(instance.uuid)
+                self.delete_allocation_for_instance(context, instance.uuid)
         url = "/resource_providers/%s" % rp_uuid
         resp = self.delete(url, global_request_id=context.global_id)
         if resp:

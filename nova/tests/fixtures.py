@@ -1757,7 +1757,7 @@ class PlacementFixture(fixtures.Fixture):
             headers=headers,
             raise_exc=False)
 
-    def _fake_delete(self, *args):
+    def _fake_delete(self, *args, **kwargs):
         (url,) = args[1:]
         # TODO(sbauza): The current placement NoAuthMiddleware returns a 401
         # in case a token is not provided. We should change that by creating
