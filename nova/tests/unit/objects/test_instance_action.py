@@ -176,7 +176,8 @@ class _TestInstanceActionObject(object):
             self.context, 'fake-uuid')
         for index, action in enumerate(obj_list):
             self.compare_obj(action, fake_actions[index])
-        mock_get.assert_called_once_with(self.context, 'fake-uuid')
+        mock_get.assert_called_once_with(self.context, 'fake-uuid', None,
+                                         None, None)
 
 
 class TestInstanceActionObject(test_objects._LocalTest,

@@ -42,7 +42,8 @@ class ServerActionsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):
         def fake_instance_action_get_by_request_id(context, uuid, request_id):
             return copy.deepcopy(self.actions[uuid][request_id])
 
-        def fake_server_actions_get(context, uuid):
+        def fake_server_actions_get(context, uuid, limit=None, marker=None,
+                                    filters=None):
             return [copy.deepcopy(value) for value in
                     six.itervalues(self.actions[uuid])]
 

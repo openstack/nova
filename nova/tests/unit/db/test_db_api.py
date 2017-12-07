@@ -4080,6 +4080,64 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
 
         self._assertEqualOrderedListOfObjects([action2, action1], actions)
 
+    def test_instance_actions_get_with_limit(self):
+        """Test list instance actions can support pagination."""
+        uuid1 = uuidsentinel.uuid1
+
+        extra = {
+            'created_at': timeutils.utcnow()
+        }
+
+        action_values = self._create_action_values(uuid1, extra=extra)
+        action1 = db.action_start(self.ctxt, action_values)
+
+        action_values['action'] = 'delete'
+        action_values['request_id'] = 'req-' + uuidsentinel.reqid1
+        db.action_start(self.ctxt, action_values)
+
+        actions = db.actions_get(self.ctxt, uuid1)
+        self.assertEqual(2, len(actions))
+
+        actions = db.actions_get(self.ctxt, uuid1, limit=1)
+        self.assertEqual(1, len(actions))
+
+        actions = db.actions_get(
+            self.ctxt, uuid1, limit=1,
+            marker=action_values['request_id'])
+        self.assertEqual(1, len(actions))
+        self._assertEqualListsOfObjects([action1], actions)
+
+    def test_instance_actions_get_with_changes_since(self):
+        """Test list instance actions can support timestamp filter."""
+        uuid1 = uuidsentinel.uuid1
+
+        extra = {
+            'created_at': timeutils.utcnow()
+        }
+
+        action_values = self._create_action_values(uuid1, extra=extra)
+        db.action_start(self.ctxt, action_values)
+
+        timestamp = timeutils.utcnow()
+        action_values['start_time'] = timestamp
+        action_values['updated_at'] = timestamp
+        action_values['action'] = 'delete'
+        action2 = db.action_start(self.ctxt, action_values)
+
+        actions = db.actions_get(self.ctxt, uuid1)
+        self.assertEqual(2, len(actions))
+        self.assertNotEqual(actions[0]['updated_at'],
+                            actions[1]['updated_at'])
+        actions = db.actions_get(
+            self.ctxt, uuid1, filters={'changes-since': timestamp})
+        self.assertEqual(1, len(actions))
+        self._assertEqualListsOfObjects([action2], actions)
+
+    def test_instance_actions_get_with_not_found_marker(self):
+        self.assertRaises(exception.MarkerNotFound,
+                          db.actions_get, self.ctxt, uuidsentinel.uuid1,
+                          marker=uuidsentinel.not_found_marker)
+
     def test_instance_action_get_by_instance_and_action(self):
         """Ensure we can get an action by instance UUID and action id."""
         ctxt2 = context.get_admin_context()

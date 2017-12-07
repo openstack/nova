@@ -100,15 +100,17 @@ class InstanceAction(base.NovaPersistentObject, base.NovaObject,
 @base.NovaObjectRegistry.register
 class InstanceActionList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
-    #              InstanceAction <= version 1.1
-    VERSION = '1.0'
+    # Version 1.1: get_by_instance_uuid added pagination and filters support
+    VERSION = '1.1'
     fields = {
         'objects': fields.ListOfObjectsField('InstanceAction'),
         }
 
     @base.remotable_classmethod
-    def get_by_instance_uuid(cls, context, instance_uuid):
-        db_actions = db.actions_get(context, instance_uuid)
+    def get_by_instance_uuid(cls, context, instance_uuid, limit=None,
+                             marker=None, filters=None):
+        db_actions = db.actions_get(
+            context, instance_uuid, limit, marker, filters)
         return base.obj_make_list(context, cls(), InstanceAction, db_actions)
 
 

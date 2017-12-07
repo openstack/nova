@@ -133,7 +133,8 @@ class InstanceActionsTestV21(test.NoDBTestCase):
         policy.set_rules(oslo_policy.Rules.from_dict(rules))
 
     def test_list_actions(self):
-        def fake_get_actions(context, uuid):
+        def fake_get_actions(context, uuid, limit=None, marker=None,
+                             filters=None):
             actions = []
             for act in six.itervalues(self.fake_actions[uuid]):
                 action = models.InstanceAction()
