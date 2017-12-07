@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api_sample_tests import api_sample_base
 
 
@@ -80,3 +81,14 @@ class QuotaSetsSampleJsonTests(api_sample_base.ApiSampleTestBaseV21):
 class QuotaSetsSampleJsonTests2_36(QuotaSetsSampleJsonTests):
     microversion = '2.36'
     scenarios = [('v2_36', {'api_major_version': 'v2.1'})]
+
+
+class NoopQuotaSetsSampleJsonTests(QuotaSetsSampleJsonTests):
+    sample_dir = "os-quota-sets-noop"
+
+    def setUp(self):
+        super(NoopQuotaSetsSampleJsonTests, self).setUp()
+        # NOTE(melwitt): We can't simply set self.flags to the NoopQuotaDriver
+        # here to use the driver because the QuotaEngine is global. See the
+        # fixture for details.
+        self.useFixture(nova_fixtures.NoopQuotaDriverFixture())

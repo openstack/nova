@@ -1612,3 +1612,26 @@ class PrivsepNoHelperFixture(fixtures.Fixture):
         self.useFixture(fixtures.MonkeyPatch(
             'oslo_privsep.daemon.RootwrapClientChannel',
             UnHelperfulClientChannel))
+
+
+class NoopQuotaDriverFixture(fixtures.Fixture):
+    """A fixture to run tests using the NoopQuotaDriver.
+
+    We can't simply set self.flags to the NoopQuotaDriver in tests to use the
+    NoopQuotaDriver because the QuotaEngine object is global. Concurrently
+    running tests will fail intermittently because they might get the
+    NoopQuotaDriver globally when they expected the default DbQuotaDriver
+    behavior. So instead, we can patch the _driver property of the QuotaEngine
+    class on a per-test basis.
+    """
+
+    def setUp(self):
+        super(NoopQuotaDriverFixture, self).setUp()
+        self.useFixture(fixtures.MonkeyPatch('nova.quota.QuotaEngine._driver',
+                        nova_quota.NoopQuotaDriver()))
+        # Set the config option just so that code checking for the presence of
+        # the NoopQuotaDriver setting will see it as expected.
+        # For some reason, this does *not* work when TestCase.flags is used.
+        # When using self.flags, the concurrent test failures returned.
+        CONF.set_override('driver', 'nova.quota.NoopQuotaDriver', 'quota')
+        self.addCleanup(CONF.clear_override, 'driver', 'quota')
