@@ -182,6 +182,7 @@ class ControllerTest(test.TestCase):
         self.ips_controller = ips.IPsController()
         policy.reset()
         policy.init()
+        self.addCleanup(policy.reset)
         fake_network.stub_out_nw_api_get_instance_nw_info(self)
 
 
@@ -1243,6 +1244,43 @@ class ServersControllerTest(ControllerTest):
 
         self.assertEqual(1, len(servers))
         self.assertEqual(uuids.fake, servers[0]['id'])
+
+    def test_get_servers_admin_filters_as_user_with_policy_override(self):
+        """Test getting servers by admin-only or unknown options when
+        context is not admin but policy allows.
+        """
+        server_uuid = uuids.fake
+
+        def fake_get_all(context, search_opts=None,
+                         limit=None, marker=None,
+                         expected_attrs=None, sort_keys=None, sort_dirs=None):
+            self.assertIsNotNone(search_opts)
+            # Allowed by user
+            self.assertIn('name', search_opts)
+            self.assertIn('terminated_at', search_opts)
+            # OSAPI converts status to vm_state
+            self.assertIn('vm_state', search_opts)
+            # Allowed only by admins with admin API on
+            self.assertIn('ip', search_opts)
+            self.assertNotIn('unknown_option', search_opts)
+            return objects.InstanceList(
+                objects=[fakes.stub_instance_obj(100, uuid=server_uuid)])
+
+        rules = {
+            "os_compute_api:servers:index": "project_id:fake",
+            "os_compute_api:servers:allow_all_filters": "project_id:fake",
+        }
+        policy.set_rules(oslo_policy.Rules.from_dict(rules))
+
+        self.mock_get_all.side_effect = fake_get_all
+
+        query_str = ("name=foo&ip=10.*&status=active&unknown_option=meow&"
+                     "terminated_at=^2016-02-01.*")
+        req = self.req('/fake/servers?%s' % query_str)
+        servers = self.controller.index(req)['servers']
+
+        self.assertEqual(len(servers), 1)
+        self.assertEqual(servers[0]['id'], server_uuid)
 
     def test_get_servers_allows_ip(self):
         """Test getting servers by ip."""

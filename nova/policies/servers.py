@@ -63,6 +63,20 @@ rules = [
             }
         ]),
     policy.DocumentedRuleDefault(
+        SERVERS % 'allow_all_filters',
+        base.RULE_ADMIN_API,
+        "Allow all filters when listing servers",
+        [
+            {
+                'method': 'GET',
+                'path': '/servers'
+            },
+            {
+                'method': 'GET',
+                'path': '/servers/detail'
+            }
+        ]),
+    policy.DocumentedRuleDefault(
         SERVERS % 'show',
         RULE_AOO,
         "Show a server",
