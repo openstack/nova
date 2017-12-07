@@ -3096,6 +3096,13 @@ class ServerTestV256Common(ServersTestBase):
     microversion = '2.56'
     ADMIN_API = True
 
+    def _setup_compute_service(self):
+        # Set up 3 compute services in the same cell
+        for host in ('host1', 'host2', 'host3'):
+            fake.set_nodes([host])
+            self.addCleanup(fake.restore_nodes)
+            self.start_service('compute', host=host)
+
     def _create_server(self):
         server = self._build_minimal_create_server_request(
             image_uuid='a2459075-d96c-40d5-893e-577ff92e721c')
@@ -3104,18 +3111,6 @@ class ServerTestV256Common(ServersTestBase):
         response = self.api.api_post('/servers', post).body
         return response['server']
 
-
-class ServerTestV256SingleCellMultiHostTestCase(ServerTestV256Common):
-    """Happy path test where we create a server on one host, migrate it to
-    another host of our choosing and ensure it lands there.
-    """
-    def _setup_compute_service(self):
-        # Set up 3 compute services in the same cell
-        for host in ('host1', 'host2', 'host3'):
-            fake.set_nodes([host])
-            self.addCleanup(fake.restore_nodes)
-            self.start_service('compute', host=host)
-
     @staticmethod
     def _get_target_and_other_hosts(host):
         target_other_hosts = {'host1': ['host2', 'host3'],
@@ -3123,6 +3118,11 @@ class ServerTestV256SingleCellMultiHostTestCase(ServerTestV256Common):
                               'host3': ['host1', 'host2']}
         return target_other_hosts[host]
 
+
+class ServerTestV256SingleCellMultiHostTestCase(ServerTestV256Common):
+    """Happy path test where we create a server on one host, migrate it to
+    another host of our choosing and ensure it lands there.
+    """
     def test_migrate_server_to_host_in_same_cell(self):
         server = self._create_server()
         server = self._wait_for_state_change(server, 'BUILD')
@@ -3136,20 +3136,6 @@ class ServerTestV256SingleCellMultiHostTestCase(ServerTestV256Common):
 
 
 class ServerTestV256RescheduleTestCase(ServerTestV256Common):
-
-    def _setup_compute_service(self):
-        # Set up 3 compute services in the same cell
-        for host in ('host1', 'host2', 'host3'):
-            fake.set_nodes([host])
-            self.addCleanup(fake.restore_nodes)
-            self.start_service('compute', host=host)
-
-    @staticmethod
-    def _get_target_and_other_hosts(host):
-        target_other_hosts = {'host1': ['host2', 'host3'],
-                              'host2': ['host3', 'host1'],
-                              'host3': ['host1', 'host2']}
-        return target_other_hosts[host]
 
     @mock.patch.object(compute_manager.ComputeManager, '_prep_resize',
                        side_effect=exception.MigrationError(
