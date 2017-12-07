@@ -325,6 +325,124 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         )
         grandchild_rp.set_inventory(inv_list)
 
+        # Check all providers returned when getting by root UUID
+        rps = rp_obj.ResourceProviderList.get_all_by_filters(
+            self.ctx,
+            filters={
+                'in_tree': uuidsentinel.root_rp,
+            }
+        )
+        self.assertEqual(3, len(rps))
+
+        # Check all providers returned when getting by child UUID
+        rps = rp_obj.ResourceProviderList.get_all_by_filters(
+            self.ctx,
+            filters={
+                'in_tree': uuidsentinel.child_rp,
+            }
+        )
+        self.assertEqual(3, len(rps))
+
+        # Check all providers returned when getting by grandchild UUID
+        rps = rp_obj.ResourceProviderList.get_all_by_filters(
+            self.ctx,
+            filters={
+                'in_tree': uuidsentinel.grandchild_rp,
+            }
+        )
+        self.assertEqual(3, len(rps))
+
+        # Make sure that the member_of and uuid filters work with the in_tree
+        # filter
+
+        # No aggregate associations yet, so expect no records when adding a
+        # member_of filter
+        rps = rp_obj.ResourceProviderList.get_all_by_filters(
+            self.ctx,
+            filters={
+                'member_of': [uuidsentinel.agg],
+                'in_tree': uuidsentinel.grandchild_rp,
+            }
+        )
+        self.assertEqual(0, len(rps))
+
+        # OK, associate the grandchild with an aggregate and verify that ONLY
+        # the grandchild is returned when asking for the grandchild's tree
+        # along with the aggregate as member_of
+        grandchild_rp.set_aggregates([uuidsentinel.agg])
+        rps = rp_obj.ResourceProviderList.get_all_by_filters(
+            self.ctx,
+            filters={
+                'member_of': [uuidsentinel.agg],
+                'in_tree': uuidsentinel.grandchild_rp,
+            }
+        )
+        self.assertEqual(1, len(rps))
+        self.assertEqual(uuidsentinel.grandchild_rp, rps[0].uuid)
+
+        # Try filtering on an unknown UUID and verify no results
+        rps = rp_obj.ResourceProviderList.get_all_by_filters(
+            self.ctx,
+            filters={
+                'uuid': uuidsentinel.unknown_rp,
+                'in_tree': uuidsentinel.grandchild_rp,
+            }
+        )
+        self.assertEqual(0, len(rps))
+
+        # And now check that filtering for just the child's UUID along with the
+        # tree produces just a single provider (the child)
+        rps = rp_obj.ResourceProviderList.get_all_by_filters(
+            self.ctx,
+            filters={
+                'uuid': uuidsentinel.child_rp,
+                'in_tree': uuidsentinel.grandchild_rp,
+            }
+        )
+        self.assertEqual(1, len(rps))
+        self.assertEqual(uuidsentinel.child_rp, rps[0].uuid)
+
+        # Ensure that the resources filter also continues to work properly with
+        # the in_tree filter. Request resources that none of the providers
+        # currently have and ensure no providers are returned
+        rps = rp_obj.ResourceProviderList.get_all_by_filters(
+            self.ctx,
+            filters={
+                'in_tree': uuidsentinel.grandchild_rp,
+                'resources': {
+                    'VCPU': 200,
+                }
+            }
+        )
+        self.assertEqual(0, len(rps))
+
+        # And now ask for one VCPU, which should only return us the grandchild
+        rps = rp_obj.ResourceProviderList.get_all_by_filters(
+            self.ctx,
+            filters={
+                'in_tree': uuidsentinel.grandchild_rp,
+                'resources': {
+                    'VCPU': 1,
+                }
+            }
+        )
+        self.assertEqual(1, len(rps))
+        self.assertEqual(uuidsentinel.grandchild_rp, rps[0].uuid)
+
+        # Finally, verify we still get the grandchild if filtering on the
+        # parent's UUID as in_tree
+        rps = rp_obj.ResourceProviderList.get_all_by_filters(
+            self.ctx,
+            filters={
+                'in_tree': uuidsentinel.child_rp,
+                'resources': {
+                    'VCPU': 1,
+                }
+            }
+        )
+        self.assertEqual(1, len(rps))
+        self.assertEqual(uuidsentinel.grandchild_rp, rps[0].uuid)
+
         allocs = [
             rp_obj.Allocation(
                 resource_provider=grandchild_rp,
@@ -351,6 +469,50 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         grandchild_rp.destroy()
         child_rp.destroy()
         root_rp.destroy()
+
+    def test_get_all_in_tree_old_records(self):
+        """Simulate an old resource provider record in the database that has no
+        root_provider_uuid set and ensure that when selecting all providers in
+        a tree, passing in that old resource provider, that we still get that
+        provider returned.
+        """
+        # Passing a non-existing resource provider UUID should return an empty
+        # list
+        rps = rp_obj.ResourceProviderList.get_all_by_filters(
+            self.ctx,
+            filters={
+                'in_tree': uuidsentinel.rp1,
+            }
+        )
+        self.assertEqual([], rps.objects)
+
+        rp_tbl = rp_obj._RP_TBL
+        conn = self.api_db.get_engine().connect()
+
+        # First, set up a record for an "old-style" resource provider with no
+        # root provider UUID.
+        ins_stmt = rp_tbl.insert().values(
+            id=1,
+            uuid=uuidsentinel.rp1,
+            name='rp-1',
+            root_provider_id=None,
+            parent_provider_id=None,
+            generation=42,
+        )
+        conn.execute(ins_stmt)
+
+        # NOTE(jaypipes): This is just disabling the online data migration that
+        # occurs in _from_db_object() that sets root provider ID to ensure we
+        # don't have any migrations messing with the end result.
+        with mock.patch('nova.objects.resource_provider.'
+                        '_set_root_provider_id'):
+            rps = rp_obj.ResourceProviderList.get_all_by_filters(
+                self.ctx,
+                filters={
+                    'in_tree': uuidsentinel.rp1,
+                }
+            )
+        self.assertEqual(1, len(rps))
 
     def test_destroy_resource_provider(self):
         created_resource_provider = rp_obj.ResourceProvider(
