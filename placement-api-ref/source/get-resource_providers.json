@@ -29,7 +29,9 @@
           "rel": "allocations"
         }
       ],
-      "name": "vgr.localdomain"
+      "name": "vgr.localdomain",
+      "parent_provider_uuid": "542df8ed-9be2-49b9-b4db-6d3183ff8ec8",
+      "root_provider_uuid": "542df8ed-9be2-49b9-b4db-6d3183ff8ec8"
     },
     {
       "generation": 2,
@@ -60,7 +62,9 @@
           "rel": "allocations"
         }
       ],
-      "name": "pony1"
+      "name": "pony1",
+      "parent_provider_uuid": null,
+      "root_provider_uuid": "d0b381e9-8761-42de-8e6c-bba99a96d5f5"
     }
   ]
 }

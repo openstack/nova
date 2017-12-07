@@ -54,6 +54,9 @@ VERSIONS = [
              # as GET. The 'allocation_requests' format in GET
              # /allocation_candidates is updated to be the same as well.
     '1.13',  # Adds POST /allocations to set allocations for multiple consumers
+             # as GET
+    '1.14',  # Adds parent and root provider UUID on resource provider
+             # representation and 'in_tree' filter on GET /resource_providers
 ]
 
 

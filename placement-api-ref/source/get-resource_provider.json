@@ -27,5 +27,7 @@
         }
     ],
     "name": "Ceph Storage Pool",
-    "uuid": "3b4005be-d64b-456f-ba36-0ffd02718868"
+    "uuid": "3b4005be-d64b-456f-ba36-0ffd02718868",
+    "parent_provider_uuid": "542df8ed-9be2-49b9-b4db-6d3183ff8ec8",
+    "root_provider_uuid": "542df8ed-9be2-49b9-b4db-6d3183ff8ec8"
 }

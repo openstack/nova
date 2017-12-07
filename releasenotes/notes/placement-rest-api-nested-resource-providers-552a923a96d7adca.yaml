@@ -1,0 +1,13 @@
+---
+features:
+  - New placement REST API microversion 1.14 is added to support nested
+    resource providers. Users of the placement REST API can now pass a
+    ``in_tree=<UUID>`` parameter to the ``GET /resource_providers`` REST API
+    call.  This will trigger the placement service to return all resource
+    provider records within the "provider tree" of the resource provider with
+    the supplied UUID value. The resource provider representation now includes
+    a ``parent_provider_uuid`` value that indicates the UUID of the immediate
+    parent resource provider, or ``null`` if the provider has no parent. For
+    convenience, the resource provider resource also contains a
+    ``root_provider_uuid`` field that is populated with the UUID of the
+    top-most resource provider in the provider tree.
