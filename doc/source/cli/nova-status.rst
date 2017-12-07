@@ -101,6 +101,10 @@ Upgrade
   * Checks for the Placement API are modified to require version 1.4, that
     is needed in Pike and further for nova-scheduler to work correctly.
 
+  **17.0.0 (Queens)**
+
+  * Checks for the Placement API are modified to require version 1.14.
+
 See Also
 ========
 
