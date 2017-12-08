@@ -63,7 +63,7 @@ def get_block_device_info(instance, block_device_mapping):
     return block_device_info
 
 
-def block_device_info_get_root(block_device_info):
+def block_device_info_get_root_device(block_device_info):
     block_device_info = block_device_info or {}
     return block_device_info.get('root_device_name')
 

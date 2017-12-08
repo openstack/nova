@@ -127,8 +127,9 @@ class BlockDeviceInfoManager(object):
         # either booting from volume, or booting from image/iso
         root_disk = {}
 
-        root_device = (driver.block_device_info_get_root(block_device_info) or
-                       self._DEFAULT_ROOT_DEVICE)
+        root_device = driver.block_device_info_get_root_device(
+                block_device_info)
+        root_device = root_device or self._DEFAULT_ROOT_DEVICE
 
         if self.is_boot_from_volume(block_device_info):
             root_volume = self._get_root_device_bdm(
