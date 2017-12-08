@@ -176,8 +176,9 @@ def create_resource_provider(req):
             {'duplicate': duplicate})
     except exception.ObjectActionError as exc:
         raise webob.exc.HTTPBadRequest(
-            _('Unable to create resource provider %(rp_uuid)s: %(error)s') %
-            {'rp_uuid': uuid, 'error': exc})
+            _('Unable to create resource provider "%(name)s", %(rp_uuid)s: '
+              '%(error)s') %
+            {'name': data['name'], 'rp_uuid': uuid, 'error': exc})
 
     req.response.location = util.resource_provider_url(
         req.environ, resource_provider)
