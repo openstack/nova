@@ -34,7 +34,7 @@ class DeployTest(test.NoDBTestCase):
         self.flags(auth_uri=auth_uri, group='keystone_authtoken')
         # ensure that the auth_token middleware is chosen
         self.flags(auth_strategy='keystone', group='api')
-        app = deploy.deploy(CONF, 'nova')
+        app = deploy.deploy(CONF)
         req = webob.Request.blank('/resource_providers', method="GET")
 
         response = req.get_response(app)
