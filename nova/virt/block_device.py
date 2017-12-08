@@ -292,8 +292,6 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
     def detach(self, context, instance, volume_api, virt_driver,
                attachment_id=None, destroy_bdm=False):
 
-        connector = virt_driver.get_volume_connector(instance)
-        connection_info = self['connection_info']
         volume_id = self.volume_id
 
         # Only attempt to detach and disconnect from the volume if the instance
@@ -310,48 +308,50 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                       {'vol_id': volume_id,
                        'inst_host': instance.host}, instance=instance)
 
-        if connection_info and not destroy_bdm and (
-           connector.get('host') != instance.host):
-            # If the volume is attached to another host (evacuate) then
-            # this connector is for the wrong host. Use the connector that
-            # was stored in connection_info instead (if we have one, and it
-            # is for the expected host).
-            stashed_connector = connection_info.get('connector')
-            if not stashed_connector:
-                # Volume was attached before we began stashing connectors
-                LOG.warning("Host mismatch detected, but stashed "
-                            "volume connector not found. Instance host is "
-                            "%(ihost)s, but volume connector host is "
-                            "%(chost)s.",
-                            {'ihost': instance.host,
-                             'chost': connector.get('host')})
-            elif stashed_connector.get('host') != instance.host:
-                # Unexpected error. The stashed connector is also not matching
-                # the needed instance host.
-                LOG.error("Host mismatch detected in stashed volume "
-                          "connector. Will use local volume connector. "
-                          "Instance host is %(ihost)s. Local volume "
-                          "connector host is %(chost)s. Stashed volume "
-                          "connector host is %(schost)s.",
-                          {'ihost': instance.host,
-                           'chost': connector.get('host'),
-                           'schost': stashed_connector.get('host')})
-            else:
-                # Fix found. Use stashed connector.
-                LOG.debug("Host mismatch detected. Found usable stashed "
-                          "volume connector. Instance host is %(ihost)s. "
-                          "Local volume connector host was %(chost)s. "
-                          "Stashed volume connector host is %(schost)s.",
-                          {'ihost': instance.host,
-                           'chost': connector.get('host'),
-                           'schost': stashed_connector.get('host')})
-                connector = stashed_connector
-
         # NOTE(jdg): For now we need to actually inspect the bdm for an
         # attachment_id as opposed to relying on what may have been passed
         # in, we want to force usage of the old detach flow for now and only
         # use the new flow when we explicitly used it for the attach.
         if not self['attachment_id']:
+            connector = virt_driver.get_volume_connector(instance)
+            connection_info = self['connection_info']
+            if connection_info and not destroy_bdm and (
+               connector.get('host') != instance.host):
+                # If the volume is attached to another host (evacuate) then
+                # this connector is for the wrong host. Use the connector that
+                # was stored in connection_info instead (if we have one, and it
+                # is for the expected host).
+                stashed_connector = connection_info.get('connector')
+                if not stashed_connector:
+                    # Volume was attached before we began stashing connectors
+                    LOG.warning("Host mismatch detected, but stashed "
+                                "volume connector not found. Instance host is "
+                                "%(ihost)s, but volume connector host is "
+                                "%(chost)s.",
+                                {'ihost': instance.host,
+                                 'chost': connector.get('host')})
+                elif stashed_connector.get('host') != instance.host:
+                    # Unexpected error. The stashed connector is also not
+                    # matching the needed instance host.
+                    LOG.error("Host mismatch detected in stashed volume "
+                              "connector. Will use local volume connector. "
+                              "Instance host is %(ihost)s. Local volume "
+                              "connector host is %(chost)s. Stashed volume "
+                              "connector host is %(schost)s.",
+                              {'ihost': instance.host,
+                               'chost': connector.get('host'),
+                               'schost': stashed_connector.get('host')})
+                else:
+                    # Fix found. Use stashed connector.
+                    LOG.debug("Host mismatch detected. Found usable stashed "
+                              "volume connector. Instance host is %(ihost)s. "
+                              "Local volume connector host was %(chost)s. "
+                              "Stashed volume connector host is %(schost)s.",
+                              {'ihost': instance.host,
+                               'chost': connector.get('host'),
+                               'schost': stashed_connector.get('host')})
+                    connector = stashed_connector
+
             volume_api.terminate_connection(context, volume_id, connector)
             volume_api.detach(context.elevated(), volume_id, instance.uuid,
                               attachment_id)
