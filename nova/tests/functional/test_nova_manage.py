@@ -264,3 +264,56 @@ class NovaManageDBIronicTest(test.TestCase):
         ret = self.commands.ironic_flavor_migration('test', 'fake-host3',
                                                     'fake-node4', False, False)
         self.assertEqual(2, ret)
+
+
+class NovaManageCellV2Test(test.TestCase):
+    def setUp(self):
+        super(NovaManageCellV2Test, self).setUp()
+        self.commands = manage.CellV2Commands()
+        self.context = context.RequestContext('fake-user', 'fake-project')
+
+        self.service1 = objects.Service(context=self.context,
+                                        host='fake-host1',
+                                        binary='nova-compute',
+                                        topic='fake-host1',
+                                        report_count=1,
+                                        disabled=False,
+                                        disabled_reason=None,
+                                        availability_zone='nova',
+                                        forced_down=False)
+        self.service1.create()
+
+        self.cn1 = objects.ComputeNode(context=self.context,
+                                       service_id=self.service1.id,
+                                       host='fake-host1',
+                                       hypervisor_type='ironic',
+                                       vcpus=1,
+                                       memory_mb=1024,
+                                       local_gb=10,
+                                       vcpus_used=1,
+                                       memory_mb_used=1024,
+                                       local_gb_used=10,
+                                       hypervisor_version=0,
+                                       hypervisor_hostname='fake-node1',
+                                       cpu_info='{}')
+        self.cn1.create()
+
+    def test_delete_host(self):
+        cells = objects.CellMappingList.get_all(self.context)
+
+        self.commands.discover_hosts()
+
+        # We should have one mapped node
+        cns = objects.ComputeNodeList.get_all(self.context)
+        self.assertEqual(1, len(cns))
+        self.assertEqual(1, cns[0].mapped)
+
+        for cell in cells:
+            r = self.commands.delete_host(cell.uuid, 'fake-host1')
+            if r == 0:
+                break
+
+        # Our node should now be unmapped
+        cns = objects.ComputeNodeList.get_all(self.context)
+        self.assertEqual(1, len(cns))
+        self.assertEqual(0, cns[0].mapped)

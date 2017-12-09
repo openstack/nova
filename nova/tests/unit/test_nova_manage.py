@@ -1873,7 +1873,8 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
                           uuidsentinel.cell1), output)
 
     @mock.patch.object(objects.InstanceList, 'get_by_host')
-    def test_delete_host_instances_exist(self, mock_get_by_host):
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
+    def test_delete_host_instances_exist(self, mock_get_cn, mock_get_by_host):
         """Tests trying to delete a host but the host has instances."""
         ctxt = context.get_admin_context()
         # create the cell mapping
@@ -1887,6 +1888,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         hm.create()
         mock_get_by_host.return_value = [objects.Instance(
             ctxt, uuid=uuidsentinel.instance)]
+        mock_get_cn.return_value = []
         self.assertEqual(4, self.commands.delete_host(uuidsentinel.cell1,
                                                       'fake-host'))
         output = self.output.getvalue().strip()
@@ -1897,7 +1899,9 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.InstanceList, 'get_by_host',
                        return_value=[])
     @mock.patch.object(objects.HostMapping, 'destroy')
-    def test_delete_host_success(self, mock_destroy, mock_get_by_host):
+    @mock.patch.object(objects.ComputeNodeList, 'get_all_by_host')
+    def test_delete_host_success(self, mock_get_cn, mock_destroy,
+                                 mock_get_by_host):
         """Tests trying to delete a host that has not instances."""
         ctxt = context.get_admin_context()
         # create the cell mapping
@@ -1910,6 +1914,8 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
             context=ctxt, host='fake-host', cell_mapping=cm1)
         hm.create()
 
+        mock_get_cn.return_value = [mock.MagicMock(), mock.MagicMock()]
+
         self.assertEqual(0, self.commands.delete_host(uuidsentinel.cell1,
                                                       'fake-host'))
         output = self.output.getvalue().strip()
@@ -1917,6 +1923,9 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         mock_get_by_host.assert_called_once_with(
             test.MatchType(context.RequestContext), 'fake-host')
         mock_destroy.assert_called_once_with()
+        for node in mock_get_cn.return_value:
+            self.assertEqual(0, node.mapped)
+            node.save.assert_called_once_with()
 
 
 class TestNovaManageMain(test.NoDBTestCase):
