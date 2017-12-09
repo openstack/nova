@@ -6390,12 +6390,8 @@ class LibvirtDriver(driver.ComputeDriver):
         """Note that this function takes an instance name."""
         try:
             guest = self._host.get_guest(instance)
-
-            # TODO(sahid): We are converting all calls from a
-            # virDomain object to use nova.virt.libvirt.Guest.
-            # We should be able to remove domain at the end.
-            domain = guest._domain
-            return domain.blockStats(disk_id)
+            dev = guest.get_block_device(disk_id)
+            return dev.blockStats()
         except libvirt.libvirtError as e:
             errcode = e.get_error_code()
             LOG.info('Getting block stats failed, device might have '

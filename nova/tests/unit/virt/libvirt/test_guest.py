@@ -813,6 +813,10 @@ class GuestBlockTestCase(test.NoDBTestCase):
         self.assertRaises(fakelibvirt.libvirtError,
                           self.gblock.is_job_complete)
 
+    def test_blockStats(self):
+        self.gblock.blockStats()
+        self.domain.blockStats.assert_called_once_with('vda')
+
 
 class JobInfoTestCase(test.NoDBTestCase):
 

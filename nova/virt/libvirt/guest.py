@@ -861,6 +861,10 @@ class BlockDevice(object):
 
         return False
 
+    def blockStats(self):
+        """Extracts block device statistics for a domain"""
+        return self._guest._domain.blockStats(self._disk)
+
 
 class VCPUInfo(object):
     def __init__(self, id, cpu, state, time):
