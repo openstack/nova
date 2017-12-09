@@ -232,9 +232,9 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             uuids.cn1: [mock.sentinel.alloc_req],
         }
         ctx = mock.Mock()
-        selected_hosts = self.driver._schedule(ctx, spec_obj,
-            instance_uuids, alloc_reqs_by_rp_uuid,
-            mock.sentinel.provider_summaries)
+        self.assertRaises(exception.NoValidHost, self.driver._schedule, ctx,
+                spec_obj, instance_uuids, alloc_reqs_by_rp_uuid,
+                mock.sentinel.provider_summaries)
 
         mock_get_all_states.assert_called_once_with(
             ctx.elevated.return_value, spec_obj,
@@ -243,9 +243,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         mock_claim.assert_called_once_with(ctx.elevated.return_value, spec_obj,
             uuids.instance, [mock.sentinel.alloc_req])
 
-        self.assertEqual([], selected_hosts)
-
-        mock_cleanup.assert_called_once_with([])
+        mock_cleanup.assert_not_called()
 
         # Ensure that we have consumed the resources on the chosen host states
         self.assertFalse(host_state.consume_from_request.called)
@@ -289,8 +287,9 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             uuids.cn1: [mock.sentinel.alloc_req],
         }
         ctx = mock.Mock()
-        self.driver._schedule(ctx, spec_obj, instance_uuids,
-            alloc_reqs_by_rp_uuid, mock.sentinel.provider_summaries)
+        self.assertRaises(exception.NoValidHost, self.driver._schedule, ctx,
+                spec_obj, instance_uuids, alloc_reqs_by_rp_uuid,
+                mock.sentinel.provider_summaries)
 
         # Ensure we cleaned up the first successfully-claimed instance
         mock_cleanup.assert_called_once_with([uuids.instance1])
@@ -636,33 +635,41 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         self.assertEqual([host_state], dests)
 
+    @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
+                "_claim_resources", return_value=True)
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_schedule')
-    def test_select_destinations_fewer_num_instances(self, mock_schedule):
-        """Tests that the select_destinations() method properly handles
-        resetting host state objects and raising NoValidHost when the
-        _schedule() method returns no host matches.
+                '_get_all_host_states')
+    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
+                '_get_sorted_hosts')
+    def test_schedule_fewer_num_instances(self, mock_get_hosts,
+            mock_get_all_states, mock_claim):
+        """Tests that the _schedule() method properly handles
+        resetting host state objects and raising NoValidHost when there are not
+        enough hosts available.
         """
         spec_obj = objects.RequestSpec(
+            num_instances=2,
             flavor=objects.Flavor(memory_mb=512,
                                   root_gb=512,
                                   ephemeral_gb=0,
                                   swap=0,
                                   vcpus=1),
             project_id=uuids.project_id,
-            num_instances=2)
+            instance_group=None)
 
-        host_state = mock.Mock(spec=host_manager.HostState,
-                cell_uuid=uuids.cell)
-        mock_schedule.return_value = [[host_state]]
+        host_state = mock.Mock(spec=host_manager.HostState, host="fake_host",
+                uuid=uuids.cn1, cell_uuid=uuids.cell, nodename="fake_node",
+                limits={}, updated="Not None")
+        all_host_states = [host_state]
+        mock_get_all_states.return_value = all_host_states
+        mock_get_hosts.side_effect = [all_host_states, []]
 
-        self.assertRaises(exception.NoValidHost,
-            self.driver.select_destinations, self.context, spec_obj,
-            [mock.sentinel.instance_uuid1, mock.sentinel.instance_uuid2],
-            mock.sentinel.alloc_reqs_by_rp_uuid, mock.sentinel.p_sums)
+        instance_uuids = [uuids.inst1, uuids.inst2]
+        fake_allocs_by_rp = {uuids.cn1: [{}]}
 
-        # Verify that the host state object has been marked as not updated so
-        # it's picked up in the next pull from the DB for compute node objects
+        self.assertRaises(exception.NoValidHost, self.driver._schedule,
+                self.context, spec_obj, instance_uuids, fake_allocs_by_rp,
+                mock.sentinel.p_sums)
         self.assertIsNone(host_state.updated)
 
     @mock.patch("nova.scheduler.host_manager.HostState.consume_from_request")
