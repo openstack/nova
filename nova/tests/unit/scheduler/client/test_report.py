@@ -1072,13 +1072,14 @@ class TestSetAndClearAllocations(SchedulerReportClientTestCase):
         expected_microversion = '1.13'
 
         resp = self.client.set_and_clear_allocations(
-            self.rp_uuid, self.consumer_uuid, self.data,
+            self.context, self.rp_uuid, self.consumer_uuid, self.data,
             self.project_id, self.user_id)
 
         self.assertTrue(resp)
         self.mock_post.assert_called_once_with(
             self.expected_url, mock.ANY,
-            version=expected_microversion)
+            version=expected_microversion,
+            global_request_id=self.context.global_id)
 
     def test_payload_no_clear(self):
         expected_payload = {
@@ -1096,7 +1097,7 @@ class TestSetAndClearAllocations(SchedulerReportClientTestCase):
         }
 
         resp = self.client.set_and_clear_allocations(
-            self.rp_uuid, self.consumer_uuid, self.data,
+            self.context, self.rp_uuid, self.consumer_uuid, self.data,
             self.project_id, self.user_id)
 
         self.assertTrue(resp)
@@ -1125,7 +1126,7 @@ class TestSetAndClearAllocations(SchedulerReportClientTestCase):
         }
 
         resp = self.client.set_and_clear_allocations(
-            self.rp_uuid, self.consumer_uuid, self.data,
+            self.context, self.rp_uuid, self.consumer_uuid, self.data,
             self.project_id, self.user_id,
             consumer_to_clear=mock.sentinel.migration_uuid)
 
@@ -1139,7 +1140,7 @@ class TestSetAndClearAllocations(SchedulerReportClientTestCase):
         self.mock_post.return_value.text = 'concurrently updated'
 
         resp = self.client.set_and_clear_allocations(
-            self.rp_uuid, self.consumer_uuid, self.data,
+            self.context, self.rp_uuid, self.consumer_uuid, self.data,
             self.project_id, self.user_id,
             consumer_to_clear=mock.sentinel.migration_uuid)
 
@@ -1154,7 +1155,7 @@ class TestSetAndClearAllocations(SchedulerReportClientTestCase):
         self.mock_post.return_value.text = error_message
 
         resp = self.client.set_and_clear_allocations(
-            self.rp_uuid, self.consumer_uuid, self.data,
+            self.context, self.rp_uuid, self.consumer_uuid, self.data,
             self.project_id, self.user_id,
             consumer_to_clear=mock.sentinel.migration_uuid)
 
@@ -1212,7 +1213,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                 'generation': 2,
             },
         ]
-        self.client._ensure_resource_provider(cn.uuid)
+        self.client._ensure_resource_provider(self.context, cn.uuid)
         get_pia_mock.assert_called_once_with(set([uuids.agg1, uuids.agg2]))
         self.assertTrue(self.client._provider_tree.exists(uuids.shr1))
         self.assertTrue(self.client._provider_tree.exists(uuids.shr2))
@@ -1269,7 +1270,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         get_trait_mock.return_value = set(['CUSTOM_GOLD'])
         get_pia_mock.return_value = []
 
-        self.client._ensure_resource_provider(uuids.compute_node)
+        self.client._ensure_resource_provider(self.context, uuids.compute_node)
 
         get_rpt_mock.assert_called_once_with(uuids.compute_node)
         self.assertTrue(self.client._provider_tree.exists(uuids.compute_node))
@@ -1308,11 +1309,13 @@ class TestProviderOperations(SchedulerReportClientTestCase):
 
         self.assertRaises(
             exception.ResourceProviderCreationFailed,
-            self.client._ensure_resource_provider, uuids.compute_node)
+            self.client._ensure_resource_provider, self.context,
+            uuids.compute_node)
 
         get_rpt_mock.assert_called_once_with(uuids.compute_node)
         create_rp_mock.assert_called_once_with(
-            uuids.compute_node, uuids.compute_node, parent_provider_uuid=None)
+            self.context, uuids.compute_node, uuids.compute_node,
+            parent_provider_uuid=None)
         self.assertFalse(self.client._provider_tree.exists(uuids.compute_node))
         self.assertFalse(refresh_mock.called)
         self.assertRaises(
@@ -1341,7 +1344,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         }
         self.assertEqual(
             uuids.compute_node,
-            self.client._ensure_resource_provider(uuids.compute_node))
+            self.client._ensure_resource_provider(self.context,
+                                                  uuids.compute_node))
         self._validate_provider(uuids.compute_node, name='compute-name',
                                 generation=1, parent_uuid=None,
                                 aggregates=set(), traits=set())
@@ -1350,6 +1354,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         refresh_mock.assert_not_called()
         get_rpt_mock.assert_called_once_with(uuids.compute_node)
         create_rp_mock.assert_called_once_with(
+                self.context,
                 uuids.compute_node,
                 uuids.compute_node,  # name param defaults to UUID if None
                 parent_provider_uuid=None,
@@ -1360,7 +1365,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
 
         self.assertEqual(
             uuids.compute_node,
-            self.client._ensure_resource_provider(uuids.compute_node))
+            self.client._ensure_resource_provider(self.context,
+                                                  uuids.compute_node))
         self._validate_provider(uuids.compute_node, name='compute-name',
                                 generation=1, parent_uuid=None)
 
@@ -1368,9 +1374,10 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.assertFalse(create_rp_mock.called)
 
         # Validate the path where we specify a name (don't default to the UUID)
-        self.client._ensure_resource_provider(uuids.cn2, 'a-name')
+        self.client._ensure_resource_provider(
+            self.context, uuids.cn2, 'a-name')
         create_rp_mock.assert_called_once_with(
-                uuids.cn2, 'a-name', parent_provider_uuid=None)
+                self.context, uuids.cn2, 'a-name', parent_provider_uuid=None)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_refresh_associations', new=mock.Mock())
@@ -1380,7 +1387,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                 '_get_providers_in_tree')
     def test_ensure_resource_provider_tree(self, get_rpt_mock, create_rp_mock):
         """Test _ensure_resource_provider with a tree of providers."""
-        def _create_resource_provider(uuid, name, parent_provider_uuid=None):
+        def _create_resource_provider(context, uuid, name,
+                                      parent_provider_uuid=None):
             """Mock side effect for creating the RP with the specified args."""
             return {
                 'uuid': uuid,
@@ -1394,28 +1402,31 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         get_rpt_mock.return_value = []
 
         # Create the root
-        root = self.client._ensure_resource_provider(uuids.root)
+        root = self.client._ensure_resource_provider(self.context, uuids.root)
         self.assertEqual(uuids.root, root)
 
         # Now create a child
         child1 = self.client._ensure_resource_provider(
-            uuids.child1, name='junior', parent_provider_uuid=uuids.root)
+            self.context, uuids.child1, name='junior',
+            parent_provider_uuid=uuids.root)
         self.assertEqual(uuids.child1, child1)
 
         # If we re-ensure the child, we get the object from the tree, not a
         # newly-created one - i.e. the early .find() works like it should.
         self.assertIs(child1,
-                      self.client._ensure_resource_provider(uuids.child1))
+                      self.client._ensure_resource_provider(self.context,
+                                                            uuids.child1))
 
         # Make sure we can create a grandchild
         grandchild = self.client._ensure_resource_provider(
-            uuids.grandchild, parent_provider_uuid=uuids.child1)
+            self.context, uuids.grandchild,
+            parent_provider_uuid=uuids.child1)
         self.assertEqual(uuids.grandchild, grandchild)
 
         # Now create a second child of the root and make sure it doesn't wind
         # up in some crazy wrong place like under child1 or grandchild
         child2 = self.client._ensure_resource_provider(
-            uuids.child2, parent_provider_uuid=uuids.root)
+            self.context, uuids.child2, parent_provider_uuid=uuids.root)
         self.assertEqual(uuids.child2, child2)
 
         # At this point we should get all the providers.
@@ -1436,7 +1447,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         tree_uuids = [uuids.root, uuids.one, uuids.two]
         mock_gpu.return_value = tree_uuids
         self.assertEqual(uuids.root,
-                         self.client._ensure_resource_provider(uuids.root))
+                         self.client._ensure_resource_provider(self.context,
+                                                               uuids.root))
         mock_exists.assert_called_once_with(uuids.root)
         mock_gpu.assert_called_once_with(uuids.root)
         mock_refresh.assert_has_calls(
@@ -1455,7 +1467,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         mock_gpit.return_value = [{'uuid': u, 'name': u, 'generation': 42}
                                   for u in tree_uuids]
         self.assertEqual(uuids.root,
-                         self.client._ensure_resource_provider(uuids.root))
+                         self.client._ensure_resource_provider(self.context,
+                                                               uuids.root))
         mock_gpit.assert_called_once_with(uuids.root)
         mock_refresh.assert_has_calls(
             [mock.call(uuid, generation=42, force=True)
@@ -1476,9 +1489,11 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         mock_create.return_value = {'name': 'cn', 'uuid': uuids.cn,
                                     'generation': 42}
         self.assertEqual(uuids.root,
-                         self.client._ensure_resource_provider(uuids.root))
+                         self.client._ensure_resource_provider(self.context,
+                                                               uuids.root))
         mock_gpit.assert_called_once_with(uuids.root)
-        mock_create.assert_called_once_with(uuids.root, uuids.root,
+        mock_create.assert_called_once_with(self.context, uuids.root,
+                                            uuids.root,
                                             parent_provider_uuid=None)
         mock_refresh.assert_not_called()
         self.assertEqual([uuids.cn],
@@ -1762,7 +1777,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         resp_mock = mock.Mock(status_code=201)
         self.ks_adap_mock.post.return_value = resp_mock
 
-        self.client._create_resource_provider(uuid, name)
+        self.client._create_resource_provider(self.context, uuid, name)
 
         expected_payload = {
             'uuid': uuid,
@@ -1772,7 +1787,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         expected_url = '/resource_providers'
         self.ks_adap_mock.post.assert_called_once_with(
             expected_url, json=expected_payload, raise_exc=False,
-            microversion='1.14')
+            microversion='1.14',
+            headers={'X-Openstack-Request-Id': self.context.global_id})
 
     def test_create_resource_provider_with_parent(self):
         """Test that when specifying a parent provider UUID, that the
@@ -1785,6 +1801,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.ks_adap_mock.post.return_value = resp_mock
 
         result = self.client._create_resource_provider(
+            self.context,
             uuid,
             name,
             parent_provider_uuid=parent_uuid,
@@ -1804,7 +1821,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         expected_url = '/resource_providers'
         self.ks_adap_mock.post.assert_called_once_with(
             expected_url, json=expected_payload, raise_exc=False,
-            microversion='1.14')
+            microversion='1.14',
+            headers={'X-Openstack-Request-Id': self.context.global_id})
         self.assertEqual(expected_provider_dict, result)
 
     @mock.patch.object(report.LOG, 'info')
@@ -1826,7 +1844,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
 
         get_rp_mock.return_value = mock.sentinel.get_rp
 
-        result = self.client._create_resource_provider(uuid, name)
+        result = self.client._create_resource_provider(self.context, uuid,
+                                                       name)
 
         expected_payload = {
             'uuid': uuid,
@@ -1835,7 +1854,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         expected_url = '/resource_providers'
         self.ks_adap_mock.post.assert_called_once_with(
             expected_url, json=expected_payload, raise_exc=False,
-            microversion='1.14')
+            microversion='1.14',
+            headers={'X-Openstack-Request-Id': self.context.global_id})
         self.assertEqual(mock.sentinel.get_rp, result)
         # The 409 response will produce a message to the info log.
         self.assertTrue(logging_mock.called)
@@ -1852,7 +1872,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
 
         self.assertRaises(
             exception.ResourceProviderCreationFailed,
-            self.client._create_resource_provider, uuids.compute_node, 'foo')
+            self.client._create_resource_provider, self.context,
+            uuids.compute_node, 'foo')
 
     @mock.patch.object(report.LOG, 'error')
     def test_create_resource_provider_error(self, logging_mock):
@@ -1868,7 +1889,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
 
         self.assertRaises(
             exception.ResourceProviderCreationFailed,
-            self.client._create_resource_provider, uuid, name)
+            self.client._create_resource_provider, self.context, uuid, name)
 
         expected_payload = {
             'uuid': uuid,
@@ -1877,7 +1898,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         expected_url = '/resource_providers'
         self.ks_adap_mock.post.assert_called_once_with(
             expected_url, json=expected_payload, raise_exc=False,
-            microversion='1.14')
+            microversion='1.14',
+            headers={'X-Openstack-Request-Id': self.context.global_id})
         # A 503 Service Unavailable should log an error that
         # includes the placement request id and
         # _create_resource_provider() should return None
@@ -2381,7 +2403,8 @@ class TestInventory(SchedulerReportClientTestCase):
     def test_update_compute_node(self, mock_ui, mock_delete, mock_erp):
         cn = self.compute_node
         self.client.update_compute_node(self.context, cn)
-        mock_erp.assert_called_once_with(cn.uuid, cn.hypervisor_hostname)
+        mock_erp.assert_called_once_with(self.context, cn.uuid,
+                                         cn.hypervisor_hostname)
         expected_inv_data = {
             'VCPU': {
                 'total': 8,
@@ -2409,6 +2432,7 @@ class TestInventory(SchedulerReportClientTestCase):
             },
         }
         mock_ui.assert_called_once_with(
+            self.context,
             cn.uuid,
             expected_inv_data,
         )
@@ -2430,7 +2454,8 @@ class TestInventory(SchedulerReportClientTestCase):
         cn.memory_mb = 0
         cn.local_gb = 0
         self.client.update_compute_node(self.context, cn)
-        mock_erp.assert_called_once_with(cn.uuid, cn.hypervisor_hostname)
+        mock_erp.assert_called_once_with(self.context, cn.uuid,
+                                         cn.hypervisor_hostname)
         mock_delete.assert_called_once_with(self.context, cn.uuid)
         self.assertFalse(mock_ui.called)
 
@@ -2755,7 +2780,7 @@ There was a conflict when trying to complete your request.
 
         inv_data = report._compute_node_to_inventory_dict(compute_node)
         result = self.client._update_inventory_attempt(
-            compute_node.uuid, inv_data
+            self.context, compute_node.uuid, inv_data
         )
         self.assertTrue(result)
 
@@ -2831,7 +2856,7 @@ There was a conflict when trying to complete your request.
         # Make a change to trigger the update...
         inv_data['VCPU']['total'] = new_vcpus_total
         result = self.client._update_inventory_attempt(
-            compute_node.uuid, inv_data
+            self.context, compute_node.uuid, inv_data
         )
         self.assertTrue(result)
 
@@ -2917,7 +2942,7 @@ There was a conflict when trying to complete your request.
         }
         inv_data = report._compute_node_to_inventory_dict(compute_node)
         result = self.client._update_inventory_attempt(
-            compute_node.uuid, inv_data
+            self.context, compute_node.uuid, inv_data
         )
         self.assertTrue(result)
         exp_url = '/resource_providers/%s/inventories' % uuid
@@ -2958,14 +2983,14 @@ There was a conflict when trying to complete your request.
 
         inv_data = report._compute_node_to_inventory_dict(compute_node)
         result = self.client._update_inventory_attempt(
-            compute_node.uuid, inv_data
+            self.context, compute_node.uuid, inv_data
         )
         self.assertFalse(result)
 
         # Invalidated the cache
         self.assertFalse(self.client._provider_tree.exists(uuid))
         # Refreshed our resource provider
-        mock_ensure.assert_called_once_with(uuid)
+        mock_ensure.assert_called_once_with(self.context, uuid)
         # Logged the request id in the log message
         self.assertEqual(uuids.request_id,
                          mock_info.call_args[0][1]['placement_req_id'])
@@ -3000,6 +3025,7 @@ There was a conflict when trying to complete your request.
         self.assertRaises(
             exception.InventoryInUse,
             self.client._update_inventory_attempt,
+            self.context,
             compute_node.uuid,
             inv_data,
         )
@@ -3035,7 +3061,7 @@ There was a conflict when trying to complete your request.
 
         inv_data = report._compute_node_to_inventory_dict(compute_node)
         result = self.client._update_inventory_attempt(
-            compute_node.uuid, inv_data
+            self.context, compute_node.uuid, inv_data
         )
         self.assertFalse(result)
 
@@ -3075,7 +3101,7 @@ There was a conflict when trying to complete your request.
 
         inv_data = report._compute_node_to_inventory_dict(compute_node)
         result = self.client._update_inventory_attempt(
-            compute_node.uuid, inv_data
+            self.context, compute_node.uuid, inv_data
         )
         self.assertFalse(result)
 
@@ -3106,7 +3132,7 @@ There was a conflict when trying to complete your request.
             42,
         )
         result = self.client._update_inventory(
-            cn.uuid, mock.sentinel.inv_data
+            self.context, cn.uuid, mock.sentinel.inv_data
         )
         self.assertTrue(result)
 
@@ -3131,7 +3157,7 @@ There was a conflict when trying to complete your request.
             42,
         )
         result = self.client._update_inventory(
-            cn.uuid, mock.sentinel.inv_data
+            self.context, cn.uuid, mock.sentinel.inv_data
         )
         self.assertFalse(result)
 
@@ -3140,9 +3166,9 @@ There was a conflict when trying to complete your request.
 
         # Three attempts to update
         mock_update.assert_has_calls([
-            mock.call(cn.uuid, mock.sentinel.inv_data),
-            mock.call(cn.uuid, mock.sentinel.inv_data),
-            mock.call(cn.uuid, mock.sentinel.inv_data),
+            mock.call(self.context, cn.uuid, mock.sentinel.inv_data),
+            mock.call(self.context, cn.uuid, mock.sentinel.inv_data),
+            mock.call(self.context, cn.uuid, mock.sentinel.inv_data),
         ])
 
         # Slept three times
@@ -3196,6 +3222,7 @@ There was a conflict when trying to complete your request.
             inv_data,
         )
         mock_erp.assert_called_once_with(
+            self.context,
             mock.sentinel.rp_uuid,
             mock.sentinel.rp_name,
             parent_provider_uuid=None,
@@ -3204,6 +3231,7 @@ There was a conflict when trying to complete your request.
         self.assertFalse(mock_erc.called)
         self.assertFalse(mock_gocr.called)
         mock_upd.assert_called_once_with(
+            self.context,
             mock.sentinel.rp_uuid,
             inv_data,
         )
@@ -3232,6 +3260,7 @@ There was a conflict when trying to complete your request.
             inv_data,
         )
         mock_erp.assert_called_once_with(
+            self.context,
             mock.sentinel.rp_uuid,
             mock.sentinel.rp_name,
             parent_provider_uuid=None,
@@ -3299,12 +3328,14 @@ There was a conflict when trying to complete your request.
             inv_data,
         )
         mock_erp.assert_called_once_with(
+            self.context,
             mock.sentinel.rp_uuid,
             mock.sentinel.rp_name,
             parent_provider_uuid=None,
         )
-        mock_erc.assert_called_once_with('CUSTOM_IRON_SILVER')
+        mock_erc.assert_called_once_with(self.context, 'CUSTOM_IRON_SILVER')
         mock_upd.assert_called_once_with(
+            self.context,
             mock.sentinel.rp_uuid,
             inv_data,
         )
@@ -3323,7 +3354,8 @@ There was a conflict when trying to complete your request.
             self.context, uuids.child, 'junior', {},
             parent_provider_uuid=uuids.parent)
         mock_erp.assert_called_once_with(
-            uuids.child, 'junior', parent_provider_uuid=uuids.parent)
+            self.context, uuids.child, 'junior',
+            parent_provider_uuid=uuids.parent)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'put')
@@ -3332,8 +3364,8 @@ There was a conflict when trying to complete your request.
     def test_ensure_resource_class_microversion_failover(self, mock_gocr,
                                                          mock_put):
         mock_put.return_value.status_code = 406
-        self.client._ensure_resource_class('CUSTOM_IRON_SILVER')
-        mock_gocr.assert_called_once_with('CUSTOM_IRON_SILVER')
+        self.client._ensure_resource_class(self.context, 'CUSTOM_IRON_SILVER')
+        mock_gocr.assert_called_once_with(self.context, 'CUSTOM_IRON_SILVER')
 
 
 class TestAllocations(SchedulerReportClientTestCase):
@@ -3644,7 +3676,8 @@ class TestResourceClass(SchedulerReportClientTestCase):
         resp_mock = mock.Mock(status_code=200)
         mock_get.return_value = resp_mock
         rc_name = 'CUSTOM_FOO'
-        result = self.client._get_or_create_resource_class(rc_name)
+        result = self.client._get_or_create_resource_class(self.context,
+                                                           rc_name)
         mock_get.assert_called_once_with(
             '/resource_classes/' + rc_name,
             version="1.2",
@@ -3659,12 +3692,13 @@ class TestResourceClass(SchedulerReportClientTestCase):
         resp_mock = mock.Mock(status_code=404)
         mock_get.return_value = resp_mock
         rc_name = 'CUSTOM_FOO'
-        result = self.client._get_or_create_resource_class(rc_name)
+        result = self.client._get_or_create_resource_class(self.context,
+                                                           rc_name)
         mock_get.assert_called_once_with(
             '/resource_classes/' + rc_name,
             version="1.2",
         )
-        mock_crc.assert_called_once_with(rc_name)
+        mock_crc.assert_called_once_with(self.context, rc_name)
         self.assertEqual(rc_name, result)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -3674,7 +3708,8 @@ class TestResourceClass(SchedulerReportClientTestCase):
         resp_mock = mock.Mock(status_code=500, text='server error')
         mock_get.return_value = resp_mock
         rc_name = 'CUSTOM_FOO'
-        result = self.client._get_or_create_resource_class(rc_name)
+        result = self.client._get_or_create_resource_class(self.context,
+                                                           rc_name)
         mock_get.assert_called_once_with(
             '/resource_classes/' + rc_name,
             version="1.2",
@@ -3687,11 +3722,12 @@ class TestResourceClass(SchedulerReportClientTestCase):
         resp_mock = mock.Mock(status_code=201)
         mock_post.return_value = resp_mock
         rc_name = 'CUSTOM_FOO'
-        result = self.client._create_resource_class(rc_name)
+        result = self.client._create_resource_class(self.context, rc_name)
         mock_post.assert_called_once_with(
             '/resource_classes',
             {'name': rc_name},
             version="1.2",
+            global_request_id=self.context.global_id
         )
         self.assertIsNone(result)
 
@@ -3701,11 +3737,12 @@ class TestResourceClass(SchedulerReportClientTestCase):
         resp_mock = mock.Mock(status_code=409)
         mock_post.return_value = resp_mock
         rc_name = 'CUSTOM_FOO'
-        result = self.client._create_resource_class(rc_name)
+        result = self.client._create_resource_class(self.context, rc_name)
         mock_post.assert_called_once_with(
             '/resource_classes',
             {'name': rc_name},
             version="1.2",
+            global_request_id=self.context.global_id
         )
         self.assertIsNone(result)
         self.assertIn('Another thread already', mock_log.call_args[0][0])

@@ -4030,7 +4030,7 @@ class ComputeManager(manager.Manager):
                  instance=instance)
         # TODO(cdent): Should we be doing anything with return values here?
         self.reportclient.set_and_clear_allocations(
-            cn_uuid, instance.uuid, orig_alloc, instance.project_id,
+            context, cn_uuid, instance.uuid, orig_alloc, instance.project_id,
             instance.user_id, consumer_to_clear=migration.uuid)
         return True
 

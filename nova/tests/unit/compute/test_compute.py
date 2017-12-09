@@ -6202,7 +6202,7 @@ class ComputeTestCase(BaseTestCase,
                               migrate_data=migrate_data)
             mock_setup.assert_called_once_with(c, instance, self.compute.host)
             mock_client.set_and_clear_allocations.assert_called_once_with(
-                mock.sentinel.source, instance.uuid,
+                c, mock.sentinel.source, instance.uuid,
                 mock.sentinel.allocs,
                 instance.project_id, instance.user_id,
                 consumer_to_clear=migration.uuid)
