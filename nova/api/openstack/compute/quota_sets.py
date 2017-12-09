@@ -81,6 +81,22 @@ class QuotaSetsController(wsgi.Controller):
             values = QUOTAS.get_project_quotas(context, id, usages=usages)
 
         if usages:
+            # NOTE(melwitt): For the detailed quota view with usages, the API
+            # returns a response in the format:
+            # {
+            #     "quota_set": {
+            #         "cores": {
+            #             "in_use": 0,
+            #             "limit": 20,
+            #             "reserved": 0
+            #         },
+            # ...
+            # We've re-architected quotas to eliminate reservations, so we no
+            # longer have a 'reserved' key returned from get_*_quotas, so set
+            # it here to satisfy the REST API response contract.
+            reserved = QUOTAS.get_reserved()
+            for v in values.values():
+                v['reserved'] = reserved
             return values
         else:
             return {k: v['limit'] for k, v in values.items()}

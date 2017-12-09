@@ -3571,16 +3571,6 @@ def quota_destroy_all_by_project_and_user(context, project_id, user_id):
         filter_by(user_id=user_id).\
         soft_delete(synchronize_session=False)
 
-    model_query(context, models.QuotaUsage, read_deleted="no").\
-        filter_by(project_id=project_id).\
-        filter_by(user_id=user_id).\
-        soft_delete(synchronize_session=False)
-
-    model_query(context, models.Reservation, read_deleted="no").\
-        filter_by(project_id=project_id).\
-        filter_by(user_id=user_id).\
-        soft_delete(synchronize_session=False)
-
 
 @pick_context_manager_writer
 def quota_destroy_all_by_project(context, project_id):
@@ -3589,14 +3579,6 @@ def quota_destroy_all_by_project(context, project_id):
         soft_delete(synchronize_session=False)
 
     model_query(context, models.ProjectUserQuota, read_deleted="no").\
-        filter_by(project_id=project_id).\
-        soft_delete(synchronize_session=False)
-
-    model_query(context, models.QuotaUsage, read_deleted="no").\
-        filter_by(project_id=project_id).\
-        soft_delete(synchronize_session=False)
-
-    model_query(context, models.Reservation, read_deleted="no").\
         filter_by(project_id=project_id).\
         soft_delete(synchronize_session=False)
 
