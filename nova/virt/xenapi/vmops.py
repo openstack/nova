@@ -2530,7 +2530,8 @@ class VMOps(object):
                         block_migration, migrate_data)
         except Exception:
             with excutils.save_and_reraise_exception():
-                recover_method(context, instance, destination_hostname)
+                recover_method(context, instance, destination_hostname,
+                               migrate_data)
 
     def post_live_migration(self, context, instance, migrate_data=None):
         if migrate_data is not None:
