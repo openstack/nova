@@ -87,6 +87,58 @@ class _TestSelectionObject(object):
         self.assertEqual(expected_alloc, dest.allocation_request)
         self.assertIsNone(dest.allocation_request_version)
 
+    def test_selection_obj_to_dict(self):
+        """Tests that to_dict() method properly converts a Selection object to
+        the corresponding dict.
+        """
+        fake_numa_limit = objects.numa.NUMATopologyLimits(
+                cpu_allocation_ratio=1.0, ram_allocation_ratio=1.0)
+        fake_limit = {"memory_mb": 1024, "disk_gb": 100, "vcpus": 2,
+                "numa_topology": fake_numa_limit}
+        fake_limit_obj = objects.SchedulerLimits.from_dict(fake_limit)
+        sel_obj = objects.Selection(service_host="fakehost",
+                nodename="fakenode", compute_node_uuid=uuids.host,
+                cell_uuid=uuids.cell, limits=fake_limit_obj,
+                allocation_request="fake", allocation_request_version="99.9")
+        expected = {
+                'host': 'fakehost',
+                'nodename': 'fakenode',
+                'limits': {
+                    'disk_gb': 100,
+                    'memory_mb': 1024,
+                    'numa_topology': {
+                    'nova_object.changes': [
+                            'cpu_allocation_ratio',
+                            'ram_allocation_ratio'],
+                    'nova_object.data': {
+                        'cpu_allocation_ratio': 1.0,
+                        'ram_allocation_ratio': 1.0},
+                    'nova_object.name': 'NUMATopologyLimits',
+                    'nova_object.namespace': 'nova',
+                    'nova_object.version': '1.0'}}}
+        result = sel_obj.to_dict()
+        self.assertDictEqual(expected, result)
+
+    def test_selection_obj_to_dict_no_numa(self):
+        """Tests that to_dict() method properly converts a
+        Selection object to the corresponding dict when the numa_topology field
+        is None.
+        """
+        fake_limit = {"memory_mb": 1024, "disk_gb": 100, "vcpus": 2,
+                "numa_topology": None}
+        fake_limit_obj = objects.SchedulerLimits.from_dict(fake_limit)
+        sel_obj = objects.Selection(service_host="fakehost",
+                nodename="fakenode", compute_node_uuid=uuids.host,
+                cell_uuid=uuids.cell, limits=fake_limit_obj,
+                allocation_request="fake", allocation_request_version="99.9")
+        expected = {"host": "fakehost",
+                "nodename": "fakenode",
+                "limits": {
+                    "disk_gb": 100,
+                    "memory_mb": 1024}}
+        result = sel_obj.to_dict()
+        self.assertDictEqual(expected, result)
+
 
 class TestSelectionObject(test_objects._LocalTest,
                             _TestSelectionObject):

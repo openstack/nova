@@ -45,26 +45,6 @@ CONF = nova.conf.CONF
 QUOTAS = quota.QUOTAS
 
 
-def _selection_obj_to_dict(selection):
-    if selection.limits is not None:
-        limits = selection.limits.to_dict()
-    else:
-        limits = {}
-    # The NUMATopologyFilter can set 'numa_topology' in the limits dict
-    # to a NUMATopologyLimits object which we need to convert to a primitive
-    # before this hits jsonutils.to_primitive(). We only check for that known
-    # case specifically as we don't care about handling out of tree filters
-    # or drivers injecting non-serializable things in the limits dict.
-    numa_limit = limits.get("numa_topology")
-    if numa_limit is not None:
-        limits['numa_topology'] = limits['numa_topology'].obj_to_primitive()
-    return {
-        'host': selection.service_host,
-        'nodename': selection.nodename,
-        'limits': limits,
-    }
-
-
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
 
@@ -154,8 +134,7 @@ class SchedulerManager(manager.Manager):
         # involves an RPC change. So convert the list of lists of Selection
         # objects to a list of host state dicts, which is what the calling
         # method expects.
-        selected = [sel[0] for sel in selections]
-        selection_dicts = [_selection_obj_to_dict(claim) for claim in selected]
+        selection_dicts = [sel[0].to_dict() for sel in selections]
         return jsonutils.to_primitive(selection_dicts)
 
     def update_aggregates(self, ctxt, aggregates):
