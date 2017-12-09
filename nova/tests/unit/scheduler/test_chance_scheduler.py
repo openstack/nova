@@ -100,7 +100,7 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         expected = attempts
         self.flags(max_attempts=attempts, group="scheduler")
         selected_hosts = self.driver._schedule(self.context, "compute",
-                spec_obj, [spec_obj.instance_uuid])
+                spec_obj, [spec_obj.instance_uuid], return_alternates=True)
         self.assertEqual(1, len(selected_hosts))
         for host_list in selected_hosts:
             self.assertEqual(expected, len(host_list))
@@ -112,7 +112,18 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         expected = len(hosts)
         self.flags(max_attempts=attempts, group="scheduler")
         selected_hosts = self.driver._schedule(self.context, "compute",
-                spec_obj, [spec_obj.instance_uuid])
+                spec_obj, [spec_obj.instance_uuid], return_alternates=True)
+        self.assertEqual(1, len(selected_hosts))
+        for host_list in selected_hosts:
+            self.assertEqual(expected, len(host_list))
+
+        # Now verify that if we pass False for return_alternates, that we only
+        # get one host in the host_list.
+        attempts = 5
+        expected = 1
+        self.flags(max_attempts=attempts, group="scheduler")
+        selected_hosts = self.driver._schedule(self.context, "compute",
+                spec_obj, [spec_obj.instance_uuid], return_alternates=False)
         self.assertEqual(1, len(selected_hosts))
         for host_list in selected_hosts:
             self.assertEqual(expected, len(host_list))
@@ -131,7 +142,7 @@ class ChanceSchedulerTestCase(test_scheduler.SchedulerTestCase):
         attempts = 2
         self.flags(max_attempts=attempts, group="scheduler")
         selected_hosts = self.driver._schedule(self.context, "compute",
-                spec_obj, instance_uuids)
+                spec_obj, instance_uuids, return_alternates=True)
         self.assertEqual(num_instances, len(selected_hosts))
         for host_list in selected_hosts:
             self.assertEqual(attempts, len(host_list))

@@ -283,7 +283,7 @@ class CachingSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 instance_group=None)
 
         dests = self.driver._schedule(self.context, spec_obj,
-                instance_uuids, None, None)
+                instance_uuids, None, None, return_alternates=True)
         # There should be max_attempts hosts per instance (1 selected, 2 alts)
         self.assertEqual(total_returned, len(dests[0]))
         self.assertEqual(total_returned, len(dests[1]))

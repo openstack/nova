@@ -146,10 +146,11 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         self.assertNotIn('forced_host', filt_props)
         self.assertNotIn('forced_node', filt_props)
 
-    def _test_populate_filter_props(self, host_state_obj=True,
+    def _test_populate_filter_props(self, selection_obj=True,
                                     with_retry=True,
                                     force_hosts=None,
-                                    force_nodes=None):
+                                    force_nodes=None,
+                                    no_limits=None):
         if force_hosts is None:
             force_hosts = []
         if force_nodes is None:
@@ -168,30 +169,33 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         else:
             filter_properties = dict()
 
-        if host_state_obj:
-            class host_state(object):
-                host = 'fake-host'
-                nodename = 'fake-node'
-                limits = 'fake-limits'
+        if no_limits:
+            fake_limits = None
         else:
-            host_state = dict(host='fake-host',
-                              nodename='fake-node',
-                              limits='fake-limits')
+            fake_limits = objects.SchedulerLimits(vcpu=1, disk_gb=2,
+                    memory_mb=3, numa_topology=None)
+        selection = objects.Selection(service_host="fake-host",
+                nodename="fake-node", limits=fake_limits)
+        if not selection_obj:
+            selection = selection.to_dict()
+            fake_limits = fake_limits.to_dict()
 
         scheduler_utils.populate_filter_properties(filter_properties,
-                                                   host_state)
+                                                   selection)
 
         enable_retry_force_hosts = not force_hosts or len(force_hosts) > 1
         enable_retry_force_nodes = not force_nodes or len(force_nodes) > 1
         if with_retry or enable_retry_force_hosts or enable_retry_force_nodes:
             # So we can check for 2 hosts
             scheduler_utils.populate_filter_properties(filter_properties,
-                                                       host_state)
+                                                       selection)
 
         if force_hosts:
             expected_limits = None
+        elif no_limits:
+            expected_limits = {}
         else:
-            expected_limits = 'fake-limits'
+            expected_limits = fake_limits
         self.assertEqual(expected_limits,
                          filter_properties.get('limits'))
 
@@ -207,7 +211,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         self._test_populate_filter_props()
 
     def test_populate_filter_props_host_dict(self):
-        self._test_populate_filter_props(host_state_obj=False)
+        self._test_populate_filter_props(selection_obj=False)
 
     def test_populate_filter_props_no_retry(self):
         self._test_populate_filter_props(with_retry=False)
@@ -225,6 +229,9 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
     def test_populate_filter_props_multi_force_nodes_with_retry(self):
         self._test_populate_filter_props(force_nodes=['force-node1',
                                                       'force-node2'])
+
+    def test_populate_filter_props_no_limits(self):
+        self._test_populate_filter_props(no_limits=True)
 
     def test_populate_retry_exception_at_max_attempts(self):
         self.flags(max_attempts=2, group='scheduler')

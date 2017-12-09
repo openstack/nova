@@ -483,20 +483,21 @@ def build_filter_properties(scheduler_hints, forced_host,
     return filter_properties
 
 
-def populate_filter_properties(filter_properties, host_state):
+def populate_filter_properties(filter_properties, selection):
     """Add additional information to the filter properties after a node has
     been selected by the scheduling process.
     """
-    if isinstance(host_state, dict):
+    if isinstance(selection, dict):
         # TODO(edleafe): remove support for dicts
-        host = host_state['host']
-        nodename = host_state['nodename']
-        limits = host_state['limits']
+        host = selection['host']
+        nodename = selection['nodename']
+        limits = selection['limits']
     else:
-        host = host_state.host
-        nodename = host_state.nodename
-        limits = host_state.limits
-
+        host = selection.service_host
+        nodename = selection.nodename
+        limits = selection.limits if "limits" in selection else {}
+        # 'limits' can also be None, so handle that as an empty dict
+        limits = limits or {}
     # Adds a retry entry for the selected compute host and node:
     _add_retry_host(filter_properties, host, nodename)
 

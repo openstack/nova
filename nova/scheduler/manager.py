@@ -48,7 +48,7 @@ QUOTAS = quota.QUOTAS
 class SchedulerManager(manager.Manager):
     """Chooses a host to run instances on."""
 
-    target = messaging.Target(version='4.4')
+    target = messaging.Target(version='4.5')
 
     _sentinel = object()
 
@@ -82,13 +82,30 @@ class SchedulerManager(manager.Manager):
         self.driver.run_periodic_tasks(context)
 
     @messaging.expected_exceptions(exception.NoValidHost)
-    def select_destinations(self, ctxt,
-                            request_spec=None, filter_properties=None,
-                            spec_obj=_sentinel, instance_uuids=None):
+    def select_destinations(self, ctxt, request_spec=None,
+            filter_properties=None, spec_obj=_sentinel, instance_uuids=None,
+            return_objects=False, return_alternates=False):
         """Returns destinations(s) best suited for this RequestSpec.
 
-        The result should be a list of dicts with 'host', 'nodename' and
-        'limits' as keys.
+        Starting in Queens, this method returns a list of lists of Selection
+        objects, with one list for each requested instance. Each instance's
+        list will have its first element be the Selection object representing
+        the chosen host for the instance, and if return_alternates is True,
+        zero or more alternate objects that could also satisfy the request. The
+        number of alternates is determined by the configuration option
+        `CONF.scheduler.max_attempts`.
+
+        The ability of a calling method to handle this format of returned
+        destinations is indicated by a True value in the parameter
+        `return_objects`. However, there may still be some older conductors in
+        a deployment that have not been updated to Queens, and in that case
+        return_objects will be False, and the result will be a list of dicts
+        with 'host', 'nodename' and 'limits' as keys. When return_objects is
+        False, the value of return_alternates has no effect. The reason there
+        are two kwarg parameters return_objects and return_alternates is so we
+        can differentiate between callers that understand the Selection object
+        format but *don't* want to get alternate hosts, as is the case with the
+        conductors that handle certain move operations.
         """
         LOG.debug("Starting to schedule for instances: %s", instance_uuids)
 
@@ -127,15 +144,22 @@ class SchedulerManager(manager.Manager):
                         rp_uuid = rr['resource_provider']['uuid']
                         alloc_reqs_by_rp_uuid[rp_uuid].append(ar)
 
+        # Only return alteranates if both return_objects and return_alternates
+        # are True.
+        return_alternates = return_alternates and return_objects
         selections = self.driver.select_destinations(ctxt, spec_obj,
                 instance_uuids, alloc_reqs_by_rp_uuid, provider_summaries,
-                allocation_request_version)
-        # We don't want to change the return value in this patch, as it
-        # involves an RPC change. So convert the list of lists of Selection
-        # objects to a list of host state dicts, which is what the calling
-        # method expects.
-        selection_dicts = [sel[0].to_dict() for sel in selections]
-        return jsonutils.to_primitive(selection_dicts)
+                allocation_request_version, return_alternates)
+        # If `return_objects` is False, we need to convert the selections to
+        # the older format, which is a list of host state dicts.
+        # NOTE(edleafe): since the RPC calling side is not yet updated in this
+        # patch, return_objects will always be False. This prevents sending the
+        # new Selection objects back until a later patch where the calling RPC
+        # will be changed.
+        if not return_objects:
+            selection_dicts = [sel[0].to_dict() for sel in selections]
+            return jsonutils.to_primitive(selection_dicts)
+        return selections
 
     def update_aggregates(self, ctxt, aggregates):
         """Updates HostManager internal aggregates information.

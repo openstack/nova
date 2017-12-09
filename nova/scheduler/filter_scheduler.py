@@ -47,9 +47,9 @@ class FilterScheduler(driver.Scheduler):
 
     def select_destinations(self, context, spec_obj, instance_uuids,
             alloc_reqs_by_rp_uuid, provider_summaries,
-            allocation_request_version=None):
+            allocation_request_version=None, return_alternates=False):
         """Returns a list of lists of Selection objects, which represent the
-        selected hosts and alternates for each instance.
+        hosts and (optionally) alternates for each instance.
 
         :param context: The RequestContext object
         :param spec_obj: The RequestSpec object
@@ -76,6 +76,11 @@ class FilterScheduler(driver.Scheduler):
                                    resources.
         :param allocation_request_version: The microversion used to request the
                                            allocations.
+        :param return_alternates: When True, zero or more alternate hosts are
+                                  returned with each selected host. The number
+                                  of alternates is determined by the
+                                  configuration option
+                                  `CONF.scheduler.max_attempts`.
         """
         self.notifier.info(
             context, 'scheduler.select_destinations.start',
@@ -83,7 +88,7 @@ class FilterScheduler(driver.Scheduler):
 
         host_selections = self._schedule(context, spec_obj, instance_uuids,
                 alloc_reqs_by_rp_uuid, provider_summaries,
-                allocation_request_version)
+                allocation_request_version, return_alternates)
         self.notifier.info(
             context, 'scheduler.select_destinations.end',
             dict(request_spec=spec_obj.to_legacy_request_spec_dict()))
@@ -91,7 +96,7 @@ class FilterScheduler(driver.Scheduler):
 
     def _schedule(self, context, spec_obj, instance_uuids,
             alloc_reqs_by_rp_uuid, provider_summaries,
-            allocation_request_version=None):
+            allocation_request_version=None, return_alternates=False):
         """Returns a list of lists of Selection objects.
 
         :param context: The RequestContext object
@@ -118,6 +123,11 @@ class FilterScheduler(driver.Scheduler):
                                    resources.
         :param allocation_request_version: The microversion used to request the
                                            allocations.
+        :param return_alternates: When True, zero or more alternate hosts are
+                                  returned with each selected host. The number
+                                  of alternates is determined by the
+                                  configuration option
+                                  `CONF.scheduler.max_attempts`.
         """
         elevated = context.elevated()
 
@@ -148,7 +158,7 @@ class FilterScheduler(driver.Scheduler):
         # is based on CONF.scheduler.max_attempts; note that if there are not
         # enough filtered hosts to provide the full number of alternates, the
         # list of hosts may be shorter than this amount.
-        num_alts = CONF.scheduler.max_attempts
+        num_alts = CONF.scheduler.max_attempts if return_alternates else 0
 
         if (instance_uuids is None or
                 not self.USES_ALLOCATION_CANDIDATES or
@@ -162,8 +172,6 @@ class FilterScheduler(driver.Scheduler):
             # is None, that indicates an older conductor, so we need to return
             # the objects without alternates. They will be converted back to
             # the older dict format representing HostState objects.
-            if instance_uuids is None:
-                num_alts = 0
             return self._legacy_find_hosts(num_instances, spec_obj, hosts,
                     num_alts)
 

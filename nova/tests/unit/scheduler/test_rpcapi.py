@@ -20,6 +20,7 @@ import mock
 from oslo_config import cfg
 
 from nova import context
+from nova import exception as exc
 from nova import objects
 from nova.scheduler import rpcapi as scheduler_rpcapi
 from nova import test
@@ -76,9 +77,19 @@ class SchedulerRpcAPITestCase(test.NoDBTestCase):
         fake_spec = objects.RequestSpec()
         self._test_scheduler_api('select_destinations', rpc_method='call',
                 expected_args={'spec_obj': fake_spec,
-                               'instance_uuids': [uuids.instance]},
+                'instance_uuids': [uuids.instance], 'return_objects': True,
+                'return_alternates': True},
                 spec_obj=fake_spec, instance_uuids=[uuids.instance],
-                version='4.4')
+                return_objects=True, return_alternates=True, version='4.5')
+
+    def test_select_destinations_4_4(self):
+        self.flags(scheduler='4.4', group='upgrade_levels')
+        fake_spec = objects.RequestSpec()
+        self._test_scheduler_api('select_destinations', rpc_method='call',
+                expected_args={'spec_obj': fake_spec,
+                'instance_uuids': [uuids.instance]}, spec_obj=fake_spec,
+                instance_uuids=[uuids.instance], return_objects=False,
+                return_alternates=False, version='4.4')
 
     def test_select_destinations_4_3(self):
         self.flags(scheduler='4.3', group='upgrade_levels')
@@ -86,7 +97,22 @@ class SchedulerRpcAPITestCase(test.NoDBTestCase):
         self._test_scheduler_api('select_destinations', rpc_method='call',
                 expected_args={'spec_obj': fake_spec},
                 spec_obj=fake_spec, instance_uuids=[uuids.instance],
-                version='4.3')
+                return_alternates=False, version='4.3')
+
+    def test_select_destinations_old_with_new_params(self):
+        self.flags(scheduler='4.4', group='upgrade_levels')
+        fake_spec = objects.RequestSpec()
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        rpcapi = scheduler_rpcapi.SchedulerAPI()
+        self.assertRaises(exc.SelectionObjectsWithOldRPCVersionNotSupported,
+                rpcapi.select_destinations, ctxt, fake_spec, ['fake_uuids'],
+                return_objects=True, return_alternates=True)
+        self.assertRaises(exc.SelectionObjectsWithOldRPCVersionNotSupported,
+                rpcapi.select_destinations, ctxt, fake_spec, ['fake_uuids'],
+                return_objects=False, return_alternates=True)
+        self.assertRaises(exc.SelectionObjectsWithOldRPCVersionNotSupported,
+                rpcapi.select_destinations, ctxt, fake_spec, ['fake_uuids'],
+                return_objects=True, return_alternates=False)
 
     @mock.patch.object(objects.RequestSpec, 'to_legacy_filter_properties_dict')
     @mock.patch.object(objects.RequestSpec, 'to_legacy_request_spec_dict')

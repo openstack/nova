@@ -51,7 +51,8 @@ class ChanceScheduler(driver.Scheduler):
         hosts = [host for host in hosts if host not in ignore_hosts]
         return hosts
 
-    def _schedule(self, context, topic, spec_obj, instance_uuids):
+    def _schedule(self, context, topic, spec_obj, instance_uuids,
+            return_alternates=False):
         """Picks a host that is up at random."""
 
         elevated = context.elevated()
@@ -87,7 +88,10 @@ class ChanceScheduler(driver.Scheduler):
 
         # We can't return dupes as alternates, since alternates are used when
         # building to the selected host fails.
-        alts_per_instance = min(len(hosts), CONF.scheduler.max_attempts)
+        if return_alternates:
+            alts_per_instance = min(len(hosts), CONF.scheduler.max_attempts)
+        else:
+            alts_per_instance = 0
         for sel_host in selected_hosts:
             selection = objects.Selection.from_host_state(sel_host)
             sel_plus_alts = [selection]
@@ -105,8 +109,10 @@ class ChanceScheduler(driver.Scheduler):
 
     def select_destinations(self, context, spec_obj, instance_uuids,
             alloc_reqs_by_rp_uuid, provider_summaries,
-            allocation_request_version=None):
-        """Selects random destinations. Returns a list of HostState objects."""
+            allocation_request_version=None, return_alternates=False):
+        """Selects random destinations. Returns a list of list of Selection
+        objects.
+        """
         num_instances = spec_obj.num_instances
         # TODO(danms): This needs to be extended to support multiple cells
         # and limiting the destination scope to a single requested cell

@@ -22,15 +22,24 @@ class SchedulerQueryClient(object):
     def __init__(self):
         self.scheduler_rpcapi = scheduler_rpcapi.SchedulerAPI()
 
-    def select_destinations(self, context, spec_obj, instance_uuids):
+    def select_destinations(self, context, spec_obj, instance_uuids,
+            return_objects=False, return_alternates=False):
         """Returns destinations(s) best suited for this request_spec and
         filter_properties.
 
-        The result should be a list of dicts with 'host', 'nodename' and
-        'limits' as keys.
+        When return_objects is False, the result will be the "old-style" list
+        of dicts with 'host', 'nodename' and 'limits' as keys. The value of
+        return_alternates is ignored.
+
+        When return_objects is True, the result will be a list of lists of
+        Selection objects, with one list per instance. Each instance's list
+        will contain a Selection representing the selected (and claimed) host,
+        and, if return_alternates is True, zero or more Selection objects that
+        represent alternate hosts. The number of alternates returned depends on
+        the configuration setting `CONF.scheduler.max_attempts`.
         """
         return self.scheduler_rpcapi.select_destinations(context, spec_obj,
-                instance_uuids)
+                instance_uuids, return_objects, return_alternates)
 
     def update_aggregates(self, context, aggregates):
         """Updates HostManager internal aggregates information.
