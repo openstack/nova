@@ -1499,18 +1499,11 @@ class CellsBroadcastMethodsTestCase(test.NoDBTestCase):
         fake_instance = objects.Instance(**fake_attrs)
         expected_cell_name = 'api-cell!child-cell2!grandchild-cell1'
 
-        def fake_save(instance):
-            self.assertEqual(fake_uuid, instance.uuid)
-            self.assertEqual(expected_cell_name, instance.cell_name)
-            self.assertEqual(fake_info_cache, instance.info_cache)
-            self.assertEqual(fake_sys_metadata, instance.system_metadata)
-
         @mock.patch.object(objects.Instance, 'save')
         @mock.patch.object(objects.Instance, 'create')
-        def do_test(mock_create, mock_save):
-            if exists:
-                mock_save.side_effect = fake_save
-            else:
+        @mock.patch('nova.utils.get_obj_repr_unicode')
+        def do_test(mock_goru, mock_create, mock_save):
+            if not exists:
                 error = exception.InstanceNotFound(instance_id=fake_uuid)
                 mock_save.side_effect = error
 
@@ -1520,6 +1513,13 @@ class CellsBroadcastMethodsTestCase(test.NoDBTestCase):
                 mock_save.assert_called_once_with(expected_vm_state=None,
                                                   expected_task_state=None)
                 self.assertFalse(mock_create.called)
+
+                instance = mock_goru.call_args_list[0][0][0]
+                self.assertEqual(fake_uuid, instance.uuid)
+                self.assertEqual(expected_cell_name, instance.cell_name)
+                self.assertEqual(fake_info_cache.instance_uuid,
+                                 instance.info_cache.instance_uuid)
+                self.assertEqual(fake_sys_metadata, instance.system_metadata)
             else:
                 mock_save.assert_called_once_with(expected_vm_state=None,
                                                   expected_task_state=None)
