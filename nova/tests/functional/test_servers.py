@@ -988,11 +988,16 @@ class ServerTestV220(ServersTestBase):
         server_id = found_server['id']
 
         # Test attach volume
-        with test.nested(mock.patch.object(compute_api.API,
+        with test.nested(mock.patch.object(volume.cinder,
+                                       'is_microversion_supported'),
+                         mock.patch.object(compute_api.API,
                                        '_check_attach_and_reserve_volume'),
                          mock.patch.object(rpcapi.ComputeAPI,
-                                       'attach_volume')) as (mock_reserve,
+                                       'attach_volume')) as (mock_cinder_mv,
+                                                             mock_reserve,
                                                              mock_attach):
+            mock_cinder_mv.side_effect = \
+                exception.CinderAPIVersionNotAvailable(version='3.44')
             volume_attachment = {"volumeAttachment": {"volumeId":
                                        "5d721593-f033-4f6d-ab6f-b5b067e61bc4"}}
             self.api.api_post(
@@ -1028,10 +1033,15 @@ class ServerTestV220(ServersTestBase):
         server_id = found_server['id']
 
         # Test attach volume
-        with test.nested(mock.patch.object(compute_api.API,
+        with test.nested(mock.patch.object(volume.cinder,
+                                       'is_microversion_supported'),
+                         mock.patch.object(compute_api.API,
                                        '_check_attach_and_reserve_volume'),
                          mock.patch.object(volume.cinder.API,
-                                       'attach')) as (mock_reserve, mock_vol):
+                                       'attach')) as (mock_cinder_mv,
+                                                      mock_reserve, mock_vol):
+            mock_cinder_mv.side_effect = \
+                exception.CinderAPIVersionNotAvailable(version='3.44')
             volume_attachment = {"volumeAttachment": {"volumeId":
                                        "5d721593-f033-4f6d-ab6f-b5b067e61bc4"}}
             attach_response = self.api.api_post(
@@ -1052,6 +1062,58 @@ class ServerTestV220(ServersTestBase):
                          ) as (mock_check, mock_get_bdms, mock_clean_vols):
 
             mock_get_bdms.return_value = self._get_fake_bdms(self.ctxt)
+            attachment_id = mock_get_bdms.return_value[0]['volume_id']
+            self.api.api_delete('/servers/%s/os-volume_attachments/%s' %
+                            (server_id, attachment_id))
+            self.assertTrue(mock_check.called)
+            self.assertTrue(mock_clean_vols.called)
+
+        self._delete_server(server_id)
+
+    def test_attach_detach_vol_to_shelved_offloaded_server_new_flow(self):
+        self.flags(shelved_offload_time=0)
+        found_server = self._shelve_server()
+        self.assertEqual('SHELVED_OFFLOADED', found_server['status'])
+        server_id = found_server['id']
+        fake_bdms = self._get_fake_bdms(self.ctxt)
+
+        # Test attach volume
+        self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
+        with test.nested(mock.patch.object(volume.cinder,
+                                       'is_microversion_supported'),
+                         mock.patch.object(compute_api.API,
+                            '_check_volume_already_attached_to_instance'),
+                         mock.patch.object(volume.cinder.API,
+                                        'check_availability_zone'),
+                         mock.patch.object(volume.cinder.API,
+                                        'attachment_create'),
+                         mock.patch.object(volume.cinder.API,
+                                        'attachment_complete')
+                         ) as (mock_cinder_mv, mock_check_vol_attached,
+                               mock_check_av_zone, mock_attach_create,
+                               mock_attachment_complete):
+            mock_attach_create.return_value = {'id': 'fake_id'}
+            volume_attachment = {"volumeAttachment": {"volumeId":
+                                       "5d721593-f033-4f6d-ab6f-b5b067e61bc4"}}
+            attach_response = self.api.api_post(
+                             '/servers/%s/os-volume_attachments' % (server_id),
+                             volume_attachment).body['volumeAttachment']
+            self.assertTrue(mock_attach_create.called)
+            mock_attachment_complete.assert_called_once_with(
+                mock.ANY, 'fake_id')
+            self.assertIsNone(attach_response['device'])
+
+        # Test detach volume
+        self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
+        with test.nested(mock.patch.object(volume.cinder.API,
+                                           'begin_detaching'),
+                         mock.patch.object(objects.BlockDeviceMappingList,
+                                           'get_by_instance_uuid'),
+                         mock.patch.object(compute_api.API,
+                                           '_local_cleanup_bdm_volumes')
+                         ) as (mock_check, mock_get_bdms, mock_clean_vols):
+
+            mock_get_bdms.return_value = fake_bdms
             attachment_id = mock_get_bdms.return_value[0]['volume_id']
             self.api.api_delete('/servers/%s/os-volume_attachments/%s' %
                             (server_id, attachment_id))
@@ -1230,7 +1292,7 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
         different image than what is in the root disk of the root volume
         will result in a 400 BadRequest error.
         """
-        self.useFixture(nova_fixtures.CinderFixture(self))
+        self.useFixture(nova_fixtures.CinderFixtureNewAttachFlow(self))
         # First create our server as normal.
         server_req_body = {
             # There is no imageRef because this is boot from volume.
@@ -1242,7 +1304,8 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
                 'networks': 'none',
                 'block_device_mapping_v2': [{
                     'boot_index': 0,
-                    'uuid': nova_fixtures.CinderFixture.IMAGE_BACKED_VOL,
+                    'uuid':
+                    nova_fixtures.CinderFixtureNewAttachFlow.IMAGE_BACKED_VOL,
                     'source_type': 'volume',
                     'destination_type': 'volume'
                 }]

@@ -14,6 +14,7 @@ import time
 
 import mock
 
+from nova.compute import api as compute_api
 from nova import context
 from nova import exception
 from nova.tests import fixtures
@@ -22,6 +23,9 @@ from nova.tests.functional.notification_sample_tests \
     import notification_sample_base
 from nova.tests.unit import fake_notifier
 from nova.virt import fake
+
+COMPUTE_VERSION_OLD_ATTACH_FLOW = \
+    compute_api.CINDER_V3_ATTACH_MIN_COMPUTE_VERSION - 1
 
 
 class TestInstanceNotificationSampleWithMultipleCompute(
@@ -34,7 +38,7 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         super(TestInstanceNotificationSampleWithMultipleCompute, self).setUp()
         self.neutron = fixtures.NeutronFixture(self)
         self.useFixture(self.neutron)
-        self.cinder = fixtures.CinderFixture(self)
+        self.cinder = fixtures.CinderFixtureNewAttachFlow(self)
         self.useFixture(self.cinder)
         self.useFixture(fixtures.AllServicesCurrent())
 
@@ -177,6 +181,26 @@ class TestInstanceNotificationSampleWithMultipleCompute(
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[5])
 
 
+class TestInstanceNotificationSampleWithMultipleComputeOldAttachFlow(
+        TestInstanceNotificationSampleWithMultipleCompute):
+
+    def setUp(self):
+        self.flags(compute_driver='fake.FakeLiveMigrateDriver')
+        self.flags(use_neutron=True)
+        self.flags(bdms_in_notifications='True', group='notifications')
+        super(TestInstanceNotificationSampleWithMultipleCompute, self).setUp()
+        self.neutron = fixtures.NeutronFixture(self)
+        self.useFixture(self.neutron)
+        self.cinder = fixtures.CinderFixture(self)
+        self.useFixture(self.cinder)
+
+        patcher = self.mock_min_service_version = \
+            mock.patch('nova.objects.Service.get_minimum_version',
+                       return_value=COMPUTE_VERSION_OLD_ATTACH_FLOW)
+        self.mock_min_service_version = patcher.start()
+        self.addCleanup(patcher.stop)
+
+
 class TestInstanceNotificationSample(
         notification_sample_base.NotificationSampleTestBase):
 
@@ -186,7 +210,7 @@ class TestInstanceNotificationSample(
         super(TestInstanceNotificationSample, self).setUp()
         self.neutron = fixtures.NeutronFixture(self)
         self.useFixture(self.neutron)
-        self.cinder = fixtures.CinderFixture(self)
+        self.cinder = fixtures.CinderFixtureNewAttachFlow(self)
         self.useFixture(self.cinder)
 
     def _wait_until_swap_volume(self, server, volume_id):
@@ -1067,12 +1091,17 @@ class TestInstanceNotificationSample(
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[6])
 
-    def test_volume_swap_server_with_error(self):
+    def _do_setup_server_and_error_flag(self):
         server = self._boot_a_server(
             extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
-
         self._attach_volume_to_server(server, self.cinder.SWAP_ERR_OLD_VOL)
-        self.cinder.swap_volume_instance_error_uuid = server['id']
+
+        self.cinder.attachment_error_id = self.cinder.SWAP_ERR_ATTACH_ID
+
+        return server
+
+    def test_volume_swap_server_with_error(self):
+        server = self._do_setup_server_and_error_flag()
 
         self._volume_swap_server(server, self.cinder.SWAP_ERR_OLD_VOL,
                                  self.cinder.SWAP_ERR_NEW_VOL)
@@ -1212,8 +1241,7 @@ class TestInstanceNotificationSample(
         # Leave instance in normal, active state
         self.api.post_server_action(server['id'], {'restore': {}})
 
-    @mock.patch('nova.volume.cinder.API.attach')
-    def _test_attach_volume_error(self, server, mock_attach):
+    def _do_test_attach_volume_error(self, server, mock_attach):
         def attach_volume(*args, **kwargs):
             raise exception.CinderConnectionFailed(
                 reason="Connection timed out")
@@ -1266,6 +1294,10 @@ class TestInstanceNotificationSample(
                 'volume_id': self.cinder.SWAP_NEW_VOL,
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+
+    @mock.patch('nova.volume.cinder.API.attachment_update')
+    def _test_attach_volume_error(self, server, mock_attach):
+        self._do_test_attach_volume_error(server, mock_attach)
 
     def _test_interface_attach_and_detach(self, server):
         post = {
@@ -1340,3 +1372,35 @@ class TestInstanceNotificationSample(
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+
+
+class TestInstanceNotificationSampleOldAttachFlow(
+        TestInstanceNotificationSample):
+
+    def setUp(self):
+        self.flags(use_neutron=True)
+        self.flags(bdms_in_notifications='True', group='notifications')
+        super(TestInstanceNotificationSample, self).setUp()
+        self.neutron = fixtures.NeutronFixture(self)
+        self.useFixture(self.neutron)
+        self.cinder = fixtures.CinderFixture(self)
+        self.useFixture(self.cinder)
+
+        patcher = self.mock_min_service_version = \
+            mock.patch('nova.objects.Service.get_minimum_version',
+                       return_value=COMPUTE_VERSION_OLD_ATTACH_FLOW)
+        self.mock_min_service_version = patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def _do_setup_server_and_error_flag(self):
+        server = self._boot_a_server(
+            extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
+        self._attach_volume_to_server(server, self.cinder.SWAP_ERR_OLD_VOL)
+
+        self.cinder.swap_volume_instance_error_uuid = server['id']
+
+        return server
+
+    @mock.patch('nova.volume.cinder.API.attach')
+    def _test_attach_volume_error(self, server, mock_attach):
+        self._do_test_attach_volume_error(server, mock_attach)

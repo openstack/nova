@@ -2049,11 +2049,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     @mock.patch('nova.volume.cinder.API.get')
     @mock.patch('nova.volume.cinder.API.attachment_update')
     @mock.patch('nova.volume.cinder.API.attachment_delete')
+    @mock.patch('nova.volume.cinder.API.attachment_complete')
     @mock.patch('nova.volume.cinder.API.migrate_volume_completion',
                 return_value={'save_volume_id': uuids.old_volume_id})
     def test_swap_volume_with_new_attachment_id_cinder_migrate_true(
-            self, migrate_volume_completion, attachment_delete,
-            attachment_update, get_volume, get_bdm, notify_about_volume_swap):
+            self, migrate_volume_completion, attachment_complete,
+            attachment_delete, attachment_update, get_volume, get_bdm,
+            notify_about_volume_swap):
         """Tests a swap volume operation with a new style volume attachment
         passed in from the compute API, and the case that Cinder initiated
         the swap volume because of a volume retype situation. This is a happy
@@ -2091,6 +2093,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             # We updated the new attachment with the host connector.
             attachment_update.assert_called_once_with(
                 self.context, uuids.new_attachment_id, mock.sentinel.connector)
+            # We tell Cinder that the new volume is connected
+            attachment_complete.assert_called_once_with(
+                self.context, uuids.new_attachment_id)
             # After a successful swap volume, we deleted the old attachment.
             attachment_delete.assert_called_once_with(
                 self.context, uuids.old_attachment_id)
@@ -2115,10 +2120,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
     @mock.patch('nova.volume.cinder.API.get')
     @mock.patch('nova.volume.cinder.API.attachment_update')
     @mock.patch('nova.volume.cinder.API.attachment_delete')
+    @mock.patch('nova.volume.cinder.API.attachment_complete')
     @mock.patch('nova.volume.cinder.API.migrate_volume_completion')
     def test_swap_volume_with_new_attachment_id_cinder_migrate_false(
-            self, migrate_volume_completion, attachment_delete,
-            attachment_update, get_volume, get_bdm, notify_about_volume_swap):
+            self, migrate_volume_completion, attachment_complete,
+            attachment_delete, attachment_update, get_volume, get_bdm,
+            notify_about_volume_swap):
         """Tests a swap volume operation with a new style volume attachment
         passed in from the compute API, and the case that Cinder did not
         initiate the swap volume. This is a happy path test. Since it is not a
@@ -2156,6 +2163,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             # We updated the new attachment with the host connector.
             attachment_update.assert_called_once_with(
                 self.context, uuids.new_attachment_id, mock.sentinel.connector)
+            # We tell Cinder that the new volume is connected
+            attachment_complete.assert_called_once_with(
+                self.context, uuids.new_attachment_id)
             # After a successful swap volume, we deleted the old attachment.
             attachment_delete.assert_called_once_with(
                 self.context, uuids.old_attachment_id)
@@ -4152,8 +4162,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         mock_log.assert_not_called()
 
     @mock.patch('nova.volume.cinder.API.attachment_delete')
+    @mock.patch('nova.volume.cinder.API.attachment_create',
+                return_value={'id': uuids.attachment_id})
+    @mock.patch('nova.objects.BlockDeviceMapping.save')
     @mock.patch('nova.volume.cinder.API.terminate_connection')
     def test_terminate_volume_connections(self, mock_term_conn,
+                                          mock_bdm_save,
+                                          mock_attach_create,
                                           mock_attach_delete):
         """Tests _terminate_volume_connections with cinder v2 style,
         cinder v3.44 style, and non-volume BDMs.
@@ -4174,21 +4189,25 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 objects.BlockDeviceMapping(volume_id=None,
                                            destination_type='local')
             ])
+        instance = fake_instance.fake_instance_obj(
+            self.context, vm_state=vm_states.ACTIVE)
         fake_connector = mock.sentinel.fake_connector
         with mock.patch.object(self.compute.driver, 'get_volume_connector',
                                return_value=fake_connector) as connector_mock:
             self.compute._terminate_volume_connections(
-                self.context, mock.sentinel.instance, bdms)
+                self.context, instance, bdms)
         # assert we called terminate_connection twice (once per old volume bdm)
         mock_term_conn.assert_has_calls([
             mock.call(self.context, uuids.v2_volume_id_1, fake_connector),
             mock.call(self.context, uuids.v2_volume_id_2, fake_connector)
         ])
         # assert we only build the connector once
-        connector_mock.assert_called_once_with(mock.sentinel.instance)
+        connector_mock.assert_called_once_with(instance)
         # assert we called delete_attachment once for the single new volume bdm
         mock_attach_delete.assert_called_once_with(
             self.context, uuids.attach_id)
+        mock_attach_create.assert_called_once_with(
+            self.context, uuids.v3_volume_id, instance.uuid)
 
     def test_instance_soft_delete_notification(self):
         inst_obj = fake_instance.fake_instance_obj(self.context,

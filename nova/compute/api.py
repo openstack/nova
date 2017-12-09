@@ -102,6 +102,7 @@ AGGREGATE_ACTION_UPDATE_META = 'UpdateMeta'
 AGGREGATE_ACTION_DELETE = 'Delete'
 AGGREGATE_ACTION_ADD = 'Add'
 BFV_RESERVE_MIN_COMPUTE_VERSION = 17
+CINDER_V3_ATTACH_MIN_COMPUTE_VERSION = 24
 
 # FIXME(danms): Keep a global cache of the cells we find the
 # first time we look. This needs to be refreshed on a timer or
@@ -1331,7 +1332,7 @@ class API(base.Base):
                     if (min_compute_version >=
                         BFV_RESERVE_MIN_COMPUTE_VERSION):
                         volume = self._check_attach_and_reserve_volume(
-                            context, volume_id, instance)
+                            context, volume_id, instance, bdm)
                     else:
                         # NOTE(ildikov): This call is here only for backward
                         # compatibility can be removed after Ocata EOL.
@@ -3653,12 +3654,45 @@ class API(base.Base):
         except exception.VolumeBDMNotFound:
             pass
 
-    def _check_attach_and_reserve_volume(self, context, volume_id, instance):
+    def _check_attach_and_reserve_volume(self, context, volume_id, instance,
+                                         bdm):
         volume = self.volume_api.get(context, volume_id)
         self.volume_api.check_availability_zone(context, volume,
                                                 instance=instance)
-        self.volume_api.reserve_volume(context, volume_id)
-
+        if 'id' in instance:
+            # This is a volume attach to an existing instance, so
+            # we only care about the cell the instance is in.
+            min_compute_version = objects.Service.get_minimum_version(
+                context, 'nova-compute')
+        else:
+            # The instance is being created and we don't know which
+            # cell it's going to land in, so check all cells.
+            min_compute_version = \
+                objects.service.get_minimum_version_all_cells(
+                    context, ['nova-compute'])
+        if min_compute_version >= CINDER_V3_ATTACH_MIN_COMPUTE_VERSION:
+            # Attempt a new style volume attachment, but fallback to old-style
+            # in case Cinder API 3.44 isn't available.
+            try:
+                attachment_id = self.volume_api.attachment_create(
+                    context, volume_id, instance.uuid)['id']
+                bdm.attachment_id = attachment_id
+                # NOTE(ildikov): In case of boot from volume the BDM at this
+                # point is not yet created in a cell database, so we can't
+                # call save().  When attaching a volume to an existing
+                # instance, the instance is already in a cell and the BDM has
+                # been created in that same cell so updating here in that case
+                # is "ok".
+                if bdm.obj_attr_is_set('id'):
+                    bdm.save()
+            except exception.CinderAPIVersionNotAvailable:
+                LOG.debug('The available Cinder microversion is not high '
+                          'enough to create new style volume attachment.')
+                self.volume_api.reserve_volume(context, volume_id)
+        else:
+            LOG.debug('The compute service version is not high enough to '
+                      'create a new style volume attachment.')
+            self.volume_api.reserve_volume(context, volume_id)
         return volume
 
     def _attach_volume(self, context, instance, volume_id, device,
@@ -3672,7 +3706,8 @@ class API(base.Base):
             context, instance, device, volume_id, disk_bus=disk_bus,
             device_type=device_type, tag=tag)
         try:
-            self._check_attach_and_reserve_volume(context, volume_id, instance)
+            self._check_attach_and_reserve_volume(context, volume_id, instance,
+                                                  volume_bdm)
             self._record_action_start(
                 context, instance, instance_actions.ATTACH_VOLUME)
             self.compute_rpcapi.attach_volume(context, instance, volume_bdm)
@@ -3695,21 +3730,31 @@ class API(base.Base):
         instance will be unshelved.
         """
         @wrap_instance_event(prefix='api')
-        def attach_volume(self, context, v_id, instance, dev):
-            self.volume_api.attach(context,
-                                   v_id,
-                                   instance.uuid,
-                                   dev)
+        def attach_volume(self, context, v_id, instance, dev, attachment_id):
+            if attachment_id:
+                # Normally we wouldn't complete an attachment without a host
+                # connector, but we do this to make the volume status change
+                # to "in-use" to maintain the API semantics with the old flow.
+                # When unshelving the instance, the compute service will deal
+                # with this disconnected attachment.
+                self.volume_api.attachment_complete(context, attachment_id)
+            else:
+                self.volume_api.attach(context,
+                                       v_id,
+                                       instance.uuid,
+                                       dev)
 
         volume_bdm = self._create_volume_bdm(
             context, instance, device, volume_id, disk_bus=disk_bus,
             device_type=device_type, is_local_creation=True)
         try:
-            self._check_attach_and_reserve_volume(context, volume_id, instance)
+            self._check_attach_and_reserve_volume(context, volume_id, instance,
+                                                  volume_bdm)
             self._record_action_start(
                 context, instance,
                 instance_actions.ATTACH_VOLUME)
-            attach_volume(self, context, volume_id, instance, device)
+            attach_volume(self, context, volume_id, instance, device,
+                          volume_bdm.attachment_id)
         except Exception:
             with excutils.save_and_reraise_exception():
                 volume_bdm.destroy()
@@ -3730,6 +3775,28 @@ class API(base.Base):
         #             a valid device.
         if device and not block_device.match_device(device):
             raise exception.InvalidDevicePath(path=device)
+
+        # Check to see if the computes in this cell can support new-style
+        # volume attachments.
+        min_compute_version = objects.Service.get_minimum_version(
+            context, 'nova-compute')
+        if min_compute_version >= CINDER_V3_ATTACH_MIN_COMPUTE_VERSION:
+            try:
+                # Check to see if Cinder is new enough to create new-style
+                # attachments.
+                cinder.is_microversion_supported(context, '3.44')
+            except exception.CinderAPIVersionNotAvailable:
+                pass
+            else:
+                # Make sure the volume isn't already attached to this instance
+                # because based on the above checks, we'll use the new style
+                # attachment flow in _check_attach_and_reserve_volume and
+                # Cinder will allow multiple attachments between the same
+                # volume and instance but the old flow API semantics don't
+                # allow that so we enforce it here.
+                self._check_volume_already_attached_to_instance(context,
+                                                                instance,
+                                                                volume_id)
 
         is_shelved_offloaded = instance.vm_state == vm_states.SHELVED_OFFLOADED
         if is_shelved_offloaded:

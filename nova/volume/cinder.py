@@ -79,6 +79,38 @@ def _check_microversion(url, microversion):
     raise exception.CinderAPIVersionNotAvailable(version=microversion)
 
 
+def _get_cinderclient_parameters(context):
+    global _SESSION
+
+    if not _SESSION:
+        _SESSION = ks_loading.load_session_from_conf_options(
+            CONF, nova.conf.cinder.cinder_group.name)
+
+    url = None
+
+    auth = service_auth.get_auth_plugin(context)
+    service_type, service_name, interface = CONF.cinder.catalog_info.split(':')
+
+    service_parameters = {'service_type': service_type,
+                          'service_name': service_name,
+                          'interface': interface,
+                          'region_name': CONF.cinder.os_region_name}
+
+    if CONF.cinder.endpoint_template:
+        url = CONF.cinder.endpoint_template % context.to_dict()
+    else:
+        url = _SESSION.get_endpoint(auth, **service_parameters)
+
+    return auth, service_parameters, url
+
+
+def is_microversion_supported(context, microversion):
+
+    _, _, url = _get_cinderclient_parameters(context)
+
+    _check_microversion(url, microversion)
+
+
 def cinderclient(context, microversion=None, skip_version_check=False):
     """Constructs a cinder client object for making API requests.
 
@@ -92,28 +124,12 @@ def cinderclient(context, microversion=None, skip_version_check=False):
         is used directly. This should only be used if a previous check for the
         same microversion was successful.
     """
-    global _SESSION
 
-    if not _SESSION:
-        _SESSION = ks_loading.load_session_from_conf_options(
-            CONF, nova.conf.cinder.cinder_group.name)
-
-    url = None
     endpoint_override = None
-
-    auth = service_auth.get_auth_plugin(context)
-    service_type, service_name, interface = CONF.cinder.catalog_info.split(':')
-
-    service_parameters = {'service_type': service_type,
-                          'service_name': service_name,
-                          'interface': interface,
-                          'region_name': CONF.cinder.os_region_name}
+    auth, service_parameters, url = _get_cinderclient_parameters(context)
 
     if CONF.cinder.endpoint_template:
-        url = CONF.cinder.endpoint_template % context.to_dict()
         endpoint_override = url
-    else:
-        url = _SESSION.get_endpoint(auth, **service_parameters)
 
     # TODO(jamielennox): This should be using proper version discovery from
     # the cinder service rather than just inspecting the URL for certain string
