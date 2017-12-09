@@ -13,6 +13,8 @@
 import mock
 import six
 
+from oslo_utils import timeutils
+
 import nova
 from nova import context
 from nova import exception
@@ -40,6 +42,8 @@ _RESOURCE_PROVIDER_DB = {
     'generation': 0,
     'root_provider_uuid': _RESOURCE_PROVIDER_UUID,
     'parent_provider_uuid': None,
+    'updated_at': None,
+    'created_at': timeutils.utcnow(with_timezone=True),
 }
 
 _RESOURCE_PROVIDER_ID2 = 2
@@ -66,6 +70,8 @@ _INVENTORY_DB = {
     'max_unit': 8,
     'step_size': 1,
     'allocation_ratio': 1.0,
+    'updated_at': None,
+    'created_at': timeutils.utcnow(with_timezone=True),
 }
 _ALLOCATION_ID = 2
 _ALLOCATION_DB = {

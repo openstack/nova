@@ -44,6 +44,7 @@ _TRAIT_TBL = models.Trait.__table__
 _ALLOC_TBL = models.Allocation.__table__
 _INV_TBL = models.Inventory.__table__
 _RP_TBL = models.ResourceProvider.__table__
+# Not used in this file but used in tests.
 _RC_TBL = models.ResourceClass.__table__
 _AGG_TBL = models.PlacementAggregate.__table__
 _RP_AGG_TBL = models.ResourceProviderAggregate.__table__
@@ -404,6 +405,8 @@ def _get_provider_by_uuid(context, uuid):
         rpt.c.generation,
         root.c.uuid.label("root_provider_uuid"),
         parent.c.uuid.label("parent_provider_uuid"),
+        rpt.c.updated_at,
+        rpt.c.created_at,
     ]
     sel = sa.select(cols).select_from(rp_to_parent).where(rpt.c.uuid == uuid)
     res = context.session.execute(sel).fetchone()
@@ -490,7 +493,8 @@ def _get_traits_by_provider_id(context, rp_id):
     join_cond = sa.and_(t.c.id == rpt.c.trait_id,
                         rpt.c.resource_provider_id == rp_id)
     join = sa.join(t, rpt, join_cond)
-    sel = sa.select([t.c.id, t.c.name]).select_from(join)
+    sel = sa.select([t.c.id, t.c.name,
+                     t.c.created_at, t.c.updated_at]).select_from(join)
     return [dict(r) for r in context.session.execute(sel).fetchall()]
 
 
@@ -637,7 +641,7 @@ def _provider_ids_from_uuid(context, uuid):
 
 
 @base.NovaObjectRegistry.register_if(False)
-class ResourceProvider(base.NovaObject):
+class ResourceProvider(base.NovaObject, base.NovaTimestampObject):
     SETTABLE_FIELDS = ('name', 'parent_provider_uuid')
 
     fields = {
@@ -1438,6 +1442,8 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
             rp.c.uuid,
             rp.c.name,
             rp.c.generation,
+            rp.c.updated_at,
+            rp.c.created_at,
             root_rp.c.uuid.label("root_provider_uuid"),
             parent_rp.c.uuid.label("parent_provider_uuid"),
         ]
@@ -1597,7 +1603,7 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
 
 
 @base.NovaObjectRegistry.register_if(False)
-class Inventory(base.NovaObject):
+class Inventory(base.NovaObject, base.NovaTimestampObject):
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -1628,6 +1634,8 @@ def _get_inventory_by_provider_id(ctx, rp_id):
         inv.c.max_unit,
         inv.c.step_size,
         inv.c.allocation_ratio,
+        inv.c.updated_at,
+        inv.c.created_at,
     ]
     sel = sa.select(cols)
     sel = sel.where(inv.c.resource_provider_id == rp_id)
@@ -1680,7 +1688,7 @@ class InventoryList(base.ObjectListBase, base.NovaObject):
 
 
 @base.NovaObjectRegistry.register_if(False)
-class Allocation(base.NovaObject):
+class Allocation(base.NovaObject, base.NovaTimestampObject):
 
     fields = {
         'id': fields.IntegerField(),
@@ -1961,6 +1969,8 @@ def _get_allocations_by_provider_id(ctx, rp_id):
         allocs.c.resource_class_id,
         allocs.c.consumer_id,
         allocs.c.used,
+        allocs.c.updated_at,
+        allocs.c.created_at
     ]
     sel = sa.select(cols)
     sel = sel.where(allocs.c.resource_provider_id == rp_id)
@@ -2247,7 +2257,7 @@ class UsageList(base.ObjectListBase, base.NovaObject):
 
 
 @base.NovaObjectRegistry.register_if(False)
-class ResourceClass(base.NovaObject):
+class ResourceClass(base.NovaObject, base.NovaTimestampObject):
 
     MIN_CUSTOM_RESOURCE_CLASS_ID = 10000
     """Any user-defined resource classes must have an identifier greater than
@@ -2283,8 +2293,9 @@ class ResourceClass(base.NovaObject):
         :raises: ResourceClassNotFound if no such resource class was found
         """
         _ensure_rc_cache(context)
-        rc_id = _RC_CACHE.id_from_string(name)
-        obj = cls(context, id=rc_id, name=name)
+        rc = _RC_CACHE.all_from_string(name)
+        obj = cls(context, id=rc['id'], name=rc['name'],
+                  updated_at=rc['updated_at'], created_at=rc['created_at'])
         obj.obj_reset_changes()
         return obj
 
@@ -2438,7 +2449,7 @@ class ResourceClassList(base.ObjectListBase, base.NovaObject):
 
 
 @base.NovaObjectRegistry.register_if(False)
-class Trait(base.NovaObject):
+class Trait(base.NovaObject, base.NovaTimestampObject):
 
     # All the user-defined traits must begin with this prefix.
     CUSTOM_NAMESPACE = 'CUSTOM_'

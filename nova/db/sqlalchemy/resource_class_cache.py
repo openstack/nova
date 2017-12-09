@@ -48,10 +48,12 @@ def _refresh_from_db(ctx, cache):
     :param cache: ResourceClassCache object to refresh.
     """
     with db_api.api_context_manager.reader.connection.using(ctx) as conn:
-        sel = sa.select([_RC_TBL.c.id, _RC_TBL.c.name])
+        sel = sa.select([_RC_TBL.c.id, _RC_TBL.c.name, _RC_TBL.c.updated_at,
+                         _RC_TBL.c.created_at])
         res = conn.execute(sel).fetchall()
         cache.id_cache = {r[1]: r[0] for r in res}
         cache.str_cache = {r[0]: r[1] for r in res}
+        cache.all_cache = {r[1]: r for r in res}
 
 
 class ResourceClassCache(object):
@@ -59,7 +61,8 @@ class ResourceClassCache(object):
 
     # List of dict of all standard resource classes, where every list item
     # have a form {'id': <ID>, 'name': <NAME>}
-    STANDARDS = [{'id': fields.ResourceClass.STANDARD.index(s), 'name': s}
+    STANDARDS = [{'id': fields.ResourceClass.STANDARD.index(s), 'name': s,
+                  'updated_at': None, 'created_at': None}
                  for s in fields.ResourceClass.STANDARD]
 
     def __init__(self, ctx):
@@ -71,11 +74,13 @@ class ResourceClassCache(object):
         self.ctx = ctx
         self.id_cache = {}
         self.str_cache = {}
+        self.all_cache = {}
 
     def clear(self):
         with lockutils.lock(_LOCKNAME):
             self.id_cache = {}
             self.str_cache = {}
+            self.all_cache = {}
 
     def id_from_string(self, rc_str):
         """Given a string representation of a resource class -- e.g. "DISK_GB"
@@ -105,6 +110,34 @@ class ResourceClassCache(object):
             _refresh_from_db(self.ctx, self)
             if rc_str in self.id_cache:
                 return self.id_cache[rc_str]
+            raise exception.ResourceClassNotFound(resource_class=rc_str)
+
+    def all_from_string(self, rc_str):
+        """Given a string representation of a resource class -- e.g. "DISK_GB"
+        or "CUSTOM_IRON_SILVER" -- return all the resource class info.
+
+        :param rc_str: The string representation of the resource class for
+                       which to look up a resource_class.
+        :returns: dict representing the resource class fields, if the
+                  resource class was found in the list of standard
+                  resource classes or the resource_classes database table.
+        :raises: `exception.ResourceClassNotFound` if rc_str cannot be found in
+                 either the standard classes or the DB.
+        """
+        # First check the standard resource classes
+        if rc_str in fields.ResourceClass.STANDARD:
+            return {'id': fields.ResourceClass.STANDARD.index(rc_str),
+                    'name': rc_str,
+                    'updated_at': None,
+                    'created_at': None}
+
+        with lockutils.lock(_LOCKNAME):
+            if rc_str in self.all_cache:
+                return self.all_cache[rc_str]
+            # Otherwise, check the database table
+            _refresh_from_db(self.ctx, self)
+            if rc_str in self.all_cache:
+                return self.all_cache[rc_str]
             raise exception.ResourceClassNotFound(resource_class=rc_str)
 
     def string_from_id(self, rc_id):
