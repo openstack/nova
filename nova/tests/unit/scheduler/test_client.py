@@ -116,4 +116,19 @@ class SchedulerClientTestCase(test.NoDBTestCase):
             mock.sentinel.rp_uuid,
             mock.sentinel.rp_name,
             mock.sentinel.inv_data,
+            parent_provider_uuid=None,
+        )
+        # Pass the optional parent_provider_uuid
+        mock_set.reset_mock()
+        self.client.set_inventory_for_provider(
+            mock.sentinel.child_uuid,
+            mock.sentinel.child_name,
+            mock.sentinel.inv_data2,
+            parent_provider_uuid=mock.sentinel.rp_uuid,
+        )
+        mock_set.assert_called_once_with(
+            mock.sentinel.child_uuid,
+            mock.sentinel.child_name,
+            mock.sentinel.inv_data2,
+            parent_provider_uuid=mock.sentinel.rp_uuid,
         )

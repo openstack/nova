@@ -1155,8 +1155,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             self.client._ensure_resource_provider, uuids.compute_node)
 
         get_rp_mock.assert_called_once_with(uuids.compute_node)
-        create_rp_mock.assert_called_once_with(uuids.compute_node,
-                                               uuids.compute_node)
+        create_rp_mock.assert_called_once_with(
+            uuids.compute_node, uuids.compute_node, parent_provider_uuid=None)
         self.assertFalse(self.client._provider_tree.exists(uuids.compute_node))
         self.assertFalse(get_agg_mock.called)
         self.assertEqual({}, self.client._provider_aggregate_map)
@@ -1178,7 +1178,11 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             'name': 'compute-name',
             'generation': 1,
         }
-        self.client._ensure_resource_provider(uuids.compute_node)
+        self.assertEqual(
+            uuids.compute_node,
+            self.client._ensure_resource_provider(uuids.compute_node))
+        self._validate_provider(uuids.compute_node, name='compute-name',
+                                generation=1, parent_uuid=None)
 
         get_agg_mock.assert_called_once_with(uuids.compute_node)
         self.assertIn(uuids.compute_node, self.client._provider_aggregate_map)
@@ -1190,15 +1194,76 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         create_rp_mock.assert_called_once_with(
                 uuids.compute_node,
                 uuids.compute_node,  # name param defaults to UUID if None
+                parent_provider_uuid=None,
         )
         self.assertTrue(self.client._provider_tree.exists(uuids.compute_node))
 
         create_rp_mock.reset_mock()
 
-        self.client._ensure_resource_provider(uuids.compute_node,
-                                              'compute-name')
+        self.assertEqual(
+            uuids.compute_node,
+            self.client._ensure_resource_provider(uuids.compute_node))
+        self._validate_provider(uuids.compute_node, name='compute-name',
+                                generation=1, parent_uuid=None)
+
         # Shouldn't be called now that provider is in cache...
         self.assertFalse(create_rp_mock.called)
+
+        # Validate the path where we specify a name (don't default to the UUID)
+        self.client._ensure_resource_provider(uuids.cn2, 'a-name')
+        create_rp_mock.assert_called_once_with(
+                uuids.cn2, 'a-name', parent_provider_uuid=None)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_refresh_aggregate_map', new=mock.Mock())
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_create_resource_provider')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_resource_provider')
+    def test_ensure_resource_provider_tree(self, get_rp_mock, create_rp_mock):
+        """Test _ensure_resource_provider with a tree of providers."""
+        def _create_resource_provider(uuid, name, parent_provider_uuid=None):
+            """Mock side effect for creating the RP with the specified args."""
+            return {
+                'uuid': uuid,
+                'name': name,
+                'generation': 0,
+                'parent_provider_uuid': parent_provider_uuid
+            }
+        create_rp_mock.side_effect = _create_resource_provider
+
+        # Not initially in the placement database, so we have to create it.
+        get_rp_mock.return_value = None
+
+        # Create the root
+        root = self.client._ensure_resource_provider(uuids.root)
+        self.assertEqual(uuids.root, root)
+
+        # Now create a child
+        child1 = self.client._ensure_resource_provider(
+            uuids.child1, name='junior', parent_provider_uuid=uuids.root)
+        self.assertEqual(uuids.child1, child1)
+
+        # If we re-ensure the child, we get the object from the tree, not a
+        # newly-created one - i.e. the early .find() works like it should.
+        self.assertIs(child1,
+                      self.client._ensure_resource_provider(uuids.child1))
+
+        # Make sure we can create a grandchild
+        grandchild = self.client._ensure_resource_provider(
+            uuids.grandchild, parent_provider_uuid=uuids.child1)
+        self.assertEqual(uuids.grandchild, grandchild)
+
+        # Now create a second child of the root and make sure it doesn't wind
+        # up in some crazy wrong place like under child1 or grandchild
+        child2 = self.client._ensure_resource_provider(
+            uuids.child2, parent_provider_uuid=uuids.root)
+        self.assertEqual(uuids.child2, child2)
+
+        # At this point we should get all the providers.
+        self.assertEqual(
+            set([uuids.root, uuids.child1, uuids.child2, uuids.grandchild]),
+            self.client._provider_tree.get_provider_uuids())
 
     def test_get_allocation_candidates(self):
         resp_mock = mock.Mock(status_code=200)
@@ -2456,6 +2521,7 @@ There was a conflict when trying to complete your request.
         mock_erp.assert_called_once_with(
             mock.sentinel.rp_uuid,
             mock.sentinel.rp_name,
+            parent_provider_uuid=None,
         )
         # No custom resource classes to ensure...
         self.assertFalse(mock_erc.called)
@@ -2490,6 +2556,7 @@ There was a conflict when trying to complete your request.
         mock_erp.assert_called_once_with(
             mock.sentinel.rp_uuid,
             mock.sentinel.rp_name,
+            parent_provider_uuid=None,
         )
         self.assertFalse(mock_gocr.called)
         self.assertFalse(mock_erc.called)
@@ -2555,6 +2622,7 @@ There was a conflict when trying to complete your request.
         mock_erp.assert_called_once_with(
             mock.sentinel.rp_uuid,
             mock.sentinel.rp_name,
+            parent_provider_uuid=None,
         )
         mock_erc.assert_called_once_with('CUSTOM_IRON_SILVER')
         mock_upd.assert_called_once_with(
@@ -2563,6 +2631,19 @@ There was a conflict when trying to complete your request.
         )
         self.assertFalse(mock_gocr.called)
         self.assertFalse(mock_del.called)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_delete_inventory', new=mock.Mock())
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_ensure_resource_class', new=mock.Mock())
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_ensure_resource_provider')
+    def test_set_inventory_for_provider_with_parent(self, mock_erp):
+        """Ensure parent UUID is sent through."""
+        self.client.set_inventory_for_provider(
+            uuids.child, 'junior', {}, parent_provider_uuid=uuids.parent)
+        mock_erp.assert_called_once_with(
+            uuids.child, 'junior', parent_provider_uuid=uuids.parent)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'put')

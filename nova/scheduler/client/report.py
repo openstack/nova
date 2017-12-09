@@ -496,7 +496,8 @@ class SchedulerReportClient(object):
         LOG.error(msg, args)
         raise exception.ResourceProviderCreationFailed(name=name)
 
-    def _ensure_resource_provider(self, uuid, name=None):
+    def _ensure_resource_provider(self, uuid, name=None,
+                                  parent_provider_uuid=None):
         """Ensures that the placement API has a record of a resource provider
         with the supplied UUID. If not, creates the resource provider record in
         the placement API for the supplied UUID, passing in a name for the
@@ -515,7 +516,11 @@ class SchedulerReportClient(object):
         :param name: Optional name for the resource provider if the record
                      does not exist. If empty, the name is set to the UUID
                      value
+        :param parent_provider_uuid: Optional UUID of the immediate parent
         """
+        # NOTE(efried): We currently have no code path where we need to set the
+        # parent_provider_uuid on a previously-parent-less provider - so we do
+        # NOT handle that scenario here.
         if self._provider_tree.exists(uuid):
             self._refresh_aggregate_map(uuid)
             return uuid
@@ -524,13 +529,25 @@ class SchedulerReportClient(object):
         # the placement API.
         rp = self._get_resource_provider(uuid)
         if rp is None:
-            rp = self._create_resource_provider(uuid, name or uuid)
+            rp = self._create_resource_provider(
+                uuid, name or uuid, parent_provider_uuid=parent_provider_uuid)
 
         # If there had been no resource provider record, force refreshing
         # the aggregate map.
         self._refresh_aggregate_map(uuid, force=True)
 
-        return self._provider_tree.new_root(rp['name'], uuid, rp['generation'])
+        # If this is a root node (no parent), create it as such
+        if parent_provider_uuid is None:
+            return self._provider_tree.new_root(
+                rp['name'], uuid, rp['generation'])
+
+        # Not a root - we have to insert it into the proper place in the tree.
+        # NOTE(efried): We populate self._provider_tree from the top down, so
+        # we can count on the parent being in the tree - we don't have to
+        # retrieve it from placement.
+        return self._provider_tree.new_child(rp['name'], parent_provider_uuid,
+                                             uuid=uuid,
+                                             generation=rp['generation'])
 
     def _get_inventory(self, rp_uuid):
         url = '/resource_providers/%s/inventories' % rp_uuid
@@ -804,7 +821,8 @@ class SchedulerReportClient(object):
         msg_args['err'] = r.text
         LOG.error(msg, msg_args)
 
-    def set_inventory_for_provider(self, rp_uuid, rp_name, inv_data):
+    def set_inventory_for_provider(self, rp_uuid, rp_name, inv_data,
+                                   parent_provider_uuid=None):
         """Given the UUID of a provider, set the inventory records for the
         provider to the supplied dict of resources.
 
@@ -813,11 +831,16 @@ class SchedulerReportClient(object):
                         a record for it in the placement API
         :param inv_data: Dict, keyed by resource class name, of inventory data
                          to set against the provider
+        :param parent_provider_uuid:
+                If the provider is not a root, this is required, and represents
+                the UUID of the immediate parent, which is a provider for which
+                this method has already been invoked.
 
         :raises: exc.InvalidResourceClass if a supplied custom resource class
                  name does not meet the placement API's format requirements.
         """
-        self._ensure_resource_provider(rp_uuid, rp_name)
+        self._ensure_resource_provider(
+            rp_uuid, rp_name, parent_provider_uuid=parent_provider_uuid)
 
         # Auto-create custom resource classes coming from a virt driver
         list(map(self._ensure_resource_class,

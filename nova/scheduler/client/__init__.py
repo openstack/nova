@@ -58,11 +58,13 @@ class SchedulerClient(object):
     def delete_aggregate(self, context, aggregate):
         self.queryclient.delete_aggregate(context, aggregate)
 
-    def set_inventory_for_provider(self, rp_uuid, rp_name, inv_data):
+    def set_inventory_for_provider(self, rp_uuid, rp_name, inv_data,
+                                   parent_provider_uuid=None):
         self.reportclient.set_inventory_for_provider(
             rp_uuid,
             rp_name,
             inv_data,
+            parent_provider_uuid=parent_provider_uuid,
         )
 
     def update_compute_node(self, compute_node):
