@@ -62,8 +62,9 @@ class Scheduler(object):
 
     @abc.abstractmethod
     def select_destinations(self, context, spec_obj, instance_uuids,
-            provider_summaries):
-        """Returns a list of HostState objects that have been chosen by the
+            alloc_reqs_by_rp_uuid, provider_summaries,
+            allocation_request_version=None):
+        """Returns a list of Selection objects that have been chosen by the
         scheduler driver, one for each requested instance
         (spec_obj.num_instances)
         """

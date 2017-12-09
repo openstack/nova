@@ -1217,7 +1217,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         resp_mock.json.return_value = json_data
         self.ks_adap_mock.get.return_value = resp_mock
 
-        alloc_reqs, p_sums = self.client.get_allocation_candidates(resources)
+        alloc_reqs, p_sums, allocation_request_version = \
+                self.client.get_allocation_candidates(resources)
 
         expected_url = '/allocation_candidates?%s' % parse.urlencode(
             {'resources': 'MEMORY_MB:1024,VCPU:1'})

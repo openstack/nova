@@ -45,19 +45,23 @@ CONF = nova.conf.CONF
 QUOTAS = quota.QUOTAS
 
 
-def _host_state_obj_to_dict(host_state):
-    limits = dict(host_state.limits)
+def _selection_obj_to_dict(selection):
+    if selection.limits is not None:
+        limits = selection.limits.to_dict()
+    else:
+        limits = {}
     # The NUMATopologyFilter can set 'numa_topology' in the limits dict
     # to a NUMATopologyLimits object which we need to convert to a primitive
     # before this hits jsonutils.to_primitive(). We only check for that known
     # case specifically as we don't care about handling out of tree filters
     # or drivers injecting non-serializable things in the limits dict.
-    if 'numa_topology' in limits:
+    numa_limit = limits.get("numa_topology")
+    if numa_limit is not None:
         limits['numa_topology'] = limits['numa_topology'].obj_to_primitive()
     return {
-        'host': host_state.host,
-        'nodename': host_state.nodename,
-        'limits': limits
+        'host': selection.service_host,
+        'nodename': selection.nodename,
+        'limits': limits,
     }
 
 
@@ -122,9 +126,11 @@ class SchedulerManager(manager.Manager):
                 # We have to handle the case that we failed to connect to the
                 # Placement service and the safe_connect decorator on
                 # get_allocation_candidates returns None.
-                alloc_reqs, provider_summaries = None, None
+                alloc_reqs, provider_summaries, allocation_request_version = (
+                        None, None, None)
             else:
-                alloc_reqs, provider_summaries = res
+                (alloc_reqs, provider_summaries,
+                            allocation_request_version) = res
             if not alloc_reqs:
                 LOG.debug("Got no allocation candidates from the Placement "
                           "API. This may be a temporary occurrence as compute "
@@ -141,10 +147,16 @@ class SchedulerManager(manager.Manager):
                         rp_uuid = rr['resource_provider']['uuid']
                         alloc_reqs_by_rp_uuid[rp_uuid].append(ar)
 
-        dests = self.driver.select_destinations(ctxt, spec_obj, instance_uuids,
-            alloc_reqs_by_rp_uuid, provider_summaries)
-        dest_dicts = [_host_state_obj_to_dict(d) for d in dests]
-        return jsonutils.to_primitive(dest_dicts)
+        selections = self.driver.select_destinations(ctxt, spec_obj,
+                instance_uuids, alloc_reqs_by_rp_uuid, provider_summaries,
+                allocation_request_version)
+        # We don't want to change the return value in this patch, as it
+        # involves an RPC change. So convert the list of lists of Selection
+        # objects to a list of host state dicts, which is what the calling
+        # method expects.
+        selected = [sel[0] for sel in selections]
+        selection_dicts = [_selection_obj_to_dict(claim) for claim in selected]
+        return jsonutils.to_primitive(selection_dicts)
 
     def update_aggregates(self, ctxt, aggregates):
         """Updates HostManager internal aggregates information.

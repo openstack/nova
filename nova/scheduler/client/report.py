@@ -308,7 +308,8 @@ class SchedulerReportClient(object):
 
     @safe_connect
     def get_allocation_candidates(self, resources):
-        """Returns a tuple of (allocation_requests, provider_summaries).
+        """Returns a tuple of (allocation_requests, provider_summaries,
+        allocation_request_version).
 
         The allocation_requests are a collection of potential JSON objects that
         can be passed to the PUT /allocations/{consumer_uuid} Placement REST
@@ -319,8 +320,10 @@ class SchedulerReportClient(object):
         inventory and capacity information for any resource provider involved
         in the allocation_requests.
 
-        :returns: A tuple with a list of allocation_request dicts and a dict of
-                  provider information or (None, None) if the request failed
+        :returns: A tuple with a list of allocation_request dicts, a dict of
+                  provider information, and the microversion used to request
+                  this data from placement, or (None, None, None) if the
+                  request failed
 
         :param nova.scheduler.utils.ResourceRequest resources:
             A ResourceRequest object representing the requested resources and
@@ -339,11 +342,13 @@ class SchedulerReportClient(object):
             'resources': resource_query,
         }
 
+        version = '1.10'
         url = "/allocation_candidates?%s" % parse.urlencode(qs_params)
-        resp = self.get(url, version='1.10')
+        resp = self.get(url, version=version)
         if resp.status_code == 200:
             data = resp.json()
-            return data['allocation_requests'], data['provider_summaries']
+            return (data['allocation_requests'], data['provider_summaries'],
+                    version)
 
         msg = ("Failed to retrieve allocation candidates from placement API "
                "for filters %(resources)s. Got %(status_code)d: %(err_text)s.")
@@ -353,7 +358,7 @@ class SchedulerReportClient(object):
             'err_text': resp.text,
         }
         LOG.error(msg, args)
-        return None, None
+        return None, None, None
 
     @safe_connect
     def _get_provider_aggregates(self, rp_uuid):
@@ -982,7 +987,7 @@ class SchedulerReportClient(object):
     @safe_connect
     @retries
     def claim_resources(self, consumer_uuid, alloc_request, project_id,
-                        user_id):
+                        user_id, allocation_request_version=None):
         """Creates allocation records for the supplied instance UUID against
         the supplied resource providers.
 
@@ -1002,8 +1007,13 @@ class SchedulerReportClient(object):
                               placement's PUT /allocations API
         :param project_id: The project_id associated with the allocations.
         :param user_id: The user_id associated with the allocations.
+        :param allocation_request_version: The microversion used to request the
+                                           allocations.
         :returns: True if the allocations were created, False otherwise.
         """
+        # Older clients might not send the allocation_request_version, so
+        # default to 1.10
+        allocation_request_version = allocation_request_version or '1.10'
         # Ensure we don't change the supplied alloc request since it's used in
         # a loop within the scheduler against multiple instance claims
         ar = copy.deepcopy(alloc_request)
@@ -1022,7 +1032,7 @@ class SchedulerReportClient(object):
 
         payload['project_id'] = project_id
         payload['user_id'] = user_id
-        r = self.put(url, payload, version='1.10')
+        r = self.put(url, payload, version=allocation_request_version)
         if r.status_code != 204:
             # NOTE(jaypipes): Yes, it sucks doing string comparison like this
             # but we have no error codes, only error messages.

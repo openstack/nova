@@ -27,6 +27,7 @@ from six.moves import range
 import nova.conf
 from nova import exception
 from nova.i18n import _
+from nova import objects
 from nova import rpc
 from nova.scheduler import client
 from nova.scheduler import driver
@@ -45,14 +46,10 @@ class FilterScheduler(driver.Scheduler):
         self.placement_client = scheduler_client.reportclient
 
     def select_destinations(self, context, spec_obj, instance_uuids,
-            alloc_reqs_by_rp_uuid, provider_summaries):
-        """Returns a list of sorted lists of HostState objects (1 for each
-        instance) that would satisfy the supplied request_spec. Each of those
-        lists consist of [chosen_host, alternate1, ..., alternateN], where the
-        'chosen_host' has already had its resources claimed in Placement,
-        followed by zero or more alternates. The alternates are hosts that can
-        satisfy the request, and are included so that if the build for the
-        chosen host fails, the cell conductor can retry.
+            alloc_reqs_by_rp_uuid, provider_summaries,
+            allocation_request_version=None):
+        """Returns a list of lists of Selection objects, which represent the
+        selected hosts and alternates for each instance.
 
         :param context: The RequestContext object
         :param spec_obj: The RequestSpec object
@@ -77,28 +74,25 @@ class FilterScheduler(driver.Scheduler):
                                    indicates the Placement API returned no
                                    potential matches for the requested
                                    resources.
+        :param allocation_request_version: The microversion used to request the
+                                           allocations.
         """
         self.notifier.info(
             context, 'scheduler.select_destinations.start',
             dict(request_spec=spec_obj.to_legacy_request_spec_dict()))
 
-        selected_host_lists = self._schedule(context, spec_obj, instance_uuids,
-            alloc_reqs_by_rp_uuid, provider_summaries)
+        host_selections = self._schedule(context, spec_obj, instance_uuids,
+                alloc_reqs_by_rp_uuid, provider_summaries,
+                allocation_request_version)
         self.notifier.info(
             context, 'scheduler.select_destinations.end',
             dict(request_spec=spec_obj.to_legacy_request_spec_dict()))
-        # NOTE(edleafe) - In this patch we only create the lists of [chosen,
-        # alt1, alt2, etc.]. In a later patch we will change what we return, so
-        # for this patch just return the selected hosts.
-        selected_hosts = [sel_host[0] for sel_host in selected_host_lists]
-        return selected_hosts
+        return host_selections
 
     def _schedule(self, context, spec_obj, instance_uuids,
-            alloc_reqs_by_rp_uuid, provider_summaries):
-        """Returns a list of hosts that meet the required specs, ordered by
-        their fitness.
-
-        These hosts will have already had their resources claimed in Placement.
+            alloc_reqs_by_rp_uuid, provider_summaries,
+            allocation_request_version=None):
+        """Returns a list of lists of Selection objects.
 
         :param context: The RequestContext object
         :param spec_obj: The RequestSpec object
@@ -122,6 +116,8 @@ class FilterScheduler(driver.Scheduler):
                                    indicates the Placement API returned no
                                    potential matches for the requested
                                    resources.
+        :param allocation_request_version: The microversion used to request the
+                                           allocations.
         """
         elevated = context.elevated()
 
@@ -152,7 +148,7 @@ class FilterScheduler(driver.Scheduler):
         # is based on CONF.scheduler.max_attempts; note that if there are not
         # enough filtered hosts to provide the full number of alternates, the
         # list of hosts may be shorter than this amount.
-        num_to_return = CONF.scheduler.max_attempts
+        num_alts = CONF.scheduler.max_attempts
 
         if (instance_uuids is None or
                 not self.USES_ALLOCATION_CANDIDATES or
@@ -164,13 +160,12 @@ class FilterScheduler(driver.Scheduler):
             # placement API, alloc_reqs_by_rp_uuid will be None, so we skip
             # claiming in that case as well. In the case where instance_uuids
             # is None, that indicates an older conductor, so we need to return
-            # the older-style HostState objects without alternates.
-            # NOTE(edleafe): moving this logic into a separate method, as this
-            # method is already way too long. It will also make it easier to
-            # clean up once we no longer have to worry about older conductors.
-            include_alternates = (instance_uuids is not None)
+            # the objects without alternates. They will be converted back to
+            # the older dict format representing HostState objects.
+            if instance_uuids is None:
+                num_alts = 0
             return self._legacy_find_hosts(num_instances, spec_obj, hosts,
-                    num_to_return, include_alternates)
+                    num_alts)
 
         # A list of the instance UUIDs that were successfully claimed against
         # in the placement API. If we are not able to successfully claim for
@@ -199,13 +194,16 @@ class FilterScheduler(driver.Scheduler):
             for host in hosts:
                 cn_uuid = host.uuid
                 if cn_uuid not in alloc_reqs_by_rp_uuid:
-                    LOG.debug("Found host state %s that wasn't in "
-                              "allocation_requests. Skipping.", cn_uuid)
+                    msg = ("A host state with uuid = '%s' that did not have a "
+                          "matching allocation_request was encountered while "
+                          "scheduling. This host was skipped.")
+                    LOG.debug(msg, cn_uuid)
                     continue
 
                 alloc_reqs = alloc_reqs_by_rp_uuid[cn_uuid]
                 if self._claim_resources(elevated, spec_obj, instance_uuid,
-                        alloc_reqs):
+                        alloc_reqs,
+                        allocation_request_version=allocation_request_version):
                     claimed_host = host
                     break
 
@@ -233,7 +231,8 @@ class FilterScheduler(driver.Scheduler):
         # We have selected and claimed hosts for each instance. Now we need to
         # find alternates for each host.
         selections_to_return = self._get_alternate_hosts(
-            claimed_hosts, spec_obj, hosts, num, num_to_return)
+            claimed_hosts, spec_obj, hosts, num, num_alts,
+            alloc_reqs_by_rp_uuid, allocation_request_version)
         return selections_to_return
 
     def _ensure_sufficient_hosts(self, hosts, required_count,
@@ -274,7 +273,8 @@ class FilterScheduler(driver.Scheduler):
         for uuid in instance_uuids:
             self.placement_client.delete_allocation_for_instance(uuid)
 
-    def _claim_resources(self, ctx, spec_obj, instance_uuid, alloc_reqs):
+    def _claim_resources(self, ctx, spec_obj, instance_uuid, alloc_reqs,
+            allocation_request_version=None):
         """Given an instance UUID (representing the consumer of resources), the
         HostState object for the host that was chosen for the instance, and a
         list of allocation_request JSON objects, attempt to claim resources for
@@ -295,6 +295,8 @@ class FilterScheduler(driver.Scheduler):
                            (along with the project and user ID to the placement
                            API's PUT /allocations/{consumer_uuid} call to claim
                            resources for the instance
+        :param allocation_request_version: The microversion used to request the
+                                           allocations.
         """
 
         if utils.request_is_rebuild(spec_obj):
@@ -324,10 +326,10 @@ class FilterScheduler(driver.Scheduler):
         alloc_req = alloc_reqs[0]
 
         return self.placement_client.claim_resources(instance_uuid,
-            alloc_req, project_id, user_id)
+                alloc_req, project_id, user_id,
+                allocation_request_version=allocation_request_version)
 
-    def _legacy_find_hosts(self, num_instances, spec_obj, hosts,
-            num_to_return, include_alternates):
+    def _legacy_find_hosts(self, num_instances, spec_obj, hosts, num_alts):
         """Some schedulers do not do claiming, or we can sometimes not be able
         to if the Placement service is not reachable. Additionally, we may be
         working with older conductors that don't pass in instance_uuids.
@@ -335,11 +337,9 @@ class FilterScheduler(driver.Scheduler):
         # The list of hosts selected for each instance
         selected_hosts = []
         # This the overall list of values to be returned. There will be one
-        # item per instance, and when 'include_alternates' is True, that item
-        # will be a list of HostState objects representing the selected host
-        # along with alternates from the same cell. When 'include_alternates'
-        # is False, the return value will be a list of HostState objects, with
-        # one per requested instance.
+        # item per instance, and each item will be a list of Selection objects
+        # representing the selected host along with zero or more alternates
+        # from the same cell.
         selections_to_return = []
 
         for num in range(num_instances):
@@ -356,12 +356,9 @@ class FilterScheduler(driver.Scheduler):
         # raise a NoValidHost exception.
         self._ensure_sufficient_hosts(selected_hosts, num_instances)
 
-        if include_alternates:
-            selections_to_return = self._get_alternate_hosts(
-                selected_hosts, spec_obj, hosts, num, num_to_return)
-            return selections_to_return
-        # No alternatives but we still need to return a list of lists of hosts
-        return [[host] for host in selected_hosts]
+        selections_to_return = self._get_alternate_hosts(selected_hosts,
+                spec_obj, hosts, num, num_alts)
+        return selections_to_return
 
     @staticmethod
     def _consume_selected_host(selected_host, spec_obj):
@@ -373,7 +370,8 @@ class FilterScheduler(driver.Scheduler):
             spec_obj.instance_group.obj_reset_changes(['hosts'])
 
     def _get_alternate_hosts(self, selected_hosts, spec_obj, hosts, index,
-                             num_to_return):
+                             num_alts, alloc_reqs_by_rp_uuid=None,
+                             allocation_request_version=None):
         # We only need to filter/weigh the hosts again if we're dealing with
         # more than one instance since the single selected host will get
         # filtered out of the list of alternates below.
@@ -383,13 +381,14 @@ class FilterScheduler(driver.Scheduler):
             # hosts again to get an accurate count for alternates.
             hosts = self._get_sorted_hosts(spec_obj, hosts, index)
         # This is the overall list of values to be returned. There will be one
-        # item per instance, and that item will be a list of HostState objects
+        # item per instance, and each item will be a list of Selection objects
         # representing the selected host along with alternates from the same
         # cell.
         selections_to_return = []
         for selected_host in selected_hosts:
             # This is the list of hosts for one particular instance.
-            selected_plus_alts = [selected_host]
+            selection = objects.Selection.from_host_state(selected_host)
+            selected_plus_alts = [selection]
             cell_uuid = selected_host.cell_uuid
             # This will populate the alternates with many of the same unclaimed
             # hosts. This is OK, as it should be rare for a build to fail. And
@@ -399,10 +398,32 @@ class FilterScheduler(driver.Scheduler):
             # will have had its resources reduced and will have a much lower
             # chance of being able to fit another instance on it.
             for host in hosts:
-                if len(selected_plus_alts) >= num_to_return:
+                if len(selected_plus_alts) >= num_alts:
                     break
                 if host.cell_uuid == cell_uuid and host not in selected_hosts:
-                    selected_plus_alts.append(host)
+                    if alloc_reqs_by_rp_uuid is not None:
+                        alt_uuid = host.uuid
+                        if alt_uuid not in alloc_reqs_by_rp_uuid:
+                            msg = ("A host state with uuid = '%s' that did "
+                                   "not have a matching allocation_request "
+                                   "was encountered while scheduling. This "
+                                   "host was skipped.")
+                            LOG.debug(msg, alt_uuid)
+                            continue
+
+                        # TODO(jaypipes): Loop through all allocation_requests
+                        # instead of just trying the first one. For now, since
+                        # we'll likely want to order the allocation_requests in
+                        # the future based on information in the provider
+                        # summaries, we'll just try to claim resources using
+                        # the first allocation_request
+                        alloc_req = alloc_reqs_by_rp_uuid[alt_uuid][0]
+                        alt_selection = (
+                            objects.Selection.from_host_state(host, alloc_req,
+                                    allocation_request_version))
+                    else:
+                        alt_selection = objects.Selection.from_host_state(host)
+                    selected_plus_alts.append(alt_selection)
             selections_to_return.append(selected_plus_alts)
         return selections_to_return
 
