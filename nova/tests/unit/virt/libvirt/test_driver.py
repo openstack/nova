@@ -11952,15 +11952,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         fake_backend.disks['disk'].create_snap.assert_called_once_with(
             libvirt_utils.RESIZE_SNAPSHOT_NAME)
 
-    @mock.patch.object(utils, 'execute')
-    def test_create_ephemeral_specified_fs(self, mock_exec):
+    @mock.patch('nova.privsep.fs.mkfs')
+    def test_create_ephemeral_specified_fs(self, fake_mkfs):
         self.flags(default_ephemeral_format='ext3')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         drvr._create_ephemeral('/dev/something', 20, 'myVol', 'linux',
                                is_block_dev=True, specified_fs='ext4')
-        mock_exec.assert_called_once_with('mkfs', '-t', 'ext4', '-F', '-L',
-                                          'myVol', '/dev/something',
-                                          run_as_root=True)
+        fake_mkfs.assert_has_calls([mock.call('ext4', '/dev/something',
+                                              'myVol')])
 
     @mock.patch('nova.privsep.path.utime')
     def test_create_ephemeral_specified_fs_not_valid(self, mock_utime):
@@ -11995,24 +11994,22 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                               context, instance, disk_info['mapping'],
                               block_device_info=block_device_info)
 
-    def test_create_ephemeral_default(self):
+    @mock.patch('nova.privsep.fs.mkfs')
+    def test_create_ephemeral_default(self, fake_mkfs):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.mox.StubOutWithMock(utils, 'execute')
-        utils.execute('mkfs', '-t', 'ext4', '-F', '-L', 'myVol',
-                      '/dev/something', run_as_root=True)
-        self.mox.ReplayAll()
         drvr._create_ephemeral('/dev/something', 20, 'myVol', 'linux',
                                is_block_dev=True)
+        fake_mkfs.assert_has_calls([mock.call('ext4', '/dev/something',
+                                              'myVol')])
 
-    def test_create_ephemeral_with_conf(self):
+    @mock.patch('nova.privsep.fs.mkfs')
+    def test_create_ephemeral_with_conf(self, fake_mkfs):
         CONF.set_override('default_ephemeral_format', 'ext4')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.mox.StubOutWithMock(utils, 'execute')
-        utils.execute('mkfs', '-t', 'ext4', '-F', '-L', 'myVol',
-                      '/dev/something', run_as_root=True)
-        self.mox.ReplayAll()
         drvr._create_ephemeral('/dev/something', 20, 'myVol', 'linux',
                                is_block_dev=True)
+        fake_mkfs.assert_has_calls([mock.call('ext4', '/dev/something',
+                                              'myVol')])
 
     def test_create_ephemeral_with_arbitrary(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -12048,13 +12045,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                                   '/dev/something',
                                                   '20G', 'fs_format')
 
-    def test_create_swap_default(self):
+    @mock.patch('nova.privsep.fs.unprivileged_mkfs')
+    def test_create_swap_default(self, fake_mkfs):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.mox.StubOutWithMock(utils, 'execute')
-        utils.execute('mkswap', '/dev/something', run_as_root=False)
-        self.mox.ReplayAll()
-
         drvr._create_swap('/dev/something', 1)
+        fake_mkfs.assert_has_calls([mock.call('swap', '/dev/something')])
 
     def test_ensure_console_log_for_instance_pass(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)

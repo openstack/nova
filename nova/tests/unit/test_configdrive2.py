@@ -64,7 +64,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
             if imagefile:
                 fileutils.delete_if_exists(imagefile)
 
-    @mock.patch.object(utils, 'mkfs', return_value=None)
+    @mock.patch('nova.privsep.fs.unprivileged_mkfs', return_value=None)
     @mock.patch('nova.privsep.fs.mount', return_value=('', ''))
     @mock.patch('nova.privsep.fs.umount', return_value=None)
     @mock.patch.object(utils, 'trycmd', return_value=(None, None))

@@ -904,7 +904,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
                          os_type="linux", architecture="x86-64")
         self.check_vm_params_for_linux()
 
-    def test_spawn_vhd_glance_windows(self):
+    @mock.patch('nova.privsep.fs.mkfs')
+    def test_spawn_vhd_glance_windows(self, fake_mkfs):
         self._test_spawn(IMAGE_VHD, None, None,
                          os_type="windows", architecture="i386",
                          instance_type_id=5)

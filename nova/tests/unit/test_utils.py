@@ -677,45 +677,6 @@ class AuditPeriodTest(test.NoDBTestCase):
                                            year=2011))
 
 
-class MkfsTestCase(test.NoDBTestCase):
-
-    @mock.patch('nova.utils.execute')
-    def test_mkfs_ext4(self, mock_execute):
-        utils.mkfs('ext4', '/my/block/dev')
-        mock_execute.assert_called_once_with('mkfs', '-t', 'ext4', '-F',
-            '/my/block/dev', run_as_root=False)
-
-    @mock.patch('nova.utils.execute')
-    def test_mkfs_msdos(self, mock_execute):
-        utils.mkfs('msdos', '/my/msdos/block/dev')
-        mock_execute.assert_called_once_with('mkfs', '-t', 'msdos',
-            '/my/msdos/block/dev', run_as_root=False)
-
-    @mock.patch('nova.utils.execute')
-    def test_mkfs_swap(self, mock_execute):
-        utils.mkfs('swap', '/my/swap/block/dev')
-        mock_execute.assert_called_once_with('mkswap', '/my/swap/block/dev',
-            run_as_root=False)
-
-    @mock.patch('nova.utils.execute')
-    def test_mkfs_ext4_withlabel(self, mock_execute):
-        utils.mkfs('ext4', '/my/block/dev', 'ext4-vol')
-        mock_execute.assert_called_once_with('mkfs', '-t', 'ext4', '-F',
-            '-L', 'ext4-vol', '/my/block/dev', run_as_root=False)
-
-    @mock.patch('nova.utils.execute')
-    def test_mkfs_msdos_withlabel(self, mock_execute):
-        utils.mkfs('msdos', '/my/msdos/block/dev', 'msdos-vol')
-        mock_execute.assert_called_once_with('mkfs', '-t', 'msdos',
-            '-n', 'msdos-vol', '/my/msdos/block/dev', run_as_root=False)
-
-    @mock.patch('nova.utils.execute')
-    def test_mkfs_swap_withlabel(self, mock_execute):
-        utils.mkfs('swap', '/my/swap/block/dev', 'swap-vol')
-        mock_execute.assert_called_once_with('mkswap', '-L', 'swap-vol',
-            '/my/swap/block/dev', run_as_root=False)
-
-
 class MetadataToDictTestCase(test.NoDBTestCase):
     def test_metadata_to_dict(self):
         self.assertEqual(utils.metadata_to_dict(

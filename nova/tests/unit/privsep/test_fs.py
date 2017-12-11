@@ -32,3 +32,42 @@ class PrivsepFilesystemHelpersTestCase(test.NoDBTestCase):
         self.assertEqual(2, len(partitions))
         self.assertEqual((1, 2, 10, "ext3", "", "boot"), partitions[0])
         self.assertEqual((2, 20, 10, "", "bob", ""), partitions[1])
+
+
+class MkfsTestCase(test.NoDBTestCase):
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_mkfs_ext4(self, mock_execute):
+        nova.privsep.fs.unprivileged_mkfs('ext4', '/my/block/dev')
+        mock_execute.assert_called_once_with('mkfs', '-t', 'ext4', '-F',
+            '/my/block/dev')
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_mkfs_msdos(self, mock_execute):
+        nova.privsep.fs.unprivileged_mkfs('msdos', '/my/msdos/block/dev')
+        mock_execute.assert_called_once_with('mkfs', '-t', 'msdos',
+            '/my/msdos/block/dev')
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_mkfs_swap(self, mock_execute):
+        nova.privsep.fs.unprivileged_mkfs('swap', '/my/swap/block/dev')
+        mock_execute.assert_called_once_with('mkswap', '/my/swap/block/dev')
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_mkfs_ext4_withlabel(self, mock_execute):
+        nova.privsep.fs.unprivileged_mkfs('ext4', '/my/block/dev', 'ext4-vol')
+        mock_execute.assert_called_once_with(
+            'mkfs', '-t', 'ext4', '-F', '-L', 'ext4-vol', '/my/block/dev')
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_mkfs_msdos_withlabel(self, mock_execute):
+        nova.privsep.fs.unprivileged_mkfs(
+            'msdos', '/my/msdos/block/dev', 'msdos-vol')
+        mock_execute.assert_called_once_with(
+            'mkfs', '-t', 'msdos', '-n', 'msdos-vol', '/my/msdos/block/dev')
+
+    @mock.patch('oslo_concurrency.processutils.execute')
+    def test_mkfs_swap_withlabel(self, mock_execute):
+        nova.privsep.fs.unprivileged_mkfs(
+            'swap', '/my/swap/block/dev', 'swap-vol')
+        mock_execute.assert_called_once_with(
+            'mkswap', '-L', 'swap-vol', '/my/swap/block/dev')
