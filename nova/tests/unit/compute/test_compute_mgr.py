@@ -6039,6 +6039,19 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                 self.instance.node)
             self.assertIsNotNone(self.instance.migration_context)
 
+        # Three fake BDMs:
+        # 1. volume BDM with an attachment_id which will be updated/completed
+        # 2. volume BDM without an attachment_id so it's not updated
+        # 3. non-volume BDM so it's not updated
+        fake_bdms = objects.BlockDeviceMappingList(objects=[
+            objects.BlockDeviceMapping(destination_type='volume',
+                                       attachment_id=uuids.attachment_id,
+                                       device_name='/dev/vdb'),
+            objects.BlockDeviceMapping(destination_type='volume',
+                                       attachment_id=None),
+            objects.BlockDeviceMapping(destination_type='local')
+        ])
+
         @mock.patch('nova.objects.Service.get_minimum_version',
                     return_value=22)
         @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
@@ -6053,8 +6066,16 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(self.compute.network_api, 'migrate_instance_finish')
         @mock.patch.object(self.compute.network_api, 'get_instance_nw_info')
         @mock.patch.object(objects.BlockDeviceMappingList,
-                           'get_by_instance_uuid')
-        def do_finish_revert_resize(mock_get_by_instance_uuid,
+                           'get_by_instance_uuid', return_value=fake_bdms)
+        @mock.patch.object(self.compute, '_get_instance_block_device_info')
+        @mock.patch.object(self.compute.driver, 'get_volume_connector')
+        @mock.patch.object(self.compute.volume_api, 'attachment_update')
+        @mock.patch.object(self.compute.volume_api, 'attachment_complete')
+        def do_finish_revert_resize(mock_attachment_complete,
+                                    mock_attachment_update,
+                                    mock_get_vol_connector,
+                                    mock_get_blk,
+                                    mock_get_by_instance_uuid,
                                     mock_get_instance_nw_info,
                                     mock_instance_finish,
                                     mock_setup_network,
@@ -6073,6 +6094,13 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                               reservations=None,
                                               migration=self.migration)
             self.assertIsNone(self.instance.migration_context)
+            # We should only have one attachment_update/complete call for the
+            # volume BDM that had an attachment.
+            mock_attachment_update.assert_called_once_with(
+                self.context, uuids.attachment_id,
+                mock_get_vol_connector.return_value, '/dev/vdb')
+            mock_attachment_complete.assert_called_once_with(
+                self.context, uuids.attachment_id)
 
         do_revert_resize()
         do_finish_revert_resize()

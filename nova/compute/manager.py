@@ -3899,8 +3899,19 @@ class ComputeManager(manager.Manager):
             network_info = self.network_api.get_instance_nw_info(context,
                                                                  instance)
 
+            # revert_resize deleted any volume attachments for the instance
+            # and created new ones to be used on this host, but we
+            # have to update those attachments with the host connector so the
+            # BDM.connection_info will get set in the call to
+            # _get_instance_block_device_info below with refresh_conn_info=True
+            # and then the volumes can be re-connected via the driver on this
+            # host.
+            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance.uuid)
+            self._update_volume_attachments(context, instance, bdms)
+
             block_device_info = self._get_instance_block_device_info(
-                    context, instance, refresh_conn_info=True)
+                    context, instance, refresh_conn_info=True, bdms=bdms)
 
             power_on = old_vm_state != vm_states.STOPPED
             self.driver.finish_revert_migration(context, instance,
@@ -3910,6 +3921,9 @@ class ComputeManager(manager.Manager):
             instance.drop_migration_context()
             instance.launched_at = timeutils.utcnow()
             instance.save(expected_task_state=task_states.RESIZE_REVERTING)
+
+            # Complete any volume attachments so the volumes are in-use.
+            self._complete_volume_attachments(context, bdms)
 
             # if the original vm state was STOPPED, set it back to STOPPED
             LOG.info("Updating instance to original state: '%s'",
@@ -4261,6 +4275,36 @@ class ComputeManager(manager.Manager):
         instance.ephemeral_gb = instance_type.ephemeral_gb
         instance.flavor = instance_type
 
+    def _update_volume_attachments(self, context, instance, bdms):
+        """Updates volume attachments using the virt driver host connector.
+
+        :param context: nova.context.RequestContext - user request context
+        :param instance: nova.objects.Instance
+        :param bdms: nova.objects.BlockDeviceMappingList - the list of block
+                     device mappings for the given instance
+        """
+        if bdms:
+            connector = None
+            for bdm in bdms:
+                if bdm.is_volume and bdm.attachment_id:
+                    if connector is None:
+                        connector = self.driver.get_volume_connector(instance)
+                    self.volume_api.attachment_update(
+                        context, bdm.attachment_id, connector, bdm.device_name)
+
+    def _complete_volume_attachments(self, context, bdms):
+        """Completes volume attachments for the instance
+
+        :param context: nova.context.RequestContext - user request context
+        :param bdms: nova.objects.BlockDeviceMappingList - the list of block
+                     device mappings for the given instance
+        """
+        if bdms:
+            for bdm in bdms:
+                if bdm.is_volume and bdm.attachment_id:
+                    self.volume_api.attachment_complete(
+                        context, bdm.attachment_id)
+
     def _finish_resize(self, context, instance, migration, disk_info,
                        image_meta, bdms):
         resize_instance = False
@@ -4304,6 +4348,15 @@ class ComputeManager(manager.Manager):
                self.host, action=fields.NotificationAction.RESIZE_FINISH,
                phase=fields.NotificationPhase.START, bdms=bdms)
 
+        # We need to update any volume attachments using the destination
+        # host connector so that we can update the BDM.connection_info
+        # before calling driver.finish_migration otherwise the driver
+        # won't know how to connect the volumes to this host.
+        # Note that _get_instance_block_device_info with
+        # refresh_conn_info=True will update the BDM.connection_info value
+        # in the database so we must do this before calling that method.
+        self._update_volume_attachments(context, instance, bdms)
+
         block_device_info = self._get_instance_block_device_info(
             context, instance, refresh_conn_info=True, bdms=bdms)
 
@@ -4322,6 +4375,9 @@ class ComputeManager(manager.Manager):
                 if old_instance_type_id != new_instance_type_id:
                     self._set_instance_info(instance,
                                             old_instance_type)
+
+        # Now complete any volume attachments that were previously updated.
+        self._complete_volume_attachments(context, bdms)
 
         migration.status = 'finished'
         with migration.obj_as_admin():
