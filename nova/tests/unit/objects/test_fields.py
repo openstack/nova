@@ -736,3 +736,13 @@ class TestSchemaGeneration(test.NoDBTestCase):
         expected = {'type': ['string'], 'pattern': '[a-z]+[0-9]+',
                     'readonly': False}
         self.assertEqual(expected, field.get_schema())
+
+
+class TestNotificationSource(test.NoDBTestCase):
+    def test_get_source_by_binary(self):
+        self.assertEqual('nova-api',
+                         fields.NotificationSource.get_source_by_binary(
+                             'nova-osapi_compute'))
+        self.assertEqual('nova-metadata',
+                         fields.NotificationSource.get_source_by_binary(
+                             'nova-metadata'))

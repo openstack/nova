@@ -809,6 +809,12 @@ class NotificationSource(BaseNovaEnum):
     ALL = (API, COMPUTE, CONDUCTOR, SCHEDULER,
            NETWORK, CONSOLEAUTH, CELLS, CONSOLE, METADATA)
 
+    @staticmethod
+    def get_source_by_binary(binary):
+        # nova-osapi_compute binary name needs to be translated to nova-api
+        # notification source enum value.
+        return "nova-api" if binary == "nova-osapi_compute" else binary
+
 
 class NotificationAction(BaseNovaEnum):
     UPDATE = 'update'
