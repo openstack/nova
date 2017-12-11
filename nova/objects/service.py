@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 24
+SERVICE_VERSION = 25
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -116,6 +116,9 @@ SERVICE_VERSION_HISTORY = (
     # for cold migration.
     {'compute_rpc': '4.18'},
     # Version 24: Add support for Cinder v3 attach/detach API.
+    {'compute_rpc': '4.18'},
+    # Version 25: Compute hosts allow migration-based allocations
+    # for live migration.
     {'compute_rpc': '4.18'},
 )
 

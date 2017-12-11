@@ -339,7 +339,8 @@ def resources_from_request_spec(spec_obj):
 # TODO(mriedem): Remove this when select_destinations() in the scheduler takes
 # some sort of skip_filters flag.
 def claim_resources_on_destination(
-        reportclient, instance, source_node, dest_node):
+        reportclient, instance, source_node, dest_node,
+        source_node_allocations=None):
     """Copies allocations from source node to dest node in Placement
 
     Normally the scheduler will allocate resources on a chosen destination
@@ -361,9 +362,10 @@ def claim_resources_on_destination(
                          node fails.
     """
     # Get the current allocations for the source node and the instance.
-    source_node_allocations = (
-        reportclient.get_allocations_for_consumer_by_provider(
-            source_node.uuid, instance.uuid))
+    if not source_node_allocations:
+        source_node_allocations = (
+            reportclient.get_allocations_for_consumer_by_provider(
+                source_node.uuid, instance.uuid))
     if source_node_allocations:
         # Generate an allocation request for the destination node.
         alloc_request = {

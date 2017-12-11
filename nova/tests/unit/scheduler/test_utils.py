@@ -499,6 +499,8 @@ class TestUtils(test.NoDBTestCase):
         @mock.patch.object(reportclient,
                            'claim_resources', return_value=False)
         def test(mock_claim, mock_get_allocs):
+            # NOTE(danms): Don't pass source_node_allocations here to test
+            # that they are fetched if needed.
             self.assertRaises(exception.NoValidHost,
                               utils.claim_resources_on_destination,
                               reportclient, instance, source_node, dest_node)
@@ -536,15 +538,14 @@ class TestUtils(test.NoDBTestCase):
         }
 
         @mock.patch.object(reportclient,
-                           'get_allocations_for_consumer_by_provider',
-                           return_value=source_res_allocs)
+                           'get_allocations_for_consumer_by_provider')
         @mock.patch.object(reportclient,
                            'claim_resources', return_value=True)
         def test(mock_claim, mock_get_allocs):
             utils.claim_resources_on_destination(
-                reportclient, instance, source_node, dest_node)
-            mock_get_allocs.assert_called_once_with(
-                uuids.source_node, instance.uuid)
+                reportclient, instance, source_node, dest_node,
+                source_res_allocs)
+            self.assertFalse(mock_get_allocs.called)
             mock_claim.assert_called_once_with(
                 instance.uuid, dest_alloc_request,
                 instance.project_id, instance.user_id)

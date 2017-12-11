@@ -3716,8 +3716,8 @@ class ComputeManager(manager.Manager):
         cn_uuid = rt.get_node_uuid(nodename)
 
         if migration.source_node == nodename:
-            if migration.status == 'confirmed':
-                # NOTE(danms): We're confirming on the source node, so try to
+            if migration.status in ('confirmed', 'completed'):
+                # NOTE(danms): We're finishing on the source node, so try to
                 # delete the allocation based on the migration uuid
                 deleted = self.reportclient.delete_allocation_for_instance(
                     migration.uuid)
@@ -5904,6 +5904,9 @@ class ComputeManager(manager.Manager):
                 LOG.exception('Pre live migration failed at %s',
                               dest, instance=instance)
                 self._set_migration_status(migration, 'error')
+                # Make sure we set this for _rollback_live_migration()
+                # so it can find it, as expected if it was called later
+                migrate_data.migration = migration
                 self._rollback_live_migration(context, instance, dest,
                                               migrate_data)
 
@@ -6167,10 +6170,6 @@ class ComputeManager(manager.Manager):
         # host even before next periodic task.
         self.update_available_resource(ctxt)
 
-        rt = self._get_resource_tracker()
-        rt.delete_allocation_for_migrated_instance(
-            instance, source_node)
-
         self._update_scheduler_instance_info(ctxt, instance)
         self._notify_about_instance_usage(ctxt, instance,
                                           "live_migration._post.end",
@@ -6182,6 +6181,34 @@ class ComputeManager(manager.Manager):
         if migrate_data and migrate_data.obj_attr_is_set('migration'):
             migrate_data.migration.status = 'completed'
             migrate_data.migration.save()
+            migration = migrate_data.migration
+            rc = self.scheduler_client.reportclient
+            # Check to see if our migration has its own allocations
+            allocs = rc.get_allocations_for_consumer(migration.uuid)
+        else:
+            # We didn't have data on a migration, which means we can't
+            # look up to see if we had new-style migration-based
+            # allocations. This should really only happen in cases of
+            # a buggy virt driver or some really old component in the
+            # system. Log a warning so we know it happened.
+            allocs = None
+            LOG.warning('Live migration ended with no migrate_data '
+                        'record. Unable to clean up migration-based '
+                        'allocations which is almost certainly not '
+                        'an expected situation.')
+
+        if allocs:
+            # We had a migration-based allocation that we need to handle
+            self._delete_allocation_after_move(instance,
+                                               migrate_data.migration,
+                                               instance.flavor,
+                                               source_node)
+        else:
+            # No migration-based allocations, so do the old thing and
+            # attempt to clean up any doubled per-instance allocation
+            rt = self._get_resource_tracker()
+            rt.delete_allocation_for_migrated_instance(
+                instance, source_node)
 
     def _consoles_enabled(self):
         """Returns whether a console is enable."""
@@ -6277,23 +6304,6 @@ class ComputeManager(manager.Manager):
             Contains the status we want to set for the migration object
 
         """
-        # Remove allocations created in Placement for the dest node.
-        # NOTE(mriedem): The migrate_data.migration object does not have the
-        # dest_node (or dest UUID) set, so we have to lookup the destination
-        # ComputeNode with only the hostname.
-        dest_node = objects.ComputeNode.get_first_node_by_host_for_old_compat(
-            context, dest, use_slave=True)
-        reportclient = self.scheduler_client.reportclient
-        resources = scheduler_utils.resources_from_flavor(
-            instance, instance.flavor)
-        reportclient.remove_provider_from_instance_allocation(
-            instance.uuid, dest_node.uuid, instance.user_id,
-            instance.project_id, resources)
-
-        instance.task_state = None
-        instance.progress = 0
-        instance.save(expected_task_state=[task_states.MIGRATING])
-
         # TODO(tdurakov): remove dict to object conversion once RPC API version
         # is bumped to 5.x
         if isinstance(migrate_data, dict):
@@ -6306,6 +6316,20 @@ class ComputeManager(manager.Manager):
             migration = migrate_data.migration
         else:
             migration = None
+
+        if migration:
+            # Remove allocations created in Placement for the dest node.
+            # If migration is None, we must be so old we don't have placement,
+            # so no need to do something else.
+            self._revert_allocation(context, instance, migration)
+        else:
+            LOG.error('Unable to revert allocations during live migration '
+                      'rollback; compute driver did not provide migrate_data',
+                      instance=instance)
+
+        instance.task_state = None
+        instance.progress = 0
+        instance.save(expected_task_state=[task_states.MIGRATING])
 
         # NOTE(tr3buchet): setup networks on source host (really it's re-setup)
         self.network_api.setup_networks_on_host(context, instance, self.host)
