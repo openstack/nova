@@ -54,7 +54,9 @@ the same host to the destination options. Also set to true
 if you allow the ServerGroupAffinityFilter and need to resize.
 """),
     cfg.ListOpt('non_inheritable_image_properties',
-        default=['cache_in_nova', 'bittorrent'],
+        default=['cache_in_nova', 'bittorrent',
+                 'img_signature_hash_method', 'img_signature',
+                 'img_signature_key_type', 'img_signature_certificate_uuid'],
         help="""
 Image properties that should not be inherited from the instance
 when taking a snapshot.
@@ -68,7 +70,10 @@ Possible values:
   the image properties that are only needed by base images can be included
   here, since the snapshots that are created from the base images don't
   need them.
-* Default list: cache_in_nova, bittorrent
+* Default list: cache_in_nova, bittorrent, img_signature_hash_method,
+                img_signature, img_signature_key_type,
+                img_signature_certificate_uuid
+
 """),
     cfg.StrOpt('multi_instance_display_name_template',
         default='%(name)s-%(count)d',
