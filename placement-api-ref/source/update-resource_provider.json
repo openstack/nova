@@ -27,5 +27,7 @@
         }
     ],
     "name": "Shared storage",
-    "uuid": "33f26ae0-dbf2-485b-a24a-244d8280e29f"
+    "uuid": "33f26ae0-dbf2-485b-a24a-244d8280e29f",
+    "parent_provider_uuid": "542df8ed-9be2-49b9-b4db-6d3183ff8ec8",
+    "root_provider_uuid": "d0b381e9-8761-42de-8e6c-bba99a96d5f5"
 }
