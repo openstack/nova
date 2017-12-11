@@ -53,8 +53,9 @@ def verify_project_id(context, project_id):
         raise failure
     except kse.ClientException:
         # something is wrong, like there isn't a keystone v3 endpoint,
+        # or nova isn't configured for the interface to talk to it;
         # we'll take the pass and default to everything being ok.
-        LOG.exception("Unable to contact keystone to verify project_id")
+        LOG.info("Unable to contact keystone to verify project_id")
         return True
 
     if resp:
