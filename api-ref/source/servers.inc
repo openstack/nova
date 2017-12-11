@@ -152,10 +152,37 @@ body. The possible server status values are:
 - ``VERIFY_RESIZE``. System is awaiting confirmation that the server
   is operational after a move or resize.
 
+
+There is whitelist for valid filter keys. Any filter key other than from
+whitelist will be silently ignored.
+
+- For non-admin users, whitelist is different from admin users whitelist.
+  Valid whitelist for non-admin users includes
+
+  - ``all_tenants``
+  - ``changes-since``
+  - ``flavor``
+  - ``image``
+  - ``ip``
+  - ``ip6`` (New in version 2.5)
+  - ``name``
+  - ``not-tags`` (New in version 2.26)
+  - ``not-tags-any`` (New in version 2.26)
+  - ``reservation_id``
+  - ``status``
+  - ``tags`` (New in version 2.26)
+  - ``tags-any`` (New in version 2.26)
+
+
+- For admin user, whitelist includes all filter keys mentioned in
+  :ref:`list-server-request` Section.
+
 Normal response codes: 200
 
 Error response codes: badRequest(400), unauthorized(401),
 forbidden(403)
+
+.. _list-server-request:
 
 Request
 -------
