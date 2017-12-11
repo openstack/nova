@@ -40,8 +40,8 @@ Response
   - uuid: resource_provider_uuid
   - links: resource_provider_links
   - name: resource_provider_name
-  - parent_provider_uuid: resource_provider_parent_provider_uuid
-  - root_provider_uuid: resource_provider_root_provider_uuid
+  - parent_provider_uuid: resource_provider_parent_provider_uuid_required
+  - root_provider_uuid: resource_provider_root_provider_uuid_required
 
 Response Example
 ----------------
@@ -72,7 +72,6 @@ Request
   - name: resource_provider_name
   - uuid: resource_provider_uuid_opt
   - parent_provider_uuid: resource_provider_parent_provider_uuid
-  - root_provider_uuid: resource_provider_root_provider_uuid
 
 Request example
 ---------------

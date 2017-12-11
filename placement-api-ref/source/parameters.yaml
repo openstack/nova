@@ -298,7 +298,7 @@ resource_provider_object:
   required: true
   description: >
     A dictionary which contains the UUID of the resource provider.
-resource_provider_parent_provider_uuid:
+resource_provider_parent_provider_uuid: &resource_provider_parent_provider_uuid
   type: string
   in: body
   required: false
@@ -306,19 +306,8 @@ resource_provider_parent_provider_uuid:
     The UUID of the immediate parent of the resource provider.
   min_version: 1.14
 resource_provider_parent_provider_uuid_required:
-  type: string
-  in: body
+  <<: *resource_provider_parent_provider_uuid
   required: true
-  description: >
-    The UUID of the immediate parent of the resource provider.
-  min_version: 1.14
-resource_provider_root_provider_uuid:
-  type: string
-  in: body
-  required: false
-  description: >
-    Read-only UUID of the top-most provider in this provider tree.
-  min_version: 1.14
 resource_provider_root_provider_uuid_required:
   type: string
   in: body
