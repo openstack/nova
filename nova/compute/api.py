@@ -2907,7 +2907,6 @@ class API(base.Base):
     def rebuild(self, context, instance, image_href, admin_password,
                 files_to_inject=None, **kwargs):
         """Rebuild the given instance with the provided attributes."""
-        orig_image_ref = instance.image_ref or ''
         files_to_inject = files_to_inject or []
         metadata = kwargs.get('metadata', {})
         preserve_ephemeral = kwargs.get('preserve_ephemeral', False)
@@ -2920,6 +2919,29 @@ class API(base.Base):
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
             context, instance.uuid)
         root_bdm = compute_utils.get_root_bdm(context, instance, bdms)
+
+        # Check to see if the image is changing and we have a volume-backed
+        # server.
+        is_volume_backed = compute_utils.is_volume_backed_instance(
+            context, instance, bdms)
+        if is_volume_backed:
+            # For boot from volume, instance.image_ref is empty, so we need to
+            # query the image from the volume.
+            if root_bdm is None:
+                # This shouldn't happen and is an error, we need to fail. This
+                # is not the users fault, it's an internal error. Without a
+                # root BDM we have no way of knowing the backing volume (or
+                # image in that volume) for this instance.
+                raise exception.NovaException(
+                    _('Unable to find root block device mapping for '
+                      'volume-backed instance.'))
+
+            volume = self.volume_api.get(context, root_bdm.volume_id)
+            volume_image_metadata = volume.get('volume_image_metadata', {})
+            orig_image_ref = volume_image_metadata.get('image_id')
+        else:
+            orig_image_ref = instance.image_ref
+
         self._checks_for_create_and_rebuild(context, image_id, image,
                 flavor, metadata, files_to_inject, root_bdm)
 
