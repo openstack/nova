@@ -12,14 +12,21 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import os
 from oslo_log import log as logging
 import six
 import six.moves.urllib.parse as urlparse
 from zvmconnector import connector
 
+from oslo_utils import fileutils
+
+from nova.api.metadata import base as instance_metadata
+from nova import conf
 from nova import exception
+from nova.virt import configdrive
 
 
+CONF = conf.CONF
 LOG = logging.getLogger(__name__)
 
 
@@ -59,3 +66,56 @@ class ConnectorClient(object):
             raise exception.ZVMConnectorError(results=results)
 
         return results['output']
+
+
+def _get_instance_path(instance_uuid):
+    instance_folder = os.path.join(os.path.normpath(CONF.instances_path),
+                                   instance_uuid)
+    fileutils.ensure_tree(instance_folder)
+    return instance_folder
+
+
+def _create_config_drive(context, instance_path, instance,
+                         injected_files, network_info, admin_password):
+    if CONF.config_drive_format != 'iso9660':
+        raise exception.ConfigDriveUnsupportedFormat(
+                        format=CONF.config_drive_format)
+
+    LOG.debug('Using config drive', instance=instance)
+
+    extra_md = {}
+    if admin_password:
+        extra_md['admin_pass'] = admin_password
+
+    inst_md = instance_metadata.InstanceMetadata(instance,
+                                                 content=injected_files,
+                                                 extra_md=extra_md,
+                                                 network_info=network_info,
+                                                 request_context=context)
+
+    configdrive_iso = os.path.join(instance_path, 'cfgdrive.iso')
+    LOG.debug('Creating config drive at %s', configdrive_iso,
+              instance=instance)
+    with configdrive.ConfigDriveBuilder(instance_md=inst_md) as cdb:
+        cdb.make_drive(configdrive_iso)
+
+    return configdrive_iso
+
+
+# Prepare and create configdrive for instance
+def generate_configdrive(context, instance, injected_files,
+                         network_info, admin_password):
+    # Create network configuration files
+    LOG.debug('Creating config drive configuration files '
+              'for instance: %s', instance.name, instance=instance)
+
+    instance_path = _get_instance_path(instance.uuid)
+
+    transportfiles = None
+    if configdrive.required_by(instance):
+        transportfiles = _create_config_drive(context, instance_path,
+                                              instance,
+                                              injected_files,
+                                              network_info,
+                                              admin_password)
+    return transportfiles
