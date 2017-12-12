@@ -82,11 +82,6 @@ def generate_glance_url(context):
     return next(get_api_servers(context))
 
 
-def generate_image_url(image_ref, context):
-    """Generate an image URL from an image_ref."""
-    return "%s/images/%s" % (generate_glance_url(context), image_ref)
-
-
 def _endpoint_from_image_ref(image_href):
     """Return the image_ref and guessed endpoint from an image url.
 

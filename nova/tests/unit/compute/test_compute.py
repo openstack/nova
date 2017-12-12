@@ -60,7 +60,6 @@ from nova import context
 from nova import db
 from nova import exception
 from nova.image import api as image_api
-from nova.image import glance
 from nova.network import model as network_model
 from nova import objects
 from nova.objects import block_device as block_device_obj
@@ -1497,6 +1496,8 @@ class ComputeTestCase(BaseTestCase,
         super(ComputeTestCase, self).setUp()
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
 
+        self.image_api = image_api.API()
+
     def test_wrap_instance_fault(self):
         inst = {"uuid": uuids.instance}
 
@@ -2418,8 +2419,8 @@ class ComputeTestCase(BaseTestCase,
             self.assertIn('display_name', payload)
             self.assertIn('created_at', payload)
             self.assertIn('launched_at', payload)
-            image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF,
-                                                      self.context)
+            image_ref_url = self.image_api.generate_image_url(FAKE_IMAGE_REF,
+                 self.context)
             self.assertEqual(payload['image_ref_url'], image_ref_url)
         msg = fake_notifier.NOTIFICATIONS[0]
         self.assertIn('rescue_image_name', msg.payload)
@@ -2459,8 +2460,8 @@ class ComputeTestCase(BaseTestCase,
             self.assertIn('display_name', payload)
             self.assertIn('created_at', payload)
             self.assertIn('launched_at', payload)
-            image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF,
-                                                      self.context)
+            image_ref_url = self.image_api.generate_image_url(FAKE_IMAGE_REF,
+                 self.context)
             self.assertEqual(payload['image_ref_url'], image_ref_url)
 
         self.compute.terminate_instance(self.context, instance, [], [])
@@ -4207,7 +4208,8 @@ class ComputeTestCase(BaseTestCase,
         self.assertIn('launched_at', payload)
         self.assertIn('fixed_ips', payload)
         self.assertTrue(payload['launched_at'])
-        image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF, self.context)
+        image_ref_url = self.image_api.generate_image_url(FAKE_IMAGE_REF,
+             self.context)
         self.assertEqual(payload['image_ref_url'], image_ref_url)
         self.assertEqual('Success', payload['message'])
         self.compute.terminate_instance(self.context, instance, [], [])
@@ -4337,7 +4339,8 @@ class ComputeTestCase(BaseTestCase,
         self.assertIn('deleted_at', payload)
         self.assertEqual(payload['terminated_at'], utils.strtime(cur_time))
         self.assertEqual(payload['deleted_at'], utils.strtime(cur_time))
-        image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF, self.context)
+        image_ref_url = self.image_api.generate_image_url(FAKE_IMAGE_REF,
+             self.context)
         self.assertEqual(payload['image_ref_url'], image_ref_url)
 
     @mock.patch.object(fake.FakeDriver, "macs_for_instance")
@@ -5026,9 +5029,10 @@ class ComputeTestCase(BaseTestCase,
 
         inst_ref.refresh()
 
-        image_ref_url = glance.generate_image_url(image_ref, self.context)
-        new_image_ref_url = glance.generate_image_url(new_image_ref,
-                                                      self.context)
+        image_ref_url = self.image_api.generate_image_url(image_ref,
+             self.context)
+        new_image_ref_url = self.image_api.generate_image_url(new_image_ref,
+             self.context)
 
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 3)
         msg = fake_notifier.NOTIFICATIONS[0]
@@ -5116,8 +5120,8 @@ class ComputeTestCase(BaseTestCase,
         self.assertIn('created_at', payload)
         self.assertIn('launched_at', payload)
         self.assertEqual(payload['launched_at'], utils.strtime(cur_time))
-        image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF,
-                                                  self.context)
+        image_ref_url = self.image_api.generate_image_url(FAKE_IMAGE_REF,
+             self.context)
         self.assertEqual(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(self.context, instance, [], [])
 
@@ -5169,7 +5173,8 @@ class ComputeTestCase(BaseTestCase,
         self.assertIn('display_name', payload)
         self.assertIn('created_at', payload)
         self.assertIn('launched_at', payload)
-        image_ref_url = glance.generate_image_url(FAKE_IMAGE_REF, self.context)
+        image_ref_url = self.image_api.generate_image_url(FAKE_IMAGE_REF,
+             self.context)
         self.assertEqual(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(self.context, instance, [], [])
 

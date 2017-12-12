@@ -28,7 +28,7 @@ from oslo_utils import timeutils
 import nova.conf
 import nova.context
 from nova import exception
-from nova.image import glance
+from nova import image as image_api
 from nova import network
 from nova.network import model as network_model
 from nova.notifications.objects import base as notification_base
@@ -394,7 +394,8 @@ def info_from_instance(context, instance, network_info,
         modifications.
 
     """
-    image_ref_url = glance.generate_image_url(instance.image_ref, context)
+    image_ref_url = image_api.API().generate_image_url(instance.image_ref,
+                                                       context)
 
     instance_type = instance.get_flavor()
     instance_type_name = instance_type.get('name', '')
