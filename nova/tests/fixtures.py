@@ -1575,7 +1575,7 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
             return {'save_volume_id': new_volume_id}
 
         def fake_attachment_create(_self, context, volume_id, instance_uuid,
-                                   connector=None):
+                                   connector=None, mountpoint=None):
             attachment_id = uuidutils.generate_uuid()
             if self.attachment_error_id is not None:
                 attachment_id = self.attachment_error_id

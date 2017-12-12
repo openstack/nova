@@ -558,7 +558,7 @@ class API(object):
 
     @translate_volume_exception
     def attachment_create(self, context, volume_id, instance_id,
-                          connector=None):
+                          connector=None, mountpoint=None):
         """Create a volume attachment. This requires microversion >= 3.44.
 
         The attachment_create call was introduced in microversion 3.27. We
@@ -571,13 +571,28 @@ class API(object):
             attached.
         :param connector: host connector dict; if None, the attachment will
             be 'reserved' but not yet attached.
+        :param mountpoint: Optional mount device name for the attachment,
+            e.g. "/dev/vdb". This is only used if a connector is provided.
         :returns: a dict created from the
             cinderclient.v3.attachments.VolumeAttachment object with a backward
             compatible connection_info dict
         """
+        # NOTE(mriedem): Due to a limitation in the POST /attachments/
+        # API in Cinder, we have to pass the mountpoint in via the
+        # host connector rather than pass it in as a top-level parameter
+        # like in the os-attach volume action API. Hopefully this will be
+        # fixed some day with a new Cinder microversion but until then we
+        # work around it client-side.
+        _connector = connector
+        if _connector and mountpoint and 'mountpoint' not in _connector:
+            # Make a copy of the connector so we don't modify it by
+            # reference.
+            _connector = copy.deepcopy(connector)
+            _connector['mountpoint'] = mountpoint
+
         try:
             attachment_ref = cinderclient(context, '3.44').attachments.create(
-                volume_id, connector, instance_id)
+                volume_id, _connector, instance_id)
             return _translate_attachment_ref(attachment_ref)
         except cinder_exception.ClientException as ex:
             with excutils.save_and_reraise_exception():

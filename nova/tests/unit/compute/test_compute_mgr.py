@@ -6511,7 +6511,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             self.assertIsInstance(mock_plm.call_args_list[0][0][5],
                                   migrate_data_obj.LiveMigrateData)
             mock_attach.assert_called_once_with(
-                self.context, volume_id, instance.uuid, connector=connector)
+                self.context, volume_id, instance.uuid, connector=connector,
+                mountpoint=vol_bdm.device_name)
             self.assertEqual(vol_bdm.attachment_id, new_attachment_id)
             self.assertEqual(migrate_data.old_vol_attachment_ids[volume_id],
                              orig_attachment_id)
