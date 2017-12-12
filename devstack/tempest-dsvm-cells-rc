@@ -106,6 +106,9 @@ r="$r|(?:.*id\-9cecbe35\-b9d4\-48da\-a37e\-7ce70aa43d30.*)"
 # test_stamp_pattern uses security groups which aren't supported in cells v1
 # tempest.scenario.test_stamp_pattern.TestStampPattern.test_stamp_pattern
 r="$r|(?:.*id\-10fd234a\-515c\-41e5\-b092\-8323060598c5.*)"
+# Bug 1709985: rebuild randomly times out, probably due to sync issues
+# tempest.api.compute.admin.test_servers.ServersAdminTestJSON.test_rebuild_server_in_error_state
+r="$r|(?:.*id\-682cb127\-e5bb\-4f53\-87ce\-cb9003604442.*)"
 r="$r).*$"
 
 export DEVSTACK_GATE_TEMPEST_REGEX="$r"
