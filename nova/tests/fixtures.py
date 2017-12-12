@@ -1592,7 +1592,8 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
             if attachment_id == CinderFixtureNewAttachFlow.SWAP_ERR_ATTACH_ID:
                 self.swap_error = True
 
-        def fake_attachment_update(_self, context, attachment_id, connector):
+        def fake_attachment_update(_self, context, attachment_id, connector,
+                                   mountpoint=None):
             attachment_ref = {'driver_volume_type': 'fake_type',
                               'id': attachment_id,
                               'connection_info': {'data':

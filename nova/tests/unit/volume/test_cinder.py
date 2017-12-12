@@ -337,15 +337,18 @@ class CinderApiTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_attachment_update(self, mock_cinderclient):
-        """Tests the happy path for updating a volume attachment."""
+        """Tests the happy path for updating a volume attachment without
+        a mountpoint.
+        """
         fake_attachment = FakeAttachment()
+        connector = {'host': 'fake-host'}
         expected_attachment_ref = {
              'id': uuids.attachment_id,
              'volume_id': fake_attachment.volume_id,
              'connection_info': {
                  'attach_mode': 'rw',
                  'attached_at': fake_attachment.attached_at,
-                 'connector': {'host': 'fake-host'},
+                 'connector': connector,
                  'data': {'foo': 'bar', 'target_lun': '1'},
                  'detached_at': None,
                  'driver_volume_type': 'fake_type',
@@ -355,8 +358,45 @@ class CinderApiTestCase(test.NoDBTestCase):
         mock_cinderclient.return_value.attachments.update.return_value = (
             fake_attachment)
         result = self.api.attachment_update(
-            self.ctx, uuids.attachment_id, connector={'host': 'fake-host'})
+            self.ctx, uuids.attachment_id, connector=connector)
         self.assertEqual(expected_attachment_ref, result)
+        # Make sure the connector wasn't modified.
+        self.assertNotIn('mountpoint', connector)
+        mock_cinderclient.return_value.attachments.update.\
+            assert_called_once_with(uuids.attachment_id, connector)
+
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_attachment_update_with_mountpoint(self, mock_cinderclient):
+        """Tests the happy path for updating a volume attachment with
+        a mountpoint.
+        """
+        fake_attachment = FakeAttachment()
+        original_connector = {'host': 'fake-host'}
+        updated_connector = dict(original_connector, mountpoint='/dev/vdb')
+        expected_attachment_ref = {
+             'id': uuids.attachment_id,
+             'volume_id': fake_attachment.volume_id,
+             'connection_info': {
+                 'attach_mode': 'rw',
+                 'attached_at': fake_attachment.attached_at,
+                 'connector': updated_connector,
+                 'data': {'foo': 'bar', 'target_lun': '1'},
+                 'detached_at': None,
+                 'driver_volume_type': 'fake_type',
+                 'instance': fake_attachment.instance,
+                 'status': 'attaching',
+                 'volume_id': fake_attachment.volume_id}}
+        mock_cinderclient.return_value.attachments.update.return_value = (
+            fake_attachment)
+        result = self.api.attachment_update(
+            self.ctx, uuids.attachment_id, connector=original_connector,
+            mountpoint='/dev/vdb')
+        self.assertEqual(expected_attachment_ref, result)
+        # Make sure the original connector wasn't modified.
+        self.assertNotIn('mountpoint', original_connector)
+        # Make sure the mountpoint was passed through via the connector.
+        mock_cinderclient.return_value.attachments.update.\
+            assert_called_once_with(uuids.attachment_id, updated_connector)
 
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_attachment_update_attachment_not_found(self, mock_cinderclient):

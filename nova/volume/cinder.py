@@ -614,7 +614,8 @@ class API(object):
                            'code': getattr(ex, 'code', None)})
 
     @translate_attachment_exception
-    def attachment_update(self, context, attachment_id, connector):
+    def attachment_update(self, context, attachment_id, connector,
+                          mountpoint=None):
         """Updates the connector on the volume attachment. An attachment
         without a connector is considered reserved but not fully attached.
 
@@ -623,17 +624,34 @@ class API(object):
         :param connector: host connector dict. This is required when updating
             a volume attachment. To terminate a connection, the volume
             attachment for that connection must be deleted.
+        :param mountpoint: Optional mount device name for the attachment,
+            e.g. "/dev/vdb". Theoretically this is optional per volume backend,
+            but in practice it's normally required so it's best to always
+            provide a value.
         :returns: a dict created from the
             cinderclient.v3.attachments.VolumeAttachment object with a backward
             compatible connection_info dict
         """
+        # NOTE(mriedem): Due to a limitation in the PUT /attachments/{id}
+        # API in Cinder, we have to pass the mountpoint in via the
+        # host connector rather than pass it in as a top-level parameter
+        # like in the os-attach volume action API. Hopefully this will be
+        # fixed some day with a new Cinder microversion but until then we
+        # work around it client-side.
+        _connector = connector
+        if mountpoint and 'mountpoint' not in connector:
+            # Make a copy of the connector so we don't modify it by
+            # reference.
+            _connector = copy.deepcopy(connector)
+            _connector['mountpoint'] = mountpoint
+
         try:
             attachment_ref = cinderclient(
                 context, '3.44', skip_version_check=True).attachments.update(
-                    attachment_id, connector)
+                    attachment_id, _connector)
             translated_attach_ref = _translate_attachment_ref(
                 attachment_ref.to_dict())
-            translated_attach_ref['connection_info']['connector'] = connector
+            translated_attach_ref['connection_info']['connector'] = _connector
             return translated_attach_ref
         except cinder_exception.ClientException as ex:
             with excutils.save_and_reraise_exception():
