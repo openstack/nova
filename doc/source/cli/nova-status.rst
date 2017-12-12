@@ -107,6 +107,8 @@ Upgrade
   **18.0.0 (Rocky)**
 
   * Checks for the Placement API are modified to require version 1.21.
+  * Checks that ironic instances have had their embedded flavors migrated to
+    use custom resource classes.
 
 See Also
 ========

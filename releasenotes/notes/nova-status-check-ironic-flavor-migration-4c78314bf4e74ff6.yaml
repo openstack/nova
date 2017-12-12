@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    A new check is added to the ``nova-status upgrade check`` CLI which can
+    assist with determining if ironic instances have had their embedded flavor
+    migrated to use the corresponding ironic node custom resource class.
