@@ -104,6 +104,8 @@ Upgrade
   **17.0.0 (Queens)**
 
   * Checks for the Placement API are modified to require version 1.17.
+  * Checks that ironic instances have had their embedded flavors migrated to
+    use custom resource classes. This check was backported from Rocky.
 
 See Also
 ========
