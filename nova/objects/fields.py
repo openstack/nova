@@ -734,6 +734,15 @@ class PciDeviceType(BaseNovaEnum):
     ALL = (STANDARD, SRIOV_PF, SRIOV_VF)
 
 
+class PCINUMAAffinityPolicy(BaseNovaEnum):
+
+    REQUIRED = "required"
+    LEGACY = "legacy"
+    PREFERRED = "preferred"
+
+    ALL = (REQUIRED, LEGACY, PREFERRED)
+
+
 class DiskFormat(BaseNovaEnum):
     RBD = "rbd"
     LVM = "lvm"
@@ -1200,6 +1209,10 @@ class PciDeviceStatusField(BaseEnumField):
 
 class PciDeviceTypeField(BaseEnumField):
     AUTO_TYPE = PciDeviceType()
+
+
+class PCINUMAAffinityPolicyField(BaseEnumField):
+    AUTO_TYPE = PCINUMAAffinityPolicy()
 
 
 class DiskFormatField(BaseEnumField):

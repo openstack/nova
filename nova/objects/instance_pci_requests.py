@@ -24,7 +24,8 @@ class InstancePCIRequest(base.NovaObject,
                          base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: Add request_id
-    VERSION = '1.1'
+    # Version 1.2: Add PCI NUMA affinity policy
+    VERSION = '1.2'
 
     fields = {
         'count': fields.IntegerField(),
@@ -34,13 +35,18 @@ class InstancePCIRequest(base.NovaObject,
         # on major version bump
         'is_new': fields.BooleanField(default=False),
         'request_id': fields.UUIDField(nullable=True),
+        'numa_policy': fields.PCINUMAAffinityPolicyField(nullable=True),
     }
 
     def obj_load_attr(self, attr):
         setattr(self, attr, None)
 
     def obj_make_compatible(self, primitive, target_version):
+        super(InstancePCIRequest, self).obj_make_compatible(primitive,
+                                                            target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 2) and 'numa_policy' in primitive:
+            del primitive['numa_policy']
         if target_version < (1, 1) and 'request_id' in primitive:
             del primitive['request_id']
 
