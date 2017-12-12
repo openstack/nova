@@ -141,7 +141,11 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         self.admin_api.delete_migration(server['id'], migrations[0]['id'])
         self._wait_for_notification('instance.live_migration_abort.start')
         self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
-        self._wait_for_notification('instance.live_migration_abort.end')
+        # NOTE(gibi): the intance.live_migration_rollback notification emitted
+        # after the instance.live_migration_abort notification so we have to
+        # wait for the rollback to ensure we can assert both notifications
+        # below
+        self._wait_for_notification('instance.live_migration_rollback.end')
         self.assertEqual(6, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
             'instance-live_migration_pre-start',
