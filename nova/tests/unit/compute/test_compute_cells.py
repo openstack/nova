@@ -650,14 +650,13 @@ class CellsConductorAPIRPCRedirect(test.NoDBTestCase):
     @mock.patch.object(objects.RequestSpec, 'get_by_instance_uuid')
     @mock.patch.object(compute_api.API, '_record_action_start')
     @mock.patch.object(compute_api.API, '_resize_cells_support')
-    @mock.patch.object(compute_utils, 'reserve_quota_delta')
     @mock.patch.object(compute_utils, 'upsize_quota_delta')
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(flavors, 'extract_flavor')
     @mock.patch.object(compute_api.API, '_check_auto_disk_config')
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     def test_resize_instance(self, _bdms, _check, _extract, _save, _upsize,
-                             _reserve, _cells, _record, _spec_get_by_uuid):
+                             _cells, _record, _spec_get_by_uuid):
         flavor = objects.Flavor(**test_flavor.fake_flavor)
         _extract.return_value = flavor
         orig_system_metadata = {}

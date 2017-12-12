@@ -1097,25 +1097,6 @@ class ComputeUtilsQuotaTestCase(test.TestCase):
         deltas = compute_utils.reverse_upsize_quota_delta(self.context, inst)
         self.assertEqual(expected_deltas, deltas)
 
-    @mock.patch.object(objects.Quotas, 'reserve')
-    @mock.patch.object(objects.quotas, 'ids_from_instance')
-    def test_reserve_quota_delta(self, mock_ids_from_instance,
-                                 mock_reserve):
-        quotas = objects.Quotas(context=context)
-        inst = create_instance(self.context, params=None)
-        inst.old_flavor = flavors.get_flavor_by_name('m1.tiny')
-        inst.new_flavor = flavors.get_flavor_by_name('m1.medium')
-
-        mock_ids_from_instance.return_value = (inst.project_id, inst.user_id)
-        mock_reserve.return_value = quotas
-
-        deltas = compute_utils.upsize_quota_delta(self.context,
-                                                  inst.new_flavor,
-                                                  inst.old_flavor)
-        compute_utils.reserve_quota_delta(self.context, deltas, inst)
-        mock_reserve.assert_called_once_with(project_id=inst.project_id,
-                                             user_id=inst.user_id, **deltas)
-
     @mock.patch('nova.objects.Quotas.count_as_dict')
     def test_check_instance_quota_exceeds_with_multiple_resources(self,
                                                                   mock_count):
