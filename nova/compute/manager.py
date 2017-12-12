@@ -3862,11 +3862,13 @@ class ComputeManager(manager.Manager):
 
         """
         with self._error_out_instance_on_exception(context, instance):
+            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                context, instance.uuid)
             self._notify_about_instance_usage(
                     context, instance, "resize.revert.start")
             compute_utils.notify_about_instance_action(context, instance,
                 self.host, action=fields.NotificationAction.RESIZE_REVERT,
-                    phase=fields.NotificationPhase.START)
+                    phase=fields.NotificationPhase.START, bdms=bdms)
 
             # NOTE(mriedem): delete stashed old_vm_state information; we
             # default to ACTIVE for backwards compatibility if old_vm_state
@@ -3906,8 +3908,6 @@ class ComputeManager(manager.Manager):
             # _get_instance_block_device_info below with refresh_conn_info=True
             # and then the volumes can be re-connected via the driver on this
             # host.
-            bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
-                context, instance.uuid)
             self._update_volume_attachments(context, instance, bdms)
 
             block_device_info = self._get_instance_block_device_info(
@@ -3942,7 +3942,7 @@ class ComputeManager(manager.Manager):
                     context, instance, "resize.revert.end")
             compute_utils.notify_about_instance_action(context, instance,
                 self.host, action=fields.NotificationAction.RESIZE_REVERT,
-                    phase=fields.NotificationPhase.END)
+                    phase=fields.NotificationPhase.END, bdms=bdms)
 
     def _revert_allocation(self, context, instance, migration):
         """Revert an allocation that is held by migration to our instance."""

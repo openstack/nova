@@ -5773,9 +5773,11 @@ class ComputeTestCase(BaseTestCase,
                 instance=instance, reservations=[])
         mock_notify.assert_has_calls([
             mock.call(self.context, instance, 'fake-mini',
-                      action='resize_revert', phase='start'),
+                      action='resize_revert', phase='start',
+                      bdms=test.MatchType(objects.BlockDeviceMappingList)),
             mock.call(self.context, instance, 'fake-mini',
-                      action='resize_revert', phase='end')])
+                      action='resize_revert', phase='end',
+                      bdms=test.MatchType(objects.BlockDeviceMappingList))])
 
         self.assertIsNone(instance.task_state)
 
