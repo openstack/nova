@@ -666,7 +666,6 @@ class API(object):
                     attachment_id, _connector)
             translated_attach_ref = _translate_attachment_ref(
                 attachment_ref.to_dict())
-            translated_attach_ref['connection_info']['connector'] = _connector
             return translated_attach_ref
         except cinder_exception.ClientException as ex:
             with excutils.save_and_reraise_exception():

@@ -374,7 +374,6 @@ class CinderApiTestCase(test.NoDBTestCase):
              'connection_info': {
                  'attach_mode': 'rw',
                  'attached_at': fake_attachment.attached_at,
-                 'connector': connector,
                  'data': {'foo': 'bar', 'target_lun': '1'},
                  'detached_at': None,
                  'driver_volume_type': 'fake_type',
@@ -405,7 +404,6 @@ class CinderApiTestCase(test.NoDBTestCase):
              'connection_info': {
                  'attach_mode': 'rw',
                  'attached_at': fake_attachment.attached_at,
-                 'connector': updated_connector,
                  'data': {'foo': 'bar', 'target_lun': '1'},
                  'detached_at': None,
                  'driver_volume_type': 'fake_type',
