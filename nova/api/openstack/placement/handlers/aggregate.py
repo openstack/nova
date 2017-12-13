@@ -54,6 +54,7 @@ def _serialize_aggregates(aggregate_uuids):
 
 @wsgi_wrapper.PlacementWsgify
 @util.check_accept('application/json')
+@microversion.version_handler('1.1')
 def get_aggregates(req):
     """GET a list of aggregates associated with a resource provider.
 
@@ -62,7 +63,6 @@ def get_aggregates(req):
     On success return a 200 with an application/json body containing a
     list of aggregate uuids.
     """
-    microversion.raise_http_status_code_if_not_version(req, 404, (1, 1))
     context = req.environ['placement.context']
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     resource_provider = rp_obj.ResourceProvider.get_by_uuid(
@@ -74,8 +74,8 @@ def get_aggregates(req):
 
 @wsgi_wrapper.PlacementWsgify
 @util.require_content('application/json')
+@microversion.version_handler('1.1')
 def set_aggregates(req):
-    microversion.raise_http_status_code_if_not_version(req, 404, (1, 1))
     context = req.environ['placement.context']
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     resource_provider = rp_obj.ResourceProvider.get_by_uuid(
