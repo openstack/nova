@@ -526,6 +526,13 @@ class BuildRequestListTestCase(test.NoDBTestCase):
             objects.base.obj_equal_prims(req.instance,
                                          req_list[i].instance)
 
+    def test_get_by_filters_marker_not_found(self):
+        self._create_req()
+        self.assertRaises(exception.MarkerNotFound,
+                          build_request.BuildRequestList.get_by_filters,
+                          self.context, {}, marker=uuidutils.generate_uuid(),
+                          sort_keys=['id'], sort_dirs=['asc'])
+
     def test_get_by_filters_limit(self):
         reqs = [self._create_req(),
                 self._create_req(),
