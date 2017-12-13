@@ -1159,7 +1159,8 @@ def get_vm_state(session, instance):
 def get_stats_from_cluster(session, cluster):
     """Get the aggregate resource stats of a cluster."""
     vcpus = 0
-    mem_info = {'total': 0, 'free': 0}
+    used_mem_mb = 0
+    total_mem_mb = 0
     # Get the Host and Resource Pool Managed Object Refs
     prop_dict = session._call_method(vutil,
                                      "get_object_properties_dict",
@@ -1172,27 +1173,25 @@ def get_stats_from_cluster(session, cluster):
             result = session._call_method(vim_util,
                          "get_properties_for_a_collection_of_objects",
                          "HostSystem", host_mors,
-                         ["summary.hardware", "summary.runtime"])
+                         ["summary.hardware", "summary.runtime",
+                          "summary.quickStats"])
             for obj in result.objects:
-                hardware_summary = obj.propSet[0].val
-                runtime_summary = obj.propSet[1].val
+                host_props = propset_dict(obj.propSet)
+                hardware_summary = host_props['summary.hardware']
+                runtime_summary = host_props['summary.runtime']
+                stats_summary = host_props['summary.quickStats']
                 if (runtime_summary.inMaintenanceMode is False and
                     runtime_summary.connectionState == "connected"):
                     # Total vcpus is the sum of all pCPUs of individual hosts
                     # The overcommitment ratio is factored in by the scheduler
-                    vcpus += hardware_summary.numCpuThreads
-
-        res_mor = prop_dict.get('resourcePool')
-        if res_mor:
-            res_usage = session._call_method(vutil, "get_object_property",
-                                             res_mor, "summary.runtime.memory")
-            if res_usage:
-                # maxUsage is the memory limit of the cluster available to VM's
-                mem_info['total'] = int(res_usage.maxUsage / units.Mi)
-                # overallUsage is the hypervisor's view of memory usage by VM's
-                consumed = int(res_usage.overallUsage / units.Mi)
-                mem_info['free'] = mem_info['total'] - consumed
-    stats = {'vcpus': vcpus, 'mem': mem_info}
+                    threads = hardware_summary.numCpuThreads
+                    vcpus += threads
+                    used_mem_mb += stats_summary.overallMemoryUsage
+                    mem_mb = hardware_summary.memorySize // units.Mi
+                    total_mem_mb += mem_mb
+    stats = {'vcpus': vcpus,
+             'mem': {'total': total_mem_mb,
+                     'free': total_mem_mb - used_mem_mb}}
     return stats
 
 

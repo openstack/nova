@@ -772,6 +772,7 @@ class HostSystem(ManagedObject):
         self.set("capability.maxHostSupportedVcpus", 600)
         self.set("summary.hardware", hardware)
         self.set("summary.runtime", runtime)
+        self.set("summary.quickStats", quickstats)
         self.set("config.network.pnic", net_info_pnic)
         self.set("connected", connected)
 
