@@ -433,7 +433,8 @@ class BuildRequestList(base.ObjectListBase, base.NovaObject):
 
             filtered_build_reqs.append(build_req)
 
-        if (len(filtered_build_reqs) < 2) or (not sort_keys):
+        if (((len(filtered_build_reqs) < 2) or (not sort_keys))
+                and not marker):
             # No need to sort
             return cls(context, objects=filtered_build_reqs)
 
@@ -446,6 +447,8 @@ class BuildRequestList(base.ObjectListBase, base.NovaObject):
                 if build_req.instance.uuid == marker:
                     marker_index = i
                     break
+            else:
+                raise exception.MarkerNotFound(marker=marker)
         len_build_reqs = len(sorted_build_reqs)
         limit_index = len_build_reqs
         if limit:
