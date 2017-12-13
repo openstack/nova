@@ -492,6 +492,50 @@ class ResourceTracker(object):
         return (nodename not in self.compute_nodes or
                 not self.driver.node_is_available(nodename))
 
+    def _check_for_nodes_rebalance(self, context, resources, nodename):
+        """Check if nodes rebalance has happened.
+
+        The ironic driver maintains a hash ring mapping bare metal nodes
+        to compute nodes. If a compute dies, the hash ring is rebuilt, and
+        some of its bare metal nodes (more precisely, those not in ACTIVE
+        state) are assigned to other computes.
+
+        This method checks for this condition and adjusts the database
+        accordingly.
+
+        :param context: security context
+        :param resources: initial values
+        :param nodename: node name
+        :returns: True if a suitable compute node record was found, else False
+        """
+        if not self.driver.rebalances_nodes:
+            return False
+
+        # Its possible ironic just did a node re-balance, so let's
+        # check if there is a compute node that already has the correct
+        # hypervisor_hostname. We can re-use that rather than create a
+        # new one and have to move existing placement allocations
+        cn_candidates = objects.ComputeNodeList.get_by_hypervisor(
+            context, nodename)
+
+        if len(cn_candidates) == 1:
+            cn = cn_candidates[0]
+            LOG.info("ComputeNode %(name)s moving from %(old)s to %(new)s",
+                     {"name": nodename, "old": cn.host, "new": self.host})
+            cn.host = self.host
+            self.compute_nodes[nodename] = cn
+            self._copy_resources(cn, resources)
+            self._setup_pci_tracker(context, cn, resources)
+            self._update(context, cn)
+            return True
+        elif len(cn_candidates) > 1:
+            LOG.error(
+                "Found more than one ComputeNode for nodename %s. "
+                "Please clean up the orphaned ComputeNode records in your DB.",
+                nodename)
+
+        return False
+
     def _init_compute_node(self, context, resources):
         """Initialize the compute node if it does not already exist.
 
@@ -525,6 +569,9 @@ class ResourceTracker(object):
             self._copy_resources(cn, resources)
             self._setup_pci_tracker(context, cn, resources)
             self._update(context, cn)
+            return
+
+        if self._check_for_nodes_rebalance(context, resources, nodename):
             return
 
         # there was no local copy and none in the database
