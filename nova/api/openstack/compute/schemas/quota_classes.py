@@ -36,3 +36,12 @@ del update_v250['properties']['quota_class_set']['properties'][
 del update_v250['properties']['quota_class_set']['properties'][
     'security_group_rules']
 del update_v250['properties']['quota_class_set']['properties']['networks']
+
+# 2.57 builds on 2.50 and removes injected_file* quotas.
+update_v257 = copy.deepcopy(update_v250)
+del update_v257['properties']['quota_class_set']['properties'][
+    'injected_files']
+del update_v257['properties']['quota_class_set']['properties'][
+    'injected_file_content_bytes']
+del update_v257['properties']['quota_class_set']['properties'][
+    'injected_file_path_bytes']

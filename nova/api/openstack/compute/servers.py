@@ -80,11 +80,13 @@ class ServersController(wsgi.Controller):
     schema_server_update_v219 = schema_servers.base_update_v219
     schema_server_rebuild_v219 = schema_servers.base_rebuild_v219
     schema_server_rebuild_v254 = schema_servers.base_rebuild_v254
+    schema_server_rebuild_v257 = schema_servers.base_rebuild_v257
 
     schema_server_create_v232 = schema_servers.base_create_v232
     schema_server_create_v237 = schema_servers.base_create_v237
     schema_server_create_v242 = schema_servers.base_create_v242
     schema_server_create_v252 = schema_servers.base_create_v252
+    schema_server_create_v257 = schema_servers.base_create_v257
 
     # NOTE(alex_xu): Please do not add more items into this list. This list
     # should be removed in the future.
@@ -134,6 +136,7 @@ class ServersController(wsgi.Controller):
 
         # TODO(alex_xu): The final goal is that merging all of
         # extended json-schema into server main json-schema.
+        self._create_schema(self.schema_server_create_v257, '2.57')
         self._create_schema(self.schema_server_create_v252, '2.52')
         self._create_schema(self.schema_server_create_v242, '2.42')
         self._create_schema(self.schema_server_create_v237, '2.37')
@@ -447,7 +450,8 @@ class ServersController(wsgi.Controller):
     @validation.schema(schema_server_create_v232, '2.32', '2.36')
     @validation.schema(schema_server_create_v237, '2.37', '2.41')
     @validation.schema(schema_server_create_v242, '2.42', '2.51')
-    @validation.schema(schema_server_create_v252, '2.52')
+    @validation.schema(schema_server_create_v252, '2.52', '2.56')
+    @validation.schema(schema_server_create_v257, '2.57')
     def create(self, req, body):
         """Creates a new server for a given user."""
         context = req.environ['nova.context']
@@ -878,7 +882,8 @@ class ServersController(wsgi.Controller):
     @validation.schema(schema_server_rebuild_v20, '2.0', '2.0')
     @validation.schema(schema_server_rebuild, '2.1', '2.18')
     @validation.schema(schema_server_rebuild_v219, '2.19', '2.53')
-    @validation.schema(schema_server_rebuild_v254, '2.54')
+    @validation.schema(schema_server_rebuild_v254, '2.54', '2.56')
+    @validation.schema(schema_server_rebuild_v257, '2.57')
     def _action_rebuild(self, req, id, body):
         """Rebuild an instance with the given attributes."""
         rebuild_dict = body['rebuild']
@@ -905,6 +910,13 @@ class ServersController(wsgi.Controller):
         if (api_version_request.is_supported(req, min_version='2.54')
                 and 'key_name' in rebuild_dict):
             kwargs['key_name'] = rebuild_dict.get('key_name')
+
+        # If user_data is not specified, we don't include it in kwargs because
+        # we don't want to overwrite the existing user_data.
+        include_user_data = api_version_request.is_supported(
+            req, min_version='2.57')
+        if include_user_data and 'user_data' in rebuild_dict:
+            kwargs['user_data'] = rebuild_dict['user_data']
 
         for request_attribute, instance_attribute in attr_map.items():
             try:
@@ -961,6 +973,9 @@ class ServersController(wsgi.Controller):
         if api_version_request.is_supported(req, min_version='2.54'):
             # NOTE(liuyulong): set the new key_name for the API response.
             view['server']['key_name'] = instance.key_name
+
+        if include_user_data:
+            view['server']['user_data'] = instance.user_data
 
         robj = wsgi.ResponseObject(view)
         return self._add_location(robj)

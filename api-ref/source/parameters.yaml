@@ -1739,6 +1739,7 @@ contents:
   in: body
   required: true
   type: string
+  max_version: 2.56
 cores: &cores
   description: |
     The number of allowed server cores for each tenant.
@@ -3300,6 +3301,7 @@ injected_file_content_bytes:
   in: body
   required: true
   type: integer
+  max_version: 2.56
 injected_file_content_bytes_quota_details:
   description: |
     The object of detailed injected file content bytes quota,
@@ -3308,18 +3310,21 @@ injected_file_content_bytes_quota_details:
   in: body
   required: true
   type: object
+  max_version: 2.56
 injected_file_content_bytes_quota_optional:
   description: |
     The number of allowed bytes of content for each injected file.
   in: body
   required: false
   type: integer
+  max_version: 2.56
 injected_file_path_bytes:
   description: |
     The number of allowed bytes for each injected file path.
   in: body
   required: true
   type: integer
+  max_version: 2.56
 injected_file_path_bytes_quota_details:
   description: |
     The object of detailed injected file path bytes quota,
@@ -3328,18 +3333,21 @@ injected_file_path_bytes_quota_details:
   in: body
   required: true
   type: object
+  max_version: 2.56
 injected_file_path_bytes_quota_optional:
   description: |
     The number of allowed bytes for each injected file path.
   in: body
   required: false
   type: integer
+  max_version: 2.56
 injected_files: &injected_files
   description: |
     The number of allowed injected files for each tenant.
   in: body
   required: true
   type: integer
+  max_version: 2.56
 injected_files_quota_class: &injected_files_quota_class
   <<: *injected_files
   description: |
@@ -3354,12 +3362,14 @@ injected_files_quota_details:
   in: body
   required: true
   type: object
+  max_version: 2.56
 injected_files_quota_optional:
   description: |
     The number of allowed injected files for each tenant.
   in: body
   required: false
   type: integer
+  max_version: 2.56
 injectNetworkInfo:
   description: |
     The action.
@@ -4575,6 +4585,7 @@ path:
   in: body
   required: true
   type: string
+  max_version: 2.56
 pause:
   description: |
     The action to pause a server.
@@ -4603,6 +4614,7 @@ personality:
   in: body
   required: false
   type: array
+  max_version: 2.56
 policies:
   description: |
     A list of exactly one policy name to associate with the server group. The
@@ -5846,6 +5858,22 @@ user_data:
   in: body
   required: false
   type: string
+user_data_rebuild_req:
+  description: |
+    Configuration information or scripts to use upon rebuild.
+    Must be Base64 encoded. If ``null`` is specified, the existing user_data
+    is unset.
+  in: body
+  required: false
+  type: string
+  min_version: 2.57
+user_data_rebuild_resp:
+  in: body
+  required: true
+  type: string
+  description: |
+    The current user_data for the instance.
+  min_version: 2.57
 user_id:
   description: |
     The user ID of the user who owns the server.

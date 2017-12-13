@@ -2295,6 +2295,105 @@ class ServersControllerRebuildTestV254(ServersControllerRebuildInstanceTest):
                           self.req, FAKE_UUID, body=body)
 
 
+class ServersControllerRebuildTestV257(ServersControllerRebuildTestV254):
+    """Tests server rebuild at microversion 2.57 where user_data can be
+    provided and personality files are no longer accepted.
+    """
+
+    def setUp(self):
+        super(ServersControllerRebuildTestV257, self).setUp()
+        self.req.api_version_request = \
+            api_version_request.APIVersionRequest('2.57')
+
+    def test_rebuild_personality(self):
+        """Tests that trying to rebuild with personality files fails."""
+        body = {
+            "rebuild": {
+                "imageRef": self.image_uuid,
+                "personality": [{
+                    "path": "/path/to/file",
+                    "contents": base64.encode_as_text("Test String"),
+                }]
+            }
+        }
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller._action_rebuild,
+                               self.req, FAKE_UUID, body=body)
+        self.assertIn('personality', six.text_type(ex))
+
+    def test_rebuild_user_data_old_version(self):
+        """Tests that trying to rebuild with user_data before 2.57 fails."""
+        body = {
+            "rebuild": {
+                "imageRef": self.image_uuid,
+                "user_data": "ZWNobyAiaGVsbG8gd29ybGQi"
+            }
+        }
+        self.req.api_version_request = \
+            api_version_request.APIVersionRequest('2.55')
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller._action_rebuild,
+                               self.req, FAKE_UUID, body=body)
+        self.assertIn('user_data', six.text_type(ex))
+
+    def test_rebuild_user_data_malformed(self):
+        """Tests that trying to rebuild with malformed user_data fails."""
+        body = {
+            "rebuild": {
+                "imageRef": self.image_uuid,
+                "user_data": b'invalid'
+            }
+        }
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller._action_rebuild,
+                               self.req, FAKE_UUID, body=body)
+        self.assertIn('user_data', six.text_type(ex))
+
+    def test_rebuild_user_data_too_large(self):
+        """Tests that passing user_data to rebuild that is too large fails."""
+        body = {
+            "rebuild": {
+                "imageRef": self.image_uuid,
+                "user_data": ('MQ==' * 16384)
+            }
+        }
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller._action_rebuild,
+                               self.req, FAKE_UUID, body=body)
+        self.assertIn('user_data', six.text_type(ex))
+
+    @mock.patch.object(context.RequestContext, 'can')
+    @mock.patch.object(compute_api.API, 'get')
+    @mock.patch('nova.db.instance_update_and_get_original')
+    def test_rebuild_reset_user_data(self, mock_update, mock_get, mock_policy):
+        """Tests that passing user_data=None resets the user_data on the
+        instance.
+        """
+        body = {
+            "rebuild": {
+                "imageRef": self.image_uuid,
+                "user_data": None
+            }
+        }
+
+        mock_get.return_value = fakes.stub_instance_obj(
+            context.RequestContext(self.req_user_id, self.req_project_id),
+            user_data='ZWNobyAiaGVsbG8gd29ybGQi')
+
+        def fake_instance_update_and_get_original(
+                ctxt, instance_uuid, values, **kwargs):
+            # save() is called twice and the second one has system_metadata
+            # in the updates, so we can ignore that one.
+            if 'system_metadata' not in values:
+                self.assertIn('user_data', values)
+                self.assertIsNone(values['user_data'])
+            return instance_update_and_get_original(
+                ctxt, instance_uuid, values, **kwargs)
+        mock_update.side_effect = fake_instance_update_and_get_original
+        self.controller._action_rebuild(self.req, FAKE_UUID, body=body)
+        self.assertEqual(2, mock_update.call_count)
+
+
 class ServersControllerRebuildTestV219(ServersControllerRebuildInstanceTest):
 
     def setUp(self):
@@ -4094,6 +4193,33 @@ class ServersControllerCreateTestV252(test.NoDBTestCase):
             api_version_request.APIVersionRequest('2.52')
         self.assertRaises(
             exception.ValidationError, self._create_server, tags)
+
+
+class ServersControllerCreateTestV257(test.NoDBTestCase):
+    """Tests that trying to create a server with personality files using
+    microversion 2.57 fails.
+    """
+    def test_create_server_with_personality_fails(self):
+        controller = servers.ServersController()
+        body = {
+            'server': {
+                'name': 'no-personality-files',
+                'imageRef': '6b0edabb-8cde-4684-a3f4-978960a51378',
+                'flavorRef': '2',
+                'networks': 'auto',
+                'personality': [{
+                    'path': '/path/to/file',
+                    'contents': 'ZWNobyAiaGVsbG8gd29ybGQi'
+                }]
+            }
+        }
+        req = fakes.HTTPRequestV21.blank('/servers', version='2.57')
+        req.body = jsonutils.dump_as_bytes(body)
+        req.method = 'POST'
+        req.headers['content-type'] = 'application/json'
+        ex = self.assertRaises(
+            exception.ValidationError, controller.create, req, body=body)
+        self.assertIn('personality', six.text_type(ex))
 
 
 class ServersControllerCreateTestWithMock(test.TestCase):

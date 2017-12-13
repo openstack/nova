@@ -488,6 +488,7 @@ Request
   - preserve_ephemeral: preserve_ephemeral
   - description: server_description
   - key_name: key_name_rebuild_req
+  - user_data: user_data_rebuild_req
 
 **Example Rebuild Server (rebuild Action) (v2.54)**
 
@@ -536,6 +537,7 @@ Response
   - description: server_description_resp
   - tags: tags
   - key_name: key_name_rebuild_resp
+  - user_data: user_data_rebuild_resp
 
 **Example Rebuild Server (rebuild Action) (v2.54)**
 

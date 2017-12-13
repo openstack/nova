@@ -1,0 +1,17 @@
+---
+features:
+  - |
+    The 2.57 microversion makes the following changes:
+
+    * The ``user_data`` parameter is added to the server rebuild API.
+    * The ``personality`` parameter is removed from the server create and
+      rebuild APIs. Use the ``user_data`` parameter instead.
+    * The ``maxPersonality`` and ``maxPersonalitySize`` limits are excluded
+      from the ``GET /limits`` API response.
+    * The ``injected_files``, ``injected_file_content_bytes`` and
+      ``injected_file_path_bytes`` quotas are removed from the
+      ``os-quota-sets`` and ``os-quota-class-sets`` APIs.
+
+    See the `spec`_ for more details and reasoning.
+
+    .. _spec: https://specs.openstack.org/openstack/nova-specs/specs/queens/approved/deprecate-file-injection.html

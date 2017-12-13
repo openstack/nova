@@ -14,12 +14,6 @@
 #    under the License.
 
 
-# This is a list of limits which needs to filter out from the API response.
-# This is due to the deprecation of network related proxy APIs, the related
-# limit should be removed from the API also.
-FILTERED_LIMITS = ['floating_ips', 'security_groups', 'security_group_rules']
-
-
 class ViewBuilder(object):
     """OpenStack API base limits view builder."""
 
@@ -41,9 +35,10 @@ class ViewBuilder(object):
             "server_group_members": ["maxServerGroupMembers"]
     }
 
-    def build(self, absolute_limits, filter_result=False, max_image_meta=True):
+    def build(self, absolute_limits, filtered_limits=None,
+              max_image_meta=True):
         absolute_limits = self._build_absolute_limits(
-            absolute_limits, filter_result=filter_result,
+            absolute_limits, filtered_limits,
             max_image_meta=max_image_meta)
 
         output = {
@@ -55,17 +50,17 @@ class ViewBuilder(object):
 
         return output
 
-    def _build_absolute_limits(self, absolute_limits, filter_result=False,
+    def _build_absolute_limits(self, absolute_limits, filtered_limits=None,
                                max_image_meta=True):
         """Builder for absolute limits
 
         absolute_limits should be given as a dict of limits.
         For example: {"ram": 512, "gigabytes": 1024}.
 
+        filtered_limits is an optional list of limits to exclude from the
+        result set.
         """
-        filtered_limits = []
-        if filter_result:
-            filtered_limits = FILTERED_LIMITS
+        filtered_limits = filtered_limits or []
         limits = {}
         for name, value in absolute_limits.items():
             if (name in self.limit_names and

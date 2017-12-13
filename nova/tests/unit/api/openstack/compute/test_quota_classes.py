@@ -33,6 +33,7 @@ class QuotaClassSetsTestV21(test.TestCase):
                        'security_groups': 10,
                        'security_group_rules': 20, 'key_pairs': 100,
                        'injected_file_path_bytes': 255}
+    filtered_quotas = None
 
     def quota_set(self, class_name):
         quotas = copy.deepcopy(self.quota_resources)
@@ -58,18 +59,15 @@ class QuotaClassSetsTestV21(test.TestCase):
     def test_format_quota_set(self):
         quota_set = self.controller._format_quota_set('test_class',
                                                       self.quota_resources,
-                                                      self.req)
+                                                      self.filtered_quotas)
         qs = quota_set['quota_class_set']
 
         self.assertEqual(qs['id'], 'test_class')
-        self.assertEqual(qs['instances'], 10)
-        self.assertEqual(qs['cores'], 20)
-        self.assertEqual(qs['ram'], 51200)
-        self.assertEqual(qs['metadata_items'], 128)
-        self.assertEqual(qs['injected_files'], 5)
-        self.assertEqual(qs['injected_file_path_bytes'], 255)
-        self.assertEqual(qs['injected_file_content_bytes'], 10240)
-        self.assertEqual(qs['key_pairs'], 100)
+        for resource, value in self.quota_resources.items():
+            self.assertEqual(value, qs[resource])
+        if self.filtered_quotas:
+            for resource in self.filtered_quotas:
+                self.assertNotIn(resource, qs)
         self._check_filtered_extended_quota(qs)
 
     def test_quotas_show(self):
@@ -135,23 +133,29 @@ class QuotaClassSetsTestV250(QuotaClassSetsTestV21):
                        'injected_file_path_bytes': 255,
                        'server_groups': 10,
                        'server_group_members': 10}
+    filtered_quotas = quota_classes_v21.FILTERED_QUOTAS_2_50
 
     def _check_filtered_extended_quota(self, quota_set):
         self.assertEqual(10, quota_set['server_groups'])
         self.assertEqual(10, quota_set['server_group_members'])
-        self.assertNotIn('floating_ips', quota_set)
-        self.assertNotIn('fixed_ips', quota_set)
-        self.assertNotIn('security_groups', quota_set)
-        self.assertNotIn('security_group_rules', quota_set)
-        self.assertNotIn('networks', quota_set)
+        for resource in self.filtered_quotas:
+            self.assertNotIn(resource, quota_set)
 
     def test_quotas_update_with_filtered_quota(self):
-        filtered_quotas = ["fixed_ips", "floating_ips", "networks",
-                           "security_group_rules", "security_groups"]
-        for resource in filtered_quotas:
+        for resource in self.filtered_quotas:
             body = {'quota_class_set': {resource: 10}}
             self.assertRaises(self.validation_error, self.controller.update,
                               self.req, 'test_class', body=body)
+
+
+class QuotaClassSetsTestV257(QuotaClassSetsTestV250):
+    api_version = '2.57'
+
+    def setUp(self):
+        super(QuotaClassSetsTestV257, self).setUp()
+        for resource in quota_classes_v21.FILTERED_QUOTAS_2_57:
+            self.quota_resources.pop(resource, None)
+        self.filtered_quotas.extend(quota_classes_v21.FILTERED_QUOTAS_2_57)
 
 
 class QuotaClassesPolicyEnforcementV21(test.NoDBTestCase):

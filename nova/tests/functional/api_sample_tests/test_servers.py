@@ -463,9 +463,12 @@ class ServersActionsJson254Test(ServersSampleBase):
     sample_dir = 'servers'
     scenarios = [('v2_54', {'api_major_version': 'v2.1'})]
 
+    def _create_server(self):
+        return self._post_server()
+
     def test_server_rebuild(self):
         fakes.stub_out_key_pair_funcs(self)
-        uuid = self._post_server()
+        uuid = self._create_server()
         image = fake.get_valid_image_id()
         params = {
             'uuid': image,
@@ -483,6 +486,15 @@ class ServersActionsJson254Test(ServersSampleBase):
         subs = params.copy()
         del subs['uuid']
         self._verify_response('server-action-rebuild-resp', subs, resp, 202)
+
+
+class ServersActionsJson257Test(ServersActionsJson254Test):
+    """Tests rebuilding a server with new user_data."""
+    microversion = '2.57'
+    scenarios = [('v2_57', {'api_major_version': 'v2.1'})]
+
+    def _create_server(self):
+        return self._post_server(use_common_server_api_samples=False)
 
 
 class ServersCreateImageJsonTest(ServersSampleBase,
