@@ -13,6 +13,7 @@
 #    under the License.
 
 import os
+import time
 
 from oslo_config import cfg
 from oslo_serialization import jsonutils
@@ -265,3 +266,4 @@ class NotificationSampleTestBase(test.TestCase,
                 return migrations
             if retries == max_retries:
                 self.fail('The migration table left empty.')
+            time.sleep(0.5)
