@@ -161,21 +161,33 @@ def _make_inventory_object(resource_provider, resource_class, **data):
     return inventory
 
 
-def _send_inventories(response, resource_provider, inventories):
+def _send_inventories(req, resource_provider, inventories):
     """Send a JSON representation of a list of inventories."""
+    response = req.response
     response.status = 200
-    response.body = encodeutils.to_utf8(jsonutils.dumps(
-        _serialize_inventories(inventories, resource_provider.generation)))
+    output, last_modified = _serialize_inventories(
+        inventories, resource_provider.generation)
+    response.body = encodeutils.to_utf8(jsonutils.dumps(output))
     response.content_type = 'application/json'
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
+    if want_version.matches((1, 15)):
+        response.last_modified = last_modified
+        response.cache_control = 'no-cache'
     return response
 
 
-def _send_inventory(response, resource_provider, inventory, status=200):
+def _send_inventory(req, resource_provider, inventory, status=200):
     """Send a JSON representation of one single inventory."""
+    response = req.response
     response.status = status
     response.body = encodeutils.to_utf8(jsonutils.dumps(_serialize_inventory(
         inventory, generation=resource_provider.generation)))
     response.content_type = 'application/json'
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
+    if want_version.matches((1, 15)):
+        modified = util.pick_last_modified(None, inventory)
+        response.last_modified = modified
+        response.cache_control = 'no-cache'
     return response
 
 
@@ -195,11 +207,13 @@ def _serialize_inventories(inventories, generation):
     inventories_by_class = {inventory.resource_class: inventory
                             for inventory in inventories}
     inventories_dict = {}
+    last_modified = None
     for resource_class, inventory in inventories_by_class.items():
+        last_modified = util.pick_last_modified(last_modified, inventory)
         inventories_dict[resource_class] = _serialize_inventory(
             inventory, generation=None)
-    return {'resource_provider_generation': generation,
-            'inventories': inventories_dict}
+    return ({'resource_provider_generation': generation,
+             'inventories': inventories_dict}, last_modified)
 
 
 @wsgi_wrapper.PlacementWsgify
@@ -238,7 +252,7 @@ def create_inventory(req):
     response = req.response
     response.location = util.inventory_url(
         req.environ, resource_provider, resource_class)
-    return _send_inventory(response, resource_provider, inventory,
+    return _send_inventory(req, resource_provider, inventory,
                            status=201)
 
 
@@ -294,7 +308,7 @@ def get_inventories(req):
 
     inv_list = rp_obj.InventoryList.get_all_by_resource_provider(context, rp)
 
-    return _send_inventories(req.response, rp, inv_list)
+    return _send_inventories(req, rp, inv_list)
 
 
 @wsgi_wrapper.PlacementWsgify
@@ -323,7 +337,7 @@ def get_inventory(req):
             _('No inventory of class %(class)s for %(rp_uuid)s') %
             {'class': resource_class, 'rp_uuid': uuid})
 
-    return _send_inventory(req.response, rp, inventory)
+    return _send_inventory(req, rp, inventory)
 
 
 @wsgi_wrapper.PlacementWsgify
@@ -383,7 +397,7 @@ def set_inventories(req):
               '%(rp_uuid)s: %(error)s') % {'rp_uuid': resource_provider.uuid,
                                           'error': exc})
 
-    return _send_inventories(req.response, resource_provider, inventories)
+    return _send_inventories(req, resource_provider, inventories)
 
 
 @wsgi_wrapper.PlacementWsgify
@@ -468,4 +482,4 @@ def update_inventory(req):
               '%(rp_uuid)s: %(error)s') % {'rp_uuid': resource_provider.uuid,
                                           'error': exc})
 
-    return _send_inventory(req.response, resource_provider, inventory)
+    return _send_inventory(req, resource_provider, inventory)

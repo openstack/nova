@@ -17,6 +17,7 @@ import copy
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
+from oslo_utils import timeutils
 import webob
 
 from nova.api.openstack.placement import microversion
@@ -161,7 +162,16 @@ def _allocations_dict(allocations, key_fetcher, resource_provider=None,
     """Turn allocations into a dict of resources keyed by key_fetcher."""
     allocation_data = collections.defaultdict(dict)
 
+    # NOTE(cdent): The last_modified for an allocation will always be
+    # based off the created_at column because allocations are only
+    # ever inserted, never updated.
+    last_modified = None
+    # Only calculate last-modified if we are using a microversion that
+    # supports it.
+    get_last_modified = want_version and want_version.matches((1, 15))
     for allocation in allocations:
+        if get_last_modified:
+            last_modified = util.pick_last_modified(last_modified, allocation)
         key = key_fetcher(allocation)
         if 'resources' not in allocation_data[key]:
             allocation_data[key]['resources'] = {}
@@ -183,7 +193,8 @@ def _allocations_dict(allocations, key_fetcher, resource_provider=None,
             result['project_id'] = allocations[0].project_id
             result['user_id'] = allocations[0].user_id
 
-    return result
+    last_modified = last_modified or timeutils.utcnow(with_timezone=True)
+    return result, last_modified
 
 
 def _serialize_allocations_for_consumer(allocations, want_version=None):
@@ -245,6 +256,7 @@ def _serialize_allocations_for_resource_provider(allocations,
 def list_for_consumer(req):
     """List allocations associated with a consumer."""
     context = req.environ['placement.context']
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     consumer_id = util.wsgi_path_item(req.environ, 'consumer_uuid')
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
 
@@ -254,13 +266,18 @@ def list_for_consumer(req):
     allocations = rp_obj.AllocationList.get_all_by_consumer_id(
         context, consumer_id)
 
-    allocations_json = jsonutils.dumps(
-        _serialize_allocations_for_consumer(allocations, want_version))
+    output, last_modified = _serialize_allocations_for_consumer(
+        allocations, want_version)
+    allocations_json = jsonutils.dumps(output)
 
-    req.response.status = 200
-    req.response.body = encodeutils.to_utf8(allocations_json)
-    req.response.content_type = 'application/json'
-    return req.response
+    response = req.response
+    response.status = 200
+    response.body = encodeutils.to_utf8(allocations_json)
+    response.content_type = 'application/json'
+    if want_version.matches((1, 15)):
+        response.last_modified = last_modified
+        response.cache_control = 'no-cache'
+    return response
 
 
 @wsgi_wrapper.PlacementWsgify
@@ -273,6 +290,7 @@ def list_for_resource_provider(req):
     # using a dict of dicts for the output we are potentially limiting
     # ourselves in terms of sorting and filtering.
     context = req.environ['placement.context']
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     uuid = util.wsgi_path_item(req.environ, 'uuid')
 
     # confirm existence of resource provider so we get a reasonable
@@ -286,13 +304,18 @@ def list_for_resource_provider(req):
 
     allocs = rp_obj.AllocationList.get_all_by_resource_provider(context, rp)
 
-    allocations_json = jsonutils.dumps(
-        _serialize_allocations_for_resource_provider(allocs, rp))
+    output, last_modified = _serialize_allocations_for_resource_provider(
+        allocs, rp)
+    allocations_json = jsonutils.dumps(output)
 
-    req.response.status = 200
-    req.response.body = encodeutils.to_utf8(allocations_json)
-    req.response.content_type = 'application/json'
-    return req.response
+    response = req.response
+    response.status = 200
+    response.body = encodeutils.to_utf8(allocations_json)
+    response.content_type = 'application/json'
+    if want_version.matches((1, 15)):
+        response.last_modified = last_modified
+        response.cache_control = 'no-cache'
+    return response
 
 
 def _new_allocations(context, resource_provider_uuid, consumer_uuid,

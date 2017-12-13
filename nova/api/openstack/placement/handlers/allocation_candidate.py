@@ -17,6 +17,7 @@ import collections
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
+from oslo_utils import timeutils
 import webob
 
 from nova.api.openstack.placement import microversion
@@ -224,4 +225,7 @@ def list_allocation_candidates(req):
     json_data = jsonutils.dumps(trx_cands)
     response.body = encodeutils.to_utf8(json_data)
     response.content_type = 'application/json'
+    if want_version.matches((1, 15)):
+        response.cache_control = 'no-cache'
+        response.last_modified = timeutils.utcnow(with_timezone=True)
     return response

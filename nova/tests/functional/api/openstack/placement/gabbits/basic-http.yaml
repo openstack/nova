@@ -159,3 +159,20 @@ tests:
       $.errors[0].title:  Not Found
   response_strings:
       - The resource could not be found.
+
+- name: root at 1.15 has cache headers
+  GET: /
+  request_headers:
+      openstack-api-version: placement 1.15
+  response_headers:
+      cache-control: no-cache
+      # Does last-modified look like a legit timestamp?
+      last-modified:  /^\w+, \d+ \w+ \d{4} [\d:]+ GMT$/
+
+- name: root at 1.14 no cache headers
+  GET: /
+  request_headers:
+      openstack-api-version: placement 1.14
+  response_forbidden_headers:
+      - last-modified
+      - cache-control

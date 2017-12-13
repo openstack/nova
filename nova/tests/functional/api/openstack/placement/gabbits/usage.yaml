@@ -38,6 +38,21 @@ tests:
   response_json_paths:
       usages: {}
 
+- name: get usages no cache headers base microversion
+  GET: $LAST_URL
+  response_forbidden_headers:
+      - last-modified
+      - cache-control
+
+- name: get usages cache headers 1.15
+  GET: $LAST_URL
+  request_headers:
+      openstack-api-version: placement 1.15
+  response_headers:
+      cache-control: no-cache
+      # Does last-modified look like a legit timestamp?
+      last-modified:  /^\w+, \d+ \w+ \d{4} [\d:]+ GMT$/
+
 - name: get total usages earlier version
   GET: /usages?project_id=$ENVIRON['PROJECT_ID']
   request_headers:

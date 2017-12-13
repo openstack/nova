@@ -5,7 +5,8 @@ fixtures:
 defaults:
     request_headers:
         x-auth-token: admin
-        openstack-api-version: placement latest
+        # traits introduced in 1.6
+        openstack-api-version: placement 1.6
 
 tests:
 
@@ -34,6 +35,9 @@ tests:
     location: //traits/CUSTOM_TRAIT_1/
   response_forbidden_headers:
     - content-type
+    # PUT in 1.6 version should not have cache headers
+    - cache-control
+    - last-modified
 
 - name: create a trait which existed
   PUT: /traits/CUSTOM_TRAIT_1
@@ -48,6 +52,9 @@ tests:
   status: 204
   response_forbidden_headers:
       - content-type
+      # In early versions cache headers should not be present
+      - cache-control
+      - last-modified
 
 - name: get a non-existed trait
   GET: /traits/NON_EXISTED
@@ -56,6 +63,11 @@ tests:
 - name: delete a trait
   DELETE: /traits/CUSTOM_TRAIT_1
   status: 204
+  response_forbidden_headers:
+    - content-type
+    # DELETE in any version should not have cache headers
+    - cache-control
+    - last-modified
 
 - name: delete a non-existed trait
   DELETE: /traits/CUSTOM_NON_EXSITED
@@ -133,6 +145,61 @@ tests:
   response_strings:
     - "Invalid query string parameters: Additional properties are not allowed"
 
+- name: list traits 1.14 no cache headers
+  GET: /traits
+  request_headers:
+      openstack-api-version: placement 1.14
+  response_forbidden_headers:
+    - cache-control
+    - last-modified
+
+- name: list traits 1.15 has cache headers
+  GET: /traits
+  request_headers:
+      openstack-api-version: placement 1.15
+  response_headers:
+      cache-control: no-cache
+      # Does last-modified look like a legit timestamp?
+      last-modified:  /^\w+, \d+ \w+ \d{4} [\d:]+ GMT$/
+
+- name: get trait 1.14 no cache headers
+  GET: /traits/CUSTOM_TRAIT_1
+  request_headers:
+      openstack-api-version: placement 1.14
+  status: 204
+  response_forbidden_headers:
+    - cache-control
+    - last-modified
+
+- name: get trait 1.15 has cache headers
+  GET: /traits/CUSTOM_TRAIT_1
+  request_headers:
+      openstack-api-version: placement 1.15
+  status: 204
+  response_headers:
+      cache-control: no-cache
+      # Does last-modified look like a legit timestamp?
+      last-modified:  /^\w+, \d+ \w+ \d{4} [\d:]+ GMT$/
+
+- name: put trait 1.14 no cache headers
+  PUT: /traits/CUSTOM_TRAIT_1
+  request_headers:
+      openstack-api-version: placement 1.14
+  status: 204
+  response_forbidden_headers:
+    - cache-control
+    - last-modified
+
+- name: put trait 1.15 has cache headers
+  PUT: /traits/CUSTOM_TRAIT_1
+  request_headers:
+      openstack-api-version: placement 1.15
+  status: 204
+  response_headers:
+      cache-control: no-cache
+      # Does last-modified look like a legit timestamp?
+      last-modified:  /^\w+, \d+ \w+ \d{4} [\d:]+ GMT$/
+
 - name: post new resource provider
   POST: /resource_providers
   request_headers:
@@ -152,6 +219,10 @@ tests:
   response_json_paths:
     $.resource_provider_generation: 0
     $.traits.`len`: 0
+  response_forbidden_headers:
+    # In 1.6 no cache headers
+    - cache-control
+    - last-modified
 
 - name: set traits for resource provider
   PUT: /resource_providers/$ENVIRON['RP_UUID']/traits
@@ -169,6 +240,10 @@ tests:
   response_strings:
     - CUSTOM_TRAIT_1
     - CUSTOM_TRAIT_2
+  response_forbidden_headers:
+    # In 1.6 no cache headers
+    - cache-control
+    - last-modified
 
 - name: get associated traits
   GET: /traits?associated=true
@@ -272,3 +347,58 @@ tests:
   status: 404
   response_strings:
     - No resource provider with uuid non_existed found
+
+- name: empty traits for resource provider 1.15 has cache headers
+  GET: /resource_providers/$ENVIRON['RP_UUID']/traits
+  request_headers:
+    openstack-api-version: placement 1.15
+  response_headers:
+    cache-control: no-cache
+    # Does last-modified look like a legit timestamp?
+    last-modified:  /^\w+, \d+ \w+ \d{4} [\d:]+ GMT$/
+
+- name: update rp trait 1.14 no cache headers
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/traits
+  data:
+    traits:
+        - CUSTOM_TRAIT_1
+        - CUSTOM_TRAIT_2
+    resource_provider_generation: 2
+  request_headers:
+    openstack-api-version: placement 1.14
+    content-type: application/json
+  response_forbidden_headers:
+    - cache-control
+    - last-modified
+
+- name: update rp trait 1.15 has cache headers
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/traits
+  data:
+    traits:
+        - CUSTOM_TRAIT_1
+        - CUSTOM_TRAIT_2
+    resource_provider_generation: 3
+  request_headers:
+    openstack-api-version: placement 1.15
+    content-type: application/json
+  response_headers:
+    cache-control: no-cache
+    # Does last-modified look like a legit timestamp?
+    last-modified:  /^\w+, \d+ \w+ \d{4} [\d:]+ GMT$/
+
+- name: list traits for resource provider 1.14 no cache headers
+  GET: /resource_providers/$ENVIRON['RP_UUID']/traits
+  request_headers:
+    openstack-api-version: placement 1.14
+  response_forbidden_headers:
+    - cache-control
+    - last-modified
+
+- name: list traits for resource provider 1.15 has cache headers
+  GET: /resource_providers/$ENVIRON['RP_UUID']/traits
+  request_headers:
+    openstack-api-version: placement 1.15
+  response_headers:
+    cache-control: no-cache
+    # Does last-modified look like a legit timestamp?
+    last-modified:  /^\w+, \d+ \w+ \d{4} [\d:]+ GMT$/

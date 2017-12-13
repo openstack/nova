@@ -373,6 +373,11 @@ tests:
                 DISK_GB: 2
                 VCPU: 8
   status: 204
+  # These headers should not be present in any microversion on PUT
+  # because there is no response body.
+  response_forbidden_headers:
+      - cache-control
+      - last-modified
 
 - name: get those allocations for consumer
   GET: /allocations/1835b1c9-1c61-45af-9eb3-3e0e9f29487b
@@ -409,3 +414,37 @@ tests:
       - Allocation for resource provider 'be8b9cba-e7db-4a12-a386-99b4242167fe' that does not exist
   response_json_paths:
       $.errors[0].title: Bad Request
+
+- name: get allocations for resource provider with cache headers 1.15
+  GET: /resource_providers/fcfa516a-abbe-45d1-8152-d5225d82e596/allocations
+  request_headers:
+      openstack-api-version: placement 1.15
+  response_headers:
+      cache-control: no-cache
+      # Does last-modified look like a legit timestamp?
+      last-modified:  /^\w+, \d+ \w+ \d{4} [\d:]+ GMT$/
+
+- name: get allocations for resource provider without cache headers 1.14
+  GET: /resource_providers/fcfa516a-abbe-45d1-8152-d5225d82e596/allocations
+  request_headers:
+      openstack-api-version: placement 1.14
+  response_forbidden_headers:
+      - cache-control
+      - last-modified
+
+- name: get allocations for consumer with cache headers 1.15
+  GET: /allocations/1835b1c9-1c61-45af-9eb3-3e0e9f29487b
+  request_headers:
+      openstack-api-version: placement 1.15
+  response_headers:
+      cache-control: no-cache
+      # Does last-modified look like a legit timestamp?
+      last-modified:  /^\w+, \d+ \w+ \d{4} [\d:]+ GMT$/
+
+- name: get allocations for consumer without cache headers 1.14
+  GET: /allocations/1835b1c9-1c61-45af-9eb3-3e0e9f29487b
+  request_headers:
+      openstack-api-version: placement 1.14
+  response_forbidden_headers:
+      - cache-control
+      - last-modified

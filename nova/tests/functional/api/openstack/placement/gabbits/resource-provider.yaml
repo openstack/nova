@@ -12,8 +12,15 @@ tests:
 
 - name: what is at resource providers
   GET: /resource_providers
+  request_headers:
+      # microversion 1.15 for cache headers
+      openstack-api-version: placement 1.15
   response_json_paths:
       $.resource_providers: []
+  response_headers:
+      cache-control: no-cache
+      # Does last-modified look like a legit timestamp?
+      last-modified:  /^\w+, \d+ \w+ \d{4} [\d:]+ GMT$/
 
 - name: non admin forbidden
   GET: /resource_providers
@@ -78,6 +85,12 @@ tests:
   GET: /resource_providers/$ENVIRON['RP_UUID']
   request_headers:
       content-type: application/json
+      openstack-api-version: placement 1.15
+  response_headers:
+      content-type: application/json
+      cache-control: no-cache
+      # Does last-modified look like a legit timestamp?
+      last-modified:  /^\w+, \d+ \w+ \d{4} [\d:]+ GMT$/
   response_json_paths:
       $.uuid: $ENVIRON['RP_UUID']
       $.name: $ENVIRON['RP_NAME']
@@ -104,6 +117,8 @@ tests:
 
 - name: list one resource providers
   GET: /resource_providers
+  request_headers:
+      openstack-api-version: placement 1.15
   response_json_paths:
       $.resource_providers.`len`: 1
       $.resource_providers[0].uuid: $ENVIRON['RP_UUID']
@@ -113,6 +128,10 @@ tests:
       $.resource_providers[0].links[?rel = "self"].href: /resource_providers/$ENVIRON['RP_UUID']
       $.resource_providers[0].links[?rel = "inventories"].href: /resource_providers/$ENVIRON['RP_UUID']/inventories
       $.resource_providers[0].links[?rel = "usages"].href: /resource_providers/$ENVIRON['RP_UUID']/usages
+  response_headers:
+      cache-control: no-cache
+      # Does last-modified look like a legit timestamp?
+      last-modified:  /^\w+, \d+ \w+ \d{4} [\d:]+ GMT$/
 
 - name: filter out all resource providers by name
   GET: /resource_providers?name=flubblebubble
@@ -181,11 +200,15 @@ tests:
   PUT: /resource_providers/$RESPONSE['$.resource_providers[0].uuid']
   request_headers:
       content-type: application/json
+      openstack-api-version: placement 1.15
   data:
       name: new name
   status: 200
   response_headers:
       content-type: /application/json/
+      cache-control: no-cache
+      # Does last-modified look like a legit timestamp?
+      last-modified:  /^\w+, \d+ \w+ \d{4} [\d:]+ GMT$/
   response_forbidden_headers:
       - location
   response_json_paths:
@@ -491,3 +514,11 @@ tests:
       - "Failed validating 'maxLength'"
   response_json_paths:
       $.errors[0].title: Bad Request
+
+- name: confirm no cache-control headers before 1.15
+  GET: /resource_providers
+  request_headers:
+      openstack-api-version: placement 1.14
+  response_forbidden_headers:
+      - cache-control
+      - last-modified

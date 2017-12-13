@@ -19,6 +19,7 @@ import webob
 
 from nova.api.openstack.placement import handler
 from nova.api.openstack.placement.handlers import root
+from nova.api.openstack.placement import microversion
 from nova import test
 from nova.tests import uuidsentinel
 
@@ -35,6 +36,9 @@ def _environ(path='/moo', method='GET'):
         'SERVER_NAME': 'example.com',
         'SERVER_PORT': '80',
         'wsgi.url_scheme': 'http',
+        # The microversion version value is not used, but it
+        # needs to be set to avoid a KeyError.
+        microversion.MICROVERSION_ENVIRON: microversion.Version(1, 12),
     }
 
 

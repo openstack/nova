@@ -15,6 +15,7 @@ import copy
 
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
+from oslo_utils import timeutils
 import webob
 
 from nova.api.openstack.placement import microversion
@@ -56,12 +57,17 @@ def _serialize_resource_class(environ, rc):
     return data
 
 
-def _serialize_resource_classes(environ, rcs):
+def _serialize_resource_classes(environ, rcs, want_version):
     output = []
+    last_modified = None
+    get_last_modified = want_version.matches((1, 15))
     for rc in rcs:
+        if get_last_modified:
+            last_modified = util.pick_last_modified(last_modified, rc)
         data = _serialize_resource_class(environ, rc)
         output.append(data)
-    return {"resource_classes": output}
+    last_modified = last_modified or timeutils.utcnow(with_timezone=True)
+    return ({"resource_classes": output}, last_modified)
 
 
 @wsgi_wrapper.PlacementWsgify
@@ -131,6 +137,7 @@ def get_resource_class(req):
     """
     name = util.wsgi_path_item(req.environ, 'name')
     context = req.environ['placement.context']
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     # The containing application will catch a not found here.
     rc = rp_obj.ResourceClass.get_by_name(context, name)
 
@@ -138,6 +145,13 @@ def get_resource_class(req):
         _serialize_resource_class(req.environ, rc))
     )
     req.response.content_type = 'application/json'
+    if want_version.matches((1, 15)):
+        req.response.cache_control = 'no-cache'
+        # Non-custom resource classes will return None from pick_last_modified,
+        # so the 'or' causes utcnow to be used.
+        last_modified = util.pick_last_modified(None, rc) or timeutils.utcnow(
+            with_timezone=True)
+        req.response.last_modified = last_modified
     return req.response
 
 
@@ -151,13 +165,17 @@ def list_resource_classes(req):
     a collection of resource classes.
     """
     context = req.environ['placement.context']
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     rcs = rp_obj.ResourceClassList.get_all(context)
 
     response = req.response
-    response.body = encodeutils.to_utf8(jsonutils.dumps(
-        _serialize_resource_classes(req.environ, rcs))
-    )
+    output, last_modified = _serialize_resource_classes(
+        req.environ, rcs, want_version)
+    response.body = encodeutils.to_utf8(jsonutils.dumps(output))
     response.content_type = 'application/json'
+    if want_version.matches((1, 15)):
+        response.last_modified = last_modified
+        response.cache_control = 'no-cache'
     return response
 
 

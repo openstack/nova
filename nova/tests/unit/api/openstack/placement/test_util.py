@@ -13,8 +13,12 @@
 """Unit tests for the utility functions used by the placement API."""
 
 
+import datetime
+
 import fixtures
+import mock
 from oslo_middleware import request_id
+from oslo_utils import timeutils
 import webob
 
 import six.moves.urllib.parse as urlparse
@@ -594,3 +598,83 @@ class TestParseQsResourcesAndTraits(test.NoDBTestCase):
               '&required2=CUSTOM_SWITCH_BIG,CUSTOM_PHYSNET_PROD'
               '&resources3=CUSTOM_MAGIC:123')
         self.assertRaises(webob.exc.HTTPBadRequest, self.do_parse, qs)
+
+
+class TestPickLastModified(test.NoDBTestCase):
+
+    def setUp(self):
+        super(TestPickLastModified, self).setUp()
+        self.resource_provider = rp_obj.ResourceProvider(
+            name=uuidsentinel.rp_name, uuid=uuidsentinel.rp_uuid)
+
+    def test_updated_versus_none(self):
+        now = timeutils.utcnow(with_timezone=True)
+        self.resource_provider.updated_at = now
+        self.resource_provider.created_at = now
+        chosen_time = util.pick_last_modified(None, self.resource_provider)
+        self.assertEqual(now, chosen_time)
+
+    def test_created_versus_none(self):
+        now = timeutils.utcnow(with_timezone=True)
+        self.resource_provider.created_at = now
+        self.resource_provider.updated_at = None
+        chosen_time = util.pick_last_modified(None, self.resource_provider)
+        self.assertEqual(now, chosen_time)
+
+    def test_last_modified_less(self):
+        now = timeutils.utcnow(with_timezone=True)
+        less = now - datetime.timedelta(seconds=300)
+        self.resource_provider.updated_at = now
+        self.resource_provider.created_at = now
+        chosen_time = util.pick_last_modified(less, self.resource_provider)
+        self.assertEqual(now, chosen_time)
+
+    def test_last_modified_more(self):
+        now = timeutils.utcnow(with_timezone=True)
+        more = now + datetime.timedelta(seconds=300)
+        self.resource_provider.updated_at = now
+        self.resource_provider.created_at = now
+        chosen_time = util.pick_last_modified(more, self.resource_provider)
+        self.assertEqual(more, chosen_time)
+
+    def test_last_modified_same(self):
+        now = timeutils.utcnow(with_timezone=True)
+        self.resource_provider.updated_at = now
+        self.resource_provider.created_at = now
+        chosen_time = util.pick_last_modified(now, self.resource_provider)
+        self.assertEqual(now, chosen_time)
+
+    def test_no_object_time_fields_less(self):
+        # An unsaved ovo will not have the created_at or updated_at fields
+        # present on the object at all.
+        now = timeutils.utcnow(with_timezone=True)
+        less = now - datetime.timedelta(seconds=300)
+        with mock.patch('oslo_utils.timeutils.utcnow') as mock_utc:
+            mock_utc.return_value = now
+            chosen_time = util.pick_last_modified(
+                less, self.resource_provider)
+            self.assertEqual(now, chosen_time)
+            mock_utc.assert_called_once_with(with_timezone=True)
+
+    def test_no_object_time_fields_more(self):
+        # An unsaved ovo will not have the created_at or updated_at fields
+        # present on the object at all.
+        now = timeutils.utcnow(with_timezone=True)
+        more = now + datetime.timedelta(seconds=300)
+        with mock.patch('oslo_utils.timeutils.utcnow') as mock_utc:
+            mock_utc.return_value = now
+            chosen_time = util.pick_last_modified(
+                more, self.resource_provider)
+            self.assertEqual(more, chosen_time)
+            mock_utc.assert_called_once_with(with_timezone=True)
+
+    def test_no_object_time_fields_none(self):
+        # An unsaved ovo will not have the created_at or updated_at fields
+        # present on the object at all.
+        now = timeutils.utcnow(with_timezone=True)
+        with mock.patch('oslo_utils.timeutils.utcnow') as mock_utc:
+            mock_utc.return_value = now
+            chosen_time = util.pick_last_modified(
+                None, self.resource_provider)
+            self.assertEqual(now, chosen_time)
+            mock_utc.assert_called_once_with(with_timezone=True)
