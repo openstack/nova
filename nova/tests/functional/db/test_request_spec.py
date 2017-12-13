@@ -30,6 +30,9 @@ class RequestSpecTestCase(test.NoDBTestCase):
     def setUp(self):
         super(RequestSpecTestCase, self).setUp()
         self.useFixture(fixtures.Database(database='api'))
+        # NOTE(danms): Only needed for the fallback legacy main db loading
+        # code in InstanceGroup.
+        self.useFixture(fixtures.Database(database='main'))
         self.context = context.RequestContext('fake-user', 'fake-project')
         self.spec_obj = request_spec.RequestSpec()
         self.instance_uuid = None
