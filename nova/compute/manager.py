@@ -3424,7 +3424,7 @@ class ComputeManager(manager.Manager):
 
         try:
             self.driver.set_admin_password(instance, new_pass)
-            LOG.info("Root password set", instance=instance)
+            LOG.info("Admin password set", instance=instance)
             instance.task_state = None
             instance.save(
                 expected_task_state=task_states.UPDATING_PASSWORD)
