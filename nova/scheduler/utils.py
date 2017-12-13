@@ -754,3 +754,47 @@ def request_is_rebuild(spec_obj):
         return False
     check_type = spec_obj.scheduler_hints.get('_nova_check_type')
     return check_type == ['rebuild']
+
+
+def claim_resources(ctx, client, spec_obj, instance_uuid, alloc_req,
+        allocation_request_version=None):
+    """Given an instance UUID (representing the consumer of resources) and the
+    allocation_request JSON object returned from Placement, attempt to claim
+    resources for the instance in the placement API. Returns True if the claim
+    process was successful, False otherwise.
+
+    :param ctx: The RequestContext object
+    :param client: The scheduler client to use for making the claim call
+    :param spec_obj: The RequestSpec object - needed to get the project_id
+    :param instance_uuid: The UUID of the consuming instance
+    :param alloc_req: The allocation_request received from placement for the
+                      resources we want to claim against the chosen host. The
+                      allocation_request satisfies the original request for
+                      resources and can be supplied as-is (along with the
+                      project and user ID to the placement API's PUT
+                      /allocations/{consumer_uuid} call to claim resources for
+                      the instance
+    :param allocation_request_version: The microversion used to request the
+                                       allocations.
+    """
+    if request_is_rebuild(spec_obj):
+        # NOTE(danms): This is a rebuild-only scheduling request, so we should
+        # not be doing any extra claiming
+        LOG.debug('Not claiming resources in the placement API for '
+                  'rebuild-only scheduling of instance %(uuid)s',
+                  {'uuid': instance_uuid})
+        return True
+
+    LOG.debug("Attempting to claim resources in the placement API for "
+              "instance %s", instance_uuid)
+
+    project_id = spec_obj.project_id
+
+    # NOTE(jaypipes): So, the RequestSpec doesn't store the user_id,
+    # only the project_id, so we need to grab the user information from
+    # the context. Perhaps we should consider putting the user ID in
+    # the spec object?
+    user_id = ctx.user_id
+
+    return client.claim_resources(instance_uuid, alloc_req, project_id,
+            user_id, allocation_request_version=allocation_request_version)

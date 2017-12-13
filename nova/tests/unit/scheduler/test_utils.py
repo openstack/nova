@@ -551,3 +551,36 @@ class TestUtils(test.NoDBTestCase):
                 instance.project_id, instance.user_id)
 
         test()
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient')
+    @mock.patch('nova.scheduler.utils.request_is_rebuild')
+    def test_claim_resources(self, mock_is_rebuild, mock_client):
+        """Tests that when claim_resources() is called, that we appropriately
+        call the placement client to claim resources for the instance.
+        """
+        mock_is_rebuild.return_value = False
+        ctx = mock.Mock(user_id=uuids.user_id)
+        spec_obj = mock.Mock(project_id=uuids.project_id)
+        instance_uuid = uuids.instance
+        alloc_req = mock.sentinel.alloc_req
+        mock_client.claim_resources.return_value = True
+
+        res = utils.claim_resources(ctx, mock_client, spec_obj, instance_uuid,
+                alloc_req)
+
+        mock_client.claim_resources.assert_called_once_with(uuids.instance,
+                mock.sentinel.alloc_req, uuids.project_id, uuids.user_id,
+                allocation_request_version=None)
+        self.assertTrue(res)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient')
+    @mock.patch('nova.scheduler.utils.request_is_rebuild')
+    def test_claim_resouces_for_policy_check(self, mock_is_rebuild,
+            mock_client):
+        mock_is_rebuild.return_value = True
+        ctx = mock.Mock(user_id=uuids.user_id)
+        res = utils.claim_resources(ctx, None, mock.sentinel.spec_obj,
+                mock.sentinel.instance_uuid, [])
+        self.assertTrue(res)
+        mock_is_rebuild.assert_called_once_with(mock.sentinel.spec_obj)
+        self.assertFalse(mock_client.claim_resources.called)

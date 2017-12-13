@@ -66,8 +66,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.placement_client = pc_client
         super(FilterSchedulerTestCase, self).setUp()
 
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_claim_resources')
+    @mock.patch('nova.scheduler.utils.claim_resources')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
                 '_get_all_host_states')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
@@ -112,11 +111,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # Ensure that we have consumed the resources on the chosen host states
         host_state.consume_from_request.assert_called_once_with(spec_obj)
 
-        # And ensure we never called _claim_resources()
+        # And ensure we never called claim_resources()
         self.assertFalse(mock_claim.called)
 
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_claim_resources')
+    @mock.patch('nova.scheduler.utils.claim_resources')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
                 '_get_all_host_states')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
@@ -163,11 +161,10 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # Ensure that we have consumed the resources on the chosen host states
         host_state.consume_from_request.assert_called_once_with(spec_obj)
 
-        # And ensure we never called _claim_resources()
+        # And ensure we never called claim_resources()
         self.assertFalse(mock_claim.called)
 
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_claim_resources')
+    @mock.patch('nova.scheduler.utils.claim_resources')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
                 '_get_all_host_states')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
@@ -209,8 +206,9 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             ctx.elevated.return_value, spec_obj,
             mock.sentinel.provider_summaries)
         mock_get_hosts.assert_called()
-        mock_claim.assert_called_once_with(ctx.elevated.return_value, spec_obj,
-                uuids.instance, alloc_reqs_by_rp_uuid[uuids.cn1],
+        mock_claim.assert_called_once_with(ctx.elevated.return_value,
+                self.placement_client, spec_obj, uuids.instance,
+                alloc_reqs_by_rp_uuid[uuids.cn1][0],
                 allocation_request_version=None)
 
         self.assertEqual(len(selected_hosts), 1)
@@ -231,8 +229,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
                 '_cleanup_allocations')
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_claim_resources')
+    @mock.patch('nova.scheduler.utils.claim_resources')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
                 '_get_all_host_states')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
@@ -261,7 +258,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
         instance_uuids = [uuids.instance]
         alloc_reqs_by_rp_uuid = {
-            uuids.cn1: {"allocations": [mock.sentinel.alloc_req]},
+            uuids.cn1: [{"allocations": mock.sentinel.alloc_req}],
         }
         ctx = mock.Mock()
         fake_version = "1.99"
@@ -274,8 +271,9 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             ctx.elevated.return_value, spec_obj,
             mock.sentinel.provider_summaries)
         mock_get_hosts.assert_called_once_with(spec_obj, all_host_states, 0)
-        mock_claim.assert_called_once_with(ctx.elevated.return_value, spec_obj,
-            uuids.instance, alloc_reqs_by_rp_uuid[uuids.cn1],
+        mock_claim.assert_called_once_with(ctx.elevated.return_value,
+                self.placement_client, spec_obj, uuids.instance,
+                alloc_reqs_by_rp_uuid[uuids.cn1][0],
             allocation_request_version=fake_version)
 
         mock_cleanup.assert_not_called()
@@ -284,8 +282,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
 
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
                 '_cleanup_allocations')
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_claim_resources')
+    @mock.patch('nova.scheduler.utils.claim_resources')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
                 '_get_all_host_states')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
@@ -333,8 +330,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # Ensure we cleaned up the first successfully-claimed instance
         mock_cleanup.assert_called_once_with([uuids.instance1])
 
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_claim_resources')
+    @mock.patch('nova.scheduler.utils.claim_resources')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
                 '_get_all_host_states')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
@@ -399,8 +395,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         expected_selection = [[sel0, sel1, sel2]]
         self.assertEqual(expected_selection, selected_hosts)
 
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_claim_resources')
+    @mock.patch('nova.scheduler.utils.claim_resources')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
                 '_get_all_host_states')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
@@ -461,8 +456,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         expected_selection = [[sel0]]
         self.assertEqual(expected_selection, selected_hosts)
 
-    @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
-                '_claim_resources')
+    @mock.patch('nova.scheduler.utils.claim_resources')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
                 '_get_all_host_states')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
@@ -496,8 +490,8 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         mock_claim.return_value = True
 
         alloc_reqs_by_rp_uuid = {
-            uuids.cn1: {"allocations": ["fake_cn1_alloc"]},
-            uuids.cn2: {"allocations": ["fake_cn2_alloc"]},
+            uuids.cn1: [{"allocations": "fake_cn1_alloc"}],
+            uuids.cn2: [{"allocations": "fake_cn2_alloc"}],
         }
 
         # Simulate host 1 and host 2 being randomly returned first by
@@ -512,14 +506,16 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.driver._schedule(ctx, spec_obj, instance_uuids,
             alloc_reqs_by_rp_uuid, mock.sentinel.provider_summaries)
 
-        # Check that we called _claim_resources() for both the first and second
+        # Check that we called claim_resources() for both the first and second
         # host state
         claim_calls = [
-            mock.call(ctx.elevated.return_value, spec_obj, uuids.instance0,
-                    alloc_reqs_by_rp_uuid[uuids.cn2],
+            mock.call(ctx.elevated.return_value, self.placement_client,
+                    spec_obj, uuids.instance0,
+                    alloc_reqs_by_rp_uuid[uuids.cn2][0],
                     allocation_request_version=None),
-            mock.call(ctx.elevated.return_value, spec_obj, uuids.instance1,
-                    alloc_reqs_by_rp_uuid[uuids.cn1],
+            mock.call(ctx.elevated.return_value, self.placement_client,
+                    spec_obj, uuids.instance1,
+                    alloc_reqs_by_rp_uuid[uuids.cn1][0],
                     allocation_request_version=None),
         ]
         mock_claim.assert_has_calls(claim_calls)
@@ -690,36 +686,6 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         exp_calls = [mock.call(uuids.instance1), mock.call(uuids.instance2)]
         pc.delete_allocation_for_instance.assert_has_calls(exp_calls)
 
-    def test_claim_resources(self):
-        """Tests that when _schedule() calls _claim_resources(), that we
-        appropriately call the placement client to claim resources for the
-        instance.
-        """
-        ctx = mock.Mock(user_id=uuids.user_id)
-        spec_obj = objects.RequestSpec(project_id=uuids.project_id)
-        instance_uuid = uuids.instance
-        alloc_reqs = [mock.sentinel.alloc_req]
-
-        res = self.driver._claim_resources(ctx, spec_obj, instance_uuid,
-            alloc_reqs)
-
-        pc = self.placement_client
-        pc.claim_resources.return_value = True
-        pc.claim_resources.assert_called_once_with(uuids.instance,
-            mock.sentinel.alloc_req, uuids.project_id, uuids.user_id,
-            allocation_request_version=None)
-        self.assertTrue(res)
-
-    @mock.patch('nova.scheduler.utils.request_is_rebuild')
-    def test_claim_resouces_for_policy_check(self, mock_policy):
-        mock_policy.return_value = True
-        res = self.driver._claim_resources(None, mock.sentinel.spec_obj,
-                                           mock.sentinel.instance_uuid,
-                                           [])
-        self.assertTrue(res)
-        mock_policy.assert_called_once_with(mock.sentinel.spec_obj)
-        self.assertFalse(self.placement_client.claim_resources.called)
-
     def test_add_retry_host(self):
         retry = dict(num_attempts=1, hosts=[])
         filter_properties = dict(retry=retry)
@@ -798,8 +764,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
             mock.sentinel.p_sums, mock.sentinel.ar_version, False)
         self.assertEqual([[fake_selection]], dests)
 
-    @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
-                "_claim_resources", return_value=True)
+    @mock.patch('nova.scheduler.utils.claim_resources', return_value=True)
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
                 '_get_all_host_states')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
@@ -836,8 +801,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self.assertIsNone(host_state.updated)
 
     @mock.patch("nova.scheduler.host_manager.HostState.consume_from_request")
-    @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
-                "_claim_resources")
+    @mock.patch('nova.scheduler.utils.claim_resources')
     @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
                 "_get_sorted_hosts")
     @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
@@ -898,8 +862,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         self._test_alternates_returned(num_instances=8, num_alternates=8)
 
     @mock.patch("nova.scheduler.host_manager.HostState.consume_from_request")
-    @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
-                "_claim_resources")
+    @mock.patch('nova.scheduler.utils.claim_resources')
     @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
                 "_get_sorted_hosts")
     @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
@@ -956,8 +919,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 self.assertEqual(alternate.cell_uuid, selected_cell_uuid)
 
     @mock.patch("nova.scheduler.host_manager.HostState.consume_from_request")
-    @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
-                "_claim_resources")
+    @mock.patch('nova.scheduler.utils.claim_resources')
     @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
                 "_get_sorted_hosts")
     @mock.patch("nova.scheduler.filter_scheduler.FilterScheduler."
