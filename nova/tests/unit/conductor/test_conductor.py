@@ -65,6 +65,12 @@ from nova import utils
 CONF = conf.CONF
 
 
+fake_selection1 = objects.Selection(service_host="host1", nodename="node1",
+        cell_uuid=uuids.cell, limits=None)
+fake_selection2 = objects.Selection(service_host="host2", nodename="node2",
+        cell_uuid=uuids.cell, limits=None)
+
+
 class FakeContext(context.RequestContext):
     def elevated(self):
         """Return a consistent elevated context so we can detect it."""
@@ -414,9 +420,8 @@ class _BaseTaskTestCase(object):
                 'num_instances': 2}
         filter_properties = {'retry': {'num_attempts': 1, 'hosts': []}}
         self.conductor_manager._schedule_instances(self.context,
-                fake_spec, [uuids.fake, uuids.fake]).AndReturn(
-                        [{'host': 'host1', 'nodename': 'node1', 'limits': []},
-                         {'host': 'host2', 'nodename': 'node2', 'limits': []}])
+                fake_spec, [uuids.fake, uuids.fake], return_alternates=True
+                ).AndReturn([[fake_selection1], [fake_selection2]])
         db.block_device_mapping_get_all_by_instance(self.context,
                 instances[0].uuid).AndReturn([])
         self.conductor_manager.compute_rpcapi.build_and_run_instance(
@@ -431,13 +436,13 @@ class _BaseTaskTestCase(object):
                     'num_instances': 2},
                 filter_properties={'retry': {'num_attempts': 1,
                                              'hosts': [['host1', 'node1']]},
-                                   'limits': []},
+                                   'limits': {}},
                 admin_password='admin_password',
                 injected_files='injected_files',
                 requested_networks=None,
                 security_groups='security_groups',
                 block_device_mapping=mox.IgnoreArg(),
-                node='node1', limits=[])
+                node='node1', limits=None)
         db.block_device_mapping_get_all_by_instance(self.context,
                 instances[1].uuid).AndReturn([])
         self.conductor_manager.compute_rpcapi.build_and_run_instance(
@@ -450,7 +455,7 @@ class _BaseTaskTestCase(object):
                     'instance_properties': instance_properties,
                     'instance_type': instance_type_p,
                     'num_instances': 2},
-                filter_properties={'limits': [],
+                filter_properties={'limits': {},
                                    'retry': {'num_attempts': 1,
                                              'hosts': [['host2', 'node2']]}},
                 admin_password='admin_password',
@@ -458,7 +463,7 @@ class _BaseTaskTestCase(object):
                 requested_networks=None,
                 security_groups='security_groups',
                 block_device_mapping=mox.IgnoreArg(),
-                node='node2', limits=[])
+                node='node2', limits=None)
         self.mox.ReplayAll()
 
         # build_instances() is a cast, we need to wait for it to complete
@@ -636,9 +641,7 @@ class _BaseTaskTestCase(object):
             mock_select_dests, mock_get_by_host, mock_get_inst_map_by_uuid,
             _mock_save, _mock_buildreq):
 
-        mock_select_dests.return_value = [
-                {'host': 'host1', 'nodename': 'node1', 'limits': []},
-                {'host': 'host2', 'nodename': 'node2', 'limits': []}]
+        mock_select_dests.return_value = [[fake_selection1], [fake_selection2]]
 
         instances = [fake_instance.fake_instance_obj(self.context)
                      for i in range(2)]
@@ -678,10 +681,7 @@ class _BaseTaskTestCase(object):
             mock_select_dests, mock_get_by_host, mock_get_inst_map_by_uuid,
             _mock_save, mock_buildreq):
 
-        mock_select_dests.return_value = [
-                {'host': 'host1', 'nodename': 'node1', 'limits': []},
-                {'host': 'host2', 'nodename': 'node2', 'limits': []}]
-
+        mock_select_dests.return_value = [[fake_selection1], [fake_selection2]]
         num_instances = 2
         instances = [fake_instance.fake_instance_obj(self.context)
                      for i in range(num_instances)]
@@ -727,9 +727,7 @@ class _BaseTaskTestCase(object):
             mock_select_dests, mock_get_by_host, mock_get_inst_map_by_uuid,
             _mock_save, _mock_buildreq):
 
-        mock_select_dests.return_value = [
-                {'host': 'host1', 'nodename': 'node1', 'limits': []},
-                {'host': 'host2', 'nodename': 'node2', 'limits': []}]
+        mock_select_dests.return_value = [[fake_selection1], [fake_selection2]]
         mock_get_by_host.side_effect = [
                 objects.HostMapping(cell_mapping=objects.CellMapping(id=1)),
                 objects.HostMapping(cell_mapping=objects.CellMapping(id=2))]
@@ -778,10 +776,7 @@ class _BaseTaskTestCase(object):
     def test_build_instances_destroy_build_request(self, mock_select_dests,
             mock_build_req_get):
 
-        mock_select_dests.return_value = [
-                {'host': 'host1', 'nodename': 'node1', 'limits': []},
-                {'host': 'host2', 'nodename': 'node2', 'limits': []}]
-
+        mock_select_dests.return_value = [[fake_selection1], [fake_selection2]]
         num_instances = 2
         instances = [fake_instance.fake_instance_obj(self.context)
                      for i in range(num_instances)]
@@ -826,9 +821,7 @@ class _BaseTaskTestCase(object):
         # conductor_manager._destroy_build_request() should not cause the
         # build to stop.
 
-        mock_select_dests.return_value = [
-                {'host': 'host1', 'nodename': 'node1', 'limits': []}]
-
+        mock_select_dests.return_value = [[fake_selection1]]
         instance = fake_instance.fake_instance_obj(self.context)
         image = {'fake-data': 'should_pass_silently'}
 
@@ -864,14 +857,14 @@ class _BaseTaskTestCase(object):
                 request_spec=mock.ANY,
                 filter_properties={'retry': {'num_attempts': 2,
                                              'hosts': [['host1', 'node1']]},
-                                   'limits': []},
+                                   'limits': {}},
                 admin_password='admin_password',
                 injected_files='injected_files',
                 requested_networks=None,
                 security_groups='security_groups',
                 block_device_mapping=test.MatchType(
                     objects.BlockDeviceMappingList),
-                node='node1', limits=[])
+                node='node1', limits=None)
             mock_pop_inst_map.assert_not_called()
             mock_destroy_build_req.assert_not_called()
 
@@ -950,13 +943,13 @@ class _BaseTaskTestCase(object):
             to_filtprops.return_value = filter_properties
             to_reqspec.return_value = request_spec
             from_primitives.return_value = fake_spec
-            sched_instances.return_value = [host]
+            sched_instances.return_value = [[fake_selection1]]
             self.conductor.unshelve_instance(self.context, instance, fake_spec)
             reset_forced_destinations.assert_called_once_with()
             from_primitives.assert_called_once_with(self.context, request_spec,
                     filter_properties)
             sched_instances.assert_called_once_with(self.context, fake_spec,
-                    [instance.uuid])
+                    [instance.uuid], return_alternates=False)
             self.assertEqual(cell_mapping,
                              fake_spec.requested_destination.cell)
             # NOTE(sbauza): Since the instance is dehydrated when passing
@@ -1010,9 +1003,7 @@ class _BaseTaskTestCase(object):
             mock.patch.object(objects.InstanceMapping,
                               'get_by_instance_uuid'),
         ) as (schedule_mock, unshelve_mock, get_by_instance_uuid):
-            schedule_mock.return_value = [{'host': 'fake_host',
-                                           'nodename': 'fake_node',
-                                           'limits': {}}]
+            schedule_mock.return_value = [[fake_selection1]]
             get_by_instance_uuid.return_value = objects.InstanceMapping(
                 cell_mapping=objects.CellMapping.get_by_uuid(
                     self.context, uuids.cell1))
@@ -1047,11 +1038,11 @@ class _BaseTaskTestCase(object):
                 'fake_image_id', show_deleted=False).AndReturn('fake_image')
         scheduler_utils.build_request_spec('fake_image',
                 mox.IgnoreArg()).AndReturn('req_spec')
+        fake_selection = objects.Selection(service_host="fake_host",
+                nodename="fake_node", limits=None)
         self.conductor_manager._schedule_instances(self.context,
-                fake_spec, [instance.uuid]).AndReturn(
-                        [{'host': 'fake_host',
-                          'nodename': 'fake_node',
-                          'limits': {}}])
+                fake_spec, [instance.uuid], return_alternates=False).AndReturn(
+                [[fake_selection]])
         self.conductor_manager.compute_rpcapi.unshelve_instance(self.context,
                 instance, 'fake_host', image='fake_image',
                 filter_properties={'limits': {},
@@ -1074,7 +1065,8 @@ class _BaseTaskTestCase(object):
         instance.save()
         system_metadata = instance.system_metadata
 
-        def fake_schedule_instances(context, request_spec, *instances):
+        def fake_schedule_instances(context, request_spec, *instances,
+                **kwargs):
             raise exc.NoValidHost(reason='')
 
         with test.nested(
@@ -1147,11 +1139,11 @@ class _BaseTaskTestCase(object):
 
         scheduler_utils.build_request_spec(None,
                 mox.IgnoreArg()).AndReturn('req_spec')
+        fake_selection = objects.Selection(service_host="fake_host",
+                nodename="fake_node", limits=None)
         self.conductor_manager._schedule_instances(self.context,
-                fake_spec, [instance.uuid]).AndReturn(
-                        [{'host': 'fake_host',
-                          'nodename': 'fake_node',
-                          'limits': {}}])
+                fake_spec, [instance.uuid], return_alternates=False).AndReturn(
+                [[fake_selection]])
         self.conductor_manager.compute_rpcapi.unshelve_instance(self.context,
                 instance, 'fake_host', image=None,
                 filter_properties={'limits': {},
@@ -1190,7 +1182,9 @@ class _BaseTaskTestCase(object):
         inst_obj.host = 'noselect'
         expected_host = 'thebesthost'
         expected_node = 'thebestnode'
-        expected_limits = 'fake-limits'
+        expected_limits = None
+        fake_selection = objects.Selection(service_host=expected_host,
+                nodename=expected_node, limits=None)
         rebuild_args, compute_args = self._prepare_rebuild_args(
             {'host': None, 'node': expected_node, 'limits': expected_limits})
         request_spec = {}
@@ -1206,9 +1200,7 @@ class _BaseTaskTestCase(object):
                               return_value=fake_spec),
             mock.patch.object(self.conductor_manager.scheduler_client,
                               'select_destinations',
-                              return_value=[{'host': expected_host,
-                                             'nodename': expected_node,
-                                             'limits': expected_limits}]),
+                              return_value=[[fake_selection]]),
             mock.patch('nova.scheduler.utils.build_request_spec',
                        return_value=request_spec)
         ) as (rebuild_mock, sig_mock, fp_mock, select_dest_mock, bs_mock):
@@ -1220,7 +1212,7 @@ class _BaseTaskTestCase(object):
             fp_mock.assert_called_once_with(self.context, request_spec,
                                             filter_properties)
             select_dest_mock.assert_called_once_with(self.context, fake_spec,
-                                                     inst_uuids)
+                    inst_uuids, return_objects=True, return_alternates=False)
             compute_args['host'] = expected_host
             rebuild_mock.assert_called_once_with(self.context,
                                             instance=inst_obj,
@@ -1256,7 +1248,8 @@ class _BaseTaskTestCase(object):
             fp_mock.assert_called_once_with(self.context, request_spec,
                                             filter_properties)
             select_dest_mock.assert_called_once_with(self.context, fake_spec,
-                    [inst_obj.uuid])
+                    [inst_obj.uuid], return_objects=True,
+                    return_alternates=False)
             self.assertFalse(rebuild_mock.called)
 
     @mock.patch.object(conductor_manager.compute_rpcapi.ComputeAPI,
@@ -1341,7 +1334,9 @@ class _BaseTaskTestCase(object):
         inst_obj.host = 'noselect'
         expected_host = 'thebesthost'
         expected_node = 'thebestnode'
-        expected_limits = 'fake-limits'
+        expected_limits = None
+        fake_selection = objects.Selection(service_host=expected_host,
+                nodename=expected_node, limits=None)
         fake_spec = objects.RequestSpec(ignore_hosts=[])
         rebuild_args, compute_args = self._prepare_rebuild_args(
             {'host': None, 'node': expected_node, 'limits': expected_limits,
@@ -1353,9 +1348,7 @@ class _BaseTaskTestCase(object):
                               return_value=False),
             mock.patch.object(self.conductor_manager.scheduler_client,
                               'select_destinations',
-                              return_value=[{'host': expected_host,
-                                             'nodename': expected_node,
-                                             'limits': expected_limits}]),
+                              return_value=[[fake_selection]]),
             mock.patch.object(fake_spec, 'reset_forced_destinations'),
         ) as (rebuild_mock, sig_mock, select_dest_mock, reset_fd):
             self.conductor_manager.rebuild_instance(context=self.context,
@@ -1366,7 +1359,8 @@ class _BaseTaskTestCase(object):
             else:
                 reset_fd.assert_not_called()
             select_dest_mock.assert_called_once_with(self.context,
-                    fake_spec, [inst_obj.uuid])
+                    fake_spec, [inst_obj.uuid], return_objects=True,
+                    return_alternates=False)
             compute_args['host'] = expected_host
             rebuild_mock.assert_called_once_with(self.context,
                                             instance=inst_obj,
@@ -1429,9 +1423,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                                select_destinations,
                                                build_and_run_instance,
                                                get_az):
-        select_destinations.return_value = [{'host': 'fake-host',
-                                             'nodename': 'fake-nodename',
-                                             'limits': None}]
+        select_destinations.return_value = [[fake_selection1]]
         get_az.return_value = 'myaz'
         details = {}
 
@@ -1442,11 +1434,11 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             self.assertEqual(1, len(kwargs['block_device_mapping']))
             # FIXME(danms): How to validate the db connection here?
 
-        self.start_service('compute', host='fake-host')
+        self.start_service('compute', host='host1')
         build_and_run_instance.side_effect = _build_and_run_instance
         self.conductor.schedule_and_build_instances(**params)
         self.assertTrue(build_and_run_instance.called)
-        get_az.assert_called_once_with(mock.ANY, 'fake-host')
+        get_az.assert_called_once_with(mock.ANY, 'host1')
 
         instance_uuid = details['instance'].uuid
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
@@ -1524,23 +1516,12 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                                    build_and_run_instance):
         # This list needs to match the number of build_requests and the number
         # of request_specs in params.
-        select_destinations.return_value = [{'host': 'fake-host',
-                                             'nodename': 'fake-nodename',
-                                             'limits': None},
-                                            {'host': 'fake-host',
-                                             'nodename': 'fake-nodename',
-                                             'limits': None},
-                                            {'host': 'fake-host2',
-                                             'nodename': 'fake-nodename2',
-                                             'limits': None},
-                                            {'host': 'fake-host2',
-                                             'nodename': 'fake-nodename2',
-                                             'limits': None}]
-
+        select_destinations.return_value = [[fake_selection1],
+                [fake_selection2], [fake_selection1], [fake_selection2]]
         params = self.params
 
-        self.start_service('compute', host='fake-host')
-        self.start_service('compute', host='fake-host2')
+        self.start_service('compute', host='host1')
+        self.start_service('compute', host='host2')
 
         # Because of the cache, this should only be called twice,
         # once for the first and once for the third request.
@@ -1592,18 +1573,14 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         """Test that creates two instances in separate cells."""
         # This list needs to match the number of build_requests and the number
         # of request_specs in params.
-        select_destinations.return_value = [{'host': 'fake-host',
-                                             'nodename': 'fake-nodename',
-                                             'limits': None},
-                                            {'host': 'fake-host2',
-                                             'nodename': 'fake-nodename2',
-                                             'limits': None}]
+        select_destinations.return_value = [[fake_selection1],
+                [fake_selection2]]
 
         params = self.params
 
         # The cells are created in the base TestCase setup.
-        self.start_service('compute', host='fake-host', cell='cell1')
-        self.start_service('compute', host='fake-host2', cell='cell2')
+        self.start_service('compute', host='host1', cell='cell1')
+        self.start_service('compute', host='host2', cell='cell2')
 
         get_hostmapping.side_effect = self.host_mappings.values()
 
@@ -1663,10 +1640,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                                          taglist_destroy):
 
         br_destroy.side_effect = exc.BuildRequestNotFound(uuid='foo')
-        self.start_service('compute', host='fake-host')
-        select_destinations.return_value = [{'host': 'fake-host',
-                                             'nodename': 'nodesarestupid',
-                                             'limits': None}]
+        self.start_service('compute', host='host1')
+        select_destinations.return_value = [[fake_selection1]]
         taglist_create.return_value = self.params['tags']
         self.conductor.schedule_and_build_instances(**self.params)
         self.assertFalse(build_and_run.called)
@@ -1700,10 +1675,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             None,
         ]
 
-        self.start_service('compute', host='fake-host')
-        select_destinations.return_value = [{'host': 'fake-host',
-                                             'nodename': 'nodesarestupid',
-                                             'limits': None}]
+        self.start_service('compute', host='host1')
+        select_destinations.return_value = [[fake_selection1]]
         self.conductor.schedule_and_build_instances(**self.params)
         self.assertFalse(build_and_run.called)
         self.assertFalse(bury.called)
@@ -1730,10 +1703,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             None,
         ]
 
-        self.start_service('compute', host='fake-host')
-        select_destinations.return_value = [{'host': 'fake-host',
-                                             'nodename': 'nodesarestupid',
-                                             'limits': None}]
+        self.start_service('compute', host='host1')
+        select_destinations.return_value = [[fake_selection1]]
         self.conductor.schedule_and_build_instances(**self.params)
         self.assertFalse(build_and_run.called)
         self.assertFalse(bury.called)
@@ -1760,15 +1731,9 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         """
         inst_uuid = self.params['build_requests'][0].instance.uuid
         br_get_by_inst.side_effect = exc.BuildRequestNotFound(uuid=inst_uuid)
-        self.start_service('compute', host='fake-host')
-        select_destinations.return_value = [{'host': 'fake-host',
-                                             'nodename': 'nodesarestupid',
-                                             'limits': None}]
-        with mock.patch.object(self.conductor.scheduler_client,
-                               'reportclient') as mock_rc:
-            self.conductor.schedule_and_build_instances(**self.params)
-            mock_rc.delete_allocation_for_instance.assert_called_once_with(
-                inst_uuid)
+        self.start_service('compute', host='host1')
+        select_destinations.return_value = [[fake_selection1]]
+        self.conductor.schedule_and_build_instances(**self.params)
         # we don't create the instance since the build request is gone
         self.assertFalse(inst_create.called)
         # we don't build the instance since we didn't create it
@@ -1796,9 +1761,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                              instances[0].uuid)
 
         bury.side_effect = _fake_bury
-        select_dest.return_value = [{'host': 'missing-host',
-                                             'nodename': 'nodesarestupid',
-                                             'limits': None}]
+        select_dest.return_value = [[fake_selection1]]
         self.conductor.schedule_and_build_instances(**self.params)
         self.assertTrue(bury.called)
         self.assertFalse(build_and_run.called)
@@ -1807,9 +1770,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
     def test_schedule_and_build_over_quota_during_recheck(self, mock_select,
                                                           mock_check):
-        mock_select.return_value = [{'host': 'fake-host',
-                                     'nodename': 'fake-nodename',
-                                     'limits': None}]
+        mock_select.return_value = [[fake_selection1]]
         # Simulate a race where the first check passes and the recheck fails.
         # First check occurs in compute/api.
         fake_quotas = {'instances': 5, 'cores': 10, 'ram': 4096}
@@ -1831,7 +1792,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.stub_out('nova.objects.Instance.save', fake_save)
 
         # This is needed to register the compute node in a cell.
-        self.start_service('compute', host='fake-host')
+        self.start_service('compute', host='host1')
         self.assertRaises(
             exc.TooManyInstances,
             self.conductor.schedule_and_build_instances, **self.params)
@@ -1870,13 +1831,11 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
     @mock.patch('nova.scheduler.rpcapi.SchedulerAPI.select_destinations')
     def test_schedule_and_build_no_quota_recheck(self, mock_select,
                                                  mock_check, mock_build):
-        mock_select.return_value = [{'host': 'fake-host',
-                                     'nodename': 'fake-nodename',
-                                     'limits': None}]
+        mock_select.return_value = [[fake_selection1]]
         # Disable recheck_quota.
         self.flags(recheck_quota=False, group='quota')
         # This is needed to register the compute node in a cell.
-        self.start_service('compute', host='fake-host')
+        self.start_service('compute', host='host1')
         self.conductor.schedule_and_build_instances(**self.params)
 
         # check_deltas should not have been called a second time. The first
@@ -2302,10 +2261,10 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             cell_mapping=objects.CellMapping.get_by_uuid(self.context,
                                                          uuids.cell1))
 
-        hosts = [dict(host='host1', nodename=None, limits={})]
+        hosts = [dict(host='host1', nodename='node1', limits={})]
         metadata_mock.return_value = image
         exc_info = test.TestingException('something happened')
-        select_dest_mock.return_value = hosts
+        select_dest_mock.return_value = [[fake_selection1]]
 
         updates = {'vm_state': vm_states.STOPPED,
                    'task_state': None}
@@ -2317,13 +2276,13 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         # Filter properties are populated during code execution
         legacy_filter_props = {'retry': {'num_attempts': 1,
-                                         'hosts': [['host1', None]]},
+                                         'hosts': [['host1', 'node1']]},
                                'limits': {}}
 
         metadata_mock.assert_called_with({})
         sig_mock.assert_called_once_with(self.context, fake_spec)
-        select_dest_mock.assert_called_once_with(
-            self.context, fake_spec, [inst_obj.uuid])
+        select_dest_mock.assert_called_once_with(self.context, fake_spec,
+                [inst_obj.uuid], return_objects=True, return_alternates=False)
         prep_resize_mock.assert_called_once_with(
             self.context, inst_obj, legacy_request_spec['image'],
             flavor, hosts[0]['host'], None, [resvs],
@@ -2425,16 +2384,15 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         filter_properties = {'retry': {'num_attempts': 1, 'hosts': []}}
         inst_uuids = [inst.uuid for inst in instances]
         self.conductor_manager._schedule_instances(self.context,
-                fake_spec, inst_uuids).AndReturn(
-                        [{'host': 'host1', 'nodename': 'node1', 'limits': []},
-                         {'host': 'host2', 'nodename': 'node2', 'limits': []}])
+                fake_spec, inst_uuids, return_alternates=True).AndReturn(
+                [[fake_selection1], [fake_selection2]])
         instances[0].save().AndRaise(
                 exc.InstanceNotFound(instance_id=instances[0].uuid))
         instances[1].save()
         self.conductor_manager.compute_rpcapi.build_and_run_instance(
                 self.context, instance=instances[1], host='host2',
                 image={'fake-data': 'should_pass_silently'}, request_spec=spec,
-                filter_properties={'limits': [],
+                filter_properties={'limits': {},
                                    'retry': {'num_attempts': 1,
                                              'hosts': [['host2',
                                                         'node2']]}},
@@ -2443,7 +2401,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 requested_networks=None,
                 security_groups='security_groups',
                 block_device_mapping=mox.IsA(objects.BlockDeviceMappingList),
-                node='node2', limits=[])
+                node='node2', limits=None)
         self.mox.ReplayAll()
 
         # build_instances() is a cast, we need to wait for it to complete
@@ -2468,8 +2426,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         instances = [fake_instance.fake_instance_obj(self.context)
                 for i in range(2)]
         image = {'fake-data': 'should_pass_silently'}
-        destinations = [{'host': 'host1', 'nodename': 'node1', 'limits': []},
-                {'host': 'host2', 'nodename': 'node2', 'limits': []}]
+        destinations = [[fake_selection1], [fake_selection2]]
         spec = {'fake': 'specs',
                 'instance_properties': instances[0]}
         build_request_spec.return_value = spec
@@ -2510,7 +2467,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             build_and_run_instance.assert_called_once_with(self.context,
                     instance=instances[1], host='host2', image={'fake-data':
                         'should_pass_silently'}, request_spec=spec,
-                    filter_properties={'limits': [],
+                    filter_properties={'limits': {},
                                        'retry': {'num_attempts': 1,
                                                  'hosts': [['host2',
                                                             'node2']]}},
@@ -2519,7 +2476,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                     requested_networks=None,
                     security_groups='security_groups',
                     block_device_mapping=mock.ANY,
-                    node='node2', limits=[])
+                    node='node2', limits=None)
 
     def test_cleanup_allocated_networks_none_requested(self):
         # Tests that we don't deallocate networks if 'none' were specifically

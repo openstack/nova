@@ -313,9 +313,13 @@ class LiveMigrationTask(base.TaskBase):
             self._check_not_over_max_retries(attempted_hosts)
             request_spec.ignore_hosts = attempted_hosts
             try:
-                hoststate = self.scheduler_client.select_destinations(
-                    self.context, request_spec, [self.instance.uuid])[0]
-                host = hoststate['host']
+                selection_lists = self.scheduler_client.select_destinations(
+                        self.context, request_spec, [self.instance.uuid],
+                        return_objects=True, return_alternates=False)
+                # We only need the first item in the first list, as there is
+                # only one instance, and we don't care about any alternates.
+                selection = selection_lists[0][0]
+                host = selection.service_host
             except messaging.RemoteError as ex:
                 # TODO(ShaoHe Feng) There maybe multi-scheduler, and the
                 # scheduling algorithm is R-R, we can let other scheduler try.
@@ -334,9 +338,9 @@ class LiveMigrationTask(base.TaskBase):
                 # The scheduler would have created allocations against the
                 # selected destination host in Placement, so we need to remove
                 # those before moving on.
-                self._remove_host_allocations(host, hoststate['nodename'])
+                self._remove_host_allocations(host, selection.nodename)
                 host = None
-        return host, hoststate['nodename']
+        return selection.service_host, selection.nodename
 
     def _remove_host_allocations(self, host, node):
         """Removes instance allocations against the given host from Placement

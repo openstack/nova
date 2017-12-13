@@ -29,6 +29,12 @@ from nova.tests import uuidsentinel as uuids
 from nova import utils
 
 
+fake_selection1 = objects.Selection(service_host="host1", nodename="node1",
+        cell_uuid=uuids.cell)
+fake_selection2 = objects.Selection(service_host="host2", nodename="node2",
+        cell_uuid=uuids.cell)
+
+
 class LiveMigrationTaskTestCase(test.NoDBTestCase):
     def setUp(self):
         super(LiveMigrationTaskTestCase, self).setUp()
@@ -333,8 +339,9 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             self.context, self.fake_spec)
         self.fake_spec.reset_forced_destinations()
         self.task.scheduler_client.select_destinations(
-            self.context, self.fake_spec, [self.instance.uuid]).AndReturn(
-                        [{'host': 'host1', 'nodename': 'node1'}])
+                self.context, self.fake_spec, [self.instance.uuid],
+                return_objects=True, return_alternates=False).AndReturn(
+                [[fake_selection1]])
         self.task._check_compatible_with_source_hypervisor("host1")
         self.task._call_livem_checks_on_host("host1")
 
@@ -366,14 +373,15 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                     check_compat, call_livem_checks):
             get_image.return_value = "image"
             from_components.return_value = another_spec
-            select_dest.return_value = [{'host': 'host1', 'nodename': 'node1'}]
+            select_dest.return_value = [[fake_selection1]]
 
             self.assertEqual(("host1", "node1"), task._find_destination())
 
             get_image.assert_called_once_with(self.instance.system_metadata)
             setup_ig.assert_called_once_with(self.context, another_spec)
             select_dest.assert_called_once_with(self.context, another_spec,
-                    [self.instance.uuid])
+                    [self.instance.uuid], return_objects=True,
+                    return_alternates=False)
             # Make sure the request_spec was updated to include the cell
             # mapping.
             self.assertIsNotNone(another_spec.requested_destination.cell)
@@ -393,8 +401,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
         scheduler_utils.setup_instance_group(self.context, self.fake_spec)
         self.task.scheduler_client.select_destinations(self.context,
-                self.fake_spec, [self.instance.uuid]).AndReturn(
-                        [{'host': 'host1', 'nodename': 'node1'}])
+                self.fake_spec, [self.instance.uuid], return_objects=True,
+                return_alternates=False).AndReturn([[fake_selection1]])
         self.task._check_compatible_with_source_hypervisor("host1")
         self.task._call_livem_checks_on_host("host1")
 
@@ -414,14 +422,14 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             self.instance.system_metadata).AndReturn("image")
         scheduler_utils.setup_instance_group(self.context, self.fake_spec)
         self.task.scheduler_client.select_destinations(self.context,
-                self.fake_spec, [self.instance.uuid]).AndReturn(
-                        [{'host': 'host1', 'nodename': 'node1'}])
+                self.fake_spec, [self.instance.uuid], return_objects=True,
+                return_alternates=False).AndReturn([[fake_selection1]])
         self.task._check_compatible_with_source_hypervisor("host1")\
                 .AndRaise(error)
 
         self.task.scheduler_client.select_destinations(self.context,
-                self.fake_spec, [self.instance.uuid]).AndReturn(
-                        [{'host': 'host2', 'nodename': 'node2'}])
+                self.fake_spec, [self.instance.uuid], return_objects=True,
+                return_alternates=False).AndReturn([[fake_selection2]])
         self.task._check_compatible_with_source_hypervisor("host2")
         self.task._call_livem_checks_on_host("host2")
 
@@ -454,15 +462,15 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             self.instance.system_metadata).AndReturn("image")
         scheduler_utils.setup_instance_group(self.context, self.fake_spec)
         self.task.scheduler_client.select_destinations(self.context,
-                self.fake_spec, [self.instance.uuid]).AndReturn(
-                        [{'host': 'host1', 'nodename': 'node1'}])
+                self.fake_spec, [self.instance.uuid], return_objects=True,
+                return_alternates=False).AndReturn([[fake_selection1]])
         self.task._check_compatible_with_source_hypervisor("host1")
         self.task._call_livem_checks_on_host("host1")\
                 .AndRaise(exception.Invalid)
 
         self.task.scheduler_client.select_destinations(self.context,
-                self.fake_spec, [self.instance.uuid]).AndReturn(
-                        [{'host': 'host2', 'nodename': 'node2'}])
+                self.fake_spec, [self.instance.uuid], return_objects=True,
+                return_alternates=False).AndReturn([[fake_selection2]])
         self.task._check_compatible_with_source_hypervisor("host2")
         self.task._call_livem_checks_on_host("host2")
 
@@ -487,15 +495,15 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             self.instance.system_metadata).AndReturn("image")
         scheduler_utils.setup_instance_group(self.context, self.fake_spec)
         self.task.scheduler_client.select_destinations(self.context,
-                self.fake_spec, [self.instance.uuid]).AndReturn(
-                        [{'host': 'host1', 'nodename': 'node1'}])
+                self.fake_spec, [self.instance.uuid], return_objects=True,
+                return_alternates=False).AndReturn([[fake_selection1]])
         self.task._check_compatible_with_source_hypervisor("host1")
         self.task._call_livem_checks_on_host("host1")\
                 .AndRaise(exception.MigrationPreCheckError("reason"))
 
         self.task.scheduler_client.select_destinations(self.context,
-                self.fake_spec, [self.instance.uuid]).AndReturn(
-                        [{'host': 'host2', 'nodename': 'node2'}])
+                self.fake_spec, [self.instance.uuid], return_objects=True,
+                return_alternates=False).AndReturn([[fake_selection2]])
         self.task._check_compatible_with_source_hypervisor("host2")
         self.task._call_livem_checks_on_host("host2")
 
@@ -519,8 +527,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             self.instance.system_metadata).AndReturn("image")
         scheduler_utils.setup_instance_group(self.context, self.fake_spec)
         self.task.scheduler_client.select_destinations(self.context,
-                self.fake_spec, [self.instance.uuid]).AndReturn(
-                        [{'host': 'host1', 'nodename': 'node1'}])
+                self.fake_spec, [self.instance.uuid], return_objects=True,
+                return_alternates=False).AndReturn([[fake_selection1]])
         self.task._check_compatible_with_source_hypervisor("host1")\
                 .AndRaise(exception.DestinationHypervisorTooOld)
 
@@ -547,8 +555,9 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             self.instance.system_metadata).AndReturn("image")
         scheduler_utils.setup_instance_group(self.context, self.fake_spec)
         self.task.scheduler_client.select_destinations(self.context,
-                self.fake_spec, [self.instance.uuid]).AndRaise(
-                        exception.NoValidHost(reason=""))
+                self.fake_spec, [self.instance.uuid], return_objects=True,
+                return_alternates=False).AndRaise(
+                exception.NoValidHost(reason=""))
 
         self.mox.ReplayAll()
         self.assertRaises(exception.NoValidHost, self.task._find_destination)

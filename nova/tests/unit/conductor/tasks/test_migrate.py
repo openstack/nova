@@ -43,9 +43,10 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         self.instance = objects.Instance._from_db_object(
             self.context, inst_object, inst, [])
         self.request_spec = objects.RequestSpec(image=objects.ImageMeta())
-        self.hosts = [dict(host='host1', nodename=None, limits={})]
+        self.host_lists = [[objects.Selection(service_host="host1",
+                nodename="node1", cell_uuid=uuids.cell1)]]
         self.filter_properties = {'limits': {}, 'retry': {'num_attempts': 1,
-                                  'hosts': [['host1', None]]}}
+                                  'hosts': [['host1', 'node1']]}}
         self.reservations = []
         self.clean_shutdown = True
 
@@ -64,7 +65,7 @@ class MigrationTaskTestCase(test.NoDBTestCase):
     def test_execute_legacy_no_pre_create_migration(self, prep_resize_mock,
                                                     sel_dest_mock, sig_mock,
                                                     az_mock, gmv_mock):
-        sel_dest_mock.return_value = self.hosts
+        sel_dest_mock.return_value = self.host_lists
         az_mock.return_value = 'myaz'
         task = self._generate_task()
         legacy_request_spec = self.request_spec.to_legacy_request_spec_dict()
@@ -73,13 +74,15 @@ class MigrationTaskTestCase(test.NoDBTestCase):
 
         sig_mock.assert_called_once_with(self.context, self.request_spec)
         task.scheduler_client.select_destinations.assert_called_once_with(
-            self.context, self.request_spec, [self.instance.uuid])
+            self.context, self.request_spec, [self.instance.uuid],
+            return_objects=True, return_alternates=False)
+        selection = self.host_lists[0][0]
         prep_resize_mock.assert_called_once_with(
             self.context, self.instance, legacy_request_spec['image'],
-            self.flavor, self.hosts[0]['host'], None, self.reservations,
+            self.flavor, selection.service_host, None, self.reservations,
             request_spec=legacy_request_spec,
-            filter_properties=self.filter_properties,
-            node=self.hosts[0]['nodename'], clean_shutdown=self.clean_shutdown)
+            filter_properties=self.filter_properties, node=selection.nodename,
+            clean_shutdown=self.clean_shutdown)
         az_mock.assert_called_once_with(self.context, 'host1')
         self.assertIsNone(task._migration)
 
@@ -95,7 +98,7 @@ class MigrationTaskTestCase(test.NoDBTestCase):
     def _test_execute(self, prep_resize_mock, sel_dest_mock, sig_mock, az_mock,
                       gmv_mock, cm_mock, sm_mock, cn_mock, rc_mock,
                       requested_destination=False):
-        sel_dest_mock.return_value = self.hosts
+        sel_dest_mock.return_value = self.host_lists
         az_mock.return_value = 'myaz'
 
         if requested_destination:
@@ -126,13 +129,15 @@ class MigrationTaskTestCase(test.NoDBTestCase):
 
         sig_mock.assert_called_once_with(self.context, self.request_spec)
         task.scheduler_client.select_destinations.assert_called_once_with(
-            self.context, self.request_spec, [self.instance.uuid])
+            self.context, self.request_spec, [self.instance.uuid],
+            return_objects=True, return_alternates=False)
+        selection = self.host_lists[0][0]
         prep_resize_mock.assert_called_once_with(
             self.context, self.instance, legacy_request_spec['image'],
-            self.flavor, self.hosts[0]['host'], task._migration,
+            self.flavor, selection.service_host, task._migration,
             self.reservations, request_spec=legacy_request_spec,
-            filter_properties=self.filter_properties,
-            node=self.hosts[0]['nodename'], clean_shutdown=self.clean_shutdown)
+            filter_properties=self.filter_properties, node=selection.nodename,
+            clean_shutdown=self.clean_shutdown)
         az_mock.assert_called_once_with(self.context, 'host1')
         self.assertIsNotNone(task._migration)
 
@@ -178,7 +183,7 @@ class MigrationTaskTestCase(test.NoDBTestCase):
     def test_execute_rollback(self, prep_resize_mock, sel_dest_mock, sig_mock,
                               az_mock, gmv_mock, cm_mock, sm_mock, cn_mock,
                               rc_mock, mock_ra):
-        sel_dest_mock.return_value = self.hosts
+        sel_dest_mock.return_value = self.host_lists
         az_mock.return_value = 'myaz'
         task = self._generate_task()
         gmv_mock.return_value = 23

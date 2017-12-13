@@ -496,7 +496,7 @@ class ComputeTaskManager(base.Base):
         else:
             try:
                 host_mapping = objects.HostMapping.get_by_host(context,
-                        host['host'])
+                        host.service_host)
             except exception.HostMappingNotFound:
                 # NOTE(alaski): For now this exception means that a
                 # deployment has not migrated to cellsv2 and we should
@@ -545,8 +545,8 @@ class ComputeTaskManager(base.Base):
             instance_uuids = [instance.uuid for instance in instances]
             spec_obj = objects.RequestSpec.from_primitives(
                     context, request_spec, filter_properties)
-            hosts = self._schedule_instances(
-                    context, spec_obj, instance_uuids)
+            host_lists = self._schedule_instances(context, spec_obj,
+                    instance_uuids, return_alternates=True)
         except Exception as exc:
             updates = {'vm_state': vm_states.ERROR, 'task_state': None}
             for instance in instances:
@@ -563,10 +563,11 @@ class ComputeTaskManager(base.Base):
                     context, instance, requested_networks)
             return
 
-        for (instance, host) in six.moves.zip(instances, hosts):
+        for (instance, host_list) in six.moves.zip(instances, host_lists):
+            host = host_list[0]
             instance.availability_zone = (
                 availability_zones.get_host_availability_zone(context,
-                                                              host['host']))
+                        host.service_host))
             try:
                 # NOTE(danms): This saves the az change above, refreshes our
                 # instance, and tells us if it has been deleted underneath us
@@ -605,22 +606,23 @@ class ComputeTaskManager(base.Base):
                     return
 
             self.compute_rpcapi.build_and_run_instance(context,
-                    instance=instance, host=host['host'], image=image,
+                    instance=instance, host=host.service_host, image=image,
                     request_spec=request_spec,
                     filter_properties=local_filter_props,
                     admin_password=admin_password,
                     injected_files=injected_files,
                     requested_networks=requested_networks,
                     security_groups=security_groups,
-                    block_device_mapping=bdms, node=host['nodename'],
-                    limits=host['limits'])
+                    block_device_mapping=bdms, node=host.nodename,
+                    limits=host.limits)
 
     def _schedule_instances(self, context, request_spec,
-                            instance_uuids=None):
+                            instance_uuids=None, return_alternates=False):
         scheduler_utils.setup_instance_group(context, request_spec)
-        hosts = self.scheduler_client.select_destinations(context,
-            request_spec, instance_uuids)
-        return hosts
+        host_lists = self.scheduler_client.select_destinations(context,
+                request_spec, instance_uuids, return_objects=True,
+                return_alternates=return_alternates)
+        return host_lists
 
     @targets_cell
     def unshelve_instance(self, context, instance, request_spec=None):
@@ -701,12 +703,14 @@ class ComputeTaskManager(base.Base):
                             objects.Destination(
                                 cell=instance_mapping.cell_mapping))
 
-                    hosts = self._schedule_instances(context, request_spec,
-                                                     [instance.uuid])
-                    host_state = hosts[0]
+                    host_lists = self._schedule_instances(context,
+                            request_spec, [instance.uuid],
+                            return_alternates=False)
+                    host_list = host_lists[0]
+                    selection = host_list[0]
                     scheduler_utils.populate_filter_properties(
-                            filter_properties, host_state)
-                    (host, node) = (host_state['host'], host_state['nodename'])
+                            filter_properties, selection)
+                    (host, node) = (selection.service_host, selection.nodename)
                     instance.availability_zone = (
                         availability_zones.get_host_availability_zone(
                             context, host))
@@ -847,12 +851,13 @@ class ComputeTaskManager(base.Base):
                     # is not forced to be the original host
                     request_spec.reset_forced_destinations()
                 try:
-                    hosts = self._schedule_instances(context, request_spec,
-                                                     [instance.uuid])
-                    host_dict = hosts.pop(0)
-                    host, node, limits = (host_dict['host'],
-                                          host_dict['nodename'],
-                                          host_dict['limits'])
+                    host_lists = self._schedule_instances(context,
+                            request_spec, [instance.uuid],
+                            return_alternates=False)
+                    host_list = host_lists[0]
+                    selection = host_list[0]
+                    host, node, limits = (selection.service_host,
+                            selection.nodename, selection.limits)
                 except exception.NoValidHost as ex:
                     if migration:
                         migration.status = 'error'
@@ -1008,8 +1013,8 @@ class ComputeTaskManager(base.Base):
         # Add all the UUIDs for the instances
         instance_uuids = [spec.instance_uuid for spec in request_specs]
         try:
-            hosts = self._schedule_instances(context, request_specs[0],
-                                             instance_uuids)
+            host_lists = self._schedule_instances(context, request_specs[0],
+                    instance_uuids, return_alternates=True)
         except Exception as exc:
             LOG.exception('Failed to schedule instances')
             self._bury_in_cell0(context, request_specs[0], exc,
@@ -1020,19 +1025,22 @@ class ComputeTaskManager(base.Base):
         cell_mapping_cache = {}
         instances = []
 
-        for (build_request, request_spec, host) in six.moves.zip(
-                build_requests, request_specs, hosts):
+        for (build_request, request_spec, host_list) in six.moves.zip(
+                build_requests, request_specs, host_lists):
             instance = build_request.get_new_instance(context)
+            # host_list is a list of one or more Selection objects, the first
+            # of which has been selected and its resources claimed.
+            host = host_list[0]
             # Convert host from the scheduler into a cell record
-            if host['host'] not in host_mapping_cache:
+            if host.service_host not in host_mapping_cache:
                 try:
                     host_mapping = objects.HostMapping.get_by_host(
-                        context, host['host'])
-                    host_mapping_cache[host['host']] = host_mapping
+                        context, host.service_host)
+                    host_mapping_cache[host.service_host] = host_mapping
                 except exception.HostMappingNotFound as exc:
                     LOG.error('No host-to-cell mapping found for selected '
                               'host %(host)s. Setup is incomplete.',
-                              {'host': host['host']})
+                              {'host': host.service_host})
                     self._bury_in_cell0(context, request_spec, exc,
                                         build_requests=[build_request],
                                         instances=[instance])
@@ -1040,7 +1048,7 @@ class ComputeTaskManager(base.Base):
                     instances.append(None)
                     continue
             else:
-                host_mapping = host_mapping_cache[host['host']]
+                host_mapping = host_mapping_cache[host.service_host]
 
             cell = host_mapping.cell_mapping
 
@@ -1062,7 +1070,7 @@ class ComputeTaskManager(base.Base):
             else:
                 instance.availability_zone = (
                     availability_zones.get_host_availability_zone(
-                        context, host['host']))
+                        context, host.service_host))
                 with obj_target_cell(instance, cell):
                     instance.create()
                     instances.append(instance)
@@ -1085,13 +1093,17 @@ class ComputeTaskManager(base.Base):
                                                   request_specs,
                                                   cell_mapping_cache)
 
-        for (build_request, request_spec, host, instance) in six.moves.zip(
-                build_requests, request_specs, hosts, instances):
+        zipped = six.moves.zip(build_requests, request_specs, host_lists,
+                              instances)
+        for (build_request, request_spec, host_list, instance) in zipped:
             if instance is None:
                 # Skip placeholders that were buried in cell0 or had their
                 # build requests deleted by the user before instance create.
                 continue
             cell = cell_mapping_cache[instance.uuid]
+            # host_list is a list of one or more Selection objects, the first
+            # of which has been selected and its resources claimed.
+            host = host_list[0]
             filter_props = request_spec.to_legacy_filter_properties_dict()
             scheduler_utils.populate_retry(filter_props, instance.uuid)
             scheduler_utils.populate_filter_properties(filter_props,
@@ -1138,7 +1150,6 @@ class ComputeTaskManager(base.Base):
             # pass the objects.
             legacy_secgroups = [s.identifier
                                 for s in request_spec.security_groups]
-
             with obj_target_cell(instance, cell) as cctxt:
                 self.compute_rpcapi.build_and_run_instance(
                     cctxt, instance=instance, image=image,
@@ -1149,8 +1160,8 @@ class ComputeTaskManager(base.Base):
                     requested_networks=requested_networks,
                     security_groups=legacy_secgroups,
                     block_device_mapping=instance_bdms,
-                    host=host['host'], node=host['nodename'],
-                    limits=host['limits'])
+                    host=host.service_host, node=host.nodename,
+                    limits=host.limits)
 
     def _cleanup_build_artifacts(self, context, exc, instances, build_requests,
                                  request_specs, cell_mapping_cache):
