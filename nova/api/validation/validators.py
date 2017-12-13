@@ -120,6 +120,33 @@ def _validate_name(instance):
     raise exception.InvalidName(reason=regex.reason)
 
 
+@jsonschema.FormatChecker.cls_checks('az_name_with_leading_trailing_spaces',
+                                     exception.InvalidName)
+def _validate_az_name_with_leading_trailing_spaces(instance):
+    regex = parameter_types.valid_az_name_leading_trailing_spaces_regex
+    try:
+        if re.search(regex.regex, instance):
+            return True
+    except TypeError:
+        # The name must be string type. If instance isn't string type, the
+        # TypeError will be raised at here.
+        pass
+    raise exception.InvalidName(reason=regex.reason)
+
+
+@jsonschema.FormatChecker.cls_checks('az_name', exception.InvalidName)
+def _validate_az_name(instance):
+    regex = parameter_types.valid_az_name_regex
+    try:
+        if re.search(regex.regex, instance):
+            return True
+    except TypeError:
+        # The name must be string type. If instance isn't string type, the
+        # TypeError will be raised at here.
+        pass
+    raise exception.InvalidName(reason=regex.reason)
+
+
 @jsonschema.FormatChecker.cls_checks('cell_name_with_leading_trailing_spaces',
                                      exception.InvalidName)
 def _validate_cell_name_with_leading_trailing_spaces(instance):
