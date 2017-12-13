@@ -15,8 +15,9 @@ import copy
 import heapq
 import itertools
 
-from nova import context
 import six
+
+from nova import context
 
 
 class RecordSortContext(object):
@@ -25,7 +26,7 @@ class RecordSortContext(object):
         self.sort_dirs = sort_dirs
 
     def compare_records(self, rec1, rec2):
-        """Implements cmp(inst1, inst2) for the first key that is different.
+        """Implements cmp(rec1, rec2) for the first key that is different.
 
         Adjusts for the requested sort direction by inverting the result
         as needed.
@@ -81,7 +82,7 @@ class CrossCellLister(object):
 
         For instances (and many other types) this is 'uuid', but could also
         be things like 'id' or anything else used as the marker identifier
-        when fetching a page of results
+        when fetching a page of results.
         """
         pass
 
