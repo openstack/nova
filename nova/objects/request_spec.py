@@ -445,6 +445,18 @@ class RequestSpec(base.NovaObject):
             else:
                 setattr(spec, key, getattr(spec_obj, key))
         spec._context = context
+
+        if 'instance_group' in spec and spec.instance_group:
+            # NOTE(danms): We don't store the full instance group in
+            # the reqspec since it would be stale almost immediately.
+            # Instead, load it by uuid here so it's up-to-date.
+            try:
+                spec.instance_group = objects.InstanceGroup.get_by_uuid(
+                    context, spec.instance_group.uuid)
+            except exception.InstanceGroupNotFound:
+                # NOTE(danms): Instance group may have been deleted
+                spec.instance_group = None
+
         spec.obj_reset_changes()
         return spec
 
@@ -484,7 +496,14 @@ class RequestSpec(base.NovaObject):
         # NOTE(alaski): The db schema is the full serialized object in a
         # 'spec' column.  If anything has changed we rewrite the full thing.
         if updates:
-            db_updates = {'spec': jsonutils.dumps(self.obj_to_primitive())}
+            # NOTE(danms): Don't persist the could-be-large and could-be-stale
+            # properties of InstanceGroup
+            spec = self.obj_clone()
+            if 'instance_group' in spec and spec.instance_group:
+                spec.instance_group.members = None
+                spec.instance_group.hosts = None
+
+            db_updates = {'spec': jsonutils.dumps(spec.obj_to_primitive())}
             if 'instance_uuid' in updates:
                 db_updates['instance_uuid'] = updates['instance_uuid']
         return db_updates
