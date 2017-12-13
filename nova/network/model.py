@@ -409,8 +409,11 @@ class VIF(Model):
         return not self.__eq__(other)
 
     def fixed_ips(self):
-        return [fixed_ip for subnet in self['network']['subnets']
-                         for fixed_ip in subnet['ips']]
+        if self['network']:
+            return [fixed_ip for subnet in self['network']['subnets']
+                             for fixed_ip in subnet['ips']]
+        else:
+            return []
 
     def floating_ips(self):
         return [floating_ip for fixed_ip in self.fixed_ips()
