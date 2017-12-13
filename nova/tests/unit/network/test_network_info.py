@@ -423,6 +423,11 @@ class VIFTests(test.NoDBTestCase):
         ] * 2
         self.assertEqual(fixed_ips, ips)
 
+    def test_vif_get_fixed_ips_network_is_none(self):
+        vif = model.VIF()
+        fixed_ips = vif.fixed_ips()
+        self.assertEqual([], fixed_ips)
+
     def test_vif_get_floating_ips(self):
         vif = fake_network_cache_model.new_vif()
         vif['network']['subnets'][0]['ips'][0].add_floating_ip('192.168.1.1')
