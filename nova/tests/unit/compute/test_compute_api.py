@@ -4635,7 +4635,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, {'foo': 'bar'}, limit=None, marker='fake-marker',
                 sort_keys=['baz'], sort_dirs=['desc'])
             mock_inst_get.assert_called_once_with(
-                self.context, {'foo': 'bar'}, limit=None, marker='fake-marker',
+                self.context, {'foo': 'bar'}, limit=None, marker=None,
                 expected_attrs=None, sort_keys=['baz'], sort_dirs=['desc'])
             for i, instance in enumerate(build_req_instances + cell_instances):
                 self.assertEqual(instance, instances[i])
@@ -4669,7 +4669,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, {'foo': 'bar'}, limit=None, marker='fake-marker',
                 sort_keys=['baz'], sort_dirs=['desc'])
             mock_inst_get.assert_called_once_with(
-                self.context, {'foo': 'bar'}, limit=None, marker='fake-marker',
+                self.context, {'foo': 'bar'}, limit=None, marker=None,
                 expected_attrs=None, sort_keys=['baz'], sort_dirs=['desc'])
             for i, instance in enumerate(build_req_instances + cell_instances):
                 self.assertEqual(instance, instances[i])
@@ -4703,14 +4703,15 @@ class _ComputeAPIUnitTestMixIn(object):
                 self.context, {'foo': 'bar'}, limit=10, marker='fake-marker',
                 sort_keys=['baz'], sort_dirs=['desc'])
             mock_inst_get.assert_called_once_with(
-                self.context, {'foo': 'bar'}, limit=8, marker='fake-marker',
+                self.context, {'foo': 'bar'}, limit=8, marker=None,
                 expected_attrs=None, sort_keys=['baz'], sort_dirs=['desc'])
             for i, instance in enumerate(build_req_instances + cell_instances):
                 self.assertEqual(instance, instances[i])
 
     @mock.patch.object(context, 'target_cell')
     @mock.patch.object(objects.BuildRequestList, 'get_by_filters',
-                       return_value=objects.BuildRequestList(objects=[]))
+                       side_effect=exception.MarkerNotFound(
+                           marker='fake-marker'))
     @mock.patch.object(objects.CellMapping, 'get_by_uuid')
     @mock.patch.object(objects.CellMappingList, 'get_all')
     def test_get_all_includes_cell0(self, mock_cm_get_all,
@@ -4805,7 +4806,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 for cm in mock_cm_get_all.return_value:
                     mock_target_cell.assert_any_call(self.context, cm)
             inst_get_calls = [mock.call(cctxt, {'foo': 'bar'},
-                                        limit=8, marker='fake-marker',
+                                        limit=8, marker=None,
                                         expected_attrs=None, sort_keys=['baz'],
                                         sort_dirs=['desc']),
                               mock.call(mock.ANY, {'foo': 'bar'},
@@ -4822,7 +4823,8 @@ class _ComputeAPIUnitTestMixIn(object):
 
     @mock.patch.object(context, 'target_cell')
     @mock.patch.object(objects.BuildRequestList, 'get_by_filters',
-                       return_value=objects.BuildRequestList(objects=[]))
+                       side_effect=exception.MarkerNotFound(
+                           marker=uuids.marker))
     @mock.patch.object(objects.CellMapping, 'get_by_uuid')
     @mock.patch.object(objects.CellMappingList, 'get_all')
     def test_get_all_cell0_marker_not_found(self, mock_cm_get_all,
