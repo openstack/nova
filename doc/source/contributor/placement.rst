@@ -214,6 +214,24 @@ provided in a request using another decorator:
 ``@util.check_accept('application/json')``. If the header does not allow
 `JSON`, a ``406`` response status is returned.
 
+If a hander returns a response body, a ``Last-Modified`` header should be
+included with the response. If the entity or entities in the response body
+are directly associated with an object (or objects, in the case of a
+collection response) that has an ``updated_at`` (or ``created_at``)
+field, that field's value can be used as the value of the header (WebOb will
+take care of turning the datetime object into a string timestamp). A
+``util.pick_last_modified`` is available to help choose the most recent
+last-modified when traversing a collection of entities.
+
+If there is no directly associated object (for example, the output is the
+composite of several objects) then the ``Last-Modified`` time should be
+``timeutils.utcnow(with_timezone=True)`` (the timezone must be set in order
+to be a valid HTTP timestamp).
+
+If a ``Last-Modified`` header is set, then a ``Cache-Control`` header with a
+value of ``no-cache`` must be set as well. This is to avoid user-agents
+inadvertently caching the responses.
+
 `JSON` sent in a request should be validated against a JSON Schema. A
 ``util.extract_json`` method is available. This takes a request body and a
 schema. If multiple schema are used for different microversions of the same
