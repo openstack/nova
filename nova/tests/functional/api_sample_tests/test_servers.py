@@ -33,7 +33,8 @@ class ServersSampleBase(api_sample_base.ApiSampleTestBaseV21):
 
     common_req_names = [
         (None, '2.36', 'server-create-req'),
-        ('2.37', None, 'server-create-req-v237')
+        ('2.37', '2.56', 'server-create-req-v237'),
+        ('2.57', None, 'server-create-req-v257')
     ]
 
     def _get_request_name(self, use_common):
