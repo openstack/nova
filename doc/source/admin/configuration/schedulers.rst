@@ -258,7 +258,7 @@ This filter passes hosts if no ``instance_type`` key is set or the
 is a string that may contain either a single ``instance_type`` name or a
 comma-separated list of ``instance_type`` names, such as ``m1.nano`` or
 ``m1.nano,m1.small``.  For information about how to use this filter, see
-:ref:`host-aggregates`.  See also :ref:`TypeAffinityFilter`.
+:ref:`host-aggregates`.
 
 AllHostsFilter
 --------------
@@ -752,15 +752,6 @@ With the API, use the ``os:scheduler_hints`` key:
            "cidr": "24"
        }
    }
-
-.. _TypeAffinityFilter:
-
-TypeAffinityFilter
-------------------
-
-Dynamically limits hosts to one instance type. An instance can only be launched
-on a host, if no instance with different instances types are running on it, or
-if the host has no running instances at all.
 
 Cell filters
 ~~~~~~~~~~~~

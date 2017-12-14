@@ -83,16 +83,3 @@ def instance_uuids_overlap(host_state, uuids):
     # host_state.instances is a dict whose keys are the instance uuids
     host_uuids = set(host_state.instances.keys())
     return bool(host_uuids.intersection(set_uuids))
-
-
-def other_types_on_host(host_state, instance_type_id):
-    """Tests for overlap between a host_state's instances and an
-    instance_type_id.
-
-    Returns True if there are any instances in the host_state whose
-    instance_type_id is different than the supplied instance_type_id value.
-    """
-    host_instances = host_state.instances.values()
-    host_types = set([inst.instance_type_id for inst in host_instances])
-    inst_set = set([instance_type_id])
-    return bool(host_types - inst_set)
