@@ -17,9 +17,6 @@
 # serve to show the default.
 
 # import sys
-import subprocess
-
-import openstackdocstheme
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -34,7 +31,7 @@ import openstackdocstheme
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = []
+extensions = ['openstackdocstheme']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -50,6 +47,11 @@ master_doc = 'index'
 # General information about the project.
 project = u'Compute API Guide'
 bug_tag = u'api-guide'
+repository_name = 'openstack/nova'
+bug_project = 'nova'
+
+# Must set this variable to include year, month, day, hours, and minutes.
+html_last_updated_fmt = '%Y-%m-%d %H:%M'
 
 copyright = u'2015, OpenStack contributors'
 
@@ -71,29 +73,6 @@ release = '2.1.0'
 # today = ''
 # Else, today_fmt is used as the format for a strftime call.
 # today_fmt = '%B %d, %Y'
-
-# A few variables have to be set for the log-a-bug feature.
-#   giturl: The location of conf.py on Git. Must be set manually.
-#   gitsha: The SHA checksum of the bug description. Extracted from git log.
-#   bug_tag: Tag for categorizing the bug. Must be set manually.
-#   bug_project: Launchpad project to file bugs against.
-# These variables are passed to the logabug code via html_context.
-giturl = u'http://git.openstack.org/cgit/openstack/nova/tree/api-guide/source'
-git_cmd = ["/usr/bin/git", "rev-parse", "HEAD"]
-gitsha = subprocess.Popen(
-    git_cmd, stdout=subprocess.PIPE).communicate()[0]
-
-
-# source tree
-pwd = subprocess.Popen(
-    "pwd", stdout=subprocess.PIPE).communicate()[0].decode().strip('\n')
-
-# html_context allows us to pass arbitrary values into the html template
-html_context = {"pwd": pwd,
-                "gitsha": gitsha,
-                "bug_tag": bug_tag,
-                "giturl": giturl,
-                "bug_project": "nova"}
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -136,7 +115,7 @@ html_theme = 'openstackdocs'
 # html_theme_options = {}
 
 # Add any paths that contain custom themes here, relative to this directory.
-html_theme_path = [openstackdocstheme.get_html_theme_path()]
+# html_theme_path = [openstackdocstheme.get_html_theme_path()]
 
 # The name for this set of Sphinx documents.  If None, it defaults to
 # "<project> v<release> documentation".
