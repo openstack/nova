@@ -148,11 +148,13 @@ class _TestInstanceActionObject(object):
             'instance_uuid': uuids.instance,
             'action': 'fake-action',
             'start_time': self.context.timestamp,
+            'updated_at': self.context.timestamp,
         }
         expected_packed_action_finish = {
             'request_id': self.context.request_id,
             'instance_uuid': uuids.instance,
             'finish_time': NOW,
+            'updated_at': NOW,
         }
         mock_start.return_value = fake_action
         mock_finish.return_value = fake_action
