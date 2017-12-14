@@ -1,0 +1,7 @@
+---
+upgrade:
+  - |
+    Setting of 'nicira-iface-id' in XenServer VIF's other-config
+    field by XenAPI driver has been removed to avoid VM booting
+    timeout problem when using neutron polling mode.
+    It was previously deprecated in Pike.

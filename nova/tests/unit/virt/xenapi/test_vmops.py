@@ -1793,8 +1793,8 @@ class LiveMigrateHelperTestCase(VMOpsTestBase):
                                'get_other_config') as mock_other_config, \
              mock.patch.object(self._session.VM,
                               'get_VIFs') as mock_get_vif:
-            mock_other_config.side_effect = [{'nicira-iface-id': 'vif_id_a'},
-                                             {'nicira-iface-id': 'vif_id_b'}]
+            mock_other_config.side_effect = [{'neutron-port-id': 'vif_id_a'},
+                                             {'neutron-port-id': 'vif_id_b'}]
             mock_get_vif.return_value = ['vif_ref1']
             vif_uuid_map = {'': 'default_net_ref'}
             vif_map = self.vmops._generate_vif_network_map('vm_ref',
