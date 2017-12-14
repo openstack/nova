@@ -168,7 +168,7 @@ class RequestSpec(API_BASE):
 
     id = Column(Integer, primary_key=True)
     instance_uuid = Column(String(36), nullable=False)
-    spec = Column(Text, nullable=False)
+    spec = Column(MediumText(), nullable=False)
 
 
 class Flavors(API_BASE):
