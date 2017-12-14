@@ -1,0 +1,11 @@
+---
+upgrade:
+  - |
+    This release contains a schema migration for the ``nova_api`` database
+    in order to address bug 1738094:
+
+    https://bugs.launchpad.net/nova/+bug/1738094
+
+    The migration is optional and can be postponed if you have not been
+    affected by the bug. The bug manifests itself through "Data too long for
+    column 'spec'" database errors.

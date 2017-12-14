@@ -35,6 +35,7 @@ import mock
 from oslo_db.sqlalchemy import test_base
 from oslo_db.sqlalchemy import test_migrations
 from oslo_db.sqlalchemy import utils as db_utils
+from oslo_serialization import jsonutils
 import sqlalchemy
 from sqlalchemy.engine import reflection
 
@@ -43,6 +44,7 @@ from nova.db.sqlalchemy.api_migrations import migrate_repo
 from nova.db.sqlalchemy import api_models
 from nova.db.sqlalchemy import migration as sa_migration
 from nova import test
+from nova.test import uuids
 from nova.tests import fixtures as nova_fixtures
 
 
@@ -577,6 +579,34 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
     def _check_029(self, engine, data):
         for column in ['created_at', 'updated_at', 'id', 'uuid']:
             self.assertColumnExists(engine, 'placement_aggregates', column)
+
+    def _pre_upgrade_031(self, engine):
+        request_specs = db_utils.get_table(engine, 'request_specs')
+        # The spec value is a serialized json blob.
+        spec = jsonutils.dumps(
+            {"instance_group": {"id": 42,
+                                "members": ["uuid1",
+                                            "uuid2",
+                                            "uuid3"]}})
+        fake_request_spec = {
+            'id': 42, 'spec': spec, 'instance_uuid': uuids.instance}
+        request_specs.insert().execute(fake_request_spec)
+
+    def _check_031(self, engine, data):
+        request_specs = db_utils.get_table(engine, 'request_specs')
+        if engine.name == 'mysql':
+            self.assertIsInstance(request_specs.c.spec.type,
+                                  sqlalchemy.dialects.mysql.MEDIUMTEXT)
+
+        expected_spec = {"instance_group": {"id": 42,
+                                            "members": ["uuid1",
+                                                        "uuid2",
+                                                        "uuid3"]}}
+        from_db_request_spec = request_specs.select(
+            request_specs.c.id == 42).execute().first()
+        self.assertEqual(uuids.instance, from_db_request_spec['instance_uuid'])
+        db_spec = jsonutils.loads(from_db_request_spec['spec'])
+        self.assertDictEqual(expected_spec, db_spec)
 
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
