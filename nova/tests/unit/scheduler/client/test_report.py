@@ -1075,6 +1075,121 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         self.assertFalse(res)
 
 
+class TestSetAndClearAllocations(SchedulerReportClientTestCase):
+
+    def setUp(self):
+        super(TestSetAndClearAllocations, self).setUp()
+        # We want to reuse the mock throughout the class, but with
+        # different return values.
+        self.mock_post = mock.patch(
+            'nova.scheduler.client.report.SchedulerReportClient.post').start()
+        self.addCleanup(self.mock_post.stop)
+        self.mock_post.return_value.status_code = 204
+        self.rp_uuid = mock.sentinel.rp
+        self.consumer_uuid = mock.sentinel.consumer
+        self.data = {"MEMORY_MB": 1024}
+        self.project_id = mock.sentinel.project_id
+        self.user_id = mock.sentinel.user_id
+        self.expected_url = '/allocations'
+
+    def test_url_microversion(self):
+        expected_microversion = '1.13'
+
+        resp = self.client.set_and_clear_allocations(
+            self.rp_uuid, self.consumer_uuid, self.data,
+            self.project_id, self.user_id)
+
+        self.assertTrue(resp)
+        self.mock_post.assert_called_once_with(
+            self.expected_url, mock.ANY,
+            version=expected_microversion)
+
+    def test_payload_no_clear(self):
+        expected_payload = {
+            self.consumer_uuid: {
+                'user_id': self.user_id,
+                'project_id': self.project_id,
+                'allocations': {
+                    self.rp_uuid: {
+                        'resources': {
+                            'MEMORY_MB': 1024
+                        }
+                    }
+                }
+            }
+        }
+
+        resp = self.client.set_and_clear_allocations(
+            self.rp_uuid, self.consumer_uuid, self.data,
+            self.project_id, self.user_id)
+
+        self.assertTrue(resp)
+        args, kwargs = self.mock_post.call_args
+        payload = args[1]
+        self.assertEqual(expected_payload, payload)
+
+    def test_payload_with_clear(self):
+        expected_payload = {
+            self.consumer_uuid: {
+                'user_id': self.user_id,
+                'project_id': self.project_id,
+                'allocations': {
+                    self.rp_uuid: {
+                        'resources': {
+                            'MEMORY_MB': 1024
+                        }
+                    }
+                }
+            },
+            mock.sentinel.migration_uuid: {
+                'user_id': self.user_id,
+                'project_id': self.project_id,
+                'allocations': {}
+            }
+        }
+
+        resp = self.client.set_and_clear_allocations(
+            self.rp_uuid, self.consumer_uuid, self.data,
+            self.project_id, self.user_id,
+            consumer_to_clear=mock.sentinel.migration_uuid)
+
+        self.assertTrue(resp)
+        args, kwargs = self.mock_post.call_args
+        payload = args[1]
+        self.assertEqual(expected_payload, payload)
+
+    def test_409_concurrent_update(self):
+        self.mock_post.return_value.status_code = 409
+        self.mock_post.return_value.text = 'concurrently updated'
+
+        resp = self.client.set_and_clear_allocations(
+            self.rp_uuid, self.consumer_uuid, self.data,
+            self.project_id, self.user_id,
+            consumer_to_clear=mock.sentinel.migration_uuid)
+
+        self.assertFalse(resp)
+        # Post was attempted three times.
+        self.assertEqual(3, len(self.mock_post.call_args_list))
+
+    @mock.patch('nova.scheduler.client.report.LOG.warning')
+    def test_not_409_failure(self, mock_log):
+        error_message = 'placement not there'
+        self.mock_post.return_value.status_code = 503
+        self.mock_post.return_value.text = error_message
+
+        resp = self.client.set_and_clear_allocations(
+            self.rp_uuid, self.consumer_uuid, self.data,
+            self.project_id, self.user_id,
+            consumer_to_clear=mock.sentinel.migration_uuid)
+
+        self.assertFalse(resp)
+        args, kwargs = mock_log.call_args
+        log_message = args[0]
+        log_args = args[1]
+        self.assertIn('Unable to post allocations', log_message)
+        self.assertEqual(error_message, log_args['text'])
+
+
 class TestProviderOperations(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_create_resource_provider')

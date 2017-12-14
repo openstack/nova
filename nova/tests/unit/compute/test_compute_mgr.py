@@ -6229,9 +6229,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                                 self.instance, self.migration)
 
             self.assertTrue(r)
-            mock_report.put_allocations.assert_called_once_with(
+            mock_report.set_and_clear_allocations.assert_called_once_with(
                 cu, self.instance.uuid, {'DISK_GB': 1},
-                self.instance.project_id, self.instance.user_id)
+                self.instance.project_id, self.instance.user_id,
+                consumer_to_clear=self.migration.uuid)
 
         doit()
 
@@ -6247,8 +6248,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                                 self.instance, self.migration)
 
             self.assertFalse(r)
-            self.assertFalse(mock_report.put_allocations.called)
-            self.assertFalse(mock_report.delete_allocation_for_instance.called)
+            self.assertFalse(mock_report.set_and_clear_allocations.called)
 
         doit()
 
@@ -6273,7 +6273,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                                 self.instance, self.migration)
 
             self.assertTrue(r)
-            self.assertTrue(mock_report.put_allocations.called)
+            self.assertTrue(mock_report.set_and_clear_allocations.called)
 
         doit()
 

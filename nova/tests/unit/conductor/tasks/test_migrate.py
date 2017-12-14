@@ -257,26 +257,3 @@ class MigrationTaskAllocationUtils(test.NoDBTestCase):
                           migrate.replace_allocation_with_migration,
                           mock.sentinel.context,
                           instance, migration)
-
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'put_allocations')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'delete_allocation_for_instance')
-    def test_revert_allocation_for_migration_retries_delete(self,
-                                                            mock_da, mock_pa):
-        migration = objects.Migration(uuid=uuids.migration)
-        instance = objects.Instance(uuid=uuids.instance,
-                                    user_id='fake', project_id='fake',
-                                    host='host', node='node')
-        source_cn = objects.ComputeNode(uuid=uuids.source)
-        mock_pa.return_value = False
-        migrate.revert_allocation_for_migration(source_cn,
-                                                instance, migration,
-                                                mock.sentinel.allocs)
-        mock_pa.assert_has_calls([
-            mock.call(source_cn.uuid, instance.uuid, mock.sentinel.allocs,
-                      instance.project_id, instance.user_id),
-            mock.call(source_cn.uuid, instance.uuid, mock.sentinel.allocs,
-                      instance.project_id, instance.user_id),
-        ])
-        mock_da.assert_called_once_with(migration.uuid)

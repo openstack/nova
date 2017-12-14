@@ -6033,12 +6033,11 @@ class ComputeTestCase(BaseTestCase,
                               instance=instance, migration=migration,
                               migrate_data=migrate_data)
             mock_setup.assert_called_once_with(c, instance, self.compute.host)
-            mock_client.put_allocations.assert_called_once_with(
+            mock_client.set_and_clear_allocations.assert_called_once_with(
                 mock.sentinel.source, instance.uuid,
                 mock.sentinel.allocs,
-                instance.project_id, instance.user_id)
-            mock_client.delete_allocation_for_instance.assert_called_once_with(
-                migration.uuid)
+                instance.project_id, instance.user_id,
+                consumer_to_clear=migration.uuid)
 
         do_it()
 
