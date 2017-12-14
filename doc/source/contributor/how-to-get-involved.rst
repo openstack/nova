@@ -356,7 +356,10 @@ How to do great bug triage?
 
 https://wiki.openstack.org/wiki/Nova/BugTriage
 
-More details coming soon...
+Sylvain Bauza and Stephen Finucane gave a nice `presentation`_ on this topic
+at the Queens summit in Sydney.
+
+.. _presentation: https://www.openstack.org/videos/sydney-2017/upstream-bug-triage-the-hidden-gem
 
 How to step up into a project leadership role?
 ==============================================

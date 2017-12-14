@@ -120,3 +120,14 @@ providing a service token with the request -- you can then just deploy your
 metadata service with the keystone authentication WSGI middleware. This is
 configured using the keystone authentication parameters in the
 ``vendordata_dynamic_auth`` configuration group.
+
+References
+==========
+
+* Michael Still's talk from the Queens summit in Sydney:
+  `Metadata, User Data, Vendor Data, oh my!`_
+* Michael's blog post on `deploying a simple vendordata service`_ which
+  provides more details and sample code to supplement the documentation above.
+
+.. _Metadata, User Data, Vendor Data, oh my!: https://www.openstack.org/videos/sydney-2017/metadata-user-data-vendor-data-oh-my
+.. _deploying a simple vendordata service: http://www.stillhq.com/openstack/000022.html
