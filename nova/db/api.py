@@ -1885,9 +1885,10 @@ def action_finish(context, values):
     return IMPL.action_finish(context, values)
 
 
-def actions_get(context, uuid):
-    """Get all instance actions for the provided instance."""
-    return IMPL.actions_get(context, uuid)
+def actions_get(context, instance_uuid, limit=None, marker=None,
+                filters=None):
+    """Get all instance actions for the provided instance and filters."""
+    return IMPL.actions_get(context, instance_uuid, limit, marker, filters)
 
 
 def action_get_by_request_id(context, uuid, request_id):

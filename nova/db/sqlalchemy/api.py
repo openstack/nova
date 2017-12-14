@@ -5689,12 +5689,30 @@ def action_finish(context, values):
 
 
 @pick_context_manager_reader
-def actions_get(context, instance_uuid):
-    """Get all instance actions for the provided uuid."""
-    actions = model_query(context, models.InstanceAction).\
-                          filter_by(instance_uuid=instance_uuid).\
-                          order_by(desc("created_at"), desc("id")).\
-                          all()
+def actions_get(context, instance_uuid, limit=None, marker=None,
+                filters=None):
+    """Get all instance actions for the provided uuid and filters."""
+    if limit == 0:
+        return []
+
+    sort_keys = ['created_at', 'id']
+    sort_dirs = ['desc', 'desc']
+
+    query_prefix = model_query(context, models.InstanceAction).\
+        filter_by(instance_uuid=instance_uuid)
+    if filters and 'changes-since' in filters:
+        changes_since = timeutils.normalize_time(filters['changes-since'])
+        query_prefix = query_prefix. \
+            filter(models.InstanceAction.updated_at >= changes_since)
+
+    if marker is not None:
+        marker = action_get_by_request_id(context, instance_uuid, marker)
+        if not marker:
+            raise exception.MarkerNotFound(marker=marker)
+    actions = sqlalchemyutils.paginate_query(query_prefix,
+                                             models.InstanceAction, limit,
+                                             sort_keys, marker=marker,
+                                             sort_dirs=sort_dirs).all()
     return actions
 
 
