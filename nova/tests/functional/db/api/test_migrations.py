@@ -36,6 +36,7 @@ import mock
 from oslo_db.sqlalchemy import test_base
 from oslo_db.sqlalchemy import test_migrations
 from oslo_db.sqlalchemy import utils as db_utils
+from oslo_serialization import jsonutils
 import sqlalchemy
 from sqlalchemy.engine import reflection
 
@@ -479,6 +480,36 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
             build_requests.c.id == 2021).execute().first()
         self.assertEqual('{"uuid": "foo", "name": "bar"}',
                          fake_build_req.instance)
+
+    def _pre_upgrade_022(self, engine):
+        request_specs = db_utils.get_table(engine, 'request_specs')
+        # The spec value is a serialized json blob.
+        spec = jsonutils.dumps(
+            {"instance_group": {"id": 42,
+                                "members": ["uuid1",
+                                            "uuid2",
+                                            "uuid3"]}})
+        fake_request_spec = {
+            'id': 42, 'spec': spec,
+            'instance_uuid': 'c65539ad-b7f5-43d8-934a-018d42424da8'}
+        request_specs.insert().execute(fake_request_spec)
+
+    def _check_022(self, engine, data):
+        request_specs = db_utils.get_table(engine, 'request_specs')
+        if engine.name == 'mysql':
+            self.assertIsInstance(request_specs.c.spec.type,
+                                  sqlalchemy.dialects.mysql.MEDIUMTEXT)
+
+        expected_spec = {"instance_group": {"id": 42,
+                                            "members": ["uuid1",
+                                                        "uuid2",
+                                                        "uuid3"]}}
+        from_db_request_spec = request_specs.select(
+            request_specs.c.id == 42).execute().first()
+        self.assertEqual('c65539ad-b7f5-43d8-934a-018d42424da8',
+                         from_db_request_spec['instance_uuid'])
+        db_spec = jsonutils.loads(from_db_request_spec['spec'])
+        self.assertDictEqual(expected_spec, db_spec)
 
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
