@@ -5141,7 +5141,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 sort_keys=['baz'], sort_dirs=['desc'])
             fields = ['metadata', 'info_cache', 'security_groups']
             mock_inst_get.assert_called_once_with(
-                self.context, {'foo': 'bar'}, None, 'fake-marker',
+                self.context, {'foo': 'bar'}, None, None,
                 fields, ['baz'], ['desc'])
             for i, instance in enumerate(build_req_instances + cell_instances):
                 self.assertEqual(instance, instances[i])
@@ -5176,7 +5176,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 sort_keys=['baz'], sort_dirs=['desc'])
             fields = ['metadata', 'info_cache', 'security_groups']
             mock_inst_get.assert_called_once_with(
-                self.context, {'foo': 'bar'}, None, 'fake-marker',
+                self.context, {'foo': 'bar'}, None, None,
                 fields, ['baz'], ['desc'])
             for i, instance in enumerate(build_req_instances + cell_instances):
                 self.assertEqual(instance, instances[i])
@@ -5211,7 +5211,7 @@ class _ComputeAPIUnitTestMixIn(object):
                 sort_keys=['baz'], sort_dirs=['desc'])
             fields = ['metadata', 'info_cache', 'security_groups']
             mock_inst_get.assert_called_once_with(
-                self.context, {'foo': 'bar'}, 8, 'fake-marker',
+                self.context, {'foo': 'bar'}, 8, None,
                 fields, ['baz'], ['desc'])
             for i, instance in enumerate(build_req_instances + cell_instances):
                 self.assertEqual(instance, instances[i])
@@ -5249,7 +5249,7 @@ class _ComputeAPIUnitTestMixIn(object):
             fields = ['metadata', 'info_cache', 'security_groups']
             mock_inst_get.assert_called_once_with(
                 mock.ANY, {'foo': 'bar'},
-                8, 'fake-marker',
+                8, None,
                 fields, ['baz'], ['desc'])
             for i, instance in enumerate(build_req_instances +
                                          cell_instances):
@@ -5549,7 +5549,7 @@ class Cellsv1DeprecatedTestMixIn(object):
                 sort_keys=['baz'], sort_dirs=['desc'])
             fields = ['metadata', 'info_cache', 'security_groups']
             mock_inst_get.assert_called_once_with(
-                self.context, {'foo': 'bar'}, limit=None, marker='fake-marker',
+                self.context, {'foo': 'bar'}, limit=None, marker=None,
                 fields=fields, sort_keys=['baz'], sort_dirs=['desc'])
             for i, instance in enumerate(build_req_instances + cell_instances):
                 self.assertEqual(instance, instances[i])
@@ -5584,7 +5584,7 @@ class Cellsv1DeprecatedTestMixIn(object):
                 sort_keys=['baz'], sort_dirs=['desc'])
             fields = ['metadata', 'info_cache', 'security_groups']
             mock_inst_get.assert_called_once_with(
-                self.context, {'foo': 'bar'}, limit=None, marker='fake-marker',
+                self.context, {'foo': 'bar'}, limit=None, marker=None,
                 fields=fields, sort_keys=['baz'], sort_dirs=['desc'])
             for i, instance in enumerate(build_req_instances + cell_instances):
                 self.assertEqual(instance, instances[i])
@@ -5619,7 +5619,7 @@ class Cellsv1DeprecatedTestMixIn(object):
                 sort_keys=['baz'], sort_dirs=['desc'])
             fields = ['metadata', 'info_cache', 'security_groups']
             mock_inst_get.assert_called_once_with(
-                self.context, {'foo': 'bar'}, limit=8, marker='fake-marker',
+                self.context, {'foo': 'bar'}, limit=8, marker=None,
                 fields=fields, sort_keys=['baz'], sort_dirs=['desc'])
             for i, instance in enumerate(build_req_instances + cell_instances):
                 self.assertEqual(instance, instances[i])
@@ -5669,7 +5669,7 @@ class Cellsv1DeprecatedTestMixIn(object):
                     mock_target_cell.assert_any_call(self.context, cm)
             fields = ['metadata', 'info_cache', 'security_groups']
             inst_get_calls = [mock.call(cctxt, {'foo': 'bar'},
-                                        limit=8, marker='fake-marker',
+                                        limit=8, marker=None,
                                         fields=fields, sort_keys=['baz'],
                                         sort_dirs=['desc']),
                               mock.call(mock.ANY, {'foo': 'bar'},
@@ -5699,7 +5699,8 @@ class Cellsv1DeprecatedTestMixIn(object):
 
     @mock.patch.object(context, 'target_cell')
     @mock.patch.object(objects.BuildRequestList, 'get_by_filters',
-                       return_value=objects.BuildRequestList(objects=[]))
+                       side_effect=exception.MarkerNotFound(
+                           marker=uuids.marker))
     @mock.patch.object(objects.CellMapping, 'get_by_uuid')
     @mock.patch.object(objects.CellMappingList, 'get_all')
     def test_get_all_cell0_marker_not_found(self, mock_cm_get_all,
