@@ -86,10 +86,8 @@ class RebuildVolumeBackedSameImage(integrated_helpers._IntegratedTestBase,
                 'imageRef': '155d900f-4e14-4e4c-a73d-069cbf4541e6'
             }
         }
-        # Since we're using the CastAsCall fixture, the NoValidHost error
-        # should actually come back to the API and result in a 500 error.
-        # Normally the user would get a 202 response because nova-api RPC casts
-        # to nova-conductor which RPC calls the scheduler which raises the
-        # NoValidHost.
-        self.api.api_post('/servers/%s/action' % server['id'],
-                          rebuild_req_body, check_response_status=[500])
+        server = self.api.api_post('/servers/%s/action' % server['id'],
+                                   rebuild_req_body).body['server']
+        # FIXME(mriedem): Once bug 1482040 is fixed, the server image ref
+        # should still be blank for a volume-backed server after the rebuild.
+        self.assertNotEqual('', server['image'])
