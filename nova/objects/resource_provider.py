@@ -73,6 +73,7 @@ def _ensure_rc_cache(ctx):
     _RC_CACHE = rc_cache.ResourceClassCache(ctx)
 
 
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 @db_api.api_context_manager.writer
 def _trait_sync(ctx):
     """Sync the os_traits symbols to the database.
