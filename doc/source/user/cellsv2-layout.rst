@@ -331,7 +331,7 @@ affect you. To ensure you do not make futile attempts at rescheduling,
 you should set ``[scheduler]/max_attempts=1`` in ``nova.conf``.
 
 The second two are related. The summary is that some of the facilities
-that Nova has for ensuring that affinty/anti-affinity is preserved
+that Nova has for ensuring that affinity/anti-affinity is preserved
 between instances does not function in Pike with a multi-cell
 layout. If you don't use affinity operations, then this will not
 affect you. To make sure you don't make futile attempts at the

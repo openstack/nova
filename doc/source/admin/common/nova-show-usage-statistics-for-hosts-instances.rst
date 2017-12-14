@@ -133,9 +133,9 @@ Show instance usage statistics
 
      ``hypervisor`` indicates the current hypervisor on which the VM is running.
 
-     ``nic_details`` containts a list of details per vNIC.
+     ``nic_details`` contains a list of details per vNIC.
 
-     ``uptime`` is the amount of time in seconds that the VM has been runnning.
+     ``uptime`` is the amount of time in seconds that the VM has been running.
 
      |
 

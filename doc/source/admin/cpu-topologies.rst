@@ -350,7 +350,7 @@ maximum of one thread, run:
      --property hw_cpu_max_sockets=2 \
      --property hw_cpu_max_threads=1
 
-The value specified in the flavor is treated as the abolute limit.  The image
+The value specified in the flavor is treated as the absolute limit.  The image
 limits are not permitted to exceed the flavor limits, they can only be equal
 to or lower than what the flavor defines. By setting a ``max`` value for
 sockets, cores, or threads, administrators can prevent users configuring
