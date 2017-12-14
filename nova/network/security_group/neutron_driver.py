@@ -245,7 +245,6 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                 LOG.exception(_LE("Neutron Error: %s"), e)
                 self.raise_invalid_property(six.text_type(e))
             else:
-                LOG.exception(_LE("Neutron Error:"))
                 six.reraise(*exc_info)
         converted_rules = []
         for rule in rules:
@@ -443,7 +442,6 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                         'project': context.project_id})
                 self.raise_not_found(msg)
             else:
-                LOG.exception(_LE("Neutron Error:"))
                 six.reraise(*exc_info)
         params = {'device_id': instance.uuid}
         try:
@@ -476,6 +474,13 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                          {'security_group_id': security_group_id,
                           'port_id': port['id']})
                 neutron.update_port(port['id'], {'port': updated_port})
+            except n_exc.NeutronClientException as e:
+                exc_info = sys.exc_info()
+                if e.status_code == 400:
+                    raise exception.SecurityGroupCannotBeApplied(
+                        six.text_type(e))
+                else:
+                    six.reraise(*exc_info)
             except Exception:
                 with excutils.save_and_reraise_exception():
                     LOG.exception(_LE("Neutron Error:"))
@@ -497,7 +502,6 @@ class SecurityGroupAPI(security_group_base.SecurityGroupBase):
                         'project': context.project_id})
                 self.raise_not_found(msg)
             else:
-                LOG.exception(_LE("Neutron Error:"))
                 six.reraise(*exc_info)
         params = {'device_id': instance.uuid}
         try:
