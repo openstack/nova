@@ -287,6 +287,7 @@ tests:
   status: 400
   response_strings:
       - 'parent provider UUID cannot be same as UUID'
+      - 'Unable to create resource provider \"child\", $ENVIRON["ALT_PARENT_PROVIDER_UUID"]:'
 
 - name: update a parent provider UUID to non-existing provider
   PUT: /resource_providers/$ENVIRON['RP_UUID']
