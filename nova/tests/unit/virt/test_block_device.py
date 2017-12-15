@@ -258,8 +258,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
     def _test_driver_device(self, name):
         db_bdm = getattr(self, "%s_bdm" % name)
         test_bdm = self.driver_classes[name](db_bdm)
-        self.assertThat(test_bdm, matchers.DictMatches(
-            getattr(self, "%s_driver_bdm" % name)))
+        expected = getattr(self, "%s_driver_bdm" % name)
+        self.assertThat(expected, matchers.DictMatches(test_bdm))
 
         for k, v in db_bdm.items():
             field_val = getattr(test_bdm._bdm_obj, k)
@@ -267,9 +267,33 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                 v = bool(v)
             self.assertEqual(field_val, v)
 
-        self.assertThat(test_bdm.legacy(),
-                        matchers.DictMatches(
-                            getattr(self, "%s_legacy_driver_bdm" % name)))
+        for field, value in expected.items():
+            # Test that all driver bdm fields are available as both attrs and
+            # dict values
+            self.assertEqual(test_bdm[field], value)
+            self.assertEqual(getattr(test_bdm, field), value)
+
+            test_value = mock.sentinel.value
+            if field in test_bdm._proxy_as_attr:
+                # We can't set a versioned object field to a sentinel because
+                # it's an invalid type. It's not worth creating valid example
+                # values for all possible field types just for this, so we just
+                # test setting it to its current value. This at least
+                # exercises the code path without being a maintenance burden.
+                test_value = value
+
+            # Test that we can set values via either attribute or dict
+            test_bdm[field] = test_value
+            self.assertEqual(getattr(test_bdm, field), test_value)
+
+            setattr(test_bdm, field, value)
+            self.assertEqual(test_bdm[field], value)
+
+            # Reset the value
+            test_bdm[field] = value
+
+        expected = getattr(self, "%s_legacy_driver_bdm" % name)
+        self.assertThat(expected, matchers.DictMatches(test_bdm.legacy()))
 
         # Test passthru attributes
         for passthru in test_bdm._proxy_as_attr:
