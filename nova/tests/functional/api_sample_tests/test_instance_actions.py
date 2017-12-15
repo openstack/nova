@@ -18,6 +18,9 @@ import copy
 import six
 
 from nova.tests.functional.api_sample_tests import api_sample_base
+from nova.tests.functional.api_sample_tests import test_servers
+from nova.tests.functional import api_samples_test_base
+from nova.tests.functional import integrated_helpers
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_server_actions
 from nova.tests.unit import utils as test_utils
@@ -127,3 +130,73 @@ class ServerActionsV251NonAdminSampleJsonTest(ServerActionsSampleJsonTest):
     ADMIN_API = False
     microversion = '2.51'
     scenarios = [('v2_51', {'api_major_version': 'v2.1'})]
+
+
+class ServerActionsV258SampleJsonTest(test_servers.ServersSampleBase,
+                                      integrated_helpers.InstanceHelperMixin):
+    microversion = '2.58'
+    scenarios = [('v2_58', {'api_major_version': 'v2.1'})]
+    sample_dir = 'os-instance-actions'
+    ADMIN_API = True
+
+    def setUp(self):
+        super(ServerActionsV258SampleJsonTest, self).setUp()
+        # Create and stop a server
+        self.uuid = self._post_server()
+        self._get_response('servers/%s/action' % self.uuid, 'POST',
+                           '{"os-stop": null}')
+        response = self._do_get('servers/%s/os-instance-actions' % self.uuid)
+        response_data = api_samples_test_base.pretty_data(response.content)
+        actions = api_samples_test_base.objectify(response_data)
+        self.action_stop = actions['instanceActions'][0]
+        self._wait_for_state_change(self.api, {'id': self.uuid}, 'SHUTOFF')
+
+    def _get_subs(self):
+        return {
+            'uuid': self.uuid,
+            'project_id': self.action_stop['project_id']
+        }
+
+    def test_instance_action_get(self):
+        req_id = self.action_stop['request_id']
+        response = self._do_get('servers/%s/os-instance-actions/%s' %
+                                (self.uuid, req_id))
+        # Non-admins can see event details except for the "traceback" field
+        # starting in the 2.51 microversion.
+        if self.ADMIN_API:
+            name = 'instance-action-get-resp'
+        else:
+            name = 'instance-action-get-non-admin-resp'
+        self._verify_response(name, self._get_subs(), response, 200)
+
+    def test_instance_actions_list(self):
+        response = self._do_get('servers/%s/os-instance-actions' % self.uuid)
+        self._verify_response('instance-actions-list-resp', self._get_subs(),
+                              response, 200)
+
+    def test_instance_actions_list_with_limit(self):
+        response = self._do_get('servers/%s/os-instance-actions'
+                                '?limit=1' % self.uuid)
+        self._verify_response('instance-actions-list-with-limit-resp',
+                              self._get_subs(), response, 200)
+
+    def test_instance_actions_list_with_marker(self):
+
+        marker = self.action_stop['request_id']
+        response = self._do_get('servers/%s/os-instance-actions'
+                                '?marker=%s' % (self.uuid, marker))
+        self._verify_response('instance-actions-list-with-marker-resp',
+                              self._get_subs(), response, 200)
+
+    def test_instance_actions_with_timestamp_filter(self):
+        stop_action_time = self.action_stop['start_time']
+        response = self._do_get(
+            'servers/%s/os-instance-actions'
+            '?changes-since=%s' % (self.uuid, stop_action_time))
+        self._verify_response(
+            'instance-actions-list-with-timestamp-filter',
+            self._get_subs(), response, 200)
+
+
+class ServerActionsV258NonAdminSampleJsonTest(ServerActionsV258SampleJsonTest):
+    ADMIN_API = False

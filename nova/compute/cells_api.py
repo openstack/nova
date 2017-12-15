@@ -676,7 +676,9 @@ class InstanceActionAPI(compute_api.InstanceActionAPI):
         super(InstanceActionAPI, self).__init__()
         self.cells_rpcapi = cells_rpcapi.CellsAPI()
 
-    def actions_get(self, context, instance):
+    def actions_get(self, context, instance, limit=None, marker=None,
+                    filters=None):
+        # Paging and filtering isn't supported in cells v1.
         return self.cells_rpcapi.actions_get(context, instance)
 
     def action_get_by_request_id(self, context, instance, request_id):

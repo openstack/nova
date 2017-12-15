@@ -34,9 +34,11 @@ from nova.tests import uuidsentinel as uuids
 
 FAKE_UUID = fake_server_actions.FAKE_UUID
 FAKE_REQUEST_ID = fake_server_actions.FAKE_REQUEST_ID1
+FAKE_EVENT_ID = fake_server_actions.FAKE_ACTION_ID1
+FAKE_REQUEST_NOTFOUND_ID = 'req-' + uuids.req_not_found
 
 
-def format_action(action):
+def format_action(action, expect_traceback=True):
     '''Remove keys that aren't serialized.'''
     to_delete = ('id', 'finish_time', 'created_at', 'updated_at', 'deleted_at',
                  'deleted')
@@ -47,14 +49,16 @@ def format_action(action):
         # NOTE(danms): Without WSGI above us, these will be just stringified
         action['start_time'] = str(action['start_time'].replace(tzinfo=None))
     for event in action.get('events', []):
-        format_event(event)
+        format_event(event, expect_traceback)
     return action
 
 
-def format_event(event):
+def format_event(event, expect_traceback=True):
     '''Remove keys that aren't serialized.'''
-    to_delete = ('id', 'created_at', 'updated_at', 'deleted_at', 'deleted',
-                 'action_id')
+    to_delete = ['id', 'created_at', 'updated_at', 'deleted_at', 'deleted',
+                 'action_id']
+    if not expect_traceback:
+        to_delete.append('traceback')
     for key in to_delete:
         if key in event:
             del(event[key])
@@ -109,6 +113,7 @@ class InstanceActionsPolicyTestV21(test.NoDBTestCase):
 class InstanceActionsTestV21(test.NoDBTestCase):
     instance_actions = instance_actions_v21
     wsgi_api_version = os_wsgi.DEFAULT_API_VERSION
+    expect_events_non_admin = False
 
     def fake_get(self, context, instance_uuid, expected_attrs=None):
         return objects.Instance(uuid=instance_uuid)
@@ -188,8 +193,13 @@ class InstanceActionsTestV21(test.NoDBTestCase):
         req = self._get_http_req('os-instance-actions/1')
         res_dict = self.controller.show(req, FAKE_UUID, FAKE_REQUEST_ID)
         fake_action = self.fake_actions[FAKE_UUID][FAKE_REQUEST_ID]
-        self.assertEqual(format_action(fake_action),
-                         format_action(res_dict['instanceAction']))
+        if self.expect_events_non_admin:
+            fake_event = fake_server_actions.FAKE_EVENTS[FAKE_EVENT_ID]
+            fake_action['events'] = copy.deepcopy(fake_event)
+        # By default, non-admins are not allowed to see traceback details.
+        self.assertEqual(format_action(fake_action, expect_traceback=False),
+                         format_action(res_dict['instanceAction'],
+                                       expect_traceback=False))
 
     def test_action_not_found(self):
         def fake_no_action(context, uuid, action_id):
@@ -223,3 +233,57 @@ class InstanceActionsTestV221(InstanceActionsTestV21):
     def fake_get(self, context, instance_uuid, expected_attrs=None):
         self.assertEqual('yes', context.read_deleted)
         return objects.Instance(uuid=instance_uuid)
+
+
+class InstanceActionsTestV251(InstanceActionsTestV221):
+    wsgi_api_version = "2.51"
+    expect_events_non_admin = True
+
+
+class InstanceActionsTestV258(InstanceActionsTestV251):
+    wsgi_api_version = "2.58"
+
+    @mock.patch('nova.objects.InstanceActionList.get_by_instance_uuid')
+    def test_get_action_with_invalid_marker(self, mock_actions_get):
+        """Tests detail paging with an invalid marker (not found)."""
+        mock_actions_get.side_effect = exception.MarkerNotFound(
+            marker=FAKE_REQUEST_NOTFOUND_ID)
+        req = self._get_http_req('os-instance-actions?'
+                                 'marker=%s' % FAKE_REQUEST_NOTFOUND_ID)
+        self.assertRaises(exc.HTTPBadRequest,
+                          self.controller.index, req, FAKE_UUID)
+
+    def test_get_action_with_invalid_limit(self):
+        """Tests get paging with an invalid limit."""
+        req = self._get_http_req('os-instance-actions?limit=x')
+        self.assertRaises(exception.ValidationError,
+                          self.controller.index, req)
+        req = self._get_http_req('os-instance-actions?limit=-1')
+        self.assertRaises(exception.ValidationError,
+                          self.controller.index, req)
+
+    def test_get_action_with_invalid_change_since(self):
+        """Tests get paging with a invalid change_since."""
+        req = self._get_http_req('os-instance-actions?'
+                                 'changes-since=wrong_time')
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller.index, req)
+        self.assertIn('Invalid input for query parameters changes-since',
+                      six.text_type(ex))
+
+    def test_get_action_with_invalid_params(self):
+        """Tests get paging with a invalid change_since."""
+        req = self._get_http_req('os-instance-actions?'
+                                 'wrong_params=xxx')
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller.index, req)
+        self.assertIn('Additional properties are not allowed',
+                      six.text_type(ex))
+
+    def test_get_action_with_multi_params(self):
+        """Tests get paging with multi markers."""
+        req = self._get_http_req('os-instance-actions?marker=A&marker=B')
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller.index, req)
+        self.assertIn('Invalid input for query parameters marker',
+                      six.text_type(ex))

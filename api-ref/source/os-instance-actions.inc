@@ -22,7 +22,7 @@ through the ``policy.json`` file.
 
 Normal response codes: 200
 
-Error response codes: unauthorized(401), forbidden(403), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
 
 Request
 -------
@@ -31,6 +31,9 @@ Request
 
 
   - server_id: server_id_path
+  - limit: instance_action_limit
+  - marker: instance_action_marker
+  - changes-since: changes_since_instance_action
 
 Response
 --------
@@ -46,12 +49,18 @@ Response
   - request_id: request_id_body
   - start_time: start_time
   - user_id: user_id
+  - updated_at: updated_instance_action
+  - instance_actions_links: instance_actions_next_links
 
 **Example List Actions For Server: JSON response**
 
 .. literalinclude:: ../../doc/api_samples/os-instance-actions/instance-actions-list-resp.json
    :language: javascript
 
+**Example List Actions For Server With Links (v2.58):**
+
+.. literalinclude:: ../../doc/api_samples/os-instance-actions/v2.58/instance-actions-list-with-limit-resp.json
+   :language: javascript
 
 Show Server Action Details
 ==========================
@@ -102,6 +111,7 @@ Response
   - events.finish_time: event_finish_time
   - events.result: event_result
   - events.traceback: event_traceback
+  - updated_at: updated_instance_action
 
 **Example Show Server Action Details For Admin (v2.1)**
 

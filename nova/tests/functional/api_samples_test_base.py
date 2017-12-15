@@ -434,6 +434,8 @@ class ApiSampleTestBase(integrated_helpers._IntegratedTestBase):
                   '-[0-9a-f]{4}-[0-9a-f]{12})',
             'uuid': '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}'
                     '-[0-9a-f]{4}-[0-9a-f]{12}',
+            'request_id': 'req-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}'
+                          '-[0-9a-f]{4}-[0-9a-f]{12}',
             'reservation_id': 'r-[0-9a-zA-Z]{8}',
             'private_key': '(-----BEGIN RSA PRIVATE KEY-----|)'
                            '[a-zA-Z0-9\n/+=]*'
