@@ -850,8 +850,11 @@ class ComputeTaskManager(base.Base):
                     # TODO(sbauza): Provide directly the RequestSpec object
                     # when _set_vm_state_and_notify() accepts it
                     filter_properties = {'ignore_hosts': [instance.host]}
+                    # build_request_spec expects a primitive image dict
+                    image_meta = nova_object.obj_to_primitive(
+                        instance.image_meta)
                     request_spec = scheduler_utils.build_request_spec(
-                            context, image_ref, [instance])
+                            context, image_meta, [instance])
                     request_spec = objects.RequestSpec.from_primitives(
                         context, request_spec, filter_properties)
                 elif recreate:
