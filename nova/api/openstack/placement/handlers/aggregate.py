@@ -16,19 +16,10 @@ from oslo_utils import encodeutils
 from oslo_utils import timeutils
 
 from nova.api.openstack.placement import microversion
+from nova.api.openstack.placement.schemas import aggregate as schema
 from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
 from nova.objects import resource_provider as rp_obj
-
-
-PUT_AGGREGATES_SCHEMA = {
-    "type": "array",
-    "items": {
-        "type": "string",
-        "format": "uuid"
-    },
-    "uniqueItems": True
-}
 
 
 def _send_aggregates(req, aggregate_uuids):
@@ -80,7 +71,7 @@ def set_aggregates(req):
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
-    aggregate_uuids = util.extract_json(req.body, PUT_AGGREGATES_SCHEMA)
+    aggregate_uuids = util.extract_json(req.body, schema.PUT_AGGREGATES_SCHEMA)
     resource_provider.set_aggregates(aggregate_uuids)
 
     return _send_aggregates(req, aggregate_uuids)
