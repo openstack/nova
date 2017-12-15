@@ -17,33 +17,12 @@ from oslo_utils import timeutils
 import webob
 
 from nova.api.openstack.placement import microversion
+from nova.api.openstack.placement.schemas import usage as schema
 from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
 from nova import exception
 from nova.i18n import _
 from nova.objects import resource_provider as rp_obj
-
-
-# Represents the allowed query string parameters to GET /usages
-GET_USAGES_SCHEMA_1_9 = {
-    "type": "object",
-    "properties": {
-        "project_id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255,
-        },
-        "user_id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255,
-        },
-    },
-    "required": [
-        "project_id"
-     ],
-    "additionalProperties": False,
-}
 
 
 def _serialize_usages(resource_provider, usage):
@@ -111,9 +90,7 @@ def get_total_usages(req):
     context = req.environ['placement.context']
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
 
-    schema = GET_USAGES_SCHEMA_1_9
-
-    util.validate_query_params(req, schema)
+    util.validate_query_params(req, schema.GET_USAGES_SCHEMA_1_9)
 
     project_id = req.GET.get('project_id')
     user_id = req.GET.get('user_id')
