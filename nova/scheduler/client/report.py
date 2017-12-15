@@ -26,6 +26,7 @@ from nova.compute import provider_tree
 from nova.compute import utils as compute_utils
 import nova.conf
 from nova import exception
+from nova.i18n import _
 from nova import objects
 from nova.objects import fields
 from nova.scheduler import utils as scheduler_utils
@@ -426,6 +427,39 @@ class SchedulerReportClient(object):
             }
             LOG.error(msg, args)
             raise exception.ResourceProviderRetrievalFailed(uuid=uuid)
+
+    @safe_connect
+    def _get_providers_in_aggregates(self, agg_uuids):
+        """Queries the placement API for a list of the resource providers
+        associated with any of the specified aggregates.
+
+        :param agg_uuids: Iterable of string UUIDs of aggregates to filter on.
+        :return: A list of dicts of resource provider information, which may be
+                 empty if no provider exists with the specified UUID.
+        :raise: ResourceProviderRetrievalFailed on error.
+        """
+        if not agg_uuids:
+            return []
+
+        qpval = ','.join(agg_uuids)
+        resp = self.get("/resource_providers?member_of=in:" + qpval,
+                        version='1.3')
+        if resp.status_code == 200:
+            return resp.json()['resource_providers']
+
+        # Some unexpected error
+        placement_req_id = get_placement_request_id(resp)
+        msg = _("[%(placement_req_id)s] Failed to retrieve resource providers "
+                "associated with the following aggregates from placement API: "
+                "%(aggs)s. Got %(status_code)d: %(err_text)s.")
+        args = {
+            'aggs': qpval,
+            'status_code': resp.status_code,
+            'err_text': resp.text,
+            'placement_req_id': placement_req_id,
+        }
+        LOG.error(msg, args)
+        raise exception.ResourceProviderRetrievalFailed(message=msg % args)
 
     @safe_connect
     def _get_providers_in_tree(self, uuid):
