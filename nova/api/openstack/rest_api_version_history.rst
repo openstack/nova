@@ -386,6 +386,12 @@ user documentation.
     '/os-baremetal-nodes'
     '/os-fping'
 
+.. note:: A `regression`_ was introduced in this microversion which broke the
+    ``force`` parameter in the ``PUT /os-quota-sets`` API. The fix will have
+    to be applied to restore this functionality.
+
+.. _regression: https://bugs.launchpad.net/nova/+bug/1733886
+
 2.37
 ----
 
