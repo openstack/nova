@@ -32,7 +32,6 @@ import errno
 import functools
 import glob
 import itertools
-import mmap
 import operator
 import os
 import pwd
@@ -410,7 +409,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # is safe for migration provided the filesystem is cache coherent
             # (cluster filesystems typically are, but things like NFS are not).
             self._disk_cachemode = "none"
-            if not self._supports_direct_io(CONF.instances_path):
+            if not utils.supports_direct_io(CONF.instances_path):
                 self._disk_cachemode = "writethrough"
         return self._disk_cachemode
 
@@ -2974,53 +2973,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest, mode='bind'):
             return ctype.ConsoleSerial(host=hostname, port=port)
         raise exception.ConsoleTypeUnavailable(console_type='serial')
-
-    @staticmethod
-    def _supports_direct_io(dirpath):
-
-        if not hasattr(os, 'O_DIRECT'):
-            LOG.debug("This python runtime does not support direct I/O")
-            return False
-
-        testfile = os.path.join(dirpath, ".directio.test")
-
-        hasDirectIO = True
-        fd = None
-        try:
-            fd = os.open(testfile, os.O_CREAT | os.O_WRONLY | os.O_DIRECT)
-            # Check is the write allowed with 512 byte alignment
-            align_size = 512
-            m = mmap.mmap(-1, align_size)
-            m.write(b"x" * align_size)
-            os.write(fd, m)
-            LOG.debug("Path '%(path)s' supports direct I/O",
-                      {'path': dirpath})
-        except OSError as e:
-            if e.errno == errno.EINVAL:
-                LOG.debug("Path '%(path)s' does not support direct I/O: "
-                          "'%(ex)s'", {'path': dirpath, 'ex': e})
-                hasDirectIO = False
-            else:
-                with excutils.save_and_reraise_exception():
-                    LOG.error("Error on '%(path)s' while checking "
-                              "direct I/O: '%(ex)s'",
-                              {'path': dirpath, 'ex': e})
-        except Exception as e:
-            with excutils.save_and_reraise_exception():
-                LOG.error("Error on '%(path)s' while checking direct I/O: "
-                          "'%(ex)s'", {'path': dirpath, 'ex': e})
-        finally:
-            # ensure unlink(filepath) will actually remove the file by deleting
-            # the remaining link to it in close(fd)
-            if fd is not None:
-                os.close(fd)
-
-            try:
-                os.unlink(testfile)
-            except Exception:
-                pass
-
-        return hasDirectIO
 
     @staticmethod
     def _create_ephemeral(target, ephemeral_size,

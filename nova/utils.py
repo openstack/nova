@@ -20,9 +20,11 @@
 import contextlib
 import copy
 import datetime
+import errno
 import functools
 import hashlib
 import inspect
+import mmap
 import os
 import pyclbr
 import random
@@ -1379,3 +1381,50 @@ def get_endpoint(ksa_adapter):
     raise ks_exc.EndpointNotFound(
         "Could not find requested endpoint for any of the following "
         "interfaces: %s" % interfaces)
+
+
+def supports_direct_io(dirpath):
+
+    if not hasattr(os, 'O_DIRECT'):
+        LOG.debug("This python runtime does not support direct I/O")
+        return False
+
+    testfile = os.path.join(dirpath, ".directio.test")
+
+    hasDirectIO = True
+    fd = None
+    try:
+        fd = os.open(testfile, os.O_CREAT | os.O_WRONLY | os.O_DIRECT)
+        # Check is the write allowed with 512 byte alignment
+        align_size = 512
+        m = mmap.mmap(-1, align_size)
+        m.write(b"x" * align_size)
+        os.write(fd, m)
+        LOG.debug("Path '%(path)s' supports direct I/O",
+                  {'path': dirpath})
+    except OSError as e:
+        if e.errno == errno.EINVAL:
+            LOG.debug("Path '%(path)s' does not support direct I/O: "
+                      "'%(ex)s'", {'path': dirpath, 'ex': e})
+            hasDirectIO = False
+        else:
+            with excutils.save_and_reraise_exception():
+                LOG.error("Error on '%(path)s' while checking "
+                          "direct I/O: '%(ex)s'",
+                          {'path': dirpath, 'ex': e})
+    except Exception as e:
+        with excutils.save_and_reraise_exception():
+            LOG.error("Error on '%(path)s' while checking direct I/O: "
+                      "'%(ex)s'", {'path': dirpath, 'ex': e})
+    finally:
+        # ensure unlink(filepath) will actually remove the file by deleting
+        # the remaining link to it in close(fd)
+        if fd is not None:
+            os.close(fd)
+
+        try:
+            os.unlink(testfile)
+        except Exception:
+            pass
+
+    return hasDirectIO

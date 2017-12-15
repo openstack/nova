@@ -118,7 +118,18 @@ def _convert_image(source, dest, in_format, out_format, run_as_root):
     # on persistent storage when the command exits. Without (2), a host crash
     # may leave a corrupt image in the image cache, which Nova cannot recover
     # automatically.
-    cmd = ('qemu-img', 'convert', '-t', 'none', '-O', out_format)
+    # NOTE(zigo): we cannot use -t none if the instances dir is mounted on a
+    # filesystem that doesn't have support for O_DIRECT, which is the case
+    # for example with tmpfs. This simply crashes "openstack server create"
+    # in environments like live distributions. In such case, the best choice
+    # is writethrough, which is power-failure safe, but still faster than
+    # writeback.
+    if utils.supports_direct_io(CONF.instances_path):
+        cache_mode = 'none'
+    else:
+        cache_mode = 'writethrough'
+    cmd = ('qemu-img', 'convert', '-t', cache_mode, '-O', out_format)
+
     if in_format is not None:
         cmd = cmd + ('-f', in_format)
     cmd = cmd + (source, dest)

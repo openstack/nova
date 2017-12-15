@@ -45,9 +45,10 @@ class QemuTestCase(test.NoDBTestCase):
         self.assertTrue(image_info)
         self.assertTrue(str(image_info))
 
+    @mock.patch('nova.utils.supports_direct_io', return_value=True)
     @mock.patch.object(utils, 'execute',
                        side_effect=processutils.ProcessExecutionError)
-    def test_convert_image_with_errors(self, mocked_execute):
+    def test_convert_image_with_errors(self, mocked_execute, mock_direct_io):
         self.assertRaises(exception.ImageUnacceptable,
                           images.convert_image,
                           '/path/that/does/not/exist',
@@ -77,3 +78,23 @@ class QemuTestCase(test.NoDBTestCase):
                                'Image href123 is unacceptable.*',
                                images.fetch_to_raw,
                                None, 'href123', '/no/path')
+
+    @mock.patch('nova.utils.supports_direct_io', return_value=True)
+    @mock.patch('nova.utils.execute')
+    def test_convert_image_with_direct_io_support(self, mock_execute,
+                                                  mock_direct_io):
+        images._convert_image('source', 'dest', 'in_format', 'out_format',
+                              run_as_root=False)
+        expected = ('qemu-img', 'convert', '-t', 'none', '-O', 'out_format',
+                    '-f', 'in_format', 'source', 'dest')
+        self.assertTupleEqual(expected, mock_execute.call_args[0])
+
+    @mock.patch('nova.utils.supports_direct_io', return_value=False)
+    @mock.patch('nova.utils.execute')
+    def test_convert_image_without_direct_io_support(self, mock_execute,
+                                                     mock_direct_io):
+        images._convert_image('source', 'dest', 'in_format', 'out_format',
+                              run_as_root=False)
+        expected = ('qemu-img', 'convert', '-t', 'writethrough',
+                    '-O', 'out_format', '-f', 'in_format', 'source', 'dest')
+        self.assertTupleEqual(expected, mock_execute.call_args[0])

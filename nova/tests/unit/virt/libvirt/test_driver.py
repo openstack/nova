@@ -6835,57 +6835,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(len(interfaces), 2)
         self.assertEqual(interfaces[0].get('type'), 'bridge')
 
-    def _behave_supports_direct_io(self, raise_open=False, raise_write=False,
-                                   exc=ValueError()):
-        open_behavior = os.open(os.path.join('.', '.directio.test'),
-                                os.O_CREAT | os.O_WRONLY | os.O_DIRECT)
-        if raise_open:
-            open_behavior.AndRaise(exc)
-        else:
-            open_behavior.AndReturn(3)
-            write_bahavior = os.write(3, mox.IgnoreArg())
-            if raise_write:
-                write_bahavior.AndRaise(exc)
-
-            # ensure unlink(filepath) will actually remove the file by deleting
-            # the remaining link to it in close(fd)
-            os.close(3)
-
-        os.unlink(3)
-
-    def test_supports_direct_io(self):
-        # O_DIRECT is not supported on all Python runtimes, so on platforms
-        # where it's not supported (e.g. Mac), we can still test the code-path
-        # by stubbing out the value.
-        if not hasattr(os, 'O_DIRECT'):
-            # `mock` seems to have trouble stubbing an attr that doesn't
-            # originally exist, so falling back to stubbing out the attribute
-            # directly.
-            os.O_DIRECT = 16384
-            self.addCleanup(delattr, os, 'O_DIRECT')
-
-        einval = OSError()
-        einval.errno = errno.EINVAL
-        self.mox.StubOutWithMock(os, 'open')
-        self.mox.StubOutWithMock(os, 'write')
-        self.mox.StubOutWithMock(os, 'close')
-        self.mox.StubOutWithMock(os, 'unlink')
-        _supports_direct_io = libvirt_driver.LibvirtDriver._supports_direct_io
-
-        self._behave_supports_direct_io()
-        self._behave_supports_direct_io(raise_write=True)
-        self._behave_supports_direct_io(raise_open=True)
-        self._behave_supports_direct_io(raise_write=True, exc=einval)
-        self._behave_supports_direct_io(raise_open=True, exc=einval)
-
-        self.mox.ReplayAll()
-        self.assertTrue(_supports_direct_io('.'))
-        self.assertRaises(ValueError, _supports_direct_io, '.')
-        self.assertRaises(ValueError, _supports_direct_io, '.')
-        self.assertFalse(_supports_direct_io('.'))
-        self.assertFalse(_supports_direct_io('.'))
-        self.mox.VerifyAll()
-
     def _check_xml_and_container(self, instance):
         instance_ref = objects.Instance(**instance)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
@@ -6982,12 +6931,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         self.stub_out('os.open', os_open_stub)
 
-        @staticmethod
         def connection_supports_direct_io_stub(dirpath):
             return directio_supported
 
-        self.stubs.Set(libvirt_driver.LibvirtDriver,
-            '_supports_direct_io', connection_supports_direct_io_stub)
+        self.stub_out('nova.utils.supports_direct_io',
+                      connection_supports_direct_io_stub)
 
         instance_ref = objects.Instance(**self.test_instance)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
@@ -16580,7 +16528,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     #                get_guest_xml().
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_set_host_enabled')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_build_device_metadata')
-    @mock.patch.object(libvirt_driver.LibvirtDriver, '_supports_direct_io')
+    @mock.patch('nova.utils.supports_direct_io')
     @mock.patch('nova.api.metadata.base.InstanceMetadata')
     def _test_finish_migration(self, mock_instance_metadata,
                                mock_supports_direct_io,
@@ -17539,7 +17487,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
     #                get_guest_xml().
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_set_host_enabled')
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_build_device_metadata')
-    @mock.patch.object(libvirt_driver.LibvirtDriver, '_supports_direct_io')
+    @mock.patch('nova.utils.supports_direct_io')
     @mock.patch('nova.api.metadata.base.InstanceMetadata')
     def _test_rescue(self, instance,
                      mock_instance_metadata, mock_supports_direct_io,
