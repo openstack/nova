@@ -970,6 +970,108 @@ class AllocationCandidatesTestCase(ProviderDBBase):
         # So we're getting the right value, but we really shouldn't be.
         self._validate_allocation_requests(expected, alloc_cands)
 
+    def test_only_one_sharing_provider(self):
+        ss1 = self._create_provider('ss1', uuids.agg1)
+        _set_traits(ss1, "MISC_SHARES_VIA_AGGREGATE")
+        _add_inventory(ss1, fields.ResourceClass.IPV4_ADDRESS, 24)
+        _add_inventory(ss1, fields.ResourceClass.SRIOV_NET_VF, 16)
+        _add_inventory(ss1, fields.ResourceClass.DISK_GB, 1600)
+
+        alloc_cands = self._get_allocation_candidates([
+            placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    'IPV4_ADDRESS': 2,
+                    'SRIOV_NET_VF': 1,
+                    'DISK_GB': 1500,
+                }
+            )]
+        )
+
+        expected = [
+            [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
+             ('ss1', fields.ResourceClass.SRIOV_NET_VF, 1),
+             ('ss1', fields.ResourceClass.DISK_GB, 1500)]
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
+
+    def test_all_sharing_providers_no_rc_overlap(self):
+        ss1 = self._create_provider('ss1', uuids.agg1)
+        _set_traits(ss1, "MISC_SHARES_VIA_AGGREGATE")
+        _add_inventory(ss1, fields.ResourceClass.IPV4_ADDRESS, 24)
+
+        ss2 = self._create_provider('ss2', uuids.agg1)
+        _set_traits(ss2, "MISC_SHARES_VIA_AGGREGATE")
+        _add_inventory(ss2, fields.ResourceClass.DISK_GB, 1600)
+
+        alloc_cands = self._get_allocation_candidates([
+            placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    'IPV4_ADDRESS': 2,
+                    'DISK_GB': 1500,
+                }
+            )]
+        )
+
+        # TODO(gibi): Bug https://bugs.launchpad.net/nova/+bug/1730730
+        # We expect only one candidate where IPV4_ADDRESS comes from ss1 and
+        # DISK_GB comes from ss2
+        # expected = [
+        #     [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
+        #      ('ss2', fields.ResourceClass.DISK_GB, 1500)]
+        # ]
+        # But we are getting the same candidate twice
+        expected = [
+            # this is what we expect but then
+            [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
+             ('ss2', fields.ResourceClass.DISK_GB, 1500)],
+            # we get the same thing again
+            [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
+             ('ss2', fields.ResourceClass.DISK_GB, 1500)],
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
+
+    def test_all_sharing_providers_no_rc_overlap_more_classes(self):
+        ss1 = self._create_provider('ss1', uuids.agg1)
+        _set_traits(ss1, "MISC_SHARES_VIA_AGGREGATE")
+        _add_inventory(ss1, fields.ResourceClass.IPV4_ADDRESS, 24)
+        _add_inventory(ss1, fields.ResourceClass.SRIOV_NET_VF, 16)
+
+        ss2 = self._create_provider('ss2', uuids.agg1)
+        _set_traits(ss2, "MISC_SHARES_VIA_AGGREGATE")
+        _add_inventory(ss2, fields.ResourceClass.DISK_GB, 1600)
+
+        alloc_cands = self._get_allocation_candidates([
+            placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    'IPV4_ADDRESS': 2,
+                    'SRIOV_NET_VF': 1,
+                    'DISK_GB': 1500,
+                }
+            )]
+        )
+
+        # TODO(gibi/efried): Bug https://bugs.launchpad.net/nova/+bug/1730730
+        # We expect only one candidate where IPV4_ADDRESS and SRIOV_NET_VF
+        # comes from ss1 and DISK_GB comes from ss2
+        # expected = [
+        #     [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
+        #      ('ss1', fields.ResourceClass.SRIOV_NET_VF, 1),
+        #      ('ss2', fields.ResourceClass.DISK_GB, 1500)]
+        # ]
+        # But we're actually seeing the expected candidate twice
+        expected = [
+            [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
+             ('ss1', fields.ResourceClass.SRIOV_NET_VF, 1),
+             ('ss2', fields.ResourceClass.DISK_GB, 1500)],
+            [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
+             ('ss1', fields.ResourceClass.SRIOV_NET_VF, 1),
+             ('ss2', fields.ResourceClass.DISK_GB, 1500)],
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
+
     def test_all_sharing_providers(self):
         ss1 = self._create_provider('ss1', uuids.agg1)
         _set_traits(ss1, "MISC_SHARES_VIA_AGGREGATE")
