@@ -158,6 +158,8 @@ Possible values:
 * False (default): Disallows the injection. Any via the REST API provided
 admin password will be silently ignored.
 
+*Linux* distribution guest only.
+
 Related options:
 
 * ``inject_partition``: That option will decide about the discovery and usage
@@ -179,6 +181,8 @@ instance gets launched from a volume.
 This config option will enable directly modifying the instance disk and does
 not affect what cloud-init may do using data from config_drive option or the
 metadata service.
+
+*Linux* distribution guest only.
 
 Related options:
 
@@ -203,6 +207,8 @@ Possible values:
 * -1 => find the root partition with the file system to mount with libguestfs
 *  0 => The image is not partitioned
 * >0 => The number of the partition to use for the injection
+
+*Linux* distribution guest only.
 
 Related options:
 
