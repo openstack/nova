@@ -44,10 +44,8 @@ class LibvirtHGSTVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
 
     def test_libvirt_hgst_driver_get_config(self):
         drvr = hgst.LibvirtHGSTVolumeDriver(self.fake_host)
-        di = {'path': '/dev/space01', 'name': 'space01', 'type': 'raw',
-              'dev': 'vda1', 'bus': 'pci0', 'device_path': '/dev/space01'}
-        ci = {'data': di}
-        conf = drvr.get_config(ci, di)
+        ci = {'data': {'device_path': '/dev/space01'}}
+        conf = drvr.get_config(ci, self.disk_info)
         self.assertEqual('block', conf.source_type)
         self.assertEqual('/dev/space01', conf.source_path)
 

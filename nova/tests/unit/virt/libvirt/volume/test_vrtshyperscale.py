@@ -35,15 +35,9 @@ class LibvirtHyperScaleVolumeDriverTestCase(
         hs = vrtshyperscale.LibvirtHyperScaleVolumeDriver(self.fake_host)
 
         # expect valid conf is returned if called with proper arguments
-        disk_info = {'name': DEVICE_NAME,
-                     'type': None,
-                     'dev': None,
-                     'bus': None,
-                     'device_path': DEVICE_PATH,
-                    }
-        conn = {'data': disk_info}
+        conn = {'data': {'device_path': DEVICE_PATH}}
 
-        conf = hs.get_config(conn, disk_info)
+        conf = hs.get_config(conn, self.disk_info)
 
         self.assertEqual("block", conf.source_type)
         self.assertEqual(DEVICE_PATH, conf.source_path)

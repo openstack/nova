@@ -46,11 +46,8 @@ class LibvirtDISCOVolumeDriverTestCase(
     def test_libvirt_disco_driver_get_config(self):
         dcon = disco.LibvirtDISCOVolumeDriver(self.fake_host)
 
-        disk_info = {'path': '/dev/dms1234567', 'name': 'aDiscoVolume',
-                     'type': 'raw', 'dev': 'vda1', 'bus': 'pci0',
-                     'device_path': '/dev/dms1234567'}
-        conn = {'data': disk_info}
-        conf = dcon.get_config(conn, disk_info)
+        conn = {'data': {'device_path': '/dev/dms1234567'}}
+        conf = dcon.get_config(conn, self.disk_info)
         self.assertEqual('file', conf.source_type)
         self.assertEqual('/dev/dms1234567', conf.source_path)
         self.assertEqual('disco', conf.source_protocol)
