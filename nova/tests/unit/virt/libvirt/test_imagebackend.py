@@ -171,10 +171,13 @@ class _ImageTestCase(object):
             'quota:disk_total_bytes_sec': 30 * units.Mi,
             'quota:disk_total_iops_sec': 3 * units.Ki,
         }
+        disk_info = {
+            'bus': 'virtio',
+            'dev': '/dev/vda',
+            'type': 'cdrom',
+        }
 
-        disk = image.libvirt_info(disk_bus="virtio",
-                                  disk_dev="/dev/vda",
-                                  device_type="cdrom",
+        disk = image.libvirt_info(disk_info,
                                   cache_mode="none",
                                   extra_specs=extra_specs,
                                   hypervisor_version=4004001,

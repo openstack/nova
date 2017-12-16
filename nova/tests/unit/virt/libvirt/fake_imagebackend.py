@@ -196,16 +196,15 @@ class ImageBackendFixture(fixtures.Fixture):
         if self.imported_files is not None:
             self.imported_files.append((local_filename, remote_filename))
 
-    def _fake_libvirt_info(self, mock_disk, disk_bus, disk_dev, device_type,
-                           cache_mode, extra_specs, hypervisor_version,
-                           disk_unit=None):
+    def _fake_libvirt_info(self, mock_disk, disk_info, cache_mode,
+                           extra_specs, hypervisor_version, disk_unit=None):
         # For tests in test_virt_drivers which expect libvirt_info to be
         # functional
         info = config.LibvirtConfigGuestDisk()
         info.source_type = 'file'
-        info.source_device = device_type
-        info.target_bus = disk_bus
-        info.target_dev = disk_dev
+        info.source_device = disk_info['type']
+        info.target_bus = disk_info['bus']
+        info.target_dev = disk_info['dev']
         info.driver_cache = cache_mode
         info.driver_format = 'raw'
         info.source_path = mock_disk.path
