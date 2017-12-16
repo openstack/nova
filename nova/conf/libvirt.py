@@ -885,7 +885,7 @@ libvirt_volume_quobyte_opts = [
 Directory where the Quobyte volume is mounted on the compute node.
 
 Nova supports Quobyte volume driver that enables storing Block Storage
-service volumes on a Quobyte storage back end. This Option sepcifies the
+service volumes on a Quobyte storage back end. This Option specifies the
 path of the directory where Quobyte volume is mounted.
 
 Possible values:
