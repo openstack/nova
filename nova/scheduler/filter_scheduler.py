@@ -151,7 +151,7 @@ class FilterScheduler(driver.Scheduler):
         # host, we virtually consume resources on it so subsequent
         # selections can adjust accordingly.
 
-        # Note: remember, we are using an iterator here. So only
+        # Note: remember, we are using a generator-iterator here. So only
         # traverse this list once. This can bite you if the hosts
         # are being scanned in a filter or weighing function.
         hosts = self._get_all_host_states(elevated, spec_obj,
@@ -342,8 +342,8 @@ class FilterScheduler(driver.Scheduler):
         # The provider_summaries variable will be an empty dict when the
         # Placement API found no providers that match the requested
         # constraints, which in turn makes compute_uuids an empty list and
-        # get_host_states_by_uuids will return an empty tuple also, which will
-        # eventually result in a NoValidHost error.
+        # get_host_states_by_uuids will return an empty generator-iterator
+        # also, which will eventually result in a NoValidHost error.
         compute_uuids = None
         if provider_summaries is not None:
             compute_uuids = list(provider_summaries.keys())
