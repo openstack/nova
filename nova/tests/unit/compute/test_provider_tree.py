@@ -247,3 +247,54 @@ class TestProviderTree(test.NoDBTestCase):
         self.assertTrue(pt.update_traits(cn.uuid, traits))
         self.assertEqual(rp_gen, pt._find_with_lock(cn.uuid).generation)
         self.assertTrue(pt.has_traits(cn.uuid, traits[-1:]))
+
+    def test_have_aggregates_changed_no_existing_rp(self):
+        cns = self.compute_nodes
+        pt = provider_tree.ProviderTree(cns)
+        self.assertRaises(
+            ValueError, pt.have_aggregates_changed, uuids.non_existing_rp, [])
+
+    def test_update_aggregates_no_existing_rp(self):
+        cns = self.compute_nodes
+        pt = provider_tree.ProviderTree(cns)
+        self.assertRaises(
+            ValueError, pt.update_aggregates, uuids.non_existing_rp, [])
+
+    def test_have_aggregates_changed(self):
+        cn = self.compute_node1
+        cns = self.compute_nodes
+        pt = provider_tree.ProviderTree(cns)
+        rp_gen = 1
+
+        aggregates = [
+            uuids.agg1,
+            uuids.agg2,
+        ]
+        self.assertTrue(pt.have_aggregates_changed(cn.uuid, aggregates))
+        self.assertTrue(pt.in_aggregates(cn.uuid, []))
+        self.assertFalse(pt.in_aggregates(cn.uuid, aggregates))
+        self.assertFalse(pt.in_aggregates(cn.uuid, aggregates[:1]))
+        self.assertTrue(pt.update_aggregates(cn.uuid, aggregates,
+                                             generation=rp_gen))
+        self.assertTrue(pt.in_aggregates(cn.uuid, aggregates))
+        self.assertTrue(pt.in_aggregates(cn.uuid, aggregates[:1]))
+
+        # Updating with the same aggregates info should return False
+        self.assertFalse(pt.have_aggregates_changed(cn.uuid, aggregates))
+        # But the generation should get updated
+        rp_gen = 2
+        self.assertFalse(pt.update_aggregates(cn.uuid, aggregates,
+                                              generation=rp_gen))
+        self.assertFalse(pt.have_aggregates_changed(cn.uuid, aggregates))
+        self.assertEqual(rp_gen, pt._find_with_lock(cn.uuid).generation)
+        self.assertTrue(pt.in_aggregates(cn.uuid, aggregates))
+        self.assertTrue(pt.in_aggregates(cn.uuid, aggregates[:1]))
+
+        # Make a change to the aggregates list
+        aggregates.append(uuids.agg3)
+        self.assertTrue(pt.have_aggregates_changed(cn.uuid, aggregates))
+        self.assertFalse(pt.in_aggregates(cn.uuid, aggregates[-1:]))
+        # Don't update the generation
+        self.assertTrue(pt.update_aggregates(cn.uuid, aggregates))
+        self.assertEqual(rp_gen, pt._find_with_lock(cn.uuid).generation)
+        self.assertTrue(pt.in_aggregates(cn.uuid, aggregates[-1:]))
