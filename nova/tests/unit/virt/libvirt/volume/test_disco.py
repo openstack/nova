@@ -58,10 +58,7 @@ class LibvirtDISCOVolumeDriverTestCase(
     def test_libvirt_disco_driver_disconnect(self):
         dcon = disco.LibvirtDISCOVolumeDriver(self.fake_host)
         dcon.connector.disconnect_volume = mock.MagicMock()
-        disk_info = {'path': '/dev/dms1234567', 'name': 'aDiscoVolume',
-                     'type': 'raw', 'dev': 'vda1', 'bus': 'pci0',
-                     'device_path': '/dev/dms123456'}
-        conn = {'data': disk_info}
-        dcon.disconnect_volume(conn, disk_info, mock.sentinel.instance)
+        conn = {'data': mock.sentinel.conn_data}
+        dcon.disconnect_volume(conn, mock.sentinel.instance)
         dcon.connector.disconnect_volume.assert_called_once_with(
-            disk_info, None)
+            mock.sentinel.conn_data, None)

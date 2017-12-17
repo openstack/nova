@@ -54,9 +54,7 @@ class LibvirtHGSTVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
     def test_libvirt_hgst_driver_disconnect(self):
         drvr = hgst.LibvirtHGSTVolumeDriver(self.fake_host)
         drvr.connector.disconnect_volume = mock.MagicMock()
-        di = {'path': '/dev/space01', 'name': 'space01', 'type': 'raw',
-              'dev': 'vda1', 'bus': 'pci0', 'device_path': '/dev/space01'}
-        ci = {'data': di}
-        drvr.disconnect_volume(ci, di, mock.sentinel.instance)
+        ci = {'data': mock.sentinel.conn_data}
+        drvr.disconnect_volume(ci, mock.sentinel.instance)
         drvr.connector.disconnect_volume.assert_called_once_with(
-                       di, None)
+                       mock.sentinel.conn_data, None)

@@ -57,6 +57,6 @@ class LibvirtDRBDVolumeDriverTestCase(
         # now disconnect the volume
         with mock.patch.object(connector.DRBDConnector,
                                'disconnect_volume') as mock_disconnect:
-            drbd_driver.disconnect_volume(connection_info, 'vda', instance)
+            drbd_driver.disconnect_volume(connection_info, instance)
         # disconnect is all passthrough so just assert the call
         mock_disconnect.assert_called_once_with(connection_info['data'], None)

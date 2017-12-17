@@ -51,7 +51,8 @@ class LibvirtHyperScaleVolumeDriver(libvirt_volume.LibvirtVolumeDriver):
         LOG.info("connect_volume: device path %(device_path)s",
             {'device_path': connection_info['data']['device_path']})
 
-    def disconnect_volume(self, connection_info, disk_dev, instance):
+    def disconnect_volume(self, connection_info, instance):
         self.connector.disconnect_volume(connection_info['data'], None)
-        LOG.info("Disconnected volume %(vol_id)s",
-                 {'vol_id': connection_info['data']['name']})
+        LOG.debug("Disconnected volume %(vol_id)s",
+                  {'vol_id': connection_info['data']['name']},
+                  instance=instance)
