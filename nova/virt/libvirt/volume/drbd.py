@@ -29,7 +29,7 @@ class LibvirtDRBDVolumeDriver(libvirt_volume.LibvirtVolumeDriver):
         self.connector = connector.InitiatorConnector.factory(
             initiator.DRBD, utils.get_root_helper())
 
-    def connect_volume(self, connection_info, disk_info, instance):
+    def connect_volume(self, connection_info, instance):
         """Connect the volume.
 
         Sets the connection_info['data']['device_path'] value upon successful
@@ -38,7 +38,6 @@ class LibvirtDRBDVolumeDriver(libvirt_volume.LibvirtVolumeDriver):
         :param connection_info: dict of connection information for the backend
             storage when a connection was initiated with Cinder. Expects
             connection_info['data']['device'] to be set.
-        :param disk_info: dict of block device information (not used).
         :param instance: The nova.objects.Instance that is having a volume
             connected to it.
         """

@@ -39,7 +39,7 @@ class LibvirtHyperScaleVolumeDriver(libvirt_volume.LibvirtVolumeDriver):
         self.connector = connector.InitiatorConnector.factory(
             initiator.VERITAS_HYPERSCALE, utils.get_root_helper())
 
-    def connect_volume(self, connection_info, disk_info, instance):
+    def connect_volume(self, connection_info, instance):
         # The os-brick connector may raise BrickException.
         # The convention in nova is to just propagate it up.
         # Note that the device path is returned from the os-brick connector

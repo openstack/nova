@@ -1175,9 +1175,9 @@ class LibvirtDriver(driver.ComputeDriver):
             raise exception.VolumeDriverNotFound(driver_type=driver_type)
         return self.volume_drivers[driver_type]
 
-    def _connect_volume(self, connection_info, disk_info, instance):
+    def _connect_volume(self, connection_info, instance):
         vol_driver = self._get_volume_driver(connection_info)
-        vol_driver.connect_volume(connection_info, disk_info, instance)
+        vol_driver.connect_volume(connection_info, instance)
 
     def _disconnect_volume(self, connection_info, disk_dev, instance):
         vol_driver = self._get_volume_driver(connection_info)
@@ -1242,9 +1242,9 @@ class LibvirtDriver(driver.ComputeDriver):
                         "block size") % CONF.libvirt.virt_type
                 raise exception.InvalidHypervisorType(msg)
 
+        self._connect_volume(connection_info, instance)
         disk_info = blockinfo.get_info_from_bdm(
             instance, CONF.libvirt.virt_type, instance.image_meta, bdm)
-        self._connect_volume(connection_info, disk_info, instance)
         if disk_info['bus'] == 'scsi':
             disk_info['unit'] = self._get_scsi_controller_max_unit(guest) + 1
 
@@ -1356,7 +1356,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # LibvirtConfigGuestDisk object it returns. We do not explicitly save
         # this to the BDM here as the upper compute swap_volume method will
         # eventually do this for us.
-        self._connect_volume(new_connection_info, disk_info, instance)
+        self._connect_volume(new_connection_info, instance)
         conf = self._get_volume_config(new_connection_info, disk_info)
         if not conf.source_path:
             self._disconnect_volume(new_connection_info, disk_dev, instance)
@@ -3746,7 +3746,7 @@ class LibvirtDriver(driver.ComputeDriver):
             connection_info = vol['connection_info']
             vol_dev = block_device.prepend_dev(vol['mount_device'])
             info = disk_mapping[vol_dev]
-            self._connect_volume(connection_info, info, instance)
+            self._connect_volume(connection_info, instance)
             if scsi_controller and scsi_controller.model == 'virtio-scsi':
                 info['unit'] = disk_mapping['unit']
                 disk_mapping['unit'] += 1
@@ -5054,10 +5054,7 @@ class LibvirtDriver(driver.ComputeDriver):
             block_device_info)
         root_disk = block_device.get_root_bdm(block_device_mapping)
         if root_disk:
-            disk_info = blockinfo.get_info_from_bdm(
-                instance, CONF.libvirt.virt_type, image_meta, root_disk)
-            self._connect_volume(root_disk['connection_info'], disk_info,
-                                 instance)
+            self._connect_volume(root_disk['connection_info'], instance)
             disk_path = root_disk['connection_info']['data']['device_path']
 
             # NOTE(apmelton) - Even though the instance is being booted from a
@@ -6886,10 +6883,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         for bdm in block_device_mapping:
             connection_info = bdm['connection_info']
-            disk_info = blockinfo.get_info_from_bdm(
-                instance, CONF.libvirt.virt_type,
-                instance.image_meta, bdm)
-            self._connect_volume(connection_info, disk_info, instance)
+            self._connect_volume(connection_info, instance)
 
         # We call plug_vifs before the compute manager calls
         # ensure_filtering_rules_for_instance, to ensure bridge is set up

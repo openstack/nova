@@ -51,8 +51,7 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
                                     'name': self.name}}
         instance = mock.sentinel.instance
         instance.uuid = uuids.instance
-        libvirt_driver.connect_volume(connection_info, self.disk_info,
-                                      instance)
+        libvirt_driver.connect_volume(connection_info, instance)
         libvirt_driver.disconnect_volume(connection_info, "vde",
                                          mock.sentinel.instance)
 
@@ -100,8 +99,7 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
                                     'options': options}}
         instance = mock.sentinel.instance
         instance.uuid = uuids.instance
-        libvirt_driver.connect_volume(connection_info, self.disk_info,
-                                      instance)
+        libvirt_driver.connect_volume(connection_info, instance)
         libvirt_driver.disconnect_volume(connection_info, "vde",
                                          mock.sentinel.instance)
 

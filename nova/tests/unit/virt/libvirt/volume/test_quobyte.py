@@ -314,8 +314,7 @@ class LibvirtQuobyteVolumeDriverTestCase(
 
         connection_info = {'data': {'export': export_string,
                                     'name': self.name}}
-        libvirt_driver.connect_volume(connection_info, self.disk_info,
-                                      mock.sentinel.instance)
+        libvirt_driver.connect_volume(connection_info, mock.sentinel.instance)
 
         conf = libvirt_driver.get_config(connection_info, self.disk_info)
         tree = conf.format_dom()
@@ -345,8 +344,7 @@ class LibvirtQuobyteVolumeDriverTestCase(
 
         connection_info = {'data': {'export': export_string,
                                     'name': self.name}}
-        libvirt_driver.connect_volume(connection_info, self.disk_info,
-                                      mock.sentinel.instance)
+        libvirt_driver.connect_volume(connection_info, mock.sentinel.instance)
 
         conf = libvirt_driver.get_config(connection_info, self.disk_info)
         tree = conf.format_dom()
@@ -379,8 +377,7 @@ class LibvirtQuobyteVolumeDriverTestCase(
         connection_info = {'data': {'export': export_string,
                                     'name': self.name}}
 
-        libvirt_driver.connect_volume(connection_info, self.disk_info,
-                                      mock.sentinel.instance)
+        libvirt_driver.connect_volume(connection_info, mock.sentinel.instance)
 
         conf = libvirt_driver.get_config(connection_info, self.disk_info)
         tree = conf.format_dom()
@@ -413,8 +410,7 @@ class LibvirtQuobyteVolumeDriverTestCase(
         export_mnt_base = os.path.join(mnt_base,
                                        utils.get_hash_str(quobyte_volume))
 
-        libvirt_driver.connect_volume(connection_info, self.disk_info,
-                                      mock.sentinel.instance)
+        libvirt_driver.connect_volume(connection_info, mock.sentinel.instance)
         conf = libvirt_driver.get_config(connection_info, self.disk_info)
         tree = conf.format_dom()
         self.assertEqual('file', tree.get('type'))
@@ -451,7 +447,6 @@ class LibvirtQuobyteVolumeDriverTestCase(
             self.assertRaises(nova_exception.NovaException,
                               libvirt_driver.connect_volume,
                               connection_info,
-                              self.disk_info,
                               mock.sentinel.instance)
 
     def test_libvirt_quobyte_driver_normalize_export_with_protocol(self):
