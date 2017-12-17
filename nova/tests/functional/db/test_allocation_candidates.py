@@ -1014,19 +1014,7 @@ class AllocationCandidatesTestCase(ProviderDBBase):
             )]
         )
 
-        # TODO(gibi): Bug https://bugs.launchpad.net/nova/+bug/1730730
-        # We expect only one candidate where IPV4_ADDRESS comes from ss1 and
-        # DISK_GB comes from ss2
-        # expected = [
-        #     [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
-        #      ('ss2', fields.ResourceClass.DISK_GB, 1500)]
-        # ]
-        # But we are getting the same candidate twice
         expected = [
-            # this is what we expect but then
-            [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
-             ('ss2', fields.ResourceClass.DISK_GB, 1500)],
-            # we get the same thing again
             [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
              ('ss2', fields.ResourceClass.DISK_GB, 1500)],
         ]
@@ -1053,22 +1041,10 @@ class AllocationCandidatesTestCase(ProviderDBBase):
             )]
         )
 
-        # TODO(gibi/efried): Bug https://bugs.launchpad.net/nova/+bug/1730730
-        # We expect only one candidate where IPV4_ADDRESS and SRIOV_NET_VF
-        # comes from ss1 and DISK_GB comes from ss2
-        # expected = [
-        #     [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
-        #      ('ss1', fields.ResourceClass.SRIOV_NET_VF, 1),
-        #      ('ss2', fields.ResourceClass.DISK_GB, 1500)]
-        # ]
-        # But we're actually seeing the expected candidate twice
         expected = [
             [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
              ('ss1', fields.ResourceClass.SRIOV_NET_VF, 1),
-             ('ss2', fields.ResourceClass.DISK_GB, 1500)],
-            [('ss1', fields.ResourceClass.IPV4_ADDRESS, 2),
-             ('ss1', fields.ResourceClass.SRIOV_NET_VF, 1),
-             ('ss2', fields.ResourceClass.DISK_GB, 1500)],
+             ('ss2', fields.ResourceClass.DISK_GB, 1500)]
         ]
         self._validate_allocation_requests(expected, alloc_cands)
 
