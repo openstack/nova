@@ -429,12 +429,16 @@ class TestBlockDeviceMappingUUIDMigration(test.TestCase):
 
     @staticmethod
     @db_api.pick_context_manager_writer
-    def _create_legacy_bdm(context):
+    def _create_legacy_bdm(context, deleted=False):
         # Create a BDM with no uuid
         values = {'instance_uuid': uuids.instance_uuid}
         bdm_ref = db_models.BlockDeviceMapping()
         bdm_ref.update(values)
         bdm_ref.save(context.session)
+
+        if deleted:
+            bdm_ref.soft_delete(context.session)
+
         return bdm_ref
 
     @mock.patch.object(objects.BlockDeviceMapping, '_create_uuid')
@@ -511,6 +515,10 @@ class TestBlockDeviceMappingUUIDMigration(test.TestCase):
 
         # Run the online migration again to see nothing was processed
         self._assert_online_migration(0, 0)
+
+        # Assert that we assign a uuid to a deleted bdm.
+        self._create_legacy_bdm(self.context, deleted=True)
+        self._assert_online_migration(1, 1)
 
         # Test that we don't migrate more than the limit
         for i in range(0, 3):
