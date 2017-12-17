@@ -439,7 +439,13 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                             driver_attach=False, fail_driver_attach=False,
                             volume_attach=True, fail_volume_attach=False,
                             access_mode='rw', availability_zone=None,
+                            multiattach=False, driver_multi_attach=False,
+                            fail_with_virt_driver=False,
                             include_shared_targets=False):
+        if driver_multi_attach:
+            self.virt_driver.capabilities['supports_multiattach'] = True
+        else:
+            self.virt_driver.capabilities['supports_multiattach'] = False
         elevated_context = self.context.elevated()
         self.stubs.Set(self.context, 'elevated',
                        lambda: elevated_context)
@@ -453,6 +459,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         connection_info = {'data': {'access_mode': access_mode}}
         expected_conn_info = {'data': {'access_mode': access_mode},
                               'serial': fake_volume['id']}
+        if multiattach and driver_multi_attach:
+            expected_conn_info['multiattach'] = True
         enc_data = {'fake': 'enc_data'}
 
         if include_shared_targets:
@@ -484,6 +492,11 @@ class TestDriverBlockDevice(test.NoDBTestCase):
             return instance, expected_conn_info
 
         self.virt_driver.get_volume_connector(instance).AndReturn(connector)
+
+        if fail_with_virt_driver:
+            driver_bdm._bdm_obj.save().AndReturn(None)
+            return instance, expected_conn_info
+
         if self.attachment_id is None:
             self.volume_api.initialize_connection(
                 elevated_context, fake_volume['id'],
@@ -1220,3 +1233,44 @@ class TestDriverBlockDeviceNewFlow(TestDriverBlockDevice):
     where a volume BDM has an attachment_id.
     """
     attachment_id = uuids.attachment_id
+
+    def test_volume_attach_multiattach(self):
+        test_bdm = self.driver_classes['volume'](
+            self.volume_bdm)
+        volume = {'id': 'fake-volume-id-1',
+                  'multiattach': True,
+                  'attach_status': 'attached',
+                  'status': 'in-use',
+                  'attachments': {'fake_instance_2':
+                                  {'mountpoint': '/dev/vdc'}}}
+
+        instance, expected_conn_info = self._test_volume_attach(
+                test_bdm, self.volume_bdm, volume, multiattach=True,
+                driver_multi_attach=True)
+
+        self.mox.ReplayAll()
+
+        test_bdm.attach(self.context, instance,
+                        self.volume_api, self.virt_driver)
+        self.assertThat(test_bdm['connection_info'],
+                        matchers.DictMatches(expected_conn_info))
+
+    def test_volume_attach_multiattach_no_virt_driver_support(self):
+        test_bdm = self.driver_classes['volume'](
+            self.volume_bdm)
+        volume = {'id': 'fake-volume-id-1',
+                  'multiattach': True,
+                  'attach_status': 'attached',
+                  'status': 'in-use',
+                  'attachments': {'fake_instance_2':
+                                  {'mountpoint': '/dev/vdc'}}}
+
+        instance, _ = self._test_volume_attach(test_bdm, self.volume_bdm,
+                                               volume, multiattach=True,
+                                               fail_with_virt_driver=True)
+
+        self.mox.ReplayAll()
+
+        self.assertRaises(exception.MultiattachNotSupportedByVirtDriver,
+                          test_bdm.attach, self.context, instance,
+                          self.volume_api, self.virt_driver)

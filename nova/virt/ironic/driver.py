@@ -132,7 +132,8 @@ class IronicDriver(virt_driver.ComputeDriver):
     capabilities = {"has_imagecache": False,
                     "supports_recreate": False,
                     "supports_migrate_to_same_host": False,
-                    "supports_attach_interface": True
+                    "supports_attach_interface": True,
+                    "supports_multiattach": False
                     }
 
     # Needed for exiting instances to have allocations for custom resource

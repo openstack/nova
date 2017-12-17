@@ -268,6 +268,33 @@ class LibvirtVolumeTestCase(LibvirtISCSIVolumeBaseTestCase):
         readonly = tree.find('./readonly')
         self.assertIsNotNone(readonly)
 
+    def test_libvirt_volume_multiattach(self):
+        libvirt_driver = volume.LibvirtVolumeDriver(self.fake_host)
+        connection_info = {
+             'driver_volume_type': 'fake',
+             'data': {
+                 "device_path": "/foo",
+                 'access_mode': 'rw',
+                 },
+             'multiattach': True,
+            }
+        disk_info = {
+            "bus": "virtio",
+            "dev": "vde",
+            "type": "disk",
+            }
+
+        conf = libvirt_driver.get_config(connection_info, disk_info)
+        tree = conf.format_dom()
+        shareable = tree.find('./shareable')
+        self.assertIsNotNone(shareable)
+
+        connection_info['multiattach'] = False
+        conf = libvirt_driver.get_config(connection_info, disk_info)
+        tree = conf.format_dom()
+        shareable = tree.find('./shareable')
+        self.assertIsNone(shareable)
+
     @mock.patch('nova.virt.libvirt.host.Host.has_min_version')
     def test_libvirt_volume_driver_discard_true(self, mock_has_min_version):
         # Check the discard attrib is present in driver section

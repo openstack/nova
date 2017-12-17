@@ -298,6 +298,11 @@ PERF_EVENTS_CPU_FLAG_MAPPING = {'cmt': 'cmt',
 # Mediated devices support
 MIN_LIBVIRT_MDEV_SUPPORT = (3, 4, 0)
 
+# libvirt>=3.10 is required for volume multiattach if qemu<2.10.
+# See https://bugzilla.redhat.com/show_bug.cgi?id=1378242
+# for details.
+MIN_LIBVIRT_MULTIATTACH = (3, 10, 0)
+
 
 class LibvirtDriver(driver.ComputeDriver):
     capabilities = {
@@ -309,6 +314,9 @@ class LibvirtDriver(driver.ComputeDriver):
         "supports_tagged_attach_interface": True,
         "supports_tagged_attach_volume": True,
         "supports_extend_volume": True,
+        # Multiattach support is conditional on qemu and libvirt versions
+        # determined in init_host.
+        "supports_multiattach": False
     }
 
     def __init__(self, virtapi, read_only=False):
@@ -424,9 +432,14 @@ class LibvirtDriver(driver.ComputeDriver):
         except AttributeError:
             return
 
-        cache_mode = self.disk_cachemodes.get(source_type,
-                                              driver_cache)
-        conf.driver_cache = cache_mode
+        # Shareable disks like for a multi-attach volume need to have the
+        # driver cache disabled.
+        if getattr(conf, 'shareable', False):
+            conf.driver_cache = 'none'
+        else:
+            cache_mode = self.disk_cachemodes.get(source_type,
+                                                  driver_cache)
+            conf.driver_cache = cache_mode
 
     def _do_quality_warnings(self):
         """Warn about untested driver configurations.
@@ -464,6 +477,8 @@ class LibvirtDriver(driver.ComputeDriver):
         self._parse_migration_flags()
 
         self._supported_perf_events = self._get_supported_perf_events()
+
+        self._set_multiattach_support()
 
         if (CONF.libvirt.virt_type == 'lxc' and
                 not (CONF.libvirt.uid_maps and CONF.libvirt.gid_maps)):
@@ -546,6 +561,20 @@ class LibvirtDriver(driver.ComputeDriver):
                 {'arch': kvm_arch,
                  'libvirt_ver': self._version_to_string(
                      MIN_LIBVIRT_OTHER_ARCH.get(kvm_arch))})
+
+    def _set_multiattach_support(self):
+        # Check to see if multiattach is supported. Based on bugzilla
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1378242 and related
+        # clones, the shareable flag on a disk device will only work with
+        # qemu<2.10 or libvirt>=3.10. So check those versions here and set
+        # the capability appropriately.
+        if (self._host.has_min_version(lv_ver=MIN_LIBVIRT_MULTIATTACH) or
+                not self._host.has_min_version(hv_ver=(2, 10, 0))):
+            self.capabilities['supports_multiattach'] = True
+        else:
+            LOG.debug('Volume multiattach is not supported based on current '
+                      'versions of QEMU and libvirt. QEMU must be less than '
+                      '2.10 or libvirt must be greater than or equal to 3.10.')
 
     def _prepare_migration_flags(self):
         migration_flags = 0

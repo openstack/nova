@@ -250,6 +250,16 @@ class VolumeAttachFailed(Invalid):
                 "Reason: %(reason)s")
 
 
+class MultiattachNotSupportedByVirtDriver(NovaException):
+    # This exception indicates the compute hosting the instance does not
+    # support multiattach volumes. This should generally be considered a
+    # 409 HTTPConflict error in the API since we expect all virt drivers to
+    # eventually support multiattach volumes.
+    msg_fmt = _("Volume %(volume_id)s has 'multiattach' set, "
+                "which is not supported for this instance.")
+    code = 409
+
+
 class VolumeNotCreated(NovaException):
     msg_fmt = _("Volume %(volume_id)s did not finish being created"
                 " even after we waited %(seconds)s seconds or %(attempts)s"
