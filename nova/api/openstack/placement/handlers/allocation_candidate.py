@@ -21,6 +21,7 @@ from oslo_utils import timeutils
 import webob
 
 from nova.api.openstack.placement import microversion
+from nova.api.openstack.placement.schemas import allocation_candidate as schema
 from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
 from nova import exception
@@ -29,21 +30,6 @@ from nova.objects import resource_provider as rp_obj
 
 
 LOG = logging.getLogger(__name__)
-
-# Represents the allowed query string parameters to the GET
-# /allocation_candidates API call
-_GET_SCHEMA_1_10 = {
-    "type": "object",
-    "properties": {
-        "resources": {
-            "type": "string"
-        },
-    },
-    "required": [
-        "resources",
-    ],
-    "additionalProperties": False,
-}
 
 
 def _transform_allocation_requests_dict(alloc_reqs):
@@ -208,8 +194,7 @@ def list_allocation_candidates(req):
     """
     context = req.environ['placement.context']
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
-    schema = _GET_SCHEMA_1_10
-    util.validate_query_params(req, schema)
+    util.validate_query_params(req, schema.GET_SCHEMA_1_10)
 
     requests = util.parse_qs_request_groups(req.GET)
 
