@@ -2528,6 +2528,52 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                     block_device_mapping=mock.ANY,
                     node='node2', limits=[])
 
+    @mock.patch('nova.objects.Instance.save')
+    def test_build_instances_max_retries_exceeded(self, mock_save):
+        """Tests that when populate_retry raises MaxRetriesExceeded in
+        build_instances, we don't attempt to cleanup the build request.
+        """
+        instance = fake_instance.fake_instance_obj(self.context)
+        image = {'id': uuids.image_id}
+        filter_props = {
+            'retry': {
+                'num_attempts': CONF.scheduler.max_attempts
+            }
+        }
+        requested_networks = objects.NetworkRequestList()
+        with mock.patch.object(self.conductor, '_destroy_build_request',
+                               new_callable=mock.NonCallableMock):
+            self.conductor.build_instances(
+                self.context, [instance], image, filter_props,
+                mock.sentinel.admin_pass, mock.sentinel.files,
+                requested_networks, mock.sentinel.secgroups)
+            mock_save.assert_called_once_with()
+
+    @mock.patch('nova.objects.Instance.save')
+    def test_build_instances_reschedule_no_valid_host(self, mock_save):
+        """Tests that when select_destinations raises NoValidHost in
+        build_instances, we don't attempt to cleanup the build request if
+        we're rescheduling (num_attempts>1).
+        """
+        instance = fake_instance.fake_instance_obj(self.context)
+        image = {'id': uuids.image_id}
+        filter_props = {
+            'retry': {
+                'num_attempts': 1   # populate_retry will increment this
+            }
+        }
+        requested_networks = objects.NetworkRequestList()
+        with mock.patch.object(self.conductor, '_destroy_build_request',
+                               new_callable=mock.NonCallableMock):
+            with mock.patch.object(
+                    self.conductor.scheduler_client, 'select_destinations',
+                    side_effect=exc.NoValidHost(reason='oops')):
+                self.conductor.build_instances(
+                    self.context, [instance], image, filter_props,
+                    mock.sentinel.admin_pass, mock.sentinel.files,
+                    requested_networks, mock.sentinel.secgroups)
+                mock_save.assert_called_once_with()
+
     def test_cleanup_allocated_networks_none_requested(self):
         # Tests that we don't deallocate networks if 'none' were specifically
         # requested.
