@@ -418,11 +418,9 @@ class CellDatabases(fixtures.Fixture):
                 # cell_mapping of None. Since we're controlling our
                 # own targeting in this fixture, we need to call this out
                 # specifically and avoid switching global database state
-                try:
-                    with self._real_target_cell(context, cell_mapping) as c:
-                        yield c
-                finally:
-                    return
+                with self._real_target_cell(context, cell_mapping) as c:
+                    yield c
+                return
             ctxt_mgr = self._ctxt_mgrs[cell_mapping.database_connection]
             # This assumes the next local DB access is the same cell that
             # was targeted last time.
