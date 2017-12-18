@@ -1409,6 +1409,34 @@ class LibvirtConfigGuestHostdevPCI(LibvirtConfigBaseTest):
         self.assertEqual(obj.type, 'usb')
 
 
+class LibvirtConfigGuestHostdevMDEV(LibvirtConfigBaseTest):
+
+    expected = """
+            <hostdev mode='subsystem' type='mdev' model='vfio-pci'
+             managed='no'>
+                <source>
+                    <address uuid="b38a3f43-4be2-4046-897f-b67c2f5e0140" />
+                </source>
+            </hostdev>
+            """
+
+    def test_config_guest_hostdev_mdev(self):
+        hostdev = config.LibvirtConfigGuestHostdevMDEV()
+        hostdev.uuid = "b38a3f43-4be2-4046-897f-b67c2f5e0140"
+        xml = hostdev.to_xml()
+        self.assertXmlEqual(self.expected, xml)
+
+    def test_parse_guest_hostdev_mdev(self):
+        xmldoc = self.expected
+        obj = config.LibvirtConfigGuestHostdevMDEV()
+        obj.parse_str(xmldoc)
+        self.assertEqual(obj.mode, 'subsystem')
+        self.assertEqual(obj.type, 'mdev')
+        self.assertEqual(obj.managed, 'no')
+        self.assertEqual(obj.model, 'vfio-pci')
+        self.assertEqual(obj.uuid, 'b38a3f43-4be2-4046-897f-b67c2f5e0140')
+
+
 class LibvirtConfigGuestCharDeviceLog(LibvirtConfigBaseTest):
 
     def test_config_log(self):
