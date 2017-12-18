@@ -930,9 +930,6 @@ class SchedulerReportClient(object):
     def _delete_inventory(self, context, rp_uuid):
         """Deletes all inventory records for a resource provider with the
         supplied UUID.
-
-        First attempt to DELETE the inventory using microversion 1.5. If
-        this results in a 406, fail over to a PUT.
         """
         if not self._provider_tree.has_inventory(rp_uuid):
             return None
@@ -958,31 +955,6 @@ class SchedulerReportClient(object):
             'rp_uuid': rp_uuid,
             'placement_req_id': placement_req_id,
         }
-        if r.status_code == 406:
-            # microversion 1.5 not available so try the earlier way
-            # TODO(cdent): When we're happy that all placement
-            # servers support microversion 1.5 we can remove this
-            # call and the associated code.
-            LOG.debug('Falling back to placement API microversion 1.0 '
-                      'for deleting all inventory for a resource provider.')
-            payload = {
-                'resource_provider_generation': cur_gen,
-                'inventories': {},
-            }
-            r = self.put(url, payload, global_request_id=context.global_id)
-            placement_req_id = get_placement_request_id(r)
-            msg_args['placement_req_id'] = placement_req_id
-            if r.status_code == 200:
-                # Update our view of the generation for next time
-                updated_inv = r.json()
-                new_gen = updated_inv['resource_provider_generation']
-
-                self._provider_tree.update_inventory(rp_uuid, {}, new_gen)
-                msg_args['generation'] = new_gen
-                LOG.info("[%(placement_req_id)s] Deleted all inventory for "
-                         "resource provider %(rp_uuid)s at generation "
-                         "%(generation)i.", msg_args)
-                return
 
         if r.status_code == 204:
             self._provider_tree.update_inventory(rp_uuid, {}, cur_gen + 1)
@@ -1232,8 +1204,7 @@ class SchedulerReportClient(object):
     def _ensure_resource_class(self, context, name):
         """Make sure a custom resource class exists.
 
-        First attempt to PUT the resource class using microversion 1.7. If
-        this results in a 406, fail over to a GET and POST with version 1.2.
+        PUT the resource class using microversion 1.7.
 
         Returns the name of the resource class if it was successfully
         created or already exists. Otherwise None.
@@ -1247,14 +1218,6 @@ class SchedulerReportClient(object):
                             global_request_id=context.global_id)
         if 200 <= response.status_code < 300:
             return name
-        elif response.status_code == 406:
-            # microversion 1.7 not available so try the earlier way
-            # TODO(cdent): When we're happy that all placement
-            # servers support microversion 1.7 we can remove this
-            # call and the associated code.
-            LOG.debug('Falling back to placement API microversion 1.2 '
-                      'for resource class management.')
-            return self._get_or_create_resource_class(context, name)
         else:
             msg = ("Failed to ensure resource class record with placement API "
                    "for resource class %(rc_name)s. Got %(status_code)d: "
@@ -1263,69 +1226,6 @@ class SchedulerReportClient(object):
                 'rc_name': name,
                 'status_code': response.status_code,
                 'err_text': response.text,
-            }
-            LOG.error(msg, args)
-            raise exception.InvalidResourceClass(resource_class=name)
-
-    def _get_or_create_resource_class(self, context, name):
-        """Queries the placement API for a resource class supplied resource
-        class string name. If the resource class does not exist, creates it.
-
-        Returns the resource class name if exists or was created, else None.
-
-        :param context: The security context
-        :param name: String name of the resource class to check/create.
-        """
-        resp = self.get("/resource_classes/%s" % name, version="1.2")
-        if 200 <= resp.status_code < 300:
-            return name
-        elif resp.status_code == 404:
-            self._create_resource_class(context, name)
-            return name
-        else:
-            msg = ("Failed to retrieve resource class record from placement "
-                   "API for resource class %(rc_name)s. Got %(status_code)d: "
-                   "%(err_text)s.")
-            args = {
-                'rc_name': name,
-                'status_code': resp.status_code,
-                'err_text': resp.text,
-            }
-            LOG.error(msg, args)
-            return None
-
-    def _create_resource_class(self, context, name):
-        """Calls the placement API to create a new resource class.
-
-        :param context: The security context
-        :param name: String name of the resource class to create.
-
-        :returns: None on successful creation.
-        :raises: `exception.InvalidResourceClass` upon error.
-        """
-        url = "/resource_classes"
-        payload = {
-            'name': name,
-        }
-        resp = self.post(url, payload, version="1.2",
-                         global_request_id=context.global_id)
-        if 200 <= resp.status_code < 300:
-            msg = ("Created resource class record via placement API for "
-                   "resource class %s.")
-            LOG.info(msg, name)
-        elif resp.status_code == 409:
-            # Another thread concurrently created a resource class with the
-            # same name. Log a warning and then just return
-            msg = ("Another thread already created a resource class with the "
-                   "name %s. Returning.")
-            LOG.info(msg, name)
-        else:
-            msg = ("Failed to create resource class %(resource_class)s in "
-                   "placement API. Got %(status_code)d: %(err_text)s.")
-            args = {
-                'resource_class': name,
-                'status_code': resp.status_code,
-                'err_text': resp.text,
             }
             LOG.error(msg, args)
             raise exception.InvalidResourceClass(resource_class=name)
@@ -1679,13 +1579,6 @@ class SchedulerReportClient(object):
         }
         url = '/allocations/%s' % consumer_uuid
         r = self.put(url, payload, version='1.8')
-        if r.status_code == 406:
-            # microversion 1.8 not available so try the earlier way
-            # TODO(melwitt): Remove this when we can be sure all placement
-            # servers support version 1.8.
-            payload.pop('project_id')
-            payload.pop('user_id')
-            r = self.put(url, payload)
         if r.status_code != 204:
             # NOTE(jaypipes): Yes, it sucks doing string comparison like this
             # but we have no error codes, only error messages.

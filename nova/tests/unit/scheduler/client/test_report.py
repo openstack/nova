@@ -272,29 +272,6 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         self.assertTrue(resp)
         mock_put.assert_called_once_with(expected_url, mock.ANY, version='1.8')
 
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put')
-    def test_put_allocations_fail_fallback_succeeds(self, mock_put):
-        not_acceptable = mock.Mock()
-        not_acceptable.status_code = 406
-        not_acceptable.text = 'microversion not supported'
-        ok_request = mock.Mock()
-        ok_request.status_code = 204
-        ok_request.text = 'cool'
-        mock_put.side_effect = [not_acceptable, ok_request]
-        rp_uuid = mock.sentinel.rp
-        consumer_uuid = mock.sentinel.consumer
-        data = {"MEMORY_MB": 1024}
-        expected_url = "/allocations/%s" % consumer_uuid
-        resp = self.client.put_allocations(rp_uuid, consumer_uuid, data,
-                                           mock.sentinel.project_id,
-                                           mock.sentinel.user_id)
-        self.assertTrue(resp)
-        # Should fall back to earlier way if 1.8 fails.
-        call1 = mock.call(expected_url, mock.ANY, version='1.8')
-        call2 = mock.call(expected_url, mock.ANY)
-        self.assertEqual(2, mock_put.call_count)
-        mock_put.assert_has_calls([call1, call2])
-
     @mock.patch.object(report.LOG, 'warning')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.put')
     def test_put_allocations_fail(self, mock_put, mock_warn):
@@ -2465,14 +2442,10 @@ class TestInventory(SchedulerReportClientTestCase):
 
     @mock.patch.object(report.LOG, 'info')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'put')
-    @mock.patch.object(report.LOG, 'info')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'delete')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get')
-    def test_delete_inventory(self, mock_get, mock_delete, mock_debug,
-                              mock_put, mock_info):
+    def test_delete_inventory(self, mock_get, mock_delete, mock_info):
         cn = self.compute_node
         # Make sure the resource provider exists for preventing to call the API
         self._init_provider_tree()
@@ -2488,7 +2461,7 @@ class TestInventory(SchedulerReportClientTestCase):
                                             uuids.request_id}
         result = self.client._delete_inventory(self.context, cn.uuid)
         self.assertIsNone(result)
-        self.assertFalse(mock_put.called)
+        self.assertTrue(mock_delete.called)
         self.assertEqual(uuids.request_id,
                          mock_info.call_args[0][1]['placement_req_id'])
         mock_delete.assert_called_once_with(
@@ -2516,121 +2489,6 @@ class TestInventory(SchedulerReportClientTestCase):
         self.assertFalse(mock_delete.called)
         self.assertFalse(mock_extract.called)
         self._validate_provider(cn.uuid, generation=1)
-
-    @mock.patch.object(report.LOG, 'info')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'put')
-    @mock.patch.object(report.LOG, 'debug')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'delete')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get')
-    def test_delete_inventory_put(self, mock_get, mock_delete, mock_debug,
-                                  mock_put, mock_info):
-        cn = self.compute_node
-        # Make sure the resource provider exists for preventing to call the API
-        self._init_provider_tree()
-
-        mock_get.return_value.json.return_value = {
-            'resource_provider_generation': 1,
-            'inventories': {
-                'DISK_GB': {'total': 10},
-            }
-        }
-        mock_delete.return_value.status_code = 406
-        mock_put.return_value.status_code = 200
-        mock_put.return_value.json.return_value = {
-            'resource_provider_generation': 44,
-            'inventories': {
-            }
-        }
-        mock_put.return_value.headers = {'x-openstack-request-id':
-                                         uuids.request_id}
-        result = self.client._delete_inventory(self.context, cn.uuid)
-        self.assertIsNone(result)
-        self.assertTrue(mock_debug.called)
-        self.assertTrue(mock_put.called)
-        self.assertTrue(mock_info.called)
-        self.assertEqual(uuids.request_id,
-                         mock_info.call_args[0][1]['placement_req_id'])
-        self._validate_provider(cn.uuid, generation=44)
-
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'put')
-    @mock.patch.object(report.LOG, 'debug')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'delete')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get')
-    def test_delete_inventory_put_failover(self, mock_get, mock_delete,
-                                           mock_debug, mock_put):
-        cn = self.compute_node
-        # Make sure the resource provider exists for preventing to call the API
-        self._init_provider_tree()
-
-        mock_get.return_value.json.return_value = {
-            'resource_provider_generation': 42,
-            'inventories': {
-                'DISK_GB': {'total': 10},
-            }
-        }
-        mock_delete.return_value.status_code = 406
-        mock_put.return_value.status_code = 200
-        self.client._delete_inventory(self.context, cn.uuid)
-        self.assertTrue(mock_debug.called)
-        exp_url = '/resource_providers/%s/inventories' % cn.uuid
-        payload = {
-            'resource_provider_generation': 42,
-            'inventories': {},
-        }
-        mock_put.assert_called_once_with(
-            exp_url, payload, global_request_id=self.context.global_id)
-
-    @mock.patch.object(report.LOG, 'error')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'put')
-    @mock.patch.object(report.LOG, 'debug')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'delete')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get')
-    def test_delete_inventory_put_failover_in_use(self, mock_get, mock_delete,
-                                                  mock_debug, mock_put,
-                                                  mock_error):
-        cn = self.compute_node
-        # Make sure the resource provider exists for preventing to call the API
-        self._init_provider_tree()
-
-        mock_get.return_value.json.return_value = {
-            'resource_provider_generation': 42,
-            'inventories': {
-                'DISK_GB': {'total': 10},
-            }
-        }
-        mock_delete.return_value.status_code = 406
-        mock_put.return_value.status_code = 409
-        mock_put.return_value.text = (
-            'There was a *fake* failure: inventory in use'
-        )
-        mock_put.return_value.json.return_value = {
-            'resource_provider_generation': 44,
-            'inventories': {
-            }
-        }
-        mock_put.return_value.headers = {'x-openstack-request-id':
-                                         uuids.request_id}
-        self.client._delete_inventory(self.context, cn.uuid)
-        self.assertTrue(mock_debug.called)
-        exp_url = '/resource_providers/%s/inventories' % cn.uuid
-        payload = {
-            'resource_provider_generation': 42,
-            'inventories': {},
-        }
-        mock_put.assert_called_once_with(
-            exp_url, payload, global_request_id=self.context.global_id)
-        self.assertTrue(mock_error.called)
-        self.assertEqual(uuids.request_id,
-                         mock_error.call_args[0][1]['placement_req_id'])
 
     @mock.patch.object(report.LOG, 'warning')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -3189,11 +3047,9 @@ There was a conflict when trying to complete your request.
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_class')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_or_create_resource_class')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_provider')
-    def test_set_inventory_for_provider_no_custom(self, mock_erp, mock_gocr,
-            mock_erc, mock_del, mock_upd):
+    def test_set_inventory_for_provider_no_custom(self, mock_erp, mock_erc,
+            mock_del, mock_upd):
         """Tests that inventory records of all standard resource classes are
         passed to the report client's _update_inventory() method.
         """
@@ -3237,7 +3093,6 @@ There was a conflict when trying to complete your request.
         )
         # No custom resource classes to ensure...
         self.assertFalse(mock_erc.called)
-        self.assertFalse(mock_gocr.called)
         mock_upd.assert_called_once_with(
             self.context,
             mock.sentinel.rp_uuid,
@@ -3252,11 +3107,9 @@ There was a conflict when trying to complete your request.
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_class')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_or_create_resource_class')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_provider')
-    def test_set_inventory_for_provider_no_inv(self, mock_erp, mock_gocr,
-            mock_erc, mock_del, mock_upd):
+    def test_set_inventory_for_provider_no_inv(self, mock_erp, mock_erc,
+            mock_del, mock_upd):
         """Tests that passing empty set of inventory records triggers a delete
         of inventory for the provider.
         """
@@ -3273,7 +3126,6 @@ There was a conflict when trying to complete your request.
             mock.sentinel.rp_name,
             parent_provider_uuid=None,
         )
-        self.assertFalse(mock_gocr.called)
         self.assertFalse(mock_erc.called)
         self.assertFalse(mock_upd.called)
         mock_del.assert_called_once_with(self.context, mock.sentinel.rp_uuid)
@@ -3285,11 +3137,9 @@ There was a conflict when trying to complete your request.
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_class')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_or_create_resource_class')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_provider')
     def test_set_inventory_for_provider_with_custom(self, mock_erp,
-            mock_gocr, mock_erc, mock_del, mock_upd):
+            mock_erc, mock_del, mock_upd):
         """Tests that inventory records that include a custom resource class
         are passed to the report client's _update_inventory() method and that
         the custom resource class is auto-created.
@@ -3347,7 +3197,6 @@ There was a conflict when trying to complete your request.
             mock.sentinel.rp_uuid,
             inv_data,
         )
-        self.assertFalse(mock_gocr.called)
         self.assertFalse(mock_del.called)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -3364,19 +3213,6 @@ There was a conflict when trying to complete your request.
         mock_erp.assert_called_once_with(
             self.context, uuids.child, 'junior',
             parent_provider_uuid=uuids.parent)
-
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'put')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_or_create_resource_class')
-    def test_ensure_resource_class_microversion_failover(self, mock_gocr,
-                                                         mock_put):
-        mock_put.return_value.status_code = 406
-        self.client._ensure_resource_class(self.context, 'CUSTOM_IRON_SILVER')
-        mock_gocr.assert_called_once_with(self.context, 'CUSTOM_IRON_SILVER')
-        mock_put.assert_called_once_with(
-            '/resource_classes/CUSTOM_IRON_SILVER', None, version='1.7',
-            global_request_id=self.context.global_id)
 
 
 class TestAllocations(SchedulerReportClientTestCase):
@@ -3673,87 +3509,6 @@ class TestAllocations(SchedulerReportClientTestCase):
         mock_log.reset_mock()
         resp_mock.status_code = 409
         self.client.delete_resource_provider(self.context, cn)
-        # With a 409, only the warning should be called
+        # With a 409, only the error should be called
         self.assertEqual(0, mock_log.info.call_count)
         self.assertEqual(1, mock_log.error.call_count)
-
-
-class TestResourceClass(SchedulerReportClientTestCase):
-
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_create_resource_class')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.get')
-    def test_get_or_create_existing(self, mock_get, mock_crc):
-        resp_mock = mock.Mock(status_code=200)
-        mock_get.return_value = resp_mock
-        rc_name = 'CUSTOM_FOO'
-        result = self.client._get_or_create_resource_class(self.context,
-                                                           rc_name)
-        mock_get.assert_called_once_with(
-            '/resource_classes/' + rc_name,
-            version="1.2",
-        )
-        self.assertFalse(mock_crc.called)
-        self.assertEqual(rc_name, result)
-
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_create_resource_class')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.get')
-    def test_get_or_create_not_existing(self, mock_get, mock_crc):
-        resp_mock = mock.Mock(status_code=404)
-        mock_get.return_value = resp_mock
-        rc_name = 'CUSTOM_FOO'
-        result = self.client._get_or_create_resource_class(self.context,
-                                                           rc_name)
-        mock_get.assert_called_once_with(
-            '/resource_classes/' + rc_name,
-            version="1.2",
-        )
-        mock_crc.assert_called_once_with(self.context, rc_name)
-        self.assertEqual(rc_name, result)
-
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_create_resource_class')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.get')
-    def test_get_or_create_bad_get(self, mock_get, mock_crc):
-        resp_mock = mock.Mock(status_code=500, text='server error')
-        mock_get.return_value = resp_mock
-        rc_name = 'CUSTOM_FOO'
-        result = self.client._get_or_create_resource_class(self.context,
-                                                           rc_name)
-        mock_get.assert_called_once_with(
-            '/resource_classes/' + rc_name,
-            version="1.2",
-        )
-        self.assertFalse(mock_crc.called)
-        self.assertIsNone(result)
-
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.post')
-    def test_create_resource_class(self, mock_post):
-        resp_mock = mock.Mock(status_code=201)
-        mock_post.return_value = resp_mock
-        rc_name = 'CUSTOM_FOO'
-        result = self.client._create_resource_class(self.context, rc_name)
-        mock_post.assert_called_once_with(
-            '/resource_classes',
-            {'name': rc_name},
-            version="1.2",
-            global_request_id=self.context.global_id
-        )
-        self.assertIsNone(result)
-
-    @mock.patch('nova.scheduler.client.report.LOG.info')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.post')
-    def test_create_resource_class_concurrent_write(self, mock_post, mock_log):
-        resp_mock = mock.Mock(status_code=409)
-        mock_post.return_value = resp_mock
-        rc_name = 'CUSTOM_FOO'
-        result = self.client._create_resource_class(self.context, rc_name)
-        mock_post.assert_called_once_with(
-            '/resource_classes',
-            {'name': rc_name},
-            version="1.2",
-            global_request_id=self.context.global_id
-        )
-        self.assertIsNone(result)
-        self.assertIn('Another thread already', mock_log.call_args[0][0])
