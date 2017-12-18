@@ -32,25 +32,25 @@ Response
 
   - limits: limits
   - absolute: limits_absolutes
-  - maxImageMeta: image_metadata_items
-  - maxPersonality: injected_files
-  - maxPersonalitySize: injected_file_content_bytes
-  - maxSecurityGroupRules: security_group_rules_quota
-  - maxSecurityGroups: security_groups_quota
   - maxServerGroupMembers: server_group_members
   - maxServerGroups: server_groups
   - maxServerMeta: metadata_items
   - maxTotalCores: cores
-  - maxTotalFloatingIps: floating_ips
   - maxTotalInstances: instances
   - maxTotalKeypairs: key_pairs
   - maxTotalRAMSize: ram
   - totalCoresUsed: total_cores_used
-  - totalFloatingIpsUsed: total_floatingips_used
   - totalInstancesUsed: total_instances_used
   - totalRAMUsed: total_ram_used
-  - totalSecurityGroupsUsed: total_security_groups_used
   - totalServerGroupsUsed: total_server_groups_used
+  - maxSecurityGroupRules: security_group_rules_quota
+  - maxSecurityGroups: security_groups_quota
+  - maxTotalFloatingIps: floating_ips
+  - totalFloatingIpsUsed: total_floatingips_used
+  - totalSecurityGroupsUsed: total_security_groups_used
+  - maxImageMeta: image_metadata_items
+  - maxPersonality: injected_files
+  - maxPersonalitySize: injected_file_content_bytes
   - rate: limits_rates
 
 **Example Show Rate And Absolute Limits: JSON response**
