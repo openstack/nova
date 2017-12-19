@@ -30,7 +30,7 @@ This example sets the debugging level to ``INFO`` (which is less verbose than
 the default ``DEBUG`` setting).
 
 For more about the logging configuration syntax, including the ``handlers`` and
-``quaname`` variables, see the `Python documentation
+``qualname`` variables, see the `Python documentation
 <https://docs.python.org/release/2.7/library/logging.html#configuration-file-format>`__
 on logging configuration files.
 

@@ -76,7 +76,7 @@ In this instance, there are 0 persistent huge pages (``HugePages_Total``) and 0
 transparent huge pages (``AnonHugePages``) allocated. Huge pages can be
 allocated at boot time or run time. Huge pages require a contiguous area of
 memory - memory that gets increasingly fragmented the long a host is running.
-Identifying contiguous areas of memory is a issue for all huge page sizes, but
+Identifying contiguous areas of memory is an issue for all huge page sizes, but
 it is particularly problematic for larger huge page sizes such as 1 GB huge
 pages. Allocating huge pages at boot time will ensure the correct number of huge
 pages is always available, while allocating them at run time can fail if memory
