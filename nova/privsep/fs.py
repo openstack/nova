@@ -83,6 +83,11 @@ def blockdev_size(path):
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
+def blockdev_flush(path):
+    return processutils.execute('blockdev', '--flushbufs', path)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
 def clear(path, volume_size, shred=False):
     cmd = ['shred']
     if shred:
