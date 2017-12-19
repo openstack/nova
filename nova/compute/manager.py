@@ -5292,7 +5292,7 @@ class ComputeManager(manager.Manager):
 
     def _init_volume_connection(self, context, new_volume_id,
                                 old_volume_id, connector, bdm,
-                                new_attachment_id):
+                                new_attachment_id, mountpoint):
 
         if new_attachment_id is None:
             # We're dealing with an old-style attachment so initialize the
@@ -5307,7 +5307,8 @@ class ComputeManager(manager.Manager):
             # the host connector, which will give us back the new attachment
             # connection_info.
             new_cinfo = self.volume_api.attachment_update(
-                context, new_attachment_id, connector)['connection_info']
+                context, new_attachment_id, connector,
+                mountpoint)['connection_info']
 
         old_cinfo = jsonutils.loads(bdm['connection_info'])
         if old_cinfo and 'serial' not in old_cinfo:
@@ -5328,7 +5329,7 @@ class ComputeManager(manager.Manager):
         try:
             old_cinfo, new_cinfo = self._init_volume_connection(
                 context, new_volume_id, old_volume_id, connector,
-                bdm, new_attachment_id)
+                bdm, new_attachment_id, mountpoint)
             # NOTE(lyarwood): The Libvirt driver, the only virt driver
             # currently implementing swap_volume, will modify the contents of
             # new_cinfo when connect_volume is called. This is then saved to

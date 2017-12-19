@@ -462,7 +462,8 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                 connector).AndReturn(connection_info)
         else:
             self.volume_api.attachment_update(
-                elevated_context, self.attachment_id, connector).AndReturn(
+                elevated_context, self.attachment_id, connector,
+                bdm_dict['device_name']).AndReturn(
                     {'connection_info': connection_info})
 
         if driver_attach:

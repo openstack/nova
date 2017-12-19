@@ -442,7 +442,8 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
         LOG.debug("Updating existing volume attachment record: %s",
                   attachment_id, instance=instance)
         connection_info = volume_api.attachment_update(
-            context, attachment_id, connector)['connection_info']
+            context, attachment_id, connector,
+            self['mount_device'])['connection_info']
         if 'serial' not in connection_info:
             connection_info['serial'] = self.volume_id
         self._preserve_multipath_id(connection_info)

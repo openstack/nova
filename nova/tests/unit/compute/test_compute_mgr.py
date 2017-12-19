@@ -2092,7 +2092,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 self.context, uuids.old_volume_id, instance.uuid)
             # We updated the new attachment with the host connector.
             attachment_update.assert_called_once_with(
-                self.context, uuids.new_attachment_id, mock.sentinel.connector)
+                self.context, uuids.new_attachment_id, mock.sentinel.connector,
+                bdm.device_name)
             # We tell Cinder that the new volume is connected
             attachment_complete.assert_called_once_with(
                 self.context, uuids.new_attachment_id)
@@ -2162,7 +2163,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 self.context, uuids.old_volume_id, instance.uuid)
             # We updated the new attachment with the host connector.
             attachment_update.assert_called_once_with(
-                self.context, uuids.new_attachment_id, mock.sentinel.connector)
+                self.context, uuids.new_attachment_id, mock.sentinel.connector,
+                bdm.device_name)
             # We tell Cinder that the new volume is connected
             attachment_complete.assert_called_once_with(
                 self.context, uuids.new_attachment_id)
@@ -2231,7 +2233,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 self.context, uuids.old_volume_id, instance.uuid)
             # We tried to update the new attachment with the host connector.
             attachment_update.assert_called_once_with(
-                self.context, uuids.new_attachment_id, mock.sentinel.connector)
+                self.context, uuids.new_attachment_id, mock.sentinel.connector,
+                bdm.device_name)
             # After a failure, we rollback the detaching status of the old
             # volume.
             roll_detaching.assert_called_once_with(
@@ -2300,7 +2303,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 self.context, uuids.old_volume_id, instance.uuid)
             # We updated the new attachment with the host connector.
             attachment_update.assert_called_once_with(
-                self.context, uuids.new_attachment_id, mock.sentinel.connector)
+                self.context, uuids.new_attachment_id, mock.sentinel.connector,
+                bdm.device_name)
             # After a failure, we rollback the detaching status of the old
             # volume.
             roll_detaching.assert_called_once_with(
