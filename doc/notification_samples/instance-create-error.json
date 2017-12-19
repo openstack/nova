@@ -1,14 +1,8 @@
 {
     "event_type":"instance.create.error",
     "payload":{
-        "nova_object.data":{
-            "architecture":"x86_64",
-            "availability_zone": "nova",
-            "block_devices":[],
-            "created_at":"2012-10-29T13:42:11Z",
-            "deleted_at":null,
-            "display_name":"some-server",
-            "display_description":"some-server",
+        "$ref":"common_payloads/InstanceCreatePayload.json#",
+        "nova_object.data": {
             "fault": {
                 "nova_object.data": {
                     "exception": "FlavorDiskTooSmall",
@@ -20,69 +14,11 @@
                 "nova_object.namespace": "nova",
                 "nova_object.version": "1.0"
             },
-            "host":"compute",
-            "host_name":"some-server",
             "ip_addresses": [],
-            "key_name": "my-key",
-            "keypairs": [{
-                "nova_object.name": "KeypairPayload",
-                "nova_object.namespace": "nova",
-                "nova_object.version": "1.0",
-                "nova_object.data": {
-                    "user_id": "fake",
-                    "name": "my-key",
-                    "fingerprint": "1e:2c:9b:56:79:4b:45:77:f9:ca:7a:98:2c:b0:d5:3c",
-                    "public_key": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQDx8nkQv/zgGgB4rMYmIf+6A4l6Rr+o/6lHBQdW5aYd44bd8JttDCE/F/pNRr0lRE+PiqSPO8nDPHw0010JeMH9gYgnnFlyY3/OcJ02RhIPyyxYpv9FhY+2YiUkpwFOcLImyrxEsYXpD/0d3ac30bNH6Sw9JD9UZHYcpSxsIbECHw== Generated-by-Nova",
-                    "type": "ssh"
-                }
-            }],
-            "kernel_id":"",
-            "launched_at":null,
-            "image_uuid": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
-            "metadata":{},
-            "locked":false,
-            "node":"fake-mini",
-            "os_type":null,
-            "progress":0,
-            "ramdisk_id":"",
-            "reservation_id":"r-npxv0e40",
-            "state":"building",
-            "task_state":null,
-            "power_state":"pending",
-            "tags":["tag"],
-            "tenant_id":"6f70656e737461636b20342065766572",
-            "terminated_at":null,
-            "auto_disk_config":"MANUAL",
-            "flavor": {
-                "nova_object.name": "FlavorPayload",
-                "nova_object.data": {
-                    "flavorid": "a22d5517-147c-4147-a0d1-e698df5cd4e3",
-                    "name": "test_flavor",
-                    "root_gb": 1,
-                    "vcpus": 1,
-                    "ephemeral_gb": 0,
-                    "memory_mb": 512,
-                    "disabled": false,
-                    "rxtx_factor": 1.0,
-                    "extra_specs": {
-                        "hw:watchdog_action": "disabled"
-                    },
-                    "projects": null,
-                    "swap": 0,
-                    "is_public": true,
-                    "vcpu_weight": 0,
-                    "description":null
-                },
-                "nova_object.version": "1.4",
-                "nova_object.namespace": "nova"
-            },
-            "updated_at": "2012-10-29T13:42:11Z",
-            "user_id":"fake",
-            "uuid":"178b0921-8f85-4257-88b6-2e743b5a975c"
-        },
-        "nova_object.name":"InstanceCreatePayload",
-        "nova_object.namespace":"nova",
-        "nova_object.version":"1.7"
+            "launched_at": null,
+            "power_state": "pending",
+            "state": "building"
+        }
     },
     "priority":"ERROR",
     "publisher_id":"nova-compute:compute"
