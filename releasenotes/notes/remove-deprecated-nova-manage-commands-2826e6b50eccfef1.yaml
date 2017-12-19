@@ -4,5 +4,6 @@ upgrade:
     The following ``nova-manage`` commands have been removed.
 
     - ``quota``
+    - ``shell``
 
     These were previously deprecated in 16.0.0.

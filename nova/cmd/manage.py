@@ -16,37 +16,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# Interactive shell based on Django:
-#
-# Copyright (c) 2005, the Lawrence Journal-World
-# All rights reserved.
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are met:
-#
-#     1. Redistributions of source code must retain the above copyright notice,
-#        this list of conditions and the following disclaimer.
-#
-#     2. Redistributions in binary form must reproduce the above copyright
-#        notice, this list of conditions and the following disclaimer in the
-#        documentation and/or other materials provided with the distribution.
-#
-#     3. Neither the name of Django nor the names of its contributors may be
-#        used to endorse or promote products derived from this software without
-#        specific prior written permission.
-#
-# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
-# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
-# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
-# A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
-# OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
-# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
-# THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
-# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
-# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
 
 """
   CLI interface for nova management.
@@ -134,86 +103,6 @@ def mask_passwd_in_url(url):
         parsed.path, parsed.params,
         parsed.query, parsed.fragment)
     return urlparse.urlunparse(new_parsed)
-
-
-class ShellCommands(object):
-
-    # TODO(stephenfin): Remove this during the Queens cycle
-    description = ('DEPRECATED: The shell commands are deprecated since '
-                   'Pike as they serve no useful purpose in modern nova. '
-                   'They will be removed in an upcoming release.')
-
-    def bpython(self):
-        """Runs a bpython shell.
-
-        Falls back to Ipython/python shell if unavailable
-        """
-        self.run('bpython')
-
-    def ipython(self):
-        """Runs an Ipython shell.
-
-        Falls back to Python shell if unavailable
-        """
-        self.run('ipython')
-
-    def python(self):
-        """Runs a python shell.
-
-        Falls back to Python shell if unavailable
-        """
-        self.run('python')
-
-    @args('--shell', metavar='<bpython|ipython|python >',
-            help='Python shell')
-    def run(self, shell=None):
-        """Runs a Python interactive interpreter."""
-        if not shell:
-            shell = 'bpython'
-
-        if shell == 'bpython':
-            try:
-                import bpython
-                bpython.embed()
-            except ImportError:
-                shell = 'ipython'
-        if shell == 'ipython':
-            try:
-                from IPython import embed
-                embed()
-            except ImportError:
-                try:
-                    # Ipython < 0.11
-                    # Explicitly pass an empty list as arguments, because
-                    # otherwise IPython would use sys.argv from this script.
-                    import IPython
-
-                    shell = IPython.Shell.IPShell(argv=[])
-                    shell.mainloop()
-                except ImportError:
-                    # no IPython module
-                    shell = 'python'
-
-        if shell == 'python':
-            import code
-            try:
-                # Try activating rlcompleter, because it's handy.
-                import readline
-            except ImportError:
-                pass
-            else:
-                # We don't have to wrap the following import in a 'try',
-                # because we already know 'readline' was imported successfully.
-                readline.parse_and_bind("tab:complete")
-            code.interact()
-
-    @args('--path', metavar='<path>', help='Script path')
-    def script(self, path):
-        """Runs the script from the specified path with flags set properly.
-
-        arguments: path
-        """
-        exec(compile(open(path).read(), path, 'exec'), locals(), globals())
 
 
 def _db_error(caught_exception):
@@ -1907,7 +1796,6 @@ CATEGORIES = {
     'logs': GetLogCommands,
     'network': NetworkCommands,
     'project': ProjectCommands,
-    'shell': ShellCommands,
 }
 
 
