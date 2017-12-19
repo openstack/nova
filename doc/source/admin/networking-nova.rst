@@ -893,7 +893,7 @@ Temporarily disable firewall
 Problem
 -------
 
-Networking issues prevent administrators accessing or reaching VM's through
+Networking issues prevent administrators accessing or reaching VMs through
 various pathways.
 
 Solution

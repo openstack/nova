@@ -317,7 +317,7 @@ and ``hw:cpu_threads``, refer to the :doc:`/admin/flavors` guide.
 It is also possible to set upper limits on the number of sockets, cores, and
 threads used. Unlike the hard values above, it is not necessary for this exact
 number to used because it only provides a limit. This can be used to provide
-some flexibility in scheduling, while ensuring certains limits are not
+some flexibility in scheduling, while ensuring certain limits are not
 exceeded. For example, to ensure no more than two sockets are defined in the
 instance topology, run:
 
