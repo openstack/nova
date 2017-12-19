@@ -18,8 +18,12 @@ Helpers for filesystem related routines.
 """
 
 from oslo_concurrency import processutils
+from oslo_log import log as logging
 
 import nova.privsep
+
+
+LOG = logging.getLogger(__name__)
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
@@ -123,3 +127,24 @@ def remove_device_maps(device):
 def get_filesystem_type(device):
     return processutils.execute('blkid', '-o', 'value', '-s', 'TYPE', device,
                                 check_exit_code=[0, 2])
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def resize2fs(image, check_exit_code):
+    unprivileged_resize2fs(image, check_exit_code)
+
+
+# NOTE(mikal): this method is deliberately not wrapped in a privsep entrypoint
+def unprivileged_resize2fs(image, check_exit_code):
+    try:
+        processutils.execute('e2fsck',
+                             '-fp',
+                             image,
+                             check_exit_code=[0, 1, 2])
+    except processutils.ProcessExecutionError as exc:
+        LOG.debug("Checking the file system with e2fsck has failed, "
+                  "the resize will be aborted. (%s)", exc)
+    else:
+        processutils.execute('resize2fs',
+                             image,
+                             check_exit_code=check_exit_code)
