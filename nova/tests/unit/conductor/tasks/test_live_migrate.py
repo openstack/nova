@@ -304,6 +304,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         # Make sure the request_spec was updated to include the cell
         # mapping.
         self.assertIsNotNone(self.fake_spec.requested_destination.cell)
+        # Make sure the spec was updated to include the project_id.
+        self.assertEqual(self.fake_spec.project_id, self.instance.project_id)
 
     def test_find_destination_works_with_no_request_spec(self):
         task = live_migrate.LiveMigrationTask(

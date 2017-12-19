@@ -705,6 +705,7 @@ class ComputeTaskManager(base.Base):
                             objects.Destination(
                                 cell=instance_mapping.cell_mapping))
 
+                    request_spec.ensure_project_id(instance)
                     hosts = self._schedule_instances(context, request_spec,
                                                      [instance.uuid])
                     host_state = hosts[0]
@@ -867,6 +868,7 @@ class ComputeTaskManager(base.Base):
                     # is not forced to be the original host
                     request_spec.reset_forced_destinations()
                 try:
+                    request_spec.ensure_project_id(instance)
                     hosts = self._schedule_instances(context, request_spec,
                                                      [instance.uuid])
                     host_dict = hosts.pop(0)

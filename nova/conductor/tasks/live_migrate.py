@@ -262,6 +262,7 @@ class LiveMigrationTask(base.TaskBase):
             request_spec.requested_destination = objects.Destination(
                 cell=cell_mapping)
 
+        request_spec.ensure_project_id(self.instance)
         host = None
         while host is None:
             self._check_not_over_max_retries(attempted_hosts)
