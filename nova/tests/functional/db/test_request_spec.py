@@ -147,9 +147,12 @@ class RequestSpecInstanceMigrationTestCase(
         self.assertEqual(0, done)
 
         # Make sure all instances have now a related RequestSpec
-        for uuid in [instance.uuid for instance in self.instances]:
+        for instance in self.instances:
+            uuid = instance.uuid
             try:
-                objects.RequestSpec.get_by_instance_uuid(self.context, uuid)
+                spec = objects.RequestSpec.get_by_instance_uuid(
+                    self.context, uuid)
+                self.assertEqual(instance.project_id, spec.project_id)
             except exception.RequestSpecNotFound:
                 self.fail("RequestSpec not found for instance UUID :%s ", uuid)
 
