@@ -38,7 +38,14 @@ By default 'addresses' is hidden only when the server is in
                 'method': 'GET',
                 'path': '/servers/detail'
             }
-        ]),
+        ],
+        deprecated_for_removal=True,
+        deprecated_reason=(
+            'Capability of configuring the server states to hide the '
+            'address has been deprecated for removal. Now this policy is '
+            'not needed to control the server address'
+        ),
+        deprecated_since='17.0.0'),
 ]
 
 

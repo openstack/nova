@@ -283,6 +283,14 @@ osapi_hide_opts = [
         default=[BUILDING],
         deprecated_group="DEFAULT",
         deprecated_name="osapi_hide_server_address_states",
+        deprecated_for_removal=True,
+        deprecated_since="17.0.0",
+        deprecated_reason="This option hide the server address in server "
+                          "representation for configured server states. "
+                          "Which makes GET server API controlled by this "
+                          "config options. Due to this config options, user "
+                          "would not be able to discover the API behavior on "
+                          "different clouds which leads to the interop issue.",
         help="""
 This option is a list of all instance states for which network address
 information should not be returned from the API.
