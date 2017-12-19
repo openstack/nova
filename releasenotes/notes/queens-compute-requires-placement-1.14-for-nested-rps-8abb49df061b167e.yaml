@@ -1,0 +1,7 @@
+---
+upgrade:
+  - |
+    The ``nova-compute`` service requires Placement API version 1.14 at a
+    minimum to support `nested resource providers`_.
+
+    .. _nested resource providers: http://specs.openstack.org/openstack/nova-specs/specs/queens/approved/nested-resource-providers.html

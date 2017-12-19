@@ -49,11 +49,13 @@ changed or be partially complete at this time.
 * `Compute Node Inventory <https://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/compute-node-inventory-newton.html>`_
 * `Resource Provider Allocations <https://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/resource-providers-allocations.html>`_
 * `Resource Provider Base Models <https://specs.openstack.org/openstack/nova-specs/specs/newton/implemented/resource-providers.html>`_
-* `Nested Resource Providers <http://specs.openstack.org/openstack/nova-specs/specs/pike/approved/nested-resource-providers.html>`_
+* `Nested Resource Providers`_
 * `Custom Resource Classes <http://specs.openstack.org/openstack/nova-specs/specs/ocata/implemented/custom-resource-classes.html>`_
 * `Scheduler Filters in DB <http://specs.openstack.org/openstack/nova-specs/specs/ocata/implemented/resource-providers-scheduler-db-filters.html>`_
 * `Scheduler claiming resources to the Placement API <http://specs.openstack.org/openstack/nova-specs/specs/pike/approved/placement-claims.html>`_
 * `The Traits API - Manage Traits with ResourceProvider <http://specs.openstack.org/openstack/nova-specs/specs/pike/approved/resource-provider-traits.html>`_
+
+.. _Nested Resource Providers: http://specs.openstack.org/openstack/nova-specs/specs/queens/approved/nested-resource-providers.html
 
 Deployment
 ==========
@@ -263,6 +265,14 @@ Pike (16.0.0)
   Since resizing to the same host is disabled by default, and generally only
   used in testing, this is mentioned for completeness but should not be a
   concern for production deployments.
+
+Queens (17.0.0)
+~~~~~~~~~~~~~~~
+
+* The minimum Placement API microversion required by the *nova-compute* service
+  is ``1.14`` in order to support `Nested Resource Providers`_. This means you
+  must upgrade the Placement service before upgrading any *nova-compute*
+  services to Queens.
 
 
 REST API
