@@ -239,6 +239,7 @@ class MigrationTask(base.TaskBase):
                 cell=instance_mapping.cell_mapping)
 
         migration = self._preallocate_migration()
+        self.request_spec.ensure_project_id(self.instance)
         # For now, don't request alternates. A later patch in the series will
         # modify migration to use alternates instead of calling the scheduler
         # again.

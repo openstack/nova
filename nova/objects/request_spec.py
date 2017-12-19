@@ -50,6 +50,8 @@ class RequestSpec(base.NovaObject):
                                             nullable=True),
         'pci_requests': fields.ObjectField('InstancePCIRequests',
                                            nullable=True),
+        # TODO(mriedem): The project_id shouldn't be nullable since the
+        # scheduler relies on it being set.
         'project_id': fields.StringField(nullable=True),
         'availability_zone': fields.StringField(nullable=True),
         'flavor': fields.ObjectField('Flavor', nullable=False),
@@ -435,6 +437,10 @@ class RequestSpec(base.NovaObject):
         # original contract
         spec_obj.obj_set_defaults()
         return spec_obj
+
+    def ensure_project_id(self, instance):
+        if 'project_id' not in self or self.project_id is None:
+            self.project_id = instance.project_id
 
     @staticmethod
     def _from_db_object(context, spec, db_spec):
