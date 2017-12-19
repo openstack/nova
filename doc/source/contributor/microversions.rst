@@ -216,6 +216,18 @@ A microversion is not needed in the following situation:
     returned with a 503 or 3xx response, so it may be removed without bumping
     the microversion.
 
+  - An obvious regression bug in an admin-only API where the bug can still
+    be fixed upstream on active stable branches. Admin-only APIs are less of
+    a concern for interoperability and generally a regression in behavior can
+    be dealt with as a bug fix when the documentation clearly shows the API
+    behavior was unexpectedly regressed. See [#f3]_ for an example. Intentional
+    behavior changes to an admin-only API *do* require a microversion, like the
+    :ref:`2.53 microversion <2.53-microversion>` for example.
+
+**Footnotes**
+
+.. [#f3] https://review.openstack.org/#/c/523194/
+
 In Code
 -------
 
