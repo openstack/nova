@@ -513,9 +513,13 @@ class TestAllocation(test_objects._LocalTest):
                                  consumer_id=uuids.fake_instance,
                                  used=8)
         alloc_list = objects.AllocationList(self.context, objects=[obj])
-        self.assertNotIn("id", obj)
         alloc_list.create_all()
-        self.assertIn("id", obj)
+
+        rp_al = resource_provider.AllocationList
+        saved_allocations = rp_al.get_all_by_resource_provider_uuid(
+            self.context, rp.uuid)
+        self.assertEqual(1, len(saved_allocations))
+        self.assertEqual(obj.used, saved_allocations[0].used)
 
     def test_create_with_id_fails(self):
         rp = objects.ResourceProvider(context=self.context,

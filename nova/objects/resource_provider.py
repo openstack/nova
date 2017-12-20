@@ -1849,8 +1849,7 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
                         resource_class_id=rc_id,
                         consumer_id=alloc.consumer_id,
                         used=alloc.used)
-                result = conn.execute(ins_stmt)
-                alloc.id = result.lastrowid
+                conn.execute(ins_stmt)
 
             # Generation checking happens here. If the inventory for
             # this resource provider changed out from under us,
