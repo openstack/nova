@@ -73,6 +73,10 @@ VERSIONS = {
 
 
 class Versions(wsgi.Resource):
+
+    # The root version API isn't under the microversion control.
+    support_api_request_version = False
+
     def __init__(self):
         super(Versions, self).__init__(None)
 

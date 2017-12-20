@@ -268,7 +268,7 @@ class ResourceTest(MicroversionedTest):
                     raise webob.exc.HTTPInternalServerError()
                 return 'success'
 
-        app = fakes.TestRouterV21(Controller())
+        app = fakes.TestRouter(Controller())
         req = webob.Request.blank('/tests')
         response = req.get_response(app)
         self.assertEqual(b'success', response.body)
@@ -286,7 +286,7 @@ class ResourceTest(MicroversionedTest):
                     raise webob.exc.HTTPInternalServerError()
                 return 'success'
 
-        app = fakes.TestRouterV21(Controller())
+        app = fakes.TestRouter(Controller())
         req = webob.Request.blank('/tests')
         req.headers = self._make_microversion_header(version)
         response = req.get_response(app)
@@ -300,7 +300,7 @@ class ResourceTest(MicroversionedTest):
             def index(self, req):
                 return 'success'
 
-        app = fakes.TestRouterV21(Controller())
+        app = fakes.TestRouter(Controller())
         req = webob.Request.blank('/tests')
         req.headers = self._make_microversion_header(invalid_version)
         response = req.get_response(app)

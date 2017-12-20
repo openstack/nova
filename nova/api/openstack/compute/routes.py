@@ -108,7 +108,7 @@ def _create_controller(main_controller, controller_list,
     same resource will be merged into single one controller.
     """
 
-    controller = wsgi.ResourceV21(main_controller())
+    controller = wsgi.Resource(main_controller())
     for ctl in controller_list:
         controller.register_extensions(ctl())
     for ctl in action_controller_list:

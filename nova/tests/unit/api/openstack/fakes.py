@@ -273,15 +273,6 @@ class TestRouter(wsgi.Router):
         super(TestRouter, self).__init__(mapper)
 
 
-class TestRouterV21(wsgi.Router):
-    def __init__(self, controller, mapper=None):
-        if not mapper:
-            mapper = routes.Mapper()
-        mapper.resource("test", "tests",
-                        controller=os_wsgi.ResourceV21(controller))
-        super(TestRouterV21, self).__init__(mapper)
-
-
 class FakeAuthDatabase(object):
     data = {}
 
