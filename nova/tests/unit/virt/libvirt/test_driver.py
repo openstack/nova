@@ -1421,6 +1421,28 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertRaises(exception.NovaException,
                           drvr.set_admin_password, instance, "123")
 
+    @mock.patch('nova.utils.get_image_from_system_metadata')
+    @mock.patch.object(host.Host,
+                       'has_min_version', return_value=True)
+    @mock.patch('nova.virt.libvirt.host.Host.get_guest')
+    def test_set_admin_password_not_implemented(
+            self, mock_get_guest, ver, mock_image):
+        self.flags(virt_type='kvm', group='libvirt')
+        instance = objects.Instance(**self.test_instance)
+        mock_image.return_value = {"properties": {
+            "hw_qemu_guest_agent": "yes"}}
+        mock_guest = mock.Mock(spec=libvirt_guest.Guest)
+        not_implemented = fakelibvirt.make_libvirtError(
+                fakelibvirt.libvirtError,
+                "Guest agent disappeared while executing command",
+                error_code=fakelibvirt.VIR_ERR_AGENT_UNRESPONSIVE)
+        mock_guest.set_user_password.side_effect = not_implemented
+        mock_get_guest.return_value = mock_guest
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        self.assertRaises(NotImplementedError,
+                          drvr.set_admin_password, instance, "123")
+
     @mock.patch.object(objects.Service, 'save')
     @mock.patch.object(objects.Service, 'get_by_compute_host')
     def test_set_host_enabled_with_disable(self, mock_svc, mock_save):
