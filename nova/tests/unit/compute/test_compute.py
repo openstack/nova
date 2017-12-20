@@ -4669,10 +4669,23 @@ class ComputeTestCase(BaseTestCase,
         orig_inst_save = instance.save
         network_api = self.compute.network_api
 
+        # Three fake BDMs:
+        # 1. volume BDM with an attachment_id which will be updated/completed
+        # 2. volume BDM without an attachment_id so it's not updated
+        # 3. non-volume BDM so it's not updated
+        fake_bdms = objects.BlockDeviceMappingList(objects=[
+            objects.BlockDeviceMapping(destination_type='volume',
+                                       attachment_id=uuids.attachment_id,
+                                       device_name='/dev/vdb'),
+            objects.BlockDeviceMapping(destination_type='volume',
+                                       attachment_id=None),
+            objects.BlockDeviceMapping(destination_type='local')
+        ])
+
         with test.nested(
             mock.patch.object(objects.BlockDeviceMappingList,
                               'get_by_instance_uuid',
-                              return_value='fake_bdms'),
+                              return_value=fake_bdms),
             mock.patch.object(network_api, 'setup_networks_on_host'),
             mock.patch.object(network_api, 'migrate_instance_finish'),
             mock.patch.object(self.compute.network_api,
@@ -4683,9 +4696,13 @@ class ComputeTestCase(BaseTestCase,
             mock.patch.object(self.compute, '_get_instance_block_device_info'),
             mock.patch.object(migration, 'save'),
             mock.patch.object(instance, 'save'),
+            mock.patch.object(self.compute.driver, 'get_volume_connector'),
+            mock.patch.object(self.compute.volume_api, 'attachment_update'),
+            mock.patch.object(self.compute.volume_api, 'attachment_complete')
         ) as (mock_get_bdm, mock_setup, mock_net_mig, mock_get_nw, mock_notify,
               mock_notify_action, mock_virt_mig, mock_get_blk, mock_mig_save,
-              mock_inst_save):
+              mock_inst_save, mock_get_vol_connector, mock_attachment_update,
+              mock_attachment_complete):
             def _mig_save():
                 self.assertEqual(migration.status, 'finished')
                 self.assertEqual(vm_state, instance.vm_state)
@@ -4747,10 +4764,10 @@ class ComputeTestCase(BaseTestCase,
             mock_notify_action.assert_has_calls([
                 mock.call(self.context, instance, 'fake-mini',
                           action='resize_finish', phase='start',
-                          bdms='fake_bdms'),
+                          bdms=fake_bdms),
                 mock.call(self.context, instance, 'fake-mini',
                           action='resize_finish', phase='end',
-                          bdms='fake_bdms')])
+                          bdms=fake_bdms)])
             # nova.conf sets the default flavor to m1.small and the test
             # sets the default flavor to m1.tiny so they should be different
             # which makes this a resize
@@ -4760,9 +4777,17 @@ class ComputeTestCase(BaseTestCase,
                 'fake-bdminfo', power_on)
             mock_get_blk.assert_called_once_with(self.context, instance,
                                                  refresh_conn_info=True,
-                                                 bdms='fake_bdms')
+                                                 bdms=fake_bdms)
             mock_inst_save.assert_has_calls(inst_call_list)
             mock_mig_save.assert_called_once_with()
+
+            # We should only have one attachment_update/complete call for the
+            # volume BDM that had an attachment.
+            mock_attachment_update.assert_called_once_with(
+                self.context, uuids.attachment_id,
+                mock_get_vol_connector.return_value, '/dev/vdb')
+            mock_attachment_complete.assert_called_once_with(
+                self.context, uuids.attachment_id)
 
     def test_finish_resize_from_active(self):
         self._test_finish_resize(power_on=True)
