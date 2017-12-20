@@ -17,7 +17,6 @@ import copy
 import webob
 
 from nova.api.openstack.compute.schemas import quota_classes
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import exception
@@ -76,17 +75,17 @@ class QuotaClassSetsController(wsgi.Controller):
         return dict(quota_class_set=result)
 
     @wsgi.Controller.api_version('2.1', '2.49')
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     def show(self, req, id):
         return self._show(req, id, exclude_server_groups=True)
 
     @wsgi.Controller.api_version('2.50', '2.56')  # noqa
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     def show(self, req, id):
         return self._show(req, id, FILTERED_QUOTAS_2_50)
 
     @wsgi.Controller.api_version('2.57')  # noqa
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     def show(self, req, id):
         return self._show(req, id, FILTERED_QUOTAS_2_57)
 
@@ -99,19 +98,19 @@ class QuotaClassSetsController(wsgi.Controller):
                                       exclude_server_groups)
 
     @wsgi.Controller.api_version("2.1", "2.49")  # noqa
-    @extensions.expected_errors(400)
+    @wsgi.expected_errors(400)
     @validation.schema(quota_classes.update)
     def update(self, req, id, body):
         return self._update(req, id, body, exclude_server_groups=True)
 
     @wsgi.Controller.api_version("2.50", "2.56")  # noqa
-    @extensions.expected_errors(400)
+    @wsgi.expected_errors(400)
     @validation.schema(quota_classes.update_v250)
     def update(self, req, id, body):
         return self._update(req, id, body, FILTERED_QUOTAS_2_50)
 
     @wsgi.Controller.api_version("2.57")  # noqa
-    @extensions.expected_errors(400)
+    @wsgi.expected_errors(400)
     @validation.schema(quota_classes.update_v257)
     def update(self, req, id, body):
         return self._update(req, id, body, FILTERED_QUOTAS_2_57)

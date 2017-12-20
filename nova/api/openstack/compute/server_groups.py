@@ -24,7 +24,6 @@ from webob import exc
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import server_groups as schema
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 import nova.conf
@@ -106,7 +105,7 @@ class ServerGroupController(wsgi.Controller):
             server_group['user_id'] = group.user_id
         return server_group
 
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def show(self, req, id):
         """Return data about the given server group."""
         context = _authorize_context(req, 'show')
@@ -117,7 +116,7 @@ class ServerGroupController(wsgi.Controller):
         return {'server_group': self._format_server_group(context, sg, req)}
 
     @wsgi.response(204)
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def delete(self, req, id):
         """Delete a server group."""
         context = _authorize_context(req, 'delete')
@@ -130,7 +129,7 @@ class ServerGroupController(wsgi.Controller):
         except nova.exception.InstanceGroupNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     @validation.query_schema(schema.server_groups_query_param)
     def index(self, req):
         """Returns a list of server groups."""
@@ -147,7 +146,7 @@ class ServerGroupController(wsgi.Controller):
         return {'server_groups': result}
 
     @wsgi.Controller.api_version("2.1")
-    @extensions.expected_errors((400, 403))
+    @wsgi.expected_errors((400, 403))
     @validation.schema(schema.create, "2.0", "2.14")
     @validation.schema(schema.create_v215, "2.15")
     def create(self, req, body):

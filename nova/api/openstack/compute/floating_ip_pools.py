@@ -14,7 +14,6 @@
 
 from nova.api.openstack.api_version_request \
     import MAX_PROXY_API_SUPPORT_VERSION
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import network
 from nova.policies import floating_ip_pools as fip_policies
@@ -41,7 +40,7 @@ class FloatingIPPoolsController(wsgi.Controller):
         super(FloatingIPPoolsController, self).__init__()
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     def index(self, req):
         """Return a list of pools."""
         context = req.environ['nova.context']

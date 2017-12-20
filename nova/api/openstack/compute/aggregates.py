@@ -22,7 +22,6 @@ from webob import exc
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import aggregates
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute_api
@@ -40,7 +39,7 @@ class AggregateController(wsgi.Controller):
     def __init__(self):
         self.api = compute_api.AggregateAPI()
 
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     def index(self, req):
         """Returns a list a host aggregate's id, name, availability_zone."""
         context = _get_context(req)
@@ -51,7 +50,7 @@ class AggregateController(wsgi.Controller):
 
     # NOTE(gmann): Returns 200 for backwards compatibility but should be 201
     # as this operation complete the creation of aggregates resource.
-    @extensions.expected_errors((400, 409))
+    @wsgi.expected_errors((400, 409))
     @validation.schema(aggregates.create_v20, '2.0', '2.0')
     @validation.schema(aggregates.create, '2.1')
     def create(self, req, body):
@@ -85,7 +84,7 @@ class AggregateController(wsgi.Controller):
 
         return agg
 
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def show(self, req, id):
         """Shows the details of an aggregate, hosts and metadata included."""
         context = _get_context(req)
@@ -96,7 +95,7 @@ class AggregateController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=e.format_message())
         return self._marshall_aggregate(req, aggregate)
 
-    @extensions.expected_errors((400, 404, 409))
+    @wsgi.expected_errors((400, 404, 409))
     @validation.schema(aggregates.update_v20, '2.0', '2.0')
     @validation.schema(aggregates.update, '2.1')
     def update(self, req, id, body):
@@ -121,7 +120,7 @@ class AggregateController(wsgi.Controller):
     # NOTE(gmann): Returns 200 for backwards compatibility but should be 204
     # as this operation complete the deletion of aggregate resource and return
     # no response body.
-    @extensions.expected_errors((400, 404))
+    @wsgi.expected_errors((400, 404))
     def delete(self, req, id):
         """Removes an aggregate by id."""
         context = _get_context(req)
@@ -136,7 +135,7 @@ class AggregateController(wsgi.Controller):
     # NOTE(gmann): Returns 200 for backwards compatibility but should be 202
     # for representing async API as this API just accepts the request and
     # request hypervisor driver to complete the same in async mode.
-    @extensions.expected_errors((404, 409))
+    @wsgi.expected_errors((404, 409))
     @wsgi.action('add_host')
     @validation.schema(aggregates.add_host)
     def _add_host(self, req, id, body):
@@ -159,7 +158,7 @@ class AggregateController(wsgi.Controller):
     # NOTE(gmann): Returns 200 for backwards compatibility but should be 202
     # for representing async API as this API just accepts the request and
     # request hypervisor driver to complete the same in async mode.
-    @extensions.expected_errors((404, 409))
+    @wsgi.expected_errors((404, 409))
     @wsgi.action('remove_host')
     @validation.schema(aggregates.remove_host)
     def _remove_host(self, req, id, body):
@@ -181,7 +180,7 @@ class AggregateController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=msg)
         return self._marshall_aggregate(req, aggregate)
 
-    @extensions.expected_errors((400, 404))
+    @wsgi.expected_errors((400, 404))
     @wsgi.action('set_metadata')
     @validation.schema(aggregates.set_metadata)
     def _set_metadata(self, req, id, body):

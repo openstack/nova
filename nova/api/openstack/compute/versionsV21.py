@@ -17,12 +17,11 @@ import webob.exc
 
 from nova.api.openstack.compute import versions
 from nova.api.openstack.compute.views import versions as views_versions
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 
 
 class VersionsController(wsgi.Controller):
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def show(self, req, id='v2.1'):
         builder = views_versions.get_view_builder(req)
         if req.is_legacy_v2():

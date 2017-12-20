@@ -17,7 +17,6 @@ import testscenarios
 import webob
 
 from nova.api.openstack import api_version_request as api_version
-from nova.api.openstack import extensions
 from nova.api.openstack import versioned_method
 from nova.api.openstack import wsgi
 from nova import exception
@@ -329,7 +328,7 @@ class ResourceTest(MicroversionedTest):
 
     def test_resource_call_with_method_post(self):
         class Controller(object):
-            @extensions.expected_errors(400)
+            @wsgi.expected_errors(400)
             def create(self, req, body):
                 if expected_body != body:
                     msg = "The request body invalid"
@@ -1018,3 +1017,41 @@ class TestController(test.NoDBTestCase):
         result = wsgi.Controller.check_for_versions_intersection(func_list=
                                                                  func_list)
         self.assertTrue(result)
+
+
+class ExpectedErrorTestCase(test.NoDBTestCase):
+
+    def test_expected_error(self):
+        @wsgi.expected_errors(404)
+        def fake_func():
+            raise webob.exc.HTTPNotFound()
+
+        self.assertRaises(webob.exc.HTTPNotFound, fake_func)
+
+    def test_expected_error_from_list(self):
+        @wsgi.expected_errors((404, 403))
+        def fake_func():
+            raise webob.exc.HTTPNotFound()
+
+        self.assertRaises(webob.exc.HTTPNotFound, fake_func)
+
+    def test_unexpected_error(self):
+        @wsgi.expected_errors(404)
+        def fake_func():
+            raise webob.exc.HTTPConflict()
+
+        self.assertRaises(webob.exc.HTTPInternalServerError, fake_func)
+
+    def test_unexpected_error_from_list(self):
+        @wsgi.expected_errors((404, 413))
+        def fake_func():
+            raise webob.exc.HTTPConflict()
+
+        self.assertRaises(webob.exc.HTTPInternalServerError, fake_func)
+
+    def test_unexpected_policy_not_authorized_error(self):
+        @wsgi.expected_errors(404)
+        def fake_func():
+            raise exception.PolicyNotAuthorized(action="foo")
+
+        self.assertRaises(exception.PolicyNotAuthorized, fake_func)

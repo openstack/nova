@@ -24,7 +24,6 @@ from webob import exc
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import simple_tenant_usage as schema
 from nova.api.openstack.compute.views import usages as usages_view
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 import nova.conf
@@ -264,28 +263,28 @@ class SimpleTenantUsageController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.40")
     @validation.query_schema(schema.index_query_v240)
-    @extensions.expected_errors(400)
+    @wsgi.expected_errors(400)
     def index(self, req):
         """Retrieve tenant_usage for all tenants."""
         return self._index(req, links=True)
 
     @wsgi.Controller.api_version("2.1", "2.39")  # noqa
     @validation.query_schema(schema.index_query)
-    @extensions.expected_errors(400)
+    @wsgi.expected_errors(400)
     def index(self, req):
         """Retrieve tenant_usage for all tenants."""
         return self._index(req)
 
     @wsgi.Controller.api_version("2.40")
     @validation.query_schema(schema.show_query_v240)
-    @extensions.expected_errors(400)
+    @wsgi.expected_errors(400)
     def show(self, req, id):
         """Retrieve tenant_usage for a specified tenant."""
         return self._show(req, id, links=True)
 
     @wsgi.Controller.api_version("2.1", "2.39")  # noqa
     @validation.query_schema(schema.show_query)
-    @extensions.expected_errors(400)
+    @wsgi.expected_errors(400)
     def show(self, req, id):
         """Retrieve tenant_usage for a specified tenant."""
         return self._show(req, id)

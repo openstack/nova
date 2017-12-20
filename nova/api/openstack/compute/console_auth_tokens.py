@@ -15,7 +15,6 @@
 
 import webob
 
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.consoleauth import rpcapi as consoleauth_rpcapi
 from nova.i18n import _
@@ -55,11 +54,11 @@ class ConsoleAuthTokensController(wsgi.Controller):
                  if i in connect_info}}
 
     @wsgi.Controller.api_version("2.1", "2.30")
-    @extensions.expected_errors((400, 401, 404))
+    @wsgi.expected_errors((400, 401, 404))
     def show(self, req, id):
         return self._show(req, id, True)
 
     @wsgi.Controller.api_version("2.31")  # noqa
-    @extensions.expected_errors((400, 404))
+    @wsgi.expected_errors((400, 404))
     def show(self, req, id):
         return self._show(req, id, False)

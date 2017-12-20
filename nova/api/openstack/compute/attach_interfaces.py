@@ -20,7 +20,6 @@ from webob import exc
 
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import attach_interfaces
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
@@ -49,7 +48,7 @@ class InterfaceAttachmentController(wsgi.Controller):
         self.network_api = network.API()
         super(InterfaceAttachmentController, self).__init__()
 
-    @extensions.expected_errors((404, 501))
+    @wsgi.expected_errors((404, 501))
     def index(self, req, server_id):
         """Returns the list of interface attachments for a given instance."""
         context = req.environ['nova.context']
@@ -71,7 +70,7 @@ class InterfaceAttachmentController(wsgi.Controller):
 
         return {'interfaceAttachments': results}
 
-    @extensions.expected_errors((403, 404))
+    @wsgi.expected_errors((403, 404))
     def show(self, req, server_id, id):
         """Return data about the given interface attachment."""
         context = req.environ['nova.context']
@@ -98,7 +97,7 @@ class InterfaceAttachmentController(wsgi.Controller):
         return {'interfaceAttachment': _translate_interface_attachment_view(
                 port_info['port'])}
 
-    @extensions.expected_errors((400, 404, 409, 500, 501))
+    @wsgi.expected_errors((400, 404, 409, 500, 501))
     @validation.schema(attach_interfaces.create, '2.0', '2.48')
     @validation.schema(attach_interfaces.create_v249, '2.49')
     def create(self, req, server_id, body):
@@ -157,7 +156,7 @@ class InterfaceAttachmentController(wsgi.Controller):
         return self.show(req, server_id, vif['id'])
 
     @wsgi.response(202)
-    @extensions.expected_errors((404, 409, 501))
+    @wsgi.expected_errors((404, 409, 501))
     def delete(self, req, server_id, id):
         """Detach an interface from an instance."""
         context = req.environ['nova.context']

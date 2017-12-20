@@ -25,7 +25,6 @@ from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import hypervisors as hyper_schema
 from nova.api.openstack.compute.views import hypervisors as hyper_view
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.cells import utils as cells_utils
@@ -192,7 +191,7 @@ class HypervisorsController(wsgi.Controller):
     @wsgi.Controller.api_version(UUID_FOR_ID_MIN_VERSION)
     @validation.query_schema(hyper_schema.list_query_schema_v253,
                              UUID_FOR_ID_MIN_VERSION)
-    @extensions.expected_errors((400, 404))
+    @wsgi.expected_errors((400, 404))
     def index(self, req):
         """Starting with the 2.53 microversion, the id field in the response
         is the compute_nodes.uuid value. Also, the search and servers routes
@@ -205,13 +204,13 @@ class HypervisorsController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.33", "2.52")  # noqa
     @validation.query_schema(hyper_schema.list_query_schema_v233)
-    @extensions.expected_errors((400))
+    @wsgi.expected_errors((400))
     def index(self, req):
         limit, marker = common.get_limit_and_marker(req)
         return self._index(req, limit=limit, marker=marker, links=True)
 
     @wsgi.Controller.api_version("2.1", "2.32")  # noqa
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     def index(self, req):
         return self._index(req)
 
@@ -222,7 +221,7 @@ class HypervisorsController(wsgi.Controller):
     @wsgi.Controller.api_version(UUID_FOR_ID_MIN_VERSION)
     @validation.query_schema(hyper_schema.list_query_schema_v253,
                              UUID_FOR_ID_MIN_VERSION)
-    @extensions.expected_errors((400, 404))
+    @wsgi.expected_errors((400, 404))
     def detail(self, req):
         """Starting with the 2.53 microversion, the id field in the response
         is the compute_nodes.uuid value. Also, the search and servers routes
@@ -235,13 +234,13 @@ class HypervisorsController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.33", "2.52")  # noqa
     @validation.query_schema(hyper_schema.list_query_schema_v233)
-    @extensions.expected_errors((400))
+    @wsgi.expected_errors((400))
     def detail(self, req):
         limit, marker = common.get_limit_and_marker(req)
         return self._detail(req, limit=limit, marker=marker, links=True)
 
     @wsgi.Controller.api_version("2.1", "2.32")  # noqa
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     def detail(self, req):
         return self._detail(req)
 
@@ -283,7 +282,7 @@ class HypervisorsController(wsgi.Controller):
     @wsgi.Controller.api_version(UUID_FOR_ID_MIN_VERSION)
     @validation.query_schema(hyper_schema.show_query_schema_v253,
                              UUID_FOR_ID_MIN_VERSION)
-    @extensions.expected_errors((400, 404))
+    @wsgi.expected_errors((400, 404))
     def show(self, req, id):
         """The 2.53 microversion requires that the id is a uuid and as a result
         it can also return a 400 response if an invalid uuid is passed.
@@ -296,7 +295,7 @@ class HypervisorsController(wsgi.Controller):
         return self._show(req, id, with_servers)
 
     @wsgi.Controller.api_version("2.1", "2.52")     # noqa F811
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def show(self, req, id):
         return self._show(req, id)
 
@@ -321,7 +320,7 @@ class HypervisorsController(wsgi.Controller):
         return dict(hypervisor=self._view_hypervisor(
             hyp, service, True, req, instances))
 
-    @extensions.expected_errors((400, 404, 501))
+    @wsgi.expected_errors((400, 404, 501))
     def uptime(self, req, id):
         context = req.environ['nova.context']
         context.can(hv_policies.BASE_POLICY_NAME)
@@ -354,7 +353,7 @@ class HypervisorsController(wsgi.Controller):
                                                      uptime=uptime))
 
     @wsgi.Controller.api_version('2.1', '2.52')
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def search(self, req, id):
         """Prior to microversion 2.53 you could search for hypervisors by a
         hostname pattern on a dedicated route. Starting with 2.53, searching
@@ -377,7 +376,7 @@ class HypervisorsController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=msg)
 
     @wsgi.Controller.api_version('2.1', '2.52')
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def servers(self, req, id):
         """Prior to microversion 2.53 you could search for hypervisors by a
         hostname pattern and include servers on those hosts in the response on
@@ -402,7 +401,7 @@ class HypervisorsController(wsgi.Controller):
             hypervisors.append(hyp)
         return dict(hypervisors=hypervisors)
 
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     def statistics(self, req):
         context = req.environ['nova.context']
         context.can(hv_policies.BASE_POLICY_NAME)

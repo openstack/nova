@@ -23,7 +23,6 @@ from nova.api.openstack.api_version_request \
     import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import volumes as volumes_schema
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
@@ -103,7 +102,7 @@ class VolumeController(wsgi.Controller):
         super(VolumeController, self).__init__()
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def show(self, req, id):
         """Return data about the given volume."""
         context = req.environ['nova.context']
@@ -118,7 +117,7 @@ class VolumeController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.response(202)
-    @extensions.expected_errors((400, 404))
+    @wsgi.expected_errors((400, 404))
     def delete(self, req, id):
         """Delete a volume."""
         context = req.environ['nova.context']
@@ -133,14 +132,14 @@ class VolumeController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @validation.query_schema(volumes_schema.index_query)
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     def index(self, req):
         """Returns a summary list of volumes."""
         return self._items(req, entity_maker=_translate_volume_summary_view)
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @validation.query_schema(volumes_schema.detail_query)
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     def detail(self, req):
         """Returns a detailed list of volumes."""
         return self._items(req, entity_maker=_translate_volume_detail_view)
@@ -156,7 +155,7 @@ class VolumeController(wsgi.Controller):
         return {'volumes': res}
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors((400, 403, 404))
+    @wsgi.expected_errors((400, 403, 404))
     @validation.schema(volumes_schema.create)
     def create(self, req, body):
         """Creates a new volume."""
@@ -263,7 +262,7 @@ class VolumeAttachmentController(wsgi.Controller):
         self.volume_api = cinder.API()
         super(VolumeAttachmentController, self).__init__()
 
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     @validation.query_schema(volumes_schema.index_query)
     def index(self, req, server_id):
         """Returns the list of volume attachments for a given instance."""
@@ -286,7 +285,7 @@ class VolumeAttachmentController(wsgi.Controller):
 
         return {'volumeAttachments': results}
 
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def show(self, req, server_id, id):
         """Return data about the given volume attachment."""
         context = req.environ['nova.context']
@@ -311,7 +310,7 @@ class VolumeAttachmentController(wsgi.Controller):
             assigned_mountpoint)}
 
     # TODO(mriedem): This API should return a 202 instead of a 200 response.
-    @extensions.expected_errors((400, 404, 409))
+    @wsgi.expected_errors((400, 404, 409))
     @validation.schema(volumes_schema.create_volume_attachment, '2.0', '2.48')
     @validation.schema(volumes_schema.create_volume_attachment_v249, '2.49')
     def create(self, req, server_id, body):
@@ -357,7 +356,7 @@ class VolumeAttachmentController(wsgi.Controller):
         return {'volumeAttachment': attachment}
 
     @wsgi.response(202)
-    @extensions.expected_errors((400, 404, 409))
+    @wsgi.expected_errors((400, 404, 409))
     @validation.schema(volumes_schema.update_volume_attachment)
     def update(self, req, server_id, id, body):
         context = req.environ['nova.context']
@@ -398,7 +397,7 @@ class VolumeAttachmentController(wsgi.Controller):
                     'swap_volume', server_id)
 
     @wsgi.response(202)
-    @extensions.expected_errors((400, 403, 404, 409))
+    @wsgi.expected_errors((400, 403, 404, 409))
     def delete(self, req, server_id, id):
         """Detach a volume from an instance."""
         context = req.environ['nova.context']
@@ -477,7 +476,7 @@ class SnapshotController(wsgi.Controller):
         super(SnapshotController, self).__init__()
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def show(self, req, id):
         """Return data about the given snapshot."""
         context = req.environ['nova.context']
@@ -492,7 +491,7 @@ class SnapshotController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.response(202)
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def delete(self, req, id):
         """Delete a snapshot."""
         context = req.environ['nova.context']
@@ -505,14 +504,14 @@ class SnapshotController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @validation.query_schema(volumes_schema.index_query)
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     def index(self, req):
         """Returns a summary list of snapshots."""
         return self._items(req, entity_maker=_translate_snapshot_summary_view)
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @validation.query_schema(volumes_schema.detail_query)
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     def detail(self, req):
         """Returns a detailed list of snapshots."""
         return self._items(req, entity_maker=_translate_snapshot_detail_view)
@@ -528,7 +527,7 @@ class SnapshotController(wsgi.Controller):
         return {'snapshots': res}
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors((400, 403))
+    @wsgi.expected_errors((400, 403))
     @validation.schema(volumes_schema.snapshot_create)
     def create(self, req, body):
         """Creates a new snapshot."""

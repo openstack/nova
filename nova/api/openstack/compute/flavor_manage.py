@@ -17,7 +17,6 @@ from oslo_log import log as logging
 from nova.api.openstack import api_version_request
 from nova.api.openstack.compute.schemas import flavor_manage
 from nova.api.openstack.compute.views import flavors as flavors_view
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import flavors
@@ -43,7 +42,7 @@ class FlavorManageController(wsgi.Controller):
     # 204 as this operation complete the deletion of aggregate resource and
     # return no response body.
     @wsgi.response(202)
-    @extensions.expected_errors((404))
+    @wsgi.expected_errors((404))
     @wsgi.action("delete")
     def _delete(self, req, id):
         context = req.environ['nova.context']
@@ -66,7 +65,7 @@ class FlavorManageController(wsgi.Controller):
     # NOTE(oomichi): Return 200 for backwards compatibility but should be 201
     # as this operation complete the creation of flavor resource.
     @wsgi.action("create")
-    @extensions.expected_errors((400, 409))
+    @wsgi.expected_errors((400, 409))
     @validation.schema(flavor_manage.create_v20, '2.0', '2.0')
     @validation.schema(flavor_manage.create, '2.1', '2.54')
     @validation.schema(flavor_manage.create_v2_55,
@@ -118,7 +117,7 @@ class FlavorManageController(wsgi.Controller):
 
     @wsgi.Controller.api_version(flavors_view.FLAVOR_DESCRIPTION_MICROVERSION)
     @wsgi.action('update')
-    @extensions.expected_errors((400, 404))
+    @wsgi.expected_errors((400, 404))
     @validation.schema(flavor_manage.update_v2_55,
                        flavors_view.FLAVOR_DESCRIPTION_MICROVERSION)
     def _update(self, req, id, body):

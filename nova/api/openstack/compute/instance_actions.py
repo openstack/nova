@@ -23,7 +23,6 @@ from nova.api.openstack.compute.schemas \
     import instance_actions as schema_instance_actions
 from nova.api.openstack.compute.views \
     import instance_actions as instance_actions_view
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
@@ -73,7 +72,7 @@ class InstanceActionsController(wsgi.Controller):
             return common.get_instance(self.compute_api, context, server_id)
 
     @wsgi.Controller.api_version("2.1", "2.57")
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def index(self, req, server_id):
         """Returns the list of actions recorded for a given instance."""
         context = req.environ["nova.context"]
@@ -85,7 +84,7 @@ class InstanceActionsController(wsgi.Controller):
         return {'instanceActions': actions}
 
     @wsgi.Controller.api_version("2.58")  # noqa
-    @extensions.expected_errors((400, 404))
+    @wsgi.expected_errors((400, 404))
     @validation.query_schema(schema_instance_actions.list_query_params_v258,
                              "2.58")
     def index(self, req, server_id):
@@ -115,7 +114,7 @@ class InstanceActionsController(wsgi.Controller):
             actions_dict['links'] = actions_links
         return actions_dict
 
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def show(self, req, server_id, id):
         """Return data about the given instance action."""
         context = req.environ['nova.context']

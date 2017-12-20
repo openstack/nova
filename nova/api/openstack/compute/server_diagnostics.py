@@ -18,7 +18,6 @@ import webob
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.views import server_diagnostics
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
@@ -33,7 +32,7 @@ class ServerDiagnosticsController(wsgi.Controller):
         super(ServerDiagnosticsController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
-    @extensions.expected_errors((400, 404, 409, 501))
+    @wsgi.expected_errors((400, 404, 409, 501))
     def index(self, req, server_id):
         context = req.environ["nova.context"]
         context.can(sd_policies.BASE_POLICY_NAME)

@@ -19,7 +19,6 @@ import webob.exc
 from nova.api.openstack.api_version_request \
     import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack.compute.schemas import floating_ips_bulk
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 import nova.conf
@@ -34,7 +33,7 @@ CONF = nova.conf.CONF
 class FloatingIPBulkController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def index(self, req):
         """Return a list of all floating IPs."""
         context = req.environ['nova.context']
@@ -43,7 +42,7 @@ class FloatingIPBulkController(wsgi.Controller):
         return self._get_floating_ip_info(context)
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def show(self, req, id):
         """Return a list of all floating IPs for a given host."""
         context = req.environ['nova.context']
@@ -84,7 +83,7 @@ class FloatingIPBulkController(wsgi.Controller):
         return floating_ip_info
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors((400, 409))
+    @wsgi.expected_errors((400, 409))
     @validation.schema(floating_ips_bulk.create)
     def create(self, req, body):
         """Bulk create floating IPs."""
@@ -113,7 +112,7 @@ class FloatingIPBulkController(wsgi.Controller):
                                                "interface": interface}}
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors((400, 404))
+    @wsgi.expected_errors((400, 404))
     @validation.schema(floating_ips_bulk.delete)
     def update(self, req, id, body):
         """Bulk delete floating IPs."""

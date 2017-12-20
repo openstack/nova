@@ -18,7 +18,6 @@ from webob import exc
 import nova
 from nova.api.openstack import common
 from nova.api.openstack.compute.views import addresses as views_addresses
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.i18n import _
 from nova.policies import ips as ips_policies
@@ -36,7 +35,7 @@ class IPsController(wsgi.Controller):
         super(IPsController, self).__init__(**kwargs)
         self._compute_api = nova.compute.API()
 
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def index(self, req, server_id):
         context = req.environ["nova.context"]
         context.can(ips_policies.POLICY_ROOT % 'index')
@@ -44,7 +43,7 @@ class IPsController(wsgi.Controller):
         networks = common.get_networks_for_instance(context, instance)
         return self._view_builder.index(networks)
 
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def show(self, req, server_id, id):
         context = req.environ["nova.context"]
         context.can(ips_policies.POLICY_ROOT % 'show')

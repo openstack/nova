@@ -20,7 +20,6 @@ from nova.api.openstack.api_version_request \
     import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import floating_ip_dns
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import exception
@@ -86,7 +85,7 @@ class FloatingIPDNSDomainController(wsgi.Controller):
         self.network_api = network.API()
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors(501)
+    @wsgi.expected_errors(501)
     def index(self, req):
         """Return a list of available DNS domains."""
         context = req.environ['nova.context']
@@ -106,7 +105,7 @@ class FloatingIPDNSDomainController(wsgi.Controller):
         return _translate_domain_entries_view(domainlist)
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors((400, 501))
+    @wsgi.expected_errors((400, 501))
     @validation.schema(floating_ip_dns.domain_entry_update)
     def update(self, req, id, body):
         """Add or modify domain entry."""
@@ -142,7 +141,7 @@ class FloatingIPDNSDomainController(wsgi.Controller):
                                              area_name: area})
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors((404, 501))
+    @wsgi.expected_errors((404, 501))
     @wsgi.response(202)
     def delete(self, req, id):
         """Delete the domain identified by id."""
@@ -167,7 +166,7 @@ class FloatingIPDNSEntryController(wsgi.Controller):
         self.network_api = network.API()
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors((404, 501))
+    @wsgi.expected_errors((404, 501))
     def show(self, req, domain_id, id):
         """Return the DNS entry that corresponds to domain_id and id."""
         context = req.environ['nova.context']
@@ -205,7 +204,7 @@ class FloatingIPDNSEntryController(wsgi.Controller):
         return _translate_dns_entry_view(entry)
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors(501)
+    @wsgi.expected_errors(501)
     @validation.schema(floating_ip_dns.dns_entry_update)
     def update(self, req, domain_id, id, body):
         """Add or modify dns entry."""
@@ -237,7 +236,7 @@ class FloatingIPDNSEntryController(wsgi.Controller):
                                           'domain': domain})
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors((404, 501))
+    @wsgi.expected_errors((404, 501))
     @wsgi.response(202)
     def delete(self, req, domain_id, id):
         """Delete the entry identified by req and id."""

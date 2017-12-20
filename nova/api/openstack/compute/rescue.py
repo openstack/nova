@@ -18,7 +18,6 @@ from webob import exc
 
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import rescue
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
@@ -38,7 +37,7 @@ class RescueController(wsgi.Controller):
     # TODO(cyeoh): Should be responding here with 202 Accept
     # because rescue is an async call, but keep to 200
     # for backwards compatibility reasons.
-    @extensions.expected_errors((400, 404, 409, 501))
+    @wsgi.expected_errors((400, 404, 409, 501))
     @wsgi.action('rescue')
     @validation.schema(rescue.rescue)
     def _rescue(self, req, id, body):
@@ -81,7 +80,7 @@ class RescueController(wsgi.Controller):
             return {}
 
     @wsgi.response(202)
-    @extensions.expected_errors((404, 409, 501))
+    @wsgi.expected_errors((404, 409, 501))
     @wsgi.action('unrescue')
     def _unrescue(self, req, id, body):
         """Unrescue an instance."""

@@ -20,7 +20,6 @@ import webob
 
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import console_output
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
@@ -33,7 +32,7 @@ class ConsoleOutputController(wsgi.Controller):
         super(ConsoleOutputController, self).__init__(*args, **kwargs)
         self.compute_api = compute.API()
 
-    @extensions.expected_errors((404, 409, 501))
+    @wsgi.expected_errors((404, 409, 501))
     @wsgi.action('os-getConsoleOutput')
     @validation.schema(console_output.get_console_output)
     def get_console_output(self, req, id, body):

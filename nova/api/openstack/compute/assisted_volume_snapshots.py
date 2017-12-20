@@ -21,7 +21,6 @@ import six
 from webob import exc
 
 from nova.api.openstack.compute.schemas import assisted_volume_snapshots
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
@@ -36,7 +35,7 @@ class AssistedVolumeSnapshotsController(wsgi.Controller):
         self.compute_api = compute.API()
         super(AssistedVolumeSnapshotsController, self).__init__()
 
-    @extensions.expected_errors(400)
+    @wsgi.expected_errors(400)
     @validation.schema(assisted_volume_snapshots.snapshots_create)
     def create(self, req, body):
         """Creates a new snapshot."""
@@ -64,7 +63,7 @@ class AssistedVolumeSnapshotsController(wsgi.Controller):
 
     @wsgi.response(204)
     @validation.query_schema(assisted_volume_snapshots.delete_query)
-    @extensions.expected_errors((400, 404))
+    @wsgi.expected_errors((400, 404))
     def delete(self, req, id):
         """Delete a snapshot."""
         context = req.environ['nova.context']

@@ -16,7 +16,6 @@ from oslo_log import log as logging
 import webob
 
 from nova.api.openstack.compute.schemas import server_external_events
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
@@ -63,7 +62,7 @@ class ServerExternalEventsController(wsgi.Controller):
 
         return instances
 
-    @extensions.expected_errors((403, 404))
+    @wsgi.expected_errors((403, 404))
     @wsgi.response(200)
     @validation.schema(server_external_events.create, '2.1', '2.50')
     @validation.schema(server_external_events.create_v251, '2.51')

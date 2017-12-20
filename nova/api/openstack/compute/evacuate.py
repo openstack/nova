@@ -19,7 +19,6 @@ from webob import exc
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import evacuate
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
@@ -70,7 +69,7 @@ class EvacuateController(wsgi.Controller):
     # TODO(eliqiao): Should be responding here with 202 Accept
     # because evacuate is an async call, but keep to 200 for
     # backwards compatibility reasons.
-    @extensions.expected_errors((400, 404, 409))
+    @wsgi.expected_errors((400, 404, 409))
     @wsgi.action('evacuate')
     @validation.schema(evacuate.evacuate, "2.0", "2.13")
     @validation.schema(evacuate.evacuate_v214, "2.14", "2.28")

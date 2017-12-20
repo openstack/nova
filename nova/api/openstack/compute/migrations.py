@@ -13,7 +13,6 @@
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import migrations as schema_migrations
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
@@ -69,7 +68,7 @@ class MigrationsController(wsgi.Controller):
 
         return objects
 
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     @validation.query_schema(schema_migrations.list_query_schema_v20)
     def index(self, req):
         """Return all migrations using the query parameters as filters."""

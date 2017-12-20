@@ -16,7 +16,6 @@ import webob
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import server_tags as schema
 from nova.api.openstack.compute.views import server_tags
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.api.validation import parameter_types
@@ -63,7 +62,7 @@ class ServerTagsController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.26")
     @wsgi.response(204)
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def show(self, req, server_id, id):
         context = req.environ["nova.context"]
         context.can(st_policies.POLICY_ROOT % 'show')
@@ -83,7 +82,7 @@ class ServerTagsController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=msg)
 
     @wsgi.Controller.api_version("2.26")
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def index(self, req, server_id):
         context = req.environ["nova.context"]
         context.can(st_policies.POLICY_ROOT % 'index')
@@ -100,7 +99,7 @@ class ServerTagsController(wsgi.Controller):
         return {'tags': _get_tags_names(tags)}
 
     @wsgi.Controller.api_version("2.26")
-    @extensions.expected_errors((400, 404, 409))
+    @wsgi.expected_errors((400, 404, 409))
     @validation.schema(schema.update)
     def update(self, req, server_id, id, body):
         context = req.environ["nova.context"]
@@ -152,7 +151,7 @@ class ServerTagsController(wsgi.Controller):
         return response
 
     @wsgi.Controller.api_version("2.26")
-    @extensions.expected_errors((404, 409))
+    @wsgi.expected_errors((404, 409))
     @validation.schema(schema.update_all)
     def update_all(self, req, server_id, body):
         context = req.environ["nova.context"]
@@ -177,7 +176,7 @@ class ServerTagsController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.26")
     @wsgi.response(204)
-    @extensions.expected_errors((404, 409))
+    @wsgi.expected_errors((404, 409))
     def delete(self, req, server_id, id):
         context = req.environ["nova.context"]
         context.can(st_policies.POLICY_ROOT % 'delete')
@@ -201,7 +200,7 @@ class ServerTagsController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.26")
     @wsgi.response(204)
-    @extensions.expected_errors((404, 409))
+    @wsgi.expected_errors((404, 409))
     def delete_all(self, req, server_id):
         context = req.environ["nova.context"]
         context.can(st_policies.POLICY_ROOT % 'delete_all')

@@ -18,7 +18,6 @@ import webob
 
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import flavors_extraspecs
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import exception
@@ -46,7 +45,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
                 raise webob.exc.HTTPBadRequest(
                           explanation=error.format_message())
 
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def index(self, req, flavor_id):
         """Returns the list of extra specs for a given flavor."""
         context = req.environ['nova.context']
@@ -56,7 +55,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
     # NOTE(gmann): Here should be 201 instead of 200 by v2.1
     # +microversions because the flavor extra specs has been created
     # completely when returning a response.
-    @extensions.expected_errors((400, 404, 409))
+    @wsgi.expected_errors((400, 404, 409))
     @validation.schema(flavors_extraspecs.create)
     def create(self, req, flavor_id, body):
         context = req.environ['nova.context']
@@ -74,7 +73,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         return body
 
-    @extensions.expected_errors((400, 404, 409))
+    @wsgi.expected_errors((400, 404, 409))
     @validation.schema(flavors_extraspecs.update)
     def update(self, req, flavor_id, id, body):
         context = req.environ['nova.context']
@@ -94,7 +93,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
         return body
 
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def show(self, req, flavor_id, id):
         """Return a single extra spec item."""
         context = req.environ['nova.context']
@@ -111,7 +110,7 @@ class FlavorExtraSpecsController(wsgi.Controller):
     # NOTE(gmann): Here should be 204(No Content) instead of 200 by v2.1
     # +microversions because the flavor extra specs has been deleted
     # completely when returning a response.
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def delete(self, req, flavor_id, id):
         """Deletes an existing extra spec."""
         context = req.environ['nova.context']

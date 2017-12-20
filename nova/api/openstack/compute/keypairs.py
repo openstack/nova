@@ -22,7 +22,6 @@ from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import keypairs
 from nova.api.openstack.compute.views import keypairs as keypairs_view
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.compute import api as compute_api
@@ -56,7 +55,7 @@ class KeypairController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.10")
     @wsgi.response(201)
-    @extensions.expected_errors((400, 403, 409))
+    @wsgi.expected_errors((400, 403, 409))
     @validation.schema(keypairs.create_v210)
     def create(self, req, body):
         """Create or import keypair.
@@ -75,7 +74,7 @@ class KeypairController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.2", "2.9")  # noqa
     @wsgi.response(201)
-    @extensions.expected_errors((400, 403, 409))
+    @wsgi.expected_errors((400, 403, 409))
     @validation.schema(keypairs.create_v22)
     def create(self, req, body):
         """Create or import keypair.
@@ -95,7 +94,7 @@ class KeypairController(wsgi.Controller):
         return self._create(req, body, type=True)
 
     @wsgi.Controller.api_version("2.1", "2.1")  # noqa
-    @extensions.expected_errors((400, 403, 409))
+    @wsgi.expected_errors((400, 403, 409))
     @validation.schema(keypairs.create_v20, "2.0", "2.0")
     @validation.schema(keypairs.create, "2.1", "2.1")
     def create(self, req, body):
@@ -149,21 +148,21 @@ class KeypairController(wsgi.Controller):
     @wsgi.Controller.api_version("2.1", "2.1")
     @validation.query_schema(keypairs.delete_query_schema_v20)
     @wsgi.response(202)
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def delete(self, req, id):
         self._delete(req, id)
 
     @wsgi.Controller.api_version("2.2", "2.9")    # noqa
     @validation.query_schema(keypairs.delete_query_schema_v20)
     @wsgi.response(204)
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def delete(self, req, id):
         self._delete(req, id)
 
     @wsgi.Controller.api_version("2.10")    # noqa
     @validation.query_schema(keypairs.delete_query_schema_v210)
     @wsgi.response(204)
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def delete(self, req, id):
         # handle optional user-id for admin only
         user_id = self._get_user_id(req)
@@ -189,7 +188,7 @@ class KeypairController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.10")
     @validation.query_schema(keypairs.show_query_schema_v210)
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def show(self, req, id):
         # handle optional user-id for admin only
         user_id = self._get_user_id(req)
@@ -197,13 +196,13 @@ class KeypairController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.2", "2.9")  # noqa
     @validation.query_schema(keypairs.show_query_schema_v20)
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def show(self, req, id):
         return self._show(req, id, type=True)
 
     @wsgi.Controller.api_version("2.1", "2.1")  # noqa
     @validation.query_schema(keypairs.show_query_schema_v20)
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def show(self, req, id):
         return self._show(req, id)
 
@@ -232,14 +231,14 @@ class KeypairController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.35")
     @validation.query_schema(keypairs.index_query_schema_v235)
-    @extensions.expected_errors(400)
+    @wsgi.expected_errors(400)
     def index(self, req):
         user_id = self._get_user_id(req)
         return self._index(req, links=True, type=True, user_id=user_id)
 
     @wsgi.Controller.api_version("2.10", "2.34")  # noqa
     @validation.query_schema(keypairs.index_query_schema_v210)
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     def index(self, req):
         # handle optional user-id for admin only
         user_id = self._get_user_id(req)
@@ -247,13 +246,13 @@ class KeypairController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.2", "2.9")  # noqa
     @validation.query_schema(keypairs.index_query_schema_v20)
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     def index(self, req):
         return self._index(req, type=True)
 
     @wsgi.Controller.api_version("2.1", "2.1")  # noqa
     @validation.query_schema(keypairs.index_query_schema_v20)
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     def index(self, req):
         return self._index(req)
 

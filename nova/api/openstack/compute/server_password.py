@@ -17,7 +17,6 @@
 
 from nova.api.metadata import password
 from nova.api.openstack import common
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
 from nova.policies import server_password as sp_policies
@@ -28,7 +27,7 @@ class ServerPasswordController(wsgi.Controller):
     def __init__(self):
         self.compute_api = compute.API()
 
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def index(self, req, server_id):
         context = req.environ['nova.context']
         context.can(sp_policies.BASE_POLICY_NAME)
@@ -37,7 +36,7 @@ class ServerPasswordController(wsgi.Controller):
         passw = password.extract_password(instance)
         return {'password': passw or ''}
 
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     @wsgi.response(204)
     def clear(self, req, server_id):
         """Removes the encrypted server password from the metadata server

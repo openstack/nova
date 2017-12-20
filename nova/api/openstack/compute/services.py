@@ -18,7 +18,6 @@ import webob.exc
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack.compute.schemas import services
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import availability_zones
@@ -190,7 +189,7 @@ class ServiceController(wsgi.Controller):
         return action(body, context)
 
     @wsgi.response(204)
-    @extensions.expected_errors((400, 404))
+    @wsgi.expected_errors((400, 404))
     def delete(self, req, id):
         """Deletes the specified service."""
         context = req.environ['nova.context']
@@ -228,7 +227,7 @@ class ServiceController(wsgi.Controller):
             raise webob.exc.HTTPBadRequest(explanation=explanation)
 
     @validation.query_schema(services.index_query_schema)
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     def index(self, req):
         """Return a list of all running services. Filter by host & service
         name
@@ -241,7 +240,7 @@ class ServiceController(wsgi.Controller):
         return {'services': _services}
 
     @wsgi.Controller.api_version('2.1', '2.52')
-    @extensions.expected_errors((400, 404))
+    @wsgi.expected_errors((400, 404))
     @validation.schema(services.service_update, '2.0', '2.10')
     @validation.schema(services.service_update_v211, '2.11', '2.52')
     def update(self, req, id, body):
@@ -261,7 +260,7 @@ class ServiceController(wsgi.Controller):
         return self._perform_action(req, id, body, actions)
 
     @wsgi.Controller.api_version(UUID_FOR_ID_MIN_VERSION)  # noqa F811
-    @extensions.expected_errors((400, 404))
+    @wsgi.expected_errors((400, 404))
     @validation.schema(services.service_update_v2_53, UUID_FOR_ID_MIN_VERSION)
     def update(self, req, id, body):
         """Perform service update
