@@ -1057,12 +1057,6 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
     def setUp(self, mock_init_agg, mock_init_inst):
         super(HostManagerChangedNodesTestCase, self).setUp()
         self.host_manager = host_manager.HostManager()
-        self.fake_hosts = [
-              host_manager.HostState('host1', 'node1', uuids.cell),
-              host_manager.HostState('host2', 'node2', uuids.cell),
-              host_manager.HostState('host3', 'node3', uuids.cell),
-              host_manager.HostState('host4', 'node4', uuids.cell)
-            ]
 
     @mock.patch('nova.objects.ServiceList.get_by_binary')
     @mock.patch('nova.objects.ComputeNodeList.get_all')
