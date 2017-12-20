@@ -1217,7 +1217,6 @@ class TestAllocation(ResourceProviderBaseCase):
                          disk_allocation.used)
         self.assertEqual(DISK_ALLOCATION['consumer_id'],
                          disk_allocation.consumer_id)
-        self.assertIsInstance(disk_allocation.id, int)
 
         allocations = rp_obj.AllocationList.get_all_by_resource_provider(
             self.ctx, resource_provider)
