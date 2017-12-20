@@ -83,12 +83,13 @@ class BlockDeviceDict(dict):
     def _validate(self, bdm_dict):
         """Basic data format validations."""
         dict_fields = set(key for key, _ in bdm_dict.items())
+        valid_fields = self._fields | self._db_only_fields
 
         # Check that there are no bogus fields
-        if not (dict_fields <=
-                (self._fields | self._db_only_fields)):
+        if not (dict_fields <= valid_fields):
             raise exception.InvalidBDMFormat(
-                details=_("Some fields are invalid."))
+                    details=("Following fields are invalid: %s" %
+                             " ".join(dict_fields - valid_fields)))
 
         if bdm_dict.get('no_device'):
             return
