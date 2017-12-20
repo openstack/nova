@@ -438,13 +438,9 @@ class Resource(wsgi.Application):
     """
     support_api_request_version = True
 
-    def __init__(self, controller, inherits=None):
+    def __init__(self, controller):
         """:param controller: object that implement methods created by routes
                               lib
-           :param inherits: another resource object that this resource should
-                            inherit extensions from. Any action extensions that
-                            are applied to the parent resource will also apply
-                            to this resource.
         """
 
         self.controller = controller
@@ -459,7 +455,6 @@ class Resource(wsgi.Application):
         # Save a mapping of extensions
         self.wsgi_extensions = {}
         self.wsgi_action_extensions = {}
-        self.inherits = inherits
 
     def register_actions(self, controller):
         """Registers controller actions with this resource."""
@@ -696,12 +691,6 @@ class Resource(wsgi.Application):
                                             action,
                                             content_type,
                                             body)
-        if self.inherits:
-            _meth, parent_ext = self.inherits.get_method(request,
-                                                         action,
-                                                         content_type,
-                                                         body)
-            extensions.extend(parent_ext)
         return meth, extensions
 
     def _get_method(self, request, action, content_type, body):
