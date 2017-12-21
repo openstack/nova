@@ -488,16 +488,20 @@ default to "none".
 
 Possible values:
 
-* ``host-model``: Clones the host CPU feature flags.
-* ``host-passthrough``: Use the host CPU model exactly;
-* ``custom``: Use a named CPU model;
-* ``none``: Not set any CPU model.
+* ``host-model``: Clones the host CPU feature flags
+* ``host-passthrough``: Use the host CPU model exactly
+* ``custom``: Use a named CPU model
+* ``none``: Don't set a specific CPU model. For instances with
+``virt_type`` as KVM/QEMU, the default CPU model from QEMU will be used,
+which provides a basic set of CPU features that are compatible with most
+hosts.
 
 Related options:
 
-* ``cpu_model``: If ``custom`` is used for ``cpu_mode``, set this config
-  option too, otherwise this would result in an error and the instance won't
-  be launched.
+* ``cpu_model``: This should be set ONLY when ``cpu_mode`` is set to
+``custom``. Otherwise, it would result in an error and the instance
+launch will fail.
+
 """),
     cfg.StrOpt('cpu_model',
                help="""
@@ -505,12 +509,14 @@ Set the name of the libvirt CPU model the instance should use.
 
 Possible values:
 
-* The names listed in /usr/share/libvirt/cpu_map.xml
+* The named CPU models listed in ``/usr/share/libvirt/cpu_map.xml``
 
 Related options:
 
-* ``cpu_mode``: Don't set this when ``cpu_mode`` is NOT set to ``custom``.
-  This would result in an error and the instance won't be launched.
+* ``cpu_mode``: This should be set to ``custom`` ONLY when you want to
+configure (via ``cpu_model``) a specific named CPU model.  Otherwise, it
+would result in an error and the instance launch will fail.
+
 * ``virt_type``: Only the virtualization types ``kvm`` and ``qemu`` use this.
 """),
     cfg.StrOpt('snapshots_directory',
