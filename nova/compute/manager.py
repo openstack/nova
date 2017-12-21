@@ -5838,7 +5838,7 @@ class ComputeManager(manager.Manager):
                     # are providing the connector in the create call.
                     attach_ref = self.volume_api.attachment_create(
                         context, bdm.volume_id, bdm.instance_uuid,
-                        connector=connector)
+                        connector=connector, mountpoint=bdm.device_name)
 
                     # save current attachment so we can detach it on success,
                     # or restore it on a rollback.

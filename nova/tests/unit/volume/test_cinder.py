@@ -300,7 +300,9 @@ class CinderApiTestCase(test.NoDBTestCase):
 
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_attachment_create(self, mock_cinderclient):
-        """Tests the happy path for creating a volume attachment."""
+        """Tests the happy path for creating a volume attachment without a
+        mountpoint.
+        """
         attachment_ref = {'id': uuids.attachment_id,
                           'connection_info': {}}
         expected_attachment_ref = {'id': uuids.attachment_id,
@@ -312,6 +314,30 @@ class CinderApiTestCase(test.NoDBTestCase):
         self.assertEqual(expected_attachment_ref, result)
         mock_cinderclient.return_value.attachments.create.\
             assert_called_once_with(uuids.volume_id, None, uuids.instance_id)
+
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_attachment_create_with_mountpoint(self, mock_cinderclient):
+        """Tests the happy path for creating a volume attachment with a
+        mountpoint.
+        """
+        attachment_ref = {'id': uuids.attachment_id,
+                          'connection_info': {}}
+        expected_attachment_ref = {'id': uuids.attachment_id,
+                                   'connection_info': {}}
+        mock_cinderclient.return_value.attachments.create.return_value = (
+            attachment_ref)
+        original_connector = {'host': 'fake-host'}
+        updated_connector = dict(original_connector, mountpoint='/dev/vdb')
+        result = self.api.attachment_create(
+            self.ctx, uuids.volume_id, uuids.instance_id,
+            connector=original_connector, mountpoint='/dev/vdb')
+        self.assertEqual(expected_attachment_ref, result)
+        # Make sure the original connector wasn't modified.
+        self.assertNotIn('mountpoint', original_connector)
+        # Make sure the mountpoint was passed through via the connector.
+        mock_cinderclient.return_value.attachments.create.\
+            assert_called_once_with(uuids.volume_id, updated_connector,
+                                    uuids.instance_id)
 
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_attachment_create_volume_not_found(self, mock_cinderclient):
