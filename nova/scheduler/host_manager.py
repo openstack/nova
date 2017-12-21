@@ -662,7 +662,7 @@ class HostManager(object):
         return self._get_host_states(context, compute_nodes, services)
 
     def get_all_host_states(self, context):
-        """Returns a list of HostStates that represents all the hosts
+        """Returns a generator of HostStates that represents all the hosts
         the HostManager knows about. Also, each of the consumable resources
         in HostState are pre-populated and adjusted based on data in the db.
         """
@@ -672,7 +672,7 @@ class HostManager(object):
         return self._get_host_states(context, compute_nodes, services)
 
     def _get_host_states(self, context, compute_nodes, services):
-        """Returns a tuple of HostStates given a list of computes.
+        """Returns a generator over HostStates given a list of computes.
 
         Also updates the HostStates internal mapping for the HostManager.
         """
@@ -715,7 +715,13 @@ class HostManager(object):
                          "from scheduler"), {'host': host, 'node': node})
             del self.host_state_map[state_key]
 
-        return (self.host_state_map[host] for host in seen_nodes)
+        # NOTE(mriedem): We are returning a generator, which means the global
+        # host_state_map could change due to a concurrent scheduling request
+        # where a compute node is now considered 'dead' and is removed from
+        # the host_state_map, so we have to be sure to check that the next
+        # seen_node is still in the map before returning it.
+        return (self.host_state_map[host] for host in seen_nodes
+                if host in self.host_state_map)
 
     def _get_aggregates_info(self, host):
         return [self.aggs_by_id[agg_id] for agg_id in
