@@ -17,6 +17,7 @@ from oslo_utils import timeutils
 
 import nova
 from nova import context
+from nova.db.sqlalchemy import api_models as models
 from nova import exception
 from nova.objects import fields
 from nova.objects import resource_provider
@@ -218,6 +219,29 @@ class TestResourceProvider(test_objects._LocalTest):
         self.assertRaises(exception.NotFound,
                           resource_provider.ResourceProvider.get_by_uuid,
                           self.context, uuids.rp)
+
+    def test_destroy(self):
+
+        def emulate_rp_mysql_delete(func):
+            def wrapped(context, _id):
+                rp = context.session.query(
+                    models.ResourceProvider).\
+                    filter(
+                        models.ResourceProvider.id == _id).first()
+                self.assertIsNone(rp.root_provider_id)
+                return func(context, _id)
+            return wrapped
+
+        emulated = emulate_rp_mysql_delete(resource_provider._delete_rp_record)
+
+        rp = resource_provider.ResourceProvider(
+            self.context, uuid=_RESOURCE_PROVIDER_UUID,
+            name=_RESOURCE_PROVIDER_NAME)
+        rp.create()
+
+        with mock.patch.object(
+                resource_provider, '_delete_rp_record', emulated):
+            rp.destroy()
 
 
 class TestInventoryNoDB(test_objects._LocalTest):
