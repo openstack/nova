@@ -300,6 +300,8 @@ class LiveMigrationTask(base.TaskBase):
             request_spec.requested_destination = objects.Destination(
                 cell=cell_mapping)
 
+        request_spec.ensure_project_id(self.instance)
+
         return request_spec
 
     def _find_destination(self):
