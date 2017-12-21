@@ -12,7 +12,6 @@
 """Placement API handlers for setting and deleting allocations."""
 
 import collections
-import copy
 
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
@@ -21,6 +20,7 @@ from oslo_utils import timeutils
 import webob
 
 from nova.api.openstack.placement import microversion
+from nova.api.openstack.placement.schemas import allocation as schema
 from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
 from nova import exception
@@ -29,132 +29,6 @@ from nova.objects import resource_provider as rp_obj
 
 
 LOG = logging.getLogger(__name__)
-
-ALLOCATION_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "allocations": {
-            "type": "array",
-            "minItems": 1,
-            "items": {
-                "type": "object",
-                "properties": {
-                    "resource_provider": {
-                        "type": "object",
-                        "properties": {
-                            "uuid": {
-                                "type": "string",
-                                "format": "uuid"
-                            }
-                        },
-                        "additionalProperties": False,
-                        "required": ["uuid"]
-                    },
-                    "resources": {
-                        "type": "object",
-                        "minProperties": 1,
-                        "patternProperties": {
-                            "^[0-9A-Z_]+$": {
-                                "type": "integer",
-                                "minimum": 1,
-                            }
-                        },
-                        "additionalProperties": False
-                    }
-                },
-                "required": [
-                    "resource_provider",
-                    "resources"
-                ],
-                "additionalProperties": False
-            }
-        }
-    },
-    "required": ["allocations"],
-    "additionalProperties": False
-}
-
-ALLOCATION_SCHEMA_V1_8 = copy.deepcopy(ALLOCATION_SCHEMA)
-ALLOCATION_SCHEMA_V1_8['properties']['project_id'] = {'type': 'string',
-                                                      'minLength': 1,
-                                                      'maxLength': 255}
-ALLOCATION_SCHEMA_V1_8['properties']['user_id'] = {'type': 'string',
-                                                   'minLength': 1,
-                                                   'maxLength': 255}
-ALLOCATION_SCHEMA_V1_8['required'].extend(['project_id', 'user_id'])
-
-# Update the allocation schema to achieve symmetry with the representation
-# used when GET /allocations/{consumer_uuid} is called.
-# NOTE(cdent): Explicit duplication here for sake of comprehensibility.
-ALLOCATION_SCHEMA_V1_12 = {
-    "type": "object",
-    "properties": {
-        "allocations": {
-            "type": "object",
-            "minProperties": 1,
-            # resource provider uuid
-            "patternProperties": {
-                "^[0-9a-fA-F-]{36}$": {
-                    "type": "object",
-                    "properties": {
-                        # generation is optional
-                        "generation": {
-                            "type": "integer",
-                        },
-                        "resources": {
-                            "type": "object",
-                            "minProperties": 1,
-                            # resource class
-                            "patternProperties": {
-                                "^[0-9A-Z_]+$": {
-                                    "type": "integer",
-                                    "minimum": 1,
-                                }
-                            },
-                            "additionalProperties": False
-                        }
-                    },
-                    "required": ["resources"],
-                    "additionalProperties": False
-                }
-            },
-            "additionalProperties": False
-        },
-        "project_id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-        },
-        "user_id": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 255
-        }
-    },
-    "required": [
-        "allocations",
-        "project_id",
-        "user_id"
-    ]
-}
-
-
-# POST to /allocations, added in microversion 1.13, uses the
-# POST_ALLOCATIONS_V1_13 schema to allow multiple allocations
-# from multiple consumers in one request. It is a dict, keyed by
-# consumer uuid, using the form of PUT allocations from microversion
-# 1.12. In POST the allocations can be empty, so DELETABLE_ALLOCATIONS
-# modifies ALLOCATION_SCHEMA_V1_12 accordingly.
-DELETABLE_ALLOCATIONS = copy.deepcopy(ALLOCATION_SCHEMA_V1_12)
-DELETABLE_ALLOCATIONS['properties']['allocations']['minProperties'] = 0
-POST_ALLOCATIONS_V1_13 = {
-    "type": "object",
-    "minProperties": 1,
-    "additionalProperties": False,
-    "patternProperties": {
-        "^[0-9a-fA-F-]{36}$": DELETABLE_ALLOCATIONS
-    }
-}
 
 
 def _allocations_dict(allocations, key_fetcher, resource_provider=None,
@@ -414,21 +288,21 @@ def _set_allocations_for_consumer(req, schema):
 @microversion.version_handler('1.0', '1.7')
 @util.require_content('application/json')
 def set_allocations_for_consumer(req):
-    return _set_allocations_for_consumer(req, ALLOCATION_SCHEMA)
+    return _set_allocations_for_consumer(req, schema.ALLOCATION_SCHEMA)
 
 
 @wsgi_wrapper.PlacementWsgify  # noqa
 @microversion.version_handler('1.8', '1.11')
 @util.require_content('application/json')
 def set_allocations_for_consumer(req):
-    return _set_allocations_for_consumer(req, ALLOCATION_SCHEMA_V1_8)
+    return _set_allocations_for_consumer(req, schema.ALLOCATION_SCHEMA_V1_8)
 
 
 @wsgi_wrapper.PlacementWsgify  # noqa
 @microversion.version_handler('1.12')
 @util.require_content('application/json')
 def set_allocations_for_consumer(req):
-    return _set_allocations_for_consumer(req, ALLOCATION_SCHEMA_V1_12)
+    return _set_allocations_for_consumer(req, schema.ALLOCATION_SCHEMA_V1_12)
 
 
 @wsgi_wrapper.PlacementWsgify
@@ -436,7 +310,7 @@ def set_allocations_for_consumer(req):
 @util.require_content('application/json')
 def set_allocations(req):
     context = req.environ['placement.context']
-    data = util.extract_json(req.body, POST_ALLOCATIONS_V1_13)
+    data = util.extract_json(req.body, schema.POST_ALLOCATIONS_V1_13)
 
     # Create a sequence of allocation objects to be used in an
     # AllocationList.create_all() call, which will mean all the changes
