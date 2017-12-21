@@ -26,10 +26,9 @@ class MultinicSampleJsonTest(integrated_helpers.InstanceHelperMixin,
 
     def setUp(self):
         super(MultinicSampleJsonTest, self).setUp()
-        self.neutron = fixtures.NeutronFixture(self)
-        self.useFixture(self.neutron)
         server = self._boot_a_server(
-            extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
+            extra_params={'networks': [
+                {'port': fixtures.NeutronFixture.port_1['id']}]})
         self.uuid = server['id']
 
     def _boot_a_server(self, expected_status='ACTIVE', extra_params=None):
@@ -46,7 +45,7 @@ class MultinicSampleJsonTest(integrated_helpers.InstanceHelperMixin,
         return found_server
 
     def _add_fixed_ip(self):
-        subs = {"networkId": 'e1882e38-38c2-4239-ade7-35d644cb963a'}
+        subs = {"networkId": fixtures.NeutronFixture.network_1['id']}
         response = self._do_post('servers/%s/action' % (self.uuid),
                                  'multinic-add-fixed-ip-req', subs)
         self.assertEqual(202, response.status_code)
