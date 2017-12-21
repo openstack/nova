@@ -18,8 +18,10 @@ import math
 import mock
 from oslo_utils import units
 
+from nova import exception
 from nova.objects import fields as obj_fields
 from nova.tests.unit.virt.xenapi import stubs
+from nova.tests import uuidsentinel as uuids
 from nova.virt import driver
 from nova.virt import fake
 from nova.virt import xenapi
@@ -71,9 +73,10 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
                 'vgpu_stats': {
                     'c8328467-badf-43d8-8e28-0e096b0f88b1':
                         {'uuid': '6444c6ee-3a49-42f5-bebb-606b52175e67',
-                         'total': 7,
-                         'max_heads': 1,
                          'type_name': 'Intel GVT-g',
+                         'max_heads': 1,
+                         'total': 7,
+                         'remaining': 7,
                          },
                      }}
 
@@ -322,3 +325,98 @@ class XenAPIDriverTestCase(stubs.XenAPITestBaseNoDB):
         vgpu_total = drv._get_vgpu_total(vgpu_stats)
 
         self.assertEqual(11, vgpu_total)
+
+    def test_get_vgpu_info_no_vgpu_alloc(self):
+        # no vgpu in allocation.
+        alloc = {
+            'rp1': {
+                'resources': {
+                    'VCPU': 1,
+                    'MEMORY_MB': 512,
+                    'DISK_GB': 1,
+                }
+            }
+        }
+
+        drv = self._get_driver()
+        vgpu_info = drv._get_vgpu_info(alloc)
+
+        self.assertIsNone(vgpu_info)
+
+    @mock.patch.object(host.HostState, 'get_host_stats')
+    def test_get_vgpu_info_has_vgpu_alloc(self, mock_get_stats):
+        # Have vgpu in allocation.
+        alloc = {
+            'rp1': {
+                'resources': {
+                    'VCPU': 1,
+                    'MEMORY_MB': 512,
+                    'DISK_GB': 1,
+                    'VGPU': 1,
+                }
+            }
+        }
+        # The following fake data assumes there are two GPU
+        # groups both of which supply the same type of vGPUs.
+        # If the 1st GPU group has no remaining available vGPUs;
+        # the 2nd GPU group still has remaining available vGPUs.
+        # it should return the uuid from the 2nd GPU group.
+        vgpu_stats = {
+            uuids.gpu_group_1: {
+                'uuid': uuids.vgpu_type,
+                'type_name': 'GRID K180Q',
+                'max_heads': 4,
+                'total': 2,
+                'remaining': 0,
+            },
+            uuids.gpu_group_2: {
+                'uuid': uuids.vgpu_type,
+                'type_name': 'GRID K180Q',
+                'max_heads': 4,
+                'total': 2,
+                'remaining': 2,
+            },
+        }
+
+        host_stats = self.host_stats()
+        host_stats.update(vgpu_stats=vgpu_stats)
+        mock_get_stats.return_value = host_stats
+
+        drv = self._get_driver()
+        vgpu_info = drv._get_vgpu_info(alloc)
+
+        expected_info = {'gpu_grp_uuid': uuids.gpu_group_2,
+                         'vgpu_type_uuid': uuids.vgpu_type}
+        self.assertEqual(expected_info, vgpu_info)
+
+    @mock.patch.object(host.HostState, 'get_host_stats')
+    def test_get_vgpu_info_has_vgpu_alloc_except(self, mock_get_stats):
+        # Allocated vGPU but got exception due to no remaining vGPU.
+        alloc = {
+            'rp1': {
+                'resources': {
+                    'VCPU': 1,
+                    'MEMORY_MB': 512,
+                    'DISK_GB': 1,
+                    'VGPU': 1,
+                }
+            }
+        }
+        vgpu_stats = {
+            uuids.gpu_group: {
+                'uuid': uuids.vgpu_type,
+                'type_name': 'Intel GVT-g',
+                'max_heads': 1,
+                'total': 7,
+                'remaining': 0,
+            },
+        }
+
+        host_stats = self.host_stats()
+        host_stats.update(vgpu_stats=vgpu_stats)
+        mock_get_stats.return_value = host_stats
+
+        drv = self._get_driver()
+        self.assertRaises(exception.ComputeResourcesUnavailable,
+                          drv._get_vgpu_info,
+                          alloc)

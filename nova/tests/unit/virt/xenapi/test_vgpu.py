@@ -92,6 +92,7 @@ class VGPUTestCase(test.NoDBTestCase):
             'type_name_2',  # VGPU_type.get_model_name
             'type_uuid_2',  # VGPU_type.get_uuid
             '4',  # VGPU_type.get_max_heads
+            '6',  # GPU_group.get_remaining_capacity
         ]
         host_obj = host.HostState(session)
 
@@ -102,8 +103,9 @@ class VGPUTestCase(test.NoDBTestCase):
                         'type_name': 'type_name_2',
                         'max_heads': 4,
                         'total': 7,
+                        'remaining': 6,
                         }
-        self.assertEqual(session.call_xenapi.call_count, 5)
+        self.assertEqual(session.call_xenapi.call_count, 6)
         # It should get_uuid for the vGPU type passed via *enabled_vgpu_types*
         # (the arg for get_uuid should be 'type_ref_2').
         get_uuid_call = [mock.call('VGPU_type.get_uuid', 'type_ref_2')]
@@ -125,6 +127,7 @@ class VGPUTestCase(test.NoDBTestCase):
             'type_name_2',  # VGPU_type.get_model_name
             'type_uuid_1',  # VGPU_type.get_uuid
             '4',  # VGPU_type.get_max_heads
+            '6',  # GPU_group.get_remaining_capacity
         ]
         host_obj = host.HostState(session)
 
@@ -136,8 +139,9 @@ class VGPUTestCase(test.NoDBTestCase):
             'type_name': 'type_name_1',
             'max_heads': 4,
             'total': 7,
+            'remaining': 6,
         }
-        self.assertEqual(session.call_xenapi.call_count, 5)
+        self.assertEqual(session.call_xenapi.call_count, 6)
         # It should call get_uuid for the first vGPU type (the arg for get_uuid
         # should be 'type_ref_1').
         get_uuid_call = [mock.call('VGPU_type.get_uuid', 'type_ref_1')]

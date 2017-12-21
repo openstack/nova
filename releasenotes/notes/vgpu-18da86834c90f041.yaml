@@ -1,0 +1,30 @@
+---
+features:
+  - |
+    When using XenAPI driver for XenServer, we can support booting instances
+    with a vGPU attached to get better graphics processing capability.
+    In order to use this feature, the operators should specify the enabled
+    vGPU types in the nova compute configuration file with the configuration
+    option - ``[devices]/enabled_vgpu_types``. Only the enabled vGPU types
+    can be used by instances.
+    XenServer automatically detects and groups together identical physical
+    GPUs. Although the physical GPUs may support multiple vGPU types, at
+    the moment nova only supports a single vGPU type for each compute node.
+    The operators can run the following CLI commands in XenServer to get
+    the available vGPU types if the host supports vGPU.
+
+    * xe vgpu-type-list
+
+    The values of "model-name ( RO):" from the output of the above commands
+    are the vGPU type names which you can choose from to set the nova
+    configure - ``[devices]/enabled_vgpu_types``. Please choose only one
+    vGPU type to be enabled.
+
+    The operators should specify a vGPU resource in the flavor's extra_specs:
+
+    * nova flavor-key <flavor-id> set resources:VGPU=1
+
+    Then users can use the flavor to boot instances with a vGPU attached.
+    At the moment, XenServer doesn't support multiple vGPUs for a single
+    instance, so ``resources:VGPU`` in the flavor's extra_specs should
+    always be ``1``.

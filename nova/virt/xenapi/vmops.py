@@ -400,9 +400,26 @@ class VMOps(object):
         other_config['last_dom_id'] = self._session.VM.get_domid(vm_ref)
         self._session.VM.set_other_config(vm_ref, other_config)
 
+    def _attach_vgpu(self, vm_ref, vgpu_info, instance):
+        if not vgpu_info:
+            return
+        grp_ref = self._session.call_xenapi("GPU_group.get_by_uuid",
+                                            vgpu_info['gpu_grp_uuid'])
+        type_ref = self._session.call_xenapi("VGPU_type.get_by_uuid",
+                                            vgpu_info['vgpu_type_uuid'])
+        # NOTE(jianghuaw): set other-config with "nova-instance-uuid" to
+        # declare which nova instance owns this vGPU. That should be useful
+        # for tracking purposes. '0' is the device id for VGPU. As we only
+        # support one VGPU at the moment, so only '0' is the valid value.
+        # Refer to https://xapi-project.github.io/xen-api/classes/vgpu.html
+        # for this Xen API of 'VGPU.create'.
+        self._session.call_xenapi('VGPU.create', vm_ref, grp_ref, '0',
+                                  {'nova-instance-uuid': instance['uuid']},
+                                  type_ref)
+
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, network_info=None, block_device_info=None,
-              name_label=None, rescue=False):
+              vgpu_info=None, name_label=None, rescue=False):
 
         if block_device_info:
             LOG.debug("Block device information present: %s",
@@ -432,12 +449,12 @@ class VMOps(object):
             return vdis
 
         self._spawn(context, instance, image_meta, step, create_disks_step,
-                    True, injected_files, admin_password,
-                    network_info, block_device_info, name_label, rescue)
+                    True, injected_files, admin_password, network_info,
+                    block_device_info, vgpu_info, name_label, rescue)
 
     def _spawn(self, context, instance, image_meta, step, create_disks_step,
                first_boot, injected_files=None, admin_password=None,
-               network_info=None, block_device_info=None,
+               network_info=None, block_device_info=None, vgpu_info=None,
                name_label=None, rescue=False, power_on=True, resize=True,
                completed_callback=None):
         if name_label is None:
@@ -515,9 +532,15 @@ class VMOps(object):
             return vm_ref
 
         @step
-        def attach_devices_step(undo_mgr, vm_ref, vdis, disk_image_type):
+        def attach_devices_step(undo_mgr, vm_ref, vdis, disk_image_type,
+                                vgpu_info):
             attach_disks(undo_mgr, vm_ref, vdis, disk_image_type)
             attach_pci_devices(undo_mgr, vm_ref)
+            # NOTE(jianghuaw): in XAPI, the VGPU record is associated with a
+            # VM since creation. The record will be destroyed automatically
+            # once VM is destroyed. So there is no need to add any additional
+            # undo functions for VGPU.
+            self._attach_vgpu(vm_ref, vgpu_info, instance)
 
         if rescue:
             # NOTE(johannes): Attach disks from original VM to rescue VM now,
@@ -583,7 +606,8 @@ class VMOps(object):
 
             vm_ref = create_vm_record_step(undo_mgr, disk_image_type,
                     kernel_file, ramdisk_file)
-            attach_devices_step(undo_mgr, vm_ref, vdis, disk_image_type)
+            attach_devices_step(undo_mgr, vm_ref, vdis, disk_image_type,
+                                vgpu_info)
 
             inject_instance_data_step(undo_mgr, vm_ref, vdis)
 
