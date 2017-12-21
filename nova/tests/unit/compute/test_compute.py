@@ -4828,7 +4828,7 @@ class ComputeTestCase(BaseTestCase,
         bdm.create()
 
         # stub out volume attach
-        def fake_volume_get(self, context, volume_id):
+        def fake_volume_get(self, context, volume_id, microversion=None):
             return volume
         self.stub_out('nova.volume.cinder.API.get', fake_volume_get)
 
@@ -10569,7 +10569,8 @@ class ComputeAPITestCase(BaseTestCase):
 
     @mock.patch.object(objects.BlockDeviceMapping,
                        'get_by_volume_and_instance')
-    def test_detach_volume_libvirt_is_down(self, mock_get):
+    @mock.patch.object(cinder.API, 'get', return_value={'id': uuids.volume_id})
+    def test_detach_volume_libvirt_is_down(self, mock_get_vol, mock_get):
         # Ensure rollback during detach if libvirt goes down
         called = {}
         instance = self._create_fake_instance_obj()
@@ -10618,7 +10619,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         # Stub out fake_volume_get so cinder api does not raise exception
         # and manager gets to call bdm.destroy()
-        def fake_volume_get(self, context, volume_id):
+        def fake_volume_get(self, context, volume_id, microversion=None):
             return {'id': volume_id}
         self.stub_out('nova.volume.cinder.API.get', fake_volume_get)
 
@@ -12494,7 +12495,7 @@ class EvacuateHostTestCase(BaseTestCase):
 
         db.block_device_mapping_create(self.context, values)
 
-        def fake_volume_get(self, context, volume):
+        def fake_volume_get(self, context, volume, microversion=None):
             return {'id': 'fake_volume_id'}
         self.stub_out("nova.volume.cinder.API.get", fake_volume_get)
 

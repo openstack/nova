@@ -1325,7 +1325,7 @@ class CinderFixture(fixtures.Fixture):
     def setUp(self):
         super(CinderFixture, self).setUp()
 
-        def fake_get(self_api, context, volume_id):
+        def fake_get(self_api, context, volume_id, microversion=None):
             # Check for the special swap volumes.
             if volume_id in (CinderFixture.SWAP_OLD_VOL,
                              CinderFixture.SWAP_ERR_OLD_VOL):
@@ -1499,7 +1499,7 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
     def setUp(self):
         super(CinderFixtureNewAttachFlow, self).setUp()
 
-        def fake_get(self_api, context, volume_id):
+        def fake_get(self_api, context, volume_id, microversion=None):
             # Check for the special swap volumes.
             if volume_id in (CinderFixture.SWAP_OLD_VOL,
                              CinderFixture.SWAP_ERR_OLD_VOL):
