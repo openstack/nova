@@ -1896,13 +1896,10 @@ class ComputeManager(manager.Manager):
             instance.task_state = task_states.SCHEDULING
             instance.save()
 
-            # TODO(mriedem): Pass the request_spec back to conductor so that
-            # it gets to the next chosen host during the reschedule and we
-            # can hopefully eventually get rid of the legacy filter_properties.
             self.compute_task_api.build_instances(context, [instance],
                     image, filter_properties, admin_password,
                     injected_files, requested_networks, security_groups,
-                    block_device_mapping)
+                    block_device_mapping, request_spec=request_spec)
             return build_results.RESCHEDULED
         except (exception.InstanceNotFound,
                 exception.UnexpectedDeletingTaskStateError):

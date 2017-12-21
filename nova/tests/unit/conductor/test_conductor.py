@@ -394,6 +394,9 @@ class _BaseTaskTestCase(object):
     @mock.patch.object(objects.RequestSpec, 'from_primitives')
     def test_build_instances(self, mock_fp, mock_save, mock_getaz,
                              mock_buildreq):
+        """Tests creating two instances and the scheduler returns a unique
+        host/node combo for each instance.
+        """
         fake_spec = objects.RequestSpec
         mock_fp.return_value = fake_spec
         instance_type = flavors.get_default_flavor()
@@ -424,19 +427,16 @@ class _BaseTaskTestCase(object):
                 ).AndReturn([[fake_selection1], [fake_selection2]])
         db.block_device_mapping_get_all_by_instance(self.context,
                 instances[0].uuid).AndReturn([])
+        filter_properties2 = {'retry': {'num_attempts': 1,
+                                        'hosts': [['host1', 'node1']]},
+                              'limits': {}}
         self.conductor_manager.compute_rpcapi.build_and_run_instance(
                 self.context,
                 instance=mox.IgnoreArg(),
                 host='host1',
                 image={'fake_data': 'should_pass_silently'},
-                request_spec={
-                    'image': {'fake_data': 'should_pass_silently'},
-                    'instance_properties': instance_properties,
-                    'instance_type': instance_type_p,
-                    'num_instances': 2},
-                filter_properties={'retry': {'num_attempts': 1,
-                                             'hosts': [['host1', 'node1']]},
-                                   'limits': {}},
+                request_spec=fake_spec,
+                filter_properties=filter_properties2,
                 admin_password='admin_password',
                 injected_files='injected_files',
                 requested_networks=None,
@@ -445,19 +445,16 @@ class _BaseTaskTestCase(object):
                 node='node1', limits=None)
         db.block_device_mapping_get_all_by_instance(self.context,
                 instances[1].uuid).AndReturn([])
+        filter_properties3 = {'limits': {},
+                              'retry': {'num_attempts': 1,
+                                        'hosts': [['host2', 'node2']]}}
         self.conductor_manager.compute_rpcapi.build_and_run_instance(
                 self.context,
                 instance=mox.IgnoreArg(),
                 host='host2',
                 image={'fake_data': 'should_pass_silently'},
-                request_spec={
-                    'image': {'fake_data': 'should_pass_silently'},
-                    'instance_properties': instance_properties,
-                    'instance_type': instance_type_p,
-                    'num_instances': 2},
-                filter_properties={'limits': {},
-                                   'retry': {'num_attempts': 1,
-                                             'hosts': [['host2', 'node2']]}},
+                request_spec=fake_spec,
+                filter_properties=filter_properties3,
                 admin_password='admin_password',
                 injected_files='injected_files',
                 requested_networks=None,
@@ -484,7 +481,12 @@ class _BaseTaskTestCase(object):
         mock_getaz.assert_has_calls([
             mock.call(self.context, 'host1'),
             mock.call(self.context, 'host2')])
-        mock_fp.assert_called_once_with(self.context, spec, filter_properties)
+        # A RequestSpec is built from primitives once before calling the
+        # scheduler to get hosts and then once per instance we're building.
+        mock_fp.assert_has_calls([
+            mock.call(self.context, spec, filter_properties),
+            mock.call(self.context, spec, filter_properties2),
+            mock.call(self.context, spec, filter_properties3)])
 
     @mock.patch.object(scheduler_utils, 'build_request_spec')
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
@@ -916,7 +918,7 @@ class _BaseTaskTestCase(object):
         filter_properties = fake_spec.to_legacy_filter_properties_dict()
         request_spec = fake_spec.to_legacy_request_spec_dict()
 
-        host = {'host': 'host1', 'nodename': 'node1', 'limits': []}
+        host = {'host': 'host1', 'nodename': 'node1', 'limits': {}}
 
         # unshelve_instance() is a cast, we need to wait for it to complete
         self.useFixture(cast_as_call.CastAsCall(self))
@@ -2400,13 +2402,14 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         instances[0].save().AndRaise(
                 exc.InstanceNotFound(instance_id=instances[0].uuid))
         instances[1].save()
+        filter_properties2 = {'limits': {},
+                              'retry': {'num_attempts': 1,
+                                        'hosts': [['host2', 'node2']]}}
         self.conductor_manager.compute_rpcapi.build_and_run_instance(
                 self.context, instance=instances[1], host='host2',
-                image={'fake-data': 'should_pass_silently'}, request_spec=spec,
-                filter_properties={'limits': {},
-                                   'retry': {'num_attempts': 1,
-                                             'hosts': [['host2',
-                                                        'node2']]}},
+                image={'fake-data': 'should_pass_silently'},
+                request_spec=fake_spec,
+                filter_properties=filter_properties2,
                 admin_password='admin_password',
                 injected_files='injected_files',
                 requested_networks=None,
@@ -2428,7 +2431,12 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                 security_groups='security_groups',
                 block_device_mapping='block_device_mapping',
                 legacy_bdm=False)
-        fp.assert_called_once_with(self.context, spec, filter_properties)
+        # RequestSpec.from_primitives is called once before we call the
+        # scheduler to select_destinations and then once per instance that
+        # gets build in the compute.
+        fp.assert_has_calls([
+            mock.call(self.context, spec, filter_properties),
+            mock.call(self.context, spec, filter_properties2)])
 
     @mock.patch.object(scheduler_utils, 'setup_instance_group')
     @mock.patch.object(scheduler_utils, 'build_request_spec')
@@ -2477,7 +2485,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             get_buildreq.return_value.destroy.assert_called_once_with()
             build_and_run_instance.assert_called_once_with(self.context,
                     instance=instances[1], host='host2', image={'fake-data':
-                        'should_pass_silently'}, request_spec=spec,
+                        'should_pass_silently'},
+                    request_spec=from_primitives.return_value,
                     filter_properties={'limits': {},
                                        'retry': {'num_attempts': 1,
                                                  'hosts': [['host2',
@@ -2763,6 +2772,66 @@ class ConductorTaskRPCAPITestCase(_BaseTaskTestCase,
                   'block_device_mapping': block_device_mapping}
             cctxt_mock.cast.assert_called_once_with(
                 self.context, 'schedule_and_build_instances', **kw)
+        _test()
+
+    def test_build_instances_with_request_spec_ok(self):
+        """Tests passing a request_spec to the build_instances RPC API
+        method and having it passed through to the conductor task manager.
+        """
+        image = {}
+        cctxt_mock = mock.MagicMock()
+
+        @mock.patch.object(self.conductor.client, 'can_send_version',
+                           return_value=True)
+        @mock.patch.object(self.conductor.client, 'prepare',
+                           return_value=cctxt_mock)
+        def _test(prepare_mock, can_send_mock):
+            self.conductor.build_instances(
+                self.context, mock.sentinel.instances, image,
+                mock.sentinel.filter_properties, mock.sentinel.admin_password,
+                mock.sentinel.injected_files, mock.sentinel.requested_networks,
+                mock.sentinel.security_groups,
+                mock.sentinel.block_device_mapping,
+                request_spec=mock.sentinel.request_spec)
+            kw = {'instances': mock.sentinel.instances, 'image': image,
+                  'filter_properties': mock.sentinel.filter_properties,
+                  'admin_password': mock.sentinel.admin_password,
+                  'injected_files': mock.sentinel.injected_files,
+                  'requested_networks': mock.sentinel.requested_networks,
+                  'security_groups': mock.sentinel.security_groups,
+                  'request_spec': mock.sentinel.request_spec}
+            cctxt_mock.cast.assert_called_once_with(
+                self.context, 'build_instances', **kw)
+        _test()
+
+    def test_build_instances_with_request_spec_cannot_send(self):
+        """Tests passing a request_spec to the build_instances RPC API
+        method but not having it passed through to the conductor task manager
+        because the version is too old to handle it.
+        """
+        image = {}
+        cctxt_mock = mock.MagicMock()
+
+        @mock.patch.object(self.conductor.client, 'can_send_version',
+                           side_effect=(False, True, True, True))
+        @mock.patch.object(self.conductor.client, 'prepare',
+                           return_value=cctxt_mock)
+        def _test(prepare_mock, can_send_mock):
+            self.conductor.build_instances(
+                self.context, mock.sentinel.instances, image,
+                mock.sentinel.filter_properties, mock.sentinel.admin_password,
+                mock.sentinel.injected_files, mock.sentinel.requested_networks,
+                mock.sentinel.security_groups,
+                mock.sentinel.block_device_mapping,
+                request_spec=mock.sentinel.request_spec)
+            kw = {'instances': mock.sentinel.instances, 'image': image,
+                  'filter_properties': mock.sentinel.filter_properties,
+                  'admin_password': mock.sentinel.admin_password,
+                  'injected_files': mock.sentinel.injected_files,
+                  'requested_networks': mock.sentinel.requested_networks,
+                  'security_groups': mock.sentinel.security_groups}
+            cctxt_mock.cast.assert_called_once_with(
+                self.context, 'build_instances', **kw)
         _test()
 
 
