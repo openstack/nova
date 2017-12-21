@@ -505,7 +505,6 @@ Response
   - accessIPv4: accessIPv4
   - accessIPv6: accessIPv6
   - addresses: addresses_obj
-  - adminPass: adminPass_response
   - created: created
   - flavor: flavor_server
   - flavor.id: flavor_id_body_2_46
@@ -528,11 +527,12 @@ Response
   - metadata: metadata_object
   - name: server_name
   - OS-DCF:diskConfig: disk_config
-  - progress: progress
   - status: server_status
   - tenant_id: tenant_id_body
   - updated: updated
   - user_id: user_id
+  - adminPass: adminPass_response
+  - progress: progress
   - locked: locked
   - description: server_description_resp
   - tags: tags
