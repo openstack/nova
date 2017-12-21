@@ -6056,6 +6056,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                     return_value=22)
         @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
         @mock.patch.object(self.compute, "_notify_about_instance_usage")
+        @mock.patch.object(compute_utils, 'notify_about_instance_action')
         @mock.patch.object(self.compute, "_set_instance_info")
         @mock.patch.object(self.instance, 'save')
         @mock.patch.object(self.migration, 'save')
@@ -6085,6 +6086,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                     mock_mig_save,
                                     mock_inst_save,
                                     mock_set,
+                                    mock_notify_about_instance_action,
                                     mock_notify,
                                     mock_get_cn,
                                     mock_version):
