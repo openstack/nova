@@ -84,7 +84,7 @@ class VCState(object):
             self._set_host_enabled(False)
             return data
 
-        data["vcpus"] = stats['vcpus']
+        data["vcpus"] = stats['cpu']['vcpus']
         data["disk_total"] = capacity / units.Gi
         data["disk_available"] = freespace / units.Gi
         data["disk_used"] = data["disk_total"] - data["disk_available"]

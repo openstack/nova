@@ -1159,8 +1159,10 @@ def get_vm_state(session, instance):
 def get_stats_from_cluster(session, cluster):
     """Get the aggregate resource stats of a cluster."""
     vcpus = 0
+    max_vcpus_per_host = 0
     used_mem_mb = 0
     total_mem_mb = 0
+    max_mem_mb_per_host = 0
     # Get the Host and Resource Pool Managed Object Refs
     prop_dict = session._call_method(vutil,
                                      "get_object_properties_dict",
@@ -1186,12 +1188,16 @@ def get_stats_from_cluster(session, cluster):
                     # The overcommitment ratio is factored in by the scheduler
                     threads = hardware_summary.numCpuThreads
                     vcpus += threads
+                    max_vcpus_per_host = max(max_vcpus_per_host, threads)
                     used_mem_mb += stats_summary.overallMemoryUsage
                     mem_mb = hardware_summary.memorySize // units.Mi
                     total_mem_mb += mem_mb
-    stats = {'vcpus': vcpus,
+                    max_mem_mb_per_host = max(max_mem_mb_per_host, mem_mb)
+    stats = {'cpu': {'vcpus': vcpus,
+                     'max_vcpus_per_host': max_vcpus_per_host},
              'mem': {'total': total_mem_mb,
-                     'free': total_mem_mb - used_mem_mb}}
+                     'free': total_mem_mb - used_mem_mb,
+                     'max_mem_mb_per_host': max_mem_mb_per_host}}
     return stats
 
 

@@ -117,10 +117,12 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
                 num_hosts = 2
             else:
                 num_hosts = 1
-            expected_stats = {'vcpus': num_hosts * 16,
+            expected_stats = {'cpu': {'vcpus': num_hosts * 16,
+                                      'max_vcpus_per_host': 16},
                               'mem': {'total': num_hosts * 4096,
                                       'free': num_hosts * 4096 -
-                                              num_hosts * 512}}
+                                              num_hosts * 512,
+                                      'max_mem_mb_per_host': 4096}}
             self.assertEqual(expected_stats, result)
 
     def test_get_stats_from_cluster_hosts_connected_and_active(self):

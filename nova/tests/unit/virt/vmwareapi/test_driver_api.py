@@ -2383,7 +2383,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         service = self._create_service(disabled=False, host='fake-mini')
         mock_service.return_value = service
 
-        fake_stats = {'vcpus': 4, 'mem': {'total': '8194', 'free': '2048'}}
+        fake_stats = {'cpu': {'vcpus': 4},
+                      'mem': {'total': '8194', 'free': '2048'}}
         with test.nested(
             mock.patch.object(vm_util, 'get_stats_from_cluster',
                               side_effect=[vexc.VimConnectionException('fake'),
