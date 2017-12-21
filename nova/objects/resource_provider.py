@@ -3060,6 +3060,11 @@ def _alloc_candidates_with_shared(ctx, requested_resources, required_traits,
     # resource class names and amounts to consume from that resource provider
     alloc_requests = []
 
+    # Build a list of the sets of provider internal IDs that end up in
+    # allocation request objects. This is used to ensure we don't end up
+    # having allocation requests with duplicate sets of resource providers.
+    alloc_prov_ids = []
+
     # Build a dict, keyed by resource class ID, of AllocationRequestResource
     # objects that represent each resource provider for a shared resource
     sharing_resource_requests = _shared_allocation_request_resources(
@@ -3148,6 +3153,7 @@ def _alloc_candidates_with_shared(ctx, requested_resources, required_traits,
             # to ensure that the sharing providers involved in this allocation
             # request have all of the traits that the non-sharing providers
             # don't have
+            sharing_prov_ids = set()
             sharing_traits = set()
             for shared_res_req in shared_res_requests:
                 sharing_rp_uuid = shared_res_req.resource_provider.uuid
@@ -3156,14 +3162,13 @@ def _alloc_candidates_with_shared(ctx, requested_resources, required_traits,
                     if summary.resource_provider.uuid == sharing_rp_uuid:
                         shared_rp_id = rp_id
                         break
+                sharing_prov_ids.add(shared_rp_id)
                 share_prov_traits = prov_traits.get(shared_rp_id, [])
                 sharing_traits |= set(share_prov_traits)
+
+            # Check if there are missing traits with sharing providers
             still_missing_traits = missing_traits - sharing_traits
             if still_missing_traits:
-                sharing_prov_ids = set()
-                for rp_ids in sharing.values():
-                    for rp_id in rp_ids:
-                        sharing_prov_ids.add(rp_id)
                 LOG.debug('Excluding non-sharing provider %s with sharing '
                           'providers %s: missing traits %s are not satisfied '
                           'by sharing providers.',
@@ -3171,6 +3176,12 @@ def _alloc_candidates_with_shared(ctx, requested_resources, required_traits,
                           ','.join(still_missing_traits))
                 continue
 
+            # Check if we already have this combination in alloc_requests
+            prov_ids = set([ns_rp_id]) | sharing_prov_ids
+            if prov_ids in alloc_prov_ids:
+                continue
+
+            alloc_prov_ids.append(prov_ids)
             resource_requests = ns_res_requests + list(shared_res_requests)
             req = AllocationRequest(ctx, resource_requests=resource_requests)
             alloc_requests.append(req)
