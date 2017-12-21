@@ -14,46 +14,8 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_log import log as logging
-
 from nova.scheduler import filters
 from nova.scheduler.filters import utils
-
-LOG = logging.getLogger(__name__)
-
-
-class TypeAffinityFilter(filters.BaseHostFilter):
-    """DEPRECATED: TypeAffinityFilter doesn't allow more than one VM type
-    per host.
-
-    Note: this works best with ram_weight_multiplier
-    (spread) set to 1 (default).
-    """
-
-    RUN_ON_REBUILD = False
-
-    def __init__(self):
-        super(TypeAffinityFilter, self).__init__()
-        LOG.warning('TypeAffinityFilter is deprecated for removal in the '
-                    '17.0.0 Queens release. There is no replacement planned '
-                    'for this filter. It is fundamentally flawed in that it '
-                    'relies on the flavors.id primary key and if a flavor '
-                    '\"changed\" (deleted and re-created with new values) '
-                    'it will result in this filter thinking it is a '
-                    'different flavor, thus breaking the usefulness of this '
-                    'filter.')
-
-    def host_passes(self, host_state, spec_obj):
-        """Dynamically limits hosts to one instance type
-
-        Return False if host has any instance types other than the requested
-        type. Return True if all instance types match or if host is empty.
-        """
-        instance_type = spec_obj.flavor
-        instance_type_id = instance_type.id
-        other_types_on_host = utils.other_types_on_host(host_state,
-                                                        instance_type_id)
-        return not other_types_on_host
 
 
 class AggregateTypeAffinityFilter(filters.BaseHostFilter):

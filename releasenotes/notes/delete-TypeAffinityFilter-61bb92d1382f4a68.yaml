@@ -1,0 +1,11 @@
+---
+upgrade:
+  - |
+    The ``TypeAffinityFilter``, which was deprecated in the 16.0.0 Pike
+    release, has been removed. The filter was flawed in that it relied on the
+    flavor ``id`` primary key which cannot be relied upon since you cannot
+    "edit" a flavor to change its disk, vcpu, etc values. Therefore to change
+    a given flavor, it must be deleted and re-created, which means a new ``id``
+    value, thus potentially breaking the usefulness of the filter. Also, the
+    flavor migration from the ``nova`` database to the ``nova_api`` database
+    would also have resulted in different ``id`` values.
