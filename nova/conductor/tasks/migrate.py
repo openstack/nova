@@ -55,16 +55,12 @@ def replace_allocation_with_migration(context, instance, migration):
             instance_id=instance.uuid,
             reason=_('Instance has no source node allocation'))
 
-    # FIXME(danms): Since we don't have an atomic operation to adjust
-    # allocations for multiple consumers, we have to have space on the
-    # source for double the claim before we delete the old one
     # FIXME(danms): This method is flawed in that it asssumes allocations
     # against only one provider. So, this may overwite allocations against
     # a shared provider, if we had one.
-    success = reportclient.put_allocations(source_cn.uuid, migration.uuid,
-                                           orig_alloc,
-                                           instance.project_id,
-                                           instance.user_id)
+    success = reportclient.set_and_clear_allocations(
+        source_cn.uuid, migration.uuid, orig_alloc, instance.project_id,
+        instance.user_id, consumer_to_clear=instance.uuid)
     if not success:
         LOG.error('Unable to replace resource claim on source '
                   'host %(host)s node %(node)s for instance',
@@ -80,8 +76,6 @@ def replace_allocation_with_migration(context, instance, migration):
         LOG.debug('Created allocations for migration %(mig)s on %(rp)s',
                   {'mig': migration.uuid, 'rp': source_cn.uuid})
 
-    reportclient.delete_allocation_for_instance(instance.uuid)
-
     return source_cn, orig_alloc
 
 
@@ -92,16 +86,12 @@ def revert_allocation_for_migration(source_cn, instance, migration,
     schedclient = scheduler_client.SchedulerClient()
     reportclient = schedclient.reportclient
 
-    # FIXME(danms): Since we don't have an atomic operation to adjust
-    # allocations for multiple consumers, we have to have space on the
-    # source for double the claim before we delete the old one
     # FIXME(danms): This method is flawed in that it asssumes allocations
     # against only one provider. So, this may overwite allocations against
     # a shared provider, if we had one.
-    success = reportclient.put_allocations(source_cn.uuid, instance.uuid,
-                                           orig_alloc,
-                                           instance.project_id,
-                                           instance.user_id)
+    success = reportclient.set_and_clear_allocations(
+        source_cn.uuid, instance.uuid, orig_alloc, instance.project_id,
+        instance.user_id, consumer_to_clear=migration.uuid)
     if not success:
         LOG.error('Unable to replace resource claim on source '
                   'host %(host)s node %(node)s for instance',
@@ -111,38 +101,6 @@ def revert_allocation_for_migration(source_cn, instance, migration,
     else:
         LOG.debug('Created allocations for instance %(inst)s on %(rp)s',
                   {'inst': instance.uuid, 'rp': source_cn.uuid})
-
-    reportclient.delete_allocation_for_instance(migration.uuid)
-
-    # TODO(danms): Remove this late retry logic when we can replace
-    # the above two-step process with a single atomic one. Until then,
-    # we just re-attempt the claim for the instance now that we have
-    # cleared what should be an equal amount of space by deleting the
-    # holding migraton.
-
-    if not success:
-        # NOTE(danms): We failed to claim the resources for the
-        # instance above before the delete of the migration's
-        # claim. Try again to claim for the instance. This is just
-        # a racy attempt to be atomic and avoid stranding this
-        # instance without an allocation. When we have an atomic
-        # replace operation we should remove this.
-        success = reportclient.put_allocations(source_cn.uuid,
-                                               instance.uuid,
-                                               orig_alloc,
-                                               instance.project_id,
-                                               instance.user_id)
-        if success:
-            LOG.debug(
-                'Created allocations for instance %(inst)s on %(rp)s '
-                '(retried)',
-                {'inst': instance.uuid, 'rp': source_cn.uuid})
-        else:
-            LOG.error('Unable to replace resource claim on source '
-                      'host %(host)s node %(node)s for instance (retried)',
-                      {'host': instance.host,
-                       'node': instance.node},
-                      instance=instance)
 
 
 def should_do_migration_allocation(context):

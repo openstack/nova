@@ -3979,9 +3979,6 @@ class ComputeManager(manager.Manager):
         # Get just the resources part of the one allocation we need below
         orig_alloc = orig_alloc[cn_uuid].get('resources', {})
 
-        # FIXME(danms): Since we don't have an atomic operation to adjust
-        # allocations for multiple consumers, we have to have space on the
-        # source for double the claim before we delete the old one
         # FIXME(danms): This method is flawed in that it asssumes allocations
         # against only one provider. So, this may overwite allocations against
         # a shared provider, if we had one.
@@ -3989,10 +3986,10 @@ class ComputeManager(manager.Manager):
                  '%(mig)s for instance',
                  {'node': cn_uuid, 'mig': migration.uuid},
                  instance=instance)
-        self.reportclient.put_allocations(cn_uuid, instance.uuid, orig_alloc,
-                                          instance.project_id,
-                                          instance.user_id)
-        self.reportclient.delete_allocation_for_instance(migration.uuid)
+        # TODO(cdent): Should we be doing anything with return values here?
+        self.reportclient.set_and_clear_allocations(
+            cn_uuid, instance.uuid, orig_alloc, instance.project_id,
+            instance.user_id, consumer_to_clear=migration.uuid)
         return True
 
     def _prep_resize(self, context, image, instance, instance_type,
