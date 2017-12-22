@@ -24,7 +24,7 @@ Babel!=2.4.0,>=2.3.4 # BSD
 enum34>=1.0.4;python_version=='2.7' or python_version=='2.6' or python_version=='3.3' # BSD
 iso8601>=0.1.11 # MIT
 jsonschema<3.0.0,>=2.6.0 # MIT
-python-cinderclient>=3.2.0 # Apache-2.0
+python-cinderclient>=3.3.0 # Apache-2.0
 keystoneauth1>=3.3.0 # Apache-2.0
 python-neutronclient>=6.3.0 # Apache-2.0
 python-glanceclient>=2.8.0 # Apache-2.0
