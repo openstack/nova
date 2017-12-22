@@ -562,17 +562,25 @@ class ComputeTaskManager(base.Base):
             host_lists = self._schedule_instances(context, spec_obj,
                     instance_uuids, return_alternates=True)
         except Exception as exc:
+            num_attempts = filter_properties.get(
+                'retry', {}).get('num_attempts', 1)
             updates = {'vm_state': vm_states.ERROR, 'task_state': None}
             for instance in instances:
                 self._set_vm_state_and_notify(
                     context, instance.uuid, 'build_instances', updates,
                     exc, request_spec)
-                try:
-                    # If the BuildRequest stays around then instance show/lists
-                    # will pull from it rather than the errored instance.
-                    self._destroy_build_request(context, instance)
-                except exception.BuildRequestNotFound:
-                    pass
+                # If num_attempts > 1, we're in a reschedule and probably
+                # either hit NoValidHost or MaxRetriesExceeded. Either way,
+                # the build request should already be gone and we probably
+                # can't reach the API DB from the cell conductor.
+                if num_attempts <= 1:
+                    try:
+                        # If the BuildRequest stays around then instance
+                        # show/lists will pull from it rather than the errored
+                        # instance.
+                        self._destroy_build_request(context, instance)
+                    except exception.BuildRequestNotFound:
+                        pass
                 self._cleanup_allocated_networks(
                     context, instance, requested_networks)
             return
