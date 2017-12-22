@@ -5739,6 +5739,7 @@ def _action_get_last_created_by_instance_uuid(context, instance_uuid):
     return result
 
 
+@oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
 @pick_context_manager_writer
 def action_event_start(context, values):
     """Start an event on an instance action."""
