@@ -276,6 +276,14 @@ Customizing instance CPU topologies
    The functionality described below is currently only supported by the
    libvirt/KVM driver.
 
+.. note::
+   Currently it also works with libvirt/QEMU driver but we don't recommend
+   it in production use cases. This is because vCPUs are actually running
+   in one thread on host in qemu TCG (Tiny Code Generator), which is the
+   backend for libvirt/QEMU driver. Work to enable full multi-threading
+   support for TCG (a.k.a. MTTCG) is on going in QEMU community. Please see
+   this `MTTCG project`_ page for detail.
+
 In addition to configuring how an instance is scheduled on host CPUs, it is
 possible to configure how CPUs are represented in the instance itself. By
 default, when instance NUMA placement is not specified, a topology of N
@@ -362,3 +370,4 @@ guide.
 .. Links
 .. _`Image metadata`: https://docs.openstack.org/image-guide/image-metadata.html
 .. _`discussion`: http://lists.openstack.org/pipermail/openstack-dev/2016-March/090367.html
+.. _`MTTCG project`: http://wiki.qemu.org/Features/tcg-multithread
