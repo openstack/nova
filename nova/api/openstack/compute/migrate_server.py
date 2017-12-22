@@ -21,7 +21,6 @@ from webob import exc
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import migrate_server
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
@@ -38,7 +37,7 @@ class MigrateServerController(wsgi.Controller):
         self.compute_api = compute.API()
 
     @wsgi.response(202)
-    @extensions.expected_errors((400, 403, 404, 409))
+    @wsgi.expected_errors((400, 403, 404, 409))
     @wsgi.action('migrate')
     @validation.schema(migrate_server.migrate_v2_56, "2.56")
     def _migrate(self, req, id, body):
@@ -70,7 +69,7 @@ class MigrateServerController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
     @wsgi.response(202)
-    @extensions.expected_errors((400, 404, 409))
+    @wsgi.expected_errors((400, 404, 409))
     @wsgi.action('os-migrateLive')
     @validation.schema(migrate_server.migrate_live, "2.0", "2.24")
     @validation.schema(migrate_server.migrate_live_v2_25, "2.25", "2.29")

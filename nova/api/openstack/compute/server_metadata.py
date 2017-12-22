@@ -18,7 +18,6 @@ from webob import exc
 
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import server_metadata
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
@@ -49,14 +48,14 @@ class ServerMetadataController(wsgi.Controller):
             meta_dict[key] = value
         return meta_dict
 
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def index(self, req, server_id):
         """Returns the list of metadata for a given instance."""
         context = req.environ['nova.context']
         context.can(sm_policies.POLICY_ROOT % 'index')
         return {'metadata': self._get_metadata(context, server_id)}
 
-    @extensions.expected_errors((403, 404, 409))
+    @wsgi.expected_errors((403, 404, 409))
     # NOTE(gmann): Returns 200 for backwards compatibility but should be 201
     # as this operation complete the creation of metadata.
     @validation.schema(server_metadata.create)
@@ -71,7 +70,7 @@ class ServerMetadataController(wsgi.Controller):
 
         return {'metadata': new_metadata}
 
-    @extensions.expected_errors((400, 403, 404, 409))
+    @wsgi.expected_errors((400, 403, 404, 409))
     @validation.schema(server_metadata.update)
     def update(self, req, server_id, id, body):
         context = req.environ['nova.context']
@@ -88,7 +87,7 @@ class ServerMetadataController(wsgi.Controller):
 
         return {'meta': meta_item}
 
-    @extensions.expected_errors((403, 404, 409))
+    @wsgi.expected_errors((403, 404, 409))
     @validation.schema(server_metadata.update_all)
     def update_all(self, req, server_id, body):
         context = req.environ['nova.context']
@@ -123,7 +122,7 @@ class ServerMetadataController(wsgi.Controller):
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'update metadata', server_id)
 
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def show(self, req, server_id, id):
         """Return a single metadata item."""
         context = req.environ['nova.context']
@@ -136,7 +135,7 @@ class ServerMetadataController(wsgi.Controller):
             msg = _("Metadata item was not found")
             raise exc.HTTPNotFound(explanation=msg)
 
-    @extensions.expected_errors((404, 409))
+    @wsgi.expected_errors((404, 409))
     @wsgi.response(204)
     def delete(self, req, server_id, id):
         """Deletes an existing metadata."""

@@ -16,7 +16,6 @@
 import webob.exc
 
 from nova.api.openstack.compute.schemas import agents as schema
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import exception
@@ -48,7 +47,7 @@ class AgentController(wsgi.Controller):
     http://wiki.openstack.org/GuestAgentXenStoreCommunication
     """
     @validation.query_schema(schema.index_query)
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     def index(self, req):
         """Return a list of all agent builds. Filter by hypervisor."""
         context = req.environ['nova.context']
@@ -70,7 +69,7 @@ class AgentController(wsgi.Controller):
 
         return {'agents': agents}
 
-    @extensions.expected_errors((400, 404))
+    @wsgi.expected_errors((400, 404))
     @validation.schema(schema.update)
     def update(self, req, id, body):
         """Update an existing agent build."""
@@ -113,7 +112,7 @@ class AgentController(wsgi.Controller):
     # TODO(oomichi): Here should be 204(No Content) instead of 200 by v2.1
     # +microversions because the resource agent has been deleted completely
     # when returning a response.
-    @extensions.expected_errors((400, 404))
+    @wsgi.expected_errors((400, 404))
     @wsgi.response(200)
     def delete(self, req, id):
         """Deletes an existing agent build."""
@@ -134,7 +133,7 @@ class AgentController(wsgi.Controller):
     # TODO(oomichi): Here should be 201(Created) instead of 200 by v2.1
     # +microversions because the creation of a resource agent finishes
     # when returning a response.
-    @extensions.expected_errors(409)
+    @wsgi.expected_errors(409)
     @wsgi.response(200)
     @validation.schema(schema.create)
     def create(self, req, body):

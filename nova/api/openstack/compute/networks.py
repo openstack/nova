@@ -21,7 +21,6 @@ from nova.api.openstack.api_version_request \
     import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import networks as schema
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import exception
@@ -83,7 +82,7 @@ class NetworkController(wsgi.Controller):
         self.network_api = network_api or network.API()
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     def index(self, req):
         context = req.environ['nova.context']
         context.can(net_policies.POLICY_ROOT % 'view')
@@ -93,7 +92,7 @@ class NetworkController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.response(202)
-    @extensions.expected_errors((404, 501))
+    @wsgi.expected_errors((404, 501))
     @wsgi.action("disassociate")
     def _disassociate_host_and_project(self, req, id, body):
         context = req.environ['nova.context']
@@ -108,7 +107,7 @@ class NetworkController(wsgi.Controller):
             common.raise_feature_not_supported()
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def show(self, req, id):
         context = req.environ['nova.context']
         context.can(net_policies.POLICY_ROOT % 'view')
@@ -122,7 +121,7 @@ class NetworkController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.response(202)
-    @extensions.expected_errors((404, 409))
+    @wsgi.expected_errors((404, 409))
     def delete(self, req, id):
         context = req.environ['nova.context']
         context.can(net_policies.BASE_POLICY_NAME)
@@ -136,7 +135,7 @@ class NetworkController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors((400, 409, 501))
+    @wsgi.expected_errors((400, 409, 501))
     @validation.schema(schema.create)
     def create(self, req, body):
         context = req.environ['nova.context']
@@ -163,7 +162,7 @@ class NetworkController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.response(202)
-    @extensions.expected_errors((400, 501))
+    @wsgi.expected_errors((400, 501))
     @validation.schema(schema.add_network_to_project)
     def add(self, req, body):
         context = req.environ['nova.context']

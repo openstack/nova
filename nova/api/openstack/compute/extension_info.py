@@ -16,7 +16,6 @@ from oslo_log import log as logging
 
 import webob.exc
 
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import exception
 from nova.policies import extensions as ext_policies
@@ -865,7 +864,7 @@ class ExtensionInfoController(wsgi.Controller):
                                   ' to the virtual interface list.'}
         all_extensions.append(vif_extension_info)
 
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     def index(self, req):
         context = req.environ['nova.context']
         context.can(ext_policies.BASE_POLICY_NAME)
@@ -877,7 +876,7 @@ class ExtensionInfoController(wsgi.Controller):
 
         return dict(extensions=EXTENSION_LIST)
 
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def show(self, req, id):
         context = req.environ['nova.context']
         context.can(ext_policies.BASE_POLICY_NAME)

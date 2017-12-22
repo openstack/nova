@@ -24,7 +24,6 @@ from nova.api.openstack.api_version_request \
     import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import fping as schema
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
@@ -71,7 +70,7 @@ class FpingController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @validation.query_schema(schema.index_query)
-    @extensions.expected_errors(503)
+    @wsgi.expected_errors(503)
     def index(self, req):
         context = req.environ["nova.context"]
         search_opts = dict(deleted=False)
@@ -122,7 +121,7 @@ class FpingController(wsgi.Controller):
         return {"servers": res}
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors((404, 503))
+    @wsgi.expected_errors((404, 503))
     def show(self, req, id):
         context = req.environ["nova.context"]
         context.can(fping_policies.BASE_POLICY_NAME)

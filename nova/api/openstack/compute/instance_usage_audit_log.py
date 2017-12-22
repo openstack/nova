@@ -18,7 +18,6 @@ import datetime
 
 import webob.exc
 
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
 from nova.compute import rpcapi as compute_rpcapi
@@ -34,14 +33,14 @@ class InstanceUsageAuditLogController(wsgi.Controller):
     def __init__(self):
         self.host_api = compute.HostAPI()
 
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     def index(self, req):
         context = req.environ['nova.context']
         context.can(iual_policies.BASE_POLICY_NAME)
         task_log = self._get_audit_task_logs(context)
         return {'instance_usage_audit_logs': task_log}
 
-    @extensions.expected_errors(400)
+    @wsgi.expected_errors(400)
     def show(self, req, id):
         context = req.environ['nova.context']
         context.can(iual_policies.BASE_POLICY_NAME)

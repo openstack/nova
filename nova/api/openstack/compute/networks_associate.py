@@ -16,7 +16,6 @@ from nova.api.openstack.api_version_request \
     import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import networks_associate
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import exception
@@ -34,7 +33,7 @@ class NetworkAssociateActionController(wsgi.Controller):
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.action("disassociate_host")
     @wsgi.response(202)
-    @extensions.expected_errors((404, 501))
+    @wsgi.expected_errors((404, 501))
     def _disassociate_host_only(self, req, id, body):
         context = req.environ['nova.context']
         context.can(na_policies.BASE_POLICY_NAME)
@@ -49,7 +48,7 @@ class NetworkAssociateActionController(wsgi.Controller):
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.action("disassociate_project")
     @wsgi.response(202)
-    @extensions.expected_errors((404, 501))
+    @wsgi.expected_errors((404, 501))
     def _disassociate_project_only(self, req, id, body):
         context = req.environ['nova.context']
         context.can(na_policies.BASE_POLICY_NAME)
@@ -64,7 +63,7 @@ class NetworkAssociateActionController(wsgi.Controller):
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
     @wsgi.action("associate_host")
     @wsgi.response(202)
-    @extensions.expected_errors((404, 501))
+    @wsgi.expected_errors((404, 501))
     @validation.schema(networks_associate.associate_host)
     def _associate_host(self, req, id, body):
         context = req.environ['nova.context']

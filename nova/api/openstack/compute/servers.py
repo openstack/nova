@@ -39,7 +39,6 @@ from nova.api.openstack.compute.schemas import servers as schema_servers
 from nova.api.openstack.compute import security_groups
 from nova.api.openstack.compute import user_data
 from nova.api.openstack.compute.views import servers as views_servers
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
@@ -145,7 +144,7 @@ class ServersController(wsgi.Controller):
         self._create_schema(self.schema_server_create, '2.1')
         self._create_schema(self.schema_server_create_v20, '2.0')
 
-    @extensions.expected_errors((400, 403))
+    @wsgi.expected_errors((400, 403))
     @validation.query_schema(schema_servers.query_params_v226, '2.26')
     @validation.query_schema(schema_servers.query_params_v21, '2.1', '2.25')
     def index(self, req):
@@ -158,7 +157,7 @@ class ServersController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=err.format_message())
         return servers
 
-    @extensions.expected_errors((400, 403))
+    @wsgi.expected_errors((400, 403))
     @validation.query_schema(schema_servers.query_params_v226, '2.26')
     @validation.query_schema(schema_servers.query_params_v21, '2.1', '2.25')
     def detail(self, req):
@@ -434,7 +433,7 @@ class ServersController(wsgi.Controller):
 
         return objects.NetworkRequestList(objects=networks)
 
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def show(self, req, id):
         """Returns server details by server id."""
         context = req.environ['nova.context']
@@ -443,7 +442,7 @@ class ServersController(wsgi.Controller):
         return self._view_builder.show(req, instance)
 
     @wsgi.response(202)
-    @extensions.expected_errors((400, 403, 409))
+    @wsgi.expected_errors((400, 403, 409))
     @validation.schema(schema_server_create_v20, '2.0', '2.0')
     @validation.schema(schema_server_create, '2.1', '2.18')
     @validation.schema(schema_server_create_v219, '2.19', '2.31')
@@ -685,7 +684,7 @@ class ServersController(wsgi.Controller):
         else:
             self.compute_api.delete(context, instance)
 
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     @validation.schema(schema_server_update_v20, '2.0', '2.0')
     @validation.schema(schema_server_update, '2.1', '2.18')
     @validation.schema(schema_server_update_v219, '2.19')
@@ -724,7 +723,7 @@ class ServersController(wsgi.Controller):
     # for representing async API as this API just accepts the request and
     # request hypervisor driver to complete the same in async mode.
     @wsgi.response(204)
-    @extensions.expected_errors((400, 404, 409))
+    @wsgi.expected_errors((400, 404, 409))
     @wsgi.action('confirmResize')
     def _action_confirm_resize(self, req, id, body):
         context = req.environ['nova.context']
@@ -744,7 +743,7 @@ class ServersController(wsgi.Controller):
                     'confirmResize', id)
 
     @wsgi.response(202)
-    @extensions.expected_errors((400, 404, 409))
+    @wsgi.expected_errors((400, 404, 409))
     @wsgi.action('revertResize')
     def _action_revert_resize(self, req, id, body):
         context = req.environ['nova.context']
@@ -767,7 +766,7 @@ class ServersController(wsgi.Controller):
                     'revertResize', id)
 
     @wsgi.response(202)
-    @extensions.expected_errors((404, 409))
+    @wsgi.expected_errors((404, 409))
     @wsgi.action('reboot')
     @validation.schema(schema_servers.reboot)
     def _action_reboot(self, req, id, body):
@@ -825,7 +824,7 @@ class ServersController(wsgi.Controller):
             raise exc.HTTPBadRequest(explanation=msg)
 
     @wsgi.response(204)
-    @extensions.expected_errors((404, 409))
+    @wsgi.expected_errors((404, 409))
     def delete(self, req, id):
         """Destroys a server."""
         try:
@@ -863,7 +862,7 @@ class ServersController(wsgi.Controller):
         return common.get_id_from_href(flavor_ref)
 
     @wsgi.response(202)
-    @extensions.expected_errors((400, 401, 403, 404, 409))
+    @wsgi.expected_errors((400, 401, 403, 404, 409))
     @wsgi.action('resize')
     @validation.schema(schema_servers.resize)
     def _action_resize(self, req, id, body):
@@ -877,7 +876,7 @@ class ServersController(wsgi.Controller):
         self._resize(req, id, flavor_ref, **kwargs)
 
     @wsgi.response(202)
-    @extensions.expected_errors((400, 403, 404, 409))
+    @wsgi.expected_errors((400, 403, 404, 409))
     @wsgi.action('rebuild')
     @validation.schema(schema_server_rebuild_v20, '2.0', '2.0')
     @validation.schema(schema_server_rebuild, '2.1', '2.18')
@@ -981,7 +980,7 @@ class ServersController(wsgi.Controller):
         return self._add_location(robj)
 
     @wsgi.response(202)
-    @extensions.expected_errors((400, 403, 404, 409))
+    @wsgi.expected_errors((400, 403, 404, 409))
     @wsgi.action('createImage')
     @common.check_snapshots_enabled
     @validation.schema(schema_servers.create_image, '2.0', '2.0')
@@ -1079,7 +1078,7 @@ class ServersController(wsgi.Controller):
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
     @wsgi.response(202)
-    @extensions.expected_errors((404, 409))
+    @wsgi.expected_errors((404, 409))
     @wsgi.action('os-start')
     def _start_server(self, req, id, body):
         """Start an instance."""
@@ -1097,7 +1096,7 @@ class ServersController(wsgi.Controller):
                 'start', id)
 
     @wsgi.response(202)
-    @extensions.expected_errors((404, 409))
+    @wsgi.expected_errors((404, 409))
     @wsgi.action('os-stop')
     def _stop_server(self, req, id, body):
         """Stop an instance."""
@@ -1118,7 +1117,7 @@ class ServersController(wsgi.Controller):
 
     @wsgi.Controller.api_version("2.17")
     @wsgi.response(202)
-    @extensions.expected_errors((400, 404, 409))
+    @wsgi.expected_errors((400, 404, 409))
     @wsgi.action('trigger_crash_dump')
     @validation.schema(schema_servers.trigger_crash_dump)
     def _action_trigger_crash_dump(self, req, id, body):

@@ -19,7 +19,6 @@ import webob
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
 from nova.i18n import _
@@ -69,7 +68,7 @@ class ServerVirtualInterfaceController(wsgi.Controller):
         return {'virtual_interfaces': res}
 
     @wsgi.Controller.api_version("2.1", "2.43")
-    @extensions.expected_errors((400, 404))
+    @wsgi.expected_errors((400, 404))
     def index(self, req, server_id):
         """Returns the list of VIFs for a given instance."""
         return self._items(req, server_id,

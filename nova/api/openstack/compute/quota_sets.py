@@ -23,7 +23,6 @@ from nova.api.openstack.api_version_request \
 from nova.api.openstack.api_version_request \
     import MIN_WITHOUT_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack.compute.schemas import quota_sets
-from nova.api.openstack import extensions
 from nova.api.openstack import identity
 from nova.api.openstack import wsgi
 from nova.api import validation
@@ -106,18 +105,18 @@ class QuotaSetsController(wsgi.Controller):
             return {k: v['limit'] for k, v in values.items()}
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors(400)
+    @wsgi.expected_errors(400)
     def show(self, req, id):
         return self._show(req, id, [])
 
     @wsgi.Controller.api_version(  # noqa
         MIN_WITHOUT_PROXY_API_SUPPORT_VERSION, '2.56')
-    @extensions.expected_errors(400)
+    @wsgi.expected_errors(400)
     def show(self, req, id):
         return self._show(req, id, FILTERED_QUOTAS_2_36)
 
     @wsgi.Controller.api_version('2.57')  # noqa
-    @extensions.expected_errors(400)
+    @wsgi.expected_errors(400)
     def show(self, req, id):
         return self._show(req, id, FILTERED_QUOTAS_2_57)
 
@@ -134,18 +133,18 @@ class QuotaSetsController(wsgi.Controller):
             filtered_quotas=filtered_quotas)
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors(400)
+    @wsgi.expected_errors(400)
     def detail(self, req, id):
         return self._detail(req, id, [])
 
     @wsgi.Controller.api_version(  # noqa
         MIN_WITHOUT_PROXY_API_SUPPORT_VERSION, '2.56')
-    @extensions.expected_errors(400)
+    @wsgi.expected_errors(400)
     def detail(self, req, id):
         return self._detail(req, id, FILTERED_QUOTAS_2_36)
 
     @wsgi.Controller.api_version('2.57')  # noqa
-    @extensions.expected_errors(400)
+    @wsgi.expected_errors(400)
     def detail(self, req, id):
         return self._detail(req, id, FILTERED_QUOTAS_2_57)
 
@@ -162,20 +161,20 @@ class QuotaSetsController(wsgi.Controller):
             filtered_quotas=filtered_quotas)
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors(400)
+    @wsgi.expected_errors(400)
     @validation.schema(quota_sets.update)
     def update(self, req, id, body):
         return self._update(req, id, body, [])
 
     @wsgi.Controller.api_version(  # noqa
         MIN_WITHOUT_PROXY_API_SUPPORT_VERSION, '2.56')
-    @extensions.expected_errors(400)
+    @wsgi.expected_errors(400)
     @validation.schema(quota_sets.update_v236)
     def update(self, req, id, body):
         return self._update(req, id, body, FILTERED_QUOTAS_2_36)
 
     @wsgi.Controller.api_version('2.57')  # noqa
-    @extensions.expected_errors(400)
+    @wsgi.expected_errors(400)
     @validation.schema(quota_sets.update_v257)
     def update(self, req, id, body):
         return self._update(req, id, body, FILTERED_QUOTAS_2_57)
@@ -240,18 +239,18 @@ class QuotaSetsController(wsgi.Controller):
             filtered_quotas=filtered_quotas)
 
     @wsgi.Controller.api_version("2.0", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors(400)
+    @wsgi.expected_errors(400)
     def defaults(self, req, id):
         return self._defaults(req, id, [])
 
     @wsgi.Controller.api_version(  # noqa
         MIN_WITHOUT_PROXY_API_SUPPORT_VERSION, '2.56')
-    @extensions.expected_errors(400)
+    @wsgi.expected_errors(400)
     def defaults(self, req, id):
         return self._defaults(req, id, FILTERED_QUOTAS_2_36)
 
     @wsgi.Controller.api_version('2.57')  # noqa
-    @extensions.expected_errors(400)
+    @wsgi.expected_errors(400)
     def defaults(self, req, id):
         return self._defaults(req, id, FILTERED_QUOTAS_2_57)
 
@@ -267,7 +266,7 @@ class QuotaSetsController(wsgi.Controller):
     # TODO(oomichi): Here should be 204(No Content) instead of 202 by v2.1
     # +microversions because the resource quota-set has been deleted completely
     # when returning a response.
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     @validation.query_schema(quota_sets.query_schema)
     @wsgi.response(202)
     def delete(self, req, id):

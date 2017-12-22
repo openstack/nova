@@ -16,7 +16,6 @@
 from webob import exc
 
 from nova.api.openstack import common
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import compute
 from nova import exception
@@ -29,7 +28,7 @@ class PauseServerController(wsgi.Controller):
         self.compute_api = compute.API()
 
     @wsgi.response(202)
-    @extensions.expected_errors((404, 409, 501))
+    @wsgi.expected_errors((404, 409, 501))
     @wsgi.action('pause')
     def _pause(self, req, id, body):
         """Permit Admins to pause the server."""
@@ -52,7 +51,7 @@ class PauseServerController(wsgi.Controller):
             common.raise_feature_not_supported()
 
     @wsgi.response(202)
-    @extensions.expected_errors((404, 409, 501))
+    @wsgi.expected_errors((404, 409, 501))
     @wsgi.action('unpause')
     def _unpause(self, req, id, body):
         """Permit Admins to unpause the server."""

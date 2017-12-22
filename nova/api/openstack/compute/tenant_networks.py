@@ -23,7 +23,6 @@ from webob import exc
 from nova.api.openstack.api_version_request \
     import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack.compute.schemas import tenant_networks as schema
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 import nova.conf
@@ -74,7 +73,7 @@ class TenantNetworkController(wsgi.Controller):
         return [{'id': k, 'label': v} for k, v in networks.items()]
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     def index(self, req):
         context = req.environ['nova.context']
         context.can(tn_policies.BASE_POLICY_NAME)
@@ -85,7 +84,7 @@ class TenantNetworkController(wsgi.Controller):
         return {'networks': [network_dict(n) for n in networks]}
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     def show(self, req, id):
         context = req.environ['nova.context']
         context.can(tn_policies.BASE_POLICY_NAME)
@@ -97,7 +96,7 @@ class TenantNetworkController(wsgi.Controller):
         return {'network': network_dict(network)}
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors((403, 404, 409))
+    @wsgi.expected_errors((403, 404, 409))
     @wsgi.response(202)
     def delete(self, req, id):
         context = req.environ['nova.context']
@@ -115,7 +114,7 @@ class TenantNetworkController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=msg)
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors((400, 403, 409, 503))
+    @wsgi.expected_errors((400, 403, 409, 503))
     @validation.schema(schema.create)
     def create(self, req, body):
         context = req.environ["nova.context"]

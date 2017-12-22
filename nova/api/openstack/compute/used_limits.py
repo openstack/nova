@@ -16,7 +16,6 @@
 from nova.api.openstack import api_version_request
 from nova.api.openstack.api_version_request \
     import MIN_WITHOUT_PROXY_API_SUPPORT_VERSION
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.policies import used_limits as ul_policies
 from nova import quota
@@ -28,7 +27,7 @@ QUOTAS = quota.QUOTAS
 class UsedLimitsController(wsgi.Controller):
 
     @wsgi.extends
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     def index(self, req, resp_obj):
         context = req.environ['nova.context']
         project_id = self._project_id(context, req)

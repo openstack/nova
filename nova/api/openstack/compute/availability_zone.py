@@ -13,7 +13,6 @@
 #    under the License.
 
 from nova.api.openstack.compute.schemas import availability_zone as schema
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import availability_zones
 from nova import compute
@@ -103,7 +102,7 @@ class AvailabilityZoneController(wsgi.Controller):
                            "hosts": None})
         return {'availabilityZoneInfo': result}
 
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     def index(self, req):
         """Returns a summary list of availability zone."""
         context = req.environ['nova.context']
@@ -111,7 +110,7 @@ class AvailabilityZoneController(wsgi.Controller):
 
         return self._describe_availability_zones(context)
 
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     def detail(self, req):
         """Returns a detailed list of availability zone."""
         context = req.environ['nova.context']

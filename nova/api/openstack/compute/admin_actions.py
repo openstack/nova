@@ -16,7 +16,6 @@ from webob import exc
 
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import reset_server_state
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
@@ -36,7 +35,7 @@ class AdminActionsController(wsgi.Controller):
         self.compute_api = compute.API()
 
     @wsgi.response(202)
-    @extensions.expected_errors((404, 409))
+    @wsgi.expected_errors((404, 409))
     @wsgi.action('resetNetwork')
     def _reset_network(self, req, id, body):
         """Permit admins to reset networking on a server."""
@@ -51,7 +50,7 @@ class AdminActionsController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
 
     @wsgi.response(202)
-    @extensions.expected_errors((404, 409))
+    @wsgi.expected_errors((404, 409))
     @wsgi.action('injectNetworkInfo')
     def _inject_network_info(self, req, id, body):
         """Permit admins to inject network info into a server."""
@@ -66,7 +65,7 @@ class AdminActionsController(wsgi.Controller):
             raise exc.HTTPConflict(explanation=e.format_message())
 
     @wsgi.response(202)
-    @extensions.expected_errors(404)
+    @wsgi.expected_errors(404)
     @wsgi.action('os-resetState')
     @validation.schema(reset_server_state.reset_state)
     def _reset_state(self, req, id, body):

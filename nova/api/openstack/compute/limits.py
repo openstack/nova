@@ -23,7 +23,6 @@ from nova.api.openstack.api_version_request \
     import MIN_WITHOUT_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack.compute.schemas import limits
 from nova.api.openstack.compute.views import limits as limits_views
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.policies import limits as limits_policies
@@ -46,27 +45,27 @@ class LimitsController(wsgi.Controller):
     """Controller for accessing limits in the OpenStack API."""
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     @validation.query_schema(limits.limits_query_schema)
     def index(self, req):
         return self._index(req)
 
     @wsgi.Controller.api_version(MIN_WITHOUT_PROXY_API_SUPPORT_VERSION,  # noqa
                                  MAX_IMAGE_META_PROXY_API_VERSION)  # noqa
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     @validation.query_schema(limits.limits_query_schema)
     def index(self, req):
         return self._index(req, FILTERED_LIMITS_2_36)
 
     @wsgi.Controller.api_version(  # noqa
         MIN_WITHOUT_IMAGE_META_PROXY_API_VERSION, '2.56')  # noqa
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     @validation.query_schema(limits.limits_query_schema)
     def index(self, req):
         return self._index(req, FILTERED_LIMITS_2_36, max_image_meta=False)
 
     @wsgi.Controller.api_version('2.57')  # noqa
-    @extensions.expected_errors(())
+    @wsgi.expected_errors(())
     @validation.query_schema(limits.limits_query_schema)
     def index(self, req):
         return self._index(req, FILTERED_LIMITS_2_57, max_image_meta=False)

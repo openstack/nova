@@ -23,7 +23,6 @@ from webob import exc
 
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import cells
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova.cells import rpcapi as cells_rpcapi
@@ -101,7 +100,7 @@ class CellsController(wsgi.Controller):
         items = [_scrub_cell(item, detail=detail) for item in items]
         return dict(cells=items)
 
-    @extensions.expected_errors(501)
+    @wsgi.expected_errors(501)
     @common.check_cells_enabled
     def index(self, req):
         """Return all cells in brief."""
@@ -109,7 +108,7 @@ class CellsController(wsgi.Controller):
         ctxt.can(cells_policies.BASE_POLICY_NAME)
         return self._get_cells(ctxt, req)
 
-    @extensions.expected_errors(501)
+    @wsgi.expected_errors(501)
     @common.check_cells_enabled
     def detail(self, req):
         """Return all cells in detail."""
@@ -117,7 +116,7 @@ class CellsController(wsgi.Controller):
         ctxt.can(cells_policies.BASE_POLICY_NAME)
         return self._get_cells(ctxt, req, detail=True)
 
-    @extensions.expected_errors(501)
+    @wsgi.expected_errors(501)
     @common.check_cells_enabled
     def info(self, req):
         """Return name and capabilities for this cell."""
@@ -136,7 +135,7 @@ class CellsController(wsgi.Controller):
                 'capabilities': cell_capabs}
         return dict(cell=cell)
 
-    @extensions.expected_errors((404, 501))
+    @wsgi.expected_errors((404, 501))
     @common.check_cells_enabled
     def capacities(self, req, id=None):
         """Return capacities for a given cell or all cells."""
@@ -152,7 +151,7 @@ class CellsController(wsgi.Controller):
 
         return dict(cell={"capacities": capacities})
 
-    @extensions.expected_errors((404, 501))
+    @wsgi.expected_errors((404, 501))
     @common.check_cells_enabled
     def show(self, req, id):
         """Return data about the given cell name.  'id' is a cell name."""
@@ -167,7 +166,7 @@ class CellsController(wsgi.Controller):
     # NOTE(gmann): Returns 200 for backwards compatibility but should be 204
     # as this operation complete the deletion of aggregate resource and return
     # no response body.
-    @extensions.expected_errors((403, 404, 501))
+    @wsgi.expected_errors((403, 404, 501))
     @common.check_cells_enabled
     def delete(self, req, id):
         """Delete a child or parent cell entry.  'id' is a cell name."""
@@ -232,7 +231,7 @@ class CellsController(wsgi.Controller):
     # NOTE(gmann): Returns 200 for backwards compatibility but should be 201
     # as this operation complete the creation of aggregates resource when
     # returning a response.
-    @extensions.expected_errors((400, 403, 501))
+    @wsgi.expected_errors((400, 403, 501))
     @common.check_cells_enabled
     @validation.schema(cells.create_v20, '2.0', '2.0')
     @validation.schema(cells.create, '2.1')
@@ -250,7 +249,7 @@ class CellsController(wsgi.Controller):
             raise exc.HTTPForbidden(explanation=e.format_message())
         return dict(cell=_scrub_cell(cell))
 
-    @extensions.expected_errors((400, 403, 404, 501))
+    @wsgi.expected_errors((400, 403, 404, 501))
     @common.check_cells_enabled
     @validation.schema(cells.update_v20, '2.0', '2.0')
     @validation.schema(cells.update, '2.1')
@@ -285,7 +284,7 @@ class CellsController(wsgi.Controller):
     # NOTE(gmann): Returns 200 for backwards compatibility but should be 204
     # as this operation complete the sync instance info and return
     # no response body.
-    @extensions.expected_errors((400, 501))
+    @wsgi.expected_errors((400, 501))
     @common.check_cells_enabled
     @validation.schema(cells.sync_instances)
     def sync_instances(self, req, body):

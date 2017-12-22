@@ -17,7 +17,6 @@ from webob import exc
 from nova.api.openstack.api_version_request \
     import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack.compute import security_groups as sg
-from nova.api.openstack import extensions
 from nova.api.openstack import wsgi
 from nova import exception
 from nova.i18n import _
@@ -33,7 +32,7 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase,
             openstack_driver.get_openstack_security_group_driver())
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors((400, 409, 501))
+    @wsgi.expected_errors((400, 409, 501))
     def create(self, req, body):
         context = req.environ['nova.context']
         context.can(sgdr_policies.BASE_POLICY_NAME)
@@ -71,7 +70,7 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase,
             cidr, ip_protocol, from_port, to_port)
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors((400, 404, 501))
+    @wsgi.expected_errors((400, 404, 501))
     def show(self, req, id):
         context = req.environ['nova.context']
         context.can(sgdr_policies.BASE_POLICY_NAME)
@@ -90,7 +89,7 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase,
         return {"security_group_default_rule": fmt_rule}
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors((400, 404, 501))
+    @wsgi.expected_errors((400, 404, 501))
     @wsgi.response(204)
     def delete(self, req, id):
         context = req.environ['nova.context']
@@ -108,7 +107,7 @@ class SecurityGroupDefaultRulesController(sg.SecurityGroupControllerBase,
             raise exc.HTTPNotFound(explanation=ex.format_message())
 
     @wsgi.Controller.api_version("2.1", MAX_PROXY_API_SUPPORT_VERSION)
-    @extensions.expected_errors((404, 501))
+    @wsgi.expected_errors((404, 501))
     def index(self, req):
         context = req.environ['nova.context']
         context.can(sgdr_policies.BASE_POLICY_NAME)
