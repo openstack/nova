@@ -12,8 +12,10 @@
 
 import mock
 from oslo_serialization import jsonutils
+from oslo_versionedobjects import base as ovo_base
 
 from nova import objects
+from nova.objects import fields
 from nova.tests.unit.objects import test_objects
 from nova.tests import uuidsentinel as uuids
 
@@ -132,6 +134,30 @@ class _TestInstancePCIRequests(object):
         self.assertEqual(FAKE_UUID, result.requests[0].request_id)
         self.assertEqual([{'vendor_id': '8086', 'device_id': '1502'}],
                           result.requests[0].spec)
+
+    def test_obj_make_compatible_pre_1_2(self):
+        topo_obj = objects.InstancePCIRequest(
+            count=1,
+            spec=[{'vendor_id': '8086', 'device_id': '1502'}],
+            request_id=uuids.pci_request_id,
+            numa_policy=fields.PCINUMAAffinityPolicy.PREFERRED)
+        versions = ovo_base.obj_tree_get_versions('InstancePCIRequest')
+        primitive = topo_obj.obj_to_primitive(target_version='1.1',
+                                              version_manifest=versions)
+
+        self.assertNotIn('numa_policy', primitive['nova_object.data'])
+        self.assertIn('request_id', primitive['nova_object.data'])
+
+    def test_obj_make_compatible_pre_1_1(self):
+        topo_obj = objects.InstancePCIRequest(
+            count=1,
+            spec=[{'vendor_id': '8086', 'device_id': '1502'}],
+            request_id=uuids.pci_request_id)
+        versions = ovo_base.obj_tree_get_versions('InstancePCIRequest')
+        primitive = topo_obj.obj_to_primitive(target_version='1.0',
+                                              version_manifest=versions)
+
+        self.assertNotIn('request_id', primitive['nova_object.data'])
 
 
 class TestInstancePCIRequests(test_objects._LocalTest,

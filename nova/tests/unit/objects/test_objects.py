@@ -1115,7 +1115,7 @@ object_data = {
     'InstanceMappingList': '1.2-ee638619aa3d8a82a59c0c83bfa64d78',
     'InstanceNUMACell': '1.4-7c1eb9a198dee076b4de0840e45f4f55',
     'InstanceNUMATopology': '1.3-ec0030cb0402a49c96da7051c037082a',
-    'InstancePCIRequest': '1.1-b1d75ebc716cb12906d9d513890092bf',
+    'InstancePCIRequest': '1.2-6344dd8bd1bf873e7325c07afe47f774',
     'InstancePCIRequests': '1.1-65e38083177726d806684cb1cc0136d2',
     'LibvirtLiveMigrateBDMInfo': '1.0-252aabb723ca79d5469fa56f64b57811',
     'LibvirtLiveMigrateData': '1.4-ae5f344e7f78d3b45c259a0f80ea69f5',
