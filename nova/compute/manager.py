@@ -485,7 +485,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='4.18')
+    target = messaging.Target(version='4.19')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to an instance during power off.  The overall
@@ -1738,7 +1738,7 @@ class ComputeManager(manager.Manager):
                      filter_properties, admin_password=None,
                      injected_files=None, requested_networks=None,
                      security_groups=None, block_device_mapping=None,
-                     node=None, limits=None):
+                     node=None, limits=None, host_list=None):
 
         @utils.synchronized(instance.uuid)
         def _locked_do_build_and_run_instance(*args, **kwargs):
@@ -1760,24 +1760,24 @@ class ComputeManager(manager.Manager):
                     result = build_results.FAILED
                     raise
                 finally:
-                    fails = (build_results.FAILED,
-                             build_results.RESCHEDULED)
-                    if result in fails:
-                        # Remove the allocation records from Placement for
-                        # the instance if the build failed or is being
-                        # rescheduled to another node. The instance.host is
+                    if result == build_results.FAILED:
+                        # Remove the allocation records from Placement for the
+                        # instance if the build failed. The instance.host is
                         # likely set to None in _do_build_and_run_instance
-                        # which means if the user deletes the instance, it will
-                        # be deleted in the API, not the compute service.
+                        # which means if the user deletes the instance, it
+                        # will be deleted in the API, not the compute service.
                         # Setting the instance.host to None in
                         # _do_build_and_run_instance means that the
                         # ResourceTracker will no longer consider this instance
                         # to be claiming resources against it, so we want to
-                        # reflect that same thing in Placement.
-                        rt = self._get_resource_tracker()
-                        rt.reportclient.delete_allocation_for_instance(
-                            instance.uuid)
+                        # reflect that same thing in Placement.  No need to
+                        # call this for a reschedule, as the allocations will
+                        # have already been removed in
+                        # self._do_build_and_run_instance().
+                        self._delete_allocation_for_instance(instance.uuid)
 
+                    if result in (build_results.FAILED,
+                                  build_results.RESCHEDULED):
                         self._build_failed()
                     else:
                         self._failed_builds = 0
@@ -1789,7 +1789,11 @@ class ComputeManager(manager.Manager):
                       context, instance, image, request_spec,
                       filter_properties, admin_password, injected_files,
                       requested_networks, security_groups,
-                      block_device_mapping, node, limits)
+                      block_device_mapping, node, limits, host_list)
+
+    def _delete_allocation_for_instance(self, instance_uuid):
+        rt = self._get_resource_tracker()
+        rt.reportclient.delete_allocation_for_instance(instance_uuid)
 
     def _check_device_tagging(self, requested_networks, block_device_mapping):
         tagging_requested = False
@@ -1817,7 +1821,7 @@ class ComputeManager(manager.Manager):
     def _do_build_and_run_instance(self, context, instance, image,
             request_spec, filter_properties, admin_password, injected_files,
             requested_networks, security_groups, block_device_mapping,
-            node=None, limits=None):
+            node=None, limits=None, host_list=None):
 
         try:
             LOG.debug('Starting instance...', instance=instance)
@@ -1895,11 +1899,18 @@ class ComputeManager(manager.Manager):
             self._nil_out_instance_obj_host_and_node(instance)
             instance.task_state = task_states.SCHEDULING
             instance.save()
+            # The instance will have already claimed resources from this host
+            # before this build was attempted. Now that it has failed, we need
+            # to unclaim those resources before casting to the conductor, so
+            # that if there are alternate hosts available for a retry, it can
+            # claim resources on that new host for the instance.
+            self._delete_allocation_for_instance(instance.uuid)
 
             self.compute_task_api.build_instances(context, [instance],
                     image, filter_properties, admin_password,
                     injected_files, requested_networks, security_groups,
-                    block_device_mapping, request_spec=request_spec)
+                    block_device_mapping, request_spec=request_spec,
+                    host_lists=[host_list])
             return build_results.RESCHEDULED
         except (exception.InstanceNotFound,
                 exception.UnexpectedDeletingTaskStateError):

@@ -16,6 +16,7 @@
 Unit Tests for nova.compute.rpcapi
 """
 
+import copy
 import mock
 from oslo_serialization import jsonutils
 
@@ -23,6 +24,7 @@ from nova.compute import rpcapi as compute_rpcapi
 import nova.conf
 from nova import context
 from nova import exception
+from nova import objects
 from nova.objects import block_device as objects_block_dev
 from nova.objects import migrate_data as migrate_data_obj
 from nova.objects import migration as migration_obj
@@ -731,7 +733,49 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 admin_password='passwd', injected_files=None,
                 requested_networks=['network1'], security_groups=None,
                 block_device_mapping=None, node='node', limits=[],
-                version='4.0')
+                host_list=None, version='4.19')
+
+    def test_build_and_run_instance_4_18(self):
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        rpcapi = compute_rpcapi.ComputeAPI()
+        mock_client = mock.Mock()
+        rpcapi.router.client = mock.Mock(return_value=mock_client)
+        mock_client.can_send_version = mock.Mock(return_value=False)
+        prepare_mock = mock.Mock()
+        prepare_mock.cast = mock.Mock()
+        mock_client.prepare.return_value = prepare_mock
+        fake_limit = {"memory_mb": 1024, "disk_gb": 100, "vcpus": 2,
+                "numa_topology": None}
+        fake_limit_obj = objects.SchedulerLimits.from_dict(fake_limit)
+        args = (self.fake_instance_obj, "host", "image", "request_spec",
+                "filter_properties")
+        kwargs = {
+                "admin_password": 'passwd',
+                "injected_files": None,
+                "requested_networks": ['network1'],
+                "security_groups": None,
+                "block_device_mapping": None,
+                "node": 'node',
+                "limits": fake_limit_obj,
+                "host_list": ["host"],
+                }
+
+        expected_kwargs = copy.deepcopy(kwargs)
+        # Since we're failing the 'can_send_version' check, the host_list
+        # should be removed, and the limits objects should be converted to the
+        # older dict format.
+        expected_kwargs.pop("host_list")
+        expected_kwargs["limits"] = fake_limit_obj.to_dict()
+        # Add in the args, which will be added to the kwargs dict in the RPC
+        # call
+        expected_kwargs["instance"] = self.fake_instance_obj
+        expected_kwargs["image"] = "image"
+        expected_kwargs["request_spec"] = "request_spec"
+        expected_kwargs["filter_properties"] = "filter_properties"
+
+        rpcapi.build_and_run_instance(ctxt, *args, **kwargs)
+        prepare_mock.cast.assert_called_once_with(ctxt,
+                "build_and_run_instance", **expected_kwargs)
 
     def test_quiesce_instance(self):
         self._test_compute_api('quiesce_instance', 'call',

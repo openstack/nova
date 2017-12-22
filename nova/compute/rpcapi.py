@@ -329,6 +329,14 @@ class ComputeAPI(object):
         * 4.16 - Add tag argument to attach_interface()
         * 4.17 - Add new_attachment_id to swap_volume.
         * 4.18 - Add migration to prep_resize()
+
+        ... Pike supports messaging version 4.18. So any changes to existing
+        methods in 4.x after that point should be done so that they can handle
+        the version_cap being set to 4.18.
+
+        * 4.19 - build_and_run_instance() now gets a 'host_list' parameter
+                 representing potential alternate hosts for retries within a
+                 cell.
     '''
 
     VERSION_ALIASES = {
@@ -339,6 +347,7 @@ class ComputeAPI(object):
         'mitaka': '4.11',
         'newton': '4.13',
         'ocata': '4.13',
+        'pike': '4.18',
     }
 
     def __init__(self):
@@ -1116,22 +1125,31 @@ class ComputeAPI(object):
     def build_and_run_instance(self, ctxt, instance, host, image, request_spec,
             filter_properties, admin_password=None, injected_files=None,
             requested_networks=None, security_groups=None,
-            block_device_mapping=None, node=None, limits=None):
+            block_device_mapping=None, node=None, limits=None,
+            host_list=None):
         # NOTE(edleafe): compute nodes can only use the dict form of limits.
         if isinstance(limits, objects.SchedulerLimits):
             limits = limits.to_dict()
-        version = '4.0'
-        cctxt = self.router.client(ctxt).prepare(
-                server=host, version=version)
-        cctxt.cast(ctxt, 'build_and_run_instance', instance=instance,
-                image=image, request_spec=request_spec,
-                filter_properties=filter_properties,
-                admin_password=admin_password,
-                injected_files=injected_files,
-                requested_networks=requested_networks,
-                security_groups=security_groups,
-                block_device_mapping=block_device_mapping, node=node,
-                limits=limits)
+        kwargs = {"instance": instance,
+                  "image": image,
+                  "request_spec": request_spec,
+                  "filter_properties": filter_properties,
+                  "admin_password": admin_password,
+                  "injected_files": injected_files,
+                  "requested_networks": requested_networks,
+                  "security_groups": security_groups,
+                  "block_device_mapping": block_device_mapping,
+                  "node": node,
+                  "limits": limits,
+                  "host_list": host_list,
+                 }
+        client = self.router.client(ctxt)
+        version = '4.19'
+        if not client.can_send_version(version):
+            version = '4.0'
+            kwargs.pop("host_list")
+        cctxt = client.prepare(server=host, version=version)
+        cctxt.cast(ctxt, 'build_and_run_instance', **kwargs)
 
     def quiesce_instance(self, ctxt, instance):
         version = '4.0'

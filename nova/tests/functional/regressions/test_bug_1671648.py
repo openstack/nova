@@ -148,3 +148,11 @@ class TestRetryBetweenComputeNodeBuilds(test.TestCase):
 
         # Assert that we retried.
         self.assertEqual(2, self.attempts)
+
+
+class TestRetryBetweenComputeNodeBuildsCachingScheduler(
+        TestRetryBetweenComputeNodeBuilds):
+    """Tests the reschedule scenario using the CachingScheduler."""
+    def setUp(self):
+        self.flags(driver='caching_scheduler', group='scheduler')
+        super(TestRetryBetweenComputeNodeBuildsCachingScheduler, self).setUp()

@@ -470,7 +470,7 @@ class TestServiceVersion(test.TestCase):
         self.assertEqual(
             current, calculated,
             'Changes detected that require a SERVICE_VERSION change. Please '
-            'increment nova.objects.service.SERVICE_VERSION, and make sure it'
+            'increment nova.objects.service.SERVICE_VERSION, and make sure it '
             'is equal to nova.compute.manager.ComputeManager.target.version.')
 
     def test_version_in_init(self):
