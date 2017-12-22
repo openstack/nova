@@ -914,7 +914,7 @@ Directory where the SMBFS shares are mounted on the compute node.
 Mount options passed to the SMBFS client.
 
 Provide SMBFS options as a single string containing all parameters.
-See mount.cifs man page for  details. Note that the libvirt-qemu ``uid``
+See mount.cifs man page for details. Note that the libvirt-qemu ``uid``
 and ``gid`` must be specified.
 """),
 ]
