@@ -670,11 +670,13 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
         self.LV = '%s_%s' % (self.INSTANCE['uuid'], self.NAME)
         self.PATH = os.path.join('/dev', self.VG, self.LV)
 
+    @mock.patch('nova.utils.supports_direct_io', return_value=True)
     @mock.patch.object(imagebackend.lvm, 'create_volume')
     @mock.patch.object(imagebackend.disk, 'get_disk_size',
                        return_value=TEMPLATE_SIZE)
     @mock.patch.object(imagebackend.utils, 'execute')
-    def _create_image(self, sparse, mock_execute, mock_get, mock_create):
+    def _create_image(self, sparse, mock_execute, mock_get, mock_create,
+                      mock_ignored):
         fn = mock.MagicMock()
         cmd = ('qemu-img', 'convert', '-t', 'none', '-O', 'raw',
                self.TEMPLATE_PATH, self.PATH)
@@ -703,13 +705,14 @@ class LvmTestCase(_ImageTestCase, test.NoDBTestCase):
                                             self.SIZE, sparse=sparse)
         fn.assert_called_once_with(target=self.PATH, ephemeral_size=None)
 
+    @mock.patch('nova.utils.supports_direct_io', return_value=True)
     @mock.patch.object(imagebackend.disk, 'resize2fs')
     @mock.patch.object(imagebackend.lvm, 'create_volume')
     @mock.patch.object(imagebackend.disk, 'get_disk_size',
                        return_value=TEMPLATE_SIZE)
     @mock.patch.object(imagebackend.utils, 'execute')
     def _create_image_resize(self, sparse, mock_execute, mock_get,
-                             mock_create, mock_resize):
+                             mock_create, mock_resize, mock_ignored):
         fn = mock.MagicMock()
         fn(target=self.TEMPLATE_PATH)
         cmd = ('qemu-img', 'convert', '-t', 'none', '-O', 'raw',
@@ -925,6 +928,7 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
 
     def _create_image(self, sparse):
         with test.nested(
+                mock.patch('nova.utils.supports_direct_io', return_value=True),
                 mock.patch.object(self.lvm, 'create_volume', mock.Mock()),
                 mock.patch.object(self.lvm, 'remove_volumes', mock.Mock()),
                 mock.patch.object(self.disk, 'resize2fs', mock.Mock()),
@@ -1004,6 +1008,7 @@ class EncryptedLvmTestCase(_ImageTestCase, test.NoDBTestCase):
 
     def _create_image_resize(self, sparse):
         with test.nested(
+                mock.patch('nova.utils.supports_direct_io', return_value=True),
                 mock.patch.object(self.lvm, 'create_volume', mock.Mock()),
                 mock.patch.object(self.lvm, 'remove_volumes', mock.Mock()),
                 mock.patch.object(self.disk, 'resize2fs', mock.Mock()),
