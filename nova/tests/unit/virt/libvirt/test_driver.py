@@ -10806,7 +10806,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         def fake_create_domain_and_network(
                 context, xml, instance, network_info,
-                block_device_info=None, power_on=True, reboot=False,
+                block_device_info=None, power_on=True,
                 vifs_already_plugged=False, post_xml_callback=None,
                 destroy_disks_on_failure=False):
             # The config disk should be created by this callback, so we need
