@@ -20,6 +20,7 @@ import time
 
 from keystoneauth1 import exceptions as ks_exc
 from oslo_log import log as logging
+from oslo_middleware import request_id
 from six.moves.urllib import parse
 
 from nova.compute import provider_tree
@@ -250,9 +251,7 @@ def _extract_inventory_in_use(body):
 
 def get_placement_request_id(response):
     if response is not None:
-        return response.headers.get(
-            'openstack-request-id',
-            response.headers.get('x-openstack-request-id'))
+        return response.headers.get(request_id.HTTP_RESP_HEADER_REQUEST_ID)
 
 
 class SchedulerReportClient(object):
