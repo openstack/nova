@@ -1751,11 +1751,11 @@ class LibvirtDriver(driver.ComputeDriver):
                                             image_format, instance.image_meta)
                     else:
                         root_disk.snapshot_extract(out_path, image_format)
+                    LOG.info("Snapshot extracted, beginning image upload",
+                             instance=instance)
                 finally:
                     self._snapshot_domain(context, live_snapshot, virt_dom,
                                           state, instance)
-                    LOG.info("Snapshot extracted, beginning image upload",
-                             instance=instance)
 
                 # Upload that image to the image service
                 update_task_state(task_state=task_states.IMAGE_UPLOADING,
