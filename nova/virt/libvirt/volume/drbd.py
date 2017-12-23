@@ -46,16 +46,14 @@ class LibvirtDRBDVolumeDriver(libvirt_volume.LibvirtVolumeDriver):
         LOG.debug("Attached DRBD volume %s", device_info, instance=instance)
         connection_info['data']['device_path'] = device_info['path']
 
-    def disconnect_volume(self, connection_info, disk_dev, instance):
+    def disconnect_volume(self, connection_info, instance):
         """Disconnect the volume.
 
         :param connection_info: dict of connection information for the backend
             storage when a connection was initiated with Cinder.
-        :param disk_dev: The block device mountpoint device name (not path).
-            This is currently not used by this method.
         :param instance: The nova.objects.Instance that is having a volume
             disconnected from it.
         """
         LOG.debug("Calling os-brick to detach DRBD Volume.", instance=instance)
         self.connector.disconnect_volume(connection_info['data'], None)
-        LOG.debug("Disconnected DRBD Volume %s", disk_dev, instance=instance)
+        LOG.debug("Disconnected DRBD Volume", instance=instance)

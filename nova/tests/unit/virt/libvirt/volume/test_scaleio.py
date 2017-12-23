@@ -54,9 +54,7 @@ class LibvirtScaleIOVolumeDriverTestCase(
     def test_libvirt_scaleio_driver_disconnect(self):
         sio = scaleio.LibvirtScaleIOVolumeDriver(self.fake_host)
         sio.connector.disconnect_volume = mock.MagicMock()
-        disk_info = {'path': '/dev/vol01', 'name': 'vol01', 'type': 'raw',
-                    'dev': 'vda1', 'bus': 'pci0', 'device_path': '/dev/vol01'}
-        conn = {'data': disk_info}
-        sio.disconnect_volume(conn, disk_info, mock.sentinel.instance)
+        conn = {'data': mock.sentinel.conn_data}
+        sio.disconnect_volume(conn, mock.sentinel.instance)
         sio.connector.disconnect_volume.assert_called_once_with(
-            disk_info, None)
+            mock.sentinel.conn_data, None)

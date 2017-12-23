@@ -44,7 +44,7 @@ class LibvirtSMBFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
                                     'name': self.name,
                                     'options': None}}
         libvirt_driver.connect_volume(connection_info, mock.sentinel.instance)
-        libvirt_driver.disconnect_volume(connection_info, "vde",
+        libvirt_driver.disconnect_volume(connection_info,
                                          mock.sentinel.instance)
 
         mock_ensure_tree.assert_has_calls([mock.call(export_mnt_base)])
@@ -65,7 +65,7 @@ class LibvirtSMBFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
                                     'name': self.name}}
 
         libvirt_driver.connect_volume(connection_info, mock.sentinel.instance)
-        libvirt_driver.disconnect_volume(connection_info, "vde",
+        libvirt_driver.disconnect_volume(connection_info,
                                          mock.sentinel.instance)
 
         mock_umount.assert_has_calls([mock.call(export_mnt_base)])
@@ -102,7 +102,7 @@ class LibvirtSMBFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
                                     'options': options}}
 
         libvirt_driver.connect_volume(connection_info, mock.sentinel.instance)
-        libvirt_driver.disconnect_volume(connection_info, "vde",
+        libvirt_driver.disconnect_volume(connection_info,
                                          mock.sentinel.instance)
 
         mock_ensure_tree.assert_has_calls([mock.call(export_mnt_base)])

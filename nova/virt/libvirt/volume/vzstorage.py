@@ -126,8 +126,9 @@ class LibvirtVZStorageVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
 
         return _connect_volume(connection_info, instance)
 
-    def disconnect_volume(self, connection_info, disk_dev, instance):
+    def disconnect_volume(self, connection_info, instance):
         """Detach the volume from instance_name."""
-        LOG.debug("calling os-brick to detach Vzstorage Volume")
+        LOG.debug("calling os-brick to detach Vzstorage Volume",
+                instance=instance)
         self.connector.disconnect_volume(connection_info['data'], None)
-        LOG.debug("Disconnected Vzstorage Volume %s", disk_dev)
+        LOG.debug("Disconnected Vzstorage Volume", instance=instance)

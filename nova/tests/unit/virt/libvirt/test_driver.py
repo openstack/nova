@@ -6685,7 +6685,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 </disk>
 """, flags=flags)
                 mock_disconnect_volume.assert_called_with(
-                    connection_info, 'vdc', instance)
+                    connection_info, instance)
 
     @mock.patch('nova.virt.libvirt.host.Host._get_domain')
     def test_detach_volume_disk_not_found(self, mock_get_domain):
@@ -6741,7 +6741,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_order.assert_has_calls([
             mock.call.detach_volume(),
             mock.call.detach_encryptor(**encryption),
-            mock.call.disconnect_volume(connection_info, 'vdc', instance)])
+            mock.call.disconnect_volume(connection_info, instance)])
 
     def test_extend_volume(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -10551,9 +10551,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             get_volume_connector.assert_has_calls([
                 mock.call(inst_ref)])
             _disconnect_volume.assert_has_calls([
-                mock.call({'data': {'multipath_id': 'dummy1'}}, 'sda',
-                          inst_ref),
-                mock.call({'data': {}}, 'sdb', inst_ref)])
+                mock.call({'data': {'multipath_id': 'dummy1'}}, inst_ref),
+                mock.call({'data': {}}, inst_ref)])
 
     def test_post_live_migration_cinder_v3(self):
         cntx = context.get_admin_context()
@@ -10591,8 +10590,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
             mock_attachment_get.assert_called_once_with(cntx,
                                                         old_attachment_id)
-            mock_disconnect.assert_called_once_with(connection_info, disk_dev,
-                                                    instance)
+            mock_disconnect.assert_called_once_with(connection_info, instance)
         _test()
 
     def test_get_instance_disk_info_excludes_volumes(self):
@@ -14478,7 +14476,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             drvr.detach_volume(connection_info, instance, '/dev/sda')
             _get_domain.assert_called_once_with(instance)
             _disconnect_volume.assert_called_once_with(connection_info,
-                                                       'sda', instance)
+                                                       instance)
 
     def _test_attach_detach_interface_get_config(self, method_name):
         """Tests that the get_config() method is properly called in
@@ -15246,7 +15244,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         connect_volume.assert_called_once_with(new_connection_info, instance)
 
         swap_volume.assert_called_once_with(guest, 'vdb', conf, 1)
-        disconnect_volume.assert_called_once_with(old_connection_info, 'vdb',
+        disconnect_volume.assert_called_once_with(old_connection_info,
                                                   instance)
 
     def test_swap_volume_driver_source_is_volume(self):
@@ -15286,7 +15284,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         connect_volume.assert_called_once_with(
                 mock.sentinel.new_connection_info, instance)
         disconnect_volume.assert_called_once_with(
-                mock.sentinel.new_connection_info, 'vdb', instance)
+                mock.sentinel.new_connection_info, instance)
 
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.abort_job')
@@ -15318,7 +15316,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         connect_volume.assert_called_once_with(
                 mock.sentinel.new_connection_info, instance)
         disconnect_volume.assert_called_once_with(
-                mock.sentinel.new_connection_info, 'vdb', instance)
+                mock.sentinel.new_connection_info, instance)
 
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
     @mock.patch('nova.privsep.path.chown')
@@ -16135,7 +16133,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                  'flavor': {'root_gb': 10,
                                             'ephemeral_gb': 0}})
         disconnect_volume.assert_called_with(
-            mock.sentinel.conn_info_vda, 'vda', mock.ANY)
+            mock.sentinel.conn_info_vda, mock.ANY)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
     def test_migrate_disk_and_power_off_boot_from_volume_backed_snapshot(
@@ -16161,7 +16159,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                 'flavor': {'root_gb': 10,
                            'ephemeral_gb': 0}})
         disconnect_volume.assert_called_with(
-            mock.sentinel.conn_info_vda, 'vda', mock.ANY)
+            mock.sentinel.conn_info_vda, mock.ANY)
 
     @mock.patch('nova.utils.execute')
     @mock.patch('nova.virt.libvirt.utils.copy_image')

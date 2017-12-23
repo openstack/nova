@@ -52,7 +52,7 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         instance = mock.sentinel.instance
         instance.uuid = uuids.instance
         libvirt_driver.connect_volume(connection_info, instance)
-        libvirt_driver.disconnect_volume(connection_info, "vde",
+        libvirt_driver.disconnect_volume(connection_info,
                                          mock.sentinel.instance)
 
         device_path = os.path.join(export_mnt_base,
@@ -100,7 +100,7 @@ class LibvirtNFSVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         instance = mock.sentinel.instance
         instance.uuid = uuids.instance
         libvirt_driver.connect_volume(connection_info, instance)
-        libvirt_driver.disconnect_volume(connection_info, "vde",
+        libvirt_driver.disconnect_volume(connection_info,
                                          mock.sentinel.instance)
 
         mock_ensure_tree.assert_has_calls([mock.call(export_mnt_base)])

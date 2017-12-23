@@ -46,7 +46,7 @@ class LibvirtHGSTVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         device_info = self.connector.connect_volume(connection_info['data'])
         connection_info['data']['device_path'] = device_info['path']
 
-    def disconnect_volume(self, connection_info, disk_dev, instance):
+    def disconnect_volume(self, connection_info, instance):
         self.connector.disconnect_volume(connection_info['data'], None)
         super(LibvirtHGSTVolumeDriver,
-              self).disconnect_volume(connection_info, disk_dev, instance)
+              self).disconnect_volume(connection_info, instance)
