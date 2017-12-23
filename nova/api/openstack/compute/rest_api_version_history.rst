@@ -735,8 +735,8 @@ The 2.57 microversion makes the following changes:
 2.58
 ----
 
-  Add pagination support and ``changes-since`` filter for os-instance-actions
-  API. Users can now use ``limit`` and ``marker`` to perform paginated query
-  when listing instance actions. Users can also use ``changes-since`` filter
-  to filter the results based on the last time the instance action was
-  updated.
+Add pagination support and ``changes-since`` filter for os-instance-actions
+API. Users can now use ``limit`` and ``marker`` to perform paginated query
+when listing instance actions. Users can also use ``changes-since`` filter
+to filter the results based on the last time the instance action was
+updated.
