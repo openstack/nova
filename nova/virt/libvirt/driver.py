@@ -4309,6 +4309,28 @@ class LibvirtDriver(driver.ComputeDriver):
         vcpusched.priority = CONF.libvirt.realtime_scheduler_priority
         return vcpusched
 
+    def _get_cell_pairs(self, guest_cpu_numa_config, host_topology):
+        """Returns the lists of pairs(tuple) of an instance cell and
+        corresponding host cell:
+            [(LibvirtConfigGuestCPUNUMACell, NUMACell), ...]
+        """
+        cell_pairs = []
+        for guest_config_cell in guest_cpu_numa_config.cells:
+            for host_cell in host_topology.cells:
+                if guest_config_cell.id == host_cell.id:
+                    cell_pairs.append((guest_config_cell, host_cell))
+        return cell_pairs
+
+    def _get_numa_memnode(self, guest_node_id, host_cell_id):
+        """Returns the config object of LibvirtConfigGuestNUMATuneMemNode.
+        Prepares numa memory node config for the guest.
+        """
+        node = vconfig.LibvirtConfigGuestNUMATuneMemNode()
+        node.cellid = guest_node_id
+        node.nodeset = [host_cell_id]
+        node.mode = "strict"
+        return node
+
     def _get_guest_numa_config(self, instance_numa_topology, flavor,
                                allowed_cpus=None, image_meta=None):
         """Returns the config objects for the guest NUMA specs.
@@ -4366,12 +4388,13 @@ class LibvirtDriver(driver.ComputeDriver):
             if topology:
                 # Now get the CpuTune configuration from the numa_topology
                 guest_cpu_tune = vconfig.LibvirtConfigGuestCPUTune()
-                guest_numa_tune = vconfig.LibvirtConfigGuestNUMATune()
                 emupcpus = []
 
-                numa_mem = vconfig.LibvirtConfigGuestNUMATuneMemory()
-                numa_memnodes = [vconfig.LibvirtConfigGuestNUMATuneMemNode()
-                                 for _ in guest_cpu_numa_config.cells]
+                # Init NUMATune configuration
+                guest_numa_tune = vconfig.LibvirtConfigGuestNUMATune()
+                guest_numa_tune.memory = (
+                    vconfig.LibvirtConfigGuestNUMATuneMemory())
+                guest_numa_tune.memnodes = []
 
                 emulator_threads_isolated = (
                     instance_numa_topology.emulator_threads_isolated)
@@ -4390,53 +4413,50 @@ class LibvirtDriver(driver.ComputeDriver):
 
                 # TODO(sahid): Defining domain topology should be
                 # refactored.
-                for host_cell in topology.cells:
-                    for guest_node_id, guest_config_cell in enumerate(
-                            guest_cpu_numa_config.cells):
-                        if guest_config_cell.id == host_cell.id:
-                            node = numa_memnodes[guest_node_id]
-                            node.cellid = guest_node_id
-                            node.nodeset = [host_cell.id]
-                            node.mode = "strict"
+                cell_pairs = self._get_cell_pairs(guest_cpu_numa_config,
+                                                  topology)
+                for guest_node_id, (guest_config_cell, host_cell) in enumerate(
+                        cell_pairs):
+                    guest_numa_tune.memnodes.append(
+                        self._get_numa_memnode(guest_node_id, host_cell.id))
+                    guest_numa_tune.memory.nodeset.append(host_cell.id)
 
-                            numa_mem.nodeset.append(host_cell.id)
+                    object_numa_cell = instance_numa_topology.cells[
+                                                                guest_node_id]
 
-                            object_numa_cell = (
-                                    instance_numa_topology.cells[guest_node_id]
-                                )
-                            for cpu in guest_config_cell.cpus:
-                                pin_cpuset = (
-                                    vconfig.LibvirtConfigGuestCPUTuneVCPUPin())
-                                pin_cpuset.id = cpu
-                                # If there is pinning information in the cell
-                                # we pin to individual CPUs, otherwise we float
-                                # over the whole host NUMA node
+                    for cpu in guest_config_cell.cpus:
+                        pin_cpuset = (
+                            vconfig.LibvirtConfigGuestCPUTuneVCPUPin())
+                        pin_cpuset.id = cpu
+                        # If there is pinning information in the cell
+                        # we pin to individual CPUs, otherwise we float
+                        # over the whole host NUMA node
 
-                                if (object_numa_cell.cpu_pinning and
-                                        self._has_cpu_policy_support()):
-                                    pcpu = object_numa_cell.cpu_pinning[cpu]
-                                    pin_cpuset.cpuset = set([pcpu])
-                                else:
-                                    pin_cpuset.cpuset = host_cell.cpuset
-                                if emulator_threads_isolated:
-                                    emupcpus.extend(
-                                        object_numa_cell.cpuset_reserved)
-                                elif not wants_realtime or cpu not in vcpus_rt:
-                                    # - If realtime IS NOT enabled, the
-                                    #   emulator threads are allowed to float
-                                    #   across all the pCPUs associated with
-                                    #   the guest vCPUs ("not wants_realtime"
-                                    #   is true, so we add all pcpus)
-                                    # - If realtime IS enabled, then at least
-                                    #   1 vCPU is required to be set aside for
-                                    #   non-realtime usage. The emulator
-                                    #   threads are allowed to float acros the
-                                    #   pCPUs that are associated with the
-                                    #   non-realtime VCPUs (the "cpu not in
-                                    #   vcpu_rt" check deals with this
-                                    #   filtering)
-                                    emupcpus.extend(pin_cpuset.cpuset)
-                                guest_cpu_tune.vcpupin.append(pin_cpuset)
+                        if (object_numa_cell.cpu_pinning and
+                                self._has_cpu_policy_support()):
+                            pcpu = object_numa_cell.cpu_pinning[cpu]
+                            pin_cpuset.cpuset = set([pcpu])
+                        else:
+                            pin_cpuset.cpuset = host_cell.cpuset
+                        if emulator_threads_isolated:
+                            emupcpus.extend(
+                                object_numa_cell.cpuset_reserved)
+                        elif not wants_realtime or cpu not in vcpus_rt:
+                            # - If realtime IS NOT enabled, the
+                            #   emulator threads are allowed to float
+                            #   across all the pCPUs associated with
+                            #   the guest vCPUs ("not wants_realtime"
+                            #   is true, so we add all pcpus)
+                            # - If realtime IS enabled, then at least
+                            #   1 vCPU is required to be set aside for
+                            #   non-realtime usage. The emulator
+                            #   threads are allowed to float acros the
+                            #   pCPUs that are associated with the
+                            #   non-realtime VCPUs (the "cpu not in
+                            #   vcpu_rt" check deals with this
+                            #   filtering)
+                            emupcpus.extend(pin_cpuset.cpuset)
+                        guest_cpu_tune.vcpupin.append(pin_cpuset)
 
                 # TODO(berrange) When the guest has >1 NUMA node, it will
                 # span multiple host NUMA nodes. By pinning emulator threads
@@ -4459,9 +4479,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest_cpu_tune.emulatorpin = emulatorpin
                 # Sort the vcpupin list per vCPU id for human-friendlier XML
                 guest_cpu_tune.vcpupin.sort(key=operator.attrgetter("id"))
-
-                guest_numa_tune.memory = numa_mem
-                guest_numa_tune.memnodes = numa_memnodes
 
                 # normalize cell.id
                 for i, (cell, memnode) in enumerate(
