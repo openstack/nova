@@ -440,7 +440,8 @@ class VMOps(object):
         :returns: memory amount and number of vCPUs per NUMA node or
                   (None, None), if instance NUMA topology was not requested.
         :raises exception.InstanceUnacceptable:
-            If the given instance NUMA topology is not possible on Hyper-V.
+            If the given instance NUMA topology is not possible on Hyper-V, or
+            if CPU pinning is required.
         """
         instance_topology = hardware.numa_get_constraints(instance.flavor,
                                                           image_meta)
@@ -450,6 +451,11 @@ class VMOps(object):
 
         memory_per_numa_node = instance_topology.cells[0].memory
         cpus_per_numa_node = len(instance_topology.cells[0].cpuset)
+
+        if instance_topology.cpu_pinning_requested:
+            raise exception.InstanceUnacceptable(
+                reason=_("Hyper-V does not support CPU pinning."),
+                instance_id=instance.uuid)
 
         # validate that the requested NUMA topology is not asymetric.
         # e.g.: it should be like: (X cpus, X cpus, Y cpus), where X == Y.
