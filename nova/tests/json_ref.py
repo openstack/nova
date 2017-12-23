@@ -20,7 +20,7 @@ from oslo_serialization import jsonutils
 def _resolve_ref(ref, base_path):
     file_path, _, json_path = ref.partition('#')
     if json_path:
-        raise NotImplementedError('JSON refs with JSON path after the "#" is'
+        raise NotImplementedError('JSON refs with JSON path after the "#" is '
                                   'not yet supported')
 
     path = os.path.join(base_path, file_path)

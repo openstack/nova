@@ -132,3 +132,13 @@ class TestJsonRef(test.NoDBTestCase):
                                               'c': 13}}},
                              actual)
         mock_open.assert_called_once_with('some/base/path/another.json', 'r+b')
+
+    def test_ref_with_json_path_not_supported(self):
+
+        self.assertRaises(
+            NotImplementedError, json_ref.resolve_refs,
+            {'foo': 1,
+             'bar': {'$ref': 'another.json#/key-in-another',
+                     'boo': {'b': 3,
+                             'c': 13}}},
+            'some/base/path/')
