@@ -47,7 +47,7 @@ class LibvirtFibreChannelVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         conf.driver_io = "native"
         return conf
 
-    def connect_volume(self, connection_info, disk_info, instance):
+    def connect_volume(self, connection_info, instance):
         """Attach the volume to instance_name."""
 
         LOG.debug("Calling os-brick to attach FC Volume")

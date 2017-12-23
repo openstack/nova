@@ -110,13 +110,13 @@ class LibvirtVZStorageVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
 
         return ' '.join(mount_opts)
 
-    def connect_volume(self, connection_info, disk_info, instance):
+    def connect_volume(self, connection_info, instance):
         """Attach the volume to instance_name."""
         vz_share = connection_info['data']['export']
         share_lock = self.SHARE_LOCK_NAME % vz_share
 
         @utils.synchronized(share_lock)
-        def _connect_volume(connection_info, disk_info, instance):
+        def _connect_volume(connection_info, instance):
             LOG.debug("Calling os-brick to mount vzstorage")
             connection_info['data']['options'] = self._get_mount_opts(vz_share)
             device_info = self.connector.connect_volume(
@@ -124,7 +124,7 @@ class LibvirtVZStorageVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
             LOG.debug("Attached vzstorage volume %s", device_info)
             connection_info['data']['device_path'] = device_info['path']
 
-        return _connect_volume(connection_info, disk_info, instance)
+        return _connect_volume(connection_info, instance)
 
     def disconnect_volume(self, connection_info, disk_dev, instance):
         """Detach the volume from instance_name."""

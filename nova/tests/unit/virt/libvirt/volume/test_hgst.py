@@ -38,7 +38,7 @@ class LibvirtHGSTVolumeDriverTestCase(test_volume.LibvirtVolumeBaseTestCase):
         drvr.connector.connect_volume = brick_conn_vol
         di = {'path': '/dev/space01', 'name': 'space01'}
         ci = {'data': di}
-        drvr.connect_volume(ci, None, mock.sentinel.instance)
+        drvr.connect_volume(ci, mock.sentinel.instance)
         self.assertEqual('/dev/space01',
                          ci['data']['device_path'])
 

@@ -44,7 +44,7 @@ class LibvirtAOEVolumeDriver(libvirt_volume.LibvirtBaseVolumeDriver):
         conf.source_path = connection_info['data']['device_path']
         return conf
 
-    def connect_volume(self, connection_info, disk_info, instance):
+    def connect_volume(self, connection_info, instance):
         LOG.debug("Calling os-brick to attach AoE Volume")
         device_info = self.connector.connect_volume(connection_info['data'])
         LOG.debug("Attached AoE volume %s", device_info)

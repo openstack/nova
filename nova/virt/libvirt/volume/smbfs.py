@@ -39,7 +39,7 @@ class LibvirtSMBFSVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
         conf.driver_format = connection_info['data'].get('format', 'raw')
         return conf
 
-    def connect_volume(self, connection_info, disk_info, instance):
+    def connect_volume(self, connection_info, instance):
         """Connect the volume."""
         smbfs_share = connection_info['data']['export']
         mount_path = self._get_mount_path(connection_info)

@@ -64,7 +64,6 @@ class LibvirtVZStorageTestCase(test_volume.LibvirtVolumeBaseTestCase):
                                 err_pattern,
                                 drv.connect_volume,
                                 connection_info,
-                                self.disk_info,
                                 mock.sentinel.instance)
 
     @mock.patch.object(vzstorage.utils, 'synchronized',
@@ -80,8 +79,7 @@ class LibvirtVZStorageTestCase(test_volume.LibvirtVolumeBaseTestCase):
         connection_info = {'data': {'export': export_string,
                                     'name': self.name}}
 
-        drv.connect_volume(connection_info, self.disk_info,
-                           mock.sentinel.instance)
+        drv.connect_volume(connection_info, mock.sentinel.instance)
         self.assertEqual('vstorage://testcluster',
                          connection_info['data']['device_path'])
         self.assertEqual('-u stack -g qemu -m 0770 '

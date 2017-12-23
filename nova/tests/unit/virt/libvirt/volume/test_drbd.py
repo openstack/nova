@@ -44,8 +44,7 @@ class LibvirtDRBDVolumeDriverTestCase(
         }
         with mock.patch.object(connector.DRBDConnector, 'connect_volume',
                                return_value=device_info):
-            drbd_driver.connect_volume(
-                connection_info, self.disk_info, instance)
+            drbd_driver.connect_volume(connection_info, instance)
         # assert that the device_path was set
         self.assertIn('device_path', connection_info['data'])
         self.assertEqual('/path/to/fake-device',

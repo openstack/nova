@@ -106,7 +106,7 @@ class LibvirtBaseVolumeDriver(object):
 
         return conf
 
-    def connect_volume(self, connection_info, disk_info, instance):
+    def connect_volume(self, connection_info, instance):
         """Connect the volume."""
         pass
 

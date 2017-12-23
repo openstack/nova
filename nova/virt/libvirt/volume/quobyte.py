@@ -123,7 +123,7 @@ class LibvirtQuobyteVolumeDriver(fs.LibvirtBaseFileSystemVolumeDriver):
         return conf
 
     @utils.synchronized('connect_qb_volume')
-    def connect_volume(self, connection_info, disk_info, instance):
+    def connect_volume(self, connection_info, instance):
         """Connect the volume."""
         data = connection_info['data']
         quobyte_volume = self._normalize_export(data['export'])

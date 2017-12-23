@@ -39,7 +39,7 @@ class LibvirtDISCOVolumeDriverTestCase(
         with mock.patch.object(dcon.connector,
                                'connect_volume',
                                return_value={'path': '/dev/dms1234567'}):
-            dcon.connect_volume(conn, None, mock.sentinel.instance)
+            dcon.connect_volume(conn, mock.sentinel.instance)
             self.assertEqual('/dev/dms1234567',
                              conn['data']['device_path'])
 

@@ -6630,7 +6630,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     test.MatchType(objects.ImageMeta),
                     bdm)
                 mock_connect_volume.assert_called_with(
-                    connection_info, disk_info, instance)
+                    connection_info, instance)
                 mock_get_volume_config.assert_called_with(
                     connection_info, disk_info)
                 mock_dom.attachDeviceFlags.assert_called_with(
@@ -10070,12 +10070,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             ).AndReturn(vol['block_device_mapping'])
         self.mox.StubOutWithMock(drvr, "_connect_volume")
         for v in vol['block_device_mapping']:
-            disk_info = {
-                'bus': "scsi",
-                'dev': v['mount_device'].rpartition("/")[2],
-                'type': "disk"
-                }
-            drvr._connect_volume(v['connection_info'], disk_info, instance)
+            drvr._connect_volume(v['connection_info'], instance)
         self.mox.StubOutWithMock(drvr, 'plug_vifs')
         drvr.plug_vifs(mox.IsA(instance), nw_info)
 
@@ -10207,13 +10202,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             # Creating mocks
             self.mox.StubOutWithMock(drvr, "_connect_volume")
             for v in vol['block_device_mapping']:
-                disk_info = {
-                    'bus': "scsi",
-                    'dev': v['mount_device'].rpartition("/")[2],
-                    'type': "disk"
-                    }
-                drvr._connect_volume(v['connection_info'], disk_info,
-                                     inst_ref)
+                drvr._connect_volume(v['connection_info'], inst_ref)
             self.mox.StubOutWithMock(drvr, 'plug_vifs')
             drvr.plug_vifs(mox.IsA(inst_ref), nw_info)
             self.mox.ReplayAll()
@@ -10961,7 +10950,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                   'delete_on_termination': False
               }
 
-        def _connect_volume_side_effect(connection_info, disk_info, instance):
+        def _connect_volume_side_effect(connection_info, instance):
             bdm['connection_info']['data']['device_path'] = '/dev/path/to/dev'
 
         def _get(key, opt=None):
@@ -15040,8 +15029,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual(3, len(devices))
             self.assertEqual('/dev/vdb', instance.default_ephemeral_device)
             self.assertIsNone(instance.default_swap_device)
-            connect_volume.assert_called_with(bdm['connection_info'],
-                {'bus': 'virtio', 'type': 'disk', 'dev': 'vdc'}, instance)
+            connect_volume.assert_called_with(bdm['connection_info'], instance)
             get_volume_config.assert_called_with(bdm['connection_info'],
                 {'bus': 'virtio', 'type': 'disk', 'dev': 'vdc'})
             volume_save.assert_called_once_with()
@@ -15248,7 +15236,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_dom.name.return_value = 'inst'
         mock_dom.UUIDString.return_value = 'uuid'
         get_guest.return_value = guest
-        disk_info = {'bus': 'virtio', 'type': 'disk', 'dev': 'vdb'}
         conf = mock.MagicMock(source_path='/fake-new-volume')
         get_volume_config.return_value = conf
 
@@ -15256,8 +15243,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                          '/dev/vdb', 1)
 
         get_guest.assert_called_once_with(instance)
-        connect_volume.assert_called_once_with(new_connection_info, disk_info,
-                                               instance)
+        connect_volume.assert_called_once_with(new_connection_info, instance)
 
         swap_volume.assert_called_once_with(guest, 'vdb', conf, 1)
         disconnect_volume.assert_called_once_with(old_connection_info, 'vdb',
@@ -15298,8 +15284,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           mock.sentinel.new_connection_info,
                           instance, '/dev/vdb', 0)
         connect_volume.assert_called_once_with(
-                mock.sentinel.new_connection_info,
-                {'dev': 'vdb', 'type': 'disk', 'bus': 'virtio'}, instance)
+                mock.sentinel.new_connection_info, instance)
         disconnect_volume.assert_called_once_with(
                 mock.sentinel.new_connection_info, 'vdb', instance)
 
@@ -15331,8 +15316,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           mock.sentinel.new_connection_info,
                           instance, '/dev/vdb', 0)
         connect_volume.assert_called_once_with(
-                mock.sentinel.new_connection_info,
-                {'dev': 'vdb', 'type': 'disk', 'bus': 'virtio'}, instance)
+                mock.sentinel.new_connection_info, instance)
         disconnect_volume.assert_called_once_with(
                 mock.sentinel.new_connection_info, 'vdb', instance)
 
