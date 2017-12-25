@@ -37,7 +37,7 @@ Response
 Response Example
 ----------------
 
-.. literalinclude:: get-resource_provider-traits.json
+.. literalinclude:: ./samples/resource_provider_traits/get-resource_provider-traits.json
    :language: javascript
 
 Update resource provider traits
@@ -70,7 +70,7 @@ Request
 Request example
 ---------------
 
-.. literalinclude:: update-resource_provider-traits-request.json
+.. literalinclude:: ./samples/resource_provider_traits/update-resource_provider-traits-request.json
    :language: javascript
 
 Response
@@ -84,7 +84,7 @@ Response
 Response Example
 ----------------
 
-.. literalinclude:: update-resource_provider-traits.json
+.. literalinclude:: ./samples/resource_provider_traits/update-resource_provider-traits.json
    :language: javascript
 
 

@@ -40,7 +40,7 @@ Response
 Response Example
 ----------------
 
-.. literalinclude:: get-inventory.json
+.. literalinclude:: ./samples/inventories/get-inventory.json
    :language: javascript
 
 Update resource provider inventory
@@ -73,7 +73,7 @@ Request
 Request example
 ---------------
 
-.. literalinclude:: update-inventory-request.json
+.. literalinclude:: ./samples/inventories/update-inventory-request.json
    :language: javascript
 
 Response
@@ -92,7 +92,7 @@ Response
 Response Example
 ----------------
 
-.. literalinclude:: update-inventory.json
+.. literalinclude:: ./samples/inventories/update-inventory.json
    :language: javascript
 
 Delete resource provider inventory

@@ -29,7 +29,7 @@ Response
 Response Example
 ----------------
 
-.. literalinclude:: get-resource_classes.json
+.. literalinclude:: ./samples/resource_classes/get-resource_classes.json
    :language: javascript
 
 Create resource class
@@ -60,7 +60,7 @@ Request
 Request example
 ---------------
 
-.. literalinclude:: create-resource_classes-request.json
+.. literalinclude:: ./samples/resource_classes/create-resource_classes-request.json
    :language: javascript
 
 Response

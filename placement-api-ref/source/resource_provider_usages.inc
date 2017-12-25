@@ -38,5 +38,5 @@ Response
 Response Example
 ----------------
 
-.. literalinclude:: get-resource_provider_usages.json
+.. literalinclude:: ./samples/resource_provider_usages/get-resource_provider_usages.json
    :language: javascript

@@ -44,7 +44,7 @@ Request
 
 Request Example
 
-.. literalinclude:: manage-allocations-request.json
+.. literalinclude:: ./samples/allocations/manage-allocations-request.json
    :language: javascript
 
 Response
@@ -87,7 +87,7 @@ Response
 Response Example
 ----------------
 
-.. literalinclude:: get-allocations.json
+.. literalinclude:: ./samples/allocations/get-allocations.json
    :language: javascript
 
 Update allocations
@@ -123,7 +123,7 @@ Request (microversions 1.12 - )
 Request example (microversions 1.12 - )
 ---------------------------------------
 
-.. literalinclude:: update-allocations-request-1.12.json
+.. literalinclude:: ./samples/allocations/update-allocations-request-1.12.json
    :language: javascript
 
 Request (microversions 1.0 - 1.11)
@@ -142,7 +142,7 @@ Request (microversions 1.0 - 1.11)
 Request example (microversions 1.0 - 1.11)
 ------------------------------------------
 
-.. literalinclude:: update-allocations-request.json
+.. literalinclude:: ./samples/allocations/update-allocations-request.json
    :language: javascript
 
 Response

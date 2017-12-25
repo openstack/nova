@@ -39,5 +39,5 @@ Response
 Response Example
 ----------------
 
-.. literalinclude:: get-usages.json
+.. literalinclude:: ./samples/usages/get-usages.json
    :language: javascript

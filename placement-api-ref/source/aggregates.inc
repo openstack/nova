@@ -66,7 +66,7 @@ Response
 Response Example
 ----------------
 
-.. literalinclude:: get-aggregates.json
+.. literalinclude:: ./samples/aggregates/get-aggregates.json
    :language: javascript
 
 Update resource provider aggregates
@@ -91,7 +91,7 @@ Request
 Request example
 ---------------
 
-.. literalinclude:: update-aggregates-request.json
+.. literalinclude:: ./samples/aggregates/update-aggregates-request.json
    :language: javascript
 
 Response
@@ -104,5 +104,5 @@ Response
 Response Example
 ----------------
 
-.. literalinclude:: update-aggregates.json
+.. literalinclude:: ./samples/aggregates/update-aggregates.json
    :language: javascript

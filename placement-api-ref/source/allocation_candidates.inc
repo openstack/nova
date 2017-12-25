@@ -48,7 +48,7 @@ Response (microversions 1.12 - )
 Response Example (microversions 1.12 - )
 ----------------------------------------
 
-.. literalinclude:: get-allocation_candidates-1.12.json
+.. literalinclude:: ./samples/allocation_candidates/get-allocation_candidates-1.12.json
    :language: javascript
 
 Response (microversions 1.10 - 1.11)
@@ -68,5 +68,5 @@ Response (microversions 1.10 - 1.11)
 Response Example (microversions 1.10 - 1.11)
 --------------------------------------------
 
-.. literalinclude:: get-allocation_candidates.json
+.. literalinclude:: ./samples/allocation_candidates/get-allocation_candidates.json
    :language: javascript

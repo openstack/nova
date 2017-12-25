@@ -40,7 +40,7 @@ Response
 Response Example
 ----------------
 
-.. literalinclude:: get-resource_provider.json
+.. literalinclude:: ./samples/resource_providers/get-resource_provider.json
    :language: javascript
 
 Update resource provider
@@ -69,7 +69,7 @@ Request
 Request example
 ---------------
 
-.. literalinclude:: update-resource_provider-request.json
+.. literalinclude:: ./samples/resource_providers/update-resource_provider-request.json
    :language: javascript
 
 Response
@@ -87,7 +87,7 @@ Response
 Response Example
 ----------------
 
-.. literalinclude:: update-resource_provider.json
+.. literalinclude:: ./samples/resource_providers/update-resource_provider.json
    :language: javascript
 
 Delete resource provider
