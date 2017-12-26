@@ -50,7 +50,7 @@ Response
   - start_time: start_time
   - user_id: user_id
   - updated_at: updated_instance_action
-  - instance_actions_links: instance_actions_next_links
+  - links: instance_actions_next_links
 
 **Example List Actions For Server: JSON response**
 
