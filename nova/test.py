@@ -230,7 +230,8 @@ class TestCase(testtools.TestCase):
         self.useFixture(fixtures.TempHomeDir())
         self.useFixture(log_fixture.get_logging_handle_error_fixture())
 
-        self.useFixture(nova_fixtures.OutputStreamCapture())
+        self.output = nova_fixtures.OutputStreamCapture()
+        self.useFixture(self.output)
 
         self.stdlog = nova_fixtures.StandardLogging()
         self.useFixture(self.stdlog)
