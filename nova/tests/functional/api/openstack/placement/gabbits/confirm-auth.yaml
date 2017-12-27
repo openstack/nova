@@ -11,12 +11,22 @@ defaults:
         accept: application/json
 
 tests:
-    - name: no token gets 401
+    - name: no token gets 200 at root
       GET: /
+      status: 200
+
+    - name: with token 200 at root
+      GET: /
+      request_headers:
+          x-auth-token: admin:admin
+      status: 200
+
+    - name: no token gets 401
+      GET: /resource_providers
       status: 401
 
     - name: with token 200
-      GET: /
+      GET: /resource_providers
       request_headers:
           x-auth-token: admin:admin
       status: 200
