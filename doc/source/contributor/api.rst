@@ -179,17 +179,76 @@ maintain.
 Unit Tests
 ----------
 
-Should write something more here. But you need to have
-both unit and functional tests.
+Unit tests for the API can be found under path
+``nova/tests/unit/api/openstack/compute/``. Unit tests for the
+API are generally negative scenario tests, because the positive
+scenarios are tested with functional API samples tests.
+
+Negative tests would include such things as:
+
+* Request schema validation failures, for both the request body and query
+  parameters
+* HTTPNotFound or other >=400 response code failures
 
 
 Functional tests and API Samples
 --------------------------------
 
-Should write something here
+All functional API changes, including new microversions - especially if there
+are new request or response parameters, should have new functional API samples
+tests.
 
-Commit message tags
--------------------
+The API samples tests are made of two parts:
 
-Please ensure you add the ``DocImpact`` tag along with a short
-description for any API change.
+* The API sample for the reference docs. These are found under path
+  ``doc/api_samples/``. There is typically one directory per API controller
+  with subdirectories per microversion for that API controller. The unversioned
+  samples are used for the base v2.0 / v2.1 APIs.
+* Corresponding API sample templates found under path
+  ``nova/tests/functional/api_sample_tests/api_samples``. These have a similar
+  structure to the API reference docs samples, except the format of the sample
+  can include substitution variables filled in by the tests where necessary,
+  for example, to substitute things that change per test run, like a server
+  UUID.
+
+The actual functional tests are found under path
+``nova/tests/functional/api_sample_tests/``. Most, if not all, API samples
+tests extend the ``ApiSampleTestBaseV21`` class which extends
+``ApiSampleTestBase``. These base classes provide the framework for making
+a request using an API reference doc sample and validating the response using
+the corresponding template file, along with any variable substitutions that
+need to be made.
+
+Note that it is possible to automatically generate the API reference doc
+samples using the templates by simply running the tests using
+``tox -r -e api-samples``. This relies, of course, upon the test and templates
+being correct for the test to pass, which may take some iteration.
+
+In general, if you are adding a new microversion to an existing API controller,
+it is easiest to simply copy an existing test and modify it for the new
+microversion and the new samples/templates.
+
+The functional API samples tests are not the simplest thing in the world to
+get used to, and can be very frustrating at times when they fail in not
+obvious ways. If you need help debugging a functional API sample test failure,
+feel free to post your work-in-progress change for review and ask for help in
+the ``openstack-nova`` freenode IRC channel.
+
+
+Documentation
+-------------
+
+All API changes must also include updates to the compute API reference,
+which can be found under path ``api-ref/source/``.
+
+Things to consider here include:
+
+* Adding new request and/or response parameters with a new microversion
+* Marking existing parameters as deprecated in a new microversion
+
+More information on the compute API reference format and conventions can
+be found here: https://wiki.openstack.org/wiki/NovaAPIRef
+
+For more detailed documentation of certain aspects of the API, consider
+writing something into the compute API guide found under path
+``api-guide/source/``.
