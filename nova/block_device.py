@@ -48,7 +48,7 @@ bdm_new_fields = set(['source_type', 'destination_type',
                      'connection_info', 'tag'])
 
 
-bdm_db_only_fields = set(['id', 'instance_uuid', 'attachment_id'])
+bdm_db_only_fields = set(['id', 'instance_uuid', 'attachment_id', 'uuid'])
 
 
 bdm_db_inherited_fields = set(['created_at', 'updated_at',

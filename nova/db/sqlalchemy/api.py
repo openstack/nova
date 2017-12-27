@@ -3708,12 +3708,27 @@ def _from_legacy_values(values, legacy, allow_updates=False):
         return values
 
 
+def _set_or_validate_uuid(values):
+    uuid = values.get('uuid')
+
+    # values doesn't contain uuid, or it's blank
+    if not uuid:
+        values['uuid'] = uuidutils.generate_uuid()
+
+    # values contains a uuid
+    else:
+        if not uuidutils.is_uuid_like(uuid):
+            raise exception.InvalidUUID(uuid=uuid)
+
+
 @require_context
 @pick_context_manager_writer
 def block_device_mapping_create(context, values, legacy=True):
     _scrub_empty_str_values(values, ['volume_size'])
     values = _from_legacy_values(values, legacy)
     convert_objects_related_datetimes(values)
+
+    _set_or_validate_uuid(values)
 
     bdm_ref = models.BlockDeviceMapping()
     bdm_ref.update(values)
@@ -3735,14 +3750,25 @@ def block_device_mapping_update(context, bdm_id, values, legacy=True):
 
 @pick_context_manager_writer
 def block_device_mapping_update_or_create(context, values, legacy=True):
+    # TODO(mdbooth): Remove this method entirely. Callers should know whether
+    # they require update or create, and call the appropriate method.
+
     _scrub_empty_str_values(values, ['volume_size'])
     values = _from_legacy_values(values, legacy, allow_updates=True)
     convert_objects_related_datetimes(values)
 
     result = None
-    # NOTE(xqueralt): Only update a BDM when device_name was provided. We
-    # allow empty device names so they will be set later by the manager.
-    if values['device_name']:
+    # NOTE(xqueralt,danms): Only update a BDM when device_name or
+    # uuid was provided. Prefer the uuid, if available, but fall
+    # back to device_name if no uuid is provided, which can happen
+    # for BDMs created before we had a uuid. We allow empty device
+    # names so they will be set later by the manager.
+    if 'uuid' in values:
+        query = _block_device_mapping_get_query(context)
+        result = query.filter_by(instance_uuid=values['instance_uuid'],
+                                 uuid=values['uuid']).one_or_none()
+
+    if not result and values['device_name']:
         query = _block_device_mapping_get_query(context)
         result = query.filter_by(instance_uuid=values['instance_uuid'],
                                  device_name=values['device_name']).first()
@@ -3750,8 +3776,9 @@ def block_device_mapping_update_or_create(context, values, legacy=True):
     if result:
         result.update(values)
     else:
-        # Either the device_name doesn't exist in the database yet, or no
-        # device_name was provided. Both cases mean creating a new BDM.
+        # Either the device_name or uuid doesn't exist in the database yet, or
+        # neither was provided. Both cases mean creating a new BDM.
+        _set_or_validate_uuid(values)
         result = models.BlockDeviceMapping(**values)
         result.save(context.session)
 
