@@ -5,5 +5,7 @@ upgrade:
 
     - ``quota``
     - ``shell``
+    - ``project``
+    - ``account``
 
     These were previously deprecated in 16.0.0.

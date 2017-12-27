@@ -113,110 +113,6 @@ def _db_error(caught_exception):
     sys.exit(1)
 
 
-class ProjectCommands(object):
-    """Class for managing projects."""
-
-    # TODO(stephenfin): Remove this during the Queens cycle
-    description = ('DEPRECATED: The project commands are deprecated since '
-                   'Pike as this information is available over the API. They '
-                   'will be removed in an upcoming release.')
-
-    @args('--project', dest='project_id', metavar='<Project name>',
-            help='Project name')
-    @args('--user', dest='user_id', metavar='<User name>',
-            help='User name')
-    @args('--key', metavar='<key>', help='Key')
-    @args('--value', metavar='<value>', help='Value')
-    def quota(self, project_id, user_id=None, key=None, value=None):
-        """Create, update or display quotas for project/user
-
-        If no quota key is provided, the quota will be displayed.
-        If a valid quota key is provided and it does not exist,
-        it will be created. Otherwise, it will be updated.
-        """
-
-        ctxt = context.get_admin_context()
-        if user_id:
-            quota = QUOTAS.get_user_quotas(ctxt, project_id, user_id)
-        else:
-            user_id = None
-            quota = QUOTAS.get_project_quotas(ctxt, project_id)
-        # if key is None, that means we need to show the quotas instead
-        # of updating them
-        if key:
-            settable_quotas = QUOTAS.get_settable_quotas(ctxt,
-                                                         project_id,
-                                                         user_id=user_id)
-            if key in quota:
-                minimum = settable_quotas[key]['minimum']
-                maximum = settable_quotas[key]['maximum']
-                if value.lower() == 'unlimited':
-                    value = -1
-                if int(value) < -1:
-                    print(_('Quota limit must be -1 or greater.'))
-                    return 2
-                if ((int(value) < minimum) and
-                   (maximum != -1 or (maximum == -1 and int(value) != -1))):
-                    print(_('Quota limit must be greater than %s.') % minimum)
-                    return 2
-                if maximum != -1 and int(value) > maximum:
-                    print(_('Quota limit must be less than %s.') % maximum)
-                    return 2
-                try:
-                    objects.Quotas.create_limit(ctxt, project_id, key, value,
-                                                user_id=user_id)
-                except exception.QuotaExists:
-                    objects.Quotas.update_limit(ctxt, project_id, key, value,
-                                                user_id=user_id)
-            else:
-                print(_('%(key)s is not a valid quota key. Valid options are: '
-                        '%(options)s.') % {'key': key,
-                                           'options': ', '.join(quota)})
-                return 2
-        print_format = "%-36s %-10s %-10s %-10s"
-        print(print_format % (
-                    _('Quota'),
-                    _('Limit'),
-                    _('In Use'),
-                    _('Reserved')))
-        # Retrieve the quota after update
-        if user_id:
-            quota = QUOTAS.get_user_quotas(ctxt, project_id, user_id)
-        else:
-            quota = QUOTAS.get_project_quotas(ctxt, project_id)
-        reserved = QUOTAS.get_reserved()
-        for key, value in quota.items():
-            if value['limit'] is None or value['limit'] < 0:
-                value['limit'] = 'unlimited'
-            # NOTE(melwitt): We've re-architected quotas to eliminate
-            # reservations, so we no longer have a 'reserved' key returned from
-            # get_*_quotas, so set it here to satisfy what's expected from the
-            # command output.
-            value['reserved'] = reserved
-            print(print_format % (key, value['limit'], value['in_use'],
-                                  value['reserved']))
-
-    @args('--project', dest='project_id', metavar='<Project Id>',
-            help='Project Id', required=True)
-    @args('--user', dest='user_id', metavar='<User Id>',
-            help='User Id')
-    @args('--key', metavar='<key>', help='Key')
-    def quota_usage_refresh(self, project_id, user_id=None, key=None):
-        """DEPRECATED: This command is deprecated and no longer does anything.
-        """
-        # TODO(melwitt): Remove this during the Queens cycle
-        pass
-
-
-class AccountCommands(ProjectCommands):
-    """Class for managing projects."""
-
-    # TODO(stephenfin): Remove this during the Queens cycle
-    description = ('DEPRECATED: The account commands are deprecated since '
-                   'Pike as this information is available over the API. They '
-                   'will be removed in an upcoming release.')
-
-
 class FloatingIpCommands(object):
     """Class for managing floating IP."""
 
@@ -1785,7 +1681,6 @@ class CellV2Commands(object):
 
 
 CATEGORIES = {
-    'account': AccountCommands,
     'agent': AgentBuildCommands,
     'api_db': ApiDbCommands,
     'cell': CellCommands,
@@ -1795,7 +1690,6 @@ CATEGORIES = {
     'host': HostCommands,
     'logs': GetLogCommands,
     'network': NetworkCommands,
-    'project': ProjectCommands,
 }
 
 
