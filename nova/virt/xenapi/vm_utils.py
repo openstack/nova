@@ -2126,27 +2126,6 @@ def _wait_for_vhd_coalesce(session, instance, sr_ref, vdi_ref,
     raise exception.NovaException(msg)
 
 
-def _remap_vbd_dev(dev):
-    """Return the appropriate location for a plugged-in VBD device
-
-    Ubuntu Maverick moved xvd? -> sd?. This is considered a bug and will be
-    fixed in future versions:
-        https://bugs.launchpad.net/ubuntu/+source/linux/+bug/684875
-
-    For now, we work around it by just doing a string replace.
-    """
-    # NOTE(sirp): This hack can go away when we pull support for Maverick
-    should_remap = CONF.xenserver.remap_vbd_dev
-    if not should_remap:
-        return dev
-
-    old_prefix = 'xvd'
-    new_prefix = CONF.xenserver.remap_vbd_dev_prefix
-    remapped_dev = dev.replace(old_prefix, new_prefix)
-
-    return remapped_dev
-
-
 def _wait_for_device(session, dev, dom0, max_seconds):
     """Wait for device node to appear."""
     dev_path = utils.make_dev_path(dev)
@@ -2205,14 +2184,9 @@ def vdi_attached(session, vdi_ref, read_only=False, dom0=False):
         session.VBD.plug(vbd_ref, this_vm_ref)
         try:
             LOG.debug('Plugging VBD %s done.', vbd_ref)
-            orig_dev = session.call_xenapi("VBD.get_device", vbd_ref)
-            LOG.debug('VBD %(vbd_ref)s plugged as %(orig_dev)s',
-                      {'vbd_ref': vbd_ref, 'orig_dev': orig_dev})
-            dev = _remap_vbd_dev(orig_dev)
-            if dev != orig_dev:
-                LOG.debug('VBD %(vbd_ref)s plugged into wrong dev, '
-                          'remapping to %(dev)s',
-                          {'vbd_ref': vbd_ref, 'dev': dev})
+            dev = session.call_xenapi("VBD.get_device", vbd_ref)
+            LOG.debug('VBD %(vbd_ref)s plugged as %(dev)s',
+                      {'vbd_ref': vbd_ref, 'dev': dev})
             _wait_for_device(session, dev, dom0,
                              CONF.xenserver.block_device_creation_timeout)
             yield dev

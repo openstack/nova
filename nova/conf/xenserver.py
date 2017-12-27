@@ -375,30 +375,6 @@ This option represents the port of the iSCSI Target. If the
 target port is not present in the connection information from the
 volume provider then the value from this option is taken.
 """),
-    # NOTE(sirp): This is a work-around for a bug in Ubuntu Maverick,
-    # when we pull support for it, we should remove this
-    cfg.BoolOpt('remap_vbd_dev',
-        default=False,
-        deprecated_for_removal=True,
-        deprecated_since='15.0.0',
-        deprecated_reason="""
-This option provided a workaround for issues in Ubuntu Maverick, which
-was released in April 2010 and was dropped from support in April 2012.
-There's no reason to continue supporting this option.
-""",
-        help="""
-Used to enable the remapping of VBD dev.
-(Works around an issue in Ubuntu Maverick)
-"""),
-    cfg.StrOpt('remap_vbd_dev_prefix',
-        default='sd',
-        help="""
-Specify prefix to remap VBD dev to (ex. /dev/xvdb -> /dev/sdb).
-
-Related options:
-
-* If `remap_vbd_dev` is set to False this option has no impact.
-"""),
     cfg.BoolOpt('independent_compute',
         default=False,
         help="""
