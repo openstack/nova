@@ -190,6 +190,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         instance = self._shelve_offload(clean_shutdown=False)
         mock_power_off.assert_called_once_with(instance, 0, 0)
 
+    @mock.patch.object(compute_utils, 'EventReporter')
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     @mock.patch.object(nova.compute.manager.ComputeManager,
                        '_terminate_volume_connections')
@@ -205,7 +206,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
     def _shelve_offload(self, mock_notify, mock_notify_instance_usage,
                         mock_get_power_state, mock_update_resource_tracker,
                         mock_delete_alloc, mock_terminate, mock_get_bdms,
-                        clean_shutdown=True):
+                        mock_event, clean_shutdown=True):
         host = 'fake-mini'
         instance = self._create_fake_instance_obj(params={'host': host})
         instance.task_state = task_states.SHELVING
@@ -244,6 +245,9 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         mock_update_resource_tracker.assert_called_once_with(self.context,
                                                              instance)
         mock_delete_alloc.assert_called_once_with(instance)
+        mock_event.assert_called_once_with(self.context,
+                                           'compute_shelve_offload_instance',
+                                           instance.uuid)
 
         return instance
 
@@ -702,9 +706,10 @@ class ShelveComputeAPITestCase(test_compute.BaseTestCase):
         with test.nested(
             mock.patch.object(fake_instance, 'save'),
             mock.patch.object(self.compute_api.compute_rpcapi,
-                              'shelve_offload_instance')
+                              'shelve_offload_instance'),
+            mock.patch('nova.compute.api.API._record_action_start')
         ) as (
-            instance_save, rpcapi_shelve_offload_instance
+            instance_save, rpcapi_shelve_offload_instance, record
         ):
             self.compute_api.shelve_offload(self.context, fake_instance,
                                             clean_shutdown=clean_shutdown)
@@ -715,6 +720,8 @@ class ShelveComputeAPITestCase(test_compute.BaseTestCase):
             rpcapi_shelve_offload_instance.assert_called_once_with(
                     self.context, instance=fake_instance,
                     clean_shutdown=clean_shutdown)
+            record.assert_called_once_with(self.context, fake_instance,
+                                           instance_actions.SHELVE_OFFLOAD)
 
     def test_shelve_offload(self):
         self._test_shelve_offload()
