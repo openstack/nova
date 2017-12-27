@@ -17,6 +17,8 @@ import mock
 from nova.cells import rpcapi as cells_rpcapi
 from nova import context
 from nova import db
+from nova.db.sqlalchemy import api as db_api
+from nova.db.sqlalchemy import models as db_models
 from nova import exception
 from nova import objects
 from nova.objects import block_device as block_device_obj
@@ -32,6 +34,7 @@ class _TestBlockDeviceMappingObject(object):
         instance = instance or {}
         fake_bdm = fake_block_device.FakeDbBlockDeviceDict({
             'id': 123,
+            'uuid': uuids.bdm,
             'instance_uuid': instance.get('uuid') or uuids.instance,
             'attachment_id': None,
             'device_name': '/dev/sda2',
@@ -405,6 +408,80 @@ class _TestBlockDeviceMappingObject(object):
         bdm = objects.BlockDeviceMapping(context=self.context, **values)
         primitive = bdm.obj_to_primitive(target_version='1.17')
         self.assertNotIn('attachment_id', primitive)
+
+    def test_obj_make_compatible_pre_1_19(self):
+        values = {'source_type': 'volume', 'volume_id': 'fake-vol-id',
+                  'destination_type': 'volume',
+                  'instance_uuid': uuids.instance, 'uuid': uuids.bdm}
+        bdm = objects.BlockDeviceMapping(context=self.context, **values)
+        primitive = bdm.obj_to_primitive(target_version='1.18')
+        self.assertNotIn('uuid', primitive)
+
+
+class TestBlockDeviceMappingUUIDMigration(test.TestCase):
+    def setUp(self):
+        super(TestBlockDeviceMappingUUIDMigration, self).setUp()
+        self.context = context.RequestContext('fake-user-id',
+                                              'fake-project-id')
+
+        self.orig_create_uuid = \
+            objects.BlockDeviceMapping._create_uuid
+
+    @staticmethod
+    @db_api.pick_context_manager_writer
+    def _create_legacy_bdm(context):
+        # Create a BDM with no uuid
+        values = {'instance_uuid': uuids.instance_uuid}
+        bdm_ref = db_models.BlockDeviceMapping()
+        bdm_ref.update(values)
+        bdm_ref.save(context.session)
+        return bdm_ref
+
+    @mock.patch.object(objects.BlockDeviceMapping, '_create_uuid')
+    def test_populate_uuid(self, mock_create_uuid):
+        mock_create_uuid.side_effect = self.orig_create_uuid
+
+        self._create_legacy_bdm(self.context)
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                self.context, uuids.instance_uuid)
+
+        # UUID should have been populated
+        uuid = bdms[0].uuid
+        self.assertIsNotNone(uuid)
+
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                self.context, uuids.instance_uuid)
+
+        # UUID should not have changed
+        self.assertEqual(uuid, bdms[0].uuid)
+        self.assertEqual(1, mock_create_uuid.call_count)
+
+    def test_create_uuid_race(self):
+        # If threads read a legacy BDM object concurrently, we can end up
+        # calling _create_uuid multiple times. Assert that calling _create_uuid
+        # multiple times yields the same uuid.
+
+        # NOTE(mdbooth): _create_uuid handles all forms of race, including any
+        # amount of overlapping. I have not attempted to write unit tests for
+        # all potential execution orders. This test is sufficient to
+        # demonstrate that the compare-and-swap works correctly, and we trust
+        # the correctness of the database for the rest.
+
+        db_bdm = self._create_legacy_bdm(self.context)
+        uuid1 = objects.BlockDeviceMapping._create_uuid(self.context,
+                                                        db_bdm['id'])
+
+        bdm = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                self.context, uuids.instance_uuid)[0]
+        self.assertEqual(uuid1, bdm.uuid)
+
+        # We would only ever call this twice if we raced
+        # This is also testing that the compare-and-swap doesn't overwrite an
+        # existing uuid if we hit that race.
+        uuid2 = objects.BlockDeviceMapping._create_uuid(self.context,
+                                                        bdm['id'])
+
+        self.assertEqual(uuid1, uuid2)
 
 
 class TestBlockDeviceMappingObject(test_objects._LocalTest,
