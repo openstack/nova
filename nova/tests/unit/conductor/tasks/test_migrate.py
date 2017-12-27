@@ -237,7 +237,7 @@ class MigrationTaskAllocationUtils(test.NoDBTestCase):
         instance = objects.Instance(uuid=uuids.instance,
                                     host='host', node='node')
 
-        self.assertRaises(exception.InstanceUnacceptable,
+        self.assertRaises(exception.ConsumerAllocationNotFound,
                           migrate.replace_allocation_with_migration,
                           mock.sentinel.context,
                           instance, migration)
