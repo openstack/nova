@@ -158,6 +158,8 @@ class MigrationTaskTestCase(test.NoDBTestCase):
 
         if requested_destination:
             self.assertIsNone(self.request_spec.retry)
+            self.assertIn('cell', self.request_spec.requested_destination)
+            self.assertIsNotNone(self.request_spec.requested_destination.cell)
 
     def test_execute(self):
         self._test_execute()
