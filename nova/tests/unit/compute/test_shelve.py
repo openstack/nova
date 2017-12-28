@@ -466,8 +466,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         self.flags(shelved_offload_time=1)
         mock_older.return_value = False
 
-        with mock.patch.object(self.compute,
-                               '_shelve_offload_instance') as soi:
+        with mock.patch.object(self.compute, 'shelve_offload_instance') as soi:
             self.compute._poll_shelved_instances(self.context)
             self.assertFalse(soi.called)
 
@@ -486,8 +485,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         sys_meta['shelved_at'] = shelved_time.isoformat()
         instance.save()
 
-        with mock.patch.object(self.compute,
-                               '_shelve_offload_instance') as soi:
+        with mock.patch.object(self.compute, 'shelve_offload_instance') as soi:
             self.compute._poll_shelved_instances(self.context)
             self.assertFalse(soi.called)
             self.assertTrue(mock_older.called)
@@ -510,8 +508,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         def fake_soi(context, instance, **kwargs):
             data.append(instance.uuid)
 
-        with mock.patch.object(self.compute,
-                               '_shelve_offload_instance') as soi:
+        with mock.patch.object(self.compute, 'shelve_offload_instance') as soi:
             soi.side_effect = fake_soi
             self.compute._poll_shelved_instances(self.context)
             self.assertTrue(soi.called)
@@ -540,8 +537,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         def fake_soi(context, instance, **kwargs):
             data.append(instance.uuid)
 
-        with mock.patch.object(self.compute,
-                               '_shelve_offload_instance') as soi:
+        with mock.patch.object(self.compute, 'shelve_offload_instance') as soi:
             soi.side_effect = fake_soi
             self.compute._poll_shelved_instances(self.context)
             self.assertTrue(soi.called)
@@ -566,43 +562,9 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
 
         mock_parse.side_effect = fake_parse_hook
 
-        with mock.patch.object(self.compute,
-                               '_shelve_offload_instance') as soi:
+        with mock.patch.object(self.compute, 'shelve_offload_instance') as soi:
             self.compute._poll_shelved_instances(self.context)
             self.assertFalse(soi.called)
-
-    @mock.patch('nova.exception_wrapper._emit_exception_notification')
-    @mock.patch('oslo_utils.timeutils.is_older_than')
-    @mock.patch('oslo_utils.timeutils.parse_strtime')
-    def test_shelved_poll_revert_task_state_on_exception(self, mock_parse,
-                                                         mock_older, exc_mock):
-        self.flags(shelved_offload_time=1)
-        mock_older.return_value = True
-        instance = self._create_fake_instance_obj()
-        instance.task_state = None
-        instance.vm_state = vm_states.SHELVED
-        instance.host = self.compute.host
-        instance.system_metadata = {'shelved_at': ''}
-        instance.save()
-
-        def fake__shelve_offload_instance(ctxt, inst, *args, **kwargs):
-            self.assertEqual(task_states.SHELVING_OFFLOADING,
-                             inst.task_state)
-            raise test.TestingException()
-
-        with mock.patch.object(
-                self.compute, '_shelve_offload_instance',
-                side_effect=fake__shelve_offload_instance) as soi:
-            self.compute._poll_shelved_instances(self.context)
-            # Make sure @reverts_task_state was used.
-            self.assertIsNone(instance.task_state)
-            self.assertEqual(1, soi.call_count)
-            # Make sure we sent a notification for the error.
-            self.assertEqual(1, exc_mock.call_count)
-            # And recorded a fault.
-            fault = objects.InstanceFault.get_latest_for_instance(
-                self.context, instance.uuid)
-            self.assertIsNotNone(fault)
 
 
 class ShelveComputeAPITestCase(test_compute.BaseTestCase):
