@@ -3237,6 +3237,7 @@ class ComputeManager(manager.Manager):
 
     @wrap_exception()
     @reverts_task_state
+    @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def backup_instance(self, context, image_id, instance, backup_type,
                         rotation):

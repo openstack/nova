@@ -3440,11 +3440,16 @@ class ComputeTestCase(BaseTestCase,
                               self.context, image_id='fakesnap',
                               instance=inst_obj)
         else:
-            self.assertRaises(test.TestingException,
-                              self.compute.backup_instance,
-                              self.context, image_id='fakesnap',
-                              instance=inst_obj, backup_type='fake',
-                              rotation=1)
+            with mock.patch.object(compute_utils,
+                                   'EventReporter') as mock_event:
+                self.assertRaises(test.TestingException,
+                                  self.compute.backup_instance,
+                                  self.context, image_id='fakesnap',
+                                  instance=inst_obj, backup_type='fake',
+                                  rotation=1)
+                mock_event.assert_called_once_with(self.context,
+                                                   'compute_backup_instance',
+                                                   inst_obj.uuid)
 
         self.assertEqual(expected_state, self.fake_image_delete_called)
         self._assert_state({'task_state': None})

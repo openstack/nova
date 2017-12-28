@@ -2606,6 +2606,9 @@ class API(base.Base):
         instance.task_state = task_states.IMAGE_BACKUP
         instance.save(expected_task_state=[None])
 
+        self._record_action_start(context, instance,
+                                  instance_actions.BACKUP)
+
         self.compute_rpcapi.backup_instance(context, instance,
                                             image_meta['id'],
                                             backup_type,

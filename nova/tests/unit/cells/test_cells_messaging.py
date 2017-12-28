@@ -26,6 +26,7 @@ from oslo_utils import timeutils
 from nova.cells import messaging
 from nova.cells import rpcapi as cells_rpcapi
 from nova.cells import utils as cells_utils
+from nova.compute import instance_actions
 from nova.compute import task_states
 from nova.compute import vm_states
 import nova.conf
@@ -1371,8 +1372,9 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
 
         meth_cls.snapshot_instance(message, inst, image_id='image-id')
 
-    def test_backup_instance(self):
-        inst = objects.Instance()
+    @mock.patch.object(objects.InstanceAction, 'action_start')
+    def test_backup_instance(self, action_start):
+        inst = objects.Instance(uuid=uuids.instance)
         meth_cls = self.tgt_methods_cls
 
         self.mox.StubOutWithMock(inst, 'refresh')
@@ -1404,6 +1406,9 @@ class CellsTargetedMethodsTestCase(test.NoDBTestCase):
                                  image_id='image-id',
                                  backup_type='backup-type',
                                  rotation='rotation')
+        action_start.assert_called_once_with(
+            message.ctxt, inst.uuid, instance_actions.BACKUP,
+            want_result=False)
 
     def test_set_admin_password(self):
         args = ['fake-password']
