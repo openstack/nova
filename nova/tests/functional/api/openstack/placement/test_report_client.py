@@ -188,3 +188,21 @@ class SchedulerReportClientTests(test.TestCase):
             self.assertRaises(exception.InvalidResourceClass,
                               self.client.set_inventory_for_provider,
                               self.compute_uuid, self.compute_name, inv_data)
+
+    @mock.patch('keystoneauth1.session.Session.get_endpoint',
+                return_value='http://localhost:80/placement')
+    def test_global_request_id(self, mock_endpoint):
+        global_request_id = 'req-%s' % uuids.global_request_id
+
+        def assert_app(environ, start_response):
+            # Assert the 'X-Openstack-Request-Id' header in the request.
+            self.assertIn('HTTP_X_OPENSTACK_REQUEST_ID', environ)
+            self.assertEqual(global_request_id,
+                             environ['HTTP_X_OPENSTACK_REQUEST_ID'])
+            start_response('204 OK', [])
+            return []
+
+        with interceptor.RequestsInterceptor(
+                app=lambda: assert_app, url=self.url):
+            self.client.delete('/resource_providers/%s' % self.compute_uuid,
+                               global_request_id=global_request_id)

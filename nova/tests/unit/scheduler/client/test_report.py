@@ -3112,7 +3112,8 @@ class TestAllocations(SchedulerReportClientTestCase):
         self.client.delete_resource_provider(self.context, cn, cascade=True)
         self.assertEqual(2, mock_del_alloc.call_count)
         exp_url = "/resource_providers/%s" % uuids.cn
-        mock_delete.assert_called_once_with(exp_url)
+        mock_delete.assert_called_once_with(
+            exp_url, global_request_id=self.context.global_id)
         self.assertFalse(self.client._provider_tree.exists(uuids.cn))
 
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient."
@@ -3135,7 +3136,8 @@ class TestAllocations(SchedulerReportClientTestCase):
         self.client.delete_resource_provider(self.context, cn)
         mock_del_alloc.assert_not_called()
         exp_url = "/resource_providers/%s" % uuids.cn
-        mock_delete.assert_called_once_with(exp_url)
+        mock_delete.assert_called_once_with(
+            exp_url, global_request_id=self.context.global_id)
         self.assertNotIn(uuids.cn, self.client._provider_aggregate_map)
 
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient."
