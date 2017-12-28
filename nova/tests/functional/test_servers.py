@@ -1551,22 +1551,6 @@ class ProviderUsageBaseTestCase(test.TestCase,
             compute.manager.update_available_resource(ctx)
         LOG.info('Finished with periodics')
 
-    def _wait_for_migration_status(self, server, expected_status):
-        """Waits for a migration record with the given status to be found
-        for the given server, else the test fails. The migration record, if
-        found, is returned.
-        """
-        for attempt in range(10):
-            migrations = self.api.api_get('/os-migrations').body['migrations']
-            for migration in migrations:
-                if (migration['instance_uuid'] == server['id'] and
-                        migration['status'].lower() ==
-                        expected_status.lower()):
-                    return migration
-            time.sleep(0.5)
-        self.fail('Timed out waiting for migration with status "%s" for '
-                  'instance: %s' % (expected_status, server['id']))
-
 
 class ServerMovingTests(ProviderUsageBaseTestCase):
     """Tests moving servers while checking the resource allocations and usages
