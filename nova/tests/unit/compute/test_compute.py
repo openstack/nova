@@ -3434,14 +3434,17 @@ class ComputeTestCase(BaseTestCase,
                       fake_delete)
 
         inst_obj = self._get_snapshotting_instance()
-        if method == 'snapshot':
-            self.assertRaises(test.TestingException,
-                              self.compute.snapshot_instance,
-                              self.context, image_id='fakesnap',
-                              instance=inst_obj)
-        else:
-            with mock.patch.object(compute_utils,
-                                   'EventReporter') as mock_event:
+        with mock.patch.object(compute_utils,
+                               'EventReporter') as mock_event:
+            if method == 'snapshot':
+                self.assertRaises(test.TestingException,
+                                  self.compute.snapshot_instance,
+                                  self.context, image_id='fakesnap',
+                                  instance=inst_obj)
+                mock_event.assert_called_once_with(self.context,
+                                                   'compute_snapshot_instance',
+                                                   inst_obj.uuid)
+            else:
                 self.assertRaises(test.TestingException,
                                   self.compute.backup_instance,
                                   self.context, image_id='fakesnap',

@@ -12,3 +12,4 @@ features:
     * unlock
     * shelveOffload
     * createBackup
+    * createImage
