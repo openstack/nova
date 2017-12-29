@@ -21,7 +21,7 @@ import fixtures
 import mock
 from six.moves import StringIO
 
-from nova.cmd import policy_check
+from nova.cmd import policy
 import nova.conf
 from nova import context as nova_context
 from nova import db
@@ -42,11 +42,11 @@ class TestPolicyCheck(test.NoDBTestCase):
         self.output = StringIO()
         self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
         self.policy = self.useFixture(policy_fixture.RealPolicyFixture())
-        self.cmd = policy_check.PolicyCommands()
+        self.cmd = policy.PolicyCommands()
 
-    @mock.patch.object(policy_check.PolicyCommands, '_filter_rules')
-    @mock.patch.object(policy_check.PolicyCommands, '_get_target')
-    @mock.patch.object(policy_check.PolicyCommands, '_get_context')
+    @mock.patch.object(policy.PolicyCommands, '_filter_rules')
+    @mock.patch.object(policy.PolicyCommands, '_get_target')
+    @mock.patch.object(policy.PolicyCommands, '_get_context')
     def test_check(self, mock_get_context, mock_get_target,
                    mock_filter_rules):
         fake_rules = ['fake:rule', 'faux:roule']
@@ -62,7 +62,7 @@ class TestPolicyCheck(test.NoDBTestCase):
         self.assertEqual('\n'.join(fake_rules) + '\n', self.output.getvalue())
 
     @mock.patch.object(nova_context, 'RequestContext')
-    @mock.patch.object(policy_check, 'CONF')
+    @mock.patch.object(policy, 'CONF')
     def test_get_context(self, mock_CONF, mock_RequestContext):
         context = self.cmd._get_context()
 
@@ -156,31 +156,31 @@ class TestPolicyCheck(test.NoDBTestCase):
                           r.check_str in rule_conditions]
         self._check_filter_rules(db_context, instance, expected_rules)
 
-    @mock.patch.object(policy_check.config, 'parse_args')
-    @mock.patch.object(policy_check, 'CONF')
+    @mock.patch.object(policy.config, 'parse_args')
+    @mock.patch.object(policy, 'CONF')
     def _check_main(self, mock_CONF, mock_parse_args,
                     category_name='check', expected_return_value=0):
         mock_CONF.category.name = category_name
-        return_value = policy_check.main()
+        return_value = policy.main()
 
         self.assertEqual(expected_return_value, return_value)
         mock_CONF.register_cli_opts.assert_called_once_with(
-            policy_check.cli_opts)
+            policy.cli_opts)
         mock_CONF.register_cli_opt.assert_called_once_with(
-            policy_check.category_opt)
+            policy.category_opt)
 
-    @mock.patch.object(policy_check.version, 'version_string_with_package',
+    @mock.patch.object(policy.version, 'version_string_with_package',
                        return_value="x.x.x")
     def test_main_version(self, mock_version_string):
         self._check_main(category_name='version')
         self.assertEqual("x.x.x\n", self.output.getvalue())
 
-    @mock.patch.object(policy_check.cmd_common, 'print_bash_completion')
+    @mock.patch.object(policy.cmd_common, 'print_bash_completion')
     def test_main_bash_completion(self, mock_print_bash):
         self._check_main(category_name='bash-completion')
-        mock_print_bash.assert_called_once_with(policy_check.CATEGORIES)
+        mock_print_bash.assert_called_once_with(policy.CATEGORIES)
 
-    @mock.patch.object(policy_check.cmd_common, 'get_action_fn')
+    @mock.patch.object(policy.cmd_common, 'get_action_fn')
     def test_main(self, mock_get_action_fn):
         mock_fn = mock.Mock()
         mock_fn_args = [mock.sentinel.arg]
@@ -192,7 +192,7 @@ class TestPolicyCheck(test.NoDBTestCase):
         mock_fn.assert_called_once_with(mock.sentinel.arg,
                                         key=mock.sentinel.value)
 
-    @mock.patch.object(policy_check.cmd_common, 'get_action_fn')
+    @mock.patch.object(policy.cmd_common, 'get_action_fn')
     def test_main_error(self, mock_get_action_fn):
         mock_fn = mock.Mock(side_effect=Exception)
         mock_get_action_fn.return_value = (mock_fn, [], {})
