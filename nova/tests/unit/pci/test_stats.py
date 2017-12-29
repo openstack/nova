@@ -67,13 +67,13 @@ pci_requests_multiple = [objects.InstancePCIRequest(count=1,
 class PciDeviceStatsTestCase(test.NoDBTestCase):
 
     @staticmethod
-    def _get_fake_requests(vendor_ids=None, numa_policy=None):
+    def _get_fake_requests(vendor_ids=None, numa_policy=None, count=1):
         if not vendor_ids:
             vendor_ids = ['v1', 'v2']
 
         specs = [{'vendor_id': vendor_id} for vendor_id in vendor_ids]
 
-        return [objects.InstancePCIRequest(count=1, spec=[spec],
+        return [objects.InstancePCIRequest(count=count, spec=[spec],
                 numa_policy=numa_policy) for spec in specs]
 
     def _create_fake_devs(self):
@@ -248,7 +248,7 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
                          set([dev.vendor_id for dev in devs]))
 
     def _test_consume_requests_numa_policy(self, cell_ids, policy,
-            expected, vendor_id='v4'):
+            expected, vendor_id='v4', count=1):
         """Base test for 'consume_requests' function.
 
         Create three devices with vendor_id of 'v4': 'pr0' in NUMA node 0,
@@ -262,7 +262,7 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
                  for id in cell_ids]
 
         pci_requests = self._get_fake_requests(vendor_ids=[vendor_id],
-            numa_policy=policy)
+            numa_policy=policy, count=count)
         devs = self.pci_stats.consume_requests(pci_requests, cells)
 
         if expected is None:
@@ -296,7 +296,7 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
 
         Policy is 'legacy' which means we must use a device with strict NUMA
         affinity or no provided NUMA affinity. Request a device from NUMA node
-        0, which contains contains such a device, and ensure it's used.
+        0, which contains such a device, and ensure it's used.
         """
         self._test_consume_requests_numa_policy(
             [0], fields.PCINUMAAffinityPolicy.LEGACY, ['pr0'])
@@ -312,6 +312,18 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         self._test_consume_requests_numa_policy(
             [999], fields.PCINUMAAffinityPolicy.LEGACY, ['pr_none'])
 
+    def test_consume_requests_numa_policy_legacy_multiple(self):
+        """Ensure LEGACY policy will use best policy for multiple devices.
+
+        Policy is 'legacy' which means we must use a device with strict NUMA
+        affinity or no provided NUMA affinity. Request two devices from NUMA
+        node 0, which contains only one such device, and ensure we use that
+        device and the next best thing for the second device.
+        """
+        self._test_consume_requests_numa_policy(
+            [0], fields.PCINUMAAffinityPolicy.PREFERRED, ['pr0', 'pr_none'],
+            count=2)
+
     def test_consume_requests_numa_policy_legacy_fail(self):
         """Ensure REQUIRED policy will *not* provide NUMA non-affinity.
 
@@ -323,12 +335,12 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         self._test_consume_requests_numa_policy(
             [0], fields.PCINUMAAffinityPolicy.LEGACY, None, vendor_id='v2')
 
-    def test_consume_requests_numa_pci_numa_policy_preferred(self):
+    def test_consume_requests_numa_policy_preferred(self):
         """Ensure PREFERRED policy will ensure NUMA affinity if possible.
 
         Policy is 'preferred' which means we must use a device with any level
         of NUMA affinity. Request a device from NUMA node 0, which contains
-        contains an affined device, and ensure it's used.
+        an affined device, and ensure it's used.
         """
         self._test_consume_requests_numa_policy(
             [0], fields.PCINUMAAffinityPolicy.PREFERRED, ['pr0'])
@@ -344,7 +356,7 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         self._test_consume_requests_numa_policy(
             [999], fields.PCINUMAAffinityPolicy.PREFERRED, ['pr_none'])
 
-    def test_consume_requests_numa_pci_numa_policy_fallback_b(self):
+    def test_consume_requests_numa_policy_preferred_fallback_b(self):
         """Ensure PREFERRED policy will fallback to different NUMA affinity.
 
         Policy is 'preferred' which means we must use a device with any level
@@ -355,6 +367,30 @@ class PciDeviceStatsTestCase(test.NoDBTestCase):
         self._test_consume_requests_numa_policy(
             [0], fields.PCINUMAAffinityPolicy.PREFERRED, ['p2'],
             vendor_id='v2')
+
+    def test_consume_requests_numa_policy_preferred_multiple_a(self):
+        """Ensure PREFERRED policy will use best policy for multiple devices.
+
+        Policy is 'preferred' which means we must use a device with any level
+        of NUMA affinity. Request two devices from NUMA node 0, which contains
+        only one such device, and ensure we use that device and gracefully
+        degrade for the other device.
+        """
+        self._test_consume_requests_numa_policy(
+            [0], fields.PCINUMAAffinityPolicy.PREFERRED, ['pr0', 'pr_none'],
+            count=2)
+
+    def test_consume_requests_numa_policy_preferred_multiple_b(self):
+        """Ensure PREFERRED policy will use best policy for multiple devices.
+
+        Policy is 'preferred' which means we must use a device with any level
+        of NUMA affinity. Request three devices from NUMA node 0, which
+        contains only one such device, and ensure we use that device and
+        gracefully degrade for the other devices.
+        """
+        self._test_consume_requests_numa_policy(
+            [0], fields.PCINUMAAffinityPolicy.PREFERRED,
+            ['pr0', 'pr_none', 'pr1'], count=3)
 
     @mock.patch(
         'nova.pci.whitelist.Whitelist._parse_white_list_from_config')
