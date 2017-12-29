@@ -22,11 +22,14 @@ from oslo_utils import timeutils
 
 from nova import context
 from nova.db import api as db
+from nova.db.sqlalchemy import api as db_api
+from nova.db.sqlalchemy import models as db_models
 from nova import exception
 from nova import objects
 from nova.objects import fields
 from nova.objects import instance
 from nova.objects import pci_device
+from nova import test
 from nova.tests.unit.objects import test_objects
 
 
@@ -37,8 +40,9 @@ dev_dict = {
     'vendor_id': 'v',
     'numa_node': 0,
     'dev_type': fields.PciDeviceType.STANDARD,
+    'status': fields.PciDeviceStatus.AVAILABLE,
     'parent_addr': None,
-    'status': fields.PciDeviceStatus.AVAILABLE}
+}
 
 
 fake_db_dev = {
@@ -195,32 +199,6 @@ class _TestPciDeviceObject(object):
         self.assertEqual(self.pci_device.obj_what_changed(), set())
         mock_get.assert_called_once_with(ctxt, 1)
 
-    @mock.patch.object(db, 'pci_device_get_by_id')
-    @mock.patch.object(objects.PciDevice, 'save')
-    @mock.patch('oslo_utils.uuidutils.generate_uuid')
-    def test_get_by_dev_id_auto_generate_uuid(self, mock_uuid, mock_save,
-                                              mock_get):
-        """Tests loading an old db record which doesn't have a uuid set so
-        the object code auto-generates one and saves the update.
-        """
-        fake_db_dev_no_uuid = copy.deepcopy(fake_db_dev)
-        fake_db_dev_no_uuid['uuid'] = None
-        ctxt = context.get_admin_context()
-        mock_get.return_value = fake_db_dev_no_uuid
-        fake_uuid = '3afad0d9-d2db-46fd-b56b-79f90043de5e'
-        mock_uuid.return_value = fake_uuid
-
-        obj_dev = pci_device.PciDevice.get_by_dev_id(ctxt, 1)
-        self.assertEqual(fake_uuid, obj_dev.uuid)
-        # The obj_what_changed is still dirty from _from_db_object because we
-        # are mocking out save() which would eventually update the pci device
-        # in the database and call _from_db_object again on the updated record,
-        # and _from_db_object would reset the changed fields.
-        self.assertEqual(set(['uuid']), obj_dev.obj_what_changed())
-        mock_get.assert_called_once_with(ctxt, 1)
-        mock_save.assert_called_once_with()
-        mock_uuid.assert_called_once_with()
-
     def test_from_db_obj_pre_1_5_format(self):
         ctxt = context.get_admin_context()
         fake_dev_pre_1_5 = copy.deepcopy(fake_db_dev_old)
@@ -229,6 +207,22 @@ class _TestPciDeviceObject(object):
             ctxt, pci_device.PciDevice(), fake_dev_pre_1_5)
         self.assertRaises(exception.ObjectActionError,
                           dev.obj_to_primitive, '1.4')
+
+    @mock.patch.object(objects.PciDevice, '_create_uuid',
+                       return_value=uuids.pci_dev1)
+    def test_from_db_obj_missing_uuid(self, mock_create_uuid):
+        """Ensure a UUID is generated if it's not present."""
+        ctxt = context.get_admin_context()
+        fake_dev_no_uuid = copy.deepcopy(fake_db_dev)
+        fake_dev_no_uuid['uuid'] = None
+
+        dev = pci_device.PciDevice._from_db_object(
+            ctxt, pci_device.PciDevice(), fake_dev_no_uuid)
+
+        # UUID should have been populated
+        self.assertIn('uuid', dev)
+        self.assertIsNotNone(dev.uuid)
+        self.assertEqual(1, mock_create_uuid.call_count)
 
     def test_save_empty_parent_addr(self):
         ctxt = context.get_admin_context()
@@ -720,3 +714,71 @@ class TestSRIOVPciDeviceListObject(test_objects._LocalTest,
 class TestSRIOVPciDeviceListObjectRemote(test_objects._RemoteTest,
                               _TestSRIOVPciDeviceObject):
     pass
+
+
+class TestPciDeviceUUIDMigration(test.TestCase):
+    def setUp(self):
+        super(TestPciDeviceUUIDMigration, self).setUp()
+        self.context = context.RequestContext('fake-user-id',
+                                              'fake-project-id')
+
+    @staticmethod
+    @db_api.pick_context_manager_writer
+    def _create_legacy_dev(context):
+        """Create a PCI device with no UUID."""
+        values = copy.copy(dev_dict)
+        # 'PciDeviceList.get_by_instance_uuid' expected devices to be allocated
+        values['status'] = fields.PciDeviceStatus.ALLOCATED
+        values['label'] = 'l'  # Why is this necessary?
+        values['instance_uuid'] = uuids.instance_uuid
+        values['extra_info'] = '{}'
+        dev_ref = db_models.PciDevice()
+        dev_ref.update(values)
+        dev_ref.save(context.session)
+        return dev_ref
+
+    @mock.patch.object(objects.PciDevice, '_create_uuid',
+            wraps=objects.PciDevice._create_uuid)
+    def test_populate_uuid(self, mock_create_uuid):
+        self._create_legacy_dev(self.context)
+        devs = objects.PciDeviceList.get_by_instance_uuid(
+            self.context, uuids.instance_uuid)
+
+        # UUID should have been populated and object shouldn't be dirty
+        self.assertIn('uuid', devs[0])
+        self.assertIsNotNone(devs[0].uuid)
+        self.assertNotIn('uuid', devs[0].obj_what_changed())
+
+        uuid = devs[0].uuid
+
+        devs = objects.PciDeviceList.get_by_instance_uuid(
+            self.context, uuids.instance_uuid)
+
+        # UUID should not have changed
+        self.assertEqual(uuid, devs[0].uuid)
+        self.assertEqual(1, mock_create_uuid.call_count)
+
+    def test_create_uuid_race(self):
+        # If threads read a legacy PCI device object concurrently, we can end
+        # up calling _create_uuid multiple times. Assert that calling
+        # _create_uuid multiple times yields the same uuid.
+
+        # NOTE(mdbooth): _create_uuid handles all forms of race, including any
+        # amount of overlapping. I have not attempted to write unit tests for
+        # all potential execution orders. This test is sufficient to
+        # demonstrate that the compare-and-swap works correctly, and we trust
+        # the correctness of the database for the rest.
+
+        db_dev = self._create_legacy_dev(self.context)
+        uuid1 = objects.PciDevice._create_uuid(self.context, db_dev.id)
+
+        dev = objects.PciDeviceList.get_by_instance_uuid(
+            self.context, uuids.instance_uuid)[0]
+        self.assertEqual(uuid1, dev.uuid)
+
+        # We would only ever call this twice if we raced
+        # This is also testing that the compare-and-swap doesn't overwrite an
+        # existing uuid if we hit that race.
+        uuid2 = objects.PciDevice._create_uuid(self.context, dev.id)
+
+        self.assertEqual(uuid1, uuid2)

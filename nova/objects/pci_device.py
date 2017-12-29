@@ -15,6 +15,8 @@
 
 import copy
 
+from oslo_db import api as oslo_db_api
+from oslo_db.sqlalchemy import update_match
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
@@ -22,6 +24,8 @@ from oslo_utils import versionutils
 import six
 
 from nova.db import api as db
+from nova.db.sqlalchemy import api as db_api
+from nova.db.sqlalchemy import models as db_models
 from nova import exception
 from nova import objects
 from nova.objects import base
@@ -196,30 +200,62 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
     def __ne__(self, other):
         return not (self == other)
 
-    @staticmethod
-    def _from_db_object(context, pci_device, db_dev):
+    @classmethod
+    def _from_db_object(cls, context, pci_device, db_dev):
         for key in pci_device.fields:
             if key == 'uuid' and db_dev['uuid'] is None:
-                # Older records might not have a uuid field set in the
-                # database so we need to skip those here and auto-generate
-                # a uuid later below.
-                continue
-            elif key != 'extra_info':
-                setattr(pci_device, key, db_dev[key])
-            else:
-                extra_info = db_dev.get("extra_info")
+                # NOTE(danms): While the records could be nullable,
+                # generate a UUID on read since the object requires it
+                dev_id = db_dev['id']
+                db_dev[key] = cls._create_uuid(context, dev_id)
+
+            if key == 'extra_info':
+                extra_info = db_dev.get('extra_info')
                 pci_device.extra_info = jsonutils.loads(extra_info)
+                continue
+
+            setattr(pci_device, key, db_dev[key])
+
         pci_device._context = context
         pci_device.obj_reset_changes()
-
-        # TODO(jaypipes): Remove in 2.0 version of object. This does an inline
-        # migration to populate the uuid field. A similar inline migration is
-        # performed in the save() method.
-        if db_dev['uuid'] is None:
-            pci_device.uuid = uuidutils.generate_uuid()
-            pci_device.save()
-
         return pci_device
+
+    @staticmethod
+    @oslo_db_api.wrap_db_retry(max_retries=1, retry_on_deadlock=True)
+    def _create_uuid(context, dev_id):
+        # NOTE(mdbooth): This method is only required until uuid is made
+        # non-nullable in a future release.
+
+        # NOTE(mdbooth): We wrap this method in a retry loop because it can
+        # fail (safely) on multi-master galera if concurrent updates happen on
+        # different masters. It will never fail on single-master. We can only
+        # ever need one retry.
+
+        uuid = uuidutils.generate_uuid()
+        values = {'uuid': uuid}
+        compare = db_models.PciDevice(id=dev_id, uuid=None)
+
+        # NOTE(mdbooth): We explicitly use an independent transaction context
+        # here so as not to fail if:
+        # 1. We retry.
+        # 2. We're in a read transaction. This is an edge case of what's
+        #    normally a read operation. Forcing everything (transitively) which
+        #    reads a PCI device to be in a write transaction for a narrow
+        #    temporary edge case is undesirable.
+        tctxt = db_api.get_context_manager(context).writer.independent
+        with tctxt.using(context):
+            query = context.session.query(db_models.PciDevice).\
+                        filter_by(id=dev_id)
+
+            try:
+                query.update_on_match(compare, 'id', values)
+            except update_match.NoRowsMatched:
+                # We can only get here if we raced, and another writer already
+                # gave this PCI device a UUID
+                result = query.one()
+                uuid = result['uuid']
+
+        return uuid
 
     @base.remotable_classmethod
     def get_by_dev_addr(cls, context, compute_node_id, dev_addr):
