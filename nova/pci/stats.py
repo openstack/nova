@@ -156,7 +156,7 @@ class PciDeviceStats(object):
                     numa_policy = request.numa_policy
                 pools = self._filter_pools_for_numa_cells(
                     pools, numa_cells, numa_policy, count)
-            pools = self._filter_non_requested_pfs(request, pools)
+            pools = self._filter_non_requested_pfs(pools, request)
             # Failed to allocate the required number of devices
             # Return the devices already allocated back to their pools
             if sum([pool['count'] for pool in pools]) < count:
@@ -276,14 +276,15 @@ class PciDeviceStats(object):
         # can, folks.
         return pools
 
-    def _filter_non_requested_pfs(self, request, matching_pools):
+    @classmethod
+    def _filter_non_requested_pfs(cls, pools, request):
         # Remove SRIOV_PFs from pools, unless it has been explicitly requested
         # This is especially needed in cases where PFs and VFs have the same
         # product_id.
         if all(spec.get('dev_type') != fields.PciDeviceType.SRIOV_PF for
                spec in request.spec):
-            matching_pools = self._filter_pools_for_pfs(matching_pools)
-        return matching_pools
+            pools = cls._filter_pools_for_pfs(pools)
+        return pools
 
     @staticmethod
     def _filter_pools_for_pfs(pools):
@@ -327,8 +328,8 @@ class PciDeviceStats(object):
 
         # Finally, if we're not requesting PFs then we should not use these.
         # Exclude them.
-        matching_pools = self._filter_non_requested_pfs(request,
-                                                        matching_pools)
+        matching_pools = self._filter_non_requested_pfs(matching_pools,
+                                                        request)
 
         # Do we still have any devices left?
         if sum([pool['count'] for pool in matching_pools]) < count:
