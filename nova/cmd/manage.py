@@ -25,7 +25,6 @@ from __future__ import print_function
 
 import argparse
 import functools
-import os
 import re
 import sys
 import traceback
@@ -884,64 +883,6 @@ class AgentBuildCommands(object):
                                'md5hash': md5hash})
 
 
-class GetLogCommands(object):
-    """Get logging information."""
-
-    # TODO(stephenfin): Remove this during the Queens cycle
-    description = ('DEPRECATED: The log commands are deprecated since '
-                   'Pike as they are not maintained. They will be removed '
-                   'in an upcoming release.')
-
-    def errors(self):
-        """Get all of the errors from the log files."""
-        error_found = 0
-        if CONF.log_dir:
-            logs = [x for x in os.listdir(CONF.log_dir) if x.endswith('.log')]
-            for file in logs:
-                log_file = os.path.join(CONF.log_dir, file)
-                lines = [line.strip() for line in open(log_file, "r")]
-                lines.reverse()
-                print_name = 0
-                for index, line in enumerate(lines):
-                    if line.find(" ERROR ") > 0:
-                        error_found += 1
-                        if print_name == 0:
-                            print(log_file + ":-")
-                            print_name = 1
-                        linenum = len(lines) - index
-                        print((_('Line %(linenum)d : %(line)s') %
-                               {'linenum': linenum, 'line': line}))
-        if error_found == 0:
-            print(_('No errors in logfiles!'))
-
-    @args('--num_entries', metavar='<number of entries>',
-            help='number of entries(default: 10)')
-    def syslog(self, num_entries=10):
-        """Get <num_entries> of the nova syslog events."""
-        entries = int(num_entries)
-        count = 0
-        log_file = ''
-        if os.path.exists('/var/log/syslog'):
-            log_file = '/var/log/syslog'
-        elif os.path.exists('/var/log/messages'):
-            log_file = '/var/log/messages'
-        else:
-            print(_('Unable to find system log file!'))
-            return 1
-        lines = [line.strip() for line in open(log_file, "r")]
-        lines.reverse()
-        print(_('Last %s nova syslog entries:-') % (entries))
-        for line in lines:
-            if line.find("nova") > 0:
-                count += 1
-                print("%s" % (line))
-            if count == entries:
-                break
-
-        if count == 0:
-            print(_('No nova entries in syslog!'))
-
-
 class CellCommands(object):
     """Commands for managing cells v1 functionality."""
 
@@ -1688,7 +1629,6 @@ CATEGORIES = {
     'db': DbCommands,
     'floating': FloatingIpCommands,
     'host': HostCommands,
-    'logs': GetLogCommands,
     'network': NetworkCommands,
 }
 

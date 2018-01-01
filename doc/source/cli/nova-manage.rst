@@ -240,21 +240,6 @@ Nova Cells v2
     found, 3 if a host with that name is not in a cell with that uuid, 4 if
     a host with that name has instances (host not empty).
 
-Nova Logs
-~~~~~~~~~
-
-.. deprecated:: 16.0.0
-
-    This will be removed in 17.0.0 (Queens)
-
-``nova-manage logs errors``
-
-    Displays nova errors from log files.
-
-``nova-manage logs syslog <number>``
-
-    Displays nova alerts from syslog.
-
 See Also
 ========
 

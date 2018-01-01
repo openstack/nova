@@ -7,5 +7,6 @@ upgrade:
     - ``shell``
     - ``project``
     - ``account``
+    - ``logs``
 
     These were previously deprecated in 16.0.0.
