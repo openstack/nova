@@ -1027,6 +1027,11 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None,
             LOG.debug('Host does not support requested memory pagesize. '
                       'Requested: %d kB', instance_cell.pagesize)
             return
+        LOG.debug('Selected memory pagesize: %(selected_mem_pagesize)d kB. '
+                  'Requested memory pagesize: %(requested_mem_pagesize)d '
+                   '(small = -1, large = -2, any = -3)',
+                  {'selected_mem_pagesize': pagesize,
+                   'requested_mem_pagesize': instance_cell.pagesize})
 
     instance_cell.id = host_cell.id
     instance_cell.pagesize = pagesize
