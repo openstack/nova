@@ -746,7 +746,13 @@ class ComputeVolumeTestCase(BaseTestCase):
         mock_get_counter.side_effect = NotImplementedError
 
         self.flags(bandwidth_poll_interval=1)
+        # The first call will catch a NotImplementedError,
+        # then LOG.info something below:
         self.compute._poll_bandwidth_usage(ctxt)
+        self.assertIn('Bandwidth usage not supported '
+                      'by %s' % CONF.compute_driver,
+                      self.stdlog.logger.output)
+
         # A second call won't call the stubs again as the bandwidth
         # poll is now disabled
         self.compute._poll_bandwidth_usage(ctxt)
