@@ -293,11 +293,11 @@ class HostState(object):
         host_numa_topology, _fmt = hardware.host_topology_and_format_from_host(
                                 self)
         instance_numa_topology = spec_obj.numa_topology
-
-        spec_obj.numa_topology = hardware.numa_fit_instance_to_host(
-            host_numa_topology, instance_numa_topology,
-            limits=self.limits.get('numa_topology'),
-            pci_requests=pci_requests, pci_stats=self.pci_stats)
+        if host_numa_topology and instance_numa_topology:
+            spec_obj.numa_topology = hardware.numa_fit_instance_to_host(
+                host_numa_topology, instance_numa_topology,
+                limits=self.limits.get('numa_topology'),
+                pci_requests=pci_requests, pci_stats=self.pci_stats)
         if pci_requests:
             instance_cells = None
             if spec_obj.numa_topology:
