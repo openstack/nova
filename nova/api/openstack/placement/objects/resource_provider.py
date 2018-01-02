@@ -1002,7 +1002,7 @@ def _get_providers_with_shared_capacity(ctx, rc_id, amount):
     #   ) AS usage
     #     ON rp.id = usage.resource_provider_id
     # WHERE COALESCE(usage.used, 0) + $amount <= (
-    #   inv.total + inv.reserved) * inv.allocation_ratio
+    #   inv.total - inv.reserved) * inv.allocation_ratio
     # ) AND
     #   inv.min_unit <= $amount AND
     #   inv.max_unit >= $amount AND
@@ -1090,16 +1090,15 @@ def _get_all_with_shared(ctx, resources, member_of=None):
     # requesting:
     #
     # {JOIN TYPE} JOIN inventories AS inv_{RC_NAME}
-    #  ON {JOINING TABLE}.id = inv_{RC_NAME}.resource_provider_id
+    #  ON rp.id = inv_{RC_NAME}.resource_provider_id
     #  AND inv_{RC_NAME}.resource_class_id = $RC_ID
     # LEFT JOIN (
     #  SELECT resource_provider_id, SUM(used) AS used
     #  FROM allocations
-    #  WHERE resource_class_id = $VCPU_ID
+    #  WHERE resource_class_id = $RC_ID
     #  GROUP BY resource_provider_id
     # ) AS usage_{RC_NAME}
-    #  ON inv_{RC_NAME}.resource_provider_id = \
-    #      usage_{RC_NAME}.resource_provider_id
+    #  ON rp.id = usage_{RC_NAME}.resource_provider_id
     #
     # For resource classes that DO NOT have any shared resource providers, the
     # {JOIN TYPE} will be an INNER join, because we are filtering out any
@@ -1134,13 +1133,14 @@ def _get_all_with_shared(ctx, resources, member_of=None):
     # provider is associated with:
     #
     # LEFT JOIN resource_provider_aggregates AS shared_{RC_NAME}
-    #  ON {JOINING_TABLE}.id = shared_{RC_NAME}.resource_provider_id
+    #  ON rp.id = shared_{RC_NAME}.resource_provider_id
     #
     # The above is then joined to the set of aggregates associated with the set
     # of sharing providers for that resource:
     #
     # LEFT JOIN resource_provider_aggregates AS sharing_{RC_NAME}
     #  ON shared_{RC_NAME}.aggregate_id = sharing_{RC_NAME}.aggregate_id
+    #  AND sharing_{RC_NAME}.resource_provider_id IN($RPS_{RC_NAME})
     #
     # If the request specified limiting resource providers to one or more
     # specific aggregates, we then join the above to another copy of the
@@ -1154,12 +1154,12 @@ def _get_all_with_shared(ctx, resources, member_of=None):
     # "local" resource providers:
     #
     # WHERE (COALESCE(usage_vcpu.used, 0) + $AMOUNT <=
-    #   (inv_{RC_NAME}.total + inv_{RC_NAME}.reserved)
+    #   (inv_{RC_NAME}.total - inv_{RC_NAME}.reserved)
     #   * inv_{RC_NAME}.allocation_ratio
     # AND
     # inv_{RC_NAME}.min_unit <= $AMOUNT AND
     # inv_{RC_NAME}.max_unit >= $AMOUNT AND
-    # $AMOUNT_VCPU % inv_{RC_NAME}.step_size == 0)
+    # $AMOUNT % inv_{RC_NAME}.step_size == 0)
     #
     # For resource classes that DO have shared resource providers, the WHERE
     # clause is slightly more complicated:
@@ -1168,13 +1168,13 @@ def _get_all_with_shared(ctx, resources, member_of=None):
     #   inv_{RC_NAME}.resource_provider_id IS NOT NULL AND
     #   (
     #     (
-    #     COALESCE(usage_{RC_NAME}.used, 0) + $AMOUNT_VCPU <=
-    #       (inv_{RC_NAME}.total + inv_{RC_NAME}.reserved)
+    #     COALESCE(usage_{RC_NAME}.used, 0) + $AMOUNT <=
+    #       (inv_{RC_NAME}.total - inv_{RC_NAME}.reserved)
     #       * inv_{RC_NAME}.allocation_ratio
     #     ) AND
-    #     inv_{RC_NAME}.min_unit <= $AMOUNT_VCPU AND
-    #     inv_{RC_NAME}.max_unit >= $AMOUNT_VCPU AND
-    #     $AMOUNT_VCPU % inv_{RC_NAME}.step_size == 0
+    #     inv_{RC_NAME}.min_unit <= $AMOUNT AND
+    #     inv_{RC_NAME}.max_unit >= $AMOUNT AND
+    #     $AMOUNT % inv_{RC_NAME}.step_size == 0
     #   ) OR
     #   sharing_{RC_NAME}.resource_provider_id IS NOT NULL
     # )
@@ -1189,7 +1189,7 @@ def _get_all_with_shared(ctx, resources, member_of=None):
     # representing the shared storage pool, and where the request specified
     # aggregates that the compute nodes had to be associated with:
     #
-    # SELECT rp.*
+    # SELECT rp.id
     # FROM resource_providers AS rp
     # INNER JOIN inventories AS inv_vcpu
     #  ON rp.id = inv_vcpu.resource_provider_id
@@ -1200,19 +1200,17 @@ def _get_all_with_shared(ctx, resources, member_of=None):
     #  WHERE resource_class_id = $VCPU_ID
     #  GROUP BY resource_provider_id
     # ) AS usage_vcpu
-    #  ON inv_vcpu.resource_provider_id = \
-    #       usage_vcpu.resource_provider_id
+    #  ON rp.id = usage_vcpu.resource_provider_id
     # INNER JOIN inventories AS inv_memory_mb
-    # ON inv_vcpu.resource_provider_id = inv_memory_mb.resource_provider_id
-    # AND inv_memory_mb.resource_class_id = $MEMORY_MB_ID
+    #  ON rp.id = inv_memory_mb.resource_provider_id
+    #  AND inv_memory_mb.resource_class_id = $MEMORY_MB_ID
     # LEFT JOIN (
     #  SELECT resource_provider_id, SUM(used) AS used
     #  FROM allocations
     #  WHERE resource_class_id = $MEMORY_MB_ID
     #  GROUP BY resource_provider_id
     # ) AS usage_memory_mb
-    #  ON inv_memory_mb.resource_provider_id = \
-    #       usage_memory_mb.resource_provider_id
+    #  ON rp.id = usage_memory_mb.resource_provider_id
     # LEFT JOIN inventories AS inv_disk_gb
     #  ON inv_memory_mb.resource_provider_id = \
     #       inv_disk_gb.resource_provider_id
@@ -1223,21 +1221,19 @@ def _get_all_with_shared(ctx, resources, member_of=None):
     #  WHERE resource_class_id = $DISK_GB_ID
     #  GROUP BY resource_provider_id
     # ) AS usage_disk_gb
-    #  ON inv_disk_gb.resource_provider_id = \
-    #       usage_disk_gb.resource_provider_id
+    #  ON rp.id = usage_disk_gb.resource_provider_id
     # LEFT JOIN resource_provider_aggregates AS shared_disk_gb
-    #  ON inv_memory_mb.resource_provider_id = \
-    #       shared_disk.resource_provider_id
+    #  ON rp.id = shared_disk.resource_provider_id
     # LEFT JOIN resource_provider_aggregates AS sharing_disk_gb
     #  ON shared_disk_gb.aggregate_id = sharing_disk_gb.aggregate_id
-    # AND sharing_disk_gb.resource_provider_id IN ($RPS_SHARING_DISK)
+    #  AND sharing_disk_gb.resource_provider_id IN ($RPS_SHARING_DISK)
     # INNER JOIN resource_provider_aggregates AS member_aggs
     #  ON rp.id = member_aggs.resource_provider_id
     #  AND member_aggs.aggregate_id IN ($MEMBER_OF)
     # WHERE (
     #   (
     #     COALESCE(usage_vcpu.used, 0) + $AMOUNT_VCPU <=
-    #     (inv_vcpu.total + inv_vcpu.reserved)
+    #     (inv_vcpu.total - inv_vcpu.reserved)
     #     * inv_vcpu.allocation_ratio
     #   ) AND
     #   inv_vcpu.min_unit <= $AMOUNT_VCPU AND
@@ -1245,8 +1241,8 @@ def _get_all_with_shared(ctx, resources, member_of=None):
     #   $AMOUNT_VCPU % inv_vcpu.step_size == 0
     # ) AND (
     #   (
-    #     COALESCE(usage_memory_mb.used, 0) + $AMOUNT_VCPU <=
-    #     (inv_memory_mb.total + inv_memory_mb.reserved)
+    #     COALESCE(usage_memory_mb.used, 0) + $AMOUNT_MEMORY_MB <=
+    #     (inv_memory_mb.total - inv_memory_mb.reserved)
     #     * inv_memory_mb.allocation_ratio
     #   ) AND
     #   inv_memory_mb.min_unit <= $AMOUNT_MEMORY_MB AND
@@ -1257,7 +1253,7 @@ def _get_all_with_shared(ctx, resources, member_of=None):
     #   (
     #     (
     #       COALESCE(usage_disk_gb.used, 0) + $AMOUNT_DISK_GB <=
-    #         (inv_disk_gb.total + inv_disk_gb.reserved)
+    #         (inv_disk_gb.total - inv_disk_gb.reserved)
     #         * inv_disk_gb.allocation_ratio
     #     ) AND
     #     inv_disk_gb.min_unit <= $AMOUNT_DISK_GB AND
@@ -1540,15 +1536,15 @@ class ResourceProviderList(base.ObjectListBase, base.VersionedObject):
         #     ON inv.resource_provider_id = usage.resource_provider_id
         #     AND inv.resource_class_id = usage.resource_class_id
         # AND (inv.resource_class_id = $X AND (used + $AMOUNT_X <= (
-        #        total + reserved) * inv.allocation_ratio) AND
+        #        total - reserved) * inv.allocation_ratio) AND
         #        inv.min_unit <= $AMOUNT_X AND inv.max_unit >= $AMOUNT_X AND
         #        $AMOUNT_X % inv.step_size == 0)
         #      OR (inv.resource_class_id = $Y AND (used + $AMOUNT_Y <= (
-        #        total + reserved) * inv.allocation_ratio) AND
+        #        total - reserved) * inv.allocation_ratio) AND
         #        inv.min_unit <= $AMOUNT_Y AND inv.max_unit >= $AMOUNT_Y AND
         #        $AMOUNT_Y % inv.step_size == 0)
         #      OR (inv.resource_class_id = $Z AND (used + $AMOUNT_Z <= (
-        #        total + reserved) * inv.allocation_ratio) AND
+        #        total - reserved) * inv.allocation_ratio) AND
         #        inv.min_unit <= $AMOUNT_Z AND inv.max_unit >= $AMOUNT_Z AND
         #        $AMOUNT_Z % inv.step_size == 0))
         # GROUP BY rp.id
