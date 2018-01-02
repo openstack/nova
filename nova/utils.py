@@ -95,6 +95,12 @@ _FILE_CACHE = {}
 _SERVICE_TYPES = service_types.ServiceTypes()
 
 
+if hasattr(inspect, 'getfullargspec'):
+    getargspec = inspect.getfullargspec
+else:
+    getargspec = inspect.getargspec
+
+
 def get_root_helper():
     if CONF.workarounds.disable_rootwrap:
         cmd = 'sudo'
@@ -748,8 +754,8 @@ def expects_func_args(*args):
         @functools.wraps(dec)
         def _decorator(f):
             base_f = safe_utils.get_wrapped_function(f)
-            arg_names, a, kw, _default = inspect.getargspec(base_f)
-            if a or kw or set(args) <= set(arg_names):
+            argspec = getargspec(base_f)
+            if argspec[1] or argspec[2] or set(args) <= set(argspec[0]):
                 # NOTE (ndipanov): We can't really tell if correct stuff will
                 # be passed if it's a function with *args or **kwargs so
                 # we still carry on and hope for the best
