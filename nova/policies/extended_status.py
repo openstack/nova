@@ -42,7 +42,15 @@ This policy will control the visibility for a set of attributes:
                 'method': 'GET',
                 'path': '/servers/detail'
             }
-        ]),
+        ],
+        deprecated_for_removal=True,
+        deprecated_reason=(
+            'Nova API extension concept has been removed in Pike. Those '
+            'extensions have their own policies enforcement. As there is '
+            'no extensions now, "os_compute_api:os-extended-status" policy '
+            'which was added for extensions is not needed any more'
+        ),
+        deprecated_since='17.0.0'),
 ]
 
 

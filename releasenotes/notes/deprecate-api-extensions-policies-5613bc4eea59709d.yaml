@@ -1,0 +1,26 @@
+---
+deprecations:
+  - |
+    Nova API extension concept is removed in Pike. These extensions
+    have their own policies enforcement which are not needed any more.
+    All the below policies which were added mainly for extensions are
+    deprecated for removal-
+
+    - Show & List detail server
+
+        - 'os_compute_api:os-config-drive'
+        - 'os_compute_api:os-extended-availability-zone'
+        - 'os_compute_api:os-extended-status'
+        - 'os_compute_api:os-extended-volumes'
+        - 'os_compute_api:os-keypairs'
+        - 'os_compute_api:os-server-usage'
+        - 'os_compute_api:os-security-groups' (only from /servers APIs)
+
+    - Create, Update, Show & List detail flavor
+
+        - 'os_compute_api:os-flavor-rxtx'
+        - 'os_compute_api:os-flavor-access' (only from /flavors APIs)
+
+    - Show & List detail image
+
+        - 'os_compute_api:image-size'
