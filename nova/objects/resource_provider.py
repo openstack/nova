@@ -2141,7 +2141,12 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
         return alloc_list
 
     def create_all(self):
-        """Create the supplied allocations."""
+        """Create the supplied allocations.
+
+        Note that the Allocation objects that are created are not
+        returned to the caller, nor are their database ids set. If
+        those ids are required use one of the get_all_by* methods.
+        """
         # TODO(jaypipes): Retry the allocation writes on
         # ConcurrentUpdateDetected
         self._set_allocations(self._context, self.objects)
