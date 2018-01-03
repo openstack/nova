@@ -3551,7 +3551,23 @@ class LibvirtDriver(driver.ComputeDriver):
         if (CONF.libvirt.virt_type == "kvm" or
             CONF.libvirt.virt_type == "qemu"):
             if mode is None:
-                mode = "host-model"
+                caps = self._host.get_capabilities()
+                # AArch64 lacks 'host-model' support because neither libvirt
+                # nor QEMU are able to tell what the host CPU model exactly is.
+                # And there is no CPU description code for ARM(64) at this
+                # point.
+
+                # Also worth noting: 'host-passthrough' mode will completely
+                # break live migration, *unless* all the Compute nodes (running
+                # libvirtd) have *identical* CPUs.
+                if caps.host.cpu.arch == fields.Architecture.AARCH64:
+                    mode = "host-passthrough"
+                    LOG.info('CPU mode "host-passthrough" was chosen. Live '
+                             'migration can break unless all compute nodes '
+                             'have identical cpus. AArch64 does not support '
+                             'other modes.')
+                else:
+                    mode = "host-model"
             if mode == "none":
                 return vconfig.LibvirtConfigGuestCPU()
         else:
