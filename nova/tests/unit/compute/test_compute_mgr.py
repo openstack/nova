@@ -22,6 +22,7 @@ from cursive import exception as cursive_exception
 from eventlet import event as eventlet_event
 import mock
 import netaddr
+from oslo_log import log as logging
 import oslo_messaging as messaging
 from oslo_serialization import jsonutils
 from oslo_utils import timeutils
@@ -1832,6 +1833,27 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 f_instance.uuid)
 
         do_test()
+
+    @mock.patch('nova.compute.manager.LOG.log')
+    @mock.patch.object(compute_utils, 'EventReporter')
+    @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
+    @mock.patch.object(compute_utils, 'notify_about_instance_action')
+    def test_detach_interface_instance_not_found(self, mock_notify, mock_fault,
+                                                 mock_event, mock_log):
+        nw_info = network_model.NetworkInfo([
+            network_model.VIF(uuids.port_id)])
+        info_cache = objects.InstanceInfoCache(network_info=nw_info,
+                                               instance_uuid=uuids.instance)
+        instance = objects.Instance(id=1, uuid=uuids.instance,
+                                    info_cache=info_cache)
+        with mock.patch.object(self.compute.driver, 'detach_interface',
+                               side_effect=exception.InstanceNotFound(
+                                   instance_id=uuids.instance)):
+            self.assertRaises(exception.InterfaceDetachFailed,
+                              self.compute.detach_interface,
+                              self.context, instance, uuids.port_id)
+            self.assertEqual(1, mock_log.call_count)
+            self.assertEqual(logging.DEBUG, mock_log.call_args[0][0])
 
     @mock.patch.object(compute_utils, 'EventReporter')
     @mock.patch.object(virt_driver.ComputeDriver, 'get_volume_connector',

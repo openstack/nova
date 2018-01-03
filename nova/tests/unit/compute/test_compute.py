@@ -10092,7 +10092,8 @@ class ComputeAPITestCase(BaseTestCase):
             mock.call(self.context, instance, self.compute.host,
                       action='interface_detach', phase='end')])
 
-    def test_detach_interface_failed(self):
+    @mock.patch('nova.compute.manager.LOG.log')
+    def test_detach_interface_failed(self, mock_log):
         nwinfo, port_id = self.test_attach_interface()
         instance = self._create_fake_instance_obj()
         instance['uuid'] = uuids.info_cache_instance
@@ -10115,6 +10116,8 @@ class ComputeAPITestCase(BaseTestCase):
             mock_notify.assert_has_calls([
                 mock.call(self.context, instance, self.compute.host,
                           action='interface_detach', phase='start')])
+            self.assertEqual(1, mock_log.call_count)
+            self.assertEqual(logging.WARNING, mock_log.call_args[0][0])
 
     @mock.patch.object(compute_manager.LOG, 'warning')
     def test_detach_interface_deallocate_port_for_instance_failed(self,

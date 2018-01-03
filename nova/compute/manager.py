@@ -5691,9 +5691,15 @@ class ComputeManager(manager.Manager):
         try:
             self.driver.detach_interface(context, instance, condemned)
         except exception.NovaException as ex:
-            LOG.warning("Detach interface failed, port_id=%(port_id)s,"
-                        " reason: %(msg)s",
-                        {'port_id': port_id, 'msg': ex}, instance=instance)
+            # If the instance was deleted before the interface was detached,
+            # just log it at debug.
+            log_level = (logging.DEBUG
+                         if isinstance(ex, exception.InstanceNotFound)
+                         else logging.WARNING)
+            LOG.log(log_level,
+                    "Detach interface failed, port_id=%(port_id)s, reason: "
+                    "%(msg)s", {'port_id': port_id, 'msg': ex},
+                    instance=instance)
             raise exception.InterfaceDetachFailed(instance_uuid=instance.uuid)
         else:
             try:
