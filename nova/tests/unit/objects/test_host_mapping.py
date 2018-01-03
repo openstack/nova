@@ -150,6 +150,35 @@ class TestRemoteHostMappingObject(test_objects._RemoteTest,
     pass
 
 
+class _TestHostMappingListObject(object):
+    def _check_cell_map_value(self, db_val, cell_obj):
+        self.assertEqual(db_val, cell_obj.id)
+
+    @mock.patch.object(host_mapping.HostMappingList, '_get_from_db')
+    def test_get_all(self, get_from_db):
+        fake_cell = test_cell_mapping.get_db_mapping(id=1)
+        db_mapping = get_db_mapping(mapped_cell=fake_cell)
+        get_from_db.return_value = [db_mapping]
+
+        mapping_obj = objects.HostMappingList.get_all(self.context)
+
+        get_from_db.assert_called_once_with(self.context)
+        self.compare_obj(mapping_obj.objects[0], db_mapping,
+                         subs={'cell_mapping': 'cell_id'},
+                         comparators={
+                             'cell_mapping': self._check_cell_map_value})
+
+
+class TestCellMappingListObject(test_objects._LocalTest,
+                                _TestHostMappingListObject):
+    pass
+
+
+class TestRemoteCellMappingListObject(test_objects._RemoteTest,
+                                      _TestHostMappingListObject):
+    pass
+
+
 class TestHostMappingDiscovery(test.NoDBTestCase):
     @mock.patch('nova.objects.CellMappingList.get_all')
     @mock.patch('nova.objects.HostMapping.create')

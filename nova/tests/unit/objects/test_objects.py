@@ -1092,7 +1092,7 @@ object_data = {
     'FloatingIP': '1.10-52a67d52d85eb8b3f324a5b7935a335b',
     'FloatingIPList': '1.12-e4debd21fddb12cf40d36f737225fa9d',
     'HostMapping': '1.0-1a3390a696792a552ab7bd31a77ba9ac',
-    'HostMappingList': '1.0-267d952a5d48361d6d7604f50775bc34',
+    'HostMappingList': '1.1-18ac2bfb8c1eb5545bed856da58a79bc',
     'HyperVLiveMigrateData': '1.2-bcb6dad687369348ffe0f41da6888704',
     'HVSpec': '1.2-de06bcec472a2f04966b855a49c46b41',
     'IDEDeviceBus': '1.0-29d4c9f27ac44197f01b6ac1b7e16502',

@@ -1573,6 +1573,34 @@ class CellV2Commands(object):
         return 0
 
     @args('--cell_uuid', metavar='<cell_uuid>', dest='cell_uuid',
+          help=_('The uuid of the cell.'))
+    def list_hosts(self, cell_uuid=None):
+        """Lists the hosts in one or all v2 cells."""
+        ctxt = context.get_admin_context()
+        if cell_uuid:
+            # Find the CellMapping given the uuid.
+            try:
+                cell_mapping = objects.CellMapping.get_by_uuid(ctxt, cell_uuid)
+            except exception.CellMappingNotFound:
+                print(_('Cell with uuid %s was not found.') % cell_uuid)
+                return 1
+
+            host_mappings = objects.HostMappingList.get_by_cell_id(
+                ctxt, cell_mapping.id)
+        else:
+            host_mappings = objects.HostMappingList.get_all(ctxt)
+
+        field_names = [_('Cell Name'), _('Cell UUID'), _('Hostname')]
+
+        t = prettytable.PrettyTable(field_names)
+        for host in sorted(host_mappings, key=lambda _host: _host.host):
+            fields = [host.cell_mapping.name, host.cell_mapping.uuid,
+                      host.host]
+            t.add_row(fields)
+        print(t)
+        return 0
+
+    @args('--cell_uuid', metavar='<cell_uuid>', dest='cell_uuid',
           required=True, help=_('The uuid of the cell.'))
     @args('--host', metavar='<host>', dest='host',
           required=True, help=_('The host to delete.'))
