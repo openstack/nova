@@ -56,6 +56,7 @@ from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova.objects import aggregate as aggregate_obj
+from nova.objects import block_device as block_device_obj
 from nova.objects import build_request as build_request_obj
 from nova.objects import host_mapping as host_mapping_obj
 from nova.objects import instance as instance_obj
@@ -436,6 +437,8 @@ class DbCommands(object):
         quotas_obj.migrate_quota_classes_to_api_db,
         # Added in Queens
         sa_db.migration_migrate_to_uuid,
+        # Added in Queens
+        block_device_obj.BlockDeviceMapping.populate_uuids,
     )
 
     def __init__(self):

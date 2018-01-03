@@ -483,6 +483,40 @@ class TestBlockDeviceMappingUUIDMigration(test.TestCase):
 
         self.assertEqual(uuid1, uuid2)
 
+    def _assert_online_migration(self, expected_total, expected_done,
+                                 limit=10):
+        total, done = objects.BlockDeviceMapping.populate_uuids(
+                self.context, limit)
+        self.assertEqual(expected_total, total)
+        self.assertEqual(expected_done, done)
+
+    def test_online_migration(self):
+        self._assert_online_migration(0, 0)
+
+        # Create 2 BDMs, one with a uuid and one without
+        self._create_legacy_bdm(self.context)
+        db_api.block_device_mapping_create(self.context,
+                {'uuid': uuids.bdm2, 'instance_uuid': uuids.instance_uuid},
+                legacy=False)
+
+        # Run the online migration. We should find 1 and update 1
+        self._assert_online_migration(1, 1)
+
+        # Fetch the BDMs and check we didn't modify the uuid of bdm2
+        bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
+                self.context, uuids.instance_uuid)
+        bdm_uuids = [bdm.uuid for bdm in bdms]
+        self.assertIn(uuids.bdm2, bdm_uuids)
+        self.assertNotIn(None, bdm_uuids)
+
+        # Run the online migration again to see nothing was processed
+        self._assert_online_migration(0, 0)
+
+        # Test that we don't migrate more than the limit
+        for i in range(0, 3):
+            self._create_legacy_bdm(self.context)
+        self._assert_online_migration(2, 2, limit=2)
+
 
 class TestBlockDeviceMappingObject(test_objects._LocalTest,
                                    _TestBlockDeviceMappingObject):
