@@ -15295,9 +15295,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_config')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._connect_volume')
     @mock.patch('nova.virt.libvirt.host.Host.get_guest')
-    def _test_swap_volume_driver(self, get_guest, connect_volume,
-                                 get_volume_config, swap_volume,
-                                 disconnect_volume, source_type):
+    def test_swap_volume(self, get_guest, connect_volume, get_volume_config,
+                         swap_volume, disconnect_volume):
         conn = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
         instance = objects.Instance(**self.test_instance)
         old_connection_info = {'driver_volume_type': 'fake',
@@ -15334,15 +15333,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         swap_volume.assert_called_once_with(guest, 'vdb', conf, 1)
         disconnect_volume.assert_called_once_with(old_connection_info,
                                                   instance)
-
-    def test_swap_volume_driver_source_is_volume(self):
-        self._test_swap_volume_driver(source_type='volume')
-
-    def test_swap_volume_driver_source_is_image(self):
-        self._test_swap_volume_driver(source_type='image')
-
-    def test_swap_volume_driver_source_is_snapshot(self):
-        self._test_swap_volume_driver(source_type='snapshot')
 
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.rebase')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
