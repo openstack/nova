@@ -724,7 +724,7 @@ class TestPciDeviceUUIDMigration(test.TestCase):
 
     @staticmethod
     @db_api.pick_context_manager_writer
-    def _create_legacy_dev(context):
+    def _create_db_dev(context, deleted=False, **updates):
         """Create a PCI device with no UUID."""
         values = copy.copy(dev_dict)
         # 'PciDeviceList.get_by_instance_uuid' expected devices to be allocated
@@ -732,15 +732,21 @@ class TestPciDeviceUUIDMigration(test.TestCase):
         values['label'] = 'l'  # Why is this necessary?
         values['instance_uuid'] = uuids.instance_uuid
         values['extra_info'] = '{}'
+        values.update(updates)
+
         dev_ref = db_models.PciDevice()
         dev_ref.update(values)
         dev_ref.save(context.session)
+
+        if deleted:
+            dev_ref.soft_delete(context.session)
+
         return dev_ref
 
     @mock.patch.object(objects.PciDevice, '_create_uuid',
             wraps=objects.PciDevice._create_uuid)
     def test_populate_uuid(self, mock_create_uuid):
-        self._create_legacy_dev(self.context)
+        self._create_db_dev(self.context)
         devs = objects.PciDeviceList.get_by_instance_uuid(
             self.context, uuids.instance_uuid)
 
@@ -769,7 +775,7 @@ class TestPciDeviceUUIDMigration(test.TestCase):
         # demonstrate that the compare-and-swap works correctly, and we trust
         # the correctness of the database for the rest.
 
-        db_dev = self._create_legacy_dev(self.context)
+        db_dev = self._create_db_dev(self.context)
         uuid1 = objects.PciDevice._create_uuid(self.context, db_dev.id)
 
         dev = objects.PciDeviceList.get_by_instance_uuid(
@@ -782,3 +788,40 @@ class TestPciDeviceUUIDMigration(test.TestCase):
         uuid2 = objects.PciDevice._create_uuid(self.context, dev.id)
 
         self.assertEqual(uuid1, uuid2)
+
+    def _assert_online_migration(self, expected_total, expected_done,
+                                 limit=10):
+        total, done = objects.PciDevice.populate_dev_uuids(
+            self.context, limit)
+        self.assertEqual(expected_total, total)
+        self.assertEqual(expected_done, done)
+
+    def test_online_migration(self):
+        self._assert_online_migration(0, 0)
+
+        # Create 2 PCI devices, one with a uuid and one without. We need to
+        # specify an address due to unique constraints in the database
+        self._create_db_dev(self.context, address='a', uuid=None)
+        self._create_db_dev(self.context, address='b', uuid=uuids.dev_uuid)
+
+        # Run the online migration. We should find 1 and update 1
+        self._assert_online_migration(1, 1)
+
+        # Fetch the BDMs and check we didn't modify the uuid of bdm2
+        devs = objects.PciDeviceList.get_by_instance_uuid(
+            self.context, uuids.instance_uuid)
+        dev_uuids = [dev.uuid for dev in devs]
+        self.assertIn(uuids.dev_uuid, dev_uuids)
+        self.assertNotIn(None, dev_uuids)
+
+        # Run the online migration again to see nothing was processed
+        self._assert_online_migration(0, 0)
+
+        # Assert that we assign a uuid to a deleted bdm.
+        self._create_db_dev(self.context, address='c', deleted=True)
+        self._assert_online_migration(1, 1)
+
+        # Test that we don't migrate more than the limit
+        for i in range(0, 3):
+            self._create_db_dev(self.context, address=str(i))
+        self._assert_online_migration(2, 2, limit=2)

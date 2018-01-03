@@ -63,6 +63,7 @@ from nova.objects import compute_node as compute_node_obj
 from nova.objects import host_mapping as host_mapping_obj
 from nova.objects import instance as instance_obj
 from nova.objects import instance_mapping as instance_mapping_obj
+from nova.objects import pci_device as pci_device_obj
 from nova.objects import quotas as quotas_obj
 from nova.objects import virtual_interface as virtual_interface_obj
 from nova import rpc
@@ -138,6 +139,8 @@ class DbCommands(object):
         virtual_interface_obj.fill_virtual_interface_list,
         # Added in Stein
         instance_mapping_obj.populate_user_id,
+        # Added in Victoria
+        pci_device_obj.PciDevice.populate_dev_uuids,
     )
 
     def __init__(self):

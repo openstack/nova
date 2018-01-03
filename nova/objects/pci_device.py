@@ -201,6 +201,22 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
         return not (self == other)
 
     @classmethod
+    def populate_dev_uuids(cls, context, count):
+        @db_api.pick_context_manager_reader
+        def get_devs_no_uuid(context):
+            return context.session.query(db_models.PciDevice).\
+                    filter_by(uuid=None).limit(count).all()
+
+        db_devs = get_devs_no_uuid(context)
+
+        done = 0
+        for db_dev in db_devs:
+            cls._create_uuid(context, db_dev['id'])
+            done += 1
+
+        return done, done
+
+    @classmethod
     def _from_db_object(cls, context, pci_device, db_dev):
         for key in pci_device.fields:
             if key == 'uuid' and db_dev['uuid'] is None:
