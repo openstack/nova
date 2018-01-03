@@ -1249,24 +1249,25 @@ class SchedulerReportClient(object):
     def set_and_clear_allocations(self, rp_uuid, consumer_uuid, alloc_data,
                                   project_id, user_id,
                                   consumer_to_clear=None):
-        """Create allocation records for the supplied instance UUID while
+        """Create allocation records for the supplied consumer UUID while
         simultaneously clearing any allocations identified by the uuid
-        in consumer_to_clear, often a migration uuid. This is for
-        atomically managing so-called "doubled" migration records.
+        in consumer_to_clear, for example a migration uuid when moving an
+        instance to another host. This is for atomically managing so-called
+        "doubled" migration records.
 
         :note Currently we only allocate against a single resource provider.
               Once shared storage and things like NUMA allocations are a
               reality, this will change to allocate against multiple providers.
 
         :param rp_uuid: The UUID of the resource provider to allocate against.
-        :param consumer_uuid: The instance's UUID.
+        :param consumer_uuid: The consumer UUID for which allocations are
+                              being set.
         :param alloc_data: Dict, keyed by resource class, of amounts to
                            consume.
         :param project_id: The project_id associated with the allocations.
         :param user_id: The user_id associated with the allocations.
         :param consumer_to_clear: A UUID identifying allocations for a
-                                  consumer that should be cleared. This
-                                  is usually a migration uuid.
+                                  consumer that should be cleared.
         :returns: True if the allocations were created, False otherwise.
         :raises: Retry if the operation should be retried due to a concurrent
                  update.
