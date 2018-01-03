@@ -24,13 +24,15 @@ Options under this group are used to define Nova API.
 auth_opts = [
     cfg.StrOpt("auth_strategy",
         default="keystone",
-        choices=("keystone", "noauth2"),
+        choices=[
+            ("keystone", "Use keystone for authentication."),
+            ("noauth2", "Designed for testing only, as it does no actual "
+             "credential checking. 'noauth2' provides administrative "
+             "credentials only if 'admin' is specified as the username."),
+        ],
         deprecated_group="DEFAULT",
         help="""
-This determines the strategy to use for authentication: keystone or noauth2.
-'noauth2' is designed for testing only, as it does no actual credential
-checking. 'noauth2' provides administrative credentials only if 'admin' is
-specified as the username.
+Determine the strategy to use for authentication.
 """),
     cfg.BoolOpt("use_forwarded_for",
         default=False,
@@ -71,40 +73,33 @@ Possible values:
 * Any string that represents zero or more versions, separated by spaces.
 """),
     cfg.ListOpt('vendordata_providers',
-        item_type=cfg.types.String(choices=['StaticJSON', 'DynamicJSON']),
+        item_type=cfg.types.String(choices=[
+            ('StaticJSON', 'Loads a JSON file from the path configured by '
+             '``[DEFAULT] vendordata_jsonfile_path`` and use this as the '
+             'source for ``vendora_data.json`` and ``vendor_data2.json``.'),
+            ('DynamicJSON', 'Build a JSON file using values defined in '
+             '``vendordata_dynamic_targets``, which is documented separately '
+             'and uses this as the source for ``vendor_data2.json``.'),
+        ]),
         default=['StaticJSON'],
         deprecated_group="DEFAULT",
         help="""
 A list of vendordata providers.
 
 vendordata providers are how deployers can provide metadata via configdrive
-and metadata that is specific to their deployment. There are currently two
-supported providers: StaticJSON and DynamicJSON.
-
-StaticJSON reads a JSON file configured by the flag vendordata_jsonfile_path
-and places the JSON from that file into vendor_data.json and
-vendor_data2.json.
-
-DynamicJSON is configured via the vendordata_dynamic_targets flag, which is
-documented separately. For each of the endpoints specified in that flag, a
-section is added to the vendor_data2.json.
+and metadata that is specific to their deployment.
 
 For more information on the requirements for implementing a vendordata
 dynamic endpoint, please see the vendordata.rst file in the nova developer
 reference.
 
-Possible values:
-
-* A list of vendordata providers, with StaticJSON and DynamicJSON being
-  current options.
-
 Related options:
 
-* vendordata_dynamic_targets
-* vendordata_dynamic_ssl_certfile
-* vendordata_dynamic_connect_timeout
-* vendordata_dynamic_read_timeout
-* vendordata_dynamic_failure_fatal
+* ``vendordata_dynamic_targets``
+* ``vendordata_dynamic_ssl_certfile``
+* ``vendordata_dynamic_connect_timeout``
+* ``vendordata_dynamic_read_timeout``
+* ``vendordata_dynamic_failure_fatal``
 """),
     cfg.ListOpt('vendordata_dynamic_targets',
         default=[],
@@ -267,8 +262,22 @@ False. If you have many cells, especially if you confine tenants to a
 small subset of those cells, this should be True.
 """),
     cfg.StrOpt("instance_list_cells_batch_strategy",
-        choices=("fixed", "distributed"),
         default="distributed",
+        choices=[
+            ("distributed", "``distributed`` will attempt to divide the "
+             "limit requested by the user by the number of cells in the "
+             "system. This requires counting the cells in the system "
+             "initially, which will not be refreshed until service restart "
+             "or SIGHUP. The actual batch size will be increased by 10% "
+             "over the result of ($limit / $num_cells)."),
+            ("fixed", "``fixed`` will simply request fixed-size batches from "
+             "each cell, as defined by ``instance_list_cells_batch_fixed_"
+             "size``. If the limit is smaller than the batch size, the limit "
+             "will be used instead. If you do not wish batching to be used "
+             "at all, setting the fixed size equal to the ``max_limit`` "
+             "value will cause only one request per cell database to be "
+             "issued."),
+        ],
         help="""
 This controls the method by which the API queries cell databases in
 smaller batches during large instance list operations. If batching is
@@ -280,24 +289,6 @@ between the API and the database, but potentially more wasted effort
 processing the results from the database which will not be returned to
 the user. Any strategy will yield a batch size of at least 100 records,
 to avoid a user causing many tiny database queries in their request.
-
-``distributed`` (the default) will attempt to divide the limit
-requested by the user by the number of cells in the system. This
-requires counting the cells in the system initially, which will not be
-refreshed until service restart or SIGHUP. The actual batch size will
-be increased by 10% over the result of ($limit / $num_cells).
-
-``fixed`` will simply request fixed-size batches from each cell, as
-defined by ``instance_list_cells_batch_fixed_size``. If the limit is
-smaller than the batch size, the limit will be used instead. If you do
-not wish batching to be used at all, setting the fixed size equal to
-the ``max_limit`` value will cause only one request per cell database
-to be issued.
-
-Possible values:
-
-* distributed (default)
-* fixed
 
 Related options:
 

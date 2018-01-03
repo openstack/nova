@@ -18,7 +18,10 @@ from oslo_config import cfg
 SERVICEGROUP_OPTS = [
     cfg.StrOpt('servicegroup_driver',
         default='db',
-        choices=['db', 'mc'],
+        choices=[
+            ('db', 'Database ServiceGroup driver'),
+            ('mc', 'Memcache ServiceGroup driver'),
+        ],
         help="""
 This option specifies the driver to be used for the servicegroup service.
 
@@ -30,14 +33,9 @@ client driver automatically updates the compute worker status. There are
 multiple backend implementations for this service: Database ServiceGroup driver
 and Memcache ServiceGroup driver.
 
-Possible Values:
-
-    * db : Database ServiceGroup driver
-    * mc : Memcache ServiceGroup driver
-
 Related Options:
 
-    * service_down_time (maximum time since last check-in for up service)
+* ``service_down_time`` (maximum time since last check-in for up service)
 """),
 ]
 

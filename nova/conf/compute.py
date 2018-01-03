@@ -198,7 +198,10 @@ Related options:
 """),
     cfg.StrOpt('preallocate_images',
         default='none',
-        choices=('none', 'space'),
+        choices=[
+            ('none', 'No storage provisioning is done up front'),
+            ('space', 'Storage is fully allocated at instance start')
+        ],
         help="""
 The image preallocation mode to use.
 
@@ -207,11 +210,6 @@ when the instance is initially provisioned. This ensures immediate feedback is
 given if enough space isn't available. In addition, it should significantly
 improve performance on writes to new blocks and may even improve I/O
 performance to prewritten blocks due to reduced fragmentation.
-
-Possible values:
-
-* "none"  => no storage provisioning is done up front
-* "space" => storage is fully allocated at instance start
 """),
     cfg.BoolOpt('use_cow_images',
         default=True,
@@ -282,7 +280,12 @@ Unused unresized base images younger than this will not be removed.
 """),
     cfg.StrOpt('pointer_model',
         default='usbtablet',
-        choices=[None, 'ps2mouse', 'usbtablet'],
+        choices=[
+            ('ps2mouse', 'Uses relative movement. Mouse connected by PS2'),
+            ('usbtablet', 'Uses absolute movement. Tablet connect by USB'),
+            (None, 'Uses default behavior provided by drivers (mouse on PS2 '
+             'for libvirt x86)'),
+        ],
         help="""
 Generic property to specify the pointer type.
 
@@ -291,13 +294,6 @@ example to provide a graphic tablet for absolute cursor movement.
 
 If set, the 'hw_pointer_model' image property takes precedence over
 this configuration option.
-
-Possible values:
-
-* None: Uses default behavior provided by drivers (mouse on PS2 for
-        libvirt x86)
-* ps2mouse: Uses relative movement. Mouse connected by PS2
-* usbtablet: Uses absolute movement. Tablet connect by USB
 
 Related options:
 
@@ -1058,25 +1054,23 @@ Possible values:
 running_deleted_opts = [
     cfg.StrOpt("running_deleted_instance_action",
         default="reap",
-        choices=('noop', 'log', 'shutdown', 'reap'),
+        choices=[
+            ('reap', 'Powers down the instances and deletes them'),
+            ('log', 'Logs warning message about deletion of the resource'),
+            ('shutdown', 'Powers down instances and marks them as '
+             'non-bootable which can be later used for debugging/analysis'),
+            ('noop', 'Takes no action'),
+        ],
         help="""
 The compute service periodically checks for instances that have been
 deleted in the database but remain running on the compute node. The
 above option enables action to be taken when such instances are
 identified.
 
-Possible values:
-
-* reap: Powers down the instances and deletes them(default)
-* log: Logs warning message about deletion of the resource
-* shutdown: Powers down instances and marks them as non-
-  bootable which can be later used for debugging/analysis
-* noop: Takes no action
-
 Related options:
 
-* running_deleted_instance_poll_interval
-* running_deleted_instance_timeout
+* ``running_deleted_instance_poll_interval``
+* ``running_deleted_instance_timeout``
 """),
     cfg.IntOpt("running_deleted_instance_poll_interval",
         default=1800,
@@ -1136,7 +1130,14 @@ Related options:
 db_opts = [
     cfg.StrOpt('osapi_compute_unique_server_name_scope',
         default='',
-        choices=['', 'project', 'global'],
+        choices=[
+            ('', 'An empty value means that no uniqueness check is done and '
+             'duplicate names are possible'),
+            ('project', 'The instance name check is done only for instances '
+             'within the same project'),
+            ('global', 'The instance name check is done for all instances '
+             'regardless of the project'),
+        ],
         help="""
 Sets the scope of the check for unique instance names.
 
@@ -1146,15 +1147,6 @@ duplicate name will result in an ''InstanceExists'' error. The uniqueness is
 case-insensitive. Setting this option can increase the usability for end
 users as they don't have to distinguish among instances with the same name
 by their IDs.
-
-Possible values:
-
-* '': An empty value means that no uniqueness check is done and duplicate
-  names are possible.
-* "project": The instance name check is done only for instances within the
-  same project.
-* "global": The instance name check is done for all instances regardless of
-  the project.
 """),
     cfg.BoolOpt('enable_new_services',
         default=True,

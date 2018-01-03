@@ -288,20 +288,18 @@ issues. Note that quotas are not updated on a periodic task, they will update
 on a new reservation if max_age has passed since the last reservation.
 """),
     cfg.StrOpt('driver',
-               default='nova.quota.DbQuotaDriver',
-               choices=('nova.quota.DbQuotaDriver',
-                        'nova.quota.NoopQuotaDriver'),
-               help="""
+        default='nova.quota.DbQuotaDriver',
+        choices=[
+            ('nova.quota.DbQuotaDriver', 'Stores quota limit information '
+             'in the database and relies on the ``quota_*`` configuration '
+             'options for default quota limit values. Counts quota usage '
+             'on-demand.'),
+            ('nova.quota.NoopQuotaDriver', 'Ignores quota and treats all '
+             'resources as unlimited.'),
+        ],
+        help="""
 Provides abstraction for quota checks. Users can configure a specific
 driver to use for quota checks.
-
-Possible values:
-
-* nova.quota.DbQuotaDriver: Stores quota limit information
-  in the database and relies on the quota_* configuration options for default
-  quota limit values. Counts quota usage on-demand.
-* nova.quota.NoopQuotaDriver: Ignores quota and treats all resources as
-  unlimited.
 """),
     cfg.BoolOpt('recheck_quota',
         default=True,
