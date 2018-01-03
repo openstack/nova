@@ -118,7 +118,8 @@ class HyperVDriver(driver.ComputeDriver):
         self._imagecache = imagecache.ImageCache()
 
     def _check_minimum_windows_version(self):
-        if not utilsfactory.get_hostutils().check_min_windows_version(6, 2):
+        hostutils = utilsfactory.get_hostutils()
+        if not hostutils.check_min_windows_version(6, 2):
             # the version is of Windows is older than Windows Server 2012 R2.
             # Log an error, letting users know that this version is not
             # supported any longer.
@@ -127,6 +128,12 @@ class HyperVDriver(driver.ComputeDriver):
                       'Server 2012). The support for this version of '
                       'Windows has been removed in Mitaka.')
             raise exception.HypervisorTooOld(version='6.2')
+        elif not hostutils.check_min_windows_version(6, 3):
+            # TODO(claudiub): replace the warning with an exception in Rocky.
+            LOG.warning('You are running nova-compute on Windows / Hyper-V '
+                        'Server 2012. The support for this version of Windows '
+                        'has been deprecated In Queens, and will be removed '
+                        'in Rocky.')
 
     @property
     def need_legacy_block_device_info(self):
