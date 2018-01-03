@@ -74,14 +74,7 @@ class TestServerResizeReschedule(ProviderUsageBaseTestCase):
         data = {"resize": {"flavorRef": self.flavor2['id']}}
         self.api.post_server_action(server_uuid, data)
 
-        # TODO(edleafe): Remove this when the bug is fixed, and uncomment the
-        # block below that relies on the fix.
-        self.assertRaises(AssertionError, self._wait_for_state_change,
-                self.api, created_server, 'VERIFY_RESIZE')
-
-        # Un-comment this when the bug is fixed.
-        # server = self._wait_for_state_change(self.api, created_server,
-        #         'VERIFY_RESIZE')
-        # ctxt = context.get_admin_context()
-        # instance = objects.Instance.get_by_uuid(ctxt, server["id"])
-        # self.assertEqual(int(self.flavor2["id"]), instance.flavor.id)
+        server = self._wait_for_state_change(self.api, created_server,
+                'VERIFY_RESIZE')
+        self.assertEqual(self.flavor2['name'],
+                         server['flavor']['original_name'])
