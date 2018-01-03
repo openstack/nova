@@ -1050,6 +1050,11 @@ class _ComputeAPIUnitTestMixIn(object):
                                   system_metadata=fake_sys_meta)
             self._test_delete('force_delete', vm_state=vm_state)
 
+    def test_delete_forced_when_task_state_is_not_none(self):
+        for vm_state in self._get_vm_states():
+            self._test_delete('force_delete', vm_state=vm_state,
+                              task_state=task_states.RESIZE_MIGRATING)
+
     @mock.patch('nova.compute.api.API._delete_while_booting',
                 return_value=False)
     @mock.patch('nova.compute.api.API._lookup_instance')
