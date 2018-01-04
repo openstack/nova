@@ -286,12 +286,14 @@ class SchedulerReportClient(object):
         return self._client.post(url, json=data, raise_exc=False,
                                  microversion=version, headers=headers)
 
-    def put(self, url, data, version=None):
+    def put(self, url, data, version=None, global_request_id=None):
         # NOTE(sdague): using json= instead of data= sets the
         # media type to application/json for us. Placement API is
         # more sensitive to this than other APIs in the OpenStack
         # ecosystem.
-        kwargs = {'microversion': version}
+        kwargs = {'microversion': version,
+                  'headers': {request_id.INBOUND_HEADER:
+                              global_request_id} if global_request_id else {}}
         if data is not None:
             kwargs['json'] = data
         return self._client.put(url, raise_exc=False, **kwargs)
@@ -821,7 +823,7 @@ class SchedulerReportClient(object):
             'inventories': inv_data,
         }
         url = '/resource_providers/%s/inventories' % rp_uuid
-        result = self.put(url, payload)
+        result = self.put(url, payload, global_request_id=context.global_id)
         if result.status_code == 409:
             LOG.info('[%(placement_req_id)s] Inventory update conflict for '
                      '%(resource_provider_uuid)s with generation ID '
@@ -967,7 +969,7 @@ class SchedulerReportClient(object):
                 'resource_provider_generation': cur_gen,
                 'inventories': {},
             }
-            r = self.put(url, payload)
+            r = self.put(url, payload, global_request_id=context.global_id)
             placement_req_id = get_placement_request_id(r)
             msg_args['placement_req_id'] = placement_req_id
             if r.status_code == 200:
@@ -1241,7 +1243,8 @@ class SchedulerReportClient(object):
         :raises: `exception.InvalidResourceClass` upon error.
         """
         # no payload on the put request
-        response = self.put("/resource_classes/%s" % name, None, version="1.7")
+        response = self.put("/resource_classes/%s" % name, None, version="1.7",
+                            global_request_id=context.global_id)
         if 200 <= response.status_code < 300:
             return name
         elif response.status_code == 406:

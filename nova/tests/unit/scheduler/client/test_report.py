@@ -399,7 +399,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         expected_payload['user_id'] = user_id
         self.ks_adap_mock.put.assert_called_once_with(
             expected_url, microversion='1.12', json=expected_payload,
-            raise_exc=False)
+            raise_exc=False, headers={})
 
         self.assertTrue(res)
 
@@ -436,7 +436,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         expected_payload['user_id'] = user_id
         self.ks_adap_mock.put.assert_called_once_with(
             expected_url, microversion='1.12', json=expected_payload,
-            raise_exc=False)
+            raise_exc=False, headers={})
 
         self.assertTrue(res)
 
@@ -502,7 +502,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         expected_payload['user_id'] = user_id
         self.ks_adap_mock.put.assert_called_once_with(
             expected_url, microversion='1.12', json=mock.ANY,
-            raise_exc=False)
+            raise_exc=False, headers={})
         # We have to pull the json body from the mock call_args to validate
         # it separately otherwise hash seed issues get in the way.
         actual_payload = self.ks_adap_mock.put.call_args[1]['json']
@@ -592,7 +592,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         expected_payload['user_id'] = user_id
         self.ks_adap_mock.put.assert_called_once_with(
             expected_url, microversion='1.12', json=mock.ANY,
-            raise_exc=False)
+            raise_exc=False, headers={})
         # We have to pull the allocations from the json body from the
         # mock call_args to validate it separately otherwise hash seed
         # issues get in the way.
@@ -666,7 +666,8 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         expected_payload['project_id'] = project_id
         expected_payload['user_id'] = user_id
         self.ks_adap_mock.put.assert_called_once_with(
-            expected_url, microversion='1.12', json=mock.ANY, raise_exc=False)
+            expected_url, microversion='1.12', json=mock.ANY, raise_exc=False,
+            headers={})
         # We have to pull the json body from the mock call_args to validate
         # it separately otherwise hash seed issues get in the way.
         actual_payload = self.ks_adap_mock.put.call_args[1]['json']
@@ -750,7 +751,8 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         expected_payload['project_id'] = project_id
         expected_payload['user_id'] = user_id
         self.ks_adap_mock.put.assert_called_once_with(
-            expected_url, microversion='1.12', json=mock.ANY, raise_exc=False)
+            expected_url, microversion='1.12', json=mock.ANY, raise_exc=False,
+            headers={})
         # We have to pull the json body from the mock call_args to validate
         # it separately otherwise hash seed issues get in the way.
         actual_payload = self.ks_adap_mock.put.call_args[1]['json']
@@ -802,7 +804,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         # identical since we're retrying the same HTTP request
         expected_calls = [
             mock.call(expected_url, microversion='1.12', json=expected_payload,
-                      raise_exc=False)] * 2
+                      raise_exc=False, headers={})] * 2
         self.assertEqual(len(expected_calls),
                          self.ks_adap_mock.put.call_count)
         self.ks_adap_mock.put.assert_has_calls(expected_calls)
@@ -845,7 +847,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         expected_payload['user_id'] = user_id
         self.ks_adap_mock.put.assert_called_once_with(
             expected_url, microversion='1.12', json=expected_payload,
-            raise_exc=False)
+            raise_exc=False, headers={})
 
         self.assertFalse(res)
         self.assertTrue(mock_log.called)
@@ -911,7 +913,8 @@ class TestPutAllocations(SchedulerReportClientTestCase):
                                     key=sort_by_uuid)
         self.assertEqual(expected_allocations, actual_allocations)
         self.ks_adap_mock.put.assert_called_once_with(
-            expected_url, microversion='1.10', json=mock.ANY, raise_exc=False)
+            expected_url, microversion='1.10', json=mock.ANY, raise_exc=False,
+            headers={})
 
         self.assertTrue(res)
 
@@ -991,7 +994,8 @@ class TestPutAllocations(SchedulerReportClientTestCase):
                                     key=sort_by_uuid)
         self.assertEqual(expected_allocations, actual_allocations)
         self.ks_adap_mock.put.assert_called_once_with(
-            expected_url, microversion='1.10', json=mock.ANY, raise_exc=False)
+            expected_url, microversion='1.10', json=mock.ANY, raise_exc=False,
+            headers={})
 
         self.assertTrue(res)
 
@@ -1914,7 +1918,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         url = '/resource_providers/%s/aggregates' % uuids.foo
         self.client.put(url, [])
         self.ks_adap_mock.put.assert_called_once_with(
-            url, json=[], raise_exc=False, microversion=None)
+            url, json=[], raise_exc=False, microversion=None, headers={})
 
     def test_delete_provider(self):
         delete_mock = requests.Response()
@@ -1969,7 +1973,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
 
         self.ks_adap_mock.put.assert_called_once_with(
             '/resource_providers/%s/aggregates' % uuids.rp, json=aggs,
-            raise_exc=False, microversion='1.1')
+            raise_exc=False, microversion='1.1', headers={})
         # Cache was updated
         self.assertEqual(set(aggs),
                          self.client._provider_tree.data(uuids.rp).aggregates)
@@ -2087,7 +2091,7 @@ class TestTraits(SchedulerReportClientTestCase):
         self.ks_adap_mock.get.assert_called_once_with(
             '/traits?name=in:' + ','.join(all_traits), **self.trait_api_kwargs)
         self.ks_adap_mock.put.assert_has_calls(
-            [mock.call('/traits/' + trait, **self.trait_api_kwargs)
+            [mock.call('/traits/' + trait, headers={}, **self.trait_api_kwargs)
              for trait in custom_traits], any_order=True)
 
         self.ks_adap_mock.reset_mock()
@@ -2132,7 +2136,7 @@ class TestTraits(SchedulerReportClientTestCase):
         self.ks_adap_mock.get.assert_called_once_with(
             '/traits?name=in:FOO', **self.trait_api_kwargs)
         self.ks_adap_mock.put.assert_called_once_with(
-            '/traits/FOO', **self.trait_api_kwargs)
+            '/traits/FOO', headers={}, **self.trait_api_kwargs)
 
     def test_set_traits_for_provider(self):
         traits = ['HW_NIC_OFFLOAD_UCS', 'HW_NIC_OFFLOAD_RDMA']
@@ -2160,7 +2164,7 @@ class TestTraits(SchedulerReportClientTestCase):
         self.ks_adap_mock.put.assert_called_once_with(
             '/resource_providers/%s/traits' % uuids.rp,
             json={'traits': traits, 'resource_provider_generation': 0},
-            **self.trait_api_kwargs)
+            headers={}, **self.trait_api_kwargs)
 
         # And ensure the provider tree cache was updated appropriately
         self.assertFalse(
@@ -2579,7 +2583,8 @@ class TestInventory(SchedulerReportClientTestCase):
             'resource_provider_generation': 42,
             'inventories': {},
         }
-        mock_put.assert_called_once_with(exp_url, payload)
+        mock_put.assert_called_once_with(
+            exp_url, payload, global_request_id=self.context.global_id)
 
     @mock.patch.object(report.LOG, 'error')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -2621,7 +2626,8 @@ class TestInventory(SchedulerReportClientTestCase):
             'resource_provider_generation': 42,
             'inventories': {},
         }
-        mock_put.assert_called_once_with(exp_url, payload)
+        mock_put.assert_called_once_with(
+            exp_url, payload, global_request_id=self.context.global_id)
         self.assertTrue(mock_error.called)
         self.assertEqual(uuids.request_id,
                          mock_error.call_args[0][1]['placement_req_id'])
@@ -2819,7 +2825,8 @@ There was a conflict when trying to complete your request.
                 },
             }
         }
-        mock_put.assert_called_once_with(exp_url, expected)
+        mock_put.assert_called_once_with(
+            exp_url, expected, global_request_id=self.context.global_id)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get')
@@ -2895,7 +2902,8 @@ There was a conflict when trying to complete your request.
                 },
             }
         }
-        mock_put.assert_called_once_with(exp_url, expected)
+        mock_put.assert_called_once_with(
+            exp_url, expected, global_request_id=self.context.global_id)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get')
@@ -3366,6 +3374,9 @@ There was a conflict when trying to complete your request.
         mock_put.return_value.status_code = 406
         self.client._ensure_resource_class(self.context, 'CUSTOM_IRON_SILVER')
         mock_gocr.assert_called_once_with(self.context, 'CUSTOM_IRON_SILVER')
+        mock_put.assert_called_once_with(
+            '/resource_classes/CUSTOM_IRON_SILVER', None, version='1.7',
+            global_request_id=self.context.global_id)
 
 
 class TestAllocations(SchedulerReportClientTestCase):
