@@ -10,11 +10,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import six
-
 from nova import test
 from nova.tests import fixtures as nova_fixtures
-from nova.tests.functional.api import client as api_client
 from nova.tests.functional import integrated_helpers
 import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
@@ -85,8 +82,8 @@ class TestResizeWithCachingScheduler(test.TestCase,
         server = self.api.post_server({'server': server_req})
         server = self._wait_for_state_change(self.api, server, 'ACTIVE')
 
-        # original_host = server['OS-EXT-SRV-ATTR:host']
-        # target_host = 'host1' if original_host == 'host2' else 'host2'
+        original_host = server['OS-EXT-SRV-ATTR:host']
+        target_host = 'host1' if original_host == 'host2' else 'host2'
 
         # Issue the resize request.
         post = {
@@ -94,18 +91,14 @@ class TestResizeWithCachingScheduler(test.TestCase,
                 'flavorRef': self.new_flavor['id']
             }
         }
-        # FIXME(mriedem): Remove this assertion once the bug is fixed.
-        ex = self.assertRaises(api_client.OpenStackApiException,
-                               self.api.post_server_action, server['id'], post)
-        # Assert we failed in the expected way.
-        self.assertIn('ConsumerAllocationNotFound', six.text_type(ex))
+        self.api.post_server_action(server['id'], post)
 
-        # TODO(mriedem): Uncomment this once the bug is fixed.
-        # # Poll the server until the resize is done.
-        # server = self._wait_for_state_change(
-        #     self.api, server, 'VERIFY_RESIZE')
-        # # Assert that the server was migrated to the other host.
-        # self.assertEqual(target_host, server['OS-EXT-SRV-ATTR:host'])
-        # # Confirm the resize.
-        # post = {'confirmResize': None}
-        # self.api.post_server_action(server['id'], post)
+        # Poll the server until the resize is done.
+        server = self._wait_for_state_change(
+            self.api, server, 'VERIFY_RESIZE')
+        # Assert that the server was migrated to the other host.
+        self.assertEqual(target_host, server['OS-EXT-SRV-ATTR:host'])
+        # Confirm the resize.
+        post = {'confirmResize': None}
+        self.api.post_server_action(server['id'], post,
+                                    check_response_status=[204])

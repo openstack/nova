@@ -2147,13 +2147,6 @@ class InvalidAllocationConstraintsViolated(InvalidInventory):
                 "amount would violate inventory constraints.")
 
 
-class ConsumerAllocationNotFound(NovaException):
-    # This is intentionally not extending NotFound because if this
-    # leaks to the REST API it should be considered a 500 internal error.
-    msg_fmt = _('Consumer %(consumer_id)s has no resource allocation '
-                'on provider %(provider_uuid)s.')
-
-
 class UnsupportedPointerModelRequested(Invalid):
     msg_fmt = _("Pointer model '%(model)s' requested is not supported by "
                 "host.")
