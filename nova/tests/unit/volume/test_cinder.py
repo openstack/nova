@@ -117,7 +117,7 @@ class CinderApiTestCase(test.NoDBTestCase):
 
         self.api.get(self.ctx, volume_id)
 
-        mock_cinderclient.assert_called_once_with(self.ctx)
+        mock_cinderclient.assert_called_once_with(self.ctx, microversion=None)
         mock_volumes.get.assert_called_once_with(volume_id)
 
     @mock.patch('nova.volume.cinder.cinderclient')
@@ -143,6 +143,35 @@ class CinderApiTestCase(test.NoDBTestCase):
 
         self.assertRaises(exception.CinderConnectionFailed,
                   self.api.get, self.ctx, 'id1')
+
+    @mock.patch('nova.volume.cinder.cinderclient')
+    def test_get_with_shared_targets(self, mock_cinderclient):
+        """Tests getting a volume at microversion 3.48 which includes the
+        shared_targets and service_uuid parameters in the volume response body.
+        """
+        mock_volume = mock.MagicMock(
+            shared_targets=False, service_uuid=uuids.service_uuid)
+        mock_volumes = mock.MagicMock()
+        mock_volumes.get.return_value = mock_volume
+        mock_cinderclient.return_value = mock.MagicMock(volumes=mock_volumes)
+        vol = self.api.get(self.ctx, uuids.volume_id, microversion='3.48')
+        mock_cinderclient.assert_called_once_with(
+            self.ctx, microversion='3.48')
+        mock_volumes.get.assert_called_once_with(uuids.volume_id)
+        self.assertIn('shared_targets', vol)
+        self.assertFalse(vol['shared_targets'])
+        self.assertEqual(uuids.service_uuid, vol['service_uuid'])
+
+    @mock.patch('nova.volume.cinder.cinderclient',
+                side_effect=exception.CinderAPIVersionNotAvailable(
+                    version='3.48'))
+    def test_get_microversion_not_supported(self, mock_cinderclient):
+        """Tests getting a volume at microversion 3.48 but that version
+        is not available.
+        """
+        self.assertRaises(exception.CinderAPIVersionNotAvailable,
+                          self.api.get, self.ctx, uuids.volume_id,
+                          microversion='3.48')
 
     @mock.patch('nova.volume.cinder.cinderclient')
     def test_create(self, mock_cinderclient):
@@ -569,7 +598,7 @@ class CinderApiTestCase(test.NoDBTestCase):
 
         self.api.detach(self.ctx, 'id1', instance_uuid='fake_uuid')
 
-        mock_cinderclient.assert_called_with(self.ctx)
+        mock_cinderclient.assert_called_with(self.ctx, microversion=None)
         mock_volumes.detach.assert_called_once_with('id1', None)
 
     @mock.patch('nova.volume.cinder.cinderclient')
@@ -586,7 +615,7 @@ class CinderApiTestCase(test.NoDBTestCase):
 
         self.api.detach(self.ctx, 'id1', instance_uuid='fake_uuid')
 
-        mock_cinderclient.assert_called_with(self.ctx)
+        mock_cinderclient.assert_called_with(self.ctx, microversion=None)
         mock_volumes.detach.assert_called_once_with('id1', 'fakeid')
 
     @mock.patch('nova.volume.cinder.cinderclient')

@@ -199,6 +199,13 @@ def _untranslate_volume_summary_view(context, vol):
     if hasattr(vol, 'volume_image_metadata'):
         d['volume_image_metadata'] = copy.deepcopy(vol.volume_image_metadata)
 
+    # The 3.48 microversion exposes a shared_targets boolean and service_uuid
+    # string parameter which can be used with locks during volume attach
+    # and detach.
+    if hasattr(vol, 'shared_targets'):
+        d['shared_targets'] = vol.shared_targets
+        d['service_uuid'] = vol.service_uuid
+
     return d
 
 
@@ -332,8 +339,17 @@ class API(object):
     """API for interacting with the volume manager."""
 
     @translate_volume_exception
-    def get(self, context, volume_id):
-        item = cinderclient(context).volumes.get(volume_id)
+    def get(self, context, volume_id, microversion=None):
+        """Get the details about a volume given it's ID.
+
+        :param context: the nova request context
+        :param volume_id: the id of the volume to get
+        :param microversion: optional string microversion value
+        :raises: CinderAPIVersionNotAvailable if the specified microversion is
+            not available.
+        """
+        item = cinderclient(
+            context, microversion=microversion).volumes.get(volume_id)
         return _untranslate_volume_summary_view(context, item)
 
     @translate_cinder_exception
