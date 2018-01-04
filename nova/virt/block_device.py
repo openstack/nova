@@ -104,10 +104,14 @@ class DriverBlockDevice(dict):
     _fields = set()
     _legacy_fields = set()
 
-    _proxy_as_attr = set()
+    _proxy_as_attr_inherited = set()
     _update_on_save = {'disk_bus': None,
                        'device_name': None,
                        'device_type': None}
+
+    # A hash containing the combined inherited members of _proxy_as_attr for
+    # each subclass
+    _proxy_as_attr_by_class = {}
 
     def __init__(self, bdm):
         self.__dict__['_bdm_obj'] = bdm
@@ -117,6 +121,24 @@ class DriverBlockDevice(dict):
 
         self.update({field: None for field in self._fields})
         self._transform()
+
+    @property
+    def _proxy_as_attr(self):
+        # Combine the members of all _proxy_as_attr sets for this class and its
+        # ancestors
+        if self.__class__ not in self._proxy_as_attr_by_class:
+            attr_all = set()
+            for cls in self.__class__.mro():
+                attr_one = getattr(cls, '_proxy_as_attr_inherited', None)
+                if attr_one is not None:
+                    attr_all = attr_all | attr_one
+
+            # We don't need to lock here because as long as insertion into a
+            # dict is threadsafe, the only consequence of a race is calculating
+            # the inherited set multiple times.
+            self._proxy_as_attr_by_class[self.__class__] = attr_all
+
+        return self._proxy_as_attr_by_class[self.__class__]
 
     def __getattr__(self, name):
         if name in self._proxy_as_attr:
@@ -228,7 +250,7 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
     _valid_source = 'volume'
     _valid_destination = 'volume'
 
-    _proxy_as_attr = set(['volume_size', 'volume_id'])
+    _proxy_as_attr_inherited = set(['volume_size', 'volume_id'])
     _update_on_save = {'disk_bus': None,
                        'device_name': 'mount_device',
                        'device_type': None}
@@ -571,7 +593,7 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
 class DriverSnapshotBlockDevice(DriverVolumeBlockDevice):
 
     _valid_source = 'snapshot'
-    _proxy_as_attr = set(['volume_size', 'volume_id', 'snapshot_id'])
+    _proxy_as_attr_inherited = set(['snapshot_id'])
 
     def attach(self, context, instance, volume_api,
                virt_driver, wait_func=None):
@@ -598,7 +620,7 @@ class DriverSnapshotBlockDevice(DriverVolumeBlockDevice):
 class DriverImageBlockDevice(DriverVolumeBlockDevice):
 
     _valid_source = 'image'
-    _proxy_as_attr = set(['volume_size', 'volume_id', 'image_id'])
+    _proxy_as_attr_inherited = set(['image_id'])
 
     def attach(self, context, instance, volume_api,
                virt_driver, wait_func=None):
@@ -622,7 +644,7 @@ class DriverImageBlockDevice(DriverVolumeBlockDevice):
 class DriverBlankBlockDevice(DriverVolumeBlockDevice):
 
     _valid_source = 'blank'
-    _proxy_as_attr = set(['volume_size', 'volume_id', 'image_id'])
+    _proxy_as_attr_inherited = set(['image_id'])
 
     def attach(self, context, instance, volume_api,
                virt_driver, wait_func=None):

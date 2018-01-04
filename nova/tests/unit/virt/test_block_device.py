@@ -1156,6 +1156,32 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.assertFalse(hasattr(test_eph, 'refresh_connection_info'))
         self.assertFalse(hasattr(test_swap, 'refresh_connection_info'))
 
+    def test_proxy_as_attr(self):
+        class A(driver_block_device.DriverBlockDevice):
+            pass
+
+            def _transform(self):
+                pass
+
+        class B(A):
+            _proxy_as_attr_inherited = set('B')
+
+        class C(A):
+            _proxy_as_attr_inherited = set('C')
+
+        class D(B):
+            _proxy_as_attr_inherited = set('D')
+
+        class E(B, C):
+            _proxy_as_attr_inherited = set('E')
+
+        bdm = objects.BlockDeviceMapping(self.context, no_device=False)
+        self.assertEqual(set(), A(bdm)._proxy_as_attr)
+        self.assertEqual(set(['B']), B(bdm)._proxy_as_attr)
+        self.assertEqual(set(['C']), C(bdm)._proxy_as_attr)
+        self.assertEqual(set(['B', 'D']), D(bdm)._proxy_as_attr)
+        self.assertEqual(set(['B', 'C', 'E']), E(bdm)._proxy_as_attr)
+
 
 class TestDriverBlockDeviceNewFlow(TestDriverBlockDevice):
     """Virt block_device tests for the Cinder 3.44 volume attach flow
