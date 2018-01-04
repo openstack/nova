@@ -43,6 +43,8 @@ class TestRequestLogMiddleware(testtools.TestCase):
         # the API service it can start on it's own without a database.
         mocks = ['nova.objects.Service.get_by_host_and_binary',
                  'nova.objects.Service.create']
+        self.stdlog = fixtures.StandardLogging()
+        self.useFixture(self.stdlog)
         for m in mocks:
             p = mock.patch(m)
             self.addCleanup(p.stop)
@@ -56,9 +58,6 @@ class TestRequestLogMiddleware(testtools.TestCase):
         """
 
         emit.return_value = True
-        self.useFixture(fixtures.OutputStreamCapture())
-        log = fixtures.StandardLogging()
-        self.useFixture(log)
         self.useFixture(conf_fixture.ConfFixture())
         self.useFixture(fixtures.RPCFixture('nova.test'))
         api = self.useFixture(fixtures.OSAPIFixture()).api
@@ -66,7 +65,7 @@ class TestRequestLogMiddleware(testtools.TestCase):
         resp = api.api_request('/', strip_version=True)
         log1 = ('INFO [nova.api.openstack.requestlog] 127.0.0.1 '
                 '"GET /v2" status: 204 len: 0 microversion: - time:')
-        self.assertIn(log1, log.logger.output)
+        self.assertIn(log1, self.stdlog.logger.output)
 
         # the content length might vary, but the important part is
         # what we log is what we return to the user (which turns out
@@ -75,7 +74,7 @@ class TestRequestLogMiddleware(testtools.TestCase):
 
         log2 = ('INFO [nova.api.openstack.requestlog] 127.0.0.1 '
                 '"GET /" status: 200 len: %s' % content_length)
-        self.assertIn(log2, log.logger.output)
+        self.assertIn(log2, self.stdlog.logger.output)
 
     @mock.patch('nova.api.openstack.requestlog.RequestLog._should_emit')
     def test_logs_mv(self, emit):
@@ -86,9 +85,6 @@ class TestRequestLogMiddleware(testtools.TestCase):
         """
 
         emit.return_value = True
-        self.useFixture(fixtures.OutputStreamCapture())
-        log = fixtures.StandardLogging()
-        self.useFixture(log)
         self.useFixture(conf_fixture.ConfFixture())
         # NOTE(sdague): all these tests are using the
         self.useFixture(
@@ -108,7 +104,7 @@ class TestRequestLogMiddleware(testtools.TestCase):
         log1 = ('INFO [nova.api.openstack.requestlog] 127.0.0.1 '
                 '"GET /" status: 200 len: %s microversion: 2.25 time:' %
                 content_length)
-        self.assertIn(log1, log.logger.output)
+        self.assertIn(log1, self.stdlog.logger.output)
 
     @mock.patch('nova.api.openstack.compute.versions.Versions.index')
     @mock.patch('nova.api.openstack.requestlog.RequestLog._should_emit')
@@ -121,9 +117,6 @@ class TestRequestLogMiddleware(testtools.TestCase):
 
         emit.return_value = True
         v_index.side_effect = Exception("Unexpected Error")
-        self.useFixture(fixtures.OutputStreamCapture())
-        log = fixtures.StandardLogging()
-        self.useFixture(log)
         self.useFixture(conf_fixture.ConfFixture())
         self.useFixture(fixtures.RPCFixture('nova.test'))
         api = self.useFixture(fixtures.OSAPIFixture()).api
@@ -131,7 +124,7 @@ class TestRequestLogMiddleware(testtools.TestCase):
         api.api_request('/', strip_version=True)
         log1 = ('INFO [nova.api.openstack.requestlog] 127.0.0.1 "GET /"'
                 ' status: 500 len: 0 microversion: - time:')
-        self.assertIn(log1, log.logger.output)
+        self.assertIn(log1, self.stdlog.logger.output)
 
     @mock.patch('nova.api.openstack.requestlog.RequestLog._should_emit')
     def test_no_log_under_eventlet(self, emit):
@@ -146,12 +139,10 @@ class TestRequestLogMiddleware(testtools.TestCase):
         """
 
         emit.return_value = False
-        self.useFixture(fixtures.OutputStreamCapture())
-        log = fixtures.StandardLogging()
-        self.useFixture(log)
         self.useFixture(conf_fixture.ConfFixture())
         self.useFixture(fixtures.RPCFixture('nova.test'))
         api = self.useFixture(fixtures.OSAPIFixture()).api
 
         api.api_request('/', strip_version=True)
-        self.assertNotIn("nova.api.openstack.requestlog", log.logger.output)
+        self.assertNotIn("nova.api.openstack.requestlog",
+                self.stdlog.logger.output)
