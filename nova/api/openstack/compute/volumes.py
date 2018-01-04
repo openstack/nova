@@ -337,6 +337,7 @@ class VolumeAttachmentController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=e.format_message())
         except (exception.InstanceIsLocked,
                 exception.DevicePathInUse) as e:
+            # TODO(mriedem): Need to handle MultiattachNotSupportedByVirtDriver
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,

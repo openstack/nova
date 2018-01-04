@@ -535,10 +535,66 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         self._test_compute_api('reserve_block_device_name', 'call',
                 instance=self.fake_instance_obj, device='device',
                 volume_id='id', disk_bus='ide', device_type='cdrom',
-                tag='foo', version='4.15',
+                tag='foo', multiattach=True, version='4.20',
                 _return_value=objects_block_dev.BlockDeviceMapping())
 
     def test_reserve_block_device_name_raises(self):
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        instance = self.fake_instance_obj
+        rpcapi = compute_rpcapi.ComputeAPI()
+        cctxt_mock = mock.Mock()
+        mock_client = mock.Mock()
+        rpcapi.router.client = mock.Mock()
+        rpcapi.router.client.return_value = mock_client
+        with test.nested(
+            mock.patch.object(mock_client, 'can_send_version',
+                              side_effect=[False, False]),
+            mock.patch.object(mock_client, 'prepare',
+                              return_value=cctxt_mock)
+        ) as (
+            can_send_mock, prepare_mock
+        ):
+            self.assertRaises(exception.TaggedAttachmentNotSupported,
+                              rpcapi.reserve_block_device_name, ctxt, instance,
+                              'fake_device', 'fake_volume_id', tag='foo')
+        can_send_calls = [mock.call('4.20'), mock.call('4.15')]
+        can_send_mock.assert_has_calls(can_send_calls)
+
+    def test_reserve_block_device_name_downgrades_version(self):
+        ctxt = context.RequestContext('fake_user', 'fake_project')
+        instance = self.fake_instance_obj
+        rpcapi = compute_rpcapi.ComputeAPI()
+        call_mock = mock.Mock()
+        cctxt_mock = mock.Mock(call=call_mock)
+        mock_client = mock.Mock()
+        rpcapi.router.client = mock.Mock()
+        rpcapi.router.client.return_value = mock_client
+        with test.nested(
+            mock.patch.object(mock_client, 'can_send_version',
+                              side_effect=[False, False]),
+            mock.patch.object(mock_client, 'prepare',
+                              return_value=cctxt_mock)
+        ) as (
+            can_send_mock, prepare_mock
+        ):
+            rpcapi.reserve_block_device_name(ctxt, instance, 'fake_device',
+                                             'fake_volume_id')
+
+        can_send_calls = [mock.call('4.20'), mock.call('4.15')]
+        can_send_mock.assert_has_calls(can_send_calls)
+        prepare_mock.assert_called_once_with(server=instance['host'],
+                                             version='4.0')
+        call_mock.assert_called_once_with(ctxt, 'reserve_block_device_name',
+                                          instance=instance,
+                                          device='fake_device',
+                                          volume_id='fake_volume_id',
+                                          disk_bus=None, device_type=None)
+
+    def test_reserve_block_device_name_raises_no_multiattach(self):
+        """Tests that if multiattach=True but the compute service is too
+        old for the multiattach argument, an error is raised from the RPC
+        client.
+        """
         ctxt = context.RequestContext('fake_user', 'fake_project')
         instance = self.fake_instance_obj
         rpcapi = compute_rpcapi.ComputeAPI()
@@ -554,12 +610,16 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         ) as (
             can_send_mock, prepare_mock
         ):
-            self.assertRaises(exception.TaggedAttachmentNotSupported,
+            self.assertRaises(exception.MultiattachSupportNotYetAvailable,
                               rpcapi.reserve_block_device_name, ctxt, instance,
-                              'fake_device', 'fake_volume_id', tag='foo')
-        can_send_mock.assert_called_once_with('4.15')
+                              'fake_device', 'fake_volume_id',
+                              multiattach=True)
+        can_send_mock.assert_called_once_with('4.20')
 
-    def test_reserve_block_device_name_downgrades_version(self):
+    def test_reserve_block_device_name_downgrades_version_multiattach(self):
+        """Tests that if multiattach=False and the compute service is too
+        old for the multiattach argument, it's removed from the RPC call.
+        """
         ctxt = context.RequestContext('fake_user', 'fake_project')
         instance = self.fake_instance_obj
         rpcapi = compute_rpcapi.ComputeAPI()
@@ -570,23 +630,23 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         rpcapi.router.client.return_value = mock_client
         with test.nested(
             mock.patch.object(mock_client, 'can_send_version',
-                              return_value=False),
+                              side_effect=[False, True]),
             mock.patch.object(mock_client, 'prepare',
                               return_value=cctxt_mock)
         ) as (
             can_send_mock, prepare_mock
         ):
-            rpcapi.reserve_block_device_name(ctxt, instance, 'fake_device',
-                                             'fake_volume_id')
+            rpcapi.reserve_block_device_name(
+                ctxt, instance, 'fake_device', 'fake_volume_id', tag='foo')
 
-        can_send_mock.assert_called_once_with('4.15')
+        can_send_calls = [mock.call('4.20'), mock.call('4.15')]
+        can_send_mock.assert_has_calls(can_send_calls)
         prepare_mock.assert_called_once_with(server=instance['host'],
-                                             version='4.0')
-        call_mock.assert_called_once_with(ctxt, 'reserve_block_device_name',
-                                          instance=instance,
-                                          device='fake_device',
-                                          volume_id='fake_volume_id',
-                                          disk_bus=None, device_type=None)
+                                             version='4.15')
+        call_mock.assert_called_once_with(
+            ctxt, 'reserve_block_device_name', instance=instance,
+            device='fake_device', volume_id='fake_volume_id', disk_bus=None,
+            device_type=None, tag='foo')
 
     def test_refresh_instance_security_rules(self):
         expected_args = {'instance': self.fake_instance_obj}

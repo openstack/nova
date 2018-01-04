@@ -337,6 +337,7 @@ class ComputeAPI(object):
         * 4.19 - build_and_run_instance() now gets a 'host_list' parameter
                  representing potential alternate hosts for retries within a
                  cell.
+        * 4.20 - Add multiattach argument to reserve_block_device_name().
     '''
 
     VERSION_ALIASES = {
@@ -965,13 +966,24 @@ class ComputeAPI(object):
         return cctxt.call(ctxt, 'get_host_uptime')
 
     def reserve_block_device_name(self, ctxt, instance, device, volume_id,
-                                  disk_bus=None, device_type=None, tag=None):
+                                  disk_bus=None, device_type=None, tag=None,
+                                  multiattach=False):
         kw = {'instance': instance, 'device': device,
               'volume_id': volume_id, 'disk_bus': disk_bus,
-              'device_type': device_type, 'tag': tag}
-        version = '4.15'
+              'device_type': device_type, 'tag': tag,
+              'multiattach': multiattach}
+        version = '4.20'
 
         client = self.router.client(ctxt)
+        if not client.can_send_version(version):
+            if multiattach:
+                # NOTE(mriedem): Reserve attempted with a multiattach volume,
+                # but the compute isn't new enough to handle that value so we
+                # need to fail since the compute is too old to support it.
+                raise exception.MultiattachSupportNotYetAvailable()
+            version = '4.15'
+            kw.pop('multiattach')
+
         if not client.can_send_version(version):
             if tag:
                 # NOTE(artom) Reserve attempted with a device role tag, but
