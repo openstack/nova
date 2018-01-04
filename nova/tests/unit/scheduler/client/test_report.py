@@ -383,8 +383,8 @@ class TestPutAllocations(SchedulerReportClientTestCase):
 
         project_id = uuids.project_id
         user_id = uuids.user_id
-        res = self.client.claim_resources(consumer_uuid, alloc_req, project_id,
-            user_id)
+        res = self.client.claim_resources(
+            self.context, consumer_uuid, alloc_req, project_id, user_id)
 
         expected_url = "/allocations/%s" % consumer_uuid
         expected_payload = {
@@ -399,7 +399,8 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         expected_payload['user_id'] = user_id
         self.ks_adap_mock.put.assert_called_once_with(
             expected_url, microversion='1.12', json=expected_payload,
-            raise_exc=False, headers={})
+            raise_exc=False,
+            headers={'X-Openstack-Request-Id': self.context.global_id})
 
         self.assertTrue(res)
 
@@ -425,8 +426,9 @@ class TestPutAllocations(SchedulerReportClientTestCase):
 
         project_id = uuids.project_id
         user_id = uuids.user_id
-        res = self.client.claim_resources(consumer_uuid, alloc_req, project_id,
-            user_id, allocation_request_version='1.12')
+        res = self.client.claim_resources(self.context, consumer_uuid,
+                                          alloc_req, project_id, user_id,
+                                          allocation_request_version='1.12')
 
         expected_url = "/allocations/%s" % consumer_uuid
         expected_payload = {'allocations': {
@@ -436,7 +438,8 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         expected_payload['user_id'] = user_id
         self.ks_adap_mock.put.assert_called_once_with(
             expected_url, microversion='1.12', json=expected_payload,
-            raise_exc=False, headers={})
+            raise_exc=False,
+            headers={'X-Openstack-Request-Id': self.context.global_id})
 
         self.assertTrue(res)
 
@@ -476,8 +479,9 @@ class TestPutAllocations(SchedulerReportClientTestCase):
 
         project_id = uuids.project_id
         user_id = uuids.user_id
-        res = self.client.claim_resources(consumer_uuid, alloc_req, project_id,
-            user_id, allocation_request_version='1.12')
+        res = self.client.claim_resources(self.context, consumer_uuid,
+                                          alloc_req, project_id, user_id,
+                                          allocation_request_version='1.12')
 
         expected_url = "/allocations/%s" % consumer_uuid
         # New allocation should include resources claimed on both the source
@@ -502,7 +506,8 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         expected_payload['user_id'] = user_id
         self.ks_adap_mock.put.assert_called_once_with(
             expected_url, microversion='1.12', json=mock.ANY,
-            raise_exc=False, headers={})
+            raise_exc=False,
+            headers={'X-Openstack-Request-Id': self.context.global_id})
         # We have to pull the json body from the mock call_args to validate
         # it separately otherwise hash seed issues get in the way.
         actual_payload = self.ks_adap_mock.put.call_args[1]['json']
@@ -560,8 +565,9 @@ class TestPutAllocations(SchedulerReportClientTestCase):
 
         project_id = uuids.project_id
         user_id = uuids.user_id
-        res = self.client.claim_resources(consumer_uuid, alloc_req, project_id,
-            user_id, allocation_request_version='1.12')
+        res = self.client.claim_resources(self.context, consumer_uuid,
+                                          alloc_req, project_id, user_id,
+                                          allocation_request_version='1.12')
 
         expected_url = "/allocations/%s" % consumer_uuid
         # New allocation should include resources claimed on both the source
@@ -592,7 +598,8 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         expected_payload['user_id'] = user_id
         self.ks_adap_mock.put.assert_called_once_with(
             expected_url, microversion='1.12', json=mock.ANY,
-            raise_exc=False, headers={})
+            raise_exc=False,
+            headers={'X-Openstack-Request-Id': self.context.global_id})
         # We have to pull the allocations from the json body from the
         # mock call_args to validate it separately otherwise hash seed
         # issues get in the way.
@@ -645,8 +652,9 @@ class TestPutAllocations(SchedulerReportClientTestCase):
 
         project_id = uuids.project_id
         user_id = uuids.user_id
-        res = self.client.claim_resources(consumer_uuid, alloc_req, project_id,
-            user_id, allocation_request_version='1.12')
+        res = self.client.claim_resources(self.context, consumer_uuid,
+                                          alloc_req, project_id, user_id,
+                                          allocation_request_version='1.12')
 
         expected_url = "/allocations/%s" % consumer_uuid
         # New allocation should include doubled resources claimed on the same
@@ -667,7 +675,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         expected_payload['user_id'] = user_id
         self.ks_adap_mock.put.assert_called_once_with(
             expected_url, microversion='1.12', json=mock.ANY, raise_exc=False,
-            headers={})
+            headers={'X-Openstack-Request-Id': self.context.global_id})
         # We have to pull the json body from the mock call_args to validate
         # it separately otherwise hash seed issues get in the way.
         actual_payload = self.ks_adap_mock.put.call_args[1]['json']
@@ -727,8 +735,9 @@ class TestPutAllocations(SchedulerReportClientTestCase):
 
         project_id = uuids.project_id
         user_id = uuids.user_id
-        res = self.client.claim_resources(consumer_uuid, alloc_req, project_id,
-            user_id, allocation_request_version='1.12')
+        res = self.client.claim_resources(self.context, consumer_uuid,
+                                          alloc_req, project_id, user_id,
+                                          allocation_request_version='1.12')
 
         expected_url = "/allocations/%s" % consumer_uuid
         # New allocation should include doubled resources claimed on the same
@@ -752,7 +761,7 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         expected_payload['user_id'] = user_id
         self.ks_adap_mock.put.assert_called_once_with(
             expected_url, microversion='1.12', json=mock.ANY, raise_exc=False,
-            headers={})
+            headers={'X-Openstack-Request-Id': self.context.global_id})
         # We have to pull the json body from the mock call_args to validate
         # it separately otherwise hash seed issues get in the way.
         actual_payload = self.ks_adap_mock.put.call_args[1]['json']
@@ -789,8 +798,9 @@ class TestPutAllocations(SchedulerReportClientTestCase):
 
         project_id = uuids.project_id
         user_id = uuids.user_id
-        res = self.client.claim_resources(consumer_uuid, alloc_req, project_id,
-            user_id, allocation_request_version='1.12')
+        res = self.client.claim_resources(self.context, consumer_uuid,
+                                          alloc_req, project_id, user_id,
+                                          allocation_request_version='1.12')
 
         expected_url = "/allocations/%s" % consumer_uuid
         expected_payload = {
@@ -804,7 +814,9 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         # identical since we're retrying the same HTTP request
         expected_calls = [
             mock.call(expected_url, microversion='1.12', json=expected_payload,
-                      raise_exc=False, headers={})] * 2
+                      raise_exc=False,
+                      headers={'X-Openstack-Request-Id':
+                               self.context.global_id})] * 2
         self.assertEqual(len(expected_calls),
                          self.ks_adap_mock.put.call_count)
         self.ks_adap_mock.put.assert_has_calls(expected_calls)
@@ -834,8 +846,9 @@ class TestPutAllocations(SchedulerReportClientTestCase):
 
         project_id = uuids.project_id
         user_id = uuids.user_id
-        res = self.client.claim_resources(consumer_uuid, alloc_req, project_id,
-            user_id, allocation_request_version='1.12')
+        res = self.client.claim_resources(self.context, consumer_uuid,
+                                          alloc_req, project_id, user_id,
+                                          allocation_request_version='1.12')
 
         expected_url = "/allocations/%s" % consumer_uuid
         expected_payload = {
@@ -847,7 +860,8 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         expected_payload['user_id'] = user_id
         self.ks_adap_mock.put.assert_called_once_with(
             expected_url, microversion='1.12', json=expected_payload,
-            raise_exc=False, headers={})
+            raise_exc=False,
+            headers={'X-Openstack-Request-Id': self.context.global_id})
 
         self.assertFalse(res)
         self.assertTrue(mock_log.called)

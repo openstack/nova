@@ -95,8 +95,8 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             else:
                 allocs = None
             mock_claim.assert_called_once_with(
-                self.task.scheduler_client.reportclient, self.instance,
-                mock.sentinel.source_node, dest_node,
+                self.context, self.task.scheduler_client.reportclient,
+                self.instance, mock.sentinel.source_node, dest_node,
                 source_node_allocations=allocs)
             mock_mig.assert_called_once_with(
                 self.context,

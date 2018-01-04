@@ -91,8 +91,8 @@ class LiveMigrationTask(base.TaskBase):
             # This raises NoValidHost which will be handled in
             # ComputeTaskManager.
             scheduler_utils.claim_resources_on_destination(
-                self.scheduler_client.reportclient, self.instance,
-                source_node, dest_node,
+                self.context, self.scheduler_client.reportclient,
+                self.instance, source_node, dest_node,
                 source_node_allocations=self._held_allocations)
 
             # dest_node is a ComputeNode object, so we need to get the actual

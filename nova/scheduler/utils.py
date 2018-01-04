@@ -339,7 +339,7 @@ def resources_from_request_spec(spec_obj):
 # TODO(mriedem): Remove this when select_destinations() in the scheduler takes
 # some sort of skip_filters flag.
 def claim_resources_on_destination(
-        reportclient, instance, source_node, dest_node,
+        context, reportclient, instance, source_node, dest_node,
         source_node_allocations=None):
     """Copies allocations from source node to dest node in Placement
 
@@ -352,6 +352,7 @@ def claim_resources_on_destination(
     This is only appropriate when the instance flavor on the source node
     is the same on the destination node, i.e. don't use this for resize.
 
+    :param context: The request context.
     :param reportclient: An instance of the SchedulerReportClient.
     :param instance: The instance being moved.
     :param source_node: source ComputeNode where the instance currently
@@ -379,7 +380,7 @@ def claim_resources_on_destination(
         # allocations for resources on the destination node before we move,
         # we use the existing resource allocations from the source node.
         if reportclient.claim_resources(
-                instance.uuid, alloc_request,
+                context, instance.uuid, alloc_request,
                 instance.project_id, instance.user_id,
                 allocation_request_version='1.12'):
             LOG.debug('Instance allocations successfully created on '
@@ -792,7 +793,7 @@ def claim_resources(ctx, client, spec_obj, instance_uuid, alloc_req,
     # the spec object?
     user_id = ctx.user_id
 
-    return client.claim_resources(instance_uuid, alloc_req, project_id,
+    return client.claim_resources(ctx, instance_uuid, alloc_req, project_id,
             user_id, allocation_request_version=allocation_request_version)
 
 

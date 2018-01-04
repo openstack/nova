@@ -1399,8 +1399,8 @@ class SchedulerReportClient(object):
     # checking that a move operation is in place.
     @safe_connect
     @retries
-    def claim_resources(self, consumer_uuid, alloc_request, project_id,
-                        user_id, allocation_request_version=None):
+    def claim_resources(self, context, consumer_uuid, alloc_request,
+                        project_id, user_id, allocation_request_version=None):
         """Creates allocation records for the supplied instance UUID against
         the supplied resource providers.
 
@@ -1415,6 +1415,7 @@ class SchedulerReportClient(object):
         end up setting allocations for the instance only on the destination
         host thereby freeing up resources on the source host appropriately.
 
+        :param context: The security context
         :param consumer_uuid: The instance's UUID.
         :param alloc_request: The JSON body of the request to make to the
                               placement's PUT /allocations API
@@ -1462,7 +1463,8 @@ class SchedulerReportClient(object):
 
         payload['project_id'] = project_id
         payload['user_id'] = user_id
-        r = self.put(url, payload, version=allocation_request_version)
+        r = self.put(url, payload, version=allocation_request_version,
+                     global_request_id=context.global_id)
         if r.status_code != 204:
             # NOTE(jaypipes): Yes, it sucks doing string comparison like this
             # but we have no error codes, only error messages.

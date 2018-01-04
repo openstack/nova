@@ -864,7 +864,7 @@ class ComputeTaskManager(base.Base):
         # in the API.
         try:
             scheduler_utils.claim_resources_on_destination(
-                self.report_client, instance, source_node, dest_node)
+                context, self.report_client, instance, source_node, dest_node)
         except exception.NoValidHost as ex:
             with excutils.save_and_reraise_exception():
                 self._set_vm_state_and_notify(
