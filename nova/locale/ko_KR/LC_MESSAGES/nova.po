@@ -12,9 +12,9 @@
 # Ian Y. Choi <ianyrchoi@gmail.com>, 2017. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 16.0.0.0b4.dev149\n"
+"Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2017-08-10 04:03+0000\n"
+"POT-Creation-Date: 2018-01-03 23:41+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -73,10 +73,6 @@ msgstr ""
 #, python-format
 msgid "%(field)s should not be part of the updates."
 msgstr "%(field)s은(는) 업데이트의 일부여서는 안 됩니다. "
-
-#, python-format
-msgid "%(key)s is not a valid quota key. Valid options are: %(options)s."
-msgstr "%(key)s이(가) 올바른 할당량 키가 아닙니다. 올바른 옵션: %(options)s."
 
 #, python-format
 msgid "%(key)s must be an integer."
@@ -467,9 +463,6 @@ msgstr "요청된 이미지를 찾을 수 없음"
 msgid "Can not handle authentication request for %d credentials"
 msgstr "%d 신임 정보에 대한 인증 정보를 처리할 수 없음"
 
-msgid "Can't detach root device volume"
-msgstr "루트 디바이스 볼륨을 분리할 수 없음"
-
 msgid "Can't resize a disk to 0 GB."
 msgstr "디스크 크기를 0GB로 조정할 수 없습니다."
 
@@ -605,9 +598,6 @@ msgstr "이름이 %(name)s인 셀이 이미 존재합니다. "
 msgid ""
 "Change would make usage less than 0 for the following resources: %(unders)s"
 msgstr "변경하면 다음 자원에 대한 사용량이 0보다 작아집니다: %(unders)s"
-
-msgid "Claim pci failed."
-msgstr "pci 청구에 실패했습니다."
 
 #, python-format
 msgid "Class %(class_name)s could not be found: %(exception)s"
@@ -1555,9 +1545,6 @@ msgstr "destination_type이 '볼륨'인 이미지는 0이 아닌 크기를 지�
 msgid "In ERROR state"
 msgstr "ERROR 상태에 있음"
 
-msgid "In Use"
-msgstr "사용중"
-
 #, python-format
 msgid "In states %(vm_state)s/%(task_state)s, not RESIZED/None"
 msgstr "%(vm_state)s/%(task_state)s 상태에 있음, RESIZED/None이 아님"
@@ -1668,10 +1655,6 @@ msgid "Instance %(uuid)s has no mapping to a cell."
 msgstr "%(uuid)s 인스턴스에 셀에 대한 맵핑이 없습니다."
 
 #, python-format
-msgid "Instance %s is not attached."
-msgstr "%s 인스턴스가 첨부되지 않았습니다. "
-
-#, python-format
 msgid "Instance %s not found"
 msgstr "%s 인스턴스를 찾을 수 없음"
 
@@ -1780,10 +1763,6 @@ msgstr ""
 #, python-format
 msgid "Invalid PCI alias definition: %(reason)s"
 msgstr "올바르지 않은 PCI 별명 정의: %(reason)s"
-
-#, python-format
-msgid "Invalid PCI devices Whitelist config %(reason)s"
-msgstr "올바르지 않은 PCI 디바이스 화이트리스트 구성: %(reason)s"
 
 #, python-format
 msgid "Invalid Regular Expression %s"
@@ -1899,8 +1878,8 @@ msgid "Invalid minDisk filter [%s]"
 msgstr "올바르지 않은 minDisk 필터 [%s]"
 
 #, python-format
-msgid "Invalid min_ram filter [%s]"
-msgstr "올바르지 않은 min_ram 필터 [%s]"
+msgid "Invalid minRam filter [%s]"
+msgstr "올바르지 않은 minRam 필터 [%s]"
 
 msgid "Invalid name"
 msgstr "올바르지 않은 이름"
@@ -2032,19 +2011,8 @@ msgstr "키 쌍 이름에 안전하지 않은 문자가 들어있음"
 msgid "Keypair name must be string and between 1 and 255 characters long"
 msgstr "키 쌍 이름은 문자열이고 길이가 1 - 255자 범위에 속해야 함"
 
-#, python-format
-msgid "Last %s nova syslog entries:-"
-msgstr "마지막 %s nova syslog 항목:-"
-
-msgid "Limit"
-msgstr "제한"
-
 msgid "Limits only supported from vCenter 6.0 and above"
 msgstr "vCenter 6.0 이상에서만 지원되는 한계"
-
-#, python-format
-msgid "Line %(linenum)d : %(line)s"
-msgstr "행 %(linenum)d : %(line)s"
 
 #, python-format
 msgid "Link Local address is not found.:%s"
@@ -2407,9 +2375,6 @@ msgstr "VM에 인터페이스 ID가 %s인 디바이스가 없음"
 msgid "No disk at %(location)s"
 msgstr "%(location)s에 디스크가 없음"
 
-msgid "No errors in logfiles!"
-msgstr "로그 파일에 오류가 없습니다!"
-
 #, python-format
 msgid "No fixed IP addresses available for network: %(net)s"
 msgstr "네트워크에 사용 가능한 고정 IP 주소가 없음: %(net)s"
@@ -2478,9 +2443,6 @@ msgstr "정의된 네트워크가 없습니다. "
 
 msgid "No networks found"
 msgstr "네트워크를 찾을 수 없음"
-
-msgid "No nova entries in syslog!"
-msgstr "syslog에 nova 항목이 없음!"
 
 #, python-format
 msgid "No operating system found in %s"
@@ -2688,14 +2650,8 @@ msgstr "경로 %s은(는) LVM 논리적 볼륨이어야 함"
 msgid "Paused"
 msgstr "정지함"
 
-msgid "Personality file content too long"
-msgstr "특성 파일 컨텐츠가 너무 김"
-
 msgid "Personality file limit exceeded"
 msgstr "특성 파일 한계 초과"
-
-msgid "Personality file path too long"
-msgstr "특성 파일 경로가 너무 김"
 
 #, python-format
 msgid ""
@@ -2773,9 +2729,6 @@ msgstr "QEMU 게스트 에이전트가 사용되지 않음"
 msgid "Quiescing is not supported in instance %(instance_id)s"
 msgstr "인스턴스 %(instance_id)s에서 Quiesce가 지원되지 않음"
 
-msgid "Quota"
-msgstr "Quota"
-
 #, python-format
 msgid "Quota class %(class_name)s could not be found."
 msgstr "%(class_name)s 할당량 클래스를 찾을 수 없습니다. "
@@ -2847,17 +2800,6 @@ msgid ""
 "%(maximum)s."
 msgstr ""
 "%(resource)s의 할당량 한계 %(limit)s은(는) %(maximum)s 이하여야 합니다."
-
-msgid "Quota limit must be -1 or greater."
-msgstr "할당량 한계는 -1 이상이어야 합니다. "
-
-#, python-format
-msgid "Quota limit must be greater than %s."
-msgstr "할당량 한계가 %s보다 커야 합니다."
-
-#, python-format
-msgid "Quota limit must be less than %s."
-msgstr "할당량 한계가 %s보다 작아야 합니다."
 
 #, python-format
 msgid "Quota reservation %(uuid)s could not be found."
@@ -2956,9 +2898,6 @@ msgstr ""
 #, python-format
 msgid "Rescue device does not exist for instance %s"
 msgstr "%s 인스턴스에 대한 복구 디바이스가 없음"
-
-msgid "Reserved"
-msgstr "예약됨"
 
 #, python-format
 msgid "Resize error: %(reason)s"
@@ -3159,9 +3098,6 @@ msgstr ""
 #, python-format
 msgid "Snapshot %(snapshot_id)s could not be found."
 msgstr "%(snapshot_id)s 스냅샷을 찾을 수 없습니다. "
-
-msgid "Some fields are invalid."
-msgstr "일부 필드가 올바르지 않습니다"
 
 msgid "Some required fields are missing"
 msgstr "일부 필수 필드가 비어있습니다."
@@ -3385,9 +3321,6 @@ msgid ""
 "The volume cannot be assigned the same device name as the root device %s"
 msgstr "볼륨에 루트 디바이스 %s과(와) 같은 디바이스 이름을 지정할 수 없음"
 
-msgid "The volume was either invalid or not attached to the instance."
-msgstr "볼륨이 올바르지 않거나 인스턴스에 접속되지 않았습니다."
-
 #, python-format
 msgid ""
 "There are %(records)d records in the '%(table_name)s' table where the uuid "
@@ -3603,9 +3536,6 @@ msgstr "key_file을 찾을 수 없음: %s"
 msgid "Unable to find root VBD/VDI for VM"
 msgstr "VM에 대한 루트 VBD/VDI를 찾을 수 없음"
 
-msgid "Unable to find system log file!"
-msgstr "시스템 로그 파일을 찾을 수 없음!"
-
 msgid "Unable to find volume"
 msgstr "볼륨을 찾을 수 없음"
 
@@ -3804,14 +3734,6 @@ msgstr "%(username)s 사용자가 새도우 파일에 없습니다. "
 
 msgid "User data needs to be valid base 64."
 msgstr "사용자 데이터는 유효한 base64여야 합니다. "
-
-#, python-format
-msgid ""
-"User data too large. User data must be no larger than %(maxsize)s bytes once "
-"base64 encoded. Your data is %(length)d bytes"
-msgstr ""
-"사용자 데이터가 너무 큽니다. 사용자 데이터는 base64로 인코드되면 %(maxsize)s"
-"바이트를 초과하면 안 됩니다. 사용자 데이터는 %(length)d바이트입니다."
 
 msgid "User does not have admin privileges"
 msgstr "사용자에게 관리 권한이 없습니다"
@@ -4124,10 +4046,6 @@ msgstr "인스턴스가 전원 차단되었고 일시중단될 수 없습니다.
 msgid "instance_id %s could not be found as device id on any ports"
 msgstr "포트의 디바이스 ID로 instance_id %s을(를) 찾을 수 없음"
 
-#, python-format
-msgid "invalid %(property)s %(attr)s"
-msgstr "올바르지 않은 %(property)s %(attr)s"
-
 msgid "is_public must be a boolean"
 msgstr "is_public은 부울이어야 함"
 
@@ -4190,15 +4108,6 @@ msgstr "스토리지 풀 %s에 쓰기 권한이 없음"
 #, python-format
 msgid "not able to execute ssh command: %s"
 msgstr "ssh 명령을 실행할 수 없음: %s"
-
-msgid ""
-"nova-idmapshift is a tool that properly sets the ownership of a filesystem "
-"for use with linux user namespaces.  This tool can only be used with linux "
-"lxc containers.  See the man page for details."
-msgstr ""
-"nova-idmapshift는 linux 사용자 네임스페이스와 함께 사용하기 위해 파일 시스템"
-"의 소유권을 적절하게 설정하는 도구입니다. 이 도구는 linux lxc 컨테이너에만 사"
-"용할 수 있습니다. 자세한 내용은 기본 페이지를 참조하십시오. "
 
 msgid "old style configuration can use only dictionary or memcached backends"
 msgstr "이전 스타일 구성에서는 사전 또는 memcached 백엔드만 사용할 수 있음"
@@ -4337,10 +4246,6 @@ msgstr "볼륨 '%(vol)s' 상태는 '사용 가능'이어야 합니다. 현재 '%
 msgid ""
 "volume '%(vol)s' status must be 'in-use'. Currently in '%(status)s' status"
 msgstr "볼륨 '%(vol)s' 상태는 '사용 중'이어야 합니다. 현재 상태 '%(status)s'"
-
-#, python-format
-msgid "volume_id not found: %s"
-msgstr "volume_id를 찾을 수 없음: %s"
 
 #, python-format
 msgid "xenapi.fake does not have an implementation for %s"

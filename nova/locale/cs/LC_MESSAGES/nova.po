@@ -10,9 +10,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 16.0.0.0b4.dev149\n"
+"Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2017-08-10 04:03+0000\n"
+"POT-Creation-Date: 2018-01-03 23:41+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -63,10 +63,6 @@ msgstr ""
 #, python-format
 msgid "%(field)s should not be part of the updates."
 msgstr "%(field)s by nemělo být součástí aktualizací."
-
-#, python-format
-msgid "%(key)s is not a valid quota key. Valid options are: %(options)s."
-msgstr "%(key)s není platný klíč kvóty. Platné volby jsou: %(options)s."
 
 #, python-format
 msgid "%(key)s must be an integer."
@@ -421,9 +417,6 @@ msgstr "Nelze najít požadovaný obraz"
 msgid "Can not handle authentication request for %d credentials"
 msgstr "Nelze zpracovat žádost o ověření přihlašovacích údajů %d"
 
-msgid "Can't detach root device volume"
-msgstr "Nelze odpojit svazek kořenového zařízení"
-
 msgid "Can't resize a disk to 0 GB."
 msgstr "Nelze změnit velikost disku na 0 GB."
 
@@ -543,9 +536,6 @@ msgid ""
 "Change would make usage less than 0 for the following resources: %(unders)s"
 msgstr ""
 "Změna by využití změnila na méně než 0 pro následující zdroje: %(unders)s"
-
-msgid "Claim pci failed."
-msgstr "Získání pci selhalo."
 
 #, python-format
 msgid "Class %(class_name)s could not be found: %(exception)s"
@@ -1422,9 +1412,6 @@ msgstr ""
 msgid "In ERROR state"
 msgstr "ve stavu CHYBA"
 
-msgid "In Use"
-msgstr "Používá se"
-
 #, python-format
 msgid "In states %(vm_state)s/%(task_state)s, not RESIZED/None"
 msgstr "Ve stavech %(vm_state)s/%(task_state)s, není RESIZED/None"
@@ -1531,10 +1518,6 @@ msgid "Instance %(uuid)s has no mapping to a cell."
 msgstr "Instance %(uuid)s nemá žádné mapování na buňku."
 
 #, python-format
-msgid "Instance %s is not attached."
-msgstr "instance %s není připojena."
-
-#, python-format
 msgid "Instance %s not found"
 msgstr "Instance %s není uložena"
 
@@ -1636,10 +1619,6 @@ msgstr ""
 #, python-format
 msgid "Invalid PCI alias definition: %(reason)s"
 msgstr "Neplatné určení přezdívky PCI: %(reason)s"
-
-#, python-format
-msgid "Invalid PCI devices Whitelist config %(reason)s"
-msgstr "Neplatné nastavení seznamu povolených zařízení PCI: %(reason)s"
 
 #, python-format
 msgid "Invalid Regular Expression %s"
@@ -1757,8 +1736,8 @@ msgid "Invalid minDisk filter [%s]"
 msgstr "Neplatný filtr minDisk [%s]"
 
 #, python-format
-msgid "Invalid min_ram filter [%s]"
-msgstr "Neplatný filtr min_ram [%s]"
+msgid "Invalid minRam filter [%s]"
+msgstr "Neplatný filtr minRam [%s]"
 
 msgid "Invalid name"
 msgstr "Neplatný název"
@@ -1891,19 +1870,8 @@ msgstr "Název páru klíčů obsahuje nebezpečné znaky"
 msgid "Keypair name must be string and between 1 and 255 characters long"
 msgstr "Název páru klíče musí být řetězec dlouhý 1 až 255 znaků"
 
-#, python-format
-msgid "Last %s nova syslog entries:-"
-msgstr "Posledních %s položek nova v záznamu systému:-"
-
-msgid "Limit"
-msgstr "Limit"
-
 msgid "Limits only supported from vCenter 6.0 and above"
 msgstr "Limity jsou podporovány pouze ve vCenter verze 6.0 a vyšší"
-
-#, python-format
-msgid "Line %(linenum)d : %(line)s"
-msgstr "Řádek %(linenum)d : %(line)s"
 
 #, python-format
 msgid "Link Local address is not found.:%s"
@@ -2211,9 +2179,6 @@ msgstr "Na VM neexistuje žádné zařízení mající id rozhraní %s"
 msgid "No disk at %(location)s"
 msgstr "Źádný disk ve %(location)s"
 
-msgid "No errors in logfiles!"
-msgstr "Žádné chyby v souborech záznamu!"
-
 #, python-format
 msgid "No fixed IP addresses available for network: %(net)s"
 msgstr "Nejsou dostupné žádné pevné IP adresy pro síť: %(net)s"
@@ -2271,9 +2236,6 @@ msgstr "Žádné sítě nejsou určeny."
 
 msgid "No networks found"
 msgstr "Nenalezeny žádné sítě"
-
-msgid "No nova entries in syslog!"
-msgstr "Žádné položky nova v záznamu systému!"
 
 #, python-format
 msgid "No operating system found in %s"
@@ -2458,14 +2420,8 @@ msgstr "Cesta %s musí být logickým svazkem LVM"
 msgid "Paused"
 msgstr "Pozastaveno"
 
-msgid "Personality file content too long"
-msgstr "Obsah osobnostního souboru je příliš dlouhý"
-
 msgid "Personality file limit exceeded"
 msgstr "Překročen limit osobnostního souboru"
-
-msgid "Personality file path too long"
-msgstr "Cesta osobnostního souboru je příliš dlouhá"
 
 #, python-format
 msgid "Physical network is missing for network %(network_uuid)s"
@@ -2520,9 +2476,6 @@ msgstr "Agent hosta QEMU není povolen"
 #, python-format
 msgid "Quiescing is not supported in instance %(instance_id)s"
 msgstr "Ztišení není podporováno v instanci %(instance_id)s"
-
-msgid "Quota"
-msgstr "Kvóta"
 
 #, python-format
 msgid "Quota class %(class_name)s could not be found."
@@ -2594,17 +2547,6 @@ msgid ""
 "%(maximum)s."
 msgstr ""
 "Limit kvóty %(limit)s pro %(resource)s musí být menší nebo rovno %(maximum)s."
-
-msgid "Quota limit must be -1 or greater."
-msgstr "Limit kvóty musí být -1 nebo větší."
-
-#, python-format
-msgid "Quota limit must be greater than %s."
-msgstr "Limit kvóty musí být větší než %s."
-
-#, python-format
-msgid "Quota limit must be less than %s."
-msgstr "Limit kvóty musí být menší než %s."
 
 #, python-format
 msgid "Quota reservation %(uuid)s could not be found."
@@ -2686,9 +2628,6 @@ msgstr ""
 #, python-format
 msgid "Rescue device does not exist for instance %s"
 msgstr "Záchranné zařízení neexistuje v instanci %s"
-
-msgid "Reserved"
-msgstr "Vyhrazeno"
 
 #, python-format
 msgid "Resize error: %(reason)s"
@@ -2868,9 +2807,6 @@ msgstr ""
 #, python-format
 msgid "Snapshot %(snapshot_id)s could not be found."
 msgstr "Snímek %(snapshot_id)s nemohl být nalezen."
-
-msgid "Some fields are invalid."
-msgstr "Některá pole jsou neplatná."
 
 msgid "Some required fields are missing"
 msgstr "Některá povinná pole chybí"
@@ -3077,9 +3013,6 @@ msgstr ""
 "Svazek nemůže být přidělen ke stejnému názvu zařízení jako kořenové zařízení "
 "%s"
 
-msgid "The volume was either invalid or not attached to the instance."
-msgstr "Svazek buď byl neplatný, nebo nebyl k instanci připojen."
-
 #, python-format
 msgid ""
 "There are %(records)d records in the '%(table_name)s' table where the uuid "
@@ -3278,9 +3211,6 @@ msgstr "Nelze najít soubor s klíčem : %s"
 
 msgid "Unable to find root VBD/VDI for VM"
 msgstr "Nelze najít kořen VBD/VDI pro VM"
-
-msgid "Unable to find system log file!"
-msgstr "Nelze najít soubor záznamu systému!"
 
 msgid "Unable to find volume"
 msgstr "Nelze najít svazek"
@@ -3481,14 +3411,6 @@ msgstr "Uživatel %(username)s nenalezen ve stínovém souboru."
 
 msgid "User data needs to be valid base 64."
 msgstr "Uživatelská data potřebují být v platném formátu base 64."
-
-#, python-format
-msgid ""
-"User data too large. User data must be no larger than %(maxsize)s bytes once "
-"base64 encoded. Your data is %(length)d bytes"
-msgstr ""
-"Uživatelské data jsou příliš velká. Data nesmí být větší než %(maxsize)s "
-"bajtů při zakódování pomocí base64. Vaše data mají %(length)d bajtů"
 
 msgid "User does not have admin privileges"
 msgstr "Uživatel nemá správcovská oprávnění"
@@ -3845,16 +3767,6 @@ msgstr "nebyla nalezena shoda pro %s"
 msgid "not able to execute ssh command: %s"
 msgstr "nelze spustit příkaz ssh: %s"
 
-msgid ""
-"nova-idmapshift is a tool that properly sets the ownership of a filesystem "
-"for use with linux user namespaces.  This tool can only be used with linux "
-"lxc containers.  See the man page for details."
-msgstr ""
-"nova-idmapshift je nástroj pro správné nastavení vlastnictví souborového "
-"systému v rámci jmenných prostorů uživatelů linux. Tento nástroj lze použít "
-"pouze u kontejnerů lxc v linux. Pro další informace si prohlédněte stránky "
-"uživatelské příručky."
-
 msgid "operation time out"
 msgstr "operace vypršela"
 
@@ -3973,10 +3885,6 @@ msgid ""
 "volume '%(vol)s' status must be 'in-use'. Currently in '%(status)s' status"
 msgstr ""
 "stav svazku '%(vol)s' musí být 'in-use'. Nyní je ve stavu '%(status)s'."
-
-#, python-format
-msgid "volume_id not found: %s"
-msgstr "Id svazku nenalezeno: %s"
 
 #, python-format
 msgid "xenapi.fake does not have an implementation for %s"
