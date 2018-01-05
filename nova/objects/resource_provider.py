@@ -2747,6 +2747,23 @@ def _get_provider_ids_having_all_traits(ctx, required_traits):
 
 
 @db_api.api_context_manager.reader
+def _has_provider_trees(ctx):
+    """Simple method that returns whether provider trees (i.e. nested resource
+    providers) are in use in the deployment at all. This information is used to
+    switch code paths when attempting to retrieve allocation candidate
+    information. The code paths are eminently easier to execute and follow for
+    non-nested scenarios...
+
+    NOTE(jaypipes): The result of this function can be cached extensively.
+    """
+    sel = sa.select([_RP_TBL.c.id])
+    sel = sel.where(_RP_TBL.c.parent_provider_id.isnot(None))
+    sel = sel.limit(1)
+    res = ctx.session.execute(sel).fetchall()
+    return len(res) > 0
+
+
+@db_api.api_context_manager.reader
 def _get_provider_ids_matching_all(ctx, resources, required_traits):
     """Returns a list of resource provider internal IDs that have available
     inventory to satisfy all the supplied requests for resources.
