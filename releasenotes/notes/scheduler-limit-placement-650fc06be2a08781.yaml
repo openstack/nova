@@ -1,0 +1,8 @@
+---
+fixes:
+  - |
+    The FilterScheduler now limits the number of results in the query it makes
+    to placement to avoid situations where every compute node in a large
+    deployment is returned. This is configurable with the new
+    ``[scheduler]/max_placement_results`` configuration option, which defaults
+    to 1000, a sane starting value for any size deployment.

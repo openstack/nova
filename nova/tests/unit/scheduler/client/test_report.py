@@ -1506,7 +1506,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
 
         expected_url = '/allocation_candidates?%s' % parse.urlencode(
             {'resources': 'MEMORY_MB:1024,VCPU:1',
-             'required': 'CUSTOM_TRAIT1'})
+             'required': 'CUSTOM_TRAIT1',
+             'limit': 1000})
         self.ks_adap_mock.get.assert_called_once_with(
             expected_url, raise_exc=False, microversion='1.17')
         self.assertEqual(mock.sentinel.alloc_reqs, alloc_reqs)
@@ -1531,7 +1532,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                 self.client.get_allocation_candidates(resources)
 
         expected_url = '/allocation_candidates?%s' % parse.urlencode(
-            {'resources': 'MEMORY_MB:1024,VCPU:1'})
+            {'resources': 'MEMORY_MB:1024,VCPU:1',
+             'limit': 1000})
         self.ks_adap_mock.get.assert_called_once_with(
             expected_url, raise_exc=False, microversion='1.17')
         self.assertEqual(mock.sentinel.alloc_reqs, alloc_reqs)
@@ -1542,12 +1544,17 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         resp_mock = mock.Mock(status_code=404)
         self.ks_adap_mock.get.return_value = resp_mock
 
+        # Make sure we're also honoring the configured limit
+        self.flags(max_placement_results=100, group='scheduler')
+
         resources = scheduler_utils.ResourceRequest.from_extra_specs(
             {'resources:MEMORY_MB': '1024'})
 
         res = self.client.get_allocation_candidates(resources)
 
-        expected_url = '/allocation_candidates?resources=MEMORY_MB%3A1024'
+        expected_url = ('/allocation_candidates?%s' % parse.urlencode(
+            {'resources': 'MEMORY_MB:1024',
+             'limit': '100'}))
         self.ks_adap_mock.get.assert_called_once_with(
             expected_url, raise_exc=False, microversion='1.17')
         self.assertIsNone(res[0])
