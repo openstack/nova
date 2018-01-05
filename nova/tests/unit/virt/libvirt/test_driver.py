@@ -14275,7 +14275,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(6, drvr._get_vcpu_used())
         mock_list.assert_called_with(only_guests=True, only_running=True)
 
-    def test_get_instance_capabilities(self):
+    def _test_get_instance_capabilities(self, want):
+        '''Base test for 'get_capabilities' function. '''
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
         def get_host_capabilities_stub(self):
@@ -14298,11 +14299,27 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.stubs.Set(host.Host, "get_capabilities",
                        get_host_capabilities_stub)
 
-        want = [(fields.Architecture.X86_64, 'kvm', 'hvm'),
-                (fields.Architecture.X86_64, 'qemu', 'hvm'),
-                (fields.Architecture.I686, 'kvm', 'hvm')]
         got = drvr._get_instance_capabilities()
         self.assertEqual(want, got)
+
+    def test_get_instance_capabilities_kvm(self):
+        self.flags(virt_type='kvm', group='libvirt')
+
+        # Because virt_type is set to kvm, we get only
+        # capabilities where the hypervisor_type is kvm
+        want = [(fields.Architecture.X86_64, 'kvm', 'hvm'),
+                (fields.Architecture.I686, 'kvm', 'hvm')]
+
+        self._test_get_instance_capabilities(want)
+
+    def test_get_instance_capabilities_qemu(self):
+        self.flags(virt_type='qemu', group='libvirt')
+
+        # Because virt_type is set to qemu, we get only
+        # capabilities where the hypervisor_type is qemu
+        want = [(fields.Architecture.X86_64, 'qemu', 'hvm')]
+
+        self._test_get_instance_capabilities(want)
 
     def test_set_cache_mode(self):
         self.flags(disk_cachemodes=['file=directsync'], group='libvirt')
