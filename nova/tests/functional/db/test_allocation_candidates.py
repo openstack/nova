@@ -11,6 +11,7 @@
 #    under the License.
 import os_traits
 from oslo_utils import uuidutils
+import sqlalchemy as sa
 
 from nova.api.openstack.placement import lib as placement_lib
 from nova import context
@@ -1448,3 +1449,89 @@ class AllocationCandidatesTestCase(ProviderDBBase):
         #                          uuids.numa_cell0, uuids.numa_cell1])
         # self._validate_provider_summary_resources(expected, alloc_cands)
         self._validate_provider_summary_resources({}, alloc_cands)
+
+    def _get_root_ids_matching_names(self, names):
+        """Utility function to look up root provider IDs from a set of supplied
+        provider names directly from the API DB.
+        """
+        sel = sa.select([rp_obj._RP_TBL.c.root_provider_id])
+        sel = sel.where(rp_obj._RP_TBL.c.name.in_(names))
+        with self.api_db.get_engine().connect() as conn:
+            cn_root_ids = set([r[0] for r in conn.execute(sel)])
+        return cn_root_ids
+
+    def test_trees_matching_all_resources(self):
+        """Creates a few provider trees having different inventories and
+        allocations and tests the _get_trees_matching_all_resources() utility
+        function to ensure that only the root provider IDs of matching provider
+        trees are returned.
+        """
+        # We are setting up 3 trees of providers that look like this:
+        #
+        #                  compute node (cn)
+        #                 /                 \
+        #                /                   \
+        #           numa cell 0         numa cell 1
+        #               |                    |
+        #               |                    |
+        #              pf 0                 pf 1
+        cn_names = []
+        for x in ('1', '2', '3'):
+            name = 'cn' + x
+            cn_name = name
+            cn_names.append(cn_name)
+            cn = self._create_provider(name)
+
+            _add_inventory(cn, fields.ResourceClass.VCPU, 16)
+            _add_inventory(cn, fields.ResourceClass.MEMORY_MB, 32768)
+
+            name = 'cn' + x + '_numa0'
+            numa_cell0 = self._create_provider(name, parent=cn.uuid)
+            name = 'cn' + x + '_numa1'
+            numa_cell1 = self._create_provider(name, parent=cn.uuid)
+
+            name = 'cn' + x + '_numa0_pf0'
+            pf0 = self._create_provider(name, parent=numa_cell0.uuid)
+            _add_inventory(pf0, fields.ResourceClass.SRIOV_NET_VF, 8)
+            name = 'cn' + x + '_numa1_pf1'
+            pf1 = self._create_provider(name, parent=numa_cell1.uuid)
+            _add_inventory(pf1, fields.ResourceClass.SRIOV_NET_VF, 8)
+
+        # NOTE(jaypipes): _get_trees_matching_all() expects a dict of resource
+        # class internal identifiers, not string names
+        resources = {
+            fields.ResourceClass.STANDARD.index(
+                fields.ResourceClass.VCPU): 2,
+            fields.ResourceClass.STANDARD.index(
+                fields.ResourceClass.MEMORY_MB): 256,
+            fields.ResourceClass.STANDARD.index(
+                fields.ResourceClass.SRIOV_NET_VF): 1,
+        }
+        trees = rp_obj._get_trees_matching_all_resources(self.ctx, resources)
+        self.assertEqual(3, len(trees))
+
+        # The returned results are the internal root_provider_id values of the
+        # three compute node providers. Grab those values using a manual query
+        # to double-check the results of _get_trees_matching_all()
+        cn_root_ids = self._get_root_ids_matching_names(cn_names)
+        self.assertEqual(cn_root_ids, set(trees))
+
+        # OK, now consume all the VFs in the second compute node and verify
+        # only the first and third computes are returned as root providers from
+        # _get_trees_matching_all()
+        cn2_pf0 = rp_obj.ResourceProvider.get_by_uuid(self.ctx,
+                                                      uuids.cn2_numa0_pf0)
+        _allocate_from_provider(cn2_pf0, fields.ResourceClass.SRIOV_NET_VF, 8)
+
+        cn2_pf1 = rp_obj.ResourceProvider.get_by_uuid(self.ctx,
+                                                      uuids.cn2_numa1_pf1)
+        _allocate_from_provider(cn2_pf1, fields.ResourceClass.SRIOV_NET_VF, 8)
+
+        trees = rp_obj._get_trees_matching_all_resources(self.ctx, resources)
+        self.assertEqual(2, len(trees))
+
+        # cn2 had all its VFs consumed, so we should only get cn1 and cn3's IDs
+        # as the root provider IDs.
+        cn_names = ['cn1', 'cn3']
+        cn_root_ids = self._get_root_ids_matching_names(cn_names)
+        self.assertEqual(cn_root_ids, set(trees))

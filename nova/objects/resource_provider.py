@@ -2894,6 +2894,122 @@ def _provider_aggregates(ctx, rp_ids):
     return res
 
 
+@db_api.api_context_manager.reader
+def _get_trees_matching_all_resources(ctx, resources):
+    """Returns a list of root provider internal IDs for provider trees where
+    the nodes in the tree collectively have available inventory to satisfy all
+    the supplied requests for resources.
+
+    :note: This function is used for scenarios that do NOT involve sharing
+    providers AND where there are nested providers present in the deployment.
+
+    :param ctx: Session context to use
+    :param resources: A dict, keyed by resource class ID, of the amount
+                      requested of that resource class.
+    """
+    # Imagine a request group that contains a request for the following
+    # resources:
+    #
+    # * VCPU: 2
+    # * MEMORY_MB: 2048
+    # * SRIOV_NET_VF: 1
+    #
+    # The SQL we want to produce looks like this:
+    #
+    # SELECT rp.root_provider_id
+    # FROM resource_providers AS rp
+    # JOIN inventories AS inv
+    #  ON rp.id = inv.resource_provider_id
+    # LEFT JOIN (
+    #     SELECT resource_provider_id, resource_class_id, SUM(used) AS used
+    #     FROM allocations
+    #     WHERE resource_class_id IN ($RESOURCES)
+    #     GROUP BY resource_provider_id, resource_class_id
+    # ) AS usages
+    #  ON inv.resource_provider_id = usages.resource_provider_id
+    #  AND inv.resource_class_id = usages.resource_class_id
+    #  WHERE inv.resource_class_id IN ($RESOURCES) AND
+    #  (
+    #     inv.resource_class_id = $VCPU
+    #     AND (((inv.total - inv.reserved) * inv.allocation_ratio) <
+    #          (COALESCE(usage.used, 0) + $VCPU_REQUESTED))
+    #     AND inv.min_unit >= $VCPU_REQUESTED
+    #     AND inv.max_unit <= $VCPU_REQUESTED
+    #     AND inv.step_size % $VCPU_REQUESTED = 0
+    #  ) OR (
+    #     inv.resource_class_id = $RAM
+    #     AND (((inv.total - inv.reserved) * inv.allocation_ratio) <
+    #          (COALESCE(usage.used, 0) + $RAM_REQUESTED))
+    #     AND inv.min_unit >= $RAM_REQUESTED
+    #     AND inv.max_unit <= $RAM_REQUESTED
+    #     AND inv.step_size % $RAM_REQUESTED = 0
+    #  ) OR (
+    #     inv.resource_class_id = $SRIOV_NET_VF
+    #     AND (((inv.total - inv.reserved) * inv.allocation_ratio) <
+    #          (COALESCE(usage.used, 0) + $VF_REQUESTED))
+    #     AND inv.min_unit >= $VF_REQUESTED
+    #     AND inv.max_unit <= $VF_REQUESTED
+    #     AND inv.step_size % $VF_REQUESTED = 0
+    #  )
+    #  GROUP BY rp.root_provider_id
+    #  HAVING COUNT(DISTINCT inv.resource_class_id) = 3;
+    rpt = sa.alias(_RP_TBL, name="rp")
+    inv = sa.alias(_INV_TBL, name="inv")
+
+    # Derived table containing usage numbers for all resource providers for
+    # each resource class involved in the request
+    usages = sa.alias(
+        sa.select([
+            _ALLOC_TBL.c.resource_provider_id,
+            _ALLOC_TBL.c.resource_class_id,
+            sql.func.sum(_ALLOC_TBL.c.used).label('used'),
+        ]).where(
+            _ALLOC_TBL.c.resource_class_id.in_(resources),
+        ).group_by(
+            _ALLOC_TBL.c.resource_provider_id,
+            _ALLOC_TBL.c.resource_class_id
+        ),
+        name='usage',
+    )
+
+    sel = sa.select([rpt.c.root_provider_id])
+
+    rp_inv_join = sa.join(rpt, inv, rpt.c.id == inv.c.resource_provider_id)
+    rp_inv_usage_join = sa.outerjoin(
+        rp_inv_join, usages,
+        sa.and_(
+            inv.c.resource_provider_id ==
+                usages.c.resource_provider_id,
+            inv.c.resource_class_id ==
+                usages.c.resource_class_id,
+        ))
+
+    usage_conds = []
+    for rc_id, amount in resources.items():
+        usage_cond = sa.and_(
+            inv.c.resource_class_id == rc_id,
+            (
+                (sql.func.coalesce(usages.c.used, 0) + amount) <=
+                (inv.c.total - inv.c.reserved) * inv.c.allocation_ratio
+            ),
+            inv.c.min_unit <= amount,
+            inv.c.max_unit >= amount,
+            amount % inv.c.step_size == 0,
+        )
+        usage_conds.append(usage_cond)
+
+    sel = sel.select_from(rp_inv_usage_join)
+    sel = sel.where(
+        sa.and_(inv.c.resource_class_id.in_(resources),
+                sa.or_(*usage_conds)))
+    sel = sel.group_by(rpt.c.root_provider_id)
+    sel = sel.having(
+        sql.func.count(
+            sql.func.distinct(inv.c.resource_class_id)) == len(resources))
+
+    return [r[0] for r in ctx.session.execute(sel)]
+
+
 def _build_provider_summaries(context, usages, prov_traits):
     """Given a list of dicts of usage information and a map of providers to
     their associated string traits, returns a dict, keyed by resource provider
