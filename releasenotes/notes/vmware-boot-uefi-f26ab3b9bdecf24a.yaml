@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    The VMware vCenter compute driver now supports booting from images
+    which specify they require UEFI or BIOS firmware, using the
+    ``hw_firmware_type`` image metadata.
