@@ -1,0 +1,6 @@
+---
+upgrade:
+  - |
+    The ``[DEFAULT]/scheduler_driver_task_period`` configuration option,
+    which was deprecated in the 15.0.0 Ocata release, has now been removed.
+    Use the ``[scheduler]/periodic_task_interval`` option instead.

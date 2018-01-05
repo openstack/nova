@@ -66,8 +66,6 @@ Possible values:
 """),
     cfg.IntOpt("periodic_task_interval",
         default=60,
-        deprecated_name="scheduler_driver_task_period",
-        deprecated_group="DEFAULT",
         help="""
 Periodic task interval.
 
