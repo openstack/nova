@@ -106,9 +106,11 @@ class SchedulerReportClientTests(test.TestCase):
         res_class = fields.ResourceClass.VCPU
         with self._interceptor():
             # When we start out there are no resource providers.
-            rp = self.client._get_resource_provider(self.compute_uuid)
+            rp = self.client._get_resource_provider(self.context,
+                                                    self.compute_uuid)
             self.assertIsNone(rp)
-            rps = self.client._get_providers_in_tree(self.compute_uuid)
+            rps = self.client._get_providers_in_tree(self.context,
+                                                     self.compute_uuid)
             self.assertEqual([], rps)
             # But get_provider_tree_and_ensure_root creates one (via
             # _ensure_resource_provider)
@@ -120,15 +122,18 @@ class SchedulerReportClientTests(test.TestCase):
             self.client.update_compute_node(self.context, self.compute_node)
 
             # So now we have a resource provider
-            rp = self.client._get_resource_provider(self.compute_uuid)
+            rp = self.client._get_resource_provider(self.context,
+                                                    self.compute_uuid)
             self.assertIsNotNone(rp)
-            rps = self.client._get_providers_in_tree(self.compute_uuid)
+            rps = self.client._get_providers_in_tree(self.context,
+                                                     self.compute_uuid)
             self.assertEqual(1, len(rps))
 
             # We should also have empty sets of aggregate and trait
             # associations
             self.assertEqual(
-                [], self.client._get_providers_in_aggregates([uuids.agg]))
+                [], self.client._get_providers_in_aggregates(self.context,
+                                                             [uuids.agg]))
             self.assertFalse(
                 self.client._provider_tree.have_aggregates_changed(
                     self.compute_uuid, []))
@@ -311,6 +316,8 @@ class SchedulerReportClientTests(test.TestCase):
                              global_request_id=global_request_id)
             self.client.put('/resource_providers/%s' % self.compute_uuid,
                             payload,
+                            global_request_id=global_request_id)
+            self.client.get('/resource_providers/%s' % self.compute_uuid,
                             global_request_id=global_request_id)
 
     def test_get_provider_tree_with_nested_and_aggregates(self):

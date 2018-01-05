@@ -350,7 +350,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 test.MatchType(objects.ImageMeta), injected_files=[],
                 admin_password=None, allocations={}, network_info=[],
                 block_device_info='fake_bdm')
-        self.mock_get_allocs.assert_called_once_with(instance.uuid)
+        self.mock_get_allocs.assert_called_once_with(self.context,
+                                                     instance.uuid)
         mock_get_power_state.assert_called_once_with(self.context, instance)
 
         self.assertNotIn('shelved_at', instance.system_metadata)
@@ -451,7 +452,8 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
                 test.MatchType(objects.ImageMeta),
                 injected_files=[], admin_password=None,
                 allocations={}, network_info=[], block_device_info='fake_bdm')
-        self.mock_get_allocs.assert_called_once_with(instance.uuid)
+        self.mock_get_allocs.assert_called_once_with(self.context,
+                                                     instance.uuid)
         mock_get_power_state.assert_called_once_with(self.context, instance)
 
     @mock.patch.object(objects.InstanceList, 'get_by_filters')
