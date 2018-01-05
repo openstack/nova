@@ -17,9 +17,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 16.0.0.0b4.dev149\n"
+"Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2017-08-10 04:03+0000\n"
+"POT-Creation-Date: 2018-01-03 23:41+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -79,11 +79,6 @@ msgstr ""
 #, python-format
 msgid "%(field)s should not be part of the updates."
 msgstr "%(field)s não deve fazer parte das atualizações."
-
-#, python-format
-msgid "%(key)s is not a valid quota key. Valid options are: %(options)s."
-msgstr ""
-"%(key)s não é uma chave de cota válida. As opções válidas são: %(options)s."
 
 #, python-format
 msgid "%(key)s must be an integer."
@@ -479,9 +474,6 @@ msgid "Can not handle authentication request for %d credentials"
 msgstr ""
 "Não é possível manipular solicitação de autenticação para %d credenciais"
 
-msgid "Can't detach root device volume"
-msgstr "Não é possível separar o volume do dispositivo raiz"
-
 msgid "Can't resize a disk to 0 GB."
 msgstr "Não é possível redimensionar um disco para 0 GB."
 
@@ -629,9 +621,6 @@ msgstr "Célula com nome %(name)s já existe."
 msgid ""
 "Change would make usage less than 0 for the following resources: %(unders)s"
 msgstr "A mudança faria uso de menos de 0 dos recursos a seguir: %(unders)s"
-
-msgid "Claim pci failed."
-msgstr "Solicitação pci falhou."
 
 #, python-format
 msgid "Class %(class_name)s could not be found: %(exception)s"
@@ -1572,9 +1561,6 @@ msgstr ""
 msgid "In ERROR state"
 msgstr "No estado ERROR"
 
-msgid "In Use"
-msgstr "Em uso"
-
 #, python-format
 msgid "In states %(vm_state)s/%(task_state)s, not RESIZED/None"
 msgstr "Nos estados %(vm_state)s/%(task_state)s, não RESIZED/Nenhum"
@@ -1691,10 +1677,6 @@ msgid "Instance %(uuid)s has no mapping to a cell."
 msgstr "A instância %(uuid)s não possui nenhum mapeamento para uma célula."
 
 #, python-format
-msgid "Instance %s is not attached."
-msgstr "A instância %s não está conectada."
-
-#, python-format
 msgid "Instance %s not found"
 msgstr "Instância %s não encontrada"
 
@@ -1801,11 +1783,6 @@ msgstr ""
 #, python-format
 msgid "Invalid PCI alias definition: %(reason)s"
 msgstr "Definição de alias de PCI inválida: %(reason)s"
-
-#, python-format
-msgid "Invalid PCI devices Whitelist config %(reason)s"
-msgstr ""
-"Configuração de lista de desbloqueio de dispositivos PCI inválida %(reason)s"
 
 #, python-format
 msgid "Invalid Regular Expression %s"
@@ -1922,8 +1899,8 @@ msgid "Invalid minDisk filter [%s]"
 msgstr "Filtro minDisk inválido [%s]"
 
 #, python-format
-msgid "Invalid min_ram filter [%s]"
-msgstr "Filtro min_ram inválido [%s]"
+msgid "Invalid minRam filter [%s]"
+msgstr "Filtro minRam inválido [%s]"
 
 msgid "Invalid name"
 msgstr "Nome inválido"
@@ -2062,19 +2039,8 @@ msgstr ""
 "O nome do par de chaves deve ser uma sequência e entre 1 e 255 caracteres de "
 "comprimento"
 
-#, python-format
-msgid "Last %s nova syslog entries:-"
-msgstr "Últimas %s entradas do syslog nova:-"
-
-msgid "Limit"
-msgstr "Limite"
-
 msgid "Limits only supported from vCenter 6.0 and above"
 msgstr "Limites suportados somente a partir do vCenter 6.0 e acima"
-
-#, python-format
-msgid "Line %(linenum)d : %(line)s"
-msgstr "Linha %(linenum)d : %(line)s"
 
 #, python-format
 msgid "Link Local address is not found.:%s"
@@ -2438,9 +2404,6 @@ msgstr "Nenhum dispositivo com interface-id %s existe na VM"
 msgid "No disk at %(location)s"
 msgstr "Nenhum disco em %(location)s"
 
-msgid "No errors in logfiles!"
-msgstr "Sem erros nos arquivos de log!"
-
 #, python-format
 msgid "No fixed IP addresses available for network: %(net)s"
 msgstr "Nenhum endereço IP fixo disponível para rede: %(net)s"
@@ -2509,9 +2472,6 @@ msgstr "Nenhuma rede definida."
 
 msgid "No networks found"
 msgstr "Nenhuma rede localizada"
-
-msgid "No nova entries in syslog!"
-msgstr "Nenhuma entrada do nova no syslog!"
 
 #, python-format
 msgid "No operating system found in %s"
@@ -2719,14 +2679,8 @@ msgstr "O caminho %s deve ser um volume lógico LVM"
 msgid "Paused"
 msgstr "Interrompido"
 
-msgid "Personality file content too long"
-msgstr "Conteúdo de arquivo de personalidade muito longo"
-
 msgid "Personality file limit exceeded"
 msgstr "Limite excedido do arquivo de personalidade"
-
-msgid "Personality file path too long"
-msgstr "Caminho de arquivo de personalidade muito longo"
 
 #, python-format
 msgid ""
@@ -2800,9 +2754,6 @@ msgstr "O agente convidado QEMU não está ativado"
 msgid "Quiescing is not supported in instance %(instance_id)s"
 msgstr "Quiesce não é suportado na instância %(instance_id)s"
 
-msgid "Quota"
-msgstr "Quota"
-
 #, python-format
 msgid "Quota class %(class_name)s could not be found."
 msgstr "A classe da cota %(class_name)s não pôde ser localizada."
@@ -2874,17 +2825,6 @@ msgid ""
 msgstr ""
 "O limite de cota %(limit)s para %(resource)s deve ser menor ou igual a "
 "%(maximum)s."
-
-msgid "Quota limit must be -1 or greater."
-msgstr "O limite de cota deve ser -1 ou maior."
-
-#, python-format
-msgid "Quota limit must be greater than %s."
-msgstr "O limite de cota deve ser maior que %s."
-
-#, python-format
-msgid "Quota limit must be less than %s."
-msgstr "O limite de cota deve ser menor que %s."
 
 #, python-format
 msgid "Quota reservation %(uuid)s could not be found."
@@ -2978,9 +2918,6 @@ msgstr ""
 #, python-format
 msgid "Rescue device does not exist for instance %s"
 msgstr "Dispositivo de resgate não existe para a instância %s"
-
-msgid "Reserved"
-msgstr "Reservado"
 
 #, python-format
 msgid "Resize error: %(reason)s"
@@ -3178,9 +3115,6 @@ msgstr ""
 #, python-format
 msgid "Snapshot %(snapshot_id)s could not be found."
 msgstr "A captura instantânea %(snapshot_id)s não pôde ser localizada."
-
-msgid "Some fields are invalid."
-msgstr "Alguns campos são inválidos."
 
 msgid "Some required fields are missing"
 msgstr "Alguns campos requeridos estão faltando."
@@ -3398,9 +3332,6 @@ msgstr ""
 "O volume não pode ser atribuído ao mesmo nome de dispositivo que o "
 "dispositivo raiz %s"
 
-msgid "The volume was either invalid or not attached to the instance."
-msgstr "O volume era inválido ou não anexado à instância."
-
 #, python-format
 msgid ""
 "There are %(records)d records in the '%(table_name)s' table where the uuid "
@@ -3617,9 +3548,6 @@ msgstr "Não é possível localizar key_file : %s"
 msgid "Unable to find root VBD/VDI for VM"
 msgstr "Não é possível localizar VBD/VDI raiz para VM"
 
-msgid "Unable to find system log file!"
-msgstr "Não é possível encontrar o arquivo de log do sistema!"
-
 msgid "Unable to find volume"
 msgstr "Não é possível localizar o volume"
 
@@ -3821,15 +3749,6 @@ msgstr "Usuário %(username)s não localizado no arquivo de sombra."
 
 msgid "User data needs to be valid base 64."
 msgstr "Os dados do usuário devem ser base 64 válidos."
-
-#, python-format
-msgid ""
-"User data too large. User data must be no larger than %(maxsize)s bytes once "
-"base64 encoded. Your data is %(length)d bytes"
-msgstr ""
-"Dados do usuário muito grandes. Os dados do usuário não devem ser superiores "
-"a %(maxsize)s bytes quando codificados por base64. Seus dados têm %(length)d "
-"bytes"
 
 msgid "User does not have admin privileges"
 msgstr "Usuário não tem privilégios de administrador"
@@ -4144,10 +4063,6 @@ msgstr ""
 "instance_id %s não pôde ser localizado como id do dispositivo em nenhuma "
 "porta"
 
-#, python-format
-msgid "invalid %(property)s %(attr)s"
-msgstr "%(property)s %(attr)s inválidos"
-
 msgid "is_public must be a boolean"
 msgstr "is_public deve ser um booleano"
 
@@ -4210,16 +4125,6 @@ msgstr "Nenhuma permissão de gravação para o conjunto de armazenamentos %s"
 #, python-format
 msgid "not able to execute ssh command: %s"
 msgstr "não foi possível executar o comando ssh: %s"
-
-msgid ""
-"nova-idmapshift is a tool that properly sets the ownership of a filesystem "
-"for use with linux user namespaces.  This tool can only be used with linux "
-"lxc containers.  See the man page for details."
-msgstr ""
-"nova-idmapshift é uma ferramenta que configura corretamente a propriedade de "
-"um sistema de arquivos para uso com namespaces do usuário Linux. Essa "
-"ferramenta só pode ser usada com contêineres lxc Linux. Consulte a página do "
-"manual para obter detalhes."
 
 msgid "old style configuration can use only dictionary or memcached backends"
 msgstr ""
@@ -4373,10 +4278,6 @@ msgid ""
 msgstr ""
 "o volume '%(vol)s' de status deve estar 'em uso'. Atualmente em '%(status)s' "
 "de status"
-
-#, python-format
-msgid "volume_id not found: %s"
-msgstr "volume_id não localizado: %s"
 
 #, python-format
 msgid "xenapi.fake does not have an implementation for %s"

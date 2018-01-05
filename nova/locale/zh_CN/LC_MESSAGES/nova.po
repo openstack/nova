@@ -33,9 +33,9 @@
 # blkart <blkart.org@gmail.com>, 2017. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 16.0.0.0b4.dev149\n"
+"Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2017-08-10 04:03+0000\n"
+"POT-Creation-Date: 2018-01-03 23:41+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -96,10 +96,6 @@ msgstr ""
 #, python-format
 msgid "%(field)s should not be part of the updates."
 msgstr "%(field)s应该是更新的部分。"
-
-#, python-format
-msgid "%(key)s is not a valid quota key. Valid options are: %(options)s."
-msgstr "%(key)s不是一个有效的配额关键字。有效选项是：%(options)s。"
 
 #, python-format
 msgid "%(key)s must be an integer."
@@ -468,9 +464,6 @@ msgstr "无法找到请求的镜像"
 msgid "Can not handle authentication request for %d credentials"
 msgstr "无法为 %d 凭证处理认证请求"
 
-msgid "Can't detach root device volume"
-msgstr "不能断开root设备卷"
-
 msgid "Can't resize a disk to 0 GB."
 msgstr "不能调整磁盘到0GB."
 
@@ -614,9 +607,6 @@ msgstr ""
 #, python-format
 msgid "Cinder API version %(version)s is not available."
 msgstr "Cinder API 版本 %(version)s 不可用."
-
-msgid "Claim pci failed."
-msgstr "声明pci失败。"
 
 #, python-format
 msgid "Class %(class_name)s could not be found: %(exception)s"
@@ -1548,9 +1538,6 @@ msgstr "带目的类型'volume'的镜像需要指定非0的大小。"
 msgid "In ERROR state"
 msgstr "处于“错误”状态"
 
-msgid "In Use"
-msgstr "正在使用"
-
 #, python-format
 msgid "In states %(vm_state)s/%(task_state)s, not RESIZED/None"
 msgstr "处于状态 %(vm_state)s/%(task_state)s，而不是处于状态“已调整大小”/“无”"
@@ -1658,10 +1645,6 @@ msgid "Instance %(uuid)s has no mapping to a cell."
 msgstr "实例 %(uuid)s 没有映射到一个单元。"
 
 #, python-format
-msgid "Instance %s is not attached."
-msgstr "未连接实例 %s。"
-
-#, python-format
 msgid "Instance %s not found"
 msgstr "找不到实例 %s"
 
@@ -1767,10 +1750,6 @@ msgstr "无效PCI白名单：PCI白名单可以指定设备名或地址，而不
 #, python-format
 msgid "Invalid PCI alias definition: %(reason)s"
 msgstr "无效PCI别名定义：%(reason)s"
-
-#, python-format
-msgid "Invalid PCI devices Whitelist config %(reason)s"
-msgstr "无效PCI设备白名单配置%(reason)s"
 
 #, python-format
 msgid "Invalid Regular Expression %s"
@@ -1889,8 +1868,8 @@ msgid "Invalid minDisk filter [%s]"
 msgstr "minDisk 过滤器 [%s] 无效"
 
 #, python-format
-msgid "Invalid min_ram filter [%s]"
-msgstr "无效min_ram过滤器 [%s]"
+msgid "Invalid minRam filter [%s]"
+msgstr "minRam 过滤器 [%s] 无效"
 
 msgid "Invalid name"
 msgstr "无效名称"
@@ -2026,19 +2005,8 @@ msgstr "密钥对名称包含不安全的字符"
 msgid "Keypair name must be string and between 1 and 255 characters long"
 msgstr "密钥对必须是字符串，并且长度在1到255个字符"
 
-#, python-format
-msgid "Last %s nova syslog entries:-"
-msgstr "最近的nova 系统日志nova syslog 输出 %s:-"
-
-msgid "Limit"
-msgstr "限制"
-
 msgid "Limits only supported from vCenter 6.0 and above"
 msgstr "仅 vCenter 6.0 及以上版本支持限制"
-
-#, python-format
-msgid "Line %(linenum)d : %(line)s"
-msgstr "行%(linenum)d : %(line)s"
 
 #, python-format
 msgid "Link Local address is not found.:%s"
@@ -2386,9 +2354,6 @@ msgstr "在VM上面没有 interface-id %s 的设备"
 msgid "No disk at %(location)s"
 msgstr "在 %(location)s 没有磁盘"
 
-msgid "No errors in logfiles!"
-msgstr "在日志文件中没有错误！"
-
 #, python-format
 msgid "No fixed IP addresses available for network: %(net)s"
 msgstr "没有可用的固定IP给网络：%(net)s"
@@ -2457,9 +2422,6 @@ msgstr "没有网络定义。"
 
 msgid "No networks found"
 msgstr "没有找到网络"
-
-msgid "No nova entries in syslog!"
-msgstr "在系统日志中找不到Nova输出"
 
 #, python-format
 msgid "No operating system found in %s"
@@ -2673,14 +2635,8 @@ msgstr "路径 %s 必须为 LVM 逻辑卷"
 msgid "Paused"
 msgstr "已暂停"
 
-msgid "Personality file content too long"
-msgstr "个性化文件内容太长"
-
 msgid "Personality file limit exceeded"
 msgstr "超过个性化文件限制"
-
-msgid "Personality file path too long"
-msgstr "个性化文件路径太长"
 
 #, python-format
 msgid ""
@@ -2757,9 +2713,6 @@ msgstr "QEMU客户端代理未启动"
 msgid "Quiescing is not supported in instance %(instance_id)s"
 msgstr "实例%(instance_id)s不支持停顿"
 
-msgid "Quota"
-msgstr "配额"
-
 #, python-format
 msgid "Quota class %(class_name)s could not be found."
 msgstr "找不到配额类 %(class_name)s。"
@@ -2826,17 +2779,6 @@ msgid ""
 "Quota limit %(limit)s for %(resource)s must be less than or equal to "
 "%(maximum)s."
 msgstr "资源%(resource)s的配额限制%(limit)s 必须少于或等于%(maximum)s。"
-
-msgid "Quota limit must be -1 or greater."
-msgstr "配额限制必须为 -1 或更大。"
-
-#, python-format
-msgid "Quota limit must be greater than %s."
-msgstr "配额限制必须大于%s。"
-
-#, python-format
-msgid "Quota limit must be less than %s."
-msgstr "配额限制必须小于%s。"
 
 #, python-format
 msgid "Quota reservation %(uuid)s could not be found."
@@ -2917,9 +2859,6 @@ msgstr ""
 #, python-format
 msgid "Rescue device does not exist for instance %s"
 msgstr "对于实例%s，营救设备不存在"
-
-msgid "Reserved"
-msgstr "保留的"
 
 #, python-format
 msgid "Resize error: %(reason)s"
@@ -3117,9 +3056,6 @@ msgstr "关闭虚拟机(硬)失败"
 #, python-format
 msgid "Snapshot %(snapshot_id)s could not be found."
 msgstr "快照 %(snapshot_id)s 没有找到。"
-
-msgid "Some fields are invalid."
-msgstr "有些字段无效。"
 
 msgid "Some required fields are missing"
 msgstr "有些必填字段没有填写"
@@ -3330,9 +3266,6 @@ msgstr "vlan号不能小于1"
 msgid ""
 "The volume cannot be assigned the same device name as the root device %s"
 msgstr "卷不能分配不能用与root设备%s一样的设备名称"
-
-msgid "The volume was either invalid or not attached to the instance."
-msgstr "卷要不无效，要不没有连接到实例。"
 
 #, python-format
 msgid ""
@@ -3553,9 +3486,6 @@ msgstr "找不到 key_file：%s"
 msgid "Unable to find root VBD/VDI for VM"
 msgstr "找不到 VM 的根 VBD/VDI"
 
-msgid "Unable to find system log file!"
-msgstr "不能发现系统日志文件"
-
 msgid "Unable to find volume"
 msgstr "找不到卷"
 
@@ -3771,14 +3701,6 @@ msgstr "在影子文件中找不到用户 %(username)s。"
 
 msgid "User data needs to be valid base 64."
 msgstr "用户数据需要是有效的基本 64 位。"
-
-#, python-format
-msgid ""
-"User data too large. User data must be no larger than %(maxsize)s bytes once "
-"base64 encoded. Your data is %(length)d bytes"
-msgstr ""
-"用户数据太大。一旦以基本 64 位编码，用户数据就必须至多为 %(maxsize)s 字节。您"
-"的数据是 %(length)d 字节"
 
 msgid "User does not have admin privileges"
 msgstr "用户没有管理员权限"
@@ -4093,10 +4015,6 @@ msgstr "已对实例关闭电源，无法暂挂该实例。"
 msgid "instance_id %s could not be found as device id on any ports"
 msgstr "当设备在任意端口上时，无法找到实例id %s"
 
-#, python-format
-msgid "invalid %(property)s %(attr)s"
-msgstr "无效 %(property)s %(attr)s"
-
 msgid "is_public must be a boolean"
 msgstr "is_public 必须为布尔值"
 
@@ -4159,14 +4077,6 @@ msgstr "没有对存储池 %s 的写许可权"
 #, python-format
 msgid "not able to execute ssh command: %s"
 msgstr "不能执行ssh命令：%s"
-
-msgid ""
-"nova-idmapshift is a tool that properly sets the ownership of a filesystem "
-"for use with linux user namespaces.  This tool can only be used with linux "
-"lxc containers.  See the man page for details."
-msgstr ""
-"nova-idmapshift 是一个工具，用来正确设置文件系统的所有者，在使用linux用户命名"
-"空间中中使用。这个工具只能用在linux lxc容器中。查看man页面了解更多细节。"
 
 msgid "old style configuration can use only dictionary or memcached backends"
 msgstr "旧样式配置只能使用字典或 memcached 后端"
@@ -4306,10 +4216,6 @@ msgstr "卷 '%(vol)s' 状态必须是‘可用‘。当前处于 '%(status)s' �
 msgid ""
 "volume '%(vol)s' status must be 'in-use'. Currently in '%(status)s' status"
 msgstr "卷 '%(vol)s' 状态必须是‘使用中‘。当前处于 '%(status)s' 状态"
-
-#, python-format
-msgid "volume_id not found: %s"
-msgstr "volume_id没有找到：%s"
 
 #, python-format
 msgid "xenapi.fake does not have an implementation for %s"

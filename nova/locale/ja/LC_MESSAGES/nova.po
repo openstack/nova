@@ -11,9 +11,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 16.0.0.0b4.dev149\n"
+"Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2017-08-10 04:03+0000\n"
+"POT-Creation-Date: 2018-01-03 23:41+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -73,12 +73,6 @@ msgstr ""
 #, python-format
 msgid "%(field)s should not be part of the updates."
 msgstr "%(field)s を更新に含めることはできません。"
-
-#, python-format
-msgid "%(key)s is not a valid quota key. Valid options are: %(options)s."
-msgstr ""
-"%(key)s は有効なクォータキーではありません。有効なオプションは %(options)s で"
-"す。"
 
 #, python-format
 msgid "%(key)s must be an integer."
@@ -479,9 +473,6 @@ msgstr "要求されたイメージが見つかりません"
 msgid "Can not handle authentication request for %d credentials"
 msgstr "%d 認証情報に関する認証要求を処理できません"
 
-msgid "Can't detach root device volume"
-msgstr "ルートデバイスボリュームは切断することはできません"
-
 msgid "Can't resize a disk to 0 GB."
 msgstr "ディスクのサイズを 0 GB に変更することはできません。"
 
@@ -623,9 +614,6 @@ msgstr "名前が %(name)s のセルは既に存在します。"
 msgid ""
 "Change would make usage less than 0 for the following resources: %(unders)s"
 msgstr "変更によって、リソース %(unders)s の使用量が 0 未満になります"
-
-msgid "Claim pci failed."
-msgstr "PCI デバイスの要求に失敗しました。"
 
 #, python-format
 msgid "Class %(class_name)s could not be found: %(exception)s"
@@ -1570,9 +1558,6 @@ msgstr ""
 msgid "In ERROR state"
 msgstr "エラー状態です"
 
-msgid "In Use"
-msgstr "使用中"
-
 #, python-format
 msgid "In states %(vm_state)s/%(task_state)s, not RESIZED/None"
 msgstr "状態は %(vm_state)s/%(task_state)s です。RESIZED/None ではありません"
@@ -1690,10 +1675,6 @@ msgid "Instance %(uuid)s has no mapping to a cell."
 msgstr "インスタンス %(uuid)s にはセルに対するマッピングがありません。"
 
 #, python-format
-msgid "Instance %s is not attached."
-msgstr "インスタンス %s が接続されていません。"
-
-#, python-format
 msgid "Instance %s not found"
 msgstr "インスタンス %s が見つかりません"
 
@@ -1804,10 +1785,6 @@ msgstr ""
 #, python-format
 msgid "Invalid PCI alias definition: %(reason)s"
 msgstr "PCI エイリアス定義が無効です: %(reason)s"
-
-#, python-format
-msgid "Invalid PCI devices Whitelist config %(reason)s"
-msgstr "PCI デバイスのホワイトリスト設定が無効です: %(reason)s"
 
 #, python-format
 msgid "Invalid Regular Expression %s"
@@ -1923,8 +1900,8 @@ msgid "Invalid minDisk filter [%s]"
 msgstr "無効な minDisk フィルター [%s]"
 
 #, python-format
-msgid "Invalid min_ram filter [%s]"
-msgstr "無効な min_ram フィルター [%s]"
+msgid "Invalid minRam filter [%s]"
+msgstr "無効な minRam フィルター [%s]"
 
 msgid "Invalid name"
 msgstr "無効な名前"
@@ -2061,19 +2038,8 @@ msgstr "キーペア名に安全ではない文字が含まれています"
 msgid "Keypair name must be string and between 1 and 255 characters long"
 msgstr "キーペア名は 1 から 255 文字の長さの文字列でなければなりません"
 
-#, python-format
-msgid "Last %s nova syslog entries:-"
-msgstr "最後の %s nova syslog 項目:-"
-
-msgid "Limit"
-msgstr "上限値"
-
 msgid "Limits only supported from vCenter 6.0 and above"
 msgstr "上限が適用されるのは、vCenter 6.0 以降の場合のみです。"
-
-#, python-format
-msgid "Line %(linenum)d : %(line)s"
-msgstr "行 %(linenum)d : %(line)s"
 
 #, python-format
 msgid "Link Local address is not found.:%s"
@@ -2441,9 +2407,6 @@ msgstr "interface-id %s を持つデバイスが VM にありません"
 msgid "No disk at %(location)s"
 msgstr "%(location)s にディスクがありません"
 
-msgid "No errors in logfiles!"
-msgstr "ログファイル内にエラーはありません。"
-
 #, python-format
 msgid "No fixed IP addresses available for network: %(net)s"
 msgstr "ネットワーク %(net)s で使用可能な Fixed IP アドレスがありません。"
@@ -2512,9 +2475,6 @@ msgstr "ネットワークが定義されていません。"
 
 msgid "No networks found"
 msgstr "ネットワークが見つかりません"
-
-msgid "No nova entries in syslog!"
-msgstr "syslog 内に nova 項目がありません。"
 
 #, python-format
 msgid "No operating system found in %s"
@@ -2720,14 +2680,8 @@ msgstr "パス %s は LVM 論理ボリュームでなければなりません"
 msgid "Paused"
 msgstr "一時停止済み"
 
-msgid "Personality file content too long"
-msgstr "パーソナリティーファイルの内容が長すぎます"
-
 msgid "Personality file limit exceeded"
 msgstr "パーソナリティーファイル数の上限を超えました"
-
-msgid "Personality file path too long"
-msgstr "パーソナリティーファイルのパスが長すぎます"
 
 #, python-format
 msgid ""
@@ -2802,9 +2756,6 @@ msgstr "QEMU ゲストエージェントが有効になっていません"
 msgid "Quiescing is not supported in instance %(instance_id)s"
 msgstr "インスタンス %(instance_id)s を正常に終了することができません。"
 
-msgid "Quota"
-msgstr "クォータ"
-
 #, python-format
 msgid "Quota class %(class_name)s could not be found."
 msgstr "クォータクラス %(class_name)s が見つかりませんでした。"
@@ -2877,17 +2828,6 @@ msgid ""
 msgstr ""
 "%(resource)s のクォータ上限 %(limit)s は、%(maximum)s 以下でなければなりませ"
 "ん。"
-
-msgid "Quota limit must be -1 or greater."
-msgstr "クォータ上限は -1 以上の値でなければなりません。"
-
-#, python-format
-msgid "Quota limit must be greater than %s."
-msgstr "クォータ上限は %s より大きい値でなければなりません。"
-
-#, python-format
-msgid "Quota limit must be less than %s."
-msgstr "クォータ上限は %s より小さい値でなければなりません。"
 
 #, python-format
 msgid "Quota reservation %(uuid)s could not be found."
@@ -2982,9 +2922,6 @@ msgstr ""
 #, python-format
 msgid "Rescue device does not exist for instance %s"
 msgstr "インスタンス %s 用のレスキューデバイスが存在しません"
-
-msgid "Reserved"
-msgstr "予約済み"
 
 #, python-format
 msgid "Resize error: %(reason)s"
@@ -3186,9 +3123,6 @@ msgstr ""
 #, python-format
 msgid "Snapshot %(snapshot_id)s could not be found."
 msgstr "スナップショット %(snapshot_id)s が見つかりませんでした。"
-
-msgid "Some fields are invalid."
-msgstr "いくつかのフィールドが無効です。"
 
 msgid "Some required fields are missing"
 msgstr "いくつかの必須フィールドがありません。"
@@ -3406,9 +3340,6 @@ msgid ""
 msgstr ""
 "ボリュームにルートデバイス %s と同じデバイス名を割り当てることはできません"
 
-msgid "The volume was either invalid or not attached to the instance."
-msgstr "ボリュームが無効か、インスタンスに接続されていません。"
-
 #, python-format
 msgid ""
 "There are %(records)d records in the '%(table_name)s' table where the uuid "
@@ -3625,9 +3556,6 @@ msgstr "key_file %s が見つかりません"
 msgid "Unable to find root VBD/VDI for VM"
 msgstr "VM のルート VBD/VDI が見つかりません"
 
-msgid "Unable to find system log file!"
-msgstr "システムログファイルが見つかりません。"
-
 msgid "Unable to find volume"
 msgstr "ボリュームが見つかりません"
 
@@ -3829,15 +3757,6 @@ msgstr "shadow ファイルにユーザー %(username)s が見つかりません
 
 msgid "User data needs to be valid base 64."
 msgstr "ユーザーデータは有効な Base64 でなければなりません。"
-
-#, python-format
-msgid ""
-"User data too large. User data must be no larger than %(maxsize)s bytes once "
-"base64 encoded. Your data is %(length)d bytes"
-msgstr ""
-"ユーザーデータが長すぎます。Base64 エンコードの場合、ユーザーデータが "
-"%(maxsize)s バイトを超えることはできません。指定されたデータは %(length)d バ"
-"イトです。"
 
 msgid "User does not have admin privileges"
 msgstr "ユーザーに管理者権限がありません"
@@ -4154,10 +4073,6 @@ msgstr "インスタンスは電源オフになっています。休止できま
 msgid "instance_id %s could not be found as device id on any ports"
 msgstr "instance_id %s がデバイス ID に設定されたポートが見つかりませんでした"
 
-#, python-format
-msgid "invalid %(property)s %(attr)s"
-msgstr "%(property)s の %(attr)s が無効です"
-
 msgid "is_public must be a boolean"
 msgstr "is_public はブール値でなければなりません"
 
@@ -4222,15 +4137,6 @@ msgstr "ストレージプール %s に書き込み権限がありません"
 #, python-format
 msgid "not able to execute ssh command: %s"
 msgstr "ssh コマンドを実行できません: %s"
-
-msgid ""
-"nova-idmapshift is a tool that properly sets the ownership of a filesystem "
-"for use with linux user namespaces.  This tool can only be used with linux "
-"lxc containers.  See the man page for details."
-msgstr ""
-"nova-idmapshift は、Linux ユーザーの名前空間で使用可能なファイルシステムの所"
-"有者を適切に設定するツールです。このツールは Linux lxc コンテナーでしか使用で"
-"きません。詳細についてはメインページを参照してください。"
 
 msgid "old style configuration can use only dictionary or memcached backends"
 msgstr ""
@@ -4376,10 +4282,6 @@ msgid ""
 msgstr ""
 "ボリューム '%(vol)s' の状況は「使用中」でなければなりませんが、現在の状況は "
 "'%(status)s' です"
-
-#, python-format
-msgid "volume_id not found: %s"
-msgstr "volume_id が見つかりません: %s"
 
 #, python-format
 msgid "xenapi.fake does not have an implementation for %s"

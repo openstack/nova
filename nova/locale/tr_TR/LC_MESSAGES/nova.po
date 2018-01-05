@@ -8,9 +8,9 @@
 # Andreas Jaeger <jaegerandi@gmail.com>, 2016. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: nova 16.0.0.0b4.dev149\n"
+"Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2017-08-10 04:03+0000\n"
+"POT-Creation-Date: 2018-01-03 23:41+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -36,11 +36,6 @@ msgid ""
 msgstr ""
 "%(binary)s ilkesel olarak izin verilmeyen şekilde doğrudan veri tabanı "
 "erişimine kalkıştı"
-
-#, python-format
-msgid "%(key)s is not a valid quota key. Valid options are: %(options)s."
-msgstr ""
-"%(key)s geçerli bir kota anahtarı değil. Geçerli seçenekler: %(options)s."
 
 #, python-format
 msgid "%(key)s must be an integer."
@@ -373,9 +368,6 @@ msgstr "İstenilen imaj dosyası bulunamadı"
 msgid "Can not handle authentication request for %d credentials"
 msgstr "%d kimlik bilgileri için kimlik doğrulama isteği ele alınamadı"
 
-msgid "Can't detach root device volume"
-msgstr "Kök aygıt mantıksal sürücüsü ayrılamaz"
-
 msgid "Can't resize a disk to 0 GB."
 msgstr "Bir disk 0 GB'ye boyutlandırılamaz."
 
@@ -475,9 +467,6 @@ msgstr "%(name)s ismine sahip hücre zaten mevcut."
 msgid ""
 "Change would make usage less than 0 for the following resources: %(unders)s"
 msgstr "Değişiklik şu kaynaklar için kullanımı 0 altında düşürür: %(unders)s"
-
-msgid "Claim pci failed."
-msgstr "Pci talebi başarısız."
 
 #, python-format
 msgid "Class %(class_name)s could not be found: %(exception)s"
@@ -1227,9 +1216,6 @@ msgstr ""
 msgid "In ERROR state"
 msgstr "HATA durumunda"
 
-msgid "In Use"
-msgstr "Kullanımda"
-
 #, python-format
 msgid "In states %(vm_state)s/%(task_state)s, not RESIZED/None"
 msgstr "%(vm_state)s/%(task_state)s durumu içinde, RESIZED/None değil"
@@ -1318,10 +1304,6 @@ msgstr "%(server_id)s sunucusu '%(action)s' eylemi için geçersiz bir durumda"
 #, python-format
 msgid "Instance %(uuid)s has no mapping to a cell."
 msgstr "%(uuid)s sunucusunun bir hücreye eşlemi yok."
-
-#, python-format
-msgid "Instance %s is not attached."
-msgstr "%s sunucusu eklenmemiş."
 
 #, python-format
 msgid "Instance %s not found"
@@ -1417,10 +1399,6 @@ msgstr ""
 #, python-format
 msgid "Invalid PCI alias definition: %(reason)s"
 msgstr "Geçersiz PCI rumuzu tanımı: %(reason)s"
-
-#, python-format
-msgid "Invalid PCI devices Whitelist config %(reason)s"
-msgstr "Geçersiz PCI aygıtı Beyazlistesi yapılandırması %(reason)s"
 
 #, python-format
 msgid "Invalid Regular Expression %s"
@@ -1537,8 +1515,8 @@ msgid "Invalid minDisk filter [%s]"
 msgstr "Geçersiz minDisk filtresi [%s]"
 
 #, python-format
-msgid "Invalid min_ram filter [%s]"
-msgstr "Geçersiz min_ram filtresi [%s]"
+msgid "Invalid minRam filter [%s]"
+msgstr "geçersiz minRam filtresi [%s]"
 
 msgid "Invalid name"
 msgstr "Geçersiz isim"
@@ -1673,17 +1651,6 @@ msgid "Keypair name must be string and between 1 and 255 characters long"
 msgstr ""
 "Anahtar çifti adı karakter dizisi ve 1 ve 255 karakter uzunluğu arasında "
 "olmalıdır"
-
-#, python-format
-msgid "Last %s nova syslog entries:-"
-msgstr "Son %s nova syslog girdisi:-"
-
-msgid "Limit"
-msgstr "Limit"
-
-#, python-format
-msgid "Line %(linenum)d : %(line)s"
-msgstr "Satır %(linenum)d : %(line)s"
 
 #, python-format
 msgid "Link Local address is not found.:%s"
@@ -1970,9 +1937,6 @@ msgstr "VM'de interface-id %s'a ait bir aygıt yok"
 msgid "No disk at %(location)s"
 msgstr "%(location)s'da disk yok."
 
-msgid "No errors in logfiles!"
-msgstr "Kayıt dosyalarında hata yok!"
-
 #, python-format
 msgid "No fixed IP addresses available for network: %(net)s"
 msgstr "Şu ağ için kullanılabilir sabit UP adresleri yok: %(net)s"
@@ -2020,9 +1984,6 @@ msgstr "Tanımlı bir ağ yok."
 
 msgid "No networks found"
 msgstr "Ağ bulunamadı"
-
-msgid "No nova entries in syslog!"
-msgstr "Syslog'da nova girdisi yok!"
 
 #, python-format
 msgid "No operating system found in %s"
@@ -2186,14 +2147,8 @@ msgstr "Yol %s LVM mantıksal sürücüsü olmalı"
 msgid "Paused"
 msgstr "Durduruldu"
 
-msgid "Personality file content too long"
-msgstr "Kişisel dosya içeriği çok uzun"
-
 msgid "Personality file limit exceeded"
 msgstr "Kişisel dosya limiti aşıldı"
-
-msgid "Personality file path too long"
-msgstr "Kişisel dosya yolu çok uzun"
 
 #, python-format
 msgid "Physical network is missing for network %(network_uuid)s"
@@ -2247,9 +2202,6 @@ msgstr "Sağlanan watchdog eylemi (%(action)s) desteklenmiyor."
 
 msgid "QEMU guest agent is not enabled"
 msgstr "QEMU konuk ajan etkin değil"
-
-msgid "Quota"
-msgstr "Kota"
 
 #, python-format
 msgid "Quota class %(class_name)s could not be found."
@@ -2313,17 +2265,6 @@ msgid ""
 msgstr ""
 "%(resource)s için %(limit)s kota sınırı %(maximum)s den küçük ya da eşit "
 "olmalı."
-
-msgid "Quota limit must be -1 or greater."
-msgstr "Kota sınırı -1 ya da da ha büyük olmalı."
-
-#, python-format
-msgid "Quota limit must be greater than %s."
-msgstr "Kota sınırı %s'den büyük olmalı."
-
-#, python-format
-msgid "Quota limit must be less than %s."
-msgstr "Kota sınırı %s'den küçük olmalı."
 
 #, python-format
 msgid "Quota reservation %(uuid)s could not be found."
@@ -2390,9 +2331,6 @@ msgstr ""
 #, python-format
 msgid "Rescue device does not exist for instance %s"
 msgstr "%s sunucusu için kurtarma aygıtı mevcut değil"
-
-msgid "Reserved"
-msgstr "Ayrılmış"
 
 #, python-format
 msgid "Resize error: %(reason)s"
@@ -2567,9 +2505,6 @@ msgstr ""
 #, python-format
 msgid "Snapshot %(snapshot_id)s could not be found."
 msgstr "%(snapshot_id)s sistem anlık görüntüsü bulunamadı."
-
-msgid "Some fields are invalid."
-msgstr "Bazı alanlar geçersiz."
 
 msgid "Some required fields are missing"
 msgstr "Bazı gerekli alanlar eksik"
@@ -2749,9 +2684,6 @@ msgid ""
 "The volume cannot be assigned the same device name as the root device %s"
 msgstr "Mantıksal sürücü kök aygıt %s ile aynı aygıt ismiyle atanamaz"
 
-msgid "The volume was either invalid or not attached to the instance."
-msgstr "Mantıksal sürücü ya geçersizdi ya da sunucuya eklenmemiş."
-
 #, python-format
 msgid ""
 "There are %(records)d records in the '%(table_name)s' table where the uuid "
@@ -2901,9 +2833,6 @@ msgstr "key_file bulunamadı: %s"
 
 msgid "Unable to find root VBD/VDI for VM"
 msgstr "VM için kök VBD/VDI bulunamadı"
-
-msgid "Unable to find system log file!"
-msgstr "Sistem kayıt dosyası bulunamıyor!"
 
 msgid "Unable to find volume"
 msgstr "Mantıksal sürücü bulunamadı"
@@ -3084,14 +3013,6 @@ msgstr "Kullanıcı %(username)s gölge dosyasında bulunamadı."
 
 msgid "User data needs to be valid base 64."
 msgstr "Kullanıcı verisi geçerli base 64 olmalıdır."
-
-#, python-format
-msgid ""
-"User data too large. User data must be no larger than %(maxsize)s bytes once "
-"base64 encoded. Your data is %(length)d bytes"
-msgstr ""
-"Kullanıcı verisi çok büyük. Kullanıcı verisi base64 kodlandıktan sonra "
-"%(maxsize)s bayttan büyük olmamalı. Sizin veriniz %(length)d bayt"
 
 msgid "User does not have admin privileges"
 msgstr "Kullanıcı yönetici ayrıcalıklarına sahip değil"
@@ -3520,10 +3441,6 @@ msgid ""
 msgstr ""
 "mantıksal sürücü '%(vol)s' durumu 'kullanımda' olmalı. Şu an '%(status)s' "
 "durumunda"
-
-#, python-format
-msgid "volume_id not found: %s"
-msgstr "volume_id bulunamadı: %s"
 
 #, python-format
 msgid "xenapi.fake does not have an implementation for %s"
