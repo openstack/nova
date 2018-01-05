@@ -797,10 +797,11 @@ def claim_resources(ctx, client, spec_obj, instance_uuid, alloc_req,
             user_id, allocation_request_version=allocation_request_version)
 
 
-def remove_allocation_from_compute(instance, compute_node_uuid, reportclient,
-                                   flavor=None):
+def remove_allocation_from_compute(context, instance, compute_node_uuid,
+                                   reportclient, flavor=None):
     """Removes the instance allocation from the compute host.
 
+    :param context: The request context
     :param instance: the instance object owning the allocation
     :param compute_node_uuid: the UUID of the compute node where the allocation
                               needs to be removed
@@ -817,5 +818,5 @@ def remove_allocation_from_compute(instance, compute_node_uuid, reportclient,
 
     my_resources = resources_from_flavor(instance, flavor)
     return reportclient.remove_provider_from_instance_allocation(
-        instance.uuid, compute_node_uuid, instance.user_id,
+        context, instance.uuid, compute_node_uuid, instance.user_id,
         instance.project_id, my_resources)

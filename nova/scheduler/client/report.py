@@ -1054,9 +1054,10 @@ class SchedulerReportClient(object):
             self._delete_inventory(context, rp_uuid)
 
     @safe_connect
-    def _ensure_traits(self, traits):
+    def _ensure_traits(self, context, traits):
         """Make sure all specified traits exist in the placement service.
 
+        :param context: The security context
         :param traits: Iterable of trait strings to ensure exist.
         :raises: TraitCreationFailed if traits contains a trait that did not
                  exist in placement, and couldn't be created.  When this
@@ -1082,7 +1083,8 @@ class SchedulerReportClient(object):
             # Might be neat to have a batch create.  But creating multiple
             # traits will generally happen once, at initial startup, if at all.
             for trait in traits_to_create:
-                resp = self.put('/traits/' + trait, None, version='1.6')
+                resp = self.put('/traits/' + trait, None, version='1.6',
+                                global_request_id=context.global_id)
                 if not resp:
                     raise exception.TraitCreationFailed(name=trait,
                                                         error=resp.text)
@@ -1100,11 +1102,12 @@ class SchedulerReportClient(object):
         raise exception.TraitRetrievalFailed(error=resp.text)
 
     @safe_connect
-    def set_traits_for_provider(self, rp_uuid, traits):
+    def set_traits_for_provider(self, context, rp_uuid, traits):
         """Replace a provider's traits with those specified.
 
         The provider must exist - this method does not attempt to create it.
 
+        :param context: The security context
         :param rp_uuid: The UUID of the provider whose traits are to be updated
         :param traits: Iterable of traits to set on the provider
         :raises: ResourceProviderUpdateConflict if the provider's generation
@@ -1122,7 +1125,7 @@ class SchedulerReportClient(object):
         if not self._provider_tree.have_traits_changed(rp_uuid, traits):
             return
 
-        self._ensure_traits(traits)
+        self._ensure_traits(context, traits)
 
         url = '/resource_providers/%s/traits' % rp_uuid
         # NOTE(efried): Don't use the DELETE API when traits is empty, because
@@ -1134,7 +1137,8 @@ class SchedulerReportClient(object):
             'resource_provider_generation': generation,
             'traits': traits,
         }
-        resp = self.put(url, payload, version='1.6')
+        resp = self.put(url, payload, version='1.6',
+                        global_request_id=context.global_id)
 
         if resp.status_code == 200:
             json = resp.json()
@@ -1165,11 +1169,12 @@ class SchedulerReportClient(object):
         raise exception.ResourceProviderUpdateFailed(url=url, error=resp.text)
 
     @safe_connect
-    def set_aggregates_for_provider(self, rp_uuid, aggregates):
+    def set_aggregates_for_provider(self, context, rp_uuid, aggregates):
         """Replace a provider's aggregates with those specified.
 
         The provider must exist - this method does not attempt to create it.
 
+        :param context: The security context
         :param rp_uuid: The UUID of the provider whose aggregates are to be
                         updated.
         :param aggregates: Iterable of aggregates to set on the provider.
@@ -1178,7 +1183,8 @@ class SchedulerReportClient(object):
         # TODO(efried): Handle generation conflicts when supported by placement
         url = '/resource_providers/%s/aggregates' % rp_uuid
         aggregates = list(aggregates) if aggregates else []
-        resp = self.put(url, aggregates, version='1.1')
+        resp = self.put(url, aggregates, version='1.1',
+                        global_request_id=context.global_id)
 
         if resp.status_code == 200:
             placement_aggs = resp.json()['aggregates']
@@ -1268,7 +1274,7 @@ class SchedulerReportClient(object):
         return allocations.get(
             rp_uuid, {}).get('resources', {})
 
-    def _allocate_for_instance(self, rp_uuid, instance):
+    def _allocate_for_instance(self, context, rp_uuid, instance):
         my_allocations = _instance_to_allocations_dict(instance)
         current_allocations = self.get_allocations_for_consumer_by_provider(
             rp_uuid, instance.uuid)
@@ -1282,8 +1288,9 @@ class SchedulerReportClient(object):
         LOG.debug('Sending allocation for instance %s',
                   my_allocations,
                   instance=instance)
-        res = self.put_allocations(rp_uuid, instance.uuid, my_allocations,
-                                   instance.project_id, instance.user_id)
+        res = self.put_allocations(context, rp_uuid, instance.uuid,
+                                   my_allocations, instance.project_id,
+                                   instance.user_id)
         if res:
             LOG.info('Submitted allocation for instance', instance=instance)
 
@@ -1383,8 +1390,8 @@ class SchedulerReportClient(object):
         return r.status_code == 204
 
     @safe_connect
-    def remove_provider_from_instance_allocation(self, consumer_uuid, rp_uuid,
-                                                 user_id, project_id,
+    def remove_provider_from_instance_allocation(self, context, consumer_uuid,
+                                                 rp_uuid, user_id, project_id,
                                                  resources):
         """Grabs an allocation for a particular consumer UUID, strips parts of
         the allocation that refer to a supplied resource provider UUID, and
@@ -1400,6 +1407,7 @@ class SchedulerReportClient(object):
         subtract resources from the single allocation to ensure we do not
         exceed the reserved or max_unit amounts for the resource on the host.
 
+        :param context: The security context
         :param consumer_uuid: The instance/consumer UUID
         :param rp_uuid: The UUID of the provider whose resources we wish to
                         remove from the consumer's allocation
@@ -1472,7 +1480,8 @@ class SchedulerReportClient(object):
         LOG.debug("Sending updated allocation %s for instance %s after "
                   "removing resources for %s.",
                   new_allocs, consumer_uuid, rp_uuid)
-        r = self.put(url, payload, version='1.10')
+        r = self.put(url, payload, version='1.10',
+                     global_request_id=context.global_id)
         if r.status_code != 204:
             LOG.warning("Failed to save allocation for %s. Got HTTP %s: %s",
                         consumer_uuid, r.status_code, r.text)
@@ -1548,8 +1557,8 @@ class SchedulerReportClient(object):
 
     @safe_connect
     @retries
-    def put_allocations(self, rp_uuid, consumer_uuid, alloc_data, project_id,
-                        user_id):
+    def put_allocations(self, context, rp_uuid, consumer_uuid, alloc_data,
+                        project_id, user_id):
         """Creates allocation records for the supplied instance UUID against
         the supplied resource provider.
 
@@ -1557,6 +1566,7 @@ class SchedulerReportClient(object):
               Once shared storage and things like NUMA allocations are a
               reality, this will change to allocate against multiple providers.
 
+        :param context: The security context
         :param rp_uuid: The UUID of the resource provider to allocate against.
         :param consumer_uuid: The instance's UUID.
         :param alloc_data: Dict, keyed by resource class, of amounts to
@@ -1580,7 +1590,8 @@ class SchedulerReportClient(object):
             'user_id': user_id,
         }
         url = '/allocations/%s' % consumer_uuid
-        r = self.put(url, payload, version='1.8')
+        r = self.put(url, payload, version='1.8',
+                     global_request_id=context.global_id)
         if r.status_code != 204:
             # NOTE(jaypipes): Yes, it sucks doing string comparison like this
             # but we have no error codes, only error messages.
@@ -1619,7 +1630,7 @@ class SchedulerReportClient(object):
     def update_instance_allocation(self, context, compute_node, instance,
                                    sign):
         if sign > 0:
-            self._allocate_for_instance(compute_node.uuid, instance)
+            self._allocate_for_instance(context, compute_node.uuid, instance)
         else:
             self.delete_allocation_for_instance(context, instance.uuid)
 

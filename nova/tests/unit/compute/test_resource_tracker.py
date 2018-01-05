@@ -1315,6 +1315,7 @@ class TestUpdateComputeNode(BaseTestCase):
 
         self.rt._update(mock.sentinel.ctx, new_compute)
         rc.set_traits_for_provider.assert_called_once_with(
+            mock.sentinel.ctx,
             new_compute.uuid,
             mock.sentinel.traits,
         )
@@ -2842,13 +2843,15 @@ class TestUpdateUsageFromInstance(BaseTestCase):
         mock_resource_from_flavor.return_value = mock_resource
         instance = _INSTANCE_FIXTURES[0].obj_clone()
         instance.uuid = uuids.inst0
+        ctxt = context.get_admin_context()
 
-        self.rt.delete_allocation_for_evacuated_instance(instance, _NODENAME)
+        self.rt.delete_allocation_for_evacuated_instance(
+            ctxt, instance, _NODENAME)
 
         rc = self.rt.reportclient
         mock_remove_allocation = rc.remove_provider_from_instance_allocation
         mock_remove_allocation.assert_called_once_with(
-            instance.uuid, self.rt.compute_nodes[_NODENAME].uuid,
+            ctxt, instance.uuid, self.rt.compute_nodes[_NODENAME].uuid,
             instance.user_id, instance.project_id, mock_resource)
 
 
