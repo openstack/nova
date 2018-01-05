@@ -1422,7 +1422,6 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.ks_adap_mock.get.assert_called_once_with(
             expected_url, raise_exc=False, microversion='1.10')
         self.assertIsNone(res[0])
-        self.assertIsNone(res[0])
 
     def test_get_resource_provider_found(self):
         # Ensure _get_resource_provider() returns a dict of resource provider
