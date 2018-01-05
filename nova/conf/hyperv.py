@@ -46,7 +46,7 @@ Possible values:
 Enable instance metrics collection
 
 Enables metrics collections for an instance by using Hyper-V's
-metric APIs. Collected data can by retrieved by other apps and
+metric APIs. Collected data can be retrieved by other apps and
 services, e.g.: Ceilometer.
 """),
     cfg.StrOpt('instances_path_share',
