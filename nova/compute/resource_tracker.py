@@ -894,7 +894,7 @@ class ResourceTracker(object):
             # that the resource provider exists in the tree and has had its
             # cached traits refreshed.
             self.reportclient.set_traits_for_provider(
-                compute_node.uuid, traits)
+                context, compute_node.uuid, traits)
 
         if self.pci_tracker:
             self.pci_tracker.save(context)
@@ -1316,27 +1316,30 @@ class ResourceTracker(object):
                           "host that might need to be removed: %s.",
                           instance_uuid, instance.host, instance.node, alloc)
 
-    def delete_allocation_for_evacuated_instance(self, instance, node,
+    def delete_allocation_for_evacuated_instance(self, context, instance, node,
                                                  node_type='source'):
         self._delete_allocation_for_moved_instance(
-            instance, node, 'evacuated', node_type)
+            context, instance, node, 'evacuated', node_type)
 
-    def delete_allocation_for_migrated_instance(self, instance, node):
-        self._delete_allocation_for_moved_instance(instance, node, 'migrated')
+    def delete_allocation_for_migrated_instance(self, context, instance, node):
+        self._delete_allocation_for_moved_instance(context, instance, node,
+                                                   'migrated')
 
     def _delete_allocation_for_moved_instance(
-            self, instance, node, move_type, node_type='source'):
+            self, context, instance, node, move_type, node_type='source'):
         # Clean up the instance allocation from this node in placement
         cn_uuid = self.compute_nodes[node].uuid
         if not scheduler_utils.remove_allocation_from_compute(
-                instance, cn_uuid, self.reportclient):
+                context, instance, cn_uuid, self.reportclient):
             LOG.error("Failed to clean allocation of %s "
                       "instance on the %s node %s",
                       move_type, node_type, cn_uuid, instance=instance)
 
-    def delete_allocation_for_failed_resize(self, instance, node, flavor):
+    def delete_allocation_for_failed_resize(self, context, instance, node,
+                                            flavor):
         """Delete instance allocations for the node during a failed resize
 
+        :param context: The request context.
         :param instance: The instance being resized/migrated.
         :param node: The node provider on which the instance should have
             allocations to remove. If this is a resize to the same host, then
@@ -1345,7 +1348,7 @@ class ResourceTracker(object):
         """
         cn = self.compute_nodes[node]
         if not scheduler_utils.remove_allocation_from_compute(
-                instance, cn.uuid, self.reportclient, flavor):
+                context, instance, cn.uuid, self.reportclient, flavor):
             if instance.instance_type_id == flavor.id:
                 operation = 'migration'
             else:
