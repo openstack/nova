@@ -382,7 +382,7 @@ class RequestSpec(base.NovaObject):
     @classmethod
     def from_components(cls, context, instance_uuid, image, flavor,
             numa_topology, pci_requests, filter_properties, instance_group,
-            availability_zone, security_groups=None):
+            availability_zone, security_groups=None, project_id=None):
         """Returns a new RequestSpec object hydrated by various components.
 
         This helper is useful in creating the RequestSpec from the various
@@ -401,6 +401,8 @@ class RequestSpec(base.NovaObject):
         :param availability_zone: an availability_zone string
         :param security_groups: A SecurityGroupList object. If None, don't
                                 set security_groups on the resulting object.
+        :param project_id: The project_id for the requestspec (should match
+                           the instance project_id).
         """
         spec_obj = cls(context)
         spec_obj.num_instances = 1
@@ -408,7 +410,7 @@ class RequestSpec(base.NovaObject):
         spec_obj.instance_group = instance_group
         if spec_obj.instance_group is None and filter_properties:
             spec_obj._populate_group_info(filter_properties)
-        spec_obj.project_id = context.project_id
+        spec_obj.project_id = project_id or context.project_id
         spec_obj._image_meta_from_image(image)
         spec_obj._from_flavor(flavor)
         spec_obj._from_instance_pci_requests(pci_requests)
@@ -582,7 +584,8 @@ def _create_minimal_request_spec(context, instance):
         context, instance.uuid, image,
         instance.flavor, instance.numa_topology,
         instance.pci_requests,
-        {}, None, instance.availability_zone
+        {}, None, instance.availability_zone,
+        project_id=instance.project_id
     )
     scheduler_utils.setup_instance_group(context, request_spec)
     request_spec.create()
