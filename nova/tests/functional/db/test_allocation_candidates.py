@@ -66,9 +66,12 @@ class ProviderDBBase(test.NoDBTestCase):
         # _validate_allocation_requests to make failure results more readable.
         self.rp_uuid_to_name = {}
 
-    def _create_provider(self, name, *aggs):
+    def _create_provider(self, name, *aggs, **kwargs):
+        parent = kwargs.get('parent')
         rp = rp_obj.ResourceProvider(self.ctx, name=name,
                                      uuid=getattr(uuids, name))
+        if parent:
+            rp.parent_provider_uuid = parent
         rp.create()
         if aggs:
             rp.set_aggregates(aggs)
@@ -1366,3 +1369,82 @@ class AllocationCandidatesTestCase(ProviderDBBase):
         ]
 
         self._validate_allocation_requests(expected, alloc_cands)
+
+    def test_simple_tree_of_providers(self):
+        """Create a hierarchy of resource providers with various inventories on
+        the different levels of provider and see that allocation candidates
+        return information on all relevant nodes in the tree.
+        """
+        # We are setting up a tree of providers that looks like this:
+        #
+        #                  compute node (cn)
+        #                 /                 \
+        #                /                   \
+        #           numa cell 0         numa cell 1
+        #               |                    |
+        #               |                    |
+        #              pf 0                 pf 1
+        cn = self._create_provider('cn')
+
+        numa_cell0 = self._create_provider('numa_cell0', parent=cn.uuid)
+        numa_cell1 = self._create_provider('numa_cell1', parent=cn.uuid)
+
+        pf0 = self._create_provider('pf0', parent=numa_cell0.uuid)
+        pf1 = self._create_provider('pf1', parent=numa_cell1.uuid)
+
+        # Create some VCPU and MEMORY_MB inventory on the compute node, and
+        # some inventory of SRIOV_NET_VFs on each physical function. No
+        # inventory for the NUMA cell providers.
+        _add_inventory(cn, fields.ResourceClass.VCPU, 16)
+        _add_inventory(cn, fields.ResourceClass.MEMORY_MB, 32768)
+
+        for pf in (pf0, pf1):
+            _add_inventory(pf, fields.ResourceClass.SRIOV_NET_VF, 8)
+
+        alloc_cands = self._get_allocation_candidates([
+            placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    fields.ResourceClass.VCPU: 2,
+                    fields.ResourceClass.MEMORY_MB: 1024,
+                    fields.ResourceClass.SRIOV_NET_VF: 1,
+                }
+            )]
+        )
+
+        # TODO(jaypipes): This should be the following once nested providers
+        # are handled by allocation candidates:
+        # expected = [
+        #    [('cn', fields.ResourceClass.VCPU, 2),
+        #     ('cn', fields.ResourceClass.MEMORY_MB, 1024),
+        #     ('pf0', fields.ResourceClass.SRIOV_NET_VF, 1)],
+        #    [('cn', fields.ResourceClass.VCPU, 2),
+        #     ('cn', fields.ResourceClass.MEMORY_MB, 1024),
+        #     ('pf1', fields.ResourceClass.SRIOV_NET_VF, 1)],
+        # ]
+        # self._validate_allocation_requests(expected, alloc_cands)
+        self._validate_allocation_requests([], alloc_cands)
+
+        # We should get the "intermediate nodes" of the tree in the
+        # provider_summaries section that represent the NUMA cells that are
+        # parents of the PFs. Even though the NUMA cell providers aren't
+        # involved in any allocation, they are part of the tree of resource
+        # providers involved in the allocation requests and therefore should be
+        # returned in the provider_summaries section.
+        # TODO(jaypipes): This should be the following once nested providers
+        # are handled by allocation candidates:
+        # expected = {
+        #     'cn': set([
+        #         (fields.ResourceClass.VCPU, 16, 0),
+        #         (fields.ResourceClass.MEMORY_MB, 32768, 0),
+        #      ]),
+        #      'pf0': set([
+        #         (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
+        #      ]),
+        #      'pf1': set([
+        #         (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
+        #      ]),
+        # }
+        #                          uuids.numa_cell0, uuids.numa_cell1])
+        # self._validate_provider_summary_resources(expected, alloc_cands)
+        self._validate_provider_summary_resources({}, alloc_cands)
