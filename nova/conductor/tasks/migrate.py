@@ -64,6 +64,7 @@ class MigrationTask(base.TaskBase):
             self.request_spec.requested_destination = objects.Destination(
                 cell=instance_mapping.cell_mapping)
 
+        self.request_spec.ensure_project_id(self.instance)
         hosts = self.scheduler_client.select_destinations(
             self.context, self.request_spec, [self.instance.uuid])
         host_state = hosts[0]

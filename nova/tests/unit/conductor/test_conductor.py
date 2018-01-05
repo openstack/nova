@@ -952,6 +952,10 @@ class _BaseTaskTestCase(object):
             from_primitives.return_value = fake_spec
             sched_instances.return_value = [host]
             self.conductor.unshelve_instance(self.context, instance, fake_spec)
+            # The fake_spec already has a project_id set which doesn't match
+            # the instance.project_id so the spec's project_id won't be
+            # overridden using the instance.project_id.
+            self.assertNotEqual(fake_spec.project_id, instance.project_id)
             reset_forced_destinations.assert_called_once_with()
             from_primitives.assert_called_once_with(self.context, request_spec,
                     filter_properties)
@@ -1226,6 +1230,7 @@ class _BaseTaskTestCase(object):
             rebuild_mock.assert_called_once_with(self.context,
                                             instance=inst_obj,
                                             **compute_args)
+            self.assertEqual(inst_obj.project_id, fake_spec.project_id)
         self.assertEqual('compute.instance.rebuild.scheduled',
                          fake_notifier.NOTIFICATIONS[0].event_type)
 
@@ -2120,7 +2125,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             flavor=flavor,
             availability_zone=None,
             pci_requests=None,
-            numa_topology=None)
+            numa_topology=None,
+            project_id=self.context.project_id)
         resvs = 'fake-resvs'
         image = 'fake-image'
         fake_spec = objects.RequestSpec(image=objects.ImageMeta())
@@ -2143,6 +2149,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                           True, None)
         metadata_mock.assert_called_with({})
         sig_mock.assert_called_once_with(self.context, fake_spec)
+        self.assertEqual(inst_obj.project_id, fake_spec.project_id)
         notify_mock.assert_called_once_with(self.context, inst_obj.uuid,
                                               'migrate_server', updates,
                                               exc_info, legacy_request_spec)
@@ -2170,7 +2177,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             flavor=flavor,
             numa_topology=None,
             pci_requests=None,
-            availability_zone=None)
+            availability_zone=None,
+            project_id=self.context.project_id)
         image = 'fake-image'
         resvs = 'fake-resvs'
 
@@ -2194,6 +2202,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                            True, None)
         metadata_mock.assert_called_with({})
         sig_mock.assert_called_once_with(self.context, fake_spec)
+        self.assertEqual(inst_obj.project_id, fake_spec.project_id)
         notify_mock.assert_called_once_with(self.context, inst_obj.uuid,
                                             'migrate_server', updates,
                                             exc_info, legacy_request_spec)
@@ -2295,7 +2304,8 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             flavor=flavor,
             availability_zone=None,
             pci_requests=None,
-            numa_topology=None)
+            numa_topology=None,
+            project_id=self.context.project_id)
         image = 'fake-image'
         resvs = 'fake-resvs'
         fake_spec = objects.RequestSpec(image=objects.ImageMeta())
@@ -2326,6 +2336,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         metadata_mock.assert_called_with({})
         sig_mock.assert_called_once_with(self.context, fake_spec)
+        self.assertEqual(inst_obj.project_id, fake_spec.project_id)
         select_dest_mock.assert_called_once_with(
             self.context, fake_spec, [inst_obj.uuid])
         prep_resize_mock.assert_called_once_with(
