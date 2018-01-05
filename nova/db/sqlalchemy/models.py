@@ -1599,6 +1599,7 @@ class ConsoleAuthToken(BASE, NovaBase):
     internal_access_path = Column(String(255))
     instance_uuid = Column(String(36), nullable=False)
     expires = Column(Integer, nullable=False)
+    access_url_base = Column(String(255))
 
     instance = orm.relationship(
         "Instance",
