@@ -1232,7 +1232,7 @@ class ResourceTracker(object):
         # always creates allocations for an instance
         known_instances = set(self.tracked_instances.keys())
         allocations = self.reportclient.get_allocations_for_resource_provider(
-                cn.uuid) or {}
+                context, cn.uuid) or {}
         read_deleted_context = context.elevated(read_deleted='yes')
         for consumer_uuid, alloc in allocations.items():
             if consumer_uuid in known_instances:
