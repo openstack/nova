@@ -30,6 +30,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - resources: resources_query_required
+  - limit: allocation_candidates_limit
 
 Response (microversions 1.12 - )
 --------------------------------

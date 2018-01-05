@@ -42,6 +42,14 @@ trait_name:
     The name of a trait.
 
 # variables in query
+allocation_candidates_limit:
+  type: integer
+  in: query
+  required: false
+  min_version: 1.16
+  description: >
+    A positive integer used to limit the maximum number of allocation
+    candidates returned in the response.
 member_of:
   type: string
   in: query

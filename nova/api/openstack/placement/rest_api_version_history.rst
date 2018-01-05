@@ -207,3 +207,10 @@ actual last modified time of the most recently modified associated database
 entity or the current time if there is no direct mapping to the database. In
 addition, 'cache-control: no-cache' headers are added where the 'last-modified'
 header has been added to prevent inadvertent caching of resources.
+
+1.16 Limit allocation candidates
+--------------------------------
+
+Add support for a ``limit`` query parameter when making a
+``GET /allocation_candidates`` request. The parameter accepts an integer
+value, `N`, which limits the maximum number of candidates returned.

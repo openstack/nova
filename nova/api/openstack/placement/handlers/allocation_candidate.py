@@ -194,12 +194,21 @@ def list_allocation_candidates(req):
     """
     context = req.environ['placement.context']
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
-    util.validate_query_params(req, schema.GET_SCHEMA_1_10)
+    get_schema = schema.GET_SCHEMA_1_10
+    if want_version.matches((1, 16)):
+        get_schema = schema.GET_SCHEMA_1_16
+    util.validate_query_params(req, get_schema)
 
     requests = util.parse_qs_request_groups(req.GET)
+    limit = req.GET.getall('limit')
+    # JSONschema has already confirmed that limit has the form
+    # of an integer.
+    if limit:
+        limit = int(limit[0])
 
     try:
-        cands = rp_obj.AllocationCandidates.get_by_requests(context, requests)
+        cands = rp_obj.AllocationCandidates.get_by_requests(context, requests,
+                                                            limit)
     except exception.ResourceClassNotFound as exc:
         raise webob.exc.HTTPBadRequest(
             _('Invalid resource class in resources parameter: %(error)s') %

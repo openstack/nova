@@ -43,6 +43,42 @@ tests:
   response_strings:
       - Invalid resource class in resources parameter
 
+- name: get bad limit microversion
+  GET: /allocation_candidates?resources=VCPU:1&limit=5
+  request_headers:
+      openstack-api-version: placement 1.15
+  status: 400
+  response_strings:
+      - Invalid query string parameters
+      - "'limit' was unexpected"
+
+- name: get bad limit type
+  GET: /allocation_candidates?resources=VCPU:1&limit=cow
+  request_headers:
+      openstack-api-version: placement 1.16
+  status: 400
+  response_strings:
+      - Invalid query string parameters
+      - "Failed validating 'pattern'"
+
+- name: get bad limit value negative
+  GET: /allocation_candidates?resources=VCPU:1&limit=-99
+  request_headers:
+      openstack-api-version: placement 1.16
+  status: 400
+  response_strings:
+      - Invalid query string parameters
+      - "Failed validating 'pattern'"
+
+- name: get bad limit value zero
+  GET: /allocation_candidates?resources=VCPU:1&limit=0
+  request_headers:
+      openstack-api-version: placement 1.16
+  status: 400
+  response_strings:
+      - Invalid query string parameters
+      - "Failed validating 'pattern'"
+
 - name: get allocation candidates no allocations yet
   GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100
   status: 200
@@ -126,3 +162,11 @@ tests:
       cache-control: no-cache
       # Does last-modified look like a legit timestamp?
       last-modified:  /^\w+, \d+ \w+ \d{4} [\d:]+ GMT$/
+
+- name: get allocation candidates with limit
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&limit=1
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.16
+  response_json_paths:
+      $.allocation_requests.`len`: 1

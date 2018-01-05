@@ -335,12 +335,13 @@ class AllocationCandidatesTestCase(ProviderDBBase):
         # _validate_allocation_requests to make failure results more readable.
         self.rp_uuid_to_name = {}
 
-    def _get_allocation_candidates(self, requests=None):
+    def _get_allocation_candidates(self, requests=None, limit=None):
         if requests is None:
             requests = [placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources)]
-        return rp_obj.AllocationCandidates.get_by_requests(self.ctx, requests)
+        return rp_obj.AllocationCandidates.get_by_requests(self.ctx, requests,
+                                                           limit)
 
     def _validate_allocation_requests(self, expected, candidates):
         """Assert correctness of allocation requests in allocation candidates.
@@ -507,6 +508,57 @@ class AllocationCandidatesTestCase(ProviderDBBase):
         self.assertIsNotNone(cn2_p_sum)
         self.assertEqual(1, len(cn2_p_sum.traits))
         self.assertEqual(os_traits.HW_CPU_X86_AVX2, cn2_p_sum.traits[0].name)
+
+    def test_all_local_limit(self):
+        """Create some resource providers that can satisfy the request for
+        resources with local (non-shared) resources, limit them, and verify
+        that the allocation requests returned by AllocationCandidates
+        correspond with each of these resource providers.
+        """
+        # Create three compute node providers with VCPU, RAM and local disk
+        for name in ('cn1', 'cn2', 'cn3'):
+            cn = self._create_provider(name)
+            _add_inventory(cn, fields.ResourceClass.VCPU, 24,
+                           allocation_ratio=16.0)
+            _add_inventory(cn, fields.ResourceClass.MEMORY_MB, 32768,
+                           min_unit=64, step_size=64, allocation_ratio=1.5)
+            total_gb = 1000 if name == 'cn3' else 2000
+            _add_inventory(cn, fields.ResourceClass.DISK_GB, total_gb,
+                           reserved=100, min_unit=10, step_size=10,
+                           allocation_ratio=1.0)
+
+        # Ask for just one candidate.
+        limit = 1
+        alloc_cands = self._get_allocation_candidates(limit=limit)
+        allocation_requests = alloc_cands.allocation_requests
+        self.assertEqual(limit, len(allocation_requests))
+
+        # provider summaries should have only one rp
+        self.assertEqual(limit, len(alloc_cands.provider_summaries))
+
+        # Do it again, with conf set to randomize. We can't confirm the
+        # random-ness but we can be sure the code path doesn't explode.
+        self.flags(randomize_allocation_candidates=True, group='placement')
+
+        # Ask for two candidates.
+        limit = 2
+        alloc_cands = self._get_allocation_candidates(limit=limit)
+        allocation_requests = alloc_cands.allocation_requests
+        self.assertEqual(limit, len(allocation_requests))
+
+        # provider summaries should have two rps
+        self.assertEqual(limit, len(alloc_cands.provider_summaries))
+
+        # Do it again, asking for more than are available.
+        limit = 5
+        # We still only expect 2 because cn3 does not match default requests.
+        expected_length = 2
+        alloc_cands = self._get_allocation_candidates(limit=limit)
+        allocation_requests = alloc_cands.allocation_requests
+        self.assertEqual(expected_length, len(allocation_requests))
+
+        # provider summaries should have two rps
+        self.assertEqual(expected_length, len(alloc_cands.provider_summaries))
 
     def test_local_with_shared_disk(self):
         """Create some resource providers that can satisfy the request for
