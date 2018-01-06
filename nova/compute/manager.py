@@ -6831,7 +6831,8 @@ class ComputeManager(manager.Manager):
                 # NOTE(PhilDay): Record that its not supported so we can
                 # skip fast on future calls rather than waste effort getting
                 # the list of instances.
-                LOG.info("Bandwidth usage not supported by hypervisor.")
+                LOG.info("Bandwidth usage not supported by %(driver)s.",
+                         {'driver': CONF.compute_driver})
                 self._bw_usage_supported = False
                 return
 
