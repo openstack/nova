@@ -583,9 +583,9 @@ FAQs
       cell you can run this and it will report any hosts that are not yet
       mapped to a cell and map them. This command is idempotent.
 
-   In the future, we may add a flag to the ``nova-manage cell_v2 list_cells``
-   command or add another command to list hosts in a specific cell (or all
-   cells).
+   3. Run ``nova-manage cell_v2 list_hosts``. This will list hosts in all
+      cells. If you want to list hosts in a specific cell, you can run
+      ``nova-manage cell_v2 list_hosts --cell_uuid <cell_uuid>``.
 
 #. I updated the database_connection and/or transport_url in a cell using the
    ``nova-manage cell_v2 update_cell`` command but the API is still trying to
