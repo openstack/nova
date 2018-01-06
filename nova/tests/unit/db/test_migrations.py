@@ -977,6 +977,10 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         constraint_names = [constraint['name'] for constraint in constraints]
         self.assertIn('uniq_block_device_mapping0uuid', constraint_names)
 
+    def _check_375(self, engine, data):
+        self.assertColumnExists(engine, 'console_auth_tokens',
+                                'access_url_base')
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,

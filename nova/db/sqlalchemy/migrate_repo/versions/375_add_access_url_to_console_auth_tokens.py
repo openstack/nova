@@ -1,4 +1,3 @@
-#    Copyright 2016 Intel Corp.
 #    Copyright 2016 Hewlett Packard Enterprise Development Company LP
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
@@ -13,22 +12,17 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.tests import uuidsentinel
-from nova import utils
+from sqlalchemy import Column
+from sqlalchemy import MetaData
+from sqlalchemy import String
+from sqlalchemy import Table
 
-fake_token = uuidsentinel.token
-fake_token_hash = utils.get_sha256_str(fake_token)
-fake_instance_uuid = uuidsentinel.instance
-fake_token_dict = {
-    'created_at': None,
-    'updated_at': None,
-    'id': 123,
-    'token_hash': fake_token_hash,
-    'console_type': 'fake-type',
-    'host': 'fake-host',
-    'port': 1000,
-    'internal_access_path': 'fake-path',
-    'instance_uuid': fake_instance_uuid,
-    'expires': 100,
-    'access_url_base': 'http://fake.url.fake/root.html'
-    }
+
+def upgrade(migrate_engine):
+    meta = MetaData()
+    meta.bind = migrate_engine
+
+    table = Table('console_auth_tokens', meta, autoload=True)
+    new_column = Column('access_url_base', String(255), nullable=True)
+    if not hasattr(table.c, 'access_url_base'):
+        table.create_column(new_column)
