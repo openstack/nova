@@ -22,7 +22,7 @@ notifications_group = cfg.OptGroup(
     help="""
 Most of the actions in Nova which manipulate the system state generate
 notifications which are posted to the messaging component (e.g. RabbitMQ) and
-can be consumed by any service outside the Openstack. More technical details
+can be consumed by any service outside the OpenStack. More technical details
 at https://docs.openstack.org/nova/latest/reference/notifications.html
 """)
 

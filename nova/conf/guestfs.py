@@ -31,7 +31,7 @@ enable_guestfs_debug_opts = [
                 help="""
 Enable/disables guestfs logging.
 
-This configures guestfs to debug messages and push them to Openstack
+This configures guestfs to debug messages and push them to OpenStack
 logging system. When set to True, it traces libguestfs API calls and
 enable verbose debug messages. In order to use the above feature,
 "libguestfs" package must be installed.

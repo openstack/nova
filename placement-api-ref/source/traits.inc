@@ -74,7 +74,7 @@ Update traits
 Insert a new custom trait. If traits already exists 204 will be returned.
 
 There are two kinds of traits: the standard traits and the custom traits.
-The standard traits are interoperable across different Openstack cloud
+The standard traits are interoperable across different OpenStack cloud
 deployments. The definition of standard traits comes from the `os-traits`
 library. The standard traits are read-only in the placement API which means
 that the user can't modify any standard traits through API.

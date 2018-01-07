@@ -4,8 +4,8 @@
  Placement API
 ===============
 
-This is a reference for the Openstack Placement API. To learn more about
-Openstack Placement API concepts, please refer to the
+This is a reference for the OpenStack Placement API. To learn more about
+OpenStack Placement API concepts, please refer to the
 `Placement Introduction <https://docs.openstack.org/nova/latest/user/placement.html>`_.
 
 The Placement API uses JSON for data exchange.  As such, the ``Content-Type``
