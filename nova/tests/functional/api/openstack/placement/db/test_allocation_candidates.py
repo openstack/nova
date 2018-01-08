@@ -1630,11 +1630,11 @@ class AllocationCandidatesTestCase(ProviderDBBase):
         self._validate_provider_summary_resources(expected, alloc_cands)
 
     def test_simple_tree_of_providers(self):
-        """Create a hierarchy of resource providers with various inventories on
-        the different levels of provider and see that allocation candidates
-        return information on all relevant nodes in the tree.
+        """Tests that we properly winnow allocation requests when including
+        traits in the request group and that the traits appear in the provider
+        summaries of the returned allocation candidates
         """
-        # We are setting up a tree of providers that looks like this:
+        # We are setting up a single tree that looks like this:
         #
         #                  compute node (cn)
         #                 /                 \
@@ -1643,29 +1643,41 @@ class AllocationCandidatesTestCase(ProviderDBBase):
         #               |                    |
         #               |                    |
         #              pf 0                 pf 1
+        #
+        # The second physical function will be associated with the
+        # HW_NIC_OFFLOAD_GENEVE trait, but not the first physical function.
+        #
+        # We will issue a request to _get_allocation_candidates() for VCPU,
+        # MEMORY_MB and SRIOV_NET_VF **without** required traits, then include
+        # a request that includes HW_NIC_OFFLOAD_GENEVE. In the latter case,
+        # the compute node tree should be returned but the allocation requests
+        # should only include the second physical function since the required
+        # trait is only associated with that PF.
+        #
+        # Subsequently, we will consume all the SRIOV_NET_VF resources from the
+        # second PF's inventory and attempt the same request of resources and
+        # HW_NIC_OFFLOAD_GENEVE. We should get 0 returned results because now
+        # the only PF that has the required trait has no inventory left.
         cn = self._create_provider('cn')
 
-        numa_cell0 = self._create_provider('numa_cell0', parent=cn.uuid)
-        numa_cell1 = self._create_provider('numa_cell1', parent=cn.uuid)
-
-        pf0 = self._create_provider('pf0', parent=numa_cell0.uuid)
-        pf1 = self._create_provider('pf1', parent=numa_cell1.uuid)
-
-        # Create some VCPU and MEMORY_MB inventory on the compute node, and
-        # some inventory of SRIOV_NET_VFs on each physical function. No
-        # inventory for the NUMA cell providers.
         _add_inventory(cn, fields.ResourceClass.VCPU, 16)
         _add_inventory(cn, fields.ResourceClass.MEMORY_MB, 32768)
 
-        for pf in (pf0, pf1):
-            _add_inventory(pf, fields.ResourceClass.SRIOV_NET_VF, 8)
+        numa_cell0 = self._create_provider('cn_numa0', parent=cn.uuid)
+        numa_cell1 = self._create_provider('cn_numa1', parent=cn.uuid)
+
+        pf0 = self._create_provider('cn_numa0_pf0', parent=numa_cell0.uuid)
+        _add_inventory(pf0, fields.ResourceClass.SRIOV_NET_VF, 8)
+        pf1 = self._create_provider('cn_numa1_pf1', parent=numa_cell1.uuid)
+        _add_inventory(pf1, fields.ResourceClass.SRIOV_NET_VF, 8)
+        _set_traits(pf1, os_traits.HW_NIC_OFFLOAD_GENEVE)
 
         alloc_cands = self._get_allocation_candidates([
             placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources={
                     fields.ResourceClass.VCPU: 2,
-                    fields.ResourceClass.MEMORY_MB: 1024,
+                    fields.ResourceClass.MEMORY_MB: 256,
                     fields.ResourceClass.SRIOV_NET_VF: 1,
                 }
             )]
@@ -1684,12 +1696,6 @@ class AllocationCandidatesTestCase(ProviderDBBase):
         # self._validate_allocation_requests(expected, alloc_cands)
         self._validate_allocation_requests([], alloc_cands)
 
-        # We should get the "intermediate nodes" of the tree in the
-        # provider_summaries section that represent the NUMA cells that are
-        # parents of the PFs. Even though the NUMA cell providers aren't
-        # involved in any allocation, they are part of the tree of resource
-        # providers involved in the allocation requests and therefore should be
-        # returned in the provider_summaries section.
         # TODO(jaypipes): This should be the following once nested providers
         # are handled by allocation candidates:
         # expected = {
@@ -1697,6 +1703,8 @@ class AllocationCandidatesTestCase(ProviderDBBase):
         #         (fields.ResourceClass.VCPU, 16, 0),
         #         (fields.ResourceClass.MEMORY_MB, 32768, 0),
         #      ]),
+        #      'cn_numa0': set([]),
+        #      'cn_numa1': set([]),
         #      'pf0': set([
         #         (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
         #      ]),
@@ -1704,9 +1712,98 @@ class AllocationCandidatesTestCase(ProviderDBBase):
         #         (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
         #      ]),
         # }
-        #                          uuids.numa_cell0, uuids.numa_cell1])
         # self._validate_provider_summary_resources(expected, alloc_cands)
         self._validate_provider_summary_resources({}, alloc_cands)
+
+        # TODO(jaypipes): This should be the following once nested providers
+        # handle traits processing
+        # expected = {
+        #     'cn': set([]),
+        #      'cn_numa0': set([]),
+        #      'cn_numa1': set([]),
+        #      'pf0': set([]),
+        #      'pf1': set([os_traits.HW_NIC_OFFLOAD_GENEVE]),
+        # }
+        # self._validate_provider_summary_traits(expected, alloc_cands)
+        self._validate_provider_summary_traits({}, alloc_cands)
+
+        # Now add required traits to the mix and verify we still get the same
+        # result (since we haven't yet consumed the second physical function's
+        # inventory of SRIOV_NET_VF.
+        alloc_cands = self._get_allocation_candidates([
+            placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    fields.ResourceClass.VCPU: 2,
+                    fields.ResourceClass.MEMORY_MB: 256,
+                    fields.ResourceClass.SRIOV_NET_VF: 1,
+                },
+                required_traits=[os_traits.HW_NIC_OFFLOAD_GENEVE],
+            )]
+        )
+
+        # TODO(jaypipes): This should be the following once nested providers
+        # are handled by allocation candidates:
+        # expected = [
+        #    [('cn', fields.ResourceClass.VCPU, 2),
+        #     ('cn', fields.ResourceClass.MEMORY_MB, 1024),
+        #     ('pf1', fields.ResourceClass.SRIOV_NET_VF, 1)],
+        # ]
+        # self._validate_allocation_requests(expected, alloc_cands)
+        self._validate_allocation_requests([], alloc_cands)
+
+        # TODO(jaypipes): This should be the following once nested providers
+        # are handled by allocation candidates:
+        # expected = {
+        #     'cn': set([
+        #         (fields.ResourceClass.VCPU, 16, 0),
+        #         (fields.ResourceClass.MEMORY_MB, 32768, 0),
+        #      ]),
+        #      'cn_numa0': set([]),
+        #      'cn_numa1': set([]),
+        #      'pf0': set([
+        #         (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
+        #      ]),
+        #      'pf1': set([
+        #         (fields.ResourceClass.SRIOV_NET_VF, 8, 0),
+        #      ]),
+        # }
+        # self._validate_provider_summary_resources(expected, alloc_cands)
+        self._validate_provider_summary_resources({}, alloc_cands)
+
+        # TODO(jaypipes): This should be the following once nested providers
+        # handle traits processing
+        # expected = {
+        #     'cn': set([]),
+        #      'cn_numa0': set([]),
+        #      'cn_numa1': set([]),
+        #      'pf0': set([]),
+        #      'pf1': set([os_traits.HW_NIC_OFFLOAD_GENEVE]),
+        # }
+        # self._validate_provider_summary_traits(expected, alloc_cands)
+        self._validate_provider_summary_traits({}, alloc_cands)
+
+        # Now consume all the inventory of SRIOV_NET_VF on the second physical
+        # function (the one with HW_NIC_OFFLOAD_GENEVE associated with it) and
+        # verify that the same request still results in 0 results since the
+        # function with the required trait no longer has any inventory.
+        _allocate_from_provider(pf1, fields.ResourceClass.SRIOV_NET_VF, 8)
+
+        alloc_cands = self._get_allocation_candidates([
+            placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    fields.ResourceClass.VCPU: 2,
+                    fields.ResourceClass.MEMORY_MB: 256,
+                    fields.ResourceClass.SRIOV_NET_VF: 1,
+                },
+                required_traits=[os_traits.HW_NIC_OFFLOAD_GENEVE],
+            )]
+        )
+
+        self._validate_allocation_requests([], alloc_cands)
+        self._validate_provider_summary_resources({}, alloc_cands)
+        self._validate_provider_summary_traits({}, alloc_cands)
 
     def _get_root_ids_matching_names(self, names):
         """Utility function to look up root provider IDs from a set of supplied
