@@ -1588,6 +1588,8 @@ class ConsoleAuthToken(BASE, NovaBase):
         Index('console_auth_tokens_instance_uuid_idx', 'instance_uuid'),
         Index('console_auth_tokens_host_expires_idx', 'host', 'expires'),
         Index('console_auth_tokens_token_hash_idx', 'token_hash'),
+        Index('console_auth_tokens_token_hash_instance_uuid_idx', 'token_hash',
+              'instance_uuid'),
         schema.UniqueConstraint("token_hash",
                                 name="uniq_console_auth_tokens0token_hash")
     )
