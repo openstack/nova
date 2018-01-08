@@ -1073,6 +1073,7 @@ object_data = {
     'ComputeNode': '1.18-431fafd8ac4a5f3559bd9b1f1332cc22',
     'ComputeNodeList': '1.17-52f3b0962b1c86b98590144463ebb192',
     'CpuDiagnostics': '1.0-d256f2e442d1b837735fd17dfe8e3d47',
+    'ConsoleAuthToken': '1.0-a61bf7b54517c4013a12289c5a5268ea',
     'DNSDomain': '1.0-7b0b2dab778454b6a7b6c66afe163a1a',
     'DNSDomainList': '1.0-4ee0d9efdfd681fed822da88376e04d2',
     'Destination': '1.1-fff0853f3acec6b04ddc03158ded11ba',

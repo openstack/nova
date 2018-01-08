@@ -32,6 +32,7 @@ def register_all():
     __import__('nova.objects.cell_mapping')
     __import__('nova.objects.compute_node')
     __import__('nova.objects.diagnostics')
+    __import__('nova.objects.console_auth_token')
     __import__('nova.objects.dns_domain')
     __import__('nova.objects.ec2')
     __import__('nova.objects.external_event')

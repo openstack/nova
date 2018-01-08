@@ -1896,6 +1896,10 @@ class InvalidToken(Invalid):
     msg_fmt = _("The token '%(token)s' is invalid or has expired")
 
 
+class TokenInUse(Invalid):
+    msg_fmt = _("The generated token is invalid")
+
+
 class InvalidConnectionInfo(Invalid):
     msg_fmt = _("Invalid Connection Info")
 
