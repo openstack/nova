@@ -839,25 +839,7 @@ class StringLengthTestCase(test.NoDBTestCase):
 
 
 class ValidateIntegerTestCase(test.NoDBTestCase):
-    def test_valid_inputs(self):
-        self.assertEqual(
-            utils.validate_integer(42, "answer"), 42)
-        self.assertEqual(
-            utils.validate_integer("42", "answer"), 42)
-        self.assertEqual(
-            utils.validate_integer(
-                "7", "lucky", min_value=7, max_value=8), 7)
-        self.assertEqual(
-            utils.validate_integer(
-                7, "lucky", min_value=6, max_value=7), 7)
-        self.assertEqual(
-            utils.validate_integer(
-                300, "Spartaaa!!!", min_value=300), 300)
-        self.assertEqual(
-            utils.validate_integer(
-                "300", "Spartaaa!!!", max_value=300), 300)
-
-    def test_invalid_inputs(self):
+    def test_exception_converted(self):
         self.assertRaises(exception.InvalidInput,
                           utils.validate_integer,
                           "im-not-an-int", "not-an-int")

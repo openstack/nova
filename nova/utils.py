@@ -851,29 +851,19 @@ def check_string_length(value, name=None, min_length=0, max_length=None):
 
 
 def validate_integer(value, name, min_value=None, max_value=None):
-    """Make sure that value is a valid integer, potentially within range."""
-    try:
-        value = int(str(value))
-    except (ValueError, UnicodeEncodeError):
-        msg = _('%(value_name)s must be an integer')
-        raise exception.InvalidInput(reason=(
-            msg % {'value_name': name}))
+    """Make sure that value is a valid integer, potentially within range.
 
-    if min_value is not None:
-        if value < min_value:
-            msg = _('%(value_name)s must be >= %(min_value)d')
-            raise exception.InvalidInput(
-                reason=(msg % {'value_name': name,
-                               'min_value': min_value}))
-    if max_value is not None:
-        if value > max_value:
-            msg = _('%(value_name)s must be <= %(max_value)d')
-            raise exception.InvalidInput(
-                reason=(
-                    msg % {'value_name': name,
-                           'max_value': max_value})
-            )
-    return value
+    :param value: value of the integer
+    :param name: name of the integer
+    :param min_value: min_value of the integer
+    :param max_value: max_value of the integer
+    :returns: integer
+    :raise: InvalidInput If value is not a valid integer
+    """
+    try:
+        return strutils.validate_integer(value, name, min_value, max_value)
+    except ValueError as e:
+        raise exception.InvalidInput(reason=six.text_type(e))
 
 
 def _serialize_profile_info():
