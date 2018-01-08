@@ -122,69 +122,12 @@ def enable_hairpin(interface):
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
-def add_bridge(interface):
-    """Create a bridge.
-
-    :param interface: the name of the bridge
-    """
-    processutils.execute('brctl', 'addbr', interface)
-
-
-@nova.privsep.sys_admin_pctxt.entrypoint
 def delete_bridge(interface):
     """Delete a bridge.
 
     :param interface: the name of the bridge
     """
     processutils.execute('brctl', 'delbr', interface)
-
-
-@nova.privsep.sys_admin_pctxt.entrypoint
-def zero_bridge_forward_delay(interface):
-    """Set the forward delay on a bridge to zero.
-
-    :param interface: the name of the bridge
-    """
-    processutils.execute('brctl', 'setfd', interface, 0)
-
-
-@nova.privsep.sys_admin_pctxt.entrypoint
-def disable_bridge_stp(interface):
-    """Disable spanning tree protocol for the named bridge.
-
-    :param interface: the name of the bridge
-    """
-    processutils.execute('brctl', 'stp', interface, 'off')
-
-
-@nova.privsep.sys_admin_pctxt.entrypoint
-def toggle_interface(interface, updown):
-    """Bring named interfaces up or down.
-
-    :param interface: the name of the bridge
-    :param updown: 'up', or 'down'
-    """
-    processutils.execute('ip', 'link', 'set', interface, updown)
-
-
-@nova.privsep.sys_admin_pctxt.entrypoint
-def bridge_add_interface(bridge, newif):
-    """Add an interface to a bridge
-
-    :param bridge: the name of the bridge
-    :param newif: the name of the interface to add
-    """
-    processutils.execute('brctl', 'addif', bridge, newif)
-
-
-@nova.privsep.sys_admin_pctxt.entrypoint
-def bridge_delete_interface(bridge, removeif):
-    """Remove an interface from a bridge
-
-    :param bridge: the name of the bridge
-    :param removeif: the name of the interface to delete
-    """
-    processutils.execute('brctl', 'delif', bridge, removeif)
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
@@ -252,21 +195,6 @@ def unplug_contrail_vif(port_id):
         '--uuid=%s' % port_id,
     )
     processutils.execute(*cmd)
-
-
-@nova.privsep.sys_admin_pctxt.entrypoint
-def disable_multicast_snooping(interface):
-    """Disable multicast snooping for a bridge."""
-    with open('/sys/class/net/%s/bridge/multicast_snooping' % interface,
-              'w') as f:
-        f.write('0')
-
-
-@nova.privsep.sys_admin_pctxt.entrypoint
-def disable_ipv6(interface):
-    """Disable ipv6 for a bridge."""
-    with open('/proc/sys/net/ipv6/conf/%s/disable_ipv' % interface, 'w') as f:
-        f.write('1')
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint

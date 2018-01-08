@@ -974,8 +974,33 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
         )
 
         actual = os_vif_util.nova_to_osvif_vif(vif)
+        # expected vif_name is nic + vif_id, with total length 14 chars
+        expected_vif_name = 'nicdc065497-3c'
 
-        self.assertIsNone(actual)
+        self.assertIsInstance(actual, osv_objects.vif.VIFGeneric)
+        self.assertEqual(expected_vif_name, actual.vif_name)
+
+    def test_nova_to_osvif_vif_ivs_bridged(self):
+        vif = model.VIF(
+            id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+            type=model.VIF_TYPE_IVS,
+            address="22:52:25:62:e2:aa",
+            network=model.Network(
+                id="b82c1929-051e-481d-8110-4669916c7915",
+                label="Demo Net",
+                subnets=[]),
+            details={
+                model.VIF_DETAILS_PORT_FILTER: True,
+                model.VIF_DETAILS_OVS_HYBRID_PLUG: True,
+            }
+        )
+
+        actual = os_vif_util.nova_to_osvif_vif(vif)
+        # expected vif_name is nic + vif_id, with total length 14 chars
+        expected_vif_name = 'nicdc065497-3c'
+
+        self.assertIsInstance(actual, osv_objects.vif.VIFBridge)
+        self.assertEqual(expected_vif_name, actual.vif_name)
 
     def test_nova_to_osvif_vif_unknown(self):
         vif = model.VIF(

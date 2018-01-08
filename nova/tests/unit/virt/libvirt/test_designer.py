@@ -58,14 +58,6 @@ class DesignerTestCase(test.NoDBTestCase):
         self.assertEqual('fake-queues', conf.vhost_queues)
         self.assertEqual(1024, conf.vhost_rx_queue_size)
 
-    def test_set_vif_host_backend_bridge_config(self):
-        conf = config.LibvirtConfigGuestInterface()
-        designer.set_vif_host_backend_bridge_config(conf, 'fake-bridge',
-                                                    'fake-tap')
-        self.assertEqual('bridge', conf.net_type)
-        self.assertEqual('fake-bridge', conf.source_dev)
-        self.assertEqual('fake-tap', conf.target_dev)
-
     def test_set_vif_host_backend_ethernet_config_libvirt_1_3_3(self):
         conf = config.LibvirtConfigGuestInterface()
         mock_host = mock.Mock(autospec=host.Host)

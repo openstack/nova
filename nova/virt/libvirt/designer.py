@@ -43,16 +43,6 @@ def set_vif_guest_frontend_config(conf, mac, model, driver, queues,
         conf.vhost_rx_queue_size = rx_queue_size
 
 
-def set_vif_host_backend_bridge_config(conf, brname, tapname=None):
-    """Populate a LibvirtConfigGuestInterface instance
-    with host backend details for a software bridge.
-    """
-    conf.net_type = "bridge"
-    conf.source_dev = brname
-    if tapname:
-        conf.target_dev = tapname
-
-
 def set_vif_host_backend_ethernet_config(conf, tapname, host):
     """Populate a LibvirtConfigGuestInterface instance
     with host backend details for an externally configured
