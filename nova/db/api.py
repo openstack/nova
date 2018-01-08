@@ -2052,16 +2052,22 @@ def console_auth_token_create(context, values):
     return IMPL.console_auth_token_create(context, values)
 
 
-def console_auth_token_get_valid(context, token_hash, instance_uuid):
+def console_auth_token_get_valid(context, token_hash, instance_uuid=None):
     """Get a valid console authorization by token_hash and instance_uuid.
 
     The console authorizations expire at the time specified by their
     'expires' column. An expired console auth token will not be returned
     to the caller - it is treated as if it does not exist.
+
+    If instance_uuid is specified, the token is validated against both
+    expiry and instance_uuid.
+
+    If instance_uuid is not specified, the token is validated against
+    expiry only.
     """
     return IMPL.console_auth_token_get_valid(context,
                                              token_hash,
-                                             instance_uuid)
+                                             instance_uuid=instance_uuid)
 
 
 def console_auth_token_destroy_all_by_instance(context, instance_uuid):
