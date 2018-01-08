@@ -836,6 +836,16 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    def get_traits(self, nodename):
+        """Get the traits for a given node.
+
+        Returns an iterable of traits for the supplied node.
+
+        :param nodename: the name of the node.
+        :returns: an iterable of traits for the supplied node.
+        """
+        raise NotImplementedError()
+
     def get_available_resource(self, nodename):
         """Retrieve resource information.
 
