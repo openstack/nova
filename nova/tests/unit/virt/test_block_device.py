@@ -395,7 +395,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
     def test_call_wait_no_delete_volume(self):
         self._test_call_wait_func(False)
 
-    def test_volume_delete_attachment(self):
+    def test_volume_delete_attachment(self, include_shared_targets=False):
         attachment_id = uuids.attachment
         driver_bdm = self.driver_classes['volume'](self.volume_bdm)
         driver_bdm['attachment_id'] = attachment_id
@@ -406,25 +406,40 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         instance = fake_instance.fake_instance_obj(self.context,
                                                    **instance_detail)
         connector = {'ip': 'fake_ip', 'host': 'fake_host'}
+        volume = {'id': driver_bdm.volume_id,
+                  'attach_status': 'attached',
+                  'status': 'in-use'}
+        if include_shared_targets:
+            volume['shared_targets'] = True
+            volume['service_uuid'] = uuids.service_uuid
 
         with test.nested(
+            mock.patch.object(driver_bdm, '_get_volume', return_value=volume),
             mock.patch.object(self.virt_driver, 'get_volume_connector',
                               return_value=connector),
+            mock.patch('nova.utils.synchronized',
+                side_effect=lambda a: lambda f: lambda *args: f(*args)),
             mock.patch.object(self.volume_api, 'attachment_delete'),
-        ) as (_, vapi_attach_del):
+        ) as (mock_get_volume, mock_get_connector, mock_sync, vapi_attach_del):
 
             driver_bdm.detach(elevated_context, instance,
                               self.volume_api, self.virt_driver,
                               attachment_id=attachment_id)
 
+            if include_shared_targets:
+                mock_sync.assert_called_once_with((uuids.service_uuid))
             vapi_attach_del.assert_called_once_with(elevated_context,
                                                     attachment_id)
+
+    def test_volume_delete_attachment_with_shared_targets(self):
+        self.test_volume_delete_attachment(include_shared_targets=True)
 
     def _test_volume_attach(self, driver_bdm, bdm_dict,
                             fake_volume, fail_check_av_zone=False,
                             driver_attach=False, fail_driver_attach=False,
                             volume_attach=True, fail_volume_attach=False,
-                            access_mode='rw', availability_zone=None):
+                            access_mode='rw', availability_zone=None,
+                            include_shared_targets=False):
         elevated_context = self.context.elevated()
         self.stubs.Set(self.context, 'elevated',
                        lambda: elevated_context)
@@ -440,8 +455,21 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                               'serial': fake_volume['id']}
         enc_data = {'fake': 'enc_data'}
 
-        self.volume_api.get(self.context,
-                            fake_volume['id']).AndReturn(fake_volume)
+        if include_shared_targets:
+            fake_volume['shared_targets'] = True
+            fake_volume['service_uuid'] = uuids.service_uuid
+            self.volume_api.get(
+                self.context, fake_volume['id'],
+                microversion='3.48').AndReturn(fake_volume)
+        else:
+            # First call to get() fails because the API isn't new enough.
+            self.volume_api.get(
+                self.context, fake_volume['id'], microversion='3.48').AndRaise(
+                    exception.CinderAPIVersionNotAvailable(version='3.48'))
+            # So we fallback to the old call.
+            self.volume_api.get(self.context,
+                                fake_volume['id']).AndReturn(fake_volume)
+
         if not fail_check_av_zone:
             self.volume_api.check_availability_zone(self.context,
                                 fake_volume,
@@ -533,14 +561,15 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         driver_bdm._bdm_obj.save().AndReturn(None)
         return instance, expected_conn_info
 
-    def test_volume_attach(self):
+    def test_volume_attach(self, include_shared_targets=False):
         test_bdm = self.driver_classes['volume'](
             self.volume_bdm)
         volume = {'id': 'fake-volume-id-1',
                   'attach_status': 'detached'}
 
         instance, expected_conn_info = self._test_volume_attach(
-                test_bdm, self.volume_bdm, volume)
+                test_bdm, self.volume_bdm, volume,
+                include_shared_targets=include_shared_targets)
 
         self.mox.ReplayAll()
 
@@ -548,6 +577,9 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                         self.volume_api, self.virt_driver)
         self.assertThat(test_bdm['connection_info'],
                         matchers.DictMatches(expected_conn_info))
+
+    def test_volume_attach_with_shared_targets(self):
+        self.test_volume_attach(include_shared_targets=True)
 
     def test_volume_attach_ro(self):
         test_bdm = self.driver_classes['volume'](self.volume_bdm)

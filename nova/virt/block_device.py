@@ -24,6 +24,7 @@ from oslo_utils import excutils
 from nova import block_device
 import nova.conf
 from nova import exception
+from nova import utils
 
 CONF = nova.conf.CONF
 
@@ -311,9 +312,23 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                               instance=instance)
                 volume_api.roll_detaching(context, volume_id)
 
-    def detach(self, context, instance, volume_api, virt_driver,
-               attachment_id=None, destroy_bdm=False):
+    @staticmethod
+    def _get_volume(context, volume_api, volume_id):
+        # First try to get the volume at microversion 3.48 so we can get the
+        # shared_targets parameter exposed in that version. If that API version
+        # is not available, we just fallback.
+        try:
+            return volume_api.get(context, volume_id, microversion='3.48')
+        except exception.CinderAPIVersionNotAvailable:
+            return volume_api.get(context, volume_id)
 
+    def _do_detach(self, context, instance, volume_api, virt_driver,
+                   attachment_id=None, destroy_bdm=False):
+        """Private method that actually does the detach.
+
+        This is separate from the detach() method so the caller can optionally
+        lock this call.
+        """
         volume_id = self.volume_id
 
         # Only attempt to detach and disconnect from the volume if the instance
@@ -379,6 +394,25 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                               attachment_id)
         else:
             volume_api.attachment_delete(context, self['attachment_id'])
+
+    def detach(self, context, instance, volume_api, virt_driver,
+               attachment_id=None, destroy_bdm=False):
+        volume = self._get_volume(context, volume_api, self.volume_id)
+        # Check to see if we need to lock based on the shared_targets value.
+        # Default to False if the volume does not expose that value to maintain
+        # legacy behavior.
+        if volume.get('shared_targets', False):
+            # Lock the detach call using the provided service_uuid.
+            @utils.synchronized(volume['service_uuid'])
+            def _do_locked_detach(*args, **_kwargs):
+                self._do_detach(*args, **_kwargs)
+
+            _do_locked_detach(context, instance, volume_api, virt_driver,
+                              attachment_id, destroy_bdm)
+        else:
+            # We don't need to (or don't know if we need to) lock.
+            self._do_detach(context, instance, volume_api, virt_driver,
+                            attachment_id, destroy_bdm)
 
     def _legacy_volume_attach(self, context, volume, connector, instance,
                               volume_api, virt_driver,
@@ -522,15 +556,15 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                 # Delete the attachment to mark the volume as "available".
                 volume_api.attachment_delete(context, self['attachment_id'])
 
-    @update_db
-    def attach(self, context, instance, volume_api, virt_driver,
-               do_driver_attach=False, **kwargs):
-        volume = volume_api.get(context, self.volume_id)
-        volume_api.check_availability_zone(context, volume,
-                                           instance=instance)
+    def _do_attach(self, context, instance, volume, volume_api, virt_driver,
+                   do_driver_attach):
+        """Private method that actually does the attach.
+
+        This is separate from the attach() method so the caller can optionally
+        lock this call.
+        """
         context = context.elevated()
         connector = virt_driver.get_volume_connector(instance)
-
         if not self['attachment_id']:
             self._legacy_volume_attach(context, volume, connector, instance,
                                        volume_api, virt_driver,
@@ -540,6 +574,28 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                                 volume_api, virt_driver,
                                 self['attachment_id'],
                                 do_driver_attach)
+
+    @update_db
+    def attach(self, context, instance, volume_api, virt_driver,
+               do_driver_attach=False, **kwargs):
+        volume = self._get_volume(context, volume_api, self.volume_id)
+        volume_api.check_availability_zone(context, volume,
+                                           instance=instance)
+        # Check to see if we need to lock based on the shared_targets value.
+        # Default to False if the volume does not expose that value to maintain
+        # legacy behavior.
+        if volume.get('shared_targets', False):
+            # Lock the attach call using the provided service_uuid.
+            @utils.synchronized(volume['service_uuid'])
+            def _do_locked_attach(*args, **_kwargs):
+                self._do_attach(*args, **_kwargs)
+
+            _do_locked_attach(context, instance, volume, volume_api,
+                              virt_driver, do_driver_attach)
+        else:
+            # We don't need to (or don't know if we need to) lock.
+            self._do_attach(context, instance, volume, volume_api,
+                            virt_driver, do_driver_attach)
 
     @update_db
     def refresh_connection_info(self, context, instance,
