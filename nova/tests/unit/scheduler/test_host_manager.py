@@ -1023,7 +1023,10 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
         context = 'fake_context'
 
         # first call: all nodes
-        self.host_manager.get_all_host_states(context)
+        hosts = self.host_manager.get_all_host_states(context)
+        # get_all_host_states returns a generator so convert the values into
+        # an iterator
+        host_states1 = iter(hosts)
         host_states_map = self.host_manager.host_state_map
         self.assertEqual(len(host_states_map), 4)
 
@@ -1031,6 +1034,10 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
         self.host_manager.get_all_host_states(context)
         host_states_map = self.host_manager.host_state_map
         self.assertEqual(len(host_states_map), 3)
+        # Fake a concurrent request that is still processing the first result
+        # to make sure we properly handle that node4 is no longer in
+        # host_state_map.
+        list(host_states1)
 
     @mock.patch('nova.objects.ServiceList.get_by_binary')
     @mock.patch('nova.objects.ComputeNodeList.get_all')
