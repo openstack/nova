@@ -785,6 +785,37 @@ Active:          8381604 kB
         self.host.list_pci_devices(8)
         mock_listDevices.assert_called_once_with('pci', 8)
 
+    def test_list_mdev_capable_devices(self):
+        with mock.patch.object(self.host, "_list_devices") as mock_listDevices:
+            self.host.list_mdev_capable_devices(8)
+        mock_listDevices.assert_called_once_with('mdev_types', flags=8)
+
+    def test_list_mediated_devices(self):
+        with mock.patch.object(self.host, "_list_devices") as mock_listDevices:
+            self.host.list_mediated_devices(8)
+        mock_listDevices.assert_called_once_with('mdev', flags=8)
+
+    @mock.patch.object(fakelibvirt.virConnect, "listDevices")
+    def test_list_devices(self, mock_listDevices):
+        self.host._list_devices('mdev', 8)
+        mock_listDevices.assert_called_once_with('mdev', 8)
+
+    @mock.patch.object(fakelibvirt.virConnect, "listDevices")
+    def test_list_devices_unsupported(self, mock_listDevices):
+        not_supported_exc = fakelibvirt.make_libvirtError(
+                fakelibvirt.libvirtError,
+                'this function is not supported by the connection driver:'
+                ' listDevices',
+                error_code=fakelibvirt.VIR_ERR_NO_SUPPORT)
+        mock_listDevices.side_effect = not_supported_exc
+        self.assertEqual([], self.host._list_devices('mdev', 8))
+
+    @mock.patch.object(fakelibvirt.virConnect, "listDevices")
+    def test_list_devices_other_exc(self, mock_listDevices):
+        mock_listDevices.side_effect = fakelibvirt.libvirtError('test')
+        self.assertRaises(fakelibvirt.libvirtError,
+                          self.host._list_devices, 'mdev', 8)
+
     @mock.patch.object(fakelibvirt.virConnect, "compareCPU")
     def test_compare_cpu(self, mock_compareCPU):
         self.host.compare_cpu("cpuxml")

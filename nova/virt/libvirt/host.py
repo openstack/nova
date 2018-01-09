@@ -839,7 +839,39 @@ class Host(object):
 
         :returns: a list of virNodeDevice instance
         """
+        # TODO(sbauza): Replace that call by a generic _list_devices("pci")
         return self.get_connection().listDevices("pci", flags)
+
+    def list_mdev_capable_devices(self, flags=0):
+        """Lookup devices supporting mdev capabilities.
+
+        :returns: a list of virNodeDevice instance
+        """
+        return self._list_devices("mdev_types", flags=flags)
+
+    def list_mediated_devices(self, flags=0):
+        """Lookup mediated devices.
+
+        :returns: a list of virNodeDevice instance
+        """
+        return self._list_devices("mdev", flags=flags)
+
+    def _list_devices(self, cap, flags=0):
+        """Lookup devices.
+
+        :returns: a list of virNodeDevice instance
+        """
+        try:
+            return self.get_connection().listDevices(cap, flags)
+        except libvirt.libvirtError as ex:
+            error_code = ex.get_error_code()
+            if error_code == libvirt.VIR_ERR_NO_SUPPORT:
+                LOG.warning("URI %(uri)s does not support "
+                            "listDevices: %(error)s",
+                            {'uri': self._uri, 'error': ex})
+                return []
+            else:
+                raise
 
     def compare_cpu(self, xmlDesc, flags=0):
         """Compares the given CPU description with the host CPU."""

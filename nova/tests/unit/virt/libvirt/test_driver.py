@@ -289,7 +289,46 @@ _fake_NodeDevXml = \
         <feature name='txvlan'/>
         <capability type='80203'/>
       </capability>
-    </device>"""
+    </device>""",
+     "pci_0000_06_00_0": """
+    <device>
+      <name>pci_0000_06_00_0</name>
+      <path>/sys/devices/pci0000:00/0000:00:06.0</path>
+      <parent></parent>
+      <driver>
+        <name>nvidia</name>
+      </driver>
+      <capability type="pci">
+        <domain>0</domain>
+        <bus>10</bus>
+        <slot>1</slot>
+        <function>5</function>
+        <product id="0x0FFE">GRID M60-0B</product>
+        <vendor id="0x10DE">Nvidia</vendor>
+        <numa node="8"/>
+        <capability type='mdev_types'>
+          <type id='nvidia-11'>
+            <name>GRID M60-0B</name>
+            <deviceAPI>vfio-pci</deviceAPI>
+            <availableInstances>16</availableInstances>
+          </type>
+        </capability>
+      </capability>
+    </device>""",
+     "mdev_4b20d080_1b54_4048_85b3_a6a62d165c01": """
+    <device>
+      <name>mdev_4b20d080_1b54_4048_85b3_a6a62d165c01</name>
+      <path>/sys/devices/pci0000:00/0000:00:02.0/4b20d080-1b54-4048-85b3-a6a62d165c01</path>
+      <parent>pci_0000_00_02_0</parent>
+      <driver>
+        <name>vfio_mdev</name>
+      </driver>
+      <capability type='mdev'>
+        <type id='nvidia-11'/>
+        <iommuGroup number='12'/>
+      </capability>
+    </device>
+    """,
     }
 
 _fake_cpu_info = {
@@ -15843,6 +15882,9 @@ class HostStateTestCase(test.NoDBTestCase):
         def _get_vcpu_used(self):
             return 0
 
+        def _get_vgpu_total(self):
+            return 0
+
         def _get_cpu_info(self):
             return HostStateTestCase.cpu_info
 
@@ -15864,6 +15906,12 @@ class HostStateTestCase(test.NoDBTestCase):
 
         def _get_pci_passthrough_devices(self):
             return jsonutils.dumps(HostStateTestCase.pci_devices)
+
+        def _get_mdev_capable_devices(self, types=None):
+            return []
+
+        def _get_mediated_devices(self, types=None):
+            return []
 
         def _get_host_numa_topology(self):
             return HostStateTestCase.numa_topology
@@ -15913,13 +15961,16 @@ class TestGetInventory(test.NoDBTestCase):
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
         self.driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_vgpu_total')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_local_gb_info',
                 return_value={'total': 200})
     @mock.patch('nova.virt.libvirt.host.Host.get_memory_mb_total',
                 return_value=1024)
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_vcpu_total',
                 return_value=24)
-    def test_get_inventory(self, mock_vcpu, mock_mem, mock_disk):
+    def _test_get_inventory(self, mock_vcpu, mock_mem, mock_disk, mock_vgpus,
+                            total_vgpus=0):
+        mock_vgpus.return_value = total_vgpus
         expected_inv = {
             fields.ResourceClass.VCPU: {
                 'total': 24,
@@ -15940,8 +15991,23 @@ class TestGetInventory(test.NoDBTestCase):
                 'step_size': 1,
             },
         }
+        if total_vgpus > 0:
+            expected_inv.update({
+                fields.ResourceClass.VGPU: {
+                    'total': total_vgpus,
+                    'min_unit': 1,
+                    'max_unit': total_vgpus,
+                    'step_size': 1,
+                }
+            })
         inv = self.driver.get_inventory(mock.sentinel.nodename)
         self.assertEqual(expected_inv, inv)
+
+    def test_get_inventory(self):
+        self._test_get_inventory()
+
+    def test_get_inventory_with_vgpus(self):
+        self._test_get_inventory(total_vgpus=8)
 
 
 class LibvirtDriverTestCase(test.NoDBTestCase):
@@ -18181,6 +18247,124 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
              'It is not supported on this host.'),
             'nova.tests.unit.virt.libvirt.test_driver.FakeInvalidVolumeDriver'
         )
+
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
+                '._get_mediated_devices')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
+                '._get_mdev_capable_devices')
+    def test_get_vgpu_total(self, get_mdev_devs, get_mdevs):
+        get_mdev_devs.return_value = [
+            {'dev_id': 'pci_0000_84_00_0',
+             'types': {'nvidia-11': {'availableInstances': 14,
+                                     'name': 'GRID M60-0B',
+                                     'deviceAPI': 'vfio-pci'},
+                        }}]
+        get_mdevs.return_value = [
+            {'dev_id': 'pci_0000_84_00_0',
+             'type': 'nvidia-11',
+             'iommuGroup': 1
+            },
+            {'dev_id': 'pci_0000_84_00_0',
+             'type': 'nvidia-11',
+             'iommuGroup': 1
+            },
+        ]
+
+        # By default, no specific types are supported
+        self.assertEqual(0, self.drvr._get_vgpu_total())
+
+        # Now, ask for only one
+        self.flags(enabled_vgpu_types=['nvidia-11'], group='devices')
+        # We have 14 available for nvidia-11. We also have 2 mdevs of the type.
+        # So, as a total, we have 14+2, hence 16.
+        self.assertEqual(16, self.drvr._get_vgpu_total())
+
+    @mock.patch.object(host.Host, 'device_lookup_by_name')
+    @mock.patch.object(host.Host, 'list_mdev_capable_devices')
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
+                       return_value=versionutils.convert_version_to_int(
+                            libvirt_driver.MIN_LIBVIRT_MDEV_SUPPORT))
+    def test_get_mdev_capable_devices(self, _get_libvirt_version,
+                                      list_mdev_capable_devs,
+                                      device_lookup_by_name):
+        list_mdev_capable_devs.return_value = ['pci_0000_06_00_0']
+
+        def fake_nodeDeviceLookupByName(name):
+            return FakeNodeDevice(_fake_NodeDevXml[name])
+        device_lookup_by_name.side_effect = fake_nodeDeviceLookupByName
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        expected = [{"dev_id": "pci_0000_06_00_0",
+                     "types": {'nvidia-11': {'availableInstances': 16,
+                                             'name': 'GRID M60-0B',
+                                             'deviceAPI': 'vfio-pci'},
+                               }
+                     }]
+        self.assertEqual(expected, drvr._get_mdev_capable_devices())
+
+    @mock.patch.object(host.Host, 'device_lookup_by_name')
+    @mock.patch.object(host.Host, 'list_mdev_capable_devices')
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
+                       return_value=versionutils.convert_version_to_int(
+                            libvirt_driver.MIN_LIBVIRT_MDEV_SUPPORT))
+    def test_get_mdev_capable_devices_filtering(self, _get_libvirt_version,
+                                                list_mdev_capable_devs,
+                                                device_lookup_by_name):
+        list_mdev_capable_devs.return_value = ['pci_0000_06_00_0']
+
+        def fake_nodeDeviceLookupByName(name):
+            return FakeNodeDevice(_fake_NodeDevXml[name])
+        device_lookup_by_name.side_effect = fake_nodeDeviceLookupByName
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+
+        # Since we filter by a type not supported by the physical device,
+        # we don't get results.
+        self.assertEqual([],
+                         drvr._get_mdev_capable_devices(types=['nvidia-12']))
+
+    @mock.patch.object(host.Host, 'device_lookup_by_name')
+    @mock.patch.object(host.Host, 'list_mediated_devices')
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
+                       return_value=versionutils.convert_version_to_int(
+                            libvirt_driver.MIN_LIBVIRT_MDEV_SUPPORT))
+    def test_get_mediated_devices(self, _get_libvirt_version,
+                                  list_mediated_devices,
+                                  device_lookup_by_name):
+        list_mediated_devices.return_value = [
+            'mdev_4b20d080_1b54_4048_85b3_a6a62d165c01']
+
+        def fake_nodeDeviceLookupByName(name):
+            return FakeNodeDevice(_fake_NodeDevXml[name])
+        device_lookup_by_name.side_effect = fake_nodeDeviceLookupByName
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        expected = [{"dev_id": "mdev_4b20d080_1b54_4048_85b3_a6a62d165c01",
+                     "type": "nvidia-11",
+                     "iommu_group": 12
+                     }]
+        self.assertEqual(expected, drvr._get_mediated_devices())
+
+    @mock.patch.object(host.Host, 'device_lookup_by_name')
+    @mock.patch.object(host.Host, 'list_mediated_devices')
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
+                       return_value=versionutils.convert_version_to_int(
+                            libvirt_driver.MIN_LIBVIRT_MDEV_SUPPORT))
+    def test_get_mediated_devices_filtering(self, _get_libvirt_version,
+                                            list_mediated_devices,
+                                            device_lookup_by_name):
+        list_mediated_devices.return_value = [
+            'mdev_4b20d080_1b54_4048_85b3_a6a62d165c01']
+
+        def fake_nodeDeviceLookupByName(name):
+            return FakeNodeDevice(_fake_NodeDevXml[name])
+        device_lookup_by_name.side_effect = fake_nodeDeviceLookupByName
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        # Since we filter by a type not supported by the physical device,
+        # we don't get results.
+        self.assertEqual([], drvr._get_mediated_devices(types=['nvidia-12']))
 
 
 class LibvirtVolumeUsageTestCase(test.NoDBTestCase):

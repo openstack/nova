@@ -2377,6 +2377,7 @@ class LibvirtConfigNodeDevice(LibvirtConfigObject):
         self.parent = None
         self.driver = None
         self.pci_capability = None
+        self.mdev_information = None
 
     def parse_dom(self, xmldoc):
         super(LibvirtConfigNodeDevice, self).parse_dom(xmldoc)
@@ -2390,6 +2391,10 @@ class LibvirtConfigNodeDevice(LibvirtConfigObject):
                 pcicap = LibvirtConfigNodeDevicePciCap()
                 pcicap.parse_dom(c)
                 self.pci_capability = pcicap
+            elif c.tag == "capability" and c.get("type") in ['mdev']:
+                mdev_info = LibvirtConfigNodeDeviceMdevInformation()
+                mdev_info.parse_dom(c)
+                self.mdev_information = mdev_info
 
 
 class LibvirtConfigNodeDevicePciCap(LibvirtConfigObject):
@@ -2408,6 +2413,7 @@ class LibvirtConfigNodeDevicePciCap(LibvirtConfigObject):
         self.vendor_id = None
         self.numa_node = None
         self.fun_capability = []
+        self.mdev_capability = []
         self.interface = None
         self.address = None
         self.link_state = None
@@ -2446,6 +2452,10 @@ class LibvirtConfigNodeDevicePciCap(LibvirtConfigObject):
                 funcap = LibvirtConfigNodeDevicePciSubFunctionCap()
                 funcap.parse_dom(c)
                 self.fun_capability.append(funcap)
+            elif c.tag == "capability" and c.get('type') in ('mdev_types',):
+                mdevcap = LibvirtConfigNodeDeviceMdevCapableSubFunctionCap()
+                mdevcap.parse_dom(c)
+                self.mdev_capability.append(mdevcap)
 
 
 class LibvirtConfigNodeDevicePciSubFunctionCap(LibvirtConfigObject):
@@ -2464,6 +2474,45 @@ class LibvirtConfigNodeDevicePciSubFunctionCap(LibvirtConfigObject):
                                           int(c.get('bus'), 16),
                                           int(c.get('slot'), 16),
                                           int(c.get('function'), 16)))
+
+
+class LibvirtConfigNodeDeviceMdevCapableSubFunctionCap(LibvirtConfigObject):
+    def __init__(self, **kwargs):
+        super(LibvirtConfigNodeDeviceMdevCapableSubFunctionCap, self).__init__(
+                                        root_name="capability", **kwargs)
+        # mdev_types is a list of dictionaries where each item looks like:
+        # {'type': 'nvidia-11', 'name': 'GRID M60-0B', 'deviceAPI': 'vfio-pci',
+        #  'availableInstances': 16}
+        self.mdev_types = list()
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigNodeDeviceMdevCapableSubFunctionCap,
+              self).parse_dom(xmldoc)
+        for c in xmldoc.getchildren():
+            if c.tag == "type":
+                mdev_type = {'type': c.get('id')}
+                for e in c.getchildren():
+                    mdev_type[e.tag] = (int(e.text)
+                                        if e.tag == 'availableInstances'
+                                        else e.text)
+                self.mdev_types.append(mdev_type)
+
+
+class LibvirtConfigNodeDeviceMdevInformation(LibvirtConfigObject):
+    def __init__(self, **kwargs):
+        super(LibvirtConfigNodeDeviceMdevInformation, self).__init__(
+                                        root_name="capability", **kwargs)
+        self.type = None
+        self.iommu_group = None
+
+    def parse_dom(self, xmldoc):
+        super(LibvirtConfigNodeDeviceMdevInformation,
+              self).parse_dom(xmldoc)
+        for c in xmldoc.getchildren():
+            if c.tag == "type":
+                self.type = c.get('id')
+            if c.tag == "iommuGroup":
+                self.iommu_group = int(c.get('number'))
 
 
 class LibvirtConfigGuestRng(LibvirtConfigGuestDevice):

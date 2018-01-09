@@ -2793,6 +2793,24 @@ class LibvirtConfigNodeDeviceTest(LibvirtConfigBaseTest):
                          ['rx', 'tx', 'sg', 'tso', 'gso', 'gro', 'rxvlan',
                           'txvlan'])
 
+    def test_config_mdev_device(self):
+        xmlin = """
+        <device>
+          <name>mdev_4b20d080_1b54_4048_85b3_a6a62d165c01</name>
+          <parent>pci_0000_06_00_0</parent>
+          <capability type='mdev'>
+            <type id='nvidia-11'/>
+            <iommuGroup number='12'/>
+          </capability>
+        </device>"""
+
+        obj = config.LibvirtConfigNodeDevice()
+        obj.parse_str(xmlin)
+        self.assertIsInstance(obj.mdev_information,
+                              config.LibvirtConfigNodeDeviceMdevInformation)
+        self.assertEqual("nvidia-11", obj.mdev_information.type)
+        self.assertEqual(12, obj.mdev_information.iommu_group)
+
 
 class LibvirtConfigNodeDevicePciCapTest(LibvirtConfigBaseTest):
 
@@ -2870,6 +2888,45 @@ class LibvirtConfigNodeDevicePciCapTest(LibvirtConfigBaseTest):
         self.assertEqual(obj.fun_capability[1].type, 'phys_function')
         self.assertEqual(obj.fun_capability[1].device_addrs,
                          [(0, 10, 1, 1), ])
+
+    def test_config_device_pci_mdev_capable(self):
+        xmlin = """
+            <capability type="pci">
+              <domain>0</domain>
+              <bus>10</bus>
+              <slot>1</slot>
+              <function>5</function>
+              <product id="0x0FFE">GRID M60-0B</product>
+              <vendor id="0x10DE">Nvidia</vendor>
+              <capability type='mdev_types'>
+                <type id='nvidia-11'>
+                  <name>GRID M60-0B</name>
+                  <deviceAPI>vfio-pci</deviceAPI>
+                  <availableInstances>16</availableInstances>
+                </type>
+              </capability>
+            </capability>"""
+        obj = config.LibvirtConfigNodeDevicePciCap()
+        obj.parse_str(xmlin)
+
+        self.assertEqual(0, obj.domain)
+        self.assertEqual(10, obj.bus)
+        self.assertEqual(1, obj.slot)
+        self.assertEqual(5, obj.function)
+        self.assertEqual("GRID M60-0B", obj.product)
+        self.assertEqual(0x0FFE, obj.product_id)
+        self.assertEqual("Nvidia", obj.vendor)
+        self.assertEqual(0x10DE, obj.vendor_id)
+        self.assertIsNone(obj.numa_node)
+        self.assertIsInstance(
+            obj.mdev_capability[0],
+            config.LibvirtConfigNodeDeviceMdevCapableSubFunctionCap)
+
+        self.assertEqual([{
+            'availableInstances': 16,
+            'deviceAPI': 'vfio-pci',
+            'name': 'GRID M60-0B',
+            'type': 'nvidia-11'}], obj.mdev_capability[0].mdev_types)
 
 
 class LibvirtConfigNodeDevicePciSubFunctionCap(LibvirtConfigBaseTest):
