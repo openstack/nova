@@ -1,0 +1,15 @@
+---
+upgrade:
+  - |
+    Nova now uses keystoneauth1 configuration to set up communication with the
+    network service.  Use keystoneauth1 loading parameters for Adapter setup in
+    the ``[neutron]`` conf section (auth and Session options continue to work
+    as before).  Of note:
+
+    * Legacy option ``url`` is deprecated and replaced by
+      ``endpoint_override``.  This should not need to be specified if an
+      appropriate service catalog entry exists for the network service.
+    * When ``url`` is not used, ``region_name`` no longer defaults to
+      ``RegionOne``.
+    * In Queens, specifying ``url`` will trigger the legacy behavior.  The
+      ``url`` option will be removed in Rocky.

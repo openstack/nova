@@ -16,6 +16,10 @@
 from keystoneauth1 import loading as ks_loading
 from oslo_config import cfg
 
+from nova.conf import utils as confutils
+
+
+DEFAULT_SERVICE_TYPE = 'network'
 NEUTRON_GROUP = 'neutron'
 
 neutron_group = cfg.OptGroup(
@@ -27,7 +31,15 @@ Configuration options for neutron (network connectivity as a service).
 
 neutron_opts = [
     cfg.URIOpt('url',
-        default='http://127.0.0.1:9696',
+        sample_default='http://127.0.0.1:9696',
+        deprecated_for_removal=True,
+        deprecated_since='17.0.0',
+        deprecated_reason='Endpoint lookup uses the service catalog via '
+                          'common keystoneauth1 Adapter configuration '
+                          'options. In the current release, "url" will '
+                          'override this behavior, but will be ignored and/or '
+                          'removed in a future release. To achieve the same '
+                          'result, use the endpoint_override option instead.',
         help="""
 This option specifies the URL for connecting to Neutron.
 
@@ -36,18 +48,6 @@ Possible values:
 * Any valid URL that points to the Neutron API service is appropriate here.
   This typically matches the URL returned for the 'network' service type
   from the Keystone service catalog.
-"""),
-    cfg.StrOpt('region_name',
-        default='RegionOne',
-        help="""
-Region name for connecting to Neutron in admin context.
-
-This option is used in multi-region setups. If there are two Neutron
-servers running in two regions in two different machines, then two
-services need to be created in Keystone with two different regions and
-associate corresponding endpoints to those services. When requests are made
-to Keystone, the Keystone service uses the region_name to determine the
-region the request is coming from.
 """),
     cfg.StrOpt('ovs_bridge',
          default='br-int',
@@ -111,8 +111,11 @@ ALL_OPTS = (neutron_opts + metadata_proxy_opts)
 def register_opts(conf):
     conf.register_group(neutron_group)
     conf.register_opts(ALL_OPTS, group=neutron_group)
-    ks_loading.register_session_conf_options(conf, NEUTRON_GROUP)
-    ks_loading.register_auth_conf_options(conf, NEUTRON_GROUP)
+    # NOTE(efried): We don't pass `url` as a deprecated opt because that would
+    # make CONF.neutron.url indistinguishable from
+    # CONF.neutron.endpoint_override in the code, and we need to be able to use
+    # the former to trigger the legacy behavior.
+    confutils.register_ksa_opts(conf, neutron_group, DEFAULT_SERVICE_TYPE)
 
 
 def list_opts():
@@ -123,5 +126,6 @@ def list_opts():
             ks_loading.get_auth_common_conf_options() +
             ks_loading.get_auth_plugin_conf_options('password') +
             ks_loading.get_auth_plugin_conf_options('v2password') +
-            ks_loading.get_auth_plugin_conf_options('v3password'))
+            ks_loading.get_auth_plugin_conf_options('v3password') +
+            confutils.get_ksa_adapter_opts(DEFAULT_SERVICE_TYPE))
     }
