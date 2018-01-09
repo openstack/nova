@@ -24,10 +24,15 @@ class LibvirtFibreChannelVolumeDriverTestCase(
         test_volume.LibvirtVolumeBaseTestCase):
 
     def test_libvirt_fibrechan_driver(self):
-        libvirt_driver = fibrechannel.LibvirtFibreChannelVolumeDriver(
-                                                                self.fake_host)
-        self.assertIsInstance(libvirt_driver.connector,
-                              connector.FibreChannelConnector)
+        for multipath in (True, False):
+            self.flags(volume_use_multipath=multipath, group='libvirt')
+            libvirt_driver = fibrechannel.LibvirtFibreChannelVolumeDriver(
+                self.fake_host)
+            self.assertIsInstance(libvirt_driver.connector,
+                                  connector.FibreChannelConnector)
+            if hasattr(libvirt_driver.connector, 'use_multipath'):
+                self.assertEqual(
+                    multipath, libvirt_driver.connector.use_multipath)
 
     def _test_libvirt_fibrechan_driver_s390(self):
         libvirt_driver = fibrechannel.LibvirtFibreChannelVolumeDriver(

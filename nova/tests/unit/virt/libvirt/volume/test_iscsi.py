@@ -22,9 +22,14 @@ class LibvirtISCSIVolumeDriverTestCase(
         test_volume.LibvirtISCSIVolumeBaseTestCase):
 
     def test_libvirt_iscsi_driver(self, transport=None):
-        libvirt_driver = iscsi.LibvirtISCSIVolumeDriver(self.fake_host)
-        self.assertIsInstance(libvirt_driver.connector,
-                              connector.ISCSIConnector)
+        for multipath in (True, False):
+            self.flags(volume_use_multipath=multipath, group='libvirt')
+            libvirt_driver = iscsi.LibvirtISCSIVolumeDriver(self.fake_host)
+            self.assertIsInstance(libvirt_driver.connector,
+                                  connector.ISCSIConnector)
+            if hasattr(libvirt_driver.connector, 'use_multipath'):
+                self.assertEqual(
+                    multipath, libvirt_driver.connector.use_multipath)
 
     def test_libvirt_iscsi_driver_get_config(self):
         libvirt_driver = iscsi.LibvirtISCSIVolumeDriver(self.fake_host)
