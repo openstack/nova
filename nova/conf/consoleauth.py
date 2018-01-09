@@ -27,7 +27,7 @@ consoleauth_opts = [
         deprecated_name='console_token_ttl',
         deprecated_group='DEFAULT',
         help="""
-The lifetime of a console auth token.
+The lifetime of a console auth token (in seconds).
 
 A console auth token is used in authorizing console access for a user.
 Once the auth token time to live count has elapsed, the token is
