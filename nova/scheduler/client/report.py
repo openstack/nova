@@ -42,7 +42,7 @@ _RE_INV_IN_USE = re.compile("Inventory for (.+) on resource provider "
                             "(.+) in use")
 WARN_EVERY = 10
 PLACEMENT_CLIENT_SEMAPHORE = 'placement_client'
-# Number of seconds between attempts to update the aggregate map
+# Number of seconds between attempts to update a provider's aggregates
 AGGREGATE_REFRESH = 300
 NESTED_PROVIDER_API_VERSION = '1.14'
 POST_ALLOCATIONS_API_VERSION = '1.13'
@@ -261,9 +261,6 @@ class SchedulerReportClient(object):
         # An object that contains a nova-compute-side cache of resource
         # provider and inventory information
         self._provider_tree = provider_tree.ProviderTree()
-        # A dict, keyed by resource provider UUID, of sets of aggregate UUIDs
-        # the provider is associated with
-        self._provider_aggregate_map = {}
         # Track the last time we updated the aggregate map.
         self.aggregate_refresh_time = {}
         self._client = self._create_client()
@@ -275,7 +272,6 @@ class SchedulerReportClient(object):
         """Create the HTTP session accessing the placement service."""
         # Flush provider tree and aggregates so we start from a clean slate.
         self._provider_tree = provider_tree.ProviderTree()
-        self._provider_aggregate_map = {}
         self.aggregate_refresh_time = {}
         # TODO(mriedem): Perform some version discovery at some point.
         client = utils.get_ksa_adapter('placement')
@@ -589,7 +585,7 @@ class SchedulerReportClient(object):
         # parent_provider_uuid on a previously-parent-less provider - so we do
         # NOT handle that scenario here.
         if self._provider_tree.exists(uuid):
-            self._refresh_aggregate_map(uuid)
+            self._refresh_aggregates(uuid)
             return uuid
 
         # No local information about the resource provider in our tree. Check
@@ -599,22 +595,24 @@ class SchedulerReportClient(object):
             rp = self._create_resource_provider(
                 uuid, name or uuid, parent_provider_uuid=parent_provider_uuid)
 
-        # If there had been no resource provider record, force refreshing
-        # the aggregate map.
-        self._refresh_aggregate_map(uuid, force=True)
-
-        # If this is a root node (no parent), create it as such
         if parent_provider_uuid is None:
-            return self._provider_tree.new_root(
+            # If this is a root node (no parent), create it as such
+            ret = self._provider_tree.new_root(
                 rp['name'], uuid, rp['generation'])
+        else:
+            # Not a root - insert it into the proper place in the tree.
+            # NOTE(efried): We populate self._provider_tree from the top down,
+            # so we can count on the parent being in the tree - we don't have
+            # to retrieve it from placement.
+            ret = self._provider_tree.new_child(
+                rp['name'], parent_provider_uuid, uuid=uuid,
+                generation=rp['generation'])
 
-        # Not a root - we have to insert it into the proper place in the tree.
-        # NOTE(efried): We populate self._provider_tree from the top down, so
-        # we can count on the parent being in the tree - we don't have to
-        # retrieve it from placement.
-        return self._provider_tree.new_child(rp['name'], parent_provider_uuid,
-                                             uuid=uuid,
-                                             generation=rp['generation'])
+        # If there had been no local resource provider record, force refreshing
+        # the aggregate map.
+        self._refresh_aggregates(uuid, rp['generation'], force=True)
+
+        return ret
 
     def _get_inventory(self, rp_uuid):
         url = '/resource_providers/%s/inventories' % rp_uuid
@@ -642,7 +640,7 @@ class SchedulerReportClient(object):
             self._provider_tree.update_inventory(rp_uuid, curr_inv, cur_gen)
         return curr
 
-    def _refresh_aggregate_map(self, rp_uuid, force=False):
+    def _refresh_aggregates(self, rp_uuid, generation=None, force=False):
         """Refresh the aggregate map for the provided resource provider uuid.
 
         Only refresh if there has been no refresh during the lifetime of
@@ -651,20 +649,25 @@ class SchedulerReportClient(object):
 
         :param rp_uuid: UUID of the resource provider to check for fresh
                         aggregates
+        :param generation: The resource provider generation to set.  If None,
+                           the provider's generation is not updated.
         :param force: If True, force the refresh
         """
         if force or self._aggregate_map_stale(rp_uuid):
             aggs = self._get_provider_aggregates(rp_uuid)
+            if aggs is not None:
+                msg = ("Refreshing aggregate associations for resource "
+                       "provider %s, aggregates: %s")
+                LOG.debug(msg, rp_uuid, ','.join(aggs or ['None']))
 
-            msg = ("Refreshing aggregate associations for resource "
-                   "provider %s, aggregates: %s")
-            LOG.debug(msg, rp_uuid, ','.join(aggs or ['None']))
-
-            self._provider_aggregate_map[rp_uuid] = aggs
-            self.aggregate_refresh_time[rp_uuid] = time.time()
+                # NOTE(efried): This will blow up if called for a RP that
+                # doesn't exist in our _provider_tree.
+                self._provider_tree.update_aggregates(
+                    rp_uuid, aggs, generation=generation)
+                self.aggregate_refresh_time[rp_uuid] = time.time()
 
     def _aggregate_map_stale(self, uuid):
-        """Respond True if the _provider_aggregate_map is old.
+        """Respond True if aggregates have not been refreshed "recently".
 
         It is old if aggregate_refresh_time for this uuid is not set
         or more than AGGREGATE_REFRESH seconds ago.
@@ -871,7 +874,7 @@ class SchedulerReportClient(object):
                       "inventory. Ignoring.",
                       msg_args)
             self._provider_tree.remove(rp_uuid)
-            self._provider_aggregate_map.pop(rp_uuid, None)
+            self.aggregate_refresh_time.pop(rp_uuid, None)
             return
         elif r.status_code == 409:
             rc_str = _extract_inventory_in_use(r.text)
@@ -1432,7 +1435,7 @@ class SchedulerReportClient(object):
                 self._provider_tree.remove(rp_uuid)
             except ValueError:
                 pass
-            self._provider_aggregate_map.pop(rp_uuid, None)
+            self.aggregate_refresh_time.pop(rp_uuid, None)
         else:
             # Check for 404 since we don't need to log a warning if we tried to
             # delete something which doesn"t actually exist.
