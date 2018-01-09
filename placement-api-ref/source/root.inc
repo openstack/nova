@@ -7,7 +7,7 @@ supports microversioning.  Microversions allow use of certain features on a
 per-request basis via the ``OpenStack-API-Version`` header.  For example, to
 request microversion 1.10, specify the header::
 
-  Openstack-API-Version: placement 1.10
+  OpenStack-API-Version: placement 1.10
 
 For more details about Microversions, please reference:
 `Microversions
