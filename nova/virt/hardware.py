@@ -1017,14 +1017,52 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None,
     """
     LOG.debug('Attempting to fit instance cell %(cell)s on host_cell '
               '%(host_cell)s', {'cell': instance_cell, 'host_cell': host_cell})
-    # NOTE (ndipanov): do not allow an instance to overcommit against
-    # itself on any NUMA cell
-    if instance_cell.memory > host_cell.memory:
-        LOG.debug('Not enough host cell memory to fit instance cell. '
-                  'Required: %(required)d, actual: %(actual)d',
-                  {'required': instance_cell.memory,
-                   'actual': host_cell.memory})
-        return
+
+    if 'pagesize' in instance_cell and instance_cell.pagesize:
+        # The instance has requested a page size.  Verify that the requested
+        # size is valid and that there are available pages of that size on the
+        # host.
+        pagesize = _numa_cell_supports_pagesize_request(
+            host_cell, instance_cell)
+        if not pagesize:
+            LOG.debug('Host does not support requested memory pagesize. '
+                      'Requested: %d kB', instance_cell.pagesize)
+            return
+        LOG.debug('Selected memory pagesize: %(selected_mem_pagesize)d kB. '
+                  'Requested memory pagesize: %(requested_mem_pagesize)d '
+                  '(small = -1, large = -2, any = -3)',
+                  {'selected_mem_pagesize': pagesize,
+                   'requested_mem_pagesize': instance_cell.pagesize})
+        instance_cell.pagesize = pagesize
+    else:
+        # The instance provides a NUMA topology but does not define any
+        # particular page size for its memory.
+        if host_cell.mempages:
+            # The host supports explicit page sizes.  Use the smallest
+            # available page size.
+            pagesize = _get_smallest_pagesize(host_cell)
+            LOG.debug('No specific pagesize requested for instance, '
+                      'selectionned pagesize: %d', pagesize)
+            if not host_cell.can_fit_hugepages(
+                    pagesize, instance_cell.memory * units.Ki):
+                LOG.debug('Not enough available memory to schedule instance '
+                          'with pagesize %(pagesize)d. Required: '
+                          '%(required)s, available: %(available)s, total: '
+                          '%(total)s.',
+                          {'required': instance_cell.memory,
+                           'available': host_cell.avail_memory,
+                           'total': host_cell.memory,
+                           'pagesize': pagesize})
+                return
+        else:
+            # NOTE (ndipanov): do not allow an instance to overcommit against
+            # itself on any NUMA cell
+            if instance_cell.memory > host_cell.memory:
+                LOG.debug('Not enough host cell memory to fit instance cell. '
+                          'Required: %(required)d, actual: %(actual)d',
+                          {'required': instance_cell.memory,
+                           'actual': host_cell.memory})
+                return
 
     if len(instance_cell.cpuset) + cpuset_reserved > len(host_cell.cpuset):
         LOG.debug('Not enough host cell CPUs to fit instance cell. Required: '
@@ -1064,22 +1102,7 @@ def _numa_fit_instance_cell(host_cell, instance_cell, limit_cell=None,
                       {'usage': cpu_usage, 'limit': cpu_limit})
             return
 
-    pagesize = None
-    if instance_cell.pagesize:
-        pagesize = _numa_cell_supports_pagesize_request(
-            host_cell, instance_cell)
-        if not pagesize:
-            LOG.debug('Host does not support requested memory pagesize. '
-                      'Requested: %d kB', instance_cell.pagesize)
-            return
-        LOG.debug('Selected memory pagesize: %(selected_mem_pagesize)d kB. '
-                  'Requested memory pagesize: %(requested_mem_pagesize)d '
-                   '(small = -1, large = -2, any = -3)',
-                  {'selected_mem_pagesize': pagesize,
-                   'requested_mem_pagesize': instance_cell.pagesize})
-
     instance_cell.id = host_cell.id
-    instance_cell.pagesize = pagesize
     return instance_cell
 
 
@@ -1743,10 +1766,22 @@ def numa_get_reserved_huge_pages():
     return bucket
 
 
+def _get_smallest_pagesize(hostcell):
+    """Returns the smallest available page size based o hostcell"""
+    avail_pagesize = [page.size_kb for page in hostcell.mempages]
+    avail_pagesize.sort()
+    return avail_pagesize[0]
+
+
 def _numa_pagesize_usage_from_cell(hostcell, instancecell, sign):
+    if 'pagesize' in instancecell and instancecell.pagesize:
+        pagesize = instancecell.pagesize
+    else:
+        pagesize = _get_smallest_pagesize(hostcell)
+
     topo = []
     for pages in hostcell.mempages:
-        if pages.size_kb == instancecell.pagesize:
+        if pages.size_kb == pagesize:
             topo.append(objects.NUMAPagesTopology(
                 size_kb=pages.size_kb,
                 total=pages.total,
@@ -1811,9 +1846,9 @@ def numa_usage_from_instances(host, instances, free=False):
                     # guest NUMA node 0.
                     cpu_usage += sign * len(instancecell.cpuset_reserved)
 
-                if instancecell.pagesize and instancecell.pagesize > 0:
-                    newcell.mempages = _numa_pagesize_usage_from_cell(
-                        newcell, instancecell, sign)
+                # Compute mempages usage
+                newcell.mempages = _numa_pagesize_usage_from_cell(
+                    newcell, instancecell, sign)
 
                 if instance.cpu_pinning_requested:
                     pinned_cpus = set(instancecell.cpu_pinning.values())
