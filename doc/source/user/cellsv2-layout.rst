@@ -231,15 +231,16 @@ to distinguish its place and purpose from the per-cell conductor nodes.
     conductor -> mq2
   }
 
-It is important to note that services in the lower cell boxes do not
-have the ability to call back to the API-layer services via RPC, nor
-do they have access to the API database for global visibility of
-resources across the cloud. This is intentional and provides security
-and failure domain isolation benefits, but also has impacts on some
-things that would otherwise require this any-to-any communication
-style. Check the release notes for the version of Nova you are using
-for the most up-to-date information about any caveats that may be
-present due to this limitation.
+It is important to note that services in the lower cell boxes only
+have the ability to call back to the placement API but cannot access
+any other API-layer services via RPC, nor do they have access to the
+API database for global visibility of resources across the cloud.
+This is intentional and provides security and failure domain
+isolation benefits, but also has impacts on some things that would
+otherwise require this any-to-any communication style. Check the
+release notes for the version of Nova you are using for the most
+up-to-date information about any caveats that may be present due to
+this limitation.
 
 Caveats of a Multi-Cell deployment
 ----------------------------------
