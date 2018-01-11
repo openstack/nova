@@ -1641,15 +1641,14 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
 
     def test_list_cells_no_cells_verbose_false(self):
         ctxt = context.RequestContext()
-        # This uses fake uuids so the table can stay under 80 characeters.
         cell_mapping0 = objects.CellMapping(
-            context=ctxt, uuid='00000000-0000-0000',
+            context=ctxt, uuid=uuidsentinel.map0,
             database_connection='fake://user1:pass1@host1/db0',
             transport_url='none://user1:pass1@host1/',
             name='cell0')
         cell_mapping0.create()
         cell_mapping1 = objects.CellMapping(
-            context=ctxt, uuid='9e36a3ed-3eb6-4327',
+            context=ctxt, uuid=uuidsentinel.map1,
             database_connection='fake://user1@host1/db0',
             transport_url='none://user1@host1/vhost1',
             name='cell1')
@@ -1657,43 +1656,47 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         self.assertEqual(0, self.commands.list_cells())
         output = self.output.getvalue().strip()
         self.assertEqual('''\
-+-------+--------------------+---------------------------+-----------------------------+
-|  Name |        UUID        |       Transport URL       |     Database Connection     |
-+-------+--------------------+---------------------------+-----------------------------+
-| cell0 | 00000000-0000-0000 |  none://user1:****@host1/ | fake://user1:****@host1/db0 |
-| cell1 | 9e36a3ed-3eb6-4327 | none://user1@host1/vhost1 |    fake://user1@host1/db0   |
-+-------+--------------------+---------------------------+-----------------------------+''',  # noqa
-                         output)
++-------+--------------------------------------+---------------------------+-----------------------------+
+|  Name |                 UUID                 |       Transport URL       |     Database Connection     |
++-------+--------------------------------------+---------------------------+-----------------------------+
+| cell0 | %(uuid_map0)s |  none://user1:****@host1/ | fake://user1:****@host1/db0 |
+| cell1 | %(uuid_map1)s | none://user1@host1/vhost1 |    fake://user1@host1/db0   |
++-------+--------------------------------------+---------------------------+-----------------------------+''' %  # noqa
+                {"uuid_map0": uuidsentinel.map0,
+                 "uuid_map1": uuidsentinel.map1},
+                output)
 
     def test_list_cells_multiple_sorted_verbose_true(self):
         ctxt = context.RequestContext()
-        # This uses fake uuids so the table can stay under 80 characeters.
         cell_mapping0 = objects.CellMapping(
-            context=ctxt, uuid='00000000-0000-0000',
+            context=ctxt, uuid=uuidsentinel.map0,
             database_connection='fake:///db0', transport_url='none:///',
             name='cell0')
         cell_mapping0.create()
         cell_mapping1 = objects.CellMapping(
-            context=ctxt, uuid='9e36a3ed-3eb6-4327',
+            context=ctxt, uuid=uuidsentinel.map1,
             database_connection='fake:///dblon', transport_url='fake:///mqlon',
             name='london')
         cell_mapping1.create()
         cell_mapping2 = objects.CellMapping(
-            context=ctxt, uuid='8a3c608c-b275-496c',
+            context=ctxt, uuid=uuidsentinel.map2,
             database_connection='fake:///dbdal', transport_url='fake:///mqdal',
             name='dallas')
         cell_mapping2.create()
         self.assertEqual(0, self.commands.list_cells(verbose=True))
         output = self.output.getvalue().strip()
         self.assertEqual('''\
-+--------+--------------------+---------------+---------------------+
-|  Name  |        UUID        | Transport URL | Database Connection |
-+--------+--------------------+---------------+---------------------+
-| cell0  | 00000000-0000-0000 |    none:///   |     fake:///db0     |
-| dallas | 8a3c608c-b275-496c | fake:///mqdal |    fake:///dbdal    |
-| london | 9e36a3ed-3eb6-4327 | fake:///mqlon |    fake:///dblon    |
-+--------+--------------------+---------------+---------------------+''',
-                         output)
++--------+--------------------------------------+---------------+---------------------+
+|  Name  |                 UUID                 | Transport URL | Database Connection |
++--------+--------------------------------------+---------------+---------------------+
+| cell0  | %(uuid_map0)s |    none:///   |     fake:///db0     |
+| dallas | %(uuid_map2)s | fake:///mqdal |    fake:///dbdal    |
+| london | %(uuid_map1)s | fake:///mqlon |    fake:///dblon    |
++--------+--------------------------------------+---------------+---------------------+''' %  # noqa
+                {"uuid_map0": uuidsentinel.map0,
+                 "uuid_map1": uuidsentinel.map1,
+                 "uuid_map2": uuidsentinel.map2},
+                output)
 
     def test_delete_cell_not_found(self):
         """Tests trying to delete a cell that is not found by uuid."""
@@ -1883,11 +1886,11 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         ctxt = context.get_admin_context()
         # create the cell mapping
         cm1 = objects.CellMapping(
-            context=ctxt, uuid='9e36a3ed-3eb6-4327', name='london',
+            context=ctxt, uuid=uuidsentinel.map0, name='london',
             database_connection='fake:///db', transport_url='fake:///mq')
         cm1.create()
         cm2 = objects.CellMapping(
-            context=ctxt, uuid='8a3c608c-b275-496c', name='dallas',
+            context=ctxt, uuid=uuidsentinel.map1, name='dallas',
             database_connection='fake:///db', transport_url='fake:///mq')
         cm2.create()
         # create a host mapping in another cell
@@ -1900,23 +1903,25 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         self.assertEqual(0, self.commands.list_hosts())
         output = self.output.getvalue().strip()
         self.assertEqual('''\
-+-----------+--------------------+-------------+
-| Cell Name |     Cell UUID      |   Hostname  |
-+-----------+--------------------+-------------+
-|   london  | 9e36a3ed-3eb6-4327 | fake-host-1 |
-|   dallas  | 8a3c608c-b275-496c | fake-host-2 |
-+-----------+--------------------+-------------+''',
-                         output)
++-----------+--------------------------------------+-------------+
+| Cell Name |              Cell UUID               |   Hostname  |
++-----------+--------------------------------------+-------------+
+|   london  | %(uuid_map0)s | fake-host-1 |
+|   dallas  | %(uuid_map1)s | fake-host-2 |
++-----------+--------------------------------------+-------------+''' %
+                {"uuid_map0": uuidsentinel.map0,
+                 "uuid_map1": uuidsentinel.map1},
+                output)
 
     def test_list_hosts_in_cell(self):
         ctxt = context.get_admin_context()
         # create the cell mapping
         cm1 = objects.CellMapping(
-            context=ctxt, uuid='9e36a3ed-3eb6-4327', name='london',
+            context=ctxt, uuid=uuidsentinel.map0, name='london',
             database_connection='fake:///db', transport_url='fake:///mq')
         cm1.create()
         cm2 = objects.CellMapping(
-            context=ctxt, uuid='8a3c608c-b275-496c', name='dallas',
+            context=ctxt, uuid=uuidsentinel.map1, name='dallas',
             database_connection='fake:///db', transport_url='fake:///mq')
         cm2.create()
         # create a host mapping in another cell
@@ -1927,15 +1932,16 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
             context=ctxt, host='fake-host-2', cell_mapping=cm2)
         hm2.create()
         self.assertEqual(0, self.commands.list_hosts(
-            cell_uuid='9e36a3ed-3eb6-4327'))
+            cell_uuid=uuidsentinel.map0))
         output = self.output.getvalue().strip()
         self.assertEqual('''\
-+-----------+--------------------+-------------+
-| Cell Name |     Cell UUID      |   Hostname  |
-+-----------+--------------------+-------------+
-|   london  | 9e36a3ed-3eb6-4327 | fake-host-1 |
-+-----------+--------------------+-------------+''',
-                         output)
++-----------+--------------------------------------+-------------+
+| Cell Name |              Cell UUID               |   Hostname  |
++-----------+--------------------------------------+-------------+
+|   london  | %(uuid_map0)s | fake-host-1 |
++-----------+--------------------------------------+-------------+''' %
+                {"uuid_map0": uuidsentinel.map0},
+                output)
 
     def test_list_hosts_cell_not_found(self):
         """Tests trying to delete a host but a specified cell is not found."""
