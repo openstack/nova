@@ -68,7 +68,7 @@ Response
 .. literalinclude:: ../../doc/api_samples/os-migrations/v2.59/migrations-get.json
    :language: javascript
 
-**Example List Migrations With Links (v2.59):**
+**Example List Migrations With Paging (v2.59):**
 
 .. literalinclude:: ../../doc/api_samples/os-migrations/v2.59/migrations-get-with-limit.json
    :language: javascript
