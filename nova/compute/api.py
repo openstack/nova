@@ -44,6 +44,7 @@ from nova.cells import opts as cells_opts
 from nova.compute import flavors
 from nova.compute import instance_actions
 from nova.compute import instance_list
+from nova.compute import migration_list
 from nova.compute import power_state
 from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import task_states
@@ -4249,6 +4250,13 @@ class API(base.Base):
                 migrations.extend(objects.MigrationList.get_by_filters(
                     cctxt, filters).objects)
         return objects.MigrationList(objects=migrations)
+
+    def get_migrations_sorted(self, context, filters, sort_dirs=None,
+                              sort_keys=None, limit=None, marker=None):
+        """Get all migrations for the given parameters."""
+        mig_objs = migration_list.get_migration_objects_sorted(
+            context, filters, limit, marker, sort_keys, sort_dirs)
+        return mig_objs
 
     def get_migrations_in_progress_by_instance(self, context, instance_uuid,
                                                migration_type=None):

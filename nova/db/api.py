@@ -584,6 +584,17 @@ def migration_get_in_progress_by_instance(context, instance_uuid,
                                                       migration_type)
 
 
+def migration_get_by_sort_filters(context, sort_keys, sort_dirs, values):
+    """Get the uuid of the first migration in a sort order.
+
+    Return the first migration (uuid) of the set where each column value
+    is greater than or equal to the matching one in @values, for each key
+    in @sort_keys.
+    """
+    return IMPL.migration_get_by_sort_filters(context, sort_keys, sort_dirs,
+                                              values)
+
+
 ####################
 
 

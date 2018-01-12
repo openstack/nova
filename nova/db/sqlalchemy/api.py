@@ -2268,6 +2268,12 @@ def instance_get_by_sort_filters(context, sort_keys, sort_dirs, values):
     """
 
     model = models.Instance
+    return _model_get_uuid_by_sort_filters(context, model, sort_keys,
+                                           sort_dirs, values)
+
+
+def _model_get_uuid_by_sort_filters(context, model, sort_keys, sort_dirs,
+                                    values):
     query = context.session.query(model.uuid)
 
     # NOTE(danms): Below is a re-implementation of our
@@ -4398,6 +4404,12 @@ def migration_get_all_by_filters(context, filters,
         return []
 
     query = model_query(context, models.Migration)
+    if "uuid" in filters:
+        # The uuid filter is here for the MigrationLister and multi-cell
+        # paging support in the compute API.
+        uuid = filters["uuid"]
+        uuid = [uuid] if isinstance(uuid, six.string_types) else uuid
+        query = query.filter(models.Migration.uuid.in_(uuid))
     if 'changes-since' in filters:
         changes_since = timeutils.normalize_time(filters['changes-since'])
         query = query. \
@@ -4439,6 +4451,20 @@ def migration_get_all_by_filters(context, filters,
                                               sort_dirs=sort_dirs).all()
     else:
         return query.all()
+
+
+@require_context
+@pick_context_manager_reader_allow_async
+def migration_get_by_sort_filters(context, sort_keys, sort_dirs, values):
+    """Attempt to get a single migration based on a combination of sort
+    keys, directions and filter values. This is used to try to find a
+    marker migration when we don't have a marker uuid.
+
+    This returns just a uuid of the migration that matched.
+    """
+    model = models.Migration
+    return _model_get_uuid_by_sort_filters(context, model, sort_keys,
+                                           sort_dirs, values)
 
 
 @pick_context_manager_writer
