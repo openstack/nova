@@ -34,16 +34,12 @@ features:
     * For the moment, please don't restart instances (or suspend/resume them)
       or the VGPU related device will be removed from the guest.
 
-    * Mediated devices that are created by the libvirt driver are not
-      persisted upon reboot. Consequently, a guest startup would fail since the
-      virtual device wouldn't be existing. In order to prevent that issue,
-      operators rebooting a compute node have to, before restarting
-      nova-compute service, look at all the guest XML configuration and
-      recreate mediated devices for existing guests by doing
-
-    ..
-
-      echo <UUID> > /sys/class/mdev_bus/<device>/mdev_supported_types/<type>/create
+    * Mediated devices that are created by the libvirt driver are not persisted
+      upon reboot. Consequently, a guest startup would fail since the virtual
+      device wouldn't exist. In order to prevent that issue, when restarting
+      the compute service, the libvirt driver now looks at all the guest XMLs
+      to check if they have mediated devices, and if the mediated device no
+      longer exists, then Nova recreates it by using the same UUID.
 
     * If you use Nvidia GRID cards, please know that there is a limitation with
       the nvidia driver that prevents one guest to have more than one virtual

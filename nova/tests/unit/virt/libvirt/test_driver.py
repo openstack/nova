@@ -18508,7 +18508,8 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         self.assertEqual([uuids.mdev1],
                          drvr._allocate_mdevs(allocations=allocations))
         privsep_create_mdev.assert_called_once_with("0000:06:00.0",
-                                                    'nvidia-11')
+                                                    'nvidia-11',
+                                                    uuid=None)
 
     @mock.patch.object(nova.privsep.libvirt, 'create_mdev')
     @mock.patch.object(libvirt_driver.LibvirtDriver,
@@ -18562,6 +18563,43 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         # Since mdev2 is assigned to inst1, only mdev1 is available
         self.assertEqual(set([uuids.mdev1]),
                          drvr._get_existing_mdevs_not_assigned())
+
+    @mock.patch.object(nova.privsep.libvirt, 'create_mdev')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_get_mdev_capable_devices')
+    @mock.patch.object(os.path, 'exists')
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       '_get_all_assigned_mediated_devices')
+    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
+                       return_value=versionutils.convert_version_to_int(
+                            libvirt_driver.MIN_LIBVIRT_MDEV_SUPPORT))
+    def test_recreate_mediated_device_on_init_host(
+            self, _get_libvirt_version,
+            get_all_assigned_mdevs, exists, get_mdev_capable_devs,
+            privsep_create_mdev):
+        self.flags(enabled_vgpu_types=['nvidia-11'], group='devices')
+        get_all_assigned_mdevs.return_value = {uuids.mdev1: uuids.inst1,
+                                               uuids.mdev2: uuids.inst2}
+
+        # Fake the fact that mdev1 is existing but mdev2 not
+        def _exists(path):
+            # Just verify what we ask
+            self.assertIn('/sys/bus/mdev/devices/', path)
+            return True if uuids.mdev1 in path else False
+
+        exists.side_effect = _exists
+        get_mdev_capable_devs.return_value = [
+            {"dev_id": "pci_0000_06_00_0",
+             "types": {'nvidia-11': {'availableInstances': 16,
+                                     'name': 'GRID M60-0B',
+                                     'deviceAPI': 'vfio-pci'},
+                       }
+             }]
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr.init_host(host='foo')
+        privsep_create_mdev.assert_called_once_with(
+            "0000:06:00.0", 'nvidia-11', uuid=uuids.mdev2)
 
 
 class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
