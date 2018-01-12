@@ -1570,6 +1570,16 @@ class TestDelete(test.NoDBTestCase):
         self.assertRaises(exception.ImageNotFound, service.delete, ctx,
                           mock.sentinel.image_id)
 
+    def test_delete_client_conflict_failure_v2(self):
+        client = mock.MagicMock()
+        fake_details = 'Image %s is in use' % mock.sentinel.image_id
+        client.call.side_effect = glanceclient.exc.HTTPConflict(
+            details=fake_details)
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageServiceV2(client)
+        self.assertRaises(exception.ImageDeleteConflict, service.delete, ctx,
+                          mock.sentinel.image_id)
+
 
 class TestGlanceApiServers(test.NoDBTestCase):
 
