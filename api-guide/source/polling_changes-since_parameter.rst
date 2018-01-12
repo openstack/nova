@@ -7,7 +7,7 @@ performing a **GET** on various elements. Rather than re-downloading and
 re-parsing the full status at each polling interval, your REST client
 may use the *``changes-since``* parameter to check for changes since a
 previous request. The *``changes-since``* time is specified as an `ISO
-8601 <http://en.wikipedia.org/wiki/ISO_8601>`__ dateTime
+8601 <https://en.wikipedia.org/wiki/ISO_8601>`__ dateTime
 (2011-01-24T17:08Z). The form for the timestamp is CCYY-MM-DDThh:mm:ss.
 An optional time zone may be written in by appending the form ±hh:mm
 which describes the timezone as an offset from UTC. When the timezone is
