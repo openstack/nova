@@ -12,6 +12,8 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import copy
+
 from nova.api.validation import parameter_types
 
 list_query_schema_v20 = {
@@ -25,9 +27,17 @@ list_query_schema_v20 = {
         'migration_type': parameter_types.common_query_param,
     },
     # For backward compatible changes
-    # TODO(mriedem): In a future microversion, consider changing
-    # additionalProperties to False, remove the 'hidden' filter since
-    # it's vestigial, and enforce type and enum checks for the filters
-    # where that makes sense, e.g. instance_uuid, status and migration_type.
     'additionalProperties': True
 }
+
+list_query_params_v259 = copy.deepcopy(list_query_schema_v20)
+list_query_params_v259['properties'].update({
+    # The 2.59 microversion added support for paging by limit and marker
+    # and filtering by changes-since.
+    'limit': parameter_types.single_param(
+        parameter_types.non_negative_integer),
+    'marker': parameter_types.single_param({'type': 'string'}),
+    'changes-since': parameter_types.single_param(
+        {'type': 'string', 'format': 'date-time'}),
+})
+list_query_params_v259['additionalProperties'] = False

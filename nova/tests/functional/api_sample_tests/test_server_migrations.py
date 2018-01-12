@@ -210,3 +210,19 @@ class ServerMigrationsSampleJsonTestV2_24(test_servers.ServersSampleBase):
         uri = 'servers/%s/migrations/%s' % (self.uuid, self.migration.id)
         response = self._do_delete(uri)
         self.assertEqual(400, response.status_code)
+
+
+class ServerMigrationsSamplesJsonTestV2_59(
+    ServerMigrationsSamplesJsonTestV2_23
+):
+    ADMIN_API = True
+    microversion = '2.59'
+    scenarios = [('v2_59', {'api_major_version': 'v2.1'})]
+
+    def setUp(self):
+        # Add UUIDs to the fake migrations used in the tests.
+        self.fake_migrations[0][
+            'uuid'] = '12341d4b-346a-40d0-83c6-5f4f6892b650'
+        self.fake_migrations[1][
+            'uuid'] = '22341d4b-346a-40d0-83c6-5f4f6892b650'
+        super(ServerMigrationsSamplesJsonTestV2_59, self).setUp()

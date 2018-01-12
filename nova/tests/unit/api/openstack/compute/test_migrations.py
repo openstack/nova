@@ -15,6 +15,8 @@
 import datetime
 
 import mock
+import six
+from webob import exc
 
 from nova.api.openstack.compute import migrations as migrations_v21
 from nova import context
@@ -258,6 +260,98 @@ class MigrationsTestCaseV223(MigrationsTestCaseV21):
             self.assertIn('migration_type', response['migrations'][0])
 
 
+class MigrationsTestCaseV259(MigrationsTestCaseV223):
+    wsgi_api_version = '2.59'
+
+    def test_index(self):
+        migrations = {'migrations': self.controller._output(
+                                        self.req, migrations_obj, True, True)}
+
+        for i, mig in enumerate(migrations['migrations']):
+            # first item is in-progress live migration
+            if i == 0:
+                self.assertIn('links', mig)
+            else:
+                self.assertNotIn('links', mig)
+
+            self.assertIn('migration_type', mig)
+            self.assertIn('id', mig)
+            self.assertIn('uuid', mig)
+            self.assertNotIn('deleted', mig)
+            self.assertNotIn('deleted_at', mig)
+
+        with mock.patch.object(self.controller.compute_api,
+                               'get_migrations_sorted') as m_get:
+            m_get.return_value = migrations_obj
+            response = self.controller.index(self.req)
+            self.assertEqual(migrations, response)
+            self.assertIn('links', response['migrations'][0])
+            self.assertIn('migration_type', response['migrations'][0])
+
+    @mock.patch('nova.compute.api.API.get_migrations_sorted')
+    def test_index_with_invalid_marker(self, mock_migrations_get):
+        """Tests detail paging with an invalid marker (not found)."""
+        mock_migrations_get.side_effect = exception.MarkerNotFound(
+            marker=uuids.invalid_marker)
+        req = fakes.HTTPRequest.blank(
+            '/os-migrations?marker=%s' % uuids.invalid_marker,
+            version=self.wsgi_api_version, use_admin_context=True)
+        e = self.assertRaises(exc.HTTPBadRequest,
+                              self.controller.index, req)
+        self.assertEqual(
+            "Marker %s could not be found." % uuids.invalid_marker,
+            six.text_type(e))
+
+    def test_index_with_invalid_limit(self):
+        """Tests detail paging with an invalid limit."""
+        req = fakes.HTTPRequest.blank(
+            '/os-migrations?limit=x', version=self.wsgi_api_version,
+            use_admin_context=True)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.index, req)
+        req = fakes.HTTPRequest.blank(
+            '/os-migrations?limit=-1', version=self.wsgi_api_version,
+            use_admin_context=True)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.index, req)
+
+    def test_index_with_invalid_changes_since(self):
+        """Tests detail paging with an invalid changes-since value."""
+        req = fakes.HTTPRequest.blank(
+            '/os-migrations?changes-since=wrong_time',
+            version=self.wsgi_api_version, use_admin_context=True)
+        self.assertRaises(exception.ValidationError,
+                          self.controller.index, req)
+
+    def test_index_with_unknown_query_param(self):
+        """Tests detail paging with an unknown query parameter."""
+        req = fakes.HTTPRequest.blank(
+            '/os-migrations?foo=bar',
+            version=self.wsgi_api_version, use_admin_context=True)
+        ex = self.assertRaises(exception.ValidationError,
+                               self.controller.index, req)
+        self.assertIn('Additional properties are not allowed',
+                      six.text_type(ex))
+
+    @mock.patch('nova.compute.api.API.get_migrations',
+                return_value=objects.MigrationList())
+    def test_index_with_changes_since_old_microversion(self, get_migrations):
+        """Tests that the changes-since query parameteris ignored before
+        microversion 2.59.
+        """
+        # Also use a valid filter (instance_uuid) to make sure only
+        # changes-since is removed.
+        req = fakes.HTTPRequest.blank(
+            '/os-migrations?changes-since=2018-01-10T16:59:24.138939&'
+            'instance_uuid=%s' % uuids.instance_uuid,
+            version='2.58', use_admin_context=True)
+        result = self.controller.index(req)
+        self.assertEqual({'migrations': []}, result)
+        get_migrations.assert_called_once_with(
+            req.environ['nova.context'],
+            {'instance_uuid': uuids.instance_uuid})
+
+
 class MigrationsPolicyEnforcement(test.NoDBTestCase):
     def setUp(self):
         super(MigrationsPolicyEnforcement, self).setUp()
@@ -281,3 +375,7 @@ class MigrationsPolicyEnforcementV223(MigrationsPolicyEnforcement):
     def setUp(self):
         super(MigrationsPolicyEnforcementV223, self).setUp()
         self.req = fakes.HTTPRequest.blank('', version=self.wsgi_api_version)
+
+
+class MigrationsPolicyEnforcementV259(MigrationsPolicyEnforcementV223):
+    wsgi_api_version = '2.59'

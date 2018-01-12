@@ -10,12 +10,16 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.openstack import api_version_request
+from oslo_utils import timeutils
+from webob import exc
+
 from nova.api.openstack import common
 from nova.api.openstack.compute.schemas import migrations as schema_migrations
+from nova.api.openstack.compute.views import migrations as migrations_view
 from nova.api.openstack import wsgi
 from nova.api import validation
 from nova import compute
+from nova import exception
 from nova.objects import base as obj_base
 from nova.policies import migrations as migrations_policies
 
@@ -23,14 +27,14 @@ from nova.policies import migrations as migrations_policies
 class MigrationsController(wsgi.Controller):
     """Controller for accessing migrations in OpenStack API."""
 
-    _view_builder_class = common.ViewBuilder
+    _view_builder_class = migrations_view.ViewBuilder
     _collection_name = "servers/%s/migrations"
 
     def __init__(self):
         super(MigrationsController, self).__init__()
         self.compute_api = compute.API()
 
-    def _output(self, req, migrations_obj, add_link=False):
+    def _output(self, req, migrations_obj, add_link=False, add_uuid=False):
         """Returns the desired output of the API from an object.
 
         From a MigrationsList's object this method returns a list of
@@ -51,7 +55,8 @@ class MigrationsController(wsgi.Controller):
             del obj['deleted']
             del obj['deleted_at']
             del obj['hidden']
-            del obj['uuid']
+            if not add_uuid:
+                del obj['uuid']
             if 'memory_total' in obj:
                 for key in detail_keys:
                     del obj[key]
@@ -68,15 +73,71 @@ class MigrationsController(wsgi.Controller):
 
         return objects
 
-    @wsgi.expected_errors(())
-    @validation.query_schema(schema_migrations.list_query_schema_v20)
-    def index(self, req):
-        """Return all migrations using the query parameters as filters."""
+    def _index(self, req, add_link=False, next_link=False, add_uuid=False,
+               sort_dirs=None, sort_keys=None, limit=None, marker=None,
+               allow_changes_since=False):
         context = req.environ['nova.context']
         context.can(migrations_policies.POLICY_ROOT % 'index')
-        migrations = self.compute_api.get_migrations(context, req.GET)
+        search_opts = {}
+        search_opts.update(req.GET)
+        if 'changes-since' in search_opts:
+            if allow_changes_since:
+                search_opts['changes-since'] = timeutils.parse_isotime(
+                    search_opts['changes-since'])
+            else:
+                # Before microversion 2.59, the changes-since filter was not
+                # supported in the DB API. However, the schema allowed
+                # additionalProperties=True, so a user could pass it before
+                # 2.59 and filter by the updated_at field if we don't remove
+                # it from search_opts.
+                del search_opts['changes-since']
 
-        if api_version_request.is_supported(req, min_version='2.23'):
-            return {'migrations': self._output(req, migrations, True)}
+        if sort_keys:
+            try:
+                migrations = self.compute_api.get_migrations_sorted(
+                    context, search_opts,
+                    sort_dirs=sort_dirs, sort_keys=sort_keys,
+                    limit=limit, marker=marker)
+            except exception.MarkerNotFound as e:
+                raise exc.HTTPBadRequest(explanation=e.format_message())
+        else:
+            migrations = self.compute_api.get_migrations(
+                context, search_opts)
 
-        return {'migrations': self._output(req, migrations)}
+        migrations = self._output(req, migrations, add_link, add_uuid)
+        migrations_dict = {'migrations': migrations}
+
+        if next_link:
+            migrations_links = self._view_builder.get_links(req, migrations)
+            if migrations_links:
+                migrations_dict['migrations_links'] = migrations_links
+        return migrations_dict
+
+    @wsgi.Controller.api_version("2.1", "2.22")  # noqa
+    @wsgi.expected_errors(())
+    @validation.query_schema(schema_migrations.list_query_schema_v20,
+                             "2.1", "2.22")
+    def index(self, req):
+        """Return all migrations using the query parameters as filters."""
+        return self._index(req)
+
+    @wsgi.Controller.api_version("2.23", "2.58")  # noqa
+    @wsgi.expected_errors(())
+    @validation.query_schema(schema_migrations.list_query_schema_v20,
+                             "2.23", "2.58")
+    def index(self, req):
+        """Return all migrations using the query parameters as filters."""
+        return self._index(req, add_link=True)
+
+    @wsgi.Controller.api_version("2.59")  # noqa
+    @wsgi.expected_errors(400)
+    @validation.query_schema(schema_migrations.list_query_params_v259,
+                             "2.59")
+    def index(self, req):
+        """Return all migrations using the query parameters as filters."""
+        limit, marker = common.get_limit_and_marker(req)
+        return self._index(req, add_link=True, next_link=True, add_uuid=True,
+                           sort_keys=['created_at', 'id'],
+                           sort_dirs=['desc', 'desc'],
+                           limit=limit, marker=marker,
+                           allow_changes_since=True)

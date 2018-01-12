@@ -740,3 +740,20 @@ API. Users can now use ``limit`` and ``marker`` to perform paginated query
 when listing instance actions. Users can also use ``changes-since`` filter
 to filter the results based on the last time the instance action was
 updated.
+
+2.59
+----
+
+Added pagination support for migrations, there are four changes:
+
+* Add pagination support and ``changes-since`` filter for os-migrations
+  API. Users can now use ``limit`` and ``marker`` to perform paginate query
+  when listing migrations.
+* Users can also use ``changes-since`` filter to filter the results based
+  on the last time the migration record was updated.
+* ``GET /os-migrations``,
+  ``GET /servers/{server_id}/migrations/{migration_id}`` and
+  ``GET /servers/{server_id}/migrations`` will now return a uuid value in
+  addition to the migrations id in the response.
+* The query parameter schema of the ``GET /os-migrations`` API no longer
+  allows additional properties.
