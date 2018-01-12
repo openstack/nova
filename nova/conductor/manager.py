@@ -253,7 +253,6 @@ class ComputeTaskManager(base.Base):
         exception.MigrationPreCheckError,
         exception.MigrationPreCheckClientException,
         exception.LiveMigrationWithOldNovaNotSupported,
-        exception.ConsumerAllocationNotFound,
         exception.UnsupportedPolicyException)
     @targets_cell
     @wrap_instance_event(prefix='conductor')

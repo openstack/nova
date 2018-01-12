@@ -237,10 +237,9 @@ class MigrationTaskAllocationUtils(test.NoDBTestCase):
         instance = objects.Instance(uuid=uuids.instance,
                                     host='host', node='node')
 
-        self.assertRaises(exception.ConsumerAllocationNotFound,
-                          migrate.replace_allocation_with_migration,
-                          mock.sentinel.context,
-                          instance, migration)
+        result = migrate.replace_allocation_with_migration(
+            mock.sentinel.context, instance, migration)
+        self.assertEqual((None, None), result)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'put_allocations')

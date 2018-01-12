@@ -47,11 +47,11 @@ def replace_allocation_with_migration(context, instance, migration):
     orig_alloc = reportclient.get_allocations_for_consumer_by_provider(
         source_cn.uuid, instance.uuid)
     if not orig_alloc:
-        LOG.error('Unable to find existing allocations for instance on '
-                  'source compute node: %s', source_cn.uuid,
+        LOG.debug('Unable to find existing allocations for instance on '
+                  'source compute node: %s. This is normal if you are not '
+                  'using the FilterScheduler.', source_cn.uuid,
                   instance=instance)
-        raise exception.ConsumerAllocationNotFound(
-            consumer_id=instance.uuid, provider_uuid=source_cn.uuid)
+        return None, None
 
     # FIXME(danms): This method is flawed in that it asssumes allocations
     # against only one provider. So, this may overwite allocations against
