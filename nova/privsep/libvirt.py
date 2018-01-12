@@ -223,22 +223,35 @@ def unplug_plumgrid_vif(dev):
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
-def plug_contrail_vif(instance, vif, ip_addr, ip6_addr, ptype):
-    cmd_args = ('--oper=add --uuid=%s --instance_uuid=%s --vn_uuid=%s '
-                '--vm_project_uuid=%s --ip_address=%s --ipv6_address=%s'
-                ' --vm_name=%s --mac=%s --tap_name=%s --port_type=%s '
-                '--tx_vlan_id=%d --rx_vlan_id=%d'
-                % (vif['id'], instance.uuid, vif['network']['id'],
-                   instance.project_id, ip_addr, ip6_addr,
-                   instance.display_name, vif['address'],
-                   vif['devname'], ptype, -1, -1))
-    processutils.execute('vrouter-port-control', cmd_args)
+def plug_contrail_vif(project_id, vm_id, vm_name, vif_id, net_id, port_type,
+                      dev_name, mac, ip_addr, ip6_addr):
+    cmd = (
+        'vrouter-port-control',
+        '--oper=add',
+        '--vm_project_uuid=%s' % project_id,
+        '--instance_uuid=%s' % vm_id,
+        ' --vm_name=%s' % vm_name,
+        '--uuid=%s' % vif_id,
+        '--vn_uuid=%s' % net_id,
+        '--port_type=%s' % port_type,
+        '--tap_name=%s' % dev_name,
+        '--mac=%s' % mac,
+        '--ip_address=%s' % ip_addr,
+        '--ipv6_address=%s' % ip6_addr,
+        '--tx_vlan_id=-1',
+        '--rx_vlan_id=-1',
+    )
+    processutils.execute(*cmd)
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
-def unplug_contrail_vif(vif):
-    cmd_args = ('--oper=delete --uuid=%s' % (vif['id']))
-    processutils.execute('vrouter-port-control', cmd_args)
+def unplug_contrail_vif(port_id):
+    cmd = (
+        'vrouter-port-control',
+        '--oper=delete',
+        '--uuid=%s' % port_id,
+    )
+    processutils.execute(*cmd)
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
