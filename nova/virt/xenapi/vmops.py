@@ -1185,7 +1185,8 @@ class VMOps(object):
             LOG.debug("Migrated root base vhds", instance=instance)
 
         def _process_ephemeral_chain_recursive(ephemeral_chains,
-                                               active_vdi_uuids):
+                                               active_vdi_uuids,
+                                               ephemeral_disk_index=0):
             # This method is called several times, recursively.
             # The first phase snapshots the ephemeral disks, and
             # migrates the read only VHD files.
@@ -1198,48 +1199,55 @@ class VMOps(object):
                 # all the ephemeral disks, so its time to power down
                 # and complete the migration of the diffs since the snapshot
                 LOG.debug("Migrated all base vhds.", instance=instance)
-                return power_down_and_transfer_leaf_vhds(
-                            active_root_vdi_uuid,
-                            active_vdi_uuids)
+                return power_down_and_transfer_leaf_vhds(active_root_vdi_uuid,
+                                                         active_vdi_uuids)
 
             remaining_chains = []
             if number_of_chains > 1:
                 remaining_chains = ephemeral_chains[1:]
 
-            ephemeral_disk_index = len(active_vdi_uuids)
             userdevice = int(DEVICE_EPHEMERAL) + ephemeral_disk_index
 
-            # Here we take a snapshot of the ephemeral disk,
-            # and migrate all VHDs in the chain that are not being written to
-            # Once that is completed, we call back into this method to either:
-            # - migrate any remaining ephemeral disks
-            # - or, if all disks are migrated, we power down and complete
-            #   the migration but copying the diffs since all the snapshots
-            #   were taken
-            with vm_utils.snapshot_attached_here(self._session, instance,
-                    vm_ref, label, str(userdevice)) as chain_vdi_uuids:
+            # Ensure we are not snapshotting a volume
+            if not volume_utils.is_booted_from_volume(self._session, vm_ref,
+                                                      userdevice):
 
-                # remember active vdi, we will migrate these later
-                vdi_ref, vm_vdi_rec = vm_utils.get_vdi_for_vm_safely(
+                # Here we take a snapshot of the ephemeral disk,
+                # and migrate all VHDs in the chain that are not being written
+                # to. Once that is completed, we call back into this method to
+                # either:
+                # - migrate any remaining ephemeral disks
+                # - or, if all disks are migrated, we power down and complete
+                #   the migration but copying the diffs since all the snapshots
+                #   were taken
+
+                with vm_utils.snapshot_attached_here(self._session, instance,
+                            vm_ref, label, str(userdevice)) as chain_vdi_uuids:
+
+                    # remember active vdi, we will migrate these later
+                    vdi_ref, vm_vdi_rec = vm_utils.get_vdi_for_vm_safely(
                         self._session, vm_ref, str(userdevice))
-                active_uuid = vm_vdi_rec['uuid']
-                active_vdi_uuids.append(active_uuid)
+                    active_uuid = vm_vdi_rec['uuid']
+                    active_vdi_uuids.append(active_uuid)
 
-                # migrate inactive vhds
-                inactive_vdi_uuids = chain_vdi_uuids[1:]
-                ephemeral_disk_number = ephemeral_disk_index + 1
-                for seq_num, vdi_uuid in enumerate(inactive_vdi_uuids,
-                                                   start=1):
-                    vm_utils.migrate_vhd(self._session, instance, vdi_uuid,
-                                         dest, sr_path, seq_num,
-                                         ephemeral_disk_number)
+                    # migrate inactive vhds
+                    inactive_vdi_uuids = chain_vdi_uuids[1:]
+                    ephemeral_disk_number = ephemeral_disk_index + 1
+                    for seq_num, vdi_uuid in enumerate(inactive_vdi_uuids,
+                                                       start=1):
+                        vm_utils.migrate_vhd(self._session, instance, vdi_uuid,
+                                             dest, sr_path, seq_num,
+                                             ephemeral_disk_number)
 
-                LOG.debug("Read-only migrated for disk: %s", userdevice,
-                          instance=instance)
-                # This is recursive to simplify the taking and cleaning up
-                # of all the ephemeral disk snapshots
-                return _process_ephemeral_chain_recursive(remaining_chains,
-                                                          active_vdi_uuids)
+                    LOG.debug("Read-only migrated for disk: %s", userdevice,
+                              instance=instance)
+
+            # This method is recursive, so we will increment our index
+            # and process again until the chains are empty.
+            ephemeral_disk_index = ephemeral_disk_index + 1
+            return _process_ephemeral_chain_recursive(remaining_chains,
+                                                      active_vdi_uuids,
+                                                      ephemeral_disk_index)
 
         @step
         def transfer_ephemeral_disks_then_all_leaf_vdis():

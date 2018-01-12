@@ -1110,11 +1110,11 @@ class MigrateDiskResizingUpTestCase(VMOpsTestBase):
             yield [leaf, parent]
 
     @mock.patch.object(volume_utils, 'is_booted_from_volume',
-            return_value=False)
+                       return_value=False)
     def test_migrate_disk_resizing_up_works_no_ephemeral(self,
-            mock_is_booted_from_volume,
-            mock_apply_orig, mock_update_progress, mock_get_all_vdi_uuids,
-            mock_shutdown, mock_migrate_vhd, mock_get_vdi_for_vm):
+            mock_is_booted_from_volume, mock_apply_orig, mock_update_progress,
+            mock_get_all_vdi_uuids, mock_shutdown, mock_migrate_vhd,
+            mock_get_vdi_for_vm):
         context = "ctxt"
         instance = {"name": "fake", "uuid": "uuid"}
         dest = "dest"
@@ -1152,11 +1152,11 @@ class MigrateDiskResizingUpTestCase(VMOpsTestBase):
         self.assertEqual(prog_expected, mock_update_progress.call_args_list)
 
     @mock.patch.object(volume_utils, 'is_booted_from_volume',
-            return_value=False)
-    def test_migrate_disk_resizing_up_works_with_two_ephemeral(self,
-            mock_is_booted_from_volume,
-            mock_apply_orig, mock_update_progress, mock_get_all_vdi_uuids,
-            mock_shutdown, mock_migrate_vhd, mock_get_vdi_for_vm):
+                       return_value=False)
+    def test_migrate_disk_resizing_up_ephemerals_no_volume(self,
+            mock_is_booted_from_volume, mock_apply_orig, mock_update_progress,
+            mock_get_all_vdi_uuids, mock_shutdown, mock_migrate_vhd,
+            mock_get_vdi_for_vm):
         context = "ctxt"
         instance = {"name": "fake", "uuid": "uuid"}
         dest = "dest"
@@ -1203,12 +1203,11 @@ class MigrateDiskResizingUpTestCase(VMOpsTestBase):
             ]
         self.assertEqual(prog_expected, mock_update_progress.call_args_list)
 
-    @mock.patch.object(volume_utils, 'is_booted_from_volume',
-            return_value=True)
-    def test_migrate_disk_resizing_up_booted_from_volume(self,
-            mock_is_booted_from_volume,
-            mock_apply_orig, mock_update_progress, mock_get_all_vdi_uuids,
-            mock_shutdown, mock_migrate_vhd, mock_get_vdi_for_vm):
+    @mock.patch.object(volume_utils, 'is_booted_from_volume')
+    def test_migrate_disk_resizing_up_ephemerals_mixed_volumes(self,
+            mock_is_booted_from_volume, mock_apply_orig, mock_update_progress,
+            mock_get_all_vdi_uuids, mock_shutdown, mock_migrate_vhd,
+            mock_get_vdi_for_vm):
         context = "ctxt"
         instance = {"name": "fake", "uuid": "uuid"}
         dest = "dest"
@@ -1218,6 +1217,10 @@ class MigrateDiskResizingUpTestCase(VMOpsTestBase):
         mock_get_all_vdi_uuids.return_value = ["vdi-eph1", "vdi-eph2"]
         mock_get_vdi_for_vm.side_effect = [({}, {"uuid": "4-root"}),
                                            ({}, {"uuid": "5-root"})]
+        # Here we mock the is_booted_from_volume call to emulate the
+        # 4-root and 4-parent VDI's being volume based, while 5-root
+        # and 5-Parent are local ephemeral drives that should be migrated.
+        mock_is_booted_from_volume.side_effect = [True, False, True, False]
 
         with mock.patch.object(vm_utils, '_snapshot_attached_here_impl',
                 self._fake_snapshot_attached_here):
@@ -1228,15 +1231,11 @@ class MigrateDiskResizingUpTestCase(VMOpsTestBase):
                 vm_ref, min_userdevice=4)
         mock_apply_orig.assert_called_once_with(instance, vm_ref)
         mock_shutdown.assert_called_once_with(instance, vm_ref)
-
         m_vhd_expected = [mock.call(self.vmops._session, instance,
                                     "4-parent", dest, sr_path, 1, 1),
                           mock.call(self.vmops._session, instance,
-                                    "5-parent", dest, sr_path, 1, 2),
-                          mock.call(self.vmops._session, instance,
-                                    "4-root", dest, sr_path, 0, 1),
-                          mock.call(self.vmops._session, instance,
-                                    "5-root", dest, sr_path, 0, 2)]
+                                    "4-root", dest, sr_path, 0, 1)]
+
         self.assertEqual(m_vhd_expected, mock_migrate_vhd.call_args_list)
 
         prog_expected = [

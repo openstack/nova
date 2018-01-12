@@ -342,9 +342,11 @@ def find_vbd_by_number(session, vm_ref, dev_number):
                 LOG.debug(msg, exc_info=True)
 
 
-def is_booted_from_volume(session, vm_ref):
+def is_booted_from_volume(session, vm_ref, user_device=0):
     """Determine if the root device is a volume."""
-    vbd_ref = find_vbd_by_number(session, vm_ref, 0)
+    # TODO(bkaminski):  We have opened the scope of this method to accept
+    # userdevice.  We should rename this method and its references for clarity.
+    vbd_ref = find_vbd_by_number(session, vm_ref, user_device)
     vbd_other_config = session.VBD.get_other_config(vbd_ref)
     if vbd_other_config.get('osvol', False):
         return True
