@@ -1,0 +1,33 @@
+- job:
+    name: nova-lvm
+    parent: legacy-dsvm-base
+    description: |
+      Run standard integration tests using LVM image backend. This is useful if
+      there are tests touching this code.
+    timeout: 10800
+    run: playbooks/legacy/nova-lvm/run.yaml
+    post-run: playbooks/legacy/nova-lvm/post.yaml
+    required-projects:
+      - openstack-infra/devstack-gate
+      - openstack/nova
+      - openstack/tempest
+    irrelevant-files:
+      - ^(placement-)?api-.*$
+      - ^(test-|)requirements.txt$
+      - ^.*\.rst$
+      - ^.git.*$
+      - ^doc/.*$
+      - ^nova/hacking/.*$
+      - ^nova/locale/.*$
+      - ^nova/tests/.*$
+      - ^releasenotes/.*$
+      - ^setup.cfg$
+      - ^tests-py3.txt$
+      - ^tools/.*$
+      - ^tox.ini$
+
+- project:
+    name: openstack/nova
+    experimental:
+      jobs:
+        - nova-lvm
