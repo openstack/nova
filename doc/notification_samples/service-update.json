@@ -1,21 +1,10 @@
 {
     "priority": "INFO",
     "payload": {
-        "nova_object.namespace": "nova",
-        "nova_object.name": "ServiceStatusPayload",
-        "nova_object.version": "1.1",
+        "$ref": "common_payloads/ServiceStatusPayload.json#",
         "nova_object.data": {
-            "host": "host1",
-            "disabled": false,
             "last_seen_up": "2012-10-29T13:42:05Z",
-            "binary": "nova-compute",
-            "topic": "compute",
-            "disabled_reason": null,
-            "report_count": 1,
-            "forced_down": false,
-            "version": 23,
-            "availability_zone": null,
-            "uuid": "fa69c544-906b-4a6a-a9c6-c1f7a8078c73"
+            "report_count": 1
         }
     },
     "event_type": "service.update",
