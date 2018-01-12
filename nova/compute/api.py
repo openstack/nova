@@ -4687,11 +4687,6 @@ class HostAPI(base.Base):
             with nova_context.target_cell(context, cell) as cctxt:
                 try:
                     if is_uuid:
-                        # NOTE(mriedem): We wouldn't have to loop over cells if
-                        # we stored the ComputeNode.uuid in the HostMapping but
-                        # we don't have that. It could be added but would
-                        # require an online data migration to update existing
-                        # host mappings.
                         return objects.ComputeNode.get_by_uuid(cctxt,
                                                                compute_id)
                     return objects.ComputeNode.get_by_id(cctxt,
