@@ -1125,7 +1125,7 @@ object_data = {
     'MemoryDiagnostics': '1.0-2c995ae0f2223bb0f8e523c5cc0b83da',
     'Migration': '1.5-48bebaada664ee15bc23b35b2b814d75',
     'MigrationContext': '1.1-9fb17b0b521370957a884636499df52d',
-    'MigrationList': '1.3-55595bfc1a299a5962614d0821a3567e',
+    'MigrationList': '1.4-983a9c29d4f1e747ce719dc9063b729b',
     'MonitorMetric': '1.1-53b1db7c4ae2c531db79761e7acc52ba',
     'MonitorMetricList': '1.1-15ecf022a68ddbb8c2a6739cfc9f8f5e',
     'NicDiagnostics': '1.0-895e9ad50e0f56d5258585e3e066aea5',

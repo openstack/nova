@@ -185,7 +185,9 @@ class MigrationList(base.ObjectListBase, base.NovaObject):
     # Version 1.2: Migration version 1.2
     # Version 1.3: Added a new function to get in progress migrations
     #              for an instance.
-    VERSION = '1.3'
+    # Version 1.4: Added sort_keys, sort_dirs, limit, marker kwargs to
+    #              get_by_filters for migrations pagination support.
+    VERSION = '1.4'
 
     fields = {
         'objects': fields.ListOfObjectsField('Migration'),
@@ -214,8 +216,11 @@ class MigrationList(base.ObjectListBase, base.NovaObject):
                                   db_migrations)
 
     @base.remotable_classmethod
-    def get_by_filters(cls, context, filters):
-        db_migrations = db.migration_get_all_by_filters(context, filters)
+    def get_by_filters(cls, context, filters, sort_keys=None, sort_dirs=None,
+                       limit=None, marker=None):
+        db_migrations = db.migration_get_all_by_filters(
+            context, filters, sort_keys=sort_keys, sort_dirs=sort_dirs,
+            limit=limit, marker=marker)
         return base.obj_make_list(context, cls(context), objects.Migration,
                                   db_migrations)
 

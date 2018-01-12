@@ -568,9 +568,13 @@ def migration_get_in_progress_by_host_and_node(context, host, node):
     return IMPL.migration_get_in_progress_by_host_and_node(context, host, node)
 
 
-def migration_get_all_by_filters(context, filters):
+def migration_get_all_by_filters(context, filters, sort_keys=None,
+                                 sort_dirs=None, limit=None, marker=None):
     """Finds all migrations using the provided filters."""
-    return IMPL.migration_get_all_by_filters(context, filters)
+    return IMPL.migration_get_all_by_filters(context, filters,
+                                             sort_keys=sort_keys,
+                                             sort_dirs=sort_dirs,
+                                             limit=limit, marker=marker)
 
 
 def migration_get_in_progress_by_instance(context, instance_uuid,
