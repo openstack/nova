@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    The ``nova-manage cell_v2 delete_cell`` command returns an exit code 4
+    when there are instance mappings to a cell to delete but all instances
+    have been deleted in the cell.
