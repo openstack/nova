@@ -1,0 +1,25 @@
+- job:
+    name: nova-tox-functional
+    parent: openstack-tox
+    description: |
+      Run tox-based functional tests for the OpenStack Nova project with Nova
+      specific irrelevant-files list. Uses tox with the ``functional``
+      environment.
+    irrelevant-files:
+      - ^.*\.rst$
+      - ^api-.*$
+      - ^doc/source/.*$
+      - ^nova/locale/.*$
+      - ^placement-api-ref/.*$
+      - ^releasenotes/.*$
+    vars:
+      tox_envlist: functional
+
+- project:
+    name: openstack/nova
+    check:
+      jobs:
+        - nova-tox-functional
+    gate:
+      jobs:
+        - nova-tox-functional
