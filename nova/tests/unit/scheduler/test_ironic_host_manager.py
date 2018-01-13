@@ -78,9 +78,11 @@ class IronicHostManagerTestCase(test.NoDBTestCase):
         mock_get_by_binary.return_value = ironic_fakes.SERVICES
         context = 'fake_context'
 
-        self.host_manager.get_all_host_states(context)
+        hosts = self.host_manager.get_all_host_states(context)
         self.assertEqual(0, mock_get_by_host.call_count)
-        host_states_map = self.host_manager.host_state_map
+        # get_all_host_states returns a generator, so make a map from it
+        host_states_map = {(state.host, state.nodename): state for state in
+                           hosts}
         self.assertEqual(len(host_states_map), 4)
 
         for i in range(4):
@@ -234,13 +236,16 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
         context = 'fake_context'
 
         # first call: all nodes
-        self.host_manager.get_all_host_states(context)
-        host_states_map = self.host_manager.host_state_map
+        hosts = self.host_manager.get_all_host_states(context)
+        # get_all_host_states returns a generator, so make a map from it
+        host_states_map = {(state.host, state.nodename): state for state in
+                           hosts}
         self.assertEqual(4, len(host_states_map))
 
         # second call: just running nodes
-        self.host_manager.get_all_host_states(context)
-        host_states_map = self.host_manager.host_state_map
+        hosts = self.host_manager.get_all_host_states(context)
+        host_states_map = {(state.host, state.nodename): state for state in
+                           hosts}
         self.assertEqual(3, len(host_states_map))
 
     @mock.patch('nova.objects.ServiceList.get_by_binary')
@@ -254,13 +259,16 @@ class IronicHostManagerChangedNodesTestCase(test.NoDBTestCase):
         context = 'fake_context'
 
         # first call: all nodes
-        self.host_manager.get_all_host_states(context)
-        host_states_map = self.host_manager.host_state_map
+        hosts = self.host_manager.get_all_host_states(context)
+        # get_all_host_states returns a generator, so make a map from it
+        host_states_map = {(state.host, state.nodename): state for state in
+                           hosts}
         self.assertEqual(len(host_states_map), 4)
 
         # second call: no nodes
         self.host_manager.get_all_host_states(context)
-        host_states_map = self.host_manager.host_state_map
+        host_states_map = {(state.host, state.nodename): state for state in
+                           hosts}
         self.assertEqual(len(host_states_map), 0)
 
     def test_update_from_compute_node(self):
