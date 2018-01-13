@@ -116,12 +116,15 @@ class SchedulerReportClientTests(test.TestCase):
             rps = self.client._get_providers_in_tree(self.compute_uuid)
             self.assertEqual(1, len(rps))
 
-            # We should also have an empty list set of aggregate UUID
+            # We should also have empty sets of aggregate and trait
             # associations
             self.assertEqual(
                 [], self.client._get_providers_in_aggregates([uuids.agg]))
             self.assertFalse(
                 self.client._provider_tree.have_aggregates_changed(
+                    self.compute_uuid, []))
+            self.assertFalse(
+                self.client._provider_tree.have_traits_changed(
                     self.compute_uuid, []))
 
             # TODO(cdent): change this to use the methods built in
