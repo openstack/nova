@@ -160,6 +160,7 @@ class NovaProxyRequestHandlerBaseTestCase(test.NoDBTestCase):
 
         check_token.assert_called_with(mock.ANY, token="123-456-789")
         self.wh.socket.assert_called_with('node1', 10000, connect=True)
+        tsock.send.assert_called_with(test.MatchType(bytes))
         self.wh.do_proxy.assert_called_with(tsock)
 
     @mock.patch('nova.consoleauth.rpcapi.ConsoleAuthAPI.check_token')

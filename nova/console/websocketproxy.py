@@ -22,6 +22,7 @@ import socket
 import sys
 
 from oslo_log import log as logging
+from oslo_utils import encodeutils
 import six
 from six.moves import http_cookies as Cookie
 import six.moves.urllib.parse as urlparse
@@ -76,7 +77,7 @@ class TenantSock(object):
         return b''.join(popped)
 
     def sendall(self, data):
-        self.reqhandler.send_frames([data])
+        self.reqhandler.send_frames([encodeutils.safe_encode(data)])
 
     def finish_up(self):
         self.reqhandler.send_frames([b''.join([self.queue])])
@@ -193,8 +194,9 @@ class NovaProxyRequestHandlerBase(object):
 
         # Handshake as necessary
         if connect_info.get('internal_access_path'):
-            tsock.send("CONNECT %s HTTP/1.1\r\n\r\n" %
-                        connect_info['internal_access_path'])
+            tsock.send(encodeutils.safe_encode(
+                "CONNECT %s HTTP/1.1\r\n\r\n" %
+                connect_info['internal_access_path']))
             end_token = "\r\n\r\n"
             while True:
                 data = tsock.recv(4096, socket.MSG_PEEK)
