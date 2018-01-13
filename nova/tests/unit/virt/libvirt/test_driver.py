@@ -15076,8 +15076,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertTrue(instance.cleaned)
         save.assert_called_once_with()
 
-    @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
-    def test_swap_volume_file(self, mock_is_job_complete):
+    @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete',
+                return_value=True)
+    def _test_swap_volume(self, mock_is_job_complete, source_type,
+                          resize=False, fail=False):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
 
         mock_dom = mock.MagicMock()
@@ -15085,67 +15087,87 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         with mock.patch.object(drvr._conn, 'defineXML',
                                create=True) as mock_define:
-            xmldoc = "<domain/>"
             srcfile = "/first/path"
             dstfile = "/second/path"
 
-            mock_dom.XMLDesc.return_value = xmldoc
+            mock_dom.XMLDesc.return_value = mock.sentinel.orig_xml
             mock_dom.isPersistent.return_value = True
-            mock_is_job_complete.return_value = True
 
-            drvr._swap_volume(guest, srcfile,
-                              mock.MagicMock(source_type='file',
-                                             source_path=dstfile),
-                              1)
+            def fake_rebase_success(*args, **kwargs):
+                # Make sure the XML is set after the rebase so we know
+                # get_xml_desc was called after the update.
+                mock_dom.XMLDesc.return_value = mock.sentinel.new_xml
 
-            mock_dom.XMLDesc.assert_called_once_with(
+            if not fail:
+                mock_dom.blockRebase.side_effect = fake_rebase_success
+                # If the swap succeeds, make sure we use the new XML to
+                # redefine the domain.
+                expected_xml = mock.sentinel.new_xml
+            else:
+                if resize:
+                    mock_dom.blockResize.side_effect = test.TestingException()
+                    expected_exception = test.TestingException
+                else:
+                    mock_dom.blockRebase.side_effect = test.TestingException()
+                    expected_exception = exception.VolumeRebaseFailed
+                # If the swap fails, make sure we use the original domain XML
+                # to redefine the domain.
+                expected_xml = mock.sentinel.orig_xml
+
+            # Run the swap volume code.
+            mock_conf = mock.MagicMock(source_type=source_type,
+                                       source_path=dstfile)
+            if not fail:
+                drvr._swap_volume(guest, srcfile, mock_conf, 1)
+            else:
+                self.assertRaises(expected_exception, drvr._swap_volume, guest,
+                                  srcfile, mock_conf, 1)
+
+            # Verify we read the original persistent config.
+            expected_call_count = 1
+            expected_calls = [mock.call(
                 flags=(fakelibvirt.VIR_DOMAIN_XML_INACTIVE |
-                       fakelibvirt.VIR_DOMAIN_XML_SECURE))
-            mock_dom.blockRebase.assert_called_once_with(
-                srcfile, dstfile, 0, flags=(
-                    fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_COPY |
-                    fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT))
-            mock_dom.blockResize.assert_called_once_with(
-                srcfile, 1 * units.Gi / units.Ki)
-            mock_define.assert_called_once_with(xmldoc)
+                       fakelibvirt.VIR_DOMAIN_XML_SECURE))]
+            if not fail:
+                # Verify we read the updated live config.
+                expected_call_count = 2
+                expected_calls.append(
+                    mock.call(flags=fakelibvirt.VIR_DOMAIN_XML_SECURE))
+            self.assertEqual(expected_call_count, mock_dom.XMLDesc.call_count)
+            mock_dom.XMLDesc.assert_has_calls(expected_calls)
 
-    @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
-    def test_swap_volume_block(self, mock_is_job_complete):
+            # Verify we called with the correct flags.
+            expected_flags = (fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_COPY |
+                              fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT)
+            if source_type == 'block':
+                expected_flags = (expected_flags |
+                                  fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_COPY_DEV)
+            mock_dom.blockRebase.assert_called_once_with(srcfile, dstfile, 0,
+                                                         flags=expected_flags)
+
+            # Verify we defined the expected XML.
+            mock_define.assert_called_once_with(expected_xml)
+
+            # Verify we called resize with the correct args.
+            if resize:
+                mock_dom.blockResize.assert_called_once_with(
+                    srcfile, 1 * units.Gi / units.Ki)
+
+    def test_swap_volume_file(self):
+        self._test_swap_volume('file')
+
+    def test_swap_volume_block(self):
         """If the swapped volume is type="block", make sure that we give
         libvirt the correct VIR_DOMAIN_BLOCK_REBASE_COPY_DEV flag to ensure the
         correct type="block" XML is generated (bug 1691195)
         """
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        self._test_swap_volume('block')
 
-        mock_dom = mock.MagicMock()
-        guest = libvirt_guest.Guest(mock_dom)
+    def test_swap_volume_rebase_fail(self):
+        self._test_swap_volume('block', fail=True)
 
-        with mock.patch.object(drvr._conn, 'defineXML',
-                               create=True) as mock_define:
-            xmldoc = "<domain/>"
-            srcfile = "/first/path"
-            dstfile = "/second/path"
-
-            mock_dom.XMLDesc.return_value = xmldoc
-            mock_dom.isPersistent.return_value = True
-            mock_is_job_complete.return_value = True
-
-            drvr._swap_volume(guest, srcfile,
-                              mock.MagicMock(source_type='block',
-                                             source_path=dstfile),
-                              1)
-
-            mock_dom.XMLDesc.assert_called_once_with(
-                flags=(fakelibvirt.VIR_DOMAIN_XML_INACTIVE |
-                       fakelibvirt.VIR_DOMAIN_XML_SECURE))
-            mock_dom.blockRebase.assert_called_once_with(
-                srcfile, dstfile, 0, flags=(
-                    fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_COPY |
-                    fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_COPY_DEV |
-                    fakelibvirt.VIR_DOMAIN_BLOCK_REBASE_REUSE_EXT))
-            mock_dom.blockResize.assert_called_once_with(
-                srcfile, 1 * units.Gi / units.Ki)
-            mock_define.assert_called_once_with(xmldoc)
+    def test_swap_volume_resize_fail(self):
+        self._test_swap_volume('file', resize=True, fail=True)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._swap_volume')

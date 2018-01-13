@@ -1279,7 +1279,8 @@ class LibvirtDriver(driver.ComputeDriver):
         """Swap existing disk with a new block device."""
         dev = guest.get_block_device(disk_path)
 
-        # Save a copy of the domain's persistent XML file
+        # Save a copy of the domain's persistent XML file. We'll use this
+        # to redefine the domain if anything fails during the volume swap.
         xml = guest.get_xml_desc(dump_inactive=True, dump_sensitive=True)
 
         # Abort is an idempotent operation, so make sure any block
@@ -1319,6 +1320,14 @@ class LibvirtDriver(driver.ComputeDriver):
 
             if resize_to:
                 dev.resize(resize_to * units.Gi / units.Ki)
+
+            # Make sure we will redefine the domain using the updated
+            # configuration after the volume was swapped. The dump_inactive
+            # keyword arg controls whether we pull the inactive (persistent)
+            # or active (live) config from the domain. We want to pull the
+            # live config after the volume was updated to use when we redefine
+            # the domain.
+            xml = guest.get_xml_desc(dump_inactive=False, dump_sensitive=True)
         finally:
             self._host.write_instance_config(xml)
 
