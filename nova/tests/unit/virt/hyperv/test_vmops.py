@@ -503,6 +503,18 @@ class VMOpsTestCase(test_base.HyperVBaseTestCase):
             deadline=CONF.vif_plugging_timeout,
             error_callback=self._vmops._neutron_failed_callback)
 
+    @mock.patch.object(vmops.VMOps, '_get_neutron_events')
+    def test_wait_vif_plug_events_port_binding_failed(self, mock_get_events):
+        mock_get_events.side_effect = exception.PortBindingFailed(
+            port_id='fake_id')
+
+        def _context_user():
+            with self._vmops.wait_vif_plug_events(mock.sentinel.instance,
+                                                  mock.sentinel.network_info):
+                pass
+
+        self.assertRaises(exception.PortBindingFailed, _context_user)
+
     def test_neutron_failed_callback(self):
         self.flags(vif_plugging_is_fatal=True)
         self.assertRaises(exception.VirtualInterfaceCreateException,

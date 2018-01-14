@@ -306,9 +306,11 @@ class VMOps(object):
     @contextlib.contextmanager
     def wait_vif_plug_events(self, instance, network_info):
         timeout = CONF.vif_plugging_timeout
-        events = self._get_neutron_events(network_info)
 
         try:
+            # NOTE(claudiub): async calls to bind the neutron ports will be
+            # done when network_info is being accessed.
+            events = self._get_neutron_events(network_info)
             with self._virtapi.wait_for_instance_event(
                     instance, events, deadline=timeout,
                     error_callback=self._neutron_failed_callback):
@@ -319,6 +321,17 @@ class VMOps(object):
                         'instance.', instance=instance)
             if CONF.vif_plugging_is_fatal:
                 raise exception.VirtualInterfaceCreateException()
+        except exception.PortBindingFailed:
+            LOG.warning(
+                "Neutron failed to bind a port to this host. Make sure that "
+                "an L2 agent is alive and registered from this node (neutron "
+                "Open vSwitch agent or Hyper-V agent), or make sure that "
+                "neutron is configured with a mechanism driver that is able "
+                "to bind ports to this host (OVN). If you are using neutron "
+                "Hyper-V agent, make sure that networking-hyperv is installed "
+                "on the neutron controller, and that the neutron-server was "
+                "configured to use the 'hyperv' mechanism_driver.")
+            raise
 
     def _neutron_failed_callback(self, event_name, instance):
         LOG.error('Neutron Reported failure on event %s',
