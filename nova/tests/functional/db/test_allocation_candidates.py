@@ -62,11 +62,6 @@ class ProviderDBBase(test.NoDBTestCase):
         self.useFixture(fixtures.Database())
         self.api_db = self.useFixture(fixtures.Database(database='api'))
         self.ctx = context.RequestContext('fake-user', 'fake-project')
-        self.requested_resources = {
-            fields.ResourceClass.VCPU: 1,
-            fields.ResourceClass.MEMORY_MB: 64,
-            fields.ResourceClass.DISK_GB: 1500,
-        }
         # For debugging purposes, populated by _create_provider and used by
         # _validate_allocation_requests to make failure results more readable.
         self.rp_uuid_to_name = {}
@@ -1172,7 +1167,6 @@ class AllocationCandidatesTestCase(ProviderDBBase):
         #
         # It is different from test_mix_local_and_shared as it uses two
         # different aggregates to connect the two CNs to the share RP
-
         cn1 = self._create_provider('cn1', uuids.agg1)
         _add_inventory(cn1, fields.ResourceClass.VCPU, 24)
         _add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)
@@ -1208,7 +1202,6 @@ class AllocationCandidatesTestCase(ProviderDBBase):
         #    CN1 (VCPU)          CN2 (VCPU)
         #   / agg3   \ agg1     / agg1   \ agg2
         #  SS3 (IPV4)   SS1 (DISK_GB)      SS2 (IPV4)
-
         cn1 = self._create_provider('cn1', uuids.agg1, uuids.agg3)
         _add_inventory(cn1, fields.ResourceClass.VCPU, 24)
         _add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)

@@ -1248,15 +1248,14 @@ def _get_all_with_shared(ctx, resources):
     }
 
     name_map = {
-        rc_id: _RC_CACHE.string_from_id(rc_id).lower()
-        for rc_id in resources.keys()
+        rc_id: _RC_CACHE.string_from_id(rc_id).lower() for rc_id in resources
     }
 
     # Dict, keyed by resource class ID, of an aliased table object for the
     # inventories table winnowed to only that resource class.
     inv_tables = {
         rc_id: sa.alias(_INV_TBL, name='inv_%s' % name_map[rc_id])
-        for rc_id in resources.keys()
+        for rc_id in resources
     }
 
     # Dict, keyed by resource class ID, of a derived table (subquery in the
@@ -1274,7 +1273,7 @@ def _get_all_with_shared(ctx, resources):
             ),
             name='usage_%s' % name_map[rc_id],
         )
-        for rc_id in resources.keys()
+        for rc_id in resources
     }
 
     # Dict, keyed by resource class ID, of an aliased table of
@@ -1282,7 +1281,7 @@ def _get_all_with_shared(ctx, resources):
     # a provider sharing the resource class
     sharing_tables = {
         rc_id: sa.alias(_RP_AGG_TBL, name='sharing_%s' % name_map[rc_id])
-        for rc_id in resources.keys()
+        for rc_id in resources
         if len(sharing_providers[rc_id]) > 0
     }
 
@@ -1292,7 +1291,7 @@ def _get_all_with_shared(ctx, resources):
     # class.
     shared_tables = {
         rc_id: sa.alias(_RP_AGG_TBL, name='shared_%s' % name_map[rc_id])
-        for rc_id in resources.keys()
+        for rc_id in resources
         if len(sharing_providers[rc_id]) > 0
     }
 
@@ -1531,8 +1530,7 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
         usage = sa.select([_ALLOC_TBL.c.resource_provider_id,
                            _ALLOC_TBL.c.resource_class_id,
                            sql.func.sum(_ALLOC_TBL.c.used).label('used')])
-        usage = usage.where(_ALLOC_TBL.c.resource_class_id.in_(
-            resources.keys()))
+        usage = usage.where(_ALLOC_TBL.c.resource_class_id.in_(resources))
         usage = usage.group_by(_ALLOC_TBL.c.resource_provider_id,
                                _ALLOC_TBL.c.resource_class_id)
         usage = sa.alias(usage, name='usage')
@@ -2710,7 +2708,7 @@ def _get_provider_ids_having_any_trait(ctx, traits):
     :raise ValueError: If traits is empty or None.
     """
     if not traits:
-        raise ValueError('traits must not be empty')
+        raise ValueError(_('traits must not be empty'))
 
     rptt = sa.alias(_RP_TRAIT_TBL, name="rpt")
     sel = sa.select([rptt.c.resource_provider_id])
@@ -2733,7 +2731,7 @@ def _get_provider_ids_having_all_traits(ctx, required_traits):
     :raise ValueError: If required_traits is empty or None.
     """
     if not required_traits:
-        raise ValueError('required_traits must not be empty')
+        raise ValueError(_('required_traits must not be empty'))
 
     rptt = sa.alias(_RP_TRAIT_TBL, name="rpt")
     sel = sa.select([rptt.c.resource_provider_id])
@@ -2773,15 +2771,14 @@ def _get_provider_ids_matching_all(ctx, resources, required_traits):
     rpt = sa.alias(_RP_TBL, name="rp")
 
     rc_name_map = {
-        rc_id: _RC_CACHE.string_from_id(rc_id).lower()
-        for rc_id in resources.keys()
+        rc_id: _RC_CACHE.string_from_id(rc_id).lower() for rc_id in resources
     }
 
     # Dict, keyed by resource class ID, of an aliased table object for the
     # inventories table winnowed to only that resource class.
     inv_tables = {
         rc_id: sa.alias(_INV_TBL, name='inv_%s' % rc_name_map[rc_id])
-        for rc_id in resources.keys()
+        for rc_id in resources
     }
 
     # Dict, keyed by resource class ID, of a derived table (subquery in the
@@ -2799,7 +2796,7 @@ def _get_provider_ids_matching_all(ctx, resources, required_traits):
             ),
             name='usage_%s' % rc_name_map[rc_id],
         )
-        for rc_id in resources.keys()
+        for rc_id in resources
     }
 
     sel = sa.select([rpt.c.id])
@@ -2860,7 +2857,7 @@ def _build_provider_summaries(context, usages, prov_traits):
     their associated string traits, returns a dict, keyed by resource provider
     ID, of ProviderSummary objects.
 
-    :param context: nova.context.Context object
+    :param context: nova.context.RequestContext object
     :param usages: A list of dicts with the following format:
 
         {
@@ -2919,10 +2916,10 @@ def _shared_allocation_request_resources(ctx, requested_resources, sharing,
     AllocationRequestResource objects that represent resources that are
     provided by a sharing provider.
 
-    :param ctx: nova.context.Context object
+    :param ctx: nova.context.RequestContext object
     :param requested_resources: dict, keyed by resource class ID, of amounts
                                 being requested for that resource class
-    :param sharing: dict, keyed by resource class ID, of sets of resource
+    :param sharing: dict, keyed by resource class ID, of lists of resource
                     provider IDs that share that resource class and can
                     contribute to the overall allocation request
     :param summaries: dict, keyed by resource provider ID, of ProviderSummary
@@ -2945,10 +2942,10 @@ def _shared_allocation_request_resources(ctx, requested_resources, sharing,
 
 
 def _allocation_request_for_provider(ctx, requested_resources, rp_uuid):
-    """Returns an AllocationRequest object contains AllocationRequestResource
+    """Returns an AllocationRequest object containing AllocationRequestResource
     objects for each resource class in the supplied requested resources dict.
 
-    :param ctx: nova.context.Context object
+    :param ctx: nova.context.RequestContext object
     :param requested_resources: dict, keyed by resource class ID, of amounts
                                 being requested for that resource class
     :param rp_uuid: UUID of the resource provider supplying the resources
@@ -2976,7 +2973,7 @@ def _alloc_candidates_no_shared(ctx, requested_resources, rp_ids):
     ProviderSummary objects due to not having to determine requests for some
     shared and some non-shared resources.
 
-    :param ctx: nova.context.Context object
+    :param ctx: nova.context.RequestContext object
     :param requested_resources: dict, keyed by resource class ID, of amounts
                                 being requested for that resource class
     :param rp_ids: List of resource provider IDs for providers that matched the
@@ -3019,7 +3016,7 @@ def _alloc_candidates_with_shared(ctx, requested_resources, required_traits,
     some of the requested resources AND are associated by aggregate to a
     resource provider that shares the missing resources with it.
 
-    :param ctx: nova.context.Context object
+    :param ctx: nova.context.RequestContext object
     :param requested_resources: dict, keyed by resource class ID, of amounts
                                 being requested for that resource class
     :param required_traits: A map, keyed by trait string name, of required
@@ -3226,7 +3223,7 @@ def _provider_traits(ctx, rp_ids):
 
     :raises: ValueError when rp_ids is empty.
 
-    :param ctx: nova.context.Context object
+    :param ctx: nova.context.RequestContext object
     :param rp_ids: list of resource provider IDs
     """
     if not rp_ids:
@@ -3251,7 +3248,7 @@ def _trait_ids_from_names(ctx, names):
 
     :raises: ValueError when names is empty.
 
-    :param ctx: nova.context.Context object
+    :param ctx: nova.context.RequestContext object
     :param names: list of string trait names
     """
     if not names:
