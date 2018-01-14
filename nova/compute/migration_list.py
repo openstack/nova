@@ -27,7 +27,7 @@ class MigrationSortContext(multi_cell_list.RecordSortContext):
             sort_dirs = ['desc', 'desc']
 
         if 'uuid' not in sort_keys:
-            # Add uuid into the list of sort_keys which Since we're striping
+            # Add uuid into the list of sort_keys. Since we're striping
             # across cell databases here, many sort_keys arrangements will
             # yield nothing unique across all the databases to give us a stable
             # ordering, which can mess up expected client pagination behavior.
