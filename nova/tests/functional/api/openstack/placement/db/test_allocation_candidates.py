@@ -999,11 +999,9 @@ class AllocationCandidatesTestCase(ProviderDBBase):
             [('cn', fields.ResourceClass.VCPU, 1),
              ('cn', fields.ResourceClass.MEMORY_MB, 64),
              ('cn', fields.ResourceClass.DISK_GB, 1500)],
-            # TODO(efried): Due to bug #1724613, the cn + ss candidate is not
-            # returned.  Uncomment this when the bug is fixed.
-            # [('cn', fields.ResourceClass.VCPU, 1),
-            #  ('cn', fields.ResourceClass.MEMORY_MB, 64),
-            #  ('ss', fields.ResourceClass.DISK_GB, 1500)],
+            [('cn', fields.ResourceClass.VCPU, 1),
+             ('cn', fields.ResourceClass.MEMORY_MB, 64),
+             ('ss', fields.ResourceClass.DISK_GB, 1500)],
         ]
 
         self._validate_allocation_requests(expected, alloc_cands)
@@ -1037,17 +1035,13 @@ class AllocationCandidatesTestCase(ProviderDBBase):
 
         # TODO(efried): Bug #1724633: we'd *like* to get no candidates, because
         # there's no single DISK_GB resource with both STORAGE_DISK_SSD and
-        # CUSTOM_RAID traits.  So this is the ideal expected value:
-        expected = []
-        # TODO(efried): But under the design as currently conceived, we would
-        # expect to get the cn + ss candidate, because that combination
-        # satisfies both traits:
-        # expected = [
-        #     [('cn', fields.ResourceClass.VCPU, 1),
-        #      ('cn', fields.ResourceClass.MEMORY_MB, 64),
-        #      ('ss', fields.ResourceClass.DISK_GB, 1500)],
-        # ]
-        # So we're getting the right value, but we really shouldn't be.
+        # CUSTOM_RAID traits.
+        # expected = []
+        expected = [
+           [('cn', fields.ResourceClass.VCPU, 1),
+            ('cn', fields.ResourceClass.MEMORY_MB, 64),
+            ('ss', fields.ResourceClass.DISK_GB, 1500)],
+        ]
         self._validate_allocation_requests(expected, alloc_cands)
 
     def test_only_one_sharing_provider(self):
@@ -1271,11 +1265,9 @@ class AllocationCandidatesTestCase(ProviderDBBase):
             [('cn1', fields.ResourceClass.VCPU, 1),
              ('cn1', fields.ResourceClass.MEMORY_MB, 64),
              ('cn1', fields.ResourceClass.DISK_GB, 1500)],
-            # TODO(efried): We expect the rest of the results to look like:
-            # Bug 1731072 bullet (1) (also bug 1724613)
-            # [('cn1', fields.ResourceClass.VCPU, 1),
-            #  ('cn1', fields.ResourceClass.MEMORY_MB, 64),
-            #  ('ss1', fields.ResourceClass.DISK_GB, 1500)],
+            [('cn1', fields.ResourceClass.VCPU, 1),
+             ('cn1', fields.ResourceClass.MEMORY_MB, 64),
+             ('ss1', fields.ResourceClass.DISK_GB, 1500)],
         ]
 
         self._validate_allocation_requests(expected, alloc_cands)
