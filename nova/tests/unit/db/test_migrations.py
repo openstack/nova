@@ -987,6 +987,10 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
             'console_auth_tokens_token_hash_instance_uuid_idx',
             ['token_hash', 'instance_uuid'])
 
+    def _check_377(self, engine, data):
+        self.assertIndexMembers(engine, 'migrations',
+                                'migrations_updated_at_idx', ['updated_at'])
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,

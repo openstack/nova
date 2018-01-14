@@ -761,6 +761,7 @@ class Migration(BASE, NovaBase, models.SoftDeleteMixin):
               'source_compute', 'dest_compute', 'source_node', 'dest_node',
               'status'),
         Index('migrations_uuid', 'uuid', unique=True),
+        Index('migrations_updated_at_idx', 'updated_at'),
     )
     id = Column(Integer, primary_key=True, nullable=False)
     # NOTE(tr3buchet): the ____compute variables are instance['host']
