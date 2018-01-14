@@ -14,6 +14,7 @@
 #    under the License.
 
 from oslo_config import cfg
+from oslo_config import types
 
 vnc_group = cfg.OptGroup(
     'vnc',
@@ -212,6 +213,24 @@ Related options:
 
 * novncproxy_host
 * novncproxy_base_url
+"""),
+    cfg.ListOpt(
+        'auth_schemes',
+        item_type=types.String(
+            choices=['none']
+        ),
+        default=['none'],
+        help="""
+The authentication schemes to use with the compute node.
+
+Control what RFB authentication schemes are permitted for connections between
+the proxy and the compute host. If multiple schemes are enabled, the first
+matching scheme will be used, thus the strongest schemes should be listed
+first.
+
+Possible values:
+
+* "none": allow connection without authentication
 """),
 ]
 

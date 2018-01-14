@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    Added a number of new configuration options to the ``[vnc]`` group, which
+    together allow for the configuration of authentication used between the
+    *nova-novncproxy* server and the compute node VNC server.
+
+    - ``auth_schemes``

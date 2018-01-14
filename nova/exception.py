@@ -1771,6 +1771,15 @@ class SecurityProxyNegotiationFailed(NovaException):
     msg_fmt = _("Failed to negotiate security type with server: %(reason)s")
 
 
+class RFBAuthHandshakeFailed(NovaException):
+    msg_fmt = _("Failed to complete auth handshake: %(reason)s")
+
+
+class RFBAuthNoAvailableScheme(NovaException):
+    msg_fmt = _("No matching auth scheme: allowed types: '%(allowed_types)s', "
+                "desired types: '%(desired_types)s'")
+
+
 class InvalidWatchdogAction(Invalid):
     msg_fmt = _("Provided watchdog action (%(action)s) is not supported.")
 
