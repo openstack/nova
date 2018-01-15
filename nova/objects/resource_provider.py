@@ -2852,6 +2852,31 @@ def _get_provider_ids_matching_all(ctx, resources, required_traits):
     return [r[0] for r in ctx.session.execute(sel)]
 
 
+@db_api.api_context_manager.reader
+def _provider_aggregates(ctx, rp_ids):
+    """Given a list of resource provider internal IDs, returns a dict,
+    keyed by those provider IDs, of sets of aggregate ids associated
+    with that provider.
+
+    :raises: ValueError when rp_ids is empty.
+
+    :param ctx: nova.context.RequestContext object
+    :param rp_ids: list of resource provider IDs
+    """
+    if not rp_ids:
+        raise ValueError(_("Expected rp_ids to be a list of resource provider "
+                           "internal IDs, but got an empty list."))
+
+    rpat = sa.alias(_RP_AGG_TBL, name='rpat')
+    sel = sa.select([rpat.c.resource_provider_id,
+                     rpat.c.aggregate_id])
+    sel = sel.where(rpat.c.resource_provider_id.in_(rp_ids))
+    res = collections.defaultdict(set)
+    for r in ctx.session.execute(sel):
+        res[r[0]].add(r[1])
+    return res
+
+
 def _build_provider_summaries(context, usages, prov_traits):
     """Given a list of dicts of usage information and a map of providers to
     their associated string traits, returns a dict, keyed by resource provider
@@ -2910,13 +2935,27 @@ def _build_provider_summaries(context, usages, prov_traits):
     return summaries
 
 
-def _shared_allocation_request_resources(ctx, requested_resources, sharing,
-                                         summaries):
+def _aggregates_associated_with_providers(a, b, prov_aggs):
+    """quickly check if the two rps are in the same aggregates
+
+    :param a: resource provider ID for first provider
+    :param b: resource provider ID for second provider
+    :param prov_aggs: a dict keyed by resource provider IDs, of sets
+                      of aggregate ids associated with that provider
+    """
+    a_aggs = prov_aggs[a]
+    b_aggs = prov_aggs[b]
+    return a_aggs & b_aggs
+
+
+def _shared_allocation_request_resources(ctx, ns_rp_id, requested_resources,
+                                         sharing, summaries, prov_aggs):
     """Returns a dict, keyed by resource class ID, of lists of
     AllocationRequestResource objects that represent resources that are
     provided by a sharing provider.
 
     :param ctx: nova.context.RequestContext object
+    :param ns_rp_id: an internal ID of a non-sharing resource provider
     :param requested_resources: dict, keyed by resource class ID, of amounts
                                 being requested for that resource class
     :param sharing: dict, keyed by resource class ID, of lists of resource
@@ -2925,10 +2964,16 @@ def _shared_allocation_request_resources(ctx, requested_resources, sharing,
     :param summaries: dict, keyed by resource provider ID, of ProviderSummary
                       objects containing usage and trait information for
                       resource providers involved in the overall request
+    :param prov_aggs: dict, keyed by resource provider ID, of sets of
+                      aggregate ids associated with that provider.
     """
     res_requests = collections.defaultdict(list)
     for rc_id in sharing:
         for rp_id in sharing[rc_id]:
+            aggs_in_both = _aggregates_associated_with_providers(
+                ns_rp_id, rp_id, prov_aggs)
+            if not aggs_in_both:
+                continue
             summary = summaries[rp_id]
             rp_uuid = summary.resource_provider.uuid
             res_req = AllocationRequestResource(
@@ -3069,10 +3114,9 @@ def _alloc_candidates_with_shared(ctx, requested_resources, required_traits,
     # having allocation requests with duplicate sets of resource providers.
     alloc_prov_ids = []
 
-    # Build a dict, keyed by resource class ID, of AllocationRequestResource
-    # objects that represent each resource provider for a shared resource
-    sharing_resource_requests = _shared_allocation_request_resources(
-        ctx, requested_resources, sharing, summaries)
+    # Get a dict, keyed by resource provider internal ID, of sets of aggregate
+    # ids that provider has associated with it
+    prov_aggregates = _provider_aggregates(ctx, all_rp_ids)
 
     for ns_rp_id in ns_rp_ids:
         if ns_rp_id not in summaries:
@@ -3146,6 +3190,14 @@ def _alloc_candidates_with_shared(ctx, requested_resources, required_traits,
             ) for rc_id, amount in requested_resources.items()
             if rc_id in ns_resources
         ]
+
+        # Build a dict, keyed by resource class ID, of lists of
+        # AllocationRequestResource objects that represent each
+        # resource provider for a shared resource
+        sharing_resource_requests = _shared_allocation_request_resources(
+                                    ctx, ns_rp_id, requested_resources,
+                                    sharing, summaries, prov_aggregates)
+
         # A list of lists of AllocationRequestResource objects for each type of
         # shared resource class
         shared_request_groups = [

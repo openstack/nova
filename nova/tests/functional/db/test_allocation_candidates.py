@@ -1235,9 +1235,7 @@ class AllocationCandidatesTestCase(ProviderDBBase):
                 }
             )]
         )
-        # NOTE(gibi): We expect two candidates one with cn1, ss1 and ss3
-        # and one with cn2, ss1 and ss2 but we get two invalid combinations as
-        # well. This is reported in bug 1732707
+
         expected = [
             [('cn1', fields.ResourceClass.VCPU, 2),
              ('ss1', fields.ResourceClass.DISK_GB, 1500),
@@ -1245,14 +1243,6 @@ class AllocationCandidatesTestCase(ProviderDBBase):
             [('cn2', fields.ResourceClass.VCPU, 2),
              ('ss1', fields.ResourceClass.DISK_GB, 1500),
              ('ss2', fields.ResourceClass.IPV4_ADDRESS, 2)],
-            # 1) cn1 and ss2 are not connected so this is not valid
-            [('cn1', fields.ResourceClass.VCPU, 2),
-             ('ss1', fields.ResourceClass.DISK_GB, 1500),
-             ('ss2', fields.ResourceClass.IPV4_ADDRESS, 2)],
-            # 2) cn2 and ss3 are not connected so this is not valid
-            [('cn2', fields.ResourceClass.VCPU, 2),
-             ('ss1', fields.ResourceClass.DISK_GB, 1500),
-             ('ss3', fields.ResourceClass.IPV4_ADDRESS, 2)],
         ]
 
         self._validate_allocation_requests(expected, alloc_cands)
@@ -1324,11 +1314,6 @@ class AllocationCandidatesTestCase(ProviderDBBase):
             # [('cn1', fields.ResourceClass.VCPU, 1),
             #  ('cn1', fields.ResourceClass.MEMORY_MB, 64),
             #  ('ss1', fields.ResourceClass.DISK_GB, 1500)],
-            # The next invalid candidate is mixing not connected RPs as
-            # reported in bug #1732707
-            [('cn2', fields.ResourceClass.VCPU, 1),
-             ('ss1', fields.ResourceClass.DISK_GB, 1500),
-             ('ss2_1', fields.ResourceClass.MEMORY_MB, 64)],
         ]
 
         self._validate_allocation_requests(expected, alloc_cands)
@@ -1378,14 +1363,6 @@ class AllocationCandidatesTestCase(ProviderDBBase):
             # [('cn1', fields.ResourceClass.VCPU, 1),
             #  ('cn1', fields.ResourceClass.MEMORY_MB, 64),
             #  ('ss1_2', fields.ResourceClass.DISK_GB, 1500)],
-            # The rest are invalid candidates mixing not connected RPs as
-            # reported in bug #1732707
-            [('cn2', fields.ResourceClass.VCPU, 1),
-             ('ss1_1', fields.ResourceClass.DISK_GB, 1500),
-             ('ss2_1', fields.ResourceClass.MEMORY_MB, 64)],
-            [('cn2', fields.ResourceClass.VCPU, 1),
-             ('ss1_2', fields.ResourceClass.DISK_GB, 1500),
-             ('ss2_1', fields.ResourceClass.MEMORY_MB, 64)],
         ]
 
         self._validate_allocation_requests(expected, alloc_cands)
