@@ -12371,7 +12371,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('nova.virt.libvirt.LibvirtDriver.'
                 '_get_instance_disk_info_from_config')
     @mock.patch('nova.virt.libvirt.LibvirtDriver.destroy')
-    def test_hard_reboot(self, mock_destroy, mock_get_disk_info,
+    @mock.patch('nova.virt.libvirt.LibvirtDriver.'
+                '_get_all_assigned_mediated_devices')
+    def test_hard_reboot(self, mock_get_mdev, mock_destroy, mock_get_disk_info,
                          mock_get_guest_xml, mock_create_domain_and_network,
                          mock_get_info):
         self.context.auth_token = True  # any non-None value will suffice
@@ -12389,6 +12391,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     "<target dev='vdb' bus='virtio'/></disk>"
                     "</devices></domain>")
 
+        mock_get_mdev.return_value = {uuids.mdev1: uuids.inst1}
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         return_values = [hardware.InstanceInfo(state=power_state.SHUTDOWN),
@@ -12421,10 +12424,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         for name in ('disk', 'disk.local'):
             self.assertTrue(disks[name].cache.called)
 
+        mock_get_mdev.assert_called_once_with(instance)
         mock_destroy.assert_called_once_with(self.context, instance,
                 network_info, destroy_disks=False,
                 block_device_info=block_device_info)
 
+        mock_get_guest_xml.assert_called_once_with(self.context, instance,
+            network_info, mock.ANY, mock.ANY,
+            block_device_info=block_device_info, mdevs=[uuids.mdev1])
         mock_create_domain_and_network.assert_called_once_with(self.context,
             dummyxml, instance, network_info,
             block_device_info=block_device_info)
@@ -12442,9 +12449,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('nova.virt.libvirt.LibvirtDriver._get_guest_config')
     @mock.patch('nova.virt.libvirt.blockinfo.get_disk_info')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._destroy')
+    @mock.patch('nova.virt.libvirt.LibvirtDriver.'
+                '_get_all_assigned_mediated_devices')
     def test_hard_reboot_does_not_call_glance_show(self,
-            mock_destroy, mock_get_disk_info, mock_get_guest_config,
-            mock_get_instance_path, mock_write_to_file,
+            mock_get_mdev, mock_destroy, mock_get_disk_info,
+            mock_get_guest_config, mock_get_instance_path, mock_write_to_file,
             mock_get_instance_disk_info, mock_create_images_and_backing,
             mock_create_domand_and_network, mock_prepare_pci_devices_for_use,
             mock_get_instance_pci_devs, mock_looping_call, mock_ensure_tree):
@@ -12461,6 +12470,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         instance = objects.Instance(**self.test_instance)
+
+        mock_get_mdev.return_value = {}
 
         network_info = mock.MagicMock()
         block_device_info = mock.MagicMock()
@@ -18633,6 +18644,28 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertEqual({uuids.mdev: guest2.uuid},
                          drvr._get_all_assigned_mediated_devices())
+
+    @mock.patch.object(host.Host, 'get_guest')
+    def test_get_all_assigned_mediated_devices_for_an_instance(self,
+                                                               get_guest):
+        dom_with_vgpu = """
+              <domain type="kvm">
+                <devices>
+                 <hostdev mode='subsystem' type='mdev' model='vfio-pci'>
+                  <source>
+                   <address uuid='%s'/>
+                  </source>
+                 </hostdev>
+                </devices>
+              </domain>
+              """ % uuids.mdev
+        guest = libvirt_guest.Guest(FakeVirtDomain(fake_xml=dom_with_vgpu))
+        get_guest.return_value = guest
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        fake_inst = objects.Instance()
+        self.assertEqual({uuids.mdev: guest.uuid},
+                         drvr._get_all_assigned_mediated_devices(fake_inst))
+        get_guest.assert_called_once_with(fake_inst)
 
     def test_allocate_mdevs_with_no_vgpu_allocations(self):
         allocations = {
