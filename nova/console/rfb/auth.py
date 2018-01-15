@@ -18,6 +18,7 @@ import enum
 import six
 
 VERSION_LENGTH = 12
+SUBTYPE_LENGTH = 4
 
 AUTH_STATUS_FAIL = b"\x00"
 AUTH_STATUS_PASS = b"\x01"
@@ -37,6 +38,19 @@ class AuthType(enum.IntEnum):
     SASL = 20  # SASL type used by VINO and QEMU
     ARD = 30  # Apple remote desktop (screen sharing)
     MSLOGON = 0xfffffffa  # Used by UltraVNC
+
+
+class AuthVeNCryptSubtype(enum.IntEnum):
+
+    PLAIN = 256
+    TLSNONE = 257
+    TLSVNC = 258
+    TLSPLAIN = 259
+    X509NONE = 260
+    X509VNC = 261
+    X509PLAIN = 262
+    X509SASL = 263
+    TLSSASL = 264
 
 
 @six.add_metaclass(abc.ABCMeta)

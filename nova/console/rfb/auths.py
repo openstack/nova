@@ -15,6 +15,7 @@
 from oslo_config import cfg
 
 from nova.console.rfb import authnone
+from nova.console.rfb import authvencrypt
 from nova import exception
 
 CONF = cfg.CONF
@@ -24,6 +25,7 @@ class RFBAuthSchemeList(object):
 
     AUTH_SCHEME_MAP = {
         "none": authnone.RFBAuthSchemeNone,
+        "vencrypt": authvencrypt.RFBAuthSchemeVeNCrypt,
     }
 
     def __init__(self):
