@@ -2458,6 +2458,12 @@ class _ComputeAPIUnitTestMixIn(object):
         self._test_swap_volume_for_precheck_with_exception(
             exception.InstanceInvalidState,
             instance_update={'vm_state': vm_states.BUILDING})
+        self._test_swap_volume_for_precheck_with_exception(
+            exception.InstanceInvalidState,
+            instance_update={'vm_state': vm_states.STOPPED})
+        self._test_swap_volume_for_precheck_with_exception(
+            exception.InstanceInvalidState,
+            instance_update={'vm_state': vm_states.SUSPENDED})
 
     def test_swap_volume_with_another_server_volume(self):
         # Should fail if old volume's instance_uuid is not that of the instance
