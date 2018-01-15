@@ -9,3 +9,26 @@ features:
     - ``vencrypt_client_key``
     - ``vencrypt_client_cert``
     - ``vencrypt_ca_certs``
+  - |
+    The *nova-novncproxy* server can now be configured to do a security
+    negotiation with the compute node VNC server. If the VeNCrypt auth scheme
+    is enabled, this establishes a TLS session to provide encryption of all
+    data. The proxy will validate the x509 certs issued by the remote server to
+    ensure it is connecting to a valid compute node. The proxy can also send
+    its own x509 cert to allow the compute node to validate that the connection
+    comes from the official proxy server.
+upgrade:
+  - |
+    To make use of VeNCrypt, configuration steps are required for both the
+    `nova-novncproxy` service and libvirt on all the compute nodes. The
+    ``/etc/libvirt/qemu.conf`` file should be modified to set the ``vnc_tls``
+    option to ``1``, and optionally the ``vnc_tls_x509_verify`` option to
+    ``1``. Certificates must also be deployed on the compute node.
+
+    The ``nova.conf`` file should have the ``auth_schemes`` parameter in the
+    ``vnc`` group set. If there are a mix of compute nodes, some with VeNCrypt
+    enabled and others with it disabled, then the ``auth_schemes``
+    configuration option should be set to ``['vencrypt', 'none']``.
+
+    Once all compute nodes have VeNCrypt enabled, the ``auth_schemes``
+    parameter can be set to just ``['vencrypt']``.
