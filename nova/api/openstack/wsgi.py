@@ -26,11 +26,10 @@ import webob
 
 from nova.api.openstack import api_version_request as api_version
 from nova.api.openstack import versioned_method
+from nova.api import wsgi
 from nova import exception
 from nova import i18n
 from nova.i18n import _
-from nova import utils
-from nova import wsgi
 
 
 LOG = logging.getLogger(__name__)
@@ -334,16 +333,28 @@ class ResponseObject(object):
         if self.obj is not None:
             body = serializer.serialize(self.obj)
         response = webob.Response(body=body)
-        if response.headers.get('Content-Length'):
-            # NOTE(andreykurilin): we need to encode 'Content-Length' header,
-            # since webob.Response auto sets it if "body" attr is presented.
-            # https://github.com/Pylons/webob/blob/1.5.0b0/webob/response.py#L147
-            response.headers['Content-Length'] = utils.utf8(
-                response.headers['Content-Length'])
         response.status_int = self.code
-        for hdr, value in self._headers.items():
-            response.headers[hdr] = utils.utf8(value)
-        response.headers['Content-Type'] = utils.utf8(content_type)
+        for hdr, val in self._headers.items():
+            if not isinstance(val, six.text_type):
+                val = six.text_type(val)
+            if six.PY2:
+                # In Py2.X Headers must be byte strings
+                response.headers[hdr] = encodeutils.safe_encode(val)
+            else:
+                # In Py3.X Headers must be utf-8 strings
+                response.headers[hdr] = encodeutils.safe_decode(
+                        encodeutils.safe_encode(val))
+        # Deal with content_type
+        if not isinstance(content_type, six.text_type):
+            content_type = six.text_type(content_type)
+        if six.PY2:
+            # In Py2.X Headers must be byte strings
+            response.headers['Content-Type'] = encodeutils.safe_encode(
+                content_type)
+        else:
+            # In Py3.X Headers must be utf-8 strings
+            response.headers['Content-Type'] = encodeutils.safe_decode(
+                    encodeutils.safe_encode(content_type))
         return response
 
     @property
@@ -658,13 +669,15 @@ class Resource(wsgi.Application):
 
         if hasattr(response, 'headers'):
             for hdr, val in list(response.headers.items()):
+                if not isinstance(val, six.text_type):
+                    val = six.text_type(val)
                 if six.PY2:
                     # In Py2.X Headers must be byte strings
-                    response.headers[hdr] = utils.utf8(val)
+                    response.headers[hdr] = encodeutils.safe_encode(val)
                 else:
                     # In Py3.X Headers must be utf-8 strings
                     response.headers[hdr] = encodeutils.safe_decode(
-                            utils.utf8(val))
+                            encodeutils.safe_encode(val))
 
             if not request.api_version_request.is_null():
                 response.headers[API_VERSION_REQUEST_HEADER] = \

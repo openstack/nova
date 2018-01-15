@@ -29,6 +29,7 @@ import six
 import testtools
 import webob
 
+import nova.api.wsgi
 import nova.exception
 from nova import test
 from nova.tests.unit import utils
@@ -51,14 +52,14 @@ class TestLoaderNothingExists(test.NoDBTestCase):
         self.flags(api_paste_config='api-paste.ini', group='wsgi')
         self.assertRaises(
             nova.exception.ConfigNotFound,
-            nova.wsgi.Loader,
+            nova.api.wsgi.Loader,
         )
 
     def test_asbpath_config_not_found(self):
         self.flags(api_paste_config='/etc/nova/api-paste.ini', group='wsgi')
         self.assertRaises(
             nova.exception.ConfigNotFound,
-            nova.wsgi.Loader,
+            nova.api.wsgi.Loader,
         )
 
 
@@ -77,7 +78,7 @@ document_root = /tmp
         self.config.write(self._paste_config.lstrip())
         self.config.seek(0)
         self.config.flush()
-        self.loader = nova.wsgi.Loader(self.config.name)
+        self.loader = nova.api.wsgi.Loader(self.config.name)
 
     def test_config_found(self):
         self.assertEqual(self.config.name, self.loader.config_path)

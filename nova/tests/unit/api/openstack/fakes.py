@@ -30,6 +30,7 @@ from nova.api.openstack import compute
 from nova.api.openstack.compute import versions
 from nova.api.openstack import urlmap
 from nova.api.openstack import wsgi as os_wsgi
+from nova.api import wsgi
 from nova.compute import flavors
 from nova.compute import vm_states
 import nova.conf
@@ -44,7 +45,6 @@ from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_network
 from nova.tests.unit.objects import test_keypair
 from nova import utils
-from nova import wsgi
 
 
 CONF = nova.conf.CONF

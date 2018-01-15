@@ -24,8 +24,8 @@ import routes
 from six.moves import StringIO
 import webob
 
+from nova.api import wsgi
 from nova import test
-from nova import wsgi
 
 
 class Test(test.NoDBTestCase):

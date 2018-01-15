@@ -18,9 +18,9 @@ import webob.dec
 import webob.exc
 
 from nova.api.openstack import wsgi
+from nova.api import wsgi as base_wsgi
 import nova.conf
 from nova import context
-from nova import wsgi as base_wsgi
 
 CONF = nova.conf.CONF
 
