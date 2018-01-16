@@ -639,7 +639,7 @@ class SchedulerReportClient(object):
                 generation=rp['generation'])
 
         # If there had been no local resource provider record, force refreshing
-        # the aggregate & trait caches.
+        # the associated aggregates, traits, and sharing providers.
         self._refresh_associations(uuid, rp['generation'], force=True)
 
         return ret
@@ -670,9 +670,10 @@ class SchedulerReportClient(object):
             self._provider_tree.update_inventory(rp_uuid, curr_inv, cur_gen)
         return curr
 
-    def _refresh_associations(self, rp_uuid, generation=None, force=False):
-        """Refresh the aggregates and traits for the provided resource provider
-        uuid.
+    def _refresh_associations(self, rp_uuid, generation=None, force=False,
+                              refresh_sharing=True):
+        """Refresh aggregates, traits, and (optionally) aggregate-associated
+        sharing providers for the specified resource provider uuid.
 
         Only refresh if there has been no refresh during the lifetime of
         this process, ASSOCIATION_REFRESH seconds have passed, or the force arg
@@ -683,6 +684,10 @@ class SchedulerReportClient(object):
         :param generation: The resource provider generation to set.  If None,
                            the provider's generation is not updated.
         :param force: If True, force the refresh
+        :param refresh_sharing: If True, fetch all the providers associated
+                                by aggregate with the specified provider,
+                                including their traits and aggregates (but not
+                                *their* sharing providers).
         """
         if force or self._associations_stale(rp_uuid):
             # Refresh aggregates
@@ -708,6 +713,23 @@ class SchedulerReportClient(object):
                 self._provider_tree.update_traits(
                     rp_uuid, traits, generation=generation)
 
+            if refresh_sharing:
+                # Refresh providers associated by aggregate
+                for rp in self._get_providers_in_aggregates(aggs):
+                    if not self._provider_tree.exists(rp['uuid']):
+                        # NOTE(efried): Right now sharing providers are always
+                        # treated as roots. This is deliberate. From the
+                        # context of this compute's RP, it doesn't matter if a
+                        # sharing RP is part of a tree.
+                        self._provider_tree.new_root(
+                            rp['name'], rp['uuid'], rp['generation'])
+                    # Now we have to (populate or) refresh that guy's traits
+                    # and aggregates (but not *his* aggregate-associated
+                    # providers).  No need to override force=True for newly-
+                    # added providers - the missing timestamp will always
+                    # trigger them to refresh.
+                    self._refresh_associations(rp['uuid'], force=force,
+                                               refresh_sharing=False)
             self.association_refresh_time[rp_uuid] = time.time()
 
     def _associations_stale(self, uuid):
