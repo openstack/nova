@@ -486,7 +486,7 @@ class SchedulerReportClient(object):
     @safe_connect
     def _get_providers_in_tree(self, uuid):
         """Queries the placement API for a list of the resource providers in
-        the nested tree associated with the specified UUID.
+        the tree associated with the specified UUID.
 
         :param uuid: UUID identifier for the resource provider to look up
         :return: A list of dicts of resource provider information, which may be
@@ -594,48 +594,59 @@ class SchedulerReportClient(object):
         resource provider record could not be created in the placement API, an
         exception is raised.
 
-        If this method returns successfully, callers are assured both that
-        the placement API contains a record of the provider and the local tree
-        of resource provider information contains a record of the provider.
+        If this method returns successfully, callers are assured that the
+        placement API contains a record of the provider; and that the local
+        cache of resource provider information contains a record of:
+        - The specified provider
+        - All providers in its tree
+        - All providers associated via aggregate with all providers in said
+          tree
+        and for each of those providers:
+        - The UUIDs of its aggregates
+        - The trait strings associated with the provider
+
+        Note that if the provider did not exist prior to this call, the above
+        reduces to just the specified provider as a root, with no aggregates or
+        traits.
 
         :param uuid: UUID identifier for the resource provider to ensure exists
         :param name: Optional name for the resource provider if the record
                      does not exist. If empty, the name is set to the UUID
                      value
-        :param parent_provider_uuid: Optional UUID of the immediate parent
+        :param parent_provider_uuid: Optional UUID of the immediate parent,
+                                     which must have been previously _ensured.
         """
         # NOTE(efried): We currently have no code path where we need to set the
         # parent_provider_uuid on a previously-parent-less provider - so we do
         # NOT handle that scenario here.
         if self._provider_tree.exists(uuid):
-            self._refresh_associations(uuid)
+            # If we had the requested provider locally, refresh it and its
+            # descendants, but only if stale.
+            for u in self._provider_tree.get_provider_uuids(uuid):
+                self._refresh_associations(u, force=False)
             return uuid
 
-        # No local information about the resource provider in our tree. Check
-        # the placement API.
-        rp = self._get_resource_provider(uuid)
-        if rp is None:
-            rp = self._create_resource_provider(
-                uuid, name or uuid, parent_provider_uuid=parent_provider_uuid)
+        # We don't have it locally; check placement or create it.
+        created_rp = None
+        rps_to_refresh = self._get_providers_in_tree(uuid)
+        if not rps_to_refresh:
+            created_rp = self._create_resource_provider(
+                uuid, name or uuid,
+                parent_provider_uuid=parent_provider_uuid)
+            # Don't add the created_rp to rps_to_refresh.  Since we just
+            # created it, it has no aggregates or traits.
 
-        if parent_provider_uuid is None:
-            # If this is a root node (no parent), create it as such
-            ret = self._provider_tree.new_root(
-                rp['name'], uuid, rp['generation'])
-        else:
-            # Not a root - insert it into the proper place in the tree.
-            # NOTE(efried): We populate self._provider_tree from the top down,
-            # so we can count on the parent being in the tree - we don't have
-            # to retrieve it from placement.
-            ret = self._provider_tree.new_child(
-                rp['name'], parent_provider_uuid, uuid=uuid,
-                generation=rp['generation'])
+        self._provider_tree.populate_from_iterable(
+            rps_to_refresh or [created_rp])
 
-        # If there had been no local resource provider record, force refreshing
-        # the associated aggregates, traits, and sharing providers.
-        self._refresh_associations(uuid, rp['generation'], force=True)
+        # At this point, the whole tree exists in the local cache.
 
-        return ret
+        for rp_to_refresh in rps_to_refresh:
+            self._refresh_associations(
+                rp_to_refresh['uuid'],
+                generation=rp_to_refresh.get('generation'), force=True)
+
+        return uuid
 
     def _get_inventory(self, rp_uuid):
         url = '/resource_providers/%s/inventories' % rp_uuid
