@@ -1554,6 +1554,26 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         self.assertEqual(from_cli,
                          self.commands._validate_transport_url(from_cli))
 
+    def test_non_unique_transport_url_database_connection_checker(self):
+        ctxt = context.RequestContext()
+        objects.CellMapping(context=ctxt, uuid=uuidsentinel.cell1,
+                            name='cell1',
+                            transport_url='fake://mq1',
+                            database_connection='fake:///db1').create()
+        objects.CellMapping(context=ctxt, uuid=uuidsentinel.cell2,
+                            name='cell2',
+                            transport_url='fake://mq2',
+                            database_connection='fake:///db2').create()
+        resultf = self.commands.\
+                    _non_unique_transport_url_database_connection_checker(
+                                        ctxt, 'fake://mq3', 'fake:///db3')
+        resultt = self.commands.\
+                    _non_unique_transport_url_database_connection_checker(
+                                        ctxt, 'fake://mq1', 'fake:///db1')
+        self.assertFalse(resultf)
+        self.assertTrue(resultt)
+        self.assertIn('exists', self.output.getvalue())
+
     def test_create_cell_use_params(self):
         ctxt = context.get_context()
         kwargs = dict(
@@ -1777,6 +1797,35 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         self.assertEqual(1, self.commands.update_cell(
             uuidsentinel.cell1, 'foo', 'fake://new', 'fake:///new'))
         self.assertIn('not found', self.output.getvalue())
+
+    def test_update_cell_failed_if_non_unique_transport_db_urls(self):
+        ctxt = context.get_admin_context()
+        objects.CellMapping(context=ctxt, uuid=uuidsentinel.cell1,
+                            name='cell1',
+                            transport_url='fake://mq1',
+                            database_connection='fake:///db1').create()
+        objects.CellMapping(context=ctxt, uuid=uuidsentinel.cell2,
+                            name='cell2',
+                            transport_url='fake://mq2',
+                            database_connection='fake:///db2').create()
+        cell2_update1 = self.commands.update_cell(
+            uuidsentinel.cell2, 'foo', 'fake://mq1', 'fake:///db1')
+        self.assertEqual(3, cell2_update1)
+        self.assertIn('exists', self.output.getvalue())
+
+        cell2_update2 = self.commands.update_cell(
+            uuidsentinel.cell2, 'foo', 'fake://mq1', 'fake:///db3')
+        self.assertEqual(3, cell2_update2)
+        self.assertIn('exists', self.output.getvalue())
+
+        cell2_update3 = self.commands.update_cell(
+            uuidsentinel.cell2, 'foo', 'fake://mq3', 'fake:///db1')
+        self.assertEqual(3, cell2_update3)
+        self.assertIn('exists', self.output.getvalue())
+
+        cell2_update4 = self.commands.update_cell(
+            uuidsentinel.cell2, 'foo', 'fake://mq3', 'fake:///db3')
+        self.assertEqual(0, cell2_update4)
 
     def test_update_cell_failed(self):
         ctxt = context.get_admin_context()

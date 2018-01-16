@@ -231,9 +231,10 @@ Nova Cells v2
     defined by ``[database]/connection`` in the configuration file.  If a
     transport_url is not specified, it will attempt to use the one defined by
     ``[DEFAULT]/transport_url`` in the configuration file. If the cell is not
-    found by uuid, this command will return an exit code of 1. If the
-    properties cannot be set, this will return 2. Otherwise, the exit code will
-    be 0.
+    found by uuid, this command will return an exit code of 1. If the provided
+    transport_url or/and database_connection is/are same as another cell,
+    this command will return an exit code of 3. If the properties cannot be set,
+    this will return 2. Otherwise, the exit code will be 0.
 
     .. note::
 
