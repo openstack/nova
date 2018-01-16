@@ -18,6 +18,7 @@ changes for resources on the hypervisor or baremetal node. As such, there are
 no remoteable methods nor is there any interaction with the nova.db modules.
 """
 
+import collections
 import copy
 
 from oslo_concurrency import lockutils
@@ -28,6 +29,17 @@ from nova.i18n import _
 
 LOG = logging.getLogger(__name__)
 _LOCK_NAME = 'provider-tree-lock'
+
+# Point-in-time representation of a resource provider in the tree.
+# Note that, whereas namedtuple enforces read-only-ness of instances as a
+# whole, nothing prevents modification of the internals of attributes of
+# complex types (children/inventory/traits/aggregates).  However, any such
+# modifications still have no effect on the ProviderTree the instance came
+# from.  Like, you can Sharpie a moustache on a Polaroid of my face, but that
+# doesn't make a moustache appear on my actual face.
+ProviderData = collections.namedtuple(
+    'ProviderData', ['uuid', 'name', 'generation', 'parent_uuid', 'inventory',
+                     'traits', 'aggregates'])
 
 
 class _Provider(object):
@@ -51,6 +63,14 @@ class _Provider(object):
         self.traits = set()
         # Set of aggregate UUIDs
         self.aggregates = set()
+
+    def data(self):
+        inventory = copy.deepcopy(self.inventory)
+        traits = copy.copy(self.traits)
+        aggregates = copy.copy(self.aggregates)
+        return ProviderData(
+            self.uuid, self.name, self.generation, self.parent_uuid,
+            inventory, traits, aggregates)
 
     def get_provider_uuids(self):
         """Returns a set of UUIDs of this provider and all its descendants."""
@@ -252,6 +272,18 @@ class ProviderTree(object):
             if found:
                 return found
         raise ValueError(_("No such provider %s") % name_or_uuid)
+
+    def data(self, name_or_uuid):
+        """Return a point-in-time copy of the specified provider's data.
+
+        :param name_or_uuid: Either name or UUID of the resource provider whose
+                             data is to be returned.
+        :return: ProviderData object representing the specified provider.
+        :raises: ValueError if a provider with name_or_uuid was not found in
+                 the tree.
+        """
+        with self.lock:
+            return self._find_with_lock(name_or_uuid).data()
 
     def exists(self, name_or_uuid):
         """Given either a name or a UUID, return True if the tree contains the
