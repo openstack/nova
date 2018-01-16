@@ -365,10 +365,14 @@ class SchedulerReportClient(object):
     @safe_connect
     def _get_provider_aggregates(self, rp_uuid):
         """Queries the placement API for a resource provider's aggregates.
-        Returns a set() of aggregate UUIDs or None if no such resource provider
-        was found or there was an error communicating with the placement API.
 
         :param rp_uuid: UUID of the resource provider to grab aggregates for.
+        :return: A set() of aggregate UUIDs, which may be empty if the
+                 specified provider has no aggregate associations.
+        :raise: ResourceProviderAggregateRetrievalFailed on errors.  In
+                particular, we raise this exception (as opposed to returning
+                None or the empty set()) if the specified resource provider
+                does not exist.
         """
         resp = self.get("/resource_providers/%s/aggregates" % rp_uuid,
                         version='1.1')
@@ -377,33 +381,28 @@ class SchedulerReportClient(object):
             return set(data['aggregates'])
 
         placement_req_id = get_placement_request_id(resp)
-        if resp.status_code == 404:
-            msg = ("[%(placement_req_id)s] Tried to get a provider's "
-                   "aggregates; however the provider %(uuid)s does not exist.")
-            args = {
-                'uuid': rp_uuid,
-                'placement_req_id': placement_req_id,
-            }
-            LOG.warning(msg, args)
-        else:
-            msg = ("[%(placement_req_id)s] Failed to retrieve aggregates from "
-                   "placement API for resource provider with UUID %(uuid)s. "
-                   "Got %(status_code)d: %(err_text)s.")
-            args = {
-                'placement_req_id': placement_req_id,
-                'uuid': rp_uuid,
-                'status_code': resp.status_code,
-                'err_text': resp.text,
-            }
-            LOG.error(msg, args)
+        msg = ("[%(placement_req_id)s] Failed to retrieve aggregates from "
+               "placement API for resource provider with UUID %(uuid)s. "
+               "Got %(status_code)d: %(err_text)s.")
+        args = {
+            'placement_req_id': placement_req_id,
+            'uuid': rp_uuid,
+            'status_code': resp.status_code,
+            'err_text': resp.text,
+        }
+        LOG.error(msg, args)
+        raise exception.ResourceProviderAggregateRetrievalFailed(uuid=rp_uuid)
 
     @safe_connect
     def _get_provider_traits(self, rp_uuid):
-        """Queries the placement API for a resource provider's traits.  Returns
-        a set() of string trait names, or None if no such resource provider was
-        found or there was an error communicating with the placement API.
+        """Queries the placement API for a resource provider's traits.
 
         :param rp_uuid: UUID of the resource provider to grab traits for.
+        :return: A set() of string trait names, which may be empty if the
+                 specified provider has no traits.
+        :raise: ResourceProviderTraitRetrievalFailed on errors.  In particular,
+                we raise this exception (as opposed to returning None or the
+                empty set()) if the specified resource provider does not exist.
         """
         resp = self.get("/resource_providers/%s/traits" % rp_uuid,
                         version='1.6')
@@ -412,19 +411,13 @@ class SchedulerReportClient(object):
             return set(resp.json()['traits'])
 
         placement_req_id = get_placement_request_id(resp)
-        if resp.status_code == 404:
-            LOG.warning(
-                "[%(placement_req_id)s] Tried to get a provider's traits, but "
-                "the provider %(uuid)s does not exist.",
-                {'uuid': rp_uuid, 'placement_req_id': placement_req_id})
-        else:
-            LOG.error(
-                "[%(placement_req_id)s] Failed to retrieve traits from "
-                "placement API for resource provider with UUID %(uuid)s. Got "
-                "%(status_code)d: %(err_text)s.",
-                {'placement_req_id': placement_req_id, 'uuid': rp_uuid,
-                 'status_code': resp.status_code, 'err_text': resp.text})
-        return None
+        LOG.error(
+            "[%(placement_req_id)s] Failed to retrieve traits from "
+            "placement API for resource provider with UUID %(uuid)s. Got "
+            "%(status_code)d: %(err_text)s.",
+            {'placement_req_id': placement_req_id, 'uuid': rp_uuid,
+             'status_code': resp.status_code, 'err_text': resp.text})
+        raise exception.ResourceProviderTraitRetrievalFailed(uuid=rp_uuid)
 
     @safe_connect
     def _get_resource_provider(self, uuid):
@@ -688,30 +681,32 @@ class SchedulerReportClient(object):
                                 by aggregate with the specified provider,
                                 including their traits and aggregates (but not
                                 *their* sharing providers).
+        :raise: On various placement API errors, one of:
+                - ResourceProviderAggregateRetrievalFailed
+                - ResourceProviderTraitRetrievalFailed
+                - ResourceProviderRetrievalFailed
         """
         if force or self._associations_stale(rp_uuid):
             # Refresh aggregates
             aggs = self._get_provider_aggregates(rp_uuid)
-            if aggs is not None:
-                msg = ("Refreshing aggregate associations for resource "
-                       "provider %s, aggregates: %s")
-                LOG.debug(msg, rp_uuid, ','.join(aggs or ['None']))
+            msg = ("Refreshing aggregate associations for resource provider "
+                   "%s, aggregates: %s")
+            LOG.debug(msg, rp_uuid, ','.join(aggs or ['None']))
 
-                # NOTE(efried): This will blow up if called for a RP that
-                # doesn't exist in our _provider_tree.
-                self._provider_tree.update_aggregates(
-                    rp_uuid, aggs, generation=generation)
+            # NOTE(efried): This will blow up if called for a RP that doesn't
+            # exist in our _provider_tree.
+            self._provider_tree.update_aggregates(
+                rp_uuid, aggs, generation=generation)
 
             # Refresh traits
             traits = self._get_provider_traits(rp_uuid)
-            if traits is not None:
-                msg = ("Refreshing trait associations for resource "
-                       "provider %s, traits: %s")
-                LOG.debug(msg, rp_uuid, ','.join(traits or ['None']))
-                # NOTE(efried): This will blow up if called for a RP that
-                # doesn't exist in our _provider_tree.
-                self._provider_tree.update_traits(
-                    rp_uuid, traits, generation=generation)
+            msg = ("Refreshing trait associations for resource provider %s, "
+                   "traits: %s")
+            LOG.debug(msg, rp_uuid, ','.join(traits or ['None']))
+            # NOTE(efried): This will blow up if called for a RP that doesn't
+            # exist in our _provider_tree.
+            self._provider_tree.update_traits(
+                rp_uuid, traits, generation=generation)
 
             if refresh_sharing:
                 # Refresh providers associated by aggregate

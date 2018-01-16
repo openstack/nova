@@ -1806,69 +1806,44 @@ class TestAggregates(SchedulerReportClientTestCase):
     def test_get_provider_aggregates_found(self):
         uuid = uuids.compute_node
         resp_mock = mock.Mock(status_code=200)
-        json_data = {
-            'aggregates': [
-                uuids.agg1,
-                uuids.agg2,
-            ],
-        }
-        resp_mock.json.return_value = json_data
-        self.ks_adap_mock.get.return_value = resp_mock
-
-        result = self.client._get_provider_aggregates(uuid)
-
-        expected = set([
+        aggs = [
             uuids.agg1,
             uuids.agg2,
-        ])
-        expected_url = '/resource_providers/' + uuid + '/aggregates'
-        self.ks_adap_mock.get.assert_called_once_with(
-            expected_url, raise_exc=False, microversion='1.1')
-        self.assertEqual(expected, result)
-
-    @mock.patch.object(report.LOG, 'warning')
-    def test_get_provider_aggregates_not_found(self, log_mock):
-        """Test that when the placement API returns a 404 when looking up a
-        provider's aggregates, that we simply return None and log a warning
-        (since _get_provider_aggregates() should be called after
-        _ensure_resource_provider()).
-        """
-        uuid = uuids.compute_node
-        resp_mock = mock.Mock(status_code=404)
+        ]
+        resp_mock.json.return_value = {'aggregates': aggs}
         self.ks_adap_mock.get.return_value = resp_mock
-        self.ks_adap_mock.get.return_value.headers = {
-            'x-openstack-request-id': uuids.request_id}
 
         result = self.client._get_provider_aggregates(uuid)
 
         expected_url = '/resource_providers/' + uuid + '/aggregates'
         self.ks_adap_mock.get.assert_called_once_with(
             expected_url, raise_exc=False, microversion='1.1')
-        self.assertTrue(log_mock.called)
-        self.assertEqual(uuids.request_id,
-                        log_mock.call_args[0][1]['placement_req_id'])
-        self.assertIsNone(result)
+        self.assertEqual(set(aggs), result)
 
     @mock.patch.object(report.LOG, 'error')
-    def test_get_provider_aggregates_bad_request(self, log_mock):
-        """Test that when the placement API returns a 400 when looking up a
-        provider's aggregates, that we simply return None and log an error.
+    def test_get_provider_aggregates_error(self, log_mock):
+        """Test that when the placement API returns any error when looking up a
+        provider's aggregates, we raise an exception.
         """
         uuid = uuids.compute_node
-        resp_mock = mock.Mock(status_code=400)
+        resp_mock = mock.Mock(headers={
+            'x-openstack-request-id': uuids.request_id})
         self.ks_adap_mock.get.return_value = resp_mock
-        self.ks_adap_mock.get.return_value.headers = {
-            'x-openstack-request-id': uuids.request_id}
 
-        result = self.client._get_provider_aggregates(uuid)
+        for status_code in (400, 404, 503):
+            resp_mock.status_code = status_code
+            self.assertRaises(
+                exception.ResourceProviderAggregateRetrievalFailed,
+                self.client._get_provider_aggregates, uuid)
 
-        expected_url = '/resource_providers/' + uuid + '/aggregates'
-        self.ks_adap_mock.get.assert_called_once_with(
-            expected_url, raise_exc=False, microversion='1.1')
-        self.assertTrue(log_mock.called)
-        self.assertEqual(uuids.request_id,
-                        log_mock.call_args[0][1]['placement_req_id'])
-        self.assertIsNone(result)
+            expected_url = '/resource_providers/' + uuid + '/aggregates'
+            self.ks_adap_mock.get.assert_called_once_with(
+                expected_url, raise_exc=False, microversion='1.1')
+            self.assertTrue(log_mock.called)
+            self.assertEqual(uuids.request_id,
+                            log_mock.call_args[0][1]['placement_req_id'])
+            self.ks_adap_mock.get.reset_mock()
+            log_mock.reset_mock()
 
 
 class TestTraits(SchedulerReportClientTestCase):
@@ -1891,45 +1866,30 @@ class TestTraits(SchedulerReportClientTestCase):
             expected_url, **self.trait_api_kwargs)
         self.assertEqual(set(traits), result)
 
-    @mock.patch.object(report.LOG, 'warning')
-    def test_get_provider_traits_not_found(self, log_mock):
-        """Test that when the placement API returns a 404 when looking up a
-        provider's traits, we simply return None and log a warning.
-        """
-        uuid = uuids.compute_node
-        self.ks_adap_mock.get.return_value = mock.Mock(
-            status_code=404, headers={
-                'x-openstack-request-id': uuids.request_id})
-
-        result = self.client._get_provider_traits(uuid)
-
-        expected_url = '/resource_providers/' + uuid + '/traits'
-        self.ks_adap_mock.get.assert_called_once_with(
-            expected_url, raise_exc=False, microversion='1.6')
-        self.assertTrue(log_mock.called)
-        self.assertEqual(uuids.request_id,
-                         log_mock.call_args[0][1]['placement_req_id'])
-        self.assertIsNone(result)
-
     @mock.patch.object(report.LOG, 'error')
-    def test_get_provider_traits_bad_request(self, log_mock):
-        """Test that when the placement API returns a 400 when looking up a
-        provider's traits, that we simply return None and log an error.
+    def test_get_provider_traits_error(self, log_mock):
+        """Test that when the placement API returns any error when looking up a
+        provider's traits, we raise an exception.
         """
         uuid = uuids.compute_node
-        self.ks_adap_mock.get.return_value = mock.Mock(
-            status_code=400, headers={
-                'x-openstack-request-id': uuids.request_id})
+        resp_mock = mock.Mock(headers={
+            'x-openstack-request-id': uuids.request_id})
+        self.ks_adap_mock.get.return_value = resp_mock
 
-        result = self.client._get_provider_traits(uuid)
+        for status_code in (400, 404, 503):
+            resp_mock.status_code = status_code
+            self.assertRaises(
+                exception.ResourceProviderTraitRetrievalFailed,
+                self.client._get_provider_traits, uuid)
 
-        expected_url = '/resource_providers/' + uuid + '/traits'
-        self.ks_adap_mock.get.assert_called_once_with(
-            expected_url, **self.trait_api_kwargs)
-        self.assertTrue(log_mock.called)
-        self.assertEqual(uuids.request_id,
-                         log_mock.call_args[0][1]['placement_req_id'])
-        self.assertIsNone(result)
+            expected_url = '/resource_providers/' + uuid + '/traits'
+            self.ks_adap_mock.get.assert_called_once_with(
+                expected_url, **self.trait_api_kwargs)
+            self.assertTrue(log_mock.called)
+            self.assertEqual(uuids.request_id,
+                            log_mock.call_args[0][1]['placement_req_id'])
+            self.ks_adap_mock.get.reset_mock()
+            log_mock.reset_mock()
 
     def test_ensure_traits(self):
         """Successful paths, various permutations of traits existing or needing
