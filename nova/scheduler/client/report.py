@@ -968,6 +968,117 @@ class SchedulerReportClient(object):
             self._delete_inventory(rp_uuid)
 
     @safe_connect
+    def _ensure_traits(self, traits):
+        """Make sure all specified traits exist in the placement service.
+
+        :param traits: Iterable of trait strings to ensure exist.
+        :raises: TraitCreationFailed if traits contains a trait that did not
+                 exist in placement, and couldn't be created.  When this
+                 exception is raised, it is possible that *some* of the
+                 requested traits were created.
+        :raises: TraitRetrievalFailed if the initial query of existing traits
+                 was unsuccessful.  In this scenario, it is guaranteed that
+                 no traits were created.
+        """
+        if not traits:
+            return
+
+        # Query for all the requested traits.  Whichever ones we *don't* get
+        # back, we need to create.
+        # NOTE(efried): We don't attempt to filter based on our local idea of
+        # standard traits, which may not be in sync with what the placement
+        # service knows.  If the caller tries to ensure a nonexistent
+        # "standard" trait, they deserve the TraitCreationFailed exception
+        # they'll get.
+        resp = self.get('/traits?name=in:' + ','.join(traits), version='1.6')
+        if resp.status_code == 200:
+            traits_to_create = set(traits) - set(resp.json()['traits'])
+            # Might be neat to have a batch create.  But creating multiple
+            # traits will generally happen once, at initial startup, if at all.
+            for trait in traits_to_create:
+                resp = self.put('/traits/' + trait, None, version='1.6')
+                if not resp:
+                    raise exception.TraitCreationFailed(name=trait,
+                                                        error=resp.text)
+            return
+
+        # The initial GET failed
+        msg = ("[%(placement_req_id)s] Failed to retrieve the list of traits. "
+               "Got %(status_code)d: %(err_text)s")
+        args = {
+            'placement_req_id': get_placement_request_id(resp),
+            'status_code': resp.status_code,
+            'err_text': resp.text,
+        }
+        LOG.error(msg, args)
+        raise exception.TraitRetrievalFailed(error=resp.text)
+
+    @safe_connect
+    def set_traits_for_provider(self, rp_uuid, traits):
+        """Replace a provider's traits with those specified.
+
+        The provider must exist - this method does not attempt to create it.
+
+        :param rp_uuid: The UUID of the provider whose traits are to be updated
+        :param traits: Iterable of traits to set on the provider
+        :raises: ResourceProviderUpdateConflict if the provider's generation
+                 doesn't match the generation in the cache.  Callers may choose
+                 to retrieve the provider and its associations afresh and
+                 redrive this operation.
+        :raises: ResourceProviderUpdateFailed on any other placement API
+                 failure.
+        :raises: TraitCreationFailed if traits contains a trait that did not
+                 exist in placement, and couldn't be created.
+        :raises: TraitRetrievalFailed if the initial query of existing traits
+                 was unsuccessful.
+        """
+        # If not different from what we've got, short out
+        if not self._provider_tree.have_traits_changed(rp_uuid, traits):
+            return
+
+        self._ensure_traits(traits)
+
+        url = '/resource_providers/%s/traits' % rp_uuid
+        # NOTE(efried): Don't use the DELETE API when traits is empty, because
+        # that guy doesn't return content, and we need to update the cached
+        # provider tree with the new generation.
+        traits = traits or []
+        generation = self._provider_tree.data(rp_uuid).generation
+        payload = {
+            'resource_provider_generation': generation,
+            'traits': traits,
+        }
+        resp = self.put(url, payload, version='1.6')
+
+        if resp.status_code == 200:
+            json = resp.json()
+            self._provider_tree.update_traits(
+                rp_uuid, json['traits'],
+                generation=json['resource_provider_generation'])
+            return
+
+        # Some error occurred; log it
+        msg = ("[%(placement_req_id)s] Failed to update traits to "
+               "[%(traits)s] for resource provider with UUID %(uuid)s.  Got "
+               "%(status_code)d: %(err_text)s")
+        args = {
+            'placement_req_id': get_placement_request_id(resp),
+            'uuid': rp_uuid,
+            'traits': ','.join(traits),
+            'status_code': resp.status_code,
+            'err_text': resp.text,
+        }
+        LOG.error(msg, args)
+
+        # If a conflict, raise special conflict exception
+        if resp.status_code == 409:
+            raise exception.ResourceProviderUpdateConflict(
+                uuid=rp_uuid, generation=generation, error=resp.text)
+
+        # Otherwise, raise generic exception
+        raise exception.ResourceProviderUpdateFailed(url=url, error=resp.text)
+
+    @safe_connect
     def _ensure_resource_class(self, name):
         """Make sure a custom resource class exists.
 

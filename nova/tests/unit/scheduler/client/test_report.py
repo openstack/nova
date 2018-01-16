@@ -15,6 +15,7 @@ import time
 
 from keystoneauth1 import exceptions as ks_exc
 import mock
+import requests
 import six
 from six.moves.urllib import parse
 
@@ -1826,6 +1827,8 @@ class TestAggregates(SchedulerReportClientTestCase):
 
 
 class TestTraits(SchedulerReportClientTestCase):
+    trait_api_kwargs = {'raise_exc': False, 'microversion': '1.6'}
+
     def test_get_provider_traits_found(self):
         uuid = uuids.compute_node
         resp_mock = mock.Mock(status_code=200)
@@ -1840,7 +1843,7 @@ class TestTraits(SchedulerReportClientTestCase):
 
         expected_url = '/resource_providers/' + uuid + '/traits'
         self.ks_adap_mock.get.assert_called_once_with(
-            expected_url, raise_exc=False, microversion='1.6')
+            expected_url, **self.trait_api_kwargs)
         self.assertEqual(set(traits), result)
 
     @mock.patch.object(report.LOG, 'warning')
@@ -1877,11 +1880,140 @@ class TestTraits(SchedulerReportClientTestCase):
 
         expected_url = '/resource_providers/' + uuid + '/traits'
         self.ks_adap_mock.get.assert_called_once_with(
-            expected_url, raise_exc=False, microversion='1.6')
+            expected_url, **self.trait_api_kwargs)
         self.assertTrue(log_mock.called)
         self.assertEqual(uuids.request_id,
                          log_mock.call_args[0][1]['placement_req_id'])
         self.assertIsNone(result)
+
+    def test_ensure_traits(self):
+        """Successful paths, various permutations of traits existing or needing
+        to be created.
+        """
+        standard_traits = ['HW_NIC_OFFLOAD_UCS', 'HW_NIC_OFFLOAD_RDMA']
+        custom_traits = ['CUSTOM_GOLD', 'CUSTOM_SILVER']
+        all_traits = standard_traits + custom_traits
+
+        get_mock = mock.Mock(status_code=200)
+        self.ks_adap_mock.get.return_value = get_mock
+
+        # Request all traits; custom traits need to be created
+        get_mock.json.return_value = {'traits': standard_traits}
+        self.client._ensure_traits(all_traits)
+        self.ks_adap_mock.get.assert_called_once_with(
+            '/traits?name=in:' + ','.join(all_traits), **self.trait_api_kwargs)
+        self.ks_adap_mock.put.assert_has_calls(
+            [mock.call('/traits/' + trait, **self.trait_api_kwargs)
+             for trait in custom_traits], any_order=True)
+
+        self.ks_adap_mock.reset_mock()
+
+        # Request standard traits; no traits need to be created
+        get_mock.json.return_value = {'traits': standard_traits}
+        self.client._ensure_traits(standard_traits)
+        self.ks_adap_mock.get.assert_called_once_with(
+            '/traits?name=in:' + ','.join(standard_traits),
+            **self.trait_api_kwargs)
+        self.ks_adap_mock.put.assert_not_called()
+
+        self.ks_adap_mock.reset_mock()
+
+        # Request no traits - short circuit
+        self.client._ensure_traits(None)
+        self.client._ensure_traits([])
+        self.ks_adap_mock.get.assert_not_called()
+        self.ks_adap_mock.put.assert_not_called()
+
+    def test_ensure_traits_fail_retrieval(self):
+        self.ks_adap_mock.get.return_value = mock.Mock(status_code=400)
+
+        self.assertRaises(exception.TraitRetrievalFailed,
+                          self.client._ensure_traits, ['FOO'])
+
+        self.ks_adap_mock.get.assert_called_once_with(
+            '/traits?name=in:FOO', **self.trait_api_kwargs)
+        self.ks_adap_mock.put.assert_not_called()
+
+    def test_ensure_traits_fail_creation(self):
+        get_mock = mock.Mock(status_code=200)
+        get_mock.json.return_value = {'traits': []}
+        self.ks_adap_mock.get.return_value = get_mock
+        put_mock = requests.Response()
+        put_mock.status_code = 400
+        self.ks_adap_mock.put.return_value = put_mock
+
+        self.assertRaises(exception.TraitCreationFailed,
+                          self.client._ensure_traits, ['FOO'])
+
+        self.ks_adap_mock.get.assert_called_once_with(
+            '/traits?name=in:FOO', **self.trait_api_kwargs)
+        self.ks_adap_mock.put.assert_called_once_with(
+            '/traits/FOO', **self.trait_api_kwargs)
+
+    def test_set_traits_for_provider(self):
+        traits = ['HW_NIC_OFFLOAD_UCS', 'HW_NIC_OFFLOAD_RDMA']
+
+        # Make _ensure_traits succeed without PUTting
+        get_mock = mock.Mock(status_code=200)
+        get_mock.json.return_value = {'traits': traits}
+        self.ks_adap_mock.get.return_value = get_mock
+
+        # Prime the provider tree cache
+        self.client._provider_tree.new_root('rp', uuids.rp, 0)
+
+        # Mock the /rp/{u}/traits PUT to succeed
+        put_mock = mock.Mock(status_code=200)
+        put_mock.json.return_value = {'traits': traits,
+                                      'resource_provider_generation': 1}
+        self.ks_adap_mock.put.return_value = put_mock
+
+        # Invoke
+        self.client.set_traits_for_provider(uuids.rp, traits)
+
+        # Verify API calls
+        self.ks_adap_mock.get.assert_called_once_with(
+            '/traits?name=in:' + ','.join(traits), **self.trait_api_kwargs)
+        self.ks_adap_mock.put.assert_called_once_with(
+            '/resource_providers/%s/traits' % uuids.rp,
+            json={'traits': traits, 'resource_provider_generation': 0},
+            **self.trait_api_kwargs)
+
+        # And ensure the provider tree cache was updated appropriately
+        self.assertFalse(
+            self.client._provider_tree.have_traits_changed(uuids.rp, traits))
+        # Validate the generation
+        self.assertEqual(
+            1, self.client._provider_tree.data(uuids.rp).generation)
+
+    def test_set_traits_for_provider_fail(self):
+        traits = ['HW_NIC_OFFLOAD_UCS', 'HW_NIC_OFFLOAD_RDMA']
+        get_mock = mock.Mock()
+        self.ks_adap_mock.get.return_value = get_mock
+
+        # Prime the provider tree cache
+        self.client._provider_tree.new_root('rp', uuids.rp, 0)
+
+        # _ensure_traits exception bubbles up
+        get_mock.status_code = 400
+        self.assertRaises(
+            exception.TraitRetrievalFailed,
+            self.client.set_traits_for_provider, uuids.rp, traits)
+        self.ks_adap_mock.put.assert_not_called()
+
+        get_mock.status_code = 200
+        get_mock.json.return_value = {'traits': traits}
+
+        # Conflict
+        self.ks_adap_mock.put.return_value = mock.Mock(status_code=409)
+        self.assertRaises(
+            exception.ResourceProviderUpdateConflict,
+            self.client.set_traits_for_provider, uuids.rp, traits)
+
+        # Other error
+        self.ks_adap_mock.put.return_value = mock.Mock(status_code=503)
+        self.assertRaises(
+            exception.ResourceProviderUpdateFailed,
+            self.client.set_traits_for_provider, uuids.rp, traits)
 
 
 class TestAssociations(SchedulerReportClientTestCase):
