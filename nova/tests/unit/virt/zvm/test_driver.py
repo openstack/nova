@@ -14,6 +14,8 @@
 
 import copy
 import mock
+import os
+import six
 
 from nova import conf
 from nova import context
@@ -117,6 +119,8 @@ class TestZVMDriver(test.NoDBTestCase):
         self._network_info = network_model.NetworkInfo([
                 network_model.VIF(**self._network_values)
         ])
+
+        self.mock_update_task_state = mock.Mock()
 
     def test_driver_init_no_url(self):
         self.flags(cloud_connector_url=None, group='zvm')
@@ -324,3 +328,128 @@ class TestZVMDriver(test.NoDBTestCase):
                           injected_files=None, admin_password=None,
                           allocations=None, network_info=self._network_info,
                           block_device_info=None)
+
+    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('nova.image.glance.get_remote_image_service')
+    @mock.patch('nova.virt.zvm.utils.ConnectorClient.call')
+    def test_snapshot(self, call, get_image_service, mock_open):
+        image_service = mock.Mock()
+        image_id = 'e9ee1562-3ea1-4cb1-9f4c-f2033000eab1'
+        get_image_service.return_value = (image_service, image_id)
+        call_resp = ['', {"os_version": "rhel7.2",
+                          "dest_url": "file:///path/to/target"}, '']
+        call.side_effect = call_resp
+        new_image_meta = {
+            'is_public': False,
+            'status': 'active',
+            'properties': {
+                 'image_location': 'snapshot',
+                 'image_state': 'available',
+                 'owner_id': self._instance['project_id'],
+                 'os_distro': call_resp[1]['os_version'],
+                 'architecture': 's390x',
+                 'hypervisor_type': 'zvm'
+            },
+            'disk_format': 'raw',
+            'container_format': 'bare',
+        }
+        image_path = os.path.join(os.path.normpath(
+                            CONF.zvm.image_tmp_path), image_id)
+        dest_path = "file://" + image_path
+
+        self._driver.snapshot(self._context, self._instance, image_id,
+                              self.mock_update_task_state)
+        get_image_service.assert_called_with(self._context, image_id)
+
+        mock_open.assert_called_once_with(image_path, 'r')
+        ret_file = mock_open.return_value.__enter__.return_value
+        image_service.update.assert_called_once_with(self._context,
+                                                     image_id,
+                                                     new_image_meta,
+                                                     ret_file,
+                                                     purge_props=False)
+        self.mock_update_task_state.assert_has_calls([
+            mock.call(task_state='image_pending_upload'),
+            mock.call(expected_state='image_pending_upload',
+                      task_state='image_uploading')
+        ])
+        call.assert_has_calls([
+            mock.call('guest_capture', self._instance.name, image_id),
+            mock.call('image_export', image_id, dest_path,
+                      remote_host=mock.ANY),
+            mock.call('image_delete', image_id)
+        ])
+
+    @mock.patch('nova.image.glance.get_remote_image_service')
+    @mock.patch('nova.virt.zvm.hypervisor.Hypervisor.guest_capture')
+    def test_snapshot_capture_fail(self, mock_capture, get_image_service):
+        image_service = mock.Mock()
+        image_id = 'e9ee1562-3ea1-4cb1-9f4c-f2033000eab1'
+        get_image_service.return_value = (image_service, image_id)
+        mock_capture.side_effect = exception.ZVMDriverException(error='error')
+
+        self.assertRaises(exception.ZVMDriverException, self._driver.snapshot,
+                          self._context, self._instance, image_id,
+                          self.mock_update_task_state)
+
+        self.mock_update_task_state.assert_called_once_with(
+            task_state='image_pending_upload')
+        image_service.delete.assert_called_once_with(self._context, image_id)
+
+    @mock.patch('nova.image.glance.get_remote_image_service')
+    @mock.patch('nova.virt.zvm.utils.ConnectorClient.call')
+    @mock.patch('nova.virt.zvm.hypervisor.Hypervisor.image_delete')
+    @mock.patch('nova.virt.zvm.hypervisor.Hypervisor.image_export')
+    def test_snapshot_import_fail(self, mock_import, mock_delete,
+                                  call, get_image_service):
+        image_service = mock.Mock()
+        image_id = 'e9ee1562-3ea1-4cb1-9f4c-f2033000eab1'
+        get_image_service.return_value = (image_service, image_id)
+
+        mock_import.side_effect = exception.ZVMDriverException(error='error')
+
+        self.assertRaises(exception.ZVMDriverException, self._driver.snapshot,
+                          self._context, self._instance, image_id,
+                          self.mock_update_task_state)
+
+        self.mock_update_task_state.assert_called_once_with(
+            task_state='image_pending_upload')
+        get_image_service.assert_called_with(self._context, image_id)
+        call.assert_called_once_with('guest_capture',
+                                     self._instance.name, image_id)
+        mock_delete.assert_called_once_with(image_id)
+        image_service.delete.assert_called_once_with(self._context, image_id)
+
+    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('nova.image.glance.get_remote_image_service')
+    @mock.patch('nova.virt.zvm.utils.ConnectorClient.call')
+    @mock.patch('nova.virt.zvm.hypervisor.Hypervisor.image_delete')
+    @mock.patch('nova.virt.zvm.hypervisor.Hypervisor.image_export')
+    def test_snapshot_update_fail(self, mock_import, mock_delete, call,
+                                  get_image_service, mock_open):
+        image_service = mock.Mock()
+        image_id = 'e9ee1562-3ea1-4cb1-9f4c-f2033000eab1'
+        get_image_service.return_value = (image_service, image_id)
+        image_service.update.side_effect = exception.ImageNotAuthorized(
+            image_id='dummy')
+        image_path = os.path.join(os.path.normpath(
+                            CONF.zvm.image_tmp_path), image_id)
+
+        self.assertRaises(exception.ImageNotAuthorized, self._driver.snapshot,
+                          self._context, self._instance, image_id,
+                          self.mock_update_task_state)
+
+        mock_open.assert_called_once_with(image_path, 'r')
+
+        get_image_service.assert_called_with(self._context, image_id)
+        mock_delete.assert_called_once_with(image_id)
+        image_service.delete.assert_called_once_with(self._context, image_id)
+
+        self.mock_update_task_state.assert_has_calls([
+            mock.call(task_state='image_pending_upload'),
+            mock.call(expected_state='image_pending_upload',
+                      task_state='image_uploading')
+        ])
+
+        call.assert_called_once_with('guest_capture', self._instance.name,
+                                     image_id)

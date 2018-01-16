@@ -124,6 +124,9 @@ class Hypervisor(object):
     def guest_config_minidisks(self, name, disk_list):
         self._reqh.call('guest_config_minidisks', name, disk_list)
 
+    def guest_capture(self, name, image_id):
+        self._reqh.call('guest_capture', name, image_id)
+
     def image_query(self, imagename):
         """Check whether image is there or not
 
@@ -142,3 +145,15 @@ class Hypervisor(object):
     def image_import(self, image_href, image_url, image_meta):
         self._reqh.call('image_import', image_href, image_url,
                         image_meta, remote_host=self._rhost)
+
+    def image_export(self, image_id, dest_path):
+        """export image to a given place
+
+        :returns: a dict which represent the exported image information.
+        """
+        resp = self._reqh.call('image_export', image_id,
+                               dest_path, remote_host=self._rhost)
+        return resp
+
+    def image_delete(self, image_id):
+        self._reqh.call('image_delete', image_id)

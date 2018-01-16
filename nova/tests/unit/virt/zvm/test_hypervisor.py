@@ -97,3 +97,19 @@ class TestZVMHypervisor(test.NoDBTestCase):
         instance = fake_instance.fake_instance_obj(self._context)
         res = self._hypervisor.guest_exists(instance)
         self.assertFalse(res)
+
+    @mock.patch('nova.virt.zvm.utils.ConnectorClient.call')
+    def test_guest_capture(self, mcall):
+        self._hypervisor.guest_capture('n1', 'image-id')
+        mcall.assert_called_once_with('guest_capture', 'n1', 'image-id')
+
+    @mock.patch('nova.virt.zvm.utils.ConnectorClient.call')
+    def test_image_export(self, mcall):
+        self._hypervisor.image_export('image-id', 'path')
+        mcall.assert_called_once_with('image_export', 'image-id', 'path',
+                                      remote_host=self._hypervisor._rhost)
+
+    @mock.patch('nova.virt.zvm.utils.ConnectorClient.call')
+    def test_image_delete(self, mcall):
+        self._hypervisor.image_delete('image-id')
+        mcall.assert_called_once_with('image_delete', 'image-id')
