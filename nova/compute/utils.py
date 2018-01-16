@@ -446,6 +446,39 @@ def notify_about_volume_attach_detach(context, instance, host, action, phase,
 
 
 @rpc.if_notifications_enabled
+def notify_about_instance_rescue_action(
+        context, instance, host, rescue_image_ref, action, phase=None,
+        source=fields.NotificationSource.COMPUTE, exception=None):
+    """Send versioned notification about the action made on the instance
+
+    :param instance: the instance which the action performed on
+    :param host: the host emitting the notification
+    :param rescue_image_ref: the rescue image ref
+    :param action: the name of the action
+    :param phase: the phase of the action
+    :param source: the source of the notification
+    :param exception: the thrown exception (used in error notifications)
+    """
+    fault, priority = _get_fault_and_priority_from_exc(exception)
+    payload = instance_notification.InstanceActionRescuePayload(
+            instance=instance,
+            fault=fault,
+            rescue_image_ref=rescue_image_ref)
+
+    notification = instance_notification.InstanceActionRescueNotification(
+            context=context,
+            priority=priority,
+            publisher=notification_base.NotificationPublisher(
+                host=host, source=source),
+            event_type=notification_base.EventType(
+                    object='instance',
+                    action=action,
+                    phase=phase),
+            payload=payload)
+    notification.emit(context)
+
+
+@rpc.if_notifications_enabled
 def notify_about_keypair_action(context, keypair, action, phase):
     """Send versioned notification about the keypair action on the instance
 

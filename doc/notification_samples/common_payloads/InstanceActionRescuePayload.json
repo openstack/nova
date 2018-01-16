@@ -1,0 +1,8 @@
+{
+    "$ref": "InstanceActionPayload.json",
+    "nova_object.data": {
+        "rescue_image_ref": "a2459075-d96c-40d5-893e-577ff92e721c"
+    },
+    "nova_object.name": "InstanceActionRescuePayload",
+    "nova_object.version": "1.0"
+}

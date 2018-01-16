@@ -754,6 +754,42 @@ class UsageInfoTestCase(test.TestCase):
         self.assertEqual('nova.tests.unit.compute.test_compute_utils',
                          exception_payload['module_name'])
 
+    def test_notify_about_instance_rescue_action(self):
+        instance = create_instance(self.context)
+
+        compute_utils.notify_about_instance_rescue_action(
+            self.context,
+            instance,
+            'fake-compute',
+            uuids.rescue_image_ref,
+            action='rescue',
+            phase='start')
+
+        self.assertEqual(len(fake_notifier.VERSIONED_NOTIFICATIONS), 1)
+        notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+
+        self.assertEqual(notification['priority'], 'INFO')
+        self.assertEqual(notification['event_type'], 'instance.rescue.start')
+        self.assertEqual(notification['publisher_id'],
+                         'nova-compute:fake-compute')
+
+        payload = notification['payload']['nova_object.data']
+        self.assertEqual(payload['tenant_id'], self.project_id)
+        self.assertEqual(payload['user_id'], self.user_id)
+        self.assertEqual(payload['uuid'], instance['uuid'])
+
+        flavorid = flavors.get_flavor_by_name('m1.tiny')['flavorid']
+        flavor = payload['flavor']['nova_object.data']
+        self.assertEqual(str(flavor['flavorid']), flavorid)
+
+        for attr in ('display_name', 'created_at', 'launched_at',
+                     'state', 'task_state', 'display_description', 'locked',
+                     'auto_disk_config', 'key_name'):
+            self.assertIn(attr, payload, "Key %s not in payload" % attr)
+
+        self.assertEqual(payload['image_uuid'], uuids.fake_image_ref)
+        self.assertEqual(payload['rescue_image_ref'], uuids.rescue_image_ref)
+
     def test_notify_usage_exists_instance_not_found(self):
         # Ensure 'exists' notification generates appropriate usage data.
         instance = create_instance(self.context)

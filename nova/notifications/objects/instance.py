@@ -245,6 +245,21 @@ class InstanceUpdatePayload(InstancePayload):
 
 
 @nova_base.NovaObjectRegistry.register_notification
+class InstanceActionRescuePayload(InstanceActionPayload):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+    fields = {
+        'rescue_image_ref': fields.UUIDField(nullable=True)
+    }
+
+    def __init__(self, instance, fault, rescue_image_ref):
+        super(InstanceActionRescuePayload, self).__init__(
+                instance=instance,
+                fault=fault)
+        self.rescue_image_ref = rescue_image_ref
+
+
+@nova_base.NovaObjectRegistry.register_notification
 class IpPayload(base.NotificationPayloadBase):
     # Version 1.0: Initial version
     VERSION = '1.0'
@@ -451,8 +466,8 @@ class InstanceStateUpdatePayload(base.NotificationPayloadBase):
 @base.notification_sample('instance-soft_delete-end.json')
 @base.notification_sample('instance-trigger_crash_dump-start.json')
 @base.notification_sample('instance-trigger_crash_dump-end.json')
-# @base.notification_sample('instance-unrescue-start.json')
-# @base.notification_sample('instance-unrescue-end.json')
+@base.notification_sample('instance-unrescue-start.json')
+@base.notification_sample('instance-unrescue-end.json')
 @base.notification_sample('instance-unshelve-start.json')
 @base.notification_sample('instance-unshelve-end.json')
 @nova_base.NovaObjectRegistry.register_notification
@@ -526,6 +541,18 @@ class InstanceActionSnapshotNotification(base.NotificationBase):
 
     fields = {
         'payload': fields.ObjectField('InstanceActionSnapshotPayload')
+    }
+
+
+@base.notification_sample('instance-rescue-start.json')
+@base.notification_sample('instance-rescue-end.json')
+@nova_base.NovaObjectRegistry.register_notification
+class InstanceActionRescueNotification(base.NotificationBase):
+    # Version 1.0: Initial version
+    VERSION = '1.0'
+
+    fields = {
+        'payload': fields.ObjectField('InstanceActionRescuePayload')
     }
 
 

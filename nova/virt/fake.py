@@ -225,7 +225,7 @@ class FakeDriver(driver.ComputeDriver):
         pass
 
     def unrescue(self, instance, network_info):
-        pass
+        self.instances[instance.uuid].state = power_state.RUNNING
 
     def poll_rebooting_instances(self, timeout, instances):
         pass

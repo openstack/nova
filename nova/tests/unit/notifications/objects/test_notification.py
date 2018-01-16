@@ -380,6 +380,8 @@ notification_object_data = {
     'FlavorPayload': '1.4-2e7011b8b4e59167fe8b7a0a81f0d452',
     'InstanceActionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'InstanceActionPayload': '1.5-fb2804ce9b681bfb217e729153c22611',
+    'InstanceActionRescueNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
+    'InstanceActionRescuePayload': '1.0-a29f3339d0b8c3bcc997ab5d19d898d5',
     'InstanceActionVolumeNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'InstanceActionVolumePayload': '1.3-f175b22ac6d6d0aea2bac21e12156e77',
     'InstanceActionVolumeSwapNotification':

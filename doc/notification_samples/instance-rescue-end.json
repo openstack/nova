@@ -1,0 +1,12 @@
+{
+    "event_type": "instance.rescue.end",
+    "payload": {
+        "$ref": "common_payloads/InstanceActionRescuePayload.json#",
+        "nova_object.data": {
+            "state": "rescued",
+            "power_state": "shutdown"
+        }
+    },
+    "priority":"INFO",
+    "publisher_id":"nova-compute:compute"
+}

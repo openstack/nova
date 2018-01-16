@@ -2389,13 +2389,17 @@ class ComputeTestCase(BaseTestCase,
 
         self.compute.terminate_instance(self.context, instance, [], [])
 
-    def test_rescue_notifications(self):
+    @mock.patch.object(nova.compute.utils,
+                       'notify_about_instance_rescue_action')
+    @mock.patch('nova.context.RequestContext.elevated')
+    def test_rescue_notifications(self, mock_context, mock_notify):
         # Ensure notifications on instance rescue.
         def fake_rescue(self, context, instance_ref, network_info, image_meta,
                         rescue_password):
             pass
         self.stub_out('nova.virt.fake.FakeDriver.rescue', fake_rescue)
 
+        mock_context.return_value = self.context
         instance = self._create_fake_instance_obj()
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
                                             block_device_mapping=[])
@@ -2412,6 +2416,14 @@ class ComputeTestCase(BaseTestCase,
                                   'compute.instance.rescue.end']
         self.assertEqual([m.event_type for m in fake_notifier.NOTIFICATIONS],
                          expected_notifications)
+        mock_notify.assert_has_calls([
+            mock.call(self.context, instance, 'fake-mini',
+                      uuids.fake_image_ref_1,
+                      action='rescue', phase='start'),
+            mock.call(self.context, instance, 'fake-mini',
+                      uuids.fake_image_ref_1,
+                      action='rescue', phase='end')])
+
         for n, msg in enumerate(fake_notifier.NOTIFICATIONS):
             self.assertEqual(msg.event_type, expected_notifications[n])
             self.assertEqual(msg.priority, 'INFO')
@@ -2433,12 +2445,16 @@ class ComputeTestCase(BaseTestCase,
 
         self.compute.terminate_instance(self.context, instance, [], [])
 
-    def test_unrescue_notifications(self):
+    @mock.patch.object(nova.compute.utils, 'notify_about_instance_action')
+    @mock.patch('nova.context.RequestContext.elevated')
+    def test_unrescue_notifications(self, mock_context, mock_notify):
         # Ensure notifications on instance rescue.
         def fake_unrescue(self, instance_ref, network_info):
             pass
         self.stub_out('nova.virt.fake.FakeDriver.unrescue',
                        fake_unrescue)
+        context = self.context
+        mock_context.return_value = context
 
         instance = self._create_fake_instance_obj()
         self.compute.build_and_run_instance(self.context, instance, {}, {}, {},
@@ -2453,6 +2469,12 @@ class ComputeTestCase(BaseTestCase,
                                   'compute.instance.unrescue.end']
         self.assertEqual([m.event_type for m in fake_notifier.NOTIFICATIONS],
                          expected_notifications)
+        mock_notify.assert_has_calls([
+        mock.call(context, instance, 'fake-mini',
+                  action='unrescue', phase='start'),
+        mock.call(context, instance, 'fake-mini',
+                  action='unrescue', phase='end')])
+
         for n, msg in enumerate(fake_notifier.NOTIFICATIONS):
             self.assertEqual(msg.event_type, expected_notifications[n])
             self.assertEqual(msg.priority, 'INFO')
