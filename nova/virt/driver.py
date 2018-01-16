@@ -830,6 +830,36 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    def update_provider_tree(self, provider_tree, nodename):
+        """Update a ProviderTree object with current resource provider and
+        inventory information.
+
+        When this method returns, provider_tree should represent the correct
+        hierarchy of nested resource providers associated with this compute
+        node, as well as the inventory, aggregates, and traits associated with
+        those resource providers.
+
+        This method supersedes get_inventory(): if this method is implemented,
+        get_inventory() is not used.
+
+        :note: Renaming a provider (by deleting it from provider_tree and
+        re-adding it with a different name) is not supported at this time.
+
+        :param nova.compute.provider_tree.ProviderTree provider_tree:
+            A ProviderTree object representing all the providers associated
+            with the compute node's nested tree or aggregates.  This is fully
+            owned by the update_provider_tree method, and can therefore be
+            modified without locking/concurrency considerations.
+        :param nodename:
+            Name of the compute node for which the caller is updating providers
+            and inventory.  Drivers managing more than one node may use this in
+            an advisory capacity to restrict changes to only the providers
+            associated with that one node, but this is not a requirement: the
+            caller always subsumes all changes regardless.
+        :return: True if the provider_tree was changed; False otherwise.
+        """
+        raise NotImplementedError()
+
     def get_inventory(self, nodename):
         """Return a dict, keyed by resource class, of inventory information for
         the supplied node.
