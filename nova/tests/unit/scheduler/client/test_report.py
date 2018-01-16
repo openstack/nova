@@ -1924,7 +1924,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             delete_mock.status_code = status_code
             # Seed the caches
             self.client._provider_tree.new_root('compute', uuids.root, 0)
-            self.client.association_refresh_time[uuids.root] = 1234
+            self.client._association_refresh_time[uuids.root] = 1234
 
             self.client._delete_provider(uuids.root, global_request_id='gri')
 
@@ -1933,7 +1933,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                 headers={'X-Openstack-Request-Id': 'gri'}, microversion=None,
                 raise_exc=False)
             self.assertFalse(self.client._provider_tree.exists(uuids.root))
-            self.assertNotIn(uuids.root, self.client.association_refresh_time)
+            self.assertNotIn(uuids.root, self.client._association_refresh_time)
 
             self.ks_adap_mock.delete.reset_mock()
 
@@ -1977,10 +1977,15 @@ class TestProviderOperations(SchedulerReportClientTestCase):
 
     def test_set_aggregates_for_provider_fail(self):
         self.ks_adap_mock.put.return_value = mock.Mock(status_code=503)
+        # Prime the provider tree cache
+        self.client._provider_tree.new_root('rp', uuids.rp, 0)
         self.assertRaises(
             exception.ResourceProviderUpdateFailed,
             self.client.set_aggregates_for_provider,
-            self.context, uuids.rp, [])
+            self.context, uuids.rp, [uuids.agg])
+        # The cache wasn't updated
+        self.assertEqual(set(),
+                         self.client._provider_tree.data(uuids.rp).aggregates)
 
 
 class TestAggregates(SchedulerReportClientTestCase):
@@ -2024,7 +2029,7 @@ class TestAggregates(SchedulerReportClientTestCase):
                 headers={'X-Openstack-Request-Id': self.context.global_id})
             self.assertTrue(log_mock.called)
             self.assertEqual(uuids.request_id,
-                            log_mock.call_args[0][1]['placement_req_id'])
+                             log_mock.call_args[0][1]['placement_req_id'])
             self.ks_adap_mock.get.reset_mock()
             log_mock.reset_mock()
 
@@ -2074,7 +2079,7 @@ class TestTraits(SchedulerReportClientTestCase):
                 **self.trait_api_kwargs)
             self.assertTrue(log_mock.called)
             self.assertEqual(uuids.request_id,
-                            log_mock.call_args[0][1]['placement_req_id'])
+                             log_mock.call_args[0][1]['placement_req_id'])
             self.ks_adap_mock.get.reset_mock()
             log_mock.reset_mock()
 
@@ -2247,7 +2252,7 @@ class TestAssociations(SchedulerReportClientTestCase):
         mock_trait_get.assert_called_once_with(self.context, uuid)
         mock_shr_get.assert_called_once_with(
             self.context, mock_agg_get.return_value)
-        self.assertIn(uuid, self.client.association_refresh_time)
+        self.assertIn(uuid, self.client._association_refresh_time)
         self.assertTrue(
             self.client._provider_tree.in_aggregates(uuid, [uuids.agg1]))
         self.assertFalse(
@@ -2277,7 +2282,7 @@ class TestAssociations(SchedulerReportClientTestCase):
         mock_agg_get.assert_called_once_with(self.context, uuid)
         mock_trait_get.assert_called_once_with(self.context, uuid)
         mock_shr_get.assert_not_called()
-        self.assertIn(uuid, self.client.association_refresh_time)
+        self.assertIn(uuid, self.client._association_refresh_time)
         self.assertTrue(
             self.client._provider_tree.in_aggregates(uuid, [uuids.agg1]))
         self.assertFalse(
@@ -2306,7 +2311,7 @@ class TestAssociations(SchedulerReportClientTestCase):
         mock_agg_get.assert_not_called()
         mock_trait_get.assert_not_called()
         mock_shr_get.assert_not_called()
-        self.assertFalse(self.client.association_refresh_time)
+        self.assertFalse(self.client._association_refresh_time)
 
     @mock.patch.object(report.LOG, 'debug')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -2337,7 +2342,7 @@ class TestAssociations(SchedulerReportClientTestCase):
             mock.call('Refreshing trait associations for resource '
                       'provider %s, traits: %s', uuid, 'None')
         ])
-        self.assertIn(uuid, self.client.association_refresh_time)
+        self.assertIn(uuid, self.client._association_refresh_time)
 
         # Clear call count.
         mock_agg_get.reset_mock()
@@ -3325,7 +3330,7 @@ class TestAllocations(SchedulerReportClientTestCase):
     def test_delete_resource_provider_no_cascade(self, mock_by_host,
             mock_del_alloc, mock_delete):
         self.client._provider_tree.new_root(uuids.cn, uuids.cn, 1)
-        self.client.association_refresh_time[uuids.cn] = mock.Mock()
+        self.client._association_refresh_time[uuids.cn] = mock.Mock()
         cn = objects.ComputeNode(uuid=uuids.cn, host="fake_host",
                 hypervisor_hostname="fake_hostname", )
         inst1 = objects.Instance(uuid=uuids.inst1)
@@ -3339,7 +3344,7 @@ class TestAllocations(SchedulerReportClientTestCase):
         exp_url = "/resource_providers/%s" % uuids.cn
         mock_delete.assert_called_once_with(
             exp_url, global_request_id=self.context.global_id)
-        self.assertNotIn(uuids.cn, self.client.association_refresh_time)
+        self.assertNotIn(uuids.cn, self.client._association_refresh_time)
 
     @mock.patch("nova.scheduler.client.report.SchedulerReportClient."
                 "delete")

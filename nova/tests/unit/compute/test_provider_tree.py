@@ -92,6 +92,12 @@ class TestProviderTree(test.NoDBTestCase):
             uuids.non_existing_rp,
         )
 
+        # Fail attempting to add a child that already exists in the tree
+        # Existing provider is a child; search by name
+        self.assertRaises(ValueError, pt.new_child, 'numa_cell0', cn1.uuid)
+        # Existing provider is a root; search by UUID
+        self.assertRaises(ValueError, pt.new_child, cn1.uuid, cn2.uuid)
+
         # Test data().
         # Root, by UUID
         cn1_snap = pt.data(cn1.uuid)
@@ -325,12 +331,12 @@ class TestProviderTree(test.NoDBTestCase):
         # always comes after its parent (and by extension, its ancestors too).
         puuids = pt.get_provider_uuids()
         for desc in (uuids.child1, uuids.child2):
-            self.assertTrue(puuids.index(desc) > puuids.index(uuids.root))
+            self.assertGreater(puuids.index(desc), puuids.index(uuids.root))
         for desc in (uuids.grandchild1_1, uuids.grandchild1_2):
-            self.assertTrue(puuids.index(desc) > puuids.index(uuids.child1))
+            self.assertGreater(puuids.index(desc), puuids.index(uuids.child1))
         for desc in (uuids.ggc1_2_1, uuids.ggc1_2_2, uuids.ggc1_2_3):
-            self.assertTrue(
-                puuids.index(desc) > puuids.index(uuids.grandchild1_2))
+            self.assertGreater(
+                puuids.index(desc), puuids.index(uuids.grandchild1_2))
 
     def test_populate_from_iterable_with_root_update(self):
         # Ensure we can update hierarchies, including adding children, in a
