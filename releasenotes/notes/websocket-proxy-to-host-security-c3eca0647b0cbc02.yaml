@@ -17,8 +17,7 @@ features:
     ensure it is connecting to a valid compute node. The proxy can also send
     its own x509 cert to allow the compute node to validate that the connection
     comes from the official proxy server.
-upgrade:
-  - |
+
     To make use of VeNCrypt, configuration steps are required for both the
     `nova-novncproxy` service and libvirt on all the compute nodes. The
     ``/etc/libvirt/qemu.conf`` file should be modified to set the ``vnc_tls``

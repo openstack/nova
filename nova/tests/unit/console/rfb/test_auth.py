@@ -32,8 +32,8 @@ class RFBAuthSchemeListTestCase(test.NoDBTestCase):
         schemelist = auths.RFBAuthSchemeList()
 
         security_types = sorted(schemelist.schemes.keys())
-        self.assertEqual(security_types, [auth.AuthType.NONE,
-                                          auth.AuthType.VENCRYPT])
+        self.assertEqual([auth.AuthType.NONE, auth.AuthType.VENCRYPT],
+                         security_types)
 
     def test_load_unknown(self):
         """Ensure invalid auth schemes are not supported.

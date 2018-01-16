@@ -23,7 +23,7 @@ from nova.console.rfb import auth
 from nova.console.rfb import auths
 from nova.console.securityproxy import base
 from nova import exception
-from nova.i18n import _, _LI
+from nova.i18n import _
 
 LOG = logging.getLogger(__name__)
 
@@ -46,6 +46,10 @@ class RFBSecurityProxy(base.SecurityProxy):
     See the general RFB specification at:
 
       https://tools.ietf.org/html/rfc6143
+
+    See an updated, maintained RDB specification at:
+
+      https://github.com/rfbproto/rfbproto/blob/master/rfbproto.rst
     """
 
     def __init__(self):
@@ -67,7 +71,13 @@ class RFBSecurityProxy(base.SecurityProxy):
             # by sending the "Invalid" security type
             compute_sock.sendall(auth.AUTH_STATUS_FAIL)
 
-    def _parse_version(self, version_str):
+    @staticmethod
+    def _parse_version(version_str):
+        r"""Convert a version string to a float.
+
+        >>> RFBSecurityProxy._parse_version('RFB 003.008\n')
+        0.2
+        """
         maj_str = version_str[4:7]
         min_str = version_str[8:11]
 
@@ -119,6 +129,7 @@ class RFBSecurityProxy(base.SecurityProxy):
         permitted_auth_types_cnt = six.byte2int(recv(compute_sock, 1))
 
         if permitted_auth_types_cnt == 0:
+            # Decode the reason why the request failed
             reason_len_raw = recv(compute_sock, 4)
             reason_len = struct.unpack('!I', reason_len_raw)[0]
             reason = recv(compute_sock, reason_len)
@@ -148,9 +159,8 @@ class RFBSecurityProxy(base.SecurityProxy):
                        _("Only the security type None (%d) is supported") %
                        auth.AuthType.NONE)
 
-            reason = _("Client requested a security type other than "
-                       " None (%(none_code)d): "
-                       "%(auth_type)s") % {
+            reason = _("Client requested a security type other than None "
+                       "(%(none_code)d): %(auth_type)s") % {
                            'auth_type': client_auth,
                            'none_code': auth.AuthType.NONE}
             raise exception.SecurityProxyNegotiationFailed(reason=reason)
@@ -179,10 +189,10 @@ class RFBSecurityProxy(base.SecurityProxy):
                        _("Unable to negotiate security with server"))
             LOG.debug("Auth failed %s", six.text_type(e))
             raise exception.SecurityProxyNegotiationFailed(
-                reason="Auth handshake failed")
+                reason=_("Auth handshake failed"))
 
-        LOG.info(_LI("Finished security handshake, resuming normal proxy "
-                     "mode using secured socket"))
+        LOG.info("Finished security handshake, resuming normal proxy "
+                 "mode using secured socket")
 
         # we can just proxy the security result -- if the server security
         # negotiation fails, we want the client to think it has failed

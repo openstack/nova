@@ -230,7 +230,12 @@ first.
 
 Possible values:
 
-* "none": allow connection without authentication
+* ``none``: allow connection without authentication
+* ``vencrypt``: use VeNCrypt authentication scheme
+
+Related options:
+
+* ``[vnc]vencrypt_client_key``, ``[vnc]vencrypt_client_cert``: must also be set
 """),
     cfg.StrOpt(
         'vencrypt_client_key',
@@ -241,8 +246,8 @@ proxy server presents to the compute node during VNC authentication.
 
 Related options:
 
-* ``vnc.auth_schemes``: must include "vencrypt"
-* ``vnc.vencrypt_client_cert```: must also be set
+* ``vnc.auth_schemes``: must include ``vencrypt``
+* ``vnc.vencrypt_client_cert``: must also be set
 """),
     cfg.StrOpt(
         'vencrypt_client_cert',
@@ -253,8 +258,8 @@ the VNC proxy server presents to the compute node during VNC authentication.
 
 Realted options:
 
-* ``vnc.auth_schemes``: must include "vencrypt"
-* ``vnc.vencrypt_client_key```: must also be set
+* ``vnc.auth_schemes``: must include ``vencrypt``
+* ``vnc.vencrypt_client_key``: must also be set
 """),
     cfg.StrOpt(
         'vencrypt_ca_certs',
@@ -265,7 +270,7 @@ for the certificate authorities used by the compute node VNC server.
 
 Related options:
 
-* ``vnc.auth_schemes``: must include "vencrypt"
+* ``vnc.auth_schemes``: must include ``vencrypt``
 """),
 ]
 

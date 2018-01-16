@@ -12,18 +12,37 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import enum
 import ssl
 import struct
 
 from oslo_config import cfg
 from oslo_log import log as logging
+import six
 
 from nova.console.rfb import auth
 from nova import exception
-from nova.i18n import _, _LI
+from nova.i18n import _
 
 LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
+
+
+class AuthVeNCryptSubtype(enum.IntEnum):
+    """Possible VeNCrypt subtypes.
+
+    From https://github.com/rfbproto/rfbproto/blob/master/rfbproto.rst
+    """
+
+    PLAIN = 256
+    TLSNONE = 257
+    TLSVNC = 258
+    TLSPLAIN = 259
+    X509NONE = 260
+    X509VNC = 261
+    X509PLAIN = 262
+    X509SASL = 263
+    TLSSASL = 264
 
 
 class RFBAuthSchemeVeNCrypt(auth.RFBAuthScheme):
@@ -81,17 +100,20 @@ class RFBAuthSchemeVeNCrypt(auth.RFBAuthScheme):
 
         LOG.debug("Server supports VeNCrypt sub-types %s", sub_types)
 
-        if auth.AuthVeNCryptSubtype.X509NONE not in sub_types:
+        # We use X509None as we're only seeking to encrypt the channel (ruling
+        # out PLAIN) and prevent MITM (ruling out TLS*, which uses trivially
+        # MITM'd Anonymous Diffie Hellmann (DH) cyphers)
+        if AuthVeNCryptSubtype.X509NONE not in sub_types:
             reason = _("Server does not support the x509None (%s) VeNCrypt"
                        " sub-auth type") % \
-                       auth.AuthVeNCryptSubtype.X509NONE
+                       AuthVeNCryptSubtype.X509NONE
             raise exception.RFBAuthHandshakeFailed(reason=reason)
 
         LOG.debug("Attempting to use the x509None (%s) auth sub-type",
-                  auth.AuthVeNCryptSubtype.X509NONE)
+                  AuthVeNCryptSubtype.X509NONE)
 
         compute_sock.sendall(struct.pack(
-            '!I', auth.AuthVeNCryptSubtype.X509NONE))
+            '!I', AuthVeNCryptSubtype.X509NONE))
 
         # NB(sross): the spec is missing a U8 here that's used in
         # multiple implementations (e.g. QEMU, GTK-VNC).  1 means
@@ -120,9 +142,10 @@ class RFBAuthSchemeVeNCrypt(auth.RFBAuthScheme):
                 cert_reqs=ssl.CERT_REQUIRED,
                 ca_certs=CONF.vnc.vencrypt_ca_certs)
 
-            LOG.info(_LI("VeNCrypt security handshake accepted"))
+            LOG.info("VeNCrypt security handshake accepted")
             return wrapped_sock
 
         except ssl.SSLError as e:
-            reason = _("Error establishing TLS connection to server: %s") % e
+            reason = _("Error establishing TLS connection to server: %s") % (
+                six.text_type(e))
             raise exception.RFBAuthHandshakeFailed(reason=reason)

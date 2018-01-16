@@ -62,7 +62,7 @@ class RFBSecurityProxyTestCase(test.NoDBTestCase):
         self._expect_tenant_recv(auth.VERSION_LENGTH, full_version_str)
 
     def _to_binary(self, val):
-        if type(val) != six.binary_type:
+        if not isinstance(val, six.binary_type):
             val = six.binary_type(val, 'utf-8')
         return val
 
@@ -87,6 +87,11 @@ class RFBSecurityProxyTestCase(test.NoDBTestCase):
             list(self.compute_sock.recv.side_effect) + [ret_val])
 
     def test_fail(self):
+        """Validate behavior for invalid initial message from tenant.
+
+        The spec defines the sequence that should be used in the handshaking
+        process. Anything outside of this is invalid.
+        """
         self._expect_tenant_send("\x00\x00\x00\x01\x00\x00\x00\x04blah")
 
         self.proxy._fail(self.tenant_sock, None, 'blah')
@@ -94,6 +99,11 @@ class RFBSecurityProxyTestCase(test.NoDBTestCase):
         self._assert_expected_calls()
 
     def test_fail_server_message(self):
+        """Validate behavior for invalid initial message from server.
+
+        The spec defines the sequence that should be used in the handshaking
+        process. Anything outside of this is invalid.
+        """
         self._expect_tenant_send("\x00\x00\x00\x01\x00\x00\x00\x04blah")
         self._expect_compute_send("\x00")
 
@@ -102,20 +112,30 @@ class RFBSecurityProxyTestCase(test.NoDBTestCase):
         self._assert_expected_calls()
 
     def test_parse_version(self):
+        """Validate behavior of version parser."""
         res = self.proxy._parse_version("RFB 012.034\n")
         self.assertEqual(12.34, res)
 
     def test_fails_on_compute_version(self):
+        """Validate behavior for unsupported compute RFB version.
+
+        We only support RFB protocol version 3.8.
+        """
         for full_version_str in ["RFB 003.007\n", "RFB 003.009\n"]:
             self._expect_compute_recv(auth.VERSION_LENGTH, full_version_str)
 
-            self.assertRaises(exception.SecurityProxyNegotiationFailed,
-                              self.proxy.connect,
-                              self.tenant_sock,
-                              self.compute_sock)
+            ex = self.assertRaises(exception.SecurityProxyNegotiationFailed,
+                                   self.proxy.connect,
+                                   self.tenant_sock,
+                                   self.compute_sock)
+            self.assertIn('version 3.8, but server', six.text_type(ex))
             self._assert_expected_calls()
 
     def test_fails_on_tenant_version(self):
+        """Validate behavior for unsupported tenant RFB version.
+
+        We only support RFB protocol version 3.8.
+        """
         full_version_str = "RFB 003.008\n"
 
         for full_version_str_invalid in ["RFB 003.007\n", "RFB 003.009\n"]:
@@ -126,13 +146,19 @@ class RFBSecurityProxyTestCase(test.NoDBTestCase):
             self._expect_tenant_recv(auth.VERSION_LENGTH,
                                      full_version_str_invalid)
 
-            self.assertRaises(exception.SecurityProxyNegotiationFailed,
-                              self.proxy.connect,
-                              self.tenant_sock,
-                              self.compute_sock)
+            ex = self.assertRaises(exception.SecurityProxyNegotiationFailed,
+                                   self.proxy.connect,
+                                   self.tenant_sock,
+                                   self.compute_sock)
+            self.assertIn('version 3.8, but tenant', six.text_type(ex))
             self._assert_expected_calls()
 
     def test_fails_on_sec_type_cnt_zero(self):
+        """Validate behavior if a server returns 0 supported security types.
+
+        This indicates a random issue and the cause of that issues should be
+        decoded and reported in the exception.
+        """
         self.proxy._fail = mock.Mock()
 
         self._version_handshake()
@@ -142,15 +168,17 @@ class RFBSecurityProxyTestCase(test.NoDBTestCase):
         self._expect_compute_recv(6, "cheese")
         self._expect_tenant_send("\x00\x00\x00\x00\x06cheese")
 
-        self.assertRaises(exception.SecurityProxyNegotiationFailed,
-                          self.proxy.connect,
-                          self.tenant_sock,
-                          self.compute_sock)
+        ex = self.assertRaises(exception.SecurityProxyNegotiationFailed,
+                               self.proxy.connect,
+                               self.tenant_sock,
+                               self.compute_sock)
+        self.assertIn('cheese', six.text_type(ex))
 
         self._assert_expected_calls()
 
     @mock.patch.object(authnone.RFBAuthSchemeNone, "security_handshake")
     def test_full_run(self, mock_handshake):
+        """Validate correct behavior."""
         new_sock = mock.MagicMock()
         mock_handshake.return_value = new_sock
 
@@ -171,6 +199,7 @@ class RFBSecurityProxyTestCase(test.NoDBTestCase):
         self._assert_expected_calls()
 
     def test_client_auth_invalid_fails(self):
+        """Validate behavior if no security types are supported."""
         self.proxy._fail = self.manager.proxy._fail
         self.proxy.security_handshake = self.manager.proxy.security_handshake
 
@@ -195,6 +224,7 @@ class RFBSecurityProxyTestCase(test.NoDBTestCase):
         self._assert_expected_calls()
 
     def test_exception_in_choose_security_type_fails(self):
+        """Validate behavior if a given security type isn't supported."""
         self.proxy._fail = self.manager.proxy._fail
         self.proxy.security_handshake = self.manager.proxy.security_handshake
 
@@ -220,6 +250,7 @@ class RFBSecurityProxyTestCase(test.NoDBTestCase):
 
     @mock.patch.object(authnone.RFBAuthSchemeNone, "security_handshake")
     def test_exception_security_handshake_fails(self, mock_auth):
+        """Validate behavior if the security handshake fails for any reason."""
         self.proxy._fail = self.manager.proxy._fail
 
         self._version_handshake()

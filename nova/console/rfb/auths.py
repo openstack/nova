@@ -37,6 +37,13 @@ class RFBAuthSchemeList(object):
             self.schemes[scheme.security_type()] = scheme
 
     def find_scheme(self, desired_types):
+        """Find a suitable authentication scheme to use with compute node.
+
+        Identify which of the ``desired_types`` we can accept.
+
+        :param desired_types: A list of ints corresponding to the various
+            authentication types supported.
+        """
         for security_type in desired_types:
             if security_type in self.schemes:
                 return self.schemes[security_type]
