@@ -223,14 +223,15 @@ class NotificationSampleTestBase(test.TestCase,
                     in fake_notifier.VERSIONED_NOTIFICATIONS
                     if notification['event_type'] == event_type]
 
-    def _wait_for_notification(self, event_type, timeout=1.0):
+    def _wait_for_notification(self, event_type, timeout=10.0):
         notifications = fake_notifier.wait_for_versioned_notifications(
             event_type, timeout=timeout)
         self.assertTrue(
             len(notifications) > 0,
             'notification %s hasn\'t been received' % event_type)
 
-    def _wait_for_notifications(self, event_type, expected_count, timeout=1.0):
+    def _wait_for_notifications(self, event_type, expected_count,
+                                timeout=10.0):
         notifications = fake_notifier.wait_for_versioned_notifications(
                 event_type, n_events=expected_count, timeout=timeout)
         msg = ''.join('\n%s' % notif for notif in notifications)
