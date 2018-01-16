@@ -23,6 +23,8 @@ import itertools
 
 from oslo_config import cfg
 
+from oslo_config import types
+
 from nova.conf import paths
 
 
@@ -512,6 +514,58 @@ Related options:
 * ``cpu_mode``: Don't set this when ``cpu_mode`` is NOT set to ``custom``.
   This would result in an error and the instance won't be launched.
 * ``virt_type``: Only the virtualization types ``kvm`` and ``qemu`` use this.
+"""),
+    cfg.ListOpt(
+        'cpu_model_extra_flags',
+        item_type=types.String(
+            choices=['pcid'],
+            ignore_case=True,
+        ),
+        default=[],
+        help="""
+This allows specifying granular CPU feature flags when specifying CPU
+models.  For example, to explicitly specify the ``pcid``
+(Process-Context ID, an Intel processor feature) flag to the "IvyBridge"
+virtual CPU model::
+
+    [libvirt]
+    cpu_mode = custom
+    cpu_model = IvyBridge
+    cpu_model_extra_flags = pcid
+
+Currently, the choice is restricted to only one option: ``pcid`` (the
+option is case-insensitive, so ``PCID`` is also valid).  This flag is
+now required to address the guest performance degradation as a result of
+applying the "Meltdown" CVE fixes on certain Intel CPU models.
+
+Note that when using this config attribute to set the 'PCID' CPU flag,
+not all virtual (i.e. libvirt / QEMU) CPU models need it:
+
+* The only virtual CPU models that include the 'PCID' capability are
+  Intel "Haswell", "Broadwell", and "Skylake" variants.
+
+* The libvirt / QEMU CPU models "Nehalem", "Westmere", "SandyBridge",
+  and "IvyBridge" will _not_ expose the 'PCID' capability by default,
+  even if the host CPUs by the same name include it.  I.e.  'PCID' needs
+  to be explicitly specified when using the said virtual CPU models.
+
+For now, the ``cpu_model_extra_flags`` config attribute is valid only in
+combination with ``cpu_mode`` + ``cpu_model`` options.
+
+Besides ``custom``, the libvirt driver has two other CPU modes: The
+default, ``host-model``, tells it to do the right thing with respect to
+handling 'PCID' CPU flag for the guest -- *assuming* you are running
+updated processor microcode, host and guest kernel, libvirt, and QEMU.
+The other mode, ``host-passthrough``, checks if 'PCID' is available in
+the hardware, and if so directly passes it through to the Nova guests.
+Thus, in context of 'PCID', with either of these CPU modes
+(``host-model`` or ``host-passthrough``), there is no need to use the
+``cpu_model_extra_flags``.
+
+Related options:
+
+* cpu_mode
+* cpu_model
 """),
     cfg.StrOpt('snapshots_directory',
                default='$instances_path/snapshots',

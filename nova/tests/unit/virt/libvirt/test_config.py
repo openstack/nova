@@ -269,6 +269,15 @@ class LibvirtConfigGuestCPUFeatureTest(LibvirtConfigBaseTest):
             <feature name="mtrr" policy="force"/>
         """)
 
+    def test_config_simple_pcid(self):
+        obj = config.LibvirtConfigGuestCPUFeature("pcid")
+        obj.policy = "require"
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <feature name="pcid" policy="require"/>
+        """)
+
 
 class LibvirtConfigGuestCPUNUMATest(LibvirtConfigBaseTest):
 
