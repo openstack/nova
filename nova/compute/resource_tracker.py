@@ -868,33 +868,52 @@ class ResourceTracker(object):
         # is changed.
         nodename = compute_node.hypervisor_hostname
         # Persist the stats to the Scheduler
+        # First try update_provider_tree
+        # Retrieve the provider tree associated with this compute node.  If
+        # it doesn't exist yet, this will create it with a (single, root)
+        # provider corresponding to the compute node.
+        reportclient = self.scheduler_client.reportclient
+        prov_tree = reportclient.get_provider_tree_and_ensure_root(
+            context, compute_node.uuid, name=compute_node.hypervisor_hostname)
+        # Let the virt driver rearrange the provider tree and set/update
+        # the inventory, traits, and aggregates throughout.
         try:
-            inv_data = self.driver.get_inventory(nodename)
-            _normalize_inventory_from_cn_obj(inv_data, compute_node)
-            self.scheduler_client.set_inventory_for_provider(
-                context,
-                compute_node.uuid,
-                compute_node.hypervisor_hostname,
-                inv_data,
-            )
+            self.driver.update_provider_tree(prov_tree, nodename)
+            # Flush any changes.
+            reportclient.update_from_provider_tree(context, prov_tree)
+            # NOTE(efried): We do not _normalize_inventory_from_cn_obj if
+            # the virt driver is advanced enough to have implemented
+            # update_provider_tree.
         except NotImplementedError:
-            # Eventually all virt drivers will return an inventory dict in the
-            # format that the placement API expects and we'll be able to remove
-            # this code branch
-            self.scheduler_client.update_compute_node(context, compute_node)
+            # update_provider_tree isn't implemented yet - try get_inventory
+            try:
+                inv_data = self.driver.get_inventory(nodename)
+                _normalize_inventory_from_cn_obj(inv_data, compute_node)
+                self.scheduler_client.set_inventory_for_provider(
+                    context,
+                    compute_node.uuid,
+                    compute_node.hypervisor_hostname,
+                    inv_data,
+                )
+            except NotImplementedError:
+                # Eventually all virt drivers will return an inventory dict in
+                # the format that the placement API expects and we'll be able
+                # to remove this code branch
+                self.scheduler_client.update_compute_node(context,
+                                                          compute_node)
 
-        try:
-            traits = self.driver.get_traits(nodename)
-        except NotImplementedError:
-            pass
-        else:
-            # NOTE(mgoddard): set_traits_for_provider does not refresh the
-            # provider tree in the report client, so we rely on the above call
-            # to set_inventory_for_provider or update_compute_node to ensure
-            # that the resource provider exists in the tree and has had its
-            # cached traits refreshed.
-            self.reportclient.set_traits_for_provider(
-                context, compute_node.uuid, traits)
+            try:
+                traits = self.driver.get_traits(nodename)
+            except NotImplementedError:
+                pass
+            else:
+                # NOTE(mgoddard): set_traits_for_provider does not refresh the
+                # provider tree in the report client, so we rely on the above
+                # call to set_inventory_for_provider or update_compute_node to
+                # ensure that the resource provider exists in the tree and has
+                # had its cached traits refreshed.
+                self.reportclient.set_traits_for_provider(
+                    context, compute_node.uuid, traits)
 
         if self.pci_tracker:
             self.pci_tracker.save(context)

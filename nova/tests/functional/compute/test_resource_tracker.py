@@ -146,6 +146,7 @@ class IronicResourceTrackerTest(test.TestCase):
 
         driver = mock.MagicMock(autospec=virt_driver.ComputeDriver)
         driver.node_is_available.return_value = True
+        driver.update_provider_tree.side_effect = NotImplementedError
         self.driver_mock = driver
         self.rt = resource_tracker.ResourceTracker(COMPUTE_HOST, driver)
         self.rt.scheduler_client.reportclient = self.report_client
