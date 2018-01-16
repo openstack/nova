@@ -49,10 +49,11 @@ class TestVirtDriver(test.NoDBTestCase):
         empty_block_device_info = {}
 
         self.assertEqual(
-            driver.block_device_info_get_root(block_device_info), '/dev/sda')
+            driver.block_device_info_get_root_device(block_device_info),
+            '/dev/sda')
         self.assertIsNone(
-            driver.block_device_info_get_root(empty_block_device_info))
-        self.assertIsNone(driver.block_device_info_get_root(None))
+            driver.block_device_info_get_root_device(empty_block_device_info))
+        self.assertIsNone(driver.block_device_info_get_root_device(None))
 
         self.assertEqual(
             driver.block_device_info_get_swap(block_device_info), swap)
