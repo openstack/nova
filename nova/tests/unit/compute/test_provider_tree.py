@@ -134,6 +134,262 @@ class TestProviderTree(test.NoDBTestCase):
         self.assertFalse(pt.exists(numa_cell0_uuid))
         self.assertFalse(pt.exists(uuids.cn1))
 
+    def test_populate_from_iterable_empty(self):
+        pt = provider_tree.ProviderTree()
+        # Empty list is a no-op
+        pt.populate_from_iterable([])
+        self.assertEqual(set(), pt.get_provider_uuids())
+
+    def test_populate_from_iterable_error_orphan_cycle(self):
+        pt = provider_tree.ProviderTree()
+
+        # Error trying to populate with an orphan
+        grandchild1_1 = {
+            'uuid': uuids.grandchild1_1,
+            'name': 'grandchild1_1',
+            'generation': 11,
+            'parent_provider_uuid': uuids.child1,
+        }
+
+        self.assertRaises(ValueError,
+                          pt.populate_from_iterable, [grandchild1_1])
+
+        # Create a cycle so there are no orphans, but no path to a root
+        cycle = {
+            'uuid': uuids.child1,
+            'name': 'child1',
+            'generation': 1,
+            # There's a country song about this
+            'parent_provider_uuid': uuids.grandchild1_1,
+        }
+
+        self.assertRaises(ValueError,
+                          pt.populate_from_iterable, [grandchild1_1, cycle])
+
+    def test_populate_from_iterable_complex(self):
+        # root
+        #   +-> child1
+        #   |      +-> grandchild1_2
+        #   |             +-> ggc1_2_1
+        #   |             +-> ggc1_2_2
+        #   |             +-> ggc1_2_3
+        #   +-> child2
+        # another_root
+        pt = provider_tree.ProviderTree()
+        plist = [
+            {
+                'uuid': uuids.root,
+                'name': 'root',
+                'generation': 0,
+            },
+            {
+                'uuid': uuids.child1,
+                'name': 'child1',
+                'generation': 1,
+                'parent_provider_uuid': uuids.root,
+            },
+            {
+                'uuid': uuids.child2,
+                'name': 'child2',
+                'generation': 2,
+                'parent_provider_uuid': uuids.root,
+            },
+            {
+                'uuid': uuids.grandchild1_2,
+                'name': 'grandchild1_2',
+                'generation': 12,
+                'parent_provider_uuid': uuids.child1,
+            },
+            {
+                'uuid': uuids.ggc1_2_1,
+                'name': 'ggc1_2_1',
+                'generation': 121,
+                'parent_provider_uuid': uuids.grandchild1_2,
+            },
+            {
+                'uuid': uuids.ggc1_2_2,
+                'name': 'ggc1_2_2',
+                'generation': 122,
+                'parent_provider_uuid': uuids.grandchild1_2,
+            },
+            {
+                'uuid': uuids.ggc1_2_3,
+                'name': 'ggc1_2_3',
+                'generation': 123,
+                'parent_provider_uuid': uuids.grandchild1_2,
+            },
+            {
+                'uuid': uuids.another_root,
+                'name': 'another_root',
+                'generation': 911,
+            },
+        ]
+        pt.populate_from_iterable(plist)
+
+        def validate_root(expected_uuids):
+            # Make sure we have all and only the expected providers
+            self.assertEqual(expected_uuids, pt.get_provider_uuids())
+            # Now make sure they're in the right hierarchy.  Cheat: get the
+            # actual _Provider to make it easier to walk the tree (ProviderData
+            # doesn't include children).
+            root = pt._find_with_lock(uuids.root)
+            self.assertEqual(uuids.root, root.uuid)
+            self.assertEqual('root', root.name)
+            self.assertEqual(0, root.generation)
+            self.assertIsNone(root.parent_uuid)
+            self.assertEqual(2, len(list(root.children)))
+            for child in root.children.values():
+                self.assertTrue(child.name.startswith('child'))
+                if child.name == 'child1':
+                    if uuids.grandchild1_1 in expected_uuids:
+                        self.assertEqual(2, len(list(child.children)))
+                    else:
+                        self.assertEqual(1, len(list(child.children)))
+                    for grandchild in child.children.values():
+                        self.assertTrue(grandchild.name.startswith(
+                            'grandchild1_'))
+                        if grandchild.name == 'grandchild1_1':
+                            self.assertEqual(0, len(list(grandchild.children)))
+                        if grandchild.name == 'grandchild1_2':
+                            self.assertEqual(3, len(list(grandchild.children)))
+                            for ggc in grandchild.children.values():
+                                self.assertTrue(ggc.name.startswith('ggc1_2_'))
+            another_root = pt._find_with_lock(uuids.another_root)
+            self.assertEqual(uuids.another_root, another_root.uuid)
+            self.assertEqual('another_root', another_root.name)
+            self.assertEqual(911, another_root.generation)
+            self.assertIsNone(another_root.parent_uuid)
+            self.assertEqual(0, len(list(another_root.children)))
+            if uuids.new_root in expected_uuids:
+                new_root = pt._find_with_lock(uuids.new_root)
+                self.assertEqual(uuids.new_root, new_root.uuid)
+                self.assertEqual('new_root', new_root.name)
+                self.assertEqual(42, new_root.generation)
+                self.assertIsNone(new_root.parent_uuid)
+                self.assertEqual(0, len(list(new_root.children)))
+
+        expected_uuids = set([
+            uuids.root, uuids.child1, uuids.child2, uuids.grandchild1_2,
+            uuids.ggc1_2_1, uuids.ggc1_2_2, uuids.ggc1_2_3,
+            uuids.another_root])
+
+        validate_root(expected_uuids)
+
+        # Merge an orphan - still an error
+        orphan = {
+            'uuid': uuids.orphan,
+            'name': 'orphan',
+            'generation': 86,
+            'parent_provider_uuid': uuids.mystery,
+        }
+        self.assertRaises(ValueError, pt.populate_from_iterable, [orphan])
+
+        # And the tree didn't change
+        validate_root(expected_uuids)
+
+        # Merge a list with a new grandchild and a new root
+        plist = [
+            {
+                'uuid': uuids.grandchild1_1,
+                'name': 'grandchild1_1',
+                'generation': 11,
+                'parent_provider_uuid': uuids.child1,
+            },
+            {
+                'uuid': uuids.new_root,
+                'name': 'new_root',
+                'generation': 42,
+            },
+        ]
+        pt.populate_from_iterable(plist)
+
+        expected_uuids |= set([uuids.grandchild1_1, uuids.new_root])
+
+        validate_root(expected_uuids)
+
+        # Merge an empty list - still a no-op
+        pt.populate_from_iterable([])
+        validate_root(expected_uuids)
+
+    def test_populate_from_iterable_with_root_update(self):
+        # Ensure we can update hierarchies, including adding children, in a
+        # tree that's already populated.  This tests the case where a given
+        # provider exists both in the tree and in the input.  We must replace
+        # that provider *before* we inject its descendants; otherwise the
+        # descendants will be lost.  Note that this test case is not 100%
+        # reliable, as we can't predict the order over which hashed values are
+        # iterated.
+
+        pt = provider_tree.ProviderTree()
+
+        # Let's create a root
+        plist = [
+            {
+                'uuid': uuids.root,
+                'name': 'root',
+                'generation': 0,
+            },
+        ]
+        pt.populate_from_iterable(plist)
+        expected_uuids = set([uuids.root])
+        self.assertEqual(expected_uuids, pt.get_provider_uuids())
+
+        # Let's add a child updating the name and generation for the root.
+        # root
+        #   +-> child1
+        plist = [
+            {
+                'uuid': uuids.root,
+                'name': 'root_with_new_name',
+                'generation': 1,
+            },
+            {
+                'uuid': uuids.child1,
+                'name': 'child1',
+                'generation': 1,
+                'parent_provider_uuid': uuids.root,
+            },
+        ]
+        pt.populate_from_iterable(plist)
+        expected_uuids = set([uuids.root, uuids.child1])
+        self.assertEqual(expected_uuids, pt.get_provider_uuids())
+
+    def test_populate_from_iterable_disown_grandchild(self):
+        # Start with:
+        # root
+        #   +-> child
+        #   |      +-> grandchild
+        # Then send in [child] and grandchild should disappear.
+        child = {
+            'uuid': uuids.child,
+            'name': 'child',
+            'generation': 1,
+            'parent_provider_uuid': uuids.root,
+        }
+        pt = provider_tree.ProviderTree()
+        plist = [
+            {
+                'uuid': uuids.root,
+                'name': 'root',
+                'generation': 0,
+            },
+            child,
+            {
+                'uuid': uuids.grandchild,
+                'name': 'grandchild',
+                'generation': 2,
+                'parent_provider_uuid': uuids.child,
+            },
+        ]
+        pt.populate_from_iterable(plist)
+        self.assertEqual(set([uuids.root, uuids.child, uuids.grandchild]),
+                         pt.get_provider_uuids())
+        self.assertTrue(pt.exists(uuids.grandchild))
+        pt.populate_from_iterable([child])
+        self.assertEqual(set([uuids.root, uuids.child]),
+                         pt.get_provider_uuids())
+        self.assertFalse(pt.exists(uuids.grandchild))
+
     def test_has_inventory_changed_no_existing_rp(self):
         cns = self.compute_nodes
         pt = provider_tree.ProviderTree(cns)

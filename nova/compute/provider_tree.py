@@ -64,6 +64,19 @@ class _Provider(object):
         # Set of aggregate UUIDs
         self.aggregates = set()
 
+    @classmethod
+    def from_dict(cls, pdict):
+        """Factory method producing a _Provider based on a dict with
+        appropriate keys.
+
+        :param pdict: Dictionary representing a provider, with keys 'name',
+                      'uuid', 'generation', 'parent_provider_uuid'.  Of these,
+                      only 'name' is mandatory.
+        """
+        return cls(pdict['name'], uuid=pdict.get('uuid'),
+                   generation=pdict.get('generation'),
+                   parent_uuid=pdict.get('parent_provider_uuid'))
+
     def data(self):
         inventory = copy.deepcopy(self.inventory)
         traits = copy.copy(self.traits)
@@ -232,6 +245,97 @@ class ProviderTree(object):
                 ret |= root.get_provider_uuids()
         return ret
 
+    def populate_from_iterable(self, provider_dicts):
+        """Populates this ProviderTree from an iterable of provider dicts.
+
+        This method will ADD providers to the tree if provider_dicts contains
+        providers that do not exist in the tree already and will REPLACE
+        providers in the tree if provider_dicts contains providers that are
+        already in the tree. This method will NOT remove providers from the
+        tree that are not in provider_dicts.
+
+        :param provider_dicts: An iterable of dicts of resource provider
+                               information.  If a provider is present in
+                               provider_dicts, all its descendants must also be
+                               present.
+        :raises: ValueError if any provider in provider_dicts has a parent that
+                 is not in this ProviderTree or elsewhere in provider_dicts.
+        """
+        if not provider_dicts:
+            return
+
+        # Map of provider UUID to provider dict for the providers we're
+        # *adding* via this method.
+        to_add_by_uuid = {pd['uuid']: pd for pd in provider_dicts}
+
+        with self.lock:
+            # Sanity check for orphans.  Every parent UUID must either be None
+            # (the provider is a root), or be in the tree already, or exist as
+            # a key in to_add_by_uuid (we're adding it).
+            all_parents = set([None]) | set(to_add_by_uuid)
+            # NOTE(efried): Can't use get_provider_uuids directly because we're
+            # already under lock.
+            for root in self.roots:
+                all_parents |= root.get_provider_uuids()
+            missing_parents = set()
+            for pd in to_add_by_uuid.values():
+                parent_uuid = pd.get('parent_provider_uuid')
+                if parent_uuid not in all_parents:
+                    missing_parents.add(parent_uuid)
+            if missing_parents:
+                raise ValueError(
+                    _("The following parents were not found: %s") %
+                    ', '.join(missing_parents))
+
+            # Ready to do the work.
+            # Use to_add_by_uuid to keep track of which providers are left to
+            # be added.
+            while to_add_by_uuid:
+                # Find a provider that's suitable to inject.
+                for uuid, pd in to_add_by_uuid.items():
+                    # Roots are always okay to inject (None won't be a key in
+                    # to_add_by_uuid).  Otherwise, we have to make sure we
+                    # already added the parent (and, by recursion, all
+                    # ancestors) if present in the input.
+                    parent_uuid = pd.get('parent_provider_uuid')
+                    if parent_uuid not in to_add_by_uuid:
+                        break
+                else:
+                    # This should never happen - we already ensured all parents
+                    # exist in the tree, which means we can't have any branches
+                    # that don't wind up at the root, which means we can't have
+                    # cycles.  But to quell the paranoia...
+                    raise ValueError(
+                        _("Unexpectedly failed to find parents already in the"
+                          "tree for any of the following: %s") %
+                        ','.join(set(to_add_by_uuid)))
+
+                # Add or replace the provider, either as a root or under its
+                # parent
+                try:
+                    self._remove_with_lock(uuid)
+                except ValueError:
+                    # Wasn't there in the first place - fine.
+                    pass
+
+                provider = _Provider.from_dict(pd)
+                if parent_uuid is None:
+                    self.roots.append(provider)
+                else:
+                    parent = self._find_with_lock(parent_uuid)
+                    parent.add_child(provider)
+
+                # Remove this entry to signify we're done with it.
+                to_add_by_uuid.pop(uuid)
+
+    def _remove_with_lock(self, name_or_uuid):
+        found = self._find_with_lock(name_or_uuid)
+        if found.parent_uuid:
+            parent = self._find_with_lock(found.parent_uuid)
+            parent.remove_child(found)
+        else:
+            self.roots.remove(found)
+
     def remove(self, name_or_uuid):
         """Safely removes the provider identified by the supplied name_or_uuid
         parameter and all of its children from the tree.
@@ -241,12 +345,7 @@ class ProviderTree(object):
                              remove from the tree.
         """
         with self.lock:
-            found = self._find_with_lock(name_or_uuid)
-            if found.parent_uuid:
-                parent = self._find_with_lock(found.parent_uuid)
-                parent.remove_child(found)
-            else:
-                self.roots.remove(found)
+            self._remove_with_lock(name_or_uuid)
 
     def new_root(self, name, uuid, generation):
         """Adds a new root provider to the tree, returning its UUID."""
