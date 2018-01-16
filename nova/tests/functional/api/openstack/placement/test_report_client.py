@@ -18,6 +18,7 @@ import requests
 from wsgi_intercept import interceptor
 
 from nova.api.openstack.placement import deploy
+from nova.compute import provider_tree
 from nova import conf
 from nova import context
 # TODO(cdent): This points to the nova, not placement, exception for
@@ -690,3 +691,206 @@ class SchedulerReportClientTests(test.TestCase):
                 inv,
                 self.client._get_inventory(
                     self.context, uuids.cn)['inventories'])
+
+    def test_update_from_provider_tree(self):
+        """A "realistic" walk through the lifecycle of a compute node provider
+        tree.
+        """
+        # NOTE(efried): We can use the same ProviderTree throughout, since
+        # update_from_provider_tree doesn't change it.
+        new_tree = provider_tree.ProviderTree()
+
+        def assert_ptrees_equal():
+            uuids = set(self.client._provider_tree.get_provider_uuids())
+            self.assertEqual(uuids, set(new_tree.get_provider_uuids()))
+            for uuid in uuids:
+                cdata = self.client._provider_tree.data(uuid)
+                ndata = new_tree.data(uuid)
+                self.assertEqual(ndata.name, cdata.name)
+                self.assertEqual(ndata.parent_uuid, cdata.parent_uuid)
+                self.assertFalse(
+                    new_tree.has_inventory_changed(uuid, cdata.inventory))
+                self.assertFalse(
+                    new_tree.have_traits_changed(uuid, cdata.traits))
+                self.assertFalse(
+                    new_tree.have_aggregates_changed(uuid, cdata.aggregates))
+
+        # To begin with, the cache should be empty
+        self.assertEqual([], self.client._provider_tree.get_provider_uuids())
+        # When new_tree is empty, it's a no-op.
+        # Do this outside the interceptor to prove no API calls are made.
+        self.client.update_from_provider_tree(self.context, new_tree)
+        assert_ptrees_equal()
+
+        with self._interceptor():
+            # Populate with a provider with no inventories, aggregates, traits
+            new_tree.new_root('root', uuids.root, None)
+            self.client.update_from_provider_tree(self.context, new_tree)
+            assert_ptrees_equal()
+
+            # Throw in some more providers, in various spots in the tree, with
+            # some sub-properties
+            new_tree.new_child('child1', uuids.root, uuid=uuids.child1)
+            new_tree.update_aggregates('child1', [uuids.agg1, uuids.agg2])
+            new_tree.new_child('grandchild1_1', uuids.child1, uuid=uuids.gc1_1)
+            new_tree.update_traits(uuids.gc1_1, ['CUSTOM_PHYSNET_2'])
+            new_tree.new_root('ssp', uuids.ssp, None)
+            new_tree.update_inventory('ssp', {
+                fields.ResourceClass.DISK_GB: {
+                    'total': 100,
+                    'reserved': 1,
+                    'min_unit': 1,
+                    'max_unit': 10,
+                    'step_size': 2,
+                    'allocation_ratio': 10.0,
+                },
+            }, None)
+            self.client.update_from_provider_tree(self.context, new_tree)
+            assert_ptrees_equal()
+
+            # Swizzle properties
+            # Give the root some everything
+            new_tree.update_inventory(uuids.root, {
+                fields.ResourceClass.VCPU: {
+                    'total': 10,
+                    'reserved': 0,
+                    'min_unit': 1,
+                    'max_unit': 2,
+                    'step_size': 1,
+                    'allocation_ratio': 10.0,
+                },
+                fields.ResourceClass.MEMORY_MB: {
+                    'total': 1048576,
+                    'reserved': 2048,
+                    'min_unit': 1024,
+                    'max_unit': 131072,
+                    'step_size': 1024,
+                    'allocation_ratio': 1.0,
+                },
+            }, None)
+            new_tree.update_aggregates(uuids.root, [uuids.agg1])
+            new_tree.update_traits(uuids.root, ['HW_CPU_X86_AVX',
+                                                'HW_CPU_X86_AVX2'])
+            # Take away the child's aggregates
+            new_tree.update_aggregates(uuids.child1, [])
+            # Grandchild gets some inventory
+            ipv4_inv = {
+                fields.ResourceClass.IPV4_ADDRESS: {
+                    'total': 128,
+                    'reserved': 0,
+                    'min_unit': 1,
+                    'max_unit': 8,
+                    'step_size': 1,
+                    'allocation_ratio': 1.0,
+                },
+            }
+            new_tree.update_inventory('grandchild1_1', ipv4_inv, None)
+            # Shared storage provider gets traits
+            new_tree.update_traits('ssp', set(['MISC_SHARES_VIA_AGGREGATE',
+                                               'STORAGE_DISK_SSD']))
+            self.client.update_from_provider_tree(self.context, new_tree)
+            assert_ptrees_equal()
+
+            # Let's go for some error scenarios.
+            # Add inventory in an invalid resource class
+            new_tree.update_inventory(
+                'grandchild1_1',
+                dict(ipv4_inv,
+                     MOTSUC_BANDWIDTH={
+                         'total': 1250000,
+                         'reserved': 10000,
+                         'min_unit': 5000,
+                         'max_unit': 250000,
+                         'step_size': 5000,
+                         'allocation_ratio': 8.0,
+                     }), None)
+            self.assertRaises(
+                exception.ResourceProviderSyncFailed,
+                self.client.update_from_provider_tree, self.context, new_tree)
+            # The inventory update didn't get synced...
+            self.assertIsNone(self.client._get_inventory(
+                self.context, uuids.grandchild1_1))
+            # ...and the grandchild was removed from the cache
+            self.assertFalse(
+                self.client._provider_tree.exists('grandchild1_1'))
+
+            # Fix that problem so we can try the next one
+            new_tree.update_inventory(
+                'grandchild1_1',
+                dict(ipv4_inv,
+                     CUSTOM_BANDWIDTH={
+                         'total': 1250000,
+                         'reserved': 10000,
+                         'min_unit': 5000,
+                         'max_unit': 250000,
+                         'step_size': 5000,
+                         'allocation_ratio': 8.0,
+                     }), None)
+
+            # Add a bogus trait
+            new_tree.update_traits(uuids.root, ['HW_CPU_X86_AVX',
+                                                'HW_CPU_X86_AVX2',
+                                                'MOTSUC_FOO'])
+            self.assertRaises(
+                exception.ResourceProviderSyncFailed,
+                self.client.update_from_provider_tree, self.context, new_tree)
+            # Placement didn't get updated
+            self.assertEqual(set(['HW_CPU_X86_AVX', 'HW_CPU_X86_AVX2']),
+                             self.client._get_provider_traits(self.context,
+                                                              uuids.root))
+            # ...and the root was removed from the cache
+            self.assertFalse(self.client._provider_tree.exists(uuids.root))
+
+            # Fix that problem
+            new_tree.update_traits(uuids.root, ['HW_CPU_X86_AVX',
+                                                'HW_CPU_X86_AVX2',
+                                                'CUSTOM_FOO'])
+
+            # Now the sync should work
+            self.client.update_from_provider_tree(self.context, new_tree)
+            assert_ptrees_equal()
+
+            # Let's cause a conflict error by doing an "out-of-band" update
+            gen = self.client._provider_tree.data(uuids.ssp).generation
+            self.assertTrue(self.client.put(
+                '/resource_providers/%s/traits' % uuids.ssp,
+                {'resource_provider_generation': gen,
+                 'traits': ['MISC_SHARES_VIA_AGGREGATE', 'STORAGE_DISK_HDD']},
+                version='1.6'))
+
+            # Now if we try to modify the traits, we should fail and invalidate
+            # the cache...
+            new_tree.update_traits(uuids.ssp, ['MISC_SHARES_VIA_AGGREGATE',
+                                               'STORAGE_DISK_SSD',
+                                               'CUSTOM_FAST'])
+            self.assertRaises(
+                exception.ResourceProviderSyncFailed,
+                self.client.update_from_provider_tree, self.context, new_tree)
+            # ...but the next iteration will refresh the cache with the latest
+            # generation and so the next attempt should succeed.
+            self.client.update_from_provider_tree(self.context, new_tree)
+            # The out-of-band change is blown away, as it should be.
+            assert_ptrees_equal()
+
+            # Let's delete some stuff
+            new_tree.remove(uuids.ssp)
+            self.assertFalse(new_tree.exists('ssp'))
+            new_tree.remove('child1')
+            self.assertFalse(new_tree.exists('child1'))
+            # Removing a node removes its descendants too
+            self.assertFalse(new_tree.exists('grandchild1_1'))
+            self.client.update_from_provider_tree(self.context, new_tree)
+            assert_ptrees_equal()
+
+            # Remove the last provider
+            new_tree.remove(uuids.root)
+            self.assertEqual([], new_tree.get_provider_uuids())
+            self.client.update_from_provider_tree(self.context, new_tree)
+            assert_ptrees_equal()
+
+            # Having removed the providers this way, they ought to be gone
+            # from placement
+            for uuid in (uuids.root, uuids.child1, uuids.grandchild1_1,
+                         uuids.ssp):
+                resp = self.client.get('/resource_providers/%s' % uuid)
+                self.assertEqual(404, resp.status_code)
