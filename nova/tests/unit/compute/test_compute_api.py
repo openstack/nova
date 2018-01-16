@@ -2667,10 +2667,9 @@ class _ComputeAPIUnitTestMixIn(object):
         instance = self._create_instance_obj(params=params)
         instance.vm_state = instance_vm_state
 
-        # 'cache_in_nova' is for testing non-inheritable properties
-        # 'user_id' should also not be carried from sys_meta into
-        # image property...since it should be set explicitly by
-        # _create_image() in compute api.
+        # Test non-inheritable properties, 'user_id' should also not be
+        # carried from sys_meta into image property...since it should be set
+        # explicitly by _create_image() in compute api.
         fake_image_meta = {
             'is_public': True,
             'name': 'base-name',
@@ -2681,6 +2680,11 @@ class _ComputeAPIUnitTestMixIn(object):
                 'foo': 'bar',
                 'blah': 'bug?',
                 'cache_in_nova': 'dropped',
+                'bittorrent': 'dropped',
+                'img_signature_hash_method': 'dropped',
+                'img_signature': 'dropped',
+                'img_signature_key_type': 'dropped',
+                'img_signature_certificate_uuid': 'dropped'
             },
         }
         image_type = is_snapshot and 'snapshot' or 'backup'

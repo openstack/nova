@@ -1,0 +1,10 @@
+---
+upgrade:
+  - |
+    The default list of non-inherited image properties to pop when creating a
+    snapshot has been extended to include image signature properties. The
+    properties ``img_signature_hash_method``, ``img_signature``,
+    ``img_signature_key_type`` and ``img_signature_certificate_uuid`` are no
+    longer inherited by the snapshot image as they would otherwise result in
+    a Glance attempting to verify the snapshot image with the signature of the
+    original.
