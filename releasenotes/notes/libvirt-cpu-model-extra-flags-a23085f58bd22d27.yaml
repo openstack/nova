@@ -1,0 +1,21 @@
+---
+fixes:
+  - |
+    The libvirt driver now allows specifying individual CPU feature
+    flags for guests, via a new configuration attribute
+    ``[libvirt]/cpu_model_extra_flags`` -- only with ``custom`` as the
+    ``[libvirt]/cpu_model``.  Refer to its documentation in
+    ``nova.conf`` for usage details.
+
+    One of the motivations for this is to alleviate the performance
+    degradation (caused as a result of applying the "Meltdown" CVE
+    fixes) for guests running with certain Intel-based virtual CPU
+    models.  This guest performance impact is reduced by exposing the
+    CPU feature flag 'PCID' ("Process-Context ID") to the *guest* CPU,
+    assuming that it is available in the physical hardware itself.
+
+    Note that besides ``custom``, Nova's libvirt driver has two other
+    CPU modes: ``host-model`` (which is the default), and
+    ``host-passthrough``.  Refer to the
+    ``[libvirt]/cpu_model_extra_flags`` documentation for what to do
+    when you are using either of those CPU modes in context of 'PCID'.

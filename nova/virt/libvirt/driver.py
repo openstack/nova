@@ -3537,6 +3537,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _get_guest_cpu_model_config(self):
         mode = CONF.libvirt.cpu_mode
         model = CONF.libvirt.cpu_model
+        extra_flags = CONF.libvirt.cpu_model_extra_flags
 
         if (CONF.libvirt.virt_type == "kvm" or
             CONF.libvirt.virt_type == "qemu"):
@@ -3563,13 +3564,49 @@ class LibvirtDriver(driver.ComputeDriver):
             msg = _("A CPU model name should not be set when a "
                     "host CPU model is requested")
             raise exception.Invalid(msg)
+        # FIXME (kchamart): We're intentionally restricting the choices
+        # (in the conf/libvirt.py) for 'extra_flags` to just 'PCID', to
+        # address the immediate guest performance degradation caused by
+        # "Meltdown" CVE fixes on certain Intel CPU models.  In a future
+        # patch, we will:
+        # (a) Remove the restriction of choices for 'extra_flags',
+        #     allowing to add / remove additional CPU flags, as it will
+        #     make way for other useful features.
+        # (b) Remove the below check for "host-model", as it is a
+        #     valid configuration to supply additional CPU flags to it.
+        # (c) Revisit and fix the warnings / exception handling for
+        #     different combinations of CPU modes and 'extra_flags'.
+        elif ((mode == "host-model" or mode == "host-passthrough") and
+              extra_flags):
+            extra_flags = []
+            LOG.warning(
+              _LW("Setting extra CPU flags is only valid in "
+                  "combination with a custom CPU model. Refer "
+                  "to the 'nova.conf' documentation for "
+                  "'[libvirt]/cpu_model_extra_flags'"))
 
-        LOG.debug("CPU mode '%(mode)s' model '%(model)s' was chosen",
-                  {'mode': mode, 'model': (model or "")})
+        LOG.debug("CPU mode '%(mode)s' model '%(model)s' was chosen, "
+                  "with extra flags: '%(extra_flags)s'",
+                  {'mode': mode,
+                   'model': (model or ""),
+                   'extra_flags': (extra_flags or "")})
 
         cpu = vconfig.LibvirtConfigGuestCPU()
         cpu.mode = mode
         cpu.model = model
+
+        # NOTE (kchamart): Currently there's no existing way to ask if a
+        # given CPU model + CPU flags combination is supported by KVM &
+        # a specific QEMU binary.  However, libvirt runs the 'CPUID'
+        # command upfront -- before even a Nova instance (a QEMU
+        # process) is launched -- to construct CPU models and check
+        # their validity; so we are good there.  In the long-term,
+        # upstream libvirt intends to add an additional new API that can
+        # do fine-grained validation of a certain CPU model + CPU flags
+        # against a specific QEMU binary (the libvirt RFE bug for that:
+        # https://bugzilla.redhat.com/show_bug.cgi?id=1559832).
+        for flag in extra_flags:
+            cpu.add_feature(vconfig.LibvirtConfigGuestCPUFeature(flag))
 
         return cpu
 
