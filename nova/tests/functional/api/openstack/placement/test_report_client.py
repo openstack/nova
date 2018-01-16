@@ -49,6 +49,13 @@ class NoAuthReportClient(report.SchedulerReportClient):
             service_type='placement')
 
 
+@mock.patch('nova.compute.utils.is_volume_backed_instance',
+            new=mock.Mock(return_value=False))
+@mock.patch('nova.objects.compute_node.ComputeNode.save', new=mock.Mock())
+@mock.patch('keystoneauth1.session.Session.get_auth_headers',
+            new=mock.Mock(return_value={'x-auth-token': 'admin'}))
+@mock.patch('keystoneauth1.session.Session.get_endpoint',
+            new=mock.Mock(return_value='http://localhost:80/placement'))
 class SchedulerReportClientTests(test.TestCase):
     """Set up an intercepted placement API to test against."""
 
@@ -87,27 +94,28 @@ class SchedulerReportClientTests(test.TestCase):
                                   extra_specs={}))
         self.context = context.get_admin_context()
 
-    @mock.patch('nova.compute.utils.is_volume_backed_instance',
-                return_value=False)
-    @mock.patch('nova.objects.compute_node.ComputeNode.save')
-    @mock.patch('keystoneauth1.session.Session.get_auth_headers',
-                return_value={'x-auth-token': 'admin'})
-    @mock.patch('keystoneauth1.session.Session.get_endpoint',
-                return_value='http://localhost:80/placement')
-    def test_client_report_smoke(self, mock_endpoint, mock_auth, mock_cn,
-                                 mock_vbi):
+    def _interceptor(self):
+        # Isolate this initialization for maintainability.
+        return interceptor.RequestsInterceptor(app=self.app, url=self.url)
+
+    def test_client_report_smoke(self):
         """Check things go as expected when doing the right things."""
         # TODO(cdent): We should probably also have a test that
         # tests that when allocation or inventory errors happen, we
         # are resilient.
         res_class = fields.ResourceClass.VCPU
-        with interceptor.RequestsInterceptor(
-                app=self.app, url=self.url):
+        with self._interceptor():
             # When we start out there are no resource providers.
             rp = self.client._get_resource_provider(self.compute_uuid)
             self.assertIsNone(rp)
             rps = self.client._get_providers_in_tree(self.compute_uuid)
             self.assertEqual([], rps)
+            # But get_provider_tree_and_ensure_root creates one (via
+            # _ensure_resource_provider)
+            ptree = self.client.get_provider_tree_and_ensure_root(
+                self.compute_uuid)
+            self.assertEqual(set([self.compute_uuid]),
+                             ptree.get_provider_uuids())
 
             # Now let's update status for our compute node.
             self.client.update_compute_node(self.context, self.compute_node)
@@ -137,6 +145,13 @@ class SchedulerReportClientTests(test.TestCase):
             inventory_data = resp.json()['inventories']
             self.assertEqual(self.compute_node.vcpus,
                              inventory_data[res_class]['total'])
+
+            # Providers and inventory show up nicely in the provider tree
+            ptree = self.client.get_provider_tree_and_ensure_root(
+                self.compute_uuid)
+            self.assertEqual(set([self.compute_uuid]),
+                             ptree.get_provider_uuids())
+            self.assertTrue(ptree.has_inventory(self.compute_uuid))
 
             # Update allocations with our instance
             self.client.update_instance_allocation(
@@ -178,6 +193,15 @@ class SchedulerReportClientTests(test.TestCase):
             inventory_data = resp.json()['inventories']
             self.assertEqual({}, inventory_data)
 
+            # Build the provider tree afresh.
+            ptree = self.client.get_provider_tree_and_ensure_root(
+                self.compute_uuid)
+            # The compute node is still there
+            self.assertEqual(set([self.compute_uuid]),
+                             ptree.get_provider_uuids())
+            # But the inventory is gone
+            self.assertFalse(ptree.has_inventory(self.compute_uuid))
+
             # Try setting some invalid inventory and make sure the report
             # client raises the expected error.
             inv_data = {
@@ -212,3 +236,136 @@ class SchedulerReportClientTests(test.TestCase):
                 app=lambda: assert_app, url=self.url):
             self.client.delete('/resource_providers/%s' % self.compute_uuid,
                                global_request_id=global_request_id)
+
+    def test_get_provider_tree_with_nested_and_aggregates(self):
+        """A more in-depth test of get_provider_tree_and_ensure_root with
+        nested and sharing resource providers.
+
+               ss1(DISK)    ss2(DISK)           ss3(DISK)
+         agg_disk_1 \         / agg_disk_2        | agg_disk_3
+               cn(VCPU,MEM,DISK)                  x
+               /              \
+        pf1(VF,BW)        pf2(VF,BW)           sbw(BW)
+          agg_ip \       / agg_ip                 | agg_bw
+                  sip(IP)                         x
+
+        """
+        with self._interceptor():
+            # Register the compute node and its inventory
+            self.client.update_compute_node(self.context, self.compute_node)
+            # The compute node is associated with two of the shared storages
+            self.client.set_aggregates_for_provider(
+                self.compute_uuid, [uuids.agg_disk_1, uuids.agg_disk_2])
+
+            # Register two SR-IOV PFs with VF and bandwidth inventory
+            for x in (1, 2):
+                name = 'pf%d' % x
+                uuid = getattr(uuids, name)
+                self.client.set_inventory_for_provider(
+                    self.context, uuid, name, {
+                        fields.ResourceClass.SRIOV_NET_VF: {
+                            'total': 24 * x,
+                            'reserved': x,
+                            'min_unit': 1,
+                            'max_unit': 24 * x,
+                            'step_size': 1,
+                            'allocation_ratio': 1.0,
+                        },
+                        'CUSTOM_BANDWIDTH': {
+                            'total': 125000 * x,
+                            'reserved': 1000 * x,
+                            'min_unit': 5000,
+                            'max_unit': 25000 * x,
+                            'step_size': 5000,
+                            'allocation_ratio': 1.0,
+                        },
+                    }, parent_provider_uuid=self.compute_uuid)
+                # They're associated with an IP address aggregate
+                self.client.set_aggregates_for_provider(uuid, [uuids.agg_ip])
+                # Set some traits on 'em
+                self.client.set_traits_for_provider(
+                    uuid, ['CUSTOM_PHYSNET_%d' % x])
+
+            # Register three shared storage pools with disk inventory
+            for x in (1, 2, 3):
+                name = 'ss%d' % x
+                uuid = getattr(uuids, name)
+                self.client.set_inventory_for_provider(
+                    self.context, uuid, name, {
+                        fields.ResourceClass.DISK_GB: {
+                            'total': 100 * x,
+                            'reserved': x,
+                            'min_unit': 1,
+                            'max_unit': 10 * x,
+                            'step_size': 2,
+                            'allocation_ratio': 10.0,
+                        },
+                    })
+                # Mark as a sharing provider
+                self.client.set_traits_for_provider(
+                    uuid, ['MISC_SHARES_VIA_AGGREGATE'])
+                # Associate each with its own aggregate.  The compute node is
+                # associated with the first two (agg_disk_1 and agg_disk_2).
+                agg = getattr(uuids, 'agg_disk_%d' % x)
+                self.client.set_aggregates_for_provider(uuid, [agg])
+
+            # Register a shared IP address provider with IP address inventory
+            self.client.set_inventory_for_provider(
+                self.context, uuids.sip, 'sip', {
+                    fields.ResourceClass.IPV4_ADDRESS: {
+                        'total': 128,
+                        'reserved': 0,
+                        'min_unit': 1,
+                        'max_unit': 8,
+                        'step_size': 1,
+                        'allocation_ratio': 1.0,
+                    },
+                })
+            # Mark as a sharing provider, and add another trait
+            self.client.set_traits_for_provider(
+                uuids.sip, ['MISC_SHARES_VIA_AGGREGATE', 'CUSTOM_FOO'])
+            # It's associated with the same aggregate as both PFs
+            self.client.set_aggregates_for_provider(uuids.sip, [uuids.agg_ip])
+
+            # Register a shared network bandwidth provider
+            self.client.set_inventory_for_provider(
+                self.context, uuids.sbw, 'sbw', {
+                    'CUSTOM_BANDWIDTH': {
+                        'total': 1250000,
+                        'reserved': 10000,
+                        'min_unit': 5000,
+                        'max_unit': 250000,
+                        'step_size': 5000,
+                        'allocation_ratio': 8.0,
+                    },
+                })
+            # Mark as a sharing provider
+            self.client.set_traits_for_provider(
+                uuids.sbw, ['MISC_SHARES_VIA_AGGREGATE'])
+            # It's associated with some other aggregate.
+            self.client.set_aggregates_for_provider(uuids.sbw, [uuids.agg_bw])
+
+            # Setup is done.  Grab the ProviderTree
+            prov_tree = self.client.get_provider_tree_and_ensure_root(
+                self.compute_uuid)
+
+            # All providers show up because we used set_inventory_for_provider
+            self.assertEqual(set([self.compute_uuid, uuids.ss1, uuids.ss2,
+                                  uuids.pf1, uuids.pf2, uuids.sip, uuids.ss3,
+                                  uuids.sbw]),
+                             prov_tree.get_provider_uuids())
+            # Narrow the field to just our compute subtree.
+            self.assertEqual(set([self.compute_uuid, uuids.pf1, uuids.pf2]),
+                             prov_tree.get_provider_uuids(self.compute_uuid))
+
+            # Validate traits for a couple of providers
+            self.assertFalse(prov_tree.have_traits_changed(
+                uuids.pf2, ['CUSTOM_PHYSNET_2']))
+            self.assertFalse(prov_tree.have_traits_changed(
+                uuids.sip, ['MISC_SHARES_VIA_AGGREGATE', 'CUSTOM_FOO']))
+
+            # Validate aggregates for a couple of providers
+            self.assertFalse(prov_tree.have_aggregates_changed(
+                uuids.sbw, [uuids.agg_bw]))
+            self.assertFalse(prov_tree.have_aggregates_changed(
+                self.compute_uuid, [uuids.agg_disk_1, uuids.agg_disk_2]))
