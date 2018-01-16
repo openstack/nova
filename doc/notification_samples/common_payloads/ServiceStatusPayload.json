@@ -1,0 +1,19 @@
+{
+    "nova_object.name": "ServiceStatusPayload",
+    "nova_object.namespace": "nova",
+    "nova_object.version": "1.1",
+    "nova_object.data": {
+        "host": "host2",
+        "disabled": false,
+        "binary": "nova-compute",
+        "topic": "compute",
+        "disabled_reason": null,
+        "forced_down": false,
+        "version": 23,
+        "availability_zone": null,
+        "uuid": "fa69c544-906b-4a6a-a9c6-c1f7a8078c73",
+        "last_seen_up": null,
+        "report_count": 0
+    }
+}
+
