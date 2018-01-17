@@ -232,7 +232,8 @@ class PciDeviceStats(object):
         :param requested_count: The number of PCI devices requested.
         :returns: A list of pools that can, together, provide at least
             ``requested_count`` PCI devices with the level of NUMA affinity
-            required by ``numa_policy``.
+            required by ``numa_policy``, else all pools that can satisfy this
+            policy even if it's not enough.
         """
         # NOTE(stephenfin): We may wish to change the default policy at a later
         # date
@@ -265,7 +266,7 @@ class PciDeviceStats(object):
 
         # once again, we can't apply a less strict policy than the one
         # requested, so we need to return if we've demanded a NUMA affinity of
-        # LEGACY. Similarly, we will also reurn if we have enough devices to
+        # LEGACY. Similarly, we will also return if we have enough devices to
         # satisfy this somewhat strict policy.
         if requested_policy == fields.PCINUMAAffinityPolicy.LEGACY or sum(
                 pool['count'] for pool in filtered_pools) >= requested_count:
@@ -274,7 +275,8 @@ class PciDeviceStats(object):
         # if we've got here, we're using the PREFERRED policy and weren't able
         # to provide anything with stricter affinity. Use whatever devices you
         # can, folks.
-        return pools
+        return sorted(
+            pools, key=lambda pool: pool.get('numa_node') not in numa_cell_ids)
 
     @classmethod
     def _filter_non_requested_pfs(cls, pools, request):
@@ -305,6 +307,8 @@ class PciDeviceStats(object):
             quantity and required NUMA affinity of device(s) we want..
         :param numa_cells: A list of InstanceNUMACell objects whose ``id``
             corresponds to the ``id`` of host NUMACells.
+        :returns: True if the request was applied against the provided pools
+            successfully, else False.
         """
         # NOTE(vladikr): This code maybe open to race conditions.
         # Two concurrent requests may succeed when called support_requests
@@ -376,8 +380,6 @@ class PciDeviceStats(object):
         :type requests: nova.objects.InstancePCIRequests
         :param numa_cells: A list of InstanceNUMACell objects whose ``id``
             corresponds to the ``id`` of host NUMACells, or None.
-        :param numa_policy: The PCI NUMA affinity policy to apply when
-            filtering devices from ``numa_cells``, or None.
         :raises: exception.PciDeviceRequestFailed if this compute node cannot
             satisfy the given request.
         """
