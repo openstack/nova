@@ -40,19 +40,6 @@ class AuthType(enum.IntEnum):
     MSLOGON = 0xfffffffa  # Used by UltraVNC
 
 
-class AuthVeNCryptSubtype(enum.IntEnum):
-
-    PLAIN = 256
-    TLSNONE = 257
-    TLSVNC = 258
-    TLSPLAIN = 259
-    X509NONE = 260
-    X509VNC = 261
-    X509PLAIN = 262
-    X509SASL = 263
-    TLSSASL = 264
-
-
 @six.add_metaclass(abc.ABCMeta)
 class RFBAuthScheme(object):
 
@@ -74,5 +61,7 @@ class RFBAuthScheme(object):
 
         Should raise exception.RFBAuthHandshakeFailed if
         an error occurs
+
+        :param compute_sock: socket connected to the compute node instance
         """
         pass

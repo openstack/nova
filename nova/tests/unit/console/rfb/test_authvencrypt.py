@@ -58,8 +58,8 @@ class RFBAuthSchemeVeNCryptTestCase(test.NoDBTestCase):
         self._expect_recv(1, "\x00")
 
         self._expect_recv(1, "\x02")
-        subtypes_raw = [auth.AuthVeNCryptSubtype.X509NONE,
-                        auth.AuthVeNCryptSubtype.X509VNC]
+        subtypes_raw = [authvencrypt.AuthVeNCryptSubtype.X509NONE,
+                        authvencrypt.AuthVeNCryptSubtype.X509VNC]
         subtypes = struct.pack('!2I', *subtypes_raw)
         self._expect_recv(8, subtypes)
 
@@ -89,8 +89,8 @@ class RFBAuthSchemeVeNCryptTestCase(test.NoDBTestCase):
         self._expect_recv(1, "\x00")
 
         self._expect_recv(1, "\x02")
-        subtypes_raw = [auth.AuthVeNCryptSubtype.X509NONE,
-                        auth.AuthVeNCryptSubtype.X509VNC]
+        subtypes_raw = [authvencrypt.AuthVeNCryptSubtype.X509NONE,
+                        authvencrypt.AuthVeNCryptSubtype.X509VNC]
         subtypes = struct.pack('!2I', *subtypes_raw)
         self._expect_recv(8, subtypes)
 
@@ -140,7 +140,7 @@ class RFBAuthSchemeVeNCryptTestCase(test.NoDBTestCase):
         self._expect_recv(1, "\x00")
 
         self._expect_recv(1, "\x01")
-        subtypes_raw = [auth.AuthVeNCryptSubtype.X509VNC]
+        subtypes_raw = [authvencrypt.AuthVeNCryptSubtype.X509VNC]
         subtypes = struct.pack('!I', *subtypes_raw)
         self._expect_recv(4, subtypes)
 
@@ -154,8 +154,8 @@ class RFBAuthSchemeVeNCryptTestCase(test.NoDBTestCase):
         self._expect_recv(1, "\x00")
 
         self._expect_recv(1, "\x02")
-        subtypes_raw = [auth.AuthVeNCryptSubtype.X509NONE,
-                        auth.AuthVeNCryptSubtype.X509VNC]
+        subtypes_raw = [authvencrypt.AuthVeNCryptSubtype.X509NONE,
+                        authvencrypt.AuthVeNCryptSubtype.X509VNC]
         subtypes = struct.pack('!2I', *subtypes_raw)
         self._expect_recv(8, subtypes)
 
@@ -174,8 +174,8 @@ class RFBAuthSchemeVeNCryptTestCase(test.NoDBTestCase):
         self._expect_recv(1, "\x00")
 
         self._expect_recv(1, "\x02")
-        subtypes_raw = [auth.AuthVeNCryptSubtype.X509NONE,
-                        auth.AuthVeNCryptSubtype.X509VNC]
+        subtypes_raw = [authvencrypt.AuthVeNCryptSubtype.X509NONE,
+                        authvencrypt.AuthVeNCryptSubtype.X509VNC]
         subtypes = struct.pack('!2I', *subtypes_raw)
         self._expect_recv(8, subtypes)
 
