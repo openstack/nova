@@ -51,13 +51,20 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
         self.driver._serialconsoleops = mock.MagicMock()
         self.driver._imagecache = mock.MagicMock()
 
+    @mock.patch.object(driver.LOG, 'warning')
     @mock.patch.object(driver.utilsfactory, 'get_hostutils')
-    def test_check_minimum_windows_version(self, mock_get_hostutils):
+    def test_check_minimum_windows_version(self, mock_get_hostutils,
+                                           mock_warning):
         mock_hostutils = mock_get_hostutils.return_value
         mock_hostutils.check_min_windows_version.return_value = False
 
         self.assertRaises(exception.HypervisorTooOld,
                           self.driver._check_minimum_windows_version)
+
+        mock_hostutils.check_min_windows_version.side_effect = [True, False]
+
+        self.driver._check_minimum_windows_version()
+        self.assertTrue(mock_warning.called)
 
     def test_public_api_signatures(self):
         # NOTE(claudiub): wrapped functions do not keep the same signature in

@@ -1,0 +1,6 @@
+---
+deprecations:
+  - |
+    Support for Windows / Hyper-V Server 2012 has been deprecated in Queens
+    in nova and will be removed in Rocky. The supported versions are Windows /
+    Hyper-V Server 2012 R2 or newer.
