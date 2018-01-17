@@ -499,7 +499,8 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
             has_traffic_filtering=True,
             plugin="ovs",
             port_profile=osv_objects.vif.VIFPortProfileOpenVSwitch(
-                interface_id="dc065497-3c8d-4f44-8fb4-e1d33c16a536"),
+                interface_id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+                datapath_type=None),
             preserve_on_delete=False,
             vif_name="nicdc065497-3c",
             network=osv_objects.network.Network(
@@ -661,7 +662,8 @@ class OSVIFUtilTestCase(test.NoDBTestCase):
             plugin="ovs",
             bridge_name="qbrdc065497-3c",
             port_profile=osv_objects.vif.VIFPortProfileOpenVSwitch(
-                interface_id="dc065497-3c8d-4f44-8fb4-e1d33c16a536"),
+                interface_id="dc065497-3c8d-4f44-8fb4-e1d33c16a536",
+                datapath_type="system"),
             preserve_on_delete=False,
             vif_name="nicdc065497-3c",
             network=osv_objects.network.Network(
