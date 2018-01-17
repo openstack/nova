@@ -146,8 +146,7 @@ class CreateAndConnectCfgDrive(task.Task):
                  network_info, stg_ftsk, admin_pass=None):
         """Create the Task that creates and connects the config drive.
 
-        Provides the 'cfg_drv_vscsi_map' which is an element to later map
-        the vscsi drive.
+        Requires the 'mgmt_cna'
 
         :param adapter: The adapter for the pypowervm API
         :param instance: The nova instance
@@ -158,7 +157,8 @@ class CreateAndConnectCfgDrive(task.Task):
         :param admin_pass (Optional, Default None): Password to inject for the
                                                     VM.
         """
-        super(CreateAndConnectCfgDrive, self).__init__(instance, 'cfg_drive')
+        super(CreateAndConnectCfgDrive, self).__init__(
+            instance, 'cfg_drive', requires=['mgmt_cna'])
         self.adapter = adapter
         self.instance = instance
         self.injected_files = injected_files
@@ -167,13 +167,13 @@ class CreateAndConnectCfgDrive(task.Task):
         self.ad_pass = admin_pass
         self.mb = None
 
-    def execute(self):
+    def execute(self, mgmt_cna):
         self.mb = media.ConfigDrivePowerVM(self.adapter)
         self.mb.create_cfg_drv_vopt(self.instance, self.injected_files,
                                     self.network_info, self.stg_ftsk,
-                                    admin_pass=self.ad_pass)
+                                    admin_pass=self.ad_pass, mgmt_cna=mgmt_cna)
 
-    def revert(self, result, flow_failures):
+    def revert(self, mgmt_cna, result, flow_failures):
         # No media builder, nothing to do
         if self.mb is None:
             return

@@ -111,6 +111,8 @@ class TestPowerVMDriver(test.NoDBTestCase):
         mock_bhrfm.assert_called_once_with('sys')
         self.assertEqual('sys', self.drv.host_wrapper)
 
+    @mock.patch('nova.virt.powervm.tasks.network.PlugMgmtVif.execute')
+    @mock.patch('nova.virt.powervm.tasks.network.PlugVifs.execute')
     @mock.patch('nova.virt.powervm.media.ConfigDrivePowerVM')
     @mock.patch('nova.virt.configdrive.required_by')
     @mock.patch('nova.virt.powervm.vm.create_lpar')
@@ -119,10 +121,11 @@ class TestPowerVMDriver(test.NoDBTestCase):
     @mock.patch('pypowervm.tasks.storage.add_lpar_storage_scrub_tasks',
                 autospec=True)
     def test_spawn_ops(self, mock_scrub, mock_bldftsk, mock_crt_lpar,
-                       mock_cdrb, mock_cfg_drv):
+                       mock_cdrb, mock_cfg_drv, mock_plug_vifs,
+                       mock_plug_mgmt_vif):
         """Validates the 'typical' spawn flow of the spawn of an instance. """
         mock_cdrb.return_value = True
-        self.drv.host_wrapper = mock.Mock(uuid='host_uuid')
+        self.drv.host_wrapper = mock.Mock()
         self.drv.disk_dvr = mock.create_autospec(ssp.SSPDiskAdapter,
                                                  instance=True)
         mock_ftsk = pvm_tx.FeedTask('fake', [mock.Mock(spec=pvm_vios.VIOS)])
@@ -133,6 +136,8 @@ class TestPowerVMDriver(test.NoDBTestCase):
             self.adp, self.drv.host_wrapper, self.inst)
         mock_bldftsk.assert_called_once_with(
             self.adp, xag={pvm_const.XAG.VIO_SMAP, pvm_const.XAG.VIO_FMAP})
+        self.assertTrue(mock_plug_vifs.called)
+        self.assertTrue(mock_plug_mgmt_vif.called)
         mock_scrub.assert_called_once_with(
             [mock_crt_lpar.return_value.id], mock_ftsk, lpars_exist=True)
         self.drv.disk_dvr.create_disk_from_image.assert_called_once_with(
@@ -142,7 +147,8 @@ class TestPowerVMDriver(test.NoDBTestCase):
             mock_ftsk)
         mock_cfg_drv.assert_called_once_with(self.adp)
         mock_cfg_drv.return_value.create_cfg_drv_vopt.assert_called_once_with(
-            self.inst, 'files', 'netinfo', mock_ftsk, admin_pass='password')
+            self.inst, 'files', 'netinfo', mock_ftsk, admin_pass='password',
+            mgmt_cna=mock.ANY)
         self.pwron.assert_called_once_with(self.adp, self.inst)
 
         mock_cfg_drv.reset_mock()
@@ -153,17 +159,19 @@ class TestPowerVMDriver(test.NoDBTestCase):
                        'allocs')
         mock_cfg_drv.assert_not_called()
 
+    @mock.patch('nova.virt.powervm.tasks.network.UnplugVifs.execute')
     @mock.patch('nova.virt.powervm.vm.delete_lpar')
     @mock.patch('nova.virt.powervm.media.ConfigDrivePowerVM')
     @mock.patch('nova.virt.configdrive.required_by')
     @mock.patch('pypowervm.tasks.partition.build_active_vio_feed_task',
                 autospec=True)
     def test_destroy(self, mock_bldftsk, mock_cdrb, mock_cfgdrv,
-                     mock_dlt_lpar):
+                     mock_dlt_lpar, mock_unplug):
         """Validates PowerVM destroy."""
-        self.drv.host_wrapper = mock.Mock(uuid='host_uuid')
+        self.drv.host_wrapper = mock.Mock()
         self.drv.disk_dvr = mock.create_autospec(ssp.SSPDiskAdapter,
                                                  instance=True)
+
         mock_ftsk = pvm_tx.FeedTask('fake', [mock.Mock(spec=pvm_vios.VIOS)])
         mock_bldftsk.return_value = mock_ftsk
 
@@ -174,6 +182,7 @@ class TestPowerVMDriver(test.NoDBTestCase):
             self.adp, self.inst, force_immediate=True)
         mock_bldftsk.assert_called_once_with(
             self.adp, xag=[pvm_const.XAG.VIO_SMAP])
+        mock_unplug.assert_called_once()
         mock_cdrb.assert_called_once_with(self.inst)
         mock_cfgdrv.assert_called_once_with(self.adp)
         mock_cfgdrv.return_value.dlt_vopt.assert_called_once_with(
@@ -186,6 +195,7 @@ class TestPowerVMDriver(test.NoDBTestCase):
 
         self.pwroff.reset_mock()
         mock_bldftsk.reset_mock()
+        mock_unplug.reset_mock()
         mock_cdrb.reset_mock()
         mock_cfgdrv.reset_mock()
         self.drv.disk_dvr.detach_disk.reset_mock()
@@ -204,6 +214,7 @@ class TestPowerVMDriver(test.NoDBTestCase):
             self.adp, self.inst, force_immediate=False)
         mock_bldftsk.assert_called_once_with(
             self.adp, xag=[pvm_const.XAG.VIO_SMAP])
+        mock_unplug.assert_called_once()
         mock_cdrb.assert_called_once_with(self.inst)
         mock_cfgdrv.assert_not_called()
         mock_cfgdrv.return_value.dlt_vopt.assert_not_called()
@@ -214,6 +225,7 @@ class TestPowerVMDriver(test.NoDBTestCase):
 
         self.pwroff.reset_mock()
         mock_bldftsk.reset_mock()
+        mock_unplug.reset_mock()
         mock_cdrb.reset_mock()
         mock_cfgdrv.reset_mock()
         self.drv.disk_dvr.detach_disk.reset_mock()
@@ -228,11 +240,13 @@ class TestPowerVMDriver(test.NoDBTestCase):
         self.pwroff.assert_called_once_with(
             self.adp, self.inst, force_immediate=False)
         self.drv.disk_dvr.detach_disk.assert_not_called()
+        mock_unplug.assert_not_called()
         self.drv.disk_dvr.delete_disks.assert_not_called()
         mock_dlt_lpar.assert_not_called()
 
         self.pwroff.reset_mock()
         self.pwroff.side_effect = None
+        mock_unplug.reset_mock()
 
         # Convertible (PowerVM) exception
         mock_dlt_lpar.side_effect = pvm_exc.TimeoutError("Timed out")
@@ -243,6 +257,7 @@ class TestPowerVMDriver(test.NoDBTestCase):
         # Everything got called
         self.pwroff.assert_called_once_with(
             self.adp, self.inst, force_immediate=True)
+        mock_unplug.assert_called_once()
         self.drv.disk_dvr.detach_disk.assert_called_once_with(self.inst)
         self.drv.disk_dvr.delete_disks.assert_called_once_with(
             self.drv.disk_dvr.detach_disk.return_value)
@@ -304,3 +319,7 @@ class TestPowerVMDriver(test.NoDBTestCase):
         mock_vterm.side_effect = pvm_exc.HttpError(mock.Mock(status=404))
         self.assertRaises(exception.InstanceNotFound, self.drv.get_vnc_console,
                           mock.ANY, self.inst)
+
+    def test_deallocate_networks_on_reschedule(self):
+        candeallocate = self.drv.deallocate_networks_on_reschedule(mock.Mock())
+        self.assertTrue(candeallocate)

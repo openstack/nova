@@ -30,6 +30,7 @@ from pypowervm.utils import uuid as pvm_uuid
 from pypowervm.utils import validation as pvm_vldn
 from pypowervm.wrappers import base_partition as pvm_bp
 from pypowervm.wrappers import logical_partition as pvm_lpar
+from pypowervm.wrappers import network as pvm_net
 from pypowervm.wrappers import shared_proc_pool as pvm_spp
 import six
 
@@ -71,6 +72,23 @@ _POWERVM_TO_NOVA_STATE = {
     pvm_bp.LPARState.SUSPENDED: power_state.SUSPENDED,
 
     pvm_bp.LPARState.ERROR: power_state.CRASHED}
+
+
+def get_cnas(adapter, instance, **search):
+    """Returns the (possibly filtered) current CNAs on the instance.
+
+    The Client Network Adapters are the Ethernet adapters for a VM.
+
+    :param adapter: The pypowervm adapter.
+    :param instance: The nova instance.
+    :param search: Keyword arguments for CNA.search.  If omitted, all CNAs are
+                   returned.
+    :return The CNA wrappers that represent the ClientNetworkAdapters on the VM
+    """
+    meth = pvm_net.CNA.search if search else pvm_net.CNA.get
+
+    return meth(adapter, parent_type=pvm_lpar.LPAR,
+                parent_uuid=get_pvm_uuid(instance), **search)
 
 
 def get_lpar_names(adp):
@@ -324,6 +342,21 @@ def get_vm_info(adapter, instance):
     pvm_state = get_vm_qp(adapter, pvm_uuid, 'PartitionState')
     nova_state = _translate_vm_state(pvm_state)
     return hardware.InstanceInfo(nova_state)
+
+
+def norm_mac(mac):
+    """Normalizes a MAC address from pypowervm format to OpenStack.
+
+    That means that the format will be converted to lower case and will
+    have colons added.
+
+    :param mac: A pypowervm mac address.  Ex. 1234567890AB
+    :return: A mac that matches the standard neutron format.
+             Ex. 12:34:56:78:90:ab
+    """
+    # Need the replacement if the mac is already normalized.
+    mac = mac.lower().replace(':', '')
+    return ':'.join(mac[i:i + 2] for i in range(0, len(mac), 2))
 
 
 class VMBuilder(object):

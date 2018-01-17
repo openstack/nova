@@ -21,6 +21,7 @@ import mock
 from pypowervm.tasks import scsi_mapper as tsk_map
 from pypowervm.tests import test_fixtures as pvm_fx
 from pypowervm.utils import transaction as pvm_tx
+from pypowervm.wrappers import network as pvm_net
 from pypowervm.wrappers import storage as pvm_stg
 from pypowervm.wrappers import virtual_io_server as pvm_vios
 import six
@@ -187,3 +188,34 @@ class TestConfigDrivePowerVM(test.NoDBTestCase):
         cfg_dr.dlt_vopt('inst', ftsk)
         mock_functask.assert_called_once()
         ftsk.add_post_execute.assert_called_once_with('functor_task')
+
+    def test_mgmt_cna_to_vif(self):
+        mock_cna = mock.Mock(spec=pvm_net.CNA, mac="FAD4433ED120")
+
+        # Run
+        cfg_dr_builder = m.ConfigDrivePowerVM(self.apt)
+        vif = cfg_dr_builder._mgmt_cna_to_vif(mock_cna)
+
+        # Validate
+        self.assertEqual(vif.get('address'), "fa:d4:43:3e:d1:20")
+        self.assertEqual(vif.get('id'), 'mgmt_vif')
+        self.assertIsNotNone(vif.get('network'))
+        self.assertEqual(1, len(vif.get('network').get('subnets')))
+        subnet = vif.get('network').get('subnets')[0]
+        self.assertEqual(6, subnet.get('version'))
+        self.assertEqual('fe80::/64', subnet.get('cidr'))
+        ip = subnet.get('ips')[0]
+        self.assertEqual('fe80::f8d4:43ff:fe3e:d120', ip.get('address'))
+
+    def test_mac_to_link_local(self):
+        mac = 'fa:d4:43:3e:d1:20'
+        self.assertEqual('fe80::f8d4:43ff:fe3e:d120',
+                         m.ConfigDrivePowerVM._mac_to_link_local(mac))
+
+        mac = '00:00:00:00:00:00'
+        self.assertEqual('fe80::0200:00ff:fe00:0000',
+                         m.ConfigDrivePowerVM._mac_to_link_local(mac))
+
+        mac = 'ff:ff:ff:ff:ff:ff'
+        self.assertEqual('fe80::fdff:ffff:feff:ffff',
+        m.ConfigDrivePowerVM._mac_to_link_local(mac))

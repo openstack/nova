@@ -38,14 +38,14 @@ class TestStorage(test.NoDBTestCase):
         task = tf_stg.CreateAndConnectCfgDrive(
             self.adapter, self.instance, 'injected_files',
             'network_info', 'stg_ftsk', admin_pass='admin_pass')
-        task.execute()
+        task.execute('mgmt_cna')
         self.mock_cfg_drv.assert_called_once_with(self.adapter)
         self.mock_mb.create_cfg_drv_vopt.assert_called_once_with(
             self.instance, 'injected_files', 'network_info', 'stg_ftsk',
-            admin_pass='admin_pass')
+            admin_pass='admin_pass', mgmt_cna='mgmt_cna')
 
         # Normal revert
-        task.revert('result', 'flow_failures')
+        task.revert('mgmt_cna', 'result', 'flow_failures')
         self.mock_mb.dlt_vopt.assert_called_once_with(self.instance,
                                                       'stg_ftsk')
 
@@ -53,14 +53,14 @@ class TestStorage(test.NoDBTestCase):
 
         # Revert when dlt_vopt fails
         self.mock_mb.dlt_vopt.side_effect = pvm_exc.Error('fake-exc')
-        task.revert('result', 'flow_failures')
+        task.revert('mgmt_cna', 'result', 'flow_failures')
         self.mock_mb.dlt_vopt.assert_called_once()
 
         self.mock_mb.reset_mock()
 
         # Revert when media builder not created
         task.mb = None
-        task.revert('result', 'flow_failures')
+        task.revert('mgmt_cna', 'result', 'flow_failures')
         self.mock_mb.assert_not_called()
 
     def test_delete_vopt(self):
