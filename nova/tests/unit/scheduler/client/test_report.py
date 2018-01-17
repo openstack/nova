@@ -3112,7 +3112,7 @@ class TestAllocations(SchedulerReportClientTestCase):
             'project_id': inst.project_id,
             'user_id': inst.user_id,
         }
-        self.client.update_instance_allocation(cn, inst, 1)
+        self.client.update_instance_allocation(self.context, cn, inst, 1)
         mock_put.assert_called_once_with(
             '/allocations/%s' % inst.uuid,
             expected, version='1.8')
@@ -3141,7 +3141,7 @@ class TestAllocations(SchedulerReportClientTestCase):
             'DISK_GB': 123,
             'MEMORY_MB': 456,
         }
-        self.client.update_instance_allocation(cn, inst, 1)
+        self.client.update_instance_allocation(self.context, cn, inst, 1)
         self.assertFalse(mock_put.called)
         mock_get.assert_called_once_with(
             '/allocations/%s' % inst.uuid)
@@ -3163,7 +3163,7 @@ class TestAllocations(SchedulerReportClientTestCase):
         except AttributeError:
             # NOTE(danms): LOL @ py3
             mock_put.return_value.__bool__.return_value = False
-        self.client.update_instance_allocation(cn, inst, 1)
+        self.client.update_instance_allocation(self.context, cn, inst, 1)
         self.assertTrue(mock_warn.called)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -3171,9 +3171,10 @@ class TestAllocations(SchedulerReportClientTestCase):
     def test_update_instance_allocation_delete(self, mock_delete):
         cn = objects.ComputeNode(uuid=uuids.cn)
         inst = objects.Instance(uuid=uuids.inst)
-        self.client.update_instance_allocation(cn, inst, -1)
+        self.client.update_instance_allocation(self.context, cn, inst, -1)
         mock_delete.assert_called_once_with(
-            '/allocations/%s' % inst.uuid)
+            '/allocations/%s' % inst.uuid,
+            global_request_id=self.context.global_id)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'delete')
@@ -3187,7 +3188,7 @@ class TestAllocations(SchedulerReportClientTestCase):
         except AttributeError:
             # NOTE(danms): LOL @ py3
             mock_delete.return_value.__bool__.return_value = False
-        self.client.update_instance_allocation(cn, inst, -1)
+        self.client.update_instance_allocation(self.context, cn, inst, -1)
         self.assertTrue(mock_warn.called)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -3205,7 +3206,7 @@ class TestAllocations(SchedulerReportClientTestCase):
             # py3 uses __bool__
             mock_response.__bool__.return_value = False
         mock_delete.return_value = mock_response
-        self.client.delete_allocation_for_instance(uuids.rp_uuid)
+        self.client.delete_allocation_for_instance(self.context, uuids.rp_uuid)
         # make sure we didn't screw up the logic or the mock
         mock_log.info.assert_not_called()
         # make sure warning wasn't called for the 404

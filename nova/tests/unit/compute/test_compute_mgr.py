@@ -4890,7 +4890,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_dbari.return_value = build_results.FAILED
         instance = objects.Instance(uuid=uuids.instance)
         for i in range(0, 10):
-            self.compute.build_and_run_instance(None, instance, None,
+            self.compute.build_and_run_instance(self.context, instance, None,
                                                 None, None)
         service = mock_service.return_value
         self.assertTrue(service.disabled)
@@ -4908,7 +4908,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_dbari.return_value = build_results.FAILED
         instance = objects.Instance(uuid=uuids.instance)
         for i in range(0, 10):
-            self.compute.build_and_run_instance(None, instance, None,
+            self.compute.build_and_run_instance(self.context, instance, None,
                                                 None, None)
         service = mock_service.return_value
         self.assertFalse(service.save.called)
@@ -4931,7 +4931,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_dbari.side_effect = _fake_build
         instance = objects.Instance(uuid=uuids.instance)
         for i in range(0, 10):
-            self.compute.build_and_run_instance(None, instance, None,
+            self.compute.build_and_run_instance(self.context, instance, None,
                                                 None, None)
         service = mock_service.return_value
         self.assertFalse(service.save.called)
@@ -4943,7 +4943,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_dbari.return_value = build_results.RESCHEDULED
         instance = objects.Instance(uuid=uuids.instance)
         for i in range(0, 10):
-            self.compute.build_and_run_instance(None, instance, None,
+            self.compute.build_and_run_instance(self.context, instance, None,
                                                 None, None)
         service = mock_service.return_value
         self.assertTrue(service.disabled)
@@ -4964,7 +4964,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         for i in range(0, 10):
             self.assertRaises(test.TestingException,
                               self.compute.build_and_run_instance,
-                              None, instance, None,
+                              self.context, instance, None,
                               None, None)
         service = mock_service.return_value
         self.assertTrue(service.disabled)
@@ -6062,8 +6062,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             mock_drop_move_claim.assert_called_once_with(self.context,
                 self.instance, self.instance.node)
             mock_delete_allocation.assert_called_once_with(
-                self.instance, self.migration, self.instance.flavor,
-                self.instance.node)
+                self.context, self.instance, self.migration,
+                self.instance.flavor, self.instance.node)
             self.assertIsNotNone(self.instance.migration_context)
 
         # Three fake BDMs:
@@ -6151,7 +6151,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             self.migration.source_node = self.instance['node']
             self.compute._confirm_resize(self.context, self.instance,
                                          self.migration)
-            mock_delete.assert_called_once_with(self.instance, self.migration,
+            mock_delete.assert_called_once_with(self.context, self.instance,
+                                                self.migration,
                                                 self.instance.old_flavor,
                                                 self.migration.source_node)
 
@@ -6164,7 +6165,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         def do_it(mock_rc, mock_grt):
             instance = mock.MagicMock()
             migration = mock.MagicMock()
-            self.compute._delete_allocation_after_move(instance,
+            self.compute._delete_allocation_after_move(self.context,
+                                                       instance,
                                                        migration,
                                                        mock.sentinel.flavor,
                                                        mock.sentinel.node)
@@ -6190,12 +6192,13 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             self.migration.source_node = 'src'
             self.migration.uuid = uuids.migration
             self.migration.status = 'confirmed'
-            self.compute._delete_allocation_after_move(self.instance,
+            self.compute._delete_allocation_after_move(self.context,
+                                                       self.instance,
                                                        self.migration,
                                                        mock.sentinel.flavor,
                                                        'src')
             mock_report.delete_allocation_for_instance.assert_called_once_with(
-                self.migration.uuid)
+                self.context, self.migration.uuid)
 
             old = mock_report.remove_provider_from_instance_allocation
             if new_rules:
@@ -6221,7 +6224,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             self.migration.source_node = 'src'
             self.migration.uuid = uuids.migration
             self.migration.status = 'failed'
-            self.compute._delete_allocation_after_move(self.instance,
+            self.compute._delete_allocation_after_move(self.context,
+                                                       self.instance,
                                                        self.migration,
                                                        mock.sentinel.flavor,
                                                        'src')
@@ -6254,7 +6258,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             self.migration.source_node = 'src'
             self.migration.dest_node = 'dst'
             self.migration.uuid = uuids.migration
-            self.compute._delete_allocation_after_move(self.instance,
+            self.compute._delete_allocation_after_move(self.context,
+                                                       self.instance,
                                                        self.migration,
                                                        mock.sentinel.flavor,
                                                        'dst')
@@ -6837,7 +6842,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                 mock.sentinel.allocs)
             self._call_post_live_migration(migrate_data=md)
             # ...so we should have called the new style delete
-            mock_delete.assert_called_once_with(self.instance,
+            mock_delete.assert_called_once_with(self.context,
+                                                self.instance,
                                                 migration,
                                                 self.instance.flavor,
                                                 self.instance.node)

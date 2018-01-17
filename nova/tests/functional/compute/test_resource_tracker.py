@@ -298,7 +298,8 @@ class IronicResourceTrackerTest(test.TestCase):
             # allocation for us. So, we can use our old update routine
             # here to mimic that before we go do the compute RT claim,
             # and then the checks below.
-            self.rt.reportclient.update_instance_allocation(cn1_obj,
+            self.rt.reportclient.update_instance_allocation(self.ctx,
+                                                            cn1_obj,
                                                             inst,
                                                             1)
             with self.rt.instance_claim(self.ctx, inst, cn1_nodename):

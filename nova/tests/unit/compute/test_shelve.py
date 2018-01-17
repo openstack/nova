@@ -244,7 +244,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
             self.context, instance)
         mock_update_resource_tracker.assert_called_once_with(self.context,
                                                              instance)
-        mock_delete_alloc.assert_called_once_with(instance)
+        mock_delete_alloc.assert_called_once_with(self.context, instance)
         mock_event.assert_called_once_with(self.context,
                                            'compute_shelve_offload_instance',
                                            instance.uuid)

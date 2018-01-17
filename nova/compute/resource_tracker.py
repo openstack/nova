@@ -1094,8 +1094,8 @@ class ResourceTracker(object):
                                                          sign=sign)
             if require_allocation_refresh:
                 LOG.debug("Auto-correcting allocations.")
-                self.reportclient.update_instance_allocation(cn, instance,
-                                                             sign)
+                self.reportclient.update_instance_allocation(context, cn,
+                                                             instance, sign)
             # new instance, update compute node resource usage:
             self._update_usage(self._get_usage_dict(instance), nodename,
                                sign=sign)
@@ -1260,7 +1260,8 @@ class ResourceTracker(object):
                           "Deleting allocations that remained for this "
                           "instance against this compute host: %s.",
                           instance_uuid, alloc)
-                self.reportclient.delete_allocation_for_instance(instance_uuid)
+                self.reportclient.delete_allocation_for_instance(context,
+                                                                 instance_uuid)
                 continue
             if not instance.host:
                 # Allocations related to instances being scheduled should not
@@ -1383,8 +1384,10 @@ class ResourceTracker(object):
             usage = {'memory_mb': memory_mb}
             self._update_usage(usage, nodename)
 
-    def delete_allocation_for_shelve_offloaded_instance(self, instance):
-        self.reportclient.delete_allocation_for_instance(instance.uuid)
+    def delete_allocation_for_shelve_offloaded_instance(self, context,
+                                                        instance):
+        self.reportclient.delete_allocation_for_instance(context,
+                                                         instance.uuid)
 
     def _verify_resources(self, resources):
         resource_keys = ["vcpus", "memory_mb", "local_gb", "cpu_info",

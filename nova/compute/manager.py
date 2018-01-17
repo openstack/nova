@@ -750,7 +750,7 @@ class ComputeManager(manager.Manager):
         self._update_resource_tracker(context, instance)
 
         rt = self._get_resource_tracker()
-        rt.reportclient.delete_allocation_for_instance(instance.uuid)
+        rt.reportclient.delete_allocation_for_instance(context, instance.uuid)
 
         self._notify_about_instance_usage(context, instance, "delete.end",
                 system_metadata=system_meta)
@@ -1774,7 +1774,8 @@ class ComputeManager(manager.Manager):
                         # call this for a reschedule, as the allocations will
                         # have already been removed in
                         # self._do_build_and_run_instance().
-                        self._delete_allocation_for_instance(instance.uuid)
+                        self._delete_allocation_for_instance(context,
+                                                             instance.uuid)
 
                     if result in (build_results.FAILED,
                                   build_results.RESCHEDULED):
@@ -1791,9 +1792,9 @@ class ComputeManager(manager.Manager):
                       requested_networks, security_groups,
                       block_device_mapping, node, limits, host_list)
 
-    def _delete_allocation_for_instance(self, instance_uuid):
+    def _delete_allocation_for_instance(self, context, instance_uuid):
         rt = self._get_resource_tracker()
-        rt.reportclient.delete_allocation_for_instance(instance_uuid)
+        rt.reportclient.delete_allocation_for_instance(context, instance_uuid)
 
     def _check_device_tagging(self, requested_networks, block_device_mapping):
         tagging_requested = False
@@ -1904,7 +1905,7 @@ class ComputeManager(manager.Manager):
             # to unclaim those resources before casting to the conductor, so
             # that if there are alternate hosts available for a retry, it can
             # claim resources on that new host for the instance.
-            self._delete_allocation_for_instance(instance.uuid)
+            self._delete_allocation_for_instance(context, instance.uuid)
 
             self.compute_task_api.build_instances(context, [instance],
                     image, filter_properties, admin_password,
@@ -3710,7 +3711,7 @@ class ComputeManager(manager.Manager):
             rt = self._get_resource_tracker()
             rt.drop_move_claim(context, instance, migration.source_node,
                                old_instance_type, prefix='old_')
-            self._delete_allocation_after_move(instance, migration,
+            self._delete_allocation_after_move(context, instance, migration,
                                                old_instance_type,
                                                migration.source_node)
             instance.drop_migration_context()
@@ -3739,8 +3740,8 @@ class ComputeManager(manager.Manager):
                 context, instance, "resize.confirm.end",
                 network_info=network_info)
 
-    def _delete_allocation_after_move(self, instance, migration, flavor,
-                                      nodename):
+    def _delete_allocation_after_move(self, context, instance, migration,
+                                      flavor, nodename):
         rt = self._get_resource_tracker()
         cn_uuid = rt.get_node_uuid(nodename)
 
@@ -3749,7 +3750,7 @@ class ComputeManager(manager.Manager):
                 # NOTE(danms): We're finishing on the source node, so try to
                 # delete the allocation based on the migration uuid
                 deleted = self.reportclient.delete_allocation_for_instance(
-                    migration.uuid)
+                    context, migration.uuid)
                 if deleted:
                     LOG.info(_('Source node %(node)s confirmed migration '
                                '%(mig)s; deleted migration-based '
@@ -3872,7 +3873,7 @@ class ComputeManager(manager.Manager):
 
             rt = self._get_resource_tracker()
             rt.drop_move_claim(context, instance, instance.node)
-            self._delete_allocation_after_move(instance, migration,
+            self._delete_allocation_after_move(context, instance, migration,
                                                instance.flavor,
                                                instance.node)
 
@@ -4796,7 +4797,7 @@ class ComputeManager(manager.Manager):
         self._update_resource_tracker(context, instance)
 
         rt = self._get_resource_tracker()
-        rt.delete_allocation_for_shelve_offloaded_instance(instance)
+        rt.delete_allocation_for_shelve_offloaded_instance(context, instance)
 
         # NOTE(sfinucan): RPC calls should no longer be attempted against this
         # instance, so ensure any calls result in errors
@@ -4902,7 +4903,8 @@ class ComputeManager(manager.Manager):
                 # the instance claim failed with ComputeResourcesUnavailable
                 # or if we did claim but the spawn failed, because aborting the
                 # instance claim will not remove the allocations.
-                rt.reportclient.delete_allocation_for_instance(instance.uuid)
+                rt.reportclient.delete_allocation_for_instance(context,
+                                                               instance.uuid)
                 # FIXME: Umm, shouldn't we be rolling back volume connections
                 # and port bindings?
 
@@ -6281,7 +6283,8 @@ class ComputeManager(manager.Manager):
 
         if allocs:
             # We had a migration-based allocation that we need to handle
-            self._delete_allocation_after_move(instance,
+            self._delete_allocation_after_move(ctxt,
+                                               instance,
                                                migrate_data.migration,
                                                instance.flavor,
                                                source_node)

@@ -330,7 +330,7 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
                 mock.sentinel.provider_summaries)
 
         # Ensure we cleaned up the first successfully-claimed instance
-        mock_cleanup.assert_called_once_with([uuids.instance1])
+        mock_cleanup.assert_called_once_with(ctx, [uuids.instance1])
 
     @mock.patch('nova.scheduler.utils.claim_resources')
     @mock.patch('nova.scheduler.filter_scheduler.FilterScheduler.'
@@ -681,13 +681,14 @@ class FilterSchedulerTestCase(test_scheduler.SchedulerTestCase):
         # allocations for
         pc = self.placement_client
 
-        self.driver._cleanup_allocations(instance_uuids)
+        self.driver._cleanup_allocations(self.context, instance_uuids)
         self.assertFalse(pc.delete_allocation_for_instance.called)
 
         instance_uuids = [uuids.instance1, uuids.instance2]
-        self.driver._cleanup_allocations(instance_uuids)
+        self.driver._cleanup_allocations(self.context, instance_uuids)
 
-        exp_calls = [mock.call(uuids.instance1), mock.call(uuids.instance2)]
+        exp_calls = [mock.call(self.context, uuids.instance1),
+                     mock.call(self.context, uuids.instance2)]
         pc.delete_allocation_for_instance.assert_has_calls(exp_calls)
 
     def test_add_retry_host(self):

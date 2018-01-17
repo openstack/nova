@@ -172,8 +172,8 @@ class FilterScheduler(driver.Scheduler):
             # is None, that indicates an older conductor, so we need to return
             # the objects without alternates. They will be converted back to
             # the older dict format representing HostState objects.
-            return self._legacy_find_hosts(num_instances, spec_obj, hosts,
-                    num_alts)
+            return self._legacy_find_hosts(context, num_instances, spec_obj,
+                                           hosts, num_alts)
 
         # A list of the instance UUIDs that were successfully claimed against
         # in the placement API. If we are not able to successfully claim for
@@ -239,7 +239,7 @@ class FilterScheduler(driver.Scheduler):
 
         # Check if we were able to fulfill the request. If not, this call will
         # raise a NoValidHost exception.
-        self._ensure_sufficient_hosts(claimed_hosts, num_instances,
+        self._ensure_sufficient_hosts(context, claimed_hosts, num_instances,
                 claimed_instance_uuids)
 
         # We have selected and claimed hosts for each instance. Now we need to
@@ -249,7 +249,7 @@ class FilterScheduler(driver.Scheduler):
             alloc_reqs_by_rp_uuid, allocation_request_version)
         return selections_to_return
 
-    def _ensure_sufficient_hosts(self, hosts, required_count,
+    def _ensure_sufficient_hosts(self, context, hosts, required_count,
             claimed_uuids=None):
         """Checks that we have selected a host for each requested instance. If
         not, log this failure, remove allocations for any claimed instances,
@@ -260,7 +260,7 @@ class FilterScheduler(driver.Scheduler):
             return
 
         if claimed_uuids:
-            self._cleanup_allocations(claimed_uuids)
+            self._cleanup_allocations(context, claimed_uuids)
         # NOTE(Rui Chen): If multiple creates failed, set the updated time
         # of selected HostState to None so that these HostStates are
         # refreshed according to database in next schedule, and release
@@ -279,15 +279,16 @@ class FilterScheduler(driver.Scheduler):
         reason = _('There are not enough hosts available.')
         raise exception.NoValidHost(reason=reason)
 
-    def _cleanup_allocations(self, instance_uuids):
+    def _cleanup_allocations(self, context, instance_uuids):
         """Removes allocations for the supplied instance UUIDs."""
         if not instance_uuids:
             return
         LOG.debug("Cleaning up allocations for %s", instance_uuids)
         for uuid in instance_uuids:
-            self.placement_client.delete_allocation_for_instance(uuid)
+            self.placement_client.delete_allocation_for_instance(context, uuid)
 
-    def _legacy_find_hosts(self, num_instances, spec_obj, hosts, num_alts):
+    def _legacy_find_hosts(self, context, num_instances, spec_obj, hosts,
+                           num_alts):
         """Some schedulers do not do claiming, or we can sometimes not be able
         to if the Placement service is not reachable. Additionally, we may be
         working with older conductors that don't pass in instance_uuids.
@@ -312,7 +313,7 @@ class FilterScheduler(driver.Scheduler):
 
         # Check if we were able to fulfill the request. If not, this call will
         # raise a NoValidHost exception.
-        self._ensure_sufficient_hosts(selected_hosts, num_instances)
+        self._ensure_sufficient_hosts(context, selected_hosts, num_instances)
 
         selections_to_return = self._get_alternate_hosts(selected_hosts,
                 spec_obj, hosts, num, num_alts)

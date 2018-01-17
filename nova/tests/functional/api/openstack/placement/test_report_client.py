@@ -19,6 +19,7 @@ from wsgi_intercept import interceptor
 
 from nova.api.openstack.placement import deploy
 from nova import conf
+from nova import context
 from nova import exception
 from nova import objects
 from nova.objects import fields
@@ -84,6 +85,7 @@ class SchedulerReportClientTests(test.TestCase):
                                   memory_mb=1024,
                                   vcpus=2,
                                   extra_specs={}))
+        self.context = context.get_admin_context()
 
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 return_value=False)
@@ -138,7 +140,7 @@ class SchedulerReportClientTests(test.TestCase):
 
             # Update allocations with our instance
             self.client.update_instance_allocation(
-                self.compute_node, self.instance, 1)
+                self.context, self.compute_node, self.instance, 1)
 
             # Check that allocations were made
             resp = self.client.get('/allocations/%s' % self.instance_uuid)
@@ -155,7 +157,7 @@ class SchedulerReportClientTests(test.TestCase):
 
             # Delete allocations with our instance
             self.client.update_instance_allocation(
-                self.compute_node, self.instance, -1)
+                self.context, self.compute_node, self.instance, -1)
 
             # No usage
             resp = self.client.get('/resource_providers/%s/usages' %
