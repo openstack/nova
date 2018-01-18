@@ -644,6 +644,13 @@ def _provider_ids_from_uuid(context, uuid):
     return ProviderIds(**dict(res))
 
 
+@db_api.api_context_manager.writer
+def _delete_rp_record(context, _id):
+    return context.session.query(models.ResourceProvider).\
+        filter(models.ResourceProvider.id == _id).\
+        delete(synchronize_session=False)
+
+
 @base.NovaObjectRegistry.register_if(False)
 class ResourceProvider(base.NovaObject, base.NovaTimestampObject):
     SETTABLE_FIELDS = ('name', 'parent_provider_uuid')
@@ -841,11 +848,14 @@ class ResourceProvider(base.NovaObject, base.NovaTimestampObject):
         RPT_model = models.ResourceProviderTrait
         context.session.query(RPT_model).\
                 filter(RPT_model.resource_provider_id == _id).delete()
+        # set root_provider_id to null to make deletion possible
+        context.session.query(models.ResourceProvider).\
+            filter(models.ResourceProvider.id == _id,
+                   models.ResourceProvider.root_provider_id == _id).\
+            update({'root_provider_id': None})
         # Now delete the RP record
         try:
-            result = context.session.query(models.ResourceProvider).\
-                     filter(models.ResourceProvider.id == _id).\
-                     delete(synchronize_session=False)
+            result = _delete_rp_record(context, _id)
         except sqla_exc.IntegrityError:
             # NOTE(jaypipes): Another thread snuck in and parented this
             # resource provider in between the above check for
