@@ -514,6 +514,26 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
             )
         self.assertEqual(1, len(rps))
 
+    def test_has_provider_trees(self):
+        """The _has_provider_trees() helper method should return False unless
+        there is a resource provider that is a parent.
+        """
+        self.assertFalse(rp_obj._has_provider_trees(self.ctx))
+        cn = rp_obj.ResourceProvider(
+            context=self.ctx, uuid=uuidsentinel.cn, name='cn')
+        cn.create()
+
+        # No parents yet. Should still be False.
+        self.assertFalse(rp_obj._has_provider_trees(self.ctx))
+
+        numa0 = rp_obj.ResourceProvider(
+            context=self.ctx, uuid=uuidsentinel.numa0, name='numa0',
+            parent_provider_uuid=uuidsentinel.cn)
+        numa0.create()
+
+        # OK, now we've got a parent, so should be True
+        self.assertTrue(rp_obj._has_provider_trees(self.ctx))
+
     def test_destroy_resource_provider(self):
         created_resource_provider = rp_obj.ResourceProvider(
             context=self.ctx,
