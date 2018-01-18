@@ -2067,10 +2067,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             attachment_id=uuids.old_attachment_id,
             connection_info='{"data": {}}', volume_size=1)
         old_volume = {
-            'id': uuids.old_volume_id, 'size': 1, 'status': 'retyping'
+            'id': uuids.old_volume_id, 'size': 1, 'status': 'retyping',
+            'multiattach': False
         }
         new_volume = {
-            'id': uuids.new_volume_id, 'size': 1, 'status': 'reserved'
+            'id': uuids.new_volume_id, 'size': 1, 'status': 'reserved',
+            'multiattach': False
         }
         attachment_update.return_value = {"connection_info": {"data": {}}}
         get_bdm.return_value = bdm
@@ -2138,10 +2140,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             attachment_id=uuids.old_attachment_id,
             connection_info='{"data": {}}')
         old_volume = {
-            'id': uuids.old_volume_id, 'size': 1, 'status': 'detaching'
+            'id': uuids.old_volume_id, 'size': 1, 'status': 'detaching',
+            'multiattach': False
         }
         new_volume = {
-            'id': uuids.new_volume_id, 'size': 2, 'status': 'reserved'
+            'id': uuids.new_volume_id, 'size': 2, 'status': 'reserved',
+            'multiattach': False
         }
         attachment_update.return_value = {"connection_info": {"data": {}}}
         get_bdm.return_value = bdm
@@ -2181,8 +2185,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.assertEqual(uuids.new_volume_id, bdm.volume_id)
             self.assertEqual(uuids.new_attachment_id, bdm.attachment_id)
             self.assertEqual(2, bdm.volume_size)
-            self.assertEqual(uuids.new_volume_id,
-                             jsonutils.loads(bdm.connection_info)['serial'])
+            new_conn_info = jsonutils.loads(bdm.connection_info)
+            self.assertEqual(uuids.new_volume_id, new_conn_info['serial'])
+            self.assertNotIn('multiattach', new_conn_info)
 
     @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
     @mock.patch.object(compute_utils, 'notify_about_volume_swap')
@@ -2209,10 +2214,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             attachment_id=uuids.old_attachment_id,
             connection_info='{"data": {}}')
         old_volume = {
-            'id': uuids.old_volume_id, 'size': 1, 'status': 'migrating'
+            'id': uuids.old_volume_id, 'size': 1, 'status': 'migrating',
+            'multiattach': False
         }
         new_volume = {
-            'id': uuids.new_volume_id, 'size': 1, 'status': 'reserved'
+            'id': uuids.new_volume_id, 'size': 1, 'status': 'reserved',
+            'multiattach': False
         }
         get_bdm.return_value = bdm
         get_volume.side_effect = (old_volume, new_volume)
@@ -2272,10 +2279,12 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             attachment_id=uuids.old_attachment_id,
             connection_info='{"data": {}}')
         old_volume = {
-            'id': uuids.old_volume_id, 'size': 1, 'status': 'detaching'
+            'id': uuids.old_volume_id, 'size': 1, 'status': 'detaching',
+            'multiattach': False
         }
         new_volume = {
-            'id': uuids.new_volume_id, 'size': 2, 'status': 'reserved'
+            'id': uuids.new_volume_id, 'size': 2, 'status': 'reserved',
+            'multiattach': False
         }
         attachment_update.return_value = {"connection_info": {"data": {}}}
         get_bdm.return_value = bdm
@@ -2316,6 +2325,57 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             # After a failed swap volume, since it was not a
             # Cinder-initiated call, we don't call migrate_volume_completion.
             migrate_volume_completion.assert_not_called()
+
+    @mock.patch('nova.volume.cinder.API.attachment_update')
+    def test_swap_volume_with_multiattach(self, attachment_update):
+        """Tests swap volume where the volume being swapped-to supports
+        multiattach as well as the compute driver, so the attachment for the
+        new volume (created in the API) is updated with the host connector
+        and the new_connection_info is updated with the multiattach flag.
+        """
+        bdm = objects.BlockDeviceMapping(
+            volume_id=uuids.old_volume_id, device_name='/dev/vda',
+            attachment_id=uuids.old_attachment_id,
+            connection_info='{"data": {}}')
+        new_volume = {
+            'id': uuids.new_volume_id, 'size': 2, 'status': 'reserved',
+            'multiattach': True
+        }
+        attachment_update.return_value = {"connection_info": {"data": {}}}
+        connector = mock.sentinel.connector
+        with mock.patch.dict(self.compute.driver.capabilities,
+                             {'supports_multiattach': True}):
+            _, new_cinfo = self.compute._init_volume_connection(
+                self.context, new_volume, uuids.old_volume_id,
+                connector, bdm, uuids.new_attachment_id, bdm.device_name)
+            self.assertEqual(uuids.new_volume_id, new_cinfo['serial'])
+            self.assertIn('multiattach', new_cinfo)
+            self.assertTrue(new_cinfo['multiattach'])
+            attachment_update.assert_called_once_with(
+                self.context, uuids.new_attachment_id, connector,
+                bdm.device_name)
+
+    def test_swap_volume_with_multiattach_no_driver_support(self):
+        """Tests a swap volume scenario where the new volume being swapped-to
+        supports multiattach but the virt driver does not, so swap volume
+        fails.
+        """
+        bdm = objects.BlockDeviceMapping(
+            volume_id=uuids.old_volume_id, device_name='/dev/vda',
+            attachment_id=uuids.old_attachment_id,
+            connection_info='{"data": {}}')
+        new_volume = {
+            'id': uuids.new_volume_id, 'size': 2, 'status': 'reserved',
+            'multiattach': True
+        }
+        connector = {'host': 'localhost'}
+        with mock.patch.dict(self.compute.driver.capabilities,
+                             {'supports_multiattach': False}):
+            self.assertRaises(exception.MultiattachNotSupportedByVirtDriver,
+                              self.compute._init_volume_connection,
+                              self.context, new_volume, uuids.old_volume_id,
+                              connector, bdm, uuids.new_attachment_id,
+                              bdm.device_name)
 
     @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid')
     @mock.patch.object(fake_driver.FakeDriver,

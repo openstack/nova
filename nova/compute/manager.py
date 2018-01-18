@@ -5373,10 +5373,10 @@ class ComputeManager(manager.Manager):
         self._detach_volume(context, bdm, instance,
                             attachment_id=attachment_id)
 
-    def _init_volume_connection(self, context, new_volume_id,
+    def _init_volume_connection(self, context, new_volume,
                                 old_volume_id, connector, bdm,
                                 new_attachment_id, mountpoint):
-
+        new_volume_id = new_volume['id']
         if new_attachment_id is None:
             # We're dealing with an old-style attachment so initialize the
             # connection so we can get the connection_info.
@@ -5384,6 +5384,16 @@ class ComputeManager(manager.Manager):
                                                               new_volume_id,
                                                               connector)
         else:
+            # Check for multiattach on the new volume and if True, check to
+            # see if the virt driver supports multiattach.
+            # TODO(mriedem): This is copied from DriverVolumeBlockDevice
+            # and should be consolidated into some common code at some point.
+            vol_multiattach = new_volume.get('multiattach', False)
+            virt_multiattach = self.driver.capabilities['supports_multiattach']
+            if vol_multiattach and not virt_multiattach:
+                raise exception.MultiattachNotSupportedByVirtDriver(
+                    volume_id=new_volume_id)
+
             # This is a new style attachment and the API created the new
             # volume attachment and passed the id to the compute over RPC.
             # At this point we need to update the new volume attachment with
@@ -5392,6 +5402,11 @@ class ComputeManager(manager.Manager):
             new_cinfo = self.volume_api.attachment_update(
                 context, new_attachment_id, connector,
                 mountpoint)['connection_info']
+
+            if vol_multiattach:
+                # This will be used by the volume driver to determine the
+                # proper disk configuration.
+                new_cinfo['multiattach'] = True
 
         old_cinfo = jsonutils.loads(bdm['connection_info'])
         if old_cinfo and 'serial' not in old_cinfo:
@@ -5404,14 +5419,15 @@ class ComputeManager(manager.Manager):
         return (old_cinfo, new_cinfo)
 
     def _swap_volume(self, context, instance, bdm, connector,
-                     old_volume_id, new_volume_id, resize_to,
+                     old_volume_id, new_volume, resize_to,
                      new_attachment_id, is_cinder_migration):
+        new_volume_id = new_volume['id']
         mountpoint = bdm['device_name']
         failed = False
         new_cinfo = None
         try:
             old_cinfo, new_cinfo = self._init_volume_connection(
-                context, new_volume_id, old_volume_id, connector,
+                context, new_volume, old_volume_id, connector,
                 bdm, new_attachment_id, mountpoint)
             # NOTE(lyarwood): The Libvirt driver, the only virt driver
             # currently implementing swap_volume, will modify the contents of
@@ -5552,7 +5568,8 @@ class ComputeManager(manager.Manager):
             True if old_volume['status'] in ('retyping',
                                              'migrating') else False)
         old_vol_size = old_volume['size']
-        new_vol_size = self.volume_api.get(context, new_volume_id)['size']
+        new_volume = self.volume_api.get(context, new_volume_id)
+        new_vol_size = new_volume['size']
         if new_vol_size > old_vol_size:
             resize_to = new_vol_size
 
@@ -5564,7 +5581,7 @@ class ComputeManager(manager.Manager):
                                                 bdm,
                                                 connector,
                                                 old_volume_id,
-                                                new_volume_id,
+                                                new_volume,
                                                 resize_to,
                                                 new_attachment_id,
                                                 is_cinder_migration)
