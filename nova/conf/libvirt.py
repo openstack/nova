@@ -554,7 +554,9 @@ Possible cache modes:
   barriers), then data integrity can be ensured. However, because the host
   page cache is disabled, the read performance in the guest would not be as
   good as in the modes where the host page cache is enabled, such as
-  writethrough mode.
+  writethrough mode. Shareable disk devices, like for a multi-attachable block
+  storage volume, will have their cache mode set to 'none' regardless of
+  configuration.
 * writethrough: writethrough mode is the default caching mode. With
   caching set to writethrough mode, the host page cache is enabled, but the
   disk write cache is disabled for the guest. Consequently, this caching mode

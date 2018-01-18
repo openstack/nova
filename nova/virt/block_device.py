@@ -495,6 +495,13 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
         if self.volume_size is None:
             self.volume_size = volume.get('size')
 
+        vol_multiattach = volume.get('multiattach', False)
+        virt_multiattach = virt_driver.capabilities['supports_multiattach']
+
+        if vol_multiattach and not virt_multiattach:
+            raise exception.MultiattachNotSupportedByVirtDriver(
+                      volume_id=volume_id)
+
         LOG.debug("Updating existing volume attachment record: %s",
                   attachment_id, instance=instance)
         connection_info = volume_api.attachment_update(
@@ -503,6 +510,18 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
         if 'serial' not in connection_info:
             connection_info['serial'] = self.volume_id
         self._preserve_multipath_id(connection_info)
+        if vol_multiattach:
+            # This will be used by the volume driver to determine the proper
+            # disk configuration.
+            # TODO(mriedem): Long-term we should stop stashing the multiattach
+            # flag in the bdm.connection_info since that should be an untouched
+            # set of values we can refresh from Cinder as needed. Putting the
+            # multiattach flag on the bdm directly will require schema and
+            # online data migrations, plus some refactoring to anything that
+            # needs to get a block device disk config, like spawn/migrate/swap
+            # and the LibvirtLiveMigrateBDMInfo would also need to store the
+            # value.
+            connection_info['multiattach'] = True
 
         if do_driver_attach:
             encryption = encryptors.get_encryption_metadata(

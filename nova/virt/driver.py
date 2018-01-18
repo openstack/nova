@@ -130,6 +130,7 @@ class ComputeDriver(object):
         "supports_tagged_attach_interface": False,
         "supports_tagged_attach_volume": False,
         "supports_extend_volume": False,
+        "supports_multiattach": False
     }
 
     requires_allocation_refresh = False

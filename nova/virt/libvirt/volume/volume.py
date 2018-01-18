@@ -104,6 +104,11 @@ class LibvirtBaseVolumeDriver(object):
                 # specified.
                 conf.device_addr.unit = disk_info['unit']
 
+        if connection_info.get('multiattach', False):
+            # Note that driver_cache should be disabled (none) when using
+            # a shareable disk.
+            conf.shareable = True
+
         return conf
 
     def connect_volume(self, connection_info, instance):

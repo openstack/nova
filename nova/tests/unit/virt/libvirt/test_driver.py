@@ -14106,6 +14106,18 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr._set_cache_mode(fake_conf)
         self.assertEqual(fake_conf.driver_cache, 'directsync')
 
+    def test_set_cache_mode_shareable(self):
+        """Tests that when conf.shareable is True, the configuration is
+        ignored and the driver_cache is forced to 'none'.
+        """
+        self.flags(disk_cachemodes=['block=writethrough'], group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        fake_conf = FakeConfigGuestDisk()
+        fake_conf.shareable = True
+        fake_conf.source_type = 'block'
+        drvr._set_cache_mode(fake_conf)
+        self.assertEqual('none', fake_conf.driver_cache)
+
     def test_set_cache_mode_invalid_mode(self):
         self.flags(disk_cachemodes=['file=FAKE'], group='libvirt')
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
@@ -19694,3 +19706,51 @@ class LVMSnapshotTests(_BaseSnapshotTests):
     def test_qcow2(self):
         self.flags(snapshot_image_format='qcow2', group='libvirt')
         self._test_lvm_snapshot('qcow2')
+
+
+class TestLibvirtMultiattach(test.NoDBTestCase):
+    """Libvirt driver tests for volume multiattach support."""
+
+    def setUp(self):
+        super(TestLibvirtMultiattach, self).setUp()
+        self.useFixture(fakelibvirt.FakeLibvirtFixture())
+
+    @mock.patch('nova.virt.libvirt.host.Host.has_min_version',
+                return_value=True)
+    def test_init_host_supports_multiattach_new_enough_libvirt(self, min_ver):
+        """Tests that the driver supports multiattach because libvirt>=3.10.
+        """
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr._set_multiattach_support()
+        self.assertTrue(drvr.capabilities['supports_multiattach'])
+        min_ver.assert_called_once_with(
+            lv_ver=libvirt_driver.MIN_LIBVIRT_MULTIATTACH)
+
+    @mock.patch('nova.virt.libvirt.host.Host.has_min_version',
+                side_effect=[False, False])
+    def test_init_host_supports_multiattach_old_enough_qemu(self, min_ver):
+        """Tests that the driver supports multiattach because qemu<2.10.
+        """
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr._set_multiattach_support()
+        self.assertTrue(drvr.capabilities['supports_multiattach'])
+        calls = [mock.call(lv_ver=libvirt_driver.MIN_LIBVIRT_MULTIATTACH),
+                 mock.call(hv_ver=(2, 10, 0))]
+        min_ver.assert_has_calls(calls)
+
+    # FIXME(mriedem): This test intermittently fails when run at the same time
+    # as LibvirtConnTestCase, presumably because of shared global state on the
+    # version check.
+    # @mock.patch('nova.virt.libvirt.host.Host.has_min_version',
+    #             side_effect=[False, True])
+    # def test_init_host_supports_multiattach_no_support(self,
+    #                                                    has_min_version):
+    #     """Tests that the driver does not support multiattach because
+    #     qemu>=2.10 and libvirt<3.10.
+    #     """
+    #     drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+    #     drvr._set_multiattach_support()
+    #     self.assertFalse(drvr.capabilities['supports_multiattach'])
+    #     calls = [mock.call(lv_ver=libvirt_driver.MIN_LIBVIRT_MULTIATTACH),
+    #              mock.call(hv_ver=(2, 10, 0))]
+    #     has_min_version.assert_has_calls(calls)
