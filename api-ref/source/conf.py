@@ -23,23 +23,18 @@
 # serve to show the default.
 
 import os
-import subprocess
 import sys
-import warnings
 
-import openstackdocstheme
 
 extensions = [
+    'openstackdocstheme',
     'os_api_ref',
 ]
 
-
 html_theme = 'openstackdocs'
-html_theme_path = [openstackdocstheme.get_html_theme_path()]
 html_theme_options = {
     "sidebar_mode": "toc",
 }
-html_context = {'bug_project': 'nova', 'bug_tag': 'api-ref'}
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -66,6 +61,11 @@ master_doc = 'index'
 # General information about the project.
 project = u'Compute API Reference'
 copyright = u'2010-present, OpenStack Foundation'
+
+# openstackdocstheme options
+repository_name = 'openstack/nova'
+bug_project = 'nova'
+bug_tag = 'api-ref'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -150,14 +150,7 @@ pygments_style = 'sphinx'
 
 # If not '', a 'Last updated on:' timestamp is inserted at every page bottom,
 # using the given strftime format.
-# html_last_updated_fmt = '%b %d, %Y'
-git_cmd = ["git", "log", "--pretty=format:'%ad, commit %h'", "--date=local",
-    "-n1"]
-try:
-    html_last_updated_fmt = subprocess.check_output(git_cmd).decode('utf-8')
-except Exception:
-    warnings.warn('Cannot get last updated time from git repository. '
-                  'Not setting "html_last_updated_fmt".')
+html_last_updated_fmt = '%Y-%m-%d %H:%M'
 
 # If true, SmartyPants will be used to convert quotes and dashes to
 # typographically correct entities.
