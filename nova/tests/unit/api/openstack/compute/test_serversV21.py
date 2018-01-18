@@ -2055,6 +2055,10 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
                               self.req, FAKE_UUID, body=self.body)
 
     def test_rebuild_bad_personality(self):
+        # Personality files have been deprecated as of v2.57
+        self.req.api_version_request = \
+            api_version_request.APIVersionRequest('2.56')
+
         body = {
             "rebuild": {
                 "imageRef": self.image_uuid,
@@ -2070,6 +2074,10 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
                           self.req, FAKE_UUID, body=body)
 
     def test_rebuild_personality(self):
+        # Personality files have been deprecated as of v2.57
+        self.req.api_version_request = \
+            api_version_request.APIVersionRequest('2.56')
+
         body = {
             "rebuild": {
                 "imageRef": self.image_uuid,
@@ -2907,13 +2915,10 @@ class ServersControllerCreateTest(test.TestCase):
                 'metadata': {
                     'hello': 'world',
                     'open': 'stack',
-                    },
-                'personality': [
-                    {
-                        "path": "/etc/banner.txt",
-                        "contents": "MQ==",
-                    },
-                ],
+                },
+                'networks': [{
+                    'uuid': 'ff608d40-75e9-48cb-b745-77bb55b5eaf2'
+                }],
             },
         }
         self.bdm = [{'delete_on_termination': 1,
@@ -3838,6 +3843,10 @@ class ServersControllerCreateTest(test.TestCase):
 
     @mock.patch.object(compute_api.API, 'create')
     def test_create_instance_invalid_personality(self, mock_create):
+        # Personality files have been deprecated as of v2.57
+        self.req.api_version_request = \
+            api_version_request.APIVersionRequest('2.56')
+
         codec = 'utf8'
         content = encodeutils.safe_encode(
                 'b25zLiINCg0KLVJpY2hhcmQgQ$$%QQmFjaA==')
@@ -3859,8 +3868,11 @@ class ServersControllerCreateTest(test.TestCase):
                           self.controller.create, self.req, body=self.body)
 
     def test_create_instance_without_personality_should_get_empty_list(self):
+        # Personality files have been deprecated as of v2.57
+        self.req.api_version_request = \
+            api_version_request.APIVersionRequest('2.56')
+
         old_create = compute_api.API.create
-        del self.body['server']['personality']
 
         def create(*args, **kwargs):
             self.assertEqual([], kwargs['injected_files'])
@@ -3871,6 +3883,10 @@ class ServersControllerCreateTest(test.TestCase):
         self._test_create_instance()
 
     def test_create_instance_with_extra_personality_arg(self):
+        # Personality files have been deprecated as of v2.57
+        self.req.api_version_request = \
+            api_version_request.APIVersionRequest('2.56')
+
         self.body['server']['personality'] = [
             {
                 "path": "/etc/banner.txt",
