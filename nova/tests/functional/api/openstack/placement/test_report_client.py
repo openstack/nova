@@ -234,8 +234,8 @@ class SchedulerReportClientTests(test.TestCase):
 
         with interceptor.RequestsInterceptor(
                 app=lambda: assert_app, url=self.url):
-            self.client.delete('/resource_providers/%s' % self.compute_uuid,
-                               global_request_id=global_request_id)
+            self.client._delete_provider(self.compute_uuid,
+                                         global_request_id=global_request_id)
 
     def test_get_provider_tree_with_nested_and_aggregates(self):
         """A more in-depth test of get_provider_tree_and_ensure_root with

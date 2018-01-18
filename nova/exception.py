@@ -2143,6 +2143,10 @@ class ResourceProviderCreationFailed(NovaException):
     msg_fmt = _("Failed to create resource provider %(name)s")
 
 
+class ResourceProviderDeletionFailed(NovaException):
+    msg_fmt = _("Failed to delete resource provider %(uuid)s")
+
+
 class ResourceProviderUpdateFailed(NovaException):
     msg_fmt = _("Failed to update resource provider via URL %(url)s: "
                 "%(error)s")
