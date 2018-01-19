@@ -3717,6 +3717,19 @@ class TestNeutronv2WithMock(test.TestCase):
         self.assertTrue(create_port_mock.called)
 
     @mock.patch.object(client.Client, 'create_port',
+       side_effect=exceptions.IpAddressAlreadyAllocatedClient())
+    def test_create_port_minimal_raise_ip_already_allocated(self,
+            create_port_mock):
+        instance = fake_instance.fake_instance_obj(self.context)
+        fake_ip = '1.1.1.1'
+
+        self.assertRaises(exception.FixedIpAlreadyInUse,
+                          self.api._create_port_minimal,
+                          neutronapi.get_client(self.context),
+                          instance, uuids.my_netid1, fixed_ip=fake_ip)
+        self.assertTrue(create_port_mock.called)
+
+    @mock.patch.object(client.Client, 'create_port',
                        side_effect=exceptions.InvalidIpForNetworkClient())
     def test_create_port_minimal_raise_invalid_ip(self, create_port_mock):
         instance = fake_instance.fake_instance_obj(self.context)
