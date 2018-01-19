@@ -326,7 +326,6 @@ def update_resource_provider(req):
         context, uuid)
 
     schema = PUT_RESOURCE_PROVIDER_SCHEMA
-    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     if want_version.matches((1, 14)):
         schema = PUT_RP_SCHEMA_V1_14
 
