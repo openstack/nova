@@ -22,13 +22,11 @@ import posixpath
 from oslo_log import log as logging
 from oslo_serialization import base64
 from oslo_serialization import jsonutils
-from oslo_utils import importutils
 from oslo_utils import timeutils
 import six
 
 from nova.api.ec2 import ec2utils
 from nova.api.metadata import password
-from nova.api.metadata import vendordata
 from nova.api.metadata import vendordata_dynamic
 from nova.api.metadata import vendordata_json
 from nova import block_device
@@ -110,7 +108,7 @@ class InstanceMetadata(object):
     """Instance metadata."""
 
     def __init__(self, instance, address=None, content=None, extra_md=None,
-                 network_info=None, vd_driver=None, network_metadata=None,
+                 network_info=None, network_metadata=None,
                  request_context=None):
         """Creation of this object should basically cover all time consuming
         collection.  Methods after that should not cause time delays due to
@@ -195,14 +193,6 @@ class InstanceMetadata(object):
             self.files.append({'path': path,
                 'content_path': "/%s/%s" % (CONTENT_DIR, key)})
             self.content[key] = contents
-
-        if vd_driver is None:
-            vdclass = importutils.import_class(CONF.vendordata_driver)
-        else:
-            vdclass = vd_driver
-
-        self.vddriver = vdclass(instance=instance, address=address,
-                                extra_md=extra_md, network_info=network_info)
 
         self.route_configuration = None
 
@@ -505,20 +495,10 @@ class InstanceMetadata(object):
         if self._check_os_version(HAVANA, version):
             self.set_mimetype(MIME_TYPE_APPLICATION_JSON)
 
-            # NOTE(mikal): backwards compatibility... If the deployer has
-            # specified providers, and one of those providers is StaticJSON,
-            # then do that thing here. Otherwise, if the deployer has
-            # specified an old style driver here, then use that. This second
-            # bit can be removed once old style vendordata is fully deprecated
-            # and removed.
             if (CONF.api.vendordata_providers and
                 'StaticJSON' in CONF.api.vendordata_providers):
                 return jsonutils.dump_as_bytes(
                     self.vendordata_providers['StaticJSON'].get())
-            else:
-                # TODO(mikal): when we removed the old style vendordata
-                # drivers, we need to remove self.vddriver as well.
-                return jsonutils.dump_as_bytes(self.vddriver.get())
 
         raise KeyError(path)
 
@@ -752,8 +732,3 @@ def find_path_in_tree(data, path_tokens):
                 raise KeyError("/".join(path_tokens[0:i]))
             data = data[path_tokens[i]]
     return data
-
-
-# NOTE(mikal): this alias is to stop old style vendordata plugins from breaking
-# post refactor. It should be removed when we finish deprecating those plugins.
-VendorDataDriver = vendordata.VendorDataDriver
