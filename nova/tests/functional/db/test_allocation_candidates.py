@@ -425,7 +425,7 @@ class AllocationCandidatesTestCase(ProviderDBBase):
         requests = [placement_lib.RequestGroup(
             use_same_provider=False, resources=self.requested_resources,
             required_traits=missing)]
-        self.assertRaises(ValueError,
+        self.assertRaises(exception.TraitNotFound,
                           rp_obj.AllocationCandidates.get_by_requests,
                           self.ctx, requests)
 

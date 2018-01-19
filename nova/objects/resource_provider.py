@@ -3515,7 +3515,7 @@ class AllocationCandidates(base.NovaObject):
             # Double-check that we found a trait ID for each requested name
             if len(trait_map) != len(traits):
                 missing = traits - set(trait_map)
-                raise ValueError(_("Unknown traits requested: %s") % missing)
+                raise exception.TraitNotFound(name=', '.join(missing))
 
         # Contains a set of resource provider IDs that share some inventory for
         # each resource class requested. We do this here as an optimization. If

@@ -40,3 +40,9 @@ GET_SCHEMA_1_16['properties']['limit'] = {
     "minimum": 1,
     "minLength": 1
 }
+
+# Add required parameter.
+GET_SCHEMA_1_17 = copy.deepcopy(GET_SCHEMA_1_16)
+GET_SCHEMA_1_17['properties']['required'] = {
+    "type": ["string"]
+}

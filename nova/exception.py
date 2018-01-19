@@ -2216,7 +2216,7 @@ class PowerVMAPIFailed(NovaException):
 
 
 class TraitNotFound(NotFound):
-    msg_fmt = _("No such trait %(name)s.")
+    msg_fmt = _("No such trait(s): %(name)s.")
 
 
 class TraitExists(NovaException):

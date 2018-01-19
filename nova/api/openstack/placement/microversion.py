@@ -58,6 +58,8 @@ VERSIONS = [
              # representation and 'in_tree' filter on GET /resource_providers
     '1.15',  # Include last-modified and cache-control headers
     '1.16',  # Add 'limit' query parameter to GET /allocation_candidates
+    '1.17',  # Add 'required' query parameter to GET /allocation_candidates and
+             # return traits in the provider summary.
 ]
 
 

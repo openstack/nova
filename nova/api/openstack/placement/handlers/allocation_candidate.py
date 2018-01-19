@@ -18,6 +18,7 @@ from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 from oslo_utils import timeutils
+import six
 import webob
 
 from nova.api.openstack.placement import microversion
@@ -117,9 +118,10 @@ def _transform_allocation_requests_list(alloc_reqs):
     return results
 
 
-def _transform_provider_summaries(p_sums):
+def _transform_provider_summaries(p_sums, include_traits=False):
     """Turn supplied list of ProviderSummary objects into a dict, keyed by
-    resource provider UUID, of dicts of provider and inventory information.
+    resource provider UUID, of dicts of provider and inventory information. The
+    traits only show up when `include_traits` is `True`.
 
     {
        RP_UUID_1: {
@@ -132,7 +134,11 @@ def _transform_provider_summaries(p_sums):
                 'capacity': 4,
                 'used': 0,
               }
-           }
+           },
+           'traits': [
+                'HW_CPU_X86_AVX512F',
+                'HW_CPU_X86_AVX512CD'
+           ]
        },
        RP_UUID_2: {
            'resources': {
@@ -144,20 +150,32 @@ def _transform_provider_summaries(p_sums):
                 'capacity': 4,
                 'used': 0,
               }
-           }
+           },
+           'traits': [
+                'HW_NIC_OFFLOAD_TSO',
+                'HW_NIC_OFFLOAD_GRO'
+           ]
        }
     }
     """
-    return {
-        ps.resource_provider.uuid: {
-            'resources': {
-                psr.resource_class: {
-                    'capacity': psr.capacity,
-                    'used': psr.used,
-                } for psr in ps.resources
-            }
-        } for ps in p_sums
-    }
+
+    ret = {}
+
+    for ps in p_sums:
+        resources = {
+            psr.resource_class: {
+                'capacity': psr.capacity,
+                'used': psr.used,
+            } for psr in ps.resources
+        }
+
+        ret[ps.resource_provider.uuid] = {'resources': resources}
+
+        if include_traits:
+            ret[ps.resource_provider.uuid]['traits'] = [
+                t.name for t in ps.traits]
+
+    return ret
 
 
 def _transform_allocation_candidates(alloc_cands, want_version):
@@ -175,7 +193,10 @@ def _transform_allocation_candidates(alloc_cands, want_version):
     else:
         a_reqs = _transform_allocation_requests_list(
             alloc_cands.allocation_requests)
-    p_sums = _transform_provider_summaries(alloc_cands.provider_summaries)
+
+    include_traits = want_version.matches((1, 17))
+    p_sums = _transform_provider_summaries(alloc_cands.provider_summaries,
+                                           include_traits)
     return {
         'allocation_requests': a_reqs,
         'provider_summaries': p_sums,
@@ -195,7 +216,9 @@ def list_allocation_candidates(req):
     context = req.environ['placement.context']
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     get_schema = schema.GET_SCHEMA_1_10
-    if want_version.matches((1, 16)):
+    if want_version.matches((1, 17)):
+        get_schema = schema.GET_SCHEMA_1_17
+    elif want_version.matches((1, 16)):
         get_schema = schema.GET_SCHEMA_1_16
     util.validate_query_params(req, get_schema)
 
@@ -213,6 +236,8 @@ def list_allocation_candidates(req):
         raise webob.exc.HTTPBadRequest(
             _('Invalid resource class in resources parameter: %(error)s') %
             {'error': exc})
+    except exception.TraitNotFound as exc:
+        raise webob.exc.HTTPBadRequest(six.text_type(exc))
 
     response = req.response
     trx_cands = _transform_allocation_candidates(cands, want_version)
