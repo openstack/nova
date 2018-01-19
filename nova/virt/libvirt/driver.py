@@ -2776,6 +2776,7 @@ class LibvirtDriver(driver.ComputeDriver):
         self._detach_pci_devices(guest,
             pci_manager.get_instance_pci_devs(instance))
         self._detach_direct_passthrough_ports(context, instance, guest)
+        self._detach_mediated_devices(guest)
         guest.save_memory_state()
 
     def resume(self, context, instance, network_info, block_device_info=None):
@@ -5905,6 +5906,28 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 chosen_mdevs.append(chosen_mdev)
         return chosen_mdevs
+
+    def _detach_mediated_devices(self, guest):
+        mdevs = guest.get_all_devices(
+            devtype=vconfig.LibvirtConfigGuestHostdevMDEV)
+        for mdev_cfg in mdevs:
+            try:
+                guest.detach_device(mdev_cfg, live=True)
+            except libvirt.libvirtError as ex:
+                error_code = ex.get_error_code()
+                # NOTE(sbauza): There is a pending issue with libvirt that
+                # doesn't allow to hot-unplug mediated devices. Let's
+                # short-circuit the suspend action and set the instance back
+                # to ACTIVE.
+                # TODO(sbauza): Once libvirt supports this, amend the resume()
+                # operation to support reallocating mediated devices.
+                if error_code == libvirt.VIR_ERR_CONFIG_UNSUPPORTED:
+                    reason = _("Suspend is not supported for instances having "
+                               "attached vGPUs.")
+                    raise exception.InstanceFaultRollback(
+                        exception.InstanceSuspendFailure(reason=reason))
+                else:
+                    raise
 
     def _has_numa_support(self):
         # This means that the host can support LibvirtConfigGuestNUMATune

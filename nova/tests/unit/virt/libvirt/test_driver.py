@@ -12499,6 +12499,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         @mock.patch.object(dmcrypt, 'delete_volume')
         @mock.patch.object(conn, '_get_instance_disk_info_from_config',
                            return_value=[])
+        @mock.patch.object(conn, '_detach_mediated_devices')
         @mock.patch.object(conn, '_detach_direct_passthrough_ports')
         @mock.patch.object(conn, '_detach_pci_devices')
         @mock.patch.object(pci_manager, 'get_instance_pci_devs',
@@ -12507,6 +12508,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         def suspend(mock_get_guest, mock_get_instance_pci_devs,
                     mock_detach_pci_devices,
                     mock_detach_direct_passthrough_ports,
+                    mock_detach_mediated_devices,
                     mock_get_instance_disk_info,
                     mock_delete_volume):
             mock_managedSave = mock.Mock()
@@ -18816,6 +18818,59 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         drvr.init_host(host='foo')
         privsep_create_mdev.assert_called_once_with(
             "0000:06:00.0", 'nvidia-11', uuid=uuids.mdev2)
+
+    @mock.patch.object(libvirt_guest.Guest, 'detach_device')
+    def _test_detach_mediated_devices(self, side_effect, detach_device):
+
+        dom_with_vgpu = (
+            """<domain> <devices>
+            <disk type='file' device='disk'>
+            <driver name='qemu' type='qcow2' cache='none'/>
+            <source file='xxx'/>
+            <target dev='vda' bus='virtio'/>
+            <alias name='virtio-disk0'/>
+            <address type='pci' domain='0x0000' bus='0x00'
+            slot='0x04' function='0x0'/>
+            </disk>
+            <hostdev mode='subsystem' type='mdev' managed='no'
+            model='vfio-pci'>
+             <source>
+              <address uuid='81db53c6-6659-42a0-a34c-1507fdc72983'/>
+             </source>
+             <alias name='hostdev0'/>
+             <address type='pci' domain='0x0000' bus='0x00' slot='0x05'
+             function='0x0'/>
+            </hostdev>
+            </devices></domain>""")
+
+        detach_device.side_effect = side_effect
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        guest = libvirt_guest.Guest(FakeVirtDomain(fake_xml=dom_with_vgpu))
+        drvr._detach_mediated_devices(guest)
+        return detach_device
+
+    def test_detach_mediated_devices(self):
+        def fake_detach_device(cfg_obj, **kwargs):
+            self.assertIsInstance(cfg_obj,
+                                  vconfig.LibvirtConfigGuestHostdevMDEV)
+
+        detach_mock = self._test_detach_mediated_devices(fake_detach_device)
+        detach_mock.assert_called_once_with(mock.ANY, live=True)
+
+    def test_detach_mediated_devices_raises_exc_unsupported(self):
+        exc = fakelibvirt.make_libvirtError(
+            fakelibvirt.libvirtError, 'virDomainDetachDeviceFlags() failed',
+            error_code=fakelibvirt.VIR_ERR_CONFIG_UNSUPPORTED)
+
+        self.assertRaises(exception.InstanceFaultRollback,
+                          self._test_detach_mediated_devices, exc)
+
+    def test_detach_mediated_devices_raises_exc(self):
+        exc = test.TestingException()
+
+        self.assertRaises(test.TestingException,
+                          self._test_detach_mediated_devices, exc)
 
 
 class LibvirtVolumeUsageTestCase(test.NoDBTestCase):
