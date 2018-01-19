@@ -1595,7 +1595,9 @@ class LibvirtConfigGuestHostdev(LibvirtConfigGuestDevice):
                 __init__(root_name="hostdev", **kwargs)
         self.mode = kwargs.get('mode')
         self.type = kwargs.get('type')
-        self.managed = 'yes'
+        # managed attribute is only used by PCI devices but mediated devices
+        # need to say managed=no
+        self.managed = kwargs.get('managed', 'yes')
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestHostdev, self).format_dom()
@@ -1645,6 +1647,37 @@ class LibvirtConfigGuestHostdevPCI(LibvirtConfigGuestHostdev):
                         self.bus = sub.get('bus')
                         self.slot = sub.get('slot')
                         self.function = sub.get('function')
+
+
+class LibvirtConfigGuestHostdevMDEV(LibvirtConfigGuestHostdev):
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestHostdevMDEV, self).__init__(
+            mode='subsystem', type='mdev', managed='no', **kwargs)
+        # model attribute is only supported by mediated devices
+        self.model = kwargs.get('model', 'vfio-pci')
+        self.uuid = None
+
+    def format_dom(self):
+        dev = super(LibvirtConfigGuestHostdevMDEV, self).format_dom()
+        if self.model:
+            dev.set("model", self.model)
+
+        address = etree.Element("address", uuid=self.uuid)
+        source = etree.Element("source")
+        source.append(address)
+        dev.append(source)
+        return dev
+
+    def parse_dom(self, xmldoc):
+        children = super(LibvirtConfigGuestHostdevMDEV, self).parse_dom(xmldoc)
+        if xmldoc.get('model'):
+            self.model = xmldoc.get('model')
+        for c in children:
+            if c.tag == "source":
+                for sub in c.getchildren():
+                    if sub.tag == 'address':
+                        self.uuid = sub.get('uuid')
+                        return
 
 
 class LibvirtConfigGuestCharBase(LibvirtConfigGuestDevice):
@@ -2281,6 +2314,7 @@ class LibvirtConfigGuest(LibvirtConfigObject):
         # Note: This cover only for: LibvirtConfigGuestDisks
         #                            LibvirtConfigGuestFilesys
         #                            LibvirtConfigGuestHostdevPCI
+        #                            LibvirtConfigGuestHostdevMDEV
         #                            LibvirtConfigGuestInterface
         #                            LibvirtConfigGuestUidMap
         #                            LibvirtConfigGuestGidMap
@@ -2298,6 +2332,10 @@ class LibvirtConfigGuest(LibvirtConfigObject):
                         self.devices.append(obj)
                     elif d.tag == 'hostdev' and d.get('type') == 'pci':
                         obj = LibvirtConfigGuestHostdevPCI()
+                        obj.parse_dom(d)
+                        self.devices.append(obj)
+                    elif d.tag == 'hostdev' and d.get('type') == 'mdev':
+                        obj = LibvirtConfigGuestHostdevMDEV()
                         obj.parse_dom(d)
                         self.devices.append(obj)
                     elif d.tag == 'interface':

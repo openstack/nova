@@ -1,0 +1,56 @@
+---
+features:
+  - |
+    The libvirt driver now supports booting instances by asking for virtual
+    GPUs.
+    In order to support that, the operators should specify the enabled vGPU
+    types in the nova-compute configuration file by using the configuration
+    option ``[devices]/enabled_vgpu_types``. Only the enabled vGPU types can be
+    used by instances.
+
+    For knowing which types the physical GPU driver supports for libvirt, the
+    operator can look at the sysfs by doing
+
+    ..
+
+      ls /sys/class/mdev_bus/<device>/mdev_supported_types
+
+    Operators can specify a VGPU resource in a flavor by adding in the flavor's
+    extra specs
+
+    ..
+
+      nova flavor-key <flavor-id> set resources:VGPU=1
+
+    That said, Nova currently has some caveats for using vGPUs.
+
+    * For the moment, only a single type can be supported across one compute
+      node, which means that libvirt will create the vGPU by using that
+      specific type only. It's also possible to have two compute nodes having
+      different types but there is no possibility yet to specify in the flavor
+      which specific type we want to use for that instance.
+
+
+    * For the moment, please don't restart instances (or suspend/resume them)
+      or the VGPU related device will be removed from the guest.
+
+    * Mediated devices that are created by the libvirt driver are not
+      persisted upon reboot. Consequently, a guest startup would fail since the
+      virtual device wouldn't be existing. In order to prevent that issue,
+      operators rebooting a compute node have to, before restarting
+      nova-compute service, look at all the guest XML configuration and
+      recreate mediated devices for existing guests by doing
+
+    ..
+
+      echo <UUID> > /sys/class/mdev_bus/<device>/mdev_supported_types/<type>/create
+
+    * If you use Nvidia GRID cards, please know that there is a limitation with
+      the nvidia driver that prevents one guest to have more than one virtual
+      GPU from the same physical card. One guest can have two or more virtual
+      GPUs but then it requires each vGPU to be hosted by a separate physical
+      card.
+
+    We are working actively to remove or workaround those caveats, but please
+    understand that for the moment this feature is experimental given all the
+    above.
