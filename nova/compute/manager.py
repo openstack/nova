@@ -3580,7 +3580,6 @@ class ComputeManager(manager.Manager):
                 network_info=network_info)
         compute_utils.notify_about_instance_rescue_action(
             context, instance, self.host, rescue_image_ref,
-            action=fields.NotificationAction.RESCUE,
             phase=fields.NotificationPhase.START)
 
         try:
@@ -3611,7 +3610,6 @@ class ComputeManager(manager.Manager):
                 network_info=network_info)
         compute_utils.notify_about_instance_rescue_action(
             context, instance, self.host, rescue_image_ref,
-            action=fields.NotificationAction.RESCUE,
             phase=fields.NotificationPhase.END)
 
     @wrap_exception()
@@ -5493,7 +5491,6 @@ class ComputeManager(manager.Manager):
             with excutils.save_and_reraise_exception():
                 compute_utils.notify_about_volume_swap(
                     context, instance, self.host,
-                    fields.NotificationAction.VOLUME_SWAP,
                     fields.NotificationPhase.ERROR,
                     old_volume_id, new_volume_id, ex)
                 if new_cinfo:
@@ -5592,7 +5589,6 @@ class ComputeManager(manager.Manager):
 
         compute_utils.notify_about_volume_swap(
             context, instance, self.host,
-            fields.NotificationAction.VOLUME_SWAP,
             fields.NotificationPhase.START,
             old_volume_id, new_volume_id)
 
@@ -5658,7 +5654,6 @@ class ComputeManager(manager.Manager):
 
         compute_utils.notify_about_volume_swap(
             context, instance, self.host,
-            fields.NotificationAction.VOLUME_SWAP,
             fields.NotificationPhase.END,
             old_volume_id, new_volume_id)
 

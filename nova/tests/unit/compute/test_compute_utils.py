@@ -669,7 +669,6 @@ class UsageInfoTestCase(test.TestCase):
 
         compute_utils.notify_about_volume_swap(
             self.context, instance, 'fake-compute',
-            fields.NotificationAction.VOLUME_SWAP,
             fields.NotificationPhase.START,
             uuids.old_volume_id, uuids.new_volume_id)
 
@@ -711,7 +710,6 @@ class UsageInfoTestCase(test.TestCase):
         except Exception as ex:
             compute_utils.notify_about_volume_swap(
                 self.context, instance, 'fake-compute',
-                fields.NotificationAction.VOLUME_SWAP,
                 fields.NotificationPhase.ERROR,
                 uuids.old_volume_id, uuids.new_volume_id, ex)
 
@@ -762,7 +760,6 @@ class UsageInfoTestCase(test.TestCase):
             instance,
             'fake-compute',
             uuids.rescue_image_ref,
-            action='rescue',
             phase='start')
 
         self.assertEqual(len(fake_notifier.VERSIONED_NOTIFICATIONS), 1)

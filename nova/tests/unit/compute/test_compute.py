@@ -2419,11 +2419,9 @@ class ComputeTestCase(BaseTestCase,
                          expected_notifications)
         mock_notify.assert_has_calls([
             mock.call(self.context, instance, 'fake-mini',
-                      uuids.fake_image_ref_1,
-                      action='rescue', phase='start'),
+                      uuids.fake_image_ref_1, phase='start'),
             mock.call(self.context, instance, 'fake-mini',
-                      uuids.fake_image_ref_1,
-                      action='rescue', phase='end')])
+                      uuids.fake_image_ref_1, phase='end')])
 
         for n, msg in enumerate(fake_notifier.NOTIFICATIONS):
             self.assertEqual(msg.event_type, expected_notifications[n])

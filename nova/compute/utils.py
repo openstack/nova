@@ -384,7 +384,6 @@ def notify_about_instance_action(context, instance, host, action, phase=None,
 
 @rpc.if_notifications_enabled
 def notify_about_instance_create(context, instance, host, phase=None,
-                                 source=fields.NotificationSource.COMPUTE,
                                  exception=None, bdms=None):
     """Send versioned notification about instance creation
 
@@ -392,7 +391,6 @@ def notify_about_instance_create(context, instance, host, phase=None,
     :param instance: the instance being created
     :param host: the host emitting the notification
     :param phase: the phase of the creation
-    :param source: the source of the notification
     :param exception: the thrown exception (used in error notifications)
     :param bdms: BlockDeviceMappingList object for the instance. If it is not
                 provided then we will load it from the db if so configured
@@ -406,7 +404,7 @@ def notify_about_instance_create(context, instance, host, phase=None,
         context=context,
         priority=priority,
         publisher=notification_base.NotificationPublisher(
-            host=host, source=source),
+            host=host, source=fields.NotificationSource.COMPUTE),
         event_type=notification_base.EventType(
             object='instance',
             action=fields.NotificationAction.CREATE,
@@ -417,14 +415,12 @@ def notify_about_instance_create(context, instance, host, phase=None,
 
 @rpc.if_notifications_enabled
 def notify_about_volume_attach_detach(context, instance, host, action, phase,
-                                      source=fields.NotificationSource.COMPUTE,
                                       volume_id=None, exception=None):
     """Send versioned notification about the action made on the instance
     :param instance: the instance which the action performed on
     :param host: the host emitting the notification
     :param action: the name of the action
     :param phase: the phase of the action
-    :param source: the source of the notification
     :param volume_id: id of the volume will be attached
     :param exception: the thrown exception (used in error notifications)
     """
@@ -437,7 +433,7 @@ def notify_about_volume_attach_detach(context, instance, host, action, phase,
             context=context,
             priority=priority,
             publisher=notification_base.NotificationPublisher(
-                    host=host, source=source),
+                    host=host, source=fields.NotificationSource.COMPUTE),
             event_type=notification_base.EventType(
                     object='instance',
                     action=action,
@@ -448,16 +444,13 @@ def notify_about_volume_attach_detach(context, instance, host, action, phase,
 
 @rpc.if_notifications_enabled
 def notify_about_instance_rescue_action(
-        context, instance, host, rescue_image_ref, action, phase=None,
-        source=fields.NotificationSource.COMPUTE, exception=None):
+        context, instance, host, rescue_image_ref, phase=None, exception=None):
     """Send versioned notification about the action made on the instance
 
     :param instance: the instance which the action performed on
     :param host: the host emitting the notification
     :param rescue_image_ref: the rescue image ref
-    :param action: the name of the action
     :param phase: the phase of the action
-    :param source: the source of the notification
     :param exception: the thrown exception (used in error notifications)
     """
     fault, priority = _get_fault_and_priority_from_exc(exception)
@@ -470,10 +463,10 @@ def notify_about_instance_rescue_action(
             context=context,
             priority=priority,
             publisher=notification_base.NotificationPublisher(
-                host=host, source=source),
+                host=host, source=fields.NotificationSource.COMPUTE),
             event_type=notification_base.EventType(
                     object='instance',
-                    action=action,
+                    action=fields.NotificationAction.RESCUE,
                     phase=phase),
             payload=payload)
     notification.emit(context)
@@ -502,7 +495,7 @@ def notify_about_keypair_action(context, keypair, action, phase):
 
 
 @rpc.if_notifications_enabled
-def notify_about_volume_swap(context, instance, host, action, phase,
+def notify_about_volume_swap(context, instance, host, phase,
                              old_volume_id, new_volume_id, exception=None):
     """Send versioned notification about the volume swap action
        on the instance
@@ -510,7 +503,6 @@ def notify_about_volume_swap(context, instance, host, action, phase,
     :param context: the request context
     :param instance: the instance which the action performed on
     :param host: the host emitting the notification
-    :param action: the name of the action
     :param phase: the phase of the action
     :param old_volume_id: the ID of the volume that is copied from and detached
     :param new_volume_id: the ID of the volume that is copied to and attached
@@ -529,7 +521,9 @@ def notify_about_volume_swap(context, instance, host, action, phase,
         publisher=notification_base.NotificationPublisher(
             host=host, source=fields.NotificationSource.COMPUTE),
         event_type=notification_base.EventType(
-            object='instance', action=action, phase=phase),
+            object='instance',
+            action=fields.NotificationAction.VOLUME_SWAP,
+            phase=phase),
         payload=payload).emit(context)
 
 
