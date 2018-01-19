@@ -598,6 +598,7 @@ PCI passthrough
 Secure Boot
   When your Compute services use the Hyper-V hypervisor, you can enable secure
   boot for Windows and Linux instances.
+
   .. code:: console
 
      $ openstack flavor set FLAVOR-NAME \
