@@ -410,6 +410,34 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                               'fake_device', 'fake_volume_id', 'fake_disk_bus',
                               'fake_device_type', tag='foo')
 
+    @mock.patch.object(objects.BlockDeviceMapping, 'create')
+    @mock.patch.object(objects.BlockDeviceMappingList, 'get_by_instance_uuid',
+                       return_value=objects.BlockDeviceMappingList())
+    def test_reserve_block_device_name_multiattach(self, mock_get,
+                                                   mock_create):
+        """Tests the case that multiattach=True and the driver supports it."""
+        instance = fake_instance.fake_instance_obj(self.context)
+        with test.nested(
+                mock.patch.object(self.compute,
+                                  '_get_device_name_for_instance',
+                                  return_value='/dev/vda'),
+                mock.patch.dict(self.compute.driver.capabilities,
+                                supports_multiattach=True)):
+            self.compute.reserve_block_device_name(
+                self.context, instance, device=None, volume_id=uuids.volume_id,
+                disk_bus=None, device_type=None, multiattach=True)
+
+    @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
+    def test_reserve_block_device_name_multiattach_raises(self, _):
+        with mock.patch.dict(self.compute.driver.capabilities,
+                             supports_multiattach=False):
+            self.assertRaises(exception.MultiattachNotSupportedByVirtDriver,
+                              self.compute.reserve_block_device_name,
+                              self.context,
+                              fake_instance.fake_instance_obj(self.context),
+                              'fake_device', 'fake_volume_id', 'fake_disk_bus',
+                              'fake_device_type', multiattach=True)
+
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(time, 'sleep')
     def test_allocate_network_succeeds_after_retries(

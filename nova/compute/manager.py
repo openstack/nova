@@ -485,7 +485,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='4.19')
+    target = messaging.Target(version='4.20')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to an instance during power off.  The overall
@@ -5177,11 +5177,17 @@ class ComputeManager(manager.Manager):
     @reverts_task_state
     @wrap_instance_fault
     def reserve_block_device_name(self, context, instance, device,
-                                  volume_id, disk_bus, device_type, tag=None):
+                                  volume_id, disk_bus, device_type, tag=None,
+                                  multiattach=False):
         if (tag and not
                 self.driver.capabilities.get('supports_tagged_attach_volume',
                                              False)):
             raise exception.VolumeTaggedAttachNotSupported()
+
+        if (multiattach and not
+                self.driver.capabilities.get('supports_multiattach', False)):
+            raise exception.MultiattachNotSupportedByVirtDriver(
+                volume_id=volume_id)
 
         @utils.synchronized(instance.uuid)
         def do_reserve():

@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 26
+SERVICE_VERSION = 27
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -122,6 +122,9 @@ SERVICE_VERSION_HISTORY = (
     {'compute_rpc': '4.18'},
     # Version 26: Adds a 'host_list' parameter to build_and_run_instance()
     {'compute_rpc': '4.19'},
+    # Version 27: Compute RPC version 4.20; adds multiattach argument to
+    # reserve_block_device_name().
+    {'compute_rpc': '4.20'},
 )
 
 

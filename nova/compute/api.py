@@ -3654,6 +3654,7 @@ class API(base.Base):
             #             the same time. When db access is removed from
             #             compute, the bdm will be created here and we will
             #             have to make sure that they are assigned atomically.
+            # TODO(mriedem): Handle multiattach here.
             volume_bdm = self.compute_rpcapi.reserve_block_device_name(
                 context, instance, device, volume_id, disk_bus=disk_bus,
                 device_type=device_type, tag=tag)

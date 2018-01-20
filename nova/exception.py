@@ -260,6 +260,14 @@ class MultiattachNotSupportedByVirtDriver(NovaException):
     code = 409
 
 
+class MultiattachSupportNotYetAvailable(NovaException):
+    # This exception indicates the deployment is not yet new enough to support
+    # multiattach volumes, so a 409 HTTPConflict response is generally used
+    # for handling this in the API.
+    msg_fmt = _("Multiattach volume support is not yet available.")
+    code = 409
+
+
 class VolumeNotCreated(NovaException):
     msg_fmt = _("Volume %(volume_id)s did not finish being created"
                 " even after we waited %(seconds)s seconds or %(attempts)s"
