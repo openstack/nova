@@ -242,22 +242,12 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
         """Validates existence and values of a provider in this client's
         _provider_tree.
 
-        _Provider is deliberately hidden, so this method has to cheat, using
-        private methods to access the _Provider directly.
-
         :param name_or_uuid: The name or UUID of the provider to validate.
-        :param kwargs: Optional keyword arguments of internal _Provider
-                       attributes whose values are to be validated.
+        :param kwargs: Optional keyword arguments of ProviderData attributes
+                       whose values are to be validated.
         """
-        pt = self.client._provider_tree
-        # This locking is overkill, but good form
-        with pt.lock:
-            try:
-                found = pt._find_with_lock(name_or_uuid)
-            except ValueError:
-                self.fail("Provider with name or UUID %s doesn't exist" %
-                          name_or_uuid)
-        # If kwargs provided, their names indicate _Provider attributes
+        found = self.client._provider_tree.data(name_or_uuid)
+        # If kwargs provided, their names indicate ProviderData attributes
         for attr, expected in kwargs.items():
             try:
                 self.assertEqual(getattr(found, attr), expected)

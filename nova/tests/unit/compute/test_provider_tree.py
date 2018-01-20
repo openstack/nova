@@ -84,6 +84,19 @@ class TestProviderTree(test.NoDBTestCase):
             uuids.non_existing_rp,
         )
 
+        # Test data().
+        # Root, by UUID
+        cn1_snap = pt.data(cn1.uuid)
+        # Fields were faithfully copied
+        self.assertEqual(cn1.uuid, cn1_snap.uuid)
+        self.assertEqual(cn1.hypervisor_hostname, cn1_snap.name)
+        self.assertIsNone(cn1_snap.parent_uuid)
+        self.assertEqual({}, cn1_snap.inventory)
+        self.assertEqual(set(), cn1_snap.traits)
+        self.assertEqual(set(), cn1_snap.aggregates)
+        # Validate read-only-ness
+        self.assertRaises(AttributeError, setattr, cn1_snap, 'name', 'foo')
+
         cn3 = objects.ComputeNode(
             uuid=uuids.cn3,
             hypervisor_hostname='compute-node-3',
@@ -181,9 +194,16 @@ class TestProviderTree(test.NoDBTestCase):
         self.assertFalse(pt.has_inventory_changed(cn.uuid, cn_inv))
         self.assertFalse(pt.update_inventory(cn.uuid, cn_inv, rp_gen))
 
+        # A data-grab's inventory should be "equal" to the original
+        cndata = pt.data(cn.uuid)
+        self.assertFalse(pt.has_inventory_changed(cn.uuid, cndata.inventory))
+
         cn_inv['VCPU']['total'] = 6
         self.assertTrue(pt.has_inventory_changed(cn.uuid, cn_inv))
         self.assertTrue(pt.update_inventory(cn.uuid, cn_inv, rp_gen))
+
+        # The data() result was not affected; now the tree's copy is different
+        self.assertTrue(pt.has_inventory_changed(cn.uuid, cndata.inventory))
 
         self.assertFalse(pt.has_inventory_changed(cn.uuid, cn_inv))
         self.assertFalse(pt.update_inventory(cn.uuid, cn_inv, rp_gen))
@@ -222,6 +242,9 @@ class TestProviderTree(test.NoDBTestCase):
             "HW_CPU_X86_AVX",
         ]
         self.assertTrue(pt.have_traits_changed(cn.uuid, traits))
+        # A data-grab's traits are the same
+        cnsnap = pt.data(cn.uuid)
+        self.assertFalse(pt.have_traits_changed(cn.uuid, cnsnap.traits))
         self.assertTrue(pt.has_traits(cn.uuid, []))
         self.assertFalse(pt.has_traits(cn.uuid, traits))
         self.assertFalse(pt.has_traits(cn.uuid, traits[:1]))
@@ -235,17 +258,19 @@ class TestProviderTree(test.NoDBTestCase):
         rp_gen = 2
         self.assertFalse(pt.update_traits(cn.uuid, traits, generation=rp_gen))
         self.assertFalse(pt.have_traits_changed(cn.uuid, traits))
-        self.assertEqual(rp_gen, pt._find_with_lock(cn.uuid).generation)
+        self.assertEqual(rp_gen, pt.data(cn.uuid).generation)
         self.assertTrue(pt.has_traits(cn.uuid, traits))
         self.assertTrue(pt.has_traits(cn.uuid, traits[:1]))
 
         # Make a change to the traits list
         traits.append("HW_GPU_RESOLUTION_W800H600")
         self.assertTrue(pt.have_traits_changed(cn.uuid, traits))
+        # The previously-taken data now differs
+        self.assertTrue(pt.have_traits_changed(cn.uuid, cnsnap.traits))
         self.assertFalse(pt.has_traits(cn.uuid, traits[-1:]))
         # Don't update the generation
         self.assertTrue(pt.update_traits(cn.uuid, traits))
-        self.assertEqual(rp_gen, pt._find_with_lock(cn.uuid).generation)
+        self.assertEqual(rp_gen, pt.data(cn.uuid).generation)
         self.assertTrue(pt.has_traits(cn.uuid, traits[-1:]))
 
     def test_have_aggregates_changed_no_existing_rp(self):
@@ -279,6 +304,11 @@ class TestProviderTree(test.NoDBTestCase):
         self.assertTrue(pt.in_aggregates(cn.uuid, aggregates))
         self.assertTrue(pt.in_aggregates(cn.uuid, aggregates[:1]))
 
+        # data() gets the same aggregates
+        cnsnap = pt.data(cn.uuid)
+        self.assertFalse(
+            pt.have_aggregates_changed(cn.uuid, cnsnap.aggregates))
+
         # Updating with the same aggregates info should return False
         self.assertFalse(pt.have_aggregates_changed(cn.uuid, aggregates))
         # But the generation should get updated
@@ -286,7 +316,7 @@ class TestProviderTree(test.NoDBTestCase):
         self.assertFalse(pt.update_aggregates(cn.uuid, aggregates,
                                               generation=rp_gen))
         self.assertFalse(pt.have_aggregates_changed(cn.uuid, aggregates))
-        self.assertEqual(rp_gen, pt._find_with_lock(cn.uuid).generation)
+        self.assertEqual(rp_gen, pt.data(cn.uuid).generation)
         self.assertTrue(pt.in_aggregates(cn.uuid, aggregates))
         self.assertTrue(pt.in_aggregates(cn.uuid, aggregates[:1]))
 
@@ -296,5 +326,7 @@ class TestProviderTree(test.NoDBTestCase):
         self.assertFalse(pt.in_aggregates(cn.uuid, aggregates[-1:]))
         # Don't update the generation
         self.assertTrue(pt.update_aggregates(cn.uuid, aggregates))
-        self.assertEqual(rp_gen, pt._find_with_lock(cn.uuid).generation)
+        self.assertEqual(rp_gen, pt.data(cn.uuid).generation)
         self.assertTrue(pt.in_aggregates(cn.uuid, aggregates[-1:]))
+        # Previously-taken data now differs
+        self.assertTrue(pt.have_aggregates_changed(cn.uuid, cnsnap.aggregates))
