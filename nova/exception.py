@@ -2123,6 +2123,27 @@ class ResourceProviderCreationFailed(NovaException):
     msg_fmt = _("Failed to create resource provider %(name)s")
 
 
+class ResourceProviderUpdateFailed(NovaException):
+    msg_fmt = _("Failed to update resource provider via URL %(url)s: "
+                "%(error)s")
+
+
+class PlacementAPIConflict(NovaException):
+    """Any 409 error from placement APIs should use (a subclass of) this
+    exception.
+    """
+    msg_fmt = _("A conflict was encountered attempting to invoke the "
+                "placement API at URL %(url)s: %(error)s")
+
+
+class ResourceProviderUpdateConflict(PlacementAPIConflict):
+    """A 409 caused by generation mismatch from attempting to update an
+    existing provider record or its associated data (aggregates, traits, etc.).
+    """
+    msg_fmt = _("A conflict was encountered attempting to update resource "
+                "provider %(uuid)s (generation %(generation)d): %(error)s")
+
+
 class InventoryWithResourceClassNotFound(NotFound):
     msg_fmt = _("No inventory of class %(resource_class)s found.")
 
@@ -2237,6 +2258,14 @@ class TraitCannotDeleteStandard(Invalid):
 
 class TraitInUse(Invalid):
     msg_fmt = _("The trait %(name)s is in use by a resource provider.")
+
+
+class TraitRetrievalFailed(NovaException):
+    msg_fmt = _("Failed to retrieve traits from the placement API: %(error)s")
+
+
+class TraitCreationFailed(NovaException):
+    msg_fmt = _("Failed to create trait %(name)s: %(error)s")
 
 
 class CannotMigrateWithTargetHost(NovaException):
