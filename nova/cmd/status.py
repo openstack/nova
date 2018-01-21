@@ -201,7 +201,7 @@ class UpgradeCommands(object):
             # provider support.
             # NOTE: If you bump this version, remember to update the history
             # section in the nova-status man page (doc/source/cli/nova-status).
-            needs_version = pkg_resources.parse_version("1.14")
+            needs_version = pkg_resources.parse_version("1.17")
             if max_version < needs_version:
                 msg = (_('Placement API version %(needed)s needed, '
                          'you have %(current)s.') %

@@ -327,16 +327,19 @@ class SchedulerReportClient(object):
         # existing behavior.  Once the GET /allocation_candidates API is
         # prepped to accept the whole shebang, we'll join up all the resources
         # and traits in the query string (via a new method on ResourceRequest).
-        resources = resources.get_request_group(None).resources
+        res = resources.get_request_group(None).resources
+        required_traits = resources.get_request_group(None).required_traits
 
         resource_query = ",".join(
             sorted("%s:%s" % (rc, amount)
-            for (rc, amount) in resources.items()))
+            for (rc, amount) in res.items()))
         qs_params = {
             'resources': resource_query,
         }
+        if required_traits:
+            qs_params['required'] = ",".join(required_traits)
 
-        version = '1.12'
+        version = '1.17'
         url = "/allocation_candidates?%s" % parse.urlencode(qs_params)
         resp = self.get(url, version=version)
         if resp.status_code == 200:
@@ -347,7 +350,7 @@ class SchedulerReportClient(object):
         msg = ("Failed to retrieve allocation candidates from placement API "
                "for filters %(resources)s. Got %(status_code)d: %(err_text)s.")
         args = {
-            'resources': resources,
+            'resources': res,
             'status_code': resp.status_code,
             'err_text': resp.text,
         }

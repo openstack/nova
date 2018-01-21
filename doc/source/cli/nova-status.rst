@@ -103,7 +103,7 @@ Upgrade
 
   **17.0.0 (Queens)**
 
-  * Checks for the Placement API are modified to require version 1.14.
+  * Checks for the Placement API are modified to require version 1.17.
 
 See Also
 ========
