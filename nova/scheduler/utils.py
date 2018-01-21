@@ -369,14 +369,9 @@ def claim_resources_on_destination(
     if source_node_allocations:
         # Generate an allocation request for the destination node.
         alloc_request = {
-            'allocations': [
-                {
-                    'resource_provider': {
-                        'uuid': dest_node.uuid
-                    },
-                    'resources': source_node_allocations
-                }
-            ]
+            'allocations': {
+                dest_node.uuid: {'resources': source_node_allocations}
+            }
         }
         # The claim_resources method will check for existing allocations
         # for the instance and effectively "double up" the allocations for
@@ -385,7 +380,8 @@ def claim_resources_on_destination(
         # we use the existing resource allocations from the source node.
         if reportclient.claim_resources(
                 instance.uuid, alloc_request,
-                instance.project_id, instance.user_id):
+                instance.project_id, instance.user_id,
+                allocation_request_version='1.12'):
             LOG.debug('Instance allocations successfully created on '
                       'destination node %(dest)s: %(alloc_request)s',
                       {'dest': dest_node.uuid,

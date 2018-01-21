@@ -141,8 +141,7 @@ class SchedulerManager(manager.Manager):
                 # a host, we can grab an allocation request easily
                 alloc_reqs_by_rp_uuid = collections.defaultdict(list)
                 for ar in alloc_reqs:
-                    for rr in ar['allocations']:
-                        rp_uuid = rr['resource_provider']['uuid']
+                    for rp_uuid in ar['allocations']:
                         alloc_reqs_by_rp_uuid[rp_uuid].append(ar)
 
         # Only return alternates if both return_objects and return_alternates

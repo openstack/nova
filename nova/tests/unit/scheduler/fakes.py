@@ -129,18 +129,15 @@ COMPUTE_NODES = [
 
 ALLOC_REQS = [
     {
-        'allocations': [
-            {
-                'resource_provider': {
-                    'uuid': cn.uuid,
-                },
+        'allocations': {
+            cn.uuid: {
                 'resources': {
                     'VCPU': 1,
                     'MEMORY_MB': 512,
                     'DISK_GB': 512,
                 },
-            },
-        ]
+            }
+        }
     } for cn in COMPUTE_NODES
 ]
 

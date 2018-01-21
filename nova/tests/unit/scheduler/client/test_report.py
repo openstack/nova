@@ -10,7 +10,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import copy
 import time
 
 from keystoneauth1 import exceptions as ks_exc
@@ -368,6 +367,51 @@ class TestPutAllocations(SchedulerReportClientTestCase):
             mock.call(expected_url, mock.ANY, version='1.8'),
             mock.call(expected_url, mock.ANY, version='1.8')])
 
+    def test_claim_resources_success_with_old_version(self):
+        get_resp_mock = mock.Mock(status_code=200)
+        get_resp_mock.json.return_value = {
+            'allocations': {},  # build instance, not move
+        }
+        self.ks_adap_mock.get.return_value = get_resp_mock
+        resp_mock = mock.Mock(status_code=204)
+        self.ks_adap_mock.put.return_value = resp_mock
+        consumer_uuid = uuids.consumer_uuid
+        alloc_req = {
+            'allocations': [
+                {
+                    'resource_provider': {
+                        'uuid': uuids.cn1
+                    },
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    }
+                },
+            ],
+        }
+
+        project_id = uuids.project_id
+        user_id = uuids.user_id
+        res = self.client.claim_resources(consumer_uuid, alloc_req, project_id,
+            user_id)
+
+        expected_url = "/allocations/%s" % consumer_uuid
+        expected_payload = {
+            'allocations': {
+                alloc['resource_provider']['uuid']: {
+                    'resources': alloc['resources']
+                }
+                for alloc in alloc_req['allocations']
+            }
+        }
+        expected_payload['project_id'] = project_id
+        expected_payload['user_id'] = user_id
+        self.ks_adap_mock.put.assert_called_once_with(
+            expected_url, microversion='1.12', json=expected_payload,
+            raise_exc=False)
+
+        self.assertTrue(res)
+
     def test_claim_resources_success(self):
         get_resp_mock = mock.Mock(status_code=200)
         get_resp_mock.json.return_value = {
@@ -379,12 +423,11 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         consumer_uuid = uuids.consumer_uuid
         alloc_req = {
             'allocations': {
-                'resource_provider': {
-                    'uuid': uuids.cn1,
-                },
-                'resources': {
-                    'VCPU': 1,
-                    'MEMORY_MB': 1024,
+                uuids.cn1: {
+                    'resources': {
+                        'VCPU': 1,
+                        'MEMORY_MB': 1024,
+                    }
                 },
             },
         }
@@ -392,14 +435,16 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         project_id = uuids.project_id
         user_id = uuids.user_id
         res = self.client.claim_resources(consumer_uuid, alloc_req, project_id,
-            user_id)
+            user_id, allocation_request_version='1.12')
 
         expected_url = "/allocations/%s" % consumer_uuid
-        expected_payload = copy.deepcopy(alloc_req)
+        expected_payload = {'allocations': {
+            rp_uuid: alloc
+                for rp_uuid, alloc in alloc_req['allocations'].items()}}
         expected_payload['project_id'] = project_id
         expected_payload['user_id'] = user_id
         self.ks_adap_mock.put.assert_called_once_with(
-            expected_url, microversion='1.10', json=expected_payload,
+            expected_url, microversion='1.12', json=expected_payload,
             raise_exc=False)
 
         self.assertTrue(res)
@@ -428,63 +473,49 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         self.ks_adap_mock.put.return_value = resp_mock
         consumer_uuid = uuids.consumer_uuid
         alloc_req = {
-            'allocations': [
-                {
-                    'resource_provider': {
-                        'uuid': uuids.destination,
-                    },
+            'allocations': {
+                uuids.destination: {
                     'resources': {
                         'VCPU': 1,
-                        'MEMORY_MB': 1024,
-                    },
+                        'MEMORY_MB': 1024
+                    }
                 },
-            ],
+            },
         }
 
         project_id = uuids.project_id
         user_id = uuids.user_id
         res = self.client.claim_resources(consumer_uuid, alloc_req, project_id,
-            user_id)
+            user_id, allocation_request_version='1.12')
 
         expected_url = "/allocations/%s" % consumer_uuid
         # New allocation should include resources claimed on both the source
         # and destination hosts
         expected_payload = {
-            'allocations': [
-                {
-                    'resource_provider': {
-                        'uuid': uuids.source,
-                    },
+            'allocations': {
+                uuids.source: {
                     'resources': {
                         'VCPU': 1,
-                        'MEMORY_MB': 1024,
-                    },
+                        'MEMORY_MB': 1024
+                    }
                 },
-                {
-                    'resource_provider': {
-                        'uuid': uuids.destination,
-                    },
+                uuids.destination: {
                     'resources': {
                         'VCPU': 1,
-                        'MEMORY_MB': 1024,
-                    },
+                        'MEMORY_MB': 1024
+                    }
                 },
-            ],
+            },
         }
         expected_payload['project_id'] = project_id
         expected_payload['user_id'] = user_id
         self.ks_adap_mock.put.assert_called_once_with(
-            expected_url, microversion='1.10', json=mock.ANY,
+            expected_url, microversion='1.12', json=mock.ANY,
             raise_exc=False)
         # We have to pull the json body from the mock call_args to validate
         # it separately otherwise hash seed issues get in the way.
         actual_payload = self.ks_adap_mock.put.call_args[1]['json']
-        sort_by_uuid = lambda x: x['resource_provider']['uuid']
-        expected_allocations = sorted(expected_payload['allocations'],
-                                      key=sort_by_uuid)
-        actual_allocations = sorted(actual_payload['allocations'],
-                                    key=sort_by_uuid)
-        self.assertEqual(expected_allocations, actual_allocations)
+        self.assertEqual(expected_payload, actual_payload)
 
         self.assertTrue(res)
 
@@ -521,81 +552,61 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         self.ks_adap_mock.put.return_value = resp_mock
         consumer_uuid = uuids.consumer_uuid
         alloc_req = {
-            'allocations': [
-                {
-                    'resource_provider': {
-                        'uuid': uuids.destination,
-                    },
+            'allocations': {
+                uuids.destination: {
                     'resources': {
                         'VCPU': 1,
                         'MEMORY_MB': 1024,
-                    },
+                    }
                 },
-                {
-                    'resource_provider': {
-                        'uuid': uuids.shared_storage,
-                    },
+                uuids.shared_storage: {
                     'resources': {
                         'DISK_GB': 100,
-                    },
+                    }
                 },
-            ],
+            }
         }
 
         project_id = uuids.project_id
         user_id = uuids.user_id
         res = self.client.claim_resources(consumer_uuid, alloc_req, project_id,
-            user_id)
+            user_id, allocation_request_version='1.12')
 
         expected_url = "/allocations/%s" % consumer_uuid
         # New allocation should include resources claimed on both the source
         # and destination hosts but not have a doubled-up request for the disk
         # resources on the shared provider
         expected_payload = {
-            'allocations': [
-                {
-                    'resource_provider': {
-                        'uuid': uuids.source,
-                    },
+            'allocations': {
+                uuids.source: {
                     'resources': {
                         'VCPU': 1,
-                        'MEMORY_MB': 1024,
-                    },
+                        'MEMORY_MB': 1024
+                    }
                 },
-                {
-                    'resource_provider': {
-                        'uuid': uuids.shared_storage,
-                    },
+                uuids.shared_storage: {
                     'resources': {
-                        'DISK_GB': 100,
-                    },
+                        'DISK_GB': 100
+                    }
                 },
-                {
-                    'resource_provider': {
-                        'uuid': uuids.destination,
-                    },
+                uuids.destination: {
                     'resources': {
                         'VCPU': 1,
-                        'MEMORY_MB': 1024,
-                    },
+                        'MEMORY_MB': 1024
+                    }
                 },
-            ],
+            },
         }
         expected_payload['project_id'] = project_id
         expected_payload['user_id'] = user_id
         self.ks_adap_mock.put.assert_called_once_with(
-            expected_url, microversion='1.10', json=mock.ANY,
+            expected_url, microversion='1.12', json=mock.ANY,
             raise_exc=False)
         # We have to pull the allocations from the json body from the
         # mock call_args to validate it separately otherwise hash seed
         # issues get in the way.
         actual_payload = self.ks_adap_mock.put.call_args[1]['json']
-        sort_by_uuid = lambda x: x['resource_provider']['uuid']
-        expected_allocations = sorted(expected_payload['allocations'],
-                                      key=sort_by_uuid)
-        actual_allocations = sorted(actual_payload['allocations'],
-                                    key=sort_by_uuid)
-        self.assertEqual(expected_allocations, actual_allocations)
+        self.assertEqual(expected_payload, actual_payload)
 
         self.assertTrue(res)
 
@@ -629,57 +640,46 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         # resource class in the new allocation to make sure it's not lost and
         # that we don't have a KeyError when merging the allocations.
         alloc_req = {
-            'allocations': [
-                {
-                    'resource_provider': {
-                        'uuid': uuids.same_host,
-                    },
+            'allocations': {
+                uuids.same_host: {
                     'resources': {
                         'VCPU': 2,
                         'MEMORY_MB': 2048,
                         'DISK_GB': 40,
                         'CUSTOM_FOO': 1
-                    },
+                    }
                 },
-            ],
+            },
         }
 
         project_id = uuids.project_id
         user_id = uuids.user_id
         res = self.client.claim_resources(consumer_uuid, alloc_req, project_id,
-            user_id)
+            user_id, allocation_request_version='1.12')
 
         expected_url = "/allocations/%s" % consumer_uuid
         # New allocation should include doubled resources claimed on the same
         # host.
         expected_payload = {
-            'allocations': [
-                {
-                    'resource_provider': {
-                        'uuid': uuids.same_host,
-                    },
+            'allocations': {
+                uuids.same_host: {
                     'resources': {
                         'VCPU': 3,
                         'MEMORY_MB': 3072,
                         'DISK_GB': 60,
                         'CUSTOM_FOO': 1
-                    },
+                    }
                 },
-            ],
+            },
         }
         expected_payload['project_id'] = project_id
         expected_payload['user_id'] = user_id
         self.ks_adap_mock.put.assert_called_once_with(
-            expected_url, microversion='1.10', json=mock.ANY, raise_exc=False)
+            expected_url, microversion='1.12', json=mock.ANY, raise_exc=False)
         # We have to pull the json body from the mock call_args to validate
         # it separately otherwise hash seed issues get in the way.
         actual_payload = self.ks_adap_mock.put.call_args[1]['json']
-        sort_by_uuid = lambda x: x['resource_provider']['uuid']
-        expected_allocations = sorted(expected_payload['allocations'],
-                                      key=sort_by_uuid)
-        actual_allocations = sorted(actual_payload['allocations'],
-                                    key=sort_by_uuid)
-        self.assertEqual(expected_allocations, actual_allocations)
+        self.assertEqual(expected_payload, actual_payload)
 
         self.assertTrue(res)
 
@@ -718,69 +718,52 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         # This is the resize-up allocation where VCPU, MEMORY_MB and DISK_GB
         # are all being increased but DISK_GB is on a shared storage provider.
         alloc_req = {
-            'allocations': [
-                {
-                    'resource_provider': {
-                        'uuid': uuids.same_host,
-                    },
+            'allocations': {
+                uuids.same_host: {
                     'resources': {
                         'VCPU': 2,
                         'MEMORY_MB': 2048
-                    },
+                    }
                 },
-                {
-                    'resource_provider': {
-                        'uuid': uuids.shared_storage,
-                    },
+                uuids.shared_storage: {
                     'resources': {
                         'DISK_GB': 40,
-                    },
+                    }
                 },
-            ],
+            },
         }
 
         project_id = uuids.project_id
         user_id = uuids.user_id
         res = self.client.claim_resources(consumer_uuid, alloc_req, project_id,
-            user_id)
+            user_id, allocation_request_version='1.12')
 
         expected_url = "/allocations/%s" % consumer_uuid
         # New allocation should include doubled resources claimed on the same
         # host.
         expected_payload = {
-            'allocations': [
-                {
-                    'resource_provider': {
-                        'uuid': uuids.same_host,
-                    },
+            'allocations': {
+                uuids.same_host: {
                     'resources': {
                         'VCPU': 3,
                         'MEMORY_MB': 3072
-                    },
+                    }
                 },
-                {
-                    'resource_provider': {
-                        'uuid': uuids.shared_storage,
-                    },
+                uuids.shared_storage: {
                     'resources': {
-                        'DISK_GB': 60,
-                    },
+                        'DISK_GB': 60
+                    }
                 },
-            ],
+            },
         }
         expected_payload['project_id'] = project_id
         expected_payload['user_id'] = user_id
         self.ks_adap_mock.put.assert_called_once_with(
-            expected_url, microversion='1.10', json=mock.ANY, raise_exc=False)
+            expected_url, microversion='1.12', json=mock.ANY, raise_exc=False)
         # We have to pull the json body from the mock call_args to validate
         # it separately otherwise hash seed issues get in the way.
         actual_payload = self.ks_adap_mock.put.call_args[1]['json']
-        sort_by_uuid = lambda x: x['resource_provider']['uuid']
-        expected_allocations = sorted(expected_payload['allocations'],
-                                      key=sort_by_uuid)
-        actual_allocations = sorted(actual_payload['allocations'],
-                                    key=sort_by_uuid)
-        self.assertEqual(expected_allocations, actual_allocations)
+        self.assertEqual(expected_payload, actual_payload)
 
         self.assertTrue(res)
 
@@ -801,32 +784,33 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         self.ks_adap_mock.put.side_effect = resp_mocks
         consumer_uuid = uuids.consumer_uuid
         alloc_req = {
-            'allocations': [
-                {
-                    'resource_provider': {
-                        'uuid': uuids.cn1,
-                    },
+            'allocations': {
+                uuids.cn1: {
                     'resources': {
                         'VCPU': 1,
                         'MEMORY_MB': 1024,
-                    },
+                    }
                 },
-            ],
+            },
         }
 
         project_id = uuids.project_id
         user_id = uuids.user_id
         res = self.client.claim_resources(consumer_uuid, alloc_req, project_id,
-            user_id)
+            user_id, allocation_request_version='1.12')
 
         expected_url = "/allocations/%s" % consumer_uuid
-        expected_payload = copy.deepcopy(alloc_req)
+        expected_payload = {
+            'allocations':
+                {rp_uuid: res
+                    for rp_uuid, res in alloc_req['allocations'].items()}
+        }
         expected_payload['project_id'] = project_id
         expected_payload['user_id'] = user_id
         # We should have exactly two calls to the placement API that look
         # identical since we're retrying the same HTTP request
         expected_calls = [
-            mock.call(expected_url, microversion='1.10', json=expected_payload,
+            mock.call(expected_url, microversion='1.12', json=expected_payload,
                       raise_exc=False)] * 2
         self.assertEqual(len(expected_calls),
                          self.ks_adap_mock.put.call_count)
@@ -845,30 +829,31 @@ class TestPutAllocations(SchedulerReportClientTestCase):
         self.ks_adap_mock.put.return_value = resp_mock
         consumer_uuid = uuids.consumer_uuid
         alloc_req = {
-            'allocations': [
-                {
-                    'resource_provider': {
-                        'uuid': uuids.cn1,
-                    },
+            'allocations': {
+                uuids.cn1: {
                     'resources': {
                         'VCPU': 1,
                         'MEMORY_MB': 1024,
-                    },
+                    }
                 },
-            ],
+            },
         }
 
         project_id = uuids.project_id
         user_id = uuids.user_id
         res = self.client.claim_resources(consumer_uuid, alloc_req, project_id,
-            user_id)
+            user_id, allocation_request_version='1.12')
 
         expected_url = "/allocations/%s" % consumer_uuid
-        expected_payload = copy.deepcopy(alloc_req)
+        expected_payload = {
+            'allocations':
+                {rp_uuid: res
+                    for rp_uuid, res in alloc_req['allocations'].items()}
+        }
         expected_payload['project_id'] = project_id
         expected_payload['user_id'] = user_id
         self.ks_adap_mock.put.assert_called_once_with(
-            expected_url, microversion='1.10', json=expected_payload,
+            expected_url, microversion='1.12', json=expected_payload,
             raise_exc=False)
 
         self.assertFalse(res)
@@ -1434,7 +1419,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         expected_url = '/allocation_candidates?%s' % parse.urlencode(
             {'resources': 'MEMORY_MB:1024,VCPU:1'})
         self.ks_adap_mock.get.assert_called_once_with(
-            expected_url, raise_exc=False, microversion='1.10')
+            expected_url, raise_exc=False, microversion='1.12')
         self.assertEqual(mock.sentinel.alloc_reqs, alloc_reqs)
         self.assertEqual(mock.sentinel.p_sums, p_sums)
 
@@ -1451,7 +1436,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
 
         expected_url = '/allocation_candidates?resources=MEMORY_MB%3A1024'
         self.ks_adap_mock.get.assert_called_once_with(
-            expected_url, raise_exc=False, microversion='1.10')
+            expected_url, raise_exc=False, microversion='1.12')
         self.assertIsNone(res[0])
 
     def test_get_resource_provider_found(self):

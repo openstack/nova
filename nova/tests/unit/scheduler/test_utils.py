@@ -483,14 +483,11 @@ class TestUtils(test.NoDBTestCase):
             'DISK_GB': instance.root_gb
         }
         dest_alloc_request = {
-            'allocations': [
-                {
-                    'resource_provider': {
-                        'uuid': uuids.dest_node
-                    },
+            'allocations': {
+                uuids.dest_node: {
                     'resources': source_res_allocs
                 }
-            ]
+            }
         }
 
         @mock.patch.object(reportclient,
@@ -508,7 +505,8 @@ class TestUtils(test.NoDBTestCase):
                 uuids.source_node, instance.uuid)
             mock_claim.assert_called_once_with(
                 instance.uuid, dest_alloc_request,
-                instance.project_id, instance.user_id)
+                instance.project_id, instance.user_id,
+                allocation_request_version='1.12')
 
         test()
 
@@ -527,14 +525,11 @@ class TestUtils(test.NoDBTestCase):
             'DISK_GB': instance.root_gb
         }
         dest_alloc_request = {
-            'allocations': [
-                {
-                    'resource_provider': {
-                        'uuid': uuids.dest_node
-                    },
+            'allocations': {
+                uuids.dest_node: {
                     'resources': source_res_allocs
                 }
-            ]
+            }
         }
 
         @mock.patch.object(reportclient,
@@ -548,7 +543,8 @@ class TestUtils(test.NoDBTestCase):
             self.assertFalse(mock_get_allocs.called)
             mock_claim.assert_called_once_with(
                 instance.uuid, dest_alloc_request,
-                instance.project_id, instance.user_id)
+                instance.project_id, instance.user_id,
+                allocation_request_version='1.12')
 
         test()
 
