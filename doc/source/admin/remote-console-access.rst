@@ -9,7 +9,7 @@ command line. Best practice is to select only one of them to run.
 .. _about-nova-consoleauth:
 
 About nova-consoleauth
-~~~~~~~~~~~~~~~~~~~~~~
+----------------------
 
 The client proxies leverage a shared service to manage token authentication
 called ``nova-consoleauth``. This service must be running for either proxy to
@@ -21,7 +21,7 @@ which is a XenAPI-specific service that most recent VNC proxy architectures do
 not use.
 
 SPICE console
-~~~~~~~~~~~~~
+-------------
 
 OpenStack Compute supports VNC consoles to guests. The VNC protocol is fairly
 limited, lacking support for multiple monitors, bi-directional audio, reliable
@@ -57,7 +57,7 @@ Replace ``IP_ADDRESS`` with the management interface IP address of the
 controller or the VIP.
 
 VNC console proxy
-~~~~~~~~~~~~~~~~~
+-----------------
 
 The VNC proxy is an OpenStack component that enables compute service users to
 access their instances through VNC clients.
@@ -72,8 +72,7 @@ The VNC console connection works as follows:
 #. A user connects to the API and gets an ``access_url`` such as,
    ``http://ip:port/?token=xyz``.
 
-#. The user pastes the URL in a browser or uses it as a client
-   parameter.
+#. The user pastes the URL in a browser or uses it as a client parameter.
 
 #. The browser or client connects to the proxy.
 
@@ -104,8 +103,137 @@ client can talk to VNC servers. In general, the VNC proxy:
    :alt: noVNC process
    :width: 95%
 
+VNC proxy security
+~~~~~~~~~~~~~~~~~~
+
+Deploy the public-facing interface of the VNC proxy with HTTPS to prevent
+attacks from malicious parties on the network between the tenant user and proxy
+server. When using HTTPS, the TLS encryption only applies to data between the
+tenant user and proxy server. The data between the proxy server and Compute
+node instance will still be unencrypted. To provide protection for the latter,
+it is necessary to enable the VeNCrypt authentication scheme for VNC in both
+the Compute nodes and noVNC proxy server hosts.
+
+QEMU/KVM Compute node configuration
++++++++++++++++++++++++++++++++++++
+
+Ensure each Compute node running QEMU/KVM with libvirt has a set of
+certificates issued to it. The following is a list of the required
+certificates:
+
+- :file:`/etc/pki/libvirt-vnc/server-cert.pem`
+
+  An x509 certificate to be presented **by the VNC server**. The ``CommonName``
+  should match the **primary hostname of the compute node**. Use of
+  ``subjectAltName`` is also permitted if there is a need to use multiple
+  hostnames or IP addresses to access the same Compute node.
+
+- :file:`/etc/pki/libvirt-vnc/server-key.pem`
+
+  The private key used to generate the ``server-cert.pem`` file.
+
+- :file:`/etc/pki/libvirt-vnc/ca-cert.pem`
+
+  The authority certificate used to sign ``server-cert.pem`` and sign the VNC
+  proxy server certificates.
+
+The certificates must have v3 basic constraints [3]_ present to indicate the
+permitted key use and purpose data.
+
+We recommend using a dedicated certificate authority solely for the VNC
+service. This authority may be a child of the master certificate authority used
+for the OpenStack deployment. This is because libvirt does not currently have
+a mechanism to restrict what certificates can be presented by the proxy server.
+
+For further details on certificate creation, consult the QEMU manual page
+documentation on VNC server certificate setup [2]_.
+
+Configure libvirt to enable the VeNCrypt authentication scheme for the VNC
+server. In :file:`/etc/libvirt/qemu.conf`, uncomment the following settings:
+
+- ``vnc_tls=1``
+
+  This instructs libvirt to enable the VeNCrypt authentication scheme when
+  launching QEMU, passing it the certificates shown above.
+
+- ``vnc_tls_x509_verify=1``
+
+  This instructs QEMU to require that all VNC clients present a valid x509
+  certificate. Assuming a dedicated certificate authority is used for the VNC
+  service, this ensures that only approved VNC proxy servers can connect to the
+  Compute nodes.
+
+After editing :file:`qemu.conf`, the ``libvirtd`` service must be restarted:
+
+.. code:: shell
+
+  $ systemctl restart libvirtd.service
+
+Changes will not apply to any existing running guests on the Compute node, so
+this configuration should be done before launching any instances.
+
+noVNC proxy server configuration
+++++++++++++++++++++++++++++++++
+
+The noVNC proxy server initially only supports the ``none`` authentication
+scheme, which does no checking. Therefore, it is necessary to enable the
+``vencrypt`` authentication scheme by editing the :file:`nova.conf` file to
+set.
+
+.. code::
+
+  [vnc]
+  auth_schemes=vencrypt,none
+
+The :oslo.config:option:`vnc.auth_schemes` values should be listed in order
+of preference. If enabling VeNCrypt on an existing deployment which already has
+instances running, the noVNC proxy server must initially be allowed to use
+``vencrypt`` and ``none``. Once it is confirmed that all Compute nodes have
+VeNCrypt enabled for VNC, it is possible to remove the ``none`` option from the
+list of the :oslo.config:option:`vnc.auth_schemes` values.
+
+At that point, the noVNC proxy will refuse to connect to any Compute node that
+does not offer VeNCrypt.
+
+As well as enabling the authentication scheme, it is necessary to provide
+certificates to the noVNC proxy.
+
+- :file:`/etc/pki/nova-novncproxy/client-cert.pem`
+
+  An x509 certificate to be presented **to the VNC server**. While libvirt/QEMU
+  will not currently do any validation of the ``CommonName`` field, future
+  versions will allow for setting up access controls based on the
+  ``CommonName``. The ``CommonName`` field should match the **primary hostname
+  of the controller node**. If using a HA deployment, the ``Organization``
+  field can also be configured to a value that is common across all console
+  proxy instances in the deployment. This avoids the need to modify each
+  compute node's whitelist every time a console proxy instance is added or
+  removed.
+
+- :file:`/etc/pki/nova-novncproxy/client-key.pem`
+
+  The private key used to generate the ``client-cert.pem`` file.
+
+- :file:`/etc/pki/nova-novncproxy/ca-cert.pem`
+
+  The certificate authority cert used to sign ``client-cert.pem`` and sign the
+  compute node VNC server certificates.
+
+The certificates must have v3 basic constraints [3]_ present to indicate the
+permitted key use and purpose data.
+
+Once the certificates have been created, the noVNC console proxy service must
+be told where to find them. This requires editing :file:`nova.conf` to set.
+
+.. code::
+
+  [vnc]
+  vencrypt_client_key=/etc/pki/nova-novncproxy/client-key.pem
+  vencrypt_client_cert=/etc/pki/nova-novncproxy/client-cert.pem
+  vencrypt_ca_certs=/etc/pki/nova-novncproxy/ca-cert.pem
+
 VNC configuration options
--------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To customize the VNC console, use the following configuration options in your
 ``nova.conf`` file:
@@ -177,7 +305,7 @@ To customize the VNC console, use the following configuration options in your
      same network as the proxies.
 
 Typical deployment
-------------------
+~~~~~~~~~~~~~~~~~~
 
 A typical deployment has the following components:
 
@@ -197,7 +325,7 @@ A typical deployment has the following components:
   options, as follows.
 
 nova-novncproxy (noVNC)
------------------------
+~~~~~~~~~~~~~~~~~~~~~~~
 
 You must install the noVNC package, which contains the ``nova-novncproxy``
 service. As root, run the following command:
@@ -242,7 +370,7 @@ configuration options to your ``nova.conf`` file:
   connecting to instance ``vncservers``.
 
 Frequently asked questions about VNC access to virtual machines
----------------------------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 - **Q: What is the difference between ``nova-xvpvncproxy`` and
   ``nova-novncproxy``?**
@@ -325,7 +453,7 @@ Frequently asked questions about VNC access to virtual machines
   set explicitly where the ``nova-novncproxy`` service is running.
 
 Serial Console
-~~~~~~~~~~~~~~
+--------------
 
 The *serial console* feature  [1]_ in nova is an alternative for graphical
 consoles like *VNC*, *SPICE*, *RDP*. The example below uses these nodes:
@@ -366,6 +494,8 @@ Keep these things in mind:
   proxying the console interaction.
 
 References
-~~~~~~~~~~
+----------
 
 .. [1] https://specs.openstack.org/openstack/nova-specs/specs/juno/implemented/serial-ports.html
+.. [2] https://qemu.weilnetz.de/doc/qemu-doc.html#vnc_005fsec_005fcertificate_005fverify
+.. [3] https://tools.ietf.org/html/rfc3280#section-4.2.1.10

@@ -9,6 +9,10 @@ features:
     - ``vencrypt_client_key``
     - ``vencrypt_client_cert``
     - ``vencrypt_ca_certs``
+
+    For more information, refer to `the documentation`__.
+
+    __ https://docs.openstack.org/nova/latest/admin/remote-console-access.html
   - |
     The *nova-novncproxy* server can now be configured to do a security
     negotiation with the compute node VNC server. If the VeNCrypt auth scheme
@@ -31,3 +35,7 @@ features:
 
     Once all compute nodes have VeNCrypt enabled, the ``auth_schemes``
     parameter can be set to just ``['vencrypt']``.
+
+    For more information, refer to `the documentation`__.
+
+    __ https://docs.openstack.org/nova/latest/admin/remote-console-access.html
