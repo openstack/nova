@@ -1994,8 +1994,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertTrue(uuidutils.is_uuid_like(volume))
         return {}
 
-    def _assert_swap_volume(self, old_connection_info, new_connection_info,
-                            instance, mountpoint, resize_to):
+    def _assert_swap_volume(self, context, old_connection_info,
+                            new_connection_info, instance, mountpoint,
+                            resize_to):
         self.assertEqual(2, resize_to)
 
     @mock.patch.object(cinder.API, 'initialize_connection')
@@ -2334,7 +2335,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 instance, uuids.new_attachment_id)
             # Assert the expected calls.
             # The new connection_info has the new_volume_id as the serial.
-            new_cinfo = mock_driver_swap.call_args[0][1]
+            new_cinfo = mock_driver_swap.call_args[0][2]
             self.assertIn('serial', new_cinfo)
             self.assertEqual(uuids.new_volume_id, new_cinfo['serial'])
             get_bdm.assert_called_once_with(

@@ -6706,7 +6706,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     test.MatchType(objects.ImageMeta),
                     bdm)
                 mock_connect_volume.assert_called_with(
-                    connection_info, instance)
+                    self.context, connection_info, instance, encryption=None)
                 mock_get_volume_config.assert_called_with(
                     connection_info, disk_info)
                 mock_dom.attachDeviceFlags.assert_called_with(
@@ -6761,7 +6761,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 </disk>
 """, flags=flags)
                 mock_disconnect_volume.assert_called_with(
-                    connection_info, instance)
+                    None, connection_info, instance, encryption=None)
 
     @mock.patch('nova.virt.libvirt.host.Host._get_domain')
     def test_detach_volume_disk_not_found(self, mock_get_domain):
@@ -6785,12 +6785,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         mock_get_domain.assert_called_once_with(instance)
 
-    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_driver')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
     @mock.patch('nova.virt.libvirt.host.Host.get_guest')
     def test_detach_volume_order_with_encryptors(self, mock_get_guest,
-            mock_get_encryptor, mock_disconnect_volume):
+            mock_get_encryptor, mock_get_volume_driver):
 
+        mock_volume_driver = mock.MagicMock(
+            spec=volume_drivers.LibvirtBaseVolumeDriver)
+        mock_get_volume_driver.return_value = mock_volume_driver
         mock_guest = mock.MagicMock(spec=libvirt_guest.Guest)
         mock_guest.get_power_state.return_value = power_state.RUNNING
         mock_get_guest.return_value = mock_guest
@@ -6799,7 +6802,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_get_encryptor.return_value = mock_encryptor
 
         mock_order = mock.Mock()
-        mock_order.attach_mock(mock_disconnect_volume, 'disconnect_volume')
+        mock_order.attach_mock(mock_volume_driver.disconnect_volume,
+                'disconnect_volume')
         mock_order.attach_mock(mock_guest.detach_device_with_retry(),
                 'detach_volume')
         mock_order.attach_mock(mock_encryptor.detach_volume,
@@ -6916,6 +6920,196 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr.extend_volume,
                           connection_info, instance)
+
+    @mock.patch('os_brick.encryptors.get_encryption_metadata')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
+    def test_use_encryptor_connection_info_incomplete(self,
+            mock_get_encryptor, mock_get_metadata):
+        """Assert no attach attempt is made given incomplete connection_info.
+        """
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        connection_info = {'data': {}}
+
+        drvr._attach_encryptor(self.context, connection_info, None)
+
+        mock_get_metadata.assert_not_called()
+        mock_get_encryptor.assert_not_called()
+
+    @mock.patch('os_brick.encryptors.get_encryption_metadata')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
+    def test_attach_encryptor_unencrypted_volume_meta_missing(self,
+            mock_get_encryptor, mock_get_metadata):
+        """Assert that if not provided encryption metadata is fetched even
+        if the volume is ultimately unencrypted and no attempt to attach
+        is made.
+        """
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        encryption = {}
+        connection_info = {'data': {'volume_id': uuids.volume_id}}
+        mock_get_metadata.return_value = encryption
+
+        drvr._attach_encryptor(self.context, connection_info, None)
+
+        mock_get_metadata.assert_called_once_with(self.context,
+                drvr._volume_api, uuids.volume_id, connection_info)
+        mock_get_encryptor.assert_not_called()
+
+    @mock.patch('os_brick.encryptors.get_encryption_metadata')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
+    def test_attach_encryptor_unencrypted_volume_meta_provided(self,
+            mock_get_encryptor, mock_get_metadata):
+        """Assert that if an empty encryption metadata dict is provided that
+        there is no additional attempt to lookup the metadata or attach the
+        encryptor.
+        """
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        encryption = {}
+        connection_info = {'data': {'volume_id': uuids.volume_id}}
+
+        drvr._attach_encryptor(self.context, connection_info,
+                               encryption=encryption)
+
+        mock_get_metadata.assert_not_called()
+        mock_get_encryptor.assert_not_called()
+
+    @mock.patch('os_brick.encryptors.get_encryption_metadata')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
+    def test_attach_encryptor_encrypted_volume_meta_missing(self,
+            mock_get_encryptor, mock_get_metadata):
+        """Assert that if missing the encryption metadata of an encrypted
+        volume is fetched and then used to attach the encryptor for the volume.
+        """
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        mock_encryptor = mock.MagicMock()
+        mock_get_encryptor.return_value = mock_encryptor
+        encryption = {'provider': 'luks', 'control_location': 'front-end'}
+        mock_get_metadata.return_value = encryption
+        connection_info = {'data': {'volume_id': uuids.volume_id}}
+
+        drvr._attach_encryptor(self.context, connection_info, None)
+
+        mock_get_metadata.assert_called_once_with(self.context,
+                drvr._volume_api, uuids.volume_id, connection_info)
+        mock_get_encryptor.assert_called_once_with(connection_info,
+                                                   encryption)
+        mock_encryptor.attach_volume.assert_called_once_with(self.context,
+                                                             **encryption)
+
+    @mock.patch('os_brick.encryptors.get_encryption_metadata')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
+    def test_attach_encryptor_encrypted_volume_meta_provided(self,
+            mock_get_encryptor, mock_get_metadata):
+        """Assert that when provided there are no further attempts to fetch the
+        encryption metadata for the volume and that the provided metadata is
+        then used to attach the volume.
+        """
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        mock_encryptor = mock.MagicMock()
+        mock_get_encryptor.return_value = mock_encryptor
+        encryption = {'provider': 'luks', 'control_location': 'front-end'}
+        connection_info = {'data': {'volume_id': uuids.volume_id}}
+
+        drvr._attach_encryptor(self.context, connection_info,
+                encryption=encryption)
+
+        mock_get_metadata.assert_not_called()
+        mock_get_encryptor.assert_called_once_with(connection_info,
+                                                   encryption)
+        mock_encryptor.attach_volume.assert_called_once_with(self.context,
+                                                             **encryption)
+
+    @mock.patch('os_brick.encryptors.get_encryption_metadata')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
+    def test_detach_encryptor_connection_info_incomplete(self,
+            mock_get_encryptor, mock_get_metadata):
+        """Assert no detach attempt is made given incomplete connection_info.
+        """
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        connection_info = {'data': {}}
+
+        drvr._detach_encryptor(self.context, connection_info, None)
+
+        mock_get_metadata.assert_not_called()
+        mock_get_encryptor.assert_not_called()
+
+    @mock.patch('os_brick.encryptors.get_encryption_metadata')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
+    def test_detach_encryptor_unencrypted_volume_meta_missing(self,
+            mock_get_encryptor, mock_get_metadata):
+        """Assert that if not provided encryption metadata is fetched even
+        if the volume is ultimately unencrypted and no attempt to detach
+        is made.
+        """
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        encryption = {}
+        connection_info = {'data': {'volume_id': uuids.volume_id}}
+        mock_get_metadata.return_value = encryption
+
+        drvr._detach_encryptor(self.context, connection_info, None)
+
+        mock_get_metadata.assert_called_once_with(self.context,
+                drvr._volume_api, uuids.volume_id, connection_info)
+        mock_get_encryptor.assert_not_called()
+
+    @mock.patch('os_brick.encryptors.get_encryption_metadata')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
+    def test_detach_encryptor_unencrypted_volume_meta_provided(self,
+            mock_get_encryptor, mock_get_metadata):
+        """Assert that if an empty encryption metadata dict is provided that
+        there is no additional attempt to lookup the metadata or detach the
+        encryptor.
+        """
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        encryption = {}
+        connection_info = {'data': {'volume_id': uuids.volume_id}}
+
+        drvr._detach_encryptor(self.context, connection_info, encryption)
+
+        mock_get_metadata.assert_not_called()
+        mock_get_encryptor.assert_not_called()
+
+    @mock.patch('os_brick.encryptors.get_encryption_metadata')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
+    def test_detach_encryptor_encrypted_volume_meta_missing(self,
+            mock_get_encryptor, mock_get_metadata):
+        """Assert that if missing the encryption metadata of an encrypted
+        volume is fetched and then used to detach the encryptor for the volume.
+        """
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        mock_encryptor = mock.MagicMock()
+        mock_get_encryptor.return_value = mock_encryptor
+        encryption = {'provider': 'luks', 'control_location': 'front-end'}
+        mock_get_metadata.return_value = encryption
+        connection_info = {'data': {'volume_id': uuids.volume_id}}
+
+        drvr._detach_encryptor(self.context, connection_info, None)
+
+        mock_get_metadata.assert_called_once_with(self.context,
+                drvr._volume_api, uuids.volume_id, connection_info)
+        mock_get_encryptor.assert_called_once_with(connection_info,
+                                                   encryption)
+        mock_encryptor.detach_volume.assert_called_once_with(**encryption)
+
+    @mock.patch('os_brick.encryptors.get_encryption_metadata')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
+    def test_detach_encryptor_encrypted_volume_meta_provided(self,
+            mock_get_encryptor, mock_get_metadata):
+        """Assert that when provided there are no further attempts to fetch the
+        encryption metadata for the volume and that the provided metadata is
+        then used to detach the volume.
+        """
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        mock_encryptor = mock.MagicMock()
+        mock_get_encryptor.return_value = mock_encryptor
+        encryption = {'provider': 'luks', 'control_location': 'front-end'}
+        connection_info = {'data': {'volume_id': uuids.volume_id}}
+
+        drvr._detach_encryptor(self.context, connection_info, encryption)
+
+        mock_get_metadata.assert_not_called()
+        mock_get_encryptor.assert_called_once_with(connection_info,
+                                                   encryption)
+        mock_encryptor.detach_volume.assert_called_once_with(**encryption)
 
     def test_multi_nic(self):
         network_info = _fake_network_info(self, 2)
@@ -10146,7 +10340,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             ).AndReturn(vol['block_device_mapping'])
         self.mox.StubOutWithMock(drvr, "_connect_volume")
         for v in vol['block_device_mapping']:
-            drvr._connect_volume(v['connection_info'], instance)
+            drvr._connect_volume(c, v['connection_info'], instance)
         self.mox.StubOutWithMock(drvr, 'plug_vifs')
         drvr.plug_vifs(mox.IsA(instance), nw_info)
 
@@ -10278,7 +10472,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             # Creating mocks
             self.mox.StubOutWithMock(drvr, "_connect_volume")
             for v in vol['block_device_mapping']:
-                drvr._connect_volume(v['connection_info'], inst_ref)
+                drvr._connect_volume(c, v['connection_info'], inst_ref)
             self.mox.StubOutWithMock(drvr, 'plug_vifs')
             drvr.plug_vifs(mox.IsA(inst_ref), nw_info)
             self.mox.ReplayAll()
@@ -10627,8 +10821,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             get_volume_connector.assert_has_calls([
                 mock.call(inst_ref)])
             _disconnect_volume.assert_has_calls([
-                mock.call({'data': {'multipath_id': 'dummy1'}}, inst_ref),
-                mock.call({'data': {}}, inst_ref)])
+                mock.call(cntx, {'data': {'multipath_id': 'dummy1'}},
+                          inst_ref),
+                mock.call(cntx, {'data': {}}, inst_ref)])
 
     def test_post_live_migration_cinder_v3(self):
         cntx = context.get_admin_context()
@@ -10666,7 +10861,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
             mock_attachment_get.assert_called_once_with(cntx,
                                                         old_attachment_id)
-            mock_disconnect.assert_called_once_with(connection_info, instance)
+            mock_disconnect.assert_called_once_with(cntx, connection_info,
+                                                    instance)
         _test()
 
     def test_get_instance_disk_info_excludes_volumes(self):
@@ -11024,7 +11220,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                   'delete_on_termination': False
               }
 
-        def _connect_volume_side_effect(connection_info, instance):
+        def _connect_volume_side_effect(ctxt, connection_info, instance):
             bdm['connection_info']['data']['device_path'] = '/dev/path/to/dev'
 
         def _get(key, opt=None):
@@ -14563,8 +14759,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             connection_info = {'driver_volume_type': 'fake'}
             drvr.detach_volume(connection_info, instance, '/dev/sda')
             _get_domain.assert_called_once_with(instance)
-            _disconnect_volume.assert_called_once_with(connection_info,
-                                                       instance)
+            _disconnect_volume.assert_called_once_with(None, connection_info,
+                                instance, encryption=None)
 
     def _test_attach_detach_interface_get_config(self, method_name):
         """Tests that the get_config() method is properly called in
@@ -15047,25 +15243,20 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                         network_model.VIF(id='2', active=True)]
 
         with test.nested(
-            mock.patch.object(drvr, '_get_volume_encryptor'),
             mock.patch.object(drvr, 'plug_vifs'),
             mock.patch.object(drvr.firewall_driver, 'setup_basic_filtering'),
             mock.patch.object(drvr.firewall_driver,
                               'prepare_instance_filter'),
             mock.patch.object(drvr, '_create_domain'),
             mock.patch.object(drvr.firewall_driver, 'apply_instance_filter'),
-        ) as (get_volume_encryptor, plug_vifs, setup_basic_filtering,
-              prepare_instance_filter, create_domain, apply_instance_filter):
+        ) as (plug_vifs, setup_basic_filtering, prepare_instance_filter,
+              create_domain, apply_instance_filter):
             create_domain.return_value = libvirt_guest.Guest(mock_dom)
 
             guest = drvr._create_domain_and_network(
                     self.context, fake_xml, instance, network_info,
                     block_device_info=block_device_info)
 
-            get_encryption_metadata.assert_called_once_with(self.context,
-                drvr._volume_api, fake_volume_id, connection_info)
-            get_volume_encryptor.assert_called_once_with(connection_info,
-                                                         mock_encryption_meta)
             plug_vifs.assert_called_once_with(instance, network_info)
             setup_basic_filtering.assert_called_once_with(instance,
                                                           network_info)
@@ -15109,13 +15300,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock.patch.object(drvr, '_get_volume_config',
                               return_value=mock_conf)
         ) as (volume_save, connect_volume, get_volume_config):
-            devices = drvr._get_guest_storage_config(instance, image_meta,
-                disk_info, False, bdi, flavor, "hvm")
+            devices = drvr._get_guest_storage_config(self.context, instance,
+                image_meta, disk_info, False, bdi, flavor, "hvm")
 
             self.assertEqual(3, len(devices))
             self.assertEqual('/dev/vdb', instance.default_ephemeral_device)
             self.assertIsNone(instance.default_swap_device)
-            connect_volume.assert_called_with(bdm['connection_info'], instance)
+            connect_volume.assert_called_with(self.context,
+                bdm['connection_info'], instance)
             get_volume_config.assert_called_with(bdm['connection_info'],
                 {'bus': 'virtio', 'type': 'disk', 'dev': 'vdc'})
             volume_save.assert_called_once_with()
@@ -15325,14 +15517,16 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         conf = mock.MagicMock(source_path='/fake-new-volume')
         get_volume_config.return_value = conf
 
-        conn.swap_volume(old_connection_info, new_connection_info, instance,
-                         '/dev/vdb', 1)
+        conn.swap_volume(self.context, old_connection_info,
+                         new_connection_info, instance, '/dev/vdb', 1)
 
         get_guest.assert_called_once_with(instance)
-        connect_volume.assert_called_once_with(new_connection_info, instance)
+        connect_volume.assert_called_once_with(self.context,
+                                               new_connection_info, instance)
 
         swap_volume.assert_called_once_with(guest, 'vdb', conf, 1)
-        disconnect_volume.assert_called_once_with(old_connection_info,
+        disconnect_volume.assert_called_once_with(self.context,
+                                                  old_connection_info,
                                                   instance)
 
     def test_swap_volume_driver_source_is_volume(self):
@@ -15366,12 +15560,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         rebase.side_effect = exc
 
         self.assertRaises(exception.VolumeRebaseFailed, conn.swap_volume,
-                          mock.sentinel.old_connection_info,
+                          self.context, mock.sentinel.old_connection_info,
                           mock.sentinel.new_connection_info,
                           instance, '/dev/vdb', 0)
-        connect_volume.assert_called_once_with(
+        connect_volume.assert_called_once_with(self.context,
                 mock.sentinel.new_connection_info, instance)
-        disconnect_volume.assert_called_once_with(
+        disconnect_volume.assert_called_once_with(self.context,
                 mock.sentinel.new_connection_info, instance)
 
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
@@ -15398,12 +15592,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         abort_job.side_effect = [None, exc]
 
         self.assertRaises(exception.VolumeRebaseFailed, conn.swap_volume,
-                          mock.sentinel.old_connection_info,
+                          self.context, mock.sentinel.old_connection_info,
                           mock.sentinel.new_connection_info,
                           instance, '/dev/vdb', 0)
-        connect_volume.assert_called_once_with(
+        connect_volume.assert_called_once_with(self.context,
                 mock.sentinel.new_connection_info, instance)
-        disconnect_volume.assert_called_once_with(
+        disconnect_volume.assert_called_once_with(self.context,
                 mock.sentinel.new_connection_info, instance)
 
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
@@ -16189,7 +16383,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                           context.get_admin_context(), ins_ref, '10.0.0.2',
                           flavor_obj, None)
 
-    def _test_migrate_disk_and_power_off(self, flavor_obj,
+    def _test_migrate_disk_and_power_off(self, ctxt, flavor_obj,
                                          block_device_info=None,
                                          params_for_instance=None):
         """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
@@ -16228,21 +16422,20 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         # dest is different host case
         out = self.drvr.migrate_disk_and_power_off(
-               context.get_admin_context(), instance, '10.0.0.2',
-               flavor_obj, None, block_device_info=block_device_info)
+               ctxt, instance, '10.0.0.2', flavor_obj, None,
+               block_device_info=block_device_info)
         self.assertEqual(out, disk_info_text)
 
         # dest is same host case
         out = self.drvr.migrate_disk_and_power_off(
-               context.get_admin_context(), instance, '10.0.0.1',
-               flavor_obj, None, block_device_info=block_device_info)
+               ctxt, instance, '10.0.0.1', flavor_obj, None,
+               block_device_info=block_device_info)
         self.assertEqual(out, disk_info_text)
 
     def test_migrate_disk_and_power_off(self):
         flavor = {'root_gb': 10, 'ephemeral_gb': 20}
         flavor_obj = objects.Flavor(**flavor)
-
-        self._test_migrate_disk_and_power_off(flavor_obj)
+        self._test_migrate_disk_and_power_off(self.context, flavor_obj)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
     def test_migrate_disk_and_power_off_boot_from_volume(self,
@@ -16258,14 +16451,14 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         flavor = {'root_gb': 1, 'ephemeral_gb': 0}
         flavor_obj = objects.Flavor(**flavor)
         # Note(Mike_D): The size of instance's ephemeral_gb is 0 gb.
-        self._test_migrate_disk_and_power_off(
+        self._test_migrate_disk_and_power_off(self.context,
             flavor_obj, block_device_info=info,
             params_for_instance={'image_ref': None,
                                  'root_gb': 10,
                                  'ephemeral_gb': 0,
                                  'flavor': {'root_gb': 10,
                                             'ephemeral_gb': 0}})
-        disconnect_volume.assert_called_with(
+        disconnect_volume.assert_called_with(self.context,
             mock.sentinel.conn_info_vda, mock.ANY)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
@@ -16283,7 +16476,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                  'connection_info': mock.sentinel.conn_info_vda}]}
         flavor = {'root_gb': 1, 'ephemeral_gb': 0}
         flavor_obj = objects.Flavor(**flavor)
-        self._test_migrate_disk_and_power_off(
+        self._test_migrate_disk_and_power_off(self.context,
             flavor_obj, block_device_info=info,
             params_for_instance={
                 'image_ref': uuids.fake_volume_backed_image_ref,
@@ -16291,7 +16484,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                 'ephemeral_gb': 0,
                 'flavor': {'root_gb': 10,
                            'ephemeral_gb': 0}})
-        disconnect_volume.assert_called_with(
+        disconnect_volume.assert_called_with(self.context,
             mock.sentinel.conn_info_vda, mock.ANY)
 
     @mock.patch('nova.utils.execute')
@@ -16558,7 +16751,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         # Old flavor, eph is 20, real disk is 3, target is 4
         flavor = {'root_gb': 10, 'ephemeral_gb': 4}
         flavor_obj = objects.Flavor(**flavor)
-        self._test_migrate_disk_and_power_off(flavor_obj)
+        self._test_migrate_disk_and_power_off(self.context, flavor_obj)
 
     @mock.patch('nova.utils.execute')
     @mock.patch('nova.virt.libvirt.utils.copy_image')

@@ -494,7 +494,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
                                           instance_ref,
                                           '/dev/sda'))
         self.assertIsNone(
-            self.connection.swap_volume({'driver_volume_type': 'fake',
+            self.connection.swap_volume(None, {'driver_volume_type': 'fake',
                                          'data': {}},
                                         {'driver_volume_type': 'fake',
                                          'data': {}},
