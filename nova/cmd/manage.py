@@ -932,8 +932,12 @@ class CellV2Commands(object):
         return transport_url
 
     def _non_unique_transport_url_database_connection_checker(self, ctxt,
-                                        transport_url, database_connection):
+                            cell_mapping, transport_url, database_connection):
         for cell in objects.CellMappingList.get_all(ctxt):
+            if cell_mapping and cell.uuid == cell_mapping.uuid:
+                # If we're looking for a specific cell, then don't check
+                # that one for same-ness to allow idempotent updates
+                continue
             if (cell.database_connection == database_connection or
                 cell.transport_url == transport_url):
                 print(_('The specified transport_url and/or '
@@ -1320,7 +1324,7 @@ class CellV2Commands(object):
                     'in the configuration file.'))
             return 1
         if (self._non_unique_transport_url_database_connection_checker(ctxt,
-            transport_url, database_connection)):
+            None, transport_url, database_connection)):
             return 2
         cell_mapping_uuid = uuidutils.generate_uuid()
         cell_mapping = objects.CellMapping(
@@ -1464,7 +1468,7 @@ class CellV2Commands(object):
         db_connection = db_connection or CONF.database.connection
 
         if (self._non_unique_transport_url_database_connection_checker(ctxt,
-            transport_url, db_connection)):
+                cell_mapping, transport_url, db_connection)):
                 # We use the return code 3 before 2 to avoid changing the
                 # semantic meanings of return codes.
                 return 3

@@ -1556,22 +1556,31 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
 
     def test_non_unique_transport_url_database_connection_checker(self):
         ctxt = context.RequestContext()
-        objects.CellMapping(context=ctxt, uuid=uuidsentinel.cell1,
+        cell1 = objects.CellMapping(context=ctxt, uuid=uuidsentinel.cell1,
                             name='cell1',
                             transport_url='fake://mq1',
-                            database_connection='fake:///db1').create()
+                            database_connection='fake:///db1')
+        cell1.create()
         objects.CellMapping(context=ctxt, uuid=uuidsentinel.cell2,
                             name='cell2',
                             transport_url='fake://mq2',
                             database_connection='fake:///db2').create()
         resultf = self.commands.\
                     _non_unique_transport_url_database_connection_checker(
-                                        ctxt, 'fake://mq3', 'fake:///db3')
+                                        ctxt, None,
+                                        'fake://mq3', 'fake:///db3')
         resultt = self.commands.\
                     _non_unique_transport_url_database_connection_checker(
-                                        ctxt, 'fake://mq1', 'fake:///db1')
+                                        ctxt, None,
+                                        'fake://mq1', 'fake:///db1')
+        resultd = self.commands.\
+                    _non_unique_transport_url_database_connection_checker(
+                                        ctxt, cell1,
+                                        'fake://mq1', 'fake:///db1')
+
         self.assertFalse(resultf)
         self.assertTrue(resultt)
+        self.assertFalse(resultd)
         self.assertIn('exists', self.output.getvalue())
 
     def test_create_cell_use_params(self):
