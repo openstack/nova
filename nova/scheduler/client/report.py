@@ -298,7 +298,7 @@ class SchedulerReportClient(object):
         # more sensitive to this than other APIs in the OpenStack
         # ecosystem.
         kwargs = {'microversion': version}
-        if data:
+        if data is not None:
             kwargs['json'] = data
         return self._client.put(url, raise_exc=False, **kwargs)
 
