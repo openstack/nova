@@ -1134,7 +1134,7 @@ class SchedulerReportClient(object):
         # NOTE(efried): Don't use the DELETE API when traits is empty, because
         # that guy doesn't return content, and we need to update the cached
         # provider tree with the new generation.
-        traits = traits or []
+        traits = list(traits) if traits else []
         generation = self._provider_tree.data(rp_uuid).generation
         payload = {
             'resource_provider_generation': generation,
@@ -1183,7 +1183,7 @@ class SchedulerReportClient(object):
         """
         # TODO(efried): Handle generation conflicts when supported by placement
         url = '/resource_providers/%s/aggregates' % rp_uuid
-        aggregates = aggregates or []
+        aggregates = list(aggregates) if aggregates else []
         resp = self.put(url, aggregates, version='1.1')
 
         if resp.status_code == 200:
