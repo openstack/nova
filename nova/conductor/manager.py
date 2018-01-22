@@ -17,6 +17,7 @@
 import contextlib
 import copy
 import functools
+import sys
 
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -881,10 +882,12 @@ class ComputeTaskManager(base.Base):
                     with excutils.save_and_reraise_exception():
                         self._set_vm_state_and_notify(context, instance.uuid,
                                 'rebuild_server',
-                                {'vm_state': instance.vm_state,
+                                {'vm_state': vm_states.ERROR,
                                  'task_state': None}, ex, request_spec)
                         LOG.warning("No valid host found for rebuild",
                                     instance=instance)
+                        compute_utils.add_instance_fault_from_exc(context,
+                            instance, ex, sys.exc_info())
                 except exception.UnsupportedPolicyException as ex:
                     if migration:
                         migration.status = 'error'
@@ -893,10 +896,12 @@ class ComputeTaskManager(base.Base):
                     with excutils.save_and_reraise_exception():
                         self._set_vm_state_and_notify(context, instance.uuid,
                                 'rebuild_server',
-                                {'vm_state': instance.vm_state,
+                                {'vm_state': vm_states.ERROR,
                                  'task_state': None}, ex, request_spec)
                         LOG.warning("Server with unsupported policy "
                                     "cannot be rebuilt", instance=instance)
+                        compute_utils.add_instance_fault_from_exc(context,
+                            instance, ex, sys.exc_info())
 
             compute_utils.notify_about_instance_usage(
                 self.notifier, context, instance, "rebuild.scheduled")

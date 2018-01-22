@@ -109,7 +109,7 @@ class FailedEvacuateStateTests(test.TestCase,
 
         self._wait_for_notification_event_type('compute_task.rebuild_server')
 
-        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        server = self._wait_for_state_change(self.api, server, 'ERROR')
         self.assertEqual(self.hostname, server['OS-EXT-SRV-ATTR:host'])
 
         # Check migrations

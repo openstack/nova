@@ -455,7 +455,7 @@ class ServerGroupTestV21(ServerGroupTestBase):
         self.admin_api.post_server_action(servers[1]['id'], post)
         self._wait_for_migration_status(servers[1], 'error')
         server_after_failed_evac = self._wait_for_state_change(
-            self.admin_api, servers[1], 'ACTIVE')
+            self.admin_api, servers[1], 'ERROR')
 
         # assert that after a failed evac the server active on the same host
         # as before
@@ -479,7 +479,7 @@ class ServerGroupTestV21(ServerGroupTestBase):
         self.admin_api.post_server_action(servers[1]['id'], post)
         self._wait_for_migration_status(servers[1], 'error')
         server_after_failed_evac = self._wait_for_state_change(
-            self.admin_api, servers[1], 'ACTIVE')
+            self.admin_api, servers[1], 'ERROR')
 
         # assert that after a failed evac the server active on the same host
         # as before
@@ -653,7 +653,7 @@ class ServerGroupTestV215(ServerGroupTestV21):
         self.admin_api.post_server_action(servers[1]['id'], post)
         self._wait_for_migration_status(servers[1], 'error')
         server_after_failed_evac = self._wait_for_state_change(
-            self.admin_api, servers[1], 'ACTIVE')
+            self.admin_api, servers[1], 'ERROR')
 
         # assert that after a failed evac the server active on the same host
         # as before
@@ -677,7 +677,7 @@ class ServerGroupTestV215(ServerGroupTestV21):
         self.admin_api.post_server_action(servers[1]['id'], post)
         self._wait_for_migration_status(servers[1], 'error')
         server_after_failed_evac = self._wait_for_state_change(
-            self.admin_api, servers[1], 'ACTIVE')
+            self.admin_api, servers[1], 'ERROR')
 
         # assert that after a failed evac the server active on the same host
         # as before
