@@ -716,6 +716,7 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         self.device_addr = None
         self.boot_order = None
         self.mirror = None
+        self.encryption = None
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestDisk, self).format_dom()
@@ -826,6 +827,9 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         if self.device_addr:
             dev.append(self.device_addr.format_dom())
 
+        if self.encryption:
+            dev.append(self.encryption.format_dom())
+
         return dev
 
     def parse_dom(self, xmldoc):
@@ -882,6 +886,10 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
                 m = LibvirtConfigGuestDiskMirror()
                 m.parse_dom(c)
                 self.mirror = m
+            elif c.tag == 'encryption':
+                e = LibvirtConfigGuestDiskEncryption()
+                e.parse_dom(c)
+                self.encryption = e
 
 
 class LibvirtConfigGuestDiskBackingStore(LibvirtConfigObject):
@@ -1105,6 +1113,47 @@ class LibvirtConfigGuestFilesys(LibvirtConfigGuestDevice):
                     self.source_dir = c.get('dir')
             elif c.tag == 'target':
                 self.target_dir = c.get('dir')
+
+
+class LibvirtConfigGuestDiskEncryptionSecret(LibvirtConfigObject):
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestDiskEncryptionSecret, self).__init__(**kwargs)
+        self.type = None
+        self.uuid = None
+
+    def parse_dom(self, xmldoc):
+        self.type = xmldoc.get('type')
+        self.uuid = xmldoc.get('uuid')
+
+    def format_dom(self):
+        obj = etree.Element("secret")
+        obj.set("type", self.type)
+        obj.set("uuid", self.uuid)
+        return obj
+
+
+class LibvirtConfigGuestDiskEncryption(LibvirtConfigObject):
+    """https://libvirt.org/formatstorageencryption.html
+    """
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestDiskEncryption, self).__init__(**kwargs)
+        self.format = None
+        self.secret = None
+
+    def parse_dom(self, xmldoc):
+        self.format = xmldoc.get('format')
+        for c in xmldoc.getchildren():
+            if c.tag == 'secret':
+                m = LibvirtConfigGuestDiskEncryptionSecret()
+                m.parse_dom(c)
+                self.secret = m
+
+    def format_dom(self):
+        obj = etree.Element("encryption")
+        obj.set("format", self.format)
+        obj.append(self.secret.format_dom())
+
+        return obj
 
 
 class LibvirtConfigGuestDiskMirror(LibvirtConfigObject):
