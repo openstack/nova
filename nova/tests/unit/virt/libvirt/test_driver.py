@@ -7749,7 +7749,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         instance_ref.vcpu_model = test_vcpu_model.fake_vcpumodel
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         compute_info = {'disk_available_least': -1000,
-                        'local_gb': 100,
+                        'free_disk_gb': 50,
                         'cpu_info': 'asdf',
                         }
         filename = "file"
@@ -7766,7 +7766,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         return_value.is_volume_backed = False
         self.assertThat({"filename": "file",
                          'image_type': 'default',
-                         'disk_available_mb': 102400,
+                         'disk_available_mb': 51200,
                          "disk_over_commit": True,
                          "block_migration": True,
                          "is_volume_backed": False},
