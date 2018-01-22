@@ -1421,7 +1421,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         # At this point we should get all the providers.
         self.assertEqual(
             set([uuids.root, uuids.child1, uuids.child2, uuids.grandchild]),
-            self.client._provider_tree.get_provider_uuids())
+            set(self.client._provider_tree.get_provider_uuids()))
 
     @mock.patch('nova.compute.provider_tree.ProviderTree.exists')
     @mock.patch('nova.compute.provider_tree.ProviderTree.get_provider_uuids')
@@ -1461,7 +1461,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             [mock.call(uuid, generation=42, force=True)
              for uuid in tree_uuids])
         self.assertEqual(tree_uuids,
-                         self.client._provider_tree.get_provider_uuids())
+                         set(self.client._provider_tree.get_provider_uuids()))
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_providers_in_tree')
@@ -1481,7 +1481,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         mock_create.assert_called_once_with(uuids.root, uuids.root,
                                             parent_provider_uuid=None)
         mock_refresh.assert_not_called()
-        self.assertEqual(set([uuids.cn]),
+        self.assertEqual([uuids.cn],
                          self.client._provider_tree.get_provider_uuids())
 
     def test_get_allocation_candidates(self):

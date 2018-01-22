@@ -51,9 +51,10 @@ class TestProviderTree(test.NoDBTestCase):
         self.assertFalse(pt.exists(uuids.non_existing_rp))
         self.assertFalse(pt.exists('noexist'))
 
-        self.assertEqual(set([cn1.uuid]),
+        self.assertEqual([cn1.uuid],
                          pt.get_provider_uuids(name_or_uuid=cn1.uuid))
-        self.assertEqual(set([cn1.uuid, cn2.uuid]), pt.get_provider_uuids())
+        self.assertEqual(set([cn1.uuid, cn2.uuid]),
+                         set(pt.get_provider_uuids()))
 
         numa_cell0_uuid = pt.new_child('numa_cell0', cn1.uuid)
         numa_cell1_uuid = pt.new_child('numa_cell1', cn1.hypervisor_hostname)
@@ -73,11 +74,11 @@ class TestProviderTree(test.NoDBTestCase):
         # Now we've got a 3-level tree under cn1 - check provider UUIDs again
         self.assertEqual(
             set([cn1.uuid, numa_cell0_uuid, pf1_cell0_uuid, numa_cell1_uuid]),
-            pt.get_provider_uuids(name_or_uuid=cn1.uuid))
+            set(pt.get_provider_uuids(name_or_uuid=cn1.uuid)))
         self.assertEqual(
             set([cn1.uuid, cn2.uuid, numa_cell0_uuid, pf1_cell0_uuid,
                  numa_cell1_uuid]),
-            pt.get_provider_uuids())
+            set(pt.get_provider_uuids()))
 
         self.assertRaises(
             ValueError,
@@ -140,7 +141,7 @@ class TestProviderTree(test.NoDBTestCase):
         pt = provider_tree.ProviderTree()
         # Empty list is a no-op
         pt.populate_from_iterable([])
-        self.assertEqual(set(), pt.get_provider_uuids())
+        self.assertEqual([], pt.get_provider_uuids())
 
     def test_populate_from_iterable_error_orphan_cycle(self):
         pt = provider_tree.ProviderTree()
@@ -230,7 +231,7 @@ class TestProviderTree(test.NoDBTestCase):
 
         def validate_root(expected_uuids):
             # Make sure we have all and only the expected providers
-            self.assertEqual(expected_uuids, pt.get_provider_uuids())
+            self.assertEqual(expected_uuids, set(pt.get_provider_uuids()))
             # Now make sure they're in the right hierarchy.  Cheat: get the
             # actual _Provider to make it easier to walk the tree (ProviderData
             # doesn't include children).
@@ -313,6 +314,19 @@ class TestProviderTree(test.NoDBTestCase):
         pt.populate_from_iterable([])
         validate_root(expected_uuids)
 
+        # Since we have a complex tree, test the ordering of get_provider_uuids
+        # We can't predict the order of siblings, or where nephews will appear
+        # relative to their uncles, but we can guarantee that any given child
+        # always comes after its parent (and by extension, its ancestors too).
+        puuids = pt.get_provider_uuids()
+        for desc in (uuids.child1, uuids.child2):
+            self.assertTrue(puuids.index(desc) > puuids.index(uuids.root))
+        for desc in (uuids.grandchild1_1, uuids.grandchild1_2):
+            self.assertTrue(puuids.index(desc) > puuids.index(uuids.child1))
+        for desc in (uuids.ggc1_2_1, uuids.ggc1_2_2, uuids.ggc1_2_3):
+            self.assertTrue(
+                puuids.index(desc) > puuids.index(uuids.grandchild1_2))
+
     def test_populate_from_iterable_with_root_update(self):
         # Ensure we can update hierarchies, including adding children, in a
         # tree that's already populated.  This tests the case where a given
@@ -333,7 +347,7 @@ class TestProviderTree(test.NoDBTestCase):
             },
         ]
         pt.populate_from_iterable(plist)
-        expected_uuids = set([uuids.root])
+        expected_uuids = [uuids.root]
         self.assertEqual(expected_uuids, pt.get_provider_uuids())
 
         # Let's add a child updating the name and generation for the root.
@@ -353,7 +367,7 @@ class TestProviderTree(test.NoDBTestCase):
             },
         ]
         pt.populate_from_iterable(plist)
-        expected_uuids = set([uuids.root, uuids.child1])
+        expected_uuids = [uuids.root, uuids.child1]
         self.assertEqual(expected_uuids, pt.get_provider_uuids())
 
     def test_populate_from_iterable_disown_grandchild(self):
@@ -384,12 +398,11 @@ class TestProviderTree(test.NoDBTestCase):
             },
         ]
         pt.populate_from_iterable(plist)
-        self.assertEqual(set([uuids.root, uuids.child, uuids.grandchild]),
+        self.assertEqual([uuids.root, uuids.child, uuids.grandchild],
                          pt.get_provider_uuids())
         self.assertTrue(pt.exists(uuids.grandchild))
         pt.populate_from_iterable([child])
-        self.assertEqual(set([uuids.root, uuids.child]),
-                         pt.get_provider_uuids())
+        self.assertEqual([uuids.root, uuids.child], pt.get_provider_uuids())
         self.assertFalse(pt.exists(uuids.grandchild))
 
     def test_has_inventory_changed_no_existing_rp(self):

@@ -86,10 +86,12 @@ class _Provider(object):
             inventory, traits, aggregates)
 
     def get_provider_uuids(self):
-        """Returns a set of UUIDs of this provider and all its descendants."""
-        ret = set([self.uuid])
+        """Returns a list, in top-down traversal order, of UUIDs of this
+        provider and all its descendants.
+        """
+        ret = [self.uuid]
         for child in self.children.values():
-            ret |= child.get_provider_uuids()
+            ret.extend(child.get_provider_uuids())
         return ret
 
     def find(self, search):
@@ -227,7 +229,8 @@ class ProviderTree(object):
                 self.roots.append(p)
 
     def get_provider_uuids(self, name_or_uuid=None):
-        """Return a set of the UUIDs of all providers (in a subtree).
+        """Return a list, in top-down traversable order, of the UUIDs of all
+        providers (in a subtree).
 
         :param name_or_uuid: Provider name or UUID representing the root of a
                              subtree for which to return UUIDs.  If not
@@ -239,10 +242,10 @@ class ProviderTree(object):
                 return self._find_with_lock(name_or_uuid).get_provider_uuids()
 
         # If no name_or_uuid, get UUIDs for all providers recursively.
-        ret = set()
+        ret = []
         with self.lock:
             for root in self.roots:
-                ret |= root.get_provider_uuids()
+                ret.extend(root.get_provider_uuids())
         return ret
 
     def populate_from_iterable(self, provider_dicts):
@@ -276,7 +279,7 @@ class ProviderTree(object):
             # NOTE(efried): Can't use get_provider_uuids directly because we're
             # already under lock.
             for root in self.roots:
-                all_parents |= root.get_provider_uuids()
+                all_parents |= set(root.get_provider_uuids())
             missing_parents = set()
             for pd in to_add_by_uuid.values():
                 parent_uuid = pd.get('parent_provider_uuid')
