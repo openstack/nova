@@ -2503,9 +2503,11 @@ class API(base_api.NetworkAPI):
         """Create a private DNS domain with optional nova project."""
         raise NotImplementedError()
 
-    def setup_instance_network_on_host(self, context, instance, host):
+    def setup_instance_network_on_host(self, context, instance, host,
+                                       migration=None):
         """Setup network for specified instance on host."""
-        self._update_port_binding_for_instance(context, instance, host)
+        self._update_port_binding_for_instance(context, instance, host,
+                                               migration)
 
     def cleanup_instance_network_on_host(self, context, instance, host):
         """Cleanup network for specified instance on host."""

@@ -512,7 +512,8 @@ class API(base_api.NetworkAPI):
 
         self.network_rpcapi.migrate_instance_finish(context, **args)
 
-    def setup_instance_network_on_host(self, context, instance, host):
+    def setup_instance_network_on_host(self, context, instance, host,
+                                       migration=None):
         """Setup network for specified instance on host."""
         self.migrate_instance_finish(context, instance,
                                      {'source_compute': None,

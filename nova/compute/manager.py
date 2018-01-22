@@ -2880,7 +2880,8 @@ class ComputeManager(manager.Manager):
                 self._do_rebuild_instance_with_claim(
                     claim_ctxt, context, instance, orig_image_ref,
                     image_ref, injected_files, new_pass, orig_sys_metadata,
-                    bdms, recreate, on_shared_storage, preserve_ephemeral)
+                    bdms, recreate, on_shared_storage, preserve_ephemeral,
+                    migration)
             except exception.ComputeResourcesUnavailable as e:
                 LOG.debug("Could not rebuild instance on this host, not "
                           "enough resources available.", instance=instance)
@@ -2942,7 +2943,8 @@ class ComputeManager(manager.Manager):
     def _do_rebuild_instance(self, context, instance, orig_image_ref,
                              image_ref, injected_files, new_pass,
                              orig_sys_metadata, bdms, recreate,
-                             on_shared_storage, preserve_ephemeral):
+                             on_shared_storage, preserve_ephemeral,
+                             migration):
         orig_vm_state = instance.vm_state
 
         if recreate:
@@ -3015,7 +3017,7 @@ class ComputeManager(manager.Manager):
             # TODO(cfriesen): this network_api call and the one above
             # are so similar, we should really try to unify them.
             self.network_api.setup_instance_network_on_host(
-                    context, instance, self.host)
+                    context, instance, self.host, migration)
 
         allocations = self.reportclient.get_allocations_for_consumer(
             instance.uuid)
