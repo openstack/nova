@@ -2666,7 +2666,7 @@ There was a conflict when trying to complete your request.
                 },
                 'DISK_GB': {
                     'total': 10,
-                    'reserved': CONF.reserved_host_disk_mb * 1024,
+                    'reserved': 0,  # reserved_host_disk_mb is 0 by default
                     'min_unit': 1,
                     'max_unit': compute_node.local_gb,
                     'step_size': 1,
@@ -2681,6 +2681,8 @@ There was a conflict when trying to complete your request.
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'put')
     def test_update_inventory(self, mock_put, mock_get):
+        self.flags(reserved_host_disk_mb=1000)
+
         # Ensure _update_inventory() returns a list of Inventories objects
         # after creating or updating the existing values
         uuid = uuids.compute_node
@@ -2742,7 +2744,7 @@ There was a conflict when trying to complete your request.
                 },
                 'DISK_GB': {
                     'total': 10,
-                    'reserved': CONF.reserved_host_disk_mb * 1024,
+                    'reserved': 1,  # this is ceil for 1000MB
                     'min_unit': 1,
                     'max_unit': compute_node.local_gb,
                     'step_size': 1,
@@ -2787,7 +2789,7 @@ There was a conflict when trying to complete your request.
                 },
                 'DISK_GB': {
                     'total': 10,
-                    'reserved': CONF.reserved_host_disk_mb * 1024,
+                    'reserved': 0,
                     'min_unit': 1,
                     'max_unit': compute_node.local_gb,
                     'step_size': 1,
