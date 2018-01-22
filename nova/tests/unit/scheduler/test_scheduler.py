@@ -20,7 +20,6 @@ Tests For Scheduler
 import mock
 import oslo_messaging as messaging
 
-import nova.conf
 from nova import context
 from nova import objects
 from nova.scheduler import caching_scheduler
@@ -34,8 +33,6 @@ from nova import test
 from nova.tests.unit import fake_server_actions
 from nova.tests.unit.scheduler import fakes
 from nova.tests import uuidsentinel as uuids
-
-CONF = nova.conf.CONF
 
 
 class SchedulerManagerInitTestCase(test.NoDBTestCase):

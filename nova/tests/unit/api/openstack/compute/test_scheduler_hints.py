@@ -13,7 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_config import cfg
 from oslo_serialization import jsonutils
 
 from nova.api.openstack import compute
@@ -22,9 +21,6 @@ from nova.tests.unit.api.openstack import fakes
 
 
 UUID = fakes.FAKE_UUID
-
-
-CONF = cfg.CONF
 
 
 class SchedulerHintsTestCaseV21(test.TestCase):

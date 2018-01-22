@@ -94,10 +94,6 @@ from nova.api.openstack.compute import virtual_interfaces
 from nova.api.openstack.compute import volumes
 from nova.api.openstack import wsgi
 from nova.api import wsgi as base_wsgi
-import nova.conf
-
-
-CONF = nova.conf.CONF
 
 
 def _create_controller(main_controller, controller_list,

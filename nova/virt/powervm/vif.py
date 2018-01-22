@@ -16,7 +16,6 @@
 
 import abc
 
-from oslo_config import cfg
 from oslo_log import log
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
@@ -44,8 +43,6 @@ VIF_MAPPING = {VIF_TYPE_PVM_SEA:
                'nova.virt.powervm.vif.PvmSeaVifDriver',
                VIF_TYPE_PVM_OVS:
                'nova.virt.powervm.vif.PvmOvsVifDriver'}
-
-CONF = cfg.CONF
 
 
 def _build_vif_driver(adapter, instance, vif):

@@ -24,7 +24,6 @@ from nova import block_device
 from nova.cells import filters
 from nova.cells import weights
 from nova.compute import vm_states
-import nova.conf
 from nova import context
 from nova import db
 from nova import exception
@@ -34,8 +33,6 @@ from nova.tests.unit.cells import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests import uuidsentinel
 from nova import utils
-
-CONF = nova.conf.CONF
 
 
 class FakeFilterClass1(filters.BaseCellFilter):

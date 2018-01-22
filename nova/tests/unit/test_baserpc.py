@@ -20,11 +20,8 @@ Test the base rpc API.
 
 from nova import baserpc
 from nova.compute import rpcapi as compute_rpcapi
-import nova.conf
 from nova import context
 from nova import test
-
-CONF = nova.conf.CONF
 
 
 class BaseAPITestCase(test.TestCase):

@@ -22,7 +22,6 @@ from oslo_policy import policy as oslo_policy
 from oslo_serialization import jsonutils
 import requests_mock
 
-import nova.conf
 from nova import context
 from nova import exception
 from nova import policy
@@ -30,8 +29,6 @@ from nova import test
 from nova.tests.unit import fake_policy
 from nova.tests.unit import policy_fixture
 from nova import utils
-
-CONF = nova.conf.CONF
 
 
 class PolicyFileTestCase(test.NoDBTestCase):

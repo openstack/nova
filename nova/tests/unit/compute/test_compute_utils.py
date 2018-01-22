@@ -28,7 +28,6 @@ from nova.compute import manager
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
-import nova.conf
 from nova import context
 from nova import exception
 from nova.image import glance
@@ -45,12 +44,9 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_notifier
 from nova.tests.unit import fake_server_actions
-import nova.tests.unit.image.fake
 from nova.tests.unit.objects import test_flavor
 from nova.tests import uuidsentinel as uuids
 
-
-CONF = nova.conf.CONF
 
 FAKE_IMAGE_REF = uuids.image_ref
 

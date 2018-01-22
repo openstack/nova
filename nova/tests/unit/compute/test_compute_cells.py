@@ -30,7 +30,6 @@ from nova.compute import flavors
 from nova.compute import power_state
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
-import nova.conf
 from nova import context
 from nova import db
 from nova.db.sqlalchemy import api as db_api
@@ -48,7 +47,6 @@ from nova.tests import uuidsentinel as uuids
 
 
 ORIG_COMPUTE_API = None
-CONF = nova.conf.CONF
 FAKE_IMAGE_REF = uuids.image_ref
 
 NODENAME = 'fakenode1'

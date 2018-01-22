@@ -25,14 +25,12 @@ import pypowervm.util as pvm_u
 import pypowervm.wrappers.cluster as pvm_clust
 import pypowervm.wrappers.storage as pvm_stg
 
-import nova.conf
 from nova import exception
 from nova import image
 from nova.virt.powervm import vm
 
 
 LOG = logging.getLogger(__name__)
-CONF = nova.conf.CONF
 
 IMAGE_API = image.API()
 

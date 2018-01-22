@@ -14,7 +14,6 @@
 #    under the License.
 
 import mock
-from oslo_config import cfg
 from oslo_serialization import jsonutils
 from webob import exc
 
@@ -27,8 +26,6 @@ from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.image import fake
 from nova.tests import uuidsentinel as uuids
-
-CONF = cfg.CONF
 
 
 class BlockDeviceMappingTestV21(test.TestCase):

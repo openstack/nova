@@ -17,12 +17,9 @@
 
 
 from nova.compute import rpcapi as compute_rpcapi
-import nova.conf
 from nova.console import rpcapi as console_rpcapi
 from nova.db import base
 from nova import objects
-
-CONF = nova.conf.CONF
 
 
 class API(base.Base):

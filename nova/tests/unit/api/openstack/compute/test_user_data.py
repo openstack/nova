@@ -18,7 +18,6 @@ import datetime
 import uuid
 
 import mock
-from oslo_config import cfg
 from oslo_serialization import base64
 from oslo_serialization import jsonutils
 
@@ -33,7 +32,6 @@ from nova.tests.unit import fake_instance
 from nova.tests.unit.image import fake
 
 
-CONF = cfg.CONF
 FAKE_UUID = fakes.FAKE_UUID
 
 
