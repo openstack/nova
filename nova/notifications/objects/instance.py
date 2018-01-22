@@ -66,7 +66,9 @@ class InstancePayload(base.NotificationPayloadBase):
     # Version 1.4: Add BDM related data
     # Version 1.5: Add updated_at field
     # Version 1.6: Add request_id field
-    VERSION = '1.6'
+    # Version 1.7: Added action_initiator_user and action_initiator_project to
+    #              InstancePayload
+    VERSION = '1.7'
     fields = {
         'uuid': fields.UUIDField(),
         'user_id': fields.StringField(nullable=True),
@@ -109,6 +111,8 @@ class InstancePayload(base.NotificationPayloadBase):
         'auto_disk_config': fields.DiskConfigField(),
 
         'request_id': fields.StringField(nullable=True),
+        'action_initiator_user': fields.StringField(nullable=True),
+        'action_initiator_project': fields.StringField(nullable=True),
     }
 
     def __init__(self, context, instance, bdms=None):
@@ -126,7 +130,8 @@ class InstancePayload(base.NotificationPayloadBase):
         # consistent request_id.
         self.request_id = context.request_id if (context.project_id and
                                                  context.user_id) else None
-
+        self.action_initiator_user = context.user_id
+        self.action_initiator_project = context.project_id
         self.populate_schema(instance=instance)
 
 
@@ -140,7 +145,9 @@ class InstanceActionPayload(InstancePayload):
     # Version 1.4: Add BDM related data
     # Version 1.5: Added updated_at field to InstancePayload
     # Version 1.6: Added request_id field to InstancePayload
-    VERSION = '1.6'
+    # Version 1.7: Added action_initiator_user and action_initiator_project to
+    #              InstancePayload
+    VERSION = '1.7'
     fields = {
         'fault': fields.ObjectField('ExceptionPayload', nullable=True),
         'request_id': fields.StringField(nullable=True),
@@ -160,8 +167,9 @@ class InstanceActionVolumePayload(InstanceActionPayload):
     # Version 1.2: Add BDM related data
     # Version 1.3: Added updated_at field to InstancePayload
     # Version 1.4: Added request_id field to InstancePayload
-
-    VERSION = '1.4'
+    # Version 1.5: Added action_initiator_user and action_initiator_project to
+    #              InstancePayload
+    VERSION = '1.5'
     fields = {
         'volume_id': fields.UUIDField()
     }
@@ -184,7 +192,9 @@ class InstanceActionVolumeSwapPayload(InstanceActionPayload):
     # Version 1.4: Add BDM related data
     # Version 1.5: Added updated_at field to InstancePayload
     # Version 1.6: Added request_id field to InstancePayload
-    VERSION = '1.6'
+    # Version 1.7: Added action_initiator_user and action_initiator_project to
+    #              InstancePayload
+    VERSION = '1.7'
     fields = {
         'old_volume_id': fields.UUIDField(),
         'new_volume_id': fields.UUIDField(),
@@ -216,7 +226,9 @@ class InstanceCreatePayload(InstanceActionPayload):
     #         1.8: Added request_id field to InstancePayload
     #         1.9: Add trusted_image_certificates field to
     #              InstanceCreatePayload
-    VERSION = '1.9'
+    #         1.10: Added action_initiator_user and action_initiator_project to
+    #              InstancePayload
+    VERSION = '1.10'
 
     fields = {
         'keypairs': fields.ListOfObjectsField('KeypairPayload'),
@@ -246,7 +258,9 @@ class InstanceActionResizePrepPayload(InstanceActionPayload):
 
     # Version 1.0: Initial version
     # Version 1.1: Added request_id field to InstancePayload
-    VERSION = '1.1'
+    # Version 1.2: Added action_initiator_user and action_initiator_project to
+    #              InstancePayload
+    VERSION = '1.2'
     fields = {
         'new_flavor': fields.ObjectField('FlavorPayload', nullable=True)
     }
@@ -269,7 +283,9 @@ class InstanceUpdatePayload(InstancePayload):
     # Version 1.5: Add BDM related data
     # Version 1.6: Added updated_at field to InstancePayload
     # Version 1.7: Added request_id field to InstancePayload
-    VERSION = '1.7'
+    # Version 1.8: Added action_initiator_user and action_initiator_project to
+    #              InstancePayload
+    VERSION = '1.8'
     fields = {
         'state_update': fields.ObjectField('InstanceStateUpdatePayload'),
         'audit_period': fields.ObjectField('AuditPeriodPayload'),
@@ -294,7 +310,9 @@ class InstanceUpdatePayload(InstancePayload):
 class InstanceActionRescuePayload(InstanceActionPayload):
     # Version 1.0: Initial version
     # Version 1.1: Added request_id field to InstancePayload
-    VERSION = '1.1'
+    # Version 1.2: Added action_initiator_user and action_initiator_project to
+    #              InstancePayload
+    VERSION = '1.2'
     fields = {
         'rescue_image_ref': fields.UUIDField(nullable=True)
     }
@@ -316,7 +334,9 @@ class InstanceActionRebuildPayload(InstanceActionPayload):
     #              when this specific payload is created so that the
     #              instance.rebuild.* notifications using this new payload
     #              signal the change of nova_object.name.
-    VERSION = '1.7'
+    # Version 1.8: Added action_initiator_user and action_initiator_project to
+    #              InstancePayload
+    VERSION = '1.8'
     fields = {
         'trusted_image_certificates': fields.ListOfStringsField(
             nullable=True)
@@ -661,7 +681,9 @@ class InstanceActionSnapshotPayload(InstanceActionPayload):
     #              also it added a new field so we wanted to keep the version
     #              number increasing to signal the change.
     # Version 1.7: Added request_id field to InstancePayload
-    VERSION = '1.7'
+    # Version 1.8: Added action_initiator_user and action_initiator_project to
+    #              InstancePayload
+    VERSION = '1.8'
     fields = {
         'snapshot_image_id': fields.UUIDField(),
     }
@@ -677,7 +699,9 @@ class InstanceActionSnapshotPayload(InstanceActionPayload):
 @nova_base.NovaObjectRegistry.register_notification
 class InstanceExistsPayload(InstancePayload):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Added action_initiator_user and action_initiator_project to
+    #              InstancePayload
+    VERSION = '1.1'
     fields = {
         'audit_period': fields.ObjectField('AuditPeriodPayload'),
         'bandwidth': fields.ListOfObjectsField('BandwidthPayload'),

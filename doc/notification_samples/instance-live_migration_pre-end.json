@@ -3,7 +3,8 @@
     "payload": {
         "$ref": "common_payloads/InstanceActionPayload.json#",
         "nova_object.data": {
-            "task_state": "migrating"
+            "task_state": "migrating",
+            "action_initiator_user": "admin"
         }
     },
     "priority": "INFO",

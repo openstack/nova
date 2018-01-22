@@ -5,7 +5,8 @@
         "nova_object.data":{
             "host": "host2",
             "node": "host2",
-            "power_state": "pending"
+            "power_state": "pending",
+            "action_initiator_user": "admin"
         }
     },
     "priority":"INFO",

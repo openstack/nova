@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    Instance action versioned notifications now contain
+    ``action_initiator_user`` and ``action_initiator_project``
+    fields to distinguish between the owner of the instance and
+    who initiated the action upon the instance, for example an
+    administrator or another user within the same project.
