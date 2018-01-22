@@ -4238,6 +4238,73 @@ class ServersControllerCreateTestV257(test.NoDBTestCase):
         self.assertIn('personality', six.text_type(ex))
 
 
+class ServersControllerCreateTestV260(test.NoDBTestCase):
+    """Negative tests for creating a server with a multiattach volume using
+    microversion 2.60.
+    """
+    def setUp(self):
+        self.useFixture(nova_fixtures.AllServicesCurrent())
+        super(ServersControllerCreateTestV260, self).setUp()
+        self.controller = servers.ServersController()
+        get_flavor_mock = mock.patch(
+            'nova.compute.flavors.get_flavor_by_flavor_id',
+            return_value=objects.Flavor(flavorid='1'))
+        get_flavor_mock.start()
+        self.addCleanup(get_flavor_mock.stop)
+
+    def _post_server(self, version=None):
+        body = {
+            'server': {
+                'name': 'multiattach',
+                'flavorRef': '1',
+                'networks': 'auto',
+                'block_device_mapping_v2': [{
+                    'uuid': uuids.fake_volume_id,
+                    'source_type': 'volume',
+                    'destination_type': 'volume',
+                    'boot_index': 0,
+                    'delete_on_termination': True}]
+            }
+        }
+        req = fakes.HTTPRequestV21.blank(
+            '/servers', version=version or '2.60')
+        req.body = jsonutils.dump_as_bytes(body)
+        req.method = 'POST'
+        req.headers['content-type'] = 'application/json'
+        return self.controller.create(req, body=body)
+
+    def test_create_server_with_multiattach_fails_old_microversion(self):
+        """Tests the case that the user tries to boot from volume with a
+        multiattach volume but before using microversion 2.60.
+        """
+        with mock.patch.object(
+                self.controller.compute_api, 'create',
+                side_effect=
+                exception.MultiattachNotSupportedOldMicroversion) as create:
+            ex = self.assertRaises(webob.exc.HTTPBadRequest,
+                                   self._post_server, '2.59')
+        create_kwargs = create.call_args[1]
+        self.assertFalse(create_kwargs['supports_multiattach'])
+        self.assertIn('Multiattach volumes are only supported starting with '
+                      'compute API version 2.60', six.text_type(ex))
+
+    def test_create_server_with_multiattach_fails_not_available(self):
+        """Tests the case that the user tries to boot from volume with a
+        multiattach volume but before the deployment is fully upgraded.
+
+        Yes, you should ignore the AllServicesCurrent fixture in the setUp.
+        """
+        with mock.patch.object(
+                self.controller.compute_api, 'create',
+                side_effect=
+                exception.MultiattachSupportNotYetAvailable) as create:
+            ex = self.assertRaises(webob.exc.HTTPConflict, self._post_server)
+        create_kwargs = create.call_args[1]
+        self.assertTrue(create_kwargs['supports_multiattach'])
+        self.assertIn('Multiattach volume support is not yet available',
+                      six.text_type(ex))
+
+
 class ServersControllerCreateTestWithMock(test.TestCase):
     image_uuid = '76fa36fc-c930-4bf3-8c8a-ea2a2420deb6'
     flavor_ref = 'http://localhost/123/flavors/3'

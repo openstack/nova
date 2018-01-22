@@ -116,7 +116,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
         self._test_create(params, no_image=True)
 
         mock_validate_bdm.assert_called_once_with(
-            mock.ANY, mock.ANY, mock.ANY, mock.ANY)
+            mock.ANY, mock.ANY, mock.ANY, mock.ANY, mock.ANY)
         mock_bdm_image_metadata.assert_called_once_with(
             mock.ANY, mock.ANY, False)
 
@@ -354,6 +354,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
         mock_validate_bdm.assert_called_once_with(mock.ANY,
                                                   mock.ANY,
                                                   mock.ANY,
+                                                  mock.ANY,
                                                   mock.ANY)
 
     @mock.patch.object(compute_api.API, '_validate_bdm')
@@ -373,6 +374,7 @@ class BlockDeviceMappingTestV21(test.TestCase):
         params = {block_device_mapping.ATTRIBUTE_NAME: self.bdm}
         self._test_create(params, no_image=True)
         mock_validate_bdm.assert_called_once_with(mock.ANY,
+                                                  mock.ANY,
                                                   mock.ANY,
                                                   mock.ANY,
                                                   mock.ANY)

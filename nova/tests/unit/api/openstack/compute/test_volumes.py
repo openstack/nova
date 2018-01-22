@@ -72,7 +72,8 @@ def fake_get_volume(self, context, id):
     return {'id': id, 'status': status, 'attach_status': attach_status}
 
 
-def fake_attach_volume(self, context, instance, volume_id, device, tag=None):
+def fake_attach_volume(self, context, instance, volume_id, device, tag=None,
+                       supports_multiattach=False):
     pass
 
 
@@ -633,7 +634,8 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
     def test_attach_volume_to_locked_server(self):
         def fake_attach_volume_to_locked_server(self, context, instance,
                                                 volume_id, device=None,
-                                                tag=None):
+                                                tag=None,
+                                                supports_multiattach=False):
             raise exception.InstanceIsLocked(instance_uuid=instance['uuid'])
 
         self.stubs.Set(compute_api.API,
@@ -871,6 +873,90 @@ class VolumeAttachTestsV249(test.NoDBTestCase):
                                      'device': '/dev/fake',
                                      'tag': 'foo'}}
         self.attachments.create(self.req, FAKE_UUID, body=body)
+
+
+class VolumeAttachTestsV260(test.NoDBTestCase):
+    """Negative tests for attaching a multiattach volume with version 2.60."""
+    def setUp(self):
+        super(VolumeAttachTestsV260, self).setUp()
+        self.controller = volumes_v21.VolumeAttachmentController()
+        get_instance = mock.patch('nova.compute.api.API.get')
+        get_instance.side_effect = fake_get_instance
+        get_instance.start()
+        self.addCleanup(get_instance.stop)
+
+    def _post_attach(self, version=None):
+        body = {'volumeAttachment': {'volumeId': FAKE_UUID_A}}
+        req = fakes.HTTPRequestV21.blank(
+            '/servers/%s/os-volume_attachments' % FAKE_UUID,
+            version=version or '2.60')
+        req.body = jsonutils.dump_as_bytes(body)
+        req.method = 'POST'
+        req.headers['content-type'] = 'application/json'
+        return self.controller.create(req, FAKE_UUID, body=body)
+
+    def test_attach_with_multiattach_fails_old_microversion(self):
+        """Tests the case that the user tries to attach with a
+        multiattach volume but before using microversion 2.60.
+        """
+        with mock.patch.object(
+                self.controller.compute_api, 'attach_volume',
+                side_effect=
+                exception.MultiattachNotSupportedOldMicroversion) as attach:
+            ex = self.assertRaises(webob.exc.HTTPBadRequest,
+                                   self._post_attach, '2.59')
+        create_kwargs = attach.call_args[1]
+        self.assertFalse(create_kwargs['supports_multiattach'])
+        self.assertIn('Multiattach volumes are only supported starting with '
+                      'compute API version 2.60', six.text_type(ex))
+
+    def test_attach_with_multiattach_fails_not_available(self):
+        """Tests the case that the user tries to attach with a
+        multiattach volume but before the compute hosting the instance
+        is upgraded. This would come from reserve_block_device_name in
+        the compute RPC API client.
+        """
+        with mock.patch.object(
+                self.controller.compute_api, 'attach_volume',
+                side_effect=
+                exception.MultiattachSupportNotYetAvailable) as attach:
+            ex = self.assertRaises(webob.exc.HTTPConflict, self._post_attach)
+        create_kwargs = attach.call_args[1]
+        self.assertTrue(create_kwargs['supports_multiattach'])
+        self.assertIn('Multiattach volume support is not yet available',
+                      six.text_type(ex))
+
+    def test_attach_with_multiattach_fails_not_supported_by_driver(self):
+        """Tests the case that the user tries to attach with a
+        multiattach volume but the compute hosting the instance does
+        not support multiattach volumes. This would come from
+        reserve_block_device_name via RPC call to the compute service.
+        """
+        with mock.patch.object(
+                self.controller.compute_api, 'attach_volume',
+                side_effect=
+                exception.MultiattachNotSupportedByVirtDriver(
+                    volume_id=FAKE_UUID_A)) as attach:
+            ex = self.assertRaises(webob.exc.HTTPConflict, self._post_attach)
+        create_kwargs = attach.call_args[1]
+        self.assertTrue(create_kwargs['supports_multiattach'])
+        self.assertIn("has 'multiattach' set, which is not supported for "
+                      "this instance", six.text_type(ex))
+
+    def test_attach_with_multiattach_fails_for_shelved_offloaded_server(self):
+        """Tests the case that the user tries to attach with a
+        multiattach volume to a shelved offloaded server which is
+        not supported.
+        """
+        with mock.patch.object(
+                self.controller.compute_api, 'attach_volume',
+                side_effect=
+                exception.MultiattachToShelvedNotSupported) as attach:
+            ex = self.assertRaises(webob.exc.HTTPBadRequest, self._post_attach)
+        create_kwargs = attach.call_args[1]
+        self.assertTrue(create_kwargs['supports_multiattach'])
+        self.assertIn('Attaching multiattach volumes is not supported for '
+                      'shelved-offloaded instances.', six.text_type(ex))
 
 
 class CommonBadRequestTestCase(object):

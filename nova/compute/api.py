@@ -104,6 +104,7 @@ AGGREGATE_ACTION_DELETE = 'Delete'
 AGGREGATE_ACTION_ADD = 'Add'
 BFV_RESERVE_MIN_COMPUTE_VERSION = 17
 CINDER_V3_ATTACH_MIN_COMPUTE_VERSION = 24
+MIN_COMPUTE_MULTIATTACH = 27
 
 # FIXME(danms): Keep a global cache of the cells we find the
 # first time we look. This needs to be refreshed on a timer or
@@ -872,7 +873,7 @@ class API(base.Base):
             max_count, base_options, boot_meta, security_groups,
             block_device_mapping, shutdown_terminate,
             instance_group, check_server_group_quota, filter_properties,
-            key_pair, tags):
+            key_pair, tags, supports_multiattach=False):
         # Check quotas
         num_instances = compute_utils.check_num_instances_quota(
                 context, instance_type, min_count, max_count)
@@ -912,7 +913,8 @@ class API(base.Base):
                         shutdown_terminate, create_instance=False)
                 block_device_mapping = (
                     self._bdm_validate_set_size_and_instance(context,
-                        instance, instance_type, block_device_mapping))
+                        instance, instance_type, block_device_mapping,
+                        supports_multiattach))
                 instance_tags = self._transform_tags(tags, instance.uuid)
 
                 build_request = objects.BuildRequest(context,
@@ -1048,7 +1050,8 @@ class API(base.Base):
                requested_networks, config_drive,
                block_device_mapping, auto_disk_config, filter_properties,
                reservation_id=None, legacy_bdm=True, shutdown_terminate=False,
-               check_server_group_quota=False, tags=None):
+               check_server_group_quota=False, tags=None,
+               supports_multiattach=False):
         """Verify all the input parameters regardless of the provisioning
         strategy being performed and schedule the instance(s) for
         creation.
@@ -1113,7 +1116,7 @@ class API(base.Base):
             context, instance_type, min_count, max_count, base_options,
             boot_meta, security_groups, block_device_mapping,
             shutdown_terminate, instance_group, check_server_group_quota,
-            filter_properties, key_pair, tags)
+            filter_properties, key_pair, tags, supports_multiattach)
 
         instances = []
         request_specs = []
@@ -1249,7 +1252,8 @@ class API(base.Base):
 
     def _bdm_validate_set_size_and_instance(self, context, instance,
                                             instance_type,
-                                            block_device_mapping):
+                                            block_device_mapping,
+                                            supports_multiattach=False):
         """Ensure the bdms are valid, then set size and associate with instance
 
         Because this method can be called multiple times when more than one
@@ -1258,7 +1262,8 @@ class API(base.Base):
         LOG.debug("block_device_mapping %s", list(block_device_mapping),
                   instance_uuid=instance.uuid)
         self._validate_bdm(
-            context, instance, instance_type, block_device_mapping)
+            context, instance, instance_type, block_device_mapping,
+            supports_multiattach)
         instance_block_device_mapping = block_device_mapping.obj_clone()
         for bdm in instance_block_device_mapping:
             bdm.volume_size = self._volume_size(instance_type, bdm)
@@ -1280,7 +1285,7 @@ class API(base.Base):
             bdm.update_or_create()
 
     def _validate_bdm(self, context, instance, instance_type,
-                      block_device_mappings):
+                      block_device_mappings, supports_multiattach=False):
         # Make sure that the boot indexes make sense.
         # Setting a negative value or None indicates that the device should not
         # be used for booting.
@@ -1327,15 +1332,16 @@ class API(base.Base):
                     # is in 'attaching' state; if the compute service version
                     # is not high enough we will just perform the old check as
                     # opposed to reserving the volume here.
+                    volume = self.volume_api.get(context, volume_id)
                     if (min_compute_version >=
                         BFV_RESERVE_MIN_COMPUTE_VERSION):
-                        volume = self._check_attach_and_reserve_volume(
-                            context, volume_id, instance, bdm)
+                        self._check_attach_and_reserve_volume(
+                            context, volume, instance, bdm,
+                            supports_multiattach)
                     else:
                         # NOTE(ildikov): This call is here only for backward
                         # compatibility can be removed after Ocata EOL.
-                        volume = self._check_attach(context, volume_id,
-                                                    instance)
+                        self._check_attach(context, volume, instance)
                     bdm.volume_size = volume.get('size')
                 except (exception.CinderConnectionFailed,
                         exception.InvalidVolume):
@@ -1383,10 +1389,9 @@ class API(base.Base):
             if num_local > max_local:
                 raise exception.InvalidBDMLocalsLimit()
 
-    def _check_attach(self, context, volume_id, instance):
+    def _check_attach(self, context, volume, instance):
         # TODO(ildikov): This check_attach code is kept only for backward
         # compatibility and should be removed after Ocata EOL.
-        volume = self.volume_api.get(context, volume_id)
         if volume['status'] != 'available':
             msg = _("volume '%(vol)s' status must be 'available'. Currently "
                     "in '%(status)s'") % {'vol': volume['id'],
@@ -1397,8 +1402,6 @@ class API(base.Base):
             raise exception.InvalidVolume(reason=msg)
         self.volume_api.check_availability_zone(context, volume,
                                                 instance=instance)
-
-        return volume
 
     def _populate_instance_names(self, instance, num_instances):
         """Populate instance display_name and hostname."""
@@ -1580,7 +1583,8 @@ class API(base.Base):
                access_ip_v4=None, access_ip_v6=None, requested_networks=None,
                config_drive=None, auto_disk_config=None, scheduler_hints=None,
                legacy_bdm=True, shutdown_terminate=False,
-               check_server_group_quota=False, tags=None):
+               check_server_group_quota=False, tags=None,
+               supports_multiattach=False):
         """Provision instances, sending instance information to the
         scheduler.  The scheduler will determine where the instance(s)
         go and will handle creating the DB entries.
@@ -1620,7 +1624,7 @@ class API(base.Base):
                        legacy_bdm=legacy_bdm,
                        shutdown_terminate=shutdown_terminate,
                        check_server_group_quota=check_server_group_quota,
-                       tags=tags)
+                       tags=tags, supports_multiattach=supports_multiattach)
 
     def _check_auto_disk_config(self, instance=None, image=None,
                                 **extra_instance_updates):
@@ -3626,9 +3630,10 @@ class API(base.Base):
         """Inject network info for the instance."""
         self.compute_rpcapi.inject_network_info(context, instance=instance)
 
-    def _create_volume_bdm(self, context, instance, device, volume_id,
+    def _create_volume_bdm(self, context, instance, device, volume,
                            disk_bus, device_type, is_local_creation=False,
                            tag=None):
+        volume_id = volume['id']
         if is_local_creation:
             # when the creation is done locally we can't specify the device
             # name as we do not have a way to check that the name specified is
@@ -3654,10 +3659,10 @@ class API(base.Base):
             #             the same time. When db access is removed from
             #             compute, the bdm will be created here and we will
             #             have to make sure that they are assigned atomically.
-            # TODO(mriedem): Handle multiattach here.
             volume_bdm = self.compute_rpcapi.reserve_block_device_name(
                 context, instance, device, volume_id, disk_bus=disk_bus,
-                device_type=device_type, tag=tag)
+                device_type=device_type, tag=tag,
+                multiattach=volume['multiattach'])
         return volume_bdm
 
     def _check_volume_already_attached_to_instance(self, context, instance,
@@ -3680,11 +3685,16 @@ class API(base.Base):
         except exception.VolumeBDMNotFound:
             pass
 
-    def _check_attach_and_reserve_volume(self, context, volume_id, instance,
-                                         bdm):
-        volume = self.volume_api.get(context, volume_id)
+    def _check_attach_and_reserve_volume(self, context, volume, instance,
+                                         bdm, supports_multiattach=False):
+        volume_id = volume['id']
         self.volume_api.check_availability_zone(context, volume,
                                                 instance=instance)
+        # If volume.multiattach=True and the microversion to
+        # support multiattach is not used, fail the request.
+        if volume['multiattach'] and not supports_multiattach:
+            raise exception.MultiattachNotSupportedOldMicroversion()
+
         if 'id' in instance:
             # This is a volume attach to an existing instance, so
             # we only care about the cell the instance is in.
@@ -3696,6 +3706,12 @@ class API(base.Base):
             min_compute_version = \
                 objects.service.get_minimum_version_all_cells(
                     context, ['nova-compute'])
+            # Check to see if the computes have been upgraded to support
+            # booting from a multiattach volume.
+            if (volume['multiattach'] and
+                    min_compute_version < MIN_COMPUTE_MULTIATTACH):
+                raise exception.MultiattachSupportNotYetAvailable()
+
         if min_compute_version >= CINDER_V3_ATTACH_MIN_COMPUTE_VERSION:
             # Attempt a new style volume attachment, but fallback to old-style
             # in case Cinder API 3.44 isn't available.
@@ -3719,21 +3735,22 @@ class API(base.Base):
             LOG.debug('The compute service version is not high enough to '
                       'create a new style volume attachment.')
             self.volume_api.reserve_volume(context, volume_id)
-        return volume
 
-    def _attach_volume(self, context, instance, volume_id, device,
-                       disk_bus, device_type, tag=None):
+    def _attach_volume(self, context, instance, volume, device,
+                       disk_bus, device_type, tag=None,
+                       supports_multiattach=False):
         """Attach an existing volume to an existing instance.
 
         This method is separated to make it possible for cells version
         to override it.
         """
         volume_bdm = self._create_volume_bdm(
-            context, instance, device, volume_id, disk_bus=disk_bus,
+            context, instance, device, volume, disk_bus=disk_bus,
             device_type=device_type, tag=tag)
         try:
-            self._check_attach_and_reserve_volume(context, volume_id, instance,
-                                                  volume_bdm)
+            self._check_attach_and_reserve_volume(context, volume, instance,
+                                                  volume_bdm,
+                                                  supports_multiattach)
             self._record_action_start(
                 context, instance, instance_actions.ATTACH_VOLUME)
             self.compute_rpcapi.attach_volume(context, instance, volume_bdm)
@@ -3743,7 +3760,7 @@ class API(base.Base):
 
         return volume_bdm.device_name
 
-    def _attach_volume_shelved_offloaded(self, context, instance, volume_id,
+    def _attach_volume_shelved_offloaded(self, context, instance, volume,
                                          device, disk_bus, device_type):
         """Attach an existing volume to an instance in shelved offloaded state.
 
@@ -3755,6 +3772,8 @@ class API(base.Base):
         therefore the actual attachment will be performed once the
         instance will be unshelved.
         """
+        volume_id = volume['id']
+
         @wrap_instance_event(prefix='api')
         def attach_volume(self, context, v_id, instance, dev, attachment_id):
             if attachment_id:
@@ -3771,10 +3790,10 @@ class API(base.Base):
                                        dev)
 
         volume_bdm = self._create_volume_bdm(
-            context, instance, device, volume_id, disk_bus=disk_bus,
+            context, instance, device, volume, disk_bus=disk_bus,
             device_type=device_type, is_local_creation=True)
         try:
-            self._check_attach_and_reserve_volume(context, volume_id, instance,
+            self._check_attach_and_reserve_volume(context, volume, instance,
                                                   volume_bdm)
             self._record_action_start(
                 context, instance,
@@ -3793,7 +3812,8 @@ class API(base.Base):
                                     vm_states.SOFT_DELETED, vm_states.SHELVED,
                                     vm_states.SHELVED_OFFLOADED])
     def attach_volume(self, context, instance, volume_id, device=None,
-                      disk_bus=None, device_type=None, tag=None):
+                      disk_bus=None, device_type=None, tag=None,
+                      supports_multiattach=False):
         """Attach an existing volume to an existing instance."""
         # NOTE(vish): Fail fast if the device is not going to pass. This
         #             will need to be removed along with the test if we
@@ -3824,6 +3844,7 @@ class API(base.Base):
                                                                 instance,
                                                                 volume_id)
 
+        volume = self.volume_api.get(context, volume_id)
         is_shelved_offloaded = instance.vm_state == vm_states.SHELVED_OFFLOADED
         if is_shelved_offloaded:
             if tag:
@@ -3833,15 +3854,24 @@ class API(base.Base):
                 # In fact, we don't even know which computer manager the
                 # instance will eventually end up on when it's unshelved.
                 raise exception.VolumeTaggedAttachToShelvedNotSupported()
+            if volume['multiattach']:
+                # NOTE(mriedem): Similar to tagged attach, we don't support
+                # attaching a multiattach volume to shelved offloaded instances
+                # because we can't tell if the compute host (since there isn't
+                # one) supports it. This could possibly be supported in the
+                # future if the scheduler was made aware of which computes
+                # support multiattach volumes.
+                raise exception.MultiattachToShelvedNotSupported()
             return self._attach_volume_shelved_offloaded(context,
                                                          instance,
-                                                         volume_id,
+                                                         volume,
                                                          device,
                                                          disk_bus,
                                                          device_type)
 
-        return self._attach_volume(context, instance, volume_id, device,
-                                   disk_bus, device_type, tag=tag)
+        return self._attach_volume(context, instance, volume, device,
+                                   disk_bus, device_type, tag=tag,
+                                   supports_multiattach=supports_multiattach)
 
     def _detach_volume(self, context, instance, volume):
         """Detach volume from instance.

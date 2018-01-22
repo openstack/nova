@@ -268,6 +268,16 @@ class MultiattachSupportNotYetAvailable(NovaException):
     code = 409
 
 
+class MultiattachNotSupportedOldMicroversion(Invalid):
+    msg_fmt = _('Multiattach volumes are only supported starting with '
+                'compute API version 2.60.')
+
+
+class MultiattachToShelvedNotSupported(Invalid):
+    msg_fmt = _("Attaching multiattach volumes is not supported for "
+                "shelved-offloaded instances.")
+
+
 class VolumeNotCreated(NovaException):
     msg_fmt = _("Volume %(volume_id)s did not finish being created"
                 " even after we waited %(seconds)s seconds or %(attempts)s"

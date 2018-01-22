@@ -58,6 +58,11 @@ Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNo
 .. note:: From v2.20 attach a volume to an instance in SHELVED or SHELVED_OFFLOADED
           state is allowed.
 
+.. note:: From v2.60, attaching a multiattach volume to multiple instances is
+          supported for instances that are not SHELVED_OFFLOADED. The ability
+          to actually support a multiattach volume depends on the volume type
+          and compute hosting the instance.
+
 Request
 -------
 

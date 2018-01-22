@@ -348,10 +348,11 @@ class _ComputeAPIUnitTestMixIn(object):
                  }))
         mock_reserve.return_value = bdm
         instance = self._create_instance_obj()
+        volume = {'id': '1', 'multiattach': False}
         result = self.compute_api._create_volume_bdm(self.context,
                                                      instance,
                                                      'vda',
-                                                     '1',
+                                                     volume,
                                                      None,
                                                      None)
         self.assertTrue(mock_reserve.called)
@@ -376,7 +377,7 @@ class _ComputeAPIUnitTestMixIn(object):
         result = self.compute_api._create_volume_bdm(self.context,
                                                      instance,
                                                      '/dev/vda',
-                                                     volume_id,
+                                                     {'id': volume_id},
                                                      None,
                                                      None,
                                                      is_local_creation=True)
@@ -439,7 +440,8 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_reserve.assert_called_once_with(self.context, instance, None,
                                                  volume['id'],
                                                  device_type=None,
-                                                 disk_bus=None, tag='foo')
+                                                 disk_bus=None, tag='foo',
+                                                 multiattach=False)
             mock_v_api.check_availability_zone.assert_called_once_with(
                 self.context, volume, instance=instance)
             mock_v_api.reserve_volume.assert_called_once_with(self.context,
@@ -519,7 +521,8 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_reserve.assert_called_once_with(self.context, instance, None,
                                                  volume['id'],
                                                  device_type=None,
-                                                 disk_bus=None, tag='foo')
+                                                 disk_bus=None, tag='foo',
+                                                 multiattach=False)
             mock_v_api.check_availability_zone.assert_called_once_with(
                 self.context, volume, instance=instance)
             mock_v_api.attachment_create.assert_called_once_with(
@@ -529,11 +532,13 @@ class _ComputeAPIUnitTestMixIn(object):
 
     @mock.patch.object(objects.Service, 'get_minimum_version',
                        return_value=COMPUTE_VERSION_OLD_ATTACH_FLOW)
-    def test_attach_volume_shelved_instance(self, mock_get_min_ver):
+    @mock.patch('nova.volume.cinder.API.get')
+    def test_attach_volume_shelved_instance(self, mock_get, mock_get_min_ver):
         instance = self._create_instance_obj()
         instance.vm_state = vm_states.SHELVED_OFFLOADED
         volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
                                          None, None, None, None, None)
+        mock_get.return_value = volume
         self.assertRaises(exception.VolumeTaggedAttachToShelvedNotSupported,
                           self.compute_api.attach_volume, self.context,
                           instance, volume['id'], tag='foo')
@@ -3904,7 +3909,8 @@ class _ComputeAPIUnitTestMixIn(object):
         volume_id = 'e856840e-9f5b-4894-8bde-58c6e29ac1e8'
         volume_info = {'status': 'error',
                        'attach_status': 'detached',
-                       'id': volume_id}
+                       'id': volume_id,
+                       'multiattach': False}
         mock_get.return_value = volume_info
         bdms = [objects.BlockDeviceMapping(
                 **fake_block_device.FakeDbBlockDeviceDict(
@@ -3980,7 +3986,7 @@ class _ComputeAPIUnitTestMixIn(object):
         volume_id = 'e856840e-9f5b-4894-8bde-58c6e29ac1e8'
         volume_info = {'status': 'error',
                        'attach_status': 'detached',
-                       'id': volume_id}
+                       'id': volume_id, 'multiattach': False}
         mock_get.return_value = volume_info
         bdms = [objects.BlockDeviceMapping(
                 **fake_block_device.FakeDbBlockDeviceDict(
@@ -4081,7 +4087,8 @@ class _ComputeAPIUnitTestMixIn(object):
                        return_value=17)
     @mock.patch.object(objects.service, 'get_minimum_version_all_cells',
                        return_value=17)
-    @mock.patch.object(cinder.API, 'get')
+    @mock.patch.object(cinder.API, 'get',
+                       return_value={'id': '1', 'multiattach': False})
     @mock.patch.object(cinder.API, 'check_availability_zone')
     @mock.patch.object(cinder.API, 'reserve_volume',
                        side_effect=exception.InvalidInput(reason='error'))
@@ -4098,7 +4105,8 @@ class _ComputeAPIUnitTestMixIn(object):
                        return_value=COMPUTE_VERSION_NEW_ATTACH_FLOW)
     @mock.patch.object(objects.service, 'get_minimum_version_all_cells',
                        return_value=COMPUTE_VERSION_NEW_ATTACH_FLOW)
-    @mock.patch.object(cinder.API, 'get')
+    @mock.patch.object(cinder.API, 'get',
+                       return_value={'id': '1', 'multiattach': False})
     @mock.patch.object(cinder.API, 'check_availability_zone')
     @mock.patch.object(cinder.API, 'attachment_create',
                        side_effect=exception.InvalidInput(reason='error'))
@@ -4204,6 +4212,7 @@ class _ComputeAPIUnitTestMixIn(object):
                      'device_name': 'vda',
                      'boot_index': 0,
                      }))])
+            mock_volume.get.return_value = {'id': '1', 'multiattach': False}
             instance_tags = objects.TagList(objects=[objects.Tag(tag='tag')])
             shutdown_terminate = True
             instance_group = None
@@ -4311,7 +4320,8 @@ class _ComputeAPIUnitTestMixIn(object):
                        return_value=17)
     @mock.patch.object(objects.service, 'get_minimum_version_all_cells',
                        return_value=17)
-    @mock.patch.object(cinder.API, 'get')
+    @mock.patch.object(cinder.API, 'get',
+                       return_value={'id': '1', 'multiattach': False})
     @mock.patch.object(cinder.API, 'check_availability_zone',)
     @mock.patch.object(cinder.API, 'reserve_volume',
                    side_effect=(None, exception.InvalidInput(reason='error')))
@@ -4410,7 +4420,8 @@ class _ComputeAPIUnitTestMixIn(object):
                        return_value=COMPUTE_VERSION_NEW_ATTACH_FLOW)
     @mock.patch.object(objects.service, 'get_minimum_version_all_cells',
                        return_value=COMPUTE_VERSION_NEW_ATTACH_FLOW)
-    @mock.patch.object(cinder.API, 'get')
+    @mock.patch.object(cinder.API, 'get',
+                       return_value={'id': '1', 'multiattach': False})
     @mock.patch.object(cinder.API, 'check_availability_zone',)
     @mock.patch.object(cinder.API, 'attachment_create',
                        side_effect=[{'id': uuids.attachment_id},
@@ -5568,6 +5579,57 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
         mock_record.assert_called_once_with(
             self.context, instance, instance_actions.DETACH_INTERFACE)
 
+    def test_check_attach_and_reserve_volume_multiattach_old_version(self):
+        """Tests that _check_attach_and_reserve_volume fails if trying
+        to use a multiattach volume with a microversion<2.60.
+        """
+        instance = self._create_instance_obj()
+        volume = {'id': uuids.volumeid, 'multiattach': True}
+        bdm = objects.BlockDeviceMapping(volume_id=uuids.volumeid,
+                                         instance_uuid=instance.uuid)
+        self.assertRaises(exception.MultiattachNotSupportedOldMicroversion,
+                          self.compute_api._check_attach_and_reserve_volume,
+                          self.context, volume, instance, bdm,
+                          supports_multiattach=False)
+
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=compute_api.MIN_COMPUTE_MULTIATTACH - 1)
+    def test_check_attach_and_reserve_volume_multiattach_new_inst_old_compute(
+            self, get_min_version):
+        """Tests that _check_attach_and_reserve_volume fails if trying
+        to use a multiattach volume to create a new instance but the computes
+        are not all upgraded yet.
+        """
+        instance = self._create_instance_obj()
+        delattr(instance, 'id')
+        volume = {'id': uuids.volumeid, 'multiattach': True}
+        bdm = objects.BlockDeviceMapping(volume_id=uuids.volumeid,
+                                         instance_uuid=instance.uuid)
+        self.assertRaises(exception.MultiattachSupportNotYetAvailable,
+                          self.compute_api._check_attach_and_reserve_volume,
+                          self.context, volume, instance, bdm,
+                          supports_multiattach=True)
+
+    @mock.patch('nova.objects.Service.get_minimum_version',
+                return_value=compute_api.MIN_COMPUTE_MULTIATTACH)
+    @mock.patch('nova.volume.cinder.API.get',
+                return_value={'id': uuids.volumeid, 'multiattach': True})
+    @mock.patch('nova.volume.cinder.is_microversion_supported',
+                return_value=None)
+    def test_attach_volume_shelved_offloaded_fails(
+            self, is_microversion_supported, volume_get, get_min_version):
+        """Tests that trying to attach a multiattach volume to a shelved
+        offloaded instance fails because it's not supported.
+        """
+        instance = self._create_instance_obj(
+            params={'vm_state': vm_states.SHELVED_OFFLOADED})
+        with mock.patch.object(
+                self.compute_api, '_check_volume_already_attached_to_instance',
+                return_value=None):
+            self.assertRaises(exception.MultiattachToShelvedNotSupported,
+                              self.compute_api.attach_volume,
+                              self.context, instance, uuids.volumeid)
+
 
 class Cellsv1DeprecatedTestMixIn(object):
     @mock.patch.object(objects.BuildRequestList, 'get_by_filters')
@@ -5825,10 +5887,11 @@ class ComputeAPIAPICellUnitTestCase(Cellsv1DeprecatedTestMixIn,
         # In the cells rpcapi there isn't the call for the
         # reserve_block_device_name so the volume_bdm returned
         # by the _create_volume_bdm is None
+        volume = {'id': '1', 'multiattach': False}
         result = self.compute_api._create_volume_bdm(self.context,
                                                      instance,
                                                      'vda',
-                                                     '1',
+                                                     volume,
                                                      None,
                                                      None)
         self.assertIsNone(result, None)
@@ -5883,10 +5946,12 @@ class ComputeAPIAPICellUnitTestCase(Cellsv1DeprecatedTestMixIn,
 
     @mock.patch.object(objects.Service, 'get_minimum_version',
                        return_value=COMPUTE_VERSION_OLD_ATTACH_FLOW)
-    def test_tagged_volume_attach(self, mock_get_min_ver):
+    @mock.patch('nova.volume.cinder.API.get')
+    def test_tagged_volume_attach(self, mock_vol_get, mock_get_min_ver):
         instance = self._create_instance_obj()
         volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
                                          None, None, None, None, None)
+        mock_vol_get.return_value = volume
         self.assertRaises(exception.VolumeTaggedAttachNotSupported,
                           self.compute_api.attach_volume, self.context,
                           instance, volume['id'], tag='foo')
@@ -5896,7 +5961,8 @@ class ComputeAPIAPICellUnitTestCase(Cellsv1DeprecatedTestMixIn,
     @mock.patch.object(cinder, 'is_microversion_supported')
     @mock.patch.object(objects.BlockDeviceMapping,
                               'get_by_volume_and_instance')
-    def test_tagged_volume_attach_new_flow(self, mock_no_bdm,
+    @mock.patch('nova.volume.cinder.API.get')
+    def test_tagged_volume_attach_new_flow(self, mock_get_vol, mock_no_bdm,
                                            mock_cinder_mv_supported,
                                            mock_get_min_ver):
         mock_no_bdm.side_effect = exception.VolumeBDMNotFound(
@@ -5904,6 +5970,7 @@ class ComputeAPIAPICellUnitTestCase(Cellsv1DeprecatedTestMixIn,
         instance = self._create_instance_obj()
         volume = fake_volume.fake_volume(1, 'test-vol', 'test-vol',
                                          None, None, None, None, None)
+        mock_get_vol.return_value = volume
         self.assertRaises(exception.VolumeTaggedAttachNotSupported,
                           self.compute_api.attach_volume, self.context,
                           instance, volume['id'], tag='foo')
@@ -5933,6 +6000,17 @@ class ComputeAPIAPICellUnitTestCase(Cellsv1DeprecatedTestMixIn,
         count = self.compute_api._check_requested_networks(
             self.context, requested_networks, 5)
         self.assertEqual(5, count)
+
+    def test_attach_volume_with_multiattach_volume_fails(self):
+        """Tests that the cells v1 API doesn't support attaching multiattach
+        volumes.
+        """
+        instance = objects.Instance(cell_name='foo')
+        volume = {'multiattach': True}
+        device = disk_bus = disk_type = None
+        self.assertRaises(exception.MultiattachSupportNotYetAvailable,
+                          self.compute_api._attach_volume, self.context,
+                          instance, volume, device, disk_bus, disk_type)
 
 
 class ComputeAPIComputeCellUnitTestCase(Cellsv1DeprecatedTestMixIn,

@@ -186,13 +186,16 @@ class _IntegratedTestBase(test.TestCase):
             self.api_fixture.admin_api.post_extra_spec(flv_id, spec)
         return flv_id
 
-    def _build_server(self, flavor_id):
+    def _build_server(self, flavor_id, image=None):
         server = {}
-        image = self.api.get_images()[0]
-        LOG.debug("Image: %s", image)
+        if image is None:
+            image = self.api.get_images()[0]
+            LOG.debug("Image: %s", image)
 
-        # We now have a valid imageId
-        server[self._image_ref_parameter] = image['id']
+            # We now have a valid imageId
+            server[self._image_ref_parameter] = image['id']
+        else:
+            server[self._image_ref_parameter] = image
 
         # Set a valid flavorId
         flavor = self.api.get_flavor(flavor_id)

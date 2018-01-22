@@ -330,14 +330,17 @@ class VolumeAttachmentController(wsgi.Controller):
                                    server_id, instance.vm_state)
 
         try:
-            device = self.compute_api.attach_volume(context, instance,
-                                                    volume_id, device, tag=tag)
+            supports_multiattach = common.supports_multiattach_volume(req)
+            device = self.compute_api.attach_volume(
+                context, instance, volume_id, device, tag=tag,
+                supports_multiattach=supports_multiattach)
         except (exception.InstanceUnknownCell,
                 exception.VolumeNotFound) as e:
             raise exc.HTTPNotFound(explanation=e.format_message())
         except (exception.InstanceIsLocked,
-                exception.DevicePathInUse) as e:
-            # TODO(mriedem): Need to handle MultiattachNotSupportedByVirtDriver
+                exception.DevicePathInUse,
+                exception.MultiattachNotSupportedByVirtDriver,
+                exception.MultiattachSupportNotYetAvailable) as e:
             raise exc.HTTPConflict(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
@@ -345,7 +348,9 @@ class VolumeAttachmentController(wsgi.Controller):
         except (exception.InvalidVolume,
                 exception.InvalidDevicePath,
                 exception.InvalidInput,
-                exception.TaggedAttachmentNotSupported) as e:
+                exception.TaggedAttachmentNotSupported,
+                exception.MultiattachNotSupportedOldMicroversion,
+                exception.MultiattachToShelvedNotSupported) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
 
         # The attach is async

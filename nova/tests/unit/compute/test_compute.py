@@ -992,7 +992,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         return_value=17)
     def test_validate_bdm(self, mock_get_min_ver):
         def fake_get(self, context, res_id):
-            return {'id': res_id, 'size': 4}
+            return {'id': res_id, 'size': 4, 'multiattach': False}
 
         def fake_check_availability_zone(*args, **kwargs):
             pass
@@ -2120,7 +2120,8 @@ class ComputeTestCase(BaseTestCase,
                     'attachments': {instance.uuid: {
                                        'attachment_id': 'abc123'
                                         }
-                                    }
+                                    },
+                    'multiattach': False
                     }
 
         def fake_terminate_connection(self, context, volume_id, connector):
@@ -10257,7 +10258,7 @@ class ComputeAPITestCase(BaseTestCase):
                 fake_bdm)
         instance = self._create_fake_instance_obj()
         instance.id = 42
-        fake_volume = {'id': 'fake-volume-id'}
+        fake_volume = {'id': 'fake-volume-id', 'multiattach': False}
 
         with test.nested(
             mock.patch.object(objects.Service, 'get_minimum_version',
@@ -10277,7 +10278,8 @@ class ComputeAPITestCase(BaseTestCase):
 
             mock_reserve_bdm.assert_called_once_with(
                     self.context, instance, '/dev/vdb', 'fake-volume-id',
-                    disk_bus='ide', device_type='cdrom', tag=None)
+                    disk_bus='ide', device_type='cdrom', tag=None,
+                    multiattach=False)
             self.assertEqual(mock_get.call_args,
                              mock.call(self.context, 'fake-volume-id'))
             self.assertEqual(mock_check_availability_zone.call_args,
@@ -10299,7 +10301,7 @@ class ComputeAPITestCase(BaseTestCase):
                 fake_bdm)
         instance = self._create_fake_instance_obj()
         instance.id = 42
-        fake_volume = {'id': 'fake-volume-id'}
+        fake_volume = {'id': 'fake-volume-id', 'multiattach': False}
 
         with test.nested(
             mock.patch.object(objects.Service, 'get_minimum_version',
@@ -10326,7 +10328,8 @@ class ComputeAPITestCase(BaseTestCase):
 
             mock_reserve_bdm.assert_called_once_with(
                     self.context, instance, '/dev/vdb', 'fake-volume-id',
-                    disk_bus='ide', device_type='cdrom', tag=None)
+                    disk_bus='ide', device_type='cdrom', tag=None,
+                    multiattach=False)
             self.assertEqual(mock_get.call_args,
                              mock.call(self.context, 'fake-volume-id'))
             self.assertEqual(mock_check_availability_zone.call_args,
@@ -10349,7 +10352,7 @@ class ComputeAPITestCase(BaseTestCase):
                 fake_bdm)
         instance = self._create_fake_instance_obj()
         instance.id = 42
-        fake_volume = {'id': 'fake-volume-id'}
+        fake_volume = {'id': 'fake-volume-id', 'multiattach': False}
 
         with test.nested(
             mock.patch.object(objects.Service, 'get_minimum_version',
@@ -10375,7 +10378,8 @@ class ComputeAPITestCase(BaseTestCase):
 
             mock_reserve_bdm.assert_called_once_with(
                     self.context, instance, '/dev/vdb', 'fake-volume-id',
-                    disk_bus='ide', device_type='cdrom', tag=None)
+                    disk_bus='ide', device_type='cdrom', tag=None,
+                    multiattach=False)
             self.assertEqual(mock_get.call_args,
                              mock.call(self.context, 'fake-volume-id'))
             self.assertEqual(mock_check_availability_zone.call_args,
@@ -10400,7 +10404,7 @@ class ComputeAPITestCase(BaseTestCase):
                 fake_bdm)
         instance = self._create_fake_instance_obj()
         instance.id = 42
-        fake_volume = {'id': 'fake-volume-id'}
+        fake_volume = {'id': 'fake-volume-id', 'multiattach': False}
 
         with test.nested(
             mock.patch.object(objects.Service, 'get_minimum_version',
@@ -10429,7 +10433,8 @@ class ComputeAPITestCase(BaseTestCase):
 
             mock_reserve_bdm.assert_called_once_with(
                     self.context, instance, None, 'fake-volume-id',
-                    disk_bus=None, device_type=None, tag=None)
+                    disk_bus=None, device_type=None, tag=None,
+                    multiattach=False)
             self.assertEqual(mock_get.call_args,
                              mock.call(self.context, 'fake-volume-id'))
             self.assertEqual(mock_check_availability_zone.call_args,
@@ -10461,11 +10466,12 @@ class ComputeAPITestCase(BaseTestCase):
              mock.patch.object(compute_utils, 'EventReporter')
         ) as (mock_bdm_create, mock_attach_and_reserve, mock_attach,
               mock_event):
+            volume = {'id': 'fake-volume-id'}
             self.compute_api._attach_volume_shelved_offloaded(
-                    self.context, instance, 'fake-volume-id',
+                    self.context, instance, volume,
                     '/dev/vdb', 'ide', 'cdrom')
             mock_attach_and_reserve.assert_called_once_with(self.context,
-                                                            'fake-volume-id',
+                                                            volume,
                                                             instance,
                                                             fake_bdm)
             mock_attach.assert_called_once_with(self.context,
@@ -10500,11 +10506,12 @@ class ComputeAPITestCase(BaseTestCase):
                                side_effect=fake_check_attach_and_reserve),
              mock.patch.object(cinder.API, 'attachment_complete')
         ) as (mock_bdm_create, mock_attach_and_reserve, mock_attach_complete):
+            volume = {'id': 'fake-volume-id'}
             self.compute_api._attach_volume_shelved_offloaded(
-                    self.context, instance, 'fake-volume-id',
+                    self.context, instance, volume,
                     '/dev/vdb', 'ide', 'cdrom')
             mock_attach_and_reserve.assert_called_once_with(self.context,
-                                                            'fake-volume-id',
+                                                            volume,
                                                             instance,
                                                             fake_bdm)
             mock_attach_complete.assert_called_once_with(
@@ -10525,7 +10532,7 @@ class ComputeAPITestCase(BaseTestCase):
 
         def fake_volume_get(self, context, volume_id):
             called['fake_volume_get'] = True
-            return {'id': volume_id}
+            return {'id': volume_id, 'multiattach': False}
 
         def fake_rpc_attach_volume(self, context, instance, bdm):
             called['fake_rpc_attach_volume'] = True
