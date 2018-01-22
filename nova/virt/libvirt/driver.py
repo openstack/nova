@@ -565,6 +565,31 @@ class LibvirtDriver(driver.ComputeDriver):
                  'libvirt_ver': self._version_to_string(
                      MIN_LIBVIRT_OTHER_ARCH.get(kvm_arch))})
 
+        # TODO(sbauza): Remove this code once mediated devices are persisted
+        # across reboots.
+        if self._host.has_min_version(MIN_LIBVIRT_MDEV_SUPPORT):
+            self._recreate_assigned_mediated_devices()
+
+    @staticmethod
+    def _is_existing_mdev(uuid):
+        # FIXME(sbauza): Some kernel can have a uevent race meaning that the
+        # libvirt daemon won't know when a mediated device is created unless
+        # you restart that daemon. Until all kernels we support are not having
+        # that possible race, check the sysfs directly instead of asking the
+        # libvirt API.
+        # See https://bugzilla.redhat.com/show_bug.cgi?id=1376907 for ref.
+        return os.path.exists('/sys/bus/mdev/devices/{0}'.format(uuid))
+
+    def _recreate_assigned_mediated_devices(self):
+        """Recreate assigned mdevs that could have disappeared if we reboot
+        the host.
+        """
+        mdevs = self._get_all_assigned_mediated_devices()
+        requested_types = self._get_supported_vgpu_types()
+        for (mdev_uuid, instance_uuid) in six.iteritems(mdevs):
+            if not self._is_existing_mdev(mdev_uuid):
+                self._create_new_mediated_device(requested_types, mdev_uuid)
+
     def _set_multiattach_support(self):
         # Check to see if multiattach is supported. Based on bugzilla
         # https://bugzilla.redhat.com/show_bug.cgi?id=1378242 and related
@@ -5788,12 +5813,13 @@ class LibvirtDriver(driver.ComputeDriver):
                                for mdev in mdevs]) - set(allocated_mdevs)
         return available_mdevs
 
-    def _create_new_mediated_device(self, requested_types):
+    def _create_new_mediated_device(self, requested_types, uuid=None):
         """Find a physical device that can support a new mediated device and
         create it.
 
         :param requested_types: Filter only capable devices supporting those
                                 types.
+        :param uuid: The possible mdev UUID we want to create again
 
         :returns: the newly created mdev UUID or None if not possible
         """
@@ -5812,7 +5838,8 @@ class LibvirtDriver(driver.ComputeDriver):
                 # The libvirt name is like 'pci_0000_84_00_0'
                 pci_addr = "{}:{}:{}.{}".format(*dev_name[4:].split('_'))
                 chosen_mdev = nova.privsep.libvirt.create_mdev(pci_addr,
-                                                               asked_type)
+                                                               asked_type,
+                                                               uuid=uuid)
                 return chosen_mdev
 
     @utils.synchronized(VGPU_RESOURCE_SEMAPHORE)
