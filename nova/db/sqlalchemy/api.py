@@ -83,22 +83,9 @@ api_context_manager = enginefacade.transaction_context()
 
 
 def _get_db_conf(conf_group, connection=None):
-    kw = dict(
-        connection=connection or conf_group.connection,
-        slave_connection=conf_group.slave_connection,
-        sqlite_fk=False,
-        __autocommit=True,
-        expire_on_commit=False,
-        mysql_sql_mode=conf_group.mysql_sql_mode,
-        connection_recycle_time=conf_group.connection_recycle_time,
-        connection_debug=conf_group.connection_debug,
-        max_pool_size=conf_group.max_pool_size,
-        max_overflow=conf_group.max_overflow,
-        pool_timeout=conf_group.pool_timeout,
-        sqlite_synchronous=conf_group.sqlite_synchronous,
-        connection_trace=conf_group.connection_trace,
-        max_retries=conf_group.max_retries,
-        retry_interval=conf_group.retry_interval)
+    kw = dict(conf_group.items())
+    if connection is not None:
+        kw['connection'] = connection
     return kw
 
 
