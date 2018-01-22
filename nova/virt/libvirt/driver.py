@@ -6622,7 +6622,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.MigrationPreCheckError(reason=msg)
 
         if disk_over_commit:
-            disk_available_gb = dst_compute_info['local_gb']
+            disk_available_gb = dst_compute_info['free_disk_gb']
         else:
             disk_available_gb = dst_compute_info['disk_available_least']
         disk_available_mb = (
