@@ -680,11 +680,13 @@ def _pack_instance_onto_cores(available_siblings,
              '    available_siblings: %(siblings)s'
              '    instance_cell: %(cells)s'
              '    host_cell_id: %(host_cell_id)s'
-             '    threads_per_core: %(threads_per_core)s',
+             '    threads_per_core: %(threads_per_core)s'
+             '    num_cpu_reserved: %(num_cpu_reserved)s',
                 {'siblings': available_siblings,
                  'cells': instance_cell,
                  'host_cell_id': host_cell_id,
-                 'threads_per_core': threads_per_core})
+                 'threads_per_core': threads_per_core,
+                 'num_cpu_reserved': num_cpu_reserved})
 
     # We build up a data structure that answers the question: 'Given the
     # number of threads I want to pack, give me a list of all the available
@@ -871,8 +873,21 @@ def _pack_instance_onto_cores(available_siblings,
         if (instance_cell.cpu_thread_policy !=
                 fields.CPUThreadAllocationPolicy.REQUIRE and
                 not pinning):
-            pinning = list(zip(sorted(instance_cell.cpuset),
-                               itertools.chain(*sibling_set)))
+            threads_no = 1
+            # we create a fake sibling set by splitting all sibling sets and
+            # treating each core as if it has no siblings. This is necessary
+            # because '_get_pinning' will normally only take the same amount of
+            # cores ('threads_no' cores) from each sibling set. This is rather
+            # desirable when we're seeking to apply a thread policy but it is
+            # less desirable when we only care about resource usage as we do
+            # here. By treating each core as independent, as we do here, we
+            # maximize resource usage for almost-full nodes at the expense of a
+            # possible performance impact to the guest.
+            sibling_set = [set([x]) for x in itertools.chain(*sibling_sets[1])]
+            pinning, cpuset_reserved = _get_pinning(
+                threads_no, sibling_set,
+                instance_cell.cpuset,
+                num_cpu_reserved=num_cpu_reserved)
 
         threads_no = _threads(instance_cell, threads_no)
 
