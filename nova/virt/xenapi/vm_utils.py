@@ -973,16 +973,11 @@ def _make_partition(session, dev, partition_start, partition_end):
 
     # NOTE(bobball) If this runs in Dom0, parted will error trying
     # to re-read the partition table and return a generic error
-    utils.execute('parted', '--script', dev_path,
-                  'mklabel', 'msdos', run_as_root=True,
-                  check_exit_code=not session.is_local_connection)
-
-    utils.execute('parted', '--script', dev_path, '--',
-                  'mkpart', 'primary',
-                  partition_start,
-                  partition_end,
-                  run_as_root=True,
-                  check_exit_code=not session.is_local_connection)
+    nova.privsep.fs.create_partition_table(
+        dev_path, 'msdos', check_exit_code=not session.is_local_connection)
+    nova.privsep.fs.create_partition(
+        dev_path, 'primary', partition_start, partition_end,
+        check_exit_code=not session.is_local_connection)
 
     partition_path = utils.make_dev_path(dev, partition=1)
     if session.is_local_connection:
@@ -2253,27 +2248,7 @@ def _get_this_vm_ref(session):
 
 
 def _get_partitions(dev):
-    """Return partition information (num, size, type) for a device."""
-    dev_path = utils.make_dev_path(dev)
-    out, _err = utils.execute('parted', '--script', '--machine',
-                             dev_path, 'unit s', 'print',
-                             run_as_root=True)
-    lines = [line for line in out.split('\n') if line]
-    partitions = []
-
-    LOG.debug("Partitions:")
-    for line in lines[2:]:
-        line = line.rstrip(';')
-        num, start, end, size, fstype, name, flags = line.split(':')
-        num = int(num)
-        start = int(start.rstrip('s'))
-        end = int(end.rstrip('s'))
-        size = int(size.rstrip('s'))
-        LOG.debug("  %(num)s: %(fstype)s %(size)d sectors",
-                  {'num': num, 'fstype': fstype, 'size': size})
-        partitions.append((num, start, size, fstype, name, flags))
-
-    return partitions
+    return nova.privsep.fs.list_partitions(utils.make_dev_path(dev))
 
 
 def _stream_disk(session, image_service_func, image_type, virtual_size, dev):

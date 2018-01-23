@@ -451,19 +451,6 @@ class ResizeHelpersTestCase(VMUtilsTestBase):
     def test_auto_config_disk_returns_early_on_zero_size(self):
         vm_utils.try_auto_configure_disk("bad_session", "bad_vdi_ref", 0)
 
-    @mock.patch.object(utils, "execute")
-    def test_get_partitions(self, mock_execute):
-        parted_return = "BYT;\n...\n"
-        parted_return += "1:2s:11s:10s:ext3::boot;\n"
-        parted_return += "2:20s:11s:10s::bob:;\n"
-        mock_execute.return_value = (parted_return, None)
-
-        partitions = vm_utils._get_partitions("abc")
-
-        self.assertEqual(2, len(partitions))
-        self.assertEqual((1, 2, 10, "ext3", "", "boot"), partitions[0])
-        self.assertEqual((2, 20, 10, "", "bob", ""), partitions[1])
-
 
 class CheckVDISizeTestCase(VMUtilsTestBase):
     def setUp(self):
