@@ -3646,7 +3646,7 @@ key_name_rebuild_req:
 
     .. note:: Users within the same project are able to rebuild other
               user's instances in that project with a new keypair. Keys
-              are owned by users (which is the only resource that’s true
+              are owned by users (which is the only resource that's true
               of). Servers are owned by projects. Because of this a rebuild
               with a key_name is looking up the keypair by the user calling
               rebuild.

@@ -462,7 +462,7 @@ API response.
 ----
 
 Optional query parameters ``limit`` and ``marker`` were added to the
-``os-simple-tenant-usage`` endpoints for pagination. If a limit isn’t
+``os-simple-tenant-usage`` endpoints for pagination. If a limit isn't
 provided, the configurable ``max_limit`` will be used which currently
 defaults to 1000.
 
@@ -471,7 +471,7 @@ defaults to 1000.
     GET /os-simple-tenant-usage?limit={limit}&marker={instance_uuid}
     GET /os-simple-tenant-usage/{tenant_id}?limit={limit}&marker={instance_uuid}
 
-A tenant’s usage statistics may span multiple pages when the number of
+A tenant's usage statistics may span multiple pages when the number of
 instances exceeds limit, and API consumers will need to stitch together
 the aggregate results if they still want totals for all instances in a
 specific time window, grouped by tenant.

@@ -204,7 +204,7 @@ There are also some speical query options:
 
 - ``deleted`` returns (or excludes) deleted servers
 
-- ``soft_deleted`` modifies behavior of ‘deleted’ to either include or exclude
+- ``soft_deleted`` modifies behavior of 'deleted' to either include or exclude
   instances whose vm_state is SOFT_DELETED
 
 - ``all_tenants`` is an administrator query option, which allows the
