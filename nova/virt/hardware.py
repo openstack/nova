@@ -843,6 +843,15 @@ def _pack_instance_onto_cores(available_siblings,
             instance_cell.cpuset,
             num_cpu_reserved=num_cpu_reserved)
     else:  # REQUIRE, PREFER (explicit, implicit)
+        if (instance_cell.cpu_thread_policy ==
+                fields.CPUThreadAllocationPolicy.REQUIRE):
+            # make sure we actually have some siblings to play with
+            if threads_per_core <= 1:
+                LOG.info("Host does not support hyperthreading or "
+                         "hyperthreading is disabled, but 'require' "
+                         "threads policy was requested.")
+                return
+
         # NOTE(ndipanov): We iterate over the sibling sets in descending order
         # of cores that can be packed. This is an attempt to evenly distribute
         # instances among physical cores
@@ -941,27 +950,12 @@ def _numa_fit_instance_cell_with_pinning(host_cell, instance_cell,
                    'total': host_cell.memory})
         return
 
-    if host_cell.siblings:
-        LOG.debug('Using thread siblings for packing')
-        # Try to pack the instance cell onto cores
-        numa_cell = _pack_instance_onto_cores(
-            host_cell.free_siblings, instance_cell, host_cell.id,
-            max(map(len, host_cell.siblings)),
-            num_cpu_reserved=num_cpu_reserved)
-    else:
-        if (instance_cell.cpu_thread_policy ==
-                fields.CPUThreadAllocationPolicy.REQUIRE):
-            LOG.info("Host does not support hyperthreading or "
-                     "hyperthreading is disabled, but 'require' "
-                     "threads policy was requested.")
-            return
-
-        # Straightforward to pin to available cpus when there is no
-        # hyperthreading on the host
-        free_cpus = [set([cpu]) for cpu in host_cell.free_cpus]
-        numa_cell = _pack_instance_onto_cores(
-            free_cpus, instance_cell, host_cell.id,
-            num_cpu_reserved=num_cpu_reserved)
+    # Try to pack the instance cell onto cores
+    # TODO(stephenfin): We should just pass host_cell to this function
+    numa_cell = _pack_instance_onto_cores(
+        host_cell.free_siblings, instance_cell, host_cell.id,
+        max(map(len, host_cell.siblings)),
+        num_cpu_reserved=num_cpu_reserved)
 
     if not numa_cell:
         LOG.debug('Failed to map instance cell CPUs to host cell CPUs')
