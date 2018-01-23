@@ -152,6 +152,10 @@ Nova Cells v2
     instances have been mapped, and 1 if there are still instances to be
     mapped.
 
+    If ``--max-count`` is not specified, all instances in the cell will be
+    mapped in batches of 50. If you have a large number of instances, consider
+    specifying a custom value and run the command until it exits with 0.
+
 ``nova-manage cell_v2 map_cell_and_hosts [--name <cell_name>] [--transport-url <transport_url>] [--verbose]``
 
     Create a cell mapping to the database connection and message queue

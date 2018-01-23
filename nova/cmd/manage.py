@@ -1073,7 +1073,10 @@ class CellV2Commands(object):
           help='Unmigrated instances will be mapped to the cell with the '
                'uuid provided.')
     @args('--max-count', metavar='<max_count>', dest='max_count',
-          help='Maximum number of instances to map')
+          help='Maximum number of instances to map. If not set, all instances '
+               'in the cell will be mapped in batches of 50. If you have a '
+               'large number of instances, consider specifying a custom value '
+               'and run the command until it exits with 0.')
     def map_instances(self, cell_uuid, max_count=None):
         """Map instances into the provided cell.
 
