@@ -48,11 +48,7 @@ class NUMATopologyFilter(filters.BaseHostFilter):
         if fields.CPUThreadAllocationPolicy.REQUIRE not in cpu_thread_policy:
             return True
 
-        # the presence of siblings in at least one cell indicates
-        # hyperthreading (HT)
-        has_hyperthreading = any(cell.siblings for cell in host_topology.cells)
-
-        if not has_hyperthreading:
+        if not host_topology.has_threads:
             LOG.debug("%(host_state)s fails CPU policy requirements. "
                       "Host does not have hyperthreading or "
                       "hyperthreading is disabled, but 'require' threads "

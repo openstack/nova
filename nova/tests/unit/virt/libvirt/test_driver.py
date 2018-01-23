@@ -2274,7 +2274,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         host_topology = objects.NUMATopology(
             cells=[
                 objects.NUMACell(
-                    id=3, cpuset=set([1]), memory=1024, mempages=[
+                    id=3, cpuset=set([1]), siblings=[set([1])], memory=1024,
+                    mempages=[
                         objects.NUMAPagesTopology(size_kb=4, total=2000,
                                                   used=0),
                         objects.NUMAPagesTopology(size_kb=2048, total=512,
@@ -2303,7 +2304,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         host_topology = objects.NUMATopology(
             cells=[
                 objects.NUMACell(
-                    id=3, cpuset=set([1]), memory=1024, mempages=[
+                    id=3, cpuset=set([1]), siblings=[set([1])], memory=1024,
+                    mempages=[
                         objects.NUMAPagesTopology(size_kb=4, total=2000,
                                                   used=0),
                         objects.NUMAPagesTopology(size_kb=2048, total=512,
@@ -3121,11 +3123,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         host_topology = objects.NUMATopology(
             cells=[
                 objects.NUMACell(
-                    id=0, cpuset=set([1, 2]), memory=1024, mempages=[]),
+                    id=0, cpuset=set([1, 2]), siblings=[set([1]), set([2])],
+                    memory=1024, mempages=[]),
                 objects.NUMACell(
-                    id=1, cpuset=set([3, 4]), memory=1024, mempages=[]),
+                    id=1, cpuset=set([3, 4]), siblings=[set([3]), set([4])],
+                    memory=1024, mempages=[]),
                 objects.NUMACell(
-                    id=16, cpuset=set([5, 6]), memory=1024, mempages=[])])
+                    id=16, cpuset=set([5, 6]), siblings=[set([5]), set([6])],
+                    memory=1024, mempages=[])])
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         with test.nested(
@@ -13651,7 +13656,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual(set([]), got_topo.cells[2].pinned_cpus)
             self.assertEqual(set([]), got_topo.cells[3].pinned_cpus)
             self.assertEqual([set([0, 1])], got_topo.cells[0].siblings)
-            self.assertEqual([], got_topo.cells[1].siblings)
+            self.assertEqual([set([3])], got_topo.cells[1].siblings)
 
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     def test_get_host_numa_topology(self, mock_version):
@@ -16104,17 +16109,13 @@ class HostStateTestCase(test.NoDBTestCase):
         "vendor_id": '8086',
         "dev_type": fields.PciDeviceType.SRIOV_PF,
         "phys_function": None}]
-    numa_topology = objects.NUMATopology(
-                        cells=[objects.NUMACell(
-                            id=1, cpuset=set([1, 2]), memory=1024,
-                            cpu_usage=0, memory_usage=0,
-                            mempages=[], siblings=[],
-                            pinned_cpus=set([])),
-                               objects.NUMACell(
-                            id=2, cpuset=set([3, 4]), memory=1024,
-                            cpu_usage=0, memory_usage=0,
-                            mempages=[], siblings=[],
-                            pinned_cpus=set([]))])
+    numa_topology = objects.NUMATopology(cells=[
+        objects.NUMACell(
+            id=1, cpuset=set([1, 2]), memory=1024, cpu_usage=0, memory_usage=0,
+            mempages=[], siblings=[set([1]), set([2])], pinned_cpus=set([])),
+        objects.NUMACell(
+            id=2, cpuset=set([3, 4]), memory=1024, cpu_usage=0, memory_usage=0,
+            mempages=[], siblings=[set([3]), set([4])], pinned_cpus=set([]))])
 
     class FakeConnection(libvirt_driver.LibvirtDriver):
         """Fake connection object."""

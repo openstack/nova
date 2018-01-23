@@ -76,6 +76,11 @@ class NUMACell(base.NovaObject):
     def avail_memory(self):
         return self.memory - self.memory_usage
 
+    @property
+    def has_threads(self):
+        """Check if SMT threads, a.k.a. HyperThreads, are present."""
+        return any(len(sibling_set) > 1 for sibling_set in self.siblings)
+
     def pin_cpus(self, cpus):
         if cpus - self.cpuset:
             raise exception.CPUPinningUnknown(requested=list(cpus),
@@ -96,12 +101,6 @@ class NUMACell(base.NovaObject):
         self.pinned_cpus -= cpus
 
     def pin_cpus_with_siblings(self, cpus):
-        # NOTE(snikitin): Empty siblings list means that HyperThreading is
-        # disabled on the NUMA cell and we must pin CPUs like normal CPUs.
-        if not self.siblings:
-            self.pin_cpus(cpus)
-            return
-
         pin_siblings = set()
         for sib in self.siblings:
             if cpus & sib:
@@ -109,12 +108,6 @@ class NUMACell(base.NovaObject):
         self.pin_cpus(pin_siblings)
 
     def unpin_cpus_with_siblings(self, cpus):
-        # NOTE(snikitin): Empty siblings list means that HyperThreading is
-        # disabled on the NUMA cell and we must unpin CPUs like normal CPUs.
-        if not self.siblings:
-            self.unpin_cpus(cpus)
-            return
-
         pin_siblings = set()
         for sib in self.siblings:
             if cpus & sib:
@@ -210,6 +203,11 @@ class NUMATopology(base.NovaObject):
     fields = {
         'cells': fields.ListOfObjectsField('NUMACell'),
         }
+
+    @property
+    def has_threads(self):
+        """Check if any cell use SMT threads (a.k.a. Hyperthreads)"""
+        return any(cell.has_threads for cell in self.cells)
 
     @classmethod
     def obj_from_primitive(cls, primitive, context=None):

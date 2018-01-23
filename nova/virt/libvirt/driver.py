@@ -5970,8 +5970,8 @@ class LibvirtDriver(driver.ComputeDriver):
                                   ))
             cpuset &= allowed_cpus
             siblings = [sib & allowed_cpus for sib in siblings]
-            # Filter out singles and empty sibling sets that may be left
-            siblings = [sib for sib in siblings if len(sib) > 1]
+            # Filter out empty sibling sets that may be left
+            siblings = [sib for sib in siblings if len(sib) > 0]
 
             mempages = [
                 objects.NUMAPagesTopology(
