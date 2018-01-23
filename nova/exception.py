@@ -2129,6 +2129,16 @@ class ResourceProviderRetrievalFailed(NovaException):
     msg_fmt = _("Failed to get resource provider with UUID %(uuid)s")
 
 
+class ResourceProviderAggregateRetrievalFailed(NovaException):
+    msg_fmt = _("Failed to get aggregates for resource provider with UUID"
+                " %(uuid)s")
+
+
+class ResourceProviderTraitRetrievalFailed(NovaException):
+    msg_fmt = _("Failed to get traits for resource provider with UUID"
+                " %(uuid)s")
+
+
 class ResourceProviderCreationFailed(NovaException):
     msg_fmt = _("Failed to create resource provider %(name)s")
 
