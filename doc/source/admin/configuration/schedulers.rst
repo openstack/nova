@@ -768,7 +768,7 @@ advantage of this filter, the requester must pass a scheduler hint, using
 ImagePropertiesFilter
 ---------------------
 
-Filters cells based on properties defined on the instance’s image.  This
+Filters cells based on properties defined on the instance's image.  This
 filter works specifying the hypervisor required in the image metadata and the
 supported hypervisor version in cell capabilities.
 
