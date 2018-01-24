@@ -220,7 +220,7 @@ class TestOpenStackClient(object):
             headers['Content-Type'] = 'application/json'
             kwargs['body'] = jsonutils.dumps(body)
 
-        kwargs.setdefault('check_response_status', [200, 201, 202])
+        kwargs.setdefault('check_response_status', [200, 201, 202, 204])
         return APIResponse(self.api_request(relative_uri, **kwargs))
 
     def api_put(self, relative_uri, body, **kwargs):
