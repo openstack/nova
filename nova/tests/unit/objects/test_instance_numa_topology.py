@@ -13,7 +13,6 @@
 import copy
 
 import mock
-from oslo_serialization import jsonutils
 from oslo_versionedobjects import base as ovo_base
 
 from nova import exception
@@ -33,8 +32,6 @@ fake_obj_numa_topology = objects.InstanceNUMATopology(
             id=1, cpuset=set([3, 4]), memory=512, pagesize=2048)
     ])
 
-fake_numa_topology = fake_obj_numa_topology._to_dict()
-
 fake_db_topology = {
     'created_at': None,
     'updated_at': None,
@@ -44,9 +41,6 @@ fake_db_topology = {
     'instance_uuid': fake_instance_uuid,
     'numa_topology': fake_obj_numa_topology._to_json()
     }
-
-fake_old_db_topology = dict(fake_db_topology)  # copy
-fake_old_db_topology['numa_topology'] = jsonutils.dumps(fake_numa_topology)
 
 
 def get_fake_obj_numa_topology(context):
@@ -79,11 +73,6 @@ class _TestInstanceNUMATopology(object):
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid')
     def test_get_by_instance_uuid(self, mock_get):
         mock_get.return_value = fake_db_topology
-        self._test_get_by_instance_uuid()
-
-    @mock.patch('nova.db.instance_extra_get_by_instance_uuid')
-    def test_get_by_instance_uuid_old(self, mock_get):
-        mock_get.return_value = fake_old_db_topology
         self._test_get_by_instance_uuid()
 
     @mock.patch('nova.db.instance_extra_get_by_instance_uuid')

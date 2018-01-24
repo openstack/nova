@@ -32,28 +32,6 @@ fake_obj_numa = objects.NUMATopology(
 
 class _TestNUMA(object):
 
-    def test_convert_wipe(self):
-        d1 = fake_obj_numa._to_dict()
-        d2 = objects.NUMATopology.obj_from_primitive(d1)._to_dict()
-
-        self.assertEqual(d1, d2)
-
-    def test_to_legacy_limits(self):
-        limits = objects.NUMATopologyLimits(
-            cpu_allocation_ratio=16,
-            ram_allocation_ratio=2)
-        host_topo = objects.NUMATopology(cells=[
-            objects.NUMACell(id=0, cpuset=set([1, 2]), memory=1024)
-        ])
-
-        old_style = {'cells': [
-            {'mem': {'total': 1024,
-                     'limit': 2048.0},
-             'id': 0,
-             'cpus': '1,2',
-             'cpu_limit': 32.0}]}
-        self.assertEqual(old_style, limits.to_dict_legacy(host_topo))
-
     def test_free_cpus(self):
         obj = objects.NUMATopology(cells=[
             objects.NUMACell(

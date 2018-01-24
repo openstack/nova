@@ -82,15 +82,6 @@ class InstanceNUMACell(base.NovaObject,
     def __len__(self):
         return len(self.cpuset)
 
-    def _to_dict(self):
-        # NOTE(sahid): Used as legacy, could be renamed in
-        # _legacy_to_dict_ to the future to avoid confusing.
-        return {'cpus': hardware.format_cpu_spec(self.cpuset,
-                                                 allow_ranges=False),
-                'mem': {'total': self.memory},
-                'id': self.id,
-                'pagesize': self.pagesize}
-
     @classmethod
     def _from_dict(cls, data_dict):
         # NOTE(sahid): Used as legacy, could be renamed in
@@ -217,11 +208,6 @@ class InstanceNUMATopology(base.NovaObject,
     def __len__(self):
         """Defined so that boolean testing works the same as for lists."""
         return len(self.cells)
-
-    def _to_dict(self):
-        # NOTE(sahid): Used as legacy, could be renamed in _legacy_to_dict_
-        # in the future to avoid confusing.
-        return {'cells': [cell._to_dict() for cell in self.cells]}
 
     @classmethod
     def _from_dict(cls, data_dict):

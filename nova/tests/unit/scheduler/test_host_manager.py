@@ -38,7 +38,6 @@ from nova.scheduler import host_manager
 from nova import test
 from nova.tests import fixtures
 from nova.tests.unit import fake_instance
-from nova.tests.unit import matchers
 from nova.tests.unit.scheduler import fakes
 from nova.tests import uuidsentinel as uuids
 
@@ -589,11 +588,6 @@ class HostManagerTestCase(test.NoDBTestCase):
         # 3071GB
         self.assertEqual(host_states_map[('host3', 'node3')].free_disk_mb,
                          3145728)
-        self.assertThat(
-                objects.NUMATopology.obj_from_db_obj(
-                        host_states_map[('host3', 'node3')].numa_topology
-                    )._to_dict(),
-                matchers.DictMatches(fakes.NUMA_TOPOLOGY._to_dict()))
         self.assertEqual(host_states_map[('host4', 'node4')].free_ram_mb,
                          8192)
         # 8191GB
