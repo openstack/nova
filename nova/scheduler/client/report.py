@@ -1030,6 +1030,113 @@ class SchedulerReportClient(object):
         # when we invoke the DELETE.  See bug #1746374.
         self._update_inventory(context, rp_uuid, inv_data)
 
+    def _set_inventory_for_provider(self, context, rp_uuid, inv_data):
+        """Given the UUID of a provider, set the inventory records for the
+        provider to the supplied dict of resources.
+
+        Compare and contrast with set_inventory_for_provider above.  This one
+        is specially formulated for use by update_from_provider_tree.  Like the
+        other method, we DO need to _ensure_resource_class - i.e. automatically
+        create new resource classes specified in the inv_data.  However, UNLIKE
+        the other method:
+        - We don't use the DELETE API when inventory is empty, because that guy
+          doesn't return content, and we need to update the cached provider
+          tree with the new generation.
+        - We raise exceptions (rather than returning a boolean) which are
+          handled in a consistent fashion by update_from_provider_tree.
+        - We don't invalidate the cache on failure.  That's controlled at a
+          broader scope (based on errors from ANY of the set_*_for_provider
+          methods, etc.) by update_from_provider_tree.
+        - We don't retry.  In this code path, retries happen at the level of
+          the resource tracker on the next iteration.
+        - We take advantage of the cache and no-op if inv_data isn't different
+          from what we have locally.  This is an optimization, not essential.
+        - We don't _ensure_resource_provider or refresh_and_get_inventory,
+          because that's already been done in the code paths leading up to
+          update_from_provider_tree (by get_provider_tree).  This is an
+          optimization, not essential.
+
+        In short, this version is more in the spirit of set_traits_for_provider
+        and set_aggregates_for_provider.
+
+        :param context: The security context
+        :param rp_uuid: The UUID of the provider whose inventory is to be
+                        updated.
+        :param inv_data: Dict, keyed by resource class name, of inventory data
+                         to set for the provider.  Use None or the empty dict
+                         to remove all inventory for the provider.
+        :raises: InventoryInUse if inv_data indicates removal of inventory in a
+                 resource class which has active allocations for this provider.
+        :raises: InvalidResourceClass if inv_data contains a resource class
+                 which cannot be created.
+        :raises: ResourceProviderUpdateConflict if the provider's generation
+                 doesn't match the generation in the cache.  Callers may choose
+                 to retrieve the provider and its associations afresh and
+                 redrive this operation.
+        :raises: ResourceProviderUpdateFailed on any other placement API
+                 failure.
+        """
+        # TODO(efried): Consolidate/refactor to one set_inventory_for_provider.
+
+        # NOTE(efried): This is here because _ensure_resource_class already has
+        # @safe_connect, so we don't want to decorate this whole method with it
+        @safe_connect
+        def do_put(url, payload):
+            return self.put(url, payload, global_request_id=context.global_id)
+
+        # If not different from what we've got, short out
+        if not self._provider_tree.has_inventory_changed(rp_uuid, inv_data):
+            return
+
+        # Ensure non-standard resource classes exist, creating them if needed.
+        self._ensure_resource_classes(context, set(inv_data))
+
+        url = '/resource_providers/%s/inventories' % rp_uuid
+        inv_data = inv_data or {}
+        generation = self._provider_tree.data(rp_uuid).generation
+        payload = {
+            'resource_provider_generation': generation,
+            'inventories': inv_data,
+        }
+        resp = do_put(url, payload)
+
+        if resp.status_code == 200:
+            json = resp.json()
+            self._provider_tree.update_inventory(
+                rp_uuid, json['inventories'],
+                generation=json['resource_provider_generation'])
+            return
+
+        # Some error occurred; log it
+        msg = ("[%(placement_req_id)s] Failed to update inventory to "
+               "[%(inv_data)s] for resource provider with UUID %(uuid)s.  Got "
+               "%(status_code)d: %(err_text)s")
+        args = {
+            'placement_req_id': get_placement_request_id(resp),
+            'uuid': rp_uuid,
+            'inv_data': str(inv_data),
+            'status_code': resp.status_code,
+            'err_text': resp.text,
+        }
+        LOG.error(msg, args)
+
+        if resp.status_code == 409:
+            # If a conflict attempting to remove inventory in a resource class
+            # with active allocations, raise InventoryInUse
+            match = _RE_INV_IN_USE.search(resp.text)
+            if match:
+                rc = match.group(1)
+                raise exception.InventoryInUse(
+                    resource_classes=rc,
+                    resource_provider=rp_uuid,
+                )
+            # Other conflicts are generation mismatch: raise conflict exception
+            raise exception.ResourceProviderUpdateConflict(
+                uuid=rp_uuid, generation=generation, error=resp.text)
+
+        # Otherwise, raise generic exception
+        raise exception.ResourceProviderUpdateFailed(url=url, error=resp.text)
+
     @safe_connect
     def _ensure_traits(self, context, traits):
         """Make sure all specified traits exist in the placement service.

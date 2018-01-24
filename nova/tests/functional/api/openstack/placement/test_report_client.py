@@ -449,3 +449,240 @@ class SchedulerReportClientTests(test.TestCase):
                 uuids.sbw, [uuids.agg_bw]))
             self.assertFalse(prov_tree.have_aggregates_changed(
                 self.compute_uuid, [uuids.agg_disk_1, uuids.agg_disk_2]))
+
+    def test__set_inventory_for_provider(self):
+        """Tests for SchedulerReportClient._set_inventory_for_provider, NOT
+        set_inventory_for_provider.
+        """
+        with self._interceptor():
+            inv = {
+                fields.ResourceClass.SRIOV_NET_VF: {
+                    'total': 24,
+                    'reserved': 1,
+                    'min_unit': 1,
+                    'max_unit': 24,
+                    'step_size': 1,
+                    'allocation_ratio': 1.0,
+                },
+            }
+            # Provider doesn't exist in our cache
+            self.assertRaises(
+                ValueError,
+                self.client._set_inventory_for_provider,
+                self.context, uuids.cn, inv)
+            self.assertIsNone(self.client._get_inventory(
+                self.context, uuids.cn))
+
+            # Create the provider
+            self.client._ensure_resource_provider(self.context, uuids.cn)
+            # Still no inventory, but now we don't get a 404
+            self.assertEqual(
+                {},
+                self.client._get_inventory(
+                    self.context, uuids.cn)['inventories'])
+
+            # Now set the inventory
+            self.client._set_inventory_for_provider(
+                self.context, uuids.cn, inv)
+            self.assertEqual(
+                inv,
+                self.client._get_inventory(
+                    self.context, uuids.cn)['inventories'])
+
+            # Make sure we can change it
+            inv = {
+                fields.ResourceClass.SRIOV_NET_VF: {
+                    'total': 24,
+                    'reserved': 1,
+                    'min_unit': 1,
+                    'max_unit': 24,
+                    'step_size': 1,
+                    'allocation_ratio': 1.0,
+                },
+                fields.ResourceClass.IPV4_ADDRESS: {
+                    'total': 128,
+                    'reserved': 0,
+                    'min_unit': 1,
+                    'max_unit': 8,
+                    'step_size': 1,
+                    'allocation_ratio': 1.0,
+                },
+            }
+            self.client._set_inventory_for_provider(
+                self.context, uuids.cn, inv)
+            self.assertEqual(
+                inv,
+                self.client._get_inventory(
+                    self.context, uuids.cn)['inventories'])
+
+            # Create custom resource classes on the fly
+            self.assertFalse(
+                self.client.get('/resource_classes/CUSTOM_BANDWIDTH'))
+            inv = {
+                fields.ResourceClass.SRIOV_NET_VF: {
+                    'total': 24,
+                    'reserved': 1,
+                    'min_unit': 1,
+                    'max_unit': 24,
+                    'step_size': 1,
+                    'allocation_ratio': 1.0,
+                },
+                fields.ResourceClass.IPV4_ADDRESS: {
+                    'total': 128,
+                    'reserved': 0,
+                    'min_unit': 1,
+                    'max_unit': 8,
+                    'step_size': 1,
+                    'allocation_ratio': 1.0,
+                },
+                'CUSTOM_BANDWIDTH': {
+                    'total': 1250000,
+                    'reserved': 10000,
+                    'min_unit': 5000,
+                    'max_unit': 250000,
+                    'step_size': 5000,
+                    'allocation_ratio': 8.0,
+                },
+            }
+            self.client._set_inventory_for_provider(
+                self.context, uuids.cn, inv)
+            self.assertEqual(
+                inv,
+                self.client._get_inventory(
+                    self.context, uuids.cn)['inventories'])
+            # The custom resource class got created.
+            self.assertTrue(
+                self.client.get('/resource_classes/CUSTOM_BANDWIDTH'))
+
+            # Creating a bogus resource class raises the appropriate exception.
+            bogus_inv = dict(inv)
+            bogus_inv['CUSTOM_BOGU$$'] = {
+                'total': 1,
+                'reserved': 1,
+                'min_unit': 1,
+                'max_unit': 1,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            }
+            self.assertRaises(
+                exception.InvalidResourceClass,
+                self.client._set_inventory_for_provider,
+                self.context, uuids.cn, bogus_inv)
+            self.assertFalse(
+                self.client.get('/resource_classes/BOGUS'))
+            self.assertEqual(
+                inv,
+                self.client._get_inventory(
+                    self.context, uuids.cn)['inventories'])
+
+            # Create a generation conflict by doing an "out of band" update
+            oob_inv = {
+                fields.ResourceClass.IPV4_ADDRESS: {
+                    'total': 128,
+                    'reserved': 0,
+                    'min_unit': 1,
+                    'max_unit': 8,
+                    'step_size': 1,
+                    'allocation_ratio': 1.0,
+                },
+            }
+            gen = self.client._provider_tree.data(uuids.cn).generation
+            self.assertTrue(
+                self.client.put(
+                    '/resource_providers/%s/inventories' % uuids.cn,
+                    {'resource_provider_generation': gen,
+                     'inventories': oob_inv}))
+            self.assertEqual(
+                oob_inv,
+                self.client._get_inventory(
+                    self.context, uuids.cn)['inventories'])
+
+            # Now try to update again.
+            inv = {
+                fields.ResourceClass.SRIOV_NET_VF: {
+                    'total': 24,
+                    'reserved': 1,
+                    'min_unit': 1,
+                    'max_unit': 24,
+                    'step_size': 1,
+                    'allocation_ratio': 1.0,
+                },
+                'CUSTOM_BANDWIDTH': {
+                    'total': 1250000,
+                    'reserved': 10000,
+                    'min_unit': 5000,
+                    'max_unit': 250000,
+                    'step_size': 5000,
+                    'allocation_ratio': 8.0,
+                },
+            }
+            # Cached generation is off, so this will bounce with a conflict.
+            self.assertRaises(
+                exception.ResourceProviderUpdateConflict,
+                self.client._set_inventory_for_provider,
+                self.context, uuids.cn, inv)
+            # Inventory still corresponds to the out-of-band update
+            self.assertEqual(
+                oob_inv,
+                self.client._get_inventory(
+                    self.context, uuids.cn)['inventories'])
+            # Force refresh to get the latest generation
+            self.client._refresh_and_get_inventory(self.context, uuids.cn)
+            # Now the update should work
+            self.client._set_inventory_for_provider(
+                self.context, uuids.cn, inv)
+            self.assertEqual(
+                inv,
+                self.client._get_inventory(
+                    self.context, uuids.cn)['inventories'])
+
+            # Now set up an InventoryInUse case by creating a VF allocation...
+            self.assertTrue(
+                self.client.put_allocations(
+                    self.context, uuids.cn, uuids.consumer,
+                    {fields.ResourceClass.SRIOV_NET_VF: 1},
+                    uuids.proj, uuids.user))
+            # ...and trying to delete the provider's VF inventory
+            bad_inv = {
+                'CUSTOM_BANDWIDTH': {
+                    'total': 1250000,
+                    'reserved': 10000,
+                    'min_unit': 5000,
+                    'max_unit': 250000,
+                    'step_size': 5000,
+                    'allocation_ratio': 8.0,
+                },
+            }
+            # Allocation bumped the generation, so refresh to get the latest
+            self.client._refresh_and_get_inventory(self.context, uuids.cn)
+            self.assertRaises(
+                exception.InventoryInUse,
+                self.client._set_inventory_for_provider,
+                self.context, uuids.cn, bad_inv)
+            self.assertEqual(
+                inv,
+                self.client._get_inventory(
+                    self.context, uuids.cn)['inventories'])
+
+            # Same result if we try to clear all the inventory
+            bad_inv = {}
+            self.assertRaises(
+                exception.InventoryInUse,
+                self.client._set_inventory_for_provider,
+                self.context, uuids.cn, bad_inv)
+            self.assertEqual(
+                inv,
+                self.client._get_inventory(
+                    self.context, uuids.cn)['inventories'])
+
+            # Remove the allocation to make it work
+            self.client.delete('/allocations/' + uuids.consumer)
+            # Force refresh to get the latest generation
+            self.client._refresh_and_get_inventory(self.context, uuids.cn)
+            inv = {}
+            self.client._set_inventory_for_provider(
+                self.context, uuids.cn, inv)
+            self.assertEqual(
+                inv,
+                self.client._get_inventory(
+                    self.context, uuids.cn)['inventories'])
