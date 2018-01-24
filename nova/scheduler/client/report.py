@@ -311,8 +311,8 @@ class SchedulerReportClient(object):
         the requested resource constraints.
 
         The provider summaries is a dict, keyed by resource provider UUID, of
-        inventory and capacity information for any resource provider involved
-        in the allocation_requests.
+        inventory and capacity information and traits for any resource
+        provider involved in the allocation_requests.
 
         :returns: A tuple with a list of allocation_request dicts, a dict of
                   provider information, and the microversion used to request
@@ -347,13 +347,20 @@ class SchedulerReportClient(object):
             return (data['allocation_requests'], data['provider_summaries'],
                     version)
 
-        msg = ("Failed to retrieve allocation candidates from placement API "
-               "for filters %(resources)s. Got %(status_code)d: %(err_text)s.")
         args = {
             'resources': res,
             'status_code': resp.status_code,
             'err_text': resp.text,
         }
+        if required_traits:
+            msg = ("Failed to retrieve allocation candidates from placement "
+                   "API for filters %(resources)s and traits %(traits)s. Got "
+                   "%(status_code)d: %(err_text)s.")
+            args['traits'] = qs_params['required']
+        else:
+            msg = ("Failed to retrieve allocation candidates from placement "
+                   "API for filters %(resources)s. Got %(status_code)d: "
+                   "%(err_text)s.")
         LOG.error(msg, args)
         return None, None, None
 

@@ -1,14 +1,21 @@
 ---
 features:
   - |
-    Add traits support to the Nova. The new flavor extra spec is added to
+    Added traits support to the scheduler. A new flavor extra spec is added to
     support specifying the required traits. The syntax of extra spec is
-    as below:
+    ``trait:<trait_name>=required``, for example:
 
     - trait:HW_CPU_X86_AVX2=required
     - trait:STORAGE_DISK_SSD=required
 
-    The scheduler will pass traits to the GET /allocation_candidates endpoint
-    in the Placement API to filter out resource providers with each of the
-    required traits. Currently the only valid value is required. For any other
-    value will be considered as invalid.
+    The scheduler will pass required traits to the
+    ``GET /allocation_candidates`` endpoint in the Placement API to include
+    only resource providers that can satisfy the required traits. Currently
+    the only valid value is ``required``. Any other value will be considered
+    invalid.
+
+    This requires that the Placement API version 1.17 is available before
+    the ``nova-scheduler`` service can use this feature.
+
+    The FilterScheduler is currently the only scheduler driver that supports
+    this feature.
