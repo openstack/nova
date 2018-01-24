@@ -38,19 +38,6 @@ class _TestNUMA(object):
 
         self.assertEqual(d1, d2)
 
-    def test_from_legacy_limits(self):
-        old_style = {"cells": [
-                        {"mem": {
-                            "total": 1024,
-                            "limit": 2048},
-                         "cpu_limit": 96.0,
-                         "cpus": "0,1,2,3,4,5",
-                         "id": 0}]}
-
-        limits = objects.NUMATopologyLimits.obj_from_db_obj(old_style)
-        self.assertEqual(16.0, limits.cpu_allocation_ratio)
-        self.assertEqual(2.0, limits.ram_allocation_ratio)
-
     def test_to_legacy_limits(self):
         limits = objects.NUMATopologyLimits(
             cpu_allocation_ratio=16,
