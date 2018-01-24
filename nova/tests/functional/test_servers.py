@@ -1204,6 +1204,10 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
         server = self.api.get_server(server['id'])
         self.assertEqual(rebuild_image_ref, server['image']['id'])
 
+        # The server should be in ERROR state
+        self.assertEqual('ERROR', server['status'])
+        self.assertIn('No valid host', server['fault']['message'])
+
     def test_rebuild_with_new_image(self):
         """Rebuilds a server with a different image which will run it through
         the scheduler to validate the image is still OK with the compute host
