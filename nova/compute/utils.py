@@ -626,6 +626,7 @@ def notify_about_host_update(context, event_suffix, host_payload):
     notifier.info(context, 'HostAPI.%s' % event_suffix, host_payload)
 
 
+@rpc.if_notifications_enabled
 def notify_about_server_group_action(context, group, action):
     payload = sg_notification.ServerGroupPayload(group)
     notification = sg_notification.ServerGroupNotification(
