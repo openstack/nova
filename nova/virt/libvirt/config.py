@@ -1638,6 +1638,13 @@ class LibvirtConfigGuestController(LibvirtConfigGuestDevice):
         return controller
 
 
+class LibvirtConfigGuestUSBHostController(LibvirtConfigGuestController):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestUSBHostController, self).__init__(**kwargs)
+        self.type = 'usb'
+
+
 class LibvirtConfigGuestHostdev(LibvirtConfigGuestDevice):
     def __init__(self, **kwargs):
         super(LibvirtConfigGuestHostdev, self).\
