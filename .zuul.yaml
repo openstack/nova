@@ -86,7 +86,6 @@
     post-run: playbooks/legacy/nova-multiattach/post.yaml
 
 - project:
-    name: openstack/nova
     check:
       jobs:
         - nova-multiattach
