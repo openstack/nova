@@ -42,6 +42,7 @@
       - ^releasenotes/.*$
     vars:
       tox_envlist: functional
+    timeout: 3600
 
 - job:
     name: nova-tox-functional-py35
@@ -59,6 +60,7 @@
       - ^releasenotes/.*$
     vars:
       tox_envlist: functional-py35
+    timeout: 3600
 
 - project:
     name: openstack/nova
