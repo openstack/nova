@@ -66,7 +66,7 @@ availability zones. Compute supports the following hypervisors:
 - `User Mode Linux (UML) <http://user-mode-linux.sourceforge.net/>`__
 
 - `VMware vSphere
-  <http://www.vmware.com/products/vsphere-hypervisor/support.html>`__
+  <https://www.vmware.com/support/vsphere-hypervisor.html>`__
 
 - `Xen <http://www.xen.org/support/documentation.html>`__
 
