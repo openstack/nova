@@ -816,8 +816,11 @@ class IronicDriver(virt_driver.ComputeDriver):
     def get_traits(self, nodename):
         """Get the traits for a given node.
 
+        Any custom traits returned are not required to exist in the placement
+        service - the caller will ensure their existence.
+
         :param nodename: the UUID of the node.
-        :returns: an iterable of traits for the supplied node.
+        :returns: an iterable of string trait names for the supplied node.
         """
         node = self._node_from_cache(nodename)
         return list(node.traits)
