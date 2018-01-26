@@ -11403,7 +11403,10 @@ class ComputeAPIIpFilterTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.BuildRequestList, 'get_by_filters')
     @mock.patch.object(objects.CellMapping, 'get_by_uuid',
                        side_effect=exception.CellMappingNotFound(uuid='fake'))
-    def test_ip_filtering_no_limit_to_db(self, _mock_cell_map_get,
+    @mock.patch('nova.network.neutronv2.api.API.'
+                'has_substr_port_filtering_extension', return_value=False)
+    def test_ip_filtering_no_limit_to_db(self, mock_has_port_filter_ext,
+                                         _mock_cell_map_get,
                                          mock_buildreq_get):
         c = context.get_admin_context()
         # Limit is not supplied to the DB when using an IP filter

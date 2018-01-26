@@ -38,6 +38,7 @@ from nova import conductor
 from nova import context
 from nova import db
 from nova import exception
+from nova.network.neutronv2 import api as neutron_api
 from nova import objects
 from nova.objects import base as obj_base
 from nova.objects import block_device as block_device_obj
@@ -5629,6 +5630,123 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
             self.assertRaises(exception.MultiattachToShelvedNotSupported,
                               self.compute_api.attach_volume,
                               self.context, instance, uuids.volumeid)
+
+    @mock.patch.object(neutron_api.API, 'has_substr_port_filtering_extension')
+    @mock.patch.object(neutron_api.API, 'list_ports')
+    @mock.patch.object(objects.BuildRequestList, 'get_by_filters')
+    def test_get_all_ip_filter_use_neutron(self, mock_buildreq_get,
+                                           mock_list_port, mock_check_ext):
+        mock_check_ext.return_value = True
+        cell_instances = self._list_of_instances(2)
+        mock_list_port.return_value = {
+            'ports': [{'device_id': 'fake_device_id'}]}
+        with mock.patch('nova.compute.instance_list.'
+                        'get_instance_objects_sorted') as mock_inst_get:
+            mock_inst_get.return_value = objects.InstanceList(
+                self.context, objects=cell_instances)
+
+            self.compute_api.get_all(
+                self.context, search_opts={'ip': 'fake'},
+                limit=None, marker='fake-marker', sort_keys=['baz'],
+                sort_dirs=['desc'])
+
+            mock_list_port.assert_called_once_with(
+                self.context, fixed_ips='ip_address_substr=fake',
+                fields=['device_id'])
+            mock_buildreq_get.assert_called_once_with(
+                self.context, {'ip': 'fake', 'uuid': ['fake_device_id']},
+                limit=None, marker='fake-marker',
+                sort_keys=['baz'], sort_dirs=['desc'])
+            fields = ['metadata', 'info_cache', 'security_groups']
+            mock_inst_get.assert_called_once_with(
+                self.context, {'ip': 'fake', 'uuid': ['fake_device_id']},
+                None, None, fields, ['baz'], ['desc'])
+
+    @mock.patch.object(neutron_api.API, 'has_substr_port_filtering_extension')
+    @mock.patch.object(neutron_api.API, 'list_ports')
+    @mock.patch.object(objects.BuildRequestList, 'get_by_filters')
+    def test_get_all_ip6_filter_use_neutron(self, mock_buildreq_get,
+                                            mock_list_port, mock_check_ext):
+        mock_check_ext.return_value = True
+        cell_instances = self._list_of_instances(2)
+        mock_list_port.return_value = {
+            'ports': [{'device_id': 'fake_device_id'}]}
+        with mock.patch('nova.compute.instance_list.'
+                        'get_instance_objects_sorted') as mock_inst_get:
+            mock_inst_get.return_value = objects.InstanceList(
+                self.context, objects=cell_instances)
+
+            self.compute_api.get_all(
+                self.context, search_opts={'ip6': 'fake'},
+                limit=None, marker='fake-marker', sort_keys=['baz'],
+                sort_dirs=['desc'])
+
+            mock_list_port.assert_called_once_with(
+                self.context, fixed_ips='ip_address_substr=fake',
+                fields=['device_id'])
+            mock_buildreq_get.assert_called_once_with(
+                self.context, {'ip6': 'fake', 'uuid': ['fake_device_id']},
+                limit=None, marker='fake-marker',
+                sort_keys=['baz'], sort_dirs=['desc'])
+            fields = ['metadata', 'info_cache', 'security_groups']
+            mock_inst_get.assert_called_once_with(
+                self.context, {'ip6': 'fake', 'uuid': ['fake_device_id']},
+                None, None, fields, ['baz'], ['desc'])
+
+    @mock.patch.object(neutron_api.API, 'has_substr_port_filtering_extension')
+    @mock.patch.object(neutron_api.API, 'list_ports')
+    @mock.patch.object(objects.BuildRequestList, 'get_by_filters')
+    def test_get_all_ip_and_ip6_filter_use_neutron(self, mock_buildreq_get,
+                                                   mock_list_port,
+                                                   mock_check_ext):
+        mock_check_ext.return_value = True
+        cell_instances = self._list_of_instances(2)
+        mock_list_port.return_value = {
+            'ports': [{'device_id': 'fake_device_id'}]}
+        with mock.patch('nova.compute.instance_list.'
+                        'get_instance_objects_sorted') as mock_inst_get:
+            mock_inst_get.return_value = objects.InstanceList(
+                self.context, objects=cell_instances)
+
+            self.compute_api.get_all(
+                self.context, search_opts={'ip': 'fake1', 'ip6': 'fake2'},
+                limit=None, marker='fake-marker', sort_keys=['baz'],
+                sort_dirs=['desc'])
+
+            mock_list_port.assert_has_calls([
+                mock.call(
+                    self.context, fixed_ips='ip_address_substr=fake1',
+                    fields=['device_id']),
+                mock.call(
+                    self.context, fixed_ips='ip_address_substr=fake2',
+                    fields=['device_id'])
+            ])
+            mock_buildreq_get.assert_called_once_with(
+                self.context, {'ip': 'fake1', 'ip6': 'fake2',
+                               'uuid': ['fake_device_id', 'fake_device_id']},
+                limit=None, marker='fake-marker',
+                sort_keys=['baz'], sort_dirs=['desc'])
+            fields = ['metadata', 'info_cache', 'security_groups']
+            mock_inst_get.assert_called_once_with(
+                self.context, {'ip': 'fake1', 'ip6': 'fake2',
+                               'uuid': ['fake_device_id', 'fake_device_id']},
+                None, None, fields, ['baz'], ['desc'])
+
+    @mock.patch.object(neutron_api.API, 'has_substr_port_filtering_extension')
+    @mock.patch.object(neutron_api.API, 'list_ports')
+    def test_get_all_ip6_filter_use_neutron_exc(self, mock_list_port,
+                                                mock_check_ext):
+        mock_check_ext.return_value = True
+        mock_list_port.side_effect = exception.InternalError('fake')
+
+        instances = self.compute_api.get_all(
+            self.context, search_opts={'ip6': 'fake'},
+            limit=None, marker='fake-marker', sort_keys=['baz'],
+            sort_dirs=['desc'])
+        mock_list_port.assert_called_once_with(
+            self.context, fixed_ips='ip_address_substr=fake',
+            fields=['device_id'])
+        self.assertEqual([], instances.objects)
 
 
 class Cellsv1DeprecatedTestMixIn(object):

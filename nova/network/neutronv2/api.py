@@ -1112,6 +1112,10 @@ class API(base_api.NetworkAPI):
         self._refresh_neutron_extensions_cache(context, neutron=neutron)
         return constants.QOS_QUEUE in self.extensions
 
+    def has_substr_port_filtering_extension(self, context):
+        self._refresh_neutron_extensions_cache(context)
+        return constants.SUBSTR_PORT_FILTERING in self.extensions
+
     def _get_pci_device_profile(self, pci_dev):
         dev_spec = self.pci_whitelist.get_devspec(pci_dev)
         if dev_spec:
