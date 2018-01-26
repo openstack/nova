@@ -2770,7 +2770,7 @@ class CommonNetworkTestCase(test.TestCase):
                           cidr='10.1.0.0/24', fixed_cidr='10.1.1.0/25')
 
 
-class TestRPCFixedManager(network_manager.RPCAllocateFixedIP,
+class FakeRPCFixedManager(network_manager.RPCAllocateFixedIP,
         network_manager.NetworkManager):
     """Dummy manager that implements RPCAllocateFixedIP."""
 
@@ -2779,7 +2779,7 @@ class RPCAllocateTestCase(test.NoDBTestCase):
     """Tests nova.network.manager.RPCAllocateFixedIP."""
     def setUp(self):
         super(RPCAllocateTestCase, self).setUp()
-        self.rpc_fixed = TestRPCFixedManager()
+        self.rpc_fixed = FakeRPCFixedManager()
         self.context = context.RequestContext('fake', 'fake')
 
     def test_rpc_allocate(self):
@@ -2804,7 +2804,7 @@ class RPCAllocateTestCase(test.NoDBTestCase):
         self.assertEqual(address, rval)
 
 
-class TestFloatingIPManager(floating_ips.FloatingIP,
+class FakeFloatingIPManager(floating_ips.FloatingIP,
         network_manager.NetworkManager):
     """Dummy manager that implements FloatingIP."""
 
@@ -2941,7 +2941,7 @@ class FloatingIPTestCase(test.TestCase):
         super(FloatingIPTestCase, self).setUp()
         self.tempdir = self.useFixture(fixtures.TempDir()).path
         self.flags(log_dir=self.tempdir)
-        self.network = TestFloatingIPManager()
+        self.network = FakeFloatingIPManager()
         self.network.db = db
         self.project_id = fakes.FAKE_PROJECT_ID
         self.context = context.RequestContext('testuser', self.project_id,
@@ -3462,7 +3462,7 @@ class InstanceDNSTestCase(test.TestCase):
         super(InstanceDNSTestCase, self).setUp()
         self.tempdir = self.useFixture(fixtures.TempDir()).path
         self.flags(log_dir=self.tempdir)
-        self.network = TestFloatingIPManager()
+        self.network = FakeFloatingIPManager()
         self.network.db = db
         self.project_id = fakes.FAKE_PROJECT_ID
         self.context = context.RequestContext('testuser', self.project_id,

@@ -119,7 +119,7 @@ class RandomMixInWithNoFields(object):
 
 
 @base.NovaObjectRegistry.register_if(False)
-class TestSubclassedObject(RandomMixInWithNoFields, MyObj):
+class SubclassedObject(RandomMixInWithNoFields, MyObj):
     fields = {'new_field': fields.StringField()}
 
 
@@ -575,13 +575,13 @@ class _TestObject(object):
                          'rel_objects', 'mutable_default'] +
                         list(base_fields))
         myobj3_fields = ['new_field']
-        self.assertTrue(issubclass(TestSubclassedObject, MyObj))
+        self.assertTrue(issubclass(SubclassedObject, MyObj))
         self.assertEqual(len(myobj_fields), len(MyObj.fields))
         self.assertEqual(set(myobj_fields), set(MyObj.fields.keys()))
         self.assertEqual(len(myobj_fields) + len(myobj3_fields),
-                         len(TestSubclassedObject.fields))
+                         len(SubclassedObject.fields))
         self.assertEqual(set(myobj_fields) | set(myobj3_fields),
-                         set(TestSubclassedObject.fields.keys()))
+                         set(SubclassedObject.fields.keys()))
 
     def test_obj_as_admin(self):
         obj = MyObj(context=self.context)

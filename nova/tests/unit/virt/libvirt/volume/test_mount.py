@@ -39,7 +39,7 @@ from nova.virt.libvirt.volume import mount
 MAX_WAIT = 2
 
 
-class TestThreadController(object):
+class ThreadController(object):
     """Helper class for executing a test thread incrementally by waiting at
     named waitpoints.
 
@@ -50,7 +50,7 @@ class TestThreadController(object):
         ctl.waitpoint('bar')
         final_things()
 
-      ctl = TestThreadController(test)
+      ctl = ThreadController(test)
       ctl.runto('foo')
       assert(things)
       ctl.runto('bar')
@@ -66,9 +66,9 @@ class TestThreadController(object):
     all_threads = {}
 
     def __init__(self, fn):
-        """Create a TestThreadController.
+        """Create a ThreadController.
 
-        :param fn: A test function which takes a TestThreadController as its
+        :param fn: A test function which takes a ThreadController as its
                    only argument
         """
 
@@ -360,7 +360,7 @@ class HostMountStateTestCase(test.NoDBTestCase):
         def mount_a():
             # Mount vol_a from export
             self._sentinel_mount(m, mock.sentinel.vol_a)
-            TestThreadController.current().waitpoint('mounted')
+            ThreadController.current().waitpoint('mounted')
             self._sentinel_umount(m, mock.sentinel.vol_a)
 
         def mount_b():
@@ -374,20 +374,20 @@ class HostMountStateTestCase(test.NoDBTestCase):
         def mount_d():
             self._sentinel_mount(m, mock.sentinel.vol_d)
 
-        ctl_a = TestThreadController(mount_a)
-        ctl_b = TestThreadController(mount_b)
-        ctl_c = TestThreadController(mount_c)
-        ctl_d = TestThreadController(mount_d)
+        ctl_a = ThreadController(mount_a)
+        ctl_b = ThreadController(mount_b)
+        ctl_c = ThreadController(mount_c)
+        ctl_d = ThreadController(mount_d)
 
         def trap_mount(*args, **kwargs):
             # Conditionally wait at a waitpoint named after the command
             # we're executing
-            TestThreadController.current().waitpoint('mount')
+            ThreadController.current().waitpoint('mount')
 
         def trap_umount(*args, **kwargs):
             # Conditionally wait at a waitpoint named after the command
             # we're executing
-            TestThreadController.current().waitpoint('umount')
+            ThreadController.current().waitpoint('umount')
 
         mock_mount.side_effect = trap_mount
         mock_umount.side_effect = trap_umount
@@ -485,7 +485,7 @@ class HostMountStateTestCase(test.NoDBTestCase):
             # Mount vol on mountpoint a
             self._sentinel_mount(m, mock.sentinel.vol,
                                  mock.sentinel.mountpoint_a)
-            TestThreadController.current().waitpoint('mounted')
+            ThreadController.current().waitpoint('mounted')
             self._sentinel_umount(m, mock.sentinel.vol,
                                   mock.sentinel.mountpoint_a)
 
@@ -496,8 +496,8 @@ class HostMountStateTestCase(test.NoDBTestCase):
             self._sentinel_umount(m, mock.sentinel.vol,
                                   mock.sentinel.mountpoint_b)
 
-        ctl_a = TestThreadController(mount_a)
-        ctl_b = TestThreadController(mount_b)
+        ctl_a = ThreadController(mount_a)
+        ctl_b = ThreadController(mount_b)
 
         ctl_a.runto('mounted')
         mock_mount.assert_has_calls([
@@ -585,7 +585,7 @@ class MountManagerTestCase(test.NoDBTestCase):
             self.host = host
             self.generation = generation
 
-            ctl = TestThreadController.current()
+            ctl = ThreadController.current()
             if ctl is not None:
                 ctl.waitpoint('init')
 
@@ -617,10 +617,10 @@ class MountManagerTestCase(test.NoDBTestCase):
 
         def txn():
             with self.m.get_state():
-                TestThreadController.current().waitpoint('running')
+                ThreadController.current().waitpoint('running')
 
         # Start a thread which blocks holding a state object
-        ctl = TestThreadController(txn)
+        ctl = ThreadController(txn)
         ctl.runto('running')
 
         # Host goes down
