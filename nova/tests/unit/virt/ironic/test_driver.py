@@ -515,13 +515,15 @@ class IronicDriverTestCase(test.NoDBTestCase):
             instances.append(fake_instance.fake_instance_obj(self.ctx,
                                                              id=i,
                                                              uuid=uuid))
-            nodes.append(ironic_utils.get_test_node(instance_uuid=uuid))
+            nodes.append(ironic_utils.get_test_node(instance_uuid=uuid,
+                                                    fields=['instance_uuid']))
 
         mock_inst_by_uuid.side_effect = instances
         mock_call.return_value = nodes
 
         response = self.driver.list_instances()
-        mock_call.assert_called_with("node.list", associated=True, limit=0)
+        mock_call.assert_called_with("node.list", associated=True,
+                                     fields=['instance_uuid'], limit=0)
         expected_calls = [mock.call(mock.ANY, instances[0].uuid),
                           mock.call(mock.ANY, instances[1].uuid)]
         mock_inst_by_uuid.assert_has_calls(expected_calls)
@@ -534,7 +536,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_call.side_effect = exception.NovaException
         self.assertRaises(exception.VirtDriverNotReady,
                           self.driver.list_instances)
-        mock_call.assert_called_with("node.list", associated=True, limit=0)
+        mock_call.assert_called_with("node.list", associated=True,
+                                     fields=['instance_uuid'], limit=0)
         self.assertFalse(mock_inst_by_uuid.called)
 
     @mock.patch.object(cw.IronicClientWrapper, 'call')
@@ -543,11 +546,13 @@ class IronicDriverTestCase(test.NoDBTestCase):
         nodes = []
         for n in range(num_nodes):
             nodes.append(ironic_utils.get_test_node(
-                                      instance_uuid=uuidutils.generate_uuid()))
+                                      instance_uuid=uuidutils.generate_uuid(),
+                                      fields=['instance_uuid']))
 
         mock_call.return_value = nodes
         uuids = self.driver.list_instance_uuids()
-        mock_call.assert_called_with('node.list', associated=True, limit=0)
+        mock_call.assert_called_with('node.list', associated=True,
+                                     fields=['instance_uuid'], limit=0)
         expected = [n.instance_uuid for n in nodes]
         self.assertEqual(sorted(expected), sorted(uuids))
 
