@@ -703,6 +703,7 @@ class FakeLiveMigrateDriver(FakeDriver):
 
     def live_migration_force_complete(self, instance):
         self._migrating = False
+        del self.instances[instance.uuid]
 
     def live_migration_abort(self, instance):
         self._abort_migration = True

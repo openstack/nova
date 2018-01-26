@@ -42,7 +42,7 @@ class TestInstanceNotificationSampleWithMultipleCompute(
         self.useFixture(self.cinder)
         self.useFixture(fixtures.AllServicesCurrent())
 
-    def test_live_migration_actions(self):
+    def test_multiple_compute_actions(self):
         server = self._boot_a_server(
             extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
         self._wait_for_notification('instance.create.end')
@@ -56,6 +56,7 @@ class TestInstanceNotificationSampleWithMultipleCompute(
             self._test_live_migration_rollback,
             self._test_live_migration_abort,
             self._test_live_migration_pre,
+            self._test_evacuate_server
         ]
 
         for action in actions:
@@ -183,6 +184,34 @@ class TestInstanceNotificationSampleWithMultipleCompute(
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[5])
+
+    def _test_evacuate_server(self, server):
+        services = self.admin_api.get_services(host='host2',
+                                               binary='nova-compute')
+        service_id = services[0]['id']
+        self.admin_api.put_service(service_id, {'forced_down': True})
+        evacuate = {
+            'evacuate': {
+                'host': 'compute',
+                'force': True
+            }
+        }
+
+        self.admin_api.post_server_action(server['id'], evacuate)
+        self._wait_for_state_change(self.api, server,
+                                    expected_status='REBUILD')
+        self._wait_for_state_change(self.api, server,
+                                    expected_status='ACTIVE')
+
+        notifications = self._get_notifications('instance.evacuate')
+        self.assertEqual(1, len(notifications))
+        self._verify_notification(
+            'instance-evacuate',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id']},
+            actual=notifications[0])
+        self.admin_api.put_service(service_id, {'forced_down': False})
 
 
 class TestInstanceNotificationSampleWithMultipleComputeOldAttachFlow(

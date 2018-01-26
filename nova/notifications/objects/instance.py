@@ -435,7 +435,7 @@ class InstanceStateUpdatePayload(base.NotificationPayloadBase):
 @base.notification_sample('instance-resume-end.json')
 @base.notification_sample('instance-restore-start.json')
 @base.notification_sample('instance-restore-end.json')
-# @base.notification_sample('instance-evacuate.json')
+@base.notification_sample('instance-evacuate.json')
 @base.notification_sample('instance-resize_finish-start.json')
 @base.notification_sample('instance-resize_finish-end.json')
 @base.notification_sample('instance-live_migration_pre-start.json')

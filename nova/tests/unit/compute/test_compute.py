@@ -11114,7 +11114,8 @@ class ComputeAPITestCase(BaseTestCase):
             host_name='fake_dest_host',
             force=False)
 
-    def _test_evacuate(self, force=None):
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    def _test_evacuate(self, mock_notify, force=None):
         instance = self._create_fake_instance_obj(services=True)
         self.assertIsNone(instance.task_state)
 
@@ -11182,6 +11183,9 @@ class ComputeAPITestCase(BaseTestCase):
         self.assertEqual('accepted', migs[0].status)
         self.assertEqual('compute.instance.evacuate',
                          fake_notifier.NOTIFICATIONS[0].event_type)
+        mock_notify.assert_called_once_with(
+            ctxt, instance, self.compute.host, action='evacuate',
+            source='nova-api')
         if force is False:
             req_dest = fake_spec.requested_destination
             self.assertIsNotNone(req_dest)
