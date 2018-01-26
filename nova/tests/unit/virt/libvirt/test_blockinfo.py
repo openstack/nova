@@ -253,12 +253,16 @@ class LibvirtBlockInfoTest(test.NoDBTestCase):
                                              image_meta,
                                              rescue=True)
 
+        expect_disk_config_rescue = {
+            'bus': 'ide', 'dev': 'hda', 'type': 'cdrom'}
+        if blockinfo.libvirt_utils.get_arch({}) == 'aarch64':
+            expect_disk_config_rescue['bus'] = 'scsi'
+            expect_disk_config_rescue['dev'] = 'sda'
         expect = {
             'disk.rescue': {'bus': 'virtio', 'dev': 'vda',
                             'type': 'disk', 'boot_index': '1'},
             'disk': {'bus': 'virtio', 'dev': 'vdb', 'type': 'disk'},
-            'disk.config.rescue': {'bus': 'ide', 'dev': 'hda',
-                                   'type': 'cdrom'},
+            'disk.config.rescue': expect_disk_config_rescue,
             'root': {'bus': 'virtio', 'dev': 'vda',
                      'type': 'disk', 'boot_index': '1'},
             }
