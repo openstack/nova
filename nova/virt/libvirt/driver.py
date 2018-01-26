@@ -171,6 +171,7 @@ libvirt_volume_drivers = [
     'veritas_hyperscale='
         'nova.virt.libvirt.volume.vrtshyperscale.'
         'LibvirtHyperScaleVolumeDriver',
+    'storpool=nova.virt.libvirt.volume.storpool.LibvirtStorPoolVolumeDriver',
 ]
 
 

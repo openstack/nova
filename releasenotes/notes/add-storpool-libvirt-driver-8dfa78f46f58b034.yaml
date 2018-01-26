@@ -1,0 +1,3 @@
+---
+features:
+  - Added the StorPool libvirt volume attachment driver.
