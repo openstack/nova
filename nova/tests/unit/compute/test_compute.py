@@ -8599,7 +8599,7 @@ class ComputeAPITestCase(BaseTestCase):
     def test_populate_instance_for_create_encrypted(self, num_instances=1):
         CONF.set_override('enabled', True,
                           group='ephemeral_storage_encryption')
-        CONF.set_override('api_class',
+        CONF.set_override('backend',
                           'castellan.tests.unit.key_manager.mock_key_manager.'
                           'MockKeyManager',
                           group='key_manager')
