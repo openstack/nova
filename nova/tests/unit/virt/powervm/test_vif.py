@@ -59,8 +59,37 @@ class TestVifFunctions(test.NoDBTestCase):
                           {'type': 'bad_type'})
         mock_driver.assert_not_called()
 
+    @mock.patch('oslo_serialization.jsonutils.dumps')
+    @mock.patch('pypowervm.wrappers.event.Event')
+    def test_push_vif_event(self, mock_event, mock_dumps):
+        mock_vif = mock.Mock(mac='MAC', href='HREF')
+        vif._push_vif_event(self.adpt, 'action', mock_vif, mock.Mock(),
+                            'pvm_sea')
+        mock_dumps.assert_called_once_with(
+            {'provider': 'NOVA_PVM_VIF', 'action': 'action', 'mac': 'MAC',
+             'type': 'pvm_sea'})
+        mock_event.bld.assert_called_once_with(self.adpt, 'HREF',
+                                               mock_dumps.return_value)
+        mock_event.bld.return_value.create.assert_called_once_with()
+
+        mock_dumps.reset_mock()
+        mock_event.bld.reset_mock()
+        mock_event.bld.return_value.create.reset_mock()
+
+        # Exception reraises
+        mock_event.bld.return_value.create.side_effect = IndexError
+        self.assertRaises(IndexError, vif._push_vif_event, self.adpt, 'action',
+                          mock_vif, mock.Mock(), 'pvm_sea')
+        mock_dumps.assert_called_once_with(
+            {'provider': 'NOVA_PVM_VIF', 'action': 'action', 'mac': 'MAC',
+             'type': 'pvm_sea'})
+        mock_event.bld.assert_called_once_with(self.adpt, 'HREF',
+                                               mock_dumps.return_value)
+        mock_event.bld.return_value.create.assert_called_once_with()
+
+    @mock.patch('nova.virt.powervm.vif._push_vif_event')
     @mock.patch('nova.virt.powervm.vif._build_vif_driver')
-    def test_plug(self, mock_bld_drv):
+    def test_plug(self, mock_bld_drv, mock_event):
         """Test the top-level plug method."""
         mock_vif = {'address': 'MAC', 'type': 'pvm_sea'}
 
@@ -71,10 +100,13 @@ class TestVifFunctions(test.NoDBTestCase):
         mock_bld_drv.return_value.plug.assert_called_once_with(mock_vif,
                                                                new_vif=True)
         self.assertEqual(mock_bld_drv.return_value.plug.return_value, vnet)
+        mock_event.assert_called_once_with(self.adpt, 'plug', vnet, mock.ANY,
+                                           'pvm_sea')
 
         # Clean up
         mock_bld_drv.reset_mock()
         mock_bld_drv.return_value.plug.reset_mock()
+        mock_event.reset_mock()
 
         # 2) Plug returns None (which it should IRL whenever new_vif=False).
         mock_bld_drv.return_value.plug.return_value = None
@@ -84,6 +116,7 @@ class TestVifFunctions(test.NoDBTestCase):
         mock_bld_drv.return_value.plug.assert_called_once_with(mock_vif,
                                                                new_vif=False)
         self.assertIsNone(vnet)
+        mock_event.assert_not_called()
 
     @mock.patch('nova.virt.powervm.vif._build_vif_driver')
     def test_plug_raises(self, mock_vif_drv):
@@ -98,8 +131,9 @@ class TestVifFunctions(test.NoDBTestCase):
         mock_vif_drv.assert_called_once_with('adap', 'inst', mock_vif)
         vif_drv.plug.assert_called_once_with(mock_vif, new_vif='new_vif')
 
+    @mock.patch('nova.virt.powervm.vif._push_vif_event')
     @mock.patch('nova.virt.powervm.vif._build_vif_driver')
-    def test_unplug(self, mock_bld_drv):
+    def test_unplug(self, mock_bld_drv, mock_event):
         """Test the top-level unplug method."""
         mock_vif = {'address': 'MAC', 'type': 'pvm_sea'}
 
@@ -109,10 +143,12 @@ class TestVifFunctions(test.NoDBTestCase):
         mock_bld_drv.assert_called_once_with(self.adpt, 'instance', mock_vif)
         mock_bld_drv.return_value.unplug.assert_called_once_with(
             mock_vif, cna_w_list=None)
-
+        mock_event.assert_called_once_with(self.adpt, 'unplug', 'vnet_w',
+                                           mock.ANY, 'pvm_sea')
         # Clean up
         mock_bld_drv.reset_mock()
         mock_bld_drv.return_value.unplug.reset_mock()
+        mock_event.reset_mock()
 
         # 2) With specified cna_w_list
         mock_bld_drv.return_value.unplug.return_value = None
@@ -120,6 +156,7 @@ class TestVifFunctions(test.NoDBTestCase):
         mock_bld_drv.assert_called_once_with(self.adpt, 'instance', mock_vif)
         mock_bld_drv.return_value.unplug.assert_called_once_with(
             mock_vif, cna_w_list='cnalist')
+        mock_event.assert_not_called()
 
     @mock.patch('nova.virt.powervm.vif._build_vif_driver')
     def test_unplug_raises(self, mock_vif_drv):
@@ -223,3 +260,71 @@ class TestVifOvsDriver(test.NoDBTestCase):
         self.assertTrue(t1.delete.called)
         self.assertTrue(t2.delete.called)
         self.assertTrue(mock_cna.delete.called)
+
+
+class TestVifSeaDriver(test.NoDBTestCase):
+
+    def setUp(self):
+        super(TestVifSeaDriver, self).setUp()
+
+        self.adpt = mock.Mock()
+        self.inst = mock.Mock()
+        self.drv = vif.PvmSeaVifDriver(self.adpt, self.inst)
+
+    @mock.patch('nova.virt.powervm.vm.get_pvm_uuid')
+    @mock.patch('pypowervm.tasks.cna.crt_cna')
+    def test_plug_from_neutron(self, mock_crt_cna, mock_pvm_uuid):
+        """Tests that a VIF can be created.  Mocks Neutron net"""
+
+        # Set up the mocks.  Look like Neutron
+        fake_vif = {'details': {'vlan': 5}, 'network': {'meta': {}},
+                    'address': 'aabbccddeeff'}
+
+        def validate_crt(adpt, host_uuid, lpar_uuid, vlan, mac_addr=None):
+            self.assertIsNone(host_uuid)
+            self.assertEqual(5, vlan)
+            self.assertEqual('aabbccddeeff', mac_addr)
+            return pvm_net.CNA.bld(self.adpt, 5, 'host_uuid',
+                                   mac_addr=mac_addr)
+        mock_crt_cna.side_effect = validate_crt
+
+        # Invoke
+        resp = self.drv.plug(fake_vif)
+
+        # Validate (along with validate method above)
+        self.assertEqual(1, mock_crt_cna.call_count)
+        self.assertIsNotNone(resp)
+        self.assertIsInstance(resp, pvm_net.CNA)
+
+    def test_plug_existing_vif(self):
+        """Tests that a VIF need not be created."""
+
+        # Set up the mocks
+        fake_vif = {'network': {'meta': {'vlan': 5}},
+                    'address': 'aabbccddeeff'}
+
+        # Invoke
+        resp = self.drv.plug(fake_vif, new_vif=False)
+
+        self.assertIsNone(resp)
+
+    @mock.patch('nova.virt.powervm.vm.get_cnas')
+    def test_unplug_vifs(self, mock_vm_get):
+        """Tests that a delete of the vif can be done."""
+        # Mock up the CNA response.  Two should already exist, the other
+        # should not.
+        cnas = [cna('AABBCCDDEEFF'), cna('AABBCCDDEE11'), cna('AABBCCDDEE22')]
+        mock_vm_get.return_value = cnas
+
+        # Run method.  The AABBCCDDEE11 won't be unplugged (wasn't invoked
+        # below) and the last unplug will also just no-op because its not on
+        # the VM.
+        self.drv.unplug({'address': 'aa:bb:cc:dd:ee:ff'})
+        self.drv.unplug({'address': 'aa:bb:cc:dd:ee:22'})
+        self.drv.unplug({'address': 'aa:bb:cc:dd:ee:33'})
+
+        # The delete should have only been called once for each applicable vif.
+        # The second CNA didn't have a matching mac so it should be skipped.
+        self.assertEqual(1, cnas[0].delete.call_count)
+        self.assertEqual(0, cnas[1].delete.call_count)
+        self.assertEqual(1, cnas[2].delete.call_count)
