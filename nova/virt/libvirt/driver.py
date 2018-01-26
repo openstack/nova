@@ -3806,7 +3806,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 LOG.debug('Config drive not found in RBD, falling back to the '
                           'instance directory', instance=instance)
         disk_info = disk_mapping[name]
-        if 'unit' in disk_mapping:
+        if 'unit' in disk_mapping and disk_info['bus'] == 'scsi':
             disk_unit = disk_mapping['unit']
             disk_mapping['unit'] += 1  # Increments for the next disk added
         conf = disk.libvirt_info(disk_info['bus'],
@@ -3845,7 +3845,13 @@ class LibvirtDriver(driver.ComputeDriver):
             # use disk_mapping as container to keep reference of the
             # unit added and be able to increment it for each disk
             # added.
+            #
+            # NOTE(jaypipes,melwitt): If this is a boot-from-volume instance,
+            # we need to start the disk mapping unit at 1 since we set the
+            # bootable volume's unit to 0 for the bootable volume.
             disk_mapping['unit'] = 0
+            if self._is_booted_from_volume(block_device_info):
+                disk_mapping['unit'] = 1
 
         def _get_ephemeral_devices():
             eph_devices = []
@@ -3935,8 +3941,14 @@ class LibvirtDriver(driver.ComputeDriver):
             info = disk_mapping[vol_dev]
             self._connect_volume(context, connection_info, instance)
             if scsi_controller and scsi_controller.model == 'virtio-scsi':
-                info['unit'] = disk_mapping['unit']
-                disk_mapping['unit'] += 1
+                # Check if this is the bootable volume when in a
+                # boot-from-volume instance, and if so, ensure the unit
+                # attribute is 0.
+                if vol.get('boot_index') == 0:
+                    info['unit'] = 0
+                else:
+                    info['unit'] = disk_mapping['unit']
+                    disk_mapping['unit'] += 1
             cfg = self._get_volume_config(connection_info, info)
             devices.append(cfg)
             vol['connection_info'] = connection_info

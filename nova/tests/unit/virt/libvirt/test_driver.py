@@ -3675,6 +3675,158 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual(cfg.devices[4].model, 'virtio-scsi')
             mock_save.assert_called_with()
 
+    def test_get_guest_config_one_scsi_volume_with_configdrive(self):
+        """Tests that the unit attribute is only incremented for block devices
+        that have a scsi bus. Unit numbering should begin at 0 since we are not
+        booting from volume.
+        """
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {"hw_scsi_model": "virtio-scsi",
+                           "hw_disk_bus": "scsi"}})
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.config_drive = 'True'
+        conn_info = {'driver_volume_type': 'fake'}
+        bdms = block_device_obj.block_device_make_list_from_dicts(
+            self.context, [
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 1,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/sdc', 'disk_bus': 'scsi'}),
+                ]
+        )
+        bd_info = {
+            'block_device_mapping': driver_block_device.convert_volumes(bdms)}
+        bd_info['block_device_mapping'][0]['connection_info'] = conn_info
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta,
+                                            bd_info)
+        with mock.patch.object(
+                driver_block_device.DriverVolumeBlockDevice, 'save'):
+            cfg = drvr._get_guest_config(instance_ref, [], image_meta,
+                    disk_info, [], bd_info)
+
+            # The device order is determined by the order that devices are
+            # appended in _get_guest_storage_config in the driver.
+
+            # The first device will be the instance's local disk (since we're
+            # not booting from volume). It should begin unit numbering at 0.
+            self.assertIsInstance(cfg.devices[0],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertIn('disk', cfg.devices[0].source_path)
+            self.assertEqual('sda', cfg.devices[0].target_dev)
+            self.assertEqual('scsi', cfg.devices[0].target_bus)
+            self.assertEqual(0, cfg.devices[0].device_addr.unit)
+
+            # The second device will be the ephemeral disk
+            # (the flavor in self.test_instance has ephemeral_gb > 0).
+            # It should have the next unit number of 1.
+            self.assertIsInstance(cfg.devices[1],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertIn('disk.local', cfg.devices[1].source_path)
+            self.assertEqual('sdb', cfg.devices[1].target_dev)
+            self.assertEqual('scsi', cfg.devices[1].target_bus)
+            self.assertEqual(1, cfg.devices[1].device_addr.unit)
+
+            # This is the config drive. It should not have unit number set.
+            self.assertIsInstance(cfg.devices[2],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertIn('disk.config', cfg.devices[2].source_path)
+            self.assertEqual('hda', cfg.devices[2].target_dev)
+            self.assertEqual('ide', cfg.devices[2].target_bus)
+            self.assertIsNone(cfg.devices[2].device_addr)
+
+            # And this is the attached volume.
+            self.assertIsInstance(cfg.devices[3],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertEqual('sdc', cfg.devices[3].target_dev)
+            self.assertEqual('scsi', cfg.devices[3].target_bus)
+            self.assertEqual(2, cfg.devices[3].device_addr.unit)
+
+    def test_get_guest_config_boot_from_volume_with_configdrive(self):
+        """Tests that the unit attribute is only incremented for block devices
+        that have a scsi bus and that the bootable volume in a boot-from-volume
+        scenario always has the unit set to 0.
+        """
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {"hw_scsi_model": "virtio-scsi",
+                           "hw_disk_bus": "scsi"}})
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.config_drive = 'True'
+        conn_info = {'driver_volume_type': 'fake'}
+        bdms = block_device_obj.block_device_make_list_from_dicts(
+            self.context, [
+                # This is the boot volume (boot_index = 0).
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 1,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/sda', 'boot_index': 0}),
+                # This is just another attached volume.
+                fake_block_device.FakeDbBlockDeviceDict(
+                    {'id': 2,
+                     'source_type': 'volume', 'destination_type': 'volume',
+                     'device_name': '/dev/sdc', 'disk_bus': 'scsi'}),
+                ]
+        )
+        bd_info = {
+            'block_device_mapping': driver_block_device.convert_volumes(bdms)}
+        bd_info['block_device_mapping'][0]['connection_info'] = conn_info
+        bd_info['block_device_mapping'][1]['connection_info'] = conn_info
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta,
+                                            bd_info)
+        with mock.patch.object(
+                driver_block_device.DriverVolumeBlockDevice, 'save'):
+            cfg = drvr._get_guest_config(instance_ref, [], image_meta,
+                    disk_info, [], bd_info)
+
+            # The device order is determined by the order that devices are
+            # appended in _get_guest_storage_config in the driver.
+
+            # The first device will be the ephemeral disk
+            # (the flavor in self.test_instance has ephemeral_gb > 0).
+            # It should begin unit numbering at 1 because 0 is reserved for the
+            # boot volume for boot-from-volume.
+            self.assertIsInstance(cfg.devices[0],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertIn('disk.local', cfg.devices[0].source_path)
+            self.assertEqual('sdb', cfg.devices[0].target_dev)
+            self.assertEqual('scsi', cfg.devices[0].target_bus)
+            self.assertEqual(1, cfg.devices[0].device_addr.unit)
+
+            # The second device will be the config drive. It should not have a
+            # unit number set.
+            self.assertIsInstance(cfg.devices[1],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertIn('disk.config', cfg.devices[1].source_path)
+            self.assertEqual('hda', cfg.devices[1].target_dev)
+            self.assertEqual('ide', cfg.devices[1].target_bus)
+            self.assertIsNone(cfg.devices[1].device_addr)
+
+            # The third device will be the boot volume. It should have a
+            # unit number of 0.
+            self.assertIsInstance(cfg.devices[2],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertEqual('sda', cfg.devices[2].target_dev)
+            self.assertEqual('scsi', cfg.devices[2].target_bus)
+            self.assertEqual(0, cfg.devices[2].device_addr.unit)
+
+            # The fourth device will be the other attached volume.
+            self.assertIsInstance(cfg.devices[3],
+                                  vconfig.LibvirtConfigGuestDisk)
+            self.assertEqual('sdc', cfg.devices[3].target_dev)
+            self.assertEqual('scsi', cfg.devices[3].target_bus)
+            self.assertEqual(2, cfg.devices[3].device_addr.unit)
+
     def _get_guest_config_with_graphics(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
