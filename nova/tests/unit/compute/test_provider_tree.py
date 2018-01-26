@@ -56,7 +56,9 @@ class TestProviderTree(test.NoDBTestCase):
         self.assertEqual(set([cn1.uuid, cn2.uuid]), pt.get_provider_uuids())
 
         numa_cell0_uuid = pt.new_child('numa_cell0', cn1.uuid)
-        numa_cell1_uuid = pt.new_child('numa_cell1', cn1.uuid)
+        numa_cell1_uuid = pt.new_child('numa_cell1', cn1.hypervisor_hostname)
+
+        self.assertEqual(cn1.uuid, pt.data(numa_cell1_uuid).parent_uuid)
 
         self.assertTrue(pt.exists(numa_cell0_uuid))
         self.assertTrue(pt.exists('numa_cell0'))

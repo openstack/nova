@@ -395,18 +395,22 @@ class ProviderTree(object):
             except ValueError:
                 return False
 
-    def new_child(self, name, parent_uuid, uuid=None, generation=None):
+    def new_child(self, name, parent, uuid=None, generation=None):
         """Creates a new child provider with the given name and uuid under the
         given parent.
 
+        :param name: The name of the new child provider
+        :param parent: Either name or UUID of the parent provider
+        :param uuid: The UUID of the new child provider
+        :param generation: Generation to set for the new child provider
         :returns: the UUID of the new provider
 
         :raises ValueError if parent_uuid points to a non-existing provider.
         """
         with self.lock:
-            parent = self._find_with_lock(parent_uuid)
-            p = _Provider(name, uuid, generation, parent_uuid)
-            parent.add_child(p)
+            parent_node = self._find_with_lock(parent)
+            p = _Provider(name, uuid, generation, parent_node.uuid)
+            parent_node.add_child(p)
             return p.uuid
 
     def has_inventory(self, name_or_uuid):
