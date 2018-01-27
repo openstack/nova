@@ -101,8 +101,11 @@ class _IntegratedTestBase(test.TestCase):
         self.conductor = self.start_service('conductor')
         self.consoleauth = self.start_service('consoleauth')
 
-        self.network = self.start_service('network',
-                                          manager=CONF.network_manager)
+        if self.USE_NEUTRON:
+            self.neutron = self.useFixture(nova_fixtures.NeutronFixture(self))
+        else:
+            self.network = self.start_service('network',
+                                              manager=CONF.network_manager)
         self.scheduler = self._setup_scheduler_service()
 
         self.compute = self._setup_compute_service()
