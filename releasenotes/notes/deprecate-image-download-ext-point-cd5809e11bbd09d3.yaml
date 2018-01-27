@@ -1,0 +1,12 @@
+---
+deprecations:
+  - |
+    The ``[glance]/allowed_direct_url_schemes`` configuration option and
+    ``nova.image.download.modules`` extension point have been deprecated for
+    removal. These were originally added for the *nova.image.download.file*
+    FileTransfer extension which was removed in the 16.0.0 Pike release. The
+    ``nova.image.download.modules`` extension point is not maintained
+    and there is no indication of its use in production clouds. If you are
+    using this extension point, please make the nova development team
+    aware by contacting us in the #openstack-nova freenode IRC channel or
+    on the openstack-dev mailing list.
