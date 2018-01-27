@@ -89,8 +89,9 @@ def parse_version_string(version_string):
         return Version(*(int(value) for value
                          in version_string.split('.', 1)))
     except (ValueError, TypeError) as exc:
-        raise TypeError('invalid version string: %s; %s' % (
-            version_string, exc))
+        raise TypeError(
+            _('invalid version string: %(version_string)s; %(exc)s') %
+                {'version_string': version_string, 'exc': exc})
 
 
 class MicroversionMiddleware(object):
@@ -180,7 +181,7 @@ def extract_version(headers):
     # version if we really need to.
     if (str(request_version) in VERSIONS and request_version.matches()):
         return request_version
-    raise ValueError('Unacceptable version header: %s' % version_string)
+    raise ValueError(_('Unacceptable version header: %s') % version_string)
 
 
 # From twisted

@@ -296,7 +296,7 @@ def last_completed_audit_period(unit=None, before=None):
     else:
         rightnow = timeutils.utcnow()
     if unit not in ('month', 'day', 'year', 'hour'):
-        raise ValueError('Time period must be hour, day, month or year')
+        raise ValueError(_('Time period must be hour, day, month or year'))
     if unit == 'month':
         if offset == 0:
             offset = 1
