@@ -1801,6 +1801,15 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.assertEqual(uuids.request_id,
                         logging_mock.call_args[0][1]['placement_req_id'])
 
+    def test_put_empty(self):
+        # A simple put with an empty (not None) payload should send the empty
+        # payload through.
+        # Bug #1744786
+        url = '/resource_providers/%s/aggregates' % uuids.foo
+        self.client.put(url, [])
+        self.ks_adap_mock.put.assert_called_once_with(
+            url, json=[], raise_exc=False, microversion=None)
+
 
 class TestAggregates(SchedulerReportClientTestCase):
     def test_get_provider_aggregates_found(self):
