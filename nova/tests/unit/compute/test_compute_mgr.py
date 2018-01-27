@@ -7244,6 +7244,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         self.assertFalse(do_cleanup)
         self.assertFalse(destroy_disks)
 
+    @mock.patch('nova.compute.utils.notify_about_resize_prep_instance')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
     @mock.patch('nova.objects.InstanceFault.create')
     @mock.patch('nova.objects.Instance.save')
@@ -7251,9 +7252,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
     @mock.patch('nova.compute.utils.notify_about_instance_usage')
     @mock.patch('nova.compute.utils.is_volume_backed_instance',
                 new=lambda *a: False)
-    def test_prep_resize_errors_migration(self, mock_niu, mock_notify,
-                                          mock_save,
-                                          mock_if, mock_cn):
+    def test_prep_resize_errors_migration(self, mock_niu,
+                                          mock_notify, mock_save,
+                                          mock_if, mock_cn,
+                                          mock_notify_resize):
         migration = mock.MagicMock()
         flavor = objects.Flavor(name='flavor', id=1)
         cn = objects.ComputeNode(uuid=uuids.compute)
@@ -7296,6 +7298,15 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
             # Make sure we only called save once (kinda obviously must be true)
             migration.save.assert_called_once_with()
+            mock_notify_resize.assert_has_calls([
+                mock.call(self.context, instance, 'fake-mini',
+                          'start', flavor),
+                mock.call(self.context, instance, 'fake-mini',
+                          'end', flavor),
+                mock.call(self.context, instance, 'fake-mini',
+                          'start', flavor),
+                mock.call(self.context, instance, 'fake-mini',
+                          'end', flavor)])
 
         doit()
 

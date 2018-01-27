@@ -4105,6 +4105,9 @@ class ComputeManager(manager.Manager):
                                               current_period=True)
             self._notify_about_instance_usage(
                     context, instance, "resize.prep.start")
+            compute_utils.notify_about_resize_prep_instance(
+                context, instance, self.host,
+                fields.NotificationPhase.START, instance_type)
             try:
                 self._prep_resize(context, image, instance,
                                   instance_type, filter_properties,
@@ -4138,6 +4141,9 @@ class ComputeManager(manager.Manager):
                 self._notify_about_instance_usage(
                     context, instance, "resize.prep.end",
                     extra_usage_info=extra_usage_info)
+                compute_utils.notify_about_resize_prep_instance(
+                    context, instance, self.host,
+                    fields.NotificationPhase.END, instance_type)
 
     def _reschedule_resize_or_reraise(self, context, image, instance, exc_info,
             instance_type, request_spec, filter_properties):

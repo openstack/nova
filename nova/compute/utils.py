@@ -35,6 +35,7 @@ from nova import notifications
 from nova.notifications.objects import aggregate as aggregate_notification
 from nova.notifications.objects import base as notification_base
 from nova.notifications.objects import exception as notification_exception
+from nova.notifications.objects import flavor as flavor_notification
 from nova.notifications.objects import instance as instance_notification
 from nova.notifications.objects import keypair as keypair_notification
 from nova.notifications.objects import server_group as sg_notification
@@ -557,6 +558,36 @@ def notify_about_instance_snapshot(context, instance, host, phase,
         event_type=notification_base.EventType(
             object='instance',
             action=fields.NotificationAction.SNAPSHOT,
+            phase=phase),
+        payload=payload).emit(context)
+
+
+@rpc.if_notifications_enabled
+def notify_about_resize_prep_instance(context, instance, host, phase,
+                                      new_flavor):
+    """Send versioned notification about the instance resize action
+       on the instance
+
+    :param context: the request context
+    :param instance: the instance which the resize action performed on
+    :param host: the host emitting the notification
+    :param phase: the phase of the action
+    :param new_flavor: new flavor
+    """
+
+    payload = instance_notification.InstanceActionResizePrepPayload(
+        instance=instance,
+        fault=None,
+        new_flavor=flavor_notification.FlavorPayload(flavor=new_flavor))
+
+    instance_notification.InstanceActionResizePrepNotification(
+        context=context,
+        priority=fields.NotificationPriority.INFO,
+        publisher=notification_base.NotificationPublisher(
+            host=host, source=fields.NotificationSource.COMPUTE),
+        event_type=notification_base.EventType(
+            object='instance',
+            action=fields.NotificationAction.RESIZE_PREP,
             phase=phase),
         payload=payload).emit(context)
 

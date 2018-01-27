@@ -771,9 +771,12 @@ class TestInstanceNotificationSample(
         self.api.post_server_action(server['id'], post)
         self._wait_for_state_change(self.api, server, 'VERIFY_RESIZE')
 
-        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(6, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+
         # This list needs to be in order.
         expected_notifications = [
+            'instance-resize_prep-start',
+            'instance-resize_prep-end',
             'instance-resize-start',
             'instance-resize-end',
             'instance-resize_finish-start',
@@ -792,19 +795,19 @@ class TestInstanceNotificationSample(
         self.api.post_server_action(server['id'], post)
         self._wait_for_state_change(self.api, server, 'ACTIVE')
 
-        self.assertEqual(6, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self.assertEqual(8, len(fake_notifier.VERSIONED_NOTIFICATIONS))
         self._verify_notification(
             'instance-resize_revert-start',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[4])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[6])
         self._verify_notification(
             'instance-resize_revert-end',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']},
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[5])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[7])
 
     @mock.patch('nova.compute.manager.ComputeManager._reschedule',
                 return_value=True)
@@ -841,15 +844,18 @@ class TestInstanceNotificationSample(
         mock_prep_resize.side_effect = _build_resources
         self.api.post_server_action(server['id'], post)
         self._wait_for_notification('instance.resize.error')
-        self.assertEqual(1, len(fake_notifier.VERSIONED_NOTIFICATIONS),
-                         'Unexpected number of notifications: %s' %
-                         fake_notifier.VERSIONED_NOTIFICATIONS)
+        # 0: instance-resize_prep-start
+        # 1: instance-resize-error
+        # 2: instance-resize_prep-end
+        self.assertLessEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+                             'Unexpected number of notifications: %s' %
+                             fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification('instance-resize-error',
             replacements={
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']
             },
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
     @mock.patch('nova.compute.manager.ComputeManager._reschedule')
     @mock.patch('nova.compute.manager.ComputeManager._prep_resize')
@@ -893,10 +899,14 @@ class TestInstanceNotificationSample(
         self.api.post_server_action(server['id'], post)
         self._wait_for_state_change(self.api, server, expected_status='ERROR')
         self._wait_for_notification('compute.exception')
-        # There should be two notifications, one for the instance.resize.error
-        # and one for the compute.exception via the wrap_exception decorator on
-        # the ComputeManager.prep_resize method.
-        self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS),
+        # There should be the following four notifications.
+        # 0: instance-resize_prep-start
+        # 1: instance-resize-error
+        # 2: instance-resize_prep-end
+        # 3: compute.exception
+        #    (via the wrap_exception decorator on
+        #    the ComputeManager.prep_resize method.)
+        self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS),
                          'Unexpected number of notifications: %s' %
                          fake_notifier.VERSIONED_NOTIFICATIONS)
         self._verify_notification('instance-resize-error',
@@ -904,7 +914,7 @@ class TestInstanceNotificationSample(
                 'reservation_id': server['reservation_id'],
                 'uuid': server['id']
             },
-            actual=fake_notifier.VERSIONED_NOTIFICATIONS[0])
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
 
     def _test_snapshot_server(self, server):
         post = {'createImage': {'name': 'test-snap'}}

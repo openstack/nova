@@ -5255,7 +5255,8 @@ class ComputeTestCase(BaseTestCase,
         self.assertEqual(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(self.context, instance, [], [])
 
-    def test_resize_instance_notification(self):
+    @mock.patch('nova.compute.utils.notify_about_resize_prep_instance')
+    def test_resize_instance_notification(self, mock_notify):
         # Ensure notifications on instance migrate/resize.
         old_time = datetime.datetime(2012, 4, 1)
         cur_time = datetime.datetime(2012, 12, 21, 12, 21)
@@ -5307,6 +5308,11 @@ class ComputeTestCase(BaseTestCase,
              self.context)
         self.assertEqual(payload['image_ref_url'], image_ref_url)
         self.compute.terminate_instance(self.context, instance, [], [])
+        mock_notify.assert_has_calls([
+            mock.call(self.context, instance, 'fake-mini', 'start',
+                      instance_type),
+            mock.call(self.context, instance, 'fake-mini', 'end',
+                      instance_type)])
 
     def test_prep_resize_instance_migration_error_on_none_host(self):
         """Ensure prep_resize raises a migration error if destination host is

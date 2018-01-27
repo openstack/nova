@@ -1,0 +1,31 @@
+{
+    "$ref": "InstanceActionPayload.json",
+    "nova_object.data":{
+        "new_flavor": {
+            "nova_object.name": "FlavorPayload",
+            "nova_object.data": {
+                "description": null,
+                "disabled": false,
+                "ephemeral_gb": 0,
+                "extra_specs": {
+                    "hw:watchdog_action": "reset"
+                },
+                "flavorid": "d5a8bb54-365a-45ae-abdb-38d249df7845",
+                "is_public": true,
+                "memory_mb": 256,
+                "name": "other_flavor",
+                "projects": null,
+                "root_gb": 1,
+                "rxtx_factor": 1.0,
+                "swap": 0,
+                "vcpu_weight": 0,
+                "vcpus": 1
+            },
+            "nova_object.namespace": "nova",
+            "nova_object.version": "1.4"
+        },
+        "task_state": "resize_prep"
+    },
+    "nova_object.name": "InstanceActionResizePrepPayload",
+    "nova_object.version": "1.0"
+}
