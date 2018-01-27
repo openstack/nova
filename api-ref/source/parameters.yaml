@@ -368,23 +368,29 @@ all_projects:
     If you specify a tenant ID for a non-administrative user with this query parameter,
     the call lists all server groups for the tenant, or project, rather than for
     all projects.
+    Value of this query parameter is not checked, only presence is considered
+    as request for all projects.
+  in: query
+  required: false
+  type: string
+all_tenants:
+  description: |
+    Specify the ``all_tenants`` query parameter to ping instances
+    for all tenants. By default this is only allowed by admin users.
+    Value of this query parameter is not checked, only presence
+    is considered as request for all tenants.
+  in: query
+  required: false
+  type: string
+all_tenants_query:
+  description: |
+    Specify the ``all_tenants`` query parameter to list all instances
+    for all projects. A value of `all_tenants`` need not be specified.
+    If it is specified, it must be 'boolean'.
+    By default this is only allowed by admin users.
   in: query
   required: false
   type: boolean
-all_tenants:
-  description: |
-    Specify the ``all_tenants=1`` query parameter to ping instances
-    for all tenants. By default this is only allowed by admin users.
-  in: query
-  required: false
-  type: integer
-all_tenants_query:
-  description: |
-    Specify the ``all_tenants=1`` query parameter to list all instances
-    for all projects. By default this is only allowed by admin users.
-  in: query
-  required: false
-  type: integer
 all_tenants_sec_grp_query:
   description: |
     Specify the ``all_tenants`` query parameter to list all security
