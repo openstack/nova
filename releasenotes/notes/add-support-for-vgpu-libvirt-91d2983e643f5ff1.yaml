@@ -30,9 +30,28 @@ features:
       different types but there is no possibility yet to specify in the flavor
       which specific type we want to use for that instance.
 
+    * Suspending a guest having vGPUs doesn't work yet given a libvirt concern
+      (it can't hot-unplug mediated devices from a guest). Workarounds using
+      other instance actions (like snapshotting the instance or shelving it)
+      are recommended until libvirt supports that.
 
-    * For the moment, please don't restart instances (or suspend/resume them)
-      or the VGPU related device will be removed from the guest.
+    * Resizing an instance with a new flavor that has vGPU resources doesn't
+      allocate those vGPUs to the instance (the instance is created without
+      vGPU resources). We propose to work around this problem by rebuilding the
+      instance once it has been resized so then it will have allocated vGPUs.
+
+    * Migrating an instance to another host will have the same problem as
+      resize. In case you want to migrate an instance, make sure to rebuild
+      it.
+
+    * Rescuing an instance having vGPUs will mean that the rescue image won't
+      use the existing vGPUs. When unrescuing, it will use again the existing
+      vGPUs that were allocated to the instance. That said, given Nova looks
+      at all the allocated vGPUs when trying to find unallocated ones, there
+      could be a race condition if an instance is rescued at the moment a new
+      instance asking for vGPUs is created, because both instances could use
+      the same vGPUs. If you want to rescue an instance, make sure to disable
+      the host until we fix that in Nova.
 
     * Mediated devices that are created by the libvirt driver are not persisted
       upon reboot. Consequently, a guest startup would fail since the virtual
@@ -45,7 +64,8 @@ features:
       the nvidia driver that prevents one guest to have more than one virtual
       GPU from the same physical card. One guest can have two or more virtual
       GPUs but then it requires each vGPU to be hosted by a separate physical
-      card.
+      card. Until that limitation is removed, please avoid creating flavors
+      asking for more than 1 vGPU.
 
     We are working actively to remove or workaround those caveats, but please
     understand that for the moment this feature is experimental given all the

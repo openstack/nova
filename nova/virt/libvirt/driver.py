@@ -2589,6 +2589,10 @@ class LibvirtDriver(driver.ComputeDriver):
         re-creates the domain to ensure the reboot happens, as the guest
         OS cannot ignore this action.
         """
+        # NOTE(sbauza): Since we undefine the guest XML when destroying, we
+        # need to remember the existing mdevs for reusing them.
+        mdevs = self._get_all_assigned_mediated_devices(instance)
+        mdevs = list(mdevs.keys())
         # NOTE(mdbooth): In addition to performing a hard reboot of the domain,
         # the hard reboot operation is relied upon by operators to be an
         # automated attempt to fix as many things as possible about a
@@ -2617,7 +2621,8 @@ class LibvirtDriver(driver.ComputeDriver):
         #             are in place.
         xml = self._get_guest_xml(context, instance, network_info, disk_info,
                                   instance.image_meta,
-                                  block_device_info=block_device_info)
+                                  block_device_info=block_device_info,
+                                  mdevs=mdevs)
 
         # NOTE(mdbooth): context.auth_token will not be set when we call
         #                _hard_reboot from resume_state_on_host_boot()
@@ -5767,15 +5772,22 @@ class LibvirtDriver(driver.ComputeDriver):
                 mediated_devices.append(device)
         return mediated_devices
 
-    def _get_all_assigned_mediated_devices(self):
+    def _get_all_assigned_mediated_devices(self, instance=None):
         """Lookup all instances from the host and return all the mediated
         devices that are assigned to a guest.
+
+        :param instance: Only return mediated devices for that instance.
 
         :returns: A dictionary of keys being mediated device UUIDs and their
                   respective values the instance UUID of the guest using it.
         """
         allocated_mdevs = {}
-        for guest in self._host.list_guests(only_running=False):
+        if instance:
+            guest = self._host.get_guest(instance)
+            guests = [guest]
+        else:
+            guests = self._host.list_guests(only_running=False)
+        for guest in guests:
             cfg = guest.get_config()
             for device in cfg.devices:
                 if isinstance(device, vconfig.LibvirtConfigGuestHostdevMDEV):
