@@ -19,3 +19,36 @@ function archive_deleted_rows {
 }
 
 archive_deleted_rows
+
+set -e
+# We need to get the admin credentials to run the OSC CLIs for Placement.
+set +x
+BASE=${BASE:-/opt/stack}
+source $BASE/new/devstack/openrc admin
+set -x
+
+# TODO(mriedem): Consider checking for instances in ERROR state because
+# if there are any, we would expect them to retain allocations in Placement
+# and therefore we don't really need to check for leaked allocations.
+
+# Check for orphaned instance allocations in Placement which could mean
+# something failed during a test run and isn't getting cleaned up properly.
+echo "Looking for leaked resource provider allocations in Placement"
+LEAKED_ALLOCATIONS=0
+for provider in $(openstack resource provider list -c uuid -f value); do
+    echo "Looking for allocations for provider $provider"
+    allocations=$(openstack resource provider show --allocations $provider \
+                  -c allocations -f value)
+    if [[ "$allocations" != "{}" ]]; then
+        echo "Resource provider has allocations:"
+        openstack resource provider show --allocations $provider
+        LEAKED_ALLOCATIONS=1
+    fi
+done
+
+# Fail if there were any leaked allocations.
+if [[ $LEAKED_ALLOCATIONS -eq 1 ]]; then
+    echo "There were leaked allocations; failing."
+    exit 1
+fi
+echo "Resource provider allocations were cleaned up properly."
