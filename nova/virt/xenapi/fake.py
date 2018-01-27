@@ -109,11 +109,14 @@ def _create_pool(name_label):
                           {'name_label': name_label})
 
 
-def create_host(name_label, hostname='fake_name', address='fake_addr'):
+def create_host(name_label, hostname='fake_name', address='fake_addr',
+                software_version={'platform_name': 'fake_platform',
+                                  'platform_version': '1.0.0'}):
     host_ref = _create_object('host',
-                               {'name_label': name_label,
-                                'hostname': hostname,
-                                'address': address})
+                              {'name_label': name_label,
+                               'hostname': hostname,
+                               'address': address,
+                               'software_version': software_version})
     host_default_sr_ref = _create_local_srs(host_ref)
     _create_local_pif(host_ref)
 

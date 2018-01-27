@@ -1794,6 +1794,78 @@ class LiveMigrateHelperTestCase(VMOpsTestBase):
                 self._call_live_migrate_command_with_migrate_send_data,
                 migrate_data)
 
+    @mock.patch.object(vmops.VMOps, '_call_live_migrate_command')
+    def test_check_can_live_migrate_source_with_xcp2(self, mock_call_migrate):
+        ctxt = 'ctxt'
+        fake_instance = {"name": "fake_instance"}
+        fake_dest_check_data = objects.XenapiLiveMigrateData()
+        fake_dest_check_data.block_migration = True
+        mock_call_migrate.side_effect = \
+            xenapi_fake.xenapi_session.XenAPI.Failure(['VDI_NOT_IN_MAP'])
+
+        with mock.patch.object(self.vmops,
+                               '_get_iscsi_srs') as mock_iscsi_srs, \
+            mock.patch.object(self.vmops,
+                              '_get_vm_opaque_ref') as mock_vm, \
+            mock.patch.object(self.vmops,
+                              '_get_host_software_versions') as mock_host_sw:
+            mock_iscsi_srs.return_value = []
+            mock_vm.return_value = 'vm_ref'
+            mock_host_sw.return_value = {'platform_name': 'XCP',
+                                         'platform_version': '2.1.0'}
+            fake_returned_data = self.vmops.check_can_live_migrate_source(
+                ctxt, fake_instance, fake_dest_check_data)
+
+        self.assertEqual(fake_returned_data, fake_dest_check_data)
+
+    @mock.patch.object(vmops.VMOps, '_call_live_migrate_command')
+    def test_check_can_live_migrate_source_with_xcp2_vif_raise(self,
+                                                            mock_call_migrate):
+        ctxt = 'ctxt'
+        fake_instance = {"name": "fake_instance"}
+        fake_dest_check_data = objects.XenapiLiveMigrateData()
+        fake_dest_check_data.block_migration = True
+        mock_call_migrate.side_effect = \
+            xenapi_fake.xenapi_session.XenAPI.Failure(['VIF_NOT_IN_MAP'])
+
+        with mock.patch.object(self.vmops,
+                               '_get_iscsi_srs') as mock_iscsi_srs, \
+            mock.patch.object(self.vmops,
+                              '_get_vm_opaque_ref') as mock_vm, \
+            mock.patch.object(self.vmops,
+                              '_get_host_software_versions') as mock_host_sw:
+            mock_iscsi_srs.return_value = []
+            mock_vm.return_value = 'vm_ref'
+            mock_host_sw.return_value = {'platform_name': 'XCP',
+                                         'platform_version': '2.1.0'}
+            self.assertRaises(exception.MigrationPreCheckError,
+                              self.vmops.check_can_live_migrate_source, ctxt,
+                              fake_instance, fake_dest_check_data)
+
+    @mock.patch.object(vmops.VMOps, '_call_live_migrate_command')
+    def test_check_can_live_migrate_source_with_xcp2_sw_raise(self,
+                                                            mock_call_migrate):
+        ctxt = 'ctxt'
+        fake_instance = {"name": "fake_instance"}
+        fake_dest_check_data = objects.XenapiLiveMigrateData()
+        fake_dest_check_data.block_migration = True
+        mock_call_migrate.side_effect = \
+            xenapi_fake.xenapi_session.XenAPI.Failure(['VDI_NOT_IN_MAP'])
+
+        with mock.patch.object(self.vmops,
+                               '_get_iscsi_srs') as mock_iscsi_srs, \
+            mock.patch.object(self.vmops,
+                              '_get_vm_opaque_ref') as mock_vm, \
+            mock.patch.object(self.vmops,
+                              '_get_host_software_versions') as mock_host_sw:
+            mock_iscsi_srs.return_value = []
+            mock_vm.return_value = 'vm_ref'
+            mock_host_sw.return_value = {'platform_name': 'XCP',
+                                         'platform_version': '1.1.0'}
+            self.assertRaises(exception.MigrationPreCheckError,
+                              self.vmops.check_can_live_migrate_source, ctxt,
+                              fake_instance, fake_dest_check_data)
+
     def test_generate_vif_network_map(self):
         with mock.patch.object(self._session.VIF,
                                'get_other_config') as mock_other_config, \
