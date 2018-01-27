@@ -1,0 +1,10 @@
+---
+features:
+  - |
+    Add ``required`` query parameter to the ``GET /allocation_candidates`` API
+    in new placement microversion 1.17. The parameter accepts a list of traits
+    separated by ``,``, which is used to further limit the list of allocation
+    requests to resource providers that have the capacity to fulfill the
+    requested resources AND *collectively* have all of the required traits
+    associated with them. In the same microversion, the candidate attached
+    traits returned in the provider summary.

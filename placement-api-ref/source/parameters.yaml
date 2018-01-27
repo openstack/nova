@@ -50,6 +50,16 @@ allocation_candidates_limit:
   description: >
     A positive integer used to limit the maximum number of allocation
     candidates returned in the response.
+allocation_candidates_required:
+  type: string
+  in: query
+  required: false
+  min_version: 1.17
+  description: >
+    Accepts a list of traits separated by `,`. Allocation requests in the
+    response will be for resource providers that have capacity for all
+    requested resources and the set of those resource providers will
+    *collectively* contain all of the required traits.
 member_of:
   type: string
   in: query
@@ -241,7 +251,8 @@ provider_summaries:
   required: true
   description: >
     A dictionary keyed by resource provider UUID,
-    of dictionaries of inventory/capacity information.
+    of dictionaries of inventory/capacity information. The list of traits
+    the resource provider has associated with it is included in version `1.17`.
 reserved: &reserved
   type: integer
   in: body

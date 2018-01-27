@@ -271,6 +271,10 @@ class SharedStorageFixture(APIFixture):
             inv_list = rp_obj.InventoryList(objects=[vcpu_inv, ram_inv])
             cn.set_inventory(inv_list)
 
+        t_avx_sse = rp_obj.Trait.get_by_name(self.context, "HW_CPU_X86_SSE")
+        t_avx_sse2 = rp_obj.Trait.get_by_name(self.context, "HW_CPU_X86_SSE2")
+        cn1.set_traits(rp_obj.TraitList(objects=[t_avx_sse, t_avx_sse2]))
+
         # Populate shared storage provider with DISK_GB inventory
         disk_inv = rp_obj.Inventory(
             self.context,

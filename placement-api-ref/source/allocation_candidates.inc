@@ -31,6 +31,7 @@ Request
 
   - resources: resources_query_required
   - limit: allocation_candidates_limit
+  - required: allocation_candidates_required
 
 Response (microversions 1.12 - )
 --------------------------------
