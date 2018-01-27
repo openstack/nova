@@ -18,7 +18,6 @@ download images to launch instances.
 OpenStack Compute consists of the following areas and their components:
 
 ``nova-api`` service
-
   Accepts and responds to end user compute API calls. The service supports the
   OpenStack Compute API.  It enforces some policies and initiates most
   orchestration activities, such as running an instance.
