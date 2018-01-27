@@ -5322,8 +5322,12 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.Instance, 'save')
     @mock.patch.object(manager.ComputeManager, '_build_networks_for_instance')
     @mock.patch.object(manager.ComputeManager, '_prep_block_device')
-    def test_build_resources_reraises_on_failed_bdm_prep(self, mock_prep,
-                                                        mock_build, mock_save):
+    @mock.patch.object(virt_driver.ComputeDriver,
+                       'prepare_networks_before_block_device_mapping')
+    @mock.patch.object(virt_driver.ComputeDriver,
+                       'clean_networks_preparation')
+    def test_build_resources_reraises_on_failed_bdm_prep(
+            self, mock_clean, mock_prepnet, mock_prep, mock_build, mock_save):
         mock_save.return_value = self.instance
         mock_build.return_value = self.network_info
         mock_prep.side_effect = test.TestingException
@@ -5341,6 +5345,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 self.requested_networks, self.security_groups)
         mock_prep.assert_called_once_with(self.context, self.instance,
                 self.block_device_mapping)
+        mock_prepnet.assert_called_once_with(self.instance, self.network_info)
+        mock_clean.assert_called_once_with(self.instance, self.network_info)
 
     @mock.patch('nova.virt.block_device.attach_block_devices',
                 side_effect=exception.VolumeNotCreated('oops!'))
@@ -5394,7 +5400,12 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                                                      instance, hints)
         mock_get.assert_called_once_with(self.context, uuids.group_hint)
 
-    def test_failed_bdm_prep_from_delete_raises_unexpected(self):
+    @mock.patch.object(virt_driver.ComputeDriver,
+                       'prepare_networks_before_block_device_mapping')
+    @mock.patch.object(virt_driver.ComputeDriver,
+                       'clean_networks_preparation')
+    def test_failed_bdm_prep_from_delete_raises_unexpected(self, mock_clean,
+                                                           mock_prepnet):
         with test.nested(
                 mock.patch.object(self.compute,
                     '_build_networks_for_instance',
@@ -5420,6 +5431,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                         self.requested_networks, self.security_groups)])
 
             save.assert_has_calls([mock.call()])
+        mock_prepnet.assert_called_once_with(self.instance, self.network_info)
+        mock_clean.assert_called_once_with(self.instance, self.network_info)
 
     @mock.patch.object(manager.ComputeManager, '_build_networks_for_instance')
     def test_build_resources_aborts_on_failed_network_alloc(self, mock_build):
@@ -5531,8 +5544,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     @mock.patch(
         'nova.compute.manager.ComputeManager._build_networks_for_instance')
     @mock.patch('nova.objects.Instance.save')
+    @mock.patch.object(virt_driver.ComputeDriver,
+                       'prepare_networks_before_block_device_mapping')
+    @mock.patch.object(virt_driver.ComputeDriver,
+                       'clean_networks_preparation')
     def test_build_resources_unexpected_task_error_before_yield(
-            self, mock_save, mock_build_network, mock_info_wait):
+            self, mock_clean, mock_prepnet, mock_save, mock_build_network,
+            mock_info_wait):
         mock_build_network.return_value = self.network_info
         mock_save.side_effect = exception.UnexpectedTaskStateError(
             instance_uuid=uuids.instance, expected={}, actual={})
@@ -5546,6 +5564,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_build_network.assert_called_once_with(self.context, self.instance,
                 self.requested_networks, self.security_groups)
         mock_info_wait.assert_called_once_with(do_raise=False)
+        mock_prepnet.assert_called_once_with(self.instance, self.network_info)
+        mock_clean.assert_called_once_with(self.instance, self.network_info)
 
     @mock.patch('nova.network.model.NetworkInfoAsyncWrapper.wait')
     @mock.patch(

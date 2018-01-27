@@ -1,0 +1,11 @@
+---
+features:
+  - |
+    When creating a baremetal instance with volumes, the ironic driver will
+    now pass an IP address of an iSCSI initiator to the block storage service
+    because the volume backend may require the IP address for access control.
+    If an IP address is set to an ironic node as a volume connector resource,
+    the address is used. If a node has MAC addresses as volume connector
+    resources, an IP address is retrieved from VIFs associated with the MAC
+    addresses. IPv4 addresses are given priority over IPv6 addresses if both
+    are available.
