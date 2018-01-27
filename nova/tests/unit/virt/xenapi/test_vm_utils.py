@@ -369,22 +369,22 @@ class ResizeHelpersTestCase(VMUtilsTestBase):
         utils.execute('parted', '--script', path, 'set', '1',
             'boot', 'on', run_as_root=True)
 
-    def test_resize_part_and_fs_down_succeeds(self):
-        self.mox.StubOutWithMock(vm_utils, "_repair_filesystem")
-        self.mox.StubOutWithMock(utils, 'execute')
+    @mock.patch('nova.privsep.fs.resize_partition')
+    @mock.patch.object(vm_utils, '_repair_filesystem')
+    @mock.patch.object(utils, 'execute')
+    def test_resize_part_and_fs_down_succeeds(self, mock_execute, mock_repair,
+                                              mock_resize):
+        dev_path = '/dev/fake'
+        partition_path = '%s1' % dev_path
+        vm_utils._resize_part_and_fs('fake', 0, 20, 10, 'boot')
 
-        dev_path = "/dev/fake"
-        partition_path = "%s1" % dev_path
-        vm_utils._repair_filesystem(partition_path)
-        self._call_tune2fs_remove_journal(partition_path)
-        utils.execute("resize2fs", partition_path, "10s", run_as_root=True)
-        self._call_parted_mkpart(dev_path, 0, 9)
-        self._call_parted_boot_flag(dev_path)
-        self._call_tune2fs_add_journal(partition_path)
-
-        self.mox.ReplayAll()
-
-        vm_utils._resize_part_and_fs("fake", 0, 20, 10, "boot")
+        mock_execute.assert_has_calls([
+            mock.call('tune2fs', '-O ^has_journal', partition_path,
+                      run_as_root=True),
+            mock.call('resize2fs', partition_path, '10s', run_as_root=True),
+            mock.call('tune2fs', '-j', partition_path, run_as_root=True)])
+        mock_resize.assert_has_calls([
+            mock.call(dev_path, 0, 9, True)])
 
     def test_log_progress_if_required(self):
         self.mox.StubOutWithMock(vm_utils.LOG, "debug")
@@ -427,21 +427,22 @@ class ResizeHelpersTestCase(VMUtilsTestBase):
                           vm_utils._resize_part_and_fs,
                           "fake", 0, 20, 10, "boot")
 
-    def test_resize_part_and_fs_up_succeeds(self):
-        self.mox.StubOutWithMock(vm_utils, "_repair_filesystem")
-        self.mox.StubOutWithMock(utils, 'execute')
+    @mock.patch('nova.privsep.fs.resize_partition')
+    @mock.patch.object(vm_utils, '_repair_filesystem')
+    @mock.patch.object(utils, 'execute')
+    def test_resize_part_and_fs_up_succeeds(self, mock_execute, mock_repair,
+                                            mock_resize):
+        dev_path = '/dev/fake'
+        partition_path = '%s1' % dev_path
+        vm_utils._resize_part_and_fs('fake', 0, 20, 30, '')
 
-        dev_path = "/dev/fake"
-        partition_path = "%s1" % dev_path
-        vm_utils._repair_filesystem(partition_path)
-        self._call_tune2fs_remove_journal(partition_path)
-        self._call_parted_mkpart(dev_path, 0, 29)
-        utils.execute("resize2fs", partition_path, run_as_root=True)
-        self._call_tune2fs_add_journal(partition_path)
-
-        self.mox.ReplayAll()
-
-        vm_utils._resize_part_and_fs("fake", 0, 20, 30, "")
+        mock_execute.assert_has_calls([
+            mock.call('tune2fs', '-O ^has_journal', partition_path,
+                      run_as_root=True),
+            mock.call('resize2fs', partition_path, run_as_root=True),
+            mock.call('tune2fs', '-j', partition_path, run_as_root=True)])
+        mock_resize.assert_has_calls([
+            mock.call(dev_path, 0, 29, False)])
 
     def test_resize_disk_throws_on_zero_size(self):
         flavor = fake_flavor.fake_flavor_obj(self.context, root_gb=0)

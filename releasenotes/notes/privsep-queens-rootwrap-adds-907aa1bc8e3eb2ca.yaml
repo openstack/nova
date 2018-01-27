@@ -12,5 +12,5 @@ upgrade:
     The following commands are no longer required to be listed in your rootwrap
     configuration: blkid; blockdev; cat; chown; cryptsetup; dd; ebrctl; ifc_ctl;
     kpartx; losetup; lvcreate; lvremove; lvs; mkdir; mm-ctl; mount;
-    nova-idmapshift; ploop; prl_disk_tool; qemu-nbd; readlink; shred; tee;
+    nova-idmapshift; parted; ploop; prl_disk_tool; qemu-nbd; readlink; shred; tee;
     touch; umount; vgs; vrouter-port-control; and xend.

@@ -57,10 +57,6 @@ iscsiadm: CommandFilter, iscsiadm, root
 aoe-revalidate: CommandFilter, aoe-revalidate, root
 aoe-discover: CommandFilter, aoe-discover, root
 
-# nova/virt/xenapi/vm_utils.py: parted, --script, ...
-# nova/virt/xenapi/vm_utils.py: 'parted', '--script', dev_path, ..*.
-parted: CommandFilter, parted, root
-
 # nova/virt/xenapi/vm_utils.py: 'pygrub', '-qn', dev_path
 pygrub: CommandFilter, pygrub, root
 
