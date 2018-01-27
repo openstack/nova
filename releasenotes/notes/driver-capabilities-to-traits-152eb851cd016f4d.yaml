@@ -1,0 +1,26 @@
+---
+features:
+  - |
+    Compute drivers now expose capabilities via traits in the
+    Placement API.  Capabilities must map to standard traits defined
+    in `the os-traits project
+    <https://docs.openstack.org/os-traits/latest/>`_; for now these
+    are:
+
+    * ``COMPUTE_NET_ATTACH_INTERFACE``
+    * ``COMPUTE_DEVICE_TAGGING``
+    * ``COMPUTE_NET_ATTACH_INTERFACE_WITH_TAG``
+    * ``COMPUTE_VOLUME_ATTACH_WITH_TAG``
+    * ``COMPUTE_VOLUME_EXTEND``
+    * ``COMPUTE_VOLUME_MULTI_ATTACH``
+    * ``COMPUTE_TRUSTED_CERTS``
+
+    Any traits provided by the driver will be automatically added
+    during startup or a periodic update of a compute node.  Similarly
+    any traits later retracted by the driver will be automatically
+    removed.
+
+    However any traits which are removed by the admin from the compute
+    node resource provider via the Placement API will not be
+    reinstated until the compute service's provider cache is reset.
+    This can be triggered via a ``SIGHUP``.

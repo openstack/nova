@@ -70,7 +70,7 @@ os-brick==2.6.1
 os-client-config==1.29.0
 os-resource-classes==0.1.0
 os-service-types==1.2.0
-os-traits==0.4.0
+os-traits==0.8.0
 os-vif==1.14.0
 os-win==3.0.0
 os-xenapi==0.3.3

@@ -27,7 +27,8 @@ class PlacementApiClient(object):
         self.fixture = placement_fixture
 
     def get(self, url, **kwargs):
-        return client.APIResponse(self.fixture._fake_get(None, url, **kwargs))
+        return client.APIResponse(
+            self.fixture._fake_get(None, url, **kwargs))
 
     def put(self, url, body, **kwargs):
         return client.APIResponse(
@@ -36,6 +37,10 @@ class PlacementApiClient(object):
     def post(self, url, body, **kwargs):
         return client.APIResponse(
             self.fixture._fake_post(None, url, body, **kwargs))
+
+    def delete(self, url, **kwargs):
+        return client.APIResponse(
+            self.fixture._fake_delete(None, url, **kwargs))
 
 
 class PlacementFixture(placement_fixtures.PlacementFixture):

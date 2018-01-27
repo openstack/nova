@@ -123,6 +123,8 @@ class Resources(object):
 
 
 class FakeDriver(driver.ComputeDriver):
+    # These must match the traits in
+    # nova.tests.functional.integrated_helpers.ProviderUsageBaseTestCase
     capabilities = {
         "has_imagecache": True,
         "supports_evacuate": True,

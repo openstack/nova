@@ -39,8 +39,9 @@ class LibvirtReportTraitsTests(integrated_helpers.ProviderUsageBaseTestCase):
     def test_report_cpu_traits(self):
         # Test CPU traits reported on initial node startup, these specific
         # trait values are coming from fakelibvirt's baselineCPU result.
-        self.assertItemsEqual(['HW_CPU_X86_VMX', 'HW_CPU_X86_AESNI'],
-                              self._get_provider_traits(self.host_uuid))
+        traits = self._get_provider_traits(self.host_uuid)
+        for trait in ('HW_CPU_X86_VMX', 'HW_CPU_X86_AESNI'):
+            self.assertIn(trait, traits)
 
         self._create_trait('CUSTOM_TRAITS')
         new_traits = ['CUSTOM_TRAITS', 'HW_CPU_X86_AVX']
@@ -52,7 +53,8 @@ class LibvirtReportTraitsTests(integrated_helpers.ProviderUsageBaseTestCase):
         self._run_periodics()
         # HW_CPU_X86_AVX is filtered out because nova-compute owns CPU traits
         # and it's not in the baseline for the host.
-        self.assertItemsEqual(
-            ['HW_CPU_X86_VMX', 'HW_CPU_X86_AESNI', 'CUSTOM_TRAITS'],
-            self._get_provider_traits(self.host_uuid)
+        traits = set(self._get_provider_traits(self.host_uuid))
+        expected_traits = self.expected_libvirt_driver_capability_traits.union(
+            [u'HW_CPU_X86_VMX', u'HW_CPU_X86_AESNI', u'CUSTOM_TRAITS']
         )
+        self.assertItemsEqual(expected_traits, traits)
