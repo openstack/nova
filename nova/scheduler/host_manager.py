@@ -341,7 +341,6 @@ class HostManager(object):
 
     def __init__(self):
         self.cells = None
-        self.host_state_map = {}
         self.filter_handler = filters.HostFilterHandler()
         filter_classes = self.filter_handler.get_matching_classes(
                 CONF.filter_scheduler.available_filters)
@@ -677,6 +676,7 @@ class HostManager(object):
         Also updates the HostStates internal mapping for the HostManager.
         """
         # Get resource usage across the available compute nodes:
+        host_state_map = {}
         seen_nodes = set()
         for cell_uuid, computes in compute_nodes.items():
             for compute in computes:
@@ -690,12 +690,12 @@ class HostManager(object):
                 host = compute.host
                 node = compute.hypervisor_hostname
                 state_key = (host, node)
-                host_state = self.host_state_map.get(state_key)
+                host_state = host_state_map.get(state_key)
                 if not host_state:
                     host_state = self.host_state_cls(host, node,
                                                      cell_uuid,
                                                      compute=compute)
-                    self.host_state_map[state_key] = host_state
+                    host_state_map[state_key] = host_state
                 # We force to update the aggregates info each time a
                 # new request comes in, because some changes on the
                 # aggregates could have been happening after setting
@@ -707,21 +707,7 @@ class HostManager(object):
 
                 seen_nodes.add(state_key)
 
-        # remove compute nodes from host_state_map if they are not active
-        dead_nodes = set(self.host_state_map.keys()) - seen_nodes
-        for state_key in dead_nodes:
-            host, node = state_key
-            LOG.info(_LI("Removing dead compute node %(host)s:%(node)s "
-                         "from scheduler"), {'host': host, 'node': node})
-            del self.host_state_map[state_key]
-
-        # NOTE(mriedem): We are returning a generator, which means the global
-        # host_state_map could change due to a concurrent scheduling request
-        # where a compute node is now considered 'dead' and is removed from
-        # the host_state_map, so we have to be sure to check that the next
-        # seen_node is still in the map before returning it.
-        return (self.host_state_map[host] for host in seen_nodes
-                if host in self.host_state_map)
+        return (host_state_map[host] for host in seen_nodes)
 
     def _get_aggregates_info(self, host):
         return [self.aggs_by_id[agg_id] for agg_id in
