@@ -32,6 +32,7 @@ from nova import db
 from nova import exception
 from nova import objects
 from nova.objects import block_device as block_device_obj
+from nova.scheduler import weights
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client
@@ -47,6 +48,17 @@ from nova import volume
 
 
 LOG = logging.getLogger(__name__)
+
+
+class AltHostWeigher(weights.BaseHostWeigher):
+    """Used in the alternate host tests to return a pre-determined list of
+    hosts.
+    """
+    def _weigh_object(self, host_state, weight_properties):
+        """Return a defined order of hosts."""
+        weights = {"selection": 999, "alt_host1": 888, "alt_host2": 777,
+                   "alt_host3": 666, "host1": 0, "host2": 0}
+        return weights.get(host_state.host, 0)
 
 
 class ServersTestBase(integrated_helpers._IntegratedTestBase):
@@ -1372,7 +1384,7 @@ class ProviderUsageBaseTestCase(test.TestCase,
         nova.tests.unit.image.fake.stub_out_image_service(self)
 
         self.start_service('conductor')
-        self.start_service('scheduler')
+        self.scheduler_service = self.start_service('scheduler')
 
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
         fake_network.set_stub_network_methods(self)
@@ -2701,6 +2713,114 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         # The new_flavor should have been subtracted from the doubled
         # allocation which just leaves us with the original flavor.
         self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+
+    def _test_resize_reschedule_uses_host_lists(self, fails, num_alts=None):
+        """Test that when a resize attempt fails, the retry comes from the
+        supplied host_list, and does not call the scheduler.
+        """
+        server_req = self._build_minimal_create_server_request(
+                self.api, "some-server", flavor_id=self.flavor1["id"],
+                image_uuid="155d900f-4e14-4e4c-a73d-069cbf4541e6",
+                networks=[])
+
+        created_server = self.api.post_server({"server": server_req})
+        server = self._wait_for_state_change(self.api, created_server,
+                "ACTIVE")
+        inst_host = server["OS-EXT-SRV-ATTR:host"]
+        uuid_orig = self._get_provider_uuid_by_host(inst_host)
+
+        # We will need four new compute nodes to test the resize, representing
+        # the host selected by select_destinations(), along with 3 alternates.
+        self._start_compute(host="selection")
+        self._start_compute(host="alt_host1")
+        self._start_compute(host="alt_host2")
+        self._start_compute(host="alt_host3")
+        uuid_sel = self._get_provider_uuid_by_host("selection")
+        uuid_alt1 = self._get_provider_uuid_by_host("alt_host1")
+        uuid_alt2 = self._get_provider_uuid_by_host("alt_host2")
+        uuid_alt3 = self._get_provider_uuid_by_host("alt_host3")
+        hosts = [{"name": "selection", "uuid": uuid_sel},
+                 {"name": "alt_host1", "uuid": uuid_alt1},
+                 {"name": "alt_host2", "uuid": uuid_alt2},
+                 {"name": "alt_host3", "uuid": uuid_alt3},
+                ]
+
+        self.flags(weight_classes=[__name__ + '.AltHostWeigher'],
+                   group='filter_scheduler')
+        self.scheduler_service.stop()
+        self.scheduler_service = self.start_service('scheduler')
+
+        def fake_prep_resize(*args, **kwargs):
+            if self.num_fails < fails:
+                self.num_fails += 1
+                raise Exception("fake_prep_resize")
+            actual_prep_resize(*args, **kwargs)
+
+        # Yes this isn't great in a functional test, but it's simple.
+        actual_prep_resize = compute_manager.ComputeManager._prep_resize
+        self.stub_out("nova.compute.manager.ComputeManager._prep_resize",
+                      fake_prep_resize)
+        self.num_fails = 0
+        num_alts = 4 if num_alts is None else num_alts
+        # Make sure we have enough retries available for the number of
+        # requested fails.
+        attempts = min(fails + 2, num_alts)
+        self.flags(max_attempts=attempts, group='scheduler')
+        server_uuid = server["id"]
+        data = {"resize": {"flavorRef": self.flavor2["id"]}}
+        self.api.post_server_action(server_uuid, data)
+
+        if num_alts < fails:
+            # We will run out of alternates before populate_retry will
+            # raise a MaxRetriesExceeded exception, so the migration will
+            # fail and the server should be in status "ERROR"
+            server = self._wait_for_state_change(self.api, created_server,
+                    "ERROR")
+            source_usages = self._get_provider_usages(uuid_orig)
+            # The usage should be unchanged from the original flavor
+            self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+            # There should be no usages on any of the hosts
+            target_uuids = (uuid_sel, uuid_alt1, uuid_alt2, uuid_alt3)
+            empty_usage = {"VCPU": 0, "MEMORY_MB": 0, "DISK_GB": 0}
+            for target_uuid in target_uuids:
+                usage = self._get_provider_usages(target_uuid)
+                self.assertEqual(empty_usage, usage)
+        else:
+            server = self._wait_for_state_change(self.api, created_server,
+                    "VERIFY_RESIZE")
+            # Verify that the selected host failed, and was rescheduled to
+            # an alternate host.
+            new_server_host = server.get("OS-EXT-SRV-ATTR:host")
+            expected_host = hosts[fails]["name"]
+            self.assertEqual(expected_host, new_server_host)
+            uuid_dest = hosts[fails]["uuid"]
+            source_usages = self._get_provider_usages(uuid_orig)
+            dest_usages = self._get_provider_usages(uuid_dest)
+            # The usage should match the resized flavor
+            self.assertFlavorMatchesAllocation(self.flavor2, dest_usages)
+            # Verify that the other host have no allocations
+            target_uuids = (uuid_sel, uuid_alt1, uuid_alt2, uuid_alt3)
+            empty_usage = {"VCPU": 0, "MEMORY_MB": 0, "DISK_GB": 0}
+            for target_uuid in target_uuids:
+                if target_uuid == uuid_dest:
+                    continue
+                usage = self._get_provider_usages(target_uuid)
+                self.assertEqual(empty_usage, usage)
+
+            # Verify that there is only one migration record for the instance.
+            ctxt = context.get_admin_context()
+            filters = {"instance_uuid": server["id"]}
+            migrations = objects.MigrationList.get_by_filters(ctxt, filters)
+            self.assertEqual(1, len(migrations.objects))
+
+    def test_resize_reschedule_uses_host_lists_1_fail(self):
+        self._test_resize_reschedule_uses_host_lists(fails=1)
+
+    def test_resize_reschedule_uses_host_lists_3_fails(self):
+        self._test_resize_reschedule_uses_host_lists(fails=3)
+
+    def test_resize_reschedule_uses_host_lists_not_enough_alts(self):
+        self._test_resize_reschedule_uses_host_lists(fails=3, num_alts=1)
 
 
 class ServerLiveMigrateForceAndAbort(ProviderUsageBaseTestCase):

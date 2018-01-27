@@ -55,7 +55,8 @@ class MigrationTaskTestCase(test.NoDBTestCase):
                                      self.request_spec, self.reservations,
                                      self.clean_shutdown,
                                      compute_rpcapi.ComputeAPI(),
-                                     scheduler_client.SchedulerClient())
+                                     scheduler_client.SchedulerClient(),
+                                     host_list=None)
 
     @mock.patch('nova.objects.Service.get_minimum_version_multi')
     @mock.patch('nova.availability_zones.get_host_availability_zone')
@@ -75,17 +76,18 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         sig_mock.assert_called_once_with(self.context, self.request_spec)
         task.scheduler_client.select_destinations.assert_called_once_with(
             self.context, self.request_spec, [self.instance.uuid],
-            return_objects=True, return_alternates=False)
+            return_objects=True, return_alternates=True)
         selection = self.host_lists[0][0]
         prep_resize_mock.assert_called_once_with(
             self.context, self.instance, legacy_request_spec['image'],
             self.flavor, selection.service_host, None, self.reservations,
             request_spec=legacy_request_spec,
             filter_properties=self.filter_properties, node=selection.nodename,
-            clean_shutdown=self.clean_shutdown)
+            clean_shutdown=self.clean_shutdown, host_list=[])
         az_mock.assert_called_once_with(self.context, 'host1')
         self.assertIsNone(task._migration)
 
+    @mock.patch.object(objects.MigrationList, 'get_by_filters')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
     @mock.patch('nova.objects.Migration.save')
@@ -96,10 +98,11 @@ class MigrationTaskTestCase(test.NoDBTestCase):
     @mock.patch.object(scheduler_client.SchedulerClient, 'select_destinations')
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'prep_resize')
     def _test_execute(self, prep_resize_mock, sel_dest_mock, sig_mock, az_mock,
-                      gmv_mock, cm_mock, sm_mock, cn_mock, rc_mock,
+                      gmv_mock, cm_mock, sm_mock, cn_mock, rc_mock, gbf_mock,
                       requested_destination=False):
         sel_dest_mock.return_value = self.host_lists
         az_mock.return_value = 'myaz'
+        gbf_mock.return_value = objects.MigrationList()
 
         if requested_destination:
             self.request_spec.requested_destination = objects.Destination(
@@ -130,14 +133,14 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         sig_mock.assert_called_once_with(self.context, self.request_spec)
         task.scheduler_client.select_destinations.assert_called_once_with(
             self.context, self.request_spec, [self.instance.uuid],
-            return_objects=True, return_alternates=False)
+            return_objects=True, return_alternates=True)
         selection = self.host_lists[0][0]
         prep_resize_mock.assert_called_once_with(
             self.context, self.instance, legacy_request_spec['image'],
             self.flavor, selection.service_host, task._migration,
             self.reservations, request_spec=legacy_request_spec,
             filter_properties=self.filter_properties, node=selection.nodename,
-            clean_shutdown=self.clean_shutdown)
+            clean_shutdown=self.clean_shutdown, host_list=[])
         az_mock.assert_called_once_with(self.context, 'host1')
         self.assertIsNotNone(task._migration)
 
@@ -172,6 +175,7 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         self.flavor.id = 3
         self._test_execute()
 
+    @mock.patch.object(objects.MigrationList, 'get_by_filters')
     @mock.patch('nova.conductor.tasks.migrate.revert_allocation_for_migration')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient')
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
@@ -184,11 +188,12 @@ class MigrationTaskTestCase(test.NoDBTestCase):
     @mock.patch.object(compute_rpcapi.ComputeAPI, 'prep_resize')
     def test_execute_rollback(self, prep_resize_mock, sel_dest_mock, sig_mock,
                               az_mock, gmv_mock, cm_mock, sm_mock, cn_mock,
-                              rc_mock, mock_ra):
+                              rc_mock, mock_ra, mock_gbf):
         sel_dest_mock.return_value = self.host_lists
         az_mock.return_value = 'myaz'
         task = self._generate_task()
         gmv_mock.return_value = 23
+        mock_gbf.return_value = objects.MigrationList()
 
         # We just need this hook point to set a uuid on the
         # migration before we use it for teardown

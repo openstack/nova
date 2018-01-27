@@ -220,7 +220,7 @@ class ComputeTaskManager(base.Base):
     may involve coordinating activities on multiple compute nodes.
     """
 
-    target = messaging.Target(namespace='compute_task', version='1.19')
+    target = messaging.Target(namespace='compute_task', version='1.20')
 
     def __init__(self):
         super(ComputeTaskManager, self).__init__()
@@ -259,7 +259,7 @@ class ComputeTaskManager(base.Base):
     @wrap_instance_event(prefix='conductor')
     def migrate_server(self, context, instance, scheduler_hint, live, rebuild,
             flavor, block_migration, disk_over_commit, reservations=None,
-            clean_shutdown=True, request_spec=None):
+            clean_shutdown=True, request_spec=None, host_list=None):
         if instance and not isinstance(instance, nova_object.NovaObject):
             # NOTE(danms): Until v2 of the RPC API, we need to tolerate
             # old-world instance objects here
@@ -282,12 +282,13 @@ class ComputeTaskManager(base.Base):
                                              instance_uuid):
                 self._cold_migrate(context, instance, flavor,
                                    scheduler_hint['filter_properties'],
-                                   reservations, clean_shutdown, request_spec)
+                                   reservations, clean_shutdown, request_spec,
+                                   host_list)
         else:
             raise NotImplementedError()
 
     def _cold_migrate(self, context, instance, flavor, filter_properties,
-                      reservations, clean_shutdown, request_spec):
+                      reservations, clean_shutdown, request_spec, host_list):
         image = utils.get_image_from_system_metadata(
             instance.system_metadata)
 
@@ -308,8 +309,7 @@ class ComputeTaskManager(base.Base):
             request_spec.flavor = flavor
 
         task = self._build_cold_migrate_task(context, instance, flavor,
-                                             request_spec,
-                                             reservations, clean_shutdown)
+                request_spec, reservations, clean_shutdown, host_list)
         try:
             task.execute()
         except exception.NoValidHost as ex:
@@ -462,14 +462,13 @@ class ComputeTaskManager(base.Base):
                                               self.scheduler_client,
                                               request_spec)
 
-    def _build_cold_migrate_task(self, context, instance, flavor,
-                                 request_spec, reservations,
-                                 clean_shutdown):
+    def _build_cold_migrate_task(self, context, instance, flavor, request_spec,
+            reservations, clean_shutdown, host_list):
         return migrate.MigrationTask(context, instance, flavor,
                                      request_spec,
                                      reservations, clean_shutdown,
                                      self.compute_rpcapi,
-                                     self.scheduler_client)
+                                     self.scheduler_client, host_list)
 
     def _destroy_build_request(self, context, instance):
         # The BuildRequest needs to be stored until the instance is mapped to
