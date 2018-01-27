@@ -82,6 +82,8 @@ def init_application(name):
     except exception.ServiceTooOld as exc:
         return error_application(exc, name)
 
+    service.setup_profiler(name, CONF.host)
+
     conf = conf_files[0]
 
     return deploy.loadapp('config:%s' % conf, name=name)
