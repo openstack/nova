@@ -1191,8 +1191,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_providers_in_aggregates')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_resource_provider')
-    def test_ensure_resource_provider_exists_in_cache(self, get_rp_mock,
+                '_get_providers_in_tree')
+    def test_ensure_resource_provider_exists_in_cache(self, get_rpt_mock,
             get_pia_mock, get_trait_mock, get_agg_mock, create_rp_mock):
         # Override the client object's cache to contain a resource provider
         # object for the compute host and check that
@@ -1256,7 +1256,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.assertFalse(self.client._provider_tree.have_traits_changed(
             uuids.shr2, ['CUSTOM_BRONZE']))
         # These were not called because we had the root provider in the cache.
-        self.assertFalse(get_rp_mock.called)
+        self.assertFalse(get_rpt_mock.called)
         self.assertFalse(create_rp_mock.called)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -1268,17 +1268,17 @@ class TestProviderOperations(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_providers_in_aggregates')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_resource_provider')
-    def test_ensure_resource_provider_get(self, get_rp_mock, get_pia_mock,
+                '_get_providers_in_tree')
+    def test_ensure_resource_provider_get(self, get_rpt_mock, get_pia_mock,
             get_trait_mock, get_agg_mock, create_rp_mock):
         # No resource provider exists in the client's cache, so validate that
         # if we get the resource provider from the placement API that we don't
         # try to create the resource provider.
-        get_rp_mock.return_value = {
+        get_rpt_mock.return_value = [{
             'uuid': uuids.compute_node,
             'name': mock.sentinel.name,
             'generation': 1,
-        }
+        }]
 
         get_agg_mock.return_value = set([uuids.agg1])
         get_trait_mock.return_value = set(['CUSTOM_GOLD'])
@@ -1286,7 +1286,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
 
         self.client._ensure_resource_provider(uuids.compute_node)
 
-        get_rp_mock.assert_called_once_with(uuids.compute_node)
+        get_rpt_mock.assert_called_once_with(uuids.compute_node)
         self.assertTrue(self.client._provider_tree.exists(uuids.compute_node))
         get_agg_mock.assert_called_once_with(uuids.compute_node)
         self.assertTrue(
@@ -1311,13 +1311,13 @@ class TestProviderOperations(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_refresh_associations')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_resource_provider')
-    def test_ensure_resource_provider_create_fail(self, get_rp_mock,
+                '_get_providers_in_tree')
+    def test_ensure_resource_provider_create_fail(self, get_rpt_mock,
             refresh_mock, create_rp_mock):
         # No resource provider exists in the client's cache, and
         # _create_provider raises, indicating there was an error with the
         # create call. Ensure we don't populate the resource provider cache
-        get_rp_mock.return_value = None
+        get_rpt_mock.return_value = []
         create_rp_mock.side_effect = exception.ResourceProviderCreationFailed(
             name=uuids.compute_node)
 
@@ -1325,7 +1325,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             exception.ResourceProviderCreationFailed,
             self.client._ensure_resource_provider, uuids.compute_node)
 
-        get_rp_mock.assert_called_once_with(uuids.compute_node)
+        get_rpt_mock.assert_called_once_with(uuids.compute_node)
         create_rp_mock.assert_called_once_with(
             uuids.compute_node, uuids.compute_node, parent_provider_uuid=None)
         self.assertFalse(self.client._provider_tree.exists(uuids.compute_node))
@@ -1340,39 +1340,30 @@ class TestProviderOperations(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_create_resource_provider')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_provider_aggregates')
+                '_refresh_associations')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_provider_traits')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_providers_in_aggregates')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_resource_provider')
-    def test_ensure_resource_provider_create(self, get_rp_mock, get_pia_mock,
-            get_trait_mock, get_agg_mock, create_rp_mock):
+                '_get_providers_in_tree')
+    def test_ensure_resource_provider_create(self, get_rpt_mock, refresh_mock,
+                                             create_rp_mock):
         # No resource provider exists in the client's cache and no resource
         # provider was returned from the placement API, so verify that in this
         # case we try to create the resource provider via the placement API.
-        get_rp_mock.return_value = None
+        get_rpt_mock.return_value = []
         create_rp_mock.return_value = {
             'uuid': uuids.compute_node,
             'name': 'compute-name',
             'generation': 1,
         }
-        get_agg_mock.return_value = set([uuids.agg1, uuids.agg2])
-        get_trait_mock.return_value = set(['CUSTOM_FOO'])
-        get_pia_mock.return_value = []
         self.assertEqual(
             uuids.compute_node,
             self.client._ensure_resource_provider(uuids.compute_node))
         self._validate_provider(uuids.compute_node, name='compute-name',
                                 generation=1, parent_uuid=None,
-                                aggregates=set([uuids.agg1, uuids.agg2]),
-                                traits=set(['CUSTOM_FOO']))
+                                aggregates=set(), traits=set())
 
-        get_agg_mock.assert_called_once_with(uuids.compute_node)
-        get_trait_mock.assert_called_once_with(uuids.compute_node)
-        get_pia_mock.assert_called_once_with(set([uuids.agg1, uuids.agg2]))
-        get_rp_mock.assert_called_once_with(uuids.compute_node)
+        # We don't refresh for a just-created provider
+        refresh_mock.assert_not_called()
+        get_rpt_mock.assert_called_once_with(uuids.compute_node)
         create_rp_mock.assert_called_once_with(
                 uuids.compute_node,
                 uuids.compute_node,  # name param defaults to UUID if None
@@ -1401,8 +1392,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_create_resource_provider')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_resource_provider')
-    def test_ensure_resource_provider_tree(self, get_rp_mock, create_rp_mock):
+                '_get_providers_in_tree')
+    def test_ensure_resource_provider_tree(self, get_rpt_mock, create_rp_mock):
         """Test _ensure_resource_provider with a tree of providers."""
         def _create_resource_provider(uuid, name, parent_provider_uuid=None):
             """Mock side effect for creating the RP with the specified args."""
@@ -1415,7 +1406,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         create_rp_mock.side_effect = _create_resource_provider
 
         # Not initially in the placement database, so we have to create it.
-        get_rp_mock.return_value = None
+        get_rpt_mock.return_value = []
 
         # Create the root
         root = self.client._ensure_resource_provider(uuids.root)
@@ -1446,6 +1437,67 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.assertEqual(
             set([uuids.root, uuids.child1, uuids.child2, uuids.grandchild]),
             self.client._provider_tree.get_provider_uuids())
+
+    @mock.patch('nova.compute.provider_tree.ProviderTree.exists')
+    @mock.patch('nova.compute.provider_tree.ProviderTree.get_provider_uuids')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_refresh_associations')
+    def test_ensure_resource_provider_refresh_local(self, mock_refresh,
+                                                    mock_gpu, mock_exists):
+        """Make sure refreshes are called with the appropriate UUIDs and flags
+        when the local cache already has the provider in it.
+        """
+        mock_exists.return_value = True
+        tree_uuids = [uuids.root, uuids.one, uuids.two]
+        mock_gpu.return_value = tree_uuids
+        self.assertEqual(uuids.root,
+                         self.client._ensure_resource_provider(uuids.root))
+        mock_exists.assert_called_once_with(uuids.root)
+        mock_gpu.assert_called_once_with(uuids.root)
+        mock_refresh.assert_has_calls(
+            [mock.call(uuid, force=False) for uuid in tree_uuids])
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_providers_in_tree')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_refresh_associations')
+    def test_ensure_resource_provider_refresh_fetch(self, mock_refresh,
+            mock_gpit):
+        """Make sure refreshes are called with the appropriate UUIDs and flags
+        when we fetch the provider tree from placement.
+        """
+        tree_uuids = set([uuids.root, uuids.one, uuids.two])
+        mock_gpit.return_value = [{'uuid': u, 'name': u, 'generation': 42}
+                                  for u in tree_uuids]
+        self.assertEqual(uuids.root,
+                         self.client._ensure_resource_provider(uuids.root))
+        mock_gpit.assert_called_once_with(uuids.root)
+        mock_refresh.assert_has_calls(
+            [mock.call(uuid, generation=42, force=True)
+             for uuid in tree_uuids])
+        self.assertEqual(tree_uuids,
+                         self.client._provider_tree.get_provider_uuids())
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_providers_in_tree')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_create_resource_provider')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_refresh_associations')
+    def test_ensure_resource_provider_refresh_create(self, mock_refresh,
+            mock_create, mock_gpit):
+        """Make sure refresh is not called when we create the RP."""
+        mock_gpit.return_value = []
+        mock_create.return_value = {'name': 'cn', 'uuid': uuids.cn,
+                                    'generation': 42}
+        self.assertEqual(uuids.root,
+                         self.client._ensure_resource_provider(uuids.root))
+        mock_gpit.assert_called_once_with(uuids.root)
+        mock_create.assert_called_once_with(uuids.root, uuids.root,
+                                            parent_provider_uuid=None)
+        mock_refresh.assert_not_called()
+        self.assertEqual(set([uuids.cn]),
+                         self.client._provider_tree.get_provider_uuids())
 
     def test_get_allocation_candidates(self):
         resp_mock = mock.Mock(status_code=200)
