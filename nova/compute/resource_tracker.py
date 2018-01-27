@@ -1313,15 +1313,9 @@ class ResourceTracker(object):
     def _delete_allocation_for_moved_instance(
             self, instance, node, move_type, node_type='source'):
         # Clean up the instance allocation from this node in placement
-        my_resources = scheduler_utils.resources_from_flavor(
-            instance, instance.flavor)
-
         cn_uuid = self.compute_nodes[node].uuid
-
-        res = self.reportclient.remove_provider_from_instance_allocation(
-            instance.uuid, cn_uuid, instance.user_id,
-            instance.project_id, my_resources)
-        if not res:
+        if not scheduler_utils.remove_allocation_from_compute(
+                instance, cn_uuid, self.reportclient):
             LOG.error("Failed to clean allocation of %s "
                       "instance on the %s node %s",
                       move_type, node_type, cn_uuid, instance=instance)
@@ -1335,12 +1329,9 @@ class ResourceTracker(object):
             the new_flavor resources are subtracted from the single allocation.
         :param flavor: This is the new_flavor during a resize.
         """
-        resources = scheduler_utils.resources_from_flavor(instance, flavor)
         cn = self.compute_nodes[node]
-        res = self.reportclient.remove_provider_from_instance_allocation(
-            instance.uuid, cn.uuid, instance.user_id, instance.project_id,
-            resources)
-        if not res:
+        if not scheduler_utils.remove_allocation_from_compute(
+                instance, cn.uuid, self.reportclient, flavor):
             if instance.instance_type_id == flavor.id:
                 operation = 'migration'
             else:
