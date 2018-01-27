@@ -436,7 +436,7 @@ class Resource(wsgi.Application):
     wrapped in Fault() to provide API friendly error responses.
 
     """
-    support_api_request_version = False
+    support_api_request_version = True
 
     def __init__(self, controller, inherits=None):
         """:param controller: object that implement methods created by routes
@@ -739,10 +739,6 @@ class Resource(wsgi.Application):
             # about the exception to the user so it looks as if
             # the method is simply not implemented.
             return Fault(webob.exc.HTTPNotFound())
-
-
-class ResourceV21(Resource):
-    support_api_request_version = True
 
 
 def action(name):
