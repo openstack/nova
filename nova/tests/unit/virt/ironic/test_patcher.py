@@ -115,6 +115,36 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
                 self.instance, self.image_meta, self.flavor)
         self.assertPatchEqual(expected, patch)
 
+    def test_generic_get_deploy_patch_traits(self):
+        node = ironic_utils.get_test_node(driver='fake')
+        self.flavor['extra_specs']['trait:CUSTOM_FOO'] = 'required'
+        expected = [{'path': '/instance_info/traits',
+                     'value': '["CUSTOM_FOO"]',
+                     'op': 'add'}]
+        expected += self._expected_deploy_patch
+        patch = patcher.create(node).get_deploy_patch(
+                self.instance, self.image_meta, self.flavor)
+        self.assertPatchEqual(expected, patch)
+
+    def test_generic_get_deploy_patch_traits_granular(self):
+        node = ironic_utils.get_test_node(driver='fake')
+        self.flavor['extra_specs']['trait1:CUSTOM_FOO'] = 'required'
+        expected = [{'path': '/instance_info/traits',
+                     'value': '["CUSTOM_FOO"]',
+                     'op': 'add'}]
+        expected += self._expected_deploy_patch
+        patch = patcher.create(node).get_deploy_patch(
+                self.instance, self.image_meta, self.flavor)
+        self.assertPatchEqual(expected, patch)
+
+    def test_generic_get_deploy_patch_traits_ignores_not_required(self):
+        node = ironic_utils.get_test_node(driver='fake')
+        self.flavor['extra_specs']['trait:CUSTOM_FOO'] = 'invalid'
+        expected = self._expected_deploy_patch
+        patch = patcher.create(node).get_deploy_patch(
+                self.instance, self.image_meta, self.flavor)
+        self.assertPatchEqual(expected, patch)
+
     def test_generic_get_deploy_patch_ephemeral(self):
         CONF.set_override('default_ephemeral_format', 'testfmt')
         node = ironic_utils.get_test_node(driver='fake')
