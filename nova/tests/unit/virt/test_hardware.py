@@ -3171,6 +3171,55 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
         self.assertEqual(2, host_topo.cells[0].cpu_usage)
         self.assertEqual(set([0, 1]), host_topo.cells[0].pinned_cpus)
 
+    def test_isolate_w_isolate_thread_alloc(self):
+        host_topo = objects.NUMATopology(
+            cells=[objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3, 4, 5]),
+                                    memory=2048, cpu_usage=0,
+                                    memory_usage=0,
+                                    siblings=[set([0, 1]), set([2, 3]),
+                                              set([4, 5])],
+                                    mempages=[], pinned_cpus=set([]))])
+        inst_topo = objects.InstanceNUMATopology(
+            emulator_threads_policy=(
+                fields.CPUEmulatorThreadsPolicy.ISOLATE),
+            cells=[objects.InstanceNUMACell(
+                id=0,
+                cpuset=set([0, 1]), memory=2048,
+                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE
+                )])
+
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+        self.assertEqual({0: 0, 1: 2}, inst_topo.cells[0].cpu_pinning)
+        self.assertEqual(set([4]), inst_topo.cells[0].cpuset_reserved)
+
+    def test_isolate_w_isolate_thread_alloc_usage(self):
+        host_topo = objects.NUMATopology(
+            cells=[objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3, 4, 5]),
+                                    memory=2048, cpu_usage=0,
+                                    memory_usage=0,
+                                    siblings=[set([0, 1]), set([2, 3]),
+                                              set([4, 5])],
+                                    mempages=[], pinned_cpus=set([0]))])
+        inst_topo = objects.InstanceNUMATopology(
+            emulator_threads_policy=(
+                fields.CPUEmulatorThreadsPolicy.ISOLATE),
+            cells=[objects.InstanceNUMACell(
+                id=0,
+                cpuset=set([0, 1]), memory=2048,
+                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE
+                )])
+
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+
+        # NOTE(tetsuro): Ideally, we'd like to allow getting a reserved cpu
+        # ignoring sibling-ness in contrast to pinning cpus for vcpu.
+        # Uncomment this when it is supported.
+        # self.assertEqual({0: 2, 1: 4}, inst_topo.cells[0].cpu_pinning)
+        # self.assertEqual(set([1]), inst_topo.cells[0].cpuset_reserved)
+        self.assertIsNone(inst_topo)
+
     def test_asymmetric_host(self):
         """Validate behavior with an asymmetric host topology.
 
@@ -3196,3 +3245,30 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
         inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
         self.assertEqual({0: 1, 1: 2}, inst_topo.cells[0].cpu_pinning)
         self.assertEqual(set([3]), inst_topo.cells[0].cpuset_reserved)
+
+    def test_asymmetric_host_w_isolate_thread_alloc(self):
+        host_topo = objects.NUMATopology(
+            cells=[objects.NUMACell(id=0, cpuset=set([1, 2, 3, 4, 5]),
+                                    memory=2048, cpu_usage=0,
+                                    memory_usage=0,
+                                    siblings=[set([1]), set([2, 3]),
+                                              set([4, 5])],
+                                    mempages=[], pinned_cpus=set())])
+        inst_topo = objects.InstanceNUMATopology(
+            emulator_threads_policy=(
+                fields.CPUEmulatorThreadsPolicy.ISOLATE),
+            cells=[objects.InstanceNUMACell(
+                id=0,
+                cpuset=set([0, 1]), memory=2048,
+                cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
+                cpu_thread_policy=fields.CPUThreadAllocationPolicy.ISOLATE
+                )])
+
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+
+        # NOTE(tetsuro): Ideally, we'd like to allow getting a reserved cpu
+        # ignoring sibling-ness in contrast to pinning cpus for vcpu.
+        # Uncomment this when it is supported.
+        # self.assertEqual({0: 2, 1: 4}, inst_topo.cells[0].cpu_pinning)
+        # self.assertEqual(set([1]), inst_topo.cells[0].cpuset_reserved)
+        self.assertIsNone(inst_topo)
