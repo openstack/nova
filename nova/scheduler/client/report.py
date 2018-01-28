@@ -21,6 +21,7 @@ import time
 from keystoneauth1 import exceptions as ks_exc
 from oslo_log import log as logging
 from oslo_middleware import request_id
+from oslo_utils import versionutils
 from six.moves.urllib import parse
 
 from nova.compute import provider_tree
@@ -198,21 +199,17 @@ def _move_operation_alloc_request(source_allocs, dest_alloc_req):
     # already allocated against on the source host (like shared storage
     # providers)
     cur_rp_uuids = set(source_allocs.keys())
-    new_rp_uuids = set(a['resource_provider']['uuid']
-                       for a in dest_alloc_req['allocations']) - cur_rp_uuids
+    new_rp_uuids = set(dest_alloc_req['allocations']) - cur_rp_uuids
 
-    current_allocs = [
-        {
-            'resource_provider': {
-                'uuid': cur_rp_uuid,
-            },
-            'resources': alloc['resources'],
-        } for cur_rp_uuid, alloc in source_allocs.items()
-    ]
+    current_allocs = {
+        cur_rp_uuid: {'resources': alloc['resources']}
+            for cur_rp_uuid, alloc in source_allocs.items()
+    }
     new_alloc_req = {'allocations': current_allocs}
-    for alloc in dest_alloc_req['allocations']:
-        if alloc['resource_provider']['uuid'] in new_rp_uuids:
-            new_alloc_req['allocations'].append(alloc)
+    for rp_uuid in dest_alloc_req['allocations']:
+        if rp_uuid in new_rp_uuids:
+            new_alloc_req['allocations'][rp_uuid] = dest_alloc_req[
+                'allocations'][rp_uuid]
         elif not new_rp_uuids:
             # If there are no new_rp_uuids that means we're resizing to
             # the same host so we need to sum the allocations for
@@ -223,14 +220,9 @@ def _move_operation_alloc_request(source_allocs, dest_alloc_req):
             # the compute node/resource tracker is going to adjust for
             # decrementing any old allocations as necessary, the scheduler
             # shouldn't make assumptions about that.
-            for current_alloc in current_allocs:
-                # Find the matching resource provider allocations by UUID.
-                if (current_alloc['resource_provider']['uuid'] ==
-                        alloc['resource_provider']['uuid']):
-                    # Now sum the current allocation resource amounts with
-                    # the new allocation resource amounts.
-                    scheduler_utils.merge_resources(current_alloc['resources'],
-                                                    alloc['resources'])
+            scheduler_utils.merge_resources(
+                new_alloc_req['allocations'][rp_uuid]['resources'],
+                dest_alloc_req['allocations'][rp_uuid]['resources'])
 
     LOG.debug("New allocation_request containing both source and "
               "destination hosts in move operation: %s", new_alloc_req)
@@ -344,7 +336,7 @@ class SchedulerReportClient(object):
             'resources': resource_query,
         }
 
-        version = '1.10'
+        version = '1.12'
         url = "/allocation_candidates?%s" % parse.urlencode(qs_params)
         resp = self.get(url, version=version)
         if resp.status_code == 200:
@@ -1297,11 +1289,28 @@ class SchedulerReportClient(object):
         :returns: True if the allocations were created, False otherwise.
         """
         # Older clients might not send the allocation_request_version, so
-        # default to 1.10
+        # default to 1.10.
+        # TODO(alex_xu): In the rocky, all the client should send the
+        # allocation_request_version. So remove this default value.
         allocation_request_version = allocation_request_version or '1.10'
         # Ensure we don't change the supplied alloc request since it's used in
         # a loop within the scheduler against multiple instance claims
         ar = copy.deepcopy(alloc_request)
+
+        # If the allocation_request_version less than 1.12, then convert the
+        # allocation array format to the dict format. This conversion can be
+        # remove in Rocky release.
+        if versionutils.convert_version_to_tuple(
+                allocation_request_version) < (1, 12):
+            ar = {
+                'allocations': {
+                    alloc['resource_provider']['uuid']: {
+                        'resources': alloc['resources']
+                    } for alloc in ar['allocations']
+                }
+            }
+            allocation_request_version = '1.12'
+
         url = '/allocations/%s' % consumer_uuid
 
         payload = ar
