@@ -638,10 +638,7 @@ def _numa_cell_supports_pagesize_request(host_cell, inst_cell):
         return verify_pagesizes(host_cell, inst_cell, [inst_cell.pagesize])
 
 
-def _pack_instance_onto_cores(available_siblings,
-                              instance_cell,
-                              host_cell_id,
-                              threads_per_core=1,
+def _pack_instance_onto_cores(host_cell, instance_cell,
                               num_cpu_reserved=0):
     """Pack an instance onto a set of siblings.
 
@@ -661,12 +658,11 @@ def _pack_instance_onto_cores(available_siblings,
     siblings, but will simply rely on the iteration ordering and picking
     the first viable placement.
 
-    :param available_siblings: list of sets of CPU IDs corresponding to
-                               available siblings per core
+    :param host_cell: objects.NUMACell instance - the host cell that
+                      the instance should be pinned to
     :param instance_cell: An instance of objects.InstanceNUMACell
                           describing the pinning requirements of the
                           instance
-    :param threads_per_core: number of threads per core in host's cell
     :param num_cpu_reserved: number of pCPUs reserved for hypervisor
 
     :returns: An instance of objects.InstanceNUMACell containing the
@@ -674,17 +670,19 @@ def _pack_instance_onto_cores(available_siblings,
               potentially a new topology to be exposed to the
               instance. None if there is no valid way to satisfy the
               sibling requirements for the instance.
-
     """
+    # get number of threads per core in host's cell
+    threads_per_core = max(map(len, host_cell.siblings)) or 1
+
     LOG.debug('Packing an instance onto a set of siblings: '
-             '    available_siblings: %(siblings)s'
+             '    host_cell_free_siblings: %(siblings)s'
              '    instance_cell: %(cells)s'
              '    host_cell_id: %(host_cell_id)s'
              '    threads_per_core: %(threads_per_core)s'
              '    num_cpu_reserved: %(num_cpu_reserved)s',
-                {'siblings': available_siblings,
+                {'siblings': host_cell.free_siblings,
                  'cells': instance_cell,
-                 'host_cell_id': host_cell_id,
+                 'host_cell_id': host_cell.id,
                  'threads_per_core': threads_per_core,
                  'num_cpu_reserved': num_cpu_reserved})
 
@@ -692,7 +690,7 @@ def _pack_instance_onto_cores(available_siblings,
     # number of threads I want to pack, give me a list of all the available
     # sibling sets (or groups thereof) that can accommodate it'
     sibling_sets = collections.defaultdict(list)
-    for sib in available_siblings:
+    for sib in host_cell.free_siblings:
         for threads_no in range(1, len(sib) + 1):
             sibling_sets[threads_no].append(sib)
     LOG.debug('Built sibling_sets: %(siblings)s', {'siblings': sibling_sets})
@@ -903,14 +901,14 @@ def _pack_instance_onto_cores(available_siblings,
     if not pinning:
         return
     LOG.debug('Selected cores for pinning: %s, in cell %s', pinning,
-                                                            host_cell_id)
+                                                            host_cell.id)
 
     topology = objects.VirtCPUTopology(sockets=1,
                                        cores=len(pinning) // threads_no,
                                        threads=threads_no)
     instance_cell.pin_vcpus(*pinning)
     instance_cell.cpu_topology = topology
-    instance_cell.id = host_cell_id
+    instance_cell.id = host_cell.id
     instance_cell.cpuset_reserved = cpuset_reserved
     return instance_cell
 
@@ -951,11 +949,8 @@ def _numa_fit_instance_cell_with_pinning(host_cell, instance_cell,
         return
 
     # Try to pack the instance cell onto cores
-    # TODO(stephenfin): We should just pass host_cell to this function
     numa_cell = _pack_instance_onto_cores(
-        host_cell.free_siblings, instance_cell, host_cell.id,
-        max(map(len, host_cell.siblings)),
-        num_cpu_reserved=num_cpu_reserved)
+        host_cell, instance_cell, num_cpu_reserved=num_cpu_reserved)
 
     if not numa_cell:
         LOG.debug('Failed to map instance cell CPUs to host cell CPUs')
