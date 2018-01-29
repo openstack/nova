@@ -1355,7 +1355,6 @@ class _BaseTaskTestCase(object):
                 set_vm_state_and_notify_mock.call_args[0][4]['vm_state'],
                 vm_states.ERROR)
             self.assertFalse(rebuild_mock.called)
-            self.assertIn('No valid host', inst_obj.fault.message)
 
     @mock.patch.object(conductor_manager.compute_rpcapi.ComputeAPI,
                        'rebuild_instance')
@@ -1402,8 +1401,6 @@ class _BaseTaskTestCase(object):
                                            exception, mock.ANY)
         self.assertFalse(select_dest_mock.called)
         self.assertFalse(rebuild_mock.called)
-        self.assertIn('ServerGroup policy is not supported',
-                      inst_obj.fault.message)
 
         # Assert the migration status was updated.
         migration = objects.Migration.get_by_id(self.context, migration.id)
