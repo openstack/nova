@@ -1751,9 +1751,18 @@ class LibvirtDriver(driver.ComputeDriver):
         #               It is necessary in case this situation changes in the
         #               future.
         if (self._host.has_min_version(hv_type=host.HV_DRIVER_QEMU)
-             and source_type not in ('lvm')
-             and not CONF.ephemeral_storage_encryption.enabled
-             and not CONF.workarounds.disable_libvirt_livesnapshot):
+                and source_type not in ('lvm')
+                and not CONF.ephemeral_storage_encryption.enabled
+                and not CONF.workarounds.disable_libvirt_livesnapshot
+                # NOTE(rmk): We cannot perform live snapshots when a
+                # managedSave file is present, so we will use the cold/legacy
+                # method for instances which are shutdown or paused.
+                # NOTE(mriedem): Live snapshot doesn't work with paused
+                # instances on older versions of libvirt/qemu. We can likely
+                # remove the restriction on PAUSED once we require
+                # libvirt>=3.6.0 and qemu>=2.10 since that works with the
+                # Pike Ubuntu Cloud Archive testing in Queens.
+                and state not in (power_state.SHUTDOWN, power_state.PAUSED)):
             live_snapshot = True
             # Abort is an idempotent operation, so make sure any block
             # jobs which may have failed are ended. This operation also
@@ -1768,12 +1777,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 else:
                     pass
         else:
-            live_snapshot = False
-
-        # NOTE(rmk): We cannot perform live snapshots when a managedSave
-        #            file is present, so we will use the cold/legacy method
-        #            for instances which are shutdown.
-        if state == power_state.SHUTDOWN:
             live_snapshot = False
 
         self._prepare_domain_for_snapshot(context, live_snapshot, state,
