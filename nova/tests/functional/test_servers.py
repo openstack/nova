@@ -1164,11 +1164,12 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
         self.flags(host='host2')
         self.compute2 = self.start_service('compute', host='host2')
 
+        # We hard-code from a fake image since we can't get images
+        # via the compute /images proxy API with microversion > 2.35.
+        original_image_ref = '155d900f-4e14-4e4c-a73d-069cbf4541e6'
         server_req_body = {
             'server': {
-                # We hard-code from a fake image since we can't get images
-                # via the compute /images proxy API with microversion > 2.35.
-                'imageRef': '155d900f-4e14-4e4c-a73d-069cbf4541e6',
+                'imageRef': original_image_ref,
                 'flavorRef': '1',   # m1.tiny from DefaultFlavorsFixture,
                 'name': 'test_rebuild_with_image_novalidhost',
                 # We don't care about networking for this test. This requires
@@ -1211,14 +1212,22 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
             # Before microversion 2.51 events are only returned for instance
             # actions if you're an admin.
             self.api_fixture.admin_api)
-        # Unfortunately the server's image_ref is updated to be the new image
-        # even though the rebuild should not work.
+        # Assert the server image_ref was rolled back on failure.
         server = self.api.get_server(server['id'])
-        self.assertEqual(rebuild_image_ref, server['image']['id'])
+        self.assertEqual(original_image_ref, server['image']['id'])
 
         # The server should be in ERROR state
         self.assertEqual('ERROR', server['status'])
         self.assertIn('No valid host', server['fault']['message'])
+
+        # Rebuild it again with the same bad image to make sure it's rejected
+        # again. Since we're using CastAsCall here, there is no 202 from the
+        # API, and the exception from conductor gets passed back through the
+        # API.
+        ex = self.assertRaises(
+            client.OpenStackApiException, self.api.api_post,
+            '/servers/%s/action' % server['id'], rebuild_req_body)
+        self.assertIn('NoValidHost', six.text_type(ex))
 
     def test_rebuild_with_new_image(self):
         """Rebuilds a server with a different image which will run it through
