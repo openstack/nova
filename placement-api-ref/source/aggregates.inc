@@ -10,6 +10,11 @@ with one resource provider.
 .. note:: Placement aggregates are *not* the same as Nova host
    aggregates and should not be considered equivalent.
 
+Provider aggregates are used for modeling relationships where a provider
+shares resources with one or more other providers. An example is a shared
+storage pool providing DISK_GB resources to other compute node providers that
+provide VCPU and MEMORY_MB resources.
+
 The primary differences between Nova's host aggregates and placement
 aggregates are the following:
 
