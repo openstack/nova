@@ -2835,10 +2835,10 @@ force_live_migrate:
   min_version: 2.30
 force_migration_complete:
   description: |
-    The action.
+    The action to force an in-progress live migration to complete.
   in: body
   required: true
-  type: string
+  type: none
   min_version: 2.22
 force_snapshot:
   description: |
