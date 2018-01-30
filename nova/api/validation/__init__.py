@@ -21,6 +21,8 @@ import re
 
 from nova.api.openstack import api_version_request as api_version
 from nova.api.validation import validators
+from nova import exception
+from nova.i18n import _
 
 
 def _schema_validation_helper(schema, target, min_version, max_version,
@@ -167,8 +169,17 @@ def query_schema(query_params_schema, min_version=None,
             else:
                 req = args[1]
 
+            # NOTE(Kevin_Zheng): The webob package throws UnicodeError when
+            # param cannot be decoded. Catch this and raise HTTP 400.
+
+            try:
+                query_dict = req.GET.dict_of_lists()
+            except UnicodeDecodeError:
+                msg = _('Query string is not UTF-8 encoded')
+                raise exception.ValidationError(msg)
+
             if _schema_validation_helper(query_params_schema,
-                                         req.GET.dict_of_lists(),
+                                         query_dict,
                                          min_version, max_version,
                                          args, kwargs, is_body=False):
                 # NOTE(alex_xu): The additional query parameters were stripped
