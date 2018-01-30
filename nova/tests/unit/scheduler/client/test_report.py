@@ -232,10 +232,9 @@ class SchedulerReportClientTestCase(test.NoDBTestCase):
         rp_uuid = self.client._provider_tree.new_root(
             cn.hypervisor_hostname,
             cn.uuid,
-            generation,
+            generation=generation,
         )
-        self.client._provider_tree.update_inventory(rp_uuid, resources,
-                                                    generation)
+        self.client._provider_tree.update_inventory(rp_uuid, resources)
 
     def _validate_provider(self, name_or_uuid, **kwargs):
         """Validates existence and values of a provider in this client's
@@ -1923,7 +1922,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         for status_code in (204, 404):
             delete_mock.status_code = status_code
             # Seed the caches
-            self.client._provider_tree.new_root('compute', uuids.root, 0)
+            self.client._provider_tree.new_root('compute', uuids.root,
+                                                generation=0)
             self.client._association_refresh_time[uuids.root] = 1234
 
             self.client._delete_provider(uuids.root, global_request_id='gri')
@@ -1961,7 +1961,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.ks_adap_mock.put.return_value = resp_mock
 
         # Prime the provider tree cache
-        self.client._provider_tree.new_root('rp', uuids.rp, 0)
+        self.client._provider_tree.new_root('rp', uuids.rp, generation=0)
         self.assertEqual(set(),
                          self.client._provider_tree.data(uuids.rp).aggregates)
 
@@ -1978,7 +1978,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
     def test_set_aggregates_for_provider_fail(self):
         self.ks_adap_mock.put.return_value = mock.Mock(status_code=503)
         # Prime the provider tree cache
-        self.client._provider_tree.new_root('rp', uuids.rp, 0)
+        self.client._provider_tree.new_root('rp', uuids.rp, generation=0)
         self.assertRaises(
             exception.ResourceProviderUpdateFailed,
             self.client.set_aggregates_for_provider,
@@ -2169,7 +2169,7 @@ class TestTraits(SchedulerReportClientTestCase):
         self.ks_adap_mock.get.return_value = get_mock
 
         # Prime the provider tree cache
-        self.client._provider_tree.new_root('rp', uuids.rp, 0)
+        self.client._provider_tree.new_root('rp', uuids.rp, generation=0)
 
         # Mock the /rp/{u}/traits PUT to succeed
         put_mock = mock.Mock(status_code=200)
@@ -2204,7 +2204,7 @@ class TestTraits(SchedulerReportClientTestCase):
         self.ks_adap_mock.get.return_value = get_mock
 
         # Prime the provider tree cache
-        self.client._provider_tree.new_root('rp', uuids.rp, 0)
+        self.client._provider_tree.new_root('rp', uuids.rp, generation=0)
 
         # _ensure_traits exception bubbles up
         get_mock.status_code = 400
@@ -2244,7 +2244,7 @@ class TestAssociations(SchedulerReportClientTestCase):
         """Test that associations are refreshed when stale."""
         uuid = uuids.compute_node
         # Seed the provider tree so _refresh_associations finds the provider
-        self.client._provider_tree.new_root('compute', uuid, 1)
+        self.client._provider_tree.new_root('compute', uuid, generation=1)
         mock_agg_get.return_value = set([uuids.agg1])
         mock_trait_get.return_value = set(['CUSTOM_GOLD'])
         self.client._refresh_associations(self.context, uuid)
@@ -2274,7 +2274,7 @@ class TestAssociations(SchedulerReportClientTestCase):
         """Test refresh_sharing=False."""
         uuid = uuids.compute_node
         # Seed the provider tree so _refresh_associations finds the provider
-        self.client._provider_tree.new_root('compute', uuid, 1)
+        self.client._provider_tree.new_root('compute', uuid, generation=1)
         mock_agg_get.return_value = set([uuids.agg1])
         mock_trait_get.return_value = set(['CUSTOM_GOLD'])
         self.client._refresh_associations(self.context, uuid,
@@ -2325,7 +2325,7 @@ class TestAssociations(SchedulerReportClientTestCase):
         """Test that refresh associations is called when the map is stale."""
         uuid = uuids.compute_node
         # Seed the provider tree so _refresh_associations finds the provider
-        self.client._provider_tree.new_root('compute', uuid, 1)
+        self.client._provider_tree.new_root('compute', uuid, generation=1)
         mock_agg_get.return_value = set([])
         mock_trait_get.return_value = set([])
         mock_shr_get.return_value = []
@@ -2714,7 +2714,7 @@ class TestInventory(SchedulerReportClientTestCase):
         self.client._provider_tree.new_root(
             compute_node.hypervisor_hostname,
             compute_node.uuid,
-            42,
+            generation=42,
         )
 
         mock_get.return_value = {
@@ -2753,7 +2753,7 @@ class TestInventory(SchedulerReportClientTestCase):
         self.client._provider_tree.new_root(
             compute_node.hypervisor_hostname,
             compute_node.uuid,
-            42,
+            generation=42,
         )
 
         mock_get.return_value = {
@@ -2793,7 +2793,7 @@ class TestInventory(SchedulerReportClientTestCase):
         self.client._provider_tree.new_root(
             compute_node.hypervisor_hostname,
             compute_node.uuid,
-            42,
+            generation=42,
         )
 
         mock_get.return_value = {
@@ -2829,7 +2829,7 @@ class TestInventory(SchedulerReportClientTestCase):
         self.client._provider_tree.new_root(
             compute_node.hypervisor_hostname,
             compute_node.uuid,
-            42,
+            generation=42,
         )
 
         mock_get.return_value = {
@@ -2874,7 +2874,7 @@ class TestInventory(SchedulerReportClientTestCase):
         self.client._provider_tree.new_root(
             cn.hypervisor_hostname,
             cn.uuid,
-            42,
+            generation=42,
         )
         result = self.client._update_inventory(
             self.context, cn.uuid, mock.sentinel.inv_data
@@ -2899,7 +2899,7 @@ class TestInventory(SchedulerReportClientTestCase):
         self.client._provider_tree.new_root(
             cn.hypervisor_hostname,
             cn.uuid,
-            42,
+            generation=42,
         )
         result = self.client._update_inventory(
             self.context, cn.uuid, mock.sentinel.inv_data
@@ -3306,7 +3306,7 @@ class TestAllocations(SchedulerReportClientTestCase):
     @mock.patch("nova.objects.InstanceList.get_by_host_and_node")
     def test_delete_resource_provider_cascade(self, mock_by_host,
             mock_del_alloc, mock_delete):
-        self.client._provider_tree.new_root(uuids.cn, uuids.cn, 1)
+        self.client._provider_tree.new_root(uuids.cn, uuids.cn, generation=1)
         cn = objects.ComputeNode(uuid=uuids.cn, host="fake_host",
                 hypervisor_hostname="fake_hostname", )
         inst1 = objects.Instance(uuid=uuids.inst1)
@@ -3329,7 +3329,7 @@ class TestAllocations(SchedulerReportClientTestCase):
     @mock.patch("nova.objects.InstanceList.get_by_host_and_node")
     def test_delete_resource_provider_no_cascade(self, mock_by_host,
             mock_del_alloc, mock_delete):
-        self.client._provider_tree.new_root(uuids.cn, uuids.cn, 1)
+        self.client._provider_tree.new_root(uuids.cn, uuids.cn, generation=1)
         self.client._association_refresh_time[uuids.cn] = mock.Mock()
         cn = objects.ComputeNode(uuid=uuids.cn, host="fake_host",
                 hypervisor_hostname="fake_hostname", )
@@ -3351,7 +3351,7 @@ class TestAllocations(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.LOG')
     def test_delete_resource_provider_log_calls(self, mock_log, mock_delete):
         # First, check a successful call
-        self.client._provider_tree.new_root(uuids.cn, uuids.cn, 1)
+        self.client._provider_tree.new_root(uuids.cn, uuids.cn, generation=1)
         cn = objects.ComputeNode(uuid=uuids.cn, host="fake_host",
                 hypervisor_hostname="fake_hostname", )
         resp_mock = mock.MagicMock(status_code=204)

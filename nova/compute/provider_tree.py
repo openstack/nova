@@ -346,8 +346,16 @@ class ProviderTree(object):
         with self.lock:
             self._remove_with_lock(name_or_uuid)
 
-    def new_root(self, name, uuid, generation):
-        """Adds a new root provider to the tree, returning its UUID."""
+    def new_root(self, name, uuid, generation=None):
+        """Adds a new root provider to the tree, returning its UUID.
+
+        :param name: The name of the new root provider
+        :param uuid: The UUID of the new root provider
+        :param generation: Generation to set for the new root provider
+        :returns: the UUID of the new provider
+        :raises: ValueError if a provider with the specified uuid already
+                 exists in the tree.
+        """
 
         with self.lock:
             exists = True
@@ -448,7 +456,7 @@ class ProviderTree(object):
             provider = self._find_with_lock(name_or_uuid)
             return provider.has_inventory_changed(inventory)
 
-    def update_inventory(self, name_or_uuid, inventory, generation):
+    def update_inventory(self, name_or_uuid, inventory, generation=None):
         """Given a name or UUID of a provider and a dict of inventory resource
         records, update the provider's inventory and set the provider's
         generation.
@@ -464,7 +472,8 @@ class ProviderTree(object):
                              update inventory for.
         :param inventory: dict, keyed by resource class, of inventory
                           information.
-        :param generation: The resource provider generation to set
+        :param generation: The resource provider generation to set.  If not
+                           specified, the provider's generation is not changed.
         """
         with self.lock:
             provider = self._find_with_lock(name_or_uuid)
