@@ -215,16 +215,10 @@ class _Provider(object):
 
 class ProviderTree(object):
 
-    def __init__(self, cns=None):
-        """Create a provider tree from an `objects.ComputeNodeList` object."""
+    def __init__(self):
+        """Create an empty provider tree."""
         self.lock = lockutils.internal_lock(_LOCK_NAME)
         self.roots = []
-
-        if cns:
-            for cn in cns:
-                # By definition, all compute nodes are root providers...
-                p = _Provider(cn.hypervisor_hostname, cn.uuid)
-                self.roots.append(p)
 
     def get_provider_uuids(self, name_or_uuid=None):
         """Return a set of the UUIDs of all providers (in a subtree).
