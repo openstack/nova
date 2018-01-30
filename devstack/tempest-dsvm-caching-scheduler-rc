@@ -1,0 +1,30 @@
+#
+# This script is executed in the OpenStack CI nova-caching-scheduler job.
+# It's used to configure which tempest tests actually get run.  You can find
+# the CI job configuration under playbooks/legacy/nova-caching-scheduler/.
+#
+
+# Construct a regex to use when limiting scope of tempest
+# to avoid features unsupported by Nova's CachingScheduler support.
+
+# When adding entries to the regex, add a comment explaining why
+# since this list should not grow.
+
+r="^(?!.*"
+# exclude the slow tag
+r="$r(?:.*\[.*\bslow\b.*\])"
+
+# NOTE(mriedem): ServersAdminTestJSON.test_create_server_with_scheduling_hint
+# is skipped because it relies on the SameHostFilter which relies on the
+# HostState object which might be stale when that filter runs.
+# tempest.api.compute.admin.test_servers.ServersAdminTestJSON.test_create_server_with_scheduling_hint
+r="$r|(?:.*id\-fdcd9b33\-0903\-4e00\-a1f7\-b5f6543068d6.*)"
+# NOTE(mriedem): AggregatesAdminTestJSON.test_aggregate_add_host_create_server_with_az
+# is skipped because it creates an aggregate and adds a host to it, then
+# creates a server in that aggregate but fails to schedule because the caching
+# scheduler hasn't updated the host's aggregates view yet.
+# tempest.api.compute.admin.test_aggregates.AggregatesAdminTestJSON.test_aggregate_add_host_create_server_with_az
+r="$r|(?:.*id\-96be03c7\-570d\-409c\-90f8\-e4db3c646996.*)"
+r="$r).*$"
+
+export DEVSTACK_GATE_TEMPEST_REGEX="$r"

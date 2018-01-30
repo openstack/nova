@@ -63,6 +63,14 @@
     timeout: 3600
 
 - job:
+    name: nova-caching-scheduler
+    parent: nova-dsvm-base
+    description: |
+      Run non-slow Tempest API and scenario tests using the CachingScheduler.
+    run: playbooks/legacy/nova-caching-scheduler/run.yaml
+    post-run: playbooks/legacy/nova-caching-scheduler/post.yaml
+
+- job:
     name: nova-lvm
     parent: nova-dsvm-base
     description: |
@@ -100,4 +108,5 @@
         - nova-tox-functional-py35
     experimental:
       jobs:
+        - nova-caching-scheduler
         - nova-lvm
