@@ -2320,22 +2320,6 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         self._delete_and_check_allocations(
             server, source_rp_uuid, dest_rp_uuid)
 
-    def _wait_for_migration_status(self, server, expected_status):
-        """Waits for a migration record with the given status to be found
-        for the given server, else the test fails. The migration record, if
-        found, is returned.
-        """
-        for attempt in range(10):
-            migrations = self.api.api_get('/os-migrations').body['migrations']
-            for migration in migrations:
-                if (migration['instance_uuid'] == server['id'] and
-                        migration['status'].lower() ==
-                        expected_status.lower()):
-                    return migration
-            time.sleep(0.5)
-        self.fail('Timed out waiting for migration with status "%s" for '
-                  'instance: %s' % (expected_status, server['id']))
-
     def test_live_migrate_pre_check_fails(self):
         """Tests the case that the LiveMigrationTask in conductor has
         called the scheduler which picked a host and created allocations
