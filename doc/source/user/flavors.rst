@@ -93,6 +93,9 @@ Extra Specs
 Extra Specs
 ~~~~~~~~~~~
 
+.. TODO: Consider adding a table of contents here for the various extra specs
+         or make them sub-sections.
+
 .. todo::
 
    A lot of these need investigation - for example, I can find no reference to
@@ -608,3 +611,27 @@ Secure Boot
   - ``required``: Enable Secure Boot for instances running with this flavor.
   - ``disabled`` or ``optional``: (default) Disable Secure Boot for instances
     running with this flavor.
+
+Required traits
+    Added in the 17.0.0 Queens release.
+
+    Required traits allow specifying a server to build on a compute node with
+    the set of traits specified in the flavor. The traits are associated with
+    the resource provider that represents the compute node in the Placement
+    API. See the resource provider traits API reference for more details:
+    https://developer.openstack.org/api-ref/placement/#resource-provider-traits
+
+    The syntax of the extra spec is ``trait:<trait_name>=required``, for
+    example:
+
+    - trait:HW_CPU_X86_AVX2=required
+    - trait:STORAGE_DISK_SSD=required
+
+    The scheduler will pass required traits to the
+    ``GET /allocation_candidates`` endpoint in the Placement API to include
+    only resource providers that can satisfy the required traits. Currently
+    the only valid value is ``required``. Any other value will be considered
+    invalid.
+
+    The FilterScheduler is currently the only scheduler driver that supports
+    this feature.
