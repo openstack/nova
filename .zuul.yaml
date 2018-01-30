@@ -1,0 +1,44 @@
+- job:
+    name: nova-tox-functional
+    parent: openstack-tox
+    description: |
+      Run tox-based functional tests for the OpenStack Nova project with Nova
+      specific irrelevant-files list. Uses tox with the ``functional``
+      environment.
+    irrelevant-files:
+      - ^.*\.rst$
+      - ^api-.*$
+      - ^doc/source/.*$
+      - ^nova/locale/.*$
+      - ^placement-api-ref/.*$
+      - ^releasenotes/.*$
+    vars:
+      tox_envlist: functional
+
+- job:
+    name: nova-tox-functional-py35
+    parent: openstack-tox
+    description: |
+      Run tox-based functional tests for the OpenStack Nova project
+      under cPython version 3.5. with Nova specific irrelevant-files list.
+      Uses tox with the ``functional-py35`` environment.
+    irrelevant-files:
+      - ^.*\.rst$
+      - ^api-.*$
+      - ^doc/source/.*$
+      - ^nova/locale/.*$
+      - ^placement-api-ref/.*$
+      - ^releasenotes/.*$
+    vars:
+      tox_envlist: functional-py35
+
+- project:
+    name: openstack/nova
+    check:
+      jobs:
+        - nova-tox-functional
+        - nova-tox-functional-py35
+    gate:
+      jobs:
+        - nova-tox-functional
+        - nova-tox-functional-py35
