@@ -47,7 +47,7 @@ class TestInstanceNotificationSampleWithMultipleCompute(
             extra_params={'networks': [{'port': self.neutron.port_1['id']}]})
         self._wait_for_notification('instance.create.end')
         self._attach_volume_to_server(server, self.cinder.SWAP_OLD_VOL)
-        # server will boot on host1
+        # server will boot on the 'compute' host
         fake.set_nodes(['host2'])
         self.addCleanup(fake.restore_nodes)
         self.compute2 = self.start_service('compute', host='host2')
