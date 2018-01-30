@@ -27,7 +27,6 @@ from webob import exc
 
 from nova.api.openstack import api_version_request
 from nova.api.openstack import common
-from nova.api.openstack.compute import availability_zone
 from nova.api.openstack.compute import block_device_mapping
 from nova.api.openstack.compute import block_device_mapping_v1
 from nova.api.openstack.compute import config_drive
@@ -103,7 +102,6 @@ class ServersController(wsgi.Controller):
     # NOTE(alex_xu): Please do not add more items into this list. This list
     # should be removed in the future.
     server_create_func_list = [
-        availability_zone.server_create,
         block_device_mapping.server_create,
         block_device_mapping_v1.server_create,
         config_drive.server_create,
@@ -468,7 +466,7 @@ class ServersController(wsgi.Controller):
         # all of extended code into ServersController.
         self._create_by_func_list(server_dict, create_kwargs, body)
 
-        availability_zone = create_kwargs.pop("availability_zone", None)
+        availability_zone = server_dict.pop("availability_zone", None)
 
         if api_version_request.is_supported(req, min_version='2.52'):
             create_kwargs['tags'] = server_dict.get('tags')
