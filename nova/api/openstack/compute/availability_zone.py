@@ -12,7 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from nova.api.openstack.compute.schemas import availability_zone as schema
 from nova.api.openstack import wsgi
 from nova import availability_zones
 from nova import compute
@@ -127,9 +126,3 @@ def server_create(server_dict, create_kwargs, body_deprecated_param):
     # with some users already created availability_zone with
     # leading/trailing spaces with legacy v2 API.
     create_kwargs['availability_zone'] = server_dict.get(ATTRIBUTE_NAME)
-
-
-def get_server_create_schema(version):
-    if version == "2.0":
-        return schema.server_create_v20
-    return schema.server_create
