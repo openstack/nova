@@ -111,6 +111,20 @@ def _db_error(caught_exception):
     sys.exit(1)
 
 
+def _uuid_shift(uuid):
+    """We need a way to non-destructively modify UUIDs so that we can store a
+    marker without having duplicate InstanceMapping entries. This accomplishes
+    this by applying a ROT8 mapping to the non-dash characters in a UUID.
+    Calling _uuid_shift twice returns the value to the original UUID.
+    """
+    mapper = {"0": "8", "1": "9", "2": "a", "3": "b", "4": "c", "5": "d",
+              "6": "e", "7": "f", "8": "0", "9": "1", "a": "2", "b": "3",
+              "c": "4", "d": "5", "e": "6", "f": "7", "-": "-"}
+    return "".join([mapper[char] for char in uuid])
+# Since shifting twice returns you to the original, we can alias.
+_uuid_unshift = _uuid_shift
+
+
 class FloatingIpCommands(object):
     """Class for managing floating IP."""
 
@@ -1112,7 +1126,7 @@ class CellV2Commands(object):
             marker = None
         else:
             # There should be only one here
-            marker = marker_mapping[0].instance_uuid.replace(' ', '-')
+            marker = _uuid_unshift(marker_mapping[0].instance_uuid)
             marker_mapping[0].destroy()
 
         next_marker = True
@@ -1126,7 +1140,7 @@ class CellV2Commands(object):
         if next_marker:
             # Don't judge me. There's already an InstanceMapping with this UUID
             # so the marker needs to be non destructively modified.
-            next_marker = next_marker.replace('-', ' ')
+            next_marker = _uuid_shift(next_marker)
             objects.InstanceMapping(ctxt, instance_uuid=next_marker,
                     project_id=marker_project_id).create()
             return 1

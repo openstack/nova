@@ -74,6 +74,17 @@ class UtilitiesTestCase(test.NoDBTestCase):
             url4_safe,
             manage.mask_passwd_in_url(url4))
 
+    def test_shift_uuid(self):
+        uuid = uuidutils.generate_uuid()
+        shifted = manage._uuid_shift(uuid)
+        self.assertTrue(uuidutils.is_uuid_like(shifted))
+        unshifted = manage._uuid_unshift(shifted)
+        self.assertEqual(uuid, unshifted)
+        # Verify that shifting twice results in no change to the original
+        uuid = uuidutils.generate_uuid()
+        double_shift = manage._uuid_shift(manage._uuid_shift(uuid))
+        self.assertEqual(uuid, double_shift)
+
 
 class FloatingIpCommandsTestCase(test.NoDBTestCase):
     def setUp(self):
@@ -1174,7 +1185,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
 
         # Instances are mapped in the order created so we know the marker is
         # based off the third instance.
-        marker = instance_uuids[2].replace('-', ' ')
+        marker = manage._uuid_shift(instance_uuids[2])
         marker_mapping = objects.InstanceMapping.get_by_instance_uuid(ctxt,
                 marker)
         marker_mapping.destroy()
