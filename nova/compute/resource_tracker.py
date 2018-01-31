@@ -883,6 +883,19 @@ class ResourceTracker(object):
             # this code branch
             self.scheduler_client.update_compute_node(context, compute_node)
 
+        try:
+            traits = self.driver.get_traits(nodename)
+        except NotImplementedError:
+            pass
+        else:
+            # NOTE(mgoddard): set_traits_for_provider does not refresh the
+            # provider tree in the report client, so we rely on the above call
+            # to set_inventory_for_provider or update_compute_node to ensure
+            # that the resource provider exists in the tree and has had its
+            # cached traits refreshed.
+            self.reportclient.set_traits_for_provider(
+                compute_node.uuid, traits)
+
         if self.pci_tracker:
             self.pci_tracker.save(context)
 

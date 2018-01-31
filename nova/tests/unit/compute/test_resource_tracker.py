@@ -433,6 +433,7 @@ def setup_rt(hostname, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES,
     virt_resources = copy.deepcopy(virt_resources)
     vd.get_available_resource.return_value = virt_resources
     vd.get_inventory.side_effect = NotImplementedError
+    vd.get_traits.side_effect = NotImplementedError
     vd.get_host_ip_addr.return_value = _NODENAME
     vd.estimate_instance_overhead.side_effect = estimate_overhead
     vd.rebalances_nodes = False
@@ -1202,6 +1203,7 @@ class TestUpdateComputeNode(BaseTestCase):
         self.driver_mock.get_inventory.assert_called_once_with(_NODENAME)
         ucn_mock = self.sched_client_mock.update_compute_node
         ucn_mock.assert_called_once_with(mock.sentinel.ctx, new_compute)
+        self.driver_mock.get_traits.assert_called_once_with(_NODENAME)
 
     @mock.patch('nova.objects.ComputeNode.save')
     def test_existing_compute_node_updated_diff_updated_at(self, save_mock):
@@ -1250,6 +1252,7 @@ class TestUpdateComputeNode(BaseTestCase):
         self.assertFalse(norm_mock.called)
         ucn_mock = self.sched_client_mock.update_compute_node
         ucn_mock.assert_called_once_with(mock.sentinel.ctx, new_compute)
+        self.driver_mock.get_traits.assert_called_once_with(_NODENAME)
 
     @mock.patch('nova.compute.resource_tracker.'
                 '_normalize_inventory_from_cn_obj')
@@ -1288,6 +1291,34 @@ class TestUpdateComputeNode(BaseTestCase):
             mock.sentinel.inv_data,
         )
         self.assertFalse(ucn_mock.called)
+        self.driver_mock.get_traits.assert_called_once_with(_NODENAME)
+
+    def test_existing_node_get_traits_implemented(self):
+        """The get_traits() virt driver method is only implemented for some
+        virt drivers. This method returns traits information for a
+        node/provider, and if this method doesn't raise a NotImplementedError,
+        this triggers _update() to call the set_traits_for_provider() method of
+        the reporting client.
+        """
+        self._setup_rt()
+        rc = self.rt.reportclient
+        rc.set_traits_for_provider = mock.MagicMock()
+
+        # Emulate a driver that has implemented the new get_traits() virt
+        # driver method
+        self.driver_mock.get_traits.side_effect = [mock.sentinel.traits]
+
+        orig_compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()
+        self.rt.compute_nodes[_NODENAME] = orig_compute
+        self.rt.old_resources[_NODENAME] = orig_compute
+        new_compute = orig_compute.obj_clone()
+
+        self.rt._update(mock.sentinel.ctx, new_compute)
+        rc.set_traits_for_provider.assert_called_once_with(
+            new_compute.uuid,
+            mock.sentinel.traits,
+        )
+        self.driver_mock.get_traits.assert_called_once_with(_NODENAME)
 
     def test_get_node_uuid(self):
         self._setup_rt()
