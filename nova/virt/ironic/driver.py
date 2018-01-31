@@ -76,7 +76,7 @@ _UNPROVISION_STATES = (ironic_states.ACTIVE, ironic_states.DEPLOYFAIL,
 
 _NODE_FIELDS = ('uuid', 'power_state', 'target_power_state', 'provision_state',
                 'target_provision_state', 'last_error', 'maintenance',
-                'properties', 'instance_uuid', 'traits')
+                'properties', 'instance_uuid', 'traits', 'resource_class')
 
 # Console state checking interval in seconds
 _CONSOLE_STATE_CHECKING_INTERVAL = 1
