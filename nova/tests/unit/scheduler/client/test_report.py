@@ -1145,7 +1145,7 @@ class TestSetAndClearAllocations(SchedulerReportClientTestCase):
 
         self.assertFalse(resp)
         # Post was attempted three times.
-        self.assertEqual(3, len(self.mock_post.call_args_list))
+        self.assertEqual(3, self.mock_post.call_count)
 
     @mock.patch('nova.scheduler.client.report.LOG.warning')
     def test_not_409_failure(self, mock_log):
