@@ -4463,8 +4463,6 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
 
         self.assertRaises(exception.FlavorNotFound,
                           db.flavor_get, self.ctxt, flavor1['id'])
-        real_specs1 = db.flavor_extra_specs_get(self.ctxt, flavor1['flavorid'])
-        self._assertEqualObjects(real_specs1, {})
 
         r_flavor2 = db.flavor_get(self.ctxt, flavor2['id'])
         self._assertEqualObjects(flavor2, r_flavor2, 'extra_specs')
@@ -4745,25 +4743,6 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
         flavor_by_fid = db.flavor_get_by_flavor_id(self.ctxt,
                 flavor['flavorid'], read_deleted='yes')
         self.assertEqual(flavor['id'], flavor_by_fid['id'])
-
-
-class InstanceTypeExtraSpecsTestCase(BaseInstanceTypeTestCase):
-
-    def setUp(self):
-        super(InstanceTypeExtraSpecsTestCase, self).setUp()
-        values = ({'name': 'n1', 'flavorid': 'f1',
-                   'extra_specs': dict(a='a', b='b', c='c')},
-                  {'name': 'n2', 'flavorid': 'f2',
-                   'extra_specs': dict(d='d', e='e', f='f')})
-
-        # NOTE(boris-42): We have already tested flavor_create method
-        #                 with extra_specs in InstanceTypeTestCase.
-        self.flavors = [self._create_flavor(v) for v in values]
-
-    def test_flavor_extra_specs_get(self):
-        for it in self.flavors:
-            real_specs = db.flavor_extra_specs_get(self.ctxt, it['flavorid'])
-            self._assertEqualObjects(it['extra_specs'], real_specs)
 
 
 class InstanceTypeAccessTestCase(BaseInstanceTypeTestCase):

@@ -4834,22 +4834,6 @@ def flavor_access_remove(context, flavor_id, project_id):
                                              project_id=project_id)
 
 
-def _flavor_extra_specs_get_query(context, flavor_id):
-    instance_type_id_subq = _flavor_get_id_from_flavor_query(context,
-                                                             flavor_id)
-
-    return model_query(context, models.InstanceTypeExtraSpecs,
-                       read_deleted="no").\
-                filter_by(instance_type_id=instance_type_id_subq)
-
-
-@require_context
-@pick_context_manager_reader
-def flavor_extra_specs_get(context, flavor_id):
-    rows = _flavor_extra_specs_get_query(context, flavor_id).all()
-    return {row['key']: row['value'] for row in rows}
-
-
 ####################
 
 
