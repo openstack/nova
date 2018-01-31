@@ -4850,18 +4850,6 @@ def flavor_extra_specs_get(context, flavor_id):
     return {row['key']: row['value'] for row in rows}
 
 
-@require_context
-@pick_context_manager_writer
-def flavor_extra_specs_delete(context, flavor_id, key):
-    result = _flavor_extra_specs_get_query(context, flavor_id).\
-                     filter(models.InstanceTypeExtraSpecs.key == key).\
-                     soft_delete(synchronize_session=False)
-    # did not find the extra spec
-    if result == 0:
-        raise exception.FlavorExtraSpecsNotFound(
-                extra_specs_key=key, flavor_id=flavor_id)
-
-
 ####################
 
 

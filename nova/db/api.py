@@ -1573,11 +1573,6 @@ def flavor_extra_specs_get(context, flavor_id):
     """Get all extra specs for an instance type."""
     return IMPL.flavor_extra_specs_get(context, flavor_id)
 
-
-def flavor_extra_specs_delete(context, flavor_id, key):
-    """Delete the given extra specs item."""
-    IMPL.flavor_extra_specs_delete(context, flavor_id, key)
-
 ####################
 
 
