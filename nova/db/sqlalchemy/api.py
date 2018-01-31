@@ -4719,20 +4719,6 @@ def flavor_get_all(context, inactive=False, filters=None,
     return [_dict_with_extra_specs(i) for i in inst_types]
 
 
-def _flavor_get_id_from_flavor_query(context, flavor_id):
-    return model_query(context, models.InstanceTypes,
-                       (models.InstanceTypes.id,),
-                       read_deleted="no").\
-                filter_by(flavorid=flavor_id)
-
-
-def _flavor_get_id_from_flavor(context, flavor_id):
-    result = _flavor_get_id_from_flavor_query(context, flavor_id).first()
-    if not result:
-        raise exception.FlavorNotFound(flavor_id=flavor_id)
-    return result[0]
-
-
 @require_context
 @pick_context_manager_reader
 def flavor_get(context, id):
@@ -4787,21 +4773,6 @@ def flavor_destroy(context, flavor_id):
     model_query(context, models.InstanceTypeProjects, read_deleted="no").\
             filter_by(instance_type_id=ref['id']).\
             soft_delete()
-
-
-def _flavor_access_query(context):
-    return model_query(context, models.InstanceTypeProjects, read_deleted="no")
-
-
-@pick_context_manager_reader
-def flavor_access_get_by_flavor_id(context, flavor_id):
-    """Get flavor access list by flavor id."""
-    instance_type_id_subq = _flavor_get_id_from_flavor_query(context,
-                                                             flavor_id)
-    access_refs = _flavor_access_query(context).\
-                        filter_by(instance_type_id=instance_type_id_subq).\
-                        all()
-    return access_refs
 
 
 ####################
