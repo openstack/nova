@@ -38,6 +38,7 @@ from eventlet import greenthread
 from eventlet import patcher
 from eventlet import tpool
 from oslo_log import log as logging
+from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import importutils
 from oslo_utils import units
@@ -823,6 +824,8 @@ class Host(object):
 
         :returns: an instance of Guest
         """
+        if six.PY2:
+            xml = encodeutils.safe_encode(xml)
         domain = self.get_connection().defineXML(xml)
         return libvirt_guest.Guest(domain)
 
