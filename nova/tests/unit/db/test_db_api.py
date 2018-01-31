@@ -4495,16 +4495,6 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
                                  ignored_keys)
         self._assertEqualObjects(extra_specs, flavor['extra_specs'])
 
-    @mock.patch('sqlalchemy.orm.query.Query.all', return_value=[])
-    def test_flavor_create_with_extra_specs_duplicate(self, mock_all):
-        extra_specs = dict(key='value')
-        flavorid = 'flavorid'
-        self._create_flavor({'flavorid': flavorid, 'extra_specs': extra_specs})
-
-        self.assertRaises(exception.FlavorExtraSpecUpdateCreateFailed,
-                          db.flavor_extra_specs_update_or_create,
-                          self.ctxt, flavorid, extra_specs)
-
     def test_flavor_get_all(self):
         # NOTE(boris-42): Remove base instance types
         for it in db.flavor_get_all(self.ctxt):
@@ -4789,37 +4779,6 @@ class InstanceTypeExtraSpecsTestCase(BaseInstanceTypeTestCase):
             self.assertRaises(exception.FlavorExtraSpecsNotFound,
                           db.flavor_extra_specs_delete,
                           self.ctxt, it['flavorid'], 'dummy')
-
-    def test_flavor_extra_specs_update_or_create(self):
-        for it in self.flavors:
-            current_specs = it['extra_specs']
-            current_specs.update(dict(b='b1', c='c1', d='d1', e='e1'))
-            params = (self.ctxt, it['flavorid'], current_specs)
-            db.flavor_extra_specs_update_or_create(*params)
-            real_specs = db.flavor_extra_specs_get(self.ctxt, it['flavorid'])
-            self._assertEqualObjects(current_specs, real_specs)
-
-    def test_flavor_extra_specs_update_or_create_flavor_not_found(self):
-        self.assertRaises(exception.FlavorNotFound,
-                          db.flavor_extra_specs_update_or_create,
-                          self.ctxt, 'nonexists', {})
-
-    def test_flavor_extra_specs_update_or_create_retry(self):
-
-        def counted():
-            def get_id(context, flavorid):
-                get_id.counter += 1
-                raise db_exc.DBDuplicateEntry
-            get_id.counter = 0
-            return get_id
-
-        get_id = counted()
-        self.stub_out('nova.db.sqlalchemy.api._flavor_get_id_from_flavor',
-                      get_id)
-        self.assertRaises(exception.FlavorExtraSpecUpdateCreateFailed,
-                          sqlalchemy_api.flavor_extra_specs_update_or_create,
-                          self.ctxt, 1, {}, 5)
-        self.assertEqual(get_id.counter, 5)
 
 
 class InstanceTypeAccessTestCase(BaseInstanceTypeTestCase):

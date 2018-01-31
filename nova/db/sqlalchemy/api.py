@@ -4862,47 +4862,6 @@ def flavor_extra_specs_delete(context, flavor_id, key):
                 extra_specs_key=key, flavor_id=flavor_id)
 
 
-@require_context
-@pick_context_manager_writer
-def flavor_extra_specs_update_or_create(context, flavor_id, specs,
-                                               max_retries=10):
-    for attempt in range(max_retries):
-        try:
-            instance_type_id = _flavor_get_id_from_flavor(context, flavor_id)
-
-            spec_refs = model_query(context, models.InstanceTypeExtraSpecs,
-                                    read_deleted="no").\
-              filter_by(instance_type_id=instance_type_id).\
-              filter(models.InstanceTypeExtraSpecs.key.in_(specs.keys())).\
-              all()
-
-            existing_keys = set()
-            for spec_ref in spec_refs:
-                key = spec_ref["key"]
-                existing_keys.add(key)
-                with get_context_manager(context).writer.savepoint.using(
-                        context):
-                    spec_ref.update({"value": specs[key]})
-
-            for key, value in specs.items():
-                if key in existing_keys:
-                    continue
-                spec_ref = models.InstanceTypeExtraSpecs()
-                with get_context_manager(context).writer.savepoint.using(
-                        context):
-                    spec_ref.update({"key": key, "value": value,
-                                     "instance_type_id": instance_type_id})
-                    context.session.add(spec_ref)
-
-            return specs
-        except db_exc.DBDuplicateEntry:
-            # a concurrent transaction has been committed,
-            # try again unless this was the last attempt
-            if attempt == max_retries - 1:
-                raise exception.FlavorExtraSpecUpdateCreateFailed(
-                                    id=flavor_id, retries=max_retries)
-
-
 ####################
 
 
