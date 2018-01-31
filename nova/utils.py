@@ -1253,7 +1253,7 @@ def isotime(at=None):
         at = timeutils.utcnow()
     date_string = at.strftime("%Y-%m-%dT%H:%M:%S")
     tz = at.tzinfo.tzname(None) if at.tzinfo else 'UTC'
-    date_string += ('Z' if tz == 'UTC' else tz)
+    date_string += ('Z' if tz in ['UTC', 'UTC+00:00'] else tz)
     return date_string
 
 
