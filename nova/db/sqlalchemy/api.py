@@ -4757,24 +4757,6 @@ def flavor_get_by_flavor_id(context, flavor_id, read_deleted):
     return _dict_with_extra_specs(result)
 
 
-@pick_context_manager_writer
-def flavor_destroy(context, flavor_id):
-    """Marks specific flavor as deleted."""
-    ref = model_query(context, models.InstanceTypes, read_deleted="no").\
-                filter_by(flavorid=flavor_id).\
-                first()
-    if not ref:
-        raise exception.FlavorNotFound(flavor_id=flavor_id)
-
-    ref.soft_delete(context.session)
-    model_query(context, models.InstanceTypeExtraSpecs, read_deleted="no").\
-            filter_by(instance_type_id=ref['id']).\
-            soft_delete()
-    model_query(context, models.InstanceTypeProjects, read_deleted="no").\
-            filter_by(instance_type_id=ref['id']).\
-            soft_delete()
-
-
 ####################
 
 

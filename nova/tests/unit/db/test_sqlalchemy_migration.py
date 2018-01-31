@@ -332,11 +332,6 @@ class TestOcataCheck(test.TestCase):
         self.assertRaises(exception.ValidationError,
                           self.migration.upgrade, self.engine)
 
-    def test_upgrade_with_deleted_flavors(self):
-        flavor = db_api.flavor_create(self.context, self.flavor_values)
-        db_api.flavor_destroy(self.context, flavor['flavorid'])
-        self.migration.upgrade(self.engine)
-
     def test_upgrade_dirty_keypairs(self):
         db_api.key_pair_create(self.context, self.keypair_values)
         self.assertRaises(exception.ValidationError,

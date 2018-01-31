@@ -4444,26 +4444,6 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
         self._assertEqualObjects(flavor, self._get_base_values(),
                                  ignored_keys)
 
-    def test_flavor_destroy(self):
-        specs1 = {'a': '1', 'b': '2'}
-        flavor1 = self._create_flavor({'name': 'name1', 'flavorid': 'a1',
-                                       'extra_specs': specs1})
-        specs2 = {'c': '4', 'd': '3'}
-        flavor2 = self._create_flavor({'name': 'name2', 'flavorid': 'a2',
-                                       'extra_specs': specs2})
-
-        db.flavor_destroy(self.ctxt, 'a1')
-
-        self.assertRaises(exception.FlavorNotFound,
-                          db.flavor_get, self.ctxt, flavor1['id'])
-
-        r_flavor2 = db.flavor_get(self.ctxt, flavor2['id'])
-        self._assertEqualObjects(flavor2, r_flavor2, 'extra_specs')
-
-    def test_flavor_destroy_not_found(self):
-        self.assertRaises(exception.FlavorNotFound,
-                          db.flavor_destroy, self.ctxt, 'nonexists')
-
     def test_flavor_create_duplicate_name(self):
         self._create_flavor({})
         self.assertRaises(exception.FlavorExists,
@@ -4487,10 +4467,6 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
         self._assertEqualObjects(extra_specs, flavor['extra_specs'])
 
     def test_flavor_get_all(self):
-        # NOTE(boris-42): Remove base instance types
-        for it in db.flavor_get_all(self.ctxt):
-            db.flavor_destroy(self.ctxt, it['flavorid'])
-
         flavors = [
             {'root_gb': 600, 'memory_mb': 100, 'disabled': True,
              'is_public': True, 'name': 'a1', 'flavorid': 'f1'},
@@ -4693,30 +4669,6 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
         self.assertRaises(exception.FlavorNotFound,
                 db.flavor_get_by_flavor_id, self.user_ctxt,
                 flavor['flavorid'])
-
-    def test_flavor_get_by_flavor_id_deleted(self):
-        flavor = self._create_flavor({'name': 'abc', 'flavorid': '123'})
-
-        db.flavor_destroy(self.ctxt, '123')
-
-        flavor_by_fid = db.flavor_get_by_flavor_id(self.ctxt,
-                flavor['flavorid'], read_deleted='yes')
-        self.assertEqual(flavor['id'], flavor_by_fid['id'])
-
-    def test_flavor_get_by_flavor_id_deleted_and_recreate(self):
-        # NOTE(wingwj): Aims to test difference between mysql and postgresql
-        # for bug 1288636
-        param_dict = {'name': 'abc', 'flavorid': '123'}
-
-        self._create_flavor(param_dict)
-        db.flavor_destroy(self.ctxt, '123')
-
-        # Recreate the flavor with the same params
-        flavor = self._create_flavor(param_dict)
-
-        flavor_by_fid = db.flavor_get_by_flavor_id(self.ctxt,
-                flavor['flavorid'], read_deleted='yes')
-        self.assertEqual(flavor['id'], flavor_by_fid['id'])
 
 
 @mock.patch('time.sleep', new=lambda x: None)
