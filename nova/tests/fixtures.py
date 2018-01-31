@@ -1040,6 +1040,9 @@ class AllServicesCurrent(fixtures.Fixture):
         self.useFixture(fixtures.MonkeyPatch(
             'nova.objects.Service.get_minimum_version_multi',
             self._fake_minimum))
+        self.useFixture(fixtures.MonkeyPatch(
+            'nova.objects.service.get_minimum_version_all_cells',
+            lambda *a, **k: service_obj.SERVICE_VERSION))
         compute_rpcapi.LAST_VERSION = None
 
     def _fake_minimum(self, *args, **kwargs):

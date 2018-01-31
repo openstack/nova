@@ -3817,6 +3817,11 @@ class API(base.Base):
         else:
             # The instance is being created and we don't know which
             # cell it's going to land in, so check all cells.
+            # NOTE(danms): We don't require all cells to report here since
+            # we're really concerned about the new-ness of cells that the
+            # instance may be scheduled into. If a cell doesn't respond here,
+            # then it won't be a candidate for the instance and thus doesn't
+            # matter.
             min_compute_version = \
                 objects.service.get_minimum_version_all_cells(
                     context, ['nova-compute'])

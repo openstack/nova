@@ -492,6 +492,9 @@ class ServersController(wsgi.Controller):
         if host or node:
             context.can(server_policies.SERVERS % 'create:forced_host', {})
 
+        # NOTE(danms): Don't require an answer from all cells here, as
+        # we assume that if a cell isn't reporting we won't schedule into
+        # it anyway. A bit of a gamble, but a reasonable one.
         min_compute_version = service_obj.get_minimum_version_all_cells(
             nova_context.get_admin_context(), ['nova-compute'])
         supports_device_tagging = (min_compute_version >=

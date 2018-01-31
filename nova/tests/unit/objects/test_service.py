@@ -16,6 +16,7 @@ import mock
 from oslo_utils import timeutils
 from oslo_versionedobjects import base as ovo_base
 from oslo_versionedobjects import exception as ovo_exc
+import six
 
 from nova.compute import manager as compute_manager
 from nova import context
@@ -533,5 +534,48 @@ class TestServiceVersionCells(test.TestCase):
     @mock.patch('nova.objects.Service._check_minimum_version')
     def test_version_all_cells(self, mock_check, mock_notify):
         self._create_services(16, 16, 13, 16)
+        self.assertEqual(13, service.get_minimum_version_all_cells(
+            self.context, ['nova-compute']))
+
+    @mock.patch('nova.objects.service.LOG')
+    def test_get_minimum_version_checks_binary(self, mock_log):
+        ex = self.assertRaises(exception.ObjectActionError,
+                               service.get_minimum_version_all_cells,
+                               self.context, ['compute'])
+        self.assertIn('Invalid binary prefix', six.text_type(ex))
+        self.assertTrue(mock_log.warning.called)
+
+    @mock.patch('nova.context.scatter_gather_all_cells')
+    def test_version_all_cells_with_fail(self, mock_scatter):
+        mock_scatter.return_value = {
+            'foo': {'nova-compute': 13},
+            'bar': context.raised_exception_sentinel,
+        }
+        self.assertEqual(13, service.get_minimum_version_all_cells(
+            self.context, ['nova-compute']))
+        self.assertRaises(exception.CellTimeout,
+                          service.get_minimum_version_all_cells,
+                          self.context, ['nova-compute'],
+                          require_all=True)
+
+    @mock.patch('nova.context.scatter_gather_all_cells')
+    def test_version_all_cells_with_timeout(self, mock_scatter):
+        mock_scatter.return_value = {
+            'foo': {'nova-compute': 13},
+            'bar': context.did_not_respond_sentinel,
+        }
+        self.assertEqual(13, service.get_minimum_version_all_cells(
+            self.context, ['nova-compute']))
+        self.assertRaises(exception.CellTimeout,
+                          service.get_minimum_version_all_cells,
+                          self.context, ['nova-compute'],
+                          require_all=True)
+
+    @mock.patch('nova.context.scatter_gather_all_cells')
+    def test_version_all_cells_exclude_zero_service(self, mock_scatter):
+        mock_scatter.return_value = {
+            'foo': {'nova-compute': 13},
+            'bar': {'nova-compute': 0},
+        }
         self.assertEqual(13, service.get_minimum_version_all_cells(
             self.context, ['nova-compute']))

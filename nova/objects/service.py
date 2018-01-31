@@ -460,17 +460,72 @@ class Service(base.NovaPersistentObject, base.NovaObject,
                                              use_slave=use_slave)
 
 
-def get_minimum_version_all_cells(context, binaries):
-    """Get the minimum service version, checking all cells"""
+def get_minimum_version_all_cells(context, binaries, require_all=False):
+    """Get the minimum service version, checking all cells.
 
-    cells = objects.CellMappingList.get_all(context)
+    This attempts to calculate the minimum service version for a set
+    of binaries across all the cells in the system. If require_all
+    is False, then any cells that fail to report a version will be
+    ignored (assuming they won't be candidates for scheduling and thus
+    excluding them from the minimum version calculation is reasonable).
+    If require_all is True, then a failing cell will cause this to raise
+    exception.CellTimeout, as would be appropriate for gating some
+    data migration until everything is new enough.
+
+    Note that services that do not report a positive version are excluded
+    from this, as it crosses all cells which will naturally not have all
+    services.
+    """
+
+    if not all(binary.startswith('nova-') for binary in binaries):
+        LOG.warning('get_minimum_version_all_cells called with '
+                    'likely-incorrect binaries `%s\'', ','.join(binaries))
+        raise exception.ObjectActionError(
+            action='get_minimum_version_all_cells',
+            reason='Invalid binary prefix')
+
+    # NOTE(danms): Instead of using Service.get_minimum_version_multi(), we
+    # replicate the call directly to the underlying DB method here because
+    # we want to defeat the caching and we need to filter non-present
+    # services differently from the single-cell method.
+
+    results = nova_context.scatter_gather_all_cells(
+        context,
+        Service._db_service_get_minimum_version,
+        binaries)
+
     min_version = None
-    for cell in cells:
-        with nova_context.target_cell(context, cell) as cctxt:
-            version = objects.Service.get_minimum_version_multi(
-                cctxt, binaries)
-        min_version = min(min_version, version) if min_version else version
-    return min_version
+    for cell_uuid, result in results.items():
+        if result is nova_context.did_not_respond_sentinel:
+            LOG.warning('Cell %s did not respond when getting minimum '
+                        'service version', cell_uuid)
+            if require_all:
+                raise exception.CellTimeout()
+        elif result is nova_context.raised_exception_sentinel:
+            LOG.warning('Failed to get minimum service version for cell %s',
+                        cell_uuid)
+            if require_all:
+                # NOTE(danms): Okay, this isn't necessarily a timeout, but
+                # it's functionally the same from the caller's perspective
+                # and we logged the fact that it was actually a failure
+                # for the forensic investigator during the scatter/gather
+                # routine.
+                raise exception.CellTimeout()
+        else:
+            # NOTE(danms): Don't consider a zero or None result as the minimum
+            # since we're crossing cells and will likely not have all the
+            # services being probed.
+            relevant_versions = [version for version in result.values()
+                                 if version]
+            if relevant_versions:
+                min_version_cell = min(relevant_versions)
+                min_version = (min(min_version, min_version_cell)
+                               if min_version else min_version_cell)
+
+    # NOTE(danms): If we got no matches at all (such as at first startup)
+    # then report that as zero to be consistent with the other such
+    # methods.
+    return min_version or 0
 
 
 @base.NovaObjectRegistry.register
