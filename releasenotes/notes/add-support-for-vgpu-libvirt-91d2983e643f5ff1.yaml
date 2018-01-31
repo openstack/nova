@@ -33,7 +33,10 @@ features:
     * Suspending a guest having vGPUs doesn't work yet given a libvirt concern
       (it can't hot-unplug mediated devices from a guest). Workarounds using
       other instance actions (like snapshotting the instance or shelving it)
-      are recommended until libvirt supports that.
+      are recommended until libvirt supports that. If a user asks to suspend
+      the instance, Nova will get an exception that will set the instance state
+      back to ACTIVE, and you can see the suspend action in os-instance-action
+      API will be Error.
 
     * Resizing an instance with a new flavor that has vGPU resources doesn't
       allocate those vGPUs to the instance (the instance is created without
