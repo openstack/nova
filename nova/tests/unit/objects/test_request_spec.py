@@ -494,9 +494,11 @@ class _TestRequestSpecObject(object):
 
     @mock.patch.object(request_spec.RequestSpec,
             '_get_by_instance_uuid_from_db')
-    def test_get_by_instance_uuid(self, get_by_uuid):
+    @mock.patch('nova.objects.InstanceGroup.get_by_uuid')
+    def test_get_by_instance_uuid(self, mock_get_ig, get_by_uuid):
         fake_spec = fake_request_spec.fake_db_spec()
         get_by_uuid.return_value = fake_spec
+        mock_get_ig.return_value = objects.InstanceGroup(name='fresh')
 
         req_obj = request_spec.RequestSpec.get_by_instance_uuid(self.context,
                 fake_spec['instance_uuid'])
@@ -517,6 +519,7 @@ class _TestRequestSpecObject(object):
         self.assertIsInstance(req_obj.retry, objects.SchedulerRetries)
         self.assertIsInstance(req_obj.limits, objects.SchedulerLimits)
         self.assertIsInstance(req_obj.instance_group, objects.InstanceGroup)
+        self.assertEqual('fresh', req_obj.instance_group.name)
 
     def _check_update_primitive(self, req_obj, changes):
         self.assertEqual(req_obj.instance_uuid, changes['instance_uuid'])
@@ -532,10 +535,13 @@ class _TestRequestSpecObject(object):
 
         # object fields
         for field in ['image', 'numa_topology', 'pci_requests', 'flavor',
-                'retry', 'limits', 'instance_group']:
+                'retry', 'limits']:
             self.assertEqual(
                     getattr(req_obj, field).obj_to_primitive(),
                     getattr(serialized_obj, field).obj_to_primitive())
+
+        self.assertIsNone(serialized_obj.instance_group.members)
+        self.assertIsNone(serialized_obj.instance_group.hosts)
 
     def test_create(self):
         req_obj = fake_request_spec.fake_spec_obj(remove_id=True)

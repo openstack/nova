@@ -16,6 +16,7 @@ from oslo_utils import uuidutils
 from nova import context
 from nova import objects
 from nova.tests.unit import fake_flavor
+from nova.tests import uuidsentinel as uuids
 
 
 INSTANCE_NUMA_TOPOLOGY = objects.InstanceNUMATopology(
@@ -77,7 +78,7 @@ def fake_spec_obj(remove_id=False):
     req_obj.flavor = fake_flavor.fake_flavor_obj(ctxt)
     req_obj.retry = objects.SchedulerRetries()
     req_obj.limits = objects.SchedulerLimits()
-    req_obj.instance_group = objects.InstanceGroup()
+    req_obj.instance_group = objects.InstanceGroup(uuid=uuids.instgroup)
     req_obj.project_id = 'fake'
     req_obj.num_instances = 1
     req_obj.availability_zone = None
