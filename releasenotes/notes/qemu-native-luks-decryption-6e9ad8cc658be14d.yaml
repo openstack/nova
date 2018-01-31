@@ -1,0 +1,18 @@
+---
+features:
+  - |
+    QEMU 2.6.0 and Libvirt 2.2.0 allow LUKS encrypted RAW files, block devices
+    and network devices (such as rbd) to be decrypted natively by QEMU.
+    If qemu >= 2.6.0 and libvirt >= 2.2.0 are installed and the volume
+    encryption provider is 'luks', the libvirt driver will use native QEMU
+    decryption for encrypted volumes. The libvirt driver will generate a secret
+    to hold the LUKS passphrase for unlocking the volume and the volume driver
+    will use the secret to generate the required encryption XML for the disk.
+    QEMU will then be able to read from and write to the encrypted disk
+    natively, without the need of os-brick encryptors.
+
+    Instances that have attached encrypted volumes from before Queens will
+    continue to use os-brick encryptors after a live migration or direct
+    upgrade to Queens. A full reboot or another live migration between Queens
+    compute hosts is required before the instance will attempt to use QEMU
+    native LUKS decryption.
