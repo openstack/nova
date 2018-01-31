@@ -1563,11 +1563,6 @@ def flavor_access_add(context, flavor_id, project_id):
     """Add flavor access for project."""
     return IMPL.flavor_access_add(context, flavor_id, project_id)
 
-
-def flavor_access_remove(context, flavor_id, project_id):
-    """Remove flavor access for project."""
-    return IMPL.flavor_access_remove(context, flavor_id, project_id)
-
 ####################
 
 
