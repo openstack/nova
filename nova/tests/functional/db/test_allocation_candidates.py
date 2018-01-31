@@ -251,19 +251,19 @@ class ProviderDBHelperTestCase(ProviderDBBase):
 
         # No traits.  This will never be returned, because it's illegal to
         # invoke the method with no traits.
-        self._create_provider('one')
+        self._create_provider('cn1')
 
         # One trait
-        rp2 = self._create_provider('two')
-        _set_traits(rp2, 'HW_CPU_X86_TBM')
+        cn2 = self._create_provider('cn2')
+        _set_traits(cn2, 'HW_CPU_X86_TBM')
 
-        # One the same as rp2
-        rp3 = self._create_provider('three')
-        _set_traits(rp3, 'HW_CPU_X86_TBM', 'HW_CPU_X86_TSX', 'HW_CPU_X86_SGX')
+        # One the same as cn2
+        cn3 = self._create_provider('cn3')
+        _set_traits(cn3, 'HW_CPU_X86_TBM', 'HW_CPU_X86_TSX', 'HW_CPU_X86_SGX')
 
         # Disjoint
-        rp4 = self._create_provider('four')
-        _set_traits(rp4, 'HW_CPU_X86_SSE2', 'HW_CPU_X86_SSE3', 'CUSTOM_FOO')
+        cn4 = self._create_provider('cn4')
+        _set_traits(cn4, 'HW_CPU_X86_SSE2', 'HW_CPU_X86_SSE3', 'CUSTOM_FOO')
 
         # Request with no traits not allowed
         self.assertRaises(
@@ -274,14 +274,14 @@ class ProviderDBHelperTestCase(ProviderDBBase):
             rp_obj._get_provider_ids_having_all_traits, self.ctx, {})
 
         # Common trait returns both RPs having it
-        run(['HW_CPU_X86_TBM'], [rp2.id, rp3.id])
+        run(['HW_CPU_X86_TBM'], [cn2.id, cn3.id])
         # Just the one
-        run(['HW_CPU_X86_TSX'], [rp3.id])
-        run(['HW_CPU_X86_TSX', 'HW_CPU_X86_SGX'], [rp3.id])
-        run(['CUSTOM_FOO'], [rp4.id])
-        # Including the common one still just gets me rp3
-        run(['HW_CPU_X86_TBM', 'HW_CPU_X86_SGX'], [rp3.id])
-        run(['HW_CPU_X86_TBM', 'HW_CPU_X86_TSX', 'HW_CPU_X86_SGX'], [rp3.id])
+        run(['HW_CPU_X86_TSX'], [cn3.id])
+        run(['HW_CPU_X86_TSX', 'HW_CPU_X86_SGX'], [cn3.id])
+        run(['CUSTOM_FOO'], [cn4.id])
+        # Including the common one still just gets me cn3
+        run(['HW_CPU_X86_TBM', 'HW_CPU_X86_SGX'], [cn3.id])
+        run(['HW_CPU_X86_TBM', 'HW_CPU_X86_TSX', 'HW_CPU_X86_SGX'], [cn3.id])
         # Can't be satisfied
         run(['HW_CPU_X86_TBM', 'HW_CPU_X86_TSX', 'CUSTOM_FOO'], [])
         run(['HW_CPU_X86_TBM', 'HW_CPU_X86_TSX', 'HW_CPU_X86_SGX',
