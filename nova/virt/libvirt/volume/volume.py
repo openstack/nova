@@ -109,6 +109,18 @@ class LibvirtBaseVolumeDriver(object):
             # a shareable disk.
             conf.shareable = True
 
+        volume_id = connection_info.get('data', {}).get('volume_id')
+        volume_secret = None
+        if volume_id:
+            volume_secret = self.host.find_secret('volume', volume_id)
+        if volume_secret:
+            conf.encryption = vconfig.LibvirtConfigGuestDiskEncryption()
+            secret = vconfig.LibvirtConfigGuestDiskEncryptionSecret()
+            secret.type = 'passphrase'
+            secret.uuid = volume_secret.UUIDString()
+            conf.encryption.format = 'luks'
+            conf.encryption.secret = secret
+
         return conf
 
     def connect_volume(self, connection_info, instance):

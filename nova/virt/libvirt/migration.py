@@ -24,6 +24,7 @@ from oslo_log import log as logging
 
 from nova.compute import power_state
 import nova.conf
+from nova.virt.libvirt import config as vconfig
 
 LOG = logging.getLogger(__name__)
 
@@ -148,6 +149,15 @@ def _update_volume_xml(xml_doc, migrate_data, get_volume_config):
             continue
         conf = get_volume_config(
             bdm_info.connection_info, bdm_info.as_disk_info())
+
+        if bdm_info.obj_attr_is_set('encryption_secret_uuid'):
+            conf.encryption = vconfig.LibvirtConfigGuestDiskEncryption()
+            conf.encryption.format = 'luks'
+            secret = vconfig.LibvirtConfigGuestDiskEncryptionSecret()
+            secret.type = 'passphrase'
+            secret.uuid = bdm_info.encryption_secret_uuid
+            conf.encryption.secret = secret
+
         xml_doc2 = etree.XML(conf.to_xml(), parser)
         serial_dest = xml_doc2.findtext('serial')
 

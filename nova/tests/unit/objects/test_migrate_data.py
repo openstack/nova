@@ -225,11 +225,31 @@ class _TestLibvirtLiveMigrateData(object):
 
     def test_obj_make_compatible(self):
         obj = migrate_data.LibvirtLiveMigrateData(
-            old_vol_attachment_ids={uuids.volume: uuids.attachment})
+            src_supports_native_luks=True,
+            old_vol_attachment_ids={uuids.volume: uuids.attachment},
+            supported_perf_events=[],
+            serial_listen_addr='127.0.0.1',
+            target_connect_addr='127.0.0.1')
         primitive = obj.obj_to_primitive(target_version='1.0')
+        self.assertNotIn('target_connect_addr', primitive)
+        self.assertNotIn('serial_listen_addr=', primitive)
+        self.assertNotIn('supported_perf_events', primitive)
         self.assertNotIn('old_vol_attachment_ids', primitive)
+        self.assertNotIn('src_supports_native_luks', primitive)
+        primitive = obj.obj_to_primitive(target_version='1.1')
+        self.assertNotIn('serial_listen_addr=', primitive)
+        primitive = obj.obj_to_primitive(target_version='1.2')
+        self.assertNotIn('supported_perf_events', primitive)
         primitive = obj.obj_to_primitive(target_version='1.3')
         self.assertNotIn('old_vol_attachment_ids', primitive)
+        primitive = obj.obj_to_primitive(target_version='1.4')
+        self.assertNotIn('src_supports_native_luks', primitive)
+
+    def test_bdm_obj_make_compatible(self):
+        obj = migrate_data.LibvirtLiveMigrateBDMInfo(
+            encryption_secret_uuid=uuids.encryption_secret_uuid)
+        primitive = obj.obj_to_primitive(target_version='1.0')
+        self.assertNotIn('encryption_secret_uuid', primitive)
 
 
 class TestLibvirtLiveMigrateData(test_objects._LocalTest,
