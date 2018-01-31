@@ -2269,7 +2269,7 @@ class TestInventory(SchedulerReportClientTestCase):
                 '_update_inventory')
     def test_update_compute_node(self, mock_ui, mock_delete, mock_erp):
         cn = self.compute_node
-        self.client.update_compute_node(cn)
+        self.client.update_compute_node(self.context, cn)
         mock_erp.assert_called_once_with(cn.uuid, cn.hypervisor_hostname)
         expected_inv_data = {
             'VCPU': {
@@ -2318,9 +2318,9 @@ class TestInventory(SchedulerReportClientTestCase):
         cn.vcpus = 0
         cn.memory_mb = 0
         cn.local_gb = 0
-        self.client.update_compute_node(cn)
+        self.client.update_compute_node(self.context, cn)
         mock_erp.assert_called_once_with(cn.uuid, cn.hypervisor_hostname)
-        mock_delete.assert_called_once_with(cn.uuid)
+        mock_delete.assert_called_once_with(self.context, cn.uuid)
         self.assertFalse(mock_ui.called)
 
     @mock.patch.object(report.LOG, 'info')
@@ -2346,11 +2346,14 @@ class TestInventory(SchedulerReportClientTestCase):
         mock_delete.return_value.status_code = 204
         mock_delete.return_value.headers = {'x-openstack-request-id':
                                             uuids.request_id}
-        result = self.client._delete_inventory(cn.uuid)
+        result = self.client._delete_inventory(self.context, cn.uuid)
         self.assertIsNone(result)
         self.assertFalse(mock_put.called)
         self.assertEqual(uuids.request_id,
                          mock_info.call_args[0][1]['placement_req_id'])
+        mock_delete.assert_called_once_with(
+            '/resource_providers/%s/inventories' % cn.uuid,
+            version='1.5', global_request_id=self.context.global_id)
 
     @mock.patch('nova.scheduler.client.report._extract_inventory_in_use')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -2368,7 +2371,7 @@ class TestInventory(SchedulerReportClientTestCase):
             'inventories': {
             }
         }
-        result = self.client._delete_inventory(cn.uuid)
+        result = self.client._delete_inventory(self.context, cn.uuid)
         self.assertIsNone(result)
         self.assertFalse(mock_delete.called)
         self.assertFalse(mock_extract.called)
@@ -2403,7 +2406,7 @@ class TestInventory(SchedulerReportClientTestCase):
         }
         mock_put.return_value.headers = {'x-openstack-request-id':
                                          uuids.request_id}
-        result = self.client._delete_inventory(cn.uuid)
+        result = self.client._delete_inventory(self.context, cn.uuid)
         self.assertIsNone(result)
         self.assertTrue(mock_debug.called)
         self.assertTrue(mock_put.called)
@@ -2433,7 +2436,7 @@ class TestInventory(SchedulerReportClientTestCase):
         }
         mock_delete.return_value.status_code = 406
         mock_put.return_value.status_code = 200
-        self.client._delete_inventory(cn.uuid)
+        self.client._delete_inventory(self.context, cn.uuid)
         self.assertTrue(mock_debug.called)
         exp_url = '/resource_providers/%s/inventories' % cn.uuid
         payload = {
@@ -2475,7 +2478,7 @@ class TestInventory(SchedulerReportClientTestCase):
         }
         mock_put.return_value.headers = {'x-openstack-request-id':
                                          uuids.request_id}
-        self.client._delete_inventory(cn.uuid)
+        self.client._delete_inventory(self.context, cn.uuid)
         self.assertTrue(mock_debug.called)
         exp_url = '/resource_providers/%s/inventories' % cn.uuid
         payload = {
@@ -2527,7 +2530,7 @@ There was a conflict when trying to complete your request.
             'inventories': {
             }
         }
-        result = self.client._delete_inventory(cn.uuid)
+        result = self.client._delete_inventory(self.context, cn.uuid)
         self.assertIsNone(result)
         self.assertTrue(mock_warn.called)
         self.assertEqual(uuids.request_id,
@@ -2562,7 +2565,7 @@ There was a conflict when trying to complete your request.
         mock_delete.return_value.status_code = 404
         mock_delete.return_value.headers = {'x-openstack-request-id':
                                             uuids.request_id}
-        result = self.client._delete_inventory(cn.uuid)
+        result = self.client._delete_inventory(self.context, cn.uuid)
         self.assertIsNone(result)
         self.assertFalse(self.client._provider_tree.exists(cn.uuid))
         self.assertTrue(mock_debug.called)
@@ -2602,7 +2605,7 @@ There was a conflict when trying to complete your request.
         }
         mock_delete.return_value.headers = {'x-openstack-request-id':
                                          uuids.request_id}
-        result = self.client._delete_inventory(cn.uuid)
+        result = self.client._delete_inventory(self.context, cn.uuid)
         self.assertIsNone(result)
         self.assertFalse(mock_warn.called)
         self.assertTrue(mock_error.called)
@@ -3076,6 +3079,7 @@ There was a conflict when trying to complete your request.
             },
         }
         self.client.set_inventory_for_provider(
+            self.context,
             mock.sentinel.rp_uuid,
             mock.sentinel.rp_name,
             inv_data,
@@ -3111,6 +3115,7 @@ There was a conflict when trying to complete your request.
         """
         inv_data = {}
         self.client.set_inventory_for_provider(
+            self.context,
             mock.sentinel.rp_uuid,
             mock.sentinel.rp_name,
             inv_data,
@@ -3123,7 +3128,7 @@ There was a conflict when trying to complete your request.
         self.assertFalse(mock_gocr.called)
         self.assertFalse(mock_erc.called)
         self.assertFalse(mock_upd.called)
-        mock_del.assert_called_once_with(mock.sentinel.rp_uuid)
+        mock_del.assert_called_once_with(self.context, mock.sentinel.rp_uuid)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_update_inventory')
@@ -3177,6 +3182,7 @@ There was a conflict when trying to complete your request.
 
         }
         self.client.set_inventory_for_provider(
+            self.context,
             mock.sentinel.rp_uuid,
             mock.sentinel.rp_name,
             inv_data,
@@ -3203,7 +3209,8 @@ There was a conflict when trying to complete your request.
     def test_set_inventory_for_provider_with_parent(self, mock_erp):
         """Ensure parent UUID is sent through."""
         self.client.set_inventory_for_provider(
-            uuids.child, 'junior', {}, parent_provider_uuid=uuids.parent)
+            self.context, uuids.child, 'junior', {},
+            parent_provider_uuid=uuids.parent)
         mock_erp.assert_called_once_with(
             uuids.child, 'junior', parent_provider_uuid=uuids.parent)
 

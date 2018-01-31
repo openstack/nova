@@ -872,6 +872,7 @@ class ResourceTracker(object):
             inv_data = self.driver.get_inventory(nodename)
             _normalize_inventory_from_cn_obj(inv_data, compute_node)
             self.scheduler_client.set_inventory_for_provider(
+                context,
                 compute_node.uuid,
                 compute_node.hypervisor_hostname,
                 inv_data,
@@ -880,7 +881,7 @@ class ResourceTracker(object):
             # Eventually all virt drivers will return an inventory dict in the
             # format that the placement API expects and we'll be able to remove
             # this code branch
-            self.scheduler_client.update_compute_node(compute_node)
+            self.scheduler_client.update_compute_node(context, compute_node)
 
         if self.pci_tracker:
             self.pci_tracker.save(context)

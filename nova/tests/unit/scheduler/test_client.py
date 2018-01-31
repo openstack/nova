@@ -99,20 +99,23 @@ class SchedulerClientTestCase(test.NoDBTestCase):
     def test_update_compute_node(self, mock_update_compute_node):
         self.assertIsNone(self.client.reportclient.instance)
 
-        self.client.update_compute_node(mock.sentinel.cn)
+        self.client.update_compute_node(mock.sentinel.ctx, mock.sentinel.cn)
 
         self.assertIsNotNone(self.client.reportclient.instance)
-        mock_update_compute_node.assert_called_once_with(mock.sentinel.cn)
+        mock_update_compute_node.assert_called_once_with(
+            mock.sentinel.ctx, mock.sentinel.cn)
 
     @mock.patch.object(scheduler_report_client.SchedulerReportClient,
                        'set_inventory_for_provider')
     def test_set_inventory_for_provider(self, mock_set):
         self.client.set_inventory_for_provider(
+            mock.sentinel.ctx,
             mock.sentinel.rp_uuid,
             mock.sentinel.rp_name,
             mock.sentinel.inv_data,
         )
         mock_set.assert_called_once_with(
+            mock.sentinel.ctx,
             mock.sentinel.rp_uuid,
             mock.sentinel.rp_name,
             mock.sentinel.inv_data,
@@ -121,12 +124,14 @@ class SchedulerClientTestCase(test.NoDBTestCase):
         # Pass the optional parent_provider_uuid
         mock_set.reset_mock()
         self.client.set_inventory_for_provider(
+            mock.sentinel.ctx,
             mock.sentinel.child_uuid,
             mock.sentinel.child_name,
             mock.sentinel.inv_data2,
             parent_provider_uuid=mock.sentinel.rp_uuid,
         )
         mock_set.assert_called_once_with(
+            mock.sentinel.ctx,
             mock.sentinel.child_uuid,
             mock.sentinel.child_name,
             mock.sentinel.inv_data2,

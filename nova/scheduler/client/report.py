@@ -870,7 +870,7 @@ class SchedulerReportClient(object):
         return False
 
     @safe_connect
-    def _delete_inventory(self, rp_uuid):
+    def _delete_inventory(self, context, rp_uuid):
         """Deletes all inventory records for a resource provider with the
         supplied UUID.
 
@@ -894,7 +894,8 @@ class SchedulerReportClient(object):
 
         cur_gen = curr['resource_provider_generation']
         url = '/resource_providers/%s/inventories' % rp_uuid
-        r = self.delete(url, version="1.5")
+        r = self.delete(url, version="1.5",
+                        global_request_id=context.global_id)
         placement_req_id = get_placement_request_id(r)
         msg_args = {
             'rp_uuid': rp_uuid,
@@ -956,11 +957,12 @@ class SchedulerReportClient(object):
         msg_args['err'] = r.text
         LOG.error(msg, msg_args)
 
-    def set_inventory_for_provider(self, rp_uuid, rp_name, inv_data,
+    def set_inventory_for_provider(self, context, rp_uuid, rp_name, inv_data,
                                    parent_provider_uuid=None):
         """Given the UUID of a provider, set the inventory records for the
         provider to the supplied dict of resources.
 
+        :param context: The security context
         :param rp_uuid: UUID of the resource provider to set inventory for
         :param rp_name: Name of the resource provider in case we need to create
                         a record for it in the placement API
@@ -985,7 +987,7 @@ class SchedulerReportClient(object):
         if inv_data:
             self._update_inventory(rp_uuid, inv_data)
         else:
-            self._delete_inventory(rp_uuid)
+            self._delete_inventory(context, rp_uuid)
 
     @safe_connect
     def _ensure_traits(self, traits):
@@ -1195,9 +1197,10 @@ class SchedulerReportClient(object):
             LOG.error(msg, args)
             raise exception.InvalidResourceClass(resource_class=name)
 
-    def update_compute_node(self, compute_node):
+    def update_compute_node(self, context, compute_node):
         """Creates or updates stats for the supplied compute node.
 
+        :param context: The security context
         :param compute_node: updated nova.objects.ComputeNode to report
         :raises `exception.InventoryInUse` if the compute node has had changes
                 to its inventory but there are still active allocations for
@@ -1210,7 +1213,7 @@ class SchedulerReportClient(object):
         if inv_data:
             self._update_inventory(compute_node.uuid, inv_data)
         else:
-            self._delete_inventory(compute_node.uuid)
+            self._delete_inventory(context, compute_node.uuid)
 
     @safe_connect
     def get_allocations_for_consumer(self, consumer):
