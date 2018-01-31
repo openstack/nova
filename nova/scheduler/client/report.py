@@ -1101,6 +1101,42 @@ class SchedulerReportClient(object):
         raise exception.ResourceProviderUpdateFailed(url=url, error=resp.text)
 
     @safe_connect
+    def set_aggregates_for_provider(self, rp_uuid, aggregates):
+        """Replace a provider's aggregates with those specified.
+
+        The provider must exist - this method does not attempt to create it.
+
+        :param rp_uuid: The UUID of the provider whose aggregates are to be
+                        updated.
+        :param aggregates: Iterable of aggregates to set on the provider.
+        :raises: ResourceProviderUpdateFailed on any placement API failure.
+        """
+        # TODO(efried): Handle generation conflicts when supported by placement
+        url = '/resource_providers/%s/aggregates' % rp_uuid
+        aggregates = aggregates or []
+        resp = self.put(url, aggregates, version='1.1')
+
+        if resp.status_code == 200:
+            placement_aggs = resp.json()['aggregates']
+            self._provider_tree.update_aggregates(rp_uuid, placement_aggs)
+            return
+
+        # Some error occurred; log it
+        msg = ("[%(placement_req_id)s] Failed to update aggregates to "
+               "[%(aggs)s] for resource provider with UUID %(uuid)s.  Got "
+               "%(status_code)d: %(err_text)s")
+        args = {
+            'placement_req_id': get_placement_request_id(resp),
+            'uuid': rp_uuid,
+            'aggs': ','.join(aggregates),
+            'status_code': resp.status_code,
+            'err_text': resp.text,
+        }
+        LOG.error(msg, args)
+
+        raise exception.ResourceProviderUpdateFailed(url=url, error=resp.text)
+
+    @safe_connect
     def _ensure_resource_class(self, name):
         """Make sure a custom resource class exists.
 

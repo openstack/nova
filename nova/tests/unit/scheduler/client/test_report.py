@@ -1847,6 +1847,34 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.ks_adap_mock.put.assert_called_once_with(
             url, json=[], raise_exc=False, microversion=None)
 
+    def test_set_aggregates_for_provider(self):
+        aggs = [uuids.agg1, uuids.agg2]
+        resp_mock = mock.Mock(status_code=200)
+        resp_mock.json.return_value = {
+            'aggregates': aggs,
+        }
+        self.ks_adap_mock.put.return_value = resp_mock
+
+        # Prime the provider tree cache
+        self.client._provider_tree.new_root('rp', uuids.rp, 0)
+        self.assertEqual(set(),
+                         self.client._provider_tree.data(uuids.rp).aggregates)
+
+        self.client.set_aggregates_for_provider(uuids.rp, aggs)
+
+        self.ks_adap_mock.put.assert_called_once_with(
+            '/resource_providers/%s/aggregates' % uuids.rp, json=aggs,
+            raise_exc=False, microversion='1.1')
+        # Cache was updated
+        self.assertEqual(set(aggs),
+                         self.client._provider_tree.data(uuids.rp).aggregates)
+
+    def test_set_aggregates_for_provider_fail(self):
+        self.ks_adap_mock.put.return_value = mock.Mock(status_code=503)
+        self.assertRaises(
+            exception.ResourceProviderUpdateFailed,
+            self.client.set_aggregates_for_provider, uuids.rp, [])
+
 
 class TestAggregates(SchedulerReportClientTestCase):
     def test_get_provider_aggregates_found(self):
