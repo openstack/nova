@@ -4639,37 +4639,6 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
                 db.flavor_get_by_name, self.user_ctxt,
                 flavor['name'])
 
-    def test_flavor_get_by_flavor_id(self):
-        flavors = [{'name': 'abc', 'flavorid': '123'},
-                   {'name': 'def', 'flavorid': '456'},
-                   {'name': 'ghi', 'flavorid': '789'}]
-        flavors = [self._create_flavor(t) for t in flavors]
-
-        for flavor in flavors:
-            params = (self.ctxt, flavor['flavorid'])
-            flavor_by_flavorid = db.flavor_get_by_flavor_id(*params)
-            self._assertEqualObjects(flavor, flavor_by_flavorid)
-
-    def test_flavor_get_by_flavor_not_found(self):
-        self._create_flavor({})
-        self.assertRaises(exception.FlavorNotFound,
-                          db.flavor_get_by_flavor_id,
-                          self.ctxt, 'nonexists')
-
-    def test_flavor_get_by_flavor_id_non_public(self):
-        flavor = self._create_flavor({'name': 'abc', 'flavorid': '123',
-                                      'is_public': False})
-
-        # Admin can see it
-        flavor_by_fid = db.flavor_get_by_flavor_id(self.ctxt,
-                                                   flavor['flavorid'])
-        self._assertEqualObjects(flavor, flavor_by_fid)
-
-        # Regular user can not
-        self.assertRaises(exception.FlavorNotFound,
-                db.flavor_get_by_flavor_id, self.user_ctxt,
-                flavor['flavorid'])
-
 
 @mock.patch('time.sleep', new=lambda x: None)
 class FixedIPTestCase(BaseInstanceTypeTestCase):

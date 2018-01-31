@@ -4743,20 +4743,6 @@ def flavor_get_by_name(context, name):
     return _dict_with_extra_specs(result)
 
 
-@require_context
-@pick_context_manager_reader
-def flavor_get_by_flavor_id(context, flavor_id, read_deleted):
-    """Returns a dict describing specific flavor_id."""
-    result = _flavor_get_query(context, read_deleted=read_deleted).\
-                        filter_by(flavorid=flavor_id).\
-                        order_by(asc(models.InstanceTypes.deleted),
-                                 asc(models.InstanceTypes.id)).\
-                        first()
-    if not result:
-        raise exception.FlavorNotFound(flavor_id=flavor_id)
-    return _dict_with_extra_specs(result)
-
-
 ####################
 
 

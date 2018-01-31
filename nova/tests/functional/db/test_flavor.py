@@ -60,9 +60,6 @@ class FlavorObjectTestCase(test.NoDBTestCase):
         # Make sure we don't find it in the main database
         self.assertRaises(exception.FlavorNotFoundByName,
                           db.flavor_get_by_name, self.context, flavor.name)
-        self.assertRaises(exception.FlavorNotFound,
-                          db.flavor_get_by_flavor_id, self.context,
-                          flavor.flavorid)
 
     def test_get_with_no_projects(self):
         fields = dict(fake_api_flavor, projects=[])
