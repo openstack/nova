@@ -335,7 +335,8 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
         m.launch.side_effect = Exception
         vfs = vfsimpl.VFSGuestFS(self.qcowfile)
         mock_access.return_value = False
-        with mock.patch('eventlet.tpool.Proxy', return_value=m):
+        self.flags(debug=False, group='guestfs')
+        with mock.patch('eventlet.tpool.Proxy', return_value=m) as tpool_mock:
             self.assertRaises(exception.LibguestfsCannotReadKernel,
                                     vfs.inspect_capabilities)
             m.add_drive.assert_called_once_with('/dev/null')
@@ -343,3 +344,17 @@ class VirtDiskVFSGuestFSTest(test.NoDBTestCase):
             mock_access.assert_called_once_with('/boot/vmlinuz-kernel_name',
                                                 mock.ANY)
             mock_uname.assert_called_once_with()
+            self.assertEqual(1, tpool_mock.call_count)
+
+    def test_appliance_setup_inspect_capabilties_debug_mode(self):
+        """Asserts that we do not use an eventlet thread pool when guestfs
+        debug logging is enabled.
+        """
+        # We can't actually mock guestfs.GuestFS because it's an optional
+        # native package import. All we really care about here is that
+        # eventlet isn't used.
+        self.flags(debug=True, group='guestfs')
+        vfs = vfsimpl.VFSGuestFS(self.qcowfile)
+        with mock.patch('eventlet.tpool.Proxy',
+                        new_callable=mock.NonCallableMock):
+            vfs.inspect_capabilities()
