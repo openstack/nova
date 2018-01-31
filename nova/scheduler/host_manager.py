@@ -612,24 +612,29 @@ class HostManager(object):
          - services is a dict of services indexed by hostname
         """
 
+        def targeted_operation(cctxt):
+            services = objects.ServiceList.get_by_binary(
+                cctxt, 'nova-compute', include_disabled=True)
+            if compute_uuids is None:
+                return services, objects.ComputeNodeList.get_all(cctxt)
+            else:
+                return services, objects.ComputeNodeList.get_all_by_uuids(
+                    cctxt, compute_uuids)
+
+        results = context_module.scatter_gather_cells(context, cells, 60,
+                                                      targeted_operation)
         compute_nodes = collections.defaultdict(list)
         services = {}
-        for cell in cells:
-            LOG.debug('Getting compute nodes and services for cell %(cell)s',
-                      {'cell': cell.identity})
-            with context_module.target_cell(context, cell) as cctxt:
-                if compute_uuids is None:
-                    compute_nodes[cell.uuid].extend(
-                        objects.ComputeNodeList.get_all(cctxt))
-                else:
-                    compute_nodes[cell.uuid].extend(
-                        objects.ComputeNodeList.get_all_by_uuids(
-                            cctxt, compute_uuids))
-                services.update(
-                    {service.host: service
-                     for service in objects.ServiceList.get_by_binary(
-                             cctxt, 'nova-compute',
-                             include_disabled=True)})
+        for cell_uuid, result in results.items():
+            if result is context_module.raised_exception_sentinel:
+                LOG.warning('Failed to get computes for cell %s', cell_uuid)
+            elif result is context_module.did_not_respond_sentinel:
+                LOG.warning('Timeout getting computes for cell %s', cell_uuid)
+            else:
+                _services, _compute_nodes = result
+                compute_nodes[cell_uuid].extend(_compute_nodes)
+                services.update({service.host: service
+                                 for service in _services})
         return compute_nodes, services
 
     def refresh_cells_caches(self):

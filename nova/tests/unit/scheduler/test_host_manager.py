@@ -1038,6 +1038,21 @@ class HostManagerTestCase(test.NoDBTestCase):
         mock_sl.assert_called_once_with(mock.sentinel.cctxt, 'nova-compute',
                                         include_disabled=True)
 
+    @mock.patch('nova.context.scatter_gather_cells')
+    def test_get_computes_for_cells_failures(self, mock_sg):
+        mock_sg.return_value = {
+            uuids.cell1: ([mock.MagicMock(host='a'), mock.MagicMock(host='b')],
+                          [mock.sentinel.c1n1, mock.sentinel.c1n2]),
+            uuids.cell2: nova_context.did_not_respond_sentinel,
+            uuids.cell3: nova_context.raised_exception_sentinel,
+        }
+        context = nova_context.RequestContext('fake', 'fake')
+        cns, srv = self.host_manager._get_computes_for_cells(context, [])
+
+        self.assertEqual({uuids.cell1: [mock.sentinel.c1n1,
+                                        mock.sentinel.c1n2]}, cns)
+        self.assertEqual(['a', 'b'], sorted(srv.keys()))
+
 
 class HostManagerChangedNodesTestCase(test.NoDBTestCase):
     """Test case for HostManager class."""
