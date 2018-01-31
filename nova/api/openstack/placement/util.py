@@ -201,9 +201,11 @@ def trait_url(environ, trait):
 
 def validate_query_params(req, schema):
     try:
+        # NOTE(Kevin_Zheng): The webob package throws UnicodeError when
+        # param cannot be decoded. Catch this and raise HTTP 400.
         jsonschema.validate(dict(req.GET), schema,
                             format_checker=jsonschema.FormatChecker())
-    except jsonschema.ValidationError as exc:
+    except (jsonschema.ValidationError, UnicodeDecodeError) as exc:
         raise webob.exc.HTTPBadRequest(
             _('Invalid query string parameters: %(exc)s') %
             {'exc': exc})
