@@ -1130,7 +1130,11 @@ class CellV2Commands(object):
                'in the cell will be mapped in batches of 50. If you have a '
                'large number of instances, consider specifying a custom value '
                'and run the command until it exits with 0.')
-    def map_instances(self, cell_uuid, max_count=None):
+    @args('--reset', action='store_true', dest='reset_marker',
+          help='The command will start from the beginning as opposed to the '
+               'default behavior of starting from where the last run '
+               'finished')
+    def map_instances(self, cell_uuid, max_count=None, reset_marker=None):
         """Map instances into the provided cell.
 
         Instances in the nova database of the provided cell (nova database
@@ -1138,8 +1142,11 @@ class CellV2Commands(object):
         oldest to newest and if unmapped, will be mapped to the provided cell.
         A max-count can be set on the number of instance to map in a single
         run. Repeated runs of the command will start from where the last run
-        finished so it is not necessary to increase max-count to finish. An
-        exit code of 0 indicates that all instances have been mapped.
+        finished so it is not necessary to increase max-count to finish. A
+        reset option can be passed which will reset the marker, thus making the
+        command start from the beginning as opposed to the default behavior of
+        starting from where the last run finished. An exit code of 0 indicates
+        that all instances have been mapped.
         """
 
         if max_count is not None:
@@ -1169,6 +1176,8 @@ class CellV2Commands(object):
         else:
             # There should be only one here
             marker = marker_mapping[0].instance_uuid.replace(' ', '-')
+            if reset_marker:
+                marker = None
             marker_mapping[0].destroy()
 
         next_marker = True

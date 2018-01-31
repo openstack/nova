@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    Currently the ``nova-manage cell_v2 map_instances`` command uses a marker
+    setup by which repeated runs of the command will start from where the last
+    run finished, by default. A ``--reset`` option has been added to this command
+    by which the marker can be reset and users can start the process from the
+    beginning if needed, instead of the default behavior.

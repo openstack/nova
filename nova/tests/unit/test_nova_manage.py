@@ -1272,6 +1272,73 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
             test.MatchType(context.RequestContext),
             test.MatchObjPrims(cell_mapping))
 
+    @mock.patch.object(context, 'target_cell')
+    def test_map_instances_marker_reset(self, mock_target_cell):
+        ctxt = context.RequestContext('fake-user', 'fake_project')
+        cell_uuid = uuidutils.generate_uuid()
+        cell_mapping = objects.CellMapping(
+                ctxt, uuid=cell_uuid, name='fake',
+                transport_url='fake://', database_connection='fake://')
+        cell_mapping.create()
+        mock_target_cell.return_value.__enter__.return_value = ctxt
+        instance_uuids = []
+        for i in range(5):
+            uuid = uuidutils.generate_uuid()
+            instance_uuids.append(uuid)
+            objects.Instance(ctxt, project_id=ctxt.project_id,
+                             uuid=uuid).create()
+
+        # Maps first three instances.
+        ret = self.commands.map_instances(cell_uuid, max_count=3)
+        self.assertEqual(1, ret)
+
+        # Verifying that the marker is now based on third instance
+        # i.e the position of the marker.
+        inst_mappings = objects.InstanceMappingList.get_by_project_id(ctxt,
+                                        'INSTANCE_MIGRATION_MARKER')
+        marker = inst_mappings[0].instance_uuid.replace(' ', '-')
+        self.assertEqual(instance_uuids[2], marker)
+
+        # Now calling reset with map_instances max_count=2 would reset
+        # the marker as expected and start map_instances from the beginning.
+        # This implies we end up finding the marker based on second instance.
+        ret = self.commands.map_instances(cell_uuid, max_count=2,
+                                          reset_marker=True)
+        self.assertEqual(1, ret)
+
+        inst_mappings = objects.InstanceMappingList.get_by_project_id(ctxt,
+                                        'INSTANCE_MIGRATION_MARKER')
+        marker = inst_mappings[0].instance_uuid.replace(' ', '-')
+        self.assertEqual(instance_uuids[1], marker)
+
+        # Maps 4th instance using the marker (3rd is already mapped).
+        ret = self.commands.map_instances(cell_uuid, max_count=2)
+        self.assertEqual(1, ret)
+
+        # Verifying that the marker is now based on fourth instance
+        # i.e the position of the marker.
+        inst_mappings = objects.InstanceMappingList.get_by_project_id(ctxt,
+                                        'INSTANCE_MIGRATION_MARKER')
+        marker = inst_mappings[0].instance_uuid.replace(' ', '-')
+        self.assertEqual(instance_uuids[3], marker)
+
+        # Maps first four instances (all four duplicate entries which
+        # are already present from previous calls)
+        ret = self.commands.map_instances(cell_uuid, max_count=4,
+                                          reset_marker=True)
+        self.assertEqual(1, ret)
+
+        # Verifying that the marker is still based on fourth instance
+        # i.e the position of the marker.
+        inst_mappings = objects.InstanceMappingList.get_by_project_id(ctxt,
+                                        'INSTANCE_MIGRATION_MARKER')
+        marker = inst_mappings[0].instance_uuid.replace(' ', '-')
+        self.assertEqual(instance_uuids[3], marker)
+
+        # Maps the 5th instance.
+        ret = self.commands.map_instances(cell_uuid)
+        self.assertEqual(0, ret)
+
     def test_map_instances_validate_cell_uuid(self):
         # create a random cell_uuid which is invalid
         cell_uuid = uuidutils.generate_uuid()
