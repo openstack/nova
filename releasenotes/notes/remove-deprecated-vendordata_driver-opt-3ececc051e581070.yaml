@@ -3,8 +3,8 @@ upgrade:
   - |
     The ``[DEFAULT] vendordata_driver`` option was deprecated in Mitaka and has
     now been removed. Configuration of vendordata drivers should now be done by
-    using the `[api] vendordata_providers`` option. For more information, refer
-    to the `vendordata documentation`__.
+    using the ``[api] vendordata_providers`` option. For more information,
+    refer to the `vendordata documentation`__.
 
     __ https://docs.openstack.org/nova/latest/user/vendordata.html
   - |
