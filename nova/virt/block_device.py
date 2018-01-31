@@ -496,7 +496,8 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
             self.volume_size = volume.get('size')
 
         vol_multiattach = volume.get('multiattach', False)
-        virt_multiattach = virt_driver.capabilities['supports_multiattach']
+        virt_multiattach = virt_driver.capabilities.get(
+            'supports_multiattach', False)
 
         if vol_multiattach and not virt_multiattach:
             raise exception.MultiattachNotSupportedByVirtDriver(
