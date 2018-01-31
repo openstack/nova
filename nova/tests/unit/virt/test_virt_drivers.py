@@ -454,6 +454,7 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         self.assertIn('ip', result)
         self.assertIn('initiator', result)
         self.assertIn('host', result)
+        return result
 
     @catch_notimplementederror
     def test_get_volume_connector_storage_ip(self):
@@ -981,3 +982,11 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
             "hw_qemu_guest_agent": "yes"}}
         instance, network_info = self._get_running_instance(obj=True)
         self.connection.set_admin_password(instance, 'p4ssw0rd')
+
+    def test_get_volume_connector(self):
+        for multipath in (True, False):
+            self.flags(volume_use_multipath=multipath, group='libvirt')
+            result = super(LibvirtConnTestCase,
+                           self).test_get_volume_connector()
+            self.assertIn('multipath', result)
+            self.assertEqual(multipath, result['multipath'])
