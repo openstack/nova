@@ -3891,13 +3891,16 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.context,
                           bdms, legacy_bdm=True)
 
+    @mock.patch.object(objects.service, 'get_minimum_version_all_cells',
+                       return_value=17)
     @mock.patch.object(objects.Service, 'get_minimum_version',
                        return_value=17)
     @mock.patch.object(cinder.API, 'get')
     @mock.patch.object(cinder.API, 'reserve_volume',
                        side_effect=exception.InvalidInput(reason='error'))
     def test_validate_bdm_with_error_volume(self, mock_reserve_volume,
-                                            mock_get, mock_get_min_ver):
+                                            mock_get, mock_get_min_ver,
+                                            mock_get_min_ver_all):
         # Tests that an InvalidInput exception raised from
         # volume_api.reserve_volume due to the volume status not being
         # 'available' results in _validate_bdm re-raising InvalidVolume.
@@ -3928,7 +3931,7 @@ class _ComputeAPIUnitTestMixIn(object):
         mock_reserve_volume.assert_called_once_with(
             self.context, volume_id)
 
-    @mock.patch.object(objects.Service, 'get_minimum_version',
+    @mock.patch.object(objects.service, 'get_minimum_version_all_cells',
                        return_value=17)
     @mock.patch.object(cinder.API, 'get_snapshot',
              side_effect=exception.CinderConnectionFailed(reason='error'))
@@ -3967,6 +3970,8 @@ class _ComputeAPIUnitTestMixIn(object):
                           self.context,
                           instance, instance_type, bdms)
 
+    @mock.patch.object(objects.service, 'get_minimum_version_all_cells',
+                       return_value=COMPUTE_VERSION_NEW_ATTACH_FLOW)
     @mock.patch.object(objects.Service, 'get_minimum_version',
                        return_value=COMPUTE_VERSION_NEW_ATTACH_FLOW)
     @mock.patch.object(cinder.API, 'get')
@@ -3974,7 +3979,8 @@ class _ComputeAPIUnitTestMixIn(object):
                        side_effect=exception.InvalidInput(reason='error'))
     def test_validate_bdm_with_error_volume_new_flow(self, mock_attach_create,
                                                      mock_get,
-                                                     mock_get_min_ver):
+                                                     mock_get_min_ver,
+                                                     mock_get_min_ver_all):
         # Tests that an InvalidInput exception raised from
         # volume_api.attachment_create due to the volume status not being
         # 'available' results in _validate_bdm re-raising InvalidVolume.
@@ -4071,7 +4077,7 @@ class _ComputeAPIUnitTestMixIn(object):
 
         do_test()
 
-    @mock.patch.object(objects.Service, 'get_minimum_version',
+    @mock.patch.object(objects.service, 'get_minimum_version_all_cells',
                        return_value=17)
     @mock.patch.object(cinder.API, 'get',
              side_effect=exception.CinderConnectionFailed(reason='error'))
