@@ -29,7 +29,7 @@ availability_zone_policies = [
         [
             {
                 'method': 'GET',
-                'path': 'os-availability-zone'
+                'path': '/os-availability-zone'
             }
         ]),
     policy.DocumentedRuleDefault(
