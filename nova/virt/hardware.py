@@ -1108,23 +1108,22 @@ def _numa_get_pagesize_constraints(flavor, image_meta):
     return pagesize
 
 
-def _numa_get_flavor_cpu_map_list(flavor):
-    hw_numa_cpus = []
-    extra_specs = flavor.get("extra_specs", {})
+def _numa_get_flavor_numa_map(flavor, key, func):
+    hw_numa_map = []
+    extra_specs = flavor.get('extra_specs', {})
     for cellid in range(objects.ImageMetaProps.NUMA_NODES_MAX):
-        cpuprop = "hw:numa_cpus.%d" % cellid
-        if cpuprop not in extra_specs:
+        prop = '%s.%d' % (key, cellid)
+        if prop not in extra_specs:
             break
-        hw_numa_cpus.append(
-            parse_cpu_spec(extra_specs[cpuprop]))
+        hw_numa_map.append(func(extra_specs[prop]))
 
-    if hw_numa_cpus:
-        return hw_numa_cpus
+    return hw_numa_map or None
 
 
 def _numa_get_cpu_map_list(flavor, image_meta):
-    flavor_cpu_list = _numa_get_flavor_cpu_map_list(flavor)
-    image_cpu_list = image_meta.properties.get("hw_numa_cpus", None)
+    flavor_cpu_list = _numa_get_flavor_numa_map(flavor, 'hw:numa_cpus',
+                                                parse_cpu_spec)
+    image_cpu_list = image_meta.properties.get('hw_numa_cpus', None)
 
     if flavor_cpu_list is None:
         return image_cpu_list
@@ -1136,22 +1135,9 @@ def _numa_get_cpu_map_list(flavor, image_meta):
     return flavor_cpu_list
 
 
-def _numa_get_flavor_mem_map_list(flavor):
-    hw_numa_mem = []
-    extra_specs = flavor.get("extra_specs", {})
-    for cellid in range(objects.ImageMetaProps.NUMA_NODES_MAX):
-        memprop = "hw:numa_mem.%d" % cellid
-        if memprop not in extra_specs:
-            break
-        hw_numa_mem.append(int(extra_specs[memprop]))
-
-    if hw_numa_mem:
-        return hw_numa_mem
-
-
 def _numa_get_mem_map_list(flavor, image_meta):
-    flavor_mem_list = _numa_get_flavor_mem_map_list(flavor)
-    image_mem_list = image_meta.properties.get("hw_numa_mem", None)
+    flavor_mem_list = _numa_get_flavor_numa_map(flavor, 'hw:numa_mem', int)
+    image_mem_list = image_meta.properties.get('hw_numa_mem', None)
 
     if flavor_mem_list is None:
         return image_mem_list
