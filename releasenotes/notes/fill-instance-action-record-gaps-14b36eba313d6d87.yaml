@@ -3,13 +3,13 @@ features:
   - |
     The following instance action records have been added:
 
-    * attach_interface
-    * detach_interface
-    * attach_volume
-    * detach_volume
-    * swap_volume
-    * lock
-    * unlock
-    * shelveOffload
-    * createBackup
-    * createImage
+    * ``attach_interface``
+    * ``detach_interface``
+    * ``attach_volume``
+    * ``detach_volume``
+    * ``swap_volume``
+    * ``lock``
+    * ``unlock``
+    * ``shelveOffload``
+    * ``createBackup``
+    * ``createImage``
