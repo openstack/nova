@@ -306,9 +306,9 @@ def normalize_traits_qs_param(val):
     """
     ret = set(substr.strip() for substr in val.split(','))
     if not all(trait for trait in ret):
-        msg = _('Invalid query string parameters: Expected \'required\' '
-                'parameter value of the form: HW_CPU_X86_VMX,CUSTOM_MAGIC. '
-                'Got: "%s"') % val
+        msg = _("Invalid query string parameters: Expected 'required' "
+                "parameter value of the form: HW_CPU_X86_VMX,CUSTOM_MAGIC. "
+                "Got: %s") % val
         raise webob.exc.HTTPBadRequest(msg)
     return ret
 

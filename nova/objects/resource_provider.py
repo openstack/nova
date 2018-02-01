@@ -2481,7 +2481,7 @@ class Trait(base.NovaObject, base.NovaTimestampObject):
         result = context.session.query(models.Trait).filter_by(
             name=name).first()
         if not result:
-            raise exception.TraitNotFound(name=name)
+            raise exception.TraitNotFound(names=name)
         return result
 
     @classmethod
@@ -2500,7 +2500,7 @@ class Trait(base.NovaObject, base.NovaTimestampObject):
         res = context.session.query(models.Trait).filter_by(
             name=name).delete()
         if not res:
-            raise exception.TraitNotFound(name=name)
+            raise exception.TraitNotFound(names=name)
 
     def destroy(self):
         if 'name' not in self:
@@ -3515,7 +3515,7 @@ class AllocationCandidates(base.NovaObject):
             # Double-check that we found a trait ID for each requested name
             if len(trait_map) != len(traits):
                 missing = traits - set(trait_map)
-                raise exception.TraitNotFound(name=', '.join(missing))
+                raise exception.TraitNotFound(names=', '.join(missing))
 
         # Contains a set of resource provider IDs that share some inventory for
         # each resource class requested. We do this here as an optimization. If

@@ -56,7 +56,7 @@ allocation_candidates_required:
   required: false
   min_version: 1.17
   description: >
-    Accepts a list of traits separated by `,`. Allocation requests in the
+    Accepts a list of comma-separated traits. Allocation requests in the
     response will be for resource providers that have capacity for all
     requested resources and the set of those resource providers will
     *collectively* contain all of the required traits.
@@ -252,7 +252,8 @@ provider_summaries:
   description: >
     A dictionary keyed by resource provider UUID,
     of dictionaries of inventory/capacity information. The list of traits
-    the resource provider has associated with it is included in version `1.17`.
+    the resource provider has associated with it is included in version `1.17`
+    and above.
 reserved: &reserved
   type: integer
   in: body

@@ -196,9 +196,8 @@ class UpgradeCommands(object):
             versions = self._placement_get("/")
             max_version = pkg_resources.parse_version(
                 versions["versions"][0]["max_version"])
-            # NOTE(mriedem): 1.14 is required by nova-compute services to
-            # get and set parent resource provider UUIDs for nested resource
-            # provider support.
+            # NOTE(mriedem): 1.17 is required by nova-scheduler to get
+            # allocation candidates with required traits from the flavor.
             # NOTE: If you bump this version, remember to update the history
             # section in the nova-status man page (doc/source/cli/nova-status).
             needs_version = pkg_resources.parse_version("1.17")

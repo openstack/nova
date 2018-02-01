@@ -196,7 +196,7 @@ def _transform_allocation_candidates(alloc_cands, want_version):
 
     include_traits = want_version.matches((1, 17))
     p_sums = _transform_provider_summaries(alloc_cands.provider_summaries,
-                                           include_traits)
+                                           include_traits=include_traits)
     return {
         'allocation_requests': a_reqs,
         'provider_summaries': p_sums,

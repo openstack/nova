@@ -6,5 +6,5 @@ features:
     separated by ``,``, which is used to further limit the list of allocation
     requests to resource providers that have the capacity to fulfill the
     requested resources AND *collectively* have all of the required traits
-    associated with them. In the same microversion, the candidate attached
-    traits returned in the provider summary.
+    associated with them. In the same microversion, the provider summary
+    includes the traits associated with each provider.
