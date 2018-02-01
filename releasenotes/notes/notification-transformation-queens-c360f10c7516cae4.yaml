@@ -1,0 +1,31 @@
+---
+features:
+  - |
+    The following legacy notifications have been transformed to
+    a new versioned payload:
+
+    * aggregate.add_host
+    * aggregate.remove_host
+    * instance.evacuate
+    * instance.interface_attach
+    * instance.interface_detach
+    * instance.live_migration_abort
+    * instance.live_migration_pre
+    * instance.rescue
+    * instance.resize_confirm
+    * instance.resize_prep
+    * instance.resize_revert
+    * instance.resize.error
+    * instance.trigger_crash_dump
+    * instance.unrescue
+    * keypair.delete
+    * keypair.import
+    * server_group.create
+    * server_group.delete
+
+    Every versioned notification has a sample file stored under
+    doc/notification_samples directory. Consult
+    https://docs.openstack.org/nova/latest/reference/notifications.html for
+    more information.
+
+
