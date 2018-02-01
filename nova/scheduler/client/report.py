@@ -643,6 +643,40 @@ class SchedulerReportClient(object):
 
         return uuid
 
+    @safe_connect
+    def _delete_provider(self, rp_uuid, global_request_id=None):
+        resp = self.delete('/resource_providers/%s' % rp_uuid,
+                           global_request_id=global_request_id)
+        # Check for 404 since we don't need to warn/raise if we tried to delete
+        # something which doesn"t actually exist.
+        if resp or resp.status_code == 404:
+            if resp:
+                LOG.info("Deleted resource provider %s", rp_uuid)
+            # clean the caches
+            try:
+                self._provider_tree.remove(rp_uuid)
+            except ValueError:
+                pass
+            self.association_refresh_time.pop(rp_uuid, None)
+            return
+
+        msg = ("[%(placement_req_id)s] Failed to delete resource provider "
+               "with UUID %(uuid)s from the placement API. Got "
+               "%(status_code)d: %(err_text)s.")
+        args = {
+            'placement_req_id': get_placement_request_id(resp),
+            'uuid': rp_uuid,
+            'status_code': resp.status_code,
+            'err_text': resp.text
+        }
+        LOG.error(msg, args)
+        # On conflict, the caller may wish to delete allocations and
+        # redrive.  (Note that this is not the same as a
+        # PlacementAPIConflict case.)
+        if resp.status_code == 409:
+            raise exception.ResourceProviderInUse()
+        raise exception.ResourceProviderDeletionFailed(uuid=rp_uuid)
+
     def _get_inventory(self, rp_uuid):
         url = '/resource_providers/%s/inventories' % rp_uuid
         result = self.get(url)
@@ -1677,7 +1711,6 @@ class SchedulerReportClient(object):
         else:
             return resp.json()['allocations']
 
-    @safe_connect
     def delete_resource_provider(self, context, compute_node, cascade=False):
         """Deletes the ResourceProvider record for the compute_node.
 
@@ -1699,22 +1732,10 @@ class SchedulerReportClient(object):
                     host, nodename)
             for instance in instances:
                 self.delete_allocation_for_instance(context, instance.uuid)
-        url = "/resource_providers/%s" % rp_uuid
-        resp = self.delete(url, global_request_id=context.global_id)
-        if resp:
-            LOG.info("Deleted resource provider %s", rp_uuid)
-            # clean the caches
-            try:
-                self._provider_tree.remove(rp_uuid)
-            except ValueError:
-                pass
-            self.association_refresh_time.pop(rp_uuid, None)
-        else:
-            # Check for 404 since we don't need to log a warning if we tried to
-            # delete something which doesn"t actually exist.
-            if resp.status_code != 404:
-                LOG.warning("Unable to delete resource provider %(uuid)s: "
-                            "(%(code)i %(text)s)",
-                            {"uuid": rp_uuid,
-                             "code": resp.status_code,
-                             "text": resp.text})
+        try:
+            self._delete_provider(rp_uuid, global_request_id=context.global_id)
+        except (exception.ResourceProviderInUse,
+                exception.ResourceProviderDeletionFailed):
+            # TODO(efried): Raise these.  Right now this is being left a no-op
+            # for backward compatibility.
+            pass

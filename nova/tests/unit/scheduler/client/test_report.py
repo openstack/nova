@@ -1872,6 +1872,42 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.ks_adap_mock.put.assert_called_once_with(
             url, json=[], raise_exc=False, microversion=None)
 
+    def test_delete_provider(self):
+        delete_mock = requests.Response()
+        self.ks_adap_mock.delete.return_value = delete_mock
+
+        for status_code in (204, 404):
+            delete_mock.status_code = status_code
+            # Seed the caches
+            self.client._provider_tree.new_root('compute', uuids.root, 0)
+            self.client.association_refresh_time[uuids.root] = 1234
+
+            self.client._delete_provider(uuids.root, global_request_id='gri')
+
+            self.ks_adap_mock.delete.assert_called_once_with(
+                '/resource_providers/' + uuids.root,
+                headers={'X-Openstack-Request-Id': 'gri'}, microversion=None,
+                raise_exc=False)
+            self.assertFalse(self.client._provider_tree.exists(uuids.root))
+            self.assertNotIn(uuids.root, self.client.association_refresh_time)
+
+            self.ks_adap_mock.delete.reset_mock()
+
+    def test_delete_provider_fail(self):
+        delete_mock = requests.Response()
+        self.ks_adap_mock.delete.return_value = delete_mock
+        resp_exc_map = {409: exception.ResourceProviderInUse,
+                        503: exception.ResourceProviderDeletionFailed}
+
+        for status_code, exc in resp_exc_map.items():
+            delete_mock.status_code = status_code
+            self.assertRaises(exc, self.client._delete_provider, uuids.root)
+            self.ks_adap_mock.delete.assert_called_once_with(
+                '/resource_providers/' + uuids.root, microversion=None,
+                headers={}, raise_exc=False)
+
+            self.ks_adap_mock.delete.reset_mock()
+
     def test_set_aggregates_for_provider(self):
         aggs = [uuids.agg1, uuids.agg2]
         resp_mock = mock.Mock(status_code=200)
@@ -3574,7 +3610,7 @@ class TestAllocations(SchedulerReportClientTestCase):
         self.client.delete_resource_provider(self.context, cn)
         # With a 409, only the warning should be called
         self.assertEqual(0, mock_log.info.call_count)
-        self.assertEqual(1, mock_log.warning.call_count)
+        self.assertEqual(1, mock_log.error.call_count)
 
 
 class TestResourceClass(SchedulerReportClientTestCase):
