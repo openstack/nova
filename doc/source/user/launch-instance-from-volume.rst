@@ -250,6 +250,8 @@ the volume to boot an instance.
 
    - ``NAME``. The name for the server.
 
+   See :doc:`block-device-mapping` for more details on these parameters.
+
 #. Create a bootable volume from an image. Cinder makes a volume bootable
    when ``--image`` parameter is passed.
 

@@ -41,7 +41,8 @@ Before you can launch an instance, gather the following parameters:
     policies, known as *security group rules*.
 
 - If needed, you can assign a **floating (public) IP address** to a
-  running instance.
+  running instance to make it accessible from outside the cloud. See
+  :doc:`manage-ip-addresses`.
 
 - You can also attach a block storage device, or **volume**, for
   persistent storage.
@@ -52,10 +53,6 @@ Before you can launch an instance, gather the following parameters:
    accessed from any IP address outside of the cloud. If you want those
    IP addresses to access the instances, you must modify the rules for
    the default security group.
-
-   You can also assign a floating IP address to a running instance to
-   make it accessible from outside the cloud. See
-   :doc:`manage-ip-addresses`.
 
 After you gather the parameters that you need to launch an instance,
 you can launch it from an :doc:`image<launch-instance-from-image>`
@@ -71,6 +68,9 @@ Gather parameters to launch an instance
 Before you begin, source the OpenStack RC file.
 
 #. Create a flavor.
+
+   Creating a flavor is typically only available to administrators of a cloud
+   because this has implications for scheduling efficiently in the cloud.
 
    .. code-block:: console
 
