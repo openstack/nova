@@ -114,8 +114,7 @@ class SchedulerReportClientTests(test.TestCase):
             # _ensure_resource_provider)
             ptree = self.client.get_provider_tree_and_ensure_root(
                 self.compute_uuid)
-            self.assertEqual(set([self.compute_uuid]),
-                             ptree.get_provider_uuids())
+            self.assertEqual([self.compute_uuid], ptree.get_provider_uuids())
 
             # Now let's update status for our compute node.
             self.client.update_compute_node(self.context, self.compute_node)
@@ -149,8 +148,7 @@ class SchedulerReportClientTests(test.TestCase):
             # Providers and inventory show up nicely in the provider tree
             ptree = self.client.get_provider_tree_and_ensure_root(
                 self.compute_uuid)
-            self.assertEqual(set([self.compute_uuid]),
-                             ptree.get_provider_uuids())
+            self.assertEqual([self.compute_uuid], ptree.get_provider_uuids())
             self.assertTrue(ptree.has_inventory(self.compute_uuid))
 
             # Update allocations with our instance
@@ -197,8 +195,7 @@ class SchedulerReportClientTests(test.TestCase):
             ptree = self.client.get_provider_tree_and_ensure_root(
                 self.compute_uuid)
             # The compute node is still there
-            self.assertEqual(set([self.compute_uuid]),
-                             ptree.get_provider_uuids())
+            self.assertEqual([self.compute_uuid], ptree.get_provider_uuids())
             # But the inventory is gone
             self.assertFalse(ptree.has_inventory(self.compute_uuid))
 
@@ -353,10 +350,11 @@ class SchedulerReportClientTests(test.TestCase):
             self.assertEqual(set([self.compute_uuid, uuids.ss1, uuids.ss2,
                                   uuids.pf1, uuids.pf2, uuids.sip, uuids.ss3,
                                   uuids.sbw]),
-                             prov_tree.get_provider_uuids())
+                             set(prov_tree.get_provider_uuids()))
             # Narrow the field to just our compute subtree.
-            self.assertEqual(set([self.compute_uuid, uuids.pf1, uuids.pf2]),
-                             prov_tree.get_provider_uuids(self.compute_uuid))
+            self.assertEqual(
+                set([self.compute_uuid, uuids.pf1, uuids.pf2]),
+                set(prov_tree.get_provider_uuids(self.compute_uuid)))
 
             # Validate traits for a couple of providers
             self.assertFalse(prov_tree.have_traits_changed(
