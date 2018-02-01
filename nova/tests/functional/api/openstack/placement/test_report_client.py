@@ -252,7 +252,7 @@ class SchedulerReportClientTests(test.TestCase):
             self.client.update_compute_node(self.context, self.compute_node)
             # The compute node is associated with two of the shared storages
             self.client.set_aggregates_for_provider(
-                self.compute_uuid, [uuids.agg_disk_1, uuids.agg_disk_2])
+                self.compute_uuid, set([uuids.agg_disk_1, uuids.agg_disk_2]))
 
             # Register two SR-IOV PFs with VF and bandwidth inventory
             for x in (1, 2):
@@ -320,7 +320,7 @@ class SchedulerReportClientTests(test.TestCase):
                 })
             # Mark as a sharing provider, and add another trait
             self.client.set_traits_for_provider(
-                uuids.sip, ['MISC_SHARES_VIA_AGGREGATE', 'CUSTOM_FOO'])
+                uuids.sip, set(['MISC_SHARES_VIA_AGGREGATE', 'CUSTOM_FOO']))
             # It's associated with the same aggregate as both PFs
             self.client.set_aggregates_for_provider(uuids.sip, [uuids.agg_ip])
 
