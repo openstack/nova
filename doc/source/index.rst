@@ -284,6 +284,7 @@ looking parts of our architecture. These are collected below.
    user/feature-classification
    user/filter-scheduler
    user/flavors
+   user/manage-ip-addresses
    user/placement
    user/quotas
    user/support-matrix

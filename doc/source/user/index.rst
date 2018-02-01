@@ -2,6 +2,16 @@
 User Documentation
 ==================
 
+End user guide
+--------------
+
+.. toctree::
+   :maxdepth: 1
+
+   launch-instances
+
+.. todo:: The rest of this document should probably move to the admin guide.
+
 Architecture Overview
 ---------------------
 
