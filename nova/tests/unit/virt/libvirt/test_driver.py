@@ -12608,7 +12608,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             block_device_info=block_device_info, mdevs=[uuids.mdev1])
         mock_create_domain_and_network.assert_called_once_with(self.context,
             dummyxml, instance, network_info,
-            block_device_info=block_device_info)
+            block_device_info=block_device_info, vifs_already_plugged=True)
 
     @mock.patch('oslo_utils.fileutils.ensure_tree')
     @mock.patch('oslo_service.loopingcall.FixedIntervalLoopingCall')
