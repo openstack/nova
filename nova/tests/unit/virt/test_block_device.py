@@ -1274,3 +1274,28 @@ class TestDriverBlockDeviceNewFlow(TestDriverBlockDevice):
         self.assertRaises(exception.MultiattachNotSupportedByVirtDriver,
                           test_bdm.attach, self.context, instance,
                           self.volume_api, self.virt_driver)
+
+
+class TestGetVolumeId(test.NoDBTestCase):
+
+    def test_get_volume_id_none_found(self):
+        self.assertIsNone(driver_block_device.get_volume_id(None))
+        self.assertIsNone(driver_block_device.get_volume_id({}))
+        self.assertIsNone(driver_block_device.get_volume_id({'data': {}}))
+
+    def test_get_volume_id_found_volume_id_no_serial(self):
+        self.assertEqual(uuids.volume_id,
+                         driver_block_device.get_volume_id(
+                             {'data': {'volume_id': uuids.volume_id}}))
+
+    def test_get_volume_id_found_no_volume_id_serial(self):
+        self.assertEqual(uuids.serial,
+                         driver_block_device.get_volume_id(
+                             {'serial': uuids.serial}))
+
+    def test_get_volume_id_found_both(self):
+        # volume_id is taken over serial
+        self.assertEqual(uuids.volume_id,
+                         driver_block_device.get_volume_id(
+                             {'serial': uuids.serial,
+                              'data': {'volume_id': uuids.volume_id}}))

@@ -1274,8 +1274,8 @@ class LibvirtDriver(driver.ComputeDriver):
         """Get the encryption metadata dict if it is not provided
         """
         encryption = {}
-        if connection_info.get('data', {}).get('volume_id'):
-            volume_id = connection_info['data']['volume_id']
+        volume_id = driver_block_device.get_volume_id(connection_info)
+        if volume_id:
             encryption = encryptors.get_encryption_metadata(context,
                             self._volume_api, volume_id, connection_info)
         return encryption
@@ -1323,7 +1323,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # NOTE(lyarwood): Store the passphrase as a libvirt secret locally
             # on the compute node. This secret is used later when generating
             # the volume config.
-            volume_id = connection_info.get('data', {}).get('volume_id')
+            volume_id = driver_block_device.get_volume_id(connection_info)
             self._host.create_secret('volume', volume_id, password=passphrase)
         elif encryption:
             encryptor = self._get_volume_encryptor(connection_info,
@@ -1340,7 +1340,7 @@ class LibvirtDriver(driver.ComputeDriver):
         If native LUKS decryption is enabled then delete previously created
         Libvirt volume secret from the host.
         """
-        volume_id = connection_info.get('data', {}).get('volume_id')
+        volume_id = driver_block_device.get_volume_id(connection_info)
         if volume_id and self._host.find_secret('volume', volume_id):
             return self._host.delete_secret('volume', volume_id)
         if encryption is None:
@@ -7427,10 +7427,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 bdmi.type = disk_info['type']
                 bdmi.format = disk_info.get('format')
                 bdmi.boot_index = disk_info.get('boot_index')
-                volume_id = connection_info.get('volume_id')
-                volume_secret = None
-                if volume_id:
-                    volume_secret = self._host.find_secret('volume', volume_id)
+                volume_secret = self._host.find_secret('volume', vol.volume_id)
                 if volume_secret:
                     bdmi.encryption_secret_uuid = volume_secret.UUIDString()
 
