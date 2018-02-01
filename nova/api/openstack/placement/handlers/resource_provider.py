@@ -11,8 +11,6 @@
 #    under the License.
 """Placement API handlers for resource providers."""
 
-import copy
-
 from oslo_db import exception as db_exc
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
@@ -21,93 +19,12 @@ from oslo_utils import uuidutils
 import webob
 
 from nova.api.openstack.placement import microversion
+from nova.api.openstack.placement.schemas import resource_provider as rp_schema
 from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
 from nova import exception
 from nova.i18n import _
 from nova.objects import resource_provider as rp_obj
-
-
-POST_RESOURCE_PROVIDER_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "name": {
-            "type": "string",
-            "maxLength": 200
-        },
-        "uuid": {
-            "type": "string",
-            "format": "uuid"
-        }
-    },
-    "required": [
-        "name"
-    ],
-    "additionalProperties": False,
-}
-# Remove uuid to create the schema for PUTting a resource provider
-PUT_RESOURCE_PROVIDER_SCHEMA = copy.deepcopy(POST_RESOURCE_PROVIDER_SCHEMA)
-PUT_RESOURCE_PROVIDER_SCHEMA['properties'].pop('uuid')
-
-# Placement API microversion 1.14 adds an optional parent_provider_uuid field
-# to the POST and PUT request schemas
-POST_RP_SCHEMA_V1_14 = copy.deepcopy(POST_RESOURCE_PROVIDER_SCHEMA)
-POST_RP_SCHEMA_V1_14["properties"]["parent_provider_uuid"] = {
-    "anyOf": [
-        {
-            "type": "string",
-            "format": "uuid",
-        },
-        {
-            "type": "null",
-        }
-    ]
-}
-PUT_RP_SCHEMA_V1_14 = copy.deepcopy(POST_RP_SCHEMA_V1_14)
-PUT_RP_SCHEMA_V1_14['properties'].pop('uuid')
-
-# Represents the allowed query string parameters to the GET /resource_providers
-# API call
-GET_RPS_SCHEMA_1_0 = {
-    "type": "object",
-    "properties": {
-        "name": {
-            "type": "string"
-        },
-        "uuid": {
-            "type": "string",
-            "format": "uuid"
-        }
-    },
-    "additionalProperties": False,
-}
-
-# Placement API microversion 1.3 adds support for a member_of attribute
-GET_RPS_SCHEMA_1_3 = copy.deepcopy(GET_RPS_SCHEMA_1_0)
-GET_RPS_SCHEMA_1_3['properties']['member_of'] = {
-    "type": "string"
-}
-
-# Placement API microversion 1.4 adds support for requesting resource providers
-# having some set of capacity for some resources. The query string is a
-# comma-delimited set of "$RESOURCE_CLASS_NAME:$AMOUNT" strings. The validation
-# of the string is left up to the helper code in the
-# normalize_resources_qs_param() function.
-GET_RPS_SCHEMA_1_4 = copy.deepcopy(GET_RPS_SCHEMA_1_3)
-GET_RPS_SCHEMA_1_4['properties']['resources'] = {
-    "type": "string"
-}
-
-# Placement API microversion 1.14 adds support for requesting resource
-# providers within a tree of providers. The 'in_tree' query string parameter
-# should be the UUID of a resource provider. The result of the GET call will
-# include only those resource providers in the same "provider tree" as the
-# provider with the UUID represented by 'in_tree'
-GET_RPS_SCHEMA_1_14 = copy.deepcopy(GET_RPS_SCHEMA_1_4)
-GET_RPS_SCHEMA_1_14['properties']['in_tree'] = {
-    "type": "string",
-    "format": "uuid",
-}
 
 
 def _serialize_links(environ, resource_provider):
@@ -161,10 +78,10 @@ def create_resource_provider(req):
     header pointing to the newly created resource provider.
     """
     context = req.environ['placement.context']
-    schema = POST_RESOURCE_PROVIDER_SCHEMA
+    schema = rp_schema.POST_RESOURCE_PROVIDER_SCHEMA
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     if want_version.matches((1, 14)):
-        schema = POST_RP_SCHEMA_V1_14
+        schema = rp_schema.POST_RP_SCHEMA_V1_14
     data = util.extract_json(req.body, schema)
 
     try:
@@ -256,13 +173,13 @@ def list_resource_providers(req):
     context = req.environ['placement.context']
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
 
-    schema = GET_RPS_SCHEMA_1_0
+    schema = rp_schema.GET_RPS_SCHEMA_1_0
     if want_version.matches((1, 14)):
-        schema = GET_RPS_SCHEMA_1_14
+        schema = rp_schema.GET_RPS_SCHEMA_1_14
     elif want_version.matches((1, 4)):
-        schema = GET_RPS_SCHEMA_1_4
+        schema = rp_schema.GET_RPS_SCHEMA_1_4
     elif want_version.matches((1, 3)):
-        schema = GET_RPS_SCHEMA_1_3
+        schema = rp_schema.GET_RPS_SCHEMA_1_3
 
     util.validate_query_params(req, schema)
 
@@ -325,9 +242,9 @@ def update_resource_provider(req):
     resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
 
-    schema = PUT_RESOURCE_PROVIDER_SCHEMA
+    schema = rp_schema.PUT_RESOURCE_PROVIDER_SCHEMA
     if want_version.matches((1, 14)):
-        schema = PUT_RP_SCHEMA_V1_14
+        schema = rp_schema.PUT_RP_SCHEMA_V1_14
 
     data = util.extract_json(req.body, schema)
 
