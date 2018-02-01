@@ -953,6 +953,27 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_res_unavail.assert_called_once_with(mock_nfc.return_value)
         self.assertEqual({}, result)
 
+    @mock.patch.object(ironic_driver.IronicDriver, '_node_from_cache')
+    def test_get_traits_no_traits(self, mock_nfc):
+        """Ensure that when the node has no traits, we return no traits."""
+        node = ironic_utils.get_test_node()
+        mock_nfc.return_value = node
+        result = self.driver.get_traits(node.uuid)
+
+        mock_nfc.assert_called_once_with(node.uuid)
+        self.assertEqual([], result)
+
+    @mock.patch.object(ironic_driver.IronicDriver, '_node_from_cache')
+    def test_get_traits_with_traits(self, mock_nfc):
+        """Ensure that when the node has traits, we return the traits."""
+        node = ironic_utils.get_test_node(traits=['trait1', 'trait2'])
+        mock_nfc.return_value = node
+        result = self.driver.get_traits(node.uuid)
+
+        expected = ['trait1', 'trait2']
+        mock_nfc.assert_called_once_with(node.uuid)
+        self.assertEqual(expected, result)
+
     @mock.patch.object(FAKE_CLIENT.node, 'get')
     @mock.patch.object(FAKE_CLIENT.node, 'list')
     @mock.patch.object(objects.InstanceList, 'get_uuids_by_host')

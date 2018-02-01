@@ -76,7 +76,7 @@ _UNPROVISION_STATES = (ironic_states.ACTIVE, ironic_states.DEPLOYFAIL,
 
 _NODE_FIELDS = ('uuid', 'power_state', 'target_power_state', 'provision_state',
                 'target_provision_state', 'last_error', 'maintenance',
-                'properties', 'instance_uuid')
+                'properties', 'instance_uuid', 'traits')
 
 # Console state checking interval in seconds
 _CONSOLE_STATE_CHECKING_INTERVAL = 1
@@ -812,6 +812,15 @@ class IronicDriver(virt_driver.ComputeDriver):
                 }
 
         return result
+
+    def get_traits(self, nodename):
+        """Get the traits for a given node.
+
+        :param nodename: the UUID of the node.
+        :returns: an iterable of traits for the supplied node.
+        """
+        node = self._node_from_cache(nodename)
+        return list(node.traits)
 
     def get_available_resource(self, nodename):
         """Retrieve resource information.

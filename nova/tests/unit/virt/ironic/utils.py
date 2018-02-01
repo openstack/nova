@@ -48,6 +48,7 @@ def get_test_node(**kw):
                 'maintenance': kw.get('maintenance', False),
                 'network_interface': kw.get('network_interface'),
                 'resource_class': kw.get('resource_class'),
+                'traits': kw.get('traits', []),
                 'extra': kw.get('extra', {}),
                 'updated_at': kw.get('created_at'),
                 'created_at': kw.get('updated_at')})()
