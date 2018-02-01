@@ -2460,9 +2460,15 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Initialize all the necessary networking, block devices and
         # start the instance.
+        # NOTE(melwitt): Pass vifs_already_plugged=True here even though we've
+        # unplugged vifs earlier. The behavior of neutron plug events depends
+        # on which vif type we're using and we are working with a stale network
+        # info cache here, so won't rely on waiting for neutron plug events.
+        # vifs_already_plugged=True means "do not wait for neutron plug events"
         self._create_domain_and_network(context, xml, instance, network_info,
                                         disk_info,
-                                        block_device_info=block_device_info)
+                                        block_device_info=block_device_info,
+                                        vifs_already_plugged=True)
         self._prepare_pci_devices_for_use(
             pci_manager.get_instance_pci_devs(instance, 'all'))
 
