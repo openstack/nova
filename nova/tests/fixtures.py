@@ -1655,8 +1655,8 @@ class PlacementApiClient(object):
     def __init__(self, placement_fixture):
         self.fixture = placement_fixture
 
-    def get(self, url):
-        return client.APIResponse(self.fixture._fake_get(None, url))
+    def get(self, url, **kwargs):
+        return client.APIResponse(self.fixture._fake_get(None, url, **kwargs))
 
 
 class PlacementFixture(fixtures.Fixture):

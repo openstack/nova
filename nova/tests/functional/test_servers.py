@@ -1428,6 +1428,18 @@ class ProviderUsageBaseTestCase(test.TestCase,
         return self.placement_api.get(
             '/allocations/%s' % server_uuid).body['allocations']
 
+    def _get_traits(self):
+        return self.placement_api.get('/traits', version='1.6').body['traits']
+
+    def _get_all_providers(self):
+        return self.placement_api.get(
+            '/resource_providers').body['resource_providers']
+
+    def _get_provider_traits(self, provider_uuid):
+        return self.placement_api.get(
+            '/resource_providers/%s/traits' % provider_uuid,
+            version='1.6').body['traits']
+
     def assertFlavorMatchesAllocation(self, flavor, allocation):
         self.assertEqual(flavor['vcpus'], allocation['VCPU'])
         self.assertEqual(flavor['ram'], allocation['MEMORY_MB'])
@@ -1574,6 +1586,24 @@ class ProviderUsageBaseTestCase(test.TestCase,
                 compute.manager.host)
             compute.manager.update_available_resource(ctx)
         LOG.info('Finished with periodics')
+
+
+class TraitsTrackingTests(ProviderUsageBaseTestCase):
+    compute_driver = 'fake.SmallFakeDriver'
+
+    @mock.patch.object(fake.SmallFakeDriver, 'get_traits')
+    def test_resource_provider_traits(self, mock_traits):
+        traits = ['CUSTOM_FOO', 'HW_CPU_X86_VMX']
+        mock_traits.return_value = traits
+
+        self.assertNotIn('CUSTOM_FOO', self._get_traits())
+        self.assertEqual([], self._get_all_providers())
+
+        self.compute = self._start_compute(host='host1')
+
+        rp_uuid = self._get_provider_uuid_by_host('host1')
+        self.assertEqual(traits, sorted(self._get_provider_traits(rp_uuid)))
+        self.assertIn('CUSTOM_FOO', self._get_traits())
 
 
 class ServerMovingTests(ProviderUsageBaseTestCase):
