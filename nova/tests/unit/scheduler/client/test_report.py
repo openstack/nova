@@ -1505,11 +1505,36 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                 self.client.get_allocation_candidates(resources)
 
         expected_url = '/allocation_candidates?%s' % parse.urlencode(
-            {'resources': 'MEMORY_MB:1024,VCPU:1'})
+            {'resources': 'MEMORY_MB:1024,VCPU:1',
+             'required': 'CUSTOM_TRAIT1'})
         self.ks_adap_mock.get.assert_called_once_with(
-            expected_url, raise_exc=False, microversion='1.12')
+            expected_url, raise_exc=False, microversion='1.17')
         self.assertEqual(mock.sentinel.alloc_reqs, alloc_reqs)
         self.assertEqual(mock.sentinel.p_sums, p_sums)
+
+    def test_get_allocation_candidates_with_no_trait(self):
+        resp_mock = mock.Mock(status_code=200)
+        json_data = {
+            'allocation_requests': mock.sentinel.alloc_reqs,
+            'provider_summaries': mock.sentinel.p_sums,
+        }
+        resources = scheduler_utils.ResourceRequest.from_extra_specs({
+            'resources:VCPU': '1',
+            'resources:MEMORY_MB': '1024',
+            'resources1:DISK_GB': '30',
+        })
+
+        resp_mock.json.return_value = json_data
+        self.ks_adap_mock.get.return_value = resp_mock
+
+        alloc_reqs, p_sums, allocation_request_version = \
+                self.client.get_allocation_candidates(resources)
+
+        expected_url = '/allocation_candidates?%s' % parse.urlencode(
+            {'resources': 'MEMORY_MB:1024,VCPU:1'})
+        self.ks_adap_mock.get.assert_called_once_with(
+            expected_url, raise_exc=False, microversion='1.17')
+        self.assertEqual(mock.sentinel.alloc_reqs, alloc_reqs)
 
     def test_get_allocation_candidates_not_found(self):
         # Ensure _get_resource_provider() just returns None when the placement
@@ -1524,7 +1549,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
 
         expected_url = '/allocation_candidates?resources=MEMORY_MB%3A1024'
         self.ks_adap_mock.get.assert_called_once_with(
-            expected_url, raise_exc=False, microversion='1.12')
+            expected_url, raise_exc=False, microversion='1.17')
         self.assertIsNone(res[0])
 
     def test_get_resource_provider_found(self):

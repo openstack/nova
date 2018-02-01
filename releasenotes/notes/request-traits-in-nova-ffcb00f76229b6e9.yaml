@@ -1,0 +1,14 @@
+---
+features:
+  - |
+    Add traits support to the Nova. The new flavor extra spec is added to
+    support specifying the required traits. The syntax of extra spec is
+    as below:
+
+    - trait:HW_CPU_X86_AVX2=required
+    - trait:STORAGE_DISK_SSD=required
+
+    The scheduler will pass traits to the GET /allocation_candidates endpoint
+    in the Placement API to filter out resource providers with each of the
+    required traits. Currently the only valid value is required. For any other
+    value will be considered as invalid.
