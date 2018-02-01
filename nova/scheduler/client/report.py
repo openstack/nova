@@ -678,6 +678,10 @@ class SchedulerReportClient(object):
         this process, ASSOCIATION_REFRESH seconds have passed, or the force arg
         has been set to True.
 
+        Note that we do *not* refresh inventories.  The reason is largely
+        historical: all code paths that get us here are doing inventory refresh
+        themselves.
+
         :param rp_uuid: UUID of the resource provider to check for fresh
                         aggregates and traits
         :param generation: The resource provider generation to set.  If None,
@@ -959,6 +963,38 @@ class SchedulerReportClient(object):
                "resource provider %(rp_uuid)s. Got error response: %(err)s.")
         msg_args['err'] = r.text
         LOG.error(msg, msg_args)
+
+    def get_provider_tree_and_ensure_root(self, rp_uuid, name=None,
+                                          parent_provider_uuid=None):
+        """Returns a fresh ProviderTree representing all providers which are in
+        the same tree or in the same aggregate as the specified provider,
+        including their aggregates, traits, and inventories.
+
+        If the specified provider does not exist, it is created with the
+        specified UUID, name, and parent provider (which *must* already exist).
+
+        :param rp_uuid: UUID of the resource provider for which to populate the
+                        tree.  (This doesn't need to be the UUID of the root.)
+        :param name: Optional name for the resource provider if the record
+                     does not exist. If empty, the name is set to the UUID
+                     value
+        :param parent_provider_uuid: Optional UUID of the immediate parent,
+                                     which must have been previously _ensured.
+        :return: A new ProviderTree object.
+        """
+        # TODO(efried): We would like to have the caller handle create-and/or-
+        # cache-if-not-already, but the resource tracker is currently
+        # structured to handle initialization and update in a single path.  At
+        # some point this should be refactored, and this method can *just*
+        # return a deep copy of the local _provider_tree cache.
+        # (Re)populate the local ProviderTree
+        self._ensure_resource_provider(
+            rp_uuid, name=name, parent_provider_uuid=parent_provider_uuid)
+        # Ensure inventories are up to date (for *all* cached RPs)
+        for uuid in self._provider_tree.get_provider_uuids():
+            self._refresh_and_get_inventory(uuid)
+        # Return a *copy* of the tree.
+        return copy.deepcopy(self._provider_tree)
 
     def set_inventory_for_provider(self, context, rp_uuid, rp_name, inv_data,
                                    parent_provider_uuid=None):
