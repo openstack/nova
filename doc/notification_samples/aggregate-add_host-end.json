@@ -1,17 +1,9 @@
 {
     "priority": "INFO",
     "payload": {
-        "nova_object.version": "1.1",
-        "nova_object.namespace": "nova",
-        "nova_object.name": "AggregatePayload",
+        "$ref": "common_payloads/AggregatePayload.json#",
         "nova_object.data": {
-            "name": "my-aggregate",
-            "metadata": {
-                "availability_zone": "nova"
-            },
-            "hosts": ["compute"],
-            "id": 1,
-            "uuid": "788608ec-ebdc-45c5-bc7f-e5f24ab92c80"
+            "hosts": ["compute"]
         }
     },
     "event_type": "aggregate.add_host.end",
