@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    The ``[DEFAULT]/log_options`` configuration option can be used to log
+    configuration options at DEBUG level when the `placement-api` and/or
+    `nova-api` services are started under WSGI. The default behavior is to
+    log options on startup.

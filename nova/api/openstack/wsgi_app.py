@@ -15,6 +15,7 @@ import os
 
 from oslo_config import cfg
 from oslo_log import log as logging
+from oslo_service import _options as service_opts
 from paste import deploy
 
 from nova import config
@@ -83,6 +84,16 @@ def init_application(name):
         return error_application(exc, name)
 
     service.setup_profiler(name, CONF.host)
+
+    # dump conf at debug (log_options option comes from oslo.service)
+    # FIXME(mriedem): This is gross but we don't have a public hook into
+    # oslo.service to register these options, so we are doing it manually for
+    # now; remove this when we have a hook method into oslo.service.
+    CONF.register_opts(service_opts.service_opts)
+    if CONF.log_options:
+        CONF.log_opt_values(
+            logging.getLogger(__name__),
+            logging.DEBUG)
 
     conf = conf_files[0]
 
