@@ -758,8 +758,8 @@ Added pagination support for migrations, there are four changes:
 * The query parameter schema of the ``GET /os-migrations`` API no longer
   allows additional properties.
 
-2.60
-----
+2.60 (Maximum in Queens)
+------------------------
 
 From this version of the API users can attach a ``multiattach`` capable volume
 to multiple instances. The API request for creating the additional attachments
