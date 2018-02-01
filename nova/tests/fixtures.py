@@ -1387,12 +1387,6 @@ class CinderFixture(fixtures.Fixture):
                     'size': 1
                 }
 
-            # update the status based on existing attachments
-            has_attachment = any(
-                [volume['id'] in attachments
-                 for attachments in self.attachments.values()])
-            volume['status'] = 'attached' if has_attachment else 'detached'
-
             # Check for our special image-backed volume.
             if volume_id == self.IMAGE_BACKED_VOL:
                 # Make it a bootable volume.
@@ -1566,12 +1560,6 @@ class CinderFixtureNewAttachFlow(fixtures.Fixture):
                     'multiattach': volume_id == self.MULTIATTACH_VOL,
                     'size': 1
                 }
-
-            # update the status based on existing attachments
-            has_attachment = any(
-                [volume['id'] in attachments
-                 for attachments in self.attachments.values()])
-            volume['status'] = 'attached' if has_attachment else 'detached'
 
             # Check for our special image-backed volume.
             if volume_id == self.IMAGE_BACKED_VOL:
