@@ -148,13 +148,7 @@ def list_traits(req):
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     filters = {}
 
-    try:
-        jsonschema.validate(dict(req.GET), schema.LIST_TRAIT_SCHEMA,
-                            format_checker=jsonschema.FormatChecker())
-    except jsonschema.ValidationError as exc:
-        raise webob.exc.HTTPBadRequest(
-            _('Invalid query string parameters: %(exc)s') %
-            {'exc': exc})
+    util.validate_query_params(req, schema.LIST_TRAIT_SCHEMA)
 
     if 'name' in req.GET:
         filters = _normalize_traits_qs_param(req.GET['name'])
