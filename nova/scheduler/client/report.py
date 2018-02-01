@@ -1044,9 +1044,7 @@ class SchedulerReportClient(object):
             parent_provider_uuid=parent_provider_uuid)
 
         # Auto-create custom resource classes coming from a virt driver
-        for rc_name in inv_data:
-            if rc_name not in fields.ResourceClass.STANDARD:
-                self._ensure_resource_class(context, rc_name)
+        self._ensure_resource_classes(context, set(inv_data))
 
         if inv_data:
             self._update_inventory(context, rp_uuid, inv_data)
@@ -1201,34 +1199,38 @@ class SchedulerReportClient(object):
         raise exception.ResourceProviderUpdateFailed(url=url, error=resp.text)
 
     @safe_connect
-    def _ensure_resource_class(self, context, name):
-        """Make sure a custom resource class exists.
-
-        PUT the resource class using microversion 1.7.
-
-        Returns the name of the resource class if it was successfully
-        created or already exists. Otherwise None.
+    def _ensure_resource_classes(self, context, names):
+        """Make sure resource classes exist.
 
         :param context: The security context
-        :param name: String name of the resource class to check/create.
-        :raises: `exception.InvalidResourceClass` upon error.
+        :param names: Iterable of string names of the resource classes to
+                      check/create.  Must not be None.
+        :raises: exception.InvalidResourceClass if an attempt is made to create
+                 an invalid resource class.
         """
-        # no payload on the put request
-        response = self.put("/resource_classes/%s" % name, None, version="1.7",
-                            global_request_id=context.global_id)
-        if 200 <= response.status_code < 300:
-            return name
-        else:
-            msg = ("Failed to ensure resource class record with placement API "
-                   "for resource class %(rc_name)s. Got %(status_code)d: "
-                   "%(err_text)s.")
-            args = {
-                'rc_name': name,
-                'status_code': response.status_code,
-                'err_text': response.text,
-            }
-            LOG.error(msg, args)
-            raise exception.InvalidResourceClass(resource_class=name)
+        # Placement API version that supports PUT /resource_classes/CUSTOM_*
+        # to create (or validate the existence of) a consumer-specified
+        # resource class.
+        version = '1.7'
+        to_ensure = set(n for n in names
+                        if n.startswith(fields.ResourceClass.CUSTOM_NAMESPACE))
+
+        for name in to_ensure:
+            # no payload on the put request
+            resp = self.put(
+                "/resource_classes/%s" % name, None, version=version,
+                global_request_id=context.global_id)
+            if not resp:
+                msg = ("Failed to ensure resource class record with placement "
+                       "API for resource class %(rc_name)s. Got "
+                       "%(status_code)d: %(err_text)s.")
+                args = {
+                    'rc_name': name,
+                    'status_code': resp.status_code,
+                    'err_text': resp.text,
+                }
+                LOG.error(msg, args)
+                raise exception.InvalidResourceClass(resource_class=name)
 
     def update_compute_node(self, context, compute_node):
         """Creates or updates stats for the supplied compute node.
