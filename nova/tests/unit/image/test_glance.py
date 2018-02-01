@@ -637,6 +637,19 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         self.assertRaises(FakeDiskException, service.download, ctx,
                           mock.sentinel.image_id, data=Exceptionator())
 
+    @mock.patch.object(six.moves.builtins, 'open')
+    @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
+    def test_download_no_returned_image_data_v2(
+            self, show_mock, open_mock):
+        """Verify images with no data are handled correctly."""
+        client = mock.MagicMock()
+        client.call.return_value = fake_glance_response(None)
+        ctx = mock.sentinel.ctx
+        service = glance.GlanceImageServiceV2(client)
+
+        with testtools.ExpectedException(exception.ImageUnacceptable):
+            service.download(ctx, mock.sentinel.image_id)
+
     @mock.patch('nova.image.glance.GlanceImageServiceV2._get_transfer_module')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
     def test_download_direct_file_uri_v2(self, show_mock, get_tran_mock):
