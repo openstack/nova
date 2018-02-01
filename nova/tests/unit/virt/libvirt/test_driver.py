@@ -12050,16 +12050,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_hard_reboot.assert_called_once_with(self.context,
                                                  instance, [], None)
 
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._undefine_domain')
     @mock.patch('nova.virt.libvirt.LibvirtDriver.get_info')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_domain_and_network')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._get_guest_xml')
     @mock.patch('nova.virt.libvirt.LibvirtDriver.'
                 '_get_instance_disk_info_from_config')
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._destroy')
+    @mock.patch('nova.virt.libvirt.LibvirtDriver.destroy')
     def test_hard_reboot(self, mock_destroy, mock_get_disk_info,
                          mock_get_guest_xml, mock_create_domain_and_network,
-                         mock_get_info, mock_undefine):
+                         mock_get_info):
         self.context.auth_token = True  # any non-None value will suffice
         instance = objects.Instance(**self.test_instance)
         network_info = _fake_network_info(self, 1)
@@ -12107,13 +12106,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         for name in ('disk', 'disk.local'):
             self.assertTrue(disks[name].cache.called)
 
-        mock_destroy.assert_called_once_with(instance)
-        mock_undefine.assert_called_once_with(instance)
+        mock_destroy.assert_called_once_with(self.context, instance,
+                network_info, destroy_disks=False,
+                block_device_info=block_device_info)
 
         mock_create_domain_and_network.assert_called_once_with(self.context,
             dummyxml, instance, network_info,
-            block_device_info=block_device_info,
-            reboot=True, vifs_already_plugged=True)
+            block_device_info=block_device_info)
 
     @mock.patch('oslo_utils.fileutils.ensure_tree')
     @mock.patch('oslo_service.loopingcall.FixedIntervalLoopingCall')
@@ -15075,6 +15074,49 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(1, int(instance.system_metadata['clean_attempts']))
         self.assertTrue(instance.cleaned)
         save.assert_called_once_with()
+
+    @mock.patch('os_brick.encryptors.get_encryption_metadata')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._undefine_domain')
+    def _test_cleanup_encryption_process_execution_error(self, mock_undefine,
+            mock_disconnect, mock_get_encryptor, mock_get_meta,
+            not_found=True):
+        mock_get_meta.return_value = {'fake': 'meta'}
+        mock_encryptor = mock.Mock(spec=encryptors.nop.NoOpEncryptor)
+        mock_get_encryptor.return_value = mock_encryptor
+        # Exit code 4 from os-brick detach_volume means "not found" and we want
+        # to verify we ignore it while we're trying a volume detach.
+        exc = processutils.ProcessExecutionError(exit_code=4 if not_found
+                                                 else 1)
+        mock_encryptor.detach_volume.side_effect = exc
+
+        instance = objects.Instance(self.context, **self.test_instance)
+        connection_info = {'data': {'volume_id': 'fake'}}
+        block_device_info = {'root_device_name': '/dev/vda',
+                             'ephemerals': [],
+                             'block_device_mapping': [
+                                {'connection_info': connection_info,
+                                 'mount_device': '/dev/vda'}]}
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+        if not_found:
+            drvr.cleanup(self.context, instance, network_info={},
+                         destroy_disks=False,
+                         block_device_info=block_device_info)
+            mock_disconnect.assert_called_once_with(connection_info, 'vda',
+                                                    instance)
+            mock_undefine.assert_called_once_with(instance)
+        else:
+            self.assertRaises(processutils.ProcessExecutionError, drvr.cleanup,
+                              self.context, instance, network_info={},
+                              destroy_disks=False,
+                              block_device_info=block_device_info)
+
+    def test_cleanup_encryption_volume_already_detached(self):
+        self._test_cleanup_encryption_process_execution_error(not_found=True)
+
+    def test_cleanup_encryption_volume_detach_failed(self):
+        self._test_cleanup_encryption_process_execution_error(not_found=False)
 
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete',
                 return_value=True)
