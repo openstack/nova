@@ -64,7 +64,7 @@ class ServerExternalEventsController(wsgi.Controller):
 
     @wsgi.expected_errors((403, 404))
     @wsgi.response(200)
-    @validation.schema(server_external_events.create, '2.1', '2.50')
+    @validation.schema(server_external_events.create, '2.0', '2.50')
     @validation.schema(server_external_events.create_v251, '2.51')
     def create(self, req, body):
         """Creates a new instance event."""
