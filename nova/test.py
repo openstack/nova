@@ -308,8 +308,9 @@ class TestCase(testtools.TestCase):
         # caching of that value.
         utils._IS_NEUTRON = None
 
-        # Reset the traits sync flag
+        # Reset the traits sync and rc cache flags
         objects.resource_provider._TRAITS_SYNCED = False
+        objects.resource_provider._RC_CACHE = None
         # Reset the global QEMU version flag.
         images.QEMU_VERSION = None
 
