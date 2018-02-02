@@ -12355,6 +12355,30 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         # instance disappears
         drvr._undefine_domain(instance)
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_uefi_support")
+    @mock.patch.object(host.Host, "get_guest")
+    def test_undefine_domain_handles_libvirt_errors(self, mock_get,
+            mock_has_uefi):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        instance = objects.Instance(**self.test_instance)
+        fake_guest = mock.Mock()
+        mock_get.return_value = fake_guest
+
+        unexpected = fakelibvirt.make_libvirtError(
+                fakelibvirt.libvirtError, "Random", error_code=1)
+        fake_guest.delete_configuration.side_effect = unexpected
+
+        # ensure raise unexpected error code
+        self.assertRaises(type(unexpected), drvr._undefine_domain, instance)
+
+        ignored = fakelibvirt.make_libvirtError(
+                fakelibvirt.libvirtError, "No such domain",
+                error_code=fakelibvirt.VIR_ERR_NO_DOMAIN)
+        fake_guest.delete_configuration.side_effect = ignored
+
+        # ensure no raise for no such domain
+        drvr._undefine_domain(instance)
+
     @mock.patch.object(host.Host, "list_instance_domains")
     @mock.patch.object(objects.BlockDeviceMappingList, "bdms_by_instance_uuid")
     @mock.patch.object(objects.InstanceList, "get_by_filters")
