@@ -54,8 +54,10 @@ changed or be partially complete at this time.
 * `Scheduler Filters in DB <http://specs.openstack.org/openstack/nova-specs/specs/ocata/implemented/resource-providers-scheduler-db-filters.html>`_
 * `Scheduler claiming resources to the Placement API <http://specs.openstack.org/openstack/nova-specs/specs/pike/approved/placement-claims.html>`_
 * `The Traits API - Manage Traits with ResourceProvider <http://specs.openstack.org/openstack/nova-specs/specs/pike/approved/resource-provider-traits.html>`_
+* `Request Traits During Scheduling`_
 
 .. _Nested Resource Providers: http://specs.openstack.org/openstack/nova-specs/specs/queens/approved/nested-resource-providers.html
+.. _Request Traits During Scheduling: https://specs.openstack.org/openstack/nova-specs/specs/queens/approved/request-traits-in-nova.html
 
 Deployment
 ==========
@@ -180,10 +182,12 @@ placement-api service.
         from nova-compute to the placement-api service.
 
 
+.. _placement-upgrade-notes:
+
 Upgrade Notes
 =============
 
-The follow sub-sections provide notes on upgrading to a given target release.
+The following sub-sections provide notes on upgrading to a given target release.
 
 .. note::
 
@@ -269,10 +273,10 @@ Pike (16.0.0)
 Queens (17.0.0)
 ~~~~~~~~~~~~~~~
 
-* The minimum Placement API microversion required by the *nova-compute* service
-  is ``1.14`` in order to support `Nested Resource Providers`_. This means you
-  must upgrade the Placement service before upgrading any *nova-compute*
-  services to Queens.
+* The minimum Placement API microversion required by the *nova-scheduler*
+  service is ``1.17`` in order to support `Request Traits During Scheduling`_.
+  This means you must upgrade the placement service before upgrading any
+  *nova-scheduler* services to Queens.
 
 
 REST API
