@@ -2,11 +2,6 @@
 Manage IP addresses
 ===================
 
-.. todo:: This needs quite a bit of work since nova-network has been
-          deprecated since Newton, and the network resource related compute
-          APIs which are for nova-network or that proxy to neutron have been
-          deprecated, along with their respective CLIs in python-novaclient.
-
 Each instance has a private, fixed IP address and can also have a
 public, or floating IP address. Private IP addresses are used for
 communication between instances, and public addresses are used for
@@ -21,8 +16,7 @@ is available in OpenStack Compute. The project quota defines the maximum
 number of floating IP addresses that you can allocate to the project.
 After you allocate a floating IP address to a project, you can:
 
-- Associate the floating IP address with an instance of the project. Only one
-  floating IP address can be allocated to an instance at any given time.
+- Associate the floating IP address with an instance of the project.
 
 - Disassociate a floating IP address from an instance in the project.
 
@@ -115,17 +109,35 @@ You can assign a floating IP address to a project and to an instance.
       | 42290b01-0968-43... | VM2  | SHUTOFF | -          | Shutdown    | private=10.0.0.4 | centos     |
       +---------------------+------+---------+------------+-------------+------------------+------------+
 
+   Note the server ID to use.
+
+#. List ports associated with the selected server.
+
+   .. code-block:: console
+
+      $ openstack port list --device-id SERVER_ID
+      +--------------------------------------+------+-------------------+--------------------------------------------------------------+--------+
+      | ID                                   | Name | MAC Address       | Fixed IP Addresses                                           | Status |
+      +--------------------------------------+------+-------------------+--------------------------------------------------------------+--------+
+      | 40e9dea9-f457-458f-bc46-6f4ebea3c268 |      | fa:16:3e:00:57:3e | ip_address='10.0.0.4', subnet_id='23ee9de7-362e-             | ACTIVE |
+      |                                      |      |                   | 49e2-a3b0-0de1c14930cb'                                      |        |
+      |                                      |      |                   | ip_address='fd22:4c4c:81c2:0:f816:3eff:fe00:573e', subnet_id |        |
+      |                                      |      |                   | ='a2b3acbe-fbeb-40d3-b21f-121268c21b55'                      |        |
+      +--------------------------------------+------+-------------------+--------------------------------------------------------------+--------+
+
+   Note the port ID to use.
+
 #. Associate an IP address with an instance in the project, as follows:
 
    .. code-block:: console
 
-      $ openstack server add floating ip INSTANCE_NAME_OR_ID FLOATING_IP_ADDRESS
+      $ openstack floating ip set --port PORT_ID FLOATING_IP_ADDRESS
 
    For example:
 
    .. code-block:: console
 
-      $ openstack server add floating ip VM1 172.24.4.225
+      $ openstack floating ip set --port 40e9dea9-f457-458f-bc46-6f4ebea3c268 172.24.4.225
 
    The instance is now associated with two IP addresses:
 
@@ -143,13 +155,6 @@ You can assign a floating IP address to a project and to an instance.
    for the instance, the instance is publicly available at the floating IP
    address.
 
-   .. note::
-
-      The :command:`openstack server` command does not allow users to associate a
-      floating IP address with a specific fixed IP address using the optional
-      ``--fixed-address`` parameter, which legacy commands required as an
-      argument.
-
 Disassociate floating IP addresses
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -157,7 +162,7 @@ To disassociate a floating IP address from an instance:
 
 .. code-block:: console
 
-   $ openstack server remove floating ip INSTANCE_NAME_OR_ID FLOATING_IP_ADDRESS
+   $ openstack floating ip unset --port FLOATING_IP_ADDRESS
 
 To remove the floating IP address from a project:
 

@@ -92,21 +92,6 @@ Follow the steps below to launch an instance from an image.
 #. Copy the administrative password value from the ``adminPass`` field. Use the
    password to log in to your server.
 
-   .. note::
-
-      You can also place arbitrary local files into the instance file
-      system at creation time by using the ``--file <dst-path=src-path>``
-      option. You can store up to five files. For example, if you have a
-      special authorized keys file named ``special_authorized_keysfile`` that
-      you want to put on the instance rather than using the regular SSH key
-      injection, you can use the ``--file`` option as shown in the following
-      example.
-
-   .. code-block:: console
-
-      $ openstack server create --image ubuntu-cloudimage --flavor 1 vm-name \
-        --file /root/.ssh/authorized_keys=special_authorized_keysfile
-
 #. Check if the instance is online.
 
    .. code-block:: console
