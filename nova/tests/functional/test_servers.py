@@ -1441,6 +1441,23 @@ class ProviderUsageBaseTestCase(test.TestCase,
             '/resource_providers/%s/traits' % provider_uuid,
             version='1.6').body['traits']
 
+    def _set_provider_traits(self, rp_uuid, traits):
+        """This will overwrite any existing traits.
+
+        :param rp_uuid: UUID of the resource provider to update
+        :param traits: list of trait strings to set on the provider
+        :returns: APIResponse object with the results
+        """
+        provider = self.placement_api.get(
+            '/resource_providers/%s' % rp_uuid).body
+        put_traits_req = {
+            'resource_provider_generation': provider['generation'],
+            'traits': traits
+        }
+        return self.placement_api.put(
+            '/resource_providers/%s/traits' % rp_uuid,
+            put_traits_req, version='1.6')
+
     def assertFlavorMatchesAllocation(self, flavor, allocation):
         self.assertEqual(flavor['vcpus'], allocation['VCPU'])
         self.assertEqual(flavor['ram'], allocation['MEMORY_MB'])
@@ -3236,6 +3253,60 @@ class ServerSoftDeleteTests(ProviderUsageBaseTestCase):
         # Now we want a real delete
         self.flags(reclaim_instance_interval=0)
         self._delete_and_check_allocations(server)
+
+
+class TraitsBasedSchedulingTest(ProviderUsageBaseTestCase):
+    """Tests for requesting a server with required traits in Placement"""
+
+    compute_driver = 'fake.SmallFakeDriver'
+
+    def setUp(self):
+        super(TraitsBasedSchedulingTest, self).setUp()
+        self.compute1 = self._start_compute('host1')
+        self.compute2 = self._start_compute('host2')
+        # Using a standard trait from the os-traits library, set a required
+        # trait extra spec on the flavor.
+        flavors = self.api.get_flavors()
+        self.flavor_with_trait = flavors[0]
+        self.admin_api.post_extra_spec(
+            self.flavor_with_trait['id'],
+            {'extra_specs': {'trait:HW_CPU_X86_VMX': 'required'}})
+
+    def _create_server(self):
+        # Create the server using the flavor with the required trait.
+        server_req = self._build_minimal_create_server_request(
+            self.api, 'trait-based-server',
+            image_uuid='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
+            flavor_id=self.flavor_with_trait['id'], networks='none')
+        return self.api.post_server({'server': server_req})
+
+    def test_traits_based_scheduling(self):
+        """Tests that a server create request using a required trait ends
+        up on the single compute node resource provider that also has that
+        trait in Placement.
+        """
+        # Decorate the compute_with_trait resource provider with that same
+        # trait.
+        rp_uuid = self._get_provider_uuid_by_host(self.compute1.host)
+        self._set_provider_traits(rp_uuid, ['HW_CPU_X86_VMX'])
+        server = self._create_server()
+        server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
+        # Assert the server ended up on the expected compute host that has
+        # the required trait.
+        self.assertEqual(self.compute1.host, server['OS-EXT-SRV-ATTR:host'])
+
+    def test_traits_based_scheduling_no_valid_host(self):
+        """Tests that a server create request using a required trait
+        fails to find a valid host since no compute node resource providers
+        have the trait.
+        """
+        server = self._create_server()
+        # The server should go to ERROR state because there is no valid host.
+        server = self._wait_for_state_change(self.admin_api, server, 'ERROR')
+        self.assertIsNone(server['OS-EXT-SRV-ATTR:host'])
+        # Make sure the failure was due to NoValidHost by checking the fault.
+        self.assertIn('fault', server)
+        self.assertIn('No valid host', server['fault']['message'])
 
 
 class ServerTestV256Common(ServersTestBase):
