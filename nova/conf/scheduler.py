@@ -126,6 +126,25 @@ is added to avoid any overhead from constantly checking. If enabled,
 every time this runs, we will select any unmapped hosts out of each
 cell database on every run.
 """),
+    cfg.IntOpt("max_placement_results",
+               default=1000,
+               min=1,
+               help="""
+This setting determines the maximum limit on results received from the
+placement service during a scheduling operation. It effectively limits
+the number of hosts that may be considered for scheduling requests that
+match a large number of candidates.
+
+A value of 1 (the minimum) will effectively defer scheduling to the placement
+service strictly on "will it fit" grounds. A higher value will put an upper
+cap on the number of results the scheduler will consider during the filtering
+and weighing process. Large deployments may need to set this lower than the
+total number of hosts available to limit memory consumption, network traffic,
+etc. of the scheduler.
+
+This option is only used by the FilterScheduler; if you use a different
+scheduler, this option has no effect.
+"""),
 ]
 
 filter_scheduler_group = cfg.OptGroup(name="filter_scheduler",
