@@ -67,7 +67,10 @@ class RealPolicyFixture(fixtures.Fixture):
         """
 
         for rule in policies.list_rules():
-            if rule.name not in rules:
+            # NOTE(lbragstad): Only write the rule if it isn't already in the
+            # rule set and if it isn't deprecated. Otherwise we're just going
+            # to spam test runs with deprecate policy warnings.
+            if rule.name not in rules and not rule.deprecated_for_removal:
                 rules[rule.name] = rule.check_str
 
 
