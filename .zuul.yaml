@@ -1,12 +1,11 @@
+# See https://docs.openstack.org/infra/manual/drivers.html#naming-with-zuul-v3
+# for job naming conventions.
 - job:
-    name: nova-lvm
+    name: nova-base
     parent: legacy-dsvm-base
     description: |
-      Run standard integration tests using LVM image backend. This is useful if
-      there are tests touching this code.
+      The base job definition for nova jobs. Contains common configuration.
     timeout: 10800
-    run: playbooks/legacy/nova-lvm/run.yaml
-    post-run: playbooks/legacy/nova-lvm/post.yaml
     required-projects:
       - openstack-infra/devstack-gate
       - openstack/nova
@@ -62,16 +61,43 @@
       tox_envlist: functional-py35
     timeout: 3600
 
+- job:
+    name: nova-lvm
+    parent: nova-base
+    description: |
+      Run standard integration tests using LVM image backend. This is useful if
+      there are tests touching this code.
+    run: playbooks/legacy/nova-lvm/run.yaml
+    post-run: playbooks/legacy/nova-lvm/post.yaml
+
+- job:
+    name: nova-multiattach
+    parent: nova-base
+    description: |
+      Run tempest integration tests with volume multiattach support enabled.
+      This job will only work starting with Queens.
+      It uses the default Cinder volume type in devstack (lvm) and the
+      default compute driver in devstack (libvirt). It also disables the
+      Pike Ubuntu Cloud Archive because volume multiattach support with
+      the libvirt driver only works with qemu<2.10 or libvirt>=3.10 which
+      won't work with the Pike UCA.
+    branches: ^(?!stable/(newton|ocata|pike)).*$
+    run: playbooks/legacy/nova-multiattach/run.yaml
+    post-run: playbooks/legacy/nova-multiattach/post.yaml
+
 - project:
     name: openstack/nova
-    experimental:
-      jobs:
-        - nova-lvm
     check:
       jobs:
+        - nova-multiattach
         - nova-tox-functional
         - nova-tox-functional-py35
     gate:
       jobs:
+        - nova-multiattach
         - nova-tox-functional
         - nova-tox-functional-py35
+    experimental:
+      jobs:
+        # Please try to keep this list of job names sorted alphabetically.
+        - nova-lvm
