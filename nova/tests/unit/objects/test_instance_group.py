@@ -283,7 +283,8 @@ class _TestInstanceGroupObject(object):
         mock_get_by_filt.return_value = [objects.Instance(host='host1'),
                                          objects.Instance(host='host2')]
 
-        obj = objects.InstanceGroup(self.context, members=['uuid1'])
+        obj = objects.InstanceGroup(self.context, members=['uuid1'],
+                                    uuid=uuids.group)
         self.assertEqual(2, len(obj.hosts))
         self.assertIn('host1', obj.hosts)
         self.assertIn('host2', obj.hosts)

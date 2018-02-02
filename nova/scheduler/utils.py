@@ -27,6 +27,7 @@ from nova.api.openstack.placement import lib as placement_lib
 from nova.compute import flavors
 from nova.compute import utils as compute_utils
 import nova.conf
+from nova import context as nova_context
 from nova import exception
 from nova.i18n import _, _LE, _LW
 from nova import objects
@@ -693,10 +694,42 @@ def _get_group_details(context, instance_uuid, user_group_hosts=None):
             msg = _("ServerGroupSoftAntiAffinityWeigher not configured")
             LOG.error(msg)
             raise exception.UnsupportedPolicyException(reason=msg)
-        group_hosts = set(group.get_hosts())
+        # NOTE(melwitt): If the context is already targeted to a cell (during a
+        # move operation), we don't need to scatter-gather.
+        if context.db_connection:
+            # We don't need to target the group object's context because it was
+            # retrieved with the targeted context earlier in this method.
+            group_hosts = set(group.get_hosts())
+        else:
+            group_hosts = set(_get_instance_group_hosts_all_cells(context,
+                                                                  group))
         user_hosts = set(user_group_hosts) if user_group_hosts else set()
         return GroupDetails(hosts=user_hosts | group_hosts,
                             policies=group.policies, members=group.members)
+
+
+def _get_instance_group_hosts_all_cells(context, instance_group):
+    def get_hosts_in_cell(cell_context):
+        # NOTE(melwitt): The obj_alternate_context is going to mutate the
+        # cell_instance_group._context and to do this in a scatter-gather
+        # with multiple parallel greenthreads, we need the instance groups
+        # to be separate object copies.
+        cell_instance_group = instance_group.obj_clone()
+        with cell_instance_group.obj_alternate_context(cell_context):
+            return cell_instance_group.get_hosts()
+
+    results = nova_context.scatter_gather_skip_cell0(context,
+                                                     get_hosts_in_cell)
+    hosts = []
+    for result in results.values():
+        # TODO(melwitt): We will need to handle scenarios where an exception
+        # is raised while targeting a cell and when a cell does not respond
+        # as part of the "handling of a down cell" spec:
+        # https://blueprints.launchpad.net/nova/+spec/handling-down-cell
+        if result not in (nova_context.did_not_respond_sentinel,
+                          nova_context.raised_exception_sentinel):
+            hosts.extend(result)
+    return hosts
 
 
 def setup_instance_group(context, request_spec):
@@ -706,11 +739,30 @@ def setup_instance_group(context, request_spec):
 
     :param request_spec: Request spec
     """
+    # NOTE(melwitt): Proactively query for the instance group hosts instead of
+    # relying on a lazy-load via the 'hosts' field of the InstanceGroup object.
+    if (request_spec.instance_group and
+            'hosts' not in request_spec.instance_group):
+        group = request_spec.instance_group
+        # If the context is already targeted to a cell (during a move
+        # operation), we don't need to scatter-gather. We do need to use
+        # obj_alternate_context here because the RequestSpec is queried at the
+        # start of a move operation in compute/api, before the context has been
+        # targeted.
+        if context.db_connection:
+            with group.obj_alternate_context(context):
+                group.hosts = group.get_hosts()
+        else:
+            group.hosts = _get_instance_group_hosts_all_cells(context, group)
+
     if request_spec.instance_group and request_spec.instance_group.hosts:
         group_hosts = request_spec.instance_group.hosts
     else:
         group_hosts = None
     instance_uuid = request_spec.instance_uuid
+    # This queries the group details for the group where the instance is a
+    # member. The group_hosts passed in are the hosts that contain members of
+    # the requested instance group.
     group_info = _get_group_details(context, instance_uuid, group_hosts)
     if group_info is not None:
         request_spec.instance_group.hosts = list(group_info.hosts)
