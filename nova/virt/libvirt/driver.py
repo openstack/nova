@@ -5419,10 +5419,11 @@ class LibvirtDriver(driver.ComputeDriver):
                                            destroy_disks_on_failure)
         except eventlet.timeout.Timeout:
             # We never heard from Neutron
-            LOG.warning('Timeout waiting for vif plugging callback for '
+            LOG.warning('Timeout waiting for %(events)s for '
                         'instance with vm_state %(vm_state)s and '
                         'task_state %(task_state)s.',
-                        {'vm_state': instance.vm_state,
+                        {'events': events,
+                         'vm_state': instance.vm_state,
                          'task_state': instance.task_state},
                         instance=instance)
             if CONF.vif_plugging_is_fatal:
