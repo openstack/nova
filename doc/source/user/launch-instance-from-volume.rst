@@ -259,6 +259,44 @@ the volume to boot an instance.
 
       $ openstack volume create --image IMAGE_ID --size SIZE_IN_GB bootable_volume
 
+   .. note::
+
+      A bootable encrypted volume can also be created by adding the
+      `-–type ENCRYPTED_VOLUME_TYPE` parameter to the volume create command:
+
+   .. code-block:: console
+
+      $ openstack volume create --type ENCRYPTED_VOLUME_TYPE --image IMAGE_ID --size SIZE_IN_GB bootable_volume
+      +---------------------+--------------------------------------+
+      | Field               | Value                                |
+      +---------------------+--------------------------------------+
+      | attachments         | []                                   |
+      | availability_zone   | nova                                 |
+      | bootable            | false                                |
+      | consistencygroup_id | None                                 |
+      | created_at          | 2017-06-13T18:59:57.626872           |
+      | description         | None                                 |
+      | encrypted           | True                                 |
+      | id                  | ded57a86-5b51-43ab-b70e-9bc0f91ef4ab |
+      | multiattach         | False                                |
+      | name                | bootable_volume                      |
+      | properties          |                                      |
+      | replication_status  | None                                 |
+      | size                | 1                                    |
+      | snapshot_id         | None                                 |
+      | source_volid        | None                                 |
+      | status              | creating                             |
+      | type                | LUKS                                 |
+      | updated_at          | None                                 |
+      | user_id             | 459ae34ffcd94edab0c128ed616bb19f     |
+      +---------------------+--------------------------------------+
+
+
+   This requires an encrypted volume type, which must be created ahead of
+   time by an admin.  See
+   `Create an encrypted volume type <https://docs.openstack.org/horizon/latest/admin/manage-volumes.html#create-an-encrypted-volume-type>`_
+   in the OpenStack Horizon Administration Guide.
+
 #. Create a VM from previously created bootable volume. The volume is not
    deleted when the instance is terminated.
 
