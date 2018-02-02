@@ -3706,6 +3706,7 @@ class ComputeManager(manager.Manager):
                 self.host, phase=fields.NotificationPhase.END,
                 snapshot_image_id=image_id)
         except (exception.InstanceNotFound,
+                exception.InstanceNotRunning,
                 exception.UnexpectedDeletingTaskStateError):
             # the instance got deleted during the snapshot
             # Quickly bail out of here
@@ -3732,15 +3733,25 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     def volume_snapshot_create(self, context, instance, volume_id,
                                create_info):
-        self.driver.volume_snapshot_create(context, instance, volume_id,
-                                           create_info)
+        try:
+            self.driver.volume_snapshot_create(context, instance, volume_id,
+                                               create_info)
+        except exception.InstanceNotRunning:
+            # Libvirt driver can raise this exception
+            LOG.debug('Instance disappeared during volume snapshot create',
+                      instance=instance)
 
     @messaging.expected_exceptions(NotImplementedError)
     @wrap_exception()
     def volume_snapshot_delete(self, context, instance, volume_id,
                                snapshot_id, delete_info):
-        self.driver.volume_snapshot_delete(context, instance, volume_id,
-                                           snapshot_id, delete_info)
+        try:
+            self.driver.volume_snapshot_delete(context, instance, volume_id,
+                                               snapshot_id, delete_info)
+        except exception.InstanceNotRunning:
+            # Libvirt driver can raise this exception
+            LOG.debug('Instance disappeared during volume snapshot delete',
+                      instance=instance)
 
     @wrap_instance_fault
     def _rotate_backups(self, context, instance, backup_type, rotation):
