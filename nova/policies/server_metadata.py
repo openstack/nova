@@ -28,7 +28,7 @@ server_metadata_policies = [
         "List all metadata of a server",
         [
             {
-                'path': '/servers/server_id/metadata',
+                'path': '/servers/{server_id}/metadata',
                 'method': 'GET'
             }
         ]
@@ -39,7 +39,7 @@ server_metadata_policies = [
         "Show metadata for a server",
         [
             {
-                'path': '/servers/server_id/metadata/{key}',
+                'path': '/servers/{server_id}/metadata/{key}',
                 'method': 'GET'
             }
         ]
@@ -50,7 +50,7 @@ server_metadata_policies = [
         "Create metadata for a server",
         [
             {
-                'path': '/servers/server_id/metadata',
+                'path': '/servers/{server_id}/metadata',
                 'method': 'POST'
             }
         ]
@@ -61,7 +61,7 @@ server_metadata_policies = [
         "Replace metadata for a server",
         [
             {
-                'path': '/servers/server_id/metadata',
+                'path': '/servers/{server_id}/metadata',
                 'method': 'PUT'
             }
         ]
@@ -72,7 +72,7 @@ server_metadata_policies = [
         "Update metadata from a server",
         [
             {
-                'path': '/servers/server_id/metadata/{key}',
+                'path': '/servers/{server_id}/metadata/{key}',
                 'method': 'PUT'
             }
         ]
@@ -83,7 +83,7 @@ server_metadata_policies = [
         "Delete metadata from a server",
         [
             {
-                'path': '/servers/server_id/metadata/{key}',
+                'path': '/servers/{server_id}/metadata/{key}',
                 'method': 'DELETE'
             }
         ]
