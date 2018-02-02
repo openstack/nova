@@ -49,8 +49,9 @@ class Controller(wsgi.Controller):
             return
 
         if 'server' in resp.obj and 'addresses' in resp.obj['server']:
-            instance = req.get_db_instance(id)
-            self._perhaps_hide_addresses(instance, resp.obj['server'])
+            resp_server = resp.obj['server']
+            instance = req.get_db_instance(resp_server['id'])
+            self._perhaps_hide_addresses(instance, resp_server)
 
     @wsgi.extends
     def detail(self, req, resp_obj):
