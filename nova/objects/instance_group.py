@@ -15,6 +15,7 @@
 import copy
 
 from oslo_db import exception as db_exc
+from oslo_log import log as logging
 from oslo_utils import uuidutils
 from oslo_utils import versionutils
 from sqlalchemy.orm import contains_eager
@@ -32,6 +33,7 @@ from nova.objects import fields
 
 
 LAZY_LOAD_FIELDS = ['hosts']
+LOG = logging.getLogger(__name__)
 
 
 def _instance_group_get_query(context, id_field=None, id=None):
@@ -296,6 +298,12 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
         if attrname != 'hosts':
             raise exception.ObjectActionError(
                 action='obj_load_attr', reason='unable to load %s' % attrname)
+
+        LOG.debug("Lazy-loading '%(attr)s' on %(name)s uuid %(uuid)s",
+                  {'attr': attrname,
+                   'name': self.obj_name(),
+                   'uuid': self.uuid,
+                   })
 
         self.hosts = self.get_hosts()
         self.obj_reset_changes(['hosts'])
