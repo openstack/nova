@@ -466,7 +466,7 @@ class CellsComputeAPITestCase(test_compute.ComputeAPITestCase):
         instance = self._create_fake_instance_obj()
         bdms = [block_device.BlockDeviceDict({'source_type': 'image',
                                               'destination_type': 'local',
-                                              'image_id': 'fake-image',
+                                              'image_id': uuids.image,
                                               'boot_index': 0})]
         self.compute_api._create_block_device_mapping(
             instance_type, instance.uuid, bdms)

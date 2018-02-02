@@ -503,7 +503,7 @@ class ComputeVolumeTestCase(BaseTestCase):
             mock_get.return_value = fake_bdm
             self.assertRaises(
                     test.TestingException, self.compute.detach_volume,
-                    self.context, 'fake', instance, 'fake_id')
+                    self.context, uuids.volume, instance, 'fake_id')
             self.assertFalse(mock_destroy.called)
             mock_event.assert_called_once_with(
                 self.context, 'compute_detach_volume', instance.uuid)
@@ -713,7 +713,7 @@ class ComputeVolumeTestCase(BaseTestCase):
             'boot_index': 0,
             'source_type': 'image',
             'destination_type': 'local',
-            'image_id': "fake-image",
+            'image_id': uuids.image,
             'delete_on_termination': True,
         }]
 
@@ -1434,7 +1434,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                 'instance_uuid': uuids.block_device_instance,
                 'source_type': 'image',
                 'destination_type': 'volume',
-                'image_id': 'fake-image-id-1',
+                'image_id': uuids.image,
                 'volume_size': 1,
                 'boot_index': 0}))
         blank_volume1 = objects.BlockDeviceMapping(
@@ -2886,7 +2886,7 @@ class ComputeTestCase(BaseTestCase,
                     'connection_info': '{"driver_volume_type": "rbd"}',
                     'source_type': 'image',
                     'destination_type': 'volume',
-                    'image_id': 'fake-image-id-1',
+                    'image_id': uuids.image,
                     'boot_index': 0
         })])
 
@@ -3246,7 +3246,7 @@ class ComputeTestCase(BaseTestCase,
                     'connection_info': '{"driver_volume_type": "rbd"}',
                     'source_type': 'image',
                     'destination_type': 'volume',
-                    'image_id': 'fake-image-id-1',
+                    'image_id': uuids.image,
                     'boot_index': 0
         })])
 
@@ -3442,7 +3442,7 @@ class ComputeTestCase(BaseTestCase,
         inst_obj = self._get_snapshotting_instance()
         inst_obj.image_ref = ''
         inst_obj.save()
-        self.compute.snapshot_instance(self.context, image_id='fakesnap',
+        self.compute.snapshot_instance(self.context, image_id=uuids.image,
                                        instance=inst_obj)
 
     def _test_snapshot_fails(self, raise_during_cleanup, method,
@@ -3468,7 +3468,7 @@ class ComputeTestCase(BaseTestCase,
             if method == 'snapshot':
                 self.assertRaises(test.TestingException,
                                   self.compute.snapshot_instance,
-                                  self.context, image_id='fakesnap',
+                                  self.context, image_id=uuids.image,
                                   instance=inst_obj)
                 mock_event.assert_called_once_with(self.context,
                                                    'compute_snapshot_instance',
@@ -3476,7 +3476,7 @@ class ComputeTestCase(BaseTestCase,
             else:
                 self.assertRaises(test.TestingException,
                                   self.compute.backup_instance,
-                                  self.context, image_id='fakesnap',
+                                  self.context, image_id=uuids.image,
                                   instance=inst_obj, backup_type='fake',
                                   rotation=1)
                 mock_event.assert_called_once_with(self.context,
@@ -3511,7 +3511,7 @@ class ComputeTestCase(BaseTestCase,
         self.fake_image_delete_called = False
 
         def fake_show(self_, context, image_id, **kwargs):
-            self.assertEqual('fakesnap', image_id)
+            self.assertEqual(uuids.image, image_id)
             image = {'id': image_id,
                      'status': status}
             return image
@@ -3521,7 +3521,7 @@ class ComputeTestCase(BaseTestCase,
 
         def fake_delete(self_, context, image_id):
             self.fake_image_delete_called = True
-            self.assertEqual('fakesnap', image_id)
+            self.assertEqual(uuids.image, image_id)
 
         self.stub_out('nova.tests.unit.image.fake._FakeImageService.delete',
                       fake_delete)
@@ -3535,11 +3535,11 @@ class ComputeTestCase(BaseTestCase,
 
         inst_obj = self._get_snapshotting_instance()
 
-        self.compute.snapshot_instance(self.context, image_id='fakesnap',
+        self.compute.snapshot_instance(self.context, image_id=uuids.image,
                                        instance=inst_obj)
 
     def test_snapshot_fails_with_glance_error(self):
-        image_not_found = exception.ImageNotFound(image_id='fakesnap')
+        image_not_found = exception.ImageNotFound(image_id=uuids.image)
         self._test_snapshot_deletes_image_on_failure('error', image_not_found)
         self.assertFalse(self.fake_image_delete_called)
         self._assert_state({'task_state': None})
@@ -3569,14 +3569,14 @@ class ComputeTestCase(BaseTestCase,
         inst_obj = self._get_snapshotting_instance()
         inst_obj.task_state = task_states.DELETING
         inst_obj.save()
-        self.compute.snapshot_instance(self.context, image_id='fakesnap',
+        self.compute.snapshot_instance(self.context, image_id=uuids.image,
                                        instance=inst_obj)
 
     def test_snapshot_handles_cases_when_instance_is_not_found(self):
         inst_obj = self._get_snapshotting_instance()
         inst_obj2 = objects.Instance.get_by_uuid(self.context, inst_obj.uuid)
         inst_obj2.destroy()
-        self.compute.snapshot_instance(self.context, image_id='fakesnap',
+        self.compute.snapshot_instance(self.context, image_id=uuids.image,
                                        instance=inst_obj)
 
     def _assert_state(self, state_dict):
@@ -4912,7 +4912,7 @@ class ComputeTestCase(BaseTestCase,
         # create volume
         volume = {'instance_uuid': None,
                   'device_name': None,
-                  'id': 'fake',
+                  'id': uuids.volume,
                   'size': 200,
                   'attach_status': 'detached'}
         bdm = objects.BlockDeviceMapping(
@@ -7956,7 +7956,7 @@ class ComputeTestCase(BaseTestCase,
                      'device_name': '/dev/vda',
                      'source_type': 'volume',
                      'destination_type': 'volume',
-                     'image_id': 'fake-image-id-1',
+                     'image_id': uuids.image,
                      'boot_index': 0})])
 
         return instance, block_device_mapping
@@ -8019,7 +8019,7 @@ class ComputeTestCase(BaseTestCase,
                 'instance_uuid': uuids.block_device_instance,
                 'source_type': 'volume',
                 'destination_type': 'volume',
-                'image_id': 'fake-image-id-1',
+                'image_id': uuids.image,
                 'boot_index': 0}))
         blank_volume1 = objects.BlockDeviceMapping(
              **fake_block_device.FakeDbBlockDeviceDict({
@@ -8108,7 +8108,7 @@ class ComputeTestCase(BaseTestCase,
         bdm = objects.BlockDeviceMapping(
                 context=self.context,
                 **{'source_type': 'image', 'destination_type': 'local',
-                   'image_id': 'fake-image-id', 'device_name': '/dev/hda',
+                   'image_id': uuids.image, 'device_name': '/dev/hda',
                    'instance_uuid': instance.uuid})
         bdm.create()
 
@@ -8134,8 +8134,8 @@ class ComputeTestCase(BaseTestCase,
     def test_quiesce(self, mock_snapshot_get):
         # ensure instance can be quiesced and unquiesced
         instance = self._create_fake_instance_obj()
-        mapping = [{'source_type': 'snapshot', 'snapshot_id': 'fake-id1'},
-                   {'source_type': 'snapshot', 'snapshot_id': 'fake-id2'}]
+        mapping = [{'source_type': 'snapshot', 'snapshot_id': uuids.snap1},
+                   {'source_type': 'snapshot', 'snapshot_id': uuids.snap2}]
         # unquiesce should wait until volume snapshots are completed
         mock_snapshot_get.side_effect = [{'status': 'creating'},
                                          {'status': 'available'}] * 2
@@ -8144,8 +8144,8 @@ class ComputeTestCase(BaseTestCase,
         self.compute.quiesce_instance(self.context, instance)
         self.compute.unquiesce_instance(self.context, instance, mapping)
         self.compute.terminate_instance(self.context, instance, [], [])
-        mock_snapshot_get.assert_any_call(mock.ANY, 'fake-id1')
-        mock_snapshot_get.assert_any_call(mock.ANY, 'fake-id2')
+        mock_snapshot_get.assert_any_call(mock.ANY, uuids.snap1)
+        mock_snapshot_get.assert_any_call(mock.ANY, uuids.snap2)
         self.assertEqual(4, mock_snapshot_get.call_count)
 
     def test_instance_fault_message_no_rescheduled_details_without_retry(self):
@@ -10755,7 +10755,7 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self._create_fake_instance_obj()
         fake_bdm = fake_block_device.FakeDbBlockDeviceDict(
                 {'source_type': 'volume', 'destination_type': 'volume',
-                 'volume_id': 'fake-id', 'device_name': '/dev/vdb',
+                 'volume_id': uuids.volume, 'device_name': '/dev/vdb',
                  'connection_info': '{"test": "test"}'})
         bdm = objects.BlockDeviceMapping(context=self.context, **fake_bdm)
 
@@ -10778,13 +10778,12 @@ class ComputeAPITestCase(BaseTestCase):
                               return_value='fake-connector')
         ) as (mock_detach_volume, mock_volume, mock_terminate_connection,
               mock_destroy, mock_notify, mock_detach, mock_volume_connector):
-            self.compute.detach_volume(self.context, 'fake-id', instance)
+            self.compute.detach_volume(self.context, uuids.volume, instance)
             self.assertTrue(mock_detach_volume.called)
             mock_terminate_connection.assert_called_once_with(self.context,
-                                                              'fake-id',
-                                                              'fake-connector')
+                    uuids.volume, 'fake-connector')
             mock_destroy.assert_called_once_with()
-            mock_detach.assert_called_once_with(mock.ANY, 'fake-id',
+            mock_detach.assert_called_once_with(mock.ANY, uuids.volume,
                                                 instance.uuid, None)
 
     @mock.patch.object(context.RequestContext, 'elevated')
@@ -10852,7 +10851,7 @@ class ComputeAPITestCase(BaseTestCase):
         admin = context.get_admin_context()
         instance = self._create_fake_instance_obj()
 
-        volume_id = 'fake'
+        volume_id = uuids.volume
         values = {'instance_uuid': instance['uuid'],
                   'device_name': '/dev/vdc',
                   'delete_on_termination': False,
@@ -10902,7 +10901,7 @@ class ComputeAPITestCase(BaseTestCase):
                      'source_type': 'volume',
                      'destination_type': 'volume',
                      'delete_on_termination': False,
-                     'volume_id': 'fake_vol'}
+                     'volume_id': uuids.volume}
         bdms = []
         for bdm in img_bdm, vol_bdm:
             bdm_obj = objects.BlockDeviceMapping(**bdm)
@@ -11416,7 +11415,7 @@ class ComputeAPIIpFilterTestCase(test.NoDBTestCase):
 
     @mock.patch.object(objects.BuildRequestList, 'get_by_filters')
     @mock.patch.object(objects.CellMapping, 'get_by_uuid',
-                       side_effect=exception.CellMappingNotFound(uuid='fake'))
+            side_effect=exception.CellMappingNotFound(uuid=uuids.volume))
     @mock.patch('nova.network.neutronv2.api.API.'
                 'has_substr_port_filtering_extension', return_value=False)
     def test_ip_filtering_no_limit_to_db(self, mock_has_port_filter_ext,
@@ -11434,7 +11433,7 @@ class ComputeAPIIpFilterTestCase(test.NoDBTestCase):
 
     @mock.patch.object(objects.BuildRequestList, 'get_by_filters')
     @mock.patch.object(objects.CellMapping, 'get_by_uuid',
-                       side_effect=exception.CellMappingNotFound(uuid='fake'))
+            side_effect=exception.CellMappingNotFound(uuid=uuids.volume))
     def test_ip_filtering_pass_limit_to_db(self, _mock_cell_map_get,
                                            mock_buildreq_get):
         c = context.get_admin_context()

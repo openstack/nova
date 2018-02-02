@@ -1713,9 +1713,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 use_slave=True)
             return [a, b, c]
 
-        a = FakeInstance('123', 'apple', {'clean_attempts': '100'})
-        b = FakeInstance('456', 'orange', {'clean_attempts': '3'})
-        c = FakeInstance('789', 'banana', {})
+        a = FakeInstance(uuids.instanceA, 'apple', {'clean_attempts': '100'})
+        b = FakeInstance(uuids.instanceB, 'orange', {'clean_attempts': '3'})
+        c = FakeInstance(uuids.instanceC, 'banana', {})
 
         mock_get.side_effect = _fake_get
         mock_delete.side_effect = [True, False]
@@ -1757,10 +1757,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         fake_instances = [fake_inst(self.context, uuids.instance_1, inst_host),
                           fake_inst(self.context, uuids.instance_2, inst_host)]
 
-        fake_migrations = [fake_migration('123', 'error',
+        fake_migrations = [fake_migration(uuids.mig1, 'error',
                                           uuids.instance_1,
                                           'fake-host', 'fake-mini'),
-                           fake_migration('456', 'error',
+                           fake_migration(uuids.mig2, 'error',
                                            uuids.instance_2,
                                           'fake-host', 'fake-mini')]
 

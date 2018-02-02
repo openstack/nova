@@ -24,10 +24,11 @@ from nova import exception
 from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
+from nova.tests import uuidsentinel as uuids
 
 import oslo_messaging
 
-UUID = 'abc'
+UUID = uuids.abc
 
 
 def fake_instance_get(self, _context, instance_uuid, expected_attrs=None):

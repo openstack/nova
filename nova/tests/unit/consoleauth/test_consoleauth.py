@@ -26,6 +26,7 @@ from nova.consoleauth import manager
 from nova import context
 from nova import objects
 from nova import test
+from nova.tests import uuidsentinel as uuids
 
 
 class ConsoleauthTestCase(test.NoDBTestCase):
@@ -55,7 +56,7 @@ class ConsoleauthTestCase(test.NoDBTestCase):
         # fixture so we can return it from our own mock to verify
         # that it was called
         fake_im = objects.InstanceMapping.get_by_instance_uuid(self.context,
-                                                               'fake')
+                uuids.instance)
 
         # Test that tokens expire correctly.
         self.useFixture(test.TimeOverride())

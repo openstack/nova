@@ -43,6 +43,7 @@ from nova.tests.unit import fake_network
 from nova.tests.unit import fake_notifier
 import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
+from nova.tests import uuidsentinel as uuids
 from nova.virt import fake
 from nova import volume
 
@@ -1104,7 +1105,7 @@ class ServerTestV220(ServersTestBase):
                          ) as (mock_cinder_mv, mock_check_vol_attached,
                                mock_check_av_zone, mock_attach_create,
                                mock_attachment_complete):
-            mock_attach_create.return_value = {'id': 'fake_id'}
+            mock_attach_create.return_value = {'id': uuids.volume}
             volume_attachment = {"volumeAttachment": {"volumeId":
                                        "5d721593-f033-4f6d-ab6f-b5b067e61bc4"}}
             attach_response = self.api.api_post(
@@ -1112,7 +1113,7 @@ class ServerTestV220(ServersTestBase):
                              volume_attachment).body['volumeAttachment']
             self.assertTrue(mock_attach_create.called)
             mock_attachment_complete.assert_called_once_with(
-                mock.ANY, 'fake_id')
+                mock.ANY, uuids.volume)
             self.assertIsNone(attach_response['device'])
 
         # Test detach volume

@@ -117,11 +117,9 @@ class AggregateObjectDbTestCase(test.TestCase):
 
     def test_in_api(self):
         ca1 = _create_aggregate(self.context, values={'name': 'fake_agg_1',
-                                                      'id': 1,
-                                                      'uuid': 'nonce'})
-        ca2 = db.aggregate_create(self.context, {'name': 'fake_agg_2',
-                                                 'id': 2,
-                                                 'uuid': 'nonce'})
+                'id': 1, 'uuid': uuidsentinel.agg})
+        ca2 = db.aggregate_create(self.context, {'name': 'fake_agg_2', 'id': 2,
+                'uuid': uuidsentinel.agg})
 
         api_db_agg = aggregate_obj.Aggregate.get_by_id(self.context, ca1['id'])
         cell_db_agg = aggregate_obj.Aggregate.get_by_id(

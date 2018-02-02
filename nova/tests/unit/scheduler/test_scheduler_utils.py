@@ -98,7 +98,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
         """Tests passing a legacy dict format request spec to
         set_vm_state_and_notify.
         """
-        request_spec = dict(instance_properties=dict(uuid='other-uuid'))
+        request_spec = dict(instance_properties=dict(uuid=uuids.instance))
         # The request_spec in the notification payload should be unchanged.
         self._test_set_vm_state_and_notify(
             request_spec=request_spec, payload_request_spec=request_spec)
@@ -106,7 +106,7 @@ class SchedulerUtilsTestCase(test.NoDBTestCase):
     def test_set_vm_state_and_notify_request_spec_object(self):
         """Tests passing a RequestSpec object to set_vm_state_and_notify."""
         request_spec = objects.RequestSpec.from_primitives(
-            self.context, dict(instance_properties=dict(uuid='other-uuid')),
+            self.context, dict(instance_properties=dict(uuid=uuids.instance)),
             filter_properties=dict())
         # The request_spec in the notification payload should be converted
         # to the legacy format.

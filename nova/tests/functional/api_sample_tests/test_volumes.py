@@ -24,6 +24,7 @@ from nova.tests.functional.api_sample_tests import test_servers
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
+from nova.tests import uuidsentinel as uuids
 
 COMPUTE_VERSION_OLD_ATTACH_FLOW = \
     compute_api.CINDER_V3_ATTACH_MIN_COMPUTE_VERSION - 1
@@ -276,7 +277,7 @@ class VolumeAttachmentsSample(test_servers.ServersSampleBase):
                       lambda *a, **k: None)
         self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
         self.stub_out('nova.volume.cinder.API.attachment_create',
-                      lambda *a, **k: {'id': 'fake_id'})
+                      lambda *a, **k: {'id': uuids.volume})
         self.stub_out('nova.objects.BlockDeviceMapping.save',
                       lambda *a, **k: None)
         device_name = '/dev/vdd'
