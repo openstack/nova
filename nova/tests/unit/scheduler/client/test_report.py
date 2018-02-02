@@ -1497,6 +1497,10 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             'trait:CUSTOM_TRAIT1': 'required',
             'trait:CUSTOM_TRAIT2': 'preferred',
         })
+        expected_path = '/allocation_candidates'
+        expected_query = {'resources': ['MEMORY_MB:1024,VCPU:1'],
+                          'required': ['CUSTOM_TRAIT1'],
+                          'limit': ['1000']}
 
         resp_mock.json.return_value = json_data
         self.ks_adap_mock.get.return_value = resp_mock
@@ -1504,12 +1508,13 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         alloc_reqs, p_sums, allocation_request_version = \
                 self.client.get_allocation_candidates(resources)
 
-        expected_url = '/allocation_candidates?%s' % parse.urlencode(
-            {'resources': 'MEMORY_MB:1024,VCPU:1',
-             'required': 'CUSTOM_TRAIT1',
-             'limit': 1000})
         self.ks_adap_mock.get.assert_called_once_with(
-            expected_url, raise_exc=False, microversion='1.17')
+            mock.ANY, raise_exc=False, microversion='1.17')
+        url = self.ks_adap_mock.get.call_args[0][0]
+        split_url = parse.urlsplit(url)
+        query = parse.parse_qs(split_url.query)
+        self.assertEqual(expected_path, split_url.path)
+        self.assertEqual(expected_query, query)
         self.assertEqual(mock.sentinel.alloc_reqs, alloc_reqs)
         self.assertEqual(mock.sentinel.p_sums, p_sums)
 
@@ -1524,6 +1529,9 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             'resources:MEMORY_MB': '1024',
             'resources1:DISK_GB': '30',
         })
+        expected_path = '/allocation_candidates'
+        expected_query = {'resources': ['MEMORY_MB:1024,VCPU:1'],
+                          'limit': ['1000']}
 
         resp_mock.json.return_value = json_data
         self.ks_adap_mock.get.return_value = resp_mock
@@ -1531,11 +1539,13 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         alloc_reqs, p_sums, allocation_request_version = \
                 self.client.get_allocation_candidates(resources)
 
-        expected_url = '/allocation_candidates?%s' % parse.urlencode(
-            {'resources': 'MEMORY_MB:1024,VCPU:1',
-             'limit': 1000})
         self.ks_adap_mock.get.assert_called_once_with(
-            expected_url, raise_exc=False, microversion='1.17')
+            mock.ANY, raise_exc=False, microversion='1.17')
+        url = self.ks_adap_mock.get.call_args[0][0]
+        split_url = parse.urlsplit(url)
+        query = parse.parse_qs(split_url.query)
+        self.assertEqual(expected_path, split_url.path)
+        self.assertEqual(expected_query, query)
         self.assertEqual(mock.sentinel.alloc_reqs, alloc_reqs)
 
     def test_get_allocation_candidates_not_found(self):
@@ -1543,6 +1553,9 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         # API doesn't find a resource provider matching a UUID
         resp_mock = mock.Mock(status_code=404)
         self.ks_adap_mock.get.return_value = resp_mock
+        expected_path = '/allocation_candidates'
+        expected_query = {'resources': ['MEMORY_MB:1024'],
+                          'limit': ['100']}
 
         # Make sure we're also honoring the configured limit
         self.flags(max_placement_results=100, group='scheduler')
@@ -1552,11 +1565,13 @@ class TestProviderOperations(SchedulerReportClientTestCase):
 
         res = self.client.get_allocation_candidates(resources)
 
-        expected_url = ('/allocation_candidates?%s' % parse.urlencode(
-            {'resources': 'MEMORY_MB:1024',
-             'limit': '100'}))
         self.ks_adap_mock.get.assert_called_once_with(
-            expected_url, raise_exc=False, microversion='1.17')
+            mock.ANY, raise_exc=False, microversion='1.17')
+        url = self.ks_adap_mock.get.call_args[0][0]
+        split_url = parse.urlsplit(url)
+        query = parse.parse_qs(split_url.query)
+        self.assertEqual(expected_path, split_url.path)
+        self.assertEqual(expected_query, query)
         self.assertIsNone(res[0])
 
     def test_get_resource_provider_found(self):
