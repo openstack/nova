@@ -1,5 +1,6 @@
 /nova/latest/addmethod.openstackapi.html 301 /nova/latest/contributor/api-2.html
 /nova/latest/admin/flavors2.html 301 /nova/latest/admin/flavors.html
+/nova/latest/admin/numa.html 301 /nova/latest/admin/cpu-topologies.html
 /nova/latest/aggregates.html 301 /nova/latest/user/aggregates.html
 /nova/latest/api_microversion_dev.html 301 /nova/latest/contributor/microversions.html
 /nova/latest/api_microversion_history.html 301 /nova/latest/reference/api-microversion-history.html
