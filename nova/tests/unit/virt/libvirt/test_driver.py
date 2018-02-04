@@ -11813,69 +11813,61 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           'serial_listen_addr': None,
                           'volume': {}}, res_data['pre_live_migration_result'])
 
-    @mock.patch.object(libvirt_driver.LibvirtDriver, 'plug_vifs')
-    @mock.patch.object(libvirt_driver.LibvirtDriver, '_connect_volume')
-    def test_pre_live_migration_vol_backed_works_correctly_mocked(
-            self, mock_connect, mock_plug):
-        # Creating testdata, using temp dir.
-        with utils.tempdir() as tmpdir:
-            self.flags(instances_path=tmpdir)
-            c = context.get_admin_context()
-            inst_ref = objects.Instance(root_device_name='/dev/vda',
-                                        **self.test_instance)
-            bdms = objects.BlockDeviceMappingList(objects=[
-                fake_block_device.fake_bdm_object(c, {
+    def _test_pre_live_migration_volume_backed(self, encrypted_volumes=False):
+        inst_ref = objects.Instance(root_device_name='/dev/vda',
+                                    **self.test_instance)
+        bdms = objects.BlockDeviceMappingList(objects=[
+                fake_block_device.fake_bdm_object(self.context, {
                     'connection_info': jsonutils.dumps({
-                        'serial': '12345',
+                        'serial': uuids.vol1,
                         'data': {
-                            'device_path': '/dev/disk/by-path/ip-1.2.3.4:3260'
-                                           '-iqn.abc.12345.opst-lun-X'
+                            'device_path': '/dev/disk/path/lun-X'
                         }
                     }),
                     'device_name': '/dev/sda',
-                    'volume_id': uuids.volume1,
+                    'volume_id': uuids.vol1,
                     'source_type': 'volume',
                     'destination_type': 'volume'
                 }),
-                fake_block_device.fake_bdm_object(c, {
+                fake_block_device.fake_bdm_object(self.context, {
                     'connection_info': jsonutils.dumps({
-                        'serial': '67890',
+                        'serial': uuids.vol2,
                         'data': {
-                            'device_path': '/dev/disk/by-path/ip-1.2.3.4:3260'
-                                           '-iqn.cde.67890.opst-lun-Z'
+                            'device_path': '/dev/disk/path/lun-Z'
                         }
                     }),
                     'device_name': '/dev/sdb',
-                    'volume_id': uuids.volume2,
+                    'volume_id': uuids.vol2,
                     'source_type': 'volume',
                     'destination_type': 'volume'
                 })
             ])
-            # We go through get_block_device_info to simulate what the
-            # ComputeManager sends to the driver (make sure we're using the
-            # correct type of BDM objects since there are many of them and
-            # they are super confusing).
-            block_device_info = driver.get_block_device_info(inst_ref, bdms)
+        # We go through get_block_device_info to simulate what the
+        # ComputeManager sends to the driver (make sure we're using the
+        # correct type of BDM objects since there are many of them and
+        # they are super confusing).
+        block_device_info = driver.get_block_device_info(inst_ref, bdms)
 
-            drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        with test.nested(
+            mock.patch.object(drvr, '_is_native_luks_available'),
+            mock.patch.object(drvr._host, 'find_secret'),
+            mock.patch.object(drvr, '_connect_volume'),
+            mock.patch.object(drvr, 'plug_vifs'),
+        ) as (mock_is_luks_available, mock_find_secret,
+              mock_connect_volume, mock_plug_vifs):
 
-            self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.'
-                          '_create_images_and_backing',
-                          lambda *args, **kwargs: None)
-            self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.'
-                          '_is_native_luks_available', lambda self: True)
+            mock_is_luks_available.return_value = True
+            mock_find_secret.return_value = None
+            if encrypted_volumes:
+                secret_vol1 = mock.Mock()
+                secret_vol1.UUIDString.return_value = uuids.secret_vol1
+                secret_vol2 = mock.Mock()
+                secret_vol2.UUIDString.return_value = uuids.secret_vol2
+                mock_find_secret.side_effect = [secret_vol1, secret_vol2]
 
-            class FakeNetworkInfo(object):
-                def fixed_ips(self):
-                    return ["test_ip_addr"]
-            nw_info = FakeNetworkInfo()
-            expected_connect_calls = []
-            for v in block_device_info['block_device_mapping']:
-                expected_connect_calls.append(
-                    mock.call(c, v['connection_info'], inst_ref,
-                              allow_native_luks=True))
             migrate_data = migrate_data_obj.LibvirtLiveMigrateData(
-                is_shared_instance_path=False,
+                is_shared_instance_path=True,
                 is_shared_block_storage=False,
                 is_volume_backed=True,
                 block_migration=False,
@@ -11886,36 +11878,80 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 filename='foo',
                 src_supports_native_luks=True,
             )
-            ret = drvr.pre_live_migration(
-                c, inst_ref, block_device_info, nw_info, None, migrate_data)
-            expected_result = {
-            'graphics_listen_addrs': {'spice': None,
-                                      'vnc': None},
-            'target_connect_addr': None,
-            'serial_listen_addr': None,
-            'volume': {
-            '12345': {'connection_info': {u'data': {'device_path':
-              u'/dev/disk/by-path/ip-1.2.3.4:3260-iqn.abc.12345.opst-lun-X'},
-                      'serial': '12345'},
-                      'disk_info': {'bus': 'scsi',
-                                    'dev': 'sda',
-                                    'type': 'disk'}},
-            '67890': {'connection_info': {u'data': {'device_path':
-              u'/dev/disk/by-path/ip-1.2.3.4:3260-iqn.cde.67890.opst-lun-Z'},
-                      'serial': '67890'},
-                      'disk_info': {'bus': 'scsi',
-                                    'dev': 'sdb',
-                                    'type': 'disk'}}}}
-            self.assertEqual(
-                expected_result,
-                ret.to_legacy_dict(True)['pre_live_migration_result'])
-            self.assertTrue(os.path.exists('%s/%s/' % (tmpdir,
-                                                       inst_ref['name'])))
-            mock_connect.assert_has_calls(expected_connect_calls)
-            self.assertEqual(len(expected_connect_calls),
-                             mock_connect.call_count)
-            mock_plug.assert_called_once_with(test.MatchType(objects.Instance),
-                                              nw_info)
+
+            expected_migrate_data = migrate_data_obj.LibvirtLiveMigrateData(
+                is_shared_instance_path=True,
+                is_shared_block_storage=False,
+                is_volume_backed=True,
+                block_migration=False,
+                instance_relative_path=inst_ref['name'],
+                disk_over_commit=False,
+                disk_available_mb=123,
+                image_type='qcow2',
+                filename='foo',
+                serial_listen_ports=[],
+                supported_perf_events=[],
+                target_connect_addr=None,
+                src_supports_native_luks=True
+            )
+
+            bdmi_vol1 = migrate_data_obj.LibvirtLiveMigrateBDMInfo()
+            bdmi_vol1.boot_index = None
+            bdmi_vol1.format = None
+            bdmi_vol1.serial = uuids.vol1
+            bdmi_vol1.connection_info = {
+                u'data': {'device_path': u'/dev/disk/path/lun-X'},
+                u'serial': uuids.vol1}
+            bdmi_vol1.bus = 'scsi'
+            bdmi_vol1.dev = 'sda'
+            bdmi_vol1.type = 'disk'
+
+            bdmi_vol2 = migrate_data_obj.LibvirtLiveMigrateBDMInfo()
+            bdmi_vol2.boot_index = None
+            bdmi_vol2.format = None
+            bdmi_vol2.serial = uuids.vol2
+            bdmi_vol2.connection_info = {
+                u'data': {'device_path': u'/dev/disk/path/lun-Z'},
+                u'serial': uuids.vol2}
+            bdmi_vol2.bus = 'scsi'
+            bdmi_vol2.dev = 'sdb'
+            bdmi_vol2.type = 'disk'
+
+            if encrypted_volumes:
+                bdmi_vol1.encryption_secret_uuid = uuids.secret_vol1
+                bdmi_vol2.encryption_secret_uuid = uuids.secret_vol2
+
+            expected_migrate_data.bdms = [bdmi_vol1, bdmi_vol2]
+
+            returned_migrate_data = drvr.pre_live_migration(
+                self.context, inst_ref, block_device_info, [], None,
+                migrate_data)
+
+            expected_connect_volume_calls = []
+            for bdm in block_device_info['block_device_mapping']:
+                expected_call = mock.call(self.context, bdm['connection_info'],
+                                          inst_ref, allow_native_luks=True)
+                expected_connect_volume_calls.append(expected_call)
+            mock_connect_volume.assert_has_calls(expected_connect_volume_calls)
+
+            if encrypted_volumes:
+                mock_find_secret.assert_has_calls(
+                    [mock.call('volume', uuids.vol1),
+                     mock.call('volume', uuids.vol2)])
+
+            # FIXME(lyarwood): This is taken from test_os_vif_util.py and as
+            # noted there should be removed if the ComparableVersionedObject
+            # mix-in is ever used for these objects.
+            expected_migrate_data.obj_reset_changes(recursive=True)
+            returned_migrate_data.obj_reset_changes(recursive=True)
+            self.assertEqual(expected_migrate_data.obj_to_primitive(),
+                             returned_migrate_data.obj_to_primitive())
+
+    def test_pre_live_migration_volume_backed(self):
+        self._test_pre_live_migration_volume_backed()
+
+    def test_pre_live_migration_volume_backed_encrypted(self):
+        self._test_pre_live_migration_volume_backed(encrypted_volumes=True)
 
     @mock.patch.object(eventlet.greenthread, 'sleep',
                        side_effect=eventlet.sleep(0))
