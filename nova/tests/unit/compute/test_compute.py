@@ -988,7 +988,7 @@ class ComputeVolumeTestCase(BaseTestCase):
         for expected, got in zip(expected_result, preped_bdm):
             self.assertThat(expected, matchers.IsSubDictOf(got))
 
-    @mock.patch.object(objects.Service, 'get_minimum_version',
+    @mock.patch.object(objects.service, 'get_minimum_version_all_cells',
         return_value=17)
     def test_validate_bdm(self, mock_get_min_ver):
         def fake_get(self, context, res_id):
@@ -1333,7 +1333,7 @@ class ComputeVolumeTestCase(BaseTestCase):
                           self.context, self.instance,
                           instance_type, bdms)
 
-    @mock.patch.object(objects.Service, 'get_minimum_version',
+    @mock.patch.object(objects.service, 'get_minimum_version_all_cells',
                        return_value=17)
     @mock.patch.object(cinder.API, 'get')
     @mock.patch.object(cinder.API, 'check_availability_zone')

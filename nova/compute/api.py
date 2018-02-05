@@ -1323,8 +1323,11 @@ class API(base.Base):
                         "destination_type 'volume' need to have a non-zero "
                         "size specified"))
             elif volume_id is not None:
-                min_compute_version = objects.Service.get_minimum_version(
-                    context, 'nova-compute')
+                # The instance is being created and we don't know which
+                # cell it's going to land in, so check all cells.
+                min_compute_version = \
+                    objects.service.get_minimum_version_all_cells(
+                        context, ['nova-compute'])
                 try:
                     # NOTE(ildikov): The boot from volume operation did not
                     # reserve the volume before Pike and as the older computes
