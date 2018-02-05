@@ -13,12 +13,13 @@
 
 Notifications in Nova
 =====================
+
 Similarly to other OpenStack services Nova emits notifications to the message
-bus with the Notifier class provided by oslo.messaging [1]_. From the
-notification consumer point of view a notification consists of two parts: an
-envelope with a fixed structure defined by oslo.messaging and a payload defined
-by the service emitting the notification. The envelope format is the
-following::
+bus with the Notifier class provided by :oslo.messaging-doc:`oslo.messaging
+<reference/notifier.html>`. From the notification consumer point of view a
+notification consists of two parts: an envelope with a fixed structure defined
+by oslo.messaging and a payload defined by the service emitting the
+notification. The envelope format is the following::
 
     {
         "priority": <string, selected from a predefined list by the sender>,
@@ -62,7 +63,7 @@ The versioned notification concept is created to fix the shortcomings of the
 unversioned notifications. The envelope structure of the emitted notification
 is the same as in the unversioned notification case as it is provided by
 oslo.messaging. However the payload is not a free form dictionary but a
-serialized oslo versionedobject [2]_.
+serialized :oslo.versionedobjects-doc:`oslo versionedobjects object <>`.
 
 .. _service.update:
 
@@ -300,9 +301,9 @@ notification should be created with care to avoid future needs of adding extra
 level of inheritance that changes the name of the leaf class as that name is
 present in the payload class. If this cannot be avoided and the only change is
 the renaming then the version of the new payload shall be the same as the old
-payload was before the rename. See [3]_ as an example. If the renaming
+payload was before the rename. See [1]_ as an example. If the renaming
 involves any other changes on the payload (e.g. adding new fields) then the
-version of the new payload shall be higher than the old payload was. See [4]_
+version of the new payload shall be higher than the old payload was. See [2]_
 as an example.
 
 What should be in the notification payload
@@ -344,9 +345,5 @@ Existing versioned notifications
 
 .. versioned_notifications::
 
-
-
-.. [1] http://docs.openstack.org/developer/oslo.messaging/notifier.html
-.. [2] http://docs.openstack.org/developer/oslo.versionedobjects
-.. [3] https://review.openstack.org/#/c/463001/
-.. [4] https://review.openstack.org/#/c/453077/
+.. [1] https://review.openstack.org/#/c/463001/
+.. [2] https://review.openstack.org/#/c/453077/

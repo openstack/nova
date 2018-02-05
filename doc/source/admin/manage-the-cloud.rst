@@ -21,9 +21,8 @@ might be restricted by the Identity service.
    variables for convenience), for the ability to administer the cloud from the
    command line.
 
-   To install python-openstackclient, follow the instructions in the `OpenStack
-   User Guide
-   <https://docs.openstack.org/user-guide/common/cli-install-openstack-command-line-clients.html>`_.
+   For more information on ``python-openstackclient``, refer to the
+   :python-openstackclient-doc:`documentation <>`.
 
 #. Confirm the installation was successful:
 
@@ -44,9 +43,9 @@ might be restricted by the Identity service.
 
       $ openstack help SUBCOMMAND
 
-   For a complete list of ``openstack`` commands and parameters, see the
-   `OpenStack Command-Line Reference
-   <https://docs.openstack.org/cli-reference/openstack.html>`__.
+   For a complete list of ``openstack`` commands and parameters, refer to the
+   :python-openstackclient-doc:`OpenStack Command-Line Reference
+   <cli/index.html>`.
 
 #. Set the required parameters as environment variables to make running
    commands easier. For example, you can add ``--os-username`` as an

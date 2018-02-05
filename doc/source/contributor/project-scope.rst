@@ -22,8 +22,10 @@ should and should not be doing, and why.
 Please treat this as a discussion of interesting, and hopefully useful,
 examples. It is not intended to be an exhaustive policy statement.
 
+.. _nova-mission:
+
 Mission
---------
+-------
 
 Our mission statement starts with:
 

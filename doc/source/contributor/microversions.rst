@@ -356,8 +356,8 @@ necessary to add changes to other places which describe your change:
 * Add a verbose description to
   ``nova/api/openstack/compute/rest_api_version_history.rst``.
 
-* Add a `release note`_ with a ``features`` section announcing the new or
-  changed feature and the microversion.
+* Add a :doc:`release note </contributor/releasenotes>` with a ``features``
+  section announcing the new or changed feature and the microversion.
 
 * Update the expected versions in affected tests, for example in
   ``nova/tests/unit/api/openstack/compute/test_versions.py``.
@@ -375,7 +375,6 @@ necessary to add changes to other places which describe your change:
 * Update the `API Reference`_ documentation as appropriate.  The source is
   located under `api-ref/source/`.
 
-.. _release note: https://docs.openstack.org/nova/latest/contributor/releasenotes.html
 .. _API Reference: https://developer.openstack.org/api-ref/compute/
 
 Allocating a microversion

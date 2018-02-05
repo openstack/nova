@@ -88,3 +88,9 @@ latex_documents = [
     ('index', 'Placement.tex', u'OpenStack Placement API Documentation',
      u'OpenStack Foundation', 'manual'),
 ]
+
+# -- Options for openstackdocstheme -------------------------------------------
+
+openstack_projects = [
+    'nova',
+]

@@ -6,13 +6,12 @@ Release Notes
 What is reno ?
 --------------
 
-Nova uses `reno <http://docs.openstack.org/developer/reno/usage.html>`_ for
-providing release notes in-tree. That means that a patch can include a *reno
-file* or a series can have a follow-on change containing that file explaining
-what the impact is.
+Nova uses :reno-doc:`reno <>` for providing release notes in-tree. That means
+that a patch can include a *reno file* or a series can have a follow-on change
+containing that file explaining what the impact is.
 
-A *reno file* is a YAML file written in the releasenotes/notes tree which is
-generated using the reno tool this way:
+A *reno file* is a YAML file written in the ``releasenotes/notes`` tree which
+is generated using the *reno* tool this way:
 
 .. code-block:: bash
 
@@ -21,8 +20,7 @@ generated using the reno tool this way:
 where usually ``<name-your-file>`` can be ``bp-<blueprint_name>`` for a
 blueprint or ``bug-XXXXXX`` for a bugfix.
 
-Refer to the `reno documentation <http://docs.openstack.org/developer/reno/usage.html#editing-a-release-note>`_
-for the full list of sections.
+Refer to the :reno-doc:`reno documentation <user/index.html>` for more information.
 
 
 When a release note is needed
@@ -48,8 +46,10 @@ need to provide a release note :-)
     * If the patch has an `APIImpact <http://docs.openstack.org/infra/manual/developers.html#peer-review>`_ tag
     * For nova-manage and python-novaclient changes, if it adds or changes a
       new command, including adding new options to existing commands
-    * not all blueprints in general, just the ones impacting a `contractual API <http://docs.openstack.org/developer/nova/policies.html#public-contractual-apis>`_
-    * a new virt driver is provided or an existing driver impacts the `HypervisorSupportMatrix <http://docs.openstack.org/developer/nova/support-matrix.html>`_
+    * not all blueprints in general, just the ones impacting a
+      :doc:`/contributor/policies`
+    * a new virt driver is provided or an existing driver impacts the
+      :doc:`HypervisorSupportMatrix </user/support-matrix>`
 
 * ``critical``
     * Bugfixes categorized as Critical in Launchpad *impacting users*

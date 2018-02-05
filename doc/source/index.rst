@@ -30,13 +30,12 @@ servers to provide that service.
 
 It requires the following additional OpenStack services for basic function:
 
-* `Keystone <https://docs.openstack.org/keystone/latest/>`__: This provides
-  identity and authentication for all OpenStack services.
-* `Glance <https://docs.openstack.org/glance/latest/>`__: This provides the
-  compute image repository. All compute instances launch from glance images.
-* `Neutron <https://docs.openstack.org/neutron/latest/>`__: This is
-  responsible for provisioning the virtual or physical networks that compute
-  instances connect to on boot.
+* :keystone-doc:`Keystone <>`: This provides identity and authentication for
+  all OpenStack services.
+* :glance-doc:`Glance <>`: This provides the compute image repository. All
+  compute instances launch from glance images.
+* :neutron-doc:`Neutron <>`: This is responsible for provisioning the virtual
+  or physical networks that compute instances connect to on boot.
 
 It can also integrate with other services to include: persistent block
 storage, encrypted disks, and baremetal compute instances.
@@ -50,19 +49,15 @@ either tools or the API directly.
 Tools for using Nova
 --------------------
 
-* `Horizon
-  <https://docs.openstack.org/horizon/latest/user/launch-instances.html>`_: The
-  official web ui for the OpenStack Project.
-* `OpenStack Client
-  <https://docs.openstack.org/python-openstackclient/latest/>`_: The official
-  CLI for OpenStack Projects. You should use this as your CLI for most things,
-  it includes not just nova commands but also commands for most of the projects
-  in OpenStack.
-* `Nova Client
-  <https://docs.openstack.org/python-novaclient/latest/user/shell.html>`_: For
-  some very advanced features (or administrative commands) of nova you may need
-  to use nova client. It is still supported, but the ``openstack`` cli is
-  recommended.
+* :horizon-doc:`Horizon <user/launch-instances.html>`: The official web UI for
+  the OpenStack Project.
+* :python-openstackclient-doc:`OpenStack Client <>`: The official CLI for
+  OpenStack Projects. You should use this as your CLI for most things, it
+  includes not just nova commands but also commands for most of the projects in
+  OpenStack.
+* :python-novaclient-doc:`Nova Client <user/shell.html>`: For some very
+  advanced features (or administrative commands) of nova you may need to use
+  nova client. It is still supported, but the ``openstack`` cli is recommended.
 
 Writing to the API
 ------------------
@@ -117,11 +112,9 @@ Installation
 .. TODO(sdague): links to all the rest of the install guide pieces.
 
 The detailed install guide for nova. A functioning nova will also require
-having installed `keystone
-<https://docs.openstack.org/keystone/latest/install/>`__, `glance
-<https://docs.openstack.org/glance/latest/install/>`__, and `neutron
-<https://docs.openstack.org/neutron/latest/install/>`__. Please ensure that you
-follow their install guides first.
+having installed :keystone-doc:`keystone <install/>`, :glance-doc:`glance
+<install/>`, and :neutron-doc:`neutron <install/>`. Ensure that you follow
+their install guides first.
 
 .. toctree::
    :maxdepth: 2

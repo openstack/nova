@@ -35,10 +35,10 @@ To complete these tasks, use these parameters on the
 
 .. note::
 
-   To attach a volume to a running instance, see
-   `Attach a volume to an instance`_.
+   To attach a volume to a running instance, refer to the
+   :cinder-doc:`Cinder documentation
+   <cli/cli-manage-volumes.html#attach-a-volume-to-an-instance>`.
 
-.. _Attach a volume to an instance: https://docs.openstack.org/cinder/latest/cli/cli-manage-volumes.html#attach-a-volume-to-an-instance
 .. _Boot_instance_from_image_and_attach_non-bootable_volume:
 
 Boot instance from image and attach non-bootable volume
@@ -293,8 +293,8 @@ the volume to boot an instance.
 
 
    This requires an encrypted volume type, which must be created ahead of
-   time by an admin.  See
-   `Create an encrypted volume type <https://docs.openstack.org/horizon/latest/admin/manage-volumes.html#create-an-encrypted-volume-type>`_
+   time by an admin.  Refer to
+   :horizon-doc:`admin/manage-volumes.html#create-an-encrypted-volume-type`.
    in the OpenStack Horizon Administration Guide.
 
 #. Create a VM from previously created bootable volume. The volume is not

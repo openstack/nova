@@ -223,9 +223,7 @@ when you create the bug report).
 When do I need a blueprint vs a spec?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-For more details see:
-
--  https://docs.openstack.org/nova/latest/contributor/blueprints.html
+For more details refer to :doc:`/contributor/blueprints`.
 
 To understand this question, we need to understand why blueprints and
 specs are useful.
@@ -426,8 +424,7 @@ Interoperable API, supporting a vibrant ecosystem
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 An interoperable API that gives users on-demand access to compute
-resources is at the heart of Nova's mission:
-https://docs.openstack.org/nova/latest/contributor/project-scope.html#mission
+resources is at the heart of :ref:`nova's mission <nova-mission>`.
 
 Nova has a vibrant ecosystem of tools built on top of the current Nova
 API. All features should be designed to work with all technology
@@ -910,9 +907,8 @@ this technique during M.
 Feature Classification
 ~~~~~~~~~~~~~~~~~~~~~~
 
-This is a look at moving forward this effort:
-
--  https://docs.openstack.org/nova/latest/user/support-matrix.html
+This is a look at moving forward the :doc:`support matrix effort
+</user/support-matrix>`.
 
 The things we need to cover:
 

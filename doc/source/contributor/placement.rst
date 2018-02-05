@@ -40,10 +40,11 @@ increasing the number of WSGI application instances and scaling the RDBMS using
 traditional database scaling techniques.
 
 For sake of consistency and because there was initially intent to make the
-entities in the placement service available over RPC, `versioned objects`_ are
-used to provide the interface between the HTTP application layer and the
-SQLAlchemy-driven persistence layer. Even without RPC, these objects provide
-useful structuring and separation of the code.
+entities in the placement service available over RPC,
+:oslo.versionedobjects-doc:`versioned objects <>` are used to provide the
+interface between the HTTP application layer and the SQLAlchemy-driven
+persistence layer. Even without RPC, these objects provide useful structuring
+and separation of the code.
 
 Though the placement service doesn't aspire to be a `microservice` it does
 aspire to continue to be small and minimally complex. This means a relatively
@@ -145,8 +146,8 @@ there are a few bits of required housekeeping that must be done in the code:
   microversion and give a very brief summary of the added feature.
 * Update ``nova/api/openstack/placement/rest_api_version_history.rst``
   to add a more detailed section describing the new microversion.
-* Add a `release note`_ with a ``features`` section announcing the new or
-  changed feature and the microversion.
+* Add a :reno-doc:`release note <>` with a ``features`` section announcing the
+  new or changed feature and the microversion.
 * If the ``version_handler`` decorator (see below) has been used,
   increment ``TOTAL_VERSIONED_METHODS`` in
   ``nova/tests/unit/api/openstack/placement/test_microversion.py``.
@@ -413,13 +414,11 @@ When creating new code for the placement service, please be aware of the plan
 for an eventual extraction and avoid creating unnecessary interdependencies.
 
 .. _WSGI: https://www.python.org/dev/peps/pep-3333/
-.. _versioned objects: http://docs.openstack.org/developer/oslo.versionedobjects/
 .. _wsgify: http://docs.webob.org/en/latest/api/dec.html
 .. _WebOb: http://docs.webob.org/en/latest/
 .. _Request: http://docs.webob.org/en/latest/reference.html#request
 .. _Response: http://docs.webob.org/en/latest/#response
 .. _microversions: http://specs.openstack.org/openstack/api-wg/guidelines/microversion_specification.html
-.. _release note: https://docs.openstack.org/reno/latest/user/usage.html
 .. _gabbi: https://gabbi.readthedocs.io/
 .. _telemetry: http://specs.openstack.org/openstack/telemetry-specs/specs/kilo/declarative-http-tests.html
 .. _wsgi-intercept: http://wsgi-intercept.readthedocs.io/

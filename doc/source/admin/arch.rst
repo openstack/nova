@@ -49,7 +49,7 @@ support across different hypervisors, see :doc:`/user/support-matrix`.
 You can also orchestrate clouds using multiple hypervisors in different
 availability zones. Compute supports the following hypervisors:
 
-- `Baremetal <https://docs.openstack.org/ironic/latest/>`__
+- :ironic-doc:`Baremetal <>`
 
 - `Docker <https://www.docker.io>`__
 
@@ -173,9 +173,8 @@ virtualization system. It is still possible for the resulting instance to keep
 ephemeral storage, depending on the flavor selected. In this case, the root
 file system can be on the persistent volume, and its state is maintained, even
 if the instance is shut down. For more information about this type of
-configuration, see `Introduction to the Block Storage service
-<https://docs.openstack.org/cinder/latest/configuration/block-storage/block-storage-overview.html>`_
-in the OpenStack Configuration Reference.
+configuration, see :cinder-doc:`Introduction to the Block Storage service
+<configuration/block-storage/block-storage-overview.html>`.
 
 .. note::
 

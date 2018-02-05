@@ -66,9 +66,7 @@ Configure a flavor to request one virtual GPU:
 The enabled vGPU types on the compute hosts are not exposed to API users.
 Flavors configured for vGPU support can be tied to host aggregates as a means
 to properly schedule those flavors onto the compute hosts that support them.
-See the `host aggregates`_ guide for more information.
-
-.. _host aggregates: https://docs.openstack.org/nova/latest/user/aggregates.html
+See the :doc:`/user/aggregates` for more information.
 
 Create instances with virtual GPU devices
 -----------------------------------------
