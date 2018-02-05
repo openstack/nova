@@ -21,13 +21,13 @@ Synopsis
 Description
 ===========
 
-`nova-status` is a tool that provides routines for checking the status of a
-Nova deployment.
+:program:`nova-status` is a tool that provides routines for checking the status
+of a Nova deployment.
 
 Options
 =======
 
-The standard pattern for executing a `nova-status` command is::
+The standard pattern for executing a :program:`nova-status` command is::
 
     nova-status <category> <command> [<args>]
 
@@ -47,7 +47,7 @@ all commands in that category::
     nova-status upgrade
 
 These sections describe the available categories and arguments for
-`nova-status`.
+:program:`nova-status`.
 
 Upgrade
 ~~~~~~~

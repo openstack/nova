@@ -21,10 +21,8 @@ Synopsis
 Description
 ===========
 
-Starts the `nova-cells` service.
-
-The `nova-cells` service handles communication between cells and selects cells
-for new instances.
+:program:`nova-cells` is a server daemon that serves the Nova Cells service,
+which handles communication between cells and selects cells for new instances.
 
 .. warning:: Everything in this document is referring to Cells v1, which is
     not recommended for new deployments and is deprecated in favor of Cells v2

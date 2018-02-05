@@ -21,9 +21,9 @@ Synopsis
 Description
 ===========
 
-`nova-serialproxy` is a server daemon that serves the Nova Serial Websocket
-Proxy service, which provides a websocket proxy that is compatible with
-OpenStack Nova serial ports.
+:program:`nova-serialproxy` is a server daemon that serves the Nova Serial
+Websocket Proxy service, which provides a websocket proxy that is compatible
+with OpenStack Nova serial ports.
 
 Options
 =======

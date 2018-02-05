@@ -21,8 +21,8 @@ Synopsis
 Description
 ===========
 
-`nova-manage` controls cloud computing instances by managing various admin-only
-aspects of Nova.
+:program:`nova-manage` controls cloud computing instances by managing various
+admin-only aspects of Nova.
 
 Options
 =======

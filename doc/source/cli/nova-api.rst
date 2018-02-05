@@ -21,8 +21,8 @@ Synopsis
 Description
 ===========
 
-`nova-api` is a server daemon that serves the metadata and compute APIs in
-separate greenthreads
+:program:`nova-api` is a server daemon that serves the metadata and compute
+APIs in separate greenthreads.
 
 Options
 =======

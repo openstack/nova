@@ -21,13 +21,13 @@ Synopsis
 Description
 ===========
 
-`nova-network` is a server daemon that serves the Nova Network service, which
-is responsible for allocating IPs and setting up the network
+:program:`nova-network` is a server daemon that serves the Nova Network
+service, which is responsible for allocating IPs and setting up the network
 
 .. warning::
 
-   `nova-network` is deprecated and will be removed in an upcoming release. Use
-   `neutron` or another networking solution instead.
+   :program:`nova-network` is deprecated and will be removed in an upcoming
+   release. Use *neutron* or another networking solution instead.
 
 Options
 =======

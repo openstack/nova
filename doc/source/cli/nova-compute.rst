@@ -21,10 +21,10 @@ Synopsis
 Description
 ===========
 
-`nova-compute` is a server daemon that serves the Nova Compute service, which
-is responsible for building a disk image, launching an instance via the
-underlying virtualization driver, responding to calls to check the instance's
-state, attaching persistent storage, and terminating the instance.
+:program:`nova-compute` is a server daemon that serves the Nova Compute
+service, which is responsible for building a disk image, launching an instance
+via the underlying virtualization driver, responding to calls to check the
+instance's state, attaching persistent storage, and terminating the instance.
 
 Options
 =======

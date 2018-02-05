@@ -21,8 +21,8 @@ Synopsis
 Description
 ===========
 
-`nova-consoleauth` is a server daemon that serves the Nova Console Auth
-service, which provides authentication for Nova consoles.
+:program:`nova-consoleauth` is a server daemon that serves the Nova Console
+Auth service, which provides authentication for Nova consoles.
 
 Options
 =======
