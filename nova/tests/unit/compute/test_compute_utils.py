@@ -452,7 +452,7 @@ class UsageInfoTestCase(test.TestCase):
         image_ref_url = "%s/images/%s" % (
             glance.generate_glance_url(self.context), uuids.fake_image_ref)
         self.assertEqual(payload['image_ref_url'], image_ref_url)
-        self.compute.terminate_instance(self.context, instance, [], [])
+        self.compute.terminate_instance(self.context, instance, [])
 
     def test_notify_usage_exists_deleted_instance(self):
         # Ensure 'exists' notification generates appropriate usage data.
@@ -463,7 +463,7 @@ class UsageInfoTestCase(test.TestCase):
                         'other_data': 'meow'}
         instance.system_metadata.update(sys_metadata)
         instance.save()
-        self.compute.terminate_instance(self.context, instance, [], [])
+        self.compute.terminate_instance(self.context, instance, [])
         compute_utils.notify_usage_exists(
             rpc.get_notifier('compute'), self.context, instance)
         msg = fake_notifier.NOTIFICATIONS[-1]
@@ -828,7 +828,7 @@ class UsageInfoTestCase(test.TestCase):
     def test_notify_usage_exists_instance_not_found(self):
         # Ensure 'exists' notification generates appropriate usage data.
         instance = create_instance(self.context)
-        self.compute.terminate_instance(self.context, instance, [], [])
+        self.compute.terminate_instance(self.context, instance, [])
         compute_utils.notify_usage_exists(
             rpc.get_notifier('compute'), self.context, instance)
         msg = fake_notifier.NOTIFICATIONS[-1]
@@ -888,7 +888,7 @@ class UsageInfoTestCase(test.TestCase):
         image_ref_url = "%s/images/%s" % (
             glance.generate_glance_url(self.context), uuids.fake_image_ref)
         self.assertEqual(payload['image_ref_url'], image_ref_url)
-        self.compute.terminate_instance(self.context, instance, [], [])
+        self.compute.terminate_instance(self.context, instance, [])
 
     def test_notify_about_aggregate_update_with_id(self):
         # Set aggregate payload
