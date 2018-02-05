@@ -3045,8 +3045,8 @@ class ComputeManager(manager.Manager):
                     # attach and detach the volumes through attachment level
                     # operations. In this scenario _detach_volume will delete
                     # the existing attachment which would make the volume
-                    # status change to 'in-use' if we don't pre-create another
-                    # empty attachment before deleting the old one.
+                    # status change to 'available' if we don't pre-create
+                    # another empty attachment before deleting the old one.
                     attachment_id = None
                     if bdm.attachment_id:
                         attachment_id = self.volume_api.attachment_create(
