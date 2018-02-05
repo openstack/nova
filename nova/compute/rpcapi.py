@@ -341,6 +341,13 @@ class ComputeAPI(object):
         * 4.21 - prep_resize() now gets a 'host_list' parameter representing
                  potential alternate hosts for retries within a cell.
         * 4.22 - Add request_spec to rebuild_instance()
+
+        ... Version 5.0 is functionally equivalent to 4.22, aside from
+        removing deprecated parameters. Queens sends 5.0 by default,
+        can accept 4.x calls from Pike nodes, and can be pinned to 4.x
+        for Pike compatibility. All new changes should go against 5.x.
+
+        * 5.0  - Remove 4.x compatibility
     '''
 
     VERSION_ALIASES = {
@@ -352,11 +359,12 @@ class ComputeAPI(object):
         'newton': '4.13',
         'ocata': '4.13',
         'pike': '4.18',
+        'queens': '5.0',
     }
 
     def __init__(self):
         super(ComputeAPI, self).__init__()
-        target = messaging.Target(topic=RPC_TOPIC, version='4.0')
+        target = messaging.Target(topic=RPC_TOPIC, version='5.0')
         upgrade_level = CONF.upgrade_levels.compute
         if upgrade_level == 'auto':
             version_cap = self._determine_version_cap(target)
@@ -366,6 +374,24 @@ class ComputeAPI(object):
         serializer = objects_base.NovaObjectSerializer()
         default_client = self.get_client(target, version_cap, serializer)
         self.router = rpc.ClientRouter(default_client)
+
+    def _ver(self, ctxt, old):
+        """Determine compatibility version.
+
+        This is to be used when we could send either the current major or
+        a revision of the previous major when they are equivalent. This
+        should only be used by calls that are the exact same in the current
+        and previous major versions. Returns either old, or the current major
+        version.
+
+        :param old: The version under the previous major version that should
+                    be sent if we're pinned to it.
+        """
+        client = self.router.client(ctxt)
+        if client.can_send_version('5.0'):
+            return '5.0'
+        else:
+            return old
 
     def _determine_version_cap(self, target):
         global LAST_VERSION
@@ -422,7 +448,7 @@ class ComputeAPI(object):
                            parameter for the remote method.
         :param host: This is the host to send the message to.
         '''
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=host, version=version)
         cctxt.cast(ctxt, 'add_aggregate_host',
@@ -430,7 +456,7 @@ class ComputeAPI(object):
                    slave_info=slave_info)
 
     def add_fixed_ip_to_instance(self, ctxt, instance, network_id):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'add_fixed_ip_to_instance',
@@ -441,7 +467,7 @@ class ComputeAPI(object):
         kw = {'instance': instance, 'network_id': network_id,
               'port_id': port_id, 'requested_ip': requested_ip,
               'tag': tag}
-        version = '4.16'
+        version = self._ver(ctxt, '4.16')
 
         client = self.router.client(ctxt)
         if not client.can_send_version(version):
@@ -459,13 +485,13 @@ class ComputeAPI(object):
         return cctxt.call(ctxt, 'attach_interface', **kw)
 
     def attach_volume(self, ctxt, instance, bdm):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'attach_volume', instance=instance, bdm=bdm)
 
     def change_instance_metadata(self, ctxt, instance, diff):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'change_instance_metadata',
@@ -473,7 +499,7 @@ class ComputeAPI(object):
 
     def check_can_live_migrate_destination(self, ctxt, instance, destination,
                                            block_migration, disk_over_commit):
-        version = '4.11'
+        version = self._ver(ctxt, '4.11')
         client = self.router.client(ctxt)
         if not client.can_send_version(version):
             # NOTE(eliqiao): This is a new feature that is only available
@@ -501,7 +527,7 @@ class ComputeAPI(object):
 
     def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
         dest_check_data_obj = dest_check_data
-        version = '4.8'
+        version = self._ver(ctxt, '4.8')
         client = self.router.client(ctxt)
         if not client.can_send_version(version):
             version = '4.0'
@@ -521,27 +547,32 @@ class ComputeAPI(object):
             return result
 
     def check_instance_shared_storage(self, ctxt, instance, data, host=None):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(host, instance), version=version)
         return cctxt.call(ctxt, 'check_instance_shared_storage',
                           instance=instance,
                           data=data)
 
-    # TODO(melwitt): Remove the reservations parameter in version 5.0 of the
-    # RPC API.
     def confirm_resize(self, ctxt, instance, migration, host,
-            reservations=None, cast=True):
-        version = '4.0'
-        cctxt = self.router.client(ctxt).prepare(
+            cast=True):
+        client = self.router.client(ctxt)
+        # NOTE(danms): We had a deprecation in 5.0, which means we need to
+        # try to send that, as 4.max is not equivalent for us
+        version = '5.0'
+        msg_args = {}
+        if not client.can_send_version(version):
+            version = '4.0'
+            msg_args['reservations'] = None
+        cctxt = client.prepare(
                 server=_compute_host(host, instance), version=version)
         rpc_method = cctxt.cast if cast else cctxt.call
         return rpc_method(ctxt, 'confirm_resize',
                           instance=instance, migration=migration,
-                          reservations=reservations)
+                          **msg_args)
 
     def detach_interface(self, ctxt, instance, port_id):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'detach_interface',
@@ -549,7 +580,7 @@ class ComputeAPI(object):
 
     def detach_volume(self, ctxt, instance, volume_id, attachment_id=None):
         extra = {'attachment_id': attachment_id}
-        version = '4.7'
+        version = self._ver(ctxt, '4.7')
         client = self.router.client(ctxt)
         if not client.can_send_version(version):
             version = '4.0'
@@ -559,56 +590,64 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'detach_volume',
                    instance=instance, volume_id=volume_id, **extra)
 
-    # TODO(melwitt): Remove the reservations parameter in version 5.0 of the
-    # RPC API.
-    def finish_resize(self, ctxt, instance, migration, image, disk_info,
-            host, reservations=None):
-        version = '4.0'
-        cctxt = self.router.client(ctxt).prepare(
+    def finish_resize(self, ctxt, instance, migration, image, disk_info, host):
+        client = self.router.client(ctxt)
+        # NOTE(danms): We had a deprecation in 5.0, which means we need to
+        # try to send that, as 4.max is not equivalent for us
+        version = '5.0'
+        msg_args = {}
+        if not client.can_send_version(version):
+            version = '4.0'
+            msg_args['reservations'] = None
+        cctxt = client.prepare(
                 server=host, version=version)
         cctxt.cast(ctxt, 'finish_resize',
                    instance=instance, migration=migration,
-                   image=image, disk_info=disk_info, reservations=reservations)
+                   image=image, disk_info=disk_info, **msg_args)
 
-    # TODO(melwitt): Remove the reservations parameter in version 5.0 of the
-    # RPC API.
-    def finish_revert_resize(self, ctxt, instance, migration, host,
-                             reservations=None):
-        version = '4.0'
-        cctxt = self.router.client(ctxt).prepare(
+    def finish_revert_resize(self, ctxt, instance, migration, host):
+        client = self.router.client(ctxt)
+        # NOTE(danms): We had a deprecation in 5.0, which means we need to
+        # try to send that, as 4.max is not equivalent for us
+        version = '5.0'
+        msg_args = {}
+        if not client.can_send_version(version):
+            version = '4.0'
+            msg_args['reservations'] = None
+        cctxt = client.prepare(
                 server=host, version=version)
         cctxt.cast(ctxt, 'finish_revert_resize',
                    instance=instance, migration=migration,
-                   reservations=reservations)
+                   **msg_args)
 
     def get_console_output(self, ctxt, instance, tail_length):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'get_console_output',
                           instance=instance, tail_length=tail_length)
 
     def get_console_pool_info(self, ctxt, host, console_type):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=host, version=version)
         return cctxt.call(ctxt, 'get_console_pool_info',
                           console_type=console_type)
 
     def get_console_topic(self, ctxt, host):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=host, version=version)
         return cctxt.call(ctxt, 'get_console_topic')
 
     def get_diagnostics(self, ctxt, instance):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'get_diagnostics', instance=instance)
 
     def get_instance_diagnostics(self, ctxt, instance):
-        version = '4.14'
+        version = self._ver(ctxt, '4.14')
         client = self.router.client(ctxt)
         if not client.can_send_version(version):
             # NOTE(snikitin): Since version 4.14 method
@@ -622,42 +661,42 @@ class ComputeAPI(object):
         return cctxt.call(ctxt, 'get_instance_diagnostics', instance=instance)
 
     def get_vnc_console(self, ctxt, instance, console_type):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'get_vnc_console',
                           instance=instance, console_type=console_type)
 
     def get_spice_console(self, ctxt, instance, console_type):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'get_spice_console',
                           instance=instance, console_type=console_type)
 
     def get_rdp_console(self, ctxt, instance, console_type):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'get_rdp_console',
                           instance=instance, console_type=console_type)
 
     def get_mks_console(self, ctxt, instance, console_type):
-        version = '4.3'
+        version = self._ver(ctxt, '4.3')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'get_mks_console',
                           instance=instance, console_type=console_type)
 
     def get_serial_console(self, ctxt, instance, console_type):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'get_serial_console',
                           instance=instance, console_type=console_type)
 
     def validate_console_port(self, ctxt, instance, port, console_type):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'validate_console_port',
@@ -673,20 +712,20 @@ class ComputeAPI(object):
         :param mode:
         :param host: This is the host to send the message to.
         '''
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=host, version=version)
         return cctxt.call(ctxt, 'host_maintenance_mode',
                           host=host_param, mode=mode)
 
     def host_power_action(self, ctxt, host, action):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=host, version=version)
         return cctxt.call(ctxt, 'host_power_action', action=action)
 
     def inject_network_info(self, ctxt, instance):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'inject_network_info', instance=instance)
@@ -694,7 +733,7 @@ class ComputeAPI(object):
     def live_migration(self, ctxt, instance, dest, block_migration, host,
                        migration, migrate_data=None):
         args = {'migration': migration}
-        version = '4.8'
+        version = self._ver(ctxt, '4.8')
         client = self.router.client(ctxt)
         if not client.can_send_version(version):
             version = '4.2'
@@ -710,7 +749,7 @@ class ComputeAPI(object):
                    migrate_data=migrate_data, **args)
 
     def live_migration_force_complete(self, ctxt, instance, migration):
-        version = '4.12'
+        version = self._ver(ctxt, '4.12')
         kwargs = {}
         client = self.router.client(ctxt)
         if not client.can_send_version(version):
@@ -723,21 +762,21 @@ class ComputeAPI(object):
                    **kwargs)
 
     def live_migration_abort(self, ctxt, instance, migration_id):
-        version = '4.10'
+        version = self._ver(ctxt, '4.10')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'live_migration_abort', instance=instance,
                 migration_id=migration_id)
 
     def pause_instance(self, ctxt, instance):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'pause_instance', instance=instance)
 
     def post_live_migration_at_destination(self, ctxt, instance,
             block_migration, host):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=host, version=version)
         return cctxt.call(ctxt, 'post_live_migration_at_destination',
@@ -746,7 +785,7 @@ class ComputeAPI(object):
     def pre_live_migration(self, ctxt, instance, block_migration, disk,
             host, migrate_data=None):
         migrate_data_orig = migrate_data
-        version = '4.8'
+        version = self._ver(ctxt, '4.8')
         client = self.router.client(ctxt)
         if not client.can_send_version(version):
             version = '4.0'
@@ -766,17 +805,14 @@ class ComputeAPI(object):
         else:
             return result
 
-    # TODO(melwitt): Remove the reservations parameter in version 5.0 of the
-    # RPC API.
     def prep_resize(self, ctxt, instance, image, instance_type, host,
-                    migration, reservations=None, request_spec=None,
+                    migration, request_spec=None,
                     filter_properties=None, node=None,
                     clean_shutdown=True, host_list=None):
         image_p = jsonutils.to_primitive(image)
         msg_args = {'instance': instance,
                     'instance_type': instance_type,
                     'image': image_p,
-                    'reservations': reservations,
                     'request_spec': request_spec,
                     'filter_properties': filter_properties,
                     'node': node,
@@ -784,7 +820,12 @@ class ComputeAPI(object):
                     'clean_shutdown': clean_shutdown,
                     'host_list': host_list}
         client = self.router.client(ctxt)
-        version = '4.21'
+        # NOTE(danms): We had a deprecation in 5.0, which means we need to
+        # try to send that, as 4.max is not equivalent for us
+        version = '5.0'
+        if not client.can_send_version(version):
+            version = '4.21'
+            msg_args['reservations'] = None
         if not client.can_send_version(version):
             version = '4.18'
             del msg_args['host_list']
@@ -800,7 +841,7 @@ class ComputeAPI(object):
 
     def reboot_instance(self, ctxt, instance, block_device_info,
                         reboot_type):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'reboot_instance',
@@ -823,7 +864,7 @@ class ComputeAPI(object):
                  'scheduled_node': node,
                  'limits': limits,
                  'request_spec': request_spec}
-        version = '4.22'
+        version = self._ver(ctxt, '4.22')
         client = self.router.client(ctxt)
         if not client.can_send_version(version):
             version = '4.5'
@@ -853,7 +894,7 @@ class ComputeAPI(object):
                            parameter for the remote method.
         :param host: This is the host to send the message to.
         '''
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=host, version=version)
         cctxt.cast(ctxt, 'remove_aggregate_host',
@@ -861,14 +902,14 @@ class ComputeAPI(object):
                    slave_info=slave_info)
 
     def remove_fixed_ip_from_instance(self, ctxt, instance, address):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'remove_fixed_ip_from_instance',
                    instance=instance, address=address)
 
     def remove_volume_connection(self, ctxt, instance, volume_id, host):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=host, version=version)
         return cctxt.call(ctxt, 'remove_volume_connection',
@@ -876,7 +917,7 @@ class ComputeAPI(object):
 
     def rescue_instance(self, ctxt, instance, rescue_password,
                         rescue_image_ref=None, clean_shutdown=True):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         msg_args = {'rescue_password': rescue_password,
                     'clean_shutdown': clean_shutdown,
                     'rescue_image_ref': rescue_image_ref,
@@ -887,22 +928,25 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'rescue_instance', **msg_args)
 
     def reset_network(self, ctxt, instance):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'reset_network', instance=instance)
 
-    # TODO(melwitt): Remove the reservations parameter in version 5.0 of the
-    # RPC API.
     def resize_instance(self, ctxt, instance, migration, image, instance_type,
-                        reservations=None, clean_shutdown=True):
+                        clean_shutdown=True):
         msg_args = {'instance': instance, 'migration': migration,
-                    'image': image, 'reservations': reservations,
+                    'image': image,
                     'instance_type': instance_type,
                     'clean_shutdown': clean_shutdown,
         }
-        version = '4.1'
+        # NOTE(danms): We had a deprecation in 5.0, which means we need to
+        # try to send that, as 4.max is not equivalent for us
+        version = '5.0'
         client = self.router.client(ctxt)
+        if not client.can_send_version(version):
+            version = '4.1'
+            msg_args['reservations'] = None
         if not client.can_send_version(version):
             msg_args['instance_type'] = objects_base.obj_to_primitive(
                                             instance_type)
@@ -912,24 +956,30 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'resize_instance', **msg_args)
 
     def resume_instance(self, ctxt, instance):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'resume_instance', instance=instance)
 
-    def revert_resize(self, ctxt, instance, migration, host,
-                      reservations=None):
-        version = '4.0'
-        cctxt = self.router.client(ctxt).prepare(
+    def revert_resize(self, ctxt, instance, migration, host):
+        client = self.router.client(ctxt)
+        # NOTE(danms): We had a deprecation in 5.0, which means we need to
+        # try to send that, as 4.max is not equivalent for us
+        version = '5.0'
+        msg_args = {}
+        if not client.can_send_version(version):
+            version = '4.0'
+            msg_args['reservations'] = None
+        cctxt = client.prepare(
                 server=_compute_host(host, instance), version=version)
         cctxt.cast(ctxt, 'revert_resize',
                    instance=instance, migration=migration,
-                   reservations=reservations)
+                   **msg_args)
 
     def rollback_live_migration_at_destination(self, ctxt, instance, host,
                                                destroy_disks=True,
                                                migrate_data=None):
-        version = '4.8'
+        version = self._ver(ctxt, '4.8')
         client = self.router.client(ctxt)
         if not client.can_send_version(version):
             version = '4.0'
@@ -943,21 +993,21 @@ class ComputeAPI(object):
                    instance=instance, **extra)
 
     def set_admin_password(self, ctxt, instance, new_pass):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'set_admin_password',
                           instance=instance, new_pass=new_pass)
 
     def set_host_enabled(self, ctxt, host, enabled):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=host, version=version)
         return cctxt.call(ctxt, 'set_host_enabled', enabled=enabled)
 
     def swap_volume(self, ctxt, instance, old_volume_id, new_volume_id,
                     new_attachment_id=None):
-        version = '4.17'
+        version = self._ver(ctxt, '4.17')
         client = self.router.client(ctxt)
         kwargs = dict(instance=instance,
                       old_volume_id=old_volume_id,
@@ -971,7 +1021,7 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'swap_volume', **kwargs)
 
     def get_host_uptime(self, ctxt, host):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=host, version=version)
         return cctxt.call(ctxt, 'get_host_uptime')
@@ -983,7 +1033,7 @@ class ComputeAPI(object):
               'volume_id': volume_id, 'disk_bus': disk_bus,
               'device_type': device_type, 'tag': tag,
               'multiattach': multiattach}
-        version = '4.20'
+        version = self._ver(ctxt, '4.20')
 
         client = self.router.client(ctxt)
         if not client.can_send_version(version):
@@ -1011,7 +1061,7 @@ class ComputeAPI(object):
 
     def backup_instance(self, ctxt, instance, image_id, backup_type,
                         rotation):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'backup_instance',
@@ -1021,7 +1071,7 @@ class ComputeAPI(object):
                    rotation=rotation)
 
     def snapshot_instance(self, ctxt, instance, image_id):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'snapshot_instance',
@@ -1029,7 +1079,7 @@ class ComputeAPI(object):
                    image_id=image_id)
 
     def start_instance(self, ctxt, instance):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'start_instance', instance=instance)
@@ -1037,55 +1087,64 @@ class ComputeAPI(object):
     def stop_instance(self, ctxt, instance, do_cast=True, clean_shutdown=True):
         msg_args = {'instance': instance,
                     'clean_shutdown': clean_shutdown}
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         rpc_method = cctxt.cast if do_cast else cctxt.call
         return rpc_method(ctxt, 'stop_instance', **msg_args)
 
     def suspend_instance(self, ctxt, instance):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'suspend_instance', instance=instance)
 
-    # TODO(melwitt): Remove the reservations parameter in version 5.0 of the
-    # RPC API.
-    def terminate_instance(self, ctxt, instance, bdms, reservations=None,
-                           delete_type=None):
+    def terminate_instance(self, ctxt, instance, bdms, delete_type=None):
         # NOTE(rajesht): The `delete_type` parameter is passed because
         # the method signature has to match with `terminate_instance()`
         # method of cells rpcapi.
-        version = '4.0'
-        cctxt = self.router.client(ctxt).prepare(
+        client = self.router.client(ctxt)
+        # NOTE(danms): We had a deprecation in 5.0, which means we need to
+        # try to send that, as 4.max is not equivalent for us
+        version = '5.0'
+        msg_args = {}
+        if not client.can_send_version(version):
+            version = '4.0'
+            msg_args['reservations'] = None
+        cctxt = client.prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'terminate_instance',
                    instance=instance, bdms=bdms,
-                   reservations=reservations)
+                   **msg_args)
 
     def unpause_instance(self, ctxt, instance):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'unpause_instance', instance=instance)
 
     def unrescue_instance(self, ctxt, instance):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'unrescue_instance', instance=instance)
 
-    # TODO(melwitt): Remove the reservations parameter in version 5.0 of the
-    # RPC API.
-    def soft_delete_instance(self, ctxt, instance, reservations=None):
-        version = '4.0'
-        cctxt = self.router.client(ctxt).prepare(
+    def soft_delete_instance(self, ctxt, instance):
+        client = self.router.client(ctxt)
+        # NOTE(danms): We had a deprecation in 5.0, which means we need to
+        # try to send that, as 4.max is not equivalent for us
+        version = '5.0'
+        msg_args = {}
+        if not client.can_send_version(version):
+            version = '4.0'
+            msg_args['reservations'] = None
+        cctxt = client.prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'soft_delete_instance',
-                   instance=instance, reservations=reservations)
+                   instance=instance, **msg_args)
 
     def restore_instance(self, ctxt, instance):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'restore_instance', instance=instance)
@@ -1094,7 +1153,7 @@ class ComputeAPI(object):
                         clean_shutdown=True):
         msg_args = {'instance': instance, 'image_id': image_id,
                     'clean_shutdown': clean_shutdown}
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'shelve_instance', **msg_args)
@@ -1102,14 +1161,14 @@ class ComputeAPI(object):
     def shelve_offload_instance(self, ctxt, instance,
                                 clean_shutdown=True):
         msg_args = {'instance': instance, 'clean_shutdown': clean_shutdown}
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'shelve_offload_instance', **msg_args)
 
     def unshelve_instance(self, ctxt, instance, host, image=None,
                           filter_properties=None, node=None):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         msg_kwargs = {
             'instance': instance,
             'image': image,
@@ -1122,7 +1181,7 @@ class ComputeAPI(object):
 
     def volume_snapshot_create(self, ctxt, instance, volume_id,
                                create_info):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'volume_snapshot_create', instance=instance,
@@ -1130,7 +1189,7 @@ class ComputeAPI(object):
 
     def volume_snapshot_delete(self, ctxt, instance, volume_id, snapshot_id,
                                delete_info):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'volume_snapshot_delete', instance=instance,
@@ -1141,7 +1200,7 @@ class ComputeAPI(object):
         instance = instances[0]
         cctxt = self.router.client(ctxt).prepare(
             server=_compute_host(host, instance),
-            version='4.0')
+            version=self._ver(ctxt, '4.0'))
         cctxt.cast(ctxt, 'external_instance_event', instances=instances,
                    events=events)
 
@@ -1167,7 +1226,7 @@ class ComputeAPI(object):
                   "host_list": host_list,
                  }
         client = self.router.client(ctxt)
-        version = '4.19'
+        version = self._ver(ctxt, '4.19')
         if not client.can_send_version(version):
             version = '4.0'
             kwargs.pop("host_list")
@@ -1175,20 +1234,20 @@ class ComputeAPI(object):
         cctxt.cast(ctxt, 'build_and_run_instance', **kwargs)
 
     def quiesce_instance(self, ctxt, instance):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         return cctxt.call(ctxt, 'quiesce_instance', instance=instance)
 
     def unquiesce_instance(self, ctxt, instance, mapping=None):
-        version = '4.0'
+        version = self._ver(ctxt, '4.0')
         cctxt = self.router.client(ctxt).prepare(
                 server=_compute_host(None, instance), version=version)
         cctxt.cast(ctxt, 'unquiesce_instance', instance=instance,
                    mapping=mapping)
 
     def refresh_instance_security_rules(self, ctxt, instance, host):
-        version = '4.4'
+        version = self._ver(ctxt, '4.4')
         client = self.router.client(ctxt)
         if not client.can_send_version(version):
             version = '4.0'
@@ -1199,7 +1258,7 @@ class ComputeAPI(object):
                    instance=instance)
 
     def trigger_crash_dump(self, ctxt, instance):
-        version = '4.6'
+        version = self._ver(ctxt, '4.6')
         client = self.router.client(ctxt)
 
         if not client.can_send_version(version):
