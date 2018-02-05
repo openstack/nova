@@ -1268,8 +1268,10 @@ class _BaseTaskTestCase(object):
                               'select_destinations',
                               side_effect=exc.NoValidHost(reason='')),
             mock.patch('nova.scheduler.utils.build_request_spec',
-                       return_value=request_spec)
-        ) as (rebuild_mock, sig_mock, fp_mock, select_dest_mock, bs_mock):
+                       return_value=request_spec),
+            mock.patch.object(scheduler_utils, 'set_vm_state_and_notify')
+        ) as (rebuild_mock, sig_mock, fp_mock,
+              select_dest_mock, bs_mock, set_vm_state_and_notify_mock):
             self.assertRaises(exc.NoValidHost,
                               self.conductor_manager.rebuild_instance,
                               context=self.context, instance=inst_obj,
@@ -1277,7 +1279,11 @@ class _BaseTaskTestCase(object):
             fp_mock.assert_called_once_with(self.context, request_spec,
                                             filter_properties)
             select_dest_mock.assert_called_once_with(self.context, fake_spec)
+            self.assertEqual(
+                set_vm_state_and_notify_mock.call_args[0][4]['vm_state'],
+                vm_states.ERROR)
             self.assertFalse(rebuild_mock.called)
+            self.assertIn('No valid host', inst_obj.fault.message)
 
     @mock.patch.object(conductor_manager.compute_rpcapi.ComputeAPI,
                        'rebuild_instance')
@@ -1309,12 +1315,14 @@ class _BaseTaskTestCase(object):
                           self.context,
                           inst_obj,
                           **rebuild_args)
-        updates = {'vm_state': vm_states.ACTIVE, 'task_state': None}
+        updates = {'vm_state': vm_states.ERROR, 'task_state': None}
         state_mock.assert_called_once_with(self.context, inst_obj.uuid,
                                            'rebuild_server', updates,
                                            exception, request_spec)
         self.assertFalse(select_dest_mock.called)
         self.assertFalse(rebuild_mock.called)
+        self.assertIn('ServerGroup policy is not supported',
+                      inst_obj.fault.message)
 
     def test_rebuild_instance_evacuate_migration_record(self):
         inst_obj = self._create_fake_instance_obj()

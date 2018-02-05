@@ -1,0 +1,7 @@
+---
+fixes:
+  - |
+    If scheduling fails during rebuild the server instance will go to ERROR
+    state and a fault will be recorded. `Bug 1744325`_
+
+    .. _Bug 1744325: https://bugs.launchpad.net/nova/+bug/1744325
