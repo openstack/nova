@@ -86,6 +86,8 @@ resources will help you get started with consuming the API directly.
 * :doc:`Block Device Mapping </user/block-device-mapping>`: One of the trickier
   parts to understand is the Block Device Mapping parameters used to connect
   specific block devices to computes. This deserves its own deep dive.
+* :doc:`Configuration drive </user/config-drive>`: Provide information to the
+  guest instance when it is created.
 
 For Operators
 =============
@@ -261,6 +263,7 @@ looking parts of our architecture. These are collected below.
    user/cells
    user/cellsv2_layout
    user/conductor
+   user/config-drive
    user/feature-classification
    user/filter-scheduler
    user/manage-ip-addresses
