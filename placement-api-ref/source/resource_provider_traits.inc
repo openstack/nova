@@ -102,6 +102,12 @@ Error response codes: itemNotFound(404), conflict(409)
 * `409 Conflict` if the provider's traits are updated by another
   thread while attempting the operation.
 
+.. note:: Since this request does not accept the resource provider generation,
+          it is not safe to use when multiple threads are managing traits for
+          a single provider.  In such situations, use the
+          ``PUT /resource_providers/{uuid}/traits`` API with an empty
+          ``traits`` list.
+
 Request
 -------
 
