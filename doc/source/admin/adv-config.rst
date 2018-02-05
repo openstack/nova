@@ -26,3 +26,4 @@ instance for these kind of workloads.
    pci-passthrough
    cpu-topologies
    huge-pages
+   virtual-gpu
