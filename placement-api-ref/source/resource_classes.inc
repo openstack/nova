@@ -38,9 +38,7 @@ Create resource class
 .. rest_method:: POST /resource_classes
 
 Create a new resource class. The new class must be a *custom* resource class,
-prefixed with `CUSTOM_` and distinct from the
-`standard <https://docs.openstack.org/os-traits/latest/>`__
-resource classes.
+prefixed with `CUSTOM_` and distinct from the standard resource classes.
 
 Normal Response Codes: 201
 
