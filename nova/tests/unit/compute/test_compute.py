@@ -1383,13 +1383,13 @@ class ComputeVolumeTestCase(BaseTestCase):
     def test_volume_snapshot_delete(self):
         self.assertRaises(messaging.ExpectedException,
                 self.compute.volume_snapshot_delete, self.context,
-                self.instance_object, 'fake_id', 'fake_id2', {})
+                self.instance_object, uuids.volume, uuids.snapshot, {})
 
         self.compute = utils.ExceptionHelper(self.compute)
 
         self.assertRaises(NotImplementedError,
                 self.compute.volume_snapshot_delete, self.context,
-                self.instance_object, 'fake_id', 'fake_id2', {})
+                self.instance_object, uuids.volume, uuids.snapshot, {})
 
     @mock.patch.object(cinder.API, 'create',
                        side_effect=exception.OverQuota(overs='something'))
@@ -2118,7 +2118,7 @@ class ComputeTestCase(BaseTestCase,
             return {'id': volume_id,
                     'attach_status': 'attached',
                     'attachments': {instance.uuid: {
-                                       'attachment_id': 'abc123'
+                                       'attachment_id': uuids.attachment_id
                                         }
                                     },
                     'multiattach': False
@@ -2308,7 +2308,7 @@ class ComputeTestCase(BaseTestCase,
                       fake_delete)
 
         instance = self._create_fake_instance_obj()
-        image = {'id': 'fake_id'}
+        image = {'id': uuids.image}
         # Adding shelved information to instance system metadata.
         shelved_time = timeutils.utcnow().isoformat()
         instance.system_metadata['shelved_at'] = shelved_time
@@ -3442,7 +3442,7 @@ class ComputeTestCase(BaseTestCase,
         inst_obj = self._get_snapshotting_instance()
         inst_obj.image_ref = ''
         inst_obj.save()
-        self.compute.snapshot_instance(self.context, image_id=uuids.image,
+        self.compute.snapshot_instance(self.context, image_id=uuids.snapshot,
                                        instance=inst_obj)
 
     def _test_snapshot_fails(self, raise_during_cleanup, method,
@@ -3468,7 +3468,7 @@ class ComputeTestCase(BaseTestCase,
             if method == 'snapshot':
                 self.assertRaises(test.TestingException,
                                   self.compute.snapshot_instance,
-                                  self.context, image_id=uuids.image,
+                                  self.context, image_id=uuids.snapshot,
                                   instance=inst_obj)
                 mock_event.assert_called_once_with(self.context,
                                                    'compute_snapshot_instance',
@@ -3476,7 +3476,7 @@ class ComputeTestCase(BaseTestCase,
             else:
                 self.assertRaises(test.TestingException,
                                   self.compute.backup_instance,
-                                  self.context, image_id=uuids.image,
+                                  self.context, image_id=uuids.snapshot,
                                   instance=inst_obj, backup_type='fake',
                                   rotation=1)
                 mock_event.assert_called_once_with(self.context,
@@ -3511,7 +3511,7 @@ class ComputeTestCase(BaseTestCase,
         self.fake_image_delete_called = False
 
         def fake_show(self_, context, image_id, **kwargs):
-            self.assertEqual(uuids.image, image_id)
+            self.assertEqual(uuids.snapshot, image_id)
             image = {'id': image_id,
                      'status': status}
             return image
@@ -3521,7 +3521,7 @@ class ComputeTestCase(BaseTestCase,
 
         def fake_delete(self_, context, image_id):
             self.fake_image_delete_called = True
-            self.assertEqual(uuids.image, image_id)
+            self.assertEqual(uuids.snapshot, image_id)
 
         self.stub_out('nova.tests.unit.image.fake._FakeImageService.delete',
                       fake_delete)
@@ -3535,11 +3535,11 @@ class ComputeTestCase(BaseTestCase,
 
         inst_obj = self._get_snapshotting_instance()
 
-        self.compute.snapshot_instance(self.context, image_id=uuids.image,
+        self.compute.snapshot_instance(self.context, image_id=uuids.snapshot,
                                        instance=inst_obj)
 
     def test_snapshot_fails_with_glance_error(self):
-        image_not_found = exception.ImageNotFound(image_id=uuids.image)
+        image_not_found = exception.ImageNotFound(image_id=uuids.snapshot)
         self._test_snapshot_deletes_image_on_failure('error', image_not_found)
         self.assertFalse(self.fake_image_delete_called)
         self._assert_state({'task_state': None})
@@ -3569,14 +3569,14 @@ class ComputeTestCase(BaseTestCase,
         inst_obj = self._get_snapshotting_instance()
         inst_obj.task_state = task_states.DELETING
         inst_obj.save()
-        self.compute.snapshot_instance(self.context, image_id=uuids.image,
+        self.compute.snapshot_instance(self.context, image_id=uuids.snapshot,
                                        instance=inst_obj)
 
     def test_snapshot_handles_cases_when_instance_is_not_found(self):
         inst_obj = self._get_snapshotting_instance()
         inst_obj2 = objects.Instance.get_by_uuid(self.context, inst_obj.uuid)
         inst_obj2.destroy()
-        self.compute.snapshot_instance(self.context, image_id=uuids.image,
+        self.compute.snapshot_instance(self.context, image_id=uuids.snapshot,
                                        instance=inst_obj)
 
     def _assert_state(self, state_dict):
@@ -4919,7 +4919,7 @@ class ComputeTestCase(BaseTestCase,
                         **{'context': self.context,
                            'source_type': 'volume',
                            'destination_type': 'volume',
-                           'volume_id': uuids.volume_id,
+                           'volume_id': uuids.volume,
                            'instance_uuid': instance['uuid'],
                            'device_name': '/dev/vdc'})
         bdm.create()
@@ -9828,7 +9828,7 @@ class ComputeAPITestCase(BaseTestCase):
                 self.compute_api.attach_volume,
                 self.context,
                 instance,
-                {'id': 'fake-volume-id'},
+                {'id': uuids.volume},
                 '/dev/vdb')
 
     def test_no_detach_volume_in_rescue_state(self):
@@ -10297,7 +10297,7 @@ class ComputeAPITestCase(BaseTestCase):
                 fake_bdm)
         instance = self._create_fake_instance_obj()
         instance.id = 42
-        fake_volume = {'id': 'fake-volume-id', 'multiattach': False}
+        fake_volume = {'id': uuids.volume, 'multiattach': False}
 
         with test.nested(
             mock.patch.object(objects.Service, 'get_minimum_version',
@@ -10312,20 +10312,20 @@ class ComputeAPITestCase(BaseTestCase):
               mock_reserve_vol, mock_reserve_bdm, mock_attach):
 
             self.compute_api.attach_volume(
-                    self.context, instance, 'fake-volume-id',
+                    self.context, instance, uuids.volume,
                     '/dev/vdb', 'ide', 'cdrom')
 
             mock_reserve_bdm.assert_called_once_with(
-                    self.context, instance, '/dev/vdb', 'fake-volume-id',
+                    self.context, instance, '/dev/vdb', uuids.volume,
                     disk_bus='ide', device_type='cdrom', tag=None,
                     multiattach=False)
             self.assertEqual(mock_get.call_args,
-                             mock.call(self.context, 'fake-volume-id'))
+                             mock.call(self.context, uuids.volume))
             self.assertEqual(mock_check_availability_zone.call_args,
                              mock.call(
                                  self.context, fake_volume, instance=instance))
             mock_reserve_vol.assert_called_once_with(
-                    self.context, 'fake-volume-id')
+                    self.context, uuids.volume)
             a, kw = mock_attach.call_args
             self.assertEqual(a[2].device_name, '/dev/vdb')
             self.assertEqual(a[2].volume_id, uuids.volume_id)
@@ -10340,7 +10340,7 @@ class ComputeAPITestCase(BaseTestCase):
                 fake_bdm)
         instance = self._create_fake_instance_obj()
         instance.id = 42
-        fake_volume = {'id': 'fake-volume-id', 'multiattach': False}
+        fake_volume = {'id': uuids.volume, 'multiattach': False}
 
         with test.nested(
             mock.patch.object(objects.Service, 'get_minimum_version',
@@ -10360,22 +10360,22 @@ class ComputeAPITestCase(BaseTestCase):
               mock_check_availability_zone, mock_attachment_create,
               mock_bdm_save, mock_reserve_bdm, mock_attach):
             mock_no_bdm.side_effect = exception.VolumeBDMNotFound(
-                                          volume_id='fake-volume-id')
+                    volume_id=uuids.volume)
             self.compute_api.attach_volume(
-                    self.context, instance, 'fake-volume-id',
+                    self.context, instance, uuids.volume,
                     '/dev/vdb', 'ide', 'cdrom')
 
             mock_reserve_bdm.assert_called_once_with(
-                    self.context, instance, '/dev/vdb', 'fake-volume-id',
+                    self.context, instance, '/dev/vdb', uuids.volume,
                     disk_bus='ide', device_type='cdrom', tag=None,
                     multiattach=False)
             self.assertEqual(mock_get.call_args,
-                             mock.call(self.context, 'fake-volume-id'))
+                             mock.call(self.context, uuids.volume))
             self.assertEqual(mock_check_availability_zone.call_args,
                              mock.call(
                                  self.context, fake_volume, instance=instance))
             mock_attachment_create.assert_called_once_with(self.context,
-                                                           'fake-volume-id',
+                                                           uuids.volume,
                                                            instance.uuid)
             a, kw = mock_attach.call_args
             self.assertEqual(a[2].device_name, '/dev/vdb')
@@ -10391,7 +10391,7 @@ class ComputeAPITestCase(BaseTestCase):
                 fake_bdm)
         instance = self._create_fake_instance_obj()
         instance.id = 42
-        fake_volume = {'id': 'fake-volume-id', 'multiattach': False}
+        fake_volume = {'id': uuids.volume, 'multiattach': False}
 
         with test.nested(
             mock.patch.object(objects.Service, 'get_minimum_version',
@@ -10412,23 +10412,23 @@ class ComputeAPITestCase(BaseTestCase):
             mock_attachment_create.side_effect = \
                 exception.CinderAPIVersionNotAvailable(version='3.44')
             self.compute_api.attach_volume(
-                    self.context, instance, 'fake-volume-id',
+                    self.context, instance, uuids.volume,
                     '/dev/vdb', 'ide', 'cdrom')
 
             mock_reserve_bdm.assert_called_once_with(
-                    self.context, instance, '/dev/vdb', 'fake-volume-id',
+                    self.context, instance, '/dev/vdb', uuids.volume,
                     disk_bus='ide', device_type='cdrom', tag=None,
                     multiattach=False)
             self.assertEqual(mock_get.call_args,
-                             mock.call(self.context, 'fake-volume-id'))
+                             mock.call(self.context, uuids.volume))
             self.assertEqual(mock_check_availability_zone.call_args,
                              mock.call(
                                  self.context, fake_volume, instance=instance))
             mock_attachment_create.assert_called_once_with(self.context,
-                                                           'fake-volume-id',
+                                                           uuids.volume,
                                                            instance.uuid)
             mock_reserve_vol.assert_called_once_with(
-                    self.context, 'fake-volume-id')
+                    self.context, uuids.volume)
             a, kw = mock_attach.call_args
             self.assertEqual(a[2].device_name, '/dev/vdb')
             self.assertEqual(a[2].volume_id, uuids.volume_id)
@@ -10443,7 +10443,7 @@ class ComputeAPITestCase(BaseTestCase):
                 fake_bdm)
         instance = self._create_fake_instance_obj()
         instance.id = 42
-        fake_volume = {'id': 'fake-volume-id', 'multiattach': False}
+        fake_volume = {'id': uuids.volume, 'multiattach': False}
 
         with test.nested(
             mock.patch.object(objects.Service, 'get_minimum_version',
@@ -10464,23 +10464,23 @@ class ComputeAPITestCase(BaseTestCase):
               mock_check_availability_zone, mock_attachment_create,
               mock_bdm_save, mock_reserve_bdm, mock_attach):
             mock_no_bdm.side_effect = exception.VolumeBDMNotFound(
-                                          volume_id='fake-volume-id')
+                                          volume_id=uuids.volume)
 
             self.compute_api.attach_volume(
-                    self.context, instance, 'fake-volume-id',
+                    self.context, instance, uuids.volume,
                     device=None)
 
             mock_reserve_bdm.assert_called_once_with(
-                    self.context, instance, None, 'fake-volume-id',
+                    self.context, instance, None, uuids.volume,
                     disk_bus=None, device_type=None, tag=None,
                     multiattach=False)
             self.assertEqual(mock_get.call_args,
-                             mock.call(self.context, 'fake-volume-id'))
+                             mock.call(self.context, uuids.volume))
             self.assertEqual(mock_check_availability_zone.call_args,
                              mock.call(
                                  self.context, fake_volume, instance=instance))
             mock_attachment_create.assert_called_once_with(self.context,
-                                                           'fake-volume-id',
+                                                           uuids.volume,
                                                            instance.uuid)
             a, kw = mock_attach.call_args
             self.assertEqual(a[2].volume_id, uuids.volume_id)
@@ -10489,7 +10489,7 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self._create_fake_instance_obj()
         fake_bdm = objects.BlockDeviceMapping(
             **fake_block_device.FakeDbBlockDeviceDict(
-                {'volume_id': 'fake-volume-id',
+                {'volume_id': uuids.volume,
                  'source_type': 'volume',
                  'destination_type': 'volume',
                  'device_type': 'cdrom',
@@ -10505,7 +10505,7 @@ class ComputeAPITestCase(BaseTestCase):
              mock.patch.object(compute_utils, 'EventReporter')
         ) as (mock_bdm_create, mock_attach_and_reserve, mock_attach,
               mock_event):
-            volume = {'id': 'fake-volume-id'}
+            volume = {'id': uuids.volume}
             self.compute_api._attach_volume_shelved_offloaded(
                     self.context, instance, volume,
                     '/dev/vdb', 'ide', 'cdrom')
@@ -10514,7 +10514,7 @@ class ComputeAPITestCase(BaseTestCase):
                                                             instance,
                                                             fake_bdm)
             mock_attach.assert_called_once_with(self.context,
-                                                'fake-volume-id',
+                                                uuids.volume,
                                                 instance.uuid,
                                                 '/dev/vdb')
             mock_event.assert_called_once_with(
@@ -10526,7 +10526,7 @@ class ComputeAPITestCase(BaseTestCase):
         instance = self._create_fake_instance_obj()
         fake_bdm = objects.BlockDeviceMapping(
             **fake_block_device.FakeDbBlockDeviceDict(
-                {'volume_id': 'fake-volume-id',
+                {'volume_id': uuids.volume,
                  'source_type': 'volume',
                  'destination_type': 'volume',
                  'device_type': 'cdrom',
@@ -10545,7 +10545,7 @@ class ComputeAPITestCase(BaseTestCase):
                                side_effect=fake_check_attach_and_reserve),
              mock.patch.object(cinder.API, 'attachment_complete')
         ) as (mock_bdm_create, mock_attach_and_reserve, mock_attach_complete):
-            volume = {'id': 'fake-volume-id'}
+            volume = {'id': uuids.volume}
             self.compute_api._attach_volume_shelved_offloaded(
                     self.context, instance, volume,
                     '/dev/vdb', 'ide', 'cdrom')
@@ -10610,7 +10610,7 @@ class ComputeAPITestCase(BaseTestCase):
         called = {}
         instance = self._create_fake_instance_obj()
         # Set attach_status to 'fake' as nothing is reading the value.
-        volume = {'id': 1, 'attach_status': 'fake'}
+        volume = {'id': uuids.volume, 'attach_status': 'fake'}
 
         def fake_begin_detaching(*args, **kwargs):
             called['fake_begin_detaching'] = True
@@ -10645,7 +10645,7 @@ class ComputeAPITestCase(BaseTestCase):
         fake_bdm.attachment_id = None
         mock_block_dev.return_value = fake_bdm
         instance = self._create_fake_instance_obj()
-        volume = {'id': 1, 'attach_status': 'fake'}
+        volume = {'id': uuids.volume, 'attach_status': 'fake'}
         self.compute_api._detach_volume_shelved_offloaded(self.context,
                                                           instance,
                                                           volume)
@@ -10671,7 +10671,7 @@ class ComputeAPITestCase(BaseTestCase):
         fake_bdm.volume_id = 1
         mock_block_dev.return_value = fake_bdm
         instance = self._create_fake_instance_obj()
-        volume = {'id': 1, 'attach_status': 'fake'}
+        volume = {'id': uuids.volume, 'attach_status': 'fake'}
         self.compute_api._detach_volume_shelved_offloaded(self.context,
                                                           instance,
                                                           volume)
@@ -10894,7 +10894,7 @@ class ComputeAPITestCase(BaseTestCase):
                      'destination_type': 'local',
                      'delete_on_termination': False,
                      'boot_index': 0,
-                     'image_id': 'fake_image'}
+                     'image_id': uuids.image}
         vol_bdm = {'context': admin,
                      'instance_uuid': instance['uuid'],
                      'device_name': '/dev/vdc',
@@ -12645,14 +12645,14 @@ class EvacuateHostTestCase(BaseTestCase):
         db.block_device_mapping_create(self.context, values)
 
         def fake_volume_get(self, context, volume, microversion=None):
-            return {'id': 'fake_volume_id'}
+            return {'id': uuids.volume}
         self.stub_out("nova.volume.cinder.API.get", fake_volume_get)
 
         # Stub out and record whether it gets detached
         result = {"detached": False}
 
         def fake_detach(context, volume, instance_uuid, attachment_id):
-            result["detached"] = volume == 'fake_volume_id'
+            result["detached"] = volume == uuids.volume
         mock_detach.side_effect = fake_detach
 
         def fake_terminate_connection(self, context, volume, connector):
