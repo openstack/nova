@@ -139,7 +139,8 @@ class ServerGroupTestV21(ServerGroupTestBase):
         # tree.
         self.stub_out('nova.virt.driver.load_compute_driver',
                       _fake_load_compute_driver)
-        self.compute = self.start_service('compute')
+        fake.set_nodes(['compute'])
+        self.compute = self.start_service('compute', host='compute')
 
         # NOTE(gibi): start a second compute host to be able to test affinity
         # NOTE(sbauza): Make sure the FakeDriver returns a different nodename
@@ -421,13 +422,19 @@ class ServerGroupTestV21(ServerGroupTestBase):
         time.sleep(self._service_down_time)
 
         # Start additional host to test evacuation
+        fake.set_nodes(['host3'])
         self.start_service('compute', host='host3')
 
         post = {'evacuate': {'onSharedStorage': False}}
         self.admin_api.post_server_action(servers[1]['id'], post)
+        self._wait_for_migration_status(servers[1], 'done')
         evacuated_server = self._wait_for_state_change(
             self.admin_api, servers[1], 'ACTIVE')
 
+        # check that the server is evacuated to another host
+        self.assertNotEqual(evacuated_server['OS-EXT-SRV-ATTR:host'],
+                            servers[1]['OS-EXT-SRV-ATTR:host'])
+        # check that anti-affinity policy is kept during evacuation
         self.assertNotEqual(evacuated_server['OS-EXT-SRV-ATTR:host'],
                             servers[0]['OS-EXT-SRV-ATTR:host'])
 
@@ -612,13 +619,19 @@ class ServerGroupTestV215(ServerGroupTestV21):
         time.sleep(self._service_down_time)
 
         # Start additional host to test evacuation
+        fake.set_nodes(['host3'])
         compute3 = self.start_service('compute', host='host3')
 
         post = {'evacuate': {}}
         self.admin_api.post_server_action(servers[1]['id'], post)
+        self._wait_for_migration_status(servers[1], 'done')
         evacuated_server = self._wait_for_state_change(
             self.admin_api, servers[1], 'ACTIVE')
 
+        # check that the server is evacuated
+        self.assertNotEqual(evacuated_server['OS-EXT-SRV-ATTR:host'],
+                            servers[1]['OS-EXT-SRV-ATTR:host'])
+        # check that policy is kept
         self.assertNotEqual(evacuated_server['OS-EXT-SRV-ATTR:host'],
                             servers[0]['OS-EXT-SRV-ATTR:host'])
 
@@ -804,6 +817,7 @@ class ServerGroupTestV215(ServerGroupTestV21):
 
         post = {'evacuate': {}}
         self.admin_api.post_server_action(servers[1]['id'], post)
+        self._wait_for_migration_status(servers[1], 'done')
         evacuated_server = self._wait_for_state_change(
             self.admin_api, servers[1], 'ACTIVE')
 
