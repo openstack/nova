@@ -1,0 +1,11 @@
+{
+    "priority": "INFO",
+    "payload": {
+        "$ref": "common_payloads/ServerGroupPayload.json#",
+        "nova_object.data": {
+            "members": ["54238a20-f9be-47a7-897e-d7cb0e4c03d0"]
+        }
+    },
+    "event_type": "server_group.add_member",
+    "publisher_id": "nova-api:fake-mini"
+}

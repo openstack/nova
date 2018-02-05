@@ -1082,18 +1082,17 @@ class ServerGroupTestCase(test.TestCase):
         self.user_id = 'fake'
         self.project_id = 'fake'
         self.context = context.RequestContext(self.user_id, self.project_id)
+        self.group = objects.InstanceGroup(context=self.context,
+                                           id=1,
+                                           uuid=uuids.server_group,
+                                           user_id=self.user_id,
+                                           project_id=self.project_id,
+                                           name="test-server-group",
+                                           policies=["anti-affinity"])
 
     def test_notify_about_server_group_action(self):
-        uuid = uuids.instance
-        group = objects.InstanceGroup(context=self.context,
-                                      id=1,
-                                      uuid=uuid,
-                                      user_id=self.user_id,
-                                      project_id=self.project_id,
-                                      name="test-server-group",
-                                      policies=["anti-affinity"])
         compute_utils.notify_about_server_group_action(self.context,
-                                                       group, 'create')
+                                                       self.group, 'create')
         self.assertEqual(len(fake_notifier.VERSIONED_NOTIFICATIONS), 1)
         notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
         expected = {'priority': 'INFO',
@@ -1105,9 +1104,39 @@ class ServerGroupTestCase(test.TestCase):
                             'policies': [u'anti-affinity'],
                             'project_id': u'fake',
                             'user_id': u'fake',
-                            'uuid': uuid,
+                            'uuid': uuids.server_group,
                             'hosts': None,
                             'members': None
+                        },
+                        'nova_object.name': 'ServerGroupPayload',
+                        'nova_object.namespace': 'nova',
+                        'nova_object.version': '1.0'
+                   }
+            }
+        self.assertEqual(notification, expected)
+
+    @mock.patch.object(objects.InstanceGroup, 'get_by_uuid')
+    def test_notify_about_server_group_add_member(self, mock_get_by_uuid):
+        self.group.members = [uuids.instance]
+        mock_get_by_uuid.return_value = self.group
+        compute_utils.notify_about_server_group_add_member(
+            self.context, uuids.server_group)
+        mock_get_by_uuid.assert_called_once_with(self.context,
+                                                 uuids.server_group)
+        self.assertEqual(len(fake_notifier.VERSIONED_NOTIFICATIONS), 1)
+        notification = fake_notifier.VERSIONED_NOTIFICATIONS[0]
+        expected = {'priority': 'INFO',
+                    'event_type': u'server_group.add_member',
+                    'publisher_id': u'nova-api:fake-mini',
+                    'payload': {
+                        'nova_object.data': {
+                            'name': u'test-server-group',
+                            'policies': [u'anti-affinity'],
+                            'project_id': u'fake',
+                            'user_id': u'fake',
+                            'uuid': uuids.server_group,
+                            'hosts': None,
+                            'members': [uuids.instance]
                         },
                         'nova_object.name': 'ServerGroupPayload',
                         'nova_object.namespace': 'nova',

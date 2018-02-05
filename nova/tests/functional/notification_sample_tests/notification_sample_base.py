@@ -149,7 +149,8 @@ class NotificationSampleTestBase(test.TestCase,
 
         self.assertJsonEqual(sample_obj, notification)
 
-    def _boot_a_server(self, expected_status='ACTIVE', extra_params=None):
+    def _boot_a_server(self, expected_status='ACTIVE', extra_params=None,
+                       scheduler_hints=None):
 
         # We have to depend on a specific image and flavor to fix the content
         # of the notification that will be emitted
@@ -201,6 +202,9 @@ class NotificationSampleTestBase(test.TestCase,
             server.update(extra_params)
 
         post = {'server': server}
+        if scheduler_hints:
+            post.update({"os:scheduler_hints": scheduler_hints})
+
         created_server = self.api.post_server(post)
         reservation_id = created_server['reservation_id']
         created_server = self.api.get_servers(

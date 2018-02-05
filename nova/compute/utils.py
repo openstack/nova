@@ -665,6 +665,21 @@ def notify_about_server_group_action(context, group, action):
     notification.emit(context)
 
 
+@rpc.if_notifications_enabled
+def notify_about_server_group_add_member(context, group_id):
+    group = objects.InstanceGroup.get_by_uuid(context, group_id)
+    payload = sg_notification.ServerGroupPayload(group)
+    notification = sg_notification.ServerGroupNotification(
+        priority=fields.NotificationPriority.INFO,
+        publisher=notification_base.NotificationPublisher(
+            host=CONF.host, source=fields.NotificationSource.API),
+        event_type=notification_base.EventType(
+            object='server_group',
+            action=fields.NotificationAction.ADD_MEMBER),
+        payload=payload)
+    notification.emit(context)
+
+
 def refresh_info_cache_for_instance(context, instance):
     """Refresh the info cache for an instance.
 
