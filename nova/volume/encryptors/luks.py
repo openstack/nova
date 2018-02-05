@@ -163,6 +163,9 @@ class LuksEncryptor(cryptsetup.CryptsetupEncryptor):
     def _close_volume(self, **kwargs):
         """Closes the device (effectively removes the dm-crypt mapping)."""
         LOG.debug("closing encrypted volume %s", self.dev_path)
+        # cryptsetup returns 4 when attempting to destroy a non-active
+        # luks device. We are going to ignore this error code to avoid raising
+        # an exception while detaching an already detached volume.
         utils.execute('cryptsetup', 'luksClose', self.dev_name,
-                      run_as_root=True, check_exit_code=True,
+                      run_as_root=True, check_exit_code=[0, 4],
                       attempts=3)

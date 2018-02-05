@@ -11614,15 +11614,14 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         mock_hard_reboot.assert_called_once_with(self.context,
                                                  instance, [], None)
 
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._undefine_domain')
     @mock.patch('nova.virt.libvirt.LibvirtDriver.get_info')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_domain_and_network')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._get_guest_xml')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._get_instance_disk_info')
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._destroy')
+    @mock.patch('nova.virt.libvirt.LibvirtDriver.destroy')
     def test_hard_reboot(self, mock_destroy, mock_get_disk_info,
                          mock_get_guest_xml, mock_create_domain_and_network,
-                         mock_get_info, mock_undefine):
+                         mock_get_info):
         self.context.auth_token = True  # any non-None value will suffice
         instance = objects.Instance(**self.test_instance)
         network_info = _fake_network_info(self, 1)
@@ -11670,8 +11669,9 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         for name in ('disk', 'disk.local'):
             self.assertTrue(disks[name].cache.called)
 
-        mock_destroy.assert_called_once_with(instance)
-        mock_undefine.assert_called_once_with(instance)
+        mock_destroy.assert_called_once_with(self.context, instance,
+                network_info, destroy_disks=False,
+                block_device_info=block_device_info)
 
         # Check the structure of disk_info passed to
         # _create_domain_and_network, but we don't care about any of the values
@@ -11686,8 +11686,7 @@ class LibvirtConnTestCase(test.NoDBTestCase):
         }
         mock_create_domain_and_network.assert_called_once_with(self.context,
             dummyxml, instance, network_info, mock_disk_info,
-            block_device_info=block_device_info,
-            reboot=True, vifs_already_plugged=True)
+            block_device_info=block_device_info)
 
     @mock.patch('oslo_utils.fileutils.ensure_tree')
     @mock.patch('oslo_service.loopingcall.FixedIntervalLoopingCall')
