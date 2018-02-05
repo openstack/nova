@@ -55,11 +55,13 @@ Nova Database
     determined by ``[database]/connection`` in the configuration file passed to
     nova-manage.
 
-``nova-manage db archive_deleted_rows [--max_rows <number>] [--verbose]``
+``nova-manage db archive_deleted_rows [--max_rows <number>] [--verbose] [--until-complete]``
 
     Move deleted rows from production tables to shadow tables. Specifying
     --verbose will print the results of the archive operation for any tables
-    that were changed.
+    that were changed. Specifying --until-complete will make the command run
+    continuously until all deleted rows are archived. Use the --max_rows option,
+    which defaults to 1000, as a batch size for each iteration.
 
 ``nova-manage db null_instance_uuid_scan [--delete]``
 
