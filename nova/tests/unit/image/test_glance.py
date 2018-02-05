@@ -19,6 +19,7 @@ import datetime
 
 import cryptography
 from cursive import exception as cursive_exception
+import ddt
 import glanceclient.exc
 from glanceclient.v1 import images
 import glanceclient.v2.schemas as schemas
@@ -1601,6 +1602,7 @@ class TestDelete(test.NoDBTestCase):
                           mock.sentinel.image_id)
 
 
+@ddt.ddt
 class TestGlanceApiServers(test.NoDBTestCase):
 
     def test_get_api_servers_multiple(self):
@@ -1615,18 +1617,36 @@ class TestGlanceApiServers(test.NoDBTestCase):
         self.assertEqual(expected_servers,
                          {next(api_servers) for _ in expected_servers})
 
-    @mock.patch('keystoneauth1.adapter.Adapter.get_endpoint_data')
-    def test_get_api_servers_get_ksa_adapter(self, mock_epd):
+    @ddt.data(['http://158.69.92.100/image/v2/',
+               'http://158.69.92.100/image/'],
+              ['http://158.69.92.100/image/v2',
+               'http://158.69.92.100/image/'],
+              ['http://158.69.92.100/image/v2.0/',
+               'http://158.69.92.100/image/'],
+              ['http://158.69.92.100/image/',
+               'http://158.69.92.100/image/'],
+              ['http://158.69.92.100/image',
+               'http://158.69.92.100/image'],
+              ['http://158.69.92.100/v2',
+               'http://158.69.92.100/'],
+              ['http://thing.novav2.0oh.v2.foo/image/v2/',
+               'http://thing.novav2.0oh.v2.foo/image/'])
+    @ddt.unpack
+    def test_get_api_servers_get_ksa_adapter(self, catalog_url, stripped):
         """Test get_api_servers via nova.utils.get_ksa_adapter()."""
         self.flags(api_servers=None, group='glance')
-        api_servers = glance.get_api_servers(mock.Mock())
-        self.assertEqual(mock_epd.return_value.catalog_url, next(api_servers))
-        # Still get itertools.cycle behavior
-        self.assertEqual(mock_epd.return_value.catalog_url, next(api_servers))
-        mock_epd.assert_called_once_with()
+        with mock.patch('keystoneauth1.adapter.Adapter.'
+                        'get_endpoint_data') as mock_epd:
+            mock_epd.return_value.catalog_url = catalog_url
+            api_servers = glance.get_api_servers(mock.Mock())
+            self.assertEqual(stripped, next(api_servers))
+            # Still get itertools.cycle behavior
+            self.assertEqual(stripped, next(api_servers))
+            mock_epd.assert_called_once_with()
 
-        # Now test with endpoint_override - get_endpoint_data is not called.
-        mock_epd.reset_mock()
+    @mock.patch('keystoneauth1.adapter.Adapter.get_endpoint_data')
+    def test_get_api_servers_get_ksa_adapter_endpoint_override(self,
+                                                               mock_epd):
         self.flags(endpoint_override='foo', group='glance')
         api_servers = glance.get_api_servers(mock.Mock())
         self.assertEqual('foo', next(api_servers))

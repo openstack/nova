@@ -3960,6 +3960,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock_setup_networks, mock_setup_intance_network, mock_get_bdms,
             mock_mutate_migration, mock_appy_migration, mock_drop_migration,
             mock_context_elevated):
+        self.flags(api_servers=['http://localhost/image/v2'], group='glance')
         instance = fake_instance.fake_instance_obj(self.context)
         instance.info_cache = None
         elevated_context = mock.Mock()

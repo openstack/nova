@@ -22,6 +22,7 @@ import inspect
 import itertools
 import os
 import random
+import re
 import stat
 import sys
 import time
@@ -122,7 +123,14 @@ def get_api_servers(context):
             nova.conf.glance.DEFAULT_SERVICE_TYPE,
             ksa_auth=auth, ksa_session=sess,
             min_version='2.0', max_version='2.latest')
-        api_servers = [utils.get_endpoint(ksa_adap)]
+        endpoint = utils.get_endpoint(ksa_adap)
+        if endpoint:
+            # NOTE(mriedem): Due to python-glanceclient bug 1707995 we have
+            # to massage the endpoint URL otherwise it won't work properly.
+            # We can't use glanceclient.common.utils.strip_version because
+            # of bug 1748009.
+            endpoint = re.sub(r'/v\d+(\.\d+)?/?$', '/', endpoint)
+        api_servers = [endpoint]
 
     return itertools.cycle(api_servers)
 
