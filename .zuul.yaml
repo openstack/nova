@@ -86,11 +86,27 @@
     run: playbooks/legacy/nova-multiattach/run.yaml
     post-run: playbooks/legacy/nova-multiattach/post.yaml
 
+- job:
+    name: nova-next
+    parent: nova-dsvm-base
+    description: |
+      This job was added in Newton when placement and cellsv2
+      were optional. Placement and cellsv2 are required starting in Ocata. In
+      Pike, the service user token functionality was added. This job is also
+      unique in that it runs the post_test_hook from the nova repo, which runs
+      post-test scripts to ensure those scripts are still working,
+      e.g. archive_deleted_rows.
+    # TODO(mriedem): Make this voting once bug 1747511 is fixed.
+    voting: false
+    run: playbooks/legacy/nova-next/run.yaml
+    post-run: playbooks/legacy/nova-next/post.yaml
+
 - project:
     # Please try to keep the list of job names sorted alphabetically.
     check:
       jobs:
         - nova-multiattach
+        - nova-next
         - nova-tox-functional
         - nova-tox-functional-py35
     gate:
