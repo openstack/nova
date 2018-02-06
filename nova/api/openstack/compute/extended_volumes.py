@@ -13,11 +13,15 @@
 #   under the License.
 
 """The Extended Volumes API extension."""
+from oslo_log import log as logging
+
 from nova.api.openstack import api_version_request
 from nova.api.openstack import wsgi
 from nova import context
 from nova import objects
 from nova.policies import extended_volumes as ev_policies
+
+LOG = logging.getLogger(__name__)
 
 
 class ExtendedVolumesController(wsgi.Controller):
@@ -60,12 +64,19 @@ class ExtendedVolumesController(wsgi.Controller):
                     {inst_map.cell_mapping.uuid: inst_map.cell_mapping})
 
         bdms = {}
-        for cell_mapping in cell_mappings.values():
-            with context.target_cell(ctxt, cell_mapping) as cctxt:
-                bdms.update(
-                    objects.BlockDeviceMappingList.bdms_by_instance_uuid(
-                        cctxt, instance_uuids))
-
+        results = context.scatter_gather_cells(
+                        ctxt, cell_mappings.values(), 60,
+                        objects.BlockDeviceMappingList.bdms_by_instance_uuid,
+                        instance_uuids)
+        for cell_uuid, result in results.items():
+            if result is context.raised_exception_sentinel:
+                LOG.warning('Failed to get block device mappings for cell %s',
+                            cell_uuid)
+            elif result is context.did_not_respond_sentinel:
+                LOG.warning('Timeout getting block device mappings for cell '
+                            '%s', cell_uuid)
+            else:
+                bdms.update(result)
         return bdms
 
     @wsgi.extends
