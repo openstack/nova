@@ -121,7 +121,8 @@ class LiveMigrationTask(base.TaskBase):
         # except to call the compute method, that has no matching
         # rollback call right now.
         if self._held_allocations:
-            migrate.revert_allocation_for_migration(self._source_cn,
+            migrate.revert_allocation_for_migration(self.context,
+                                                    self._source_cn,
                                                     self.instance,
                                                     self.migration,
                                                     self._held_allocations)

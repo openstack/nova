@@ -6427,7 +6427,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
             self.assertTrue(r)
             mock_report.set_and_clear_allocations.assert_called_once_with(
-                cu, self.instance.uuid, {'DISK_GB': 1},
+                mock.sentinel.ctx, cu, self.instance.uuid, {'DISK_GB': 1},
                 self.instance.project_id, self.instance.user_id,
                 consumer_to_clear=self.migration.uuid)
 

@@ -14,6 +14,7 @@ import mock
 
 from nova.compute import rpcapi as compute_rpcapi
 from nova.conductor.tasks import migrate
+from nova import context
 from nova import exception
 from nova import objects
 from nova.scheduler import client as scheduler_client
@@ -213,8 +214,8 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         task._migration.create.assert_called_once_with()
         task._migration.save.assert_called_once_with()
         self.assertEqual('error', task._migration.status)
-        mock_ra.assert_called_once_with(task._source_cn, task.instance,
-                                        task._migration,
+        mock_ra.assert_called_once_with(task.context, task._source_cn,
+                                        task.instance, task._migration,
                                         task._held_allocations)
 
 
@@ -253,6 +254,7 @@ class MigrationTaskAllocationUtils(test.NoDBTestCase):
     @mock.patch('nova.objects.ComputeNode.get_by_host_and_nodename')
     def test_replace_allocation_with_migration_allocs_fail(self, mock_cn,
                                                            mock_ga, mock_pa):
+        ctxt = context.get_admin_context()
         migration = objects.Migration(uuid=uuids.migration)
         instance = objects.Instance(uuid=uuids.instance,
                                     user_id='fake', project_id='fake',
@@ -261,5 +263,5 @@ class MigrationTaskAllocationUtils(test.NoDBTestCase):
 
         self.assertRaises(exception.NoValidHost,
                           migrate.replace_allocation_with_migration,
-                          mock.sentinel.context,
+                          ctxt,
                           instance, migration)

@@ -276,13 +276,15 @@ class SchedulerReportClient(object):
     def get(self, url, version=None):
         return self._client.get(url, raise_exc=False, microversion=version)
 
-    def post(self, url, data, version=None):
+    def post(self, url, data, version=None, global_request_id=None):
+        headers = ({request_id.INBOUND_HEADER: global_request_id}
+                   if global_request_id else {})
         # NOTE(sdague): using json= instead of data= sets the
         # media type to application/json for us. Placement API is
         # more sensitive to this than other APIs in the OpenStack
         # ecosystem.
         return self._client.post(url, json=data, raise_exc=False,
-                                 microversion=version)
+                                 microversion=version, headers=headers)
 
     def put(self, url, data, version=None):
         # NOTE(sdague): using json= instead of data= sets the
@@ -517,10 +519,11 @@ class SchedulerReportClient(object):
         raise exception.ResourceProviderRetrievalFailed(uuid=uuid)
 
     @safe_connect
-    def _create_resource_provider(self, uuid, name,
+    def _create_resource_provider(self, context, uuid, name,
                                   parent_provider_uuid=None):
         """Calls the placement API to create a new resource provider record.
 
+        :param context: The security context
         :param uuid: UUID of the new resource provider
         :param name: Name of the resource provider
         :param parent_provider_uuid: Optional UUID of the immediate parent
@@ -537,7 +540,8 @@ class SchedulerReportClient(object):
         if parent_provider_uuid is not None:
             payload['parent_provider_uuid'] = parent_provider_uuid
 
-        resp = self.post(url, payload, version=NESTED_PROVIDER_API_VERSION)
+        resp = self.post(url, payload, version=NESTED_PROVIDER_API_VERSION,
+                         global_request_id=context.global_id)
         placement_req_id = get_placement_request_id(resp)
         if resp.status_code == 201:
             msg = ("[%(placement_req_id)s] Created resource provider record "
@@ -585,7 +589,7 @@ class SchedulerReportClient(object):
         LOG.error(msg, args)
         raise exception.ResourceProviderCreationFailed(name=name)
 
-    def _ensure_resource_provider(self, uuid, name=None,
+    def _ensure_resource_provider(self, context, uuid, name=None,
                                   parent_provider_uuid=None):
         """Ensures that the placement API has a record of a resource provider
         with the supplied UUID. If not, creates the resource provider record in
@@ -612,6 +616,7 @@ class SchedulerReportClient(object):
         reduces to just the specified provider as a root, with no aggregates or
         traits.
 
+        :param context: The security context
         :param uuid: UUID identifier for the resource provider to ensure exists
         :param name: Optional name for the resource provider if the record
                      does not exist. If empty, the name is set to the UUID
@@ -634,7 +639,7 @@ class SchedulerReportClient(object):
         rps_to_refresh = self._get_providers_in_tree(uuid)
         if not rps_to_refresh:
             created_rp = self._create_resource_provider(
-                uuid, name or uuid,
+                context, uuid, name or uuid,
                 parent_provider_uuid=parent_provider_uuid)
             # Don't add the created_rp to rps_to_refresh.  Since we just
             # created it, it has no aggregates or traits.
@@ -789,9 +794,10 @@ class SchedulerReportClient(object):
         refresh_time = self.association_refresh_time.get(uuid, 0)
         return (time.time() - refresh_time) > ASSOCIATION_REFRESH
 
-    def _update_inventory_attempt(self, rp_uuid, inv_data):
+    def _update_inventory_attempt(self, context, rp_uuid, inv_data):
         """Update the inventory for this resource provider if needed.
 
+        :param context: The security context
         :param rp_uuid: The resource provider UUID for the operation
         :param inv_data: The new inventory for the resource provider
         :returns: True if the inventory was updated (or did not need to be),
@@ -865,7 +871,7 @@ class SchedulerReportClient(object):
             # NOTE(jaypipes): We don't need to pass a name parameter to
             # _ensure_resource_provider() because we know the resource provider
             # record already exists. We're just reloading the record here.
-            self._ensure_resource_provider(rp_uuid)
+            self._ensure_resource_provider(context, rp_uuid)
             return False
         elif not result:
             placement_req_id = get_placement_request_id(result)
@@ -904,7 +910,7 @@ class SchedulerReportClient(object):
         return True
 
     @safe_connect
-    def _update_inventory(self, rp_uuid, inv_data):
+    def _update_inventory(self, context, rp_uuid, inv_data):
         for attempt in (1, 2, 3):
             if not self._provider_tree.exists(rp_uuid):
                 # NOTE(danms): Either we failed to fetch/create the RP
@@ -913,7 +919,7 @@ class SchedulerReportClient(object):
                 # it. Bail and try again next time.
                 LOG.warning('Unable to refresh my resource provider record')
                 return False
-            if self._update_inventory_attempt(rp_uuid, inv_data):
+            if self._update_inventory_attempt(context, rp_uuid, inv_data):
                 return True
             time.sleep(1)
         return False
@@ -1006,7 +1012,7 @@ class SchedulerReportClient(object):
         msg_args['err'] = r.text
         LOG.error(msg, msg_args)
 
-    def get_provider_tree_and_ensure_root(self, rp_uuid, name=None,
+    def get_provider_tree_and_ensure_root(self, context, rp_uuid, name=None,
                                           parent_provider_uuid=None):
         """Returns a fresh ProviderTree representing all providers which are in
         the same tree or in the same aggregate as the specified provider,
@@ -1015,6 +1021,7 @@ class SchedulerReportClient(object):
         If the specified provider does not exist, it is created with the
         specified UUID, name, and parent provider (which *must* already exist).
 
+        :param context: The security context
         :param rp_uuid: UUID of the resource provider for which to populate the
                         tree.  (This doesn't need to be the UUID of the root.)
         :param name: Optional name for the resource provider if the record
@@ -1031,7 +1038,8 @@ class SchedulerReportClient(object):
         # return a deep copy of the local _provider_tree cache.
         # (Re)populate the local ProviderTree
         self._ensure_resource_provider(
-            rp_uuid, name=name, parent_provider_uuid=parent_provider_uuid)
+            context, rp_uuid, name=name,
+            parent_provider_uuid=parent_provider_uuid)
         # Ensure inventories are up to date (for *all* cached RPs)
         for uuid in self._provider_tree.get_provider_uuids():
             self._refresh_and_get_inventory(uuid)
@@ -1058,15 +1066,16 @@ class SchedulerReportClient(object):
                  name does not meet the placement API's format requirements.
         """
         self._ensure_resource_provider(
-            rp_uuid, rp_name, parent_provider_uuid=parent_provider_uuid)
+            context, rp_uuid, rp_name,
+            parent_provider_uuid=parent_provider_uuid)
 
         # Auto-create custom resource classes coming from a virt driver
-        list(map(self._ensure_resource_class,
-                 (rc_name for rc_name in inv_data
-                  if rc_name not in fields.ResourceClass.STANDARD)))
+        for rc_name in inv_data:
+            if rc_name not in fields.ResourceClass.STANDARD:
+                self._ensure_resource_class(context, rc_name)
 
         if inv_data:
-            self._update_inventory(rp_uuid, inv_data)
+            self._update_inventory(context, rp_uuid, inv_data)
         else:
             self._delete_inventory(context, rp_uuid)
 
@@ -1218,7 +1227,7 @@ class SchedulerReportClient(object):
         raise exception.ResourceProviderUpdateFailed(url=url, error=resp.text)
 
     @safe_connect
-    def _ensure_resource_class(self, name):
+    def _ensure_resource_class(self, context, name):
         """Make sure a custom resource class exists.
 
         First attempt to PUT the resource class using microversion 1.7. If
@@ -1227,6 +1236,7 @@ class SchedulerReportClient(object):
         Returns the name of the resource class if it was successfully
         created or already exists. Otherwise None.
 
+        :param context: The security context
         :param name: String name of the resource class to check/create.
         :raises: `exception.InvalidResourceClass` upon error.
         """
@@ -1241,7 +1251,7 @@ class SchedulerReportClient(object):
             # call and the associated code.
             LOG.debug('Falling back to placement API microversion 1.2 '
                       'for resource class management.')
-            return self._get_or_create_resource_class(name)
+            return self._get_or_create_resource_class(context, name)
         else:
             msg = ("Failed to ensure resource class record with placement API "
                    "for resource class %(rc_name)s. Got %(status_code)d: "
@@ -1254,19 +1264,20 @@ class SchedulerReportClient(object):
             LOG.error(msg, args)
             raise exception.InvalidResourceClass(resource_class=name)
 
-    def _get_or_create_resource_class(self, name):
+    def _get_or_create_resource_class(self, context, name):
         """Queries the placement API for a resource class supplied resource
         class string name. If the resource class does not exist, creates it.
 
         Returns the resource class name if exists or was created, else None.
 
+        :param context: The security context
         :param name: String name of the resource class to check/create.
         """
         resp = self.get("/resource_classes/%s" % name, version="1.2")
         if 200 <= resp.status_code < 300:
             return name
         elif resp.status_code == 404:
-            self._create_resource_class(name)
+            self._create_resource_class(context, name)
             return name
         else:
             msg = ("Failed to retrieve resource class record from placement "
@@ -1280,9 +1291,10 @@ class SchedulerReportClient(object):
             LOG.error(msg, args)
             return None
 
-    def _create_resource_class(self, name):
+    def _create_resource_class(self, context, name):
         """Calls the placement API to create a new resource class.
 
+        :param context: The security context
         :param name: String name of the resource class to create.
 
         :returns: None on successful creation.
@@ -1292,7 +1304,8 @@ class SchedulerReportClient(object):
         payload = {
             'name': name,
         }
-        resp = self.post(url, payload, version="1.2")
+        resp = self.post(url, payload, version="1.2",
+                         global_request_id=context.global_id)
         if 200 <= resp.status_code < 300:
             msg = ("Created resource class record via placement API for "
                    "resource class %s.")
@@ -1324,11 +1337,11 @@ class SchedulerReportClient(object):
                 resource classes that would be deleted by an update to the
                 placement API.
         """
-        self._ensure_resource_provider(compute_node.uuid,
+        self._ensure_resource_provider(context, compute_node.uuid,
                                        compute_node.hypervisor_hostname)
         inv_data = _compute_node_to_inventory_dict(compute_node)
         if inv_data:
-            self._update_inventory(compute_node.uuid, inv_data)
+            self._update_inventory(context, compute_node.uuid, inv_data)
         else:
             self._delete_inventory(context, compute_node.uuid)
 
@@ -1562,8 +1575,8 @@ class SchedulerReportClient(object):
 
     @safe_connect
     @retries
-    def set_and_clear_allocations(self, rp_uuid, consumer_uuid, alloc_data,
-                                  project_id, user_id,
+    def set_and_clear_allocations(self, context, rp_uuid, consumer_uuid,
+                                  alloc_data, project_id, user_id,
                                   consumer_to_clear=None):
         """Create allocation records for the supplied consumer UUID while
         simultaneously clearing any allocations identified by the uuid
@@ -1575,6 +1588,7 @@ class SchedulerReportClient(object):
               Once shared storage and things like NUMA allocations are a
               reality, this will change to allocate against multiple providers.
 
+        :param context: The security context
         :param rp_uuid: The UUID of the resource provider to allocate against.
         :param consumer_uuid: The consumer UUID for which allocations are
                               being set.
@@ -1608,7 +1622,8 @@ class SchedulerReportClient(object):
                 'user_id': user_id,
             }
         r = self.post('/allocations', payload,
-                      version=POST_ALLOCATIONS_API_VERSION)
+                      version=POST_ALLOCATIONS_API_VERSION,
+                      global_request_id=context.global_id)
         if r.status_code != 204:
             # NOTE(jaypipes): Yes, it sucks doing string comparison like this
             # but we have no error codes, only error messages.

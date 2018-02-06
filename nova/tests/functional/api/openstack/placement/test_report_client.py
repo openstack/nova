@@ -113,7 +113,7 @@ class SchedulerReportClientTests(test.TestCase):
             # But get_provider_tree_and_ensure_root creates one (via
             # _ensure_resource_provider)
             ptree = self.client.get_provider_tree_and_ensure_root(
-                self.compute_uuid)
+                self.context, self.compute_uuid)
             self.assertEqual([self.compute_uuid], ptree.get_provider_uuids())
 
             # Now let's update status for our compute node.
@@ -147,7 +147,7 @@ class SchedulerReportClientTests(test.TestCase):
 
             # Providers and inventory show up nicely in the provider tree
             ptree = self.client.get_provider_tree_and_ensure_root(
-                self.compute_uuid)
+                self.context, self.compute_uuid)
             self.assertEqual([self.compute_uuid], ptree.get_provider_uuids())
             self.assertTrue(ptree.has_inventory(self.compute_uuid))
 
@@ -193,7 +193,7 @@ class SchedulerReportClientTests(test.TestCase):
 
             # Build the provider tree afresh.
             ptree = self.client.get_provider_tree_and_ensure_root(
-                self.compute_uuid)
+                self.context, self.compute_uuid)
             # The compute node is still there
             self.assertEqual([self.compute_uuid], ptree.get_provider_uuids())
             # But the inventory is gone
@@ -233,6 +233,11 @@ class SchedulerReportClientTests(test.TestCase):
                 app=lambda: assert_app, url=self.url):
             self.client._delete_provider(self.compute_uuid,
                                          global_request_id=global_request_id)
+            payload = {
+                'name': 'test-resource-provider'
+            }
+            self.client.post('/resource_providers', payload,
+                             global_request_id=global_request_id)
 
     def test_get_provider_tree_with_nested_and_aggregates(self):
         """A more in-depth test of get_provider_tree_and_ensure_root with
@@ -344,7 +349,7 @@ class SchedulerReportClientTests(test.TestCase):
 
             # Setup is done.  Grab the ProviderTree
             prov_tree = self.client.get_provider_tree_and_ensure_root(
-                self.compute_uuid)
+                self.context, self.compute_uuid)
 
             # All providers show up because we used set_inventory_for_provider
             self.assertEqual(set([self.compute_uuid, uuids.ss1, uuids.ss2,
