@@ -1,0 +1,41 @@
+---
+prelude: |
+    The 17.0.0 release includes many new features and bug fixes. It is
+    difficult to cover all the changes that have been introduced. Please at
+    least read the upgrade section which describes the required actions to
+    upgrade your cloud from 16.0.0 (Pike) to 17.0.0 (Queens).
+
+    That said, a few major changes are worth mentioning. This is not an
+    exhaustive list:
+
+    - The latest Compute API microversion supported for Queens is v2.60. Details
+      on REST API microversions added since the 16.0.0 Pike release can be
+      found in the `REST API Version History`_ page.
+    - The placement service should be upgraded before the nova controller and
+      compute services. See the `Pike Upgrade Notes for Queens`_ for more
+      details.
+    - Some of the `multi-cell cells v2 caveats`_ have been resolved.
+    - Cells v1 and nova-network continue to be deprecated, and plan to be
+      removed in the 18.0.0 Rocky release.
+    - The libvirt and xenapi compute drivers now have (experimental) native
+      support for virtual GPU devices. See the `virtual GPU`_ admin guide for
+      more details.
+    - The libvirt compute driver now supports volume multi-attach when using
+      the 2.60 compute API microversion. See the cinder admin guide for more
+      details about volume multi-attach support in OpenStack.
+    - Version 1.0.0 of the `osc-placement plugin`_ has been released which
+      provides CLI support for interacting directly with the Placement API.
+    - Traits-based scheduling is now available for the ironic compute driver.
+      For more details, see the `ironic docs for scheduling based on traits`_.
+
+    .. _REST API Version History: https://docs.openstack.org/nova/latest/reference/api-microversion-history.html
+
+    .. _Pike Upgrade Notes for Queens: https://docs.openstack.org/nova/latest/user/placement.html#queens-17-0-0
+
+    .. _multi-cell cells v2 caveats: https://docs.openstack.org/nova/latest/user/cellsv2-layout.html#caveats-of-a-multi-cell-deployment
+
+    .. _virtual GPU: https://docs.openstack.org/nova/latest/admin/virtual-gpu.html
+
+    .. _osc-placement plugin: https://docs.openstack.org/osc-placement/latest/index.html
+
+    .. _ironic docs for scheduling based on traits: https://docs.openstack.org/ironic/latest/install/configure-nova-flavors.html#scheduling-based-on-traits
