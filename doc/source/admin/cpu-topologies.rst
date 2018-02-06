@@ -163,7 +163,8 @@ memory mapping between the two nodes, run:
     driver will not spawn instances with such topologies.
 
 For more information about the syntax for ``hw:numa_nodes``, ``hw:numa_cpus.N``
-and ``hw:num_mem.N``, refer to the :doc:`/admin/flavors` guide.
+and ``hw:num_mem.N``, refer to the :ref:`NUMA
+topology <extra-specs-numa-topology>` guide.
 
 Customizing instance CPU pinning policies
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -411,6 +411,8 @@ CPU pinning policy
      The ``hw:cpu_thread_policy`` option is only valid if ``hw:cpu_policy`` is
      set to ``dedicated``.
 
+.. _extra-specs-numa-topology:
+
 NUMA topology
   For the libvirt driver, you can define the host NUMA placement for the
   instance vCPU threads as well as the allocation of instance vCPUs and memory
