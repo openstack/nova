@@ -17,8 +17,8 @@ import sqlalchemy as sa
 # TODO(cdent): This file and its location is problematic for placement
 # extraction but we probably want to switch to os-resource-classes (like
 # os-traits) instead of moving it?
+from nova.api.openstack.placement import db_api
 from nova.api.openstack.placement import exception
-from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models as models
 from nova import rc_fields as fields
 

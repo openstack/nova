@@ -79,7 +79,6 @@ LOG = logging.getLogger(__name__)
 
 main_context_manager = enginefacade.transaction_context()
 api_context_manager = enginefacade.transaction_context()
-placement_context_manager = enginefacade.transaction_context()
 
 
 def _get_db_conf(conf_group, connection=None):
@@ -100,12 +99,6 @@ def _context_manager_from_context(context):
 def configure(conf):
     main_context_manager.configure(**_get_db_conf(conf.database))
     api_context_manager.configure(**_get_db_conf(conf.api_database))
-    if conf.placement_database.connection is None:
-        placement_context_manager.configure(
-            **_get_db_conf(conf.api_database))
-    else:
-        placement_context_manager.configure(
-            **_get_db_conf(conf.placement_database))
 
     if profiler_sqlalchemy and CONF.profiler.enabled \
             and CONF.profiler.trace_sqlalchemy:
@@ -146,10 +139,6 @@ def get_engine(use_slave=False, context=None):
 
 def get_api_engine():
     return api_context_manager.get_legacy_facade().get_engine()
-
-
-def get_placement_engine():
-    return placement_context_manager.get_legacy_facade().get_engine()
 
 
 _SHADOW_TABLE_PREFIX = 'shadow_'

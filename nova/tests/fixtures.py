@@ -37,6 +37,7 @@ from requests import adapters
 from wsgi_intercept import interceptor
 
 from nova.api.openstack.compute import tenant_networks
+from nova.api.openstack.placement import db_api as placement_db
 from nova.api.openstack import wsgi_app
 from nova.api import wsgi
 from nova.compute import rpcapi as compute_rpcapi
@@ -580,6 +581,7 @@ class Database(fixtures.Fixture):
         global SESSION_CONFIGURED
         if not SESSION_CONFIGURED:
             session.configure(CONF)
+            placement_db.configure(CONF)
             SESSION_CONFIGURED = True
         self.database = database
         if database == 'main':
@@ -593,7 +595,7 @@ class Database(fixtures.Fixture):
         elif database == 'api':
             self.get_engine = session.get_api_engine
         elif database == 'placement':
-            self.get_engine = session.get_placement_engine
+            self.get_engine = placement_db.get_placement_engine
 
     def _cache_schema(self):
         global DB_SCHEMA
@@ -637,7 +639,7 @@ class DatabaseAtVersion(fixtures.Fixture):
         elif database == 'api':
             self.get_engine = session.get_api_engine
         elif database == 'placement':
-            self.get_engine = session.get_placement_engine
+            self.get_engine = placement_db.get_placement_engine
 
     def cleanup(self):
         engine = self.get_engine()
