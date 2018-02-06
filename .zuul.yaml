@@ -1,10 +1,11 @@
 # See https://docs.openstack.org/infra/manual/drivers.html#naming-with-zuul-v3
 # for job naming conventions.
 - job:
-    name: nova-base
+    name: nova-dsvm-base
     parent: legacy-dsvm-base
     description: |
-      The base job definition for nova jobs. Contains common configuration.
+      The base job definition for nova devstack/tempest jobs.
+      Contains common configuration.
     timeout: 10800
     required-projects:
       - openstack-infra/devstack-gate
@@ -63,7 +64,7 @@
 
 - job:
     name: nova-lvm
-    parent: nova-base
+    parent: nova-dsvm-base
     description: |
       Run standard integration tests using LVM image backend. This is useful if
       there are tests touching this code.
@@ -72,7 +73,7 @@
 
 - job:
     name: nova-multiattach
-    parent: nova-base
+    parent: nova-dsvm-base
     description: |
       Run tempest integration tests with volume multiattach support enabled.
       This job will only work starting with Queens.
@@ -86,6 +87,7 @@
     post-run: playbooks/legacy/nova-multiattach/post.yaml
 
 - project:
+    # Please try to keep the list of job names sorted alphabetically.
     check:
       jobs:
         - nova-multiattach
@@ -98,5 +100,4 @@
         - nova-tox-functional-py35
     experimental:
       jobs:
-        # Please try to keep this list of job names sorted alphabetically.
         - nova-lvm

@@ -47,10 +47,6 @@
           # Only run compute API tests; note that this will need to
           # be updated if multiattach scenario tests are ever added.
           export DEVSTACK_GATE_TEMPEST_REGEX="api.compute"
-          export BRANCH_OVERRIDE=default
-          if [ "$BRANCH_OVERRIDE" != "default" ] ; then
-              export OVERRIDE_ZUUL_BRANCH=$BRANCH_OVERRIDE
-          fi
           cp devstack-gate/devstack-vm-gate-wrap.sh ./safe-devstack-vm-gate-wrap.sh
           ./safe-devstack-vm-gate-wrap.sh
         executable: /bin/bash
