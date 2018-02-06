@@ -165,6 +165,49 @@ class ExtendedVolumesTestV21(test.TestCase):
             actual = server.get('%svolumes_attached' % self.prefix)
             self.assertEqual(self.exp_volumes_detail[i], actual)
 
+    @mock.patch.object(objects.InstanceMappingList, 'get_by_instance_uuids')
+    @mock.patch('nova.context.scatter_gather_cells')
+    def test_detail_with_cell_failures(self, mock_sg,
+                                        mock_get_by_instance_uuids):
+
+        mock_get_by_instance_uuids.return_value = [
+            objects.InstanceMapping(
+                instance_uuid=UUID1,
+                cell_mapping=objects.CellMapping(
+                    uuid=uuids.cell1,
+                    transport_url='fake://nowhere/',
+                    database_connection=uuids.cell1)),
+            objects.InstanceMapping(
+                instance_uuid=UUID2,
+                cell_mapping=objects.CellMapping(
+                    uuid=uuids.cell2,
+                    transport_url='fake://nowhere/',
+                    database_connection=uuids.cell2))
+            ]
+        bdm = fake_bdms_get_all_by_instance_uuids()
+        fake_bdm = fake_block_device.fake_bdm_object(
+                                        nova_context.RequestContext, bdm[0])
+        mock_sg.return_value = {
+            uuids.cell1: {UUID1: [fake_bdm]},
+            uuids.cell2: nova_context.raised_exception_sentinel
+        }
+
+        res = self._make_request('/detail')
+        mock_get_by_instance_uuids.assert_called_once_with(
+            test.MatchType(nova_context.RequestContext), [UUID1, UUID2])
+
+        self.assertEqual(200, res.status_int)
+
+        # we would get an empty list for the second instance
+        # which is in the down cell, however this would printed
+        # in the logs.
+        for i, server in enumerate(self._get_servers(res.body)):
+            actual = server.get('%svolumes_attached' % self.prefix)
+            if i == 0:
+                self.assertEqual(self.exp_volumes_detail[i], actual)
+            else:
+                self.assertEqual([], actual)
+
 
 class ExtendedVolumesTestV23(ExtendedVolumesTestV21):
 
