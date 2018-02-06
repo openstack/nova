@@ -238,6 +238,9 @@ class SchedulerReportClientTests(test.TestCase):
             }
             self.client.post('/resource_providers', payload,
                              global_request_id=global_request_id)
+            self.client.put('/resource_providers/%s' % self.compute_uuid,
+                            payload,
+                            global_request_id=global_request_id)
 
     def test_get_provider_tree_with_nested_and_aggregates(self):
         """A more in-depth test of get_provider_tree_and_ensure_root with
