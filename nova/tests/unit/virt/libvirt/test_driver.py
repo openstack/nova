@@ -5633,6 +5633,47 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             libvirt_driver.DEFAULT_UEFI_LOADER_PATH['aarch64'])
         self.assertEqual(cfg.os_mach_type, "virt")
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver,
+                       "_get_guest_storage_config")
+    @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_numa_support")
+    @mock.patch('os.path.exists', return_value=True)
+    def test_get_guest_config_aarch64_with_graphics(self, mock_path_exists,
+                                                    mock_numa, mock_storage):
+        def get_host_capabilities_stub(self):
+            cpu = vconfig.LibvirtConfigGuestCPU()
+            cpu.arch = fields.Architecture.AARCH64
+
+            caps = vconfig.LibvirtConfigCaps()
+            caps.host = vconfig.LibvirtConfigCapsHost()
+            caps.host.cpu = cpu
+            return caps
+
+        self.stubs.Set(host.Host, "get_capabilities",
+                       get_host_capabilities_stub)
+        self.flags(enabled=True,
+                   server_listen='10.0.0.1',
+                   keymap='en-ie',
+                   group='vnc')
+        self.flags(virt_type='kvm', group='libvirt')
+        self.flags(enabled=False, group='spice')
+
+        cfg = self._get_guest_config_with_graphics()
+
+        self.assertTrue(mock_path_exists.called)
+        mock_path_exists.assert_called_with(
+            libvirt_driver.DEFAULT_UEFI_LOADER_PATH['aarch64'])
+        self.assertEqual(cfg.os_mach_type, "virt")
+
+        usbhost_exists = False
+        keyboard_exists = False
+        for device in cfg.devices:
+            if device.root_name == 'controller' and device.type == 'usb':
+                usbhost_exists = True
+            if device.root_name == 'input' and device.type == 'keyboard':
+                keyboard_exists = True
+        self.assertTrue(usbhost_exists)
+        self.assertTrue(keyboard_exists)
+
     def test_get_guest_config_machine_type_s390(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 

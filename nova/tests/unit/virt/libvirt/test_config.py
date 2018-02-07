@@ -3113,6 +3113,14 @@ class LibvirtConfigGuestControllerTest(LibvirtConfigBaseTest):
         self.assertXmlEqual(xml, """
                 <controller type='scsi' index='0' model='virtio-scsi'/>""")
 
+    def test_config_guest_usb_host_controller(self):
+        obj = config.LibvirtConfigGuestUSBHostController()
+        obj.type = 'usb'
+        obj.index = 0
+
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, "<controller type='usb' index='0'/>")
+
 
 class LibvirtConfigGuestWatchdogTest(LibvirtConfigBaseTest):
     def test_config_watchdog(self):

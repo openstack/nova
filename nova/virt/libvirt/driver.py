@@ -4943,6 +4943,21 @@ class LibvirtDriver(driver.ComputeDriver):
                 cpu_config.features.add(xf)
         return cpu_config
 
+    def _guest_add_usb_host_keyboard(self, guest):
+        """Add USB Host controller and keyboard for graphical console use.
+
+        Add USB keyboard as PS/2 support may not be present on non-x86
+        architectures.
+        """
+        keyboard = vconfig.LibvirtConfigGuestInput()
+        keyboard.type = "keyboard"
+        keyboard.bus = "usb"
+        guest.add_device(keyboard)
+
+        usbhost = vconfig.LibvirtConfigGuestUSBHostController()
+        usbhost.index = 0
+        guest.add_device(usbhost)
+
     def _get_guest_config(self, instance, network_info, image_meta,
                           disk_info, rescue=None, block_device_info=None,
                           context=None, mdevs=None):
@@ -5045,6 +5060,14 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if self._guest_add_video_device(guest):
             self._add_video_driver(guest, image_meta, flavor)
+
+            # We want video == we want graphical console. Some architectures
+            # do not have input devices attached in default configuration.
+            # Let then add USB Host controller and USB keyboard.
+            # x86(-64) and ppc64 have usb host controller and keyboard
+            # s390x does not support USB
+            if caps.host.cpu.arch == fields.Architecture.AARCH64:
+                self._guest_add_usb_host_keyboard(guest)
 
         # Qemu guest agent only support 'qemu' and 'kvm' hypervisor
         if virt_type in ('qemu', 'kvm'):
