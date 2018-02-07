@@ -216,6 +216,77 @@ class SchedulerReportClientTests(test.TestCase):
                               self.context, self.compute_uuid,
                               self.compute_name, inv_data)
 
+    @mock.patch('nova.compute.utils.is_volume_backed_instance',
+                new=mock.Mock(return_value=False))
+    @mock.patch('nova.objects.compute_node.ComputeNode.save', new=mock.Mock())
+    @mock.patch('keystoneauth1.session.Session.get_auth_headers',
+                new=mock.Mock(return_value={'x-auth-token': 'admin'}))
+    @mock.patch('keystoneauth1.session.Session.get_endpoint',
+                new=mock.Mock(return_value='http://localhost:80/placement'))
+    def test_ensure_standard_resource_class(self):
+        """Test case for bug #1746615: If placement is running a newer version
+        of code than compute, it may have new standard resource classes we
+        don't know about.  Make sure this scenario doesn't cause errors in
+        set_inventory_for_provider.
+        """
+        inv = {
+            'VCPU': {
+                'total': 10,
+                'reserved': 0,
+                'min_unit': 1,
+                'max_unit': 2,
+                'step_size': 1,
+                'allocation_ratio': 10.0,
+            },
+            'MEMORY_MB': {
+                'total': 1048576,
+                'reserved': 2048,
+                'min_unit': 1024,
+                'max_unit': 131072,
+                'step_size': 1024,
+                'allocation_ratio': 1.0,
+            },
+            'DISK_GB': {
+                'total': 100,
+                'reserved': 1,
+                'min_unit': 1,
+                'max_unit': 10,
+                'step_size': 2,
+                'allocation_ratio': 10.0,
+            },
+            # A standard resource class known by placement, but not locally
+            'PCI_DEVICE': {
+                'total': 4,
+                'reserved': 0,
+                'min_unit': 1,
+                'max_unit': 4,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            },
+            'CUSTOM_BANDWIDTH': {
+                'total': 1250000,
+                'reserved': 10000,
+                'min_unit': 5000,
+                'max_unit': 250000,
+                'step_size': 5000,
+                'allocation_ratio': 8.0,
+            },
+        }
+        with interceptor.RequestsInterceptor(app=self.app, url=self.url):
+            self.client.update_compute_node(self.context, self.compute_node)
+            # Simulate that our locally-running code has an outdated notion of
+            # standard resource classes.
+            with mock.patch.object(fields.ResourceClass, 'STANDARD',
+                                   ('VCPU', 'MEMORY_MB', 'DISK_GB')):
+                # TODO(efried): Once bug #1746615 is fixed, this will no longer
+                # raise, and can be replaced with:
+                # self.client.set_inventory_for_provider(
+                #     self.context, self.compute_uuid, self.compute_name, inv)
+                self.assertRaises(
+                    exception.InvalidResourceClass,
+                    self.client.set_inventory_for_provider,
+                    self.context, self.compute_uuid, self.compute_name, inv)
+
     @mock.patch('keystoneauth1.session.Session.get_endpoint',
                 return_value='http://localhost:80/placement')
     def test_global_request_id(self, mock_endpoint):
