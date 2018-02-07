@@ -215,8 +215,8 @@ Add support for a ``limit`` query parameter when making a
 ``GET /allocation_candidates`` request. The parameter accepts an integer
 value, `N`, which limits the maximum number of candidates returned.
 
-1.17 Add 'required' parameter to the allocation candidates
-----------------------------------------------------------
+1.17 Add 'required' parameter to the allocation candidates (Maximum in Queens)
+------------------------------------------------------------------------------
 
 Add the `required` parameter to the `GET /allocation_candidates` API. It
 accepts a list of traits separated by `,`. The provider summary in the response
