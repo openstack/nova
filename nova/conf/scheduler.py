@@ -97,18 +97,15 @@ Related options:
         deprecated_name="scheduler_max_attempts",
         deprecated_group="DEFAULT",
         help="""
-Maximum number of schedule attempts for a chosen host.
-
-This is the maximum number of attempts that will be made to schedule an
-instance before it is assumed that the failures aren't due to normal occasional
-race conflicts, but rather some other problem. When this is reached a
-MaxRetriesExceeded exception is raised, and the instance is set to an error
-state.
+This is the maximum number of attempts that will be made for a given instance
+build/move operation. It limits the number of alternate hosts returned by the
+scheduler. When that list of hosts is exhausted, a MaxRetriesExceeded
+exception is raised and the instance is set to an error state.
 
 Possible values:
 
 * A positive integer, where the integer corresponds to the max number of
-  attempts that can be made when scheduling an instance.
+  attempts that can be made when building or moving an instance.
         """),
     cfg.IntOpt("discover_hosts_in_cells_interval",
                default=-1,
