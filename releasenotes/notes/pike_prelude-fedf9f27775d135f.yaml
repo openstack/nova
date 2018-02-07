@@ -8,7 +8,7 @@ prelude: |
     That said, a few major changes are worth mentioning. This is not an
     exhaustive list:
 
-    - The latest Compute API microversion supported for Ocata is v2.53. Details
+    - The latest Compute API microversion supported for Pike is v2.53. Details
       on REST API microversions added since the 15.0.0 Ocata release can be
       found in the `REST API Version History`_ page.
     - The FilterScheduler driver now provides allocations to the Placement API,
