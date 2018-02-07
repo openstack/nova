@@ -2760,7 +2760,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         get_dest_node.assert_called_once_with(
             self.ctxt, 'dest-host', use_slave=True)
         claim.assert_called_once_with(
-            self.conductor.scheduler_client.reportclient, instance,
+            self.ctxt, self.conductor.scheduler_client.reportclient, instance,
             get_source_node.return_value, get_dest_node.return_value)
         notify.assert_called_once_with(
             self.ctxt, instance.uuid, 'rebuild_server',

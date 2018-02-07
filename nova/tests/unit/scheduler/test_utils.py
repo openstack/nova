@@ -25,6 +25,10 @@ from nova.tests import uuidsentinel as uuids
 
 class TestUtils(test.NoDBTestCase):
 
+    def setUp(self):
+        super(TestUtils, self).setUp()
+        self.context = nova_context.get_admin_context()
+
     def assertResourceRequestsEqual(self, expected, observed):
         ex_by_id = expected._rg_by_id
         ob_by_id = observed._rg_by_id
@@ -446,8 +450,7 @@ class TestUtils(test.NoDBTestCase):
         attempted on the destination compute node.
         """
         reportclient = report.SchedulerReportClient()
-        instance = fake_instance.fake_instance_obj(
-            nova_context.get_admin_context())
+        instance = fake_instance.fake_instance_obj(self.context)
         source_node = objects.ComputeNode(
             uuid=uuids.source_node, host=instance.host)
         dest_node = objects.ComputeNode(uuid=uuids.dest_node, host='dest-host')
@@ -460,7 +463,7 @@ class TestUtils(test.NoDBTestCase):
                            new_callable=mock.NonCallableMock)
         def test(mock_claim, mock_get_allocs):
             utils.claim_resources_on_destination(
-                reportclient, instance, source_node, dest_node)
+                self.context, reportclient, instance, source_node, dest_node)
             mock_get_allocs.assert_called_once_with(
                 uuids.source_node, instance.uuid)
 
@@ -471,8 +474,7 @@ class TestUtils(test.NoDBTestCase):
         on the destination compute node fails, resulting in an error.
         """
         reportclient = report.SchedulerReportClient()
-        instance = fake_instance.fake_instance_obj(
-            nova_context.get_admin_context())
+        instance = fake_instance.fake_instance_obj(self.context)
         source_node = objects.ComputeNode(
             uuid=uuids.source_node, host=instance.host)
         dest_node = objects.ComputeNode(uuid=uuids.dest_node, host='dest-host')
@@ -500,11 +502,12 @@ class TestUtils(test.NoDBTestCase):
             # that they are fetched if needed.
             self.assertRaises(exception.NoValidHost,
                               utils.claim_resources_on_destination,
-                              reportclient, instance, source_node, dest_node)
+                              self.context, reportclient, instance,
+                              source_node, dest_node)
             mock_get_allocs.assert_called_once_with(
                 uuids.source_node, instance.uuid)
             mock_claim.assert_called_once_with(
-                instance.uuid, dest_alloc_request,
+                self.context, instance.uuid, dest_alloc_request,
                 instance.project_id, instance.user_id,
                 allocation_request_version='1.12')
 
@@ -513,8 +516,7 @@ class TestUtils(test.NoDBTestCase):
     def test_claim_resources_on_destination(self):
         """Happy path test where everything is successful."""
         reportclient = report.SchedulerReportClient()
-        instance = fake_instance.fake_instance_obj(
-            nova_context.get_admin_context())
+        instance = fake_instance.fake_instance_obj(self.context)
         source_node = objects.ComputeNode(
             uuid=uuids.source_node, host=instance.host)
         dest_node = objects.ComputeNode(uuid=uuids.dest_node, host='dest-host')
@@ -538,11 +540,11 @@ class TestUtils(test.NoDBTestCase):
                            'claim_resources', return_value=True)
         def test(mock_claim, mock_get_allocs):
             utils.claim_resources_on_destination(
-                reportclient, instance, source_node, dest_node,
+                self.context, reportclient, instance, source_node, dest_node,
                 source_res_allocs)
             self.assertFalse(mock_get_allocs.called)
             mock_claim.assert_called_once_with(
-                instance.uuid, dest_alloc_request,
+                self.context, instance.uuid, dest_alloc_request,
                 instance.project_id, instance.user_id,
                 allocation_request_version='1.12')
 
@@ -564,9 +566,9 @@ class TestUtils(test.NoDBTestCase):
         res = utils.claim_resources(ctx, mock_client, spec_obj, instance_uuid,
                 alloc_req)
 
-        mock_client.claim_resources.assert_called_once_with(uuids.instance,
-                mock.sentinel.alloc_req, uuids.project_id, uuids.user_id,
-                allocation_request_version=None)
+        mock_client.claim_resources.assert_called_once_with(
+            ctx, uuids.instance, mock.sentinel.alloc_req, uuids.project_id,
+            uuids.user_id, allocation_request_version=None)
         self.assertTrue(res)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient')
