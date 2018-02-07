@@ -115,6 +115,12 @@ Normal Response Codes: 204
 
 Error response codes: itemNotFound(404), conflict(409)
 
+.. note:: Since this request does not accept the resource provider generation,
+          it is not safe to use when multiple threads are managing inventories
+          for a single provider.  In such situations, use the
+          ``PUT /resource_providers/{uuid}/inventories`` API with an empty
+          ``inventories`` dict.
+
 Request
 -------
 
