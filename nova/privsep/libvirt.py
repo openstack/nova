@@ -182,7 +182,7 @@ def bridge_delete_interface(bridge, removeif):
     """Remove an interface from a bridge
 
     :param bridge: the name of the bridge
-    :param newif: the name of the interface to add
+    :param removeif: the name of the interface to delete
     """
     processutils.execute('brctl', 'delif', bridge, removeif)
 
