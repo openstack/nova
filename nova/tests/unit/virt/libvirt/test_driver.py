@@ -7127,6 +7127,40 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_encryptor.attach_volume.assert_called_once_with(self.context,
                                                              **encryption)
 
+    @mock.patch.object(key_manager, 'API')
+    @mock.patch('os_brick.encryptors.get_encryption_metadata')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
+    def test_attach_encryptor_encrypted_native_luks_serial(self,
+            mock_get_encryptor, mock_get_metadata, mock_get_key_mgr):
+        """Uses native luks encryption with a provider encryptor and the
+        connection_info has a serial but not volume_id in the 'data'
+        sub-dict.
+        """
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        mock_encryptor = mock.MagicMock()
+        mock_get_encryptor.return_value = mock_encryptor
+        encryption = {'provider': 'luks', 'control_location': 'front-end',
+                      'encryption_key_id': uuids.encryption_key_id}
+        connection_info = {'serial': uuids.serial, 'data': {}}
+        # Mock out the key manager
+        key = u'3734363537333734'
+        key_encoded = binascii.unhexlify(key)
+        mock_key = mock.Mock()
+        mock_key_mgr = mock.Mock()
+        mock_get_key_mgr.return_value = mock_key_mgr
+        mock_key_mgr.get.return_value = mock_key
+        mock_key.get_encoded.return_value = key_encoded
+
+        with mock.patch.object(drvr, '_use_native_luks', return_value=True):
+            with mock.patch.object(drvr._host, 'create_secret') as crt_scrt:
+                drvr._attach_encryptor(self.context, connection_info,
+                                       encryption, allow_native_luks=True)
+
+        mock_get_metadata.assert_not_called()
+        mock_get_encryptor.assert_not_called()
+        crt_scrt.assert_called_once_with(
+            'volume', uuids.serial, password=key)
+
     @mock.patch('os_brick.encryptors.get_encryption_metadata')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
     def test_detach_encryptor_connection_info_incomplete(self,
@@ -10473,15 +10507,42 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             target_ret=None, src_supports_native_luks=True,
             dest_supports_native_luks=True, allow_native_luks=True):
         # Creating testdata
-        vol = {'block_device_mapping': [
-           {'connection_info': {'serial': '12345', u'data':
-            {'device_path':
-             u'/dev/disk/by-path/ip-1.2.3.4:3260-iqn.abc.12345.opst-lun-X'}},
-             'mount_device': '/dev/sda'},
-           {'connection_info': {'serial': '67890', u'data':
-            {'device_path':
-             u'/dev/disk/by-path/ip-1.2.3.4:3260-iqn.cde.67890.opst-lun-Z'}},
-             'mount_device': '/dev/sdb'}]}
+        c = context.get_admin_context()
+        instance = objects.Instance(root_device_name='/dev/vda',
+                                    **self.test_instance)
+        bdms = objects.BlockDeviceMappingList(objects=[
+            fake_block_device.fake_bdm_object(c, {
+                'connection_info': jsonutils.dumps({
+                    'serial': '12345',
+                    'data': {
+                        'device_path': '/dev/disk/by-path/ip-1.2.3.4:3260'
+                                       '-iqn.abc.12345.opst-lun-X'
+                    }
+                }),
+                'device_name': '/dev/sda',
+                'volume_id': uuids.volume1,
+                'source_type': 'volume',
+                'destination_type': 'volume'
+            }),
+            fake_block_device.fake_bdm_object(c, {
+                'connection_info': jsonutils.dumps({
+                    'serial': '67890',
+                    'data': {
+                        'device_path': '/dev/disk/by-path/ip-1.2.3.4:3260'
+                                       '-iqn.cde.67890.opst-lun-Z'
+                    }
+                }),
+                'device_name': '/dev/sdb',
+                'volume_id': uuids.volume2,
+                'source_type': 'volume',
+                'destination_type': 'volume'
+            })
+        ])
+        # We go through get_block_device_info to simulate what the
+        # ComputeManager sends to the driver (make sure we're using the
+        # correct type of BDM objects since there are many of them and
+        # they are super confusing).
+        block_device_info = driver.get_block_device_info(instance, bdms)
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
@@ -10496,16 +10557,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.stubs.Set(drvr, '_is_native_luks_available',
                         lambda: dest_supports_native_luks)
 
-        instance = objects.Instance(**self.test_instance)
-        c = context.get_admin_context()
         nw_info = FakeNetworkInfo()
 
         # Creating mocks
-        self.mox.StubOutWithMock(driver, "block_device_info_get_mapping")
-        driver.block_device_info_get_mapping(vol
-            ).AndReturn(vol['block_device_mapping'])
         self.mox.StubOutWithMock(drvr, "_connect_volume")
-        for v in vol['block_device_mapping']:
+        for v in block_device_info['block_device_mapping']:
             drvr._connect_volume(c, v['connection_info'], instance,
                                  allow_native_luks=allow_native_luks)
         self.mox.StubOutWithMock(drvr, 'plug_vifs')
@@ -10526,14 +10582,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             migrate_data.src_supports_native_luks = True
 
         result = drvr.pre_live_migration(
-            c, instance, vol, nw_info, None,
+            c, instance, block_device_info, nw_info, None,
             migrate_data=migrate_data)
         if not target_ret:
             target_ret = self._generate_target_ret()
         self.assertEqual(
+            target_ret,
             result.to_legacy_dict(
-                pre_migration_result=True)['pre_live_migration_result'],
-            target_ret)
+                pre_migration_result=True)['pre_live_migration_result'])
 
     @mock.patch.object(os, 'mkdir')
     @mock.patch('nova.virt.libvirt.utils.get_instance_path_at_destination')
@@ -10617,15 +10673,42 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         # Creating testdata, using temp dir.
         with utils.tempdir() as tmpdir:
             self.flags(instances_path=tmpdir)
-            vol = {'block_device_mapping': [
-             {'connection_info': {'serial': '12345', u'data':
-             {'device_path':
-              u'/dev/disk/by-path/ip-1.2.3.4:3260-iqn.abc.12345.opst-lun-X'}},
-             'mount_device': '/dev/sda'},
-             {'connection_info': {'serial': '67890', u'data':
-             {'device_path':
-             u'/dev/disk/by-path/ip-1.2.3.4:3260-iqn.cde.67890.opst-lun-Z'}},
-             'mount_device': '/dev/sdb'}]}
+            c = context.get_admin_context()
+            inst_ref = objects.Instance(root_device_name='/dev/vda',
+                                        **self.test_instance)
+            bdms = objects.BlockDeviceMappingList(objects=[
+                fake_block_device.fake_bdm_object(c, {
+                    'connection_info': jsonutils.dumps({
+                        'serial': '12345',
+                        'data': {
+                            'device_path': '/dev/disk/by-path/ip-1.2.3.4:3260'
+                                           '-iqn.abc.12345.opst-lun-X'
+                        }
+                    }),
+                    'device_name': '/dev/sda',
+                    'volume_id': uuids.volume1,
+                    'source_type': 'volume',
+                    'destination_type': 'volume'
+                }),
+                fake_block_device.fake_bdm_object(c, {
+                    'connection_info': jsonutils.dumps({
+                        'serial': '67890',
+                        'data': {
+                            'device_path': '/dev/disk/by-path/ip-1.2.3.4:3260'
+                                           '-iqn.cde.67890.opst-lun-Z'
+                        }
+                    }),
+                    'device_name': '/dev/sdb',
+                    'volume_id': uuids.volume2,
+                    'source_type': 'volume',
+                    'destination_type': 'volume'
+                })
+            ])
+            # We go through get_block_device_info to simulate what the
+            # ComputeManager sends to the driver (make sure we're using the
+            # correct type of BDM objects since there are many of them and
+            # they are super confusing).
+            block_device_info = driver.get_block_device_info(inst_ref, bdms)
 
             drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
@@ -10638,12 +10721,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             class FakeNetworkInfo(object):
                 def fixed_ips(self):
                     return ["test_ip_addr"]
-            inst_ref = objects.Instance(**self.test_instance)
-            c = context.get_admin_context()
             nw_info = FakeNetworkInfo()
             # Creating mocks
             self.mox.StubOutWithMock(drvr, "_connect_volume")
-            for v in vol['block_device_mapping']:
+            for v in block_device_info['block_device_mapping']:
                 drvr._connect_volume(c, v['connection_info'], inst_ref,
                                      allow_native_luks=True)
             self.mox.StubOutWithMock(drvr, 'plug_vifs')
@@ -10661,9 +10742,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 filename='foo',
                 src_supports_native_luks=True,
             )
-            ret = drvr.pre_live_migration(c, inst_ref, vol, nw_info, None,
-                                          migrate_data)
-            target_ret = {
+            ret = drvr.pre_live_migration(
+                c, inst_ref, block_device_info, nw_info, None, migrate_data)
+            expected_result = {
             'graphics_listen_addrs': {'spice': None,
                                       'vnc': None},
             'target_connect_addr': None,
@@ -10682,8 +10763,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                     'dev': 'sdb',
                                     'type': 'disk'}}}}
             self.assertEqual(
-                ret.to_legacy_dict(True)['pre_live_migration_result'],
-                target_ret)
+                expected_result,
+                ret.to_legacy_dict(True)['pre_live_migration_result'])
             self.assertTrue(os.path.exists('%s/%s/' % (tmpdir,
                                                        inst_ref['name'])))
 

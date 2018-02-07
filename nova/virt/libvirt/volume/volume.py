@@ -22,6 +22,7 @@ from oslo_log import log as logging
 import nova.conf
 from nova import exception
 from nova import profiler
+from nova.virt import block_device as driver_block_device
 from nova.virt.libvirt import config as vconfig
 import nova.virt.libvirt.driver
 from nova.virt.libvirt import utils as libvirt_utils
@@ -109,7 +110,7 @@ class LibvirtBaseVolumeDriver(object):
             # a shareable disk.
             conf.shareable = True
 
-        volume_id = connection_info.get('data', {}).get('volume_id')
+        volume_id = driver_block_device.get_volume_id(connection_info)
         volume_secret = None
         if volume_id:
             volume_secret = self.host.find_secret('volume', volume_id)

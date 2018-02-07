@@ -880,3 +880,13 @@ def is_block_device_mapping(bdm):
     return (bdm.source_type in ('image', 'volume', 'snapshot', 'blank')
             and bdm.destination_type == 'volume'
             and is_implemented(bdm))
+
+
+def get_volume_id(connection_info):
+    if connection_info:
+        # Check for volume_id in 'data' and if not there, fallback to
+        # the 'serial' that the DriverVolumeBlockDevice adds during attach.
+        volume_id = connection_info.get('data', {}).get('volume_id')
+        if not volume_id:
+            volume_id = connection_info.get('serial')
+        return volume_id
