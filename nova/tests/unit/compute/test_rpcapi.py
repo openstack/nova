@@ -522,6 +522,15 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
                 bdms=[], instance=self.fake_instance_obj, host='new_host',
                 orig_sys_metadata=None, recreate=True, on_shared_storage=True,
                 preserve_ephemeral=True, migration=None, node=None,
+                limits=None, request_spec=None, version='4.22')
+
+    def test_rebuild_instance_remove_request_spec(self):
+        self.flags(group='upgrade_levels', compute='4.21')
+        self._test_compute_api('rebuild_instance', 'cast', new_pass='None',
+                injected_files='None', image_ref='None', orig_image_ref='None',
+                bdms=[], instance=self.fake_instance_obj, host='new_host',
+                orig_sys_metadata=None, recreate=True, on_shared_storage=True,
+                preserve_ephemeral=True, migration=None, node=None,
                 limits=None, version='4.5')
 
     def test_rebuild_instance_downgrade(self):

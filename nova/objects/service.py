@@ -31,7 +31,7 @@ LOG = logging.getLogger(__name__)
 
 
 # NOTE(danms): This is the global service version counter
-SERVICE_VERSION = 28
+SERVICE_VERSION = 29
 
 
 # NOTE(danms): This is our SERVICE_VERSION history. The idea is that any
@@ -127,6 +127,8 @@ SERVICE_VERSION_HISTORY = (
     {'compute_rpc': '4.20'},
     # Version 28: Adds a 'host_list' parameter to prep_resize()
     {'compute_rpc': '4.21'},
+    # Version 29: Compute RPC version 4.22
+    {'compute_rpc': '4.22'},
 )
 
 

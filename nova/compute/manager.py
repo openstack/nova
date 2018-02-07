@@ -485,7 +485,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='4.21')
+    target = messaging.Target(version='4.22')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to an instance during power off.  The overall
@@ -2804,7 +2804,7 @@ class ComputeManager(manager.Manager):
                          injected_files, new_pass, orig_sys_metadata,
                          bdms, recreate, on_shared_storage=None,
                          preserve_ephemeral=False, migration=None,
-                         scheduled_node=None, limits=None):
+                         scheduled_node=None, limits=None, request_spec=None):
         """Destroy and re-make this instance.
 
         A 'rebuild' effectively purges all existing data from the system and
@@ -2834,6 +2834,8 @@ class ComputeManager(manager.Manager):
                                None
         :param limits: Overcommit limits set by the scheduler. If a host was
                        specified by the user, this will be None
+        :param request_spec: a RequestSpec object used to schedule the instance
+
         """
         context = context.elevated()
 
@@ -2886,11 +2888,22 @@ class ComputeManager(manager.Manager):
                     claim_ctxt, context, instance, orig_image_ref,
                     image_ref, injected_files, new_pass, orig_sys_metadata,
                     bdms, recreate, on_shared_storage, preserve_ephemeral,
-                    migration)
-            except exception.ComputeResourcesUnavailable as e:
-                LOG.debug("Could not rebuild instance on this host, not "
-                          "enough resources available.", instance=instance)
-
+                    migration, request_spec)
+            except (exception.ComputeResourcesUnavailable,
+                    exception.RescheduledException) as e:
+                if isinstance(e, exception.ComputeResourcesUnavailable):
+                    LOG.debug("Could not rebuild instance on this host, not "
+                              "enough resources available.", instance=instance)
+                else:
+                    # RescheduledException is raised by the late server group
+                    # policy check during evacuation if a parallel scheduling
+                    # violated the policy.
+                    # We catch the RescheduledException here but we don't have
+                    # the plumbing to do an actual reschedule so we abort the
+                    # operation.
+                    LOG.debug("Could not rebuild instance on this host, "
+                              "late server group check failed.",
+                              instance=instance)
                 # NOTE(ndipanov): We just abort the build for now and leave a
                 # migration record for potential cleanup later
                 self._set_migration_status(migration, 'failed')
@@ -2949,10 +2962,18 @@ class ComputeManager(manager.Manager):
                              image_ref, injected_files, new_pass,
                              orig_sys_metadata, bdms, recreate,
                              on_shared_storage, preserve_ephemeral,
-                             migration):
+                             migration, request_spec):
         orig_vm_state = instance.vm_state
 
         if recreate:
+            if request_spec:
+                # NOTE(gibi): Do a late check of server group policy as
+                # parallel scheduling could violate such policy. This will
+                # cause the evacuate to fail as rebuild does not implement
+                # reschedule.
+                hints = self._get_scheduler_hints({}, request_spec)
+                self._validate_instance_group_policy(context, instance, hints)
+
             if not self.driver.capabilities["supports_recreate"]:
                 raise exception.InstanceRecreateNotSupported
 

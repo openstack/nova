@@ -3935,6 +3935,87 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             delete_alloc.assert_called_once_with(instance, 'foo',
                                                  node_type='destination')
 
+    @mock.patch('nova.context.RequestContext.elevated')
+    @mock.patch('nova.objects.instance.Instance.drop_migration_context')
+    @mock.patch('nova.objects.instance.Instance.apply_migration_context')
+    @mock.patch('nova.objects.instance.Instance.mutated_migration_context')
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
+    @mock.patch('nova.network.neutronv2.api.API.'
+                'setup_instance_network_on_host')
+    @mock.patch('nova.network.neutronv2.api.API.setup_networks_on_host')
+    @mock.patch('nova.objects.instance.Instance.save')
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    @mock.patch('nova.compute.utils.notify_about_instance_usage')
+    @mock.patch('nova.compute.utils.notify_usage_exists')
+    @mock.patch('nova.objects.instance.Instance.image_meta',
+                new_callable=mock.PropertyMock)
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_validate_instance_group_policy')
+    @mock.patch('nova.compute.manager.ComputeManager._set_migration_status')
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.rebuild_claim')
+    def test_evacuate_late_server_group_policy_check(
+            self, mock_rebuild_claim, mock_set_migration_status,
+            mock_validate_policy, mock_image_meta, mock_notify_exists,
+            mock_notify_legacy, mock_notify, mock_instance_save,
+            mock_setup_networks, mock_setup_intance_network, mock_get_bdms,
+            mock_mutate_migration, mock_appy_migration, mock_drop_migration,
+            mock_context_elevated):
+        instance = fake_instance.fake_instance_obj(self.context)
+        instance.info_cache = None
+        elevated_context = mock.Mock()
+        mock_context_elevated.return_value = elevated_context
+        request_spec = objects.RequestSpec()
+        request_spec.scheduler_hints = {'group': [uuids.group]}
+
+        self.compute.rebuild_instance(
+            self.context, instance, None, None, None, None, None,
+            None, recreate=True, scheduled_node='fake-node',
+            request_spec=request_spec)
+
+        mock_validate_policy.assert_called_once_with(
+            elevated_context, instance, {'group': [uuids.group]})
+
+    @mock.patch('nova.compute.utils.add_instance_fault_from_exc')
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                'delete_allocation_for_evacuated_instance')
+    @mock.patch('nova.context.RequestContext.elevated')
+    @mock.patch('nova.objects.instance.Instance.save')
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    @mock.patch('nova.compute.utils.notify_about_instance_usage')
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_validate_instance_group_policy')
+    @mock.patch('nova.compute.manager.ComputeManager._set_migration_status')
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.rebuild_claim')
+    def test_evacuate_late_server_group_policy_check_fails(
+            self, mock_rebuild_claim, mock_set_migration_status,
+            mock_validate_policy, mock_notify_legacy, mock_notify,
+            mock_instance_save, mock_context_elevated, mock_delete_allocation,
+            mock_instance_fault):
+        instance = fake_instance.fake_instance_obj(self.context)
+        instance.info_cache = None
+        elevated_context = mock.Mock()
+        mock_context_elevated.return_value = elevated_context
+        request_spec = objects.RequestSpec()
+        request_spec.scheduler_hints = {'group': [uuids.group]}
+
+        exc = exception.RescheduledException(
+            instance_uuid=instance.uuid, reason='policy violation')
+        mock_validate_policy.side_effect = exc
+
+        self.assertRaises(
+            exception.BuildAbortException, self.compute.rebuild_instance,
+            self.context, instance, None, None, None, None, None, None,
+            recreate=True, scheduled_node='fake-node',
+            request_spec=request_spec)
+
+        mock_validate_policy.assert_called_once_with(
+            elevated_context, instance, {'group': [uuids.group]})
+        mock_delete_allocation.assert_called_once_with(
+            instance, 'fake-node', node_type='destination')
+        mock_notify.assert_called_once_with(
+            elevated_context, instance, 'fake-mini', action='rebuild',
+            bdms=None, exception=exc, phase='error')
+
     def test_rebuild_node_not_updated_if_not_recreate(self):
         node = uuidutils.generate_uuid()  # ironic node uuid
         instance = fake_instance.fake_instance_obj(self.context, node=node)

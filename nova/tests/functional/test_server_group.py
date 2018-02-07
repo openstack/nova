@@ -427,7 +427,7 @@ class ServerGroupTestV21(ServerGroupTestBase):
 
         post = {'evacuate': {'onSharedStorage': False}}
         self.admin_api.post_server_action(servers[1]['id'], post)
-        self._wait_for_migration_status(servers[1], 'done')
+        self._wait_for_migration_status(servers[1], ['done'])
         evacuated_server = self._wait_for_state_change(
             self.admin_api, servers[1], 'ACTIVE')
 
@@ -453,7 +453,7 @@ class ServerGroupTestV21(ServerGroupTestBase):
 
         post = {'evacuate': {'onSharedStorage': False}}
         self.admin_api.post_server_action(servers[1]['id'], post)
-        self._wait_for_migration_status(servers[1], 'error')
+        self._wait_for_migration_status(servers[1], ['error'])
         server_after_failed_evac = self._wait_for_state_change(
             self.admin_api, servers[1], 'ERROR')
 
@@ -477,7 +477,7 @@ class ServerGroupTestV21(ServerGroupTestBase):
 
         post = {'evacuate': {'onSharedStorage': False}}
         self.admin_api.post_server_action(servers[1]['id'], post)
-        self._wait_for_migration_status(servers[1], 'error')
+        self._wait_for_migration_status(servers[1], ['error'])
         server_after_failed_evac = self._wait_for_state_change(
             self.admin_api, servers[1], 'ERROR')
 
@@ -624,7 +624,7 @@ class ServerGroupTestV215(ServerGroupTestV21):
 
         post = {'evacuate': {}}
         self.admin_api.post_server_action(servers[1]['id'], post)
-        self._wait_for_migration_status(servers[1], 'done')
+        self._wait_for_migration_status(servers[1], ['done'])
         evacuated_server = self._wait_for_state_change(
             self.admin_api, servers[1], 'ACTIVE')
 
@@ -651,7 +651,7 @@ class ServerGroupTestV215(ServerGroupTestV21):
 
         post = {'evacuate': {}}
         self.admin_api.post_server_action(servers[1]['id'], post)
-        self._wait_for_migration_status(servers[1], 'error')
+        self._wait_for_migration_status(servers[1], ['error'])
         server_after_failed_evac = self._wait_for_state_change(
             self.admin_api, servers[1], 'ERROR')
 
@@ -675,7 +675,7 @@ class ServerGroupTestV215(ServerGroupTestV21):
 
         post = {'evacuate': {}}
         self.admin_api.post_server_action(servers[1]['id'], post)
-        self._wait_for_migration_status(servers[1], 'error')
+        self._wait_for_migration_status(servers[1], ['error'])
         server_after_failed_evac = self._wait_for_state_change(
             self.admin_api, servers[1], 'ERROR')
 
@@ -817,7 +817,7 @@ class ServerGroupTestV215(ServerGroupTestV21):
 
         post = {'evacuate': {}}
         self.admin_api.post_server_action(servers[1]['id'], post)
-        self._wait_for_migration_status(servers[1], 'done')
+        self._wait_for_migration_status(servers[1], ['done'])
         evacuated_server = self._wait_for_state_change(
             self.admin_api, servers[1], 'ACTIVE')
 

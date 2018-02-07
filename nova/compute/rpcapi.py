@@ -340,6 +340,7 @@ class ComputeAPI(object):
         * 4.20 - Add multiattach argument to reserve_block_device_name().
         * 4.21 - prep_resize() now gets a 'host_list' parameter representing
                  potential alternate hosts for retries within a cell.
+        * 4.22 - Add request_spec to rebuild_instance()
     '''
 
     VERSION_ALIASES = {
@@ -811,7 +812,7 @@ class ComputeAPI(object):
             image_ref, orig_image_ref, orig_sys_metadata, bdms,
             recreate=False, on_shared_storage=False, host=None, node=None,
             preserve_ephemeral=False, migration=None, limits=None,
-            kwargs=None):
+            request_spec=None, kwargs=None):
         # NOTE(edleafe): compute nodes can only use the dict form of limits.
         if isinstance(limits, objects.SchedulerLimits):
             limits = limits.to_dict()
@@ -820,9 +821,13 @@ class ComputeAPI(object):
         extra = {'preserve_ephemeral': preserve_ephemeral,
                  'migration': migration,
                  'scheduled_node': node,
-                 'limits': limits}
-        version = '4.5'
+                 'limits': limits,
+                 'request_spec': request_spec}
+        version = '4.22'
         client = self.router.client(ctxt)
+        if not client.can_send_version(version):
+            version = '4.5'
+            del extra['request_spec']
         if not client.can_send_version(version):
             version = '4.0'
             extra.pop('migration')

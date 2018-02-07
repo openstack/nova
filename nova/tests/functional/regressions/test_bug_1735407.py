@@ -148,8 +148,8 @@ class TestParallelEvacuationWithServerGroup(
         # that. The only thing that happens after the instance.host is set to
         # the target host is the migration status setting to done. So we have
         # to wait for that to avoid asserting the wrong host below.
-        self._wait_for_migration_status(server1, 'done')
-        self._wait_for_migration_status(server2, 'done')
+        self._wait_for_migration_status(server1, ['done', 'failed'])
+        self._wait_for_migration_status(server2, ['done', 'failed'])
 
         # get the servers again to have the latest information about their
         # hosts
@@ -158,28 +158,19 @@ class TestParallelEvacuationWithServerGroup(
 
         # assert that the anti-affinity policy is enforced during the
         # evacuation
-        # NOTE(gibi): This shows bug 1735407 as both instance ends up on the
-        # same host.
-        self.assertEqual(server1['OS-EXT-SRV-ATTR:host'],
-                         server2['OS-EXT-SRV-ATTR:host'])
-        # After the bug 1735407 is fixed the following is expected:
-        # self.assertNotEqual(server1['OS-EXT-SRV-ATTR:host'],
-        #                     server2['OS-EXT-SRV-ATTR:host'])
+        self.assertNotEqual(server1['OS-EXT-SRV-ATTR:host'],
+                            server2['OS-EXT-SRV-ATTR:host'])
 
         # assert that one of the evacuation was successful and that server is
         # moved to another host and the evacuation of the other server is
         # failed
-        # NOTE(gibi): This shows bug 1735407 as both instance is moved
-        self.assertNotIn(server1['OS-EXT-SRV-ATTR:host'], {'host1', 'host2'})
-        self.assertNotIn(server2['OS-EXT-SRV-ATTR:host'], {'host1', 'host2'})
-        # After fixing the bug 1735407 the following is expected
-        # if server1['status'] == 'ERROR':
-        #     failed_server = server1
-        #     evacuated_server = server2
-        # else:
-        #     failed_server = server2
-        #     evacuated_server = server1
-        # self.assertEqual('ERROR', failed_server['status'])
-        # self.assertNotEqual('host3', failed_server['OS-EXT-SRV-ATTR:host'])
-        # self.assertEqual('ACTIVE', evacuated_server['status'])
-        # self.assertEqual('host3', evacuated_server['OS-EXT-SRV-ATTR:host'])
+        if server1['status'] == 'ERROR':
+            failed_server = server1
+            evacuated_server = server2
+        else:
+            failed_server = server2
+            evacuated_server = server1
+        self.assertEqual('ERROR', failed_server['status'])
+        self.assertNotEqual('host3', failed_server['OS-EXT-SRV-ATTR:host'])
+        self.assertEqual('ACTIVE', evacuated_server['status'])
+        self.assertEqual('host3', evacuated_server['OS-EXT-SRV-ATTR:host'])

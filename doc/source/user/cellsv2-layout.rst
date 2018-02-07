@@ -326,7 +326,7 @@ following:
    .. note:: This has been resolved in the Queens release [#]_.
 
 #. Instance affinity reporting from the compute nodes to scheduler
-#. The late anti-affinity check
+#. The late anti-affinity check during server create and evacuate
 #. Querying host aggregates from the cell
 #. Attaching a volume and ``[cinder]/cross_az_attach=False``
 
