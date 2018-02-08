@@ -928,9 +928,11 @@ def _numa_fit_instance_cell_with_pinning(host_cell, instance_cell,
     if host_cell.avail_memory < instance_cell.memory:
         LOG.debug('Not enough available memory to schedule instance. '
                   'Oversubscription is not possible with pinned instances. '
-                  'Required: %(required)s, actual: %(actual)s',
+                  'Required: %(required)s, available: %(available)s, '
+                  'total: %(total)s. ',
                   {'required': instance_cell.memory,
-                   'actual': host_cell.memory})
+                   'available': host_cell.avail_memory,
+                   'total': host_cell.memory})
         return
 
     if host_cell.siblings:
