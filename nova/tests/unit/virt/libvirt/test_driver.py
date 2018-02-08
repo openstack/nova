@@ -5817,6 +5817,38 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(conf.cpu.cores, 1)
         self.assertEqual(conf.cpu.threads, 1)
 
+    def test_get_guest_cpu_config_host_passthrough_aarch64(self):
+        expected = {
+            fields.Architecture.X86_64: "host-model",
+            fields.Architecture.I686: "host-model",
+            fields.Architecture.PPC: "host-model",
+            fields.Architecture.PPC64: "host-model",
+            fields.Architecture.ARMV7: "host-model",
+            fields.Architecture.AARCH64: "host-passthrough",
+        }
+        for guestarch, expect_mode in expected.items():
+            caps = vconfig.LibvirtConfigCaps()
+            caps.host = vconfig.LibvirtConfigCapsHost()
+            caps.host.cpu = vconfig.LibvirtConfigCPU()
+            caps.host.cpu.arch = guestarch
+            with mock.patch.object(host.Host, "get_capabilities",
+                                   return_value=caps):
+                drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+                if caps.host.cpu.arch == fields.Architecture.AARCH64:
+                    drvr._has_uefi_support = mock.Mock(return_value=True)
+                instance_ref = objects.Instance(**self.test_instance)
+                image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+
+                disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                                    instance_ref,
+                                                    image_meta)
+                conf = drvr._get_guest_config(instance_ref,
+                                              _fake_network_info(self, 1),
+                                              image_meta, disk_info)
+                self.assertIsInstance(conf.cpu,
+                                      vconfig.LibvirtConfigGuestCPU)
+                self.assertEqual(conf.cpu.mode, expect_mode)
+
     def test_get_guest_cpu_config_host_model(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)

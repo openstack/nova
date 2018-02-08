@@ -1,0 +1,13 @@
+---
+upgrade:
+  - |
+    On AArch64 architecture ``cpu_mode`` for libvirt is set to ``host-passthrough``
+    by default.
+
+    AArch64 currently lacks ``host-model`` support because neither libvirt nor
+    QEMU are able to tell what the host CPU model exactly is and there is no
+    CPU description code for ARM(64) at this point.
+
+    .. warning:: ``host-passthrough`` mode will completely break live
+       migration, *unless* all the Compute nodes (running libvirtd) have
+       *identical* CPUs.
