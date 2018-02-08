@@ -495,9 +495,10 @@ class HostManagerTestCase(test.NoDBTestCase):
         mock_get_by_binary.return_value = fakes.SERVICES
         context = 'fake_context'
 
-        self.host_manager.get_all_host_states(context)
-        host_states_map = self.host_manager.host_state_map
-        self.assertEqual(len(host_states_map), 4)
+        # get_all_host_states returns a generator, so make a map from it
+        host_states_map = {(state.host, state.nodename): state for state in
+                           self.host_manager.get_all_host_states(context)}
+        self.assertEqual(4, len(host_states_map))
 
         calls = [
             mock.call(
@@ -560,8 +561,11 @@ class HostManagerTestCase(test.NoDBTestCase):
         mock_get_by_host.return_value = objects.InstanceList()
         self.host_manager.host_aggregates_map = collections.defaultdict(set)
 
-        self.host_manager.get_all_host_states('fake-context')
-        host_state = self.host_manager.host_state_map[('fake', 'fake')]
+        hosts = self.host_manager.get_all_host_states('fake-context')
+        # get_all_host_states returns a generator, so make a map from it
+        host_states_map = {(state.host, state.nodename): state for state in
+                           hosts}
+        host_state = host_states_map[('fake', 'fake')]
         self.assertEqual([], host_state.aggregates)
 
     @mock.patch.object(nova.objects.InstanceList, 'get_by_host')
@@ -581,8 +585,11 @@ class HostManagerTestCase(test.NoDBTestCase):
             set, {'fake': set([1])})
         self.host_manager.aggs_by_id = {1: fake_agg}
 
-        self.host_manager.get_all_host_states('fake-context')
-        host_state = self.host_manager.host_state_map[('fake', 'fake')]
+        hosts = self.host_manager.get_all_host_states('fake-context')
+        # get_all_host_states returns a generator, so make a map from it
+        host_states_map = {(state.host, state.nodename): state for state in
+                           hosts}
+        host_state = host_states_map[('fake', 'fake')]
         self.assertEqual([fake_agg], host_state.aggregates)
 
     @mock.patch.object(nova.objects.InstanceList, 'get_by_host')
@@ -605,8 +612,11 @@ class HostManagerTestCase(test.NoDBTestCase):
             set, {'other': set([1])})
         self.host_manager.aggs_by_id = {1: fake_agg}
 
-        self.host_manager.get_all_host_states('fake-context')
-        host_state = self.host_manager.host_state_map[('fake', 'fake')]
+        hosts = self.host_manager.get_all_host_states('fake-context')
+        # get_all_host_states returns a generator, so make a map from it
+        host_states_map = {(state.host, state.nodename): state for state in
+                           hosts}
+        host_state = host_states_map[('fake', 'fake')]
         self.assertEqual([], host_state.aggregates)
 
     @mock.patch.object(nova.objects.InstanceList, 'get_by_host',
@@ -1002,8 +1012,9 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
         mock_get_by_binary.return_value = fakes.SERVICES
         context = 'fake_context'
 
-        self.host_manager.get_all_host_states(context)
-        host_states_map = self.host_manager.host_state_map
+        # get_all_host_states returns a generator, so make a map from it
+        host_states_map = {(state.host, state.nodename): state for state in
+                           self.host_manager.get_all_host_states(context)}
         self.assertEqual(len(host_states_map), 4)
 
     @mock.patch('nova.objects.ServiceList.get_by_binary')
@@ -1024,20 +1035,16 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
 
         # first call: all nodes
         hosts = self.host_manager.get_all_host_states(context)
-        # get_all_host_states returns a generator so convert the values into
-        # an iterator
-        host_states1 = iter(hosts)
-        host_states_map = self.host_manager.host_state_map
+        # get_all_host_states returns a generator, so make a map from it
+        host_states_map = {(state.host, state.nodename): state for state in
+                           hosts}
         self.assertEqual(len(host_states_map), 4)
 
         # second call: just running nodes
-        self.host_manager.get_all_host_states(context)
-        host_states_map = self.host_manager.host_state_map
+        hosts = self.host_manager.get_all_host_states(context)
+        host_states_map = {(state.host, state.nodename): state for state in
+                           hosts}
         self.assertEqual(len(host_states_map), 3)
-        # Fake a concurrent request that is still processing the first result
-        # to make sure we properly handle that node4 is no longer in
-        # host_state_map.
-        list(host_states1)
 
     @mock.patch('nova.objects.ServiceList.get_by_binary')
     @mock.patch('nova.objects.ComputeNodeList.get_all')
@@ -1051,14 +1058,47 @@ class HostManagerChangedNodesTestCase(test.NoDBTestCase):
         context = 'fake_context'
 
         # first call: all nodes
-        self.host_manager.get_all_host_states(context)
-        host_states_map = self.host_manager.host_state_map
+        hosts = self.host_manager.get_all_host_states(context)
+        # get_all_host_states returns a generator, so make a map from it
+        host_states_map = {(state.host, state.nodename): state for state in
+                           hosts}
         self.assertEqual(len(host_states_map), 4)
 
         # second call: no nodes
-        self.host_manager.get_all_host_states(context)
-        host_states_map = self.host_manager.host_state_map
+        hosts = self.host_manager.get_all_host_states(context)
+        host_states_map = {(state.host, state.nodename): state for state in
+                           hosts}
         self.assertEqual(len(host_states_map), 0)
+
+    @mock.patch('nova.objects.ServiceList.get_by_binary')
+    @mock.patch('nova.objects.ComputeNodeList.get_all_by_uuids')
+    @mock.patch('nova.objects.InstanceList.get_by_host')
+    def test_get_host_states_by_uuids(self, mock_get_by_host, mock_get_all,
+                                      mock_get_by_binary):
+        mock_get_by_host.return_value = objects.InstanceList()
+        mock_get_all.side_effect = [fakes.COMPUTE_NODES, []]
+        mock_get_by_binary.side_effect = [fakes.SERVICES, fakes.SERVICES]
+
+        # Request 1: all nodes can satisfy the request
+        hosts1 = self.host_manager.get_host_states_by_uuids(
+            mock.sentinel.ctxt1, mock.sentinel.uuids1, objects.RequestSpec())
+        # get_host_states_by_uuids returns a generator so convert the values
+        # into an iterator
+        host_states1 = iter(hosts1)
+
+        # Request 2: no nodes can satisfy the request
+        hosts2 = self.host_manager.get_host_states_by_uuids(
+            mock.sentinel.ctxt2, mock.sentinel.uuids2, objects.RequestSpec())
+        host_states2 = iter(hosts2)
+
+        # Fake a concurrent request that is still processing the first result
+        # to make sure all nodes are still available candidates to Request 1.
+        num_hosts1 = len(list(host_states1))
+        self.assertEqual(4, num_hosts1)
+
+        # Verify that no nodes are available to Request 2.
+        num_hosts2 = len(list(host_states2))
+        self.assertEqual(0, num_hosts2)
 
 
 class HostStateTestCase(test.NoDBTestCase):
