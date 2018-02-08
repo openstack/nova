@@ -278,7 +278,7 @@ memory-intensive instances succeed.
    CPU when memory copy delays are detected.
 
    Auto-convergence is disabled by default.  You can enable it by setting
-   ``live_migration_permit_auto_convergence=true``.
+   ``live_migration_permit_auto_converge=true``.
 
    .. caution::
 
