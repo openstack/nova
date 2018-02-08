@@ -72,7 +72,7 @@ API, which can be used to build more complicated logic or automation with
 nova. This can be consumed directly, or via various SDKs. The following
 resources will help you get started with consuming the API directly.
 
-* `Compute API Guide: <https://developer.openstack.org/api-guide/compute/>`_: The
+* `Compute API Guide <https://developer.openstack.org/api-guide/compute/>`_: The
   concept guide for the API. This helps lay out the concepts behind the API to
   make consuming the API reference easier.
 * `Compute API Reference <http://developer.openstack.org/api-ref/compute/>`_:
