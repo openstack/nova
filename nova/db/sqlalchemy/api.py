@@ -5792,6 +5792,7 @@ def _action_get_by_request_id(context, instance_uuid, request_id):
     result = model_query(context, models.InstanceAction).\
                          filter_by(instance_uuid=instance_uuid).\
                          filter_by(request_id=request_id).\
+                         order_by(desc("created_at"), desc("id")).\
                          first()
     return result
 

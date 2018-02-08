@@ -3851,11 +3851,12 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.ctxt = context.get_admin_context()
 
     def _create_action_values(self, uuid, action='run_instance',
-                              ctxt=None, extra=None):
+                              ctxt=None, extra=None, instance_create=True):
         if ctxt is None:
             ctxt = self.ctxt
 
-        db.instance_create(ctxt, {'uuid': uuid})
+        if instance_create:
+            db.instance_create(ctxt, {'uuid': uuid})
 
         utc_now = timeutils.utcnow()
         values = {
@@ -4059,6 +4060,34 @@ class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
         action = db.action_get_by_request_id(self.ctxt, uuid1, request_id)
         self.assertEqual('run_instance', action['action'])
         self.assertEqual(self.ctxt.request_id, action['request_id'])
+
+    def test_instance_action_get_by_instance_and_action_by_order(self):
+        instance_uuid = uuidsentinel.uuid1
+
+        t1 = {
+            'created_at': timeutils.utcnow()
+        }
+        t2 = {
+            'created_at': timeutils.utcnow() + datetime.timedelta(seconds=5)
+        }
+        # Create a confirmResize action
+        action_values = self._create_action_values(
+            instance_uuid, action='confirmResize', extra=t1)
+        a1 = db.action_start(self.ctxt, action_values)
+
+        # Create a delete action with same instance uuid and req id
+        action_values = self._create_action_values(
+            instance_uuid, action='delete', extra=t2, instance_create=False)
+        a2 = db.action_start(self.ctxt, action_values)
+
+        self.assertEqual(a1['request_id'], a2['request_id'])
+        self.assertEqual(a1['instance_uuid'], a2['instance_uuid'])
+        self.assertTrue(a1['created_at'] < a2['created_at'])
+
+        action = db.action_get_by_request_id(self.ctxt, instance_uuid,
+                                             a1['request_id'])
+        # Only get the delete action(last created)
+        self.assertEqual(action['action'], a2['action'])
 
     def test_instance_action_event_start(self):
         """Create an instance action event."""
