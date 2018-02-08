@@ -3342,8 +3342,11 @@ class ComputeManager(manager.Manager):
                 instance.task_state = task_state
                 instance.save(expected_task_state=expected_state)
 
-            self.driver.snapshot(context, instance, image_id,
-                                 update_task_state)
+            with timeutils.StopWatch() as timer:
+                self.driver.snapshot(context, instance, image_id,
+                                     update_task_state)
+            LOG.info('Took %0.2f seconds to snapshot the instance on '
+                     'the hypervisor.', timer.elapsed(), instance=instance)
 
             instance.task_state = None
             instance.save(expected_task_state=task_states.IMAGE_UPLOADING)
