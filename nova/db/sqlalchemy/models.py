@@ -1287,7 +1287,9 @@ class InstanceAction(BASE, NovaBase, models.SoftDeleteMixin):
     __tablename__ = 'instance_actions'
     __table_args__ = (
         Index('instance_uuid_idx', 'instance_uuid'),
-        Index('request_id_idx', 'request_id')
+        Index('request_id_idx', 'request_id'),
+        Index('instance_actions_instance_uuid_updated_at_idx',
+              'instance_uuid', 'updated_at')
     )
 
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)

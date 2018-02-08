@@ -991,6 +991,12 @@ class NovaMigrationsCheckers(test_migrations.ModelsMigrationsSync,
         self.assertIndexMembers(engine, 'migrations',
                                 'migrations_updated_at_idx', ['updated_at'])
 
+    def _check_378(self, engine, data):
+        self.assertIndexMembers(
+            engine, 'instance_actions',
+            'instance_actions_instance_uuid_updated_at_idx',
+            ['instance_uuid', 'updated_at'])
+
 
 class TestNovaMigrationsSQLite(NovaMigrationsCheckers,
                                test_base.DbTestCase,
