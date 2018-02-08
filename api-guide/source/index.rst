@@ -24,10 +24,10 @@ compute resources might be Virtual Machines, Physical Machines or Containers.
 
 This guide covers the concepts in the OpenStack Compute API.
 For a full reference listing, please see:
-`Compute API Reference <http://developer.openstack.org/api-ref/compute/#compute-api>`__.
+`Compute API Reference <https://developer.openstack.org/api-ref/compute/#compute-api>`__.
 
 We welcome feedback, comments, and bug reports at
-`bugs.launchpad.net/nova <http://bugs.launchpad.net/nova>`__.
+`bugs.launchpad.net/nova <https://bugs.launchpad.net/nova>`__.
 
 Intended audience
 =================

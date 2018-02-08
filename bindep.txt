@@ -1,5 +1,5 @@
 # This is a cross-platform list tracking distribution packages needed for install and tests;
-# see http://docs.openstack.org/infra/bindep/ for additional information.
+# see https://docs.openstack.org/infra/bindep/ for additional information.
 
 build-essential [platform:dpkg test]
 gcc [platform:rpm test]

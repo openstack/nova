@@ -105,7 +105,7 @@ server might respond with a 302 redirection request.
 
 For examples of the list versions and get version details requests and
 responses, see `*API versions*
-<http://developer.openstack.org/api-ref/compute/#api-versions>`__.
+<https://developer.openstack.org/api-ref/compute/#api-versions>`__.
 
 The detailed version response contains pointers to both a human-readable
 and a machine-processable description of the API service.
