@@ -1,0 +1,11 @@
+---
+issues:
+  - |
+    Due to a bug in python-glanceclient:
+
+    https://bugs.launchpad.net/python-glanceclient/+bug/1707995
+
+    If ``[glance]/api_servers`` is not set in nova.conf, and there is a
+    versioned endpoint URL in the service catalog, nova makes a best attempt
+    at parsing and stripping the version from the URL in order to make
+    API requests to the image service.
