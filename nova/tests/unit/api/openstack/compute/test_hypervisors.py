@@ -1075,7 +1075,7 @@ class HypervisorsTestV253(HypervisorsTestV252):
             detail_hyper_dict['service']['id'] = TEST_SERVICES[index].uuid
 
     def test_servers(self):
-        """Asserts that calling the servers route after 2.48 fails."""
+        """Asserts that calling the servers route after 2.52 fails."""
         self.assertRaises(exception.VersionNotFoundForAPIMethod,
                           self.controller.servers,
                           self._get_request(True), 'hyper')
@@ -1180,7 +1180,7 @@ class HypervisorsTestV253(HypervisorsTestV252):
         pass
 
     def test_search_old_route(self):
-        """Asserts that calling the search route after 2.48 fails."""
+        """Asserts that calling the search route after 2.52 fails."""
         self.assertRaises(exception.VersionNotFoundForAPIMethod,
                           self.controller.search,
                           self._get_request(True), 'hyper')
