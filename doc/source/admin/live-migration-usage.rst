@@ -281,7 +281,7 @@ To make live-migration succeed, you have several options:
   faster than the instance's memory writes.
 
   To enable auto-convergence, set
-  ``live_migration_permit_auto_convergence=true`` in ``nova.conf`` and restart
+  ``live_migration_permit_auto_converge=true`` in ``nova.conf`` and restart
   ``nova-compute``. Do this on all compute hosts.
 
   .. caution::
