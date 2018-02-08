@@ -750,6 +750,7 @@ def _convert_block_devices(device_type, block_device_mapping):
 
     return devices
 
+
 convert_swap = functools.partial(_convert_block_devices,
                                  DriverSwapBlockDevice)
 
