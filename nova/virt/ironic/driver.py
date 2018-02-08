@@ -867,7 +867,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         with) NOSTATE and all resources == 0.
 
         :param instance: the instance object.
-        :returns: a InstanceInfo object
+        :returns: an InstanceInfo object
         """
         try:
             node = self._validate_instance_and_node(instance)
