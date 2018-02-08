@@ -2186,7 +2186,6 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             pci_requests=None,
             numa_topology=None,
             project_id=self.context.project_id)
-        resvs = 'fake-resvs'
         image = 'fake-image'
         fake_spec = objects.RequestSpec(image=objects.ImageMeta())
         spec_fc_mock.return_value = fake_spec
@@ -2203,7 +2202,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.assertRaises(exc.NoValidHost,
                           self.conductor._cold_migrate,
                           self.context, inst_obj,
-                          flavor, {}, [resvs],
+                          flavor, {},
                           True, None, None)
         metadata_mock.assert_called_with({})
         sig_mock.assert_called_once_with(self.context, fake_spec)
@@ -2238,7 +2237,6 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             availability_zone=None,
             project_id=self.context.project_id)
         image = 'fake-image'
-        resvs = 'fake-resvs'
 
         fake_spec = objects.RequestSpec(image=objects.ImageMeta())
         spec_fc_mock.return_value = fake_spec
@@ -2255,7 +2253,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.assertRaises(exc.NoValidHost,
                            self.conductor._cold_migrate,
                            self.context, inst_obj,
-                           flavor, {}, [resvs],
+                           flavor, {},
                            True, None, None)
         metadata_mock.assert_called_with({})
         sig_mock.assert_called_once_with(self.context, fake_spec)
@@ -2275,7 +2273,6 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             uuid=uuids.instance,
             user_id=fakes.FAKE_USER_ID)
         fake_spec = fake_request_spec.fake_spec_obj()
-        resvs = 'fake-resvs'
         image = 'fake-image'
 
         with test.nested(
@@ -2290,7 +2287,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
               task_rollback_mock):
             nvh = self.assertRaises(exc.NoValidHost,
                                     self.conductor._cold_migrate, self.context,
-                                    inst_obj, flavor, {}, [resvs],
+                                    inst_obj, flavor, {},
                                     True, fake_spec, None)
             self.assertIn('cold migrate', nvh.message)
 
@@ -2318,7 +2315,6 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             numa_topology=None,
             pci_requests=None,
             availability_zone=None)
-        resvs = 'fake-resvs'
         image = 'fake-image'
         exception = exc.UnsupportedPolicyException(reason='')
         fake_spec = fake_request_spec.fake_spec_obj()
@@ -2329,7 +2325,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
 
         self.assertRaises(exc.UnsupportedPolicyException,
                           self.conductor._cold_migrate, self.context,
-                          inst_obj, flavor, {}, [resvs], True, None, None)
+                          inst_obj, flavor, {}, True, None, None)
 
         updates = {'vm_state': vm_states.STOPPED, 'task_state': None}
         set_vm_mock.assert_called_once_with(self.context, inst_obj.uuid,
@@ -2363,7 +2359,6 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             numa_topology=None,
             project_id=self.context.project_id)
         image = 'fake-image'
-        resvs = 'fake-resvs'
         fake_spec = objects.RequestSpec(image=objects.ImageMeta())
         legacy_request_spec = fake_spec.to_legacy_request_spec_dict()
         spec_fc_mock.return_value = fake_spec
@@ -2383,7 +2378,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         self.assertRaises(test.TestingException,
                           self.conductor._cold_migrate,
                           self.context, inst_obj, flavor,
-                          {}, [resvs], True, None, None)
+                          {}, True, None, None)
 
         # Filter properties are populated during code execution
         legacy_filter_props = {'retry': {'num_attempts': 1,
@@ -2425,7 +2420,6 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             availability_zone=None,
             pci_requests=None,
             numa_topology=None)
-        resvs = 'fake-resvs'
         image = 'fake-image'
         fake_spec = fake_request_spec.fake_spec_obj()
 
@@ -2434,7 +2428,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         # the new one
         self.assertNotEqual(flavor, fake_spec.flavor)
         self.conductor._cold_migrate(self.context, inst_obj, flavor, {},
-                                     [resvs], True, fake_spec, None)
+                                     True, fake_spec, None)
 
         # Now the RequestSpec should be updated...
         self.assertEqual(flavor, fake_spec.flavor)
@@ -2453,7 +2447,6 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             user_id=fakes.FAKE_USER_ID)
 
         fake_spec = fake_request_spec.fake_spec_obj()
-        resvs = 'fake-resvs'
         image = 'fake-image'
 
         with test.nested(
@@ -2471,7 +2464,7 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
             nvh = self.assertRaises(exc.NoValidHost,
                                     self.conductor._cold_migrate, self.context,
                                     inst_obj, flavor_new, {},
-                                    [resvs], True, fake_spec, None)
+                                    True, fake_spec, None)
             self.assertIn('resize', nvh.message)
 
     @mock.patch('nova.objects.BuildRequest.get_by_instance_uuid')

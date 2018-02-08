@@ -53,7 +53,7 @@ class MigrationTaskTestCase(test.NoDBTestCase):
 
     def _generate_task(self):
         return migrate.MigrationTask(self.context, self.instance, self.flavor,
-                                     self.request_spec, self.reservations,
+                                     self.request_spec,
                                      self.clean_shutdown,
                                      compute_rpcapi.ComputeAPI(),
                                      scheduler_client.SchedulerClient(),

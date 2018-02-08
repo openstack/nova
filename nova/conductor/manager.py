@@ -239,6 +239,8 @@ class ComputeTaskManager(base.Base):
 
     # TODO(tdurakov): remove `live` parameter here on compute task api RPC
     # version bump to 2.x
+    # TODO(danms): remove the `reservations` parameter here on compute task api
+    # RPC version bump to 2.x
     @messaging.expected_exceptions(
         exception.NoValidHost,
         exception.ComputeServiceUnavailable,
@@ -282,13 +284,13 @@ class ComputeTaskManager(base.Base):
                                              instance_uuid):
                 self._cold_migrate(context, instance, flavor,
                                    scheduler_hint['filter_properties'],
-                                   reservations, clean_shutdown, request_spec,
+                                   clean_shutdown, request_spec,
                                    host_list)
         else:
             raise NotImplementedError()
 
     def _cold_migrate(self, context, instance, flavor, filter_properties,
-                      reservations, clean_shutdown, request_spec, host_list):
+                      clean_shutdown, request_spec, host_list):
         image = utils.get_image_from_system_metadata(
             instance.system_metadata)
 
@@ -309,7 +311,7 @@ class ComputeTaskManager(base.Base):
             request_spec.flavor = flavor
 
         task = self._build_cold_migrate_task(context, instance, flavor,
-                request_spec, reservations, clean_shutdown, host_list)
+                request_spec, clean_shutdown, host_list)
         try:
             task.execute()
         except exception.NoValidHost as ex:
@@ -463,10 +465,10 @@ class ComputeTaskManager(base.Base):
                                               request_spec)
 
     def _build_cold_migrate_task(self, context, instance, flavor, request_spec,
-            reservations, clean_shutdown, host_list):
+            clean_shutdown, host_list):
         return migrate.MigrationTask(context, instance, flavor,
                                      request_spec,
-                                     reservations, clean_shutdown,
+                                     clean_shutdown,
                                      self.compute_rpcapi,
                                      self.scheduler_client, host_list)
 
