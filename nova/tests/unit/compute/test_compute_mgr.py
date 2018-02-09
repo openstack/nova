@@ -1272,10 +1272,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 uuid=uuids.instance,
                 vm_state=vm_states.ERROR,
                 task_state=task_states.DELETING)
-        bdms = [mock.Mock(id=1, is_volume=True)]
+        bdms = [mock.Mock(id=1, is_volume=True, attachment_id=None)]
 
         self.compute._shutdown_instance(self.context, instance, bdms,
                 notify=False, try_deallocate_networks=False)
+        mock_connector.assert_called_once_with(instance)
 
     def test_shutdown_instance_endpoint_not_found(self):
         exc = cinder_exception.EndpointNotFound
