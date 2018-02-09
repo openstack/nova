@@ -2346,13 +2346,12 @@ class ComputeManager(manager.Manager):
 
         # NOTE(melwitt): attempt driver destroy before releasing ip, may
         #                want to keep ip allocated for certain failures
-        timer = timeutils.StopWatch()
         try:
             LOG.debug('Start destroying the instance on the hypervisor.',
                       instance=instance)
-            timer.start()
-            self.driver.destroy(context, instance, network_info,
-                    block_device_info)
+            with timeutils.StopWatch() as timer:
+                self.driver.destroy(context, instance, network_info,
+                                    block_device_info)
             LOG.info('Took %0.2f seconds to destroy the instance on the '
                      'hypervisor.', timer.elapsed(), instance=instance)
         except exception.InstancePowerOffFailure:
