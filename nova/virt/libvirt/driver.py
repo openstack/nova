@@ -49,6 +49,7 @@ from os_brick import exception as brick_exception
 from os_brick.initiator import connector
 from oslo_concurrency import processutils
 from oslo_log import log as logging
+from oslo_serialization import base64
 from oslo_serialization import jsonutils
 from oslo_service import loopingcall
 from oslo_utils import encodeutils
@@ -62,6 +63,7 @@ import six
 from six.moves import range
 
 from nova.api.metadata import base as instance_metadata
+from nova.api.metadata import password
 from nova import block_device
 from nova.compute import power_state
 from nova.compute import task_states
@@ -70,6 +72,7 @@ import nova.conf
 from nova.console import serial as serial_console
 from nova.console import type as ctype
 from nova import context as nova_context
+from nova import crypto
 from nova import exception
 from nova.i18n import _
 from nova import image
@@ -1825,6 +1828,17 @@ class LibvirtDriver(driver.ComputeDriver):
         else:
             raise exception.SetAdminPasswdNotSupported()
 
+    # TODO(melwitt): Combine this with the similar xenapi code at some point.
+    def _save_instance_password_if_sshkey_present(self, instance, new_pass):
+        sshkey = instance.key_data if 'key_data' in instance else None
+        if sshkey and sshkey.startswith("ssh-rsa"):
+            enc = crypto.ssh_encrypt_text(sshkey, new_pass)
+            # NOTE(melwitt): The convert_password method doesn't actually do
+            # anything with the context argument, so we can pass None.
+            instance.system_metadata.update(
+                password.convert_password(None, base64.encode_as_text(enc)))
+            instance.save()
+
     def set_admin_password(self, instance, new_pass):
         self._can_set_admin_password(instance.image_meta)
 
@@ -1844,6 +1858,10 @@ class LibvirtDriver(driver.ComputeDriver):
                      '"%(user)s": [Error Code %(error_code)s] %(ex)s')
                    % {'user': user, 'error_code': error_code, 'ex': err_msg})
             raise exception.InternalError(msg)
+        else:
+            # Save the password in sysmeta so it may be retrieved from the
+            # metadata service.
+            self._save_instance_password_if_sshkey_present(instance, new_pass)
 
     def _can_quiesce(self, instance, image_meta):
         if CONF.libvirt.virt_type not in ('kvm', 'qemu'):
