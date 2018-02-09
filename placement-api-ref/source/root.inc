@@ -45,5 +45,5 @@ Response
 Response Example
 ----------------
 
-.. literalinclude:: get-root.json
+.. literalinclude:: ./samples/root/get-root.json
    :language: javascript

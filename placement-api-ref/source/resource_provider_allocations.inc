@@ -36,5 +36,5 @@ Response
 Response Example
 ----------------
 
-.. literalinclude:: get-resource_provider_allocations.json
+.. literalinclude:: ./samples/resource_provider_allocations/get-resource_provider_allocations.json
    :language: javascript

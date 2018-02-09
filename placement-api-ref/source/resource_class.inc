@@ -38,7 +38,7 @@ Response
 Response Example
 ----------------
 
-.. literalinclude:: get-resource_class.json
+.. literalinclude:: ./samples/resource_classes/get-resource_class.json
    :language: javascript
 
 Update resource class
@@ -102,7 +102,7 @@ Request
 Request example
 ---------------
 
-.. literalinclude:: update-resource_class-request.json
+.. literalinclude:: ./samples/resource_classes/update-resource_class-request.json
    :language: javascript
 
 Response
@@ -116,7 +116,7 @@ Response
 Response Example
 ----------------
 
-.. literalinclude:: update-resource_class.json
+.. literalinclude:: ./samples/resource_classes/update-resource_class.json
    :language: javascript
 
 Delete resource class

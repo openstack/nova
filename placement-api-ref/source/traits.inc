@@ -42,7 +42,7 @@ Response
 Response Example
 ----------------
 
-.. literalinclude:: get-traits.json
+.. literalinclude:: ./samples/traits/get-traits.json
    :language: javascript
 
 Show traits

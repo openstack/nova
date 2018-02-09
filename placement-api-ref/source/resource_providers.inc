@@ -46,7 +46,7 @@ Response
 Response Example
 ----------------
 
-.. literalinclude:: get-resource_providers.json
+.. literalinclude:: ./samples/resource_providers/get-resource_providers.json
    :language: javascript
 
 Create resource provider
@@ -76,7 +76,7 @@ Request
 Request example
 ---------------
 
-.. literalinclude:: create-resource_providers-request.json
+.. literalinclude:: ./samples/resource_providers/create-resource_providers-request.json
    :language: javascript
 
 Response
