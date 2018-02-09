@@ -17,7 +17,6 @@
 import contextlib
 import copy
 import functools
-import sys
 
 from oslo_config import cfg
 from oslo_log import log as logging
@@ -968,8 +967,6 @@ class ComputeTaskManager(base.Base):
                                  'task_state': None}, ex, request_spec)
                         LOG.warning('Rebuild failed: %s',
                                     six.text_type(ex), instance=instance)
-                        compute_utils.add_instance_fault_from_exc(context,
-                            instance, ex, sys.exc_info())
 
             compute_utils.notify_about_instance_usage(
                 self.notifier, context, instance, "rebuild.scheduled")
