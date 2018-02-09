@@ -485,7 +485,7 @@ class ComputeVirtAPI(virtapi.VirtAPI):
 class ComputeManager(manager.Manager):
     """Manages the running instances from creation to destruction."""
 
-    target = messaging.Target(version='4.22')
+    target = messaging.Target(version='5.0')
 
     # How long to wait in seconds before re-issuing a shutdown
     # signal to an instance during power off.  The overall
@@ -532,6 +532,8 @@ class ComputeManager(manager.Manager):
 
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
+
+        self.additional_endpoints.append(_ComputeV4Proxy(self))
 
         # NOTE(russellb) Load the driver last.  It may call back into the
         # compute manager via the virtapi, so we want it to be fully
@@ -1195,19 +1197,6 @@ class ComputeManager(manager.Manager):
     def get_console_pool_info(self, context, console_type):
         return self.driver.get_console_pool_info(console_type)
 
-    # NOTE(hanlind): This and the virt method it calls can be removed in
-    # version 5.0 of the RPC API
-    @wrap_exception()
-    def refresh_security_group_rules(self, context, security_group_id):
-        """Tell the virtualization driver to refresh security group rules.
-
-        Passes straight through to the virtualization driver.
-
-        """
-        return self.driver.refresh_security_group_rules(security_group_id)
-
-    # TODO(alaski): Remove object_compat for RPC version 5.0
-    @object_compat
     @wrap_exception()
     def refresh_instance_security_rules(self, context, instance):
         """Tell the virtualization driver to refresh security rules for
@@ -2515,7 +2504,7 @@ class ComputeManager(manager.Manager):
     @reverts_task_state
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
-    def terminate_instance(self, context, instance, bdms, reservations):
+    def terminate_instance(self, context, instance, bdms):
         """Terminate an instance on this host."""
         @utils.synchronized(instance.uuid)
         def do_terminate_instance(instance, bdms):
@@ -2693,7 +2682,7 @@ class ComputeManager(manager.Manager):
     @reverts_task_state
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
-    def soft_delete_instance(self, context, instance, reservations):
+    def soft_delete_instance(self, context, instance):
         """Soft delete an instance on this host."""
         with compute_utils.notify_about_instance_delete(
                 self.notifier, context, instance, 'soft_delete'):
@@ -2802,9 +2791,9 @@ class ComputeManager(manager.Manager):
     @wrap_instance_fault
     def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
                          injected_files, new_pass, orig_sys_metadata,
-                         bdms, recreate, on_shared_storage=None,
-                         preserve_ephemeral=False, migration=None,
-                         scheduled_node=None, limits=None, request_spec=None):
+                         bdms, recreate, on_shared_storage,
+                         preserve_ephemeral, migration,
+                         scheduled_node, limits, request_spec):
         """Destroy and re-make this instance.
 
         A 'rebuild' effectively purges all existing data from the system and
@@ -3657,7 +3646,7 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
-    def confirm_resize(self, context, instance, reservations, migration):
+    def confirm_resize(self, context, instance, migration):
         """Confirms a migration/resize and deletes the 'old' instance.
 
         This is called from the API and runs on the source host.
@@ -3852,7 +3841,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event(prefix='compute')
     @errors_out_migration
     @wrap_instance_fault
-    def revert_resize(self, context, instance, migration, reservations):
+    def revert_resize(self, context, instance, migration):
         """Destroys the new instance on the destination machine.
 
         Reverts the model changes, and powers on the old instance on the
@@ -3917,7 +3906,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event(prefix='compute')
     @errors_out_migration
     @wrap_instance_fault
-    def finish_revert_resize(self, context, instance, reservations, migration):
+    def finish_revert_resize(self, context, instance, migration):
         """Finishes the second half of reverting a resize on the source host.
 
         Bring the original source instance state back (active/shutoff) and
@@ -4100,8 +4089,8 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def prep_resize(self, context, image, instance, instance_type,
-                    reservations, request_spec, filter_properties, node,
-                    clean_shutdown, migration=None, host_list=None):
+                    request_spec, filter_properties, node,
+                    clean_shutdown, migration, host_list):
         """Initiates the process of moving a running instance to another host.
 
         Possibly changes the VCPU, RAM and disk size in the process.
@@ -4116,12 +4105,6 @@ class ComputeManager(manager.Manager):
         if node is None:
             node = self._get_nodename(instance, refresh=True)
 
-        # NOTE(melwitt): Remove this in version 5.0 of the RPC API
-        # Code downstream may expect extra_specs to be populated since it
-        # is receiving an object, so lookup the flavor to ensure this.
-        if not isinstance(instance_type, objects.Flavor):
-            instance_type = objects.Flavor.get_by_id(context,
-                                                     instance_type['id'])
         with self._error_out_instance_on_exception(context, instance), \
                  errors_out_migration_ctxt(migration):
             compute_utils.notify_usage_exists(self.notifier, context, instance,
@@ -4224,8 +4207,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def resize_instance(self, context, instance, image,
-                        reservations, migration, instance_type,
-                        clean_shutdown):
+                        migration, instance_type, clean_shutdown):
         """Starts the migration of a running instance to another host.
 
         This is initiated from the destination host's ``prep_resize`` routine
@@ -4233,14 +4215,6 @@ class ComputeManager(manager.Manager):
         """
         with self._error_out_instance_on_exception(context, instance), \
              errors_out_migration_ctxt(migration):
-            # TODO(chaochin) Remove this until v5 RPC API
-            # Code downstream may expect extra_specs to be populated since it
-            # is receiving an object, so lookup the flavor to ensure this.
-            if (not instance_type or
-                not isinstance(instance_type, objects.Flavor)):
-                instance_type = objects.Flavor.get_by_id(
-                    context, migration['new_instance_type_id'])
-
             network_info = self.network_api.get_instance_nw_info(context,
                                                                  instance)
 
@@ -4457,7 +4431,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def finish_resize(self, context, disk_info, image, instance,
-                      reservations, migration):
+                      migration):
         """Completes the migration process.
 
         Sets up the newly transferred disk and turns on the instance at its
@@ -4608,8 +4582,6 @@ class ComputeManager(manager.Manager):
                 state=power_state.STATE_MAP[instance.power_state],
                 method='get_diagnostics')
 
-    # TODO(alaski): Remove object_compat for RPC version 5.0
-    @object_compat
     @wrap_exception()
     @wrap_instance_fault
     def get_instance_diagnostics(self, context, instance):
@@ -5214,8 +5186,8 @@ class ComputeManager(manager.Manager):
     @reverts_task_state
     @wrap_instance_fault
     def reserve_block_device_name(self, context, instance, device,
-                                  volume_id, disk_bus, device_type, tag=None,
-                                  multiattach=False):
+                                  volume_id, disk_bus, device_type, tag,
+                                  multiattach):
         if (tag and not
                 self.driver.capabilities.get('supports_tagged_attach_volume',
                                              False)):
@@ -5401,7 +5373,7 @@ class ComputeManager(manager.Manager):
     @wrap_exception()
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
-    def detach_volume(self, context, volume_id, instance, attachment_id=None):
+    def detach_volume(self, context, volume_id, instance, attachment_id):
         """Detach a volume from an instance.
 
         :param context: security context
@@ -5586,7 +5558,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def swap_volume(self, context, old_volume_id, new_volume_id, instance,
-                    new_attachment_id=None):
+                    new_attachment_id):
         """Swap volume for an instance."""
         context = context.elevated()
 
@@ -5687,7 +5659,7 @@ class ComputeManager(manager.Manager):
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
     def attach_interface(self, context, instance, network_id, port_id,
-                         requested_ip, tag=None):
+                         requested_ip, tag):
         """Use hotplug to add an network adapter to an instance."""
         if not self.driver.capabilities['supports_attach_interface']:
             raise exception.AttachInterfaceNotSupported(
@@ -5875,22 +5847,12 @@ class ComputeManager(manager.Manager):
             ctxt, instance.uuid)
         is_volume_backed = compute_utils.is_volume_backed_instance(
             ctxt, instance, bdms)
-        # TODO(tdurakov): remove dict to object conversion once RPC API version
-        # is bumped to 5.x
-        got_migrate_data_object = isinstance(dest_check_data,
-                                             migrate_data_obj.LiveMigrateData)
-        if not got_migrate_data_object:
-            dest_check_data = \
-                migrate_data_obj.LiveMigrateData.detect_implementation(
-                    dest_check_data)
         dest_check_data.is_volume_backed = is_volume_backed
         block_device_info = self._get_instance_block_device_info(
                             ctxt, instance, refresh_conn_info=False, bdms=bdms)
         result = self.driver.check_can_live_migrate_source(ctxt, instance,
                                                            dest_check_data,
                                                            block_device_info)
-        if not got_migrate_data_object:
-            result = result.to_legacy_dict()
         LOG.debug('source check data is %s', result)
         return result
 
@@ -5911,14 +5873,6 @@ class ComputeManager(manager.Manager):
         :returns: migrate_data containing additional migration info
         """
         LOG.debug('pre_live_migration data is %s', migrate_data)
-        # TODO(tdurakov): remove dict to object conversion once RPC API version
-        # is bumped to 5.x
-        got_migrate_data_object = isinstance(migrate_data,
-                                             migrate_data_obj.LiveMigrateData)
-        if not got_migrate_data_object:
-            migrate_data = \
-                migrate_data_obj.LiveMigrateData.detect_implementation(
-                    migrate_data)
 
         migrate_data.old_vol_attachment_ids = {}
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
@@ -6012,12 +5966,6 @@ class ComputeManager(manager.Manager):
             action=fields.NotificationAction.LIVE_MIGRATION_PRE,
             phase=fields.NotificationPhase.END)
 
-        # TODO(tdurakov): remove dict to object conversion once RPC API version
-        # is bumped to 5.x
-        if not got_migrate_data_object and migrate_data:
-            migrate_data = migrate_data.to_legacy_dict(
-                pre_migration_result=True)
-            migrate_data = migrate_data['pre_live_migration_result']
         LOG.debug('pre_live_migration result data is %s', migrate_data)
         return migrate_data
 
@@ -6028,13 +5976,6 @@ class ComputeManager(manager.Manager):
         # done on source/destination. For now, this is just here for status
         # reporting
         self._set_migration_status(migration, 'preparing')
-
-        got_migrate_data_object = isinstance(migrate_data,
-                                             migrate_data_obj.LiveMigrateData)
-        if not got_migrate_data_object:
-            migrate_data = \
-                migrate_data_obj.LiveMigrateData.detect_implementation(
-                    migrate_data)
 
         try:
             if ('block_migration' in migrate_data and
@@ -6111,20 +6052,14 @@ class ComputeManager(manager.Manager):
                       block_migration, migration,
                       migrate_data)
 
-    # TODO(tdurakov): migration_id is used since 4.12 rpc api version
-    # remove migration_id parameter when the compute RPC version
-    # is bumped to 5.x.
     @wrap_exception()
     @wrap_instance_event(prefix='compute')
     @wrap_instance_fault
-    def live_migration_force_complete(self, context, instance,
-                                      migration_id=None):
+    def live_migration_force_complete(self, context, instance):
         """Force live migration to complete.
 
         :param context: Security context
         :param instance: The instance that is being migrated
-        :param migration_id: ID of ongoing migration; is currently not used,
-        and isn't removed for backward compatibility
         """
 
         self._notify_about_instance_usage(
@@ -6455,14 +6390,7 @@ class ComputeManager(manager.Manager):
             Contains the status we want to set for the migration object
 
         """
-        # TODO(tdurakov): remove dict to object conversion once RPC API version
-        # is bumped to 5.x
-        if isinstance(migrate_data, dict):
-            migration = migrate_data.pop('migration', None)
-            migrate_data = \
-                migrate_data_obj.LiveMigrateData.detect_implementation(
-                    migrate_data)
-        elif (isinstance(migrate_data, migrate_data_obj.LiveMigrateData) and
+        if (isinstance(migrate_data, migrate_data_obj.LiveMigrateData) and
               migrate_data.obj_attr_is_set('migration')):
             migration = migrate_data.migration
         else:
@@ -6566,12 +6494,6 @@ class ComputeManager(manager.Manager):
             #             from remote volumes if necessary
             block_device_info = self._get_instance_block_device_info(context,
                                                                      instance)
-            # TODO(tdurakov): remove dict to object conversion once RPC API
-            # version is bumped to 5.x
-            if isinstance(migrate_data, dict):
-                migrate_data = \
-                    migrate_data_obj.LiveMigrateData.detect_implementation(
-                        migrate_data)
             self.driver.rollback_live_migration_at_destination(
                 context, instance, network_info, block_device_info,
                 destroy_disks=destroy_disks, migrate_data=migrate_data)
@@ -7820,3 +7742,190 @@ class ComputeManager(manager.Manager):
                               error, instance=instance)
         image_meta = objects.ImageMeta.from_instance(instance)
         self.driver.unquiesce(context, instance, image_meta)
+
+
+# NOTE(danms): This proxy object provides a 4.x interface for received RPC
+# calls so we are compatible with 5.0 (above) and 4.22 from <=Queens. This
+# should be removed in Rocky when we drop 4.x support.
+class _ComputeV4Proxy(object):
+    target = messaging.Target(version='4.22')
+
+    def __init__(self, manager):
+        self.manager = manager
+
+    def __getattr__(self, name):
+        # NOTE(danms): Anything not called out below is straight-through
+        return getattr(self.manager, name)
+
+    def attach_interface(self, context, instance, network_id, port_id,
+                         requested_ip, tag=None):
+        return self.manager.attach_interface(context, instance, network_id,
+                                             port_id, requested_ip, tag)
+
+    def check_can_live_migrate_source(self, ctxt, instance, dest_check_data):
+        # TODO(tdurakov): remove dict to object conversion once RPC API version
+        # is bumped to 5.x
+        got_migrate_data_object = isinstance(dest_check_data,
+                                             migrate_data_obj.LiveMigrateData)
+        if not got_migrate_data_object:
+            dest_check_data = \
+                migrate_data_obj.LiveMigrateData.detect_implementation(
+                    dest_check_data)
+        result = self.manager.check_can_live_migrate_source(ctxt, instance,
+                                                            dest_check_data)
+        if not got_migrate_data_object:
+            result = result.to_legacy_dict()
+        return result
+
+    def detach_volume(self, context, volume_id, instance, attachment_id=None):
+        return self.manager.detach_volume(context, volume_id, instance,
+                                          attachment_id)
+
+    def finish_resize(self, context, disk_info, image, instance, reservations,
+                      migration):
+        return self.manager.finish_resize(context, disk_info, image, instance,
+                                          migration)
+
+    def finish_revert_resize(self, context, instance, reservations, migration):
+        return self.manager.finish_revert_resize(context, instance, migration)
+
+    def live_migration(self, context, dest, instance, block_migration,
+                       migration, migrate_data):
+        got_migrate_data_object = isinstance(migrate_data,
+                                             migrate_data_obj.LiveMigrateData)
+        if not got_migrate_data_object:
+            migrate_data = \
+                migrate_data_obj.LiveMigrateData.detect_implementation(
+                    migrate_data)
+        return self.manager.live_migration(context, dest, instance,
+                                           block_migration, migration,
+                                           migrate_data)
+
+    def live_migration_force_complete(self, context, instance,
+                                      migration_id=None):
+        self.manager.live_migration_force_complete(context, instance)
+
+    def pre_live_migration(self, context, instance, block_migration, disk,
+                           migrate_data):
+        # TODO(tdurakov): remove dict to object conversion once RPC API version
+        # is bumped to 5.x
+        got_migrate_data_object = isinstance(migrate_data,
+                                             migrate_data_obj.LiveMigrateData)
+        if not got_migrate_data_object:
+            migrate_data = \
+                migrate_data_obj.LiveMigrateData.detect_implementation(
+                    migrate_data)
+
+        migrate_data = self.manager.pre_live_migration(context, instance,
+                                                       block_migration, disk,
+                                                       migrate_data)
+
+        # TODO(tdurakov): remove dict to object conversion once RPC API version
+        # is bumped to 5.x
+        if not got_migrate_data_object and migrate_data:
+            migrate_data = migrate_data.to_legacy_dict(
+                pre_migration_result=True)
+            migrate_data = migrate_data['pre_live_migration_result']
+
+        return migrate_data
+
+    def prep_resize(self, context, image, instance, instance_type,
+                    reservations, request_spec, filter_properties, node,
+                    clean_shutdown, migration=None, host_list=None):
+        # NOTE(melwitt): Remove this in version 5.0 of the RPC API
+        # Code downstream may expect extra_specs to be populated since it
+        # is receiving an object, so lookup the flavor to ensure this.
+        if not isinstance(instance_type, objects.Flavor):
+            instance_type = objects.Flavor.get_by_id(context,
+                                                     instance_type['id'])
+        return self.manager.prep_resize(context, image, instance,
+                                        instance_type,
+                                        request_spec, filter_properties,
+                                        node, clean_shutdown,
+                                        migration, host_list)
+
+    def rebuild_instance(self, context, instance, orig_image_ref, image_ref,
+                         injected_files, new_pass, orig_sys_metadata,
+                         bdms, recreate, on_shared_storage=None,
+                         preserve_ephemeral=False, migration=None,
+                         scheduled_node=None, limits=None, request_spec=None):
+        # FIXME(danms): Can remove handling for on_shared_storage below this
+        # point or does the API need it for compatibility?
+        return self.manager.rebuild_instance(context, instance, orig_image_ref,
+                                             image_ref, injected_files,
+                                             new_pass, orig_sys_metadata,
+                                             bdms, recreate,
+                                             on_shared_storage,
+                                             preserve_ephemeral,
+                                             migration,
+                                             scheduled_node, limits,
+                                             request_spec)
+
+    def resize_instance(self, context, instance, image, reservations,
+                        migration, instance_type, clean_shutdown):
+        # TODO(chaochin) Remove this until v5 RPC API
+        # Code downstream may expect extra_specs to be populated since it
+        # is receiving an object, so lookup the flavor to ensure this.
+        if (not instance_type or
+            not isinstance(instance_type, objects.Flavor)):
+            instance_type = objects.Flavor.get_by_id(
+                context, migration['new_instance_type_id'])
+        return self.manager.resize_instance(context, instance, image,
+                                            migration, instance_type,
+                                            clean_shutdown)
+
+    def rollback_live_migration_at_destination(self, context, instance,
+                                               destroy_disks, migrate_data):
+        # TODO(tdurakov): remove dict to object conversion once RPC API
+        # version is bumped to 5.x
+        if isinstance(migrate_data, dict):
+            migrate_data = \
+                migrate_data_obj.LiveMigrateData.detect_implementation(
+                    migrate_data)
+        return self.manager.rollback_live_migration_at_destination(
+            context, instance, destroy_disks, migrate_data)
+
+    def swap_volume(self, context, old_volume_id, new_volume_id, instance,
+                    new_attachment_id=None):
+        return self.manager.swap_volume(context, old_volume_id, new_volume_id,
+                                        instance, new_attachment_id)
+
+    def reserve_block_device_name(self, context, instance, device, volume_id,
+                                  disk_bus, device_type, tag=None,
+                                  multiattach=False):
+        return self.manager.reserve_block_device_name(context, instance,
+                                                      device, volume_id,
+                                                      disk_bus, device_type,
+                                                      tag, multiattach)
+
+    def terminate_instance(self, context, instance, bdms, reservations):
+        return self.manager.terminate_instance(context, instance, bdms)
+
+    def soft_delete_instance(self, context, instance, reservations):
+        return self.manager.soft_delete_instance(context, instance)
+
+    @object_compat
+    def refresh_instance_security_rules(self, context, instance):
+        return self.manager.refresh_instance_security_rules(context, instance)
+
+    # NOTE(hanlind): This and the virt method it calls can be removed in
+    # version 5.0 of the RPC API
+    @wrap_exception()
+    def refresh_security_group_rules(self, context, security_group_id):
+        """Tell the virtualization driver to refresh security group rules.
+
+        Passes straight through to the virtualization driver.
+
+        """
+        return self.manager.driver.refresh_security_group_rules(
+            security_group_id)
+
+    @object_compat
+    def get_instance_diagnostics(self, context, instance):
+        return self.manager.get_instance_diagnostics(context, instance)
+
+    def confirm_resize(self, context, instance, reservations, migration):
+        return self.manager.confirm_resize(context, instance, migration)
+
+    def revert_resize(self, context, instance, migration, reservations):
+        return self.manager.revert_resize(context, instance, migration)
