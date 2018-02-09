@@ -1396,10 +1396,16 @@ class CellV2Commands(object):
         # Check to see if there are any HostMappings for this cell.
         host_mappings = objects.HostMappingList.get_by_cell_id(
             ctxt, cell_mapping.id)
-        if host_mappings and not force:
-            print(_('There are existing hosts mapped to cell with uuid %s.') %
-                  cell_uuid)
-            return 2
+        nodes = []
+        if host_mappings:
+            if not force:
+                print(_('There are existing hosts mapped to cell with uuid '
+                        '%s.') % cell_uuid)
+                return 2
+            # We query for the compute nodes in the cell,
+            # so that they can be unmapped.
+            with context.target_cell(ctxt, cell_mapping) as cctxt:
+                nodes = objects.ComputeNodeList.get_all(cctxt)
 
         # Check to see if there are any InstanceMappings for this cell.
         instance_mappings = objects.InstanceMappingList.get_by_cell_id(
@@ -1420,6 +1426,12 @@ class CellV2Commands(object):
             print(_("So execute 'nova-manage db archive_deleted_rows' to "
                     "delete the instance mappings."))
             return 4
+
+        # Unmap the compute nodes so that they can be discovered
+        # again in future, if needed.
+        for node in nodes:
+            node.mapped = 0
+            node.save()
 
         # Delete hosts mapped to the cell.
         for host_mapping in host_mappings:
