@@ -81,7 +81,7 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         selection = self.host_lists[0][0]
         prep_resize_mock.assert_called_once_with(
             self.context, self.instance, legacy_request_spec['image'],
-            self.flavor, selection.service_host, None, self.reservations,
+            self.flavor, selection.service_host, None,
             request_spec=legacy_request_spec,
             filter_properties=self.filter_properties, node=selection.nodename,
             clean_shutdown=self.clean_shutdown, host_list=[])
@@ -139,7 +139,7 @@ class MigrationTaskTestCase(test.NoDBTestCase):
         prep_resize_mock.assert_called_once_with(
             self.context, self.instance, legacy_request_spec['image'],
             self.flavor, selection.service_host, task._migration,
-            self.reservations, request_spec=legacy_request_spec,
+            request_spec=legacy_request_spec,
             filter_properties=self.filter_properties, node=selection.nodename,
             clean_shutdown=self.clean_shutdown, host_list=[])
         az_mock.assert_called_once_with(self.context, 'host1')

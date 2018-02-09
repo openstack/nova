@@ -297,7 +297,7 @@ class MigrationTask(base.TaskBase):
         # RPC cast to the destination host to start the migration process.
         self.compute_rpcapi.prep_resize(
             self.context, self.instance, legacy_spec['image'],
-            self.flavor, host, migration, self.reservations,
+            self.flavor, host, migration,
             request_spec=legacy_spec, filter_properties=legacy_props,
             node=node, clean_shutdown=self.clean_shutdown,
             host_list=self.host_list)
