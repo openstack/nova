@@ -47,3 +47,8 @@ current VM host is not operational. Otherwise, the evacuation fails.
    .. code-block:: console
 
       $ nova evacuate EVACUATED_SERVER_NAME HOST_B --on-shared-storage
+
+   .. note:: Starting with the 2.14 compute API version, one no longer needs
+             to specify ``--on-shared-storage`` even if the server is on a
+             compute host which is using shared storage. The compute service
+             will automatically detect if it is running on shared storage.
