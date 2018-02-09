@@ -1703,7 +1703,8 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         self.assertEqual('Cell with uuid %s was not found.' % cell_uuid,
                          output)
 
-    def test_delete_cell_host_mappings_exist(self):
+    @mock.patch.object(objects.ComputeNodeList, 'get_all')
+    def test_delete_cell_host_mappings_exist(self, mock_get_cn):
         """Tests trying to delete a cell which has host mappings."""
         cell_uuid = uuidutils.generate_uuid()
         ctxt = context.get_admin_context()
@@ -1716,6 +1717,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         hm = objects.HostMapping(
             context=ctxt, host='fake-host', cell_mapping=cm)
         hm.create()
+        mock_get_cn.return_value = []
         self.assertEqual(2, self.commands.delete_cell(cell_uuid))
         output = self.output.getvalue().strip()
         self.assertIn('There are existing hosts mapped to cell', output)
@@ -1780,10 +1782,11 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         output = self.output.getvalue().strip()
         self.assertEqual('', output)
 
+    @mock.patch.object(objects.ComputeNodeList, 'get_all')
     @mock.patch.object(objects.HostMapping, 'destroy')
     @mock.patch.object(objects.CellMapping, 'destroy')
     def test_delete_cell_success_with_host_mappings(self, mock_cell_destroy,
-                                                    mock_hm_destroy):
+                                            mock_hm_destroy, mock_get_cn):
         """Tests trying to delete a cell with host."""
         ctxt = context.get_admin_context()
         # create the cell mapping
@@ -1795,6 +1798,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         hm = objects.HostMapping(
             context=ctxt, host='fake-host', cell_mapping=cm)
         hm.create()
+        mock_get_cn.return_value = []
         self.assertEqual(0, self.commands.delete_cell(uuidsentinel.cell1,
                                                       force=True))
         output = self.output.getvalue().strip()
@@ -1848,7 +1852,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         mock_hm_destroy.assert_called_once_with()
         mock_cell_destroy.assert_called_once_with()
         mock_im_destroy.assert_called_once_with()
-        self.assertEqual(2, mock_target_cell.call_count)
+        self.assertEqual(4, mock_target_cell.call_count)
 
     def test_update_cell_not_found(self):
         self.assertEqual(1, self.commands.update_cell(
