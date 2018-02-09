@@ -14886,7 +14886,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         fake_xml = "<test>this is a test</test>"
 
         def fake_defineXML(xml):
-            self.assertEqual(fake_xml, xml)
+            # In py2 env, xml is encoded in write_instance_config use
+            # encodeutils.safe_encode, it will be decode text before encoding
+            if six.PY2:
+                self.assertEqual(fake_safe_decode(fake_xml), xml)
+            else:
+                self.assertEqual(fake_xml, xml)
             raise fakelibvirt.libvirtError('virDomainDefineXML() failed')
 
         def fake_safe_decode(text, *args, **kwargs):
@@ -15721,20 +15726,22 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                create=True) as mock_define:
             srcfile = "/first/path"
             dstfile = "/second/path"
+            orig_xml = six.text_type(mock.sentinel.orig_xml)
+            new_xml = six.text_type(mock.sentinel.new_xml)
 
-            mock_dom.XMLDesc.return_value = mock.sentinel.orig_xml
+            mock_dom.XMLDesc.return_value = orig_xml
             mock_dom.isPersistent.return_value = True
 
             def fake_rebase_success(*args, **kwargs):
                 # Make sure the XML is set after the rebase so we know
                 # get_xml_desc was called after the update.
-                mock_dom.XMLDesc.return_value = mock.sentinel.new_xml
+                mock_dom.XMLDesc.return_value = new_xml
 
             if not fail:
                 mock_dom.blockRebase.side_effect = fake_rebase_success
                 # If the swap succeeds, make sure we use the new XML to
                 # redefine the domain.
-                expected_xml = mock.sentinel.new_xml
+                expected_xml = new_xml
             else:
                 if resize:
                     mock_dom.blockResize.side_effect = test.TestingException()
@@ -15744,7 +15751,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     expected_exception = exception.VolumeRebaseFailed
                 # If the swap fails, make sure we use the original domain XML
                 # to redefine the domain.
-                expected_xml = mock.sentinel.orig_xml
+                expected_xml = orig_xml
 
             # Run the swap volume code.
             mock_conf = mock.MagicMock(source_type=source_type,

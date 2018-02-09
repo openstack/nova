@@ -775,6 +775,31 @@ Active:          8381604 kB
         mock_defineXML.assert_called_once_with(fake_dom_xml)
         self.assertIsInstance(guest, libvirt_guest.Guest)
 
+    def test_write_instance_config_unicode(self):
+        fake_dom_xml = u"""
+                <domain type='kvm'>
+                  <uuid>cef19ce0-0ca2-11df-855d-b19fbce37686</uuid>
+                  <devices>
+                    <disk type='file'>
+                      <source file='\u4e2d\u6587'/>
+                    </disk>
+                  </devices>
+                </domain>
+            """
+
+        def emulate_defineXML(xml):
+            conn = self.host.get_connection()
+            # Emulate the decoding behavior of defineXML in Python2
+            if six.PY2:
+                xml = xml.decode("utf-8")
+            dom = fakelibvirt.Domain(conn, xml, False)
+            return dom
+        with mock.patch.object(fakelibvirt.virConnect, "defineXML"
+                               ) as mock_defineXML:
+            mock_defineXML.side_effect = emulate_defineXML
+            guest = self.host.write_instance_config(fake_dom_xml)
+            self.assertIsInstance(guest, libvirt_guest.Guest)
+
     @mock.patch.object(fakelibvirt.virConnect, "nodeDeviceLookupByName")
     def test_device_lookup_by_name(self, mock_nodeDeviceLookupByName):
         self.host.device_lookup_by_name("foo")
