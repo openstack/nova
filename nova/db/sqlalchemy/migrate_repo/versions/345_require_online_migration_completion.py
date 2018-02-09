@@ -39,7 +39,7 @@ def upgrade(migrate_engine):
         instance_types.c.deleted == 0).scalar()
     if count:
         msg = (base_msg +
-               _('There are still %(count)i unmigrated flavors. ') % {
+               _(' There are still %(count)i unmigrated flavors. ') % {
                    'count': count})
         raise exception.ValidationError(detail=msg)
 
@@ -47,7 +47,7 @@ def upgrade(migrate_engine):
         keypairs.c.deleted == 0).scalar()
     if count:
         msg = (base_msg +
-               _('There are still %(count)i unmigrated keypairs. ') % {
+               _(' There are still %(count)i unmigrated keypairs. ') % {
                    'count': count})
         raise exception.ValidationError(detail=msg)
 
@@ -55,7 +55,7 @@ def upgrade(migrate_engine):
         aggregates.c.deleted == 0).scalar()
     if count:
         msg = (base_msg +
-               _('There are still %(count)i unmigrated aggregates. ') % {
+               _(' There are still %(count)i unmigrated aggregates. ') % {
                    'count': count})
         raise exception.ValidationError(detail=msg)
 
@@ -63,6 +63,6 @@ def upgrade(migrate_engine):
         instance_groups.c.deleted == 0).scalar()
     if count:
         msg = (base_msg +
-               _('There are still %(count)i unmigrated instance groups. ') % {
+               _(' There are still %(count)i unmigrated instance groups. ') % {
                    'count': count})
         raise exception.ValidationError(detail=msg)
