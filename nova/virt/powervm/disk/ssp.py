@@ -1,4 +1,4 @@
-# Copyright 2015, 2017 IBM Corp.
+# Copyright 2015, 2018 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -24,9 +24,11 @@ from pypowervm.tasks import storage as tsk_stg
 import pypowervm.util as pvm_u
 import pypowervm.wrappers.cluster as pvm_clust
 import pypowervm.wrappers.storage as pvm_stg
+import pypowervm.wrappers.virtual_io_server as pvm_vios
 
 from nova import exception
 from nova import image
+from nova.virt.powervm import mgmt
 from nova.virt.powervm import vm
 
 
@@ -77,6 +79,7 @@ class SSPDiskAdapter(object):
 
     capabilities = {
         'shared_storage': True,
+        'snapshot': True,
     }
 
     def __init__(self, adapter, host_uuid):
@@ -87,6 +90,7 @@ class SSPDiskAdapter(object):
         """
         self._adapter = adapter
         self._host_uuid = host_uuid
+        self.mp_uuid = mgmt.mgmt_uuid(self._adapter)
         try:
             self._clust = pvm_clust.Cluster.get(self._adapter)[0]
             self._ssp = pvm_stg.SSP.get_by_href(
@@ -135,7 +139,7 @@ class SSPDiskAdapter(object):
                                        match_func=match_func)
 
         # Remove the mapping from *each* VIOS on the LPAR's host.
-        # The LPAR's host has to be self.host_uuid, else the PowerVM API will
+        # The LPAR's host has to be self._host_uuid, else the PowerVM API will
         # fail.
         #
         # Note - this may not be all the VIOSes on the system...just the ones
@@ -225,7 +229,7 @@ class SSPDiskAdapter(object):
             return tsk_map.add_map(vios_w, mapping)
 
         # Add the mapping to *each* VIOS on the LPAR's host.
-        # The LPAR's host has to be self.host_uuid, else the PowerVM API will
+        # The LPAR's host has to be self._host_uuid, else the PowerVM API will
         # fail.
         #
         # Note: this may not be all the VIOSes on the system - just the ones
@@ -245,10 +249,128 @@ class SSPDiskAdapter(object):
         """
         ret = []
         for n in self._clust.nodes:
-            # Skip any nodes that we don't have the vios uuid or uri
+            # Skip any nodes that we don't have the VIOS uuid or uri
             if not (n.vios_uuid and n.vios_uri):
                 continue
             if self._host_uuid == pvm_u.get_req_path_uuid(
                     n.vios_uri, preserve_case=True, root=True):
                 ret.append(n.vios_uuid)
         return ret
+
+    def get_bootdisk_path(self, instance, vios_uuid):
+        """Get the local path for an instance's boot disk.
+
+        :param instance: nova.objects.instance.Instance object owning the
+                         requested disk.
+        :param vios_uuid: PowerVM UUID of the VIOS to search for mappings.
+        :return: Local path for instance's boot disk.
+        """
+        vm_uuid = vm.get_pvm_uuid(instance)
+        match_func = self._disk_match_func(DiskType.BOOT, instance)
+        vios_wrap = pvm_vios.VIOS.get(self._adapter, uuid=vios_uuid,
+                                      xag=[pvm_const.XAG.VIO_SMAP])
+        maps = tsk_map.find_maps(vios_wrap.scsi_mappings,
+                                 client_lpar_id=vm_uuid, match_func=match_func)
+        if maps:
+            return maps[0].server_adapter.backing_dev_name
+        return None
+
+    def connect_instance_disk_to_mgmt(self, instance):
+        """Connect an instance's boot disk to the management partition.
+
+        :param instance: The instance whose boot disk is to be mapped.
+        :return stg_elem: The storage element (LU, VDisk, etc.) that was mapped
+        :return vios: The EntryWrapper of the VIOS from which the mapping was
+                      made.
+        :raise InstanceDiskMappingFailed: If the mapping could not be done.
+        """
+        for stg_elem, vios in self._get_bootdisk_iter(instance):
+            msg_args = {'disk_name': stg_elem.name, 'vios_name': vios.name}
+
+            # Create a new mapping. NOTE: If there's an existing mapping on
+            # the other VIOS but not this one, we'll create a second mapping
+            # here. It would take an extreme sequence of events to get to that
+            # point, and the second mapping would be harmless anyway. The
+            # alternative would be always checking all VIOSes for existing
+            # mappings, which increases the response time of the common case by
+            # an entire GET of VIOS+VIO_SMAP.
+            LOG.debug("Mapping boot disk %(disk_name)s to the management "
+                      "partition from Virtual I/O Server %(vios_name)s.",
+                      msg_args, instance=instance)
+            try:
+                tsk_map.add_vscsi_mapping(self._host_uuid, vios, self.mp_uuid,
+                                          stg_elem)
+                # If that worked, we're done.  add_vscsi_mapping logged.
+                return stg_elem, vios
+            except pvm_exc.Error:
+                LOG.exception("Failed to map boot disk %(disk_name)s to the "
+                              "management partition from Virtual I/O Server "
+                              "%(vios_name)s.", msg_args, instance=instance)
+                # Try the next hit, if available.
+        # We either didn't find the boot dev, or failed all attempts to map it.
+        raise exception.InstanceDiskMappingFailed(instance_name=instance.name)
+
+    def disconnect_disk_from_mgmt(self, vios_uuid, disk_name):
+        """Disconnect a disk from the management partition.
+
+        :param vios_uuid: The UUID of the Virtual I/O Server serving the
+                          mapping.
+        :param disk_name: The name of the disk to unmap.
+        """
+        tsk_map.remove_lu_mapping(self._adapter, vios_uuid, self.mp_uuid,
+                                  disk_names=[disk_name])
+        LOG.info("Unmapped boot disk %(disk_name)s from the management "
+                 "partition from Virtual I/O Server %(vios_uuid)s.",
+                 {'disk_name': disk_name, 'mp_uuid': self.mp_uuid,
+                  'vios_uuid': vios_uuid})
+
+    @staticmethod
+    def _disk_match_func(disk_type, instance):
+        """Return a matching function to locate the disk for an instance.
+
+        :param disk_type: One of the DiskType enum values.
+        :param instance: The instance whose disk is to be found.
+        :return: Callable suitable for the match_func parameter of the
+                 pypowervm.tasks.scsi_mapper.find_maps method.
+        """
+        disk_name = SSPDiskAdapter._get_disk_name(disk_type, instance)
+        return tsk_map.gen_match_func(pvm_stg.LU, names=[disk_name])
+
+    @staticmethod
+    def _get_disk_name(disk_type, instance, short=False):
+        """Generate a name for a virtual disk associated with an instance.
+
+        :param disk_type: One of the DiskType enum values.
+        :param instance: The instance for which the disk is to be created.
+        :param short: If True, the generated name will be limited to 15
+                      characters (the limit for virtual disk). If False, it
+                      will be limited by the API (79 characters currently).
+        :return: The sanitized file name for the disk.
+        """
+        prefix = '%s_' % (disk_type[0] if short else disk_type)
+        base = ('%s_%s' % (instance.name[:8], instance.uuid[:4]) if short
+                else instance.name)
+        return pvm_u.sanitize_file_name_for_api(
+            base, prefix=prefix, max_len=pvm_const.MaxLen.VDISK_NAME if short
+            else pvm_const.MaxLen.FILENAME_DEFAULT)
+
+    def _get_bootdisk_iter(self, instance):
+        """Return an iterator of (storage_elem, VIOS) tuples for the instance.
+
+        storage_elem is a pypowervm storage element wrapper associated with
+        the instance boot disk and VIOS is the wrapper of the Virtual I/O
+        server owning that storage element.
+
+        :param instance: nova.objects.instance.Instance object owning the
+                         requested disk.
+        :return: Iterator of tuples of (storage_elem, VIOS).
+        """
+        lpar_wrap = vm.get_instance_wrapper(self._adapter, instance)
+        match_func = self._disk_match_func(DiskType.BOOT, instance)
+        for vios_uuid in self._vios_uuids:
+            vios_wrap = pvm_vios.VIOS.get(
+                self._adapter, uuid=vios_uuid, xag=[pvm_const.XAG.VIO_SMAP])
+            for scsi_map in tsk_map.find_maps(
+                    vios_wrap.scsi_mappings, client_lpar_id=lpar_wrap.id,
+                    match_func=match_func):
+                yield scsi_map.backing_storage, vios_wrap

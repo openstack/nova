@@ -16,6 +16,7 @@ import fixtures
 import mock
 from pypowervm import exceptions as pvm_exc
 
+from nova import exception
 from nova import test
 from nova.virt.powervm.tasks import storage as tf_stg
 
@@ -173,3 +174,149 @@ class TestStorage(test.NoDBTestCase):
                 self.disk_dvr, self.context, self.instance, image_meta)
         tf.assert_called_once_with(
             name='create_disk_from_img', provides='disk_dev_info')
+
+    @mock.patch('pypowervm.tasks.scsi_mapper.find_maps', autospec=True)
+    @mock.patch('nova.virt.powervm.mgmt.discover_vscsi_disk', autospec=True)
+    @mock.patch('nova.virt.powervm.mgmt.remove_block_dev', autospec=True)
+    def test_instance_disk_to_mgmt(self, mock_rm, mock_discover, mock_find):
+        mock_discover.return_value = '/dev/disk'
+        mock_instance = mock.Mock()
+        mock_instance.name = 'instance_name'
+        mock_stg = mock.Mock()
+        mock_stg.name = 'stg_name'
+        mock_vwrap = mock.Mock()
+        mock_vwrap.name = 'vios_name'
+        mock_vwrap.uuid = 'vios_uuid'
+        mock_vwrap.scsi_mappings = ['mapping1']
+
+        disk_dvr = mock.MagicMock()
+        disk_dvr.mp_uuid = 'mp_uuid'
+        disk_dvr.connect_instance_disk_to_mgmt.return_value = (mock_stg,
+                                                               mock_vwrap)
+
+        def reset_mocks():
+            mock_find.reset_mock()
+            mock_discover.reset_mock()
+            mock_rm.reset_mock()
+            disk_dvr.reset_mock()
+
+        # Good path - find_maps returns one result
+        mock_find.return_value = ['one_mapping']
+        tf = tf_stg.InstanceDiskToMgmt(disk_dvr, mock_instance)
+        self.assertEqual('instance_disk_to_mgmt', tf.name)
+        self.assertEqual((mock_stg, mock_vwrap, '/dev/disk'), tf.execute())
+        disk_dvr.connect_instance_disk_to_mgmt.assert_called_with(
+            mock_instance)
+        mock_find.assert_called_with(['mapping1'], client_lpar_id='mp_uuid',
+                                     stg_elem=mock_stg)
+        mock_discover.assert_called_with('one_mapping')
+        tf.revert('result', 'failures')
+        disk_dvr.disconnect_disk_from_mgmt.assert_called_with('vios_uuid',
+                                                              'stg_name')
+        mock_rm.assert_called_with('/dev/disk')
+
+        # Good path - find_maps returns >1 result
+        reset_mocks()
+        mock_find.return_value = ['first_mapping', 'second_mapping']
+        tf = tf_stg.InstanceDiskToMgmt(disk_dvr, mock_instance)
+        self.assertEqual((mock_stg, mock_vwrap, '/dev/disk'), tf.execute())
+        disk_dvr.connect_instance_disk_to_mgmt.assert_called_with(
+            mock_instance)
+        mock_find.assert_called_with(['mapping1'], client_lpar_id='mp_uuid',
+                                     stg_elem=mock_stg)
+        mock_discover.assert_called_with('first_mapping')
+        tf.revert('result', 'failures')
+        disk_dvr.disconnect_disk_from_mgmt.assert_called_with('vios_uuid',
+                                                              'stg_name')
+        mock_rm.assert_called_with('/dev/disk')
+
+        # Management Partition is VIOS and NovaLink hosted storage
+        reset_mocks()
+        disk_dvr._vios_uuids = ['mp_uuid']
+        dev_name = '/dev/vg/fake_name'
+        disk_dvr.get_bootdisk_path.return_value = dev_name
+        tf = tf_stg.InstanceDiskToMgmt(disk_dvr, mock_instance)
+        self.assertEqual((None, None, dev_name), tf.execute())
+
+        # Management Partition is VIOS and not NovaLink hosted storage
+        reset_mocks()
+        disk_dvr._vios_uuids = ['mp_uuid']
+        disk_dvr.get_bootdisk_path.return_value = None
+        tf = tf_stg.InstanceDiskToMgmt(disk_dvr, mock_instance)
+        tf.execute()
+        disk_dvr.connect_instance_disk_to_mgmt.assert_called_with(
+            mock_instance)
+
+        # Bad path - find_maps returns no results
+        reset_mocks()
+        mock_find.return_value = []
+        tf = tf_stg.InstanceDiskToMgmt(disk_dvr, mock_instance)
+        self.assertRaises(exception.NewMgmtMappingNotFoundException,
+                          tf.execute)
+        disk_dvr.connect_instance_disk_to_mgmt.assert_called_with(
+            mock_instance)
+        # find_maps was still called
+        mock_find.assert_called_with(['mapping1'], client_lpar_id='mp_uuid',
+                                     stg_elem=mock_stg)
+        # discover_vscsi_disk didn't get called
+        self.assertEqual(0, mock_discover.call_count)
+        tf.revert('result', 'failures')
+        # disconnect_disk_from_mgmt got called
+        disk_dvr.disconnect_disk_from_mgmt.assert_called_with('vios_uuid',
+                                                              'stg_name')
+        # ...but remove_block_dev did not.
+        self.assertEqual(0, mock_rm.call_count)
+
+        # Bad path - connect raises
+        reset_mocks()
+        disk_dvr.connect_instance_disk_to_mgmt.side_effect = (
+            exception.InstanceDiskMappingFailed(instance_name='inst_name'))
+        tf = tf_stg.InstanceDiskToMgmt(disk_dvr, mock_instance)
+        self.assertRaises(exception.InstanceDiskMappingFailed, tf.execute)
+        disk_dvr.connect_instance_disk_to_mgmt.assert_called_with(
+            mock_instance)
+        self.assertEqual(0, mock_find.call_count)
+        self.assertEqual(0, mock_discover.call_count)
+        # revert shouldn't call disconnect or remove
+        tf.revert('result', 'failures')
+        self.assertEqual(0, disk_dvr.disconnect_disk_from_mgmt.call_count)
+        self.assertEqual(0, mock_rm.call_count)
+
+        # Validate args on taskflow.task.Task instantiation
+        with mock.patch('taskflow.task.Task.__init__') as tf:
+            tf_stg.InstanceDiskToMgmt(disk_dvr, mock_instance)
+        tf.assert_called_once_with(
+            name='instance_disk_to_mgmt',
+            provides=['stg_elem', 'vios_wrap', 'disk_path'])
+
+    @mock.patch('nova.virt.powervm.mgmt.remove_block_dev', autospec=True)
+    def test_remove_instance_disk_from_mgmt(self, mock_rm):
+        disk_dvr = mock.MagicMock()
+        mock_instance = mock.Mock()
+        mock_instance.name = 'instance_name'
+        mock_stg = mock.Mock()
+        mock_stg.name = 'stg_name'
+        mock_vwrap = mock.Mock()
+        mock_vwrap.name = 'vios_name'
+        mock_vwrap.uuid = 'vios_uuid'
+
+        tf = tf_stg.RemoveInstanceDiskFromMgmt(disk_dvr, mock_instance)
+        self.assertEqual('remove_inst_disk_from_mgmt', tf.name)
+
+        # Boot disk not mapped to mgmt partition
+        tf.execute(None, mock_vwrap, '/dev/disk')
+        self.assertEqual(disk_dvr.disconnect_disk_from_mgmt.call_count, 0)
+        self.assertEqual(mock_rm.call_count, 0)
+
+        # Boot disk mapped to mgmt partition
+        tf.execute(mock_stg, mock_vwrap, '/dev/disk')
+        disk_dvr.disconnect_disk_from_mgmt.assert_called_with('vios_uuid',
+                                                              'stg_name')
+        mock_rm.assert_called_with('/dev/disk')
+
+        # Validate args on taskflow.task.Task instantiation
+        with mock.patch('taskflow.task.Task.__init__') as tf:
+            tf_stg.RemoveInstanceDiskFromMgmt(disk_dvr, mock_instance)
+        tf.assert_called_once_with(
+            name='remove_inst_disk_from_mgmt',
+            requires=['stg_elem', 'vios_wrap', 'disk_path'])

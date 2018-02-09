@@ -2247,3 +2247,31 @@ class CannotMigrateToSameHost(NovaException):
 
 class VirtDriverNotReady(NovaException):
     msg_fmt = _("Virt driver is not ready.")
+
+
+class InstanceDiskMappingFailed(NovaException):
+    msg_fmt = _("Failed to map boot disk of instance %(instance_name)s to "
+                "the management partition from any Virtual I/O Server.")
+
+
+class NewMgmtMappingNotFoundException(NovaException):
+    msg_fmt = _("Failed to find newly-created mapping of storage element "
+                "%(stg_name)s from Virtual I/O Server %(vios_name)s to the "
+                "management partition.")
+
+
+class NoDiskDiscoveryException(NovaException):
+    msg_fmt = _("Having scanned SCSI bus %(bus)x on the management partition, "
+                "disk with UDID %(udid)s failed to appear after %(polls)d "
+                "polls over %(timeout)d seconds.")
+
+
+class UniqueDiskDiscoveryException(NovaException):
+    msg_fmt = _("Expected to find exactly one disk on the management "
+                "partition at %(path_pattern)s; found %(count)d.")
+
+
+class DeviceDeletionException(NovaException):
+    msg_fmt = _("Device %(devpath)s is still present on the management "
+                "partition after attempting to delete it. Polled %(polls)d "
+                "times over %(timeout)d seconds.")
