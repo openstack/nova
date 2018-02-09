@@ -110,12 +110,11 @@ def should_do_migration_allocation(context):
 
 class MigrationTask(base.TaskBase):
     def __init__(self, context, instance, flavor,
-                 request_spec, reservations, clean_shutdown, compute_rpcapi,
+                 request_spec, clean_shutdown, compute_rpcapi,
                  scheduler_client, host_list):
         super(MigrationTask, self).__init__(context, instance)
         self.clean_shutdown = clean_shutdown
         self.request_spec = request_spec
-        self.reservations = reservations
         self.flavor = flavor
 
         self.compute_rpcapi = compute_rpcapi
