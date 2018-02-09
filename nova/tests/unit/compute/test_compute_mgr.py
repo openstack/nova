@@ -1985,13 +1985,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock_notify.assert_any_call(
                 test.MatchType(context.RequestContext), instance1,
                 self.compute.host,
-                fields.NotificationAction.VOLUME_SWAP,
                 fields.NotificationPhase.START,
                 uuids.old_volume, uuids.new_volume)
             mock_notify.assert_any_call(
                 test.MatchType(context.RequestContext), instance1,
                 self.compute.host,
-                fields.NotificationAction.VOLUME_SWAP,
                 fields.NotificationPhase.ERROR,
                 uuids.old_volume, uuids.new_volume,
                 test.MatchType(expected_exception))
@@ -2002,12 +2000,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.assertEqual(2, mock_notify.call_count)
             mock_notify.assert_any_call(test.MatchType(context.RequestContext),
                                         instance1, self.compute.host,
-                                        fields.NotificationAction.VOLUME_SWAP,
                                         fields.NotificationPhase.START,
                                         uuids.old_volume, uuids.new_volume)
             mock_notify.assert_any_call(test.MatchType(context.RequestContext),
                                         instance1, self.compute.host,
-                                        fields.NotificationAction.VOLUME_SWAP,
                                         fields.NotificationPhase.END,
                                         uuids.old_volume, uuids.new_volume)
         mock_event.assert_called_once_with(self.context,
@@ -3343,9 +3339,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 self.context, instance, current_period=True)
             mock_notify.assert_has_calls([
                 mock.call(self.context, instance, 'fake-mini', None,
-                      action='rescue', phase='start'),
+                          phase='start'),
                 mock.call(self.context, instance, 'fake-mini', None,
-                      action='rescue', phase='end')])
+                          phase='end')])
 
             instance_save.assert_called_once_with(
                 expected_task_state=task_states.RESCUING)
