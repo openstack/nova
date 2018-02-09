@@ -2146,7 +2146,8 @@ class API(base.Base):
             instance.save(expected_task_state=[None])
 
     @check_instance_lock
-    @check_instance_state(must_have_launched=False)
+    @check_instance_state(task_state=None,
+                          must_have_launched=False)
     def force_delete(self, context, instance):
         """Force delete an instance in any vm_state/task_state."""
         self._delete(context, instance, 'force_delete', self._do_force_delete,
