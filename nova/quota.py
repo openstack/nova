@@ -1327,7 +1327,7 @@ def _instances_cores_ram_count(context, project_id, user_id=None):
     total_counts = {'project': {'instances': 0, 'cores': 0, 'ram': 0}}
     if user_id:
         total_counts['user'] = {'instances': 0, 'cores': 0, 'ram': 0}
-    for cell_uuid, result in results.items():
+    for result in results.values():
         if result not in (nova_context.did_not_respond_sentinel,
                           nova_context.raised_exception_sentinel):
             for resource, count in result['project'].items():
