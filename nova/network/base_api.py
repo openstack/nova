@@ -358,7 +358,7 @@ class NetworkAPI(base.Base):
         """Update instance vnic index.
 
         When the 'VNIC index' extension is supported this method will update
-        the vnic index of the instance on the port. A instance may have more
+        the vnic index of the instance on the port. An instance may have more
         than one vnic.
 
         :param context: The request context.
