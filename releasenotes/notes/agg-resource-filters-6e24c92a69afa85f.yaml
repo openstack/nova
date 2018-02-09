@@ -1,0 +1,22 @@
+---
+upgrade:
+  - |
+    Starting in Ocata, there is a behavior change where aggregate-based
+    overcommit ratios will no longer be honored during scheduling for the
+    FilterScheduler. Instead, overcommit values must be set on a
+    per-compute-node basis in the Nova configuration files.
+
+    If you have been relying on per-aggregate overcommit, during your upgrade,
+    you must change to using per-compute-node overcommit ratios in order for
+    your scheduling behavior to stay consistent. Otherwise, you may notice
+    increased NoValidHost scheduling failures as the aggregate-based overcommit
+    is no longer being considered.
+
+    You can safely remove the AggregateCoreFilter, AggregateRamFilter, and
+    AggregateDiskFilter from your ``[filter_scheduler]enabled_filters`` and you
+    do not need to replace them with any other core/ram/disk filters. The
+    placement query in the FilterScheduler takes care of the core/ram/disk
+    filtering, so CoreFilter, RamFilter, and DiskFilter are redundant.
+
+    Please see the mailing list thread for more information:
+    http://lists.openstack.org/pipermail/openstack-operators/2018-January/014748.html
