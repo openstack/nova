@@ -24,9 +24,11 @@ A list of the vGPU types enabled in the compute node.
 
 Some pGPUs (e.g. NVIDIA GRID K1) support different vGPU types. User can use
 this option to specify a list of enabled vGPU types that may be assigned to a
-guest instance. An example is as the following:
+guest instance. But please note that Nova only supports a single type in the
+Queens release. If more than one vGPU type is specified (as a comma-separated
+list), only the first one will be used. An example is as the following:
     [devices]
-    enabled_vgpu_types = ['GRID K100', 'Intel GVT-g', 'MxGPU.2', 'nvidia-11']
+    enabled_vgpu_types = GRID K100,Intel GVT-g,MxGPU.2,nvidia-11
 """)
 ]
 
