@@ -376,8 +376,8 @@ class LiveMigrationTask(base.TaskBase):
         # allocated for the given (destination) node.
         self.scheduler_client.reportclient.\
             remove_provider_from_instance_allocation(
-                self.instance.uuid, compute_node.uuid, self.instance.user_id,
-                self.instance.project_id, resources)
+                self.context, self.instance.uuid, compute_node.uuid,
+                self.instance.user_id, self.instance.project_id, resources)
 
     def _check_not_over_max_retries(self, attempted_hosts):
         if CONF.migrate_max_retries == -1:

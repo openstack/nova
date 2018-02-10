@@ -697,7 +697,7 @@ class ComputeManager(manager.Manager):
             cn_uuid = compute_nodes[migration.source_node]
 
             if not scheduler_utils.remove_allocation_from_compute(
-                    instance, cn_uuid, self.reportclient):
+                    context, instance, cn_uuid, self.reportclient):
                 LOG.error("Failed to clean allocation of evacuated instance "
                           "on the source node %s",
                           cn_uuid, instance=instance)
@@ -2901,7 +2901,7 @@ class ComputeManager(manager.Manager):
                 # on the same host (not evacuate) uses the NopClaim which will
                 # not raise ComputeResourcesUnavailable.
                 rt.delete_allocation_for_evacuated_instance(
-                    instance, scheduled_node, node_type='destination')
+                    context, instance, scheduled_node, node_type='destination')
                 self._notify_instance_rebuild_error(context, instance, e, bdms)
                 raise exception.BuildAbortException(
                     instance_uuid=instance.uuid, reason=e.format_message())
@@ -2915,7 +2915,8 @@ class ComputeManager(manager.Manager):
                 self._set_migration_status(migration, 'failed')
                 if recreate or scheduled_node is not None:
                     rt.delete_allocation_for_evacuated_instance(
-                        instance, scheduled_node, node_type='destination')
+                        context, instance, scheduled_node,
+                        node_type='destination')
                 self._notify_instance_rebuild_error(context, instance, e, bdms)
                 raise
             else:
@@ -3832,7 +3833,7 @@ class ComputeManager(manager.Manager):
         # any shared providers in the case of a confirm_resize operation and
         # the source host and shared providers for a revert_resize operation..
         if not scheduler_utils.remove_allocation_from_compute(
-                instance, cn_uuid, self.reportclient, flavor):
+                context, instance, cn_uuid, self.reportclient, flavor):
             LOG.error("Failed to save manipulated allocation",
                       instance=instance)
 
@@ -6291,7 +6292,7 @@ class ComputeManager(manager.Manager):
             # attempt to clean up any doubled per-instance allocation
             rt = self._get_resource_tracker()
             rt.delete_allocation_for_migrated_instance(
-                instance, source_node)
+                ctxt, instance, source_node)
 
     def _consoles_enabled(self):
         """Returns whether a console is enable."""
