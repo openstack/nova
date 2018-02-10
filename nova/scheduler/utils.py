@@ -366,7 +366,7 @@ def claim_resources_on_destination(
     if not source_node_allocations:
         source_node_allocations = (
             reportclient.get_allocations_for_consumer_by_provider(
-                source_node.uuid, instance.uuid))
+                context, source_node.uuid, instance.uuid))
     if source_node_allocations:
         # Generate an allocation request for the destination node.
         alloc_request = {

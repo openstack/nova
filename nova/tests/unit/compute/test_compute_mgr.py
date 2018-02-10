@@ -5601,7 +5601,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         except Exception as e:
             self.assertIsInstance(e, exception.BuildAbortException)
 
-        self.mock_get_allocs.assert_called_once_with(self.instance.uuid)
+        self.mock_get_allocs.assert_called_once_with(self.context,
+                                                     self.instance.uuid)
         mock_net_wait.assert_called_once_with(do_raise=False)
 
     @mock.patch.object(manager.ComputeManager, '_build_networks_for_instance')
@@ -6448,7 +6449,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                                        'src')
             self.assertFalse(mock_report.delete_allocation_for_instance.called)
             ga.assert_called_once_with(
-                mock_rt().get_node_uuid.return_value, self.migration.uuid)
+                self.context, mock_rt().get_node_uuid.return_value,
+                self.migration.uuid)
 
             old = mock_report.remove_provider_from_instance_allocation
             if new_rules:
@@ -6482,7 +6484,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                                        'dst')
             self.assertFalse(mock_report.delete_allocation_for_instance.called)
             cn_uuid = mock_rt().get_node_uuid.return_value
-            ga.assert_called_once_with(cn_uuid, self.migration.uuid)
+            ga.assert_called_once_with(self.context, cn_uuid,
+                                       self.migration.uuid)
 
             old = mock_report.remove_provider_from_instance_allocation
             if new_rules:

@@ -119,12 +119,14 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         }
         with mock.patch.object(self.manager.driver, 'select_destinations'
                 ) as select_destinations:
-            self.manager.select_destinations(None, spec_obj=fake_spec,
+            self.manager.select_destinations(self.context, spec_obj=fake_spec,
                     instance_uuids=[fake_spec.instance_uuid])
-            select_destinations.assert_called_once_with(None, fake_spec,
+            select_destinations.assert_called_once_with(
+                self.context, fake_spec,
                 [fake_spec.instance_uuid], expected_alloc_reqs_by_rp_uuid,
                 mock.sentinel.p_sums, fake_version, False)
-            mock_get_ac.assert_called_once_with(mock_rfrs.return_value)
+            mock_get_ac.assert_called_once_with(
+                self.context, mock_rfrs.return_value)
 
             # Now call select_destinations() with True values for the params
             # introduced in RPC version 4.5
@@ -196,10 +198,12 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         with mock.patch.object(self.manager.driver, 'select_destinations'
                 ) as select_destinations:
             self.assertRaises(messaging.rpc.dispatcher.ExpectedException,
-                    self.manager.select_destinations, None, spec_obj=fake_spec,
+                    self.manager.select_destinations, self.context,
+                    spec_obj=fake_spec,
                     instance_uuids=[fake_spec.instance_uuid])
             select_destinations.assert_not_called()
-            mock_get_ac.assert_called_once_with(mock_rfrs.return_value)
+            mock_get_ac.assert_called_once_with(
+                self.context, mock_rfrs.return_value)
 
     def test_select_destination_old_placement(self):
         """Tests that we will raise NoValidhost when the scheduler
@@ -240,11 +244,12 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         }
         with mock.patch.object(self.manager.driver, 'select_destinations'
                 ) as select_destinations:
-            self.manager.select_destinations(None, spec_obj=fake_spec)
-            select_destinations.assert_called_once_with(None, fake_spec, None,
-                expected_alloc_reqs_by_rp_uuid, mock.sentinel.p_sums, "42.0",
-                False)
-            mock_get_ac.assert_called_once_with(mock_rfrs.return_value)
+            self.manager.select_destinations(self.context, spec_obj=fake_spec)
+            select_destinations.assert_called_once_with(self.context,
+                fake_spec, None, expected_alloc_reqs_by_rp_uuid,
+                mock.sentinel.p_sums, "42.0", False)
+            mock_get_ac.assert_called_once_with(
+                self.context, mock_rfrs.return_value)
 
     # TODO(sbauza): Remove that test once the API v4 is removed
     @mock.patch('nova.scheduler.utils.resources_from_request_spec')
@@ -264,13 +269,16 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
         }
         with mock.patch.object(self.manager.driver, 'select_destinations'
                 ) as select_destinations:
-            self.manager.select_destinations(None, request_spec='fake_spec',
-                    filter_properties='fake_props',
-                    instance_uuids=[fake_spec.instance_uuid])
-            select_destinations.assert_called_once_with(None, fake_spec,
-                    [fake_spec.instance_uuid], expected_alloc_reqs_by_rp_uuid,
-                    mock.sentinel.p_sums, "42.0", False)
-            mock_get_ac.assert_called_once_with(mock_rfrs.return_value)
+            self.manager.select_destinations(
+                self.context, request_spec='fake_spec',
+                filter_properties='fake_props',
+                instance_uuids=[fake_spec.instance_uuid])
+            select_destinations.assert_called_once_with(
+                self.context, fake_spec,
+                [fake_spec.instance_uuid], expected_alloc_reqs_by_rp_uuid,
+                mock.sentinel.p_sums, "42.0", False)
+            mock_get_ac.assert_called_once_with(
+                self.context, mock_rfrs.return_value)
 
     def test_update_aggregates(self):
         with mock.patch.object(self.manager.driver.host_manager,

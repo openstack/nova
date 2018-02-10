@@ -2223,7 +2223,8 @@ class ComputeManager(manager.Manager):
 
         try:
             resources['allocations'] = (
-                self.reportclient.get_allocations_for_consumer(instance.uuid))
+                self.reportclient.get_allocations_for_consumer(context,
+                                                               instance.uuid))
         except Exception:
             LOG.exception('Failure retrieving placement allocations',
                           instance=instance)
@@ -3035,7 +3036,7 @@ class ComputeManager(manager.Manager):
                     context, instance, self.host, migration)
 
         allocations = self.reportclient.get_allocations_for_consumer(
-            instance.uuid)
+            context, instance.uuid)
 
         network_info = instance.get_network_info()
         if bdms is None:
@@ -3789,7 +3790,7 @@ class ComputeManager(manager.Manager):
                 # so, avoid doing the legacy behavior below.
                 mig_allocs = (
                     self.reportclient.get_allocations_for_consumer_by_provider(
-                        cn_uuid, migration.uuid))
+                        context, cn_uuid, migration.uuid))
                 if mig_allocs:
                     LOG.info(_('Source node %(node)s reverted migration '
                                '%(mig)s; not deleting migration-based '
@@ -3804,7 +3805,7 @@ class ComputeManager(manager.Manager):
             # accounting
             allocs = (
                 self.reportclient.get_allocations_for_consumer_by_provider(
-                    cn_uuid, migration.uuid))
+                    context, cn_uuid, migration.uuid))
             if allocs:
                 # NOTE(danms): The source did migration-based allocation
                 # accounting, so we should let the source node rejigger
@@ -4003,7 +4004,7 @@ class ComputeManager(manager.Manager):
         # Fetch the original allocation that the instance had on the source
         # node, which are now held by the migration
         orig_alloc = self.reportclient.get_allocations_for_consumer(
-            migration.uuid)
+            context, migration.uuid)
         if not orig_alloc:
             # NOTE(danms): This migration did not do per-migration allocation
             # accounting, so nothing to do here.
@@ -4882,7 +4883,7 @@ class ComputeManager(manager.Manager):
         limits = filter_properties.get('limits', {})
 
         allocations = self.reportclient.get_allocations_for_consumer(
-            instance.uuid)
+            context, instance.uuid)
 
         shelved_image_ref = instance.image_ref
         if image:
@@ -6267,7 +6268,7 @@ class ComputeManager(manager.Manager):
             migration = migrate_data.migration
             rc = self.scheduler_client.reportclient
             # Check to see if our migration has its own allocations
-            allocs = rc.get_allocations_for_consumer(migration.uuid)
+            allocs = rc.get_allocations_for_consumer(ctxt, migration.uuid)
         else:
             # We didn't have data on a migration, which means we can't
             # look up to see if we had new-style migration-based
