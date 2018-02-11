@@ -4213,6 +4213,15 @@ class ComputeManager(manager.Manager):
         This is initiated from the destination host's ``prep_resize`` routine
         and runs on the source host.
         """
+        try:
+            self._resize_instance(context, instance, image, migration,
+                                  instance_type, clean_shutdown)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                self._revert_allocation(context, instance, migration)
+
+    def _resize_instance(self, context, instance, image,
+                         migration, instance_type, clean_shutdown):
         with self._error_out_instance_on_exception(context, instance), \
              errors_out_migration_ctxt(migration):
             network_info = self.network_api.get_instance_nw_info(context,
@@ -4437,6 +4446,20 @@ class ComputeManager(manager.Manager):
         Sets up the newly transferred disk and turns on the instance at its
         new host machine.
 
+        """
+        try:
+            self._finish_resize_helper(context, disk_info, image, instance,
+                                       migration)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                self._revert_allocation(context, instance, migration)
+
+    def _finish_resize_helper(self, context, disk_info, image, instance,
+                              migration):
+        """Completes the migration process.
+
+        The caller must revert the instance's allocations if the migration
+        process failed.
         """
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
             context, instance.uuid)

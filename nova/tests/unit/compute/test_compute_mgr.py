@@ -5994,6 +5994,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                 expected_attrs=['metadata', 'system_metadata', 'info_cache'])
         self.migration = objects.Migration(
             context=self.context.elevated(),
+            uuid=mock.sentinel.uuid,
             instance_uuid=self.instance.uuid,
             new_instance_type_id=7,
             dest_compute=None,
