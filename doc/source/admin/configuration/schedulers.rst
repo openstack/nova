@@ -514,6 +514,7 @@ configuration options. For example:
 
 .. code-block:: ini
 
+   [filter_scheduler]
    isolated_hosts = server1, server2
    isolated_images = 342b492c-128f-4a42-8d3a-c5088cf27d13, ebd267a6-ca86-4d6c-9a0e-bd132d6b7d09
 
