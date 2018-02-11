@@ -4402,8 +4402,15 @@ class ComputeTestCase(BaseTestCase,
 
         func = getattr(self.compute, operation)
 
-        self.assertRaises(test.TestingException,
-                func, self.context, instance=instance, **kwargs)
+        with mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                        'delete_allocation_for_failed_resize') as delete_alloc:
+            self.assertRaises(test.TestingException,
+                    func, self.context, instance=instance, **kwargs)
+            if operation == 'resize_instance':
+                delete_alloc.assert_called_once_with(
+                    instance, 'fakenode1', kwargs['instance_type'])
+            else:
+                delete_alloc.assert_not_called()
         # self.context.elevated() is called in tearDown()
         self.stub_out('nova.context.RequestContext.elevated', orig_elevated)
         self.stub_out('nova.compute.manager.ComputeManager.'
@@ -4419,6 +4426,7 @@ class ComputeTestCase(BaseTestCase,
         # ensure that task_state is reverted after a failed operation.
         migration = objects.Migration(context=self.context.elevated())
         migration.instance_uuid = 'b48316c5-71e8-45e4-9884-6c78055b9b13'
+        migration.uuid = mock.sentinel.uuid
         migration.new_instance_type_id = '1'
         instance_type = objects.Flavor()
 
@@ -5108,7 +5116,9 @@ class ComputeTestCase(BaseTestCase,
                           clean_shutdown=True)
         self.compute.terminate_instance(self.context, instance, [], [])
 
-    def test_resize_instance_driver_error(self):
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                'delete_allocation_for_failed_resize')
+    def test_resize_instance_driver_error(self, delete_alloc):
         # Ensure instance status set to Error on resize error.
 
         def throw_up(*args, **kwargs):
@@ -5148,7 +5158,9 @@ class ComputeTestCase(BaseTestCase,
         self.assertEqual(instance.vm_state, vm_states.ERROR)
         self.compute.terminate_instance(self.context, instance, [], [])
 
-    def test_resize_instance_driver_rollback(self):
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                'delete_allocation_for_failed_resize')
+    def test_resize_instance_driver_rollback(self, delete_alloc):
         # Ensure instance status set to Running after rollback.
 
         def throw_up(*args, **kwargs):
@@ -5771,7 +5783,9 @@ class ComputeTestCase(BaseTestCase,
         flavor_type = flavors.get_flavor_by_flavor_id(1)
         self.assertEqual(flavor_type['name'], 'm1.tiny')
 
-    def test_resize_instance_handles_migration_error(self):
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                'delete_allocation_for_failed_resize')
+    def test_resize_instance_handles_migration_error(self, delete_alloc):
         # Ensure vm_state is ERROR when error occurs.
         def raise_migration_failure(*args):
             raise test.TestingException()

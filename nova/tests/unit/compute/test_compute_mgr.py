@@ -5540,7 +5540,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                 vm_state=vm_states.ACTIVE,
                 expected_attrs=['metadata', 'system_metadata', 'info_cache'])
         self.migration = objects.Migration(context=self.context.elevated(),
-                                           new_instance_type_id=7)
+                                           new_instance_type_id=7,
+                                           uuid=mock.sentinel.uuid)
         self.migration.status = 'migrating'
         self.useFixture(fixtures.SpawnIsSynchronousFixture())
         self.useFixture(fixtures.EventReporterStub())
@@ -5554,9 +5555,11 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             mock.patch.object(self.instance, 'save'),
             mock.patch.object(self.migration, 'save'),
             mock.patch.object(self.migration, 'obj_as_admin',
-                              return_value=mock.MagicMock())
+                              return_value=mock.MagicMock()),
+            mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                       'delete_allocation_for_failed_resize')
         ) as (meth, fault_create, instance_update, instance_save,
-              migration_save, migration_obj_as_admin):
+              migration_save, migration_obj_as_admin, delete_alloc):
             fault_create.return_value = (
                 test_instance_fault.fake_faults['fake-uuid'][0])
             self.assertRaises(
@@ -5568,6 +5571,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             self.assertEqual("error", self.migration.status)
             migration_save.assert_called_once_with()
             migration_obj_as_admin.assert_called_once_with()
+            delete_alloc.assert_called_once_with(
+                self.instance, 'fake-mini', self.instance.new_flavor)
 
     def test_resize_instance_failure(self):
         self.migration.dest_host = None
@@ -5592,10 +5597,12 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                               return_value=None),
             mock.patch.object(objects.Flavor,
                               'get_by_id',
-                              return_value=None)
+                              return_value=None),
+            mock.patch('nova.compute.resource_tracker.ResourceTracker.'
+                       'delete_allocation_for_failed_resize')
         ) as (meth, fault_create, instance_update,
               migration_save, migration_obj_as_admin, nw_info, save_inst,
-              notify, vol_block_info, bdm, flavor):
+              notify, vol_block_info, bdm, flavor, delete_alloc):
             fault_create.return_value = (
                 test_instance_fault.fake_faults['fake-uuid'][0])
             self.assertRaises(
@@ -5608,6 +5615,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                              migration_save.mock_calls)
             self.assertEqual([mock.call(), mock.call()],
                              migration_obj_as_admin.mock_calls)
+            delete_alloc.assert_called_once_with(
+                self.instance, 'fake-mini', 'type')
 
     def _test_revert_resize_instance_destroy_disks(self, is_shared=False):
 

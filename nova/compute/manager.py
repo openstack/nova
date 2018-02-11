@@ -3916,6 +3916,18 @@ class ComputeManager(manager.Manager):
                         reservations, migration, instance_type,
                         clean_shutdown):
         """Starts the migration of a running instance to another host."""
+        try:
+            self._resize_instance(context, instance, image, migration,
+                                  instance_type, clean_shutdown)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                rt = self._get_resource_tracker()
+                node = self.driver.get_available_nodes(refresh=True)[0]
+                rt.delete_allocation_for_failed_resize(
+                    instance, node, instance_type)
+
+    def _resize_instance(self, context, instance, image,
+                         migration, instance_type, clean_shutdown):
         with self._error_out_instance_on_exception(context, instance):
             # TODO(chaochin) Remove this until v5 RPC API
             # Code downstream may expect extra_specs to be populated since it
@@ -4096,6 +4108,23 @@ class ComputeManager(manager.Manager):
         Sets up the newly transferred disk and turns on the instance at its
         new host machine.
 
+        """
+        try:
+            self._finish_resize_helper(context, disk_info, image, instance,
+                                       migration)
+        except Exception:
+            with excutils.save_and_reraise_exception():
+                rt = self._get_resource_tracker()
+                node = self.driver.get_available_nodes(refresh=True)[0]
+                rt.delete_allocation_for_failed_resize(
+                    instance, node, instance.new_flavor)
+
+    def _finish_resize_helper(self, context, disk_info, image, instance,
+                              migration):
+        """Completes the migration process.
+
+        The caller must revert the instance's allocations if the migration
+        process failed.
         """
         with self._error_out_instance_on_exception(context, instance):
             image_meta = objects.ImageMeta.from_dict(image)
