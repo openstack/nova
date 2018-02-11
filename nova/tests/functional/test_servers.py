@@ -2728,9 +2728,10 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         allocations = self._get_allocations_by_server_uuid(server['id'])
         self.assertIn(source_rp_uuid, allocations)
 
-    def test_resize_to_same_host_prep_resize_fails(self):
+    def _test_resize_to_same_host_instance_fails(self, failing_method,
+                                                 event_name):
         """Tests that when we resize to the same host and resize fails in
-        the prep_resize method, we cleanup the allocations before rescheduling.
+        the given method, we cleanup the allocations before rescheduling.
         """
         # make sure that the test only uses a single host
         compute2_service_id = self.admin_api.get_services(
@@ -2742,16 +2743,17 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
 
         server = self._boot_and_check_allocations(self.flavor1, hostname)
 
-        def fake_prep_resize(*args, **kwargs):
+        def fake_resize_method(*args, **kwargs):
             # Ensure the allocations are doubled now before we fail.
             usages = self._get_provider_usages(rp_uuid)
             self.assertFlavorsMatchAllocation(
                 self.flavor1, self.flavor2, usages)
-            raise test.TestingException('Simulated _prep_resize failure.')
+            raise test.TestingException('Simulated resize failure.')
 
         # Yes this isn't great in a functional test, but it's simple.
-        self.stub_out('nova.compute.manager.ComputeManager._prep_resize',
-                      fake_prep_resize)
+        self.stub_out(
+            'nova.compute.manager.ComputeManager.%s' % failing_method,
+            fake_resize_method)
 
         self.flags(allow_resize_to_same_host=True)
         resize_req = {
@@ -2762,7 +2764,7 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         self.api.post_server_action(server['id'], resize_req)
 
         self._wait_for_action_fail_completion(
-            server, instance_actions.RESIZE, 'compute_prep_resize')
+            server, instance_actions.RESIZE, event_name)
 
         # Ensure the allocation records still exist on the host.
         source_rp_uuid = self._get_provider_uuid_by_host(hostname)
@@ -2770,6 +2772,18 @@ class ServerMovingTests(ProviderUsageBaseTestCase):
         # The new_flavor should have been subtracted from the doubled
         # allocation which just leaves us with the original flavor.
         self.assertFlavorMatchesAllocation(self.flavor1, source_usages)
+
+    def test_resize_to_same_host_prep_resize_fails(self):
+        self._test_resize_to_same_host_instance_fails(
+            '_prep_resize', 'compute_prep_resize')
+
+    def test_resize_instance_fails_allocation_cleanup(self):
+        self._test_resize_to_same_host_instance_fails(
+            '_resize_instance', 'compute_resize_instance')
+
+    def test_finish_resize_fails_allocation_cleanup(self):
+        self._test_resize_to_same_host_instance_fails(
+            '_finish_resize', 'compute_finish_resize')
 
     def _test_resize_reschedule_uses_host_lists(self, fails, num_alts=None):
         """Test that when a resize attempt fails, the retry comes from the
