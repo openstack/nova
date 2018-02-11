@@ -92,7 +92,11 @@ class TestBootFromVolumeIsolatedHostsFilter(
         # networks='none'.
         with utils.temporary_mutation(self.api, microversion='2.37'):
             server = self.api.post_server(server_req_body)
-        server = self._wait_for_state_change(self.api, server, 'ERROR')
-        # Due to bug 1746483 we expect scheduling to fail.
-        self.assertIn("Cannot load 'id' in the base class",
-                      server['fault']['message'])
+        server = self._wait_for_state_change(self.api, server, 'ACTIVE')
+        # NOTE(mriedem): The instance is successfully scheduled but since
+        # the image_id from the volume_image_metadata isn't stored in the
+        # RequestSpec.image.id, and restrict_isolated_hosts_to_isolated_images
+        # is True, the isolated host (host1) is filtered out because the
+        # filter doesn't have enough information to know if the image within
+        # the volume can be used on that host.
+        self.assertEqual('host2', server['OS-EXT-SRV-ATTR:host'])
