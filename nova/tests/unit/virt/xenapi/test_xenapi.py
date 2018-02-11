@@ -43,7 +43,7 @@ from nova.compute import vm_states
 import nova.conf
 from nova import context
 from nova import crypto
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova.network import model as network_model
 from nova import objects
@@ -1254,7 +1254,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
         self.check_vm_params_for_linux()
         self.assertEqual(actual_injected_files, injected_files)
 
-    @mock.patch('nova.db.agent_build_get_by_triple')
+    @mock.patch('nova.db.api.agent_build_get_by_triple')
     def test_spawn_agent_upgrade(self, mock_get):
         self.flags(use_agent_default=True,
                    group='xenserver')
@@ -1269,7 +1269,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
         self._test_spawn(IMAGE_VHD, None, None,
                          os_type="linux", architecture="x86-64")
 
-    @mock.patch('nova.db.agent_build_get_by_triple')
+    @mock.patch('nova.db.api.agent_build_get_by_triple')
     def test_spawn_agent_upgrade_fails_silently(self, mock_get):
         mock_get.return_value = {"version": "1.1.0", "architecture": "x86-64",
                                  "hypervisor": "xen", "os": "windows",

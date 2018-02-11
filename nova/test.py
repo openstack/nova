@@ -52,7 +52,7 @@ import testtools
 
 from nova.api.openstack.placement.objects import resource_provider
 from nova import context
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova.network import manager as network_manager
 from nova.network.security_group import openstack_driver

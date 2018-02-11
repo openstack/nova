@@ -30,11 +30,11 @@ class ServicesJsonTest(api_sample_base.ApiSampleTestBaseV21):
     def setUp(self):
         super(ServicesJsonTest, self).setUp()
         self.api.microversion = self.microversion
-        self.stub_out("nova.db.service_get_all",
+        self.stub_out("nova.db.api.service_get_all",
                       test_services.fake_db_api_service_get_all)
-        self.stub_out("nova.db.service_get_by_host_and_binary",
+        self.stub_out("nova.db.api.service_get_by_host_and_binary",
                       test_services.fake_service_get_by_host_binary)
-        self.stub_out("nova.db.service_update",
+        self.stub_out("nova.db.api.service_update",
                       test_services.fake_service_update)
         self.useFixture(utils_fixture.TimeFixture(test_services.fake_utcnow()))
 
@@ -136,8 +136,9 @@ class ServicesV253JsonTest(ServicesV211JsonTest):
         def fake_hm_destroy(context, host):
             return 1
 
-        self.stub_out('nova.db.service_get_by_uuid', db_service_get_by_uuid)
-        self.stub_out('nova.db.compute_node_get_all_by_host',
+        self.stub_out('nova.db.api.service_get_by_uuid',
+                      db_service_get_by_uuid)
+        self.stub_out('nova.db.api.compute_node_get_all_by_host',
             fake_cn_get_all_by_host)
         self.stub_out(
             'nova.objects.host_mapping.HostMapping._get_by_host_from_db',

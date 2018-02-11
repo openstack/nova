@@ -16,7 +16,7 @@ from oslo_db import exception as db_exc
 from oslo_utils import uuidutils
 from oslo_utils import versionutils
 
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova.i18n import _
 from nova import objects

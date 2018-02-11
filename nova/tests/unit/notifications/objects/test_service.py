@@ -60,7 +60,7 @@ class TestServiceStatusNotification(test.TestCase):
 
         mock_notification.return_value.emit.assert_called_once_with(self.ctxt)
 
-    @mock.patch('nova.db.service_update')
+    @mock.patch('nova.db.api.service_update')
     def test_service_update_with_notification(self, mock_db_service_update):
         service_obj = objects.Service(context=self.ctxt, id=fake_service['id'])
         mock_db_service_update.return_value = fake_service
@@ -72,7 +72,7 @@ class TestServiceStatusNotification(test.TestCase):
                                       fields.NotificationAction.UPDATE)
 
     @mock.patch('nova.notifications.objects.service.ServiceStatusNotification')
-    @mock.patch('nova.db.service_update')
+    @mock.patch('nova.db.api.service_update')
     def test_service_update_without_notification(self,
                                                  mock_db_service_update,
                                                  mock_notification):
@@ -85,7 +85,7 @@ class TestServiceStatusNotification(test.TestCase):
             service_obj.save()
             self.assertFalse(mock_notification.called)
 
-    @mock.patch('nova.db.service_create')
+    @mock.patch('nova.db.api.service_create')
     def test_service_create_with_notification(self, mock_db_service_create):
         service_obj = objects.Service(context=self.ctxt)
         service_obj["uuid"] = fake_service["uuid"]
@@ -93,7 +93,7 @@ class TestServiceStatusNotification(test.TestCase):
         self._verify_notification(service_obj,
                                   fields.NotificationAction.CREATE)
 
-    @mock.patch('nova.db.service_destroy')
+    @mock.patch('nova.db.api.service_destroy')
     def test_service_destroy_with_notification(self, mock_db_service_destroy):
         service = copy.deepcopy(fake_service)
         service.pop("version")

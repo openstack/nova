@@ -25,7 +25,7 @@ from oslo_log import log as logging
 
 import nova.conf
 from nova import context
-from nova import db
+from nova.db import api as db
 import nova.image.glance
 from nova import test
 from nova.tests import fixtures as nova_fixtures

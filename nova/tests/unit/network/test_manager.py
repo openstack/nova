@@ -30,7 +30,7 @@ import six
 import testtools
 
 from nova import context
-from nova import db
+from nova.db import api as db
 from nova.db.sqlalchemy import models
 from nova import exception
 from nova import ipv6
@@ -1378,7 +1378,7 @@ class VlanNetworkTestCase(test.TestCase):
         self.network.deallocate_floating_ip(ctxt, 'fake-address')
         mock_dealloc.assert_called_once_with(ctxt, 'fake-address')
 
-    @mock.patch('nova.db.fixed_ip_get')
+    @mock.patch('nova.db.api.fixed_ip_get')
     def test_associate_floating_ip(self, fixed_get):
         ctxt = context.RequestContext('testuser', fakes.FAKE_PROJECT_ID,
                                       is_admin=False)
@@ -1536,8 +1536,8 @@ class VlanNetworkTestCase(test.TestCase):
                                               'fakeiface',
                                               'fakenet')
 
-    @mock.patch('nova.db.floating_ip_get_all_by_host')
-    @mock.patch('nova.db.fixed_ip_get')
+    @mock.patch('nova.db.api.floating_ip_get_all_by_host')
+    @mock.patch('nova.db.api.fixed_ip_get')
     def _test_floating_ip_init_host(self, fixed_get, floating_get,
                                     public_interface, expected_arg):
 
@@ -1723,8 +1723,8 @@ class VlanNetworkTestCase(test.TestCase):
         self.network.add_fixed_ip_to_instance(self.context, FAKEUUID, HOST,
                                               networks[0]['id'])
 
-    @mock.patch('nova.db.fixed_ip_get_by_address')
-    @mock.patch('nova.db.network_get')
+    @mock.patch('nova.db.api.fixed_ip_get_by_address')
+    @mock.patch('nova.db.api.network_get')
     def test_ip_association_and_allocation_of_other_project(self, net_get,
                                                             fixed_get):
         """Makes sure that we cannot deallocaate or disassociate
@@ -1783,10 +1783,10 @@ class VlanNetworkTestCase(test.TestCase):
         db.fixed_ip_disassociate(context1.elevated(), fix_addr)
 
     @mock.patch('nova.network.rpcapi.NetworkAPI.release_dhcp')
-    @mock.patch('nova.db.virtual_interface_get')
-    @mock.patch('nova.db.fixed_ip_get_by_address')
-    @mock.patch('nova.db.network_get')
-    @mock.patch('nova.db.fixed_ip_update')
+    @mock.patch('nova.db.api.virtual_interface_get')
+    @mock.patch('nova.db.api.fixed_ip_get_by_address')
+    @mock.patch('nova.db.api.network_get')
+    @mock.patch('nova.db.api.fixed_ip_update')
     def test_deallocate_fixed(self, fixed_update, net_get, fixed_get,
                               vif_get, release_dhcp):
         """Verify that release is called properly.
@@ -1822,10 +1822,10 @@ class VlanNetworkTestCase(test.TestCase):
 
     @mock.patch.object(linux_net, 'release_dhcp')
     @mock.patch('nova.network.rpcapi.NetworkAPI.release_dhcp')
-    @mock.patch('nova.db.virtual_interface_get')
-    @mock.patch('nova.db.fixed_ip_get_by_address')
-    @mock.patch('nova.db.network_get')
-    @mock.patch('nova.db.fixed_ip_update')
+    @mock.patch('nova.db.api.virtual_interface_get')
+    @mock.patch('nova.db.api.fixed_ip_get_by_address')
+    @mock.patch('nova.db.api.network_get')
+    @mock.patch('nova.db.api.fixed_ip_update')
     def test_deallocate_fixed_rpc_pinned(self, fixed_update, net_get,
                                          fixed_get, vif_get,
                                          release_dhcp,
@@ -1866,9 +1866,9 @@ class VlanNetworkTestCase(test.TestCase):
         fixed_update.assert_called_once_with(context1, fix_addr.address,
                                              {'allocated': False})
 
-    @mock.patch('nova.db.fixed_ip_get_by_address')
-    @mock.patch('nova.db.network_get')
-    @mock.patch('nova.db.fixed_ip_update')
+    @mock.patch('nova.db.api.fixed_ip_get_by_address')
+    @mock.patch('nova.db.api.network_get')
+    @mock.patch('nova.db.api.fixed_ip_update')
     def _deallocate_fixed_with_dhcp(self, mock_dev_exists, fixed_update,
                                     net_get, fixed_get):
         net_get.return_value = dict(test_network.fake_network,
@@ -1958,9 +1958,9 @@ class VlanNetworkTestCase(test.TestCase):
         self.assertRaises(test.TestingException, deallocate, context1,
                           fix_addr, 'fake')
 
-    @mock.patch('nova.db.fixed_ip_get_by_address')
-    @mock.patch('nova.db.network_get')
-    @mock.patch('nova.db.fixed_ip_update')
+    @mock.patch('nova.db.api.fixed_ip_get_by_address')
+    @mock.patch('nova.db.api.network_get')
+    @mock.patch('nova.db.api.fixed_ip_update')
     def test_deallocate_fixed_no_vif(self, fixed_update, net_get, fixed_get):
         """Verify that deallocate doesn't raise when no vif is returned.
 
@@ -1972,7 +1972,7 @@ class VlanNetworkTestCase(test.TestCase):
         def vif_get(_context, _vif_id):
             return None
 
-        self.stub_out('nova.db.virtual_interface_get', vif_get)
+        self.stub_out('nova.db.api.virtual_interface_get', vif_get)
         context1 = context.RequestContext('user', fakes.FAKE_PROJECT_ID)
 
         instance = db.instance_create(context1,
@@ -1993,9 +1993,9 @@ class VlanNetworkTestCase(test.TestCase):
         fixed_update.assert_called_once_with(context1, fix_addr.address,
                                              {'allocated': False})
 
-    @mock.patch('nova.db.fixed_ip_get_by_address')
-    @mock.patch('nova.db.network_get')
-    @mock.patch('nova.db.fixed_ip_update')
+    @mock.patch('nova.db.api.fixed_ip_get_by_address')
+    @mock.patch('nova.db.api.network_get')
+    @mock.patch('nova.db.api.fixed_ip_update')
     def test_fixed_ip_cleanup_fail(self, fixed_update, net_get, fixed_get):
         # Verify IP is not deallocated if the security group refresh fails.
         net_get.return_value = dict(test_network.fake_network,
@@ -2106,7 +2106,7 @@ class CommonNetworkTestCase(test.TestCase):
         def dnsdomain_get(context, instance_domain):
             return domains.get(instance_domain)
 
-        self.stub_out('nova.db.dnsdomain_get', dnsdomain_get)
+        self.stub_out('nova.db.api.dnsdomain_get', dnsdomain_get)
         fake_instance = {'uuid': FAKEUUID,
                          'availability_zone': az}
 
@@ -2132,8 +2132,8 @@ class CommonNetworkTestCase(test.TestCase):
                           manager.get_instance_nw_info,
                           self.context, FAKEUUID, 'fake_rxtx_factor', HOST)
 
-    @mock.patch('nova.db.instance_get')
-    @mock.patch('nova.db.fixed_ip_get_by_instance')
+    @mock.patch('nova.db.api.instance_get')
+    @mock.patch('nova.db.api.fixed_ip_get_by_instance')
     def test_deallocate_for_instance_passes_host_info(self, fixed_get,
                                                       instance_get):
         manager = fake_network.FakeNetworkManager()
@@ -2154,7 +2154,7 @@ class CommonNetworkTestCase(test.TestCase):
             (ctx, '1.2.3.4', 'fake-host')
         ], manager.deallocate_fixed_ip_calls)
 
-    @mock.patch('nova.db.fixed_ip_get_by_instance')
+    @mock.patch('nova.db.api.fixed_ip_get_by_instance')
     def test_deallocate_for_instance_passes_host_info_with_update_dns_entries(
             self, fixed_get):
         self.flags(update_dns_entries=True)
@@ -2213,8 +2213,8 @@ class CommonNetworkTestCase(test.TestCase):
             (ctx, '1.2.3.4', 'fake-host'), (ctx, '4.3.2.1', 'fake-host')
         ], manager.deallocate_fixed_ip_calls)
 
-    @mock.patch('nova.db.fixed_ip_get_by_instance')
-    @mock.patch('nova.db.fixed_ip_disassociate')
+    @mock.patch('nova.db.api.fixed_ip_get_by_instance')
+    @mock.patch('nova.db.api.fixed_ip_disassociate')
     def test_remove_fixed_ip_from_instance(self, disassociate, get):
         manager = fake_network.FakeNetworkManager()
         get.return_value = [
@@ -2228,7 +2228,7 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertEqual('10.0.0.1', manager.deallocate_called)
         disassociate.assert_called_once_with(self.context, '10.0.0.1')
 
-    @mock.patch('nova.db.fixed_ip_get_by_instance')
+    @mock.patch('nova.db.api.fixed_ip_get_by_instance')
     def test_remove_fixed_ip_from_instance_bad_input(self, get):
         manager = fake_network.FakeNetworkManager()
         get.return_value = []
@@ -2257,7 +2257,7 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertIn('192.168.0.0/25', cidrs)
         self.assertIn('192.168.0.128/25', cidrs)
 
-    @mock.patch('nova.db.network_get_all')
+    @mock.patch('nova.db.api.network_get_all')
     def test_validate_cidrs_split_cidr_in_use_middle_of_range(self, get_all):
         manager = fake_network.FakeNetworkManager()
         get_all.return_value = [dict(test_network.fake_network,
@@ -2274,7 +2274,7 @@ class CommonNetworkTestCase(test.TestCase):
             self.assertIn(exp_cidr, cidrs)
         self.assertNotIn('192.168.2.0/24', cidrs)
 
-    @mock.patch('nova.db.network_get_all')
+    @mock.patch('nova.db.api.network_get_all')
     def test_validate_cidrs_smaller_subnet_in_use(self, get_all):
         manager = fake_network.FakeNetworkManager()
         get_all.return_value = [dict(test_network.fake_network,
@@ -2286,7 +2286,7 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertRaises(exception.CidrConflict,
                           manager.create_networks, *args)
 
-    @mock.patch('nova.db.network_get_all')
+    @mock.patch('nova.db.api.network_get_all')
     def test_validate_cidrs_split_smaller_cidr_in_use(self, get_all):
         manager = fake_network.FakeNetworkManager()
         get_all.return_value = [dict(test_network.fake_network,
@@ -2303,7 +2303,7 @@ class CommonNetworkTestCase(test.TestCase):
             self.assertIn(exp_cidr, cidrs)
         self.assertNotIn('192.168.2.0/24', cidrs)
 
-    @mock.patch('nova.db.network_get_all')
+    @mock.patch('nova.db.api.network_get_all')
     def test_validate_cidrs_split_smaller_cidr_in_use2(self, get_all):
         manager = fake_network.FakeNetworkManager()
         self.mox.StubOutWithMock(manager.db, 'network_get_all')
@@ -2320,7 +2320,7 @@ class CommonNetworkTestCase(test.TestCase):
             self.assertIn(exp_cidr, cidrs)
         self.assertNotIn('192.168.2.0/27', cidrs)
 
-    @mock.patch('nova.db.network_get_all')
+    @mock.patch('nova.db.api.network_get_all')
     def test_validate_cidrs_split_all_in_use(self, get_all):
         manager = fake_network.FakeNetworkManager()
         in_use = [dict(test_network.fake_network, **values) for values in
@@ -2343,7 +2343,7 @@ class CommonNetworkTestCase(test.TestCase):
         # ValueError: network_size * num_networks exceeds cidr size
         self.assertRaises(ValueError, manager.create_networks, *args)
 
-    @mock.patch('nova.db.network_get_all')
+    @mock.patch('nova.db.api.network_get_all')
     def test_validate_cidrs_already_used(self, get_all):
         manager = fake_network.FakeNetworkManager()
         get_all.return_value = [dict(test_network.fake_network,
@@ -2372,7 +2372,7 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertIn('192.168.0.0/24', returned_cidrs)
         self.assertIn('192.168.1.0/24', returned_cidrs)
 
-    @mock.patch('nova.db.network_get_all')
+    @mock.patch('nova.db.api.network_get_all')
     def test_validate_cidrs_conflict_existing_supernet(self, get_all):
         manager = fake_network.FakeNetworkManager()
         get_all.return_value = [dict(test_network.fake_network,
@@ -2407,7 +2407,7 @@ class CommonNetworkTestCase(test.TestCase):
         net = nets[0]
         self.assertEqual(uuid, net['uuid'])
 
-    @mock.patch('nova.db.network_get_all')
+    @mock.patch('nova.db.api.network_get_all')
     def test_create_networks_cidr_already_used(self, get_all):
         manager = fake_network.FakeNetworkManager()
         get_all.return_value = [dict(test_network.fake_network,
@@ -2426,8 +2426,8 @@ class CommonNetworkTestCase(test.TestCase):
                 'fd00::/48', None, None, None, None, None]
         self.assertTrue(manager.create_networks(*args))
 
-    @mock.patch('nova.db.network_get')
-    @mock.patch('nova.db.fixed_ips_by_virtual_interface')
+    @mock.patch('nova.db.api.network_get')
+    @mock.patch('nova.db.api.fixed_ips_by_virtual_interface')
     def test_get_instance_uuids_by_ip_regex(self, fixed_get, network_get):
         manager = fake_network.FakeNetworkManager(self.stubs)
         fixed_get.side_effect = manager.db.fixed_ips_by_virtual_interface
@@ -2476,7 +2476,7 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertEqual(_vifs[1]['instance_uuid'], res[0]['instance_uuid'])
         self.assertEqual(_vifs[2]['instance_uuid'], res[1]['instance_uuid'])
 
-    @mock.patch('nova.db.network_get')
+    @mock.patch('nova.db.api.network_get')
     def test_get_instance_uuids_by_ipv6_regex(self, network_get):
         manager = fake_network.FakeNetworkManager(self.stubs)
         _vifs = manager.db.virtual_interface_get_all(None)
@@ -2529,8 +2529,8 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertEqual(_vifs[1]['instance_uuid'], res[0]['instance_uuid'])
         self.assertEqual(_vifs[2]['instance_uuid'], res[1]['instance_uuid'])
 
-    @mock.patch('nova.db.network_get')
-    @mock.patch('nova.db.fixed_ips_by_virtual_interface')
+    @mock.patch('nova.db.api.network_get')
+    @mock.patch('nova.db.api.fixed_ips_by_virtual_interface')
     def test_get_instance_uuids_by_ip(self, fixed_get, network_get):
         manager = fake_network.FakeNetworkManager(self.stubs)
         fixed_get.side_effect = manager.db.fixed_ips_by_virtual_interface
@@ -2566,7 +2566,7 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertEqual(1, len(res))
         self.assertEqual(_vifs[2]['instance_uuid'], res[0]['instance_uuid'])
 
-    @mock.patch('nova.db.network_get_by_uuid')
+    @mock.patch('nova.db.api.network_get_by_uuid')
     def test_get_network(self, get):
         manager = fake_network.FakeNetworkManager()
         fake_context = context.RequestContext('user', 'project')
@@ -2575,7 +2575,7 @@ class CommonNetworkTestCase(test.TestCase):
         network = manager.get_network(fake_context, uuid)
         self.assertEqual(uuid, network['uuid'])
 
-    @mock.patch('nova.db.network_get_by_uuid')
+    @mock.patch('nova.db.api.network_get_by_uuid')
     def test_get_network_not_found(self, get):
         manager = fake_network.FakeNetworkManager()
         fake_context = context.RequestContext('user', 'project')
@@ -2584,7 +2584,7 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertRaises(exception.NetworkNotFound,
                           manager.get_network, fake_context, uuid)
 
-    @mock.patch('nova.db.network_get_all')
+    @mock.patch('nova.db.api.network_get_all')
     def test_get_all_networks(self, get_all):
         manager = fake_network.FakeNetworkManager()
         fake_context = context.RequestContext('user', 'project')
@@ -2597,8 +2597,8 @@ class CommonNetworkTestCase(test.TestCase):
         self.assertEqual('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
                          output[1]['uuid'])
 
-    @mock.patch('nova.db.network_get_by_uuid')
-    @mock.patch('nova.db.network_disassociate')
+    @mock.patch('nova.db.api.network_get_by_uuid')
+    @mock.patch('nova.db.api.network_disassociate')
     def test_disassociate_network(self, disassociate, get):
         manager = fake_network.FakeNetworkManager()
         disassociate.return_value = True
@@ -2608,7 +2608,7 @@ class CommonNetworkTestCase(test.TestCase):
         uuid = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
         manager.disassociate_network(fake_context, uuid)
 
-    @mock.patch('nova.db.network_get_by_uuid')
+    @mock.patch('nova.db.api.network_get_by_uuid')
     def test_disassociate_network_not_found(self, get):
         manager = fake_network.FakeNetworkManager()
         fake_context = context.RequestContext('user', 'project')
@@ -2947,11 +2947,11 @@ class FloatingIPTestCase(test.TestCase):
         self.context = context.RequestContext('testuser', self.project_id,
             is_admin=False)
 
-    @mock.patch('nova.db.fixed_ip_get')
-    @mock.patch('nova.db.network_get')
-    @mock.patch('nova.db.instance_get_by_uuid')
-    @mock.patch('nova.db.service_get_by_host_and_binary')
-    @mock.patch('nova.db.floating_ip_get_by_address')
+    @mock.patch('nova.db.api.fixed_ip_get')
+    @mock.patch('nova.db.api.network_get')
+    @mock.patch('nova.db.api.instance_get_by_uuid')
+    @mock.patch('nova.db.api.service_get_by_host_and_binary')
+    @mock.patch('nova.db.api.floating_ip_get_by_address')
     def test_disassociate_floating_ip_multi_host_calls(self, floating_get,
                                                        service_get,
                                                        inst_get, net_get,
@@ -2995,10 +2995,10 @@ class FloatingIPTestCase(test.TestCase):
 
         self.network.disassociate_floating_ip(ctxt, 'fl_ip', True)
 
-    @mock.patch('nova.db.fixed_ip_get_by_address')
-    @mock.patch('nova.db.network_get')
-    @mock.patch('nova.db.instance_get_by_uuid')
-    @mock.patch('nova.db.floating_ip_get_by_address')
+    @mock.patch('nova.db.api.fixed_ip_get_by_address')
+    @mock.patch('nova.db.api.network_get')
+    @mock.patch('nova.db.api.instance_get_by_uuid')
+    @mock.patch('nova.db.api.floating_ip_get_by_address')
     def test_associate_floating_ip_multi_host_calls(self, floating_get,
                                                     inst_get, net_get,
                                                     fixed_get):
@@ -3089,9 +3089,9 @@ class FloatingIPTestCase(test.TestCase):
                 'project_id': self.project_id})
         self.network.deallocate_for_instance(self.context, instance=instance)
 
-    @mock.patch('nova.db.fixed_ip_get')
-    @mock.patch('nova.db.floating_ip_get_by_address')
-    @mock.patch('nova.db.floating_ip_update')
+    @mock.patch('nova.db.api.fixed_ip_get')
+    @mock.patch('nova.db.api.floating_ip_get_by_address')
+    @mock.patch('nova.db.api.floating_ip_update')
     def test_migrate_instance_start(self, floating_update, floating_get,
                                     fixed_get):
         called = {'count': 0}
@@ -3138,8 +3138,8 @@ class FloatingIPTestCase(test.TestCase):
 
         self.assertEqual(2, called['count'])
 
-    @mock.patch('nova.db.fixed_ip_get')
-    @mock.patch('nova.db.floating_ip_update')
+    @mock.patch('nova.db.api.fixed_ip_get')
+    @mock.patch('nova.db.api.floating_ip_update')
     def test_migrate_instance_finish(self, floating_update, fixed_get):
         called = {'count': 0}
 
@@ -3443,13 +3443,13 @@ class FloatingIPTestCase(test.TestCase):
                              self.context, mock.sentinel.address))
         mock_get.assert_called_once_with(self.context, mock.sentinel.address)
 
-    @mock.patch('nova.db.floating_ip_get_pools')
+    @mock.patch('nova.db.api.floating_ip_get_pools')
     def test_floating_ip_pool_exists(self, floating_ip_get_pools):
         floating_ip_get_pools.return_value = [{'name': 'public'}]
         self.assertTrue(self.network._floating_ip_pool_exists(self.context,
                                                               'public'))
 
-    @mock.patch('nova.db.floating_ip_get_pools')
+    @mock.patch('nova.db.api.floating_ip_get_pools')
     def test_floating_ip_pool_does_not_exist(self, floating_ip_get_pools):
         floating_ip_get_pools.return_value = []
         self.assertFalse(self.network._floating_ip_pool_exists(self.context,

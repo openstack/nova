@@ -356,7 +356,7 @@ def set_target_cell(context, cell_mapping):
     global CELL_CACHE
     if cell_mapping is not None:
         # avoid circular import
-        from nova import db
+        from nova.db import api as db
         from nova import rpc
 
         # Synchronize access to the cache by multiple API workers.

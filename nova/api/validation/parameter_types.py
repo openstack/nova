@@ -21,7 +21,7 @@ import unicodedata
 
 import six
 
-from nova import db
+from nova.db import api as db
 from nova.i18n import _
 from nova.objects import tag
 

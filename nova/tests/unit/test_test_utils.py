@@ -18,7 +18,7 @@ import tempfile
 
 import fixtures
 
-from nova import db
+from nova.db import api as db
 from nova import test
 from nova.tests.unit import utils as test_utils
 

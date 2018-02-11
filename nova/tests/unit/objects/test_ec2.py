@@ -14,7 +14,7 @@
 
 import mock
 
-from nova import db
+from nova.db import api as db
 from nova import objects
 from nova.objects import ec2 as ec2_obj
 from nova.tests.unit.objects import test_objects

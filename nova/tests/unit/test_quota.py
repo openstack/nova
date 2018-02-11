@@ -22,7 +22,7 @@ from nova import compute
 from nova.compute import flavors
 import nova.conf
 from nova import context
-from nova import db
+from nova.db import api as db
 from nova.db.sqlalchemy import models as sqa_models
 from nova import exception
 from nova import objects
@@ -862,9 +862,9 @@ class DbQuotaDriverTestCase(test.TestCase):
                 'injected_file_path_bytes': 127,
                 }
 
-        self.stub_out('nova.db.quota_get_all_by_project_and_user',
+        self.stub_out('nova.db.api.quota_get_all_by_project_and_user',
                        fake_qgabpau)
-        self.stub_out('nova.db.quota_get_all_by_project', fake_qgabp)
+        self.stub_out('nova.db.api.quota_get_all_by_project', fake_qgabp)
 
         self._stub_quota_class_get_all_by_name()
 
@@ -1035,7 +1035,7 @@ class DbQuotaDriverTestCase(test.TestCase):
             return dict(
                 test_resource=dict(in_use=20),
                 )
-        self.stub_out('nova.db.quota_get', fake_quota_get)
+        self.stub_out('nova.db.api.quota_get', fake_quota_get)
 
     def test_get_by_project_and_user(self):
         self._stub_get_by_project_and_user_specific()
@@ -1066,8 +1066,8 @@ class DbQuotaDriverTestCase(test.TestCase):
                     sqa_models.ProjectUserQuota(resource='cores',
                                                 hard_limit=2)]
 
-        self.stub_out('nova.db.quota_get_all_by_project', fake_qgabp)
-        self.stub_out('nova.db.quota_get_all', fake_quota_get_all)
+        self.stub_out('nova.db.api.quota_get_all_by_project', fake_qgabp)
+        self.stub_out('nova.db.api.quota_get_all', fake_quota_get_all)
 
         self._stub_quota_class_get_all_by_name()
         self._stub_quota_class_get_default()
@@ -1767,13 +1767,13 @@ class DbQuotaDriverTestCase(test.TestCase):
             self.calls.append('quota_get_all_by_project_and_user')
             return {'instances': 2, 'cores': -1}
 
-        self.stub_out('nova.db.quota_get_all_by_project',
+        self.stub_out('nova.db.api.quota_get_all_by_project',
                        fake_quota_get_all_by_project)
         self.stub_out('nova.quota.DbQuotaDriver.get_project_quotas',
                        fake_get_project_quotas)
         self.stub_out('nova.quota.DbQuotaDriver._process_quotas',
                        fake_process_quotas_in_get_user_quotas)
-        self.stub_out('nova.db.quota_get_all_by_project_and_user',
+        self.stub_out('nova.db.api.quota_get_all_by_project_and_user',
                        fake_qgabpau)
 
     def test_get_settable_quotas_with_user(self):

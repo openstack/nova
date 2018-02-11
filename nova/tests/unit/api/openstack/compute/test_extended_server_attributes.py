@@ -85,7 +85,7 @@ class ExtendedServerAttributesTestV21(test.TestCase):
         fakes.stub_out_secgroup_api(self)
         self.stub_out('nova.compute.api.API.get', fake_compute_get)
         self.stub_out('nova.compute.api.API.get_all', fake_compute_get_all)
-        self.stub_out('nova.db.instance_get_by_uuid', fake_compute_get)
+        self.stub_out('nova.db.api.instance_get_by_uuid', fake_compute_get)
 
     def _make_request(self, url):
         req = fakes.HTTPRequest.blank(url)

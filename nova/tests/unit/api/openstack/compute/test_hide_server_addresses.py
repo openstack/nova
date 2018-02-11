@@ -47,7 +47,7 @@ class HideServerAddressesTestV21(test.TestCase):
         fakes.stub_out_nw_api(self)
         fakes.stub_out_secgroup_api(self)
         return_server = fakes.fake_instance_get()
-        self.stub_out('nova.db.instance_get_by_uuid', return_server)
+        self.stub_out('nova.db.api.instance_get_by_uuid', return_server)
         self._setup_wsgi()
 
     def _make_request(self, url):

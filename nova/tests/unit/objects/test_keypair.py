@@ -38,7 +38,7 @@ fake_keypair = {
 
 class _TestKeyPairObject(object):
 
-    @mock.patch('nova.db.key_pair_get')
+    @mock.patch('nova.db.api.key_pair_get')
     @mock.patch('nova.objects.KeyPair._get_from_db')
     def test_get_by_name_main(self, mock_api_get, mock_kp_get):
         mock_api_get.side_effect = exception.KeypairNotFound(user_id='foo',
@@ -103,8 +103,8 @@ class _TestKeyPairObject(object):
         mock_kp_destroy.assert_called_once_with(
             self.context, 'fake-user', 'foo-keypair')
 
-    @mock.patch('nova.db.key_pair_get_all_by_user')
-    @mock.patch('nova.db.key_pair_count_by_user')
+    @mock.patch('nova.db.api.key_pair_get_all_by_user')
+    @mock.patch('nova.db.api.key_pair_count_by_user')
     @mock.patch('nova.objects.KeyPairList._get_from_db')
     @mock.patch('nova.objects.KeyPairList._get_count_from_db')
     def test_get_by_user(self, mock_api_count, mock_api_get, mock_kp_count,
@@ -134,7 +134,7 @@ class _TestKeyPairObject(object):
         keypair_obj.obj_make_compatible(fake_keypair_copy, '1.1')
         self.assertNotIn('type', fake_keypair_copy)
 
-    @mock.patch('nova.db.key_pair_get_all_by_user')
+    @mock.patch('nova.db.api.key_pair_get_all_by_user')
     @mock.patch('nova.objects.KeyPairList._get_from_db')
     def test_get_by_user_limit(self, mock_api_get, mock_kp_get):
         api_keypair = copy.deepcopy(fake_keypair)
@@ -151,7 +151,7 @@ class _TestKeyPairObject(object):
                                              limit=1, marker=None)
         self.assertFalse(mock_kp_get.called)
 
-    @mock.patch('nova.db.key_pair_get_all_by_user')
+    @mock.patch('nova.db.api.key_pair_get_all_by_user')
     @mock.patch('nova.objects.KeyPairList._get_from_db')
     def test_get_by_user_marker(self, mock_api_get, mock_kp_get):
         api_kp_name = 'api_kp'
@@ -169,7 +169,7 @@ class _TestKeyPairObject(object):
                                             limit=None,
                                             marker=api_kp_name)
 
-    @mock.patch('nova.db.key_pair_get_all_by_user')
+    @mock.patch('nova.db.api.key_pair_get_all_by_user')
     @mock.patch('nova.objects.KeyPairList._get_from_db')
     def test_get_by_user_limit_and_marker_api(self, mock_api_get, mock_kp_get):
         first_api_kp_name = 'first_api_kp'
@@ -191,7 +191,7 @@ class _TestKeyPairObject(object):
         mock_kp_get.assert_called_once_with(self.context, 'fake-user',
                                             limit=4, marker=None)
 
-    @mock.patch('nova.db.key_pair_get_all_by_user')
+    @mock.patch('nova.db.api.key_pair_get_all_by_user')
     @mock.patch('nova.objects.KeyPairList._get_from_db')
     def test_get_by_user_limit_and_marker_main(self, mock_api_get,
                                                mock_kp_get):
@@ -211,7 +211,7 @@ class _TestKeyPairObject(object):
         mock_kp_get.assert_called_once_with(self.context, 'fake-user',
                                             limit=5, marker=first_main_kp_name)
 
-    @mock.patch('nova.db.key_pair_get_all_by_user')
+    @mock.patch('nova.db.api.key_pair_get_all_by_user')
     @mock.patch('nova.objects.KeyPairList._get_from_db')
     def test_get_by_user_limit_and_marker_invalid_marker(
             self, mock_api_get, mock_kp_get):

@@ -16,7 +16,7 @@ import mock
 
 from nova.compute import manager as compute_manager
 from nova import context
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova import objects
 from nova import test

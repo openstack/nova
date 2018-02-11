@@ -14,7 +14,7 @@
 
 import mock
 
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova.objects import instance_fault
 from nova.tests.unit.objects import test_objects
@@ -73,7 +73,7 @@ class _TestInstanceFault(object):
         get_mock.assert_called_once_with(self.context, ['fake-uuid'])
 
     @mock.patch('nova.cells.rpcapi.CellsAPI.instance_fault_create_at_top')
-    @mock.patch('nova.db.instance_fault_create')
+    @mock.patch('nova.db.api.instance_fault_create')
     def _test_create(self, update_cells, mock_create, cells_fault_create):
         mock_create.return_value = fake_faults['fake-uuid'][1]
         fault = instance_fault.InstanceFault(context=self.context)

@@ -25,7 +25,7 @@ from nova.cells import filters
 from nova.cells import weights
 from nova.compute import vm_states
 from nova import context
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova import objects
 from nova import test

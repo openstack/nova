@@ -79,11 +79,11 @@ class KeypairsTestV21(test.TestCase):
         fakes.stub_out_networking(self)
         fakes.stub_out_secgroup_api(self)
 
-        self.stub_out("nova.db.key_pair_get_all_by_user",
+        self.stub_out("nova.db.api.key_pair_get_all_by_user",
                       db_key_pair_get_all_by_user)
-        self.stub_out("nova.db.key_pair_create",
+        self.stub_out("nova.db.api.key_pair_create",
                       db_key_pair_create)
-        self.stub_out("nova.db.key_pair_destroy",
+        self.stub_out("nova.db.api.key_pair_destroy",
                       db_key_pair_destroy)
         self._setup_app_and_controller()
 
@@ -287,7 +287,7 @@ class KeypairsTestV21(test.TestCase):
         def db_key_pair_get_not_found(context, user_id, name):
             raise exception.KeypairNotFound(user_id=user_id, name=name)
 
-        self.stub_out("nova.db.key_pair_destroy",
+        self.stub_out("nova.db.api.key_pair_destroy",
                       db_key_pair_get_not_found)
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.delete, self.req, 'FAKE')
@@ -299,7 +299,7 @@ class KeypairsTestV21(test.TestCase):
                         name='foo', public_key='XXX', fingerprint='YYY',
                         type='ssh')
 
-        self.stub_out("nova.db.key_pair_get", _db_key_pair_get)
+        self.stub_out("nova.db.api.key_pair_get", _db_key_pair_get)
 
         res_dict = self.controller.show(self.req, 'FAKE')
         self.assertEqual('foo', res_dict['keypair']['name'])
@@ -312,15 +312,15 @@ class KeypairsTestV21(test.TestCase):
         def _db_key_pair_get(context, user_id, name):
             raise exception.KeypairNotFound(user_id=user_id, name=name)
 
-        self.stub_out("nova.db.key_pair_get", _db_key_pair_get)
+        self.stub_out("nova.db.api.key_pair_get", _db_key_pair_get)
 
         self.assertRaises(webob.exc.HTTPNotFound,
                           self.controller.show, self.req, 'FAKE')
 
     def test_show_server(self):
-        self.stub_out('nova.db.instance_get',
+        self.stub_out('nova.db.api.instance_get',
                       fakes.fake_instance_get())
-        self.stub_out('nova.db.instance_get_by_uuid',
+        self.stub_out('nova.db.api.instance_get_by_uuid',
                       fakes.fake_instance_get())
         # NOTE(sdague): because of the way extensions work, we have to
         # also stub out the Request compute cache with a real compute
@@ -626,7 +626,7 @@ class KeypairsTestV235(test.TestCase):
         super(KeypairsTestV235, self).setUp()
         self._setup_app_and_controller()
 
-    @mock.patch("nova.db.key_pair_get_all_by_user")
+    @mock.patch("nova.db.api.key_pair_get_all_by_user")
     def test_keypair_list_limit_and_marker(self, mock_kp_get):
         mock_kp_get.side_effect = db_key_pair_get_all_by_user
 
@@ -661,7 +661,7 @@ class KeypairsTestV235(test.TestCase):
         self.assertRaises(exception.ValidationError, self.controller.index,
                           req)
 
-    @mock.patch("nova.db.key_pair_get_all_by_user")
+    @mock.patch("nova.db.api.key_pair_get_all_by_user")
     def test_keypair_list_limit_and_marker_invalid_in_old_microversion(
             self, mock_kp_get):
         mock_kp_get.side_effect = db_key_pair_get_all_by_user

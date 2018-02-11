@@ -50,7 +50,7 @@ from nova.cmd import common as cmd_common
 import nova.conf
 from nova import config
 from nova import context
-from nova import db
+from nova.db import api as db
 from nova.db import migration
 from nova.db.sqlalchemy import api as sa_db
 from nova import exception

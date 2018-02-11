@@ -65,7 +65,7 @@ class _TestInstanceDeviceMetadata(object):
             self.assertEqual(obj_meta.bus.address, '0000:00:09.0')
             self.assertEqual(obj_meta.tags, ['nfvfunc3'])
 
-    @mock.patch('nova.db.instance_extra_get_by_instance_uuid')
+    @mock.patch('nova.db.api.instance_extra_get_by_instance_uuid')
     def test_get_by_instance_uuid(self, mock_get):
         mock_get.return_value = fake_db_metadata
         inst_meta = objects.InstanceDeviceMetadata

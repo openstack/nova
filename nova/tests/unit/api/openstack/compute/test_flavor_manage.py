@@ -22,7 +22,7 @@ from nova.api.openstack import api_version_request
 from nova.api.openstack.compute import flavor_access as flavor_access_v21
 from nova.api.openstack.compute import flavor_manage as flavormanage_v21
 from nova.compute import flavors
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova import objects
 from nova import policy

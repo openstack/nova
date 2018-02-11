@@ -65,7 +65,8 @@ class MigrateServerSamplesJsonTest(test_servers.ServersSampleBase):
                                 versionutils.convert_version_to_int('1.0')),
                            disabled=False)
             return {'compute_node': [service]}
-        self.stub_out("nova.db.service_get_by_compute_host", fake_get_compute)
+        self.stub_out("nova.db.api.service_get_by_compute_host",
+                      fake_get_compute)
 
         response = self._do_post('servers/%s/action' % self.uuid,
                                  'live-migrate-server',

@@ -30,7 +30,7 @@ from nova.compute import instance_actions
 from nova.compute import task_states
 from nova.compute import vm_states
 from nova import context
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova import objects
 from nova.objects import base as objects_base

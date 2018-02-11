@@ -451,7 +451,7 @@ class ComputeHostAPITestCase(test.TestCase):
         mock_remove_host.assert_called_once_with(
             mock.ANY, aggregate.uuid, 'fake-compute-host')
 
-    @mock.patch('nova.db.compute_node_statistics')
+    @mock.patch('nova.db.api.compute_node_statistics')
     def test_compute_node_statistics(self, mock_cns):
         # Note this should only be called twice
         mock_cns.side_effect = [

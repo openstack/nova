@@ -11,7 +11,7 @@
 # under the License.
 
 import nova.context
-from nova import db
+from nova.db import api as db
 from nova import objects
 from nova import test
 

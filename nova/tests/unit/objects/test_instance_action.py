@@ -19,7 +19,7 @@ from oslo_utils import fixture as utils_fixture
 from oslo_utils import timeutils
 import six
 
-from nova import db
+from nova.db import api as db
 from nova.objects import instance_action
 from nova import test
 from nova.tests.unit.objects import test_objects

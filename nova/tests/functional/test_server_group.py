@@ -19,7 +19,7 @@ import mock
 from oslo_config import cfg
 
 from nova import context
-from nova import db
+from nova.db import api as db
 from nova.db.sqlalchemy import api as db_api
 from nova import test
 from nova.tests import fixtures as nova_fixtures

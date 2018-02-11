@@ -36,7 +36,7 @@ from nova.conductor.tasks import live_migrate
 from nova.conductor.tasks import migrate
 from nova import conf
 from nova import context
-from nova import db
+from nova.db import api as db
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
 from nova import exception as exc

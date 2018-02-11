@@ -220,7 +220,7 @@ class VolumeAttachmentsSample(test_servers.ServersSampleBase):
             ]
             return bdms
 
-        self.stub_out('nova.db.block_device_mapping_get_all_by_instance',
+        self.stub_out('nova.db.api.block_device_mapping_get_all_by_instance',
                       fake_bdms_get_all_by_instance)
 
     def fake_bdm_get_by_volume_and_instance(

@@ -14,7 +14,7 @@
 
 from oslo_utils import versionutils
 
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova import objects
 from nova.objects import base

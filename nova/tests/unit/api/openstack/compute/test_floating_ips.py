@@ -21,7 +21,7 @@ import webob
 from nova.api.openstack.compute import floating_ips as fips_v21
 from nova import compute
 from nova import context
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova import network
 from nova import objects
@@ -238,7 +238,7 @@ class FloatingIpTestV21(test.TestCase):
                        stub_nw_info(self))
 
         fake_network.stub_out_nw_api_get_instance_nw_info(self)
-        self.stub_out('nova.db.instance_get',
+        self.stub_out('nova.db.api.instance_get',
                       fake_instance_get)
 
         self.context = context.get_admin_context()
@@ -942,7 +942,7 @@ class ExtendedFloatingIpTestV21(test.TestCase):
                        stub_nw_info(self))
 
         fake_network.stub_out_nw_api_get_instance_nw_info(self)
-        self.stub_out('nova.db.instance_get',
+        self.stub_out('nova.db.api.instance_get',
                       fake_instance_get)
 
         self.context = context.get_admin_context()

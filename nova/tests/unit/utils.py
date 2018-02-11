@@ -23,7 +23,7 @@ from six.moves import range
 from nova.compute import flavors
 import nova.conf
 import nova.context
-import nova.db
+from nova.db import api as db
 from nova import exception
 from nova.image import glance
 from nova.network import minidns
@@ -100,7 +100,7 @@ def get_test_instance(context=None, flavor=None, obj=False):
         instance.create()
     else:
         flavors.save_flavor_info(test_instance['system_metadata'], flavor, '')
-        instance = nova.db.instance_create(context, test_instance)
+        instance = db.instance_create(context, test_instance)
     return instance
 
 FAKE_NETWORK_VLAN = 100

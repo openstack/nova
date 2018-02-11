@@ -94,12 +94,13 @@ class ExtendedVolumesTestV21(test.TestCase):
         fakes.stub_out_secgroup_api(self)
         self.stub_out('nova.compute.api.API.get', fake_compute_get)
         self.stub_out('nova.compute.api.API.get_all', fake_compute_get_all)
-        self.stub_out('nova.db.block_device_mapping_get_all_by_instance_uuids',
-                       fake_bdms_get_all_by_instance_uuids)
+        self.stub_out(
+            'nova.db.api.block_device_mapping_get_all_by_instance_uuids',
+            fake_bdms_get_all_by_instance_uuids)
         self._setUp()
         self.app = self._setup_app()
         return_server = fakes.fake_instance_get()
-        self.stub_out('nova.db.instance_get_by_uuid', return_server)
+        self.stub_out('nova.db.api.instance_get_by_uuid', return_server)
 
     def _setup_app(self):
         return fakes.wsgi_app_v21()

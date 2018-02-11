@@ -21,7 +21,7 @@ from nova.compute import api as compute_api
 from nova.compute import manager as compute_manager
 import nova.conf
 import nova.context
-from nova import db
+from nova.db import api as db
 from nova import exception
 from nova.network import manager as network_manager
 from nova.network import model as network_model
@@ -322,8 +322,8 @@ def fake_get_instance_nw_info(test, num_networks=1, ips_per_vif=2,
             }
         return fake_info_cache
 
-    test.stub_out('nova.db.fixed_ip_get_by_instance', fixed_ips_fake)
-    test.stub_out('nova.db.instance_info_cache_update', update_cache_fake)
+    test.stub_out('nova.db.api.fixed_ip_get_by_instance', fixed_ips_fake)
+    test.stub_out('nova.db.api.instance_info_cache_update', update_cache_fake)
 
     class FakeContext(nova.context.RequestContext):
         def is_admin(self):
@@ -403,7 +403,7 @@ def stub_compute_with_ips(test):
     def fake_pci_device_get_by_addr(context, node_id, dev_addr):
         return test_pci_device.fake_db_dev
 
-    test.stub_out('nova.db.pci_device_get_by_addr',
+    test.stub_out('nova.db.api.pci_device_get_by_addr',
                   fake_pci_device_get_by_addr)
     test.stub_out('nova.compute.api.API.get', fake_get)
     test.stub_out('nova.compute.api.API.get_all', fake_get_all)

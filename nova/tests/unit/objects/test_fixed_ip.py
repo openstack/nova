@@ -67,15 +67,15 @@ class _TestFixedIPObject(object):
                 obj_val = str(obj_val)
             self.assertEqual(db_val, obj_val)
 
-    @mock.patch('nova.db.fixed_ip_get')
+    @mock.patch('nova.db.api.fixed_ip_get')
     def test_get_by_id(self, get):
         get.return_value = fake_fixed_ip
         fixedip = fixed_ip.FixedIP.get_by_id(self.context, 123)
         get.assert_called_once_with(self.context, 123, get_network=False)
         self._compare(fixedip, fake_fixed_ip)
 
-    @mock.patch('nova.db.fixed_ip_get')
-    @mock.patch('nova.db.network_get')
+    @mock.patch('nova.db.api.fixed_ip_get')
+    @mock.patch('nova.db.api.network_get')
     def test_get_by_id_with_extras(self, network_get, fixed_get):
         db_fixed = dict(fake_fixed_ip,
                         network=test_network.fake_network)
@@ -87,7 +87,7 @@ class _TestFixedIPObject(object):
         self.assertEqual(db_fixed['network']['uuid'], fixedip.network.uuid)
         self.assertFalse(network_get.called)
 
-    @mock.patch('nova.db.fixed_ip_get_by_address')
+    @mock.patch('nova.db.api.fixed_ip_get_by_address')
     def test_get_by_address(self, get):
         get.return_value = fake_fixed_ip
         fixedip = fixed_ip.FixedIP.get_by_address(self.context, '1.2.3.4')
@@ -95,9 +95,9 @@ class _TestFixedIPObject(object):
                                     columns_to_join=[])
         self._compare(fixedip, fake_fixed_ip)
 
-    @mock.patch('nova.db.fixed_ip_get_by_address')
-    @mock.patch('nova.db.network_get')
-    @mock.patch('nova.db.instance_get')
+    @mock.patch('nova.db.api.fixed_ip_get_by_address')
+    @mock.patch('nova.db.api.network_get')
+    @mock.patch('nova.db.api.instance_get')
     def test_get_by_address_with_extras(self, instance_get, network_get,
                                         fixed_get):
         db_fixed = dict(fake_fixed_ip, network=test_network.fake_network,
@@ -115,9 +115,9 @@ class _TestFixedIPObject(object):
         self.assertFalse(network_get.called)
         self.assertFalse(instance_get.called)
 
-    @mock.patch('nova.db.fixed_ip_get_by_address')
-    @mock.patch('nova.db.network_get')
-    @mock.patch('nova.db.instance_get')
+    @mock.patch('nova.db.api.fixed_ip_get_by_address')
+    @mock.patch('nova.db.api.network_get')
+    @mock.patch('nova.db.api.instance_get')
     def test_get_by_address_with_extras_deleted_instance(self, instance_get,
                                                          network_get,
                                                          fixed_get):
@@ -136,7 +136,7 @@ class _TestFixedIPObject(object):
         self.assertFalse(network_get.called)
         self.assertFalse(instance_get.called)
 
-    @mock.patch('nova.db.fixed_ip_get_by_floating_address')
+    @mock.patch('nova.db.api.fixed_ip_get_by_floating_address')
     def test_get_by_floating_address(self, get):
         get.return_value = fake_fixed_ip
         fixedip = fixed_ip.FixedIP.get_by_floating_address(self.context,
@@ -144,7 +144,7 @@ class _TestFixedIPObject(object):
         get.assert_called_once_with(self.context, '1.2.3.4')
         self._compare(fixedip, fake_fixed_ip)
 
-    @mock.patch('nova.db.fixed_ip_get_by_floating_address')
+    @mock.patch('nova.db.api.fixed_ip_get_by_floating_address')
     def test_get_by_floating_address_none(self, get):
         get.return_value = None
         fixedip = fixed_ip.FixedIP.get_by_floating_address(self.context,
@@ -152,7 +152,7 @@ class _TestFixedIPObject(object):
         get.assert_called_once_with(self.context, '1.2.3.4')
         self.assertIsNone(fixedip)
 
-    @mock.patch('nova.db.fixed_ip_get_by_network_host')
+    @mock.patch('nova.db.api.fixed_ip_get_by_network_host')
     def test_get_by_network_and_host(self, get):
         get.return_value = fake_fixed_ip
         fixedip = fixed_ip.FixedIP.get_by_network_and_host(self.context,
@@ -160,7 +160,7 @@ class _TestFixedIPObject(object):
         get.assert_called_once_with(self.context, 123, 'host')
         self._compare(fixedip, fake_fixed_ip)
 
-    @mock.patch('nova.db.fixed_ip_associate')
+    @mock.patch('nova.db.api.fixed_ip_associate')
     def test_associate(self, associate):
         associate.return_value = fake_fixed_ip
         fixedip = fixed_ip.FixedIP.associate(self.context, '1.2.3.4',
@@ -170,7 +170,7 @@ class _TestFixedIPObject(object):
                                      virtual_interface_id=None)
         self._compare(fixedip, fake_fixed_ip)
 
-    @mock.patch('nova.db.fixed_ip_associate')
+    @mock.patch('nova.db.api.fixed_ip_associate')
     def test_associate_with_vif(self, associate):
         associate.return_value = fake_fixed_ip
         fixedip = fixed_ip.FixedIP.associate(self.context, '1.2.3.4',
@@ -182,7 +182,7 @@ class _TestFixedIPObject(object):
                                      virtual_interface_id=0)
         self._compare(fixedip, fake_fixed_ip)
 
-    @mock.patch('nova.db.fixed_ip_associate_pool')
+    @mock.patch('nova.db.api.fixed_ip_associate_pool')
     def test_associate_pool(self, associate):
         associate.return_value = fake_fixed_ip
         fixedip = fixed_ip.FixedIP.associate_pool(self.context, 123,
@@ -192,7 +192,7 @@ class _TestFixedIPObject(object):
                                      host='host', virtual_interface_id=None)
         self._compare(fixedip, fake_fixed_ip)
 
-    @mock.patch('nova.db.fixed_ip_associate_pool')
+    @mock.patch('nova.db.api.fixed_ip_associate_pool')
     def test_associate_pool_with_vif(self, associate):
         associate.return_value = fake_fixed_ip
         fixedip = fixed_ip.FixedIP.associate_pool(self.context, 123,
@@ -203,12 +203,12 @@ class _TestFixedIPObject(object):
                                      host='host', virtual_interface_id=0)
         self._compare(fixedip, fake_fixed_ip)
 
-    @mock.patch('nova.db.fixed_ip_disassociate')
+    @mock.patch('nova.db.api.fixed_ip_disassociate')
     def test_disassociate_by_address(self, disassociate):
         fixed_ip.FixedIP.disassociate_by_address(self.context, '1.2.3.4')
         disassociate.assert_called_with(self.context, '1.2.3.4')
 
-    @mock.patch('nova.db.fixed_ip_disassociate_all_by_timeout')
+    @mock.patch('nova.db.api.fixed_ip_disassociate_all_by_timeout')
     def test_disassociate_all_by_timeout(self, disassociate):
         now = timeutils.utcnow()
         now_tz = timeutils.parse_isotime(
@@ -224,7 +224,7 @@ class _TestFixedIPObject(object):
         self.assertEqual((self.context, 'host'), args[:2])
         self.assertEqual({}, kwargs)
 
-    @mock.patch('nova.db.fixed_ip_create')
+    @mock.patch('nova.db.api.fixed_ip_create')
     def test_create(self, create):
         create.return_value = fake_fixed_ip
         fixedip = fixed_ip.FixedIP(context=self.context, address='1.2.3.4')
@@ -233,7 +233,7 @@ class _TestFixedIPObject(object):
             self.context, {'address': '1.2.3.4'})
         self._compare(fixedip, fake_fixed_ip)
 
-    @mock.patch('nova.db.fixed_ip_update')
+    @mock.patch('nova.db.api.fixed_ip_update')
     def test_save(self, update):
         update.return_value = fake_fixed_ip
         fixedip = fixed_ip.FixedIP(context=self.context, address='1.2.3.4',
@@ -244,7 +244,7 @@ class _TestFixedIPObject(object):
         update.assert_called_once_with(self.context, '1.2.3.4',
                                        {'instance_uuid': uuids.instance})
 
-    @mock.patch('nova.db.fixed_ip_disassociate')
+    @mock.patch('nova.db.api.fixed_ip_disassociate')
     def test_disassociate(self, disassociate):
         fixedip = fixed_ip.FixedIP(context=self.context, address='1.2.3.4',
                                    instance_uuid=uuids.instance)
@@ -253,7 +253,7 @@ class _TestFixedIPObject(object):
         disassociate.assert_called_once_with(self.context, '1.2.3.4')
         self.assertIsNone(fixedip.instance_uuid)
 
-    @mock.patch('nova.db.fixed_ip_get_all')
+    @mock.patch('nova.db.api.fixed_ip_get_all')
     def test_get_all(self, get_all):
         get_all.return_value = [fake_fixed_ip]
         fixedips = fixed_ip.FixedIPList.get_all(self.context)
@@ -261,7 +261,7 @@ class _TestFixedIPObject(object):
         get_all.assert_called_once_with(self.context)
         self._compare(fixedips[0], fake_fixed_ip)
 
-    @mock.patch('nova.db.fixed_ip_get_by_instance')
+    @mock.patch('nova.db.api.fixed_ip_get_by_instance')
     def test_get_by_instance(self, get):
         get.return_value = [fake_fixed_ip]
         fixedips = fixed_ip.FixedIPList.get_by_instance_uuid(self.context,
@@ -270,7 +270,7 @@ class _TestFixedIPObject(object):
         get.assert_called_once_with(self.context, uuids.instance)
         self._compare(fixedips[0], fake_fixed_ip)
 
-    @mock.patch('nova.db.fixed_ip_get_by_host')
+    @mock.patch('nova.db.api.fixed_ip_get_by_host')
     def test_get_by_host(self, get):
         get.return_value = [fake_fixed_ip]
         fixedips = fixed_ip.FixedIPList.get_by_host(self.context, 'host')
@@ -278,7 +278,7 @@ class _TestFixedIPObject(object):
         get.assert_called_once_with(self.context, 'host')
         self._compare(fixedips[0], fake_fixed_ip)
 
-    @mock.patch('nova.db.fixed_ips_by_virtual_interface')
+    @mock.patch('nova.db.api.fixed_ips_by_virtual_interface')
     def test_get_by_virtual_interface_id(self, get):
         get.return_value = [fake_fixed_ip]
         fixedips = fixed_ip.FixedIPList.get_by_virtual_interface_id(
@@ -291,7 +291,7 @@ class _TestFixedIPObject(object):
         fixedip = fixed_ip.FixedIP()
         self.assertRaises(NotImplementedError, lambda: fixedip.floating_ips)
 
-    @mock.patch('nova.db.fixed_ip_bulk_create')
+    @mock.patch('nova.db.api.fixed_ip_bulk_create')
     def test_bulk_create(self, bulk):
         fixed_ips = [fixed_ip.FixedIP(address='192.168.1.1'),
                      fixed_ip.FixedIP(address='192.168.1.2')]
@@ -300,7 +300,7 @@ class _TestFixedIPObject(object):
                                      [{'address': '192.168.1.1'},
                                       {'address': '192.168.1.2'}])
 
-    @mock.patch('nova.db.network_get_associated_fixed_ips')
+    @mock.patch('nova.db.api.network_get_associated_fixed_ips')
     def test_get_by_network(self, get):
         info = {'address': '1.2.3.4',
                 'instance_uuid': uuids.instance,
@@ -333,7 +333,7 @@ class _TestFixedIPObject(object):
         self.assertEqual(1, fip.virtual_interface.id)
         self.assertEqual(info['vif_address'], fip.virtual_interface.address)
 
-    @mock.patch('nova.db.network_get_associated_fixed_ips')
+    @mock.patch('nova.db.api.network_get_associated_fixed_ips')
     def test_backport_default_route(self, mock_get):
         info = {'address': '1.2.3.4',
                 'instance_uuid': uuids.instance,
