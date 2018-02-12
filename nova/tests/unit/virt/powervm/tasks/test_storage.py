@@ -63,6 +63,13 @@ class TestStorage(test.NoDBTestCase):
         task.revert('mgmt_cna', 'result', 'flow_failures')
         self.mock_mb.assert_not_called()
 
+        # Validate args on taskflow.task.Task instantiation
+        with mock.patch('taskflow.task.Task.__init__') as tf:
+            tf_stg.CreateAndConnectCfgDrive(
+                self.adapter, self.instance, 'injected_files',
+                'network_info', 'stg_ftsk', admin_pass='admin_pass')
+        tf.assert_called_once_with(name='cfg_drive', requires=['mgmt_cna'])
+
     def test_delete_vopt(self):
         # Test with no FeedTask
         task = tf_stg.DeleteVOpt(self.adapter, self.instance)
@@ -81,6 +88,11 @@ class TestStorage(test.NoDBTestCase):
         self.mock_mb.dlt_vopt.assert_called_once_with(
             self.instance, stg_ftsk='ftsk')
 
+        # Validate args on taskflow.task.Task instantiation
+        with mock.patch('taskflow.task.Task.__init__') as tf:
+            tf_stg.DeleteVOpt(self.adapter, self.instance)
+        tf.assert_called_once_with(name='vopt_delete')
+
     def test_delete_disk(self):
         stor_adpt_mappings = mock.Mock()
 
@@ -88,10 +100,22 @@ class TestStorage(test.NoDBTestCase):
         task.execute(stor_adpt_mappings)
         self.disk_dvr.delete_disks.assert_called_once_with(stor_adpt_mappings)
 
+        # Validate args on taskflow.task.Task instantiation
+        with mock.patch('taskflow.task.Task.__init__') as tf:
+            tf_stg.DeleteDisk(self.disk_dvr)
+        tf.assert_called_once_with(
+            name='delete_disk', requires=['stor_adpt_mappings'])
+
     def test_detach_disk(self):
         task = tf_stg.DetachDisk(self.disk_dvr, self.instance)
         task.execute()
         self.disk_dvr.detach_disk.assert_called_once_with(self.instance)
+
+        # Validate args on taskflow.task.Task instantiation
+        with mock.patch('taskflow.task.Task.__init__') as tf:
+            tf_stg.DetachDisk(self.disk_dvr, self.instance)
+        tf.assert_called_once_with(
+            name='detach_disk', provides='stor_adpt_mappings')
 
     def test_attach_disk(self):
         stg_ftsk = mock.Mock()
@@ -112,6 +136,12 @@ class TestStorage(test.NoDBTestCase):
             "timed out")
         task.revert(disk_dev_info, 'result', 'flow failures')
         self.disk_dvr.detach_disk.assert_called_once_with(self.instance)
+
+        # Validate args on taskflow.task.Task instantiation
+        with mock.patch('taskflow.task.Task.__init__') as tf:
+            tf_stg.AttachDisk(self.disk_dvr, self.instance, stg_ftsk)
+        tf.assert_called_once_with(
+            name='attach_disk', requires=['disk_dev_info'])
 
     def test_create_disk_for_img(self):
         image_meta = mock.Mock()
@@ -136,3 +166,10 @@ class TestStorage(test.NoDBTestCase):
             "timed out")
         task.revert('result', 'flow failures')
         self.disk_dvr.delete_disks.assert_called_once_with(['result'])
+
+        # Validate args on taskflow.task.Task instantiation
+        with mock.patch('taskflow.task.Task.__init__') as tf:
+            tf_stg.CreateDiskForImg(
+                self.disk_dvr, self.context, self.instance, image_meta)
+        tf.assert_called_once_with(
+            name='create_disk_from_img', provides='disk_dev_info')

@@ -47,11 +47,21 @@ class TestVMTasks(test.NoDBTestCase):
         mock_stg.assert_called_once_with([mock_vm_crt.return_value.id], 'ftsk',
                                          lpars_exist=True)
 
+        # Validate args on taskflow.task.Task instantiation
+        with mock.patch('taskflow.task.Task.__init__') as tf:
+            tf_vm.Create(self.apt, 'host_wrapper', self.instance, 'ftsk')
+        tf.assert_called_once_with(name='crt_vm', provides='lpar_wrap')
+
     @mock.patch('nova.virt.powervm.vm.power_on')
     def test_power_on(self, mock_pwron):
         pwron = tf_vm.PowerOn(self.apt, self.instance)
         pwron.execute()
         mock_pwron.assert_called_once_with(self.apt, self.instance)
+
+        # Validate args on taskflow.task.Task instantiation
+        with mock.patch('taskflow.task.Task.__init__') as tf:
+            tf_vm.PowerOn(self.apt, self.instance)
+        tf.assert_called_once_with(name='pwr_vm')
 
     @mock.patch('nova.virt.powervm.vm.power_on')
     @mock.patch('nova.virt.powervm.vm.power_off')
@@ -96,8 +106,18 @@ class TestVMTasks(test.NoDBTestCase):
         mock_pwroff.assert_called_once_with(self.apt, self.instance,
                                             force_immediate=True)
 
+        # Validate args on taskflow.task.Task instantiation
+        with mock.patch('taskflow.task.Task.__init__') as tf:
+            tf_vm.PowerOff(self.apt, self.instance)
+        tf.assert_called_once_with(name='pwr_off_vm')
+
     @mock.patch('nova.virt.powervm.vm.delete_lpar')
     def test_delete(self, mock_dlt):
         delete = tf_vm.Delete(self.apt, self.instance)
         delete.execute()
         mock_dlt.assert_called_once_with(self.apt, self.instance)
+
+        # Validate args on taskflow.task.Task instantiation
+        with mock.patch('taskflow.task.Task.__init__') as tf:
+            tf_vm.Delete(self.apt, self.instance)
+        tf.assert_called_once_with(name='dlt_vm')

@@ -39,7 +39,7 @@ class CreateDiskForImg(task.Task):
             The metadata of the image of the instance.
         """
         super(CreateDiskForImg, self).__init__(
-            'create_disk_from_img', provides='disk_dev_info')
+            name='create_disk_from_img', provides='disk_dev_info')
         self.disk_dvr = disk_dvr
         self.instance = instance
         self.context = context
@@ -80,7 +80,7 @@ class AttachDisk(task.Task):
         :param stg_ftsk: FeedTask to defer storage connectivity operations.
         """
         super(AttachDisk, self).__init__(
-            'attach_disk', requires=['disk_dev_info'])
+            name='attach_disk', requires=['disk_dev_info'])
         self.disk_dvr = disk_dvr
         self.instance = instance
         self.stg_ftsk = stg_ftsk
@@ -111,7 +111,7 @@ class DetachDisk(task.Task):
         :param instance: The nova instance.
         """
         super(DetachDisk, self).__init__(
-            'detach_disk', provides='stor_adpt_mappings')
+            name='detach_disk', provides='stor_adpt_mappings')
         self.instance = instance
         self.disk_dvr = disk_dvr
 
@@ -131,7 +131,7 @@ class DeleteDisk(task.Task):
         :param disk_dvr: The DiskAdapter for the VM.
         """
         super(DeleteDisk, self).__init__(
-            'delete_disk', requires=['stor_adpt_mappings'])
+            name='delete_disk', requires=['stor_adpt_mappings'])
         self.disk_dvr = disk_dvr
 
     def execute(self, stor_adpt_mappings):
@@ -158,7 +158,7 @@ class CreateAndConnectCfgDrive(task.Task):
                                                     VM.
         """
         super(CreateAndConnectCfgDrive, self).__init__(
-            instance, 'cfg_drive', requires=['mgmt_cna'])
+            name='cfg_drive', requires=['mgmt_cna'])
         self.adapter = adapter
         self.instance = instance
         self.injected_files = injected_files
@@ -197,7 +197,7 @@ class DeleteVOpt(task.Task):
         :param instance: The nova instance.
         :param stg_ftsk: FeedTask to defer storage connectivity operations.
         """
-        super(DeleteVOpt, self).__init__(instance, 'vopt_delete')
+        super(DeleteVOpt, self).__init__(name='vopt_delete')
         self.adapter = adapter
         self.instance = instance
         self.stg_ftsk = stg_ftsk
