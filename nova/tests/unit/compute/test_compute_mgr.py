@@ -6630,49 +6630,6 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         self.assertIsInstance(compute._live_migration_semaphore,
                               compute_utils.UnlimitedSemaphore)
 
-    def test_check_migrate_source_converts_object(self):
-        # NOTE(danms): Make sure that we legacy-ify any data objects
-        # the drivers give us back, if we were passed a non-object
-        data = migrate_data_obj.LiveMigrateData(is_volume_backed=False)
-        compute = manager._ComputeV4Proxy(mock.MagicMock())
-        compute.manager.check_can_live_migrate_source.return_value = data
-        self.assertIsInstance(
-            compute.check_can_live_migrate_source(
-                self.context, objects.Instance(uuid=uuids.instance), {}),
-            dict)
-        mgr = compute.manager
-        self.assertIsInstance(
-            mgr.check_can_live_migrate_source.call_args_list[0][0][2],
-            migrate_data_obj.LiveMigrateData)
-
-    def test_pre_live_migration_handles_dict(self):
-        compute = manager._ComputeV4Proxy(mock.MagicMock())
-
-        instance = fake_instance.fake_instance_obj(self.context,
-                                                   uuid=uuids.instance)
-        migrate_data = migrate_data_obj.LiveMigrateData()
-        compute.manager.pre_live_migration.return_value = migrate_data
-        r = compute.pre_live_migration(self.context, instance,
-                                       False, {}, {})
-        self.assertIsInstance(r, dict)
-        self.assertIsInstance(
-            compute.manager.pre_live_migration.call_args_list[0][0][4],
-            migrate_data_obj.LiveMigrateData)
-
-    def test_live_migration_handles_dict(self):
-        compute = manager._ComputeV4Proxy(mock.MagicMock())
-
-        migrate_data = migrate_data_obj.LiveMigrateData()
-        migration = objects.Migration()
-        migration.save = mock.MagicMock()
-        compute.manager.compute_rpcapi.pre_live_migration.return_value = (
-            migrate_data)
-        compute.live_migration(self.context, 'foo', {'uuid': 'foo'},
-                               False, migration, {})
-        self.assertIsInstance(
-            compute.manager.live_migration.call_args_list[0][0][5],
-            migrate_data_obj.LiveMigrateData)
-
     def test_pre_live_migration_cinder_v3_api(self):
         # This tests that pre_live_migration with a bdm with an
         # attachment_id, will create a new attachment and update
