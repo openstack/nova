@@ -115,6 +115,8 @@ class GenericDriverFields(object):
             patch.append({'path': '/instance_info/capabilities',
                           'op': 'add', 'value': jsonutils.dumps(capabilities)})
         if traits:
+            # NOTE(mgoddard): Don't JSON encode the traits list - ironic
+            # expects instance_info.traits to be a list.
             patch.append({'path': '/instance_info/traits',
-                          'op': 'add', 'value': jsonutils.dumps(traits)})
+                          'op': 'add', 'value': traits})
         return patch
