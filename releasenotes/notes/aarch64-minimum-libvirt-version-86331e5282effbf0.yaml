@@ -1,0 +1,12 @@
+---
+features:
+  - |
+    AArch64 architecture is supported by Nova with libvirt min version 3.6.0.
+    See the Nova `support matrix`_ for more details.
+
+    .. _`support matrix`: https://docs.openstack.org/nova/latest/user/support-matrix.html
+
+upgrade:
+  - The minimum version of libvirt on AArch64 architecture that nova compute
+    will interoperate with is now 3.6.0. Deployments using older versions of
+    libvirt on AArch64 should upgrade.

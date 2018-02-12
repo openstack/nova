@@ -258,6 +258,10 @@ MIN_QEMU_VIRTLOGD = (2, 7, 0)
 # Endian giving the nuance around guest vs host architectures
 MIN_LIBVIRT_KVM_PPC64_VERSION = (1, 2, 12)
 
+# aarch64 architecture with KVM
+# 'chardev' support got sorted out in 3.6.0
+MIN_LIBVIRT_KVM_AARCH64_VERSION = (3, 6, 0)
+
 # Names of the types that do not get compressed during migration
 NO_COMPRESSION_TYPES = ('qcow2',)
 
@@ -282,6 +286,7 @@ MIN_LIBVIRT_OTHER_ARCH = {
     fields.Architecture.PPC: MIN_LIBVIRT_KVM_PPC64_VERSION,
     fields.Architecture.PPC64: MIN_LIBVIRT_KVM_PPC64_VERSION,
     fields.Architecture.PPC64LE: MIN_LIBVIRT_KVM_PPC64_VERSION,
+    fields.Architecture.AARCH64: MIN_LIBVIRT_KVM_AARCH64_VERSION,
 }
 
 MIN_QEMU_OTHER_ARCH = {
