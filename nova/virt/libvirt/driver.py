@@ -1194,6 +1194,16 @@ class LibvirtDriver(driver.ComputeDriver):
                                                     **encryption)
         return encryptor
 
+    def _get_volume_encryption(self, context, connection_info):
+        """Get the encryption metadata dict if it is not provided
+        """
+        encryption = {}
+        volume_id = driver_block_device.get_volume_id(connection_info)
+        if volume_id:
+            encryption = encryptors.get_encryption_metadata(context,
+                            self._volume_api, volume_id, connection_info)
+        return encryption
+
     def _check_discard_for_attach_volume(self, conf, instance):
         """Perform some checks for volumes configured for discard support.
 
@@ -1342,8 +1352,18 @@ class LibvirtDriver(driver.ComputeDriver):
         finally:
             self._host.write_instance_config(xml)
 
-    def swap_volume(self, old_connection_info,
+    def swap_volume(self, context, old_connection_info,
                     new_connection_info, instance, mountpoint, resize_to):
+
+        # NOTE(lyarwood): Bug #1739593 uncovered a nasty data corruption
+        # issue that was fixed in Queens by Ica323b87fa85a454fca9d46ada3677f18.
+        # Given the size of the bugfix it was agreed not to backport the change
+        # to earlier stable branches and to instead block swap volume attempts.
+        if (self._get_volume_encryption(context, old_connection_info) or
+            self._get_volume_encryption(context, new_connection_info)):
+            raise NotImplementedError(_("Swap volume is not supported when "
+                "using encrypted volumes. For more details see "
+                "https://bugs.launchpad.net/nova/+bug/1739593."))
 
         guest = self._host.get_guest(instance)
 

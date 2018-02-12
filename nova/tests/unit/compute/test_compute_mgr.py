@@ -1890,8 +1890,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertTrue(uuidutils.is_uuid_like(volume))
         return {}
 
-    def _assert_swap_volume(self, old_connection_info, new_connection_info,
-                            instance, mountpoint, resize_to):
+    def _assert_swap_volume(self, context, old_connection_info,
+                            new_connection_info, instance, mountpoint,
+                            resize_to):
         self.assertEqual(2, resize_to)
 
     @mock.patch.object(cinder.API, 'initialize_connection')
