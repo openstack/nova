@@ -139,3 +139,8 @@ class TestZVMHypervisor(test.NoDBTestCase):
     def test_guest_reset(self, mcall):
         self._hypervisor.guest_reset('guest')
         mcall.assert_called_once_with('guest_reset', 'guest')
+
+    @mock.patch('nova.virt.zvm.utils.ConnectorClient.call')
+    def test_guest_get_console_output(self, mcall):
+        self._hypervisor.guest_get_console_output('guest')
+        mcall.assert_called_once_with('guest_get_console_output', 'guest')

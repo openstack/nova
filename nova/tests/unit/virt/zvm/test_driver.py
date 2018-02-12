@@ -498,3 +498,10 @@ class TestZVMDriver(test.NoDBTestCase):
                                                            id=10)
         self.assertTrue(self._driver.instance_exists(self._instance))
         self.assertFalse(self._driver.instance_exists(another_instance))
+
+    @mock.patch('nova.virt.zvm.utils.ConnectorClient.call')
+    def test_get_console_output(self, call):
+        call.return_value = 'console output'
+        outputs = self._driver.get_console_output(None, self._instance)
+        call.assert_called_once_with('guest_get_console_output', 'abc00001')
+        self.assertEqual('console output', outputs)

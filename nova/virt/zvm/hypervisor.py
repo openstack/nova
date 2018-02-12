@@ -143,6 +143,13 @@ class Hypervisor(object):
     def guest_reset(self, name):
         self._reqh.call('guest_reset', name)
 
+    def guest_get_console_output(self, name):
+        """get console out put of the given instance
+
+        :returns: The output of the console of the instace, in string format.
+        """
+        return self._reqh.call('guest_get_console_output', name)
+
     def image_query(self, imagename):
         """Check whether image is there or not
 
