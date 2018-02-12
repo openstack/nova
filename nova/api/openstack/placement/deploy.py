@@ -32,7 +32,7 @@ NAME = "nova"
 objects.register_all()
 
 
-def deploy(conf, project_name):
+def deploy(conf):
     """Assemble the middleware pipeline leading to the placement app."""
     if conf.api.auth_strategy == 'noauth2':
         auth_middleware = auth.NoAuthMiddleware
@@ -83,6 +83,20 @@ def deploy(conf, project_name):
     return application
 
 
+# NOTE(cdent): Althought project_name is no longer used because of the
+# resolution of https://bugs.launchpad.net/nova/+bug/1734491, loadapp()
+# is considered a public interface for the creation of a placement
+# WSGI app so must maintain its interface. The canonical placement WSGI
+# app is created by init_application in wsgi.py, but this is not
+# required and in fact can be limiting. loadapp() may be used from
+# fixtures or arbitrary WSGI frameworks and loaders.
 def loadapp(config, project_name=NAME):
-    application = deploy(config, project_name)
+    """WSGI application creator for placement.
+
+    :param config: An olso_config.cfg.ConfigOpts containing placement
+                   configuration.
+    :param project_name: oslo_config project name. Ignored, preserved for
+                         backwards compatibility
+    """
+    application = deploy(config)
     return application
