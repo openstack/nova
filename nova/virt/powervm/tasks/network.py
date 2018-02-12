@@ -59,7 +59,7 @@ class PlugVifs(task.Task):
         self.cnas = None
 
         super(PlugVifs, self).__init__(
-            'plug_vifs', provides='vm_cnas', requires=['lpar_wrap'])
+            name='plug_vifs', provides='vm_cnas', requires=['lpar_wrap'])
 
     def _vif_exists(self, network_info):
         """Does the instance have a CNA for a given net?
@@ -180,7 +180,7 @@ class UnplugVifs(task.Task):
         self.instance = instance
         self.network_infos = network_infos or []
 
-        super(UnplugVifs, self).__init__('unplug_vifs')
+        super(UnplugVifs, self).__init__(name='unplug_vifs')
 
     def execute(self):
         # If the LPAR is not in an OK state for deleting, then throw an
@@ -222,7 +222,7 @@ class PlugMgmtVif(task.Task):
         self.instance = instance
 
         super(PlugMgmtVif, self).__init__(
-            'plug_mgmt_vif', provides='mgmt_cna', requires=['vm_cnas'])
+            name='plug_mgmt_vif', provides='mgmt_cna', requires=['vm_cnas'])
 
     def execute(self, vm_cnas):
         LOG.info('Plugging the Management Network Interface to instance.',

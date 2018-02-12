@@ -78,6 +78,11 @@ class TestNetwork(test.NoDBTestCase):
         # code was called
         self.assertEqual(3, mock_unplug.call_count)
 
+        # Validate args on taskflow.task.Task instantiation
+        with mock.patch('taskflow.task.Task.__init__') as tf:
+            tf_net.UnplugVifs(self.apt, inst, net_info)
+        tf.assert_called_once_with(name='unplug_vifs')
+
     @mock.patch('nova.virt.powervm.vm.get_instance_wrapper')
     def test_unplug_vifs_invalid_state(self, mock_get_wrap):
         """Tests that the delete raises an exception if bad VM state."""
@@ -128,6 +133,12 @@ class TestNetwork(test.NoDBTestCase):
         # The Task provides the list of original CNAs plus only CNAs that were
         # created.
         self.assertEqual(pre_cnas + [mock_new_cna], all_cnas)
+
+        # Validate args on taskflow.task.Task instantiation
+        with mock.patch('taskflow.task.Task.__init__') as tf:
+            tf_net.PlugVifs(mock.MagicMock(), self.apt, inst, net_info)
+        tf.assert_called_once_with(
+            name='plug_vifs', provides='vm_cnas', requires=['lpar_wrap'])
 
     @mock.patch('nova.virt.powervm.vif.plug')
     @mock.patch('nova.virt.powervm.vm.get_cnas')
@@ -287,6 +298,12 @@ class TestNetwork(test.NoDBTestCase):
         # Neither get nor plug was called.
         mock_vm_get.assert_not_called()
         mock_crt_cna.assert_not_called()
+
+        # Validate args on taskflow.task.Task instantiation
+        with mock.patch('taskflow.task.Task.__init__') as tf:
+            tf_net.PlugMgmtVif(self.apt, inst)
+        tf.assert_called_once_with(
+            name='plug_mgmt_vif', provides='mgmt_cna', requires=['vm_cnas'])
 
     def test_get_vif_events(self):
         # Set up common mocks.
