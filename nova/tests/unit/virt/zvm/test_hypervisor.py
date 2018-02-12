@@ -113,3 +113,29 @@ class TestZVMHypervisor(test.NoDBTestCase):
     def test_image_delete(self, mcall):
         self._hypervisor.image_delete('image-id')
         mcall.assert_called_once_with('image_delete', 'image-id')
+
+    @mock.patch('nova.virt.zvm.utils.ConnectorClient.call')
+    def test_guest_softstop(self, mcall):
+        self._hypervisor.guest_softstop('guest')
+        mcall.assert_called_once_with('guest_softstop', 'guest',
+                                      poll_interval=0, timeout=0)
+
+    @mock.patch('nova.virt.zvm.utils.ConnectorClient.call')
+    def test_guest_pause(self, mcall):
+        self._hypervisor.guest_pause('guest')
+        mcall.assert_called_once_with('guest_pause', 'guest')
+
+    @mock.patch('nova.virt.zvm.utils.ConnectorClient.call')
+    def test_guest_unpause(self, mcall):
+        self._hypervisor.guest_unpause('guest')
+        mcall.assert_called_once_with('guest_unpause', 'guest')
+
+    @mock.patch('nova.virt.zvm.utils.ConnectorClient.call')
+    def test_guest_reboot(self, mcall):
+        self._hypervisor.guest_reboot('guest')
+        mcall.assert_called_once_with('guest_reboot', 'guest')
+
+    @mock.patch('nova.virt.zvm.utils.ConnectorClient.call')
+    def test_guest_reset(self, mcall):
+        self._hypervisor.guest_reset('guest')
+        mcall.assert_called_once_with('guest_reset', 'guest')

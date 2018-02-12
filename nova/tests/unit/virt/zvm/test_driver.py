@@ -453,3 +453,48 @@ class TestZVMDriver(test.NoDBTestCase):
 
         call.assert_called_once_with('guest_capture', self._instance.name,
                                      image_id)
+
+    @mock.patch('nova.virt.zvm.hypervisor.Hypervisor.guest_start')
+    def test_guest_start(self, call):
+        self._driver.power_on(self._context, self._instance, None)
+        call.assert_called_once_with(self._instance.name)
+
+    @mock.patch('nova.virt.zvm.hypervisor.Hypervisor.guest_softstop')
+    def test_power_off(self, ipa):
+        self._driver.power_off(self._instance)
+        ipa.assert_called_once_with(self._instance.name)
+
+    @mock.patch('nova.virt.zvm.hypervisor.Hypervisor.guest_softstop')
+    def test_power_off_with_timeout_interval(self, ipa):
+        self._driver.power_off(self._instance, 60, 10)
+        ipa.assert_called_once_with(self._instance.name,
+                                    timeout=60, retry_interval=10)
+
+    @mock.patch('nova.virt.zvm.hypervisor.Hypervisor.guest_pause')
+    def test_pause(self, ipa):
+        self._driver.pause(self._instance)
+        ipa.assert_called_once_with(self._instance.name)
+
+    @mock.patch('nova.virt.zvm.hypervisor.Hypervisor.guest_unpause')
+    def test_unpause(self, ipa):
+        self._driver.unpause(self._instance)
+        ipa.assert_called_once_with(self._instance.name)
+
+    @mock.patch('nova.virt.zvm.hypervisor.Hypervisor.guest_reboot')
+    def test_reboot_soft(self, ipa):
+        self._driver.reboot(None, self._instance, None, 'SOFT')
+        ipa.assert_called_once_with(self._instance.name)
+
+    @mock.patch('nova.virt.zvm.hypervisor.Hypervisor.guest_reset')
+    def test_reboot_hard(self, ipa):
+        self._driver.reboot(None, self._instance, None, 'HARD')
+        ipa.assert_called_once_with(self._instance.name)
+
+    @mock.patch('nova.virt.zvm.hypervisor.Hypervisor.list_names')
+    def test_instance_exists(self, mock_list):
+        mock_list.return_value = [self._instance.name.upper()]
+        # Create a new server which not in list_instances's output
+        another_instance = fake_instance.fake_instance_obj(self._context,
+                                                           id=10)
+        self.assertTrue(self._driver.instance_exists(self._instance))
+        self.assertFalse(self._driver.instance_exists(another_instance))
