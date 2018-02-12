@@ -22,7 +22,7 @@ from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement.schemas import inventory as schema
 from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
-from nova import db
+from nova.db import constants as db_const
 from nova import exception
 from nova.i18n import _
 from nova.objects import resource_provider as rp_obj
@@ -42,7 +42,7 @@ OUTPUT_INVENTORY_FIELDS = [
 INVENTORY_DEFAULTS = {
     'reserved': 0,
     'min_unit': 1,
-    'max_unit': db.MAX_INT,
+    'max_unit': db_const.MAX_INT,
     'step_size': 1,
     'allocation_ratio': 1.0
 }
