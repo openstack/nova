@@ -591,8 +591,8 @@ properties, as described in detail in the `related nova-spec document
 <http://specs.openstack.org/openstack/
 nova-specs/specs/juno/implemented/virt-driver-numa-placement.html>`_.  Filter
 will try to match the exact NUMA cells of the instance to those of the host. It
-will consider the standard over-subscription limits each cell, and provide
-limits to the compute host accordingly.
+will consider the standard over-subscription limits for each host NUMA cell,
+and provide limits to the compute host accordingly.
 
 .. note::
 
