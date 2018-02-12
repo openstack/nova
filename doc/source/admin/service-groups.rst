@@ -19,7 +19,7 @@ Database ServiceGroup driver
 
 By default, Compute uses the database driver to track if a node is live.  In a
 compute worker, this driver periodically sends a ``db update`` command to the
-database, saying “I'm OK” with a timestamp. Compute uses a pre-defined
+database, saying "I'm OK" with a timestamp. Compute uses a pre-defined
 timeout (``service_down_time``) to determine if a node is dead.
 
 The driver has limitations, which can be problematic depending on your
