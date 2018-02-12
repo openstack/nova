@@ -5110,8 +5110,8 @@ class ComputeManager(manager.Manager):
                       "old: %(old_cinfo)s",
                       {'new_cinfo': new_cinfo, 'old_cinfo': old_cinfo},
                       instance=instance)
-            self.driver.swap_volume(old_cinfo, new_cinfo, instance, mountpoint,
-                                    resize_to)
+            self.driver.swap_volume(context, old_cinfo, new_cinfo, instance,
+                                    mountpoint, resize_to)
             LOG.debug("swap_volume: Driver volume swap returned, new "
                       "connection_info is now : %(new_cinfo)s",
                       {'new_cinfo': new_cinfo})
