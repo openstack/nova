@@ -82,14 +82,11 @@ class _FakeDriverBackendTestCase(object):
         else:
             self.saved_libvirt = None
 
-        import nova.tests.unit.virt.libvirt.fake_imagebackend as \
-            fake_imagebackend
-        import nova.tests.unit.virt.libvirt.fake_libvirt_utils as \
-            fake_libvirt_utils
-        import nova.tests.unit.virt.libvirt.fakelibvirt as fakelibvirt
+        from nova.tests.unit.virt.libvirt import fake_imagebackend
+        from nova.tests.unit.virt.libvirt import fake_libvirt_utils
+        from nova.tests.unit.virt.libvirt import fakelibvirt
 
-        import nova.tests.unit.virt.libvirt.fake_os_brick_connector as \
-            fake_os_brick_connector
+        from nova.tests.unit.virt.libvirt import fake_os_brick_connector
 
         self.useFixture(fake_imagebackend.ImageBackendFixture())
         self.useFixture(fakelibvirt.FakeLibvirtFixture())
