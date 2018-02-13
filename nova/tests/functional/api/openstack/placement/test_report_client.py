@@ -207,7 +207,7 @@ class SchedulerReportClientTests(test.TestCase):
             # Try setting some invalid inventory and make sure the report
             # client raises the expected error.
             inv_data = {
-                'BAD_FOO': {
+                'CUSTOM_BOGU$_CLA$$': {
                     'total': 100,
                     'reserved': 0,
                     'min_unit': 1,
@@ -279,18 +279,8 @@ class SchedulerReportClientTests(test.TestCase):
         }
         with interceptor.RequestsInterceptor(app=self.app, url=self.url):
             self.client.update_compute_node(self.context, self.compute_node)
-            # Simulate that our locally-running code has an outdated notion of
-            # standard resource classes.
-            with mock.patch.object(fields.ResourceClass, 'STANDARD',
-                                   ('VCPU', 'MEMORY_MB', 'DISK_GB')):
-                # TODO(efried): Once bug #1746615 is fixed, this will no longer
-                # raise, and can be replaced with:
-                # self.client.set_inventory_for_provider(
-                #     self.context, self.compute_uuid, self.compute_name, inv)
-                self.assertRaises(
-                    exception.InvalidResourceClass,
-                    self.client.set_inventory_for_provider,
-                    self.context, self.compute_uuid, self.compute_name, inv)
+            self.client.set_inventory_for_provider(
+                self.context, self.compute_uuid, self.compute_name, inv)
 
     @mock.patch('keystoneauth1.session.Session.get_endpoint',
                 return_value='http://localhost:80/placement')

@@ -3119,7 +3119,7 @@ There was a conflict when trying to complete your request.
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_delete_inventory')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_ensure_resource_class')
+                '_ensure_resource_classes')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_provider')
     def test_set_inventory_for_provider_no_custom(self, mock_erp, mock_erc,
@@ -3166,7 +3166,8 @@ There was a conflict when trying to complete your request.
             parent_provider_uuid=None,
         )
         # No custom resource classes to ensure...
-        self.assertFalse(mock_erc.called)
+        mock_erc.assert_called_once_with(self.context,
+                                         set(['VCPU', 'MEMORY_MB', 'DISK_GB']))
         mock_upd.assert_called_once_with(
             self.context,
             mock.sentinel.rp_uuid,
@@ -3179,7 +3180,7 @@ There was a conflict when trying to complete your request.
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_delete_inventory')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_ensure_resource_class')
+                '_ensure_resource_classes')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_provider')
     def test_set_inventory_for_provider_no_inv(self, mock_erp, mock_erc,
@@ -3200,7 +3201,7 @@ There was a conflict when trying to complete your request.
             mock.sentinel.rp_name,
             parent_provider_uuid=None,
         )
-        self.assertFalse(mock_erc.called)
+        mock_erc.assert_called_once_with(self.context, set())
         self.assertFalse(mock_upd.called)
         mock_del.assert_called_once_with(self.context, mock.sentinel.rp_uuid)
 
@@ -3209,7 +3210,7 @@ There was a conflict when trying to complete your request.
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_delete_inventory')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_ensure_resource_class')
+                '_ensure_resource_classes')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_provider')
     def test_set_inventory_for_provider_with_custom(self, mock_erp,
@@ -3265,7 +3266,9 @@ There was a conflict when trying to complete your request.
             mock.sentinel.rp_name,
             parent_provider_uuid=None,
         )
-        mock_erc.assert_called_once_with(self.context, 'CUSTOM_IRON_SILVER')
+        mock_erc.assert_called_once_with(
+            self.context,
+            set(['VCPU', 'MEMORY_MB', 'DISK_GB', 'CUSTOM_IRON_SILVER']))
         mock_upd.assert_called_once_with(
             self.context,
             mock.sentinel.rp_uuid,
@@ -3276,7 +3279,7 @@ There was a conflict when trying to complete your request.
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_delete_inventory', new=mock.Mock())
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_ensure_resource_class', new=mock.Mock())
+                '_ensure_resource_classes', new=mock.Mock())
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_provider')
     def test_set_inventory_for_provider_with_parent(self, mock_erp):
@@ -3588,3 +3591,39 @@ class TestAllocations(SchedulerReportClientTestCase):
         # With a 409, only the error should be called
         self.assertEqual(0, mock_log.info.call_count)
         self.assertEqual(1, mock_log.error.call_count)
+
+
+class TestResourceClass(SchedulerReportClientTestCase):
+    def setUp(self):
+        super(TestResourceClass, self).setUp()
+        _put_patch = mock.patch(
+            "nova.scheduler.client.report.SchedulerReportClient.put")
+        self.addCleanup(_put_patch.stop)
+        self.mock_put = _put_patch.start()
+
+    def test_ensure_resource_classes(self):
+        rcs = ['VCPU', 'CUSTOM_FOO', 'MEMORY_MB', 'CUSTOM_BAR']
+        self.client._ensure_resource_classes(self.context, rcs)
+        self.mock_put.assert_has_calls([
+            mock.call('/resource_classes/%s' % rc, None, version='1.7',
+                      global_request_id=self.context.global_id)
+            for rc in ('CUSTOM_FOO', 'CUSTOM_BAR')
+        ], any_order=True)
+
+    def test_ensure_resource_classes_none(self):
+        for empty in ([], (), set(), {}):
+            self.client._ensure_resource_classes(self.context, empty)
+            self.mock_put.assert_not_called()
+
+    def test_ensure_resource_classes_put_fail(self):
+        resp = requests.Response()
+        resp.status_code = 503
+        self.mock_put.return_value = resp
+        rcs = ['VCPU', 'MEMORY_MB', 'CUSTOM_BAD']
+        self.assertRaises(
+            exception.InvalidResourceClass,
+            self.client._ensure_resource_classes, self.context, rcs)
+        # Only called with the "bad" one
+        self.mock_put.assert_called_once_with(
+            '/resource_classes/CUSTOM_BAD', None, version='1.7',
+            global_request_id=self.context.global_id)
