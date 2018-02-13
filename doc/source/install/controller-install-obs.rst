@@ -192,7 +192,9 @@ databases, service credentials, and API endpoints.
 
    .. code-block:: console
 
-      $ openstack service create --name placement --description "Placement API" placement
+      $ openstack service create --name placement \
+        --description "Placement API" placement
+
       +-------------+----------------------------------+
       | Field       | Value                            |
       +-------------+----------------------------------+
@@ -207,7 +209,9 @@ databases, service credentials, and API endpoints.
 
    .. code-block:: console
 
-      $ openstack endpoint create --region RegionOne placement public http://controller:8780
+      $ openstack endpoint create --region RegionOne \
+        placement public http://controller:8780
+
       +--------------+----------------------------------+
       | Field        | Value                            |
       +--------------+----------------------------------+
@@ -222,7 +226,9 @@ databases, service credentials, and API endpoints.
       | url          | http://controller:8780           |
       +--------------+----------------------------------+
 
-      $ openstack endpoint create --region RegionOne placement internal http://controller:8780
+      $ openstack endpoint create --region RegionOne \
+        placement internal http://controller:8780
+
       +--------------+----------------------------------+
       | Field        | Value                            |
       +--------------+----------------------------------+
@@ -237,7 +243,9 @@ databases, service credentials, and API endpoints.
       | url          | http://controller:8780           |
       +--------------+----------------------------------+
 
-      $ openstack endpoint create --region RegionOne placement admin http://controller:8780
+      $ openstack endpoint create --region RegionOne \
+        placement admin http://controller:8780
+
       +--------------+----------------------------------+
       | Field        | Value                            |
       +--------------+----------------------------------+
