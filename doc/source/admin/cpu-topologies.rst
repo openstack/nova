@@ -96,12 +96,28 @@ also should be local. Finally, PCI devices are directly associated with
 specific NUMA nodes for the purposes of DMA. Instances that use PCI or SR-IOV
 devices should be placed on the NUMA node associated with these devices.
 
+NUMA topology can exist on both the physical hardware of the host and the
+virtual hardware of the instance. In OpenStack, when booting a process, the
+hypervisor driver looks at the NUMA topology field of both the instance and
+the host it is being booted on, and uses that information to generate an
+appropriate configuration.
+
 By default, an instance floats across all NUMA nodes on a host. NUMA awareness
 can be enabled implicitly through the use of huge pages or pinned CPUs or
-explicitly through the use of flavor extra specs or image metadata.  In all
-cases, the ``NUMATopologyFilter`` filter must be enabled. Details on this
-filter are provided in :doc:`/admin/configuration/schedulers` in Nova
-configuration guide.
+explicitly through the use of flavor extra specs or image metadata. If the
+instance has requested a specific NUMA topology, compute will try to pin the
+vCPUs of different NUMA cells on the instance to the corresponding NUMA cells
+on the host. It will also expose the NUMA topology of the instance to the
+guest OS.
+
+If you want compute to pin a particular vCPU as part of this process,
+set the ``vcpu_pin_set`` parameter in the ``nova.conf`` configuration
+file. For more information about the ``vcpu_pin_set`` parameter, see the
+:doc:`/configuration/config`.
+
+In all cases where NUMA awareness is used, the ``NUMATopologyFilter``
+filter must be enabled. Details on this filter are provided in
+:doc:`/admin/configuration/schedulers`.
 
 .. caution::
 
