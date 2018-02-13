@@ -12,8 +12,8 @@ databases, service credentials, and API endpoints.
 
 #. To create the databases, complete these steps:
 
-   * Use the database access client to connect to the database server as the
-     ``root`` user:
+   * Use the database access client to connect to the database server
+     as the ``root`` user:
 
      .. code-block:: console
 
@@ -479,7 +479,8 @@ Finalize installation
 
   .. code-block:: console
 
-     # mv /etc/apache2/vhosts.d/nova-placement-api.conf.sample /etc/apache2/vhosts.d/nova-placement-api.conf
+     # mv /etc/apache2/vhosts.d/nova-placement-api.conf.sample \
+       /etc/apache2/vhosts.d/nova-placement-api.conf
      # systemctl reload apache2.service
 
 * Start the Compute services and configure them to start when the system boots:
