@@ -832,9 +832,10 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         self.obj_reset_changes()
 
     def _load_generic(self, attrname):
-        instance = self.__class__.get_by_uuid(self._context,
-                                              uuid=self.uuid,
-                                              expected_attrs=[attrname])
+        with utils.temporary_mutation(self._context, read_deleted='yes'):
+            instance = self.__class__.get_by_uuid(self._context,
+                                                  uuid=self.uuid,
+                                                  expected_attrs=[attrname])
 
         # NOTE(danms): Never allow us to recursively-load
         if instance.obj_attr_is_set(attrname):
