@@ -220,6 +220,22 @@ class _TestInstanceObject(object):
                                     deleted=True)
         self.assertEqual(0, len(instance.tags))
 
+    def test_lazy_load_generic_on_deleted_instance(self):
+        # For generic fields, we try to load the deleted record from the
+        # database.
+        instance = objects.Instance(self.context, uuid=uuids.instance,
+                                    user_id=self.context.user_id,
+                                    project_id=self.context.project_id)
+        instance.create()
+        instance.destroy()
+        # Re-create our local object to make sure it doesn't have sysmeta
+        # filled in by create()
+        instance = objects.Instance(self.context, uuid=uuids.instance,
+                                    user_id=self.context.user_id,
+                                    project_id=self.context.project_id)
+        self.assertNotIn('system_metadata', instance)
+        self.assertEqual(0, len(instance.system_metadata))
+
     def test_lazy_load_tags(self):
         instance = objects.Instance(self.context, uuid=uuids.instance,
                                     user_id=self.context.user_id,
