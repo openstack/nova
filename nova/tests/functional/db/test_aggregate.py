@@ -17,7 +17,6 @@ from oslo_db import exception as db_exc
 from oslo_utils import timeutils
 
 from nova import context
-from nova import db
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
 from nova import exception
@@ -114,19 +113,6 @@ class AggregateObjectDbTestCase(test.TestCase):
     def setUp(self):
         super(AggregateObjectDbTestCase, self).setUp()
         self.context = context.RequestContext('fake-user', 'fake-project')
-
-    def test_in_api(self):
-        ca1 = _create_aggregate(self.context, values={'name': 'fake_agg_1',
-                'id': 1, 'uuid': uuidsentinel.agg})
-        ca2 = db.aggregate_create(self.context, {'name': 'fake_agg_2', 'id': 2,
-                'uuid': uuidsentinel.agg})
-
-        api_db_agg = aggregate_obj.Aggregate.get_by_id(self.context, ca1['id'])
-        cell_db_agg = aggregate_obj.Aggregate.get_by_id(
-                                                    self.context, ca2['id'])
-
-        self.assertTrue(api_db_agg.in_api)
-        self.assertFalse(cell_db_agg.in_api)
 
     def test_aggregate_get_from_db(self):
         result = _create_aggregate_with_hosts(self.context)
@@ -463,19 +449,12 @@ class AggregateObjectDbTestCase(test.TestCase):
                           self.context, result['id'], 'foo_key')
 
 
-def create_aggregate(context, db_id, in_api=True):
-    if in_api:
-        fake_aggregate = _get_fake_aggregate(db_id, in_api=False, result=False)
-        aggregate_obj._aggregate_create_in_db(context, fake_aggregate,
-                                       metadata=_get_fake_metadata(db_id))
-        for host in _get_fake_hosts(db_id):
-            aggregate_obj._host_add_to_db(context, fake_aggregate['id'], host)
-    else:
-        fake_aggregate = _get_fake_aggregate(db_id, in_api=False, result=False)
-        db.aggregate_create(context, fake_aggregate,
-                            metadata=_get_fake_metadata(db_id))
-        for host in _get_fake_hosts(db_id):
-            db.aggregate_host_add(context, fake_aggregate['id'], host)
+def create_aggregate(context, db_id):
+    fake_aggregate = _get_fake_aggregate(db_id, in_api=False, result=False)
+    aggregate_obj._aggregate_create_in_db(context, fake_aggregate,
+                                          metadata=_get_fake_metadata(db_id))
+    for host in _get_fake_hosts(db_id):
+        aggregate_obj._host_add_to_db(context, fake_aggregate['id'], host)
 
 
 def compare_obj(test, result, source):
@@ -488,17 +467,22 @@ def compare_obj(test, result, source):
                         comparators={'updated_at': updated_at_comparator})
 
 
-class AggregateObjectCellTestCase(test.TestCase):
-    """Tests for the case where all aggregate data is in Cell DB"""
-
+class AggregateObjectTestCase(test.TestCase):
     def setUp(self):
-        super(AggregateObjectCellTestCase, self).setUp()
+        super(AggregateObjectTestCase, self).setUp()
         self.context = context.RequestContext('fake-user', 'fake-project')
         self._seed_data()
 
     def _seed_data(self):
         for i in range(1, 10):
-            create_aggregate(self.context, i, in_api=False)
+            create_aggregate(self.context, i)
+
+    def test_create(self):
+        new_agg = aggregate_obj.Aggregate(self.context)
+        new_agg.name = 'new-aggregate'
+        new_agg.create()
+        result = aggregate_obj.Aggregate.get_by_id(self.context, new_agg.id)
+        self.assertEqual(new_agg.name, result.name)
 
     def test_get_by_id(self):
         for i in range(1, 10):
@@ -554,106 +538,3 @@ class AggregateObjectCellTestCase(test.TestCase):
             result = aggregate_obj.Aggregate.get_by_id(self.context, i)
             compare_obj(self, agg, fake_agg)
             compare_obj(self, result, fake_agg)
-
-
-class AggregateObjectApiTestCase(AggregateObjectCellTestCase):
-    """Tests the aggregate in the case where all data is in the API DB"""
-    def _seed_data(self):
-        for i in range(1, 10):
-            create_aggregate(self.context, i)
-
-    def test_create(self):
-        new_agg = aggregate_obj.Aggregate(self.context)
-        new_agg.name = 'new-aggregate'
-        new_agg.create()
-        result = aggregate_obj.Aggregate.get_by_id(self.context, new_agg.id)
-        self.assertEqual(new_agg.name, result.name)
-
-
-class AggregateObjectMixedTestCase(AggregateObjectCellTestCase):
-    """Tests the aggregate in the case where data is in both databases"""
-    def _seed_data(self):
-        for i in range(1, 6):
-            create_aggregate(self.context, i)
-        for i in range(6, 10):
-            create_aggregate(self.context, i, in_api=False)
-
-    def test_create(self):
-        new_agg = aggregate_obj.Aggregate(self.context)
-        new_agg.name = 'new-aggregate'
-        self.assertRaises(exception.ObjectActionError,
-                          new_agg.create)
-
-
-class AggregateObjectMigrationTestCase(AggregateObjectCellTestCase):
-    """Tests the aggregate in the case where data is migrated to the API db"""
-    def _seed_data(self):
-        for i in range(1, 10):
-            create_aggregate(self.context, i, in_api=False)
-        aggregate_obj.migrate_aggregates(self.context, 50)
-
-    def test_create(self):
-        new_agg = aggregate_obj.Aggregate(self.context)
-        new_agg.name = 'new-aggregate'
-        new_agg.create()
-        result = aggregate_obj.Aggregate.get_by_id(self.context, new_agg.id)
-        self.assertEqual(new_agg.name, result.name)
-
-
-class AggregateMigrationTestCase(test.TestCase):
-
-    def setUp(self):
-        super(AggregateMigrationTestCase, self).setUp()
-        self.context = context.get_admin_context()
-
-    def test_migration(self):
-        db.aggregate_create(self.context, {'name': 'foo',
-                                           'uuid': uuidsentinel.agg_uuid})
-        main_aggregates_len = len(db.aggregate_get_all(self.context))
-        match, done = aggregate_obj.migrate_aggregates(self.context, 50)
-        self.assertEqual(1, main_aggregates_len)
-        self.assertEqual(main_aggregates_len, match)
-        self.assertEqual(main_aggregates_len, done)
-        self.assertEqual(0, len(db.aggregate_get_all(self.context)))
-        self.assertEqual(main_aggregates_len,
-                         len(aggregate_obj.AggregateList.get_all(
-                                                                self.context)))
-
-    def test_migrate_aggregate_reset_autoincrement(self):
-        agg = aggregate_obj.Aggregate(self.context, name='foo')
-        agg.create()
-        match, done = aggregate_obj.migrate_aggregate_reset_autoincrement(
-            self.context, 0)
-        self.assertEqual(0, match)
-        self.assertEqual(0, done)
-
-    def test_migrate_aggregate_reset_autoincrement_no_aggregates(self):
-        # NOTE(danms): This validates the "or 0" default if there are no
-        # aggregates (and thus no max id).
-        match, done = aggregate_obj.migrate_aggregate_reset_autoincrement(
-            self.context, 0)
-        self.assertEqual(0, match)
-        self.assertEqual(0, done)
-
-    @mock.patch('nova.objects.aggregate.LOG.error')
-    def test_migrate_aggregates_duplicate_unicode(self, mock_log_error):
-        """Tests that we handle a duplicate aggregate when migrating and that
-        we handle when the exception message is in unicode.
-        """
-        # First create an aggregate that will be migrated from main to API DB.
-        create_aggregate(self.context, 1, in_api=False)
-        # Now create that same aggregate in the API DB.
-        create_aggregate(self.context, 1, in_api=True)
-        # Now let's run the online data migration which will fail to create
-        # a duplicate aggregate in the API database and will raise
-        # AggregateNameExists which we want to modify to have a unicode
-        # message.
-        with mock.patch.object(exception.AggregateNameExists, 'msg_fmt',
-                               u'\xF0\x9F\x92\xA9'):
-            match, done = aggregate_obj.migrate_aggregates(self.context, 50)
-            # we found one
-            self.assertEqual(1, match)
-            # but we didn't migrate it
-            self.assertEqual(0, done)
-            # and we logged an error for the duplicate aggregate
-            mock_log_error.assert_called()

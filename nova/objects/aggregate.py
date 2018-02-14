@@ -16,17 +16,12 @@ from oslo_db import exception as db_exc
 from oslo_log import log as logging
 from oslo_utils import excutils
 from oslo_utils import uuidutils
-import six
 from sqlalchemy.orm import contains_eager
 from sqlalchemy.orm import joinedload
-from sqlalchemy.sql import func
-from sqlalchemy.sql import text
 
 from nova.compute import utils as compute_utils
-from nova import db
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
-from nova.db.sqlalchemy import models as main_models
 from nova import exception
 from nova.i18n import _
 from nova import objects
@@ -249,10 +244,6 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
 
     obj_extra_fields = ['availability_zone']
 
-    def __init__(self, *args, **kwargs):
-        super(Aggregate, self).__init__(*args, **kwargs)
-        self._in_api = False
-
     @staticmethod
     def _from_db_object(context, aggregate, db_aggregate):
         for key in aggregate.fields:
@@ -264,11 +255,9 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
                 db_key = key
             setattr(aggregate, key, db_aggregate[db_key])
 
-        # NOTE: This can be removed when we remove compatibility with
-        # the old aggregate model.
-        if any(f not in db_aggregate for f in DEPRECATED_FIELDS):
-            aggregate.deleted_at = None
-            aggregate.deleted = False
+        # NOTE: This can be removed when we bump Aggregate to v2.0
+        aggregate.deleted_at = None
+        aggregate.deleted = False
 
         aggregate._context = context
         aggregate.obj_reset_changes()
@@ -281,59 +270,22 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
                 action=action,
                 reason='hosts updated inline')
 
-    @property
-    def in_api(self):
-        if self._in_api:
-            return True
-        else:
-            try:
-                _aggregate_get_from_db(self._context, self.id)
-                self._in_api = True
-            except exception.AggregateNotFound:
-                pass
-            return self._in_api
-
     @base.remotable_classmethod
     def get_by_id(cls, context, aggregate_id):
-        try:
-            db_aggregate = _aggregate_get_from_db(context, aggregate_id)
-        except exception.AggregateNotFound:
-            db_aggregate = db.aggregate_get(context, aggregate_id)
+        db_aggregate = _aggregate_get_from_db(context, aggregate_id)
         return cls._from_db_object(context, cls(), db_aggregate)
 
     @base.remotable_classmethod
     def get_by_uuid(cls, context, aggregate_uuid):
-        try:
-            db_aggregate = _aggregate_get_from_db_by_uuid(context,
-                                                          aggregate_uuid)
-        except exception.AggregateNotFound:
-            db_aggregate = db.aggregate_get_by_uuid(context, aggregate_uuid)
+        db_aggregate = _aggregate_get_from_db_by_uuid(context,
+                                                      aggregate_uuid)
         return cls._from_db_object(context, cls(), db_aggregate)
-
-    @staticmethod
-    @db_api.pick_context_manager_reader
-    def _ensure_migrated(context):
-        result = context.session.query(main_models.Aggregate).\
-                 filter_by(deleted=0).count()
-        if result:
-            LOG.warning(
-                'Main database contains %(count)i unmigrated aggregates',
-                {'count': result})
-        return result == 0
 
     @base.remotable
     def create(self):
         if self.obj_attr_is_set('id'):
             raise exception.ObjectActionError(action='create',
                                               reason='already created')
-
-        # NOTE(mdoff): Once we have made it past a point where we know
-        # all aggregates have been migrated, we can remove this. Ideally
-        # in Ocata with a blocker migration to be sure.
-        if not self._ensure_migrated(self._context):
-            raise exception.ObjectActionError(
-                action='create',
-                reason='main database still contains aggregates')
 
         self._assert_no_hosts('create')
         updates = self.obj_get_changes()
@@ -381,12 +333,8 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
                                                     "updateprop.start",
                                                     payload)
         updates.pop('id', None)
-        try:
-            db_aggregate = _aggregate_update_to_db(self._context,
-                                                   self.id, updates)
-        except exception.AggregateNotFound:
-            db_aggregate = db.aggregate_update(self._context, self.id, updates)
-
+        db_aggregate = _aggregate_update_to_db(self._context,
+                                               self.id, updates)
         compute_utils.notify_about_aggregate_update(self._context,
                                                     "updateprop.end",
                                                     payload)
@@ -394,13 +342,6 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable
     def update_metadata(self, updates):
-        if self.in_api:
-            metadata_delete = _metadata_delete_from_db
-            metadata_add = _metadata_add_to_db
-        else:
-            metadata_delete = db.aggregate_metadata_delete
-            metadata_add = db.aggregate_metadata_add
-
         payload = {'aggregate_id': self.id,
                    'meta_data': updates}
         compute_utils.notify_about_aggregate_update(self._context,
@@ -410,7 +351,7 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
         for key, value in updates.items():
             if value is None:
                 try:
-                    metadata_delete(self._context, self.id, key)
+                    _metadata_delete_from_db(self._context, self.id, key)
                 except exception.AggregateMetadataNotFound:
                     pass
                 try:
@@ -420,7 +361,7 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
             else:
                 to_add[key] = value
                 self.metadata[key] = value
-        metadata_add(self._context, self.id, to_add)
+        _metadata_add_to_db(self._context, self.id, to_add)
         compute_utils.notify_about_aggregate_update(self._context,
                                                     "updatemetadata.end",
                                                     payload)
@@ -428,17 +369,11 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable
     def destroy(self):
-        try:
-            _aggregate_delete_from_db(self._context, self.id)
-        except exception.AggregateNotFound:
-            db.aggregate_delete(self._context, self.id)
+        _aggregate_delete_from_db(self._context, self.id)
 
     @base.remotable
     def add_host(self, host):
-        if self.in_api:
-            _host_add_to_db(self._context, self.id, host)
-        else:
-            db.aggregate_host_add(self._context, self.id, host)
+        _host_add_to_db(self._context, self.id, host)
 
         if self.hosts is None:
             self.hosts = []
@@ -447,10 +382,7 @@ class Aggregate(base.NovaPersistentObject, base.NovaObject):
 
     @base.remotable
     def delete_host(self, host):
-        if self.in_api:
-            _host_delete_from_db(self._context, self.id, host)
-        else:
-            db.aggregate_host_delete(self._context, self.id, host)
+        _host_delete_from_db(self._context, self.id, host)
 
         self.hosts.remove(host)
         self.obj_reset_changes(fields=['hosts'])
@@ -507,14 +439,6 @@ class AggregateList(base.ObjectListBase, base.NovaObject):
         'objects': fields.ListOfObjectsField('Aggregate'),
         }
 
-    # NOTE(mdoff): Calls to this can be removed when we remove
-    # compatibility with the old aggregate model.
-    @staticmethod
-    def _fill_deprecated(db_aggregate):
-        db_aggregate['deleted_at'] = None
-        db_aggregate['deleted'] = False
-        return db_aggregate
-
     @classmethod
     def _filter_db_aggregates(cls, db_aggregates, hosts):
         if not isinstance(hosts, set):
@@ -529,89 +453,20 @@ class AggregateList(base.ObjectListBase, base.NovaObject):
 
     @base.remotable_classmethod
     def get_all(cls, context):
-        api_db_aggregates = [cls._fill_deprecated(agg) for agg in
-                                _get_all_from_db(context)]
-        db_aggregates = db.aggregate_get_all(context)
+        db_aggregates = _get_all_from_db(context)
         return base.obj_make_list(context, cls(context), objects.Aggregate,
-                                  db_aggregates + api_db_aggregates)
+                                  db_aggregates)
 
     @base.remotable_classmethod
     def get_by_host(cls, context, host, key=None):
-        api_db_aggregates = [cls._fill_deprecated(agg) for agg in
-                            _get_by_host_from_db(context, host, key=key)]
-        db_aggregates = db.aggregate_get_by_host(context, host, key=key)
+        db_aggregates = _get_by_host_from_db(context, host, key=key)
         return base.obj_make_list(context, cls(context), objects.Aggregate,
-                                  db_aggregates + api_db_aggregates)
+                                  db_aggregates)
 
     @base.remotable_classmethod
     def get_by_metadata_key(cls, context, key, hosts=None):
-        api_db_aggregates = [cls._fill_deprecated(agg) for agg in
-                            _get_by_metadata_key_from_db(context, key=key)]
-        db_aggregates = db.aggregate_get_by_metadata_key(context, key=key)
-
-        all_aggregates = db_aggregates + api_db_aggregates
+        db_aggregates = _get_by_metadata_key_from_db(context, key=key)
         if hosts is not None:
-            all_aggregates = cls._filter_db_aggregates(all_aggregates, hosts)
+            db_aggregates = cls._filter_db_aggregates(db_aggregates, hosts)
         return base.obj_make_list(context, cls(context), objects.Aggregate,
-                                  all_aggregates)
-
-
-@db_api.pick_context_manager_reader
-def _get_main_db_aggregate_ids(context, limit):
-    from nova.db.sqlalchemy import models
-    return [x[0] for x in context.session.query(models.Aggregate.id).
-            filter_by(deleted=0).
-            limit(limit)]
-
-
-def migrate_aggregates(ctxt, count):
-    main_db_ids = _get_main_db_aggregate_ids(ctxt, count)
-    if not main_db_ids:
-        return 0, 0
-
-    count_all = len(main_db_ids)
-    count_hit = 0
-
-    for aggregate_id in main_db_ids:
-        try:
-            aggregate = Aggregate.get_by_id(ctxt, aggregate_id)
-            remove = ['metadata', 'hosts']
-            values = {field: getattr(aggregate, field)
-                      for field in aggregate.fields if field not in remove}
-            _aggregate_create_in_db(ctxt, values, metadata=aggregate.metadata)
-            for host in aggregate.hosts:
-                _host_add_to_db(ctxt, aggregate_id, host)
-            count_hit += 1
-            db.aggregate_delete(ctxt, aggregate.id)
-        except exception.AggregateNotFound:
-            LOG.warning(
-                'Aggregate id %(id)i disappeared during migration',
-                {'id': aggregate_id})
-        except (exception.AggregateNameExists) as e:
-            LOG.error(six.text_type(e))
-
-    return count_all, count_hit
-
-
-def _adjust_autoincrement(context, value):
-    engine = db_api.get_api_engine()
-    if engine.name == 'postgresql':
-        # NOTE(danms): If we migrated some aggregates in the above function,
-        # then we will have confused postgres' sequence for the autoincrement
-        # primary key. MySQL does not care about this, but since postgres does,
-        # we need to reset this to avoid a failure on the next aggregate
-        # creation.
-        engine.execute(
-            text('ALTER SEQUENCE aggregates_id_seq RESTART WITH %i;' % (
-                value)))
-
-
-@db_api.api_context_manager.reader
-def _get_max_aggregate_id(context):
-    return context.session.query(func.max(api_models.Aggregate.id)).one()[0]
-
-
-def migrate_aggregate_reset_autoincrement(ctxt, count):
-    max_id = _get_max_aggregate_id(ctxt) or 0
-    _adjust_autoincrement(ctxt, max_id + 1)
-    return 0, 0
+                                  db_aggregates)
