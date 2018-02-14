@@ -1859,12 +1859,15 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                                                                select_dest,
                                                                build_and_run):
         def _fake_bury(ctxt, request_spec, exc,
-                       build_requests=None, instances=None):
+                       build_requests=None, instances=None,
+                       block_device_mapping=None):
             self.assertIn('not mapped to any cell', str(exc))
             self.assertEqual(1, len(build_requests))
             self.assertEqual(1, len(instances))
             self.assertEqual(build_requests[0].instance_uuid,
                              instances[0].uuid)
+            self.assertEqual(self.params['block_device_mapping'],
+                             block_device_mapping)
 
         bury.side_effect = _fake_bury
         select_dest.return_value = [[fake_selection1]]
@@ -2004,6 +2007,27 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
         }
 
         self.assertEqual(expected, inst_states)
+
+    @mock.patch.object(objects.CellMapping, 'get_by_uuid')
+    @mock.patch.object(conductor_manager.ComputeTaskManager,
+                       '_create_block_device_mapping')
+    def test_bury_in_cell0_with_block_device_mapping(self, mock_create_bdm,
+            mock_get_cell):
+        mock_get_cell.return_value = self.cell_mappings['cell0']
+
+        inst_br = fake_build_request.fake_req_obj(self.ctxt)
+        del inst_br.instance.id
+        inst_br.create()
+        inst = inst_br.get_new_instance(self.ctxt)
+
+        self.conductor._bury_in_cell0(
+            self.ctxt, self.params['request_specs'][0], Exception('Foo'),
+            build_requests=[inst_br], instances=[inst],
+            block_device_mapping=self.params['block_device_mapping'])
+
+        mock_create_bdm.assert_called_once_with(
+            self.cell_mappings['cell0'], inst.flavor, inst.uuid,
+            self.params['block_device_mapping'])
 
     def test_reset(self):
         with mock.patch('nova.compute.rpcapi.ComputeAPI') as mock_rpc:
