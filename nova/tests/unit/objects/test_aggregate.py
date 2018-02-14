@@ -192,7 +192,7 @@ class _TestAggregateObject(object):
         self.assertEqual(1, len(aggs))
         self.compare_obj(aggs[0], fake_aggregate, subs=SUBS)
 
-    @mock.patch('nova.objects.aggregate._get_by_metadata_key_from_db')
+    @mock.patch('nova.objects.aggregate._get_by_metadata_from_db')
     def test_get_by_metadata_key(self, mock_api_get_by_metadata_key):
         mock_api_get_by_metadata_key.return_value = [fake_aggregate]
         aggs = aggregate.AggregateList.get_by_metadata_key(
@@ -200,14 +200,14 @@ class _TestAggregateObject(object):
         self.assertEqual(1, len(aggs))
         self.compare_obj(aggs[0], fake_aggregate, subs=SUBS)
 
-    @mock.patch('nova.objects.aggregate._get_by_metadata_key_from_db')
+    @mock.patch('nova.objects.aggregate._get_by_metadata_from_db')
     def test_get_by_metadata_key_and_hosts_no_match(self, get_by_metadata_key):
         get_by_metadata_key.return_value = [fake_aggregate]
         aggs = aggregate.AggregateList.get_by_metadata_key(
             self.context, 'this', hosts=['baz'])
         self.assertEqual(0, len(aggs))
 
-    @mock.patch('nova.objects.aggregate._get_by_metadata_key_from_db')
+    @mock.patch('nova.objects.aggregate._get_by_metadata_from_db')
     def test_get_by_metadata_key_and_hosts_match(self, get_by_metadata_key):
         get_by_metadata_key.return_value = [fake_aggregate]
         aggs = aggregate.AggregateList.get_by_metadata_key(
