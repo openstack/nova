@@ -1396,6 +1396,10 @@ class NoValidHost(NovaException):
     msg_fmt = _("No valid host was found. %(reason)s")
 
 
+class RequestFilterFailed(NovaException):
+    msg_fmt = _("Scheduling failed: %(reason)s")
+
+
 class MaxRetriesExceeded(NoValidHost):
     msg_fmt = _("Exceeded maximum number of retries. %(reason)s")
 
