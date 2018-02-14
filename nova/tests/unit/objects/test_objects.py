@@ -1072,7 +1072,7 @@ object_data = {
     'ConsoleAuthToken': '1.0-a61bf7b54517c4013a12289c5a5268ea',
     'DNSDomain': '1.0-7b0b2dab778454b6a7b6c66afe163a1a',
     'DNSDomainList': '1.0-4ee0d9efdfd681fed822da88376e04d2',
-    'Destination': '1.1-fff0853f3acec6b04ddc03158ded11ba',
+    'Destination': '1.2-74854e8cfe7fe616294d93a5d189d885',
     'DeviceBus': '1.0-77509ea1ea0dd750d5864b9bd87d3f9d',
     'DeviceMetadata': '1.0-04eb8fd218a49cbc3b1e54b774d179f7',
     'Diagnostics': '1.0-38ad3e9b1a59306253fc03f97936db95',

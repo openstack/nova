@@ -665,7 +665,8 @@ def migrate_instances_add_request_spec(context, max_count):
 class Destination(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Add cell field
-    VERSION = '1.1'
+    # Version 1.2: Add aggregates field
+    VERSION = '1.2'
 
     fields = {
         'host': fields.StringField(),
@@ -674,14 +675,47 @@ class Destination(base.NovaObject):
         # let's provide a possible nullable node here.
         'node': fields.StringField(nullable=True),
         'cell': fields.ObjectField('CellMapping', nullable=True),
+
+        # NOTE(dansmith): These are required aggregates (or sets) and
+        # are passed to placement.  See require_aggregates() below.
+        'aggregates': fields.ListOfStringsField(nullable=True,
+                                                default=None),
     }
 
     def obj_make_compatible(self, primitive, target_version):
         super(Destination, self).obj_make_compatible(primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 2):
+            if 'aggregates' in primitive:
+                del primitive['aggregates']
         if target_version < (1, 1):
             if 'cell' in primitive:
                 del primitive['cell']
+
+    def obj_load_attr(self, attrname):
+        self.obj_set_defaults(attrname)
+
+    def require_aggregates(self, aggregates):
+        """Add a set of aggregates to the list of required aggregates.
+
+        This will take a list of aggregates, which are to be logically OR'd
+        together and add them to the list of required aggregates that will
+        be used to query placement. Aggregate sets provided in sequential calls
+        to this method will be AND'd together.
+
+        For example, the following set of calls:
+            dest.require_aggregates(['foo', 'bar'])
+            dest.require_aggregates(['baz'])
+        will generate the following logical query to placement:
+            "Candidates should be in 'foo' OR 'bar', but definitely in 'baz'"
+
+        :param aggregates: A list of aggregates, at least one of which
+                           must contain the destination host.
+
+        """
+        if self.aggregates is None:
+            self.aggregates = []
+        self.aggregates.append(','.join(aggregates))
 
 
 @base.NovaObjectRegistry.register
