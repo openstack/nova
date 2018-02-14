@@ -11,7 +11,6 @@
 #    under the License.
 
 from nova import context
-from nova import db
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
 from nova import exception
@@ -56,10 +55,6 @@ class FlavorObjectTestCase(test.NoDBTestCase):
         # Make sure we find this in the API database
         flavor2 = objects.Flavor._flavor_get_from_db(self.context, flavor.id)
         self.assertEqual(flavor.id, flavor2['id'])
-
-        # Make sure we don't find it in the main database
-        self.assertRaises(exception.FlavorNotFoundByName,
-                          db.flavor_get_by_name, self.context, flavor.name)
 
     def test_get_with_no_projects(self):
         fields = dict(fake_api_flavor, projects=[])

@@ -64,11 +64,12 @@ def get_test_flavor(context=None, options=None):
                    'swap': 1024}
 
     test_flavor.update(options)
-
+    flavor_ref = objects.Flavor(context, **test_flavor)
     try:
-        flavor_ref = nova.db.flavor_create(context, test_flavor)
+        flavor_ref.create()
     except (exception.FlavorExists, exception.FlavorIdExists):
-        flavor_ref = nova.db.flavor_get_by_name(context, 'kinda.big')
+        flavor_ref = objects.Flavor.get_by_flavor_id(
+            context, test_flavor['flavorid'])
     return flavor_ref
 
 
