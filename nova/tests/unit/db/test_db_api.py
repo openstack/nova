@@ -4589,28 +4589,6 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
         self.assertRaises(exception.MarkerNotFound,
                 db.flavor_get_all, self.ctxt, marker='invalid')
 
-    def test_flavor_get(self):
-        flavors = [{'name': 'abc', 'flavorid': '123'},
-                   {'name': 'def', 'flavorid': '456'},
-                   {'name': 'ghi', 'flavorid': '789'}]
-        flavors = [self._create_flavor(t) for t in flavors]
-
-        for flavor in flavors:
-            flavor_by_id = db.flavor_get(self.ctxt, flavor['id'])
-            self._assertEqualObjects(flavor, flavor_by_id)
-
-    def test_flavor_get_non_public(self):
-        flavor = self._create_flavor({'name': 'abc', 'flavorid': '123',
-                                      'is_public': False})
-
-        # Admin can see it
-        flavor_by_id = db.flavor_get(self.ctxt, flavor['id'])
-        self._assertEqualObjects(flavor, flavor_by_id)
-
-        # Regular user can not
-        self.assertRaises(exception.FlavorNotFound, db.flavor_get,
-                self.user_ctxt, flavor['id'])
-
 
 @mock.patch('time.sleep', new=lambda x: None)
 class FixedIPTestCase(BaseInstanceTypeTestCase):

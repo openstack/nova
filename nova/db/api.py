@@ -1533,11 +1533,6 @@ def flavor_get_all(context, inactive=False, filters=None, sort_key='flavorid',
         context, inactive=inactive, filters=filters, sort_key=sort_key,
         sort_dir=sort_dir, limit=limit, marker=marker)
 
-
-def flavor_get(context, id):
-    """Get instance type by id."""
-    return IMPL.flavor_get(context, id)
-
 ####################
 
 
