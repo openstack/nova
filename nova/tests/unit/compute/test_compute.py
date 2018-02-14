@@ -324,24 +324,6 @@ class BaseTestCase(test.TestCase):
 
         return inst
 
-    def _create_instance_type(self, params=None):
-        """Create a test instance type."""
-        if not params:
-            params = {}
-
-        context = self.context.elevated()
-        inst = {}
-        inst['name'] = 'm1.small'
-        inst['memory_mb'] = 1024
-        inst['vcpus'] = 1
-        inst['root_gb'] = 20
-        inst['ephemeral_gb'] = 10
-        inst['flavorid'] = '1'
-        inst['swap'] = 2048
-        inst['rxtx_factor'] = 1
-        inst.update(params)
-        return db.flavor_create(context, inst)['id']
-
     def _create_group(self):
         values = {'name': 'testgroup',
                   'description': 'testgroup',

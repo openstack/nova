@@ -4588,69 +4588,6 @@ def console_get(context, console_id, instance_uuid=None):
 
 
 @pick_context_manager_writer
-def flavor_create(context, values, projects=None):
-    """Create a new instance type. In order to pass in extra specs,
-    the values dict should contain a 'extra_specs' key/value pair:
-
-    {'extra_specs' : {'k1': 'v1', 'k2': 'v2', ...}}
-
-    """
-    specs = values.get('extra_specs')
-    specs_refs = []
-    if specs:
-        for k, v in specs.items():
-            specs_ref = models.InstanceTypeExtraSpecs()
-            specs_ref['key'] = k
-            specs_ref['value'] = v
-            specs_refs.append(specs_ref)
-
-    values['extra_specs'] = specs_refs
-    instance_type_ref = models.InstanceTypes()
-    instance_type_ref.update(values)
-
-    if projects is None:
-        projects = []
-
-    try:
-        instance_type_ref.save(context.session)
-    except db_exc.DBDuplicateEntry as e:
-        if 'flavorid' in e.columns:
-            raise exception.FlavorIdExists(flavor_id=values['flavorid'])
-        raise exception.FlavorExists(name=values['name'])
-    except Exception as e:
-        raise db_exc.DBError(e)
-    for project in set(projects):
-        access_ref = models.InstanceTypeProjects()
-        access_ref.update({"instance_type_id": instance_type_ref.id,
-                           "project_id": project})
-        access_ref.save(context.session)
-
-    return _dict_with_extra_specs(instance_type_ref)
-
-
-def _dict_with_extra_specs(inst_type_query):
-    """Takes an instance or instance type query returned
-    by sqlalchemy and returns it as a dictionary, converting the
-    extra_specs entry from a list of dicts:
-
-    'extra_specs' : [{'key': 'k1', 'value': 'v1', ...}, ...]
-
-    to a single dict:
-
-    'extra_specs' : {'k1': 'v1'}
-
-    """
-    inst_type_dict = dict(inst_type_query)
-    extra_specs = {x['key']: x['value']
-                   for x in inst_type_query['extra_specs']}
-    inst_type_dict['extra_specs'] = extra_specs
-    return inst_type_dict
-
-
-####################
-
-
-@pick_context_manager_writer
 def cell_create(context, values):
     cell = models.Cell()
     cell.update(values)

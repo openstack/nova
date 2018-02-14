@@ -1521,13 +1521,6 @@ def console_get(context, console_id, instance_uuid=None):
 ##################
 
 
-def flavor_create(context, values, projects=None):
-    """Create a new instance type."""
-    return IMPL.flavor_create(context, values, projects=projects)
-
-####################
-
-
 def pci_device_get_by_addr(context, node_id, dev_addr):
     """Get PCI device by address."""
     return IMPL.pci_device_get_by_addr(context, node_id, dev_addr)

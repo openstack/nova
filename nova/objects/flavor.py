@@ -292,7 +292,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
                         first()
         if not result:
             raise exception.FlavorNotFound(flavor_id=id)
-        return db_api._dict_with_extra_specs(result)
+        return _dict_with_extra_specs(result)
 
     @staticmethod
     @require_context
@@ -303,7 +303,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
                             first()
         if not result:
             raise exception.FlavorNotFoundByName(flavor_name=name)
-        return db_api._dict_with_extra_specs(result)
+        return _dict_with_extra_specs(result)
 
     @staticmethod
     @require_context
@@ -315,7 +315,7 @@ class Flavor(base.NovaPersistentObject, base.NovaObject,
                         first()
         if not result:
             raise exception.FlavorNotFound(flavor_id=flavor_id)
-        return db_api._dict_with_extra_specs(result)
+        return _dict_with_extra_specs(result)
 
     @staticmethod
     def _get_projects_from_db(context, flavorid):

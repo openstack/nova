@@ -48,7 +48,6 @@ from nova.compute import task_states
 from nova.compute import vm_states
 import nova.conf
 from nova import context
-from nova import db
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import models
 from nova import exception
@@ -2956,20 +2955,20 @@ class ServersControllerCreateTest(test.TestCase):
     def test_create_instance_private_flavor(self):
         values = {
             'name': 'fake_name',
-            'memory_mb': 512,
+            'memory': 512,
             'vcpus': 1,
             'root_gb': 10,
             'ephemeral_gb': 10,
             'flavorid': '1324',
             'swap': 0,
             'rxtx_factor': 0.5,
-            'vcpu_weight': 1,
-            'disabled': False,
             'is_public': False,
         }
-        db.flavor_create(context.get_admin_context(), values)
-        self.assertRaises(webob.exc.HTTPBadRequest, self._test_create_instance,
-                          flavor=1324)
+        flavors.create(**values)
+        ex = self.assertRaises(webob.exc.HTTPBadRequest,
+                               self._test_create_instance,
+                               flavor=1324)
+        self.assertEqual('Flavor 1324 could not be found.', six.text_type(ex))
 
     def test_create_server_bad_image_uuid(self):
         self.body['server']['min_count'] = 1
