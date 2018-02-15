@@ -2137,6 +2137,75 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertEqual(33550336,
                          cfg.metadata[0].flavor.swap)
 
+    def test_get_guest_config_q35(self):
+        self.flags(virt_type="kvm",
+                   group='libvirt')
+
+        TEST_AMOUNT_OF_PCIE_SLOTS = 8
+        CONF.set_override("num_pcie_ports", TEST_AMOUNT_OF_PCIE_SLOTS,
+                group='libvirt')
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {"hw_machine_type":
+                           "pc-q35-test"}})
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+
+        cfg = drvr._get_guest_config(instance_ref,
+                                     _fake_network_info(self, 1),
+                                     image_meta, disk_info)
+
+        num_ports = 0
+        for device in cfg.devices:
+            try:
+                if (device.root_name == 'controller' and
+                        device.model == 'pcie-root-port'):
+                    num_ports += 1
+            except AttributeError:
+                pass
+
+        self.assertEqual(TEST_AMOUNT_OF_PCIE_SLOTS, num_ports)
+
+    def test_get_guest_config_pcie_i440fx(self):
+        self.flags(virt_type="kvm",
+                   group='libvirt')
+
+        TEST_AMOUNT_OF_PCIE_SLOTS = 8
+        CONF.set_override("num_pcie_ports", TEST_AMOUNT_OF_PCIE_SLOTS,
+                group='libvirt')
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {"hw_machine_type":
+                           "pc-i440fx-test"}})
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+
+        cfg = drvr._get_guest_config(instance_ref,
+                                     _fake_network_info(self, 1),
+                                     image_meta, disk_info)
+
+        num_ports = 0
+        for device in cfg.devices:
+            try:
+                if (device.root_name == 'controller' and
+                        device.model == 'pcie-root-port'):
+                    num_ports += 1
+            except AttributeError:
+                pass
+
+        # i440fx is not pcie machine so there should be no pcie ports
+        self.assertEqual(0, num_ports)
+
     def test_get_guest_config_missing_ownership_info(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 
@@ -5647,6 +5716,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             caps.host.cpu = cpu
             return caps
 
+        TEST_AMOUNT_OF_PCIE_SLOTS = 8
+        CONF.set_override("num_pcie_ports", TEST_AMOUNT_OF_PCIE_SLOTS,
+                group='libvirt')
+
         self.flags(virt_type="kvm",
                    group="libvirt")
 
@@ -5668,6 +5741,17 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_path_exists.assert_called_with(
             libvirt_driver.DEFAULT_UEFI_LOADER_PATH['aarch64'])
         self.assertEqual(cfg.os_mach_type, "virt")
+
+        num_ports = 0
+        for device in cfg.devices:
+            try:
+                if (device.root_name == 'controller' and
+                        device.model == 'pcie-root-port'):
+                    num_ports += 1
+            except AttributeError:
+                pass
+
+        self.assertEqual(TEST_AMOUNT_OF_PCIE_SLOTS, num_ports)
 
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        "_get_guest_storage_config")

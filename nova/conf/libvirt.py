@@ -637,6 +637,25 @@ Possible values:
   https://libvirt.org/html/libvirt-libvirt-domain.html ,
   which you may need to search key words ``VIR_PERF_PARAM_*``
 """),
+    cfg.IntOpt('num_pcie_ports',
+               default=0,
+               min=0,
+               max=28,
+               help= """
+The number of PCIe ports an instance will get.
+
+Libvirt allows a custom number of PCIe ports (pcie-root-port controllers) a
+target instance will get. Some will be used by default, rest will be available
+for hotplug use.
+
+By default we have just 1-2 free ports which limits hotplug.
+
+More info: https://github.com/qemu/qemu/blob/master/docs/pcie.txt
+
+Due to QEMU limitations for aarch64/virt maximum value is set to '28'.
+
+Default value '0' moves calculating amount of ports to libvirt.
+"""),
 ]
 
 libvirt_imagebackend_opts = [

@@ -5028,6 +5028,23 @@ class LibvirtDriver(driver.ComputeDriver):
                 cpu_config.features.add(xf)
         return cpu_config
 
+    def _guest_add_pcie_root_ports(self, guest):
+        """Add PCI Express root ports.
+
+        PCI Express machine can have as many PCIe devices as it has
+        pcie-root-port controllers (slots in virtual motherboard).
+
+        If we want to have more PCIe slots for hotplug then we need to create
+        whole PCIe structure (libvirt limitation).
+        """
+
+        pcieroot = vconfig.LibvirtConfigGuestPCIeRootController()
+        guest.add_device(pcieroot)
+
+        for x in range(0, CONF.libvirt.num_pcie_ports):
+            pcierootport = vconfig.LibvirtConfigGuestPCIeRootPortController()
+            guest.add_device(pcierootport)
+
     def _guest_add_usb_host_keyboard(self, guest):
         """Add USB Host controller and keyboard for graphical console use.
 
@@ -5157,6 +5174,16 @@ class LibvirtDriver(driver.ComputeDriver):
         # Qemu guest agent only support 'qemu' and 'kvm' hypervisor
         if virt_type in ('qemu', 'kvm'):
             self._set_qemu_guest_agent(guest, flavor, instance, image_meta)
+
+        # Add PCIe root port controllers for PCI Express machines
+        # but only if their amount is configured
+        if (CONF.libvirt.num_pcie_ports and
+                ((caps.host.cpu.arch == fields.Architecture.AARCH64 and
+                guest.os_mach_type.startswith('virt')) or
+                (caps.host.cpu.arch == fields.Architecture.X86_64 and
+                guest.os_mach_type is not None and
+                'q35' in guest.os_mach_type))):
+            self._guest_add_pcie_root_ports(guest)
 
         self._guest_add_pci_devices(guest, instance)
 

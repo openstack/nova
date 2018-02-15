@@ -1645,6 +1645,24 @@ class LibvirtConfigGuestUSBHostController(LibvirtConfigGuestController):
         self.type = 'usb'
 
 
+class LibvirtConfigGuestPCIeRootController(LibvirtConfigGuestController):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestPCIeRootController, self).\
+                __init__(**kwargs)
+        self.type = 'pci'
+        self.model = 'pcie-root'
+
+
+class LibvirtConfigGuestPCIeRootPortController(LibvirtConfigGuestController):
+
+    def __init__(self, **kwargs):
+        super(LibvirtConfigGuestPCIeRootPortController, self).\
+                __init__(**kwargs)
+        self.type = 'pci'
+        self.model = 'pcie-root-port'
+
+
 class LibvirtConfigGuestHostdev(LibvirtConfigGuestDevice):
     def __init__(self, **kwargs):
         super(LibvirtConfigGuestHostdev, self).\
