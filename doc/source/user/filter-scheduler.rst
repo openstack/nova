@@ -325,14 +325,32 @@ would be available, and by default the |ComputeFilter|,
 |ImagePropertiesFilter|, |ServerGroupAntiAffinityFilter|,
 and |ServerGroupAffinityFilter| would be used.
 
+Each filter selects hosts in a different way and has different costs. The order
+of ``filter_scheduler.enabled_filters`` affects scheduling performance. The
+general suggestion is to filter out invalid hosts as soon as possible to avoid
+unnecessary costs.  We can sort ``filter_scheduler.enabled_filters`` items by
+their costs in reverse order. For example, ComputeFilter is better before any
+resource calculating filters like RamFilter, CoreFilter.
+
+In medium/large environments having AvailabilityZoneFilter before any
+capability or resource calculating filters can be useful.
+
 Writing Your Own Filter
 -----------------------
 
 To create **your own filter** you must inherit from
-|BaseHostFilter| and implement one method:
-``host_passes``. This method should return ``True`` if a host passes the filter. It
-takes ``host_state`` (describing the host) and ``filter_properties`` dictionary as the
-parameters.
+|BaseHostFilter| and implement one method: ``host_passes``.
+This method should return ``True`` if a host passes the filter and return
+``False`` elsewhere.
+It takes two parameters (named arbitrarily as ``host_state`` and ``spec_obj``):
+
+* the ``HostState`` object allows to get attributes of the host.
+* the ``RequestSpec`` object describes the user request, including the flavor,
+  the image and the scheduler hints.
+
+For further details about each of those objects and their corresponding
+attributes, please refer to the codebase (at least by looking at the other
+filters code) or ask for help in the #openstack-nova IRC channel.
 
 As an example, nova.conf could contain the following scheduler-related
 settings:
@@ -352,16 +370,6 @@ With these settings, nova will use the ``FilterScheduler`` for the scheduler
 driver. All of the standard nova filters and MyFilter are available to the
 FilterScheduler, but just the RamFilter, ComputeFilter, and MyFilter will be
 used on each request.
-
-Each filter selects hosts in a different way and has different costs. The order
-of ``filter_scheduler.enabled_filters`` affects scheduling performance. The
-general suggestion is to filter out invalid hosts as soon as possible to avoid
-unnecessary costs.  We can sort ``filter_scheduler.enabled_filters`` items by
-their costs in reverse order. For example, ComputeFilter is better before any
-resource calculating filters like RamFilter, CoreFilter.
-
-In medium/large environments having AvailabilityZoneFilter before any
-capability or resource calculating filters can be useful.
 
 Weights
 -------
