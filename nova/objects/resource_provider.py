@@ -3567,24 +3567,22 @@ class AllocationCandidates(base.NovaObject):
         # needing to mess with the complex sql above or add additional
         # columns to the DB.
 
-        # Track the resource provider uuids that we have chosen so that
-        # we can pull out their summaries below.
-        alloc_req_rp_uuids = set()
         if limit and limit <= len(alloc_request_objs):
             if CONF.placement.randomize_allocation_candidates:
                 alloc_request_objs = random.sample(alloc_request_objs, limit)
             else:
                 alloc_request_objs = alloc_request_objs[:limit]
-            # Extract resource provider uuids from the resource requests.
-            for aro in alloc_request_objs:
-                for arr in aro.resource_requests:
-                    alloc_req_rp_uuids.add(arr.resource_provider.uuid)
         elif CONF.placement.randomize_allocation_candidates:
             random.shuffle(alloc_request_objs)
 
         # Limit summaries to only those mentioned in the allocation requests.
         if limit and limit <= len(alloc_request_objs):
             kept_summary_objs = []
+            alloc_req_rp_uuids = set()
+            # Extract resource provider uuids from the resource requests.
+            for aro in alloc_request_objs:
+                for arr in aro.resource_requests:
+                    alloc_req_rp_uuids.add(arr.resource_provider.uuid)
             for summary in summary_objs:
                 rp_uuid = summary.resource_provider.uuid
                 # Skip a summary if we are limiting and haven't selected an

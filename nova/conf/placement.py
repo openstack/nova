@@ -50,9 +50,10 @@ Possible values:
 Endpoint interface for this node. This is used when picking the URL in the
 service catalog.
 """),
-    cfg.BoolOpt('randomize_allocation_candidates',
-                default=False,
-                help="""
+    cfg.BoolOpt(
+        'randomize_allocation_candidates',
+        default=False,
+        help="""
 If True, when limiting allocation candidate results, the results will be
 a random sampling of the full result set. If False, allocation candidates
 are returned in a deterministic but undefined order. That is, all things
