@@ -12,11 +12,13 @@
 
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.functional import integrated_helpers
 from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import policy_fixture
 
 
-class ServersPreSchedulingTestCase(test.TestCase):
+class ServersPreSchedulingTestCase(test.TestCase,
+                                   integrated_helpers.InstanceHelperMixin):
     """Tests for the servers API with unscheduled instances.
 
     With cellsv2 an instance is not written to an instance table in the cell
@@ -237,3 +239,44 @@ class ServersPreSchedulingTestCase(test.TestCase):
             'servers/detail?not-tags-any=tag1,tag3')
         list_resp = list_resp.body['servers']
         self.assertEqual(0, len(list_resp))
+
+    def test_boot_from_volume_delete_build_request_pre_scheduling(self):
+        cinder = self.useFixture(
+            nova_fixtures.CinderFixtureNewAttachFlow(self))
+        # This makes the get_minimum_version_all_cells check say we're running
+        # the latest of everything.
+        self.useFixture(nova_fixtures.AllServicesCurrent())
+
+        volume_id = nova_fixtures.CinderFixtureNewAttachFlow.IMAGE_BACKED_VOL
+        server = self.api.post_server({
+            'server': {
+                'flavorRef': '1',
+                'name': 'test_bfv_delete_build_request_pre_scheduling',
+                'networks': 'none',
+                'block_device_mapping_v2': [
+                    {
+                        'boot_index': 0,
+                        'uuid': volume_id,
+                        'source_type': 'volume',
+                        'destination_type': 'volume'
+                    },
+                ]
+            }
+        })
+
+        # Since _IntegratedTestBase uses the CastAsCall fixture, when we
+        # get the server back we know all of the volume stuff should be done.
+        self.assertIn(volume_id, cinder.attachments[server['id']])
+
+        # Now delete the server, which should go through the "local delete"
+        # code in the API, find the build request and delete it along with
+        # detaching the volume from the instance.
+        self.api.delete_server(server['id'])
+
+        # The volume should no longer have any attachments as instance delete
+        # should have removed them.
+        # self.assertNotIn(volume_id, cinder.attachments[server['id']])
+        # FIXME(mriedem): This is part of bug 1404867 where the BDMs aren't
+        # processed when the build request is deleted. Uncomment the above
+        # and remove the below when this is fixed.
+        self.assertIn(volume_id, cinder.attachments[server['id']])
