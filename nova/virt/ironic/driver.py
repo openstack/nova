@@ -1209,15 +1209,17 @@ class IronicDriver(virt_driver.ComputeDriver):
             #             without raising any exceptions.
             return
 
-        if node.provision_state in _UNPROVISION_STATES:
-            self._unprovision(instance, node)
-        else:
-            # NOTE(hshiina): if spawn() fails before ironic starts
-            #                provisioning, instance information should be
-            #                removed from ironic node.
-            self._remove_instance_info_from_node(node, instance)
+        try:
+            if node.provision_state in _UNPROVISION_STATES:
+                self._unprovision(instance, node)
+            else:
+                # NOTE(hshiina): if spawn() fails before ironic starts
+                #                provisioning, instance information should be
+                #                removed from ironic node.
+                self._remove_instance_info_from_node(node, instance)
+        finally:
+            self._cleanup_deploy(node, instance, network_info)
 
-        self._cleanup_deploy(node, instance, network_info)
         LOG.info('Successfully unprovisioned Ironic node %s',
                  node.uuid, instance=instance)
 
