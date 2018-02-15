@@ -4208,6 +4208,16 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return False
 
+    def _get_vcpu_realtime_scheduler(self, vcpus_rt):
+        """Returns the config object of LibvirtConfigGuestCPUTuneVCPUSched.
+        Prepares realtime config for the guest.
+        """
+        vcpusched = vconfig.LibvirtConfigGuestCPUTuneVCPUSched()
+        vcpusched.vcpus = vcpus_rt
+        vcpusched.scheduler = "fifo"
+        vcpusched.priority = CONF.libvirt.realtime_scheduler_priority
+        return vcpusched
+
     def _get_guest_numa_config(self, instance_numa_topology, flavor,
                                allowed_cpus=None, image_meta=None):
         """Returns the config objects for the guest NUMA specs.
@@ -4275,20 +4285,16 @@ class LibvirtDriver(driver.ComputeDriver):
                 emulator_threads_isolated = (
                     instance_numa_topology.emulator_threads_isolated)
 
+                # Set realtime scheduler for CPUTune
                 vcpus_rt = set([])
                 wants_realtime = hardware.is_realtime_enabled(flavor)
                 if wants_realtime:
                     if not self._host.has_min_version(
                             MIN_LIBVIRT_REALTIME_VERSION):
                         raise exception.RealtimePolicyNotSupported()
-                    # Prepare realtime config for libvirt
                     vcpus_rt = hardware.vcpus_realtime_topology(
                         flavor, image_meta)
-                    vcpusched = vconfig.LibvirtConfigGuestCPUTuneVCPUSched()
-                    vcpusched.vcpus = vcpus_rt
-                    vcpusched.scheduler = "fifo"
-                    vcpusched.priority = (
-                        CONF.libvirt.realtime_scheduler_priority)
+                    vcpusched = self._get_vcpu_realtime_scheduler(vcpus_rt)
                     guest_cpu_tune.vcpusched.append(vcpusched)
 
                 # TODO(sahid): Defining domain topology should be
