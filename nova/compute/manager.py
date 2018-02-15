@@ -1849,7 +1849,7 @@ class ComputeManager(manager.Manager):
                     instance=instance)
                 self._cleanup_allocated_networks(context, instance,
                     requested_networks)
-                self._cleanup_volumes(context, instance.uuid,
+                self._cleanup_volumes(context, instance,
                     block_device_mapping, raise_exc=False)
                 compute_utils.add_instance_fault_from_exc(context,
                         instance, e, sys.exc_info(),
@@ -1909,7 +1909,7 @@ class ComputeManager(manager.Manager):
             LOG.exception(e.format_message(), instance=instance)
             self._cleanup_allocated_networks(context, instance,
                     requested_networks)
-            self._cleanup_volumes(context, instance.uuid,
+            self._cleanup_volumes(context, instance,
                     block_device_mapping, raise_exc=False)
             compute_utils.add_instance_fault_from_exc(context, instance,
                     e, sys.exc_info())
@@ -1923,7 +1923,7 @@ class ComputeManager(manager.Manager):
                           instance=instance)
             self._cleanup_allocated_networks(context, instance,
                     requested_networks)
-            self._cleanup_volumes(context, instance.uuid,
+            self._cleanup_volumes(context, instance,
                     block_device_mapping, raise_exc=False)
             compute_utils.add_instance_fault_from_exc(context, instance,
                     e, sys.exc_info())
@@ -2424,14 +2424,27 @@ class ComputeManager(manager.Manager):
                     self.host, action=fields.NotificationAction.SHUTDOWN,
                     phase=fields.NotificationPhase.END, bdms=bdms)
 
-    def _cleanup_volumes(self, context, instance_uuid, bdms, raise_exc=True):
+    def _cleanup_volumes(self, context, instance, bdms, raise_exc=True,
+                         detach=True):
         exc_info = None
-
         for bdm in bdms:
-            LOG.debug("terminating bdm %s", bdm,
-                      instance_uuid=instance_uuid)
+            if detach and bdm.volume_id:
+                try:
+                    LOG.debug("Detaching volume: %s", bdm.volume_id,
+                              instance_uuid=instance.uuid)
+                    destroy = bdm.delete_on_termination
+                    self._detach_volume(context, bdm, instance,
+                                        destroy_bdm=destroy)
+                except Exception as exc:
+                    exc_info = sys.exc_info()
+                    LOG.warning('Failed to detach volume: %(volume_id)s '
+                                'due to %(exc)s',
+                                {'volume_id': bdm.volume_id, 'exc': exc})
+
             if bdm.volume_id and bdm.delete_on_termination:
                 try:
+                    LOG.debug("Deleting volume: %s", bdm.volume_id,
+                              instance_uuid=instance.uuid)
                     self.volume_api.delete(context, bdm.volume_id)
                 except Exception as exc:
                     exc_info = sys.exc_info()
@@ -2483,8 +2496,14 @@ class ComputeManager(manager.Manager):
         #             future to set an instance fault the first time
         #             and to only ignore the failure if the instance
         #             is already in ERROR.
-        self._cleanup_volumes(context, instance.uuid, bdms,
-                raise_exc=False)
+
+        # NOTE(ameeda): The volumes already detached during the above
+        #               _shutdown_instance() call and this is why
+        #               detach is not requested from _cleanup_volumes()
+        #               in this case
+
+        self._cleanup_volumes(context, instance, bdms,
+                raise_exc=False, detach=False)
         # if a delete task succeeded, always update vm state and task
         # state without expecting task state to be DELETING
         instance.vm_state = vm_states.DELETED
@@ -7360,7 +7379,7 @@ class ComputeManager(manager.Manager):
                     try:
                         self._shutdown_instance(context, instance, bdms,
                                                 notify=False)
-                        self._cleanup_volumes(context, instance.uuid, bdms)
+                        self._cleanup_volumes(context, instance, bdms)
                     except Exception as e:
                         LOG.warning("Periodic cleanup failed to delete "
                                     "instance: %s",
