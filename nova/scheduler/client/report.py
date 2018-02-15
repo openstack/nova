@@ -939,66 +939,6 @@ class SchedulerReportClient(object):
             time.sleep(1)
         return False
 
-    @safe_connect
-    def _delete_inventory(self, context, rp_uuid):
-        """Deletes all inventory records for a resource provider with the
-        supplied UUID.
-        """
-        if not self._provider_tree.has_inventory(rp_uuid):
-            return None
-
-        curr = self._refresh_and_get_inventory(context, rp_uuid)
-
-        # Check to see if we need to update placement's view
-        if not curr.get('inventories', {}):
-            msg = "No inventory to delete from resource provider %s."
-            LOG.debug(msg, rp_uuid)
-            return
-
-        msg = ("Resource provider %s reported no inventory but previous "
-               "inventory was detected. Deleting existing inventory records.")
-        LOG.info(msg, rp_uuid)
-
-        cur_gen = curr['resource_provider_generation']
-        url = '/resource_providers/%s/inventories' % rp_uuid
-        r = self.delete(url, version="1.5",
-                        global_request_id=context.global_id)
-        placement_req_id = get_placement_request_id(r)
-        msg_args = {
-            'rp_uuid': rp_uuid,
-            'placement_req_id': placement_req_id,
-        }
-
-        if r.status_code == 204:
-            self._provider_tree.update_inventory(rp_uuid, {}, cur_gen + 1)
-            LOG.info("[%(placement_req_id)s] Deleted all inventory for "
-                     "resource provider %(rp_uuid)s.", msg_args)
-            return
-        elif r.status_code == 404:
-            # This can occur if another thread deleted the inventory and the
-            # resource provider already
-            LOG.debug("[%(placement_req_id)s] Resource provider %(rp_uuid)s "
-                      "deleted by another thread when trying to delete "
-                      "inventory. Ignoring.",
-                      msg_args)
-            self._provider_tree.remove(rp_uuid)
-            self.association_refresh_time.pop(rp_uuid, None)
-            return
-        elif r.status_code == 409:
-            rc_str = _extract_inventory_in_use(r.text)
-            if rc_str is not None:
-                msg = ("[%(placement_req_id)s] We cannot delete inventory "
-                       "%(rc_str)s for resource provider %(rp_uuid)s because "
-                       "the inventory is in use.")
-                msg_args['rc_str'] = rc_str
-                LOG.warning(msg, msg_args)
-                return
-
-        msg = ("[%(placement_req_id)s] Failed to delete inventory for "
-               "resource provider %(rp_uuid)s. Got error response: %(err)s.")
-        msg_args['err'] = r.text
-        LOG.error(msg, msg_args)
-
     def get_provider_tree_and_ensure_root(self, context, rp_uuid, name=None,
                                           parent_provider_uuid=None):
         """Returns a fresh ProviderTree representing all providers which are in
@@ -1059,10 +999,12 @@ class SchedulerReportClient(object):
         # Auto-create custom resource classes coming from a virt driver
         self._ensure_resource_classes(context, set(inv_data))
 
-        if inv_data:
-            self._update_inventory(context, rp_uuid, inv_data)
-        else:
-            self._delete_inventory(context, rp_uuid)
+        # NOTE(efried): Do not use the DELETE API introduced in microversion
+        # 1.5, even if the new inventory is empty.  It provides no way of
+        # sending the generation down, so no way to trigger/detect a conflict
+        # if an out-of-band update occurs between when we GET the latest and
+        # when we invoke the DELETE.  See bug #1746374.
+        self._update_inventory(context, rp_uuid, inv_data)
 
     @safe_connect
     def _ensure_traits(self, context, traits):
@@ -1265,10 +1207,12 @@ class SchedulerReportClient(object):
         self._ensure_resource_provider(context, compute_node.uuid,
                                        compute_node.hypervisor_hostname)
         inv_data = _compute_node_to_inventory_dict(compute_node)
-        if inv_data:
-            self._update_inventory(context, compute_node.uuid, inv_data)
-        else:
-            self._delete_inventory(context, compute_node.uuid)
+        # NOTE(efried): Do not use the DELETE API introduced in microversion
+        # 1.5, even if the new inventory is empty.  It provides no way of
+        # sending the generation down, so no way to trigger/detect a conflict
+        # if an out-of-band update occurs between when we GET the latest and
+        # when we invoke the DELETE.  See bug #1746374.
+        self._update_inventory(context, compute_node.uuid, inv_data)
 
     @safe_connect
     def get_allocations_for_consumer(self, context, consumer):

@@ -15,7 +15,6 @@ import time
 from keystoneauth1 import exceptions as ks_exc
 import mock
 import requests
-import six
 from six.moves.urllib import parse
 
 import nova.conf
@@ -2449,10 +2448,8 @@ class TestInventory(SchedulerReportClientTestCase):
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_provider')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_delete_inventory')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_update_inventory')
-    def test_update_compute_node(self, mock_ui, mock_delete, mock_erp):
+    def test_update_compute_node(self, mock_ui, mock_erp):
         cn = self.compute_node
         self.client.update_compute_node(self.context, cn)
         mock_erp.assert_called_once_with(self.context, cn.uuid,
@@ -2488,18 +2485,14 @@ class TestInventory(SchedulerReportClientTestCase):
             cn.uuid,
             expected_inv_data,
         )
-        self.assertFalse(mock_delete.called)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_provider')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_delete_inventory')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_update_inventory')
-    def test_update_compute_node_no_inv(self, mock_ui, mock_delete,
-            mock_erp):
-        """Ensure that if there are no inventory records, that we call
-        _delete_inventory() instead of _update_inventory().
+    def test_update_compute_node_no_inv(self, mock_ui, mock_erp):
+        """Ensure that if there are no inventory records, we still call
+        _update_inventory().
         """
         cn = self.compute_node
         cn.vcpus = 0
@@ -2508,180 +2501,7 @@ class TestInventory(SchedulerReportClientTestCase):
         self.client.update_compute_node(self.context, cn)
         mock_erp.assert_called_once_with(self.context, cn.uuid,
                                          cn.hypervisor_hostname)
-        mock_delete.assert_called_once_with(self.context, cn.uuid)
-        self.assertFalse(mock_ui.called)
-
-    @mock.patch.object(report.LOG, 'info')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'delete')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get')
-    def test_delete_inventory(self, mock_get, mock_delete, mock_info):
-        cn = self.compute_node
-        # Make sure the resource provider exists for preventing to call the API
-        self._init_provider_tree()
-
-        mock_get.return_value.json.return_value = {
-            'resource_provider_generation': 1,
-            'inventories': {
-                'VCPU': {'total': 16},
-            }
-        }
-        mock_delete.return_value.status_code = 204
-        mock_delete.return_value.headers = {'x-openstack-request-id':
-                                            uuids.request_id}
-        result = self.client._delete_inventory(self.context, cn.uuid)
-        self.assertIsNone(result)
-        self.assertTrue(mock_delete.called)
-        self.assertEqual(uuids.request_id,
-                         mock_info.call_args[0][1]['placement_req_id'])
-        mock_delete.assert_called_once_with(
-            '/resource_providers/%s/inventories' % cn.uuid,
-            version='1.5', global_request_id=self.context.global_id)
-
-    @mock.patch('nova.scheduler.client.report._extract_inventory_in_use')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'delete')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get')
-    def test_delete_inventory_already_no_inventory(self, mock_get, mock_delete,
-            mock_extract):
-        cn = self.compute_node
-        # Make sure the resource provider exists for preventing to call the API
-        self._init_provider_tree()
-
-        mock_get.return_value.json.return_value = {
-            'resource_provider_generation': 1,
-            'inventories': {
-            }
-        }
-        result = self.client._delete_inventory(self.context, cn.uuid)
-        self.assertIsNone(result)
-        self.assertFalse(mock_delete.called)
-        self.assertFalse(mock_extract.called)
-        self._validate_provider(cn.uuid, generation=1)
-
-    @mock.patch.object(report.LOG, 'warning')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'delete')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get')
-    def test_delete_inventory_inventory_in_use(self, mock_get, mock_delete,
-            mock_warn):
-        cn = self.compute_node
-        # Make sure the resource provider exists for preventing to call the API
-        self._init_provider_tree()
-
-        mock_get.return_value.json.return_value = {
-            'resource_provider_generation': 1,
-            'inventories': {
-                'VCPU': {'total': 16},
-                'MEMORY_MB': {'total': 1024},
-                'DISK_GB': {'total': 10},
-            }
-        }
-        mock_delete.return_value.status_code = 409
-        mock_delete.return_value.headers = {'x-openstack-request-id':
-                                         uuids.request_id}
-        rc_str = "VCPU, MEMORY_MB"
-        in_use_exc = exception.InventoryInUse(
-            resource_classes=rc_str,
-            resource_provider=cn.uuid,
-        )
-        fault_text = """
-409 Conflict
-
-There was a conflict when trying to complete your request.
-
- update conflict: %s
- """ % six.text_type(in_use_exc)
-        mock_delete.return_value.text = fault_text
-        mock_delete.return_value.json.return_value = {
-            'resource_provider_generation': 44,
-            'inventories': {
-            }
-        }
-        result = self.client._delete_inventory(self.context, cn.uuid)
-        self.assertIsNone(result)
-        self.assertTrue(mock_warn.called)
-        self.assertEqual(uuids.request_id,
-                         mock_warn.call_args[0][1]['placement_req_id'])
-
-    @mock.patch.object(report.LOG, 'debug')
-    @mock.patch.object(report.LOG, 'info')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'delete')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get')
-    def test_delete_inventory_inventory_404(self, mock_get, mock_delete,
-                                            mock_info, mock_debug):
-        """Test that when we attempt to delete all the inventory for a resource
-        provider but another thread has already deleted that resource provider,
-        that we simply remove the resource provider from our local cache and
-        return.
-        """
-        cn = self.compute_node
-        # Make sure the resource provider exists for preventing to call the API
-        self._init_provider_tree()
-        self.client.association_refresh_time[uuids.cn] = mock.Mock()
-
-        mock_get.return_value.json.return_value = {
-            'resource_provider_generation': 1,
-            'inventories': {
-                'VCPU': {'total': 16},
-                'MEMORY_MB': {'total': 1024},
-                'DISK_GB': {'total': 10},
-            }
-        }
-        mock_delete.return_value.status_code = 404
-        mock_delete.return_value.headers = {'x-openstack-request-id':
-                                            uuids.request_id}
-        result = self.client._delete_inventory(self.context, cn.uuid)
-        self.assertIsNone(result)
-        self.assertFalse(self.client._provider_tree.exists(cn.uuid))
-        self.assertTrue(mock_debug.called)
-        self.assertNotIn(cn.uuid, self.client.association_refresh_time)
-        self.assertIn('deleted by another thread', mock_debug.call_args[0][0])
-        self.assertEqual(uuids.request_id,
-                         mock_debug.call_args[0][1]['placement_req_id'])
-
-    @mock.patch.object(report.LOG, 'error')
-    @mock.patch.object(report.LOG, 'warning')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'delete')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                'get')
-    def test_delete_inventory_inventory_error(self, mock_get, mock_delete,
-            mock_warn, mock_error):
-        cn = self.compute_node
-        # Make sure the resource provider exists for preventing to call the API
-        self._init_provider_tree()
-
-        mock_get.return_value.json.return_value = {
-            'resource_provider_generation': 1,
-            'inventories': {
-                'VCPU': {'total': 16},
-                'MEMORY_MB': {'total': 1024},
-                'DISK_GB': {'total': 10},
-            }
-        }
-        mock_delete.return_value.status_code = 409
-        mock_delete.return_value.text = (
-            'There was a failure'
-        )
-        mock_delete.return_value.json.return_value = {
-            'resource_provider_generation': 44,
-            'inventories': {
-            }
-        }
-        mock_delete.return_value.headers = {'x-openstack-request-id':
-                                         uuids.request_id}
-        result = self.client._delete_inventory(self.context, cn.uuid)
-        self.assertIsNone(result)
-        self.assertFalse(mock_warn.called)
-        self.assertTrue(mock_error.called)
-        self.assertEqual(uuids.request_id,
-                         mock_error.call_args[0][1]['placement_req_id'])
+        mock_ui.assert_called_once_with(self.context, cn.uuid, {})
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 'get')
@@ -3117,13 +2937,11 @@ There was a conflict when trying to complete your request.
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_update_inventory')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_delete_inventory')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_classes')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_provider')
     def test_set_inventory_for_provider_no_custom(self, mock_erp, mock_erc,
-            mock_del, mock_upd):
+                                                  mock_upd):
         """Tests that inventory records of all standard resource classes are
         passed to the report client's _update_inventory() method.
         """
@@ -3173,18 +2991,15 @@ There was a conflict when trying to complete your request.
             mock.sentinel.rp_uuid,
             inv_data,
         )
-        self.assertFalse(mock_del.called)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_update_inventory')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_delete_inventory')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_classes')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_provider')
     def test_set_inventory_for_provider_no_inv(self, mock_erp, mock_erc,
-            mock_del, mock_upd):
+                                               mock_upd):
         """Tests that passing empty set of inventory records triggers a delete
         of inventory for the provider.
         """
@@ -3202,19 +3017,17 @@ There was a conflict when trying to complete your request.
             parent_provider_uuid=None,
         )
         mock_erc.assert_called_once_with(self.context, set())
-        self.assertFalse(mock_upd.called)
-        mock_del.assert_called_once_with(self.context, mock.sentinel.rp_uuid)
+        mock_upd.assert_called_once_with(
+            self.context, mock.sentinel.rp_uuid, {})
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_update_inventory')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_delete_inventory')
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_classes')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_provider')
-    def test_set_inventory_for_provider_with_custom(self, mock_erp,
-            mock_erc, mock_del, mock_upd):
+    def test_set_inventory_for_provider_with_custom(self, mock_erp, mock_erc,
+                                                    mock_upd):
         """Tests that inventory records that include a custom resource class
         are passed to the report client's _update_inventory() method and that
         the custom resource class is auto-created.
@@ -3274,10 +3087,7 @@ There was a conflict when trying to complete your request.
             mock.sentinel.rp_uuid,
             inv_data,
         )
-        self.assertFalse(mock_del.called)
 
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_delete_inventory', new=mock.Mock())
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_ensure_resource_classes', new=mock.Mock())
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
