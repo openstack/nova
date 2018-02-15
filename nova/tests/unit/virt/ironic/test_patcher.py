@@ -119,7 +119,7 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
         node = ironic_utils.get_test_node(driver='fake')
         self.flavor['extra_specs']['trait:CUSTOM_FOO'] = 'required'
         expected = [{'path': '/instance_info/traits',
-                     'value': '["CUSTOM_FOO"]',
+                     'value': ["CUSTOM_FOO"],
                      'op': 'add'}]
         expected += self._expected_deploy_patch
         patch = patcher.create(node).get_deploy_patch(
@@ -130,7 +130,7 @@ class IronicDriverFieldsTestCase(test.NoDBTestCase):
         node = ironic_utils.get_test_node(driver='fake')
         self.flavor['extra_specs']['trait1:CUSTOM_FOO'] = 'required'
         expected = [{'path': '/instance_info/traits',
-                     'value': '["CUSTOM_FOO"]',
+                     'value': ["CUSTOM_FOO"],
                      'op': 'add'}]
         expected += self._expected_deploy_patch
         patch = patcher.create(node).get_deploy_patch(
