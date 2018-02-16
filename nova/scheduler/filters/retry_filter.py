@@ -34,8 +34,6 @@ class RetryFilter(filters.BaseHostFilter):
         """Skip nodes that have already been attempted."""
         retry = spec_obj.retry
         if not retry:
-            # Re-scheduling is disabled
-            LOG.debug("Re-scheduling is disabled")
             return True
 
         # TODO(sbauza): Once the HostState is actually a ComputeNode, we could

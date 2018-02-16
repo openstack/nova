@@ -518,6 +518,7 @@ def populate_retry(filter_properties, instance_uuid):
     if (max_attempts == 1 or len(force_hosts) == 1
                            or len(force_nodes) == 1):
         # re-scheduling is disabled.
+        LOG.debug('Re-scheduling is disabled.')
         return
 
     # retry is enabled, update attempt count:
