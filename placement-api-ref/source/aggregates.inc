@@ -7,13 +7,18 @@ resource providers in groups called aggregates. API calls in this
 section are used to list and update the aggregates that are associated
 with one resource provider.
 
+Provider aggregates are used for modeling relationships among providers.
+Examples may include:
+
+* A shared storage pool providing DISK_GB resources to compute node providers
+  that provide VCPU and MEMORY_MB resources.
+* Affinity/anti-affinity relationships such as physical location, power failure
+  domains, or other reliability/availability constructs.
+* Groupings of compute host providers *corresponding to* Nova host aggregates
+  or availability zones.
+
 .. note:: Placement aggregates are *not* the same as Nova host
    aggregates and should not be considered equivalent.
-
-Provider aggregates are used for modeling relationships where a provider
-shares resources with one or more other providers. An example is a shared
-storage pool providing DISK_GB resources to other compute node providers that
-provide VCPU and MEMORY_MB resources.
 
 The primary differences between Nova's host aggregates and placement
 aggregates are the following:
@@ -37,8 +42,9 @@ aggregates are the following:
   providers are individually decorated with *traits* that provide
   qualitative information about the resource provider.
 * In Nova, a host aggregate dictates the *availability zone* within
-  which one or more nova-compute services reside. Placement aggregates
-  have no concept of an availability zone.
+  which one or more nova-compute services reside. While placement aggregates
+  may be used to *model* availability zones, they have no inherent concept
+  thereof.
 
 .. note:: Aggregates API requests are availiable starting from version 1.1.
 
