@@ -10,8 +10,7 @@ Evacuate instances
 
 If a hardware malfunction or other error causes the cloud compute node to fail,
 you can use the :command:`nova evacuate` command to evacuate instances.  See
-the `OpenStack Administrator Guide
-<https://docs.openstack.org/admin-guide/cli-nova-evacuate.html>`__.
+:doc:`evacuate instances <evacuate>` for more information on using the command.
 
 .. _nova-compute-node-down-manual-recovery:
 
