@@ -294,7 +294,7 @@ Possible values:
 Related options:
 
 * All of the filters in this option *must* be present in the
-  'scheduler_available_filters' option, or a SchedulerHostFilterNotFound
+  'available_filters' option, or a SchedulerHostFilterNotFound
   exception will be raised.
 """),
     cfg.ListOpt("baremetal_enabled_filters",
