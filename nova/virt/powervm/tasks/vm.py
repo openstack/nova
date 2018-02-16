@@ -48,7 +48,7 @@ class Create(task.Task):
         :param instance: The nova instance.
         :param stg_ftsk: FeedTask to defer storage connectivity operations.
         """
-        super(Create, self).__init__('crt_vm', provides='lpar_wrap')
+        super(Create, self).__init__(name='crt_vm', provides='lpar_wrap')
         self.instance = instance
         self.adapter = adapter
         self.host_wrapper = host_wrapper
@@ -74,7 +74,7 @@ class PowerOn(task.Task):
         :param adapter: The pypowervm adapter.
         :param instance: The nova instance.
         """
-        super(PowerOn, self).__init__('pwr_vm')
+        super(PowerOn, self).__init__(name='pwr_vm')
         self.adapter = adapter
         self.instance = instance
 
@@ -107,7 +107,7 @@ class PowerOff(task.Task):
         :param instance: The nova instance.
         :param force_immediate: Boolean. Perform a VSP hard power off.
         """
-        super(PowerOff, self).__init__('pwr_off_vm')
+        super(PowerOff, self).__init__(name='pwr_off_vm')
         self.instance = instance
         self.adapter = adapter
         self.force_immediate = force_immediate
@@ -126,7 +126,7 @@ class Delete(task.Task):
         :param adapter: The adapter for the pypowervm API.
         :param instance: The nova instance.
         """
-        super(Delete, self).__init__('dlt_vm')
+        super(Delete, self).__init__(name='dlt_vm')
         self.adapter = adapter
         self.instance = instance
 
