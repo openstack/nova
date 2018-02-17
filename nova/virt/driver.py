@@ -847,9 +847,15 @@ class ComputeDriver(object):
 
         :param nova.compute.provider_tree.ProviderTree provider_tree:
             A ProviderTree object representing all the providers associated
-            with the compute node's nested tree or aggregates.  This is fully
-            owned by the update_provider_tree method, and can therefore be
-            modified without locking/concurrency considerations.
+            with the compute node, and any sharing providers (those with the
+            ``MISC_SHARES_VIA_AGGREGATE`` trait) associated via aggregate with
+            any of those providers (but not *their* tree- or aggregate-
+            associated providers), as currently known by placement.  This
+            object is fully owned by the ``update_provider_tree`` method, and
+            can therefore be modified without locking/concurrency
+            considerations.  Note, however, that it may contain providers not
+            directly owned/controlled by the compute host.  Care must be taken
+            not to remove or modify such providers inadvertently.
         :param nodename:
             Name of the compute node for which the caller is updating providers
             and inventory.  Drivers managing more than one node may use this in
