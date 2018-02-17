@@ -132,8 +132,8 @@ class SchedulerReportClientTests(test.TestCase):
             # We should also have empty sets of aggregate and trait
             # associations
             self.assertEqual(
-                [], self.client._get_providers_in_aggregates(self.context,
-                                                             [uuids.agg]))
+                [], self.client._get_sharing_providers(self.context,
+                                                       [uuids.agg]))
             self.assertFalse(
                 self.client._provider_tree.have_aggregates_changed(
                     self.compute_uuid, []))
