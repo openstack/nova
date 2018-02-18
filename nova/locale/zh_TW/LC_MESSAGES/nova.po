@@ -12,7 +12,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-01-03 23:41+0000\n"
+"POT-Creation-Date: 2018-02-17 16:08+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -106,18 +106,6 @@ msgstr "%(total)i 列與查詢 %(meth)s 相符，已移轉 %(done)i"
 #, python-format
 msgid "%(type)s hypervisor does not support PCI devices"
 msgstr "%(type)s Hypervisor 不支援 PCI 裝置"
-
-#, python-format
-msgid "%(value_name)s must be <= %(max_value)d"
-msgstr "%(value_name)s 必須 <= %(max_value)d"
-
-#, python-format
-msgid "%(value_name)s must be >= %(min_value)d"
-msgstr "%(value_name)s 必須 >= %(min_value)d"
-
-#, python-format
-msgid "%(value_name)s must be an integer"
-msgstr "%(value_name)s 必須是整數"
 
 #, python-format
 msgid "%(worker_name)s value of %(workers)s is invalid, must be greater than 0"
@@ -1324,10 +1312,6 @@ msgstr "未辨識 Hypervisor 虛擬化類型 '%(hv_type)s'"
 #, python-format
 msgid "Hypervisor with ID '%s' could not be found."
 msgstr "找不到 ID 為 '%s' 的 Hypervisor。"
-
-#, python-format
-msgid "Hypervisor: %s"
-msgstr "Hypervisor：%s"
 
 #, python-format
 msgid "IP allocation over quota in pool %s."
@@ -3735,9 +3719,6 @@ msgstr "fmt = %(fmt)s 受 %(backing_file)s 支援"
 msgid "fping utility is not found."
 msgstr "找不到 fping 公用程式。"
 
-msgid "host"
-msgstr "主機"
-
 #, python-format
 msgid "href %s does not contain version"
 msgstr "href %s 不包含版本"
@@ -3984,6 +3965,3 @@ msgstr "如果範圍是公用的，則您無法傳遞 av_zone"
 
 msgid "you can not pass project if the scope is private"
 msgstr "如果範圍是專用的，則您無法傳遞專案"
-
-msgid "zone"
-msgstr "區域"

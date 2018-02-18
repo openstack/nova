@@ -16,7 +16,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-01-03 23:41+0000\n"
+"POT-Creation-Date: 2018-02-17 16:08+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -115,18 +115,6 @@ msgstr "%(total)i строк, совпадающих с запросом %(meth)
 #, python-format
 msgid "%(type)s hypervisor does not support PCI devices"
 msgstr "Гипервизор %(type)s не поддерживает устройства PCI"
-
-#, python-format
-msgid "%(value_name)s must be <= %(max_value)d"
-msgstr "%(value_name)s должно быть <= %(max_value)d"
-
-#, python-format
-msgid "%(value_name)s must be >= %(min_value)d"
-msgstr "%(value_name)s должен быть >= %(min_value)d"
-
-#, python-format
-msgid "%(value_name)s must be an integer"
-msgstr "%(value_name)s должен быть целым числом"
 
 #, python-format
 msgid "%(worker_name)s value of %(workers)s is invalid, must be greater than 0"
@@ -1460,10 +1448,6 @@ msgstr "Тип виртуализации гипервизора %(hv_type)s н�
 #, python-format
 msgid "Hypervisor with ID '%s' could not be found."
 msgstr "Гипервизор с ИД '%s' не найден."
-
-#, python-format
-msgid "Hypervisor: %s"
-msgstr "Гипервизор: %s"
 
 #, python-format
 msgid "IP allocation over quota in pool %s."
@@ -3994,9 +3978,6 @@ msgstr "fmt=%(fmt)s backed by: %(backing_file)s"
 msgid "fping utility is not found."
 msgstr "Утилита fping не найдена."
 
-msgid "host"
-msgstr "Узел"
-
 #, python-format
 msgid "href %s does not contain version"
 msgstr "href %s не содержит версию"
@@ -4264,6 +4245,3 @@ msgstr "Нельзя запустить av_zone, если область явл�
 
 msgid "you can not pass project if the scope is private"
 msgstr "Нельзя запустить проект, если область является частной"
-
-msgid "zone"
-msgstr "Зона"

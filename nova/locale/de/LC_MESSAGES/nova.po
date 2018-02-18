@@ -15,7 +15,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-01-03 23:41+0000\n"
+"POT-Creation-Date: 2018-02-17 16:08+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -114,18 +114,6 @@ msgstr ""
 #, python-format
 msgid "%(type)s hypervisor does not support PCI devices"
 msgstr "%(type)s Hypervisor unterstützt PCI Gerät nicht"
-
-#, python-format
-msgid "%(value_name)s must be <= %(max_value)d"
-msgstr "%(value_name)s muss <= %(max_value)d sein"
-
-#, python-format
-msgid "%(value_name)s must be >= %(min_value)d"
-msgstr "%(value_name)s muss >= %(min_value)d sein"
-
-#, python-format
-msgid "%(value_name)s must be an integer"
-msgstr "%(value_name)s muss eine Ganzzahl sein"
 
 #, python-format
 msgid "%(worker_name)s value of %(workers)s is invalid, must be greater than 0"
@@ -1513,10 +1501,6 @@ msgstr "Der Hypervisor-Virtualisierungstyp '%(hv_type)s' wird nicht erkannt"
 #, python-format
 msgid "Hypervisor with ID '%s' could not be found."
 msgstr "Hypervisor mit ID '%s' konnte nicht gefunden werden. "
-
-#, python-format
-msgid "Hypervisor: %s"
-msgstr "Hypervisor: %s"
 
 #, python-format
 msgid "IP allocation over quota in pool %s."
@@ -4155,9 +4139,6 @@ msgstr "fmt=%(fmt)s gesichert durch: %(backing_file)s"
 msgid "fping utility is not found."
 msgstr "fping-Dienstprogramm wurde nicht gefunden."
 
-msgid "host"
-msgstr "Host"
-
 #, python-format
 msgid "href %s does not contain version"
 msgstr "Hyperlink %s enthält Version nicht"
@@ -4428,6 +4409,3 @@ msgstr "Sie können av_zone nicht übergeben, wenn der Bereich öffentlich ist"
 
 msgid "you can not pass project if the scope is private"
 msgstr "Sie können das Projekt nicht übergeben, wenn der Bereich privat ist"
-
-msgid "zone"
-msgstr "Zone"
