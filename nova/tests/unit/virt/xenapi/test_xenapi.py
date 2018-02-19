@@ -1427,7 +1427,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
                 return [test_aggregate.fake_aggregate]
             else:
                 return []
-        self.stub_out('nova.db.aggregate_get_by_host',
+        self.stub_out('nova.objects.aggregate._get_by_host_from_db',
                       fake_aggregate_get)
 
         def fake_host_find(context, session, src, dst):

@@ -54,7 +54,6 @@ from nova.db.sqlalchemy import api as sa_db
 from nova import exception
 from nova.i18n import _
 from nova import objects
-from nova.objects import aggregate as aggregate_obj
 from nova.objects import block_device as block_device_obj
 from nova.objects import build_request as build_request_obj
 from nova.objects import host_mapping as host_mapping_obj
@@ -387,10 +386,6 @@ class DbCommands(object):
         request_spec.migrate_instances_add_request_spec,
         # Added in Newton
         keypair_obj.migrate_keypairs_to_api_db,
-        # Added in Newton
-        aggregate_obj.migrate_aggregates,
-        # Added in Newton
-        aggregate_obj.migrate_aggregate_reset_autoincrement,
         # Added in Newton
         instance_group_obj.migrate_instance_groups_to_api_db,
         # Added in Ocata

@@ -12161,9 +12161,10 @@ class ComputeAggrTestCase(BaseTestCase):
     def setUp(self):
         super(ComputeAggrTestCase, self).setUp()
         self.context = context.get_admin_context()
-        values = {'name': 'test_aggr'}
         az = {'availability_zone': 'test_zone'}
-        self.aggr = db.aggregate_create(self.context, values, metadata=az)
+        self.aggr = objects.Aggregate(self.context, name='test_aggr',
+                                      metadata=az)
+        self.aggr.create()
 
     def test_add_aggregate_host(self):
         def fake_driver_add_to_aggregate(self, context, aggregate, host,
@@ -12194,7 +12195,7 @@ class ComputeAggrTestCase(BaseTestCase):
     def test_add_aggregate_host_passes_slave_info_to_driver(self):
         def driver_add_to_aggregate(cls, context, aggregate, host, **kwargs):
             self.assertEqual(self.context, context)
-            self.assertEqual(aggregate['id'], self.aggr['id'])
+            self.assertEqual(aggregate.id, self.aggr.id)
             self.assertEqual(host, "the_host")
             self.assertEqual("SLAVE_INFO", kwargs.get("slave_info"))
 
@@ -12209,7 +12210,7 @@ class ComputeAggrTestCase(BaseTestCase):
         def driver_remove_from_aggregate(cls, context, aggregate, host,
                                          **kwargs):
             self.assertEqual(self.context, context)
-            self.assertEqual(aggregate['id'], self.aggr['id'])
+            self.assertEqual(aggregate.id, self.aggr.id)
             self.assertEqual(host, "the_host")
             self.assertEqual("SLAVE_INFO", kwargs.get("slave_info"))
 

@@ -25,6 +25,7 @@ from nova.compute import api as compute_api
 from nova import context
 from nova import db
 from nova import exception
+from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.image import fake
@@ -213,10 +214,12 @@ class ServersControllerCreateTestV21(test.TestCase):
                                           'binary': "nova-compute",
                                           'topic': 'compute',
                                           'report_count': 0})
-        agg = db.aggregate_create(admin_context,
-                {'name': 'agg1', 'uuid': uuidsentinel.agg_uuid},
-                {'availability_zone': 'nova'})
-        db.aggregate_host_add(admin_context, agg['id'], 'host1_zones')
+        agg = objects.Aggregate(admin_context,
+                                name='agg1',
+                                uuid=uuidsentinel.agg_uuid,
+                                metadata={'availability_zone': 'nova'})
+        agg.create()
+        agg.add_host('host1_zones')
         return self.req, body
 
     def test_create_instance_with_availability_zone(self):

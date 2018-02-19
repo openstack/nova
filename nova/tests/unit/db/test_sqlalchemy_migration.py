@@ -240,12 +240,6 @@ class TestNewtonCheck(test.TestCase):
             '330_enforce_mitaka_online_migrations')
         self.engine = db_api.get_engine()
 
-    def test_aggregate_not_migrated(self):
-        agg = db_api.aggregate_create(self.context, {"name": "foobar"})
-        db_api.aggregate_update(self.context, agg.id, {'uuid': None})
-        self.assertRaises(exception.ValidationError,
-                          self.migration.upgrade, self.engine)
-
     def setup_pci_device(self, dev_type):
         # NOTE(jaypipes): We cannot use db_api.pci_device_update() here because
         # newer models of PciDevice contain fields (uuid) that are not present
@@ -346,16 +340,6 @@ class TestOcataCheck(test.TestCase):
         keypair = db_api.key_pair_create(self.context, self.keypair_values)
         db_api.key_pair_destroy(self.context,
                                 keypair['user_id'], keypair['name'])
-        self.migration.upgrade(self.engine)
-
-    def test_upgrade_dirty_aggregates(self):
-        db_api.aggregate_create(self.context, self.aggregate_values)
-        self.assertRaises(exception.ValidationError,
-                          self.migration.upgrade, self.engine)
-
-    def test_upgrade_with_deleted_aggregates(self):
-        agg = db_api.aggregate_create(self.context, self.aggregate_values)
-        db_api.aggregate_delete(self.context, agg['id'])
         self.migration.upgrade(self.engine)
 
     def test_upgrade_dirty_instance_groups(self):

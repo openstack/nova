@@ -44,21 +44,19 @@ class AvailabilityZoneTestCases(test.TestCase):
         self.agg = self._create_az('az_agg', self.availability_zone)
 
     def tearDown(self):
-        db.aggregate_delete(self.context, self.agg['id'])
+        self.agg.destroy()
         super(AvailabilityZoneTestCases, self).tearDown()
 
     def _create_az(self, agg_name, az_name):
-        agg_meta = {'name': agg_name, 'uuid': uuidsentinel.agg_uuid}
-        agg = db.aggregate_create(self.context, agg_meta)
-
-        metadata = {'availability_zone': az_name}
-        db.aggregate_metadata_add(self.context, agg['id'], metadata)
-
+        agg_meta = {'name': agg_name, 'uuid': uuidsentinel.agg_uuid,
+                    'metadata': {'availability_zone': az_name}}
+        agg = objects.Aggregate(self.context, **agg_meta)
+        agg.create()
+        agg = objects.Aggregate.get_by_id(self.context, agg.id)
         return agg
 
     def _update_az(self, aggregate, az_name):
-        metadata = {'availability_zone': az_name}
-        db.aggregate_update(self.context, aggregate['id'], metadata)
+        aggregate.update_metadata({'availability_zone': az_name})
 
     def _create_service_with_topic(self, topic, host, disabled=False):
         values = {
@@ -73,12 +71,10 @@ class AvailabilityZoneTestCases(test.TestCase):
         return db.service_destroy(self.context, service['id'])
 
     def _add_to_aggregate(self, service, aggregate):
-        return db.aggregate_host_add(self.context,
-                                     aggregate['id'], service['host'])
+        aggregate.add_host(service['host'])
 
     def _delete_from_aggregate(self, service, aggregate):
-        return db.aggregate_host_delete(self.context,
-                                        aggregate['id'], service['host'])
+        aggregate.delete_host(service['host'])
 
     def test_rest_availability_zone_reset_cache(self):
         az._get_cache().add('cache', 'fake_value')
