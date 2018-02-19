@@ -635,7 +635,7 @@ def _create_test_instance():
         'instance_type_id': '5',  # m1.small
         'extra_specs': {},
         'system_metadata': {
-            'image_disk_format': 'raw',
+            'image_disk_format': 'raw'
         },
         'flavor': flavor,
         'new_flavor': None,
@@ -1847,6 +1847,8 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         test_instance = copy.deepcopy(self.test_instance)
         test_instance["display_name"] = "purple tomatoes"
+        test_instance['system_metadata']['owner_project_name'] = 'sweetshop'
+        test_instance['system_metadata']['owner_user_name'] = 'cupcake'
 
         ctxt = context.RequestContext(project_id=123,
                                       project_name="aubergine",
@@ -1921,13 +1923,13 @@ class LibvirtConnTestCase(test.NoDBTestCase):
 
         self.assertIsInstance(cfg.metadata[0].owner,
                               vconfig.LibvirtConfigGuestMetaNovaOwner)
-        self.assertEqual(456,
+        self.assertEqual("838a72b0-0d54-4827-8fd6-fb1227633ceb",
                          cfg.metadata[0].owner.userid)
-        self.assertEqual("pie",
+        self.assertEqual("cupcake",
                          cfg.metadata[0].owner.username)
-        self.assertEqual(123,
+        self.assertEqual("fake",
                          cfg.metadata[0].owner.projectid)
-        self.assertEqual("aubergine",
+        self.assertEqual("sweetshop",
                          cfg.metadata[0].owner.projectname)
 
         self.assertIsInstance(cfg.metadata[0].flavor,
@@ -1944,6 +1946,40 @@ class LibvirtConnTestCase(test.NoDBTestCase):
                          cfg.metadata[0].flavor.ephemeral)
         self.assertEqual(33550336,
                          cfg.metadata[0].flavor.swap)
+
+    def test_get_guest_config_missing_ownership_info(self):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+
+        test_instance = copy.deepcopy(self.test_instance)
+
+        ctxt = context.RequestContext(project_id=123,
+                                      project_name="aubergine",
+                                      user_id=456,
+                                      user_name="pie")
+
+        flavor = objects.Flavor(name='m1.small',
+                                memory_mb=6,
+                                vcpus=28,
+                                root_gb=496,
+                                ephemeral_gb=8128,
+                                swap=33550336,
+                                extra_specs={})
+        instance_ref = objects.Instance(**test_instance)
+        instance_ref.flavor = flavor
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+
+        cfg = drvr._get_guest_config(instance_ref,
+                                     _fake_network_info(self, 1),
+                                     image_meta, disk_info,
+                                     context=ctxt)
+        self.assertEqual("N/A",
+                         cfg.metadata[0].owner.username)
+        self.assertEqual("N/A",
+                         cfg.metadata[0].owner.projectname)
 
     def test_get_guest_config_lxc(self):
         self.flags(virt_type='lxc', group='libvirt')

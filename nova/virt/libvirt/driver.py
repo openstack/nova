@@ -3839,7 +3839,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return dev
 
-    def _get_guest_config_meta(self, context, instance):
+    def _get_guest_config_meta(self, instance):
         """Get metadata config for guest."""
 
         meta = vconfig.LibvirtConfigGuestMetaNovaInstance()
@@ -3851,13 +3851,13 @@ class LibvirtDriver(driver.ComputeDriver):
             meta.roottype = "image"
             meta.rootid = instance.image_ref
 
-        if context is not None:
-            ometa = vconfig.LibvirtConfigGuestMetaNovaOwner()
-            ometa.userid = context.user_id
-            ometa.username = context.user_name
-            ometa.projectid = context.project_id
-            ometa.projectname = context.project_name
-            meta.owner = ometa
+        system_meta = instance.system_metadata
+        ometa = vconfig.LibvirtConfigGuestMetaNovaOwner()
+        ometa.userid = instance.user_id
+        ometa.username = system_meta.get('owner_user_name', 'N/A')
+        ometa.projectid = instance.project_id
+        ometa.projectname = system_meta.get('owner_project_name', 'N/A')
+        meta.owner = ometa
 
         fmeta = vconfig.LibvirtConfigGuestMetaNovaFlavor()
         flavor = instance.flavor
@@ -4778,8 +4778,7 @@ class LibvirtDriver(driver.ComputeDriver):
             guest_numa_config.numatune,
             flavor)
 
-        guest.metadata.append(self._get_guest_config_meta(context,
-                                                          instance))
+        guest.metadata.append(self._get_guest_config_meta(instance))
         guest.idmaps = self._get_guest_idmaps()
 
         for event in self._supported_perf_events:
