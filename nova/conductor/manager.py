@@ -1031,7 +1031,8 @@ class ComputeTaskManager(base.Base):
             return tags
 
     def _bury_in_cell0(self, context, request_spec, exc,
-                       build_requests=None, instances=None):
+                       build_requests=None, instances=None,
+                       block_device_mapping=None):
         """Ensure all provided build_requests and instances end up in cell0.
 
         Cell0 is the fake cell we schedule dead instances to when we can't
@@ -1067,6 +1068,14 @@ class ComputeTaskManager(base.Base):
         for instance in instances_by_uuid.values():
             with obj_target_cell(instance, cell0) as cctxt:
                 instance.create()
+
+                # NOTE(mnaser): In order to properly clean-up volumes after
+                #               being buried in cell0, we need to store BDMs.
+                if block_device_mapping:
+                    self._create_block_device_mapping(
+                       cell0, instance.flavor, instance.uuid,
+                       block_device_mapping)
+
                 # Use the context targeted to cell0 here since the instance is
                 # now in cell0.
                 self._set_vm_state_and_notify(
@@ -1105,7 +1114,8 @@ class ComputeTaskManager(base.Base):
         except Exception as exc:
             LOG.exception('Failed to schedule instances')
             self._bury_in_cell0(context, request_specs[0], exc,
-                                build_requests=build_requests)
+                                build_requests=build_requests,
+                                block_device_mapping=block_device_mapping)
             return
 
         host_mapping_cache = {}
@@ -1128,9 +1138,10 @@ class ComputeTaskManager(base.Base):
                     LOG.error('No host-to-cell mapping found for selected '
                               'host %(host)s. Setup is incomplete.',
                               {'host': host.service_host})
-                    self._bury_in_cell0(context, request_spec, exc,
-                                        build_requests=[build_request],
-                                        instances=[instance])
+                    self._bury_in_cell0(
+                        context, request_spec, exc,
+                        build_requests=[build_request], instances=[instance],
+                        block_device_mapping=block_device_mapping)
                     # This is a placeholder in case the quota recheck fails.
                     instances.append(None)
                     continue
