@@ -2000,22 +2000,13 @@ class ComputeManager(manager.Manager):
             self._cleanup_allocated_networks(context, instance,
                     requested_networks)
             return build_results.FAILED
-        except exception.BuildAbortException as e:
-            LOG.error(e.format_message(), instance=instance)
-            self._cleanup_allocated_networks(context, instance,
-                    requested_networks)
-            self._cleanup_volumes(context, instance,
-                    block_device_mapping, raise_exc=False)
-            compute_utils.add_instance_fault_from_exc(context, instance,
-                    e, sys.exc_info())
-            self._nil_out_instance_obj_host_and_node(instance)
-            self._set_instance_obj_error_state(context, instance,
-                                               clean_task_state=True)
-            return build_results.FAILED
         except Exception as e:
-            # Should not reach here.
-            LOG.exception('Unexpected build failure, not rescheduling build.',
-                          instance=instance)
+            if isinstance(e, exception.BuildAbortException):
+                LOG.error(e.format_message(), instance=instance)
+            else:
+                # Should not reach here.
+                LOG.exception('Unexpected build failure, not rescheduling '
+                              'build.', instance=instance)
             self._cleanup_allocated_networks(context, instance,
                     requested_networks)
             self._cleanup_volumes(context, instance,
