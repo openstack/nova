@@ -1176,7 +1176,7 @@ class SqlAlchemyDbApiTestCase(DbTestCase):
 
         @sqlalchemy_api.pick_context_manager_reader
         def test(context):
-            return sqlalchemy_api._instance_get_all_uuids_by_host(
+            return sqlalchemy_api.instance_get_all_by_host(
                 context, 'host1')
 
         result = test(ctxt)
