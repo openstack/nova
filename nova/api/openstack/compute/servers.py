@@ -1146,8 +1146,6 @@ class ServersController(wsgi.Controller):
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                 'trigger_crash_dump', id)
-        except exception.TriggerCrashDumpNotSupported as e:
-            raise webob.exc.HTTPBadRequest(explanation=e.format_message())
 
 
 def remove_invalid_options(context, search_options, allowed_search_options):

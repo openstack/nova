@@ -255,7 +255,6 @@ class ComputeTaskManager(base.Base):
         exception.HypervisorUnavailable,
         exception.InstanceInvalidState,
         exception.MigrationPreCheckError,
-        exception.LiveMigrationWithOldNovaNotSupported,
         exception.UnsupportedPolicyException)
     @targets_cell
     @wrap_instance_event(prefix='conductor')
@@ -432,7 +431,6 @@ class ComputeTaskManager(base.Base):
                 exception.HypervisorUnavailable,
                 exception.InstanceInvalidState,
                 exception.MigrationPreCheckError,
-                exception.LiveMigrationWithOldNovaNotSupported,
                 exception.MigrationSchedulerRPCError) as ex:
             with excutils.save_and_reraise_exception():
                 # TODO(johngarbutt) - eventually need instance actions here

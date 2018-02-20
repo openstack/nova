@@ -66,7 +66,7 @@ class TestInstanceNotificationSampleWithMultipleCompute(
             self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
 
     @mock.patch('nova.compute.rpcapi.ComputeAPI.pre_live_migration',
-                side_effect=exception.LiveMigrationWithOldNovaNotSupported())
+                side_effect=exception.DestinationDiskExists(path='path'))
     def _test_live_migration_rollback(self, server, mock_migration):
         post = {
             'os-migrateLive': {

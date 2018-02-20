@@ -115,8 +115,7 @@ class MigrateServerController(wsgi.Controller):
                 exception.InvalidLocalStorage,
                 exception.InvalidSharedStorage,
                 exception.HypervisorUnavailable,
-                exception.MigrationPreCheckError,
-                exception.LiveMigrationWithOldNovaNotSupported) as ex:
+                exception.MigrationPreCheckError) as ex:
             if async:
                 with excutils.save_and_reraise_exception():
                     LOG.error("Unexpected exception received from "

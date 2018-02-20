@@ -330,10 +330,6 @@ class MigrateServerTestsV225(MigrateServerTestsV21):
                           self.controller._migrate_live,
                           self.req, fakes.FAKE_UUID, body=body)
 
-    def test_migrate_live_migration_with_old_nova_not_supported(self):
-        self._test_migrate_live_failed_with_exception(
-            exception.LiveMigrationWithOldNovaNotSupported())
-
 
 class MigrateServerTestsV230(MigrateServerTestsV225):
     force = False

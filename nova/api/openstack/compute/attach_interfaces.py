@@ -137,7 +137,7 @@ class InterfaceAttachmentController(wsgi.Controller):
                 exception.PortNotUsable,
                 exception.AttachInterfaceNotSupported,
                 exception.SecurityGroupCannotBeApplied,
-                exception.TaggedAttachmentNotSupported) as e:
+                exception.NetworkInterfaceTaggedAttachNotSupported) as e:
             raise exc.HTTPBadRequest(explanation=e.format_message())
         except (exception.InstanceIsLocked,
                 exception.FixedIpAlreadyInUse,
