@@ -1346,6 +1346,13 @@ class API(base.Base):
                         # compatibility can be removed after Ocata EOL.
                         self._check_attach(context, volume, instance)
                     bdm.volume_size = volume.get('size')
+
+                    # NOTE(mnaser): If we end up reserving the volume, it will
+                    #               not have an attachment_id which is needed
+                    #               for cleanups.  This can be removed once
+                    #               all calls to reserve_volume are gone.
+                    if 'attachment_id' not in bdm:
+                        bdm.attachment_id = None
                 except (exception.CinderConnectionFailed,
                         exception.InvalidVolume):
                     raise
