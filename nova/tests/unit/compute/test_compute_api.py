@@ -3606,6 +3606,46 @@ class _ComputeAPIUnitTestMixIn(object):
     @mock.patch.object(objects.Service, 'get_minimum_version',
                        return_value=17)
     @mock.patch.object(cinder.API, 'get')
+    @mock.patch.object(cinder.API, 'reserve_volume')
+    def test_validate_bdm_returns_attachment_id(self, mock_reserve_volume,
+                                                mock_get, mock_get_min_ver,
+                                                mock_get_min_ver_all):
+        # Tests that bdm validation *always* returns an attachment_id even if
+        # it's None.
+        instance = self._create_instance_obj()
+        instance_type = self._create_flavor()
+        volume_id = 'e856840e-9f5b-4894-8bde-58c6e29ac1e8'
+        volume_info = {'status': 'available',
+                       'attach_status': 'detached',
+                       'id': volume_id,
+                       'multiattach': False}
+        mock_get.return_value = volume_info
+
+        # NOTE(mnaser): We use the AnonFakeDbBlockDeviceDict to make sure that
+        #               the attachment_id field does not get any defaults to
+        #               properly test this function.
+        bdms = [objects.BlockDeviceMapping(
+                **fake_block_device.AnonFakeDbBlockDeviceDict(
+                {
+                 'boot_index': 0,
+                 'volume_id': volume_id,
+                 'source_type': 'volume',
+                 'destination_type': 'volume',
+                 'device_name': 'vda',
+                }))]
+        self.compute_api._validate_bdm(self.context, instance, instance_type,
+                                       bdms)
+        self.assertIsNone(bdms[0].attachment_id)
+
+        mock_get.assert_called_once_with(self.context, volume_id)
+        mock_reserve_volume.assert_called_once_with(
+            self.context, volume_id)
+
+    @mock.patch.object(objects.service, 'get_minimum_version_all_cells',
+                       return_value=17)
+    @mock.patch.object(objects.Service, 'get_minimum_version',
+                       return_value=17)
+    @mock.patch.object(cinder.API, 'get')
     @mock.patch.object(cinder.API, 'reserve_volume',
                        side_effect=exception.InvalidInput(reason='error'))
     def test_validate_bdm_with_error_volume(self, mock_reserve_volume,

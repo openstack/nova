@@ -1352,6 +1352,13 @@ class API(base.Base):
                         volume = self._check_attach(context, volume_id,
                                                     instance)
                     bdm.volume_size = volume.get('size')
+
+                    # NOTE(mnaser): If we end up reserving the volume, it will
+                    #               not have an attachment_id which is needed
+                    #               for cleanups.  This can be removed once
+                    #               all calls to reserve_volume are gone.
+                    if 'attachment_id' not in bdm:
+                        bdm.attachment_id = None
                 except (exception.CinderConnectionFailed,
                         exception.InvalidVolume):
                     raise
@@ -1780,6 +1787,11 @@ class API(base.Base):
             # instance is now in a cell and the delete needs to proceed
             # normally.
             return False
+
+        # We need to detach from any volumes so they aren't orphaned.
+        self._local_cleanup_bdm_volumes(
+            build_req.block_device_mappings, instance, context)
+
         return True
 
     def _delete(self, context, instance, delete_type, cb, **instance_attrs):
@@ -2054,7 +2066,12 @@ class API(base.Base):
                 except Exception as exc:
                     LOG.warning("Ignoring volume cleanup failure due to %s",
                                 exc, instance=instance)
-            bdm.destroy()
+            # If we're cleaning up volumes from an instance that wasn't yet
+            # created in a cell, i.e. the user deleted the server while
+            # the BuildRequest still existed, then the BDM doesn't actually
+            # exist in the DB to destroy it.
+            if 'id' in bdm:
+                bdm.destroy()
 
     def _local_delete(self, context, instance, bdms, delete_type, cb):
         if instance.vm_state == vm_states.SHELVED_OFFLOADED:

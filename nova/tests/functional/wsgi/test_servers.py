@@ -274,7 +274,4 @@ class ServersPreSchedulingTestCase(test.TestCase):
 
         # The volume should no longer have any attachments as instance delete
         # should have removed them.
-        # self.assertNotIn(volume_id, cinder.reserved_volumes)
-        # FIXME(mnaser): This is part of bug 1750666 where the BDMs aren't
-        # properly deleted because they don't exist in the database.
-        self.assertIn(volume_id, cinder.reserved_volumes)
+        self.assertNotIn(volume_id, cinder.reserved_volumes)
