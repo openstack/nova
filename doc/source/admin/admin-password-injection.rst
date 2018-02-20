@@ -39,6 +39,10 @@ the ``/etc/shadow`` file inside the virtual machine instance.
 
 .. note::
 
+   Linux distribution guest only.
+
+.. note::
+
    Users can only use :command:`ssh` to access the instance by using the admin
    password if the virtual machine image is a Linux distribution, and it has
    been configured to allow users to use :command:`ssh` as the root user. This
