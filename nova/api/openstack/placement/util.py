@@ -21,12 +21,16 @@ from oslo_utils import timeutils
 from oslo_utils import uuidutils
 import webob
 
+from nova.api.openstack.placement import errors
 from nova.api.openstack.placement import lib as placement_lib
 # NOTE(cdent): avoid cyclical import conflict between util and
 # microversion
 import nova.api.openstack.placement.microversion
 from nova.i18n import _
 
+# Error code handling constants
+ENV_ERROR_CODE = 'placement.error_code'
+ERROR_CODE_MICROVERSION = (1, 23)
 
 # Querystring-related constants
 _QS_RESOURCES = 'resources'
@@ -101,6 +105,9 @@ def json_error_formatter(body, status, title, environ):
     Follows API-WG guidelines at
     http://specs.openstack.org/openstack/api-wg/guidelines/errors.html
     """
+    # Shortcut to microversion module, to avoid wraps below.
+    microversion = nova.api.openstack.placement.microversion
+
     # Clear out the html that webob sneaks in.
     body = webob.exc.strip_tags(body)
     # Get status code out of status message. webob's error formatter
@@ -111,6 +118,13 @@ def json_error_formatter(body, status, title, environ):
         'title': title,
         'detail': body
     }
+
+    # Version may not be set if we have experienced an error before it
+    # is set.
+    want_version = environ.get(microversion.MICROVERSION_ENVIRON)
+    if want_version and want_version.matches(ERROR_CODE_MICROVERSION):
+        error_dict['code'] = environ.get(ENV_ERROR_CODE, errors.DEFAULT)
+
     # If the request id middleware has had a chance to add an id,
     # put it in the error response.
     if request_id.ENV_REQUEST_ID in environ:
@@ -119,7 +133,6 @@ def json_error_formatter(body, status, title, environ):
     # When there is a no microversion in the environment and a 406,
     # microversion parsing failed so we need to include microversion
     # min and max information in the error response.
-    microversion = nova.api.openstack.placement.microversion
     if status_code == 406 and microversion.MICROVERSION_ENVIRON not in environ:
         error_dict['max_version'] = microversion.max_version_string()
         error_dict['min_version'] = microversion.min_version_string()

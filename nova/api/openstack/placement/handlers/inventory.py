@@ -18,6 +18,7 @@ from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 import webob
 
+from nova.api.openstack.placement import errors
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
@@ -317,10 +318,13 @@ def set_inventories(req):
               '%(rp_uuid)s: %(error)s') % {'rp_uuid': resource_provider.uuid,
                                            'error': exc})
     except (exception.ConcurrentUpdateDetected,
-            exception.InventoryInUse,
             db_exc.DBDuplicateEntry) as exc:
         raise webob.exc.HTTPConflict(
             _('update conflict: %(error)s') % {'error': exc})
+    except exception.InventoryInUse as exc:
+        raise webob.exc.HTTPConflict(
+            _('update conflict: %(error)s') % {'error': exc},
+            comment=errors.INVENTORY_INUSE)
     except exception.InvalidInventoryCapacity as exc:
         raise webob.exc.HTTPBadRequest(
             _('Unable to update inventory for resource provider '

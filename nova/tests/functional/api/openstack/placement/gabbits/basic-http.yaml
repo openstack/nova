@@ -26,6 +26,14 @@ tests:
   response_json_paths:
       $.errors[0].request_id: /req-[a-fA-F0-9-]+/
 
+- name: error message has default code 1.23
+  GET: /barnabas
+  status: 404
+  request_headers:
+      openstack-api-version: placement 1.23
+  response_json_paths:
+      $.errors[0].code: placement.undefined_code
+
 - name: 404 at no resource provider
   GET: /resource_providers/fd0dd55c-6330-463b-876c-31c54e95cb95
   status: 404

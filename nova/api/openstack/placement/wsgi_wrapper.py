@@ -30,4 +30,9 @@ class PlacementWsgify(wsgify):
         except webob.exc.HTTPException as exc:
             LOG.debug("Placement API returning an error response: %s", exc)
             exc.json_formatter = util.json_error_formatter
+            # The exception itself is not passed to json_error_formatter
+            # but environ is, so set the environ.
+            if exc.comment:
+                req.environ[util.ENV_ERROR_CODE] = exc.comment
+                exc.comment = None
             raise

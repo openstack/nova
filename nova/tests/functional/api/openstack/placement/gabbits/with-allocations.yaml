@@ -31,6 +31,19 @@ tests:
   response_strings:
       - "Unable to delete resource provider $ENVIRON['RP_UUID']: Resource provider has allocations."
 
+- name: fail to change inventory via put 1.23
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/inventories
+  request_headers:
+      accept: application/json
+      content-type: application/json
+      openstack-api-version: placement 1.23
+  data:
+      resource_provider_generation: 5
+      inventories: {}
+  status: 409
+  response_json_paths:
+      $.errors[0].code: placement.inventory.inuse
+
 - name: fail to delete all inventory
   DELETE: /resource_providers/$ENVIRON['RP_UUID']/inventories
   request_headers:

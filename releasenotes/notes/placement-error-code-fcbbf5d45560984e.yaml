@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    In microversion 1.23 of the placement service, JSON formatted error
+    responses gain a new attribute, ``code``, with a value that identifies the
+    type of this error. This can be used to distinguish errors that are
+    different but use the same HTTP status code. Any error response which does
+    not specifically define a code will have the code
+    ``placement.undefined_code``.

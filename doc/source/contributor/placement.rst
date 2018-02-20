@@ -252,6 +252,24 @@ environment. It can be retrieved as follows::
           changes in a patch that is separate from and prior to the HTTP API
           change.
 
+If a handler needs to return an error response, with the advent of `link to
+spec once it merges`_, it is possible to include a code in the JSON error
+response.  This can be used to distinguish different errors with the same HTTP
+response status code (a common case is a generation conflict versus an
+inventory in use conflict). Error codes are simple namespaced strings (e.g.,
+``placement.inventory.inuse``) for which symbols are maintained in
+``nova.api.openstack.placement.errors``. Adding a symbol to a response is done
+by using the ``comment`` kwarg to a WebOb exception, like this::
+
+    except exception.InventoryInUse as exc:
+        raise webob.exc.HTTPConflict(
+            _('update conflict: %(error)s') % {'error': exc},
+            comment=errors.INVENTORY_INUSE)
+
+Code that adds newly raised exceptions should include an error code. Find
+additional guidelines on use in the docs for
+``nova.api.openstack.placement.errors``.
+
 Testing of handler code is described in the next section.
 
 Testing
