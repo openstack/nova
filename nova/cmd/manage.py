@@ -487,6 +487,9 @@ Error: %s""") % six.text_type(e))
                'Note that this number does not include the corresponding '
                'rows, if any, that are removed from the API database for '
                'deleted instances.')
+    @args('--before', metavar='<date>',
+          help=('Archive rows that have been deleted before this date'
+                '(YYYY-MM-DD)'))
     @args('--verbose', action='store_true', dest='verbose', default=False,
           help='Print how many rows were archived per table.')
     @args('--until-complete', action='store_true', dest='until_complete',
@@ -496,13 +499,15 @@ Error: %s""") % six.text_type(e))
     @args('--purge', action='store_true', dest='purge', default=False,
           help='Purge all data from shadow tables after archive completes')
     def archive_deleted_rows(self, max_rows=1000, verbose=False,
-                             until_complete=False, purge=False):
+                             until_complete=False, purge=False,
+                             before=None):
         """Move deleted rows from production tables to shadow tables.
 
         Returns 0 if nothing was archived, 1 if some number of rows were
         archived, 2 if max_rows is invalid, 3 if no connection could be
-        established to the API DB. If automating, this should be
-        run continuously while the result is 1, stopping at 0.
+        established to the API DB, 4 if before date is invalid. If automating,
+        this should be run continuously while the result
+        is 1, stopping at 0.
         """
         max_rows = int(max_rows)
         if max_rows < 0:
@@ -526,13 +531,23 @@ Error: %s""") % six.text_type(e))
                     'command again.'))
             return 3
 
+        if before:
+            try:
+                before_date = dateutil_parser.parse(before, fuzzy=True)
+            except ValueError as e:
+                print(_('Invalid value for --before: %s') % e)
+                return 4
+        else:
+            before_date = None
+
         table_to_rows_archived = {}
         deleted_instance_uuids = []
         if until_complete and verbose:
             sys.stdout.write(_('Archiving') + '..')  # noqa
         while True:
             try:
-                run, deleted_instance_uuids = db.archive_deleted_rows(max_rows)
+                run, deleted_instance_uuids = db.archive_deleted_rows(
+                                                max_rows, before=before_date)
             except KeyboardInterrupt:
                 run = {}
                 if until_complete and verbose:
