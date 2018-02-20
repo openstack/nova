@@ -446,38 +446,6 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.assertEqual(4, mock_warning.call_count)
 
     @mock.patch.object(ironic_driver.LOG, 'warning')
-    def test__parse_node_instance_info(self, mock_warning):
-        props = _get_properties()
-        instance_info = _get_instance_info()
-        node = ironic_utils.get_test_node(
-            uuid=uuidutils.generate_uuid(),
-            instance_info=instance_info)
-        parsed = self.driver._parse_node_instance_info(node, props)
-
-        self.assertEqual(instance_info, parsed)
-        self.assertFalse(mock_warning.called)
-
-    @mock.patch.object(ironic_driver.LOG, 'warning')
-    def test__parse_node_instance_info_bad_values(self, mock_warning):
-        props = _get_properties()
-        instance_info = _get_instance_info()
-        instance_info['vcpus'] = 'bad-value'
-        instance_info['memory_mb'] = 'bad-value'
-        instance_info['local_gb'] = 'bad-value'
-        node = ironic_utils.get_test_node(
-            uuid=uuidutils.generate_uuid(),
-            instance_info=instance_info)
-        parsed = self.driver._parse_node_instance_info(node, props)
-
-        expected = {
-            'vcpus': props['cpus'],
-            'memory_mb': props['memory_mb'],
-            'local_gb': props['local_gb']
-        }
-        self.assertEqual(expected, parsed)
-        self.assertEqual(3, mock_warning.call_count)
-
-    @mock.patch.object(ironic_driver.LOG, 'warning')
     def test__parse_node_properties_canonicalize_cpu_arch(self, mock_warning):
         props = _get_properties()
         props['cpu_arch'] = 'amd64'
