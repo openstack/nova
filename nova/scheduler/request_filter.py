@@ -60,8 +60,33 @@ def require_tenant_aggregate(ctxt, request_spec):
             reason=_('No hosts available for tenant'))
 
 
+def map_az_to_placement_aggregate(ctxt, request_spec):
+    """Map requested nova availability zones to placement aggregates.
+
+    This will modify request_spec to request hosts in an aggregate that
+    matches the desired AZ of the user's request.
+    """
+    if not CONF.scheduler.query_placement_for_availability_zone:
+        return
+
+    az_hint = request_spec.availability_zone
+    if not az_hint:
+        return
+
+    aggregates = objects.AggregateList.get_by_metadata(ctxt,
+                                                       key='availability_zone',
+                                                       value=az_hint)
+    if aggregates:
+        if ('requested_destination' not in request_spec or
+                request_spec.requested_destination is None):
+            request_spec.requested_destination = objects.Destination()
+        request_spec.requested_destination.require_aggregates(
+            [agg.uuid for agg in aggregates])
+
+
 ALL_REQUEST_FILTERS = [
     require_tenant_aggregate,
+    map_az_to_placement_aggregate,
 ]
 
 

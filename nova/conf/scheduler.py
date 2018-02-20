@@ -164,6 +164,22 @@ scheduling to any available node.
 
 See also the limit_tenants_to_placement_aggregate option.
 """),
+    cfg.BoolOpt("query_placement_for_availability_zone",
+                default=False,
+                help="""
+This setting causes the scheduler to look up a host aggregate with the
+metadata key of `availability_zone` set to the value provided by an
+incoming request, and request results from placement be limited to that
+aggregate.
+
+The matching aggregate UUID must be mirrored in placement for proper
+operation. If no host aggregate with the `availability_zone` key is
+found, or that aggregate does not match one in placement, the result will
+be the same as not finding any suitable hosts.
+
+Note that if you enable this flag, you can disable the (less efficient)
+AvailabilityZoneFilter in the scheduler.
+"""),
 ]
 
 filter_scheduler_group = cfg.OptGroup(name="filter_scheduler",

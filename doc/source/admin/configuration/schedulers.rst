@@ -1239,6 +1239,54 @@ this function, and is enabled by setting
 
   $ openstack --os-placement-api-version=1.2 resource provider aggregate set --aggregate 019e2189-31b3-49e1-aff2-b220ebd91c24 815a5634-86fb-4e1e-8824-8a631fee3e06
 
+Availability Zones with Placement
+---------------------------------
+
+In order to use placement to honor availability zone requests, there must be
+placement aggregates that match the membership and UUID of nova host aggregates
+that you assign as availability zones. The same key in aggregate metadata used
+by the `AvailabilityZoneFilter` filter controls this function, and is enabled by
+setting `[scheduler]/query_placement_for_availability_zone=True`.
+
+.. code-block:: console
+
+  $ openstack --os-compute-api-version=2.53 aggregate create myaz
+  +-------------------+--------------------------------------+
+  | Field             | Value                                |
+  +-------------------+--------------------------------------+
+  | availability_zone | None                                 |
+  | created_at        | 2018-03-29T16:22:23.175884           |
+  | deleted           | False                                |
+  | deleted_at        | None                                 |
+  | id                | 4                                    |
+  | name              | myaz                                 |
+  | updated_at        | None                                 |
+  | uuid              | 019e2189-31b3-49e1-aff2-b220ebd91c24 |
+  +-------------------+--------------------------------------+
+
+  $ openstack --os-compute-api-version=2.53 aggregate add host myaz node1
+  +-------------------+--------------------------------------+
+  | Field             | Value                                |
+  +-------------------+--------------------------------------+
+  | availability_zone | None                                 |
+  | created_at        | 2018-03-29T16:22:23.175884           |
+  | deleted           | False                                |
+  | deleted_at        | None                                 |
+  | hosts             | [u'node1']                           |
+  | id                | 4                                    |
+  | name              | myagg                                |
+  | updated_at        | None                                 |
+  | uuid              | 019e2189-31b3-49e1-aff2-b220ebd91c24 |
+  +-------------------+--------------------------------------+
+
+  $ openstack aggregate set --property availability_zone=az002 myaz
+
+  $ openstack --os-placement-api-version=1.2 resource provider aggregate set --aggregate 019e2189-31b3-49e1-aff2-b220ebd91c24 815a5634-86fb-4e1e-8824-8a631fee3e06
+
+With the above configuration, the `AvailabilityZoneFilter` filter can be disabled
+in `[filter_scheduler]/enabled_filters` while retaining proper behavior (and doing
+so with the higher performance of placement's implementation).
+
 XenServer hypervisor pools to support live migration
 ----------------------------------------------------
 
