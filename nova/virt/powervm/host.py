@@ -14,14 +14,12 @@
 
 import math
 
-from oslo_log import log as logging
 from oslo_serialization import jsonutils
 
 from nova import conf as cfg
 from nova.objects import fields
 
 
-LOG = logging.getLogger(__name__)
 CONF = cfg.CONF
 
 # Power VM hypervisor info

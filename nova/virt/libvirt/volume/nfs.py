@@ -11,12 +11,8 @@
 #    under the License.
 
 
-from oslo_log import log as logging
-
 import nova.conf
 from nova.virt.libvirt.volume import fs
-
-LOG = logging.getLogger(__name__)
 
 CONF = nova.conf.CONF
 

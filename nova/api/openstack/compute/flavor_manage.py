@@ -12,8 +12,6 @@
 
 import webob
 
-from oslo_log import log as logging
-
 from nova.api.openstack import api_version_request
 from nova.api.openstack.compute.schemas import flavor_manage
 from nova.api.openstack.compute.views import flavors as flavors_view
@@ -27,7 +25,6 @@ from nova.policies import flavor_manage as fm_policies
 from nova import policy
 
 
-LOG = logging.getLogger(__name__)
 ALIAS = "os-flavor-manage"
 
 

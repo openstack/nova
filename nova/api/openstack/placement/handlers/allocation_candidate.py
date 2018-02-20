@@ -14,7 +14,6 @@
 
 import collections
 
-from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 from oslo_utils import timeutils
@@ -28,9 +27,6 @@ from nova.api.openstack.placement import wsgi_wrapper
 from nova import exception
 from nova.i18n import _
 from nova.objects import resource_provider as rp_obj
-
-
-LOG = logging.getLogger(__name__)
 
 
 def _transform_allocation_requests_dict(alloc_reqs):

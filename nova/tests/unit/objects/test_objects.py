@@ -21,7 +21,6 @@ import pprint
 
 import fixtures
 import mock
-from oslo_log import log
 from oslo_utils import timeutils
 from oslo_versionedobjects import base as ovo_base
 from oslo_versionedobjects import exception as ovo_exc
@@ -38,9 +37,6 @@ from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit import fake_notifier
 from nova import utils
-
-
-LOG = log.getLogger(__name__)
 
 
 class MyOwnedObject(base.NovaPersistentObject, base.NovaObject):
