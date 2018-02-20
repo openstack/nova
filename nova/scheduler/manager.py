@@ -119,8 +119,9 @@ class SchedulerManager(manager.Manager):
                                                            request_spec,
                                                            filter_properties)
         resources = utils.resources_from_request_spec(spec_obj)
+        is_rebuild = utils.request_is_rebuild(spec_obj)
         alloc_reqs_by_rp_uuid, provider_summaries = None, None
-        if self.driver.USES_ALLOCATION_CANDIDATES:
+        if self.driver.USES_ALLOCATION_CANDIDATES and not is_rebuild:
             res = self.placement_client.get_allocation_candidates(resources)
             if res is None:
                 # We have to handle the case that we failed to connect to the
