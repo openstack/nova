@@ -152,7 +152,7 @@ class TestNeutronDriver(test.NoDBTestCase):
         with mock.patch.object(neutronv20, 'find_resourceid_by_name_or_id',
                                return_value=expected_sg_id):
             observed_sg = sg_api.get(self.context, name=sg_name)
-        expected_sg['security_group']['project_id'] = self.context.tenant
+        expected_sg['security_group']['project_id'] = self.context.project_id
         del expected_sg['security_group']['tenant_id']
         self.assertEqual(expected_sg['security_group'], observed_sg)
         self.mocked_client.show_security_group.assert_called_once_with(
