@@ -888,6 +888,11 @@ class ComputeTaskManager(base.Base):
                     if migration:
                         migration.status = 'error'
                         migration.save()
+                    # Rollback the image_ref if a new one was provided (this
+                    # only happens in the rebuild case, not evacuate).
+                    if orig_image_ref and orig_image_ref != image_ref:
+                        instance.image_ref = orig_image_ref
+                        instance.save()
                     request_spec = request_spec.to_legacy_request_spec_dict()
                     with excutils.save_and_reraise_exception():
                         self._set_vm_state_and_notify(context, instance.uuid,
@@ -902,6 +907,11 @@ class ComputeTaskManager(base.Base):
                     if migration:
                         migration.status = 'error'
                         migration.save()
+                    # Rollback the image_ref if a new one was provided (this
+                    # only happens in the rebuild case, not evacuate).
+                    if orig_image_ref and orig_image_ref != image_ref:
+                        instance.image_ref = orig_image_ref
+                        instance.save()
                     request_spec = request_spec.to_legacy_request_spec_dict()
                     with excutils.save_and_reraise_exception():
                         self._set_vm_state_and_notify(context, instance.uuid,
