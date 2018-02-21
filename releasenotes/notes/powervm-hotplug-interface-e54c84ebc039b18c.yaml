@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    The PowerVM driver now supports hot plugging/unplugging of network
+    interfaces.

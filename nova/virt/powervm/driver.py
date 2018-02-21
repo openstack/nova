@@ -30,6 +30,7 @@ from taskflow.patterns import linear_flow as tf_lf
 from nova import conf as cfg
 from nova.console import type as console_type
 from nova import exception as exc
+from nova.i18n import _
 from nova import image
 from nova.virt import configdrive
 from nova.virt import driver
@@ -58,7 +59,7 @@ class PowerVMDriver(driver.ComputeDriver):
             'has_imagecache': False,
             'supports_recreate': False,
             'supports_migrate_to_same_host': False,
-            'supports_attach_interface': False,
+            'supports_attach_interface': True,
             'supports_device_tagging': False,
             'supports_tagged_attach_interface': False,
             'supports_tagged_attach_volume': False,
@@ -340,6 +341,61 @@ class PowerVMDriver(driver.ComputeDriver):
         vm.reboot(self.adapter, instance, reboot_type == 'HARD')
         # pypowervm exceptions are sufficient to indicate real failure.
         # Otherwise, pypowervm thinks the instance is up.
+
+    def attach_interface(self, context, instance, image_meta, vif):
+        """Attach an interface to the instance."""
+        self.plug_vifs(instance, [vif])
+
+    def detach_interface(self, context, instance, vif):
+        """Detach an interface from the instance."""
+        self.unplug_vifs(instance, [vif])
+
+    def plug_vifs(self, instance, network_info):
+        """Plug VIFs into networks."""
+        self._log_operation('plug_vifs', instance)
+
+        # Define the flow
+        flow = tf_lf.Flow("plug_vifs")
+
+        # Get the LPAR Wrapper
+        flow.add(tf_vm.Get(self.adapter, instance))
+
+        # Run the attach
+        flow.add(tf_net.PlugVifs(self.virtapi, self.adapter, instance,
+                                 network_info))
+
+        # Run the flow
+        try:
+            tf_base.run(flow, instance=instance)
+        except exc.InstanceNotFound:
+            raise exc.VirtualInterfacePlugException(
+                _("Plug vif failed because instance %s was not found.")
+                % instance.name)
+        except Exception:
+            LOG.exception("PowerVM error plugging vifs.", instance=instance)
+            raise exc.VirtualInterfacePlugException(
+                _("Plug vif failed because of an unexpected error."))
+
+    def unplug_vifs(self, instance, network_info):
+        """Unplug VIFs from networks."""
+        self._log_operation('unplug_vifs', instance)
+
+        # Define the flow
+        flow = tf_lf.Flow("unplug_vifs")
+
+        # Run the detach
+        flow.add(tf_net.UnplugVifs(self.adapter, instance, network_info))
+
+        # Run the flow
+        try:
+            tf_base.run(flow, instance=instance)
+        except exc.InstanceNotFound:
+            LOG.warning('VM was not found during unplug operation as it is '
+                        'already possibly deleted.', instance=instance)
+        except Exception:
+            LOG.exception("PowerVM error trying to unplug vifs.",
+                          instance=instance)
+            raise exc.InterfaceDetachFailed(instance_uuid=instance.uuid)
 
     def get_vnc_console(self, context, instance):
         """Get connection info for a vnc console.

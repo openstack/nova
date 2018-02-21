@@ -1,4 +1,4 @@
-# Copyright 2015, 2017 IBM Corp.
+# Copyright 2015, 2018 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -22,6 +22,26 @@ from nova.virt.powervm import vm
 
 
 LOG = logging.getLogger(__name__)
+
+
+class Get(task.Task):
+
+    """The task for getting a VM entry."""
+
+    def __init__(self, adapter, instance):
+        """Creates the Task for getting a VM entry.
+
+        Provides the 'lpar_wrap' for other tasks.
+
+        :param adapter: The adapter for the pypowervm API
+        :param instance: The nova instance.
+        """
+        super(Get, self).__init__(name='get_vm', provides='lpar_wrap')
+        self.adapter = adapter
+        self.instance = instance
+
+    def execute(self):
+        return vm.get_instance_wrapper(self.adapter, self.instance)
 
 
 class Create(task.Task):

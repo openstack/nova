@@ -22,6 +22,7 @@ from pypowervm.helpers import log_helper as pvm_hlp_log
 from pypowervm.helpers import vios_busy as pvm_hlp_vbusy
 from pypowervm.utils import transaction as pvm_tx
 from pypowervm.wrappers import virtual_io_server as pvm_vios
+import six
 
 from nova import exception
 from nova import test
@@ -61,7 +62,7 @@ class TestPowerVMDriver(test.NoDBTestCase):
         self.assertFalse(self.drv.capabilities['supports_recreate'])
         self.assertFalse(
             self.drv.capabilities['supports_migrate_to_same_host'])
-        self.assertFalse(self.drv.capabilities['supports_attach_interface'])
+        self.assertTrue(self.drv.capabilities['supports_attach_interface'])
         self.assertFalse(self.drv.capabilities['supports_device_tagging'])
         self.assertFalse(
             self.drv.capabilities['supports_tagged_attach_interface'])
@@ -315,6 +316,65 @@ class TestPowerVMDriver(test.NoDBTestCase):
         inst = mock.Mock()
         self.drv.reboot('context', inst, 'network_info', 'HARD')
         mock_reboot.assert_called_once_with(self.adp, inst, True)
+
+    @mock.patch('nova.virt.powervm.driver.PowerVMDriver.plug_vifs')
+    def test_attach_interface(self, mock_plug_vifs):
+        self.drv.attach_interface('context', 'inst', 'image_meta', 'vif')
+        mock_plug_vifs.assert_called_once_with('inst', ['vif'])
+
+    @mock.patch('nova.virt.powervm.driver.PowerVMDriver.unplug_vifs')
+    def test_detach_interface(self, mock_unplug_vifs):
+        self.drv.detach_interface('context', 'inst', 'vif')
+        mock_unplug_vifs.assert_called_once_with('inst', ['vif'])
+
+    @mock.patch('nova.virt.powervm.tasks.vm.Get', autospec=True)
+    @mock.patch('nova.virt.powervm.tasks.base.run', autospec=True)
+    @mock.patch('nova.virt.powervm.tasks.network.PlugVifs', autospec=True)
+    @mock.patch('taskflow.patterns.linear_flow.Flow', autospec=True)
+    def test_plug_vifs(self, mock_tf, mock_plug_vifs, mock_tf_run, mock_get):
+        # Successful plug
+        mock_inst = mock.Mock()
+        self.drv.plug_vifs(mock_inst, 'net_info')
+        mock_get.assert_called_once_with(self.adp, mock_inst)
+        mock_plug_vifs.assert_called_once_with(
+            self.drv.virtapi, self.adp, mock_inst, 'net_info')
+        add_calls = [mock.call(mock_get.return_value),
+                     mock.call(mock_plug_vifs.return_value)]
+        mock_tf.return_value.add.assert_has_calls(add_calls)
+        mock_tf_run.assert_called_once_with(
+            mock_tf.return_value, instance=mock_inst)
+
+        # InstanceNotFound and generic exception both raise
+        mock_tf_run.side_effect = exception.InstanceNotFound('id')
+        exc = self.assertRaises(exception.VirtualInterfacePlugException,
+                                self.drv.plug_vifs, mock_inst, 'net_info')
+        self.assertIn('instance', six.text_type(exc))
+        mock_tf_run.side_effect = Exception
+        exc = self.assertRaises(exception.VirtualInterfacePlugException,
+                                self.drv.plug_vifs, mock_inst, 'net_info')
+        self.assertIn('unexpected', six.text_type(exc))
+
+    @mock.patch('nova.virt.powervm.tasks.base.run', autospec=True)
+    @mock.patch('nova.virt.powervm.tasks.network.UnplugVifs', autospec=True)
+    @mock.patch('taskflow.patterns.linear_flow.Flow', autospec=True)
+    def test_unplug_vifs(self, mock_tf, mock_unplug_vifs, mock_tf_run):
+        # Successful unplug
+        mock_inst = mock.Mock()
+        self.drv.unplug_vifs(mock_inst, 'net_info')
+        mock_unplug_vifs.assert_called_once_with(self.adp, mock_inst,
+                                                 'net_info')
+        mock_tf.return_value.add.assert_called_once_with(
+            mock_unplug_vifs.return_value)
+        mock_tf_run.assert_called_once_with(mock_tf.return_value, mock_inst)
+
+        # InstanceNotFound should pass
+        mock_tf_run.side_effect = exception.InstanceNotFound(instance_id='1')
+        self.drv.unplug_vifs(mock_inst, 'net_info')
+
+        # Raise InterfaceDetachFailed otherwise
+        mock_tf_run.side_effect = Exception
+        self.assertRaises(exception.InterfaceDetachFailed,
+                          self.drv.unplug_vifs, mock_inst, 'net_info')
 
     @mock.patch('pypowervm.tasks.vterm.open_remotable_vnc_vterm',
                 autospec=True)
