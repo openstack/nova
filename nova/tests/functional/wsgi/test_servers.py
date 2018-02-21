@@ -275,8 +275,4 @@ class ServersPreSchedulingTestCase(test.TestCase,
 
         # The volume should no longer have any attachments as instance delete
         # should have removed them.
-        # self.assertNotIn(volume_id, cinder.attachments[server['id']])
-        # FIXME(mriedem): This is part of bug 1404867 where the BDMs aren't
-        # processed when the build request is deleted. Uncomment the above
-        # and remove the below when this is fixed.
-        self.assertIn(volume_id, cinder.attachments[server['id']])
+        self.assertNotIn(volume_id, cinder.attachments[server['id']])
