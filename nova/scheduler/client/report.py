@@ -19,6 +19,7 @@ import re
 import time
 
 from keystoneauth1 import exceptions as ks_exc
+import os_traits
 from oslo_log import log as logging
 from oslo_middleware import request_id
 from oslo_utils import versionutils
@@ -466,9 +467,10 @@ class SchedulerReportClient(object):
             raise exception.ResourceProviderRetrievalFailed(uuid=uuid)
 
     @safe_connect
-    def _get_providers_in_aggregates(self, context, agg_uuids):
+    def _get_sharing_providers(self, context, agg_uuids):
         """Queries the placement API for a list of the resource providers
-        associated with any of the specified aggregates.
+        associated with any of the specified aggregates and possessing the
+        MISC_SHARES_VIA_AGGREGATE trait.
 
         :param context: The security context
         :param agg_uuids: Iterable of string UUIDs of aggregates to filter on.
@@ -480,10 +482,16 @@ class SchedulerReportClient(object):
             return []
 
         qpval = ','.join(agg_uuids)
+        # TODO(efried): Need a ?having_traits=[...] on this API!
         resp = self.get("/resource_providers?member_of=in:" + qpval,
                         version='1.3', global_request_id=context.global_id)
         if resp.status_code == 200:
-            return resp.json()['resource_providers']
+            rps = []
+            for rp in resp.json()['resource_providers']:
+                traits = self._get_provider_traits(context, rp['uuid'])
+                if os_traits.MISC_SHARES_VIA_AGGREGATE in traits:
+                    rps.append(rp)
+            return rps
 
         # Some unexpected error
         placement_req_id = get_placement_request_id(resp)
@@ -781,7 +789,7 @@ class SchedulerReportClient(object):
 
             if refresh_sharing:
                 # Refresh providers associated by aggregate
-                for rp in self._get_providers_in_aggregates(context, aggs):
+                for rp in self._get_sharing_providers(context, aggs):
                     if not self._provider_tree.exists(rp['uuid']):
                         # NOTE(efried): Right now sharing providers are always
                         # treated as roots. This is deliberate. From the
