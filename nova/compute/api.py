@@ -1780,12 +1780,12 @@ class API(base.Base):
             return
 
         cell = None
-        # If there is an instance.host (or the instance is shelved-offloaded),
-        # the instance has been scheduled and sent to a cell/compute which
-        # means it was pulled from the cell db.
+        # If there is an instance.host (or the instance is shelved-offloaded or
+        # in error state), the instance has been scheduled and sent to a
+        # cell/compute which means it was pulled from the cell db.
         # Normal delete should be attempted.
-        if not (instance.host or
-                instance.vm_state == vm_states.SHELVED_OFFLOADED):
+        may_have_ports_or_volumes = self._may_have_ports_or_volumes(instance)
+        if not instance.host and not may_have_ports_or_volumes:
             try:
                 if self._delete_while_booting(context, instance):
                     return
@@ -1864,9 +1864,7 @@ class API(base.Base):
                 # which will cause a cast to the child cell.
                 cb(context, instance, bdms)
                 return
-            shelved_offloaded = (instance.vm_state
-                                 == vm_states.SHELVED_OFFLOADED)
-            if not instance.host and not shelved_offloaded:
+            if not instance.host and not may_have_ports_or_volumes:
                 try:
                     with compute_utils.notify_about_instance_delete(
                             self.notifier, context, instance,
@@ -1879,7 +1877,12 @@ class API(base.Base):
                              {'state': instance.vm_state},
                               instance=instance)
                     return
-                except exception.ObjectActionError:
+                except exception.ObjectActionError as ex:
+                    # The instance's host likely changed under us as
+                    # this instance could be building and has since been
+                    # scheduled. Continue with attempts to delete it.
+                    LOG.debug('Refreshing instance because: %s', ex,
+                              instance=instance)
                     instance.refresh()
 
             if instance.vm_state == vm_states.RESIZED:
@@ -1887,7 +1890,8 @@ class API(base.Base):
 
             is_local_delete = True
             try:
-                if not shelved_offloaded:
+                # instance.host must be set in order to look up the service.
+                if instance.host is not None:
                     service = objects.Service.get_by_compute_host(
                         context.elevated(), instance.host)
                     is_local_delete = not self.servicegroup_api.service_is_up(
@@ -1904,7 +1908,9 @@ class API(base.Base):
 
                     cb(context, instance, bdms)
             except exception.ComputeHostNotFound:
-                pass
+                LOG.debug('Compute host %s not found during service up check, '
+                          'going to local delete instance', instance.host,
+                          instance=instance)
 
             if is_local_delete:
                 # If instance is in shelved_offloaded state or compute node
@@ -1930,6 +1936,16 @@ class API(base.Base):
         except exception.InstanceNotFound:
             # NOTE(comstud): Race condition. Instance already gone.
             pass
+
+    def _may_have_ports_or_volumes(self, instance):
+        # NOTE(melwitt): When an instance build fails in the compute manager,
+        # the instance host and node are set to None and the vm_state is set
+        # to ERROR. In the case, the instance with host = None has actually
+        # been scheduled and may have ports and/or volumes allocated on the
+        # compute node.
+        if instance.vm_state in (vm_states.SHELVED_OFFLOADED, vm_states.ERROR):
+            return True
+        return False
 
     def _confirm_resize_on_deleting(self, context, instance):
         # If in the middle of a resize, use confirm_resize to
@@ -1986,6 +2002,14 @@ class API(base.Base):
                           'the instance host %(instance_host)s.',
                           {'connector_host': connector.get('host'),
                            'instance_host': instance.host}, instance=instance)
+                if (instance.host is None and
+                        self._may_have_ports_or_volumes(instance)):
+                    LOG.debug('Allowing use of stashed volume connector with '
+                              'instance host None because instance with '
+                              'vm_state %(vm_state)s has been scheduled in '
+                              'the past.', {'vm_state': instance.vm_state},
+                              instance=instance)
+                    return connector
 
     def _local_cleanup_bdm_volumes(self, bdms, instance, context):
         """The method deletes the bdm records and, if a bdm is a volume, call

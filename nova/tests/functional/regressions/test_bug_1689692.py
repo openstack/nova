@@ -53,6 +53,7 @@ class ServerListLimitMarkerCell0Test(test.TestCase,
 
         self.start_service('conductor')
         self.start_service('scheduler')
+        self.start_service('consoleauth')
         # We don't start the compute service because we want NoValidHost so
         # all of the instances go into ERROR state and get put into cell0.
         self.useFixture(cast_as_call.CastAsCall(self))
