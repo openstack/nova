@@ -1568,7 +1568,11 @@ class LibvirtDriver(driver.ComputeDriver):
             LOG.warning("During detach_volume, instance disappeared.",
                         instance=instance)
         except exception.DeviceNotFound:
-            raise exception.DiskNotFound(location=disk_dev)
+            # We should still try to disconnect logical device from
+            # host, an error might have happened during a previous
+            # call.
+            LOG.info("Device %s not found in instance.",
+                     disk_dev, instance=instance)
         except libvirt.libvirtError as ex:
             # NOTE(vish): This is called to cleanup volumes after live
             #             migration, so we should still disconnect even if
