@@ -1057,7 +1057,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
     def test_unplug_vrouter_with_details(self, mock_unplug_contrail):
         d = vif.LibvirtGenericVIFDriver()
         d.unplug(self.instance, self.vif_vrouter)
-        mock_unplug_contrail.assert_called_once_with(self.vif_vrouter)
+        mock_unplug_contrail.assert_called_once_with(self.vif_vrouter['id'])
 
     @mock.patch('nova.privsep.libvirt.plug_contrail_vif')
     def test_plug_vrouter_with_details(self, mock_plug_contrail):
@@ -1076,7 +1076,10 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                 mock.call('ip', 'link', 'set', 'tap-xxx-yyy-zzz', 'up',
                     run_as_root=True, check_exit_code=[0, 2, 254])])
             mock_plug_contrail.called_once_with(
-               instance, self.vif_vrouter, '0.0.0.0', None, 'NovaVMPort')
+                instance.project_id, instance.uuid, instance.display_name,
+                self.vif_vrouter['id'], self.vif_vrouter['network']['id'],
+                'NovaVMPort', self.vif_vrouter['devname'],
+                self.vif_vrouter['address'], '0.0.0.0', None)
 
     @mock.patch('nova.network.linux_net.create_tap_dev')
     @mock.patch('nova.privsep.libvirt.plug_contrail_vif')
@@ -1095,8 +1098,11 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         mock_create_tap_dev.assert_called_once_with('tap-xxx-yyy-zzz',
                                                     multiqueue=True)
 
-        mock_plug_contrail.assert_called_once_with(
-            instance, self.vif_vrouter, '0.0.0.0', None, 'NovaVMPort')
+        mock_plug_contrail.called_once_with(
+                instance.project_id, instance.uuid, instance.display_name,
+                self.vif_vrouter['id'], self.vif_vrouter['network']['id'],
+                'NovaVMPort', self.vif_vrouter['devname'],
+                self.vif_vrouter['address'], '0.0.0.0', None)
 
     def test_ivs_ethernet_driver(self):
         d = vif.LibvirtGenericVIFDriver()

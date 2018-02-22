@@ -724,7 +724,17 @@ class LibvirtGenericVIFDriver(object):
                                                      instance.flavor)
             linux_net.create_tap_dev(dev, multiqueue=multiqueue)
             nova.privsep.libvirt.plug_contrail_vif(
-                instance, vif, ip_addr, ip6_addr, ptype)
+                instance.project_id,
+                instance.uuid,
+                instance.display_name,
+                vif['id'],
+                vif['network']['id'],
+                ptype,
+                dev,
+                vif['address'],
+                ip_addr,
+                ip6_addr,
+            )
         except processutils.ProcessExecutionError:
             LOG.exception(_("Failed while plugging vif"), instance=instance)
 
@@ -875,8 +885,9 @@ class LibvirtGenericVIFDriver(object):
         Unbind the vif from a Contrail virtual port.
         """
         dev = self.get_vif_devname(vif)
+        port_id = vif['id']
         try:
-            nova.privsep.libvirt.unplug_contrail_vif(vif)
+            nova.privsep.libvirt.unplug_contrail_vif(port_id)
             linux_net.delete_net_dev(dev)
         except processutils.ProcessExecutionError:
             LOG.exception(_("Failed while unplugging vif"), instance=instance)
