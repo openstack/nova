@@ -62,6 +62,7 @@ from nova import policy
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit.api.openstack import fakes
+from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_network
 from nova.tests.unit.image import fake
@@ -4238,26 +4239,36 @@ class ServersControllerCreateTestV257(test.NoDBTestCase):
         self.assertIn('personality', six.text_type(ex))
 
 
+@mock.patch('nova.compute.utils.check_num_instances_quota',
+            new=lambda *args, **kwargs: 1)
 class ServersControllerCreateTestV260(test.NoDBTestCase):
-    """Negative tests for creating a server with a multiattach volume using
-    microversion 2.60.
-    """
+    """Negative tests for creating a server with a multiattach volume."""
     def setUp(self):
-        self.useFixture(nova_fixtures.AllServicesCurrent())
         super(ServersControllerCreateTestV260, self).setUp()
+        self.useFixture(nova_fixtures.NoopQuotaDriverFixture())
         self.controller = servers.ServersController()
         get_flavor_mock = mock.patch(
             'nova.compute.flavors.get_flavor_by_flavor_id',
-            return_value=objects.Flavor(flavorid='1'))
+            return_value=fake_flavor.fake_flavor_obj(
+                context.get_admin_context(), flavorid='1'))
         get_flavor_mock.start()
         self.addCleanup(get_flavor_mock.stop)
+        reqspec_create_mock = mock.patch(
+            'nova.objects.RequestSpec.create')
+        reqspec_create_mock.start()
+        self.addCleanup(reqspec_create_mock.stop)
+        volume_get_mock = mock.patch(
+            'nova.volume.cinder.API.get',
+            return_value={'id': uuids.fake_volume_id, 'multiattach': True})
+        volume_get_mock.start()
+        self.addCleanup(volume_get_mock.stop)
 
     def _post_server(self, version=None):
         body = {
             'server': {
                 'name': 'multiattach',
                 'flavorRef': '1',
-                'networks': 'auto',
+                'networks': 'none',
                 'block_device_mapping_v2': [{
                     'uuid': uuids.fake_volume_id,
                     'source_type': 'volume',
@@ -4277,30 +4288,20 @@ class ServersControllerCreateTestV260(test.NoDBTestCase):
         """Tests the case that the user tries to boot from volume with a
         multiattach volume but before using microversion 2.60.
         """
-        with mock.patch.object(
-                self.controller.compute_api, 'create',
-                side_effect=
-                exception.MultiattachNotSupportedOldMicroversion) as create:
-            ex = self.assertRaises(webob.exc.HTTPBadRequest,
-                                   self._post_server, '2.59')
-        create_kwargs = create.call_args[1]
-        self.assertFalse(create_kwargs['supports_multiattach'])
+        self.useFixture(nova_fixtures.AllServicesCurrent())
+        ex = self.assertRaises(webob.exc.HTTPBadRequest,
+                               self._post_server, '2.59')
         self.assertIn('Multiattach volumes are only supported starting with '
                       'compute API version 2.60', six.text_type(ex))
 
-    def test_create_server_with_multiattach_fails_not_available(self):
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=compute_api.MIN_COMPUTE_MULTIATTACH - 1)
+    def test_create_server_with_multiattach_fails_not_available(
+            self, mock_get_min_version_all_cells):
         """Tests the case that the user tries to boot from volume with a
         multiattach volume but before the deployment is fully upgraded.
-
-        Yes, you should ignore the AllServicesCurrent fixture in the setUp.
         """
-        with mock.patch.object(
-                self.controller.compute_api, 'create',
-                side_effect=
-                exception.MultiattachSupportNotYetAvailable) as create:
-            ex = self.assertRaises(webob.exc.HTTPConflict, self._post_server)
-        create_kwargs = create.call_args[1]
-        self.assertTrue(create_kwargs['supports_multiattach'])
+        ex = self.assertRaises(webob.exc.HTTPConflict, self._post_server)
         self.assertIn('Multiattach volume support is not yet available',
                       six.text_type(ex))
 

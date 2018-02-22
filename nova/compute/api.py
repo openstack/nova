@@ -1347,7 +1347,9 @@ class API(base.Base):
                         self._check_attach(context, volume, instance)
                     bdm.volume_size = volume.get('size')
                 except (exception.CinderConnectionFailed,
-                        exception.InvalidVolume):
+                        exception.InvalidVolume,
+                        exception.MultiattachNotSupportedOldMicroversion,
+                        exception.MultiattachSupportNotYetAvailable):
                     raise
                 except exception.InvalidInput as exc:
                     raise exception.InvalidVolume(reason=exc.format_message())
