@@ -481,28 +481,44 @@ class SchedulerReportClient(object):
         if not agg_uuids:
             return []
 
-        qpval = ','.join(agg_uuids)
-        # TODO(efried): Need a ?having_traits=[...] on this API!
-        resp = self.get("/resource_providers?member_of=in:" + qpval,
-                        version='1.3', global_request_id=context.global_id)
+        aggs = ','.join(agg_uuids)
+        url = "/resource_providers?member_of=in:" + aggs
+        # First try microversion 1.18 with the `required` queryparam.
+        resp = self.get(
+            url + '&required=' + os_traits.MISC_SHARES_VIA_AGGREGATE,
+            version='1.18', global_request_id=context.global_id)
         if resp.status_code == 200:
-            rps = []
-            for rp in resp.json()['resource_providers']:
-                traits = self._get_provider_traits(context, rp['uuid'])
-                if os_traits.MISC_SHARES_VIA_AGGREGATE in traits:
-                    rps.append(rp)
-            return rps
+            return resp.json()['resource_providers']
 
-        # Some unexpected error
-        placement_req_id = get_placement_request_id(resp)
-        msg = _("[%(placement_req_id)s] Failed to retrieve resource providers "
-                "associated with the following aggregates from placement API: "
-                "%(aggs)s. Got %(status_code)d: %(err_text)s.")
+        if resp.status_code == 406:
+            # TODO(efried): Remove this branch when placement minimum is 1.18
+            # Fall back to less efficient algorithm - we have to get traits
+            # for every provider in the aggregate to filter out non-sharing.
+            resp = self.get(
+                url, version='1.3', global_request_id=context.global_id)
+            if resp.status_code == 200:
+                rps = []
+                for rp in resp.json()['resource_providers']:
+                    traits = self._get_provider_traits(context, rp['uuid'])
+                    if os_traits.MISC_SHARES_VIA_AGGREGATE in traits:
+                        rps.append(rp)
+                return rps
+            # In this error case, the word 'sharing' isn't appropriate.
+            msg = _("[%(placement_req_id)s] Failed to retrieve resource "
+                    "providers associated with the following aggregates from "
+                    "placement API: %(aggs)s. Got %(status_code)d: "
+                    "%(err_text)s.")
+        else:
+            msg = _("[%(placement_req_id)s] Failed to retrieve sharing "
+                    "resource providers associated with the following "
+                    "aggregates from placement API: %(aggs)s. Got "
+                    "%(status_code)d: %(err_text)s.")
+
         args = {
-            'aggs': qpval,
+            'aggs': aggs,
             'status_code': resp.status_code,
             'err_text': resp.text,
-            'placement_req_id': placement_req_id,
+            'placement_req_id': get_placement_request_id(resp),
         }
         LOG.error(msg, args)
         raise exception.ResourceProviderRetrievalFailed(message=msg % args)
