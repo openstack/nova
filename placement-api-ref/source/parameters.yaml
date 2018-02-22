@@ -104,7 +104,7 @@ resources_query:
   description: |
     A comma-separated list of strings indicating an amount of
     resource of a specified class that a provider must have the
-    capacity to serve::
+    capacity and availability to serve::
 
         resources=VCPU:4,DISK_GB:64,MEMORY_MB:2048
   min_version: 1.4
@@ -114,8 +114,8 @@ resources_query_required:
   required: true
   description: |
     A comma-separated list of strings indicating an amount of
-    resource of a specified class that a provider must have the
-    capacity to serve::
+    resource of a specified class that providers in each allocation request
+    must *collectively* have the capacity and availability to serve::
 
         resources=VCPU:4,DISK_GB:64,MEMORY_MB:2048
 trait_associated:
