@@ -214,14 +214,15 @@ Nova Cells v2
 
 ``nova-manage cell_v2 delete_cell [--force] --cell_uuid <cell_uuid>``
 
-    Delete a cell by the given uuid. Returns 0 if the empty cell is
-    found and deleted successfully or the cell that has hosts is found and
-    the cell and the hosts are deleted successfully with ``--force`` option,
-    1 if a cell with that uuid could not be found, 2 if host mappings were
-    found for the cell (cell not empty) without ``--force`` option, and 3
-    if there are instances mapped to the cell (cell not empty), 4 if there are
-    instance mappings to the cell but all instances have been deleted
-    in the cell.
+    Delete a cell by the given uuid. Returns 0 if the empty cell is found and
+    deleted successfully or the cell that has hosts is found and the cell, hosts
+    and the instance_mappings are deleted successfully with ``--force`` option
+    (this happens if there are no living instances), 1 if a cell with that uuid
+    could not be found, 2 if host mappings were found for the cell (cell not empty)
+    without ``--force`` option, 3 if there are instances mapped to the cell
+    (cell not empty) irrespective of the ``--force`` option, and 4 if there are
+    instance mappings to the cell but all instances have been deleted in the cell,
+    again without the ``--force`` option.
 
 ``nova-manage cell_v2 list_hosts [--cell_uuid <cell_uuid>]``
 

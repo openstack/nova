@@ -1360,7 +1360,8 @@ class CellV2Commands(object):
         return 0
 
     @args('--force', action='store_true', default=False,
-          help=_('Delete hosts that belong to the cell as well.'))
+          help=_('Delete hosts and instance_mappings that belong '
+                 'to the cell as well.'))
     @args('--cell_uuid', metavar='<cell_uuid>', dest='cell_uuid',
           required=True, help=_('The uuid of the cell to delete.'))
     def delete_cell(self, cell_uuid, force=False):
@@ -1370,15 +1371,17 @@ class CellV2Commands(object):
 
         * The cell is not found by uuid.
         * It has hosts and force is False.
-        * It has instance mappings.
+        * It has instance mappings and force is False.
 
-        If force is True and the cell has host, hosts are deleted as well.
+        If force is True and the cell has hosts and/or instance_mappings, they
+        are deleted as well (as long as there are no living instances).
 
         Returns 0 in the following cases.
 
         * The empty cell is found and deleted successfully.
-        * The cell has hosts and force is True and the cell and the hosts are
-          deleted successfully.
+        * The cell has hosts and force is True then the cell, hosts and
+          instance_mappings are deleted successfully; if there are no
+          living instances.
         """
         ctxt = context.get_admin_context()
         # Find the CellMapping given the uuid.
@@ -1407,14 +1410,20 @@ class CellV2Commands(object):
                 print(_('There are existing instances mapped to cell with '
                         'uuid %s.') % cell_uuid)
                 return 3
-            # There are no instances in the cell but the records remains
-            # in the 'instance_mappings' table.
-            print(_("There are instance mappings to cell with uuid %s, "
-                    "but all instances have been deleted "
-                    "in the cell.") % cell_uuid)
-            print(_("So execute 'nova-manage db archive_deleted_rows' to "
-                    "delete the instance mappings."))
-            return 4
+            else:
+                if not force:
+                    # There are no instances in the cell but the records remain
+                    # in the 'instance_mappings' table.
+                    print(_("There are instance mappings to cell with uuid "
+                            "%s, but all instances have been deleted "
+                            "in the cell.") % cell_uuid)
+                    print(_("So execute 'nova-manage db archive_deleted_rows' "
+                            "to delete the instance mappings."))
+                    return 4
+
+        # Delete instance_mappings of the deleted instances
+        for instance_mapping in instance_mappings:
+            instance_mapping.destroy()
 
         # Delete hosts mapped to the cell.
         for host_mapping in host_mappings:

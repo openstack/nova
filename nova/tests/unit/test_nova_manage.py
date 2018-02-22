@@ -1805,6 +1805,54 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         mock_hm_destroy.assert_called_once_with()
         mock_cell_destroy.assert_called_once_with()
 
+    @mock.patch.object(context, 'target_cell')
+    @mock.patch.object(objects.InstanceMapping, 'destroy')
+    @mock.patch.object(objects.HostMapping, 'destroy')
+    @mock.patch.object(objects.CellMapping, 'destroy')
+    def test_delete_cell_force_with_inst_mappings_of_deleted_instances(self,
+                                        mock_cell_destroy, mock_hm_destroy,
+                                        mock_im_destroy, mock_target_cell):
+
+        # Test for verifying the deletion of instance_mappings
+        # of deleted instances when using the --force option
+        ctxt = context.get_admin_context()
+        # create the cell mapping
+        cm = objects.CellMapping(
+            context=ctxt, uuid=uuidsentinel.cell1,
+            database_connection='fake:///db', transport_url='fake:///mq')
+        cm.create()
+        mock_target_cell.return_value.__enter__.return_value = ctxt
+        # create a host mapping in this cell
+        hm = objects.HostMapping(
+            context=ctxt, host='fake-host', cell_mapping=cm)
+        hm.create()
+        # create an instance and its mapping.
+        inst_uuid = uuidutils.generate_uuid()
+        proj_uuid = uuidutils.generate_uuid()
+        instance = objects.Instance(ctxt, project_id=proj_uuid,
+                                    uuid=inst_uuid)
+        instance.create()
+
+        im = objects.InstanceMapping(ctxt, project_id=proj_uuid,
+                                     cell_mapping=cm,
+                                     instance_uuid=inst_uuid)
+        im.create()
+
+        res = self.commands.delete_cell(uuidsentinel.cell1, force=True)
+        self.assertEqual(3, res)
+        output = self.output.getvalue().strip()
+        self.assertIn('There are existing instances mapped to cell', output)
+
+        # delete the instance such that we now have only its mapping
+        instance.destroy()
+
+        res = self.commands.delete_cell(uuidsentinel.cell1, force=True)
+        self.assertEqual(0, res)
+        mock_hm_destroy.assert_called_once_with()
+        mock_cell_destroy.assert_called_once_with()
+        mock_im_destroy.assert_called_once_with()
+        self.assertEqual(2, mock_target_cell.call_count)
+
     def test_update_cell_not_found(self):
         self.assertEqual(1, self.commands.update_cell(
             uuidsentinel.cell1, 'foo', 'fake://new', 'fake:///new'))
