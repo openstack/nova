@@ -80,12 +80,7 @@ class DeleteWithReservedVolumes(integrated_helpers._IntegratedTestBase,
 
         # The volume should no longer be reserved as the deletion of the
         # server should have released all the resources.
-        # TODO(mnaser): Uncomment this in patch resolving the issue
-        # self.assertNotIn(volume_id, self.cinder.reserved_volumes)
-
-        # The volume is still reserved at this point, which it should not be.
-        # TODO(mnaser): Remove this in patch resolving the issue
-        self.assertIn(volume_id, self.cinder.reserved_volumes)
+        self.assertNotIn(volume_id, self.cinder.reserved_volumes)
 
     @mock.patch('nova.objects.service.get_minimum_version_all_cells',
                 return_value=compute_api.CINDER_V3_ATTACH_MIN_COMPUTE_VERSION)
@@ -109,9 +104,4 @@ class DeleteWithReservedVolumes(integrated_helpers._IntegratedTestBase,
 
         # The volume should no longer have any attachments as instance delete
         # should have removed them.
-        # TODO(mnaser): Uncomment this in patch resolving the issue
-        # self.assertNotIn(volume_id, self.cinder.attachments[server_id])
-
-        # The volume still has attachments, which it should not have.
-        # TODO(mnaser): Remove this in patch resolving the issue
-        self.assertIn(volume_id, self.cinder.attachments[server_id])
+        self.assertNotIn(volume_id, self.cinder.attachments[server_id])
