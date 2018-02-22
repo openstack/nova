@@ -1,0 +1,12 @@
+---
+features:
+  - |
+    Placement API microversion 1.18 adds support for the `required` query
+    parameter to the `GET /resource_providers` API. It accepts a
+    comma-separated list of string trait names. When specified, the API
+    results will be filtered to include only resource providers marked with
+    all the specified traits. This is in addition to (logical AND) any
+    filtering based on other query parameters.
+
+    Trait names which are empty, do not exist, or are otherwise invalid will
+    result in a 400 error.

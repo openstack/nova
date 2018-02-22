@@ -158,7 +158,7 @@ for resources.
 
 The ``/resource_providers/{rp_uuid}/allocations`` endpoint has been available
 since version 1.0, but was not listed in the ``links`` section of the
-``GET /resource_providers`` response.  The link is included as of version 1.11.
+``GET /resource_providers`` response. The link is included as of version 1.11.
 
 1.12 PUT dict format to /allocations/{consumer_uuid}
 ----------------------------------------------------
@@ -221,3 +221,15 @@ value, `N`, which limits the maximum number of candidates returned.
 Add the `required` parameter to the `GET /allocation_candidates` API. It
 accepts a list of traits separated by `,`. The provider summary in the response
 will include the attached traits also.
+
+1.18 Support ?required=<traits> queryparam on GET /resource_providers
+---------------------------------------------------------------------
+
+Add support for the `required` query parameter to the `GET /resource_providers`
+API. It accepts a comma-separated list of string trait names. When specified,
+the API results will be filtered to include only resource providers marked with
+all the specified traits. This is in addition to (logical AND) any filtering
+based on other query parameters.
+
+Trait names which are empty, do not exist, or are otherwise invalid will result
+in a 400 error.
