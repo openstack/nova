@@ -772,16 +772,22 @@ class HackingTestCase(test.NoDBTestCase):
         self._assert_has_no_errors(code, checks.check_uuid4)
 
     def test_return_followed_by_space(self):
-        self.assertEqual(1, len(list(checks.return_followed_by_space(
-            "return(42)"))))
-        self.assertEqual(1, len(list(checks.return_followed_by_space(
-            "return(' some string ')"))))
-        self.assertEqual(0, len(list(checks.return_followed_by_space(
-            "return 42"))))
-        self.assertEqual(0, len(list(checks.return_followed_by_space(
-            "return ' some string '"))))
-        self.assertEqual(0, len(list(checks.return_followed_by_space(
-            "return (int('40') + 2)"))))
+        code = """
+                  return(42)
+                  return(a, b)
+                  return(' some string ')
+               """
+        errors = [(1, 0, 'N358'), (2, 0, 'N358'), (3, 0, 'N358')]
+        self._assert_has_errors(code, checks.return_followed_by_space,
+                                expected_errors=errors)
+        code = """
+                  return
+                  return 42
+                  return (a, b)
+                  return a, b
+                  return ' some string '
+               """
+        self._assert_has_no_errors(code, checks.return_followed_by_space)
 
     def test_no_redundant_import_alias(self):
         code = """

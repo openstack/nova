@@ -793,13 +793,13 @@ def return_followed_by_space(logical_line):
     if there are unnecessary parentheses in the written code.
 
     Not correct: return(42), return(a, b)
-    Correct: return 42, return (a, b), return a, b
+    Correct: return, return 42, return (a, b), return a, b
 
     N358
     """
     if return_not_followed_by_space.match(logical_line):
         yield (0,
-               "N357: Return keyword should be followed by a space.")
+               "N358: Return keyword should be followed by a space.")
 
 
 def no_redundant_import_alias(logical_line):
