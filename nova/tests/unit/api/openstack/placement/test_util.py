@@ -21,6 +21,7 @@ from oslo_middleware import request_id
 from oslo_utils import timeutils
 import webob
 
+import six
 import six.moves.urllib.parse as urlparse
 
 from nova.api.openstack.placement import lib as pl
@@ -144,6 +145,22 @@ class TestExtractJSON(test.NoDBTestCase):
             self.schema)
         self.assertEqual('cow', data['name'])
         self.assertEqual(uuidsentinel.rp_uuid, data['uuid'])
+
+
+class QueryParamsSchemaTestCase(test.NoDBTestCase):
+
+    def test_validate_request(self):
+        schema = {
+            'type': 'object',
+            'properties': {
+                'foo': {'type': 'string'}
+             },
+            'additionalProperties': False}
+        req = webob.Request.blank('/test?foo=%88')
+        error = self.assertRaises(webob.exc.HTTPBadRequest,
+                                  util.validate_query_params,
+                                  req, schema)
+        self.assertIn('Invalid query string parameters', six.text_type(error))
 
 
 class TestJSONErrorFormatter(test.NoDBTestCase):
