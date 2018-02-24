@@ -28,6 +28,12 @@ tests:
   response_strings:
     - 'The trait is invalid. A valid trait must be no longer than 255 characters, start with the prefix \"CUSTOM_\" and use following characters: \"A\"-\"Z\", \"0\"-\"9\" and \"_\"'
 
+- name: create a trait earlier version
+  PUT: /traits/CUSTOM_TRAIT_1
+  request_headers:
+    openstack-api-version: placement 1.5
+  status: 404
+
 - name: create a trait
   PUT: /traits/CUSTOM_TRAIT_1
   status: 201
@@ -47,6 +53,12 @@ tests:
   response_forbidden_headers:
     - content-type
 
+- name: get a trait earlier version
+  GET: /traits/CUSTOM_TRAIT_1
+  request_headers:
+    openstack-api-version: placement 1.5
+  status: 404
+
 - name: get a trait
   GET: /traits/CUSTOM_TRAIT_1
   status: 204
@@ -58,6 +70,12 @@ tests:
 
 - name: get a non-existed trait
   GET: /traits/NON_EXISTED
+  status: 404
+
+- name: delete a trait earlier version
+  DELETE: /traits/CUSTOM_TRAIT_1
+  request_headers:
+    openstack-api-version: placement 1.5
   status: 404
 
 - name: delete a trait
@@ -106,6 +124,12 @@ tests:
     - CUSTOM_TRAIT_2
     - MISC_SHARES_VIA_AGGREGATE
     - HW_CPU_X86_SHA
+
+- name: list traits earlier version
+  GET: /traits
+  request_headers:
+    openstack-api-version: placement 1.5
+  status: 404
 
 - name: list traits with invalid format of name parameter
   GET: /traits?name=in_abc
@@ -213,6 +237,12 @@ tests:
   response_forbidden_headers:
       - content-type
 
+- name: list traits for resource provider earlier version
+  GET: /resource_providers/$ENVIRON['RP_UUID']/traits
+  request_headers:
+    openstack-api-version: placement 1.5
+  status: 404
+
 - name: list traits for resource provider without traits
   GET: /resource_providers/$ENVIRON['RP_UUID']/traits
   status: 200
@@ -223,6 +253,13 @@ tests:
     # In 1.6 no cache headers
     - cache-control
     - last-modified
+
+- name: set traits for resource provider earlier version
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/traits
+  request_headers:
+    content-type: application/json
+    openstack-api-version: placement 1.5
+  status: 404
 
 - name: set traits for resource provider
   PUT: /resource_providers/$ENVIRON['RP_UUID']/traits
@@ -270,7 +307,19 @@ tests:
         - CUSTOM_TRAIT_1
         - CUSTOM_TRAIT_2
   response_strings:
-    - CUSTOM_TRAIT_1
+    - "'resource_provider_generation' is a required property"
+
+- name: set traits for resource provider with invalid resource provider generation
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/traits
+  request_headers:
+    content-type: application/json
+  status: 400
+  data:
+    traits:
+        - CUSTOM_TRAIT_1
+    resource_provider_generation: invalid_generation
+  response_strings:
+    - "'invalid_generation' is not of type 'integer'"
 
 - name: set traits for resource provider with conflict generation
   PUT: /resource_providers/$ENVIRON['RP_UUID']/traits
@@ -299,6 +348,31 @@ tests:
     - No such trait
     - NON_EXISTED_TRAIT1
     - NON_EXISTED_TRAIT2
+
+- name: set traits for resource provider with invalid type of traits
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/traits
+  request_headers:
+    content-type: application/json
+  status: 400
+  data:
+    traits: invalid_type
+    resource_provider_generation: 1
+  response_strings:
+    - "'invalid_type' is not of type 'array'"
+
+- name: set traits for resource provider with additional properties
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/traits
+  request_headers:
+    content-type: application/json
+  status: 400
+  data:
+    traits:
+        - CUSTOM_TRAIT_1
+        - CUSTOM_TRAIT_2
+    resource_provider_generation: 1
+    additional: additional
+  response_strings:
+    - 'Additional properties are not allowed'
 
 - name: set traits for non_existed resource provider
   PUT: /resource_providers/non_existed/traits
@@ -335,6 +409,12 @@ tests:
   status: 404
   response_strings:
     - No resource provider with uuid non_existed found
+
+- name: delete traits for resource provider earlier version
+  DELETE: /resource_providers/$ENVIRON['RP_UUID']/traits
+  request_headers:
+    openstack-api-version: placement 1.5
+  status: 404
 
 - name: delete traits for resource provider
   DELETE: /resource_providers/$ENVIRON['RP_UUID']/traits
