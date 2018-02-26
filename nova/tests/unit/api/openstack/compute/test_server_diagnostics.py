@@ -15,7 +15,6 @@
 
 import mock
 from oslo_serialization import jsonutils
-from webob import exc
 
 from nova.api.openstack.compute import server_diagnostics
 from nova.api.openstack import wsgi as os_wsgi
@@ -25,8 +24,6 @@ from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests import uuidsentinel as uuids
-
-import oslo_messaging
 
 UUID = uuids.abc
 
@@ -173,16 +170,6 @@ class ServerDiagnosticsTestV248(ServerDiagnosticsTestV21):
             'memory_details': {'maximum': 8192, 'used': 3072}}
 
         self._test_get_diagnostics(expected, return_value)
-
-    @mock.patch.object(oslo_messaging.RPCClient, 'can_send_version',
-                       return_value=False)
-    @mock.patch.object(compute_api.API, 'get', fake_instance_get)
-    def test_get_diagnostics_old_compute(self, mock_version):
-        """Checks case when env has new api and old compute."""
-
-        controller = server_diagnostics.ServerDiagnosticsController()
-        req = self._get_request()
-        self.assertRaises(exc.HTTPBadRequest, controller.index, req, UUID)
 
 
 class ServerDiagnosticsEnforcementV21(test.NoDBTestCase):
