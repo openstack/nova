@@ -334,6 +334,11 @@ service. As root, run the following command:
 
    # apt-get install nova-novncproxy
 
+.. note::
+
+  If using non-US key mappings, then you need at least noVNC 1.0.0 for `a fix
+  <https://github.com/novnc/noVNC/commit/99feba6ba8fee5b3a2b2dc99dc25e9179c560d31>`_.
+
 The service starts automatically on installation.
 
 To restart the service, run:
