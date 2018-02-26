@@ -85,6 +85,14 @@ resource_provider_name_query:
   required: false
   description: >
     The name of a resource provider to filter the list.
+resource_provider_required_query:
+  type: string
+  in: query
+  required: false
+  description: >
+    A comma-delimited list of string trait names. Results will be filtered to
+    include only resource providers having all the specified traits.
+  min_version: 1.18
 resource_provider_tree_query:
   type: string
   in: query

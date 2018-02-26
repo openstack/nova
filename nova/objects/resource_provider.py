@@ -1396,6 +1396,7 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
         #          'MEMORY_MB': 1024
         #      },
         #      'in_tree': <uuid>,
+        #      'required': [<trait_name>, ...]
         #  }
         if not filters:
             filters = {}
@@ -1406,6 +1407,7 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
         name = filters.pop('name', None)
         uuid = filters.pop('uuid', None)
         member_of = filters.pop('member_of', [])
+        required = filters.pop('required', [])
 
         resources = filters.pop('resources', {})
         # NOTE(sbauza): We want to key the dict by the resource class IDs
@@ -1472,6 +1474,19 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
             rps_in_aggregates = sa.select(
                 [resource_provider_id]).select_from(join_statement)
             query = query.where(rp.c.id.in_(rps_in_aggregates))
+
+        # If 'required' has values, add a filter to limit results to providers
+        # possessing *all* of the listed traits.
+        if required:
+            trait_map = _trait_ids_from_names(context, required)
+            if len(trait_map) != len(required):
+                missing = required - set(trait_map)
+                raise exception.TraitNotFound(names=', '.join(missing))
+            rp_ids = _get_provider_ids_having_all_traits(context, trait_map)
+            if not rp_ids:
+                # If no providers have the required traits, we're done
+                return []
+            query = query.where(rp.c.id.in_(rp_ids))
 
         if not resources:
             # Returns quickly the list in case we don't need to check the
@@ -1575,6 +1590,7 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
         :type filters: dict
         """
         _ensure_rc_cache(context)
+        _ensure_trait_sync(context)
         resource_providers = cls._get_all_by_filters_from_db(context, filters)
         return base.obj_make_list(context, cls(context),
                                   ResourceProvider, resource_providers)

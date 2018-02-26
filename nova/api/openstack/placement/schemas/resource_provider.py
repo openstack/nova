@@ -94,3 +94,13 @@ GET_RPS_SCHEMA_1_14['properties']['in_tree'] = {
     "type": "string",
     "format": "uuid",
 }
+
+# Microversion 1.18 adds support for the `required` query parameter to the
+# `GET /resource_providers` API. It accepts a comma-separated list of string
+# trait names. When specified, the API results will be filtered to include only
+# resource providers marked with all the specified traits. This is in addition
+# to (logical AND) any filtering based on other query parameters.
+GET_RPS_SCHEMA_1_18 = copy.deepcopy(GET_RPS_SCHEMA_1_14)
+GET_RPS_SCHEMA_1_18['properties']['required'] = {
+    "type": "string",
+}

@@ -392,6 +392,107 @@ tests:
       $.resource_providers.`len`: 1
       $.resource_providers[?uuid="$ENVIRON['ALT_PARENT_PROVIDER_UUID']"].root_provider_uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
 
+- name: filter providers by traits none of them have
+  GET: /resource_providers?required=HW_CPU_X86_SGX,HW_CPU_X86_SHA
+  response_json_paths:
+      $.resource_providers.`len`: 0
+
+- name: add traits to a provider
+  PUT: /resource_providers/$ENVIRON['RP_UUID']/traits
+  request_headers:
+    content-type: application/json
+  data:
+      resource_provider_generation: 0
+      traits: ['HW_CPU_X86_SGX', 'STORAGE_DISK_SSD']
+
+- name: add traits to another provider
+  PUT: /resource_providers/$ENVIRON['ALT_PARENT_PROVIDER_UUID']/traits
+  request_headers:
+    content-type: application/json
+  data:
+      resource_provider_generation: 0
+      traits: ['MISC_SHARES_VIA_AGGREGATE', 'STORAGE_DISK_SSD']
+
+- name: filter providers with multiple traits where no provider has all of them
+  GET: /resource_providers?required=HW_CPU_X86_SGX,MISC_SHARES_VIA_AGGREGATE
+  response_json_paths:
+      $.resource_providers.`len`: 0
+
+- name: filter providers with a trait some of them have
+  GET: /resource_providers?required=STORAGE_DISK_SSD
+  response_json_paths:
+      $.resource_providers.`len`: 2
+      # Don't really care about the root UUID - just validating that the providers present are the ones we expected
+      $.resource_providers[?uuid="$ENVIRON['ALT_PARENT_PROVIDER_UUID']"].root_provider_uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
+      $.resource_providers[?uuid="$ENVIRON['RP_UUID']"].root_provider_uuid: $ENVIRON['PARENT_PROVIDER_UUID']
+
+- name: list providers with 'required' parameter filters cumulatively with in_tree
+  GET: /resource_providers?required=STORAGE_DISK_SSD&in_tree=$ENVIRON['RP_UUID']
+  response_json_paths:
+      $.resource_providers.`len`: 1
+      # Only RP_UUID satisfies both the tree and trait constraint
+      $.resource_providers[?uuid="$ENVIRON['RP_UUID']"].root_provider_uuid: $ENVIRON['PARENT_PROVIDER_UUID']
+
+- name: create some inventory
+  PUT: /resource_providers/$ENVIRON['ALT_PARENT_PROVIDER_UUID']/inventories
+  request_headers:
+      content-type: application/json
+  data:
+      resource_provider_generation: 1
+      inventories:
+        IPV4_ADDRESS:
+          total: 253
+        DISK_GB:
+          total: 1024
+  status: 200
+  response_json_paths:
+      $.resource_provider_generation: 2
+      $.inventories.IPV4_ADDRESS.total: 253
+      $.inventories.IPV4_ADDRESS.reserved: 0
+      $.inventories.DISK_GB.total: 1024
+      $.inventories.DISK_GB.allocation_ratio: 1.0
+
+- name: list providers with 'required' parameter filters cumulatively with resources
+  GET: /resource_providers?required=STORAGE_DISK_SSD&resources=IPV4_ADDRESS:10
+  response_json_paths:
+      $.resource_providers.`len`: 1
+      # Only ALT_PARENT_PROVIDER_UUID satisfies both the tree and trait constraint
+      $.resource_providers[?uuid="$ENVIRON['ALT_PARENT_PROVIDER_UUID']"].root_provider_uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
+
+- name: invalid 'required' parameter - blank
+  GET: /resource_providers?required=
+  status: 400
+  response_strings:
+      - "Invalid query string parameters: Expected 'required' parameter value of the form: HW_CPU_X86_VMX,CUSTOM_MAGIC."
+  response_json_paths:
+      $.errors[0].title: Bad Request
+
+- name: invalid 'required' parameter - contains an empty trait name
+  GET: /resource_providers?required=STORAGE_DISK_SSD,,MISC_SHARES_VIA_AGGREGATE
+  status: 400
+  response_strings:
+      - "Invalid query string parameters: Expected 'required' parameter value of the form: HW_CPU_X86_VMX,CUSTOM_MAGIC."
+  response_json_paths:
+      $.errors[0].title: Bad Request
+
+- name: invalid 'required' parameter - contains a nonexistent trait
+  GET: /resource_providers?required=STORAGE_DISK_SSD,BOGUS_TRAIT,MISC_SHARES_VIA_AGGREGATE
+  status: 400
+  response_strings:
+      - "No such trait(s): BOGUS_TRAIT."
+  response_json_paths:
+      $.errors[0].title: Bad Request
+
+- name: schema validation fails with 'required' parameter on old microversion
+  request_headers:
+      openstack-api-version: placement 1.17
+  GET: /resource_providers?required=HW_CPU_X86_SGX,MISC_SHARES_VIA_AGGREGATE
+  status: 400
+  response_strings:
+      - Additional properties are not allowed
+  response_json_paths:
+      $.errors[0].title: Bad Request
+
 - name: fail trying to re-parent to a different provider
   PUT: /resource_providers/$ENVIRON['RP_UUID']
   request_headers:

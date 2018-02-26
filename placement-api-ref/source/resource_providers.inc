@@ -28,6 +28,7 @@ of all filters are merged with a boolean `AND`.
   - uuid: resource_provider_uuid_query
   - member_of: member_of
   - resources: resources_query
+  - required: resource_provider_required_query
   - in_tree: resource_provider_tree_query
 
 Response

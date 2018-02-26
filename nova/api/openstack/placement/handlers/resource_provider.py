@@ -174,7 +174,9 @@ def list_resource_providers(req):
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
 
     schema = rp_schema.GET_RPS_SCHEMA_1_0
-    if want_version.matches((1, 14)):
+    if want_version.matches((1, 18)):
+        schema = rp_schema.GET_RPS_SCHEMA_1_18
+    elif want_version.matches((1, 14)):
         schema = rp_schema.GET_RPS_SCHEMA_1_14
     elif want_version.matches((1, 4)):
         schema = rp_schema.GET_RPS_SCHEMA_1_4
@@ -184,7 +186,8 @@ def list_resource_providers(req):
     util.validate_query_params(req, schema)
 
     filters = {}
-    for attr in ['uuid', 'name', 'member_of', 'in_tree']:
+    qpkeys = ('uuid', 'name', 'member_of', 'in_tree', 'resources', 'required')
+    for attr in qpkeys:
         if attr in req.GET:
             value = req.GET[attr]
             # special case member_of to always make its value a
@@ -203,16 +206,21 @@ def list_resource_providers(req):
                         raise webob.exc.HTTPBadRequest(
                             _('Invalid uuid value: %(uuid)s') %
                             {'uuid': aggr_uuid})
+            elif attr == 'resources':
+                value = util.normalize_resources_qs_param(value)
+            elif attr == 'required':
+                value = util.normalize_traits_qs_param(value)
             filters[attr] = value
-    if 'resources' in req.GET:
-        resources = util.normalize_resources_qs_param(req.GET['resources'])
-        filters['resources'] = resources
     try:
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             context, filters)
     except exception.ResourceClassNotFound as exc:
         raise webob.exc.HTTPBadRequest(
             _('Invalid resource class in resources parameter: %(error)s') %
+            {'error': exc})
+    except exception.TraitNotFound as exc:
+        raise webob.exc.HTTPBadRequest(
+            _('Invalid trait(s) in "required" parameter: %(error)s') %
             {'error': exc})
 
     response = req.response
