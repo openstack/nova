@@ -230,6 +230,45 @@ class TestUtils(test.NoDBTestCase):
         )
         self._test_resources_from_request_spec(flavor, expected_resources)
 
+    def test_resources_from_request_spec_aggregates(self):
+        destination = objects.Destination()
+        flavor = objects.Flavor(vcpus=1, memory_mb=1024,
+                                root_gb=1, ephemeral_gb=0,
+                                swap=0)
+        reqspec = objects.RequestSpec(flavor=flavor,
+                                      requested_destination=destination)
+
+        destination.require_aggregates(['foo', 'bar'])
+        req = utils.resources_from_request_spec(reqspec)
+        self.assertEqual([('foo', 'bar',)],
+                         req.get_request_group(None).member_of)
+
+        destination.require_aggregates(['baz'])
+        req = utils.resources_from_request_spec(reqspec)
+        self.assertEqual([('foo', 'bar'), ('baz',)],
+                         req.get_request_group(None).member_of)
+
+    def test_resources_from_request_spec_no_aggregates(self):
+        flavor = objects.Flavor(vcpus=1, memory_mb=1024,
+                                root_gb=1, ephemeral_gb=0,
+                                swap=0)
+        reqspec = objects.RequestSpec(flavor=flavor)
+
+        req = utils.resources_from_request_spec(reqspec)
+        self.assertEqual([], req.get_request_group(None).member_of)
+
+        reqspec.requested_destination = None
+        req = utils.resources_from_request_spec(reqspec)
+        self.assertEqual([], req.get_request_group(None).member_of)
+
+        reqspec.requested_destination = objects.Destination()
+        req = utils.resources_from_request_spec(reqspec)
+        self.assertEqual([], req.get_request_group(None).member_of)
+
+        reqspec.requested_destination.aggregates = None
+        req = utils.resources_from_request_spec(reqspec)
+        self.assertEqual([], req.get_request_group(None).member_of)
+
     @mock.patch("nova.scheduler.utils.ResourceRequest.from_extra_specs")
     def test_process_extra_specs_granular_called(self, mock_proc):
         flavor = objects.Flavor(vcpus=1,

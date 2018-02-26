@@ -329,8 +329,17 @@ class SchedulerReportClient(object):
 
         :param context: The security context
         :param nova.scheduler.utils.ResourceRequest resources:
-            A ResourceRequest object representing the requested resources and
-            traits from the request spec.
+            A ResourceRequest object representing the requested resources,
+            traits, and aggregates from the request spec.
+
+        Example member_of (aggregates) value in resources:
+
+            [('foo', 'bar'), ('baz',)]
+
+        translates to:
+
+            "Candidates are in either 'foo' or 'bar', but definitely in 'baz'"
+
         """
         # TODO(efried): For now, just use the unnumbered group to retain
         # existing behavior.  Once the GET /allocation_candidates API is
@@ -338,6 +347,7 @@ class SchedulerReportClient(object):
         # and traits in the query string (via a new method on ResourceRequest).
         res = resources.get_request_group(None).resources
         required_traits = resources.get_request_group(None).required_traits
+        aggregates = resources.get_request_group(None).member_of
 
         resource_query = ",".join(
             sorted("%s:%s" % (rc, amount)
@@ -348,8 +358,19 @@ class SchedulerReportClient(object):
         }
         if required_traits:
             qs_params['required'] = ",".join(required_traits)
+        if aggregates:
+            # NOTE(danms): In 1.21, placement cannot take an AND'd
+            # set of aggregates, only an OR'd set. Thus, if we have
+            # required and optional sets, we must do the naive thing
+            # and AND ours together. That will not achieve the same
+            # result, but we can't do it from the client side. When
+            # placement supports AND'ing multiple sets, we can fix this.
+            # TODO(danms): Update this when placement can take multiple
+            # member_of query parameters.
+            required_agg = set.intersection(*[set(x) for x in aggregates])
+            qs_params['member_of'] = 'in:' + ','.join(sorted(required_agg))
 
-        version = '1.17'
+        version = '1.21'
         url = "/allocation_candidates?%s" % parse.urlencode(qs_params)
         resp = self.get(url, version=version,
                         global_request_id=context.global_id)
@@ -363,15 +384,12 @@ class SchedulerReportClient(object):
             'status_code': resp.status_code,
             'err_text': resp.text,
         }
-        if required_traits:
-            msg = ("Failed to retrieve allocation candidates from placement "
-                   "API for filters %(resources)s and traits %(traits)s. Got "
-                   "%(status_code)d: %(err_text)s.")
-            args['traits'] = qs_params['required']
-        else:
-            msg = ("Failed to retrieve allocation candidates from placement "
-                   "API for filters %(resources)s. Got %(status_code)d: "
-                   "%(err_text)s.")
+        msg = ("Failed to retrieve allocation candidates from placement "
+               "API for filters %(resources)s, traits %(traits)s, "
+               "aggregates %(aggregates)s. Got "
+               "%(status_code)d: %(err_text)s.")
+        args['traits'] = qs_params.get('required', '(none)')
+        args['aggregates'] = qs_params.get('aggregates', '(none)')
         LOG.error(msg, args)
         return None, None, None
 
