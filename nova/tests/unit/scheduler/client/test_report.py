@@ -1669,12 +1669,44 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.assertEqual(uuids.request_id,
                          logging_mock.call_args[0][1]['placement_req_id'])
 
+    def test_get_sharing_providers(self):
+        resp_mock = mock.Mock(status_code=200)
+        rpjson = [
+            {
+                'uuid': uuids.sharing1,
+                'name': 'bandwidth_provider',
+                'generation': 42,
+                'parent_provider_uuid': None,
+                'root_provider_uuid': None,
+                'links': [],
+            },
+            {
+                'uuid': uuids.sharing2,
+                'name': 'storage_provider',
+                'generation': 42,
+                'parent_provider_uuid': None,
+                'root_provider_uuid': None,
+                'links': [],
+            },
+        ]
+        resp_mock.json.return_value = {'resource_providers': rpjson}
+        self.ks_adap_mock.get.return_value = resp_mock
+
+        result = self.client._get_sharing_providers(
+            self.context, [uuids.agg1, uuids.agg2])
+
+        expected_url = ('/resource_providers?member_of=in:' +
+                        ','.join((uuids.agg1, uuids.agg2)) +
+                        '&required=MISC_SHARES_VIA_AGGREGATE')
+        self.ks_adap_mock.get.assert_called_once_with(
+            expected_url, microversion='1.18', raise_exc=False,
+            headers={'X-Openstack-Request-Id': self.context.global_id})
+        self.assertEqual(rpjson, result)
+
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_provider_traits')
-    def test_get_sharing_providers(self, mock_get_traits):
-        # Ensure _get_sharing_providers() returns a list of resource
-        # provider dicts if it finds resource provider records from the
-        # placement API
+    def test_get_sharing_providers_old(self, mock_get_traits):
+        # Run _get_sharing_providers() through the pre-1.18 code path
         resp_mock = mock.Mock(status_code=200)
         rpjson = [
             {
@@ -1695,21 +1727,26 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             },
         ]
         resp_mock.json.return_value = {'resource_providers': rpjson}
-        self.ks_adap_mock.get.return_value = resp_mock
+        # Simulate 1.18 not supported
+        self.ks_adap_mock.get.side_effect = (
+            mock.Mock(status_code=406), resp_mock)
 
         mock_get_traits.side_effect = [
             set(['MISC_SHARES_VIA_AGGREGATE', 'CUSTOM_FOO']),
             set(['CUSTOM_BAR']),
         ]
-        result = self.client._get_sharing_providers(self.context,
-                                                    [uuids.agg1,
-                                                           uuids.agg2])
+        result = self.client._get_sharing_providers(
+            self.context, [uuids.agg1, uuids.agg2])
 
-        expected_url = ('/resource_providers?member_of=in:' +
-                        ','.join((uuids.agg1, uuids.agg2)))
-        self.ks_adap_mock.get.assert_called_once_with(
-            expected_url, raise_exc=False, microversion='1.3',
+        expected_url2 = ('/resource_providers?member_of=in:' +
+                         ','.join((uuids.agg1, uuids.agg2)))
+        expected_url1 = (expected_url2 + '&required=MISC_SHARES_VIA_AGGREGATE')
+        call_kwargs = dict(
+            raise_exc=False,
             headers={'X-Openstack-Request-Id': self.context.global_id})
+        self.ks_adap_mock.get.assert_has_calls((
+            mock.call(expected_url1, microversion='1.18', **call_kwargs),
+            mock.call(expected_url2, microversion='1.3', **call_kwargs)))
         self.assertEqual(rpjson[:1], result)
 
     def test_get_sharing_providers_emptylist(self):
@@ -1731,9 +1768,10 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                           self.client._get_sharing_providers,
                           self.context, [uuid])
 
-        expected_url = '/resource_providers?member_of=in:' + uuid
+        expected_url = ('/resource_providers?member_of=in:' + uuid +
+                        '&required=MISC_SHARES_VIA_AGGREGATE')
         self.ks_adap_mock.get.assert_called_once_with(
-            expected_url, raise_exc=False, microversion='1.3',
+            expected_url, raise_exc=False, microversion='1.18',
             headers={'X-Openstack-Request-Id': self.context.global_id})
         # A 503 Service Unavailable should trigger an error log that
         # includes the placement request id
