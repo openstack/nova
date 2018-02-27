@@ -4956,8 +4956,11 @@ class ComputeManager(manager.Manager):
                 # instance claim will not remove the allocations.
                 rt.reportclient.delete_allocation_for_instance(context,
                                                                instance.uuid)
-                # FIXME: Umm, shouldn't we be rolling back volume connections
-                # and port bindings?
+                # FIXME: Umm, shouldn't we be rolling back port bindings too?
+                self._terminate_volume_connections(context, instance, bdms)
+                # The reverts_task_state decorator on unshelve_instance will
+                # eventually save these updates.
+                self._nil_out_instance_obj_host_and_node(instance)
 
         if image:
             instance.image_ref = shelved_image_ref
