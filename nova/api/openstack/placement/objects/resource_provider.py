@@ -432,7 +432,9 @@ def _get_aggregates_by_provider_id(context, rp_id):
 
 
 @db_api.api_context_manager.writer
-def _set_aggregates(context, rp_id, provided_aggregates):
+def _set_aggregates(context, resource_provider, provided_aggregates,
+                    increment_generation=False):
+    rp_id = resource_provider.id
     # When aggregate uuids are persisted no validation is done
     # to ensure that they refer to something that has meaning
     # elsewhere. It is assumed that code which makes use of the
@@ -488,6 +490,10 @@ def _set_aggregates(context, rp_id, provided_aggregates):
             insert().from_select(['resource_provider_id', 'aggregate_id'],
                                  select_agg_id)
         context.session.execute(insert_aggregates)
+
+    if increment_generation:
+        resource_provider.generation = _increment_provider_generation(
+            context, resource_provider)
 
 
 @db_api.api_context_manager.reader
@@ -757,13 +763,17 @@ class ResourceProvider(base.VersionedObject, base.TimestampedObject):
         """Get the aggregate uuids associated with this resource provider."""
         return _get_aggregates_by_provider_id(self._context, self.id)
 
-    def set_aggregates(self, aggregate_uuids):
+    def set_aggregates(self, aggregate_uuids, increment_generation=False):
         """Set the aggregate uuids associated with this resource provider.
 
         If an aggregate does not exist, one will be created using the
         provided uuid.
+
+        The resource provider generation is incremented if and only if the
+        increment_generation parameter is True.
         """
-        _set_aggregates(self._context, self.id, aggregate_uuids)
+        _set_aggregates(self._context, self, aggregate_uuids,
+                        increment_generation=increment_generation)
 
     def set_traits(self, traits):
         """Replaces the set of traits associated with the resource provider

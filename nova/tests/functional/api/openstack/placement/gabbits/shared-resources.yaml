@@ -92,12 +92,16 @@ tests:
 - name: aggregate shared
   PUT: /resource_providers/d450bd39-3b01-4355-9ea1-594f96594cf1/aggregates
   data:
-      - f3dc0f36-97d4-4daf-be0c-d71466da9c85
+      aggregates:
+        - f3dc0f36-97d4-4daf-be0c-d71466da9c85
+      resource_provider_generation: 1
 
 - name: aggregate cn1
   PUT: /resource_providers/8d830468-6395-46b0-b56a-f934a1d60bbe/aggregates
   data:
-      - f3dc0f36-97d4-4daf-be0c-d71466da9c85
+      aggregates:
+        - f3dc0f36-97d4-4daf-be0c-d71466da9c85
+      resource_provider_generation: 1
 
 # no shared trait
 - name: get resources no shared
@@ -114,7 +118,7 @@ tests:
 - name: set trait shared
   PUT: /resource_providers/d450bd39-3b01-4355-9ea1-594f96594cf1/traits
   data:
-      resource_provider_generation: 1
+      resource_provider_generation: 2
       traits:
           - MISC_SHARES_VIA_AGGREGATE
 

@@ -61,6 +61,8 @@ VERSIONS = [
     '1.17',  # Add 'required' query parameter to GET /allocation_candidates and
              # return traits in the provider summary.
     '1.18',  # Support ?required=<traits> queryparam on GET /resource_providers
+    '1.19',  # Include generation and conflict detection in provider aggregates
+             # APIs
 ]
 
 

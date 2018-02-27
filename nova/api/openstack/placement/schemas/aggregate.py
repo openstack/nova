@@ -10,13 +10,33 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 """Aggregate schemas for Placement API."""
+import copy
 
 
-PUT_AGGREGATES_SCHEMA = {
+_AGGREGATES_LIST_SCHEMA = {
     "type": "array",
     "items": {
         "type": "string",
         "format": "uuid"
     },
     "uniqueItems": True
+}
+
+
+PUT_AGGREGATES_SCHEMA_V1_1 = copy.deepcopy(_AGGREGATES_LIST_SCHEMA)
+
+
+PUT_AGGREGATES_SCHEMA_V1_19 = {
+    "type": "object",
+    "properties": {
+        "aggregates": copy.deepcopy(_AGGREGATES_LIST_SCHEMA),
+        "resource_provider_generation": {
+            "type": "integer",
+        }
+    },
+    "required": [
+        "aggregates",
+        "resource_provider_generation",
+    ],
+    "additionalProperties": False,
 }

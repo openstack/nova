@@ -57,22 +57,39 @@ tests:
   response_json_paths:
       $.errors[0].title: Not Found
 
-- name: put same aggregates twice
-  PUT: $LAST_URL
-  data:
-      - *agg_1
-      - *agg_1
-  status: 400
-  response_strings:
-      - has non-unique elements
-  response_json_paths:
-      $.errors[0].title: Bad Request
-
-- name: put some aggregates
+- name: put some aggregates - old payload and new microversion
   PUT: $LAST_URL
   data:
       - *agg_1
       - *agg_2
+  status: 400
+  response_strings:
+      - JSON does not validate
+  response_json_paths:
+      $.errors[0].title: Bad Request
+
+- name: put some aggregates - new payload and old microversion
+  PUT: $LAST_URL
+  request_headers:
+      openstack-api-version: placement 1.18
+  data:
+      resource_provider_generation: 0
+      aggregates:
+        - *agg_1
+        - *agg_2
+  status: 400
+  response_strings:
+      - JSON does not validate
+  response_json_paths:
+      $.errors[0].title: Bad Request
+
+- name: put some aggregates - new payload and new microversion
+  PUT: $LAST_URL
+  data:
+      resource_provider_generation: 0
+      aggregates:
+        - *agg_1
+        - *agg_2
   status: 200
   response_headers:
       content-type: /application/json/
@@ -82,6 +99,7 @@ tests:
   response_json_paths:
       $.aggregates[0]: *agg_1
       $.aggregates[1]: *agg_2
+      $.resource_provider_generation: 1
 
 - name: get those aggregates
   GET: $LAST_URL
@@ -92,9 +110,18 @@ tests:
   response_json_paths:
       $.aggregates.`len`: 2
 
+- name: clear those aggregates - generation conflict
+  PUT: $LAST_URL
+  data:
+      resource_provider_generation: 0
+      aggregates: []
+  status: 409
+
 - name: clear those aggregates
   PUT: $LAST_URL
-  data: []
+  data:
+      resource_provider_generation: 1
+      aggregates: []
   status: 200
   response_json_paths:
       $.aggregates: []
@@ -113,7 +140,7 @@ tests:
   response_json_paths:
       $.errors[0].title: Bad Request
 
-- name: put invalid json not array
+- name: put invalid json no generation
   PUT: $LAST_URL
   data:
       aggregates:
@@ -128,11 +155,26 @@ tests:
 - name: put invalid json not uuids
   PUT: $LAST_URL
   data:
-      - harry
-      - sally
+      aggregates:
+        - harry
+        - sally
+      resource_provider_generation: 2
   status: 400
   response_strings:
-      - JSON does not validate
+      - "is not a 'uuid'"
+  response_json_paths:
+      $.errors[0].title: Bad Request
+
+- name: put same aggregates twice
+  PUT: $LAST_URL
+  data:
+      aggregates:
+          - *agg_1
+          - *agg_1
+      resource_provider_generation: 2
+  status: 400
+  response_strings:
+      - has non-unique elements
   response_json_paths:
       $.errors[0].title: Bad Request
 
