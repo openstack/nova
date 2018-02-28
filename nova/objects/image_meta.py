@@ -15,6 +15,7 @@
 import copy
 
 from oslo_utils import versionutils
+import six
 
 from nova import exception
 from nova import objects
@@ -168,12 +169,15 @@ class ImageMetaProps(base.NovaObject):
     # Version 1.17: Add lan9118 as valid nic for hw_vif_model property for qemu
     # Version 1.18: Pull signature properties from cursive library
     # Version 1.19: Added 'img_hide_hypervisor_id' type field
-    VERSION = '1.19'
+    # Version 1.20: Added 'traits_required' list field
+    VERSION = '1.20'
 
     def obj_make_compatible(self, primitive, target_version):
         super(ImageMetaProps, self).obj_make_compatible(primitive,
                                                         target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 20):
+            primitive.pop('traits_required', None)
         if target_version < (1, 19):
             primitive.pop('img_hide_hypervisor_id', None)
         if target_version < (1, 16) and 'hw_watchdog_action' in primitive:
@@ -221,6 +225,7 @@ class ImageMetaProps(base.NovaObject):
     # 'hw_' - settings affecting the guest virtual machine hardware
     # 'img_' - settings affecting the use of images by the compute node
     # 'os_' - settings affecting the guest operating system setup
+    # 'traits_required' - The required traits associated with the image
 
     fields = {
         # name of guest hardware architecture eg i686, x86_64, ppc64
@@ -457,6 +462,13 @@ class ImageMetaProps(base.NovaObject):
         # is a fairly generic type. For a detailed type consider os_distro
         # instead
         'os_type': fields.OSTypeField(),
+
+        # The required traits associated with the image. Traits are expected to
+        # be defined as starting with `trait:` like below:
+        # trait:HW_CPU_X86_AVX2=required
+        # for trait in image_meta.traits_required:
+        # will yield trait strings such as 'HW_CPU_X86_AVX2'
+        'traits_required': fields.ListOfStringsField(),
     }
 
     # The keys are the legacy property names and
@@ -543,16 +555,26 @@ class ImageMetaProps(base.NovaObject):
             elif key == "hw_numa_cpus":
                 self._set_numa_cpus(image_props)
             else:
-                if key not in image_props:
+                # traits_required will be populated by
+                # _set_attr_from_trait_names
+                if key not in image_props or key == "traits_required":
                     continue
 
                 setattr(self, key, image_props[key])
+
+    def _set_attr_from_trait_names(self, image_props):
+        for trait in [six.text_type(k[6:]) for k, v in image_props.items()
+                      if six.text_type(k).startswith("trait:")
+                      and six.text_type(v) == six.text_type('required')]:
+            if 'traits_required' not in self:
+                self.traits_required = []
+            self.traits_required.append(trait)
 
     @classmethod
     def from_dict(cls, image_props):
         """Create instance from image properties dict
 
-        :param image_props: dictionary of image metdata properties
+        :param image_props: dictionary of image metadata properties
 
         Creates a new object instance, initializing from a
         dictionary of image metadata properties
@@ -567,6 +589,8 @@ class ImageMetaProps(base.NovaObject):
         # associated with the current name takes priority
         obj._set_attr_from_legacy_names(image_props)
         obj._set_attr_from_current_names(image_props)
+        obj._set_attr_from_trait_names(image_props)
+
         return obj
 
     def get(self, name, defvalue=None):

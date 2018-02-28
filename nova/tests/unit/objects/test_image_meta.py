@@ -108,6 +108,7 @@ class TestImageMetaProps(test.NoDBTestCase):
                  'hw_video_model': 'vga',
                  'hw_video_ram': '512',
                  'hw_qemu_guest_agent': 'yes',
+                 'trait:CUSTOM_TRUSTED': 'required',
                  # Fill sane values for the rest here
                  }
         virtprops = objects.ImageMetaProps.from_dict(props)
@@ -115,6 +116,8 @@ class TestImageMetaProps(test.NoDBTestCase):
         self.assertEqual('vga', virtprops.hw_video_model)
         self.assertEqual(512, virtprops.hw_video_ram)
         self.assertTrue(virtprops.hw_qemu_guest_agent)
+        self.assertIsNotNone(virtprops.traits_required)
+        self.assertIn('CUSTOM_TRUSTED', virtprops.traits_required)
 
     def test_default_props(self):
         props = {}
@@ -128,6 +131,7 @@ class TestImageMetaProps(test.NoDBTestCase):
         virtprops = objects.ImageMetaProps.from_dict(props)
 
         self.assertEqual("hvm", virtprops.get("hw_vm_mode", "hvm"))
+        self.assertIsNone(virtprops.get("traits_required"))
 
     def test_non_existent_prop(self):
         props = {}
@@ -281,6 +285,43 @@ class TestImageMetaProps(test.NoDBTestCase):
         self.assertEqual([set([0, 1, 2, 3])],
                          virtprops.hw_numa_cpus)
 
+    def test_get_unnumbered_trait_fields(self):
+        """Tests that only valid un-numbered required traits are parsed from
+        the properties.
+        """
+        props = {'trait:HW_CPU_X86_AVX2': 'required',
+                 'trait:CUSTOM_TRUSTED': 'required',
+                 'trait1:CUSTOM_FPGA': 'required',
+                 'trai:CUSTOM_FOO': 'required',
+                 'trait:CUSTOM_XYZ': 'xyz'}
+
+        virtprops = objects.ImageMetaProps.from_dict(props)
+
+        self.assertIn('CUSTOM_TRUSTED', virtprops.traits_required)
+        self.assertIn('HW_CPU_X86_AVX2', virtprops.traits_required)
+
+        # numbered traits are ignored
+        self.assertNotIn('CUSTOM_FPGA', virtprops.traits_required)
+        # property key does not start with `trait:` exactly
+        self.assertNotIn('CUSTOM_FOO', virtprops.traits_required)
+        # property value is not required
+        self.assertNotIn('CUSTOM_XYZ', virtprops.traits_required)
+
+    def test_traits_required_initialized_as_list(self):
+        """Tests that traits_required field is set as a list even if the same
+           property is set on the image metadata.
+        """
+        props = {'trait:HW_CPU_X86_AVX2': 'required',
+                 'trait:CUSTOM_TRUSTED': 'required',
+                 'traits_required': 'foo'}
+
+        virtprops = objects.ImageMetaProps.from_dict(props)
+
+        self.assertIsInstance(virtprops.traits_required, list)
+        self.assertIn('CUSTOM_TRUSTED', virtprops.traits_required)
+        self.assertIn('HW_CPU_X86_AVX2', virtprops.traits_required)
+        self.assertEqual(2, len(virtprops.traits_required))
+
     def test_obj_make_compatible(self):
         props = {
             'hw_firmware_type': 'uefi',
@@ -330,3 +371,9 @@ class TestImageMetaProps(test.NoDBTestCase):
         primitive = obj.obj_to_primitive('1.0')
         self.assertNotIn('img_hide_hypervisor_id',
                          primitive['nova_object.data'])
+
+    def test_obj_make_compatible_trait_fields(self):
+        """Tests that checks if we pop traits_required."""
+        obj = objects.ImageMetaProps(traits_required=['CUSTOM_TRUSTED'])
+        primitive = obj.obj_to_primitive('1.19')
+        self.assertNotIn('traits_required', primitive['nova_object.data'])
