@@ -11772,6 +11772,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             ]
         self.assertEqual(wantFiles, gotFiles)
 
+    def test_injection_info_is_sanitized(self):
+        info = get_injection_info(
+            network_info=mock.sentinel.network_info,
+            files=mock.sentinel.files,
+            admin_pass='verybadpass')
+        self.assertNotIn('verybadpass', str(info))
+        self.assertNotIn('verybadpass', repr(info))
+
     @mock.patch(
         'nova.virt.libvirt.driver.LibvirtDriver._build_device_metadata')
     @mock.patch('nova.api.metadata.base.InstanceMetadata')
