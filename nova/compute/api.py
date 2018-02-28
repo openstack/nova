@@ -3763,8 +3763,7 @@ class API(base.Base):
 
     @check_instance_lock
     @check_instance_state(vm_state=[vm_states.ACTIVE, vm_states.PAUSED,
-                                    vm_states.SUSPENDED, vm_states.STOPPED,
-                                    vm_states.RESIZED, vm_states.SOFT_DELETED])
+                                    vm_states.RESIZED])
     def swap_volume(self, context, instance, old_volume, new_volume):
         """Swap volume attached to an instance."""
         # The caller likely got the instance from volume['attachments']
