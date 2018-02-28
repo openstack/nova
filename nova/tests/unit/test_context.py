@@ -103,6 +103,7 @@ class ContextTestCase(test.NoDBTestCase):
                 {u'type': u's3', u'name': u's3'},
                 {u'type': u'image', u'name': u'glance'},
                 {u'type': u'volumev3', u'name': u'cinderv3'},
+                {u'type': u'network', u'name': u'neutron'},
                 {u'type': u'ec2', u'name': u'ec2'},
                 {u'type': u'object-store', u'name': u'swift'},
                 {u'type': u'identity', u'name': u'keystone'},
@@ -112,6 +113,7 @@ class ContextTestCase(test.NoDBTestCase):
 
         volume_catalog = [{u'type': u'image', u'name': u'glance'},
                           {u'type': u'volumev3', u'name': u'cinderv3'},
+                          {u'type': u'network', u'name': u'neutron'},
                           {u'type': u'block-storage', u'name': u'cinder'}]
         ctxt = context.RequestContext('111', '222',
                 service_catalog=service_catalog)
