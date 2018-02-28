@@ -73,13 +73,13 @@ Periodic task interval.
 
 This value controls how often (in seconds) to run periodic tasks in the
 scheduler. The specific tasks that are run for each period are determined by
-the particular scheduler being used.
+the particular scheduler being used. Currently the only in-tree scheduler
+driver that uses this option is the ``caching_scheduler``.
 
-If this is larger than the nova-service 'service_down_time' setting, Nova may
-report the scheduler service as down. This is because the scheduler driver is
-responsible for sending a heartbeat and it will only do that as often as this
-option allows. As each scheduler can work a little differently than the others,
-be sure to test this with your selected scheduler.
+If this is larger than the nova-service 'service_down_time' setting, the
+ComputeFilter (if enabled) may think the compute service is down. As each
+scheduler can work a little differently than the others, be sure to test this
+with your selected scheduler.
 
 Possible values:
 
