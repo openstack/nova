@@ -1,0 +1,88 @@
+# Copyright 2018 VEXXHOST, Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+import mock
+
+from nova.compute import api as compute_api
+from nova.tests import fixtures as nova_fixtures
+from nova.tests.functional import integrated_helpers
+
+
+class DeleteWithReservedVolumes(integrated_helpers._IntegratedTestBase,
+                                integrated_helpers.InstanceHelperMixin):
+    """Test deleting of an instance in error state that has a reserved volume.
+
+    This test boots a server from volume which will fail to be scheduled,
+    ending up in ERROR state with no host assigned and then deletes the server.
+
+    Since the server failed to be scheduled, a local delete should run which
+    will make sure that reserved volumes at the API layer are properly cleaned
+    up.
+
+    The regression is that Nova would not clean up the reserved volumes and
+    the volume would be stuck in 'attaching' state.
+    """
+    api_major_version = 'v2.1'
+    microversion = 'latest'
+
+    def _setup_compute_service(self):
+        # Override `_setup_compute_service` to make sure that we do not start
+        # up the compute service, making sure that the instance will end up
+        # failing to find a valid host.
+        pass
+
+    def _create_error_server(self, volume_id):
+        server = self.api.post_server({
+            'server': {
+                'flavorRef': '1',
+                'name': 'bfv-delete-server-in-error-status',
+                'networks': 'none',
+                'block_device_mapping_v2': [
+                    {
+                        'boot_index': 0,
+                        'uuid': volume_id,
+                        'source_type': 'volume',
+                        'destination_type': 'volume'
+                    },
+                ]
+            }
+        })
+        return self._wait_for_state_change(self.api, server, 'ERROR')
+
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=compute_api.BFV_RESERVE_MIN_COMPUTE_VERSION)
+    def test_delete_with_reserved_volumes(self, mock_version_get=None):
+        self.cinder = self.useFixture(nova_fixtures.CinderFixture(self))
+
+        # Create a server which should go to ERROR state because we don't
+        # have any active computes.
+        volume_id = nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
+        server = self._create_error_server(volume_id)
+
+        # The status of the volume at this point should be 'attaching' as it
+        # is reserved by Nova by the API.
+        self.assertIn(volume_id, self.cinder.reserved_volumes)
+
+        # Delete this server, which should delete BDMs and remove the
+        # reservation on the instances.
+        self.api.delete_server(server['id'])
+
+        # The volume should no longer be reserved as the deletion of the
+        # server should have released all the resources.
+        # TODO(mnaser): Uncomment this in patch resolving the issue
+        # self.assertNotIn(volume_id, self.cinder.reserved_volumes)
+
+        # The volume is still reserved at this point, which it should not be.
+        # TODO(mnaser): Remove this in patch resolving the issue
+        self.assertIn(volume_id, self.cinder.reserved_volumes)
