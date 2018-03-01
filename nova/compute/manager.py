@@ -1792,7 +1792,8 @@ class ComputeManager(manager.Manager):
                     tagging_requested = True
                     break
         if (tagging_requested and
-                not self.driver.capabilities.get('supports_device_tagging')):
+                not self.driver.capabilities.get('supports_device_tagging',
+                                                 False)):
             raise exception.BuildAbortException('Attempt to boot guest with '
                                                 'tagged devices on host that '
                                                 'does not support tagging.')
@@ -2981,7 +2982,7 @@ class ComputeManager(manager.Manager):
                 hints = self._get_scheduler_hints({}, request_spec)
                 self._validate_instance_group_policy(context, instance, hints)
 
-            if not self.driver.capabilities["supports_recreate"]:
+            if not self.driver.capabilities.get("supports_recreate", False):
                 raise exception.InstanceRecreateNotSupported
 
             self._check_instance_exists(context, instance)
@@ -4078,7 +4079,8 @@ class ComputeManager(manager.Manager):
         # if the flavor IDs match, it's migrate; otherwise resize
         if same_host and instance_type.id == instance['instance_type_id']:
             # check driver whether support migrate to same host
-            if not self.driver.capabilities['supports_migrate_to_same_host']:
+            if not self.driver.capabilities.get(
+                    'supports_migrate_to_same_host', False):
                 raise exception.UnableToMigrateToSelf(
                     instance_id=instance.uuid, host=self.host)
 
@@ -5449,7 +5451,8 @@ class ComputeManager(manager.Manager):
             # TODO(mriedem): This is copied from DriverVolumeBlockDevice
             # and should be consolidated into some common code at some point.
             vol_multiattach = new_volume.get('multiattach', False)
-            virt_multiattach = self.driver.capabilities['supports_multiattach']
+            virt_multiattach = self.driver.capabilities.get(
+                'supports_multiattach', False)
             if vol_multiattach and not virt_multiattach:
                 raise exception.MultiattachNotSupportedByVirtDriver(
                     volume_id=new_volume_id)
@@ -5703,7 +5706,8 @@ class ComputeManager(manager.Manager):
     def attach_interface(self, context, instance, network_id, port_id,
                          requested_ip, tag):
         """Use hotplug to add an network adapter to an instance."""
-        if not self.driver.capabilities['supports_attach_interface']:
+        if not self.driver.capabilities.get('supports_attach_interface',
+                                            False):
             raise exception.AttachInterfaceNotSupported(
                 instance_uuid=instance.uuid)
         if (tag and not
@@ -7636,7 +7640,7 @@ class ComputeManager(manager.Manager):
     def _run_image_cache_manager_pass(self, context):
         """Run a single pass of the image cache manager."""
 
-        if not self.driver.capabilities["has_imagecache"]:
+        if not self.driver.capabilities.get("has_imagecache", False):
             return
 
         # Determine what other nodes use this storage
