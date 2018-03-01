@@ -10,8 +10,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from oslo_log import log as logging
-
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional import integrated_helpers
@@ -20,8 +18,6 @@ from nova.tests.unit import fake_notifier
 import nova.tests.unit.image.fake
 from nova.tests.unit import policy_fixture
 from nova.virt import fake
-
-LOG = logging.getLogger(__name__)
 
 
 class TestParallelEvacuationWithServerGroup(

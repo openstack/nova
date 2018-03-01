@@ -14,7 +14,6 @@
 
 from oslo_db import exception as db_exc
 from oslo_db.sqlalchemy import utils as sqlalchemyutils
-from oslo_log import log as logging
 from oslo_utils import versionutils
 from sqlalchemy import or_
 from sqlalchemy.orm import joinedload
@@ -33,7 +32,6 @@ from nova.objects import base
 from nova.objects import fields
 
 
-LOG = logging.getLogger(__name__)
 OPTIONAL_FIELDS = ['extra_specs', 'projects']
 # Remove these fields in version 2.0 of the object.
 DEPRECATED_FIELDS = ['deleted', 'deleted_at']

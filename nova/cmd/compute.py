@@ -37,7 +37,6 @@ from nova import utils
 from nova import version
 
 CONF = nova.conf.CONF
-LOG = logging.getLogger('nova.compute')
 
 
 def main():

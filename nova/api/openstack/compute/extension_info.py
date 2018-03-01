@@ -12,14 +12,10 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-from oslo_log import log as logging
-
 import webob.exc
 
 from nova.api.openstack import wsgi
 from nova.policies import extensions as ext_policies
-
-LOG = logging.getLogger(__name__)
 
 
 EXTENSION_LIST = [
