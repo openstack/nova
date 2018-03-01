@@ -19,16 +19,16 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-01-03 23:41+0000\n"
+"POT-Creation-Date: 2018-02-28 15:53+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "PO-Revision-Date: 2016-04-12 06:08+0000\n"
 "Last-Translator: Copied by Zanata <copied-by-zanata@zanata.org>\n"
-"Language: pt-BR\n"
+"Language: pt_BR\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "Generated-By: Babel 2.0\n"
-"X-Generator: Zanata 3.9.6\n"
+"X-Generator: Zanata 4.3.3\n"
 "Language-Team: Portuguese (Brazil)\n"
 
 #, python-format
@@ -115,18 +115,6 @@ msgstr "%(total)i linhas corresponderal à consulta %(meth)s, %(done)i migradas"
 #, python-format
 msgid "%(type)s hypervisor does not support PCI devices"
 msgstr "O hypervisor %(type)s não suporta dispositivos PCI"
-
-#, python-format
-msgid "%(value_name)s must be <= %(max_value)d"
-msgstr "%(value_name)s deve ser <= %(max_value)d"
-
-#, python-format
-msgid "%(value_name)s must be >= %(min_value)d"
-msgstr "%(value_name)s deve ser >= %(min_value)d"
-
-#, python-format
-msgid "%(value_name)s must be an integer"
-msgstr "%(value_name)s deve ser um número inteiro"
 
 #, python-format
 msgid "%(worker_name)s value of %(workers)s is invalid, must be greater than 0"
@@ -1454,10 +1442,6 @@ msgstr "Tipo de virtualização do hypervisor '%(hv_type)s' não é reconhecido"
 #, python-format
 msgid "Hypervisor with ID '%s' could not be found."
 msgstr "O hypervisor com o ID '%s' não pôde ser localizado."
-
-#, python-format
-msgid "Hypervisor: %s"
-msgstr "Hypervisor: %s"
 
 #, python-format
 msgid "IP allocation over quota in pool %s."
@@ -4022,9 +4006,6 @@ msgstr "fmt=%(fmt)s retornado por: %(backing_file)s"
 msgid "fping utility is not found."
 msgstr "utilitário fping não localizado."
 
-msgid "host"
-msgstr "host"
-
 #, python-format
 msgid "href %s does not contain version"
 msgstr "href %s não contém versão"
@@ -4296,6 +4277,3 @@ msgstr "não será possível aprovar av_zone se o escopo for público"
 
 msgid "you can not pass project if the scope is private"
 msgstr "não será possível aprovar o projeto se o escopo for privado"
-
-msgid "zone"
-msgstr "zona"
