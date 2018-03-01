@@ -1,0 +1,33 @@
+{
+    "generation": 0,
+    "links": [
+        {
+            "href": "/placement/resource_providers/7d2590ae-fb85-4080-9306-058b4c915e3f",
+            "rel": "self"
+        },
+        {
+            "href": "/placement/resource_providers/7d2590ae-fb85-4080-9306-058b4c915e3f/aggregates",
+            "rel": "aggregates"
+        },
+        {
+            "href": "/placement/resource_providers/7d2590ae-fb85-4080-9306-058b4c915e3f/inventories",
+            "rel": "inventories"
+        },
+        {
+            "href": "/placement/resource_providers/7d2590ae-fb85-4080-9306-058b4c915e3f/usages",
+            "rel": "usages"
+        },
+        {
+            "href": "/placement/resource_providers/7d2590ae-fb85-4080-9306-058b4c915e3f/traits",
+            "rel": "traits"
+        },
+        {
+            "href": "/placement/resource_providers/7d2590ae-fb85-4080-9306-058b4c915e3f/allocations",
+            "rel": "allocations"
+        }
+    ],
+    "name": "NFS Share",
+    "uuid": "7d2590ae-fb85-4080-9306-058b4c915e3f",
+    "parent_provider_uuid": "542df8ed-9be2-49b9-b4db-6d3183ff8ec8",
+    "root_provider_uuid": "542df8ed-9be2-49b9-b4db-6d3183ff8ec8"
+}

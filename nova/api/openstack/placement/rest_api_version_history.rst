@@ -243,3 +243,12 @@ response to be identical, and to include the ``resource_provider_generation``.
 As with other generation-aware APIs, if the ``resource_provider_generation``
 specified in the `PUT` request does not match the generation known by the
 server, a 409 Conflict error is returned.
+
+1.20 Return 200 with provider payload from POST /resource_providers
+-------------------------------------------------------------------
+
+The `POST /resource_providers` API, on success, returns 200 with a payload
+representing the newly-created resource provider, in the same format as the
+corresponding `GET /resource_providers/{uuid}` call. This is to allow the
+caller to glean automatically-set fields, such as UUID and generation, without
+a subsequent GET.

@@ -17,14 +17,14 @@ tests:
   data:
       name: rp_1
       uuid: 893337e9-1e55-49f0-bcfe-6a2f16fbf2f7
-  status: 201
+  status: 200
 
 - name: post new provider 2
   POST: /resource_providers
   data:
       name: rp_2
       uuid: 5202c48f-c960-4eec-bde3-89c4f22a17b9
-  status: 201
+  status: 200
 
 - name: get by aggregates no result
   GET: '/resource_providers?member_of=in:83a3d69d-8920-48e2-8914-cadfd8fa2f91'

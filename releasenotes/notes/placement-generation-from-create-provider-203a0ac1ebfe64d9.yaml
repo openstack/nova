@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    In placement API microversion 1.20, a successful `POST /resource_providers`
+    returns 200 with a payload representing the newly-created resource
+    provider.  The format is the same format as the result of the corresponding
+    ``GET /resource_providers/{uuid}`` call. This is to allow the caller to
+    glean automatically-set fields, such as UUID and generation, without a
+    subsequent GET.

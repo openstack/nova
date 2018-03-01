@@ -27,11 +27,9 @@ tests:
   data:
       name: $ENVIRON['ALT_RP_NAME']
       uuid: $ENVIRON['ALT_RP_UUID']
-  status: 201
+  status: 200
   response_headers:
       location: //resource_providers/[a-f0-9-]+/
-  response_forbidden_headers:
-      - content-type
 
 - name: now 2 providers listed
   GET: /resource_providers

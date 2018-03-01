@@ -63,6 +63,7 @@ VERSIONS = [
     '1.18',  # Support ?required=<traits> queryparam on GET /resource_providers
     '1.19',  # Include generation and conflict detection in provider aggregates
              # APIs
+    '1.20',  # Return 200 with provider payload from POST /resource_providers
 ]
 
 

@@ -64,7 +64,7 @@ Request
 
   - uuid: resource_provider_uuid_path
   - name: resource_provider_name
-  - parent_provider_uuid: resource_provider_parent_provider_uuid
+  - parent_provider_uuid: resource_provider_parent_provider_uuid_1_14
 
 Request example
 ---------------

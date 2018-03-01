@@ -313,7 +313,7 @@ resource_provider_generation_optional:
 resource_provider_generation_v1_19:
   <<: *resource_provider_generation
   min_version: 1.19
-resource_provider_links:
+resource_provider_links: &resource_provider_links
   type: array
   in: body
   required: true
@@ -325,6 +325,11 @@ resource_provider_links:
       Aggregates relationship link is available starting from version 1.1.
       Traits relationship link is available starting from version 1.6.
       Allocations relationship link is available starting from version 1.11.
+
+resource_provider_links_v1_20:
+  <<: *resource_provider_links
+  description: |
+    A list of links associated with the resource provider.
 
 resource_provider_name:
   type: string
@@ -344,14 +349,20 @@ resource_provider_parent_provider_uuid: &resource_provider_parent_provider_uuid
   required: false
   description: >
     The UUID of the immediate parent of the resource provider.
+resource_provider_parent_provider_uuid_1_14: &resource_provider_parent_provider_uuid_1_14
+  <<: *resource_provider_parent_provider_uuid
   min_version: 1.14
 resource_provider_parent_provider_uuid_required:
   <<: *resource_provider_parent_provider_uuid
   required: true
-resource_provider_root_provider_uuid_required:
+resource_provider_root_provider_uuid_no_min: &resource_provider_root_provider_uuid_no_min
   type: string
   in: body
   required: true
+  description: >
+    UUID of the top-most provider in this provider tree.
+resource_provider_root_provider_uuid_required:
+  <<: *resource_provider_root_provider_uuid_no_min
   description: >
     Read-only UUID of the top-most provider in this provider tree.
   min_version: 1.14

@@ -105,8 +105,16 @@ def create_resource_provider(req):
 
     req.response.location = util.resource_provider_url(
         req.environ, resource_provider)
-    req.response.status = 201
-    req.response.content_type = None
+    if want_version.matches(min_version=(1, 20)):
+        req.response.body = encodeutils.to_utf8(jsonutils.dumps(
+            _serialize_provider(req.environ, resource_provider, want_version)))
+        req.response.content_type = 'application/json'
+        modified = util.pick_last_modified(None, resource_provider)
+        req.response.last_modified = modified
+        req.response.cache_control = 'no-cache'
+    else:
+        req.response.status = 201
+        req.response.content_type = None
     return req.response
 
 
