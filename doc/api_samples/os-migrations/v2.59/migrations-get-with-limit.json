@@ -17,8 +17,10 @@
             "uuid": "42341d4b-346a-40d0-83c6-5f4f6892b650"
         }
     ],
-    "migrations_links": [{
-        "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/os-migrations?limit=1&marker=42341d4b-346a-40d0-83c6-5f4f6892b650",
-        "rel": "next"
-    }]
+    "migrations_links": [
+        {
+            "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/os-migrations?limit=1&marker=42341d4b-346a-40d0-83c6-5f4f6892b650",
+            "rel": "next"
+        }
+    ]
 }
