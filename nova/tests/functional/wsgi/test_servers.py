@@ -10,6 +10,9 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import mock
+
+from nova.compute import api as compute_api
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.unit.image import fake as fake_image
@@ -237,3 +240,41 @@ class ServersPreSchedulingTestCase(test.TestCase):
             'servers/detail?not-tags-any=tag1,tag3')
         list_resp = list_resp.body['servers']
         self.assertEqual(0, len(list_resp))
+
+    @mock.patch('nova.objects.service.get_minimum_version_all_cells',
+                return_value=compute_api.BFV_RESERVE_MIN_COMPUTE_VERSION)
+    def test_bfv_delete_build_request_pre_scheduling_ocata(self, mock_get):
+        cinder = self.useFixture(nova_fixtures.CinderFixture(self))
+
+        volume_id = nova_fixtures.CinderFixture.IMAGE_BACKED_VOL
+        server = self.api.post_server({
+            'server': {
+                'flavorRef': '1',
+                'name': 'test_bfv_delete_build_request_pre_scheduling',
+                'networks': 'none',
+                'block_device_mapping_v2': [
+                    {
+                        'boot_index': 0,
+                        'uuid': volume_id,
+                        'source_type': 'volume',
+                        'destination_type': 'volume'
+                    },
+                ]
+            }
+        })
+
+        # Since _IntegratedTestBase uses the CastAsCall fixture, when we
+        # get the server back we know all of the volume stuff should be done.
+        self.assertIn(volume_id, cinder.reserved_volumes)
+
+        # Now delete the server, which should go through the "local delete"
+        # code in the API, find the build request and delete it along with
+        # detaching the volume from the instance.
+        self.api.delete_server(server['id'])
+
+        # The volume should no longer have any attachments as instance delete
+        # should have removed them.
+        # self.assertNotIn(volume_id, cinder.reserved_volumes)
+        # FIXME(mnaser): This is part of bug 1750666 where the BDMs aren't
+        # properly deleted because they don't exist in the database.
+        self.assertIn(volume_id, cinder.reserved_volumes)
