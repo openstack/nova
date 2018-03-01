@@ -15,6 +15,12 @@ List an optionally filtered collection of resource providers.
 
 Normal Response Codes: 200
 
+Error response codes: badRequest(400)
+
+A `400 BadRequest` response code will be returned
+if a resource class specified in ``resources`` request parameter
+does not exist.
+
 Request
 -------
 
