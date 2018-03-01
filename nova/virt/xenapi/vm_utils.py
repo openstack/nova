@@ -2302,8 +2302,7 @@ def _resize_part_and_fs(dev, start, old_sectors, new_sectors, flags):
     _repair_filesystem(partition_path)
 
     # Remove ext3 journal (making it ext2)
-    utils.execute('tune2fs', '-O ^has_journal', partition_path,
-                  run_as_root=True)
+    nova.privsep.fs.ext_journal_disable(partition_path)
 
     if new_sectors < old_sectors:
         # Resizing down, resize filesystem before partition resize
@@ -2325,7 +2324,7 @@ def _resize_part_and_fs(dev, start, old_sectors, new_sectors, flags):
         utils.execute('resize2fs', partition_path, run_as_root=True)
 
     # Add back journal
-    utils.execute('tune2fs', '-j', partition_path, run_as_root=True)
+    nova.privsep.fs.ext_journal_enable(partition_path)
 
 
 def _log_progress_if_required(left, last_log_time, virtual_size):

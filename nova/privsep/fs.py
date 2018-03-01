@@ -210,3 +210,13 @@ def unprivileged_resize_partition(device, start, end, bootable):
     if bootable:
         processutils.execute('parted', '--script', device,
                              'set', '1', 'boot', 'on')
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def ext_journal_disable(device):
+    processutils.execute('tune2fs', '-O ^has_journal', device)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def ext_journal_enable(device):
+    processutils.execute('tune2fs', '-j', device)
