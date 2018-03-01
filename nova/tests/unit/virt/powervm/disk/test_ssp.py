@@ -122,6 +122,7 @@ class TestSSPDiskAdapter(test.NoDBTestCase):
 
     def test_capabilities(self):
         self.assertTrue(self.ssp_drv.capabilities.get('shared_storage'))
+        self.assertFalse(self.ssp_drv.capabilities.get('has_imagecache'))
         self.assertTrue(self.ssp_drv.capabilities.get('snapshot'))
 
     @mock.patch('pypowervm.util.get_req_path_uuid', autospec=True)
@@ -164,7 +165,7 @@ class TestSSPDiskAdapter(test.NoDBTestCase):
     @mock.patch('pypowervm.util.sanitize_file_name_for_api', autospec=True)
     @mock.patch('pypowervm.tasks.storage.crt_lu', autospec=True)
     @mock.patch('nova.image.api.API.download')
-    @mock.patch('nova.virt.powervm.disk.ssp.IterableToFileAdapter',
+    @mock.patch('nova.virt.powervm.disk.driver.IterableToFileAdapter',
                 autospec=True)
     def test_create_disk_from_image(self, mock_it2f, mock_dl, mock_crt_lu,
                                     mock_san, mock_vuuid, mock_goru):
@@ -341,26 +342,6 @@ class TestSSPDiskAdapter(test.NoDBTestCase):
         self.ssp_drv._disk_match_func('disk_type', 'instance')
         mock_disk_name.assert_called_once_with('disk_type', 'instance')
         mock_gen_match.assert_called_with(pvm_stg.LU, names=['disk_name'])
-
-    @mock.patch("pypowervm.util.sanitize_file_name_for_api", autospec=True)
-    def test_get_disk_name(self, mock_san):
-        inst = mock.Mock()
-        inst.configure_mock(name='a_name_that_is_longer_than_eight',
-                            uuid='01234567-abcd-abcd-abcd-123412341234')
-
-        # Long
-        self.assertEqual(mock_san.return_value,
-                         self.ssp_drv._get_disk_name('type', inst))
-        mock_san.assert_called_with(inst.name, prefix='type_',
-                                    max_len=pvm_const.MaxLen.FILENAME_DEFAULT)
-
-        mock_san.reset_mock()
-
-        # Short
-        self.assertEqual(mock_san.return_value,
-                         self.ssp_drv._get_disk_name('type', inst, short=True))
-        mock_san.assert_called_with('a_name_t_0123', prefix='t_',
-                                    max_len=pvm_const.MaxLen.VDISK_NAME)
 
     @mock.patch('nova.virt.powervm.disk.ssp.SSPDiskAdapter.'
                 '_vios_uuids', new_callable=mock.PropertyMock)
