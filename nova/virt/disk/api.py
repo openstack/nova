@@ -117,7 +117,10 @@ def mkfs(os_type, fs_label, target, run_as_root=True, specified_fs=None):
                 specified_fs = _DEFAULT_FS_BY_OSTYPE.get(os_type,
                                                          _DEFAULT_FILE_SYSTEM)
 
-        utils.mkfs(specified_fs, target, fs_label, run_as_root=run_as_root)
+        if run_as_root:
+            nova.privsep.fs.mkfs(specified_fs, target, fs_label)
+        else:
+            nova.privsep.fs.unprivileged_mkfs(specified_fs, target, fs_label)
 
 
 def resize2fs(image, check_exit_code=False, run_as_root=False):

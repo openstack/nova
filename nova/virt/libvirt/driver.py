@@ -3183,7 +3183,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _create_swap(target, swap_mb, context=None):
         """Create a swap file of specified size."""
         libvirt_utils.create_image('raw', target, '%dM' % swap_mb)
-        utils.mkfs('swap', target)
+        nova.privsep.fs.unprivileged_mkfs('swap', target)
 
     @staticmethod
     def _get_console_log_path(instance):

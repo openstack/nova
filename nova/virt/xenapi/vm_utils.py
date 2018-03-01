@@ -1038,8 +1038,7 @@ def _generate_disk(session, instance, vm_ref, userdevice, name_label,
         if fs_type is not None and not mkfs_in_dom0:
             with vdi_attached(session, vdi_ref, read_only=False) as dev:
                 partition_path = utils.make_dev_path(dev, partition=1)
-                utils.mkfs(fs_type, partition_path, fs_label,
-                           run_as_root=True)
+                nova.privsep.fs.mkfs(fs_type, partition_path, fs_label)
 
         # 4. Create VBD between instance VM and VDI
         if vm_ref:

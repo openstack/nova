@@ -995,8 +995,8 @@ class VDIOtherConfigTestCase(VMUtilsTestBase):
 class GenerateDiskTestCase(VMUtilsTestBase):
 
     @mock.patch.object(vm_utils, 'vdi_attached')
-    @mock.patch.object(vm_utils.utils, 'mkfs',
-                       side_effect = test.TestingException())
+    @mock.patch('nova.privsep.fs.mkfs',
+                side_effect = test.TestingException())
     @mock.patch.object(vm_utils, '_get_dom0_ref', return_value='dom0_ref')
     @mock.patch.object(vm_utils, 'safe_find_sr', return_value='sr_ref')
     @mock.patch.object(vm_utils, 'create_vdi', return_value='vdi_ref')
@@ -1021,7 +1021,7 @@ class GenerateDiskTestCase(VMUtilsTestBase):
                                            bootable=False)
 
     @mock.patch.object(vm_utils, 'vdi_attached')
-    @mock.patch.object(vm_utils.utils, 'mkfs')
+    @mock.patch('nova.privsep.fs.mkfs')
     @mock.patch.object(vm_utils, '_get_dom0_ref', return_value='dom0_ref')
     @mock.patch.object(vm_utils, 'safe_find_sr', return_value='sr_ref')
     @mock.patch.object(vm_utils, 'create_vdi', return_value='vdi_ref')
@@ -1054,7 +1054,7 @@ class GenerateDiskTestCase(VMUtilsTestBase):
                                            bootable=False)
 
     @mock.patch.object(vm_utils, 'vdi_attached')
-    @mock.patch.object(vm_utils.utils, 'mkfs')
+    @mock.patch('nova.privsep.fs.mkfs')
     @mock.patch.object(vm_utils, '_get_dom0_ref', return_value='dom0_ref')
     @mock.patch.object(vm_utils, 'safe_find_sr', return_value='sr_ref')
     @mock.patch.object(vm_utils, 'create_vdi', return_value='vdi_ref')
@@ -1082,7 +1082,7 @@ class GenerateDiskTestCase(VMUtilsTestBase):
         mock_attached_here.assert_any_call(session, 'vdi_ref',
                                            read_only=False)
         mock_mkfs.assert_called_with('ext4', '/dev/fake_devp1',
-                                     'ephemeral-1', run_as_root=True)
+                                     'ephemeral-1')
 
         mock_create_vbd.assert_called_with(session, 'vm_ref', 'vdi_ref', '2',
                                            bootable=False)

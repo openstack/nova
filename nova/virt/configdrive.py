@@ -103,7 +103,7 @@ class ConfigDriveBuilder(object):
         with open(path, 'wb') as f:
             f.truncate(CONFIGDRIVESIZE_BYTES)
 
-        utils.mkfs('vfat', path, label='config-2')
+        nova.privsep.fs.unprivileged_mkfs('vfat', path, label='config-2')
 
         with utils.tempdir() as mountdir:
             mounted = False

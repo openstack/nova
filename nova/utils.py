@@ -723,31 +723,6 @@ class UndoManager(object):
             self._rollback()
 
 
-def mkfs(fs, path, label=None, run_as_root=False):
-    """Format a file or block device
-
-    :param fs: Filesystem type (examples include 'swap', 'ext3', 'ext4'
-               'btrfs', etc.)
-    :param path: Path to file or block device to format
-    :param label: Volume label to use
-    """
-    if fs == 'swap':
-        args = ['mkswap']
-    else:
-        args = ['mkfs', '-t', fs]
-    # add -F to force no interactive execute on non-block device.
-    if fs in ('ext3', 'ext4', 'ntfs'):
-        args.extend(['-F'])
-    if label:
-        if fs in ('msdos', 'vfat'):
-            label_opt = '-n'
-        else:
-            label_opt = '-L'
-        args.extend([label_opt, label])
-    args.append(path)
-    execute(*args, run_as_root=run_as_root)
-
-
 def metadata_to_dict(metadata, include_deleted=False):
     result = {}
     for item in metadata:
