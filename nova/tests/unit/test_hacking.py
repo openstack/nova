@@ -782,3 +782,23 @@ class HackingTestCase(test.NoDBTestCase):
             "return ' some string '"))))
         self.assertEqual(0, len(list(checks.return_followed_by_space(
             "return (int('40') + 2)"))))
+
+    def test_no_redundant_import_alias(self):
+        code = """
+                  from x import y as y
+                  import x as x
+                  import x.y.z as z
+                  import x.y.z as y.z
+               """
+        errors = [(x + 1, 0, 'N359') for x in range(4)]
+        self._assert_has_errors(code, checks.no_redundant_import_alias,
+                                expected_errors=errors)
+        code = """
+                  from x import y
+                  import x
+                  from x.y import z
+                  from a import bcd as cd
+                  import ab.cd.efg as fg
+                  import ab.cd.efg as d.efg
+               """
+        self._assert_has_no_errors(code, checks.no_redundant_import_alias)

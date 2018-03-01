@@ -22,7 +22,7 @@ from cursive import exception as cursive_exception
 import ddt
 import glanceclient.exc
 from glanceclient.v1 import images
-import glanceclient.v2.schemas as schemas
+from glanceclient.v2 import schemas
 from keystoneauth1 import loading as ks_loading
 import mock
 import six

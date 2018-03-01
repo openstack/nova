@@ -96,7 +96,7 @@ def setup_profiler(binary, host):
 
 
 def assert_eventlet_uses_monotonic_clock():
-    import eventlet.hubs as hubs
+    from eventlet import hubs
     import monotonic
 
     hub = hubs.get_hub()
