@@ -1834,16 +1834,42 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.assertEqual('req-' + uuids.request_id,
                          logging_mock.call_args[0][1]['placement_req_id'])
 
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_resource_provider')
+    def test_create_resource_provider_legacy(self, mock_get):
+        """Test that _create_resource_provider() sends a dict of resource
+        provider information without a parent provider UUID.
+        """
+        uuid = uuids.compute_node
+        name = 'computehost'
+        resp406_mock = mock.Mock(status_code=406)
+        resp201_mock = mock.Mock(status_code=201)
+        self.ks_adap_mock.post.side_effect = (resp406_mock, resp201_mock)
+
+        self.assertEqual(
+            mock_get.return_value,
+            self.client._create_resource_provider(self.context, uuid, name))
+
+        self.ks_adap_mock.post.assert_has_calls([
+            mock.call(
+                '/resource_providers', microversion=mver,
+                json={'uuid': uuid, 'name': name}, raise_exc=False,
+                headers={'X-Openstack-Request-Id': self.context.global_id})
+            for mver in ('1.20', '1.14')])
+        mock_get.assert_called_once_with(self.context, uuid)
+
     def test_create_resource_provider(self):
         """Test that _create_resource_provider() sends a dict of resource
         provider information without a parent provider UUID.
         """
         uuid = uuids.compute_node
         name = 'computehost'
-        resp_mock = mock.Mock(status_code=201)
+        resp_mock = mock.Mock(status_code=200)
         self.ks_adap_mock.post.return_value = resp_mock
 
-        self.client._create_resource_provider(self.context, uuid, name)
+        self.assertEqual(
+            resp_mock.json.return_value,
+            self.client._create_resource_provider(self.context, uuid, name))
 
         expected_payload = {
             'uuid': uuid,
@@ -1853,7 +1879,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         expected_url = '/resource_providers'
         self.ks_adap_mock.post.assert_called_once_with(
             expected_url, json=expected_payload, raise_exc=False,
-            microversion='1.14',
+            microversion='1.20',
             headers={'X-Openstack-Request-Id': self.context.global_id})
 
     def test_create_resource_provider_with_parent(self):
@@ -1863,14 +1889,17 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         parent_uuid = uuids.parent
         uuid = uuids.compute_node
         name = 'computehost'
-        resp_mock = mock.Mock(status_code=201)
+        resp_mock = mock.Mock(status_code=200)
         self.ks_adap_mock.post.return_value = resp_mock
 
-        result = self.client._create_resource_provider(
-            self.context,
-            uuid,
-            name,
-            parent_provider_uuid=parent_uuid,
+        self.assertEqual(
+            resp_mock.json.return_value,
+            self.client._create_resource_provider(
+                self.context,
+                uuid,
+                name,
+                parent_provider_uuid=parent_uuid,
+            )
         )
 
         expected_payload = {
@@ -1878,18 +1907,11 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             'name': name,
             'parent_provider_uuid': parent_uuid,
         }
-        expected_provider_dict = dict(
-            uuid=uuid,
-            name=name,
-            generation=0,
-            parent_provider_uuid=parent_uuid,
-        )
         expected_url = '/resource_providers'
         self.ks_adap_mock.post.assert_called_once_with(
             expected_url, json=expected_payload, raise_exc=False,
-            microversion='1.14',
+            microversion='1.20',
             headers={'X-Openstack-Request-Id': self.context.global_id})
-        self.assertEqual(expected_provider_dict, result)
 
     @mock.patch.object(report.LOG, 'info')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
@@ -1903,10 +1925,12 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         # record.
         uuid = uuids.compute_node
         name = 'computehost'
-        self.ks_adap_mock.post.return_value = mock.Mock(
-            status_code=409,
-            headers={'x-openstack-request-id': uuids.request_id},
-            text='not a name conflict')
+        resp_mock = requests.Response()
+        resp_mock.status_code = 409
+        resp_mock.headers = {'x-openstack-request-id': uuids.request_id}
+        resp_mock._content = 'not a name conflict'.encode('utf-8')
+        resp_mock.encoding = 'utf-8'
+        self.ks_adap_mock.post.return_value = resp_mock
 
         get_rp_mock.return_value = mock.sentinel.get_rp
 
@@ -1920,7 +1944,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         expected_url = '/resource_providers'
         self.ks_adap_mock.post.assert_called_once_with(
             expected_url, json=expected_payload, raise_exc=False,
-            microversion='1.14',
+            microversion='1.20',
             headers={'X-Openstack-Request-Id': self.context.global_id})
         self.assertEqual(mock.sentinel.get_rp, result)
         # The 409 response will produce a message to the info log.
@@ -1931,10 +1955,13 @@ class TestProviderOperations(SchedulerReportClientTestCase):
     def test_create_resource_provider_name_conflict(self):
         # When the API call to create the resource provider fails 409 with a
         # name conflict, we raise an exception.
-        self.ks_adap_mock.post.return_value = mock.Mock(
-            status_code=409,
-            text='<stuff>Conflicting resource provider name: foo already '
-                 'exists.</stuff>')
+        resp_mock = requests.Response()
+        resp_mock.status_code = 409
+        resp_mock._content = (
+            '<stuff>Conflicting resource provider name: '
+            'foo already exists.</stuff>').encode('utf-8')
+        resp_mock.encoding = 'utf-8'
+        self.ks_adap_mock.post.return_value = resp_mock
 
         self.assertRaises(
             exception.ResourceProviderCreationFailed,
@@ -1948,7 +1975,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         # deal with
         uuid = uuids.compute_node
         name = 'computehost'
-        resp_mock = mock.Mock(status_code=503)
+        resp_mock = requests.Response()
+        resp_mock.status_code = 503
         self.ks_adap_mock.post.return_value = resp_mock
         self.ks_adap_mock.post.return_value.headers = {
             'x-openstack-request-id': uuids.request_id}
@@ -1964,7 +1992,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         expected_url = '/resource_providers'
         self.ks_adap_mock.post.assert_called_once_with(
             expected_url, json=expected_payload, raise_exc=False,
-            microversion='1.14',
+            microversion='1.20',
             headers={'X-Openstack-Request-Id': self.context.global_id})
         # A 503 Service Unavailable should log an error that
         # includes the placement request id and

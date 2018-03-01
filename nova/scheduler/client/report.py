@@ -47,6 +47,7 @@ PLACEMENT_CLIENT_SEMAPHORE = 'placement_client'
 # Number of seconds between attempts to update a provider's aggregates and
 # traits
 ASSOCIATION_REFRESH = 300
+POST_RPS_RETURNS_PAYLOAD_API_VERSION = '1.20'
 NESTED_PROVIDER_API_VERSION = '1.14'
 POST_ALLOCATIONS_API_VERSION = '1.13'
 
@@ -577,10 +578,24 @@ class SchedulerReportClient(object):
         if parent_provider_uuid is not None:
             payload['parent_provider_uuid'] = parent_provider_uuid
 
-        resp = self.post(url, payload, version=NESTED_PROVIDER_API_VERSION,
+        # Bug #1746075: First try the microversion that returns the new
+        # provider's payload.
+        resp = self.post(url, payload,
+                         version=POST_RPS_RETURNS_PAYLOAD_API_VERSION,
                          global_request_id=context.global_id)
+
+        # TODO(efried): Remove this block when minimum placement
+        # version always returns new provider payload.
+        if resp.status_code == 406:
+            # Bug #1746075 cont'd: Otherwise, use the "silent" version and
+            # retrieve the newly-created provider via GET.
+            resp = self.post(
+                url, payload, version=NESTED_PROVIDER_API_VERSION,
+                global_request_id=context.global_id)
+
         placement_req_id = get_placement_request_id(resp)
-        if resp.status_code == 201:
+
+        if resp:
             msg = ("[%(placement_req_id)s] Created resource provider record "
                    "via placement API for resource provider with UUID "
                    "%(uuid)s and name %(name)s.")
@@ -590,12 +605,12 @@ class SchedulerReportClient(object):
                 'placement_req_id': placement_req_id,
             }
             LOG.info(msg, args)
-            return dict(
-                    uuid=uuid,
-                    name=name,
-                    generation=0,
-                    parent_provider_uuid=parent_provider_uuid,
-            )
+            if resp.status_code == 200:
+                return resp.json()
+            else:
+                # TODO(efried): Remove this branch when minimum placement
+                # version always returns new provider payload.
+                return self._get_resource_provider(context, uuid)
 
         # TODO(efried): Push error codes from placement, and use 'em.
         name_conflict = 'Conflicting resource provider name:'
