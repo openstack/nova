@@ -16,6 +16,8 @@ Websocket Proxy for OpenStack Nova SPICE HTML5 consoles
 Synopsis
 ========
 
+::
+
   nova-spicehtml5proxy [options]
 
 Description
@@ -28,7 +30,7 @@ with OpenStack Nova SPICE HTML5 consoles.
 Options
 =======
 
- **General options**
+**General options**
 
 Files
 =====

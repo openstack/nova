@@ -16,6 +16,8 @@ Root wrapper for Nova
 Synopsis
 ========
 
+::
+
   nova-rootwrap [options]
 
 Description
@@ -44,7 +46,7 @@ To make allowed commands node-specific, your packaging should only install
 Options
 =======
 
- **General options**
+**General options**
 
 Files
 =====

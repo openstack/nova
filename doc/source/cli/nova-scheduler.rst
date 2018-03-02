@@ -16,6 +16,8 @@ Nova Scheduler
 Synopsis
 ========
 
+::
+
   nova-scheduler [options]
 
 Description
@@ -27,7 +29,7 @@ which is responsible for picking a compute node to run a given instance on.
 Options
 =======
 
- **General options**
+**General options**
 
 Files
 =====

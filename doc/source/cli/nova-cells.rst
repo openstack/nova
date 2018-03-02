@@ -16,6 +16,8 @@ Server for the Nova Cells
 Synopsis
 ========
 
+::
+
   nova-cells [options]
 
 Description
@@ -34,7 +36,7 @@ for new instances.
 Options
 =======
 
- **General options**
+**General options**
 
 Files
 =====

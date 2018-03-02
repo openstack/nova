@@ -16,6 +16,8 @@ Control and manage cloud computer instances
 Synopsis
 ========
 
+::
+
   nova-manage <category> <action> [<args>]
 
 Description
@@ -46,11 +48,9 @@ Nova Database
 ~~~~~~~~~~~~~
 
 ``nova-manage db version``
-
     Print the current main database version.
 
 ``nova-manage db sync [--version <version>] [--local_cell]``
-
     Upgrade the main database schema up to the most recent version or
     ``--version`` if specified. By default, this command will also attempt to
     upgrade the schema for the cell0 database if it is mapped (see the
@@ -61,7 +61,6 @@ Nova Database
     nova-manage.
 
 ``nova-manage db archive_deleted_rows [--max_rows <number>] [--verbose] [--until-complete] [--purge]``
-
     Move deleted rows from production tables to shadow tables. Note that the
     corresponding rows in the instance_mappings and request_specs tables of the
     API database are purged when instance records are archived. Specifying
@@ -74,7 +73,6 @@ Nova Database
     <date>`` manually after archiving is complete.
 
 ``nova-manage db purge [--all] [--before <date>] [--verbose] [--all-cells]``
-
     Delete rows from shadow tables. Specifying --all will delete all data from
     all shadow tables. Specifying --before will delete data from all shadow tables
     that is older than the date provided. Date strings may be fuzzy, such as
@@ -86,11 +84,9 @@ Nova Database
     data was deleted, 4 if the list of cells cannot be obtained.
 
 ``nova-manage db null_instance_uuid_scan [--delete]``
-
     Lists and optionally deletes database records where instance_uuid is NULL.
 
 ``nova-manage db online_data_migrations [--max-count]``
-
    Perform data migration to update all live data. Return exit code 0 if
    migrations were successful or exit code 1 for partial updates. This command
    should be called after upgrading database schema and nova services on all
@@ -102,7 +98,6 @@ Nova Database
    complete.
 
 ``nova-manage db ironic_flavor_migration [--all] [--host] [--node] [--resource_class]``
-
    Perform the ironic flavor migration process against the database
    while services are offline. This is `not recommended` for most
    people. The ironic compute driver will do this online and as
@@ -131,12 +126,11 @@ Nova API Database
 ~~~~~~~~~~~~~~~~~
 
 ``nova-manage api_db version``
-
     Print the current cells api database version.
 
 ``nova-manage api_db sync``
-
-    Sync the api cells database up to the most recent version. This is the standard way to create the db as well.
+    Sync the api cells database up to the most recent version. This is the
+    standard way to create the db as well.
 
 .. _man-page-cells-v2:
 
@@ -144,7 +138,6 @@ Nova Cells v2
 ~~~~~~~~~~~~~
 
 ``nova-manage cell_v2 simple_cell_setup [--transport-url <transport_url>]``
-
     Setup a fresh cells v2 environment; this should not be used if you
     currently have a cells v1 environment. Returns 0 if setup is completed
     (or has already been done), 1 if no hosts are reporting (and cannot be
@@ -152,7 +145,6 @@ Nova Cells v2
     and 2 if run in a cells v1 environment.
 
 ``nova-manage cell_v2 map_cell0 [--database_connection <database_connection>]``
-
     Create a cell mapping to the database connection for the cell0 database.
     If a database_connection is not specified, it will use the one defined by
     ``[database]/connection`` in the configuration file passed to nova-manage.
@@ -162,7 +154,6 @@ Nova Cells v2
     successfully or already setup.
 
 ``nova-manage cell_v2 map_instances --cell_uuid <cell_uuid> [--max-count <max_count>]``
-
     Map instances to the provided cell. Instances in the nova database will
     be queried from oldest to newest and mapped to the provided cell. A
     max_count can be set on the number of instance to map in a single run.
@@ -176,7 +167,6 @@ Nova Cells v2
     specifying a custom value and run the command until it exits with 0.
 
 ``nova-manage cell_v2 map_cell_and_hosts [--name <cell_name>] [--transport-url <transport_url>] [--verbose]``
-
     Create a cell mapping to the database connection and message queue
     transport url, and map hosts to that cell. The database connection
     comes from the ``[database]/connection`` defined in the configuration
@@ -187,7 +177,6 @@ Nova Cells v2
     on successful completion, and 1 if the transport url is missing.
 
 ``nova-manage cell_v2 verify_instance --uuid <instance_uuid> [--quiet]``
-
     Verify instance mapping to a cell. This command is useful to determine if
     the cells v2 environment is properly setup, specifically in terms of the
     cell, host, and instance mapping records required. Returns 0 when the
@@ -200,7 +189,6 @@ Nova Cells v2
     which still has an instance mapping.
 
 ``nova-manage cell_v2 create_cell [--name <cell_name>] [--transport-url <transport_url>] [--database_connection <database_connection>] [--verbose]``
-
     Create a cell mapping to the database connection and message queue
     transport url. If a database_connection is not specified, it will use the
     one defined by ``[database]/connection`` in the configuration file passed
@@ -212,7 +200,6 @@ Nova Cells v2
     transport url and database connection combination.
 
 ``nova-manage cell_v2 discover_hosts [--cell_uuid <cell_uuid>] [--verbose] [--strict]``
-
     Searches cells, or a single cell, and maps found hosts. This command will
     check the database for each cell (or a single one if passed in) and map any
     hosts which are not currently mapped. If a host is already mapped nothing
@@ -224,13 +211,11 @@ Nova Cells v2
     code 1).
 
 ``nova-manage cell_v2 list_cells [--verbose]``
-
     Lists the v2 cells in the deployment. By default only the cell name and
     uuid are shown. Use the --verbose option to see transport url and database
     connection details.
 
 ``nova-manage cell_v2 delete_cell [--force] --cell_uuid <cell_uuid>``
-
     Delete a cell by the given uuid. Returns 0 if the empty cell is found and
     deleted successfully or the cell that has hosts is found and the cell, hosts
     and the instance_mappings are deleted successfully with ``--force`` option
@@ -242,14 +227,12 @@ Nova Cells v2
     again without the ``--force`` option.
 
 ``nova-manage cell_v2 list_hosts [--cell_uuid <cell_uuid>]``
-
     Lists the hosts in one or all v2 cells. By default hosts in all v2 cells
     are listed. Use the --cell_uuid option to list hosts in a specific cell.
     If the cell is not found by uuid, this command will return an exit code
     of 1. Otherwise, the exit code will be 0.
 
 ``nova-manage cell_v2 update_cell --cell_uuid <cell_uuid> [--name <cell_name>] [--transport-url <transport_url>] [--database_connection <database_connection>]``
-
     Updates the properties of a cell by the given uuid. If a
     database_connection is not specified, it will attempt to use the one
     defined by ``[database]/connection`` in the configuration file.  If a
@@ -267,7 +250,6 @@ Nova Cells v2
       values.  Use caution when changing these values.
 
 ``nova-manage cell_v2 delete_host --cell_uuid <cell_uuid> --host <host>``
-
     Delete a host by the given host name and the given cell uuid. Returns 0
     if the empty host is found and deleted successfully, 1 if a cell with
     that uuid could not be found, 2 if a host with that name could not be

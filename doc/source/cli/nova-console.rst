@@ -16,6 +16,8 @@ Nova Console Server
 Synopsis
 ========
 
+::
+
   nova-console [options]
 
 Description
@@ -27,7 +29,7 @@ is a console proxy to set up multi-tenant VM console access, e.g. with `XVP`.
 Options
 =======
 
- **General options**
+**General options**
 
 Files
 =====

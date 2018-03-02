@@ -16,6 +16,8 @@ XVP VNC Console Proxy Server
 Synopsis
 ========
 
+::
+
   nova-xvpvncproxy  [options]
 
 Description
@@ -28,7 +30,7 @@ Xen hypervisor.
 Options
 =======
 
- **General options**
+**General options**
 
 Files
 =====

@@ -16,6 +16,8 @@ Websocket novnc Proxy for OpenStack Nova noVNC consoles
 Synopsis
 ========
 
+::
+
   nova-novncproxy [options]
 
 Description
@@ -28,7 +30,7 @@ Nova noVNC consoles.
 Options
 =======
 
- **General options**
+**General options**
 
 Files
 =====

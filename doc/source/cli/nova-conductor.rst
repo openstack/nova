@@ -16,6 +16,8 @@ Server for the Nova Conductor
 Synopsis
 ========
 
+::
+
   nova-conductor [options]
 
 Description
@@ -27,7 +29,7 @@ which provides coordination and database query support for Nova.
 Options
 =======
 
- **General options**
+**General options**
 
 Files
 =====

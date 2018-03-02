@@ -16,6 +16,8 @@ Websocket serial Proxy for OpenStack Nova serial ports
 Synopsis
 ========
 
+::
+
   nova-serialproxy [options]
 
 Description
@@ -28,7 +30,7 @@ OpenStack Nova serial ports.
 Options
 =======
 
- **General options**
+**General options**
 
 Files
 =====

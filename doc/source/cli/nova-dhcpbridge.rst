@@ -16,6 +16,8 @@ Handles Lease Database updates from DHCP servers
 Synopsis
 ========
 
+::
+
   nova-dhcpbridge [options]
 
 Description
@@ -31,7 +33,7 @@ and flatDHCP). `nova-dhcpbridge` should not be run as a daemon.
 Options
 =======
 
- **General options**
+**General options**
 
 Files
 =====

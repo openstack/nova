@@ -16,6 +16,8 @@ CLI interface for nova status commands
 Synopsis
 ========
 
+::
+
   nova-status <category> <action> [<args>]
 
 Description
@@ -53,7 +55,6 @@ Upgrade
 ~~~~~~~
 
 ``nova-status upgrade check``
-
   Performs a release-specific readiness check before restarting services with
   new code. This command expects to have complete configuration and access
   to databases and services within a cell. For example, this check may query

@@ -16,7 +16,9 @@ Nova Network Server
 Synopsis
 ========
 
-  nova-network  [options]
+::
+
+  nova-network [options]
 
 Description
 ===========
@@ -32,7 +34,7 @@ is responsible for allocating IPs and setting up the network
 Options
 =======
 
- **General options**
+**General options**
 
 Files
 =====

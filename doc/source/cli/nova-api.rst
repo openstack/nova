@@ -16,6 +16,8 @@ Server for the OpenStack Compute APIs
 Synopsis
 ========
 
+::
+
   nova-api  [options]
 
 Description
@@ -27,7 +29,7 @@ separate greenthreads
 Options
 =======
 
- **General options**
+**General options**
 
 Files
 =====

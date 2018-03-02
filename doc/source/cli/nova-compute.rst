@@ -16,6 +16,8 @@ Nova Compute Server
 Synopsis
 ========
 
+::
+
   nova-compute [options]
 
 Description
@@ -29,7 +31,7 @@ state, attaching persistent storage, and terminating the instance.
 Options
 =======
 
- **General options**
+**General options**
 
 Files
 =====

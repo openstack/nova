@@ -16,6 +16,8 @@ Nova Console Authentication Server
 Synopsis
 ========
 
+::
+
   nova-consoleauth [options]
 
 Description
@@ -27,7 +29,7 @@ service, which provides authentication for Nova consoles.
 Options
 =======
 
- **General options**
+**General options**
 
 Files
 =====

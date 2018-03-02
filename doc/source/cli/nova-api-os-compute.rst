@@ -16,6 +16,8 @@ Server for the Nova OpenStack Compute APIs
 Synopsis
 ========
 
+::
+
   nova-api-os-compute  [options]
 
 Description
@@ -27,7 +29,7 @@ API
 Options
 =======
 
- **General options**
+**General options**
 
 Files
 =====

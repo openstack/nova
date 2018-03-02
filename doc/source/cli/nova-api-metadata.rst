@@ -16,6 +16,8 @@ Server for the Nova Metadata API
 Synopsis
 ========
 
+::
+
   nova-api-metadata  [options]
 
 Description
@@ -26,7 +28,7 @@ Description
 Options
 =======
 
- **General options**
+**General options**
 
 Files
 =====
