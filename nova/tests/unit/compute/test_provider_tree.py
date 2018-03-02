@@ -32,11 +32,16 @@ class TestProviderTree(test.NoDBTestCase):
             objects=[self.compute_node1, self.compute_node2],
         )
 
+    def _pt_with_cns(self):
+        pt = provider_tree.ProviderTree()
+        for cn in self.compute_nodes:
+            pt.new_root(cn.hypervisor_hostname, cn.uuid, generation=0)
+        return pt
+
     def test_tree_ops(self):
         cn1 = self.compute_node1
         cn2 = self.compute_node2
-        cns = self.compute_nodes
-        pt = provider_tree.ProviderTree(cns)
+        pt = self._pt_with_cns()
 
         self.assertRaises(
             ValueError,
@@ -406,8 +411,7 @@ class TestProviderTree(test.NoDBTestCase):
         self.assertFalse(pt.exists(uuids.grandchild))
 
     def test_has_inventory_changed_no_existing_rp(self):
-        cns = self.compute_nodes
-        pt = provider_tree.ProviderTree(cns)
+        pt = self._pt_with_cns()
         self.assertRaises(
             ValueError,
             pt.has_inventory_changed,
@@ -416,8 +420,7 @@ class TestProviderTree(test.NoDBTestCase):
         )
 
     def test_update_inventory_no_existing_rp(self):
-        cns = self.compute_nodes
-        pt = provider_tree.ProviderTree(cns)
+        pt = self._pt_with_cns()
         self.assertRaises(
             ValueError,
             pt.update_inventory,
@@ -428,8 +431,7 @@ class TestProviderTree(test.NoDBTestCase):
 
     def test_has_inventory_changed(self):
         cn = self.compute_node1
-        cns = self.compute_nodes
-        pt = provider_tree.ProviderTree(cns)
+        pt = self._pt_with_cns()
         rp_gen = 1
 
         cn_inv = {
@@ -490,21 +492,18 @@ class TestProviderTree(test.NoDBTestCase):
         self.assertTrue(pt.update_inventory(cn.uuid, cn_inv, rp_gen))
 
     def test_have_traits_changed_no_existing_rp(self):
-        cns = self.compute_nodes
-        pt = provider_tree.ProviderTree(cns)
+        pt = self._pt_with_cns()
         self.assertRaises(
             ValueError, pt.have_traits_changed, uuids.non_existing_rp, [])
 
     def test_update_traits_no_existing_rp(self):
-        cns = self.compute_nodes
-        pt = provider_tree.ProviderTree(cns)
+        pt = self._pt_with_cns()
         self.assertRaises(
             ValueError, pt.update_traits, uuids.non_existing_rp, [])
 
     def test_have_traits_changed(self):
         cn = self.compute_node1
-        cns = self.compute_nodes
-        pt = provider_tree.ProviderTree(cns)
+        pt = self._pt_with_cns()
         rp_gen = 1
 
         traits = [
@@ -545,21 +544,18 @@ class TestProviderTree(test.NoDBTestCase):
         self.assertTrue(pt.has_traits(cn.uuid, traits[-1:]))
 
     def test_have_aggregates_changed_no_existing_rp(self):
-        cns = self.compute_nodes
-        pt = provider_tree.ProviderTree(cns)
+        pt = self._pt_with_cns()
         self.assertRaises(
             ValueError, pt.have_aggregates_changed, uuids.non_existing_rp, [])
 
     def test_update_aggregates_no_existing_rp(self):
-        cns = self.compute_nodes
-        pt = provider_tree.ProviderTree(cns)
+        pt = self._pt_with_cns()
         self.assertRaises(
             ValueError, pt.update_aggregates, uuids.non_existing_rp, [])
 
     def test_have_aggregates_changed(self):
         cn = self.compute_node1
-        cns = self.compute_nodes
-        pt = provider_tree.ProviderTree(cns)
+        pt = self._pt_with_cns()
         rp_gen = 1
 
         aggregates = [
