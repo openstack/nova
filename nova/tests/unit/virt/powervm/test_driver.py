@@ -73,10 +73,10 @@ class TestPowerVMDriver(test.NoDBTestCase):
 
     @mock.patch('nova.image.API')
     @mock.patch('pypowervm.tasks.storage.ComprehensiveScrub', autospec=True)
-    @mock.patch('nova.virt.powervm.disk.ssp.SSPDiskAdapter')
+    @mock.patch('oslo_utils.importutils.import_object_ns', autospec=True)
     @mock.patch('pypowervm.wrappers.managed_system.System', autospec=True)
     @mock.patch('pypowervm.tasks.partition.validate_vios_ready', autospec=True)
-    def test_init_host(self, mock_vvr, mock_sys, mock_ssp, mock_scrub,
+    def test_init_host(self, mock_vvr, mock_sys, mock_import, mock_scrub,
                        mock_img):
         mock_hostw = mock.Mock(uuid='uuid')
         mock_sys.get.return_value = [mock_hostw]
@@ -90,8 +90,10 @@ class TestPowerVMDriver(test.NoDBTestCase):
         self.assertEqual(mock_hostw, self.drv.host_wrapper)
         mock_scrub.assert_called_once_with(self.drv.adapter)
         mock_scrub.return_value.execute.assert_called_once_with()
-        mock_ssp.assert_called_once_with(self.drv.adapter, 'uuid')
-        self.assertEqual(mock_ssp.return_value, self.drv.disk_dvr)
+        mock_import.assert_called_once_with(
+            'nova.virt.powervm.disk', 'localdisk.LocalStorage',
+            self.drv.adapter, 'uuid')
+        self.assertEqual(mock_import.return_value, self.drv.disk_dvr)
         mock_img.assert_called_once_with()
         self.assertEqual(mock_img.return_value, self.drv.image_api)
 
@@ -308,6 +310,10 @@ class TestPowerVMDriver(test.NoDBTestCase):
         mock_stream.assert_called_once_with(disk_path='disk_path')
         mock_rm.assert_called_once_with(
             stg_elem='stg_elem', vios_wrap='vios_wrap', disk_path='disk_path')
+
+        self.drv.disk_dvr.capabilities = {'snapshot': False}
+        self.assertRaises(exception.NotSupportedWithOption, self.drv.snapshot,
+                         'context', self.inst, 'image_id', 'update_task_state')
 
     def test_power_on(self):
         self.drv.power_on('context', self.inst, 'network_info')

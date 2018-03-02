@@ -1,0 +1,15 @@
+---
+features:
+  - |
+    The PowerVM virt driver now supports booting from local ephemeral disk.
+    Two new configuration options have been introduced to the ``powervm``
+    configuration group, ``disk_driver`` and ``volume_group_name``. The former
+    allows the selection of either ssp or localdisk for the PowerVM disk
+    driver. The latter specifies the name of the volume group when using the
+    localdisk disk driver.
+upgrade:
+  - |
+    The PowerVM virt driver previously used the PowerVM Shared Storage Pool
+    disk driver by default. The default disk driver for PowerVM is now
+    localdisk. See configuration option ``[powervm]/disk_driver`` for usage
+    details.
