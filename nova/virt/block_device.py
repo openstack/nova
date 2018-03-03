@@ -296,7 +296,7 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
 
             encryption = encryptors.get_encryption_metadata(context,
                     volume_api, volume_id, connection_info)
-            virt_driver.detach_volume(connection_info, instance, mp,
+            virt_driver.detach_volume(context, connection_info, instance, mp,
                                       encryption=encryption)
         except exception.DiskNotFound as err:
             LOG.warning('Ignoring DiskNotFound exception while '
