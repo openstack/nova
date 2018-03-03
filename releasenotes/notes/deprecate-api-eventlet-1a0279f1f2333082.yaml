@@ -1,0 +1,5 @@
+---
+deprecations:
+  - |
+    Running API services (nova-osapi_compute or nova-metadata) with eventlet
+    is now deprecated. Deploy with a WSGI server such as uwsgi or mod_wsgi.

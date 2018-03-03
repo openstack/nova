@@ -325,6 +325,10 @@ class WSGIService(service.Service):
         # NOTE(danms): Name can be metadata, osapi_compute, per
         # nova.service's enabled_apis
         self.binary = 'nova-%s' % name
+
+        LOG.warning('Running %s using eventlet is deprecated. Deploy with '
+                    'a WSGI server such as uwsgi or mod_wsgi.', self.binary)
+
         self.topic = None
         self.manager = self._get_manager()
         self.loader = loader or api_wsgi.Loader()
