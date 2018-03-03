@@ -466,7 +466,7 @@ class ComputeDriver(object):
         """Attach the disk to the instance at mountpoint using info."""
         raise NotImplementedError()
 
-    def detach_volume(self, connection_info, instance, mountpoint,
+    def detach_volume(self, context, connection_info, instance, mountpoint,
                       encryption=None):
         """Detach the disk attached to the instance."""
         raise NotImplementedError()

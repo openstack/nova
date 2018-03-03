@@ -445,7 +445,7 @@ class XenAPIDriver(driver.ComputeDriver):
                                       instance['name'],
                                       mountpoint)
 
-    def detach_volume(self, connection_info, instance, mountpoint,
+    def detach_volume(self, context, connection_info, instance, mountpoint,
                       encryption=None):
         """Detach volume storage from VM instance."""
         self._volumeops.detach_volume(connection_info,

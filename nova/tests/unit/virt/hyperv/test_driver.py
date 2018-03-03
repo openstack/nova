@@ -204,8 +204,8 @@ class HyperVDriverTestCase(test_base.HyperVBaseTestCase):
     def test_detach_volume(self):
         mock_instance = fake_instance.fake_instance_obj(self.context)
         self.driver.detach_volume(
-            mock.sentinel.connection_info, mock_instance,
-            mock.sentinel.mountpoint, mock.sentinel.encryption)
+            mock.sentinel.context, mock.sentinel.connection_info,
+            mock_instance, mock.sentinel.mountpoint, mock.sentinel.encryption)
 
         self.driver._volumeops.detach_volume.assert_called_once_with(
             mock.sentinel.connection_info,

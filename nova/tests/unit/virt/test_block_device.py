@@ -573,7 +573,7 @@ class TestDriverBlockDevice(test.NoDBTestCase):
                                                 test.TestingException)
                     if driver_attach:
                         self.virt_driver.detach_volume(
-                            expected_conn_info, instance,
+                            self.context, expected_conn_info, instance,
                             bdm_dict['device_name'],
                             encryption=enc_data).AndReturn(None)
                     self.volume_api.terminate_connection(
