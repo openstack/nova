@@ -63,6 +63,12 @@
     timeout: 3600
 
 - job:
+    name: nova-cells-v1
+    parent: nova-dsvm-base
+    run: playbooks/legacy/nova-cells-v1/run.yaml
+    post-run: playbooks/legacy/nova-cells-v1/post.yaml
+
+- job:
     name: nova-lvm
     parent: nova-dsvm-base
     description: |
@@ -90,11 +96,13 @@
     # Please try to keep the list of job names sorted alphabetically.
     check:
       jobs:
+        - nova-cells-v1
         - nova-multiattach
         - nova-tox-functional
         - nova-tox-functional-py35
     gate:
       jobs:
+        - nova-cells-v1
         - nova-multiattach
         - nova-tox-functional
         - nova-tox-functional-py35
