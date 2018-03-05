@@ -381,17 +381,19 @@ class ComputeAPI(object):
         service_version = objects.Service.get_minimum_version(
             context.get_admin_context(), 'nova-compute')
 
+        history = service_obj.SERVICE_VERSION_HISTORY
+
         # NOTE(johngarbutt) when there are no nova-compute services running we
         # get service_version == 0. In that case we do not want to cache
         # this result, because we will get a better answer next time.
-        # As a sane default, return the version from the last release.
+        # As a sane default, return the current version.
         if service_version == 0:
             LOG.debug("Not caching compute RPC version_cap, because min "
                       "service_version is 0. Please ensure a nova-compute "
-                      "service has been started. Defaulting to Mitaka RPC.")
-            return self.VERSION_ALIASES["mitaka"]
+                      "service has been started. Defaulting to current "
+                      "version.")
+            return history[service_obj.SERVICE_VERSION]['compute_rpc']
 
-        history = service_obj.SERVICE_VERSION_HISTORY
         try:
             version_cap = history[service_version]['compute_rpc']
         except IndexError:
