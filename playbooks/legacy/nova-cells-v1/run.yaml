@@ -23,6 +23,31 @@
         chdir: '{{ ansible_user_dir }}/workspace'
       environment: '{{ zuul | zuul_legacy_vars }}'
 
+    # NOTE(mriedem): vif_plugging_timeout depends on the
+    # os-server-external-events API which isn't plumbed in for cells v1
+    # so we have to disable vif_plugging_timeout. This means servers can
+    # go to ACTIVE status before networking is setup in the guest and we
+    # can't rely on ssh validation in testing. Some tempest tests might
+    # also fail in racy ways, so add them to tempest-dsvm-cells-rc if they
+    # do.
+    - shell:
+        cmd: |
+          set -e
+          set -x
+          cat << 'EOF' >>"/tmp/dg-local.conf"
+          [[post-config|$NOVA_CELLS_CONF]]
+          [DEFAULT]
+          vif_plugging_timeout=0
+
+          [[test-config|$TEMPEST_CONFIG]]
+          [network-feature-enabled]
+          floating_ips=False
+
+          EOF
+        executable: /bin/bash
+        chdir: '{{ ansible_user_dir }}/workspace'
+      environment: '{{ zuul | zuul_legacy_vars }}'
+
     - shell:
         cmd: |
           set -e
@@ -30,10 +55,9 @@
           export PYTHONUNBUFFERED=true
           export DEVSTACK_GATE_TEMPEST=1
           export DEVSTACK_GATE_CELLS=1
-          # NOTE(mriedem): Explicitly tell devstack-gate that we need to run
-          # the cells v1 job with nova-network.
-          export DEVSTACK_GATE_NEUTRON=0
 
+          # Note that tempest-dsvm-cells-rc sets TEMPEST_RUN_VALIDATION=False
+          # so we do not have to set it here.
           export DEVSTACK_GATE_SETTINGS=/opt/stack/new/nova/devstack/tempest-dsvm-cells-rc
 
           cp devstack-gate/devstack-vm-gate-wrap.sh ./safe-devstack-vm-gate-wrap.sh
