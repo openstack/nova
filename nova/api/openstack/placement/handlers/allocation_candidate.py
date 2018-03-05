@@ -20,12 +20,12 @@ from oslo_utils import timeutils
 import six
 import webob
 
+from nova.api.openstack.placement import exception
 from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
 from nova.api.openstack.placement.schemas import allocation_candidate as schema
 from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
-from nova import exception
 from nova.i18n import _
 
 
