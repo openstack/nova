@@ -368,7 +368,7 @@ class LegacyValidatingNotifier(object):
     ]
 
     message = _('%(event_type)s is not a versioned notification and not '
-                'whitelisted. See ./doc/source/notification.rst')
+                'whitelisted. See ./doc/source/reference/notifications.rst')
 
     def __init__(self, notifier):
         self.notifier = notifier
