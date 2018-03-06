@@ -1248,11 +1248,53 @@ class LibvirtDriver(driver.ComputeDriver):
         self._attach_encryptor(context, connection_info, encryption,
                                allow_native_luks)
 
+    def _should_disconnect_target(self, context, connection_info, instance):
+        connection_count = 0
+
+        # NOTE(jdg): Multiattach is a special case (not to be confused
+        # with shared_targets). With multiattach we may have a single volume
+        # attached multiple times to *this* compute node (ie Server-1 and
+        # Server-2).  So, if we receive a call to delete the attachment for
+        # Server-1 we need to take special care to make sure that the Volume
+        # isn't also attached to another Server on this Node.  Otherwise we
+        # will indiscriminantly delete the connection for all Server and that's
+        # no good.  So check if it's attached multiple times on this node
+        # if it is we skip the call to brick to delete the connection.
+        if connection_info.get('multiattach', False):
+            volume = self._volume_api.get(
+                context,
+                driver_block_device.get_volume_id(connection_info))
+            attachments = volume.get('attachments', {})
+            if len(attachments) > 1:
+                # First we get a list of all Server UUID's associated with
+                # this Host (Compute Node).  We're going to use this to
+                # determine if the Volume being detached is also in-use by
+                # another Server on this Host, ie just check to see if more
+                # than one attachment.server_id for this volume is in our
+                # list of Server UUID's for this Host
+                servers_this_host = objects.InstanceList.get_uuids_by_host(
+                    context, instance.host)
+
+                # NOTE(jdg): nova.volume.cinder translates the
+                # volume['attachments'] response into a dict which includes
+                # the Server UUID as the key, so we're using that
+                # here to check against our server_this_host list
+                for server_id, data in attachments.items():
+                    if server_id in servers_this_host:
+                        connection_count += 1
+        return (False if connection_count > 1 else True)
+
     def _disconnect_volume(self, context, connection_info, instance,
                            encryption=None):
         self._detach_encryptor(context, connection_info, encryption=encryption)
-        vol_driver = self._get_volume_driver(connection_info)
-        vol_driver.disconnect_volume(connection_info, instance)
+        if self._should_disconnect_target(context, connection_info, instance):
+            vol_driver = self._get_volume_driver(connection_info)
+            vol_driver.disconnect_volume(connection_info, instance)
+        else:
+            LOG.info("Detected multiple connections on this host for volume: "
+                     "%s, skipping target disconnect.",
+                     driver_block_device.get_volume_id(connection_info),
+                     instance=instance)
 
     def _extend_volume(self, connection_info, instance):
         vol_driver = self._get_volume_driver(connection_info)
