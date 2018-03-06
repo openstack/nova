@@ -16,6 +16,7 @@ import collections
 import operator
 import webob
 
+import microversion_parse
 import mock
 
 # import the handlers to load up handler decorators
@@ -54,13 +55,16 @@ class TestMicroversionDecoration(test.NoDBTestCase):
 
         stored_method_data = methods_data[-1]
         self.assertEqual(2, len(methods_data))
-        self.assertEqual(microversion.Version(1, 1), stored_method_data[0])
-        self.assertEqual(microversion.Version(1, 10), stored_method_data[1])
+        self.assertEqual(microversion_parse.Version(1, 1),
+                         stored_method_data[0])
+        self.assertEqual(microversion_parse.Version(1, 10),
+                         stored_method_data[1])
         self.assertEqual(handler, stored_method_data[2])
-        self.assertEqual(microversion.Version(2, 0), methods_data[0][0])
+        self.assertEqual(microversion_parse.Version(2, 0),
+                         methods_data[0][0])
 
     def test_version_handler_float_exception(self):
-        self.assertRaises(AttributeError,
+        self.assertRaises(TypeError,
                           microversion.version_handler(1.1),
                           handler)
 
@@ -70,7 +74,7 @@ class TestMicroversionDecoration(test.NoDBTestCase):
                           handler)
 
     def test_version_handler_tuple_exception(self):
-        self.assertRaises(AttributeError,
+        self.assertRaises(TypeError,
                           microversion.version_handler((1, 1)),
                           handler)
 
@@ -140,7 +144,7 @@ class MicroversionSequentialTest(test.NoDBTestCase):
         for method_name, method_list in microversion.VERSIONED_METHODS.items():
             previous_min_version = method_list[0][0]
             for method in method_list[1:]:
-                previous_min_version = microversion.parse_version_string(
+                previous_min_version = microversion_parse.parse_version_string(
                     '%s.%s' % (previous_min_version.major,
                                previous_min_version.minor - 1))
                 self.assertEqual(previous_min_version, method[1],

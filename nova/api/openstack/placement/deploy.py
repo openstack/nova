@@ -11,6 +11,7 @@
 #    under the License.
 """Deployment handling for Placmenent API."""
 
+from microversion_parse import middleware as mp_middleware
 import oslo_middleware
 from oslo_middleware import cors
 
@@ -19,6 +20,7 @@ from nova.api.openstack.placement import fault_wrap
 from nova.api.openstack.placement import handler
 from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement import requestlog
+from nova.api.openstack.placement import util
 
 
 # TODO(cdent): NAME points to the config project being used, so for
@@ -49,11 +51,15 @@ def deploy(conf):
 
     context_middleware = auth.PlacementKeystoneContext
     req_id_middleware = oslo_middleware.RequestId
-    microversion_middleware = microversion.MicroversionMiddleware
+    microversion_middleware = mp_middleware.MicroversionMiddleware
     fault_middleware = fault_wrap.FaultWrapper
     request_log = requestlog.RequestLog
 
     application = handler.PlacementHandler()
+    # configure microversion middleware in the old school way
+    application = microversion_middleware(
+        application, microversion.SERVICE_TYPE, microversion.VERSIONS,
+        json_error_formatter=util.json_error_formatter)
 
     # NOTE(cdent): The ordering here is important. The list is ordered
     # from the inside out. For a single request req_id_middleware is called
@@ -63,8 +69,7 @@ def deploy(conf):
     # order the request went in. This order ensures that log messages
     # all see the same contextual information including request id and
     # authentication information.
-    for middleware in (microversion_middleware,
-                       fault_middleware,
+    for middleware in (fault_middleware,
                        request_log,
                        context_middleware,
                        auth_middleware,

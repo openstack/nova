@@ -13,6 +13,7 @@
 #    under the License.
 """Unit tests for the functions used by the placement API handlers."""
 
+import microversion_parse
 import mock
 import routes
 import webob
@@ -38,7 +39,7 @@ def _environ(path='/moo', method='GET'):
         'wsgi.url_scheme': 'http',
         # The microversion version value is not used, but it
         # needs to be set to avoid a KeyError.
-        microversion.MICROVERSION_ENVIRON: microversion.Version(1, 12),
+        microversion.MICROVERSION_ENVIRON: microversion_parse.Version(1, 12),
     }
 
 

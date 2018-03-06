@@ -57,7 +57,7 @@ os-traits>=0.4.0 # Apache-2.0
 os-vif!=1.8.0,>=1.7.0 # Apache-2.0
 os-win>=3.0.0 # Apache-2.0
 castellan>=0.16.0 # Apache-2.0
-microversion-parse>=0.1.2 # Apache-2.0
+microversion-parse>=0.2.1 # Apache-2.0
 os-xenapi>=0.3.1 # Apache-2.0
 tooz>=1.58.0 # Apache-2.0
 cursive>=0.2.1 # Apache-2.0
