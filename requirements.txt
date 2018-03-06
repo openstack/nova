@@ -64,3 +64,4 @@ cursive>=0.2.1 # Apache-2.0
 pypowervm>=1.1.11 # Apache-2.0
 os-service-types>=1.2.0 # Apache-2.0
 taskflow>=2.16.0 # Apache-2.0
+python-dateutil>=2.5.3 # BSD

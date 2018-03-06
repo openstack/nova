@@ -12,7 +12,15 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
+import re
+
+from dateutil import parser as dateutil_parser
+from oslo_utils import timeutils
 from sqlalchemy.dialects import sqlite
+from sqlalchemy import func
+from sqlalchemy import MetaData
+from sqlalchemy import select
 
 from nova import context
 from nova import db
@@ -144,3 +152,81 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
         # by the archive
         self.assertIn('instance_actions', results)
         self.assertIn('instance_actions_events', results)
+
+    def _get_table_counts(self):
+        engine = sqlalchemy_api.get_engine()
+        conn = engine.connect()
+        meta = MetaData(engine)
+        meta.reflect()
+        shadow_tables = sqlalchemy_api._purgeable_tables(meta)
+        results = {}
+        for table in shadow_tables:
+            r = conn.execute(
+                select([func.count()]).select_from(table)).fetchone()
+            results[table.name] = r[0]
+        return results
+
+    def test_archive_then_purge_all(self):
+        server = self._create_server()
+        server_id = server['id']
+        self._delete_server(server_id)
+        results, deleted_ids = db.archive_deleted_rows(max_rows=1000)
+        self.assertEqual([server_id], deleted_ids)
+
+        lines = []
+
+        def status(msg):
+            lines.append(msg)
+
+        deleted = sqlalchemy_api.purge_shadow_tables(None, status_fn=status)
+        self.assertNotEqual(0, deleted)
+        self.assertNotEqual(0, len(lines))
+        for line in lines:
+            self.assertIsNotNone(re.match(r'Deleted [1-9][0-9]* rows from .*',
+                                          line))
+
+        results = self._get_table_counts()
+        # No table should have any rows
+        self.assertFalse(any(results.values()))
+
+    def test_archive_then_purge_by_date(self):
+        server = self._create_server()
+        server_id = server['id']
+        self._delete_server(server_id)
+        results, deleted_ids = db.archive_deleted_rows(max_rows=1000)
+        self.assertEqual([server_id], deleted_ids)
+
+        pre_purge_results = self._get_table_counts()
+
+        past = timeutils.utcnow() - datetime.timedelta(hours=1)
+        deleted = sqlalchemy_api.purge_shadow_tables(past)
+        # Make sure we didn't delete anything if the marker is before
+        # we started
+        self.assertEqual(0, deleted)
+
+        results = self._get_table_counts()
+        # Nothing should be changed if we didn't purge anything
+        self.assertEqual(pre_purge_results, results)
+
+        future = timeutils.utcnow() + datetime.timedelta(hours=1)
+        deleted = sqlalchemy_api.purge_shadow_tables(future)
+        # Make sure we deleted things when the marker is after
+        # we started
+        self.assertNotEqual(0, deleted)
+
+        results = self._get_table_counts()
+        # There should be no rows in any table if we purged everything
+        self.assertFalse(any(results.values()))
+
+    def test_purge_with_real_date(self):
+        """Make sure the result of dateutil's parser works with the
+           query we're making to sqlalchemy.
+        """
+        server = self._create_server()
+        server_id = server['id']
+        self._delete_server(server_id)
+        results, deleted_ids = db.archive_deleted_rows(max_rows=1000)
+        self.assertEqual([server_id], deleted_ids)
+        date = dateutil_parser.parse('oct 21 2015', fuzzy=True)
+        deleted = sqlalchemy_api.purge_shadow_tables(date)
+        self.assertEqual(0, deleted)
