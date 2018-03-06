@@ -1750,7 +1750,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         self._create_vm()
         connection_info = self._test_vmdk_connection_info('vmdk')
         mount_point = '/dev/vdc'
-        self.conn.detach_volume(connection_info, self.instance, mount_point,
+        self.conn.detach_volume(mock.sentinel.context, connection_info,
+                                self.instance, mount_point,
                                 encryption=None)
         mock_detach_volume_vmdk.assert_called_once_with(connection_info,
             self.instance)
@@ -1797,7 +1798,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
 
         with mock.patch.object(volumeops.VMwareVolumeOps,
                                'detach_volume') as detach_volume:
-            self.conn.detach_volume(connection_info, self.instance,
+            self.conn.detach_volume(mock.sentinel.context, connection_info,
+                                    self.instance,
                                     '/dev/vdc', encryption=None)
             detach_volume.assert_called_once_with(connection_info,
                                                   self.instance)
@@ -1819,7 +1821,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         self._create_vm()
         connection_info = self._test_vmdk_connection_info('iscsi')
         mount_point = '/dev/vdc'
-        self.conn.detach_volume(connection_info, self.instance, mount_point,
+        self.conn.detach_volume(mock.sentinel.context, connection_info,
+                                self.instance, mount_point,
                                 encryption=None)
         mock_detach_volume_iscsi.assert_called_once_with(connection_info,
             self.instance)
@@ -1903,7 +1906,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         device = 'fake_device'
         mock_get_rdm_disk.return_value = device
 
-        self.conn.detach_volume(connection_info, self.instance, mount_point,
+        self.conn.detach_volume(mock.sentinel.context, connection_info,
+                                self.instance, mount_point,
                                 encryption=None)
 
         mock_iscsi_get_target.assert_called_once_with(connection_info['data'])

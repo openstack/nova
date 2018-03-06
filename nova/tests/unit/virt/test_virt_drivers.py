@@ -478,7 +478,8 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
             self.connection.attach_volume(None, connection_info, instance_ref,
                                           '/dev/sda'))
         self.assertIsNone(
-            self.connection.detach_volume(connection_info, instance_ref,
+            self.connection.detach_volume(mock.sentinel.context,
+                                          connection_info, instance_ref,
                                           '/dev/sda'))
 
     @catch_notimplementederror
@@ -539,7 +540,8 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
                 driver_block_device.DriverVolumeBlockDevice, 'save'):
             self.connection.power_on(
                     self.ctxt, instance_ref, network_info, bdm)
-            self.connection.detach_volume(connection_info,
+            self.connection.detach_volume(mock.sentinel.context,
+                                          connection_info,
                                           instance_ref,
                                           '/dev/sda')
 

@@ -1550,7 +1550,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                       block_device_info=block_device_info)
         return xml
 
-    def detach_volume(self, connection_info, instance, mountpoint,
+    def detach_volume(self, context, connection_info, instance, mountpoint,
                       encryption=None):
         disk_dev = mountpoint.rpartition("/")[2]
         try:
@@ -1591,11 +1591,7 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 raise
 
-        # NOTE(lyarwood): We can provide None as the request context here as we
-        # already have the encryption metadata dict from the compute layer.
-        # This avoids the need to add the request context to the signature of
-        # detach_volume requiring changes across all drivers.
-        self._disconnect_volume(None, connection_info, instance,
+        self._disconnect_volume(context, connection_info, instance,
                                 encryption=encryption)
 
     def extend_volume(self, connection_info, instance):
