@@ -279,12 +279,6 @@ class MigrateServerTestsV21(admin_only_action_common.CommonTests):
         self._test_migrate_live_failed_with_exception(
             exception.MigrationPreCheckError(reason=''))
 
-    def test_migrate_live_migration_precheck_client_exception(self):
-        self._test_migrate_live_failed_with_exception(
-            exception.MigrationPreCheckClientException(reason=''),
-            expected_exc=webob.exc.HTTPInternalServerError,
-            check_response=False)
-
     def test_migrate_live_migration_with_unexpected_error(self):
         self._test_migrate_live_failed_with_exception(
             exception.MigrationError(reason=''),

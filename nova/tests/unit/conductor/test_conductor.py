@@ -2130,7 +2130,6 @@ class ConductorTaskTestCase(_BaseTaskTestCase, test_compute.BaseTestCase):
                exc.HypervisorUnavailable(host='dummy'),
                exc.LiveMigrationWithOldNovaNotSupported(),
                exc.MigrationPreCheckError(reason='dummy'),
-               exc.MigrationPreCheckClientException(reason='dummy'),
                exc.InvalidSharedStorage(path='dummy', reason='dummy'),
                exc.NoValidHost(reason='dummy'),
                exc.ComputeServiceUnavailable(host='dummy'),

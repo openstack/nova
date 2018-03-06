@@ -253,7 +253,6 @@ class ComputeTaskManager(base.Base):
         exception.HypervisorUnavailable,
         exception.InstanceInvalidState,
         exception.MigrationPreCheckError,
-        exception.MigrationPreCheckClientException,
         exception.LiveMigrationWithOldNovaNotSupported,
         exception.UnsupportedPolicyException)
     @targets_cell
@@ -431,7 +430,6 @@ class ComputeTaskManager(base.Base):
                 exception.HypervisorUnavailable,
                 exception.InstanceInvalidState,
                 exception.MigrationPreCheckError,
-                exception.MigrationPreCheckClientException,
                 exception.LiveMigrationWithOldNovaNotSupported,
                 exception.MigrationSchedulerRPCError) as ex:
             with excutils.save_and_reraise_exception():
