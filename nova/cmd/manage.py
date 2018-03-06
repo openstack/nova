@@ -488,8 +488,10 @@ Error: %s""") % six.text_type(e))
           default=False,
           help=('Run continuously until all deleted rows are archived. Use '
                 'max_rows as a batch size for each iteration.'))
+    @args('--purge', action='store_true', dest='purge', default=False,
+          help='Purge all data from shadow tables after archive completes')
     def archive_deleted_rows(self, max_rows=1000, verbose=False,
-                             until_complete=False):
+                             until_complete=False, purge=False):
         """Move deleted rows from production tables to shadow tables.
 
         Returns 0 if nothing was archived, 1 if some number of rows were
@@ -544,6 +546,12 @@ Error: %s""") % six.text_type(e))
                                  dict_value=_('Number of Rows Archived'))
             else:
                 print(_('Nothing was archived.'))
+
+        if table_to_rows_archived and purge:
+            if verbose:
+                print(_('Rows were archived, running purge...'))
+            self.purge(purge_all=True, verbose=verbose)
+
         # NOTE(danms): Return nonzero if we archived something
         return int(bool(table_to_rows_archived))
 

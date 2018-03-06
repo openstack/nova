@@ -447,15 +447,18 @@ Archiving.....complete
     def test_archive_deleted_rows_until_complete_quiet(self):
         self.test_archive_deleted_rows_until_complete(verbose=False)
 
+    @mock.patch('nova.db.sqlalchemy.api.purge_shadow_tables')
     @mock.patch.object(db, 'archive_deleted_rows')
     def test_archive_deleted_rows_until_stopped(self, mock_db_archive,
+                                                mock_db_purge,
                                                 verbose=True):
         mock_db_archive.side_effect = [
             ({'instances': 10, 'instance_extra': 5}, list()),
             ({'instances': 5, 'instance_faults': 1}, list()),
             KeyboardInterrupt]
         result = self.commands.archive_deleted_rows(20, verbose=verbose,
-                                                    until_complete=True)
+                                                    until_complete=True,
+                                                    purge=True)
         self.assertEqual(1, result)
         if verbose:
             expected = """\
@@ -467,6 +470,7 @@ Archiving.....stopped
 | instance_faults | 1                       |
 | instances       | 15                      |
 +-----------------+-------------------------+
+Rows were archived, running purge...
 """
         else:
             expected = ''
@@ -475,15 +479,18 @@ Archiving.....stopped
         mock_db_archive.assert_has_calls([mock.call(20),
                                           mock.call(20),
                                           mock.call(20)])
+        mock_db_purge.assert_called_once_with(None, status_fn=mock.ANY)
 
     def test_archive_deleted_rows_until_stopped_quiet(self):
         self.test_archive_deleted_rows_until_stopped(verbose=False)
 
     @mock.patch.object(db, 'archive_deleted_rows', return_value=({}, []))
     def test_archive_deleted_rows_verbose_no_results(self, mock_db_archive):
-        result = self.commands.archive_deleted_rows(20, verbose=True)
+        result = self.commands.archive_deleted_rows(20, verbose=True,
+                                                    purge=True)
         mock_db_archive.assert_called_once_with(20)
         output = self.output.getvalue()
+        # If nothing was archived, there should be no purge messages
         self.assertIn('Nothing was archived.', output)
         self.assertEqual(0, result)
 

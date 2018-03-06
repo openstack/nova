@@ -60,7 +60,7 @@ Nova Database
     determined by ``[database]/connection`` in the configuration file passed to
     nova-manage.
 
-``nova-manage db archive_deleted_rows [--max_rows <number>] [--verbose] [--until-complete]``
+``nova-manage db archive_deleted_rows [--max_rows <number>] [--verbose] [--until-complete] [--purge]``
 
     Move deleted rows from production tables to shadow tables. Note that the
     corresponding rows in the instance_mappings and request_specs tables of the
@@ -68,7 +68,10 @@ Nova Database
     --verbose will print the results of the archive operation for any tables that
     were changed. Specifying --until-complete will make the command run
     continuously until all deleted rows are archived. Use the --max_rows option,
-    which defaults to 1000, as a batch size for each iteration.
+    which defaults to 1000, as a batch size for each iteration. Specifying --purge
+    will cause a `full` DB purge to be completed after archival. If a date range
+    is desired for the purge, then run ``nova-manage db purge --before
+    <date>`` manually after archiving is complete.
 
 ``nova-manage db purge [--all] [--before <date>] [--verbose]``
 
