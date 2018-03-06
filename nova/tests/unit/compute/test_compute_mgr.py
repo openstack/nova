@@ -725,7 +725,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.compute.init_host()
 
             mock_remove_allocation.assert_called_once_with(
-                deleted_instance.uuid, uuids.our_node_uuid,
+                self.context, deleted_instance.uuid, uuids.our_node_uuid,
                 deleted_instance.user_id, deleted_instance.project_id,
                 mock.sentinel.my_resources)
 
@@ -3595,8 +3595,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             get_node.assert_called_once_with(
                 self.context, our_host, migration.source_node)
             remove_allocation.assert_called_once_with(
-                instance_2.uuid, uuids.our_node_uuid, uuids.user_id,
-                uuids.project_id, mock.sentinel.resources)
+                self.context, instance_2.uuid, uuids.our_node_uuid,
+                uuids.user_id, uuids.project_id, mock.sentinel.resources)
 
     def test_destroy_evacuated_instances_node_deleted(self):
         our_host = self.compute.host
@@ -3672,8 +3672,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             # but only instance_2 is deallocated as the compute node for
             # instance_1 is already deleted
             remove_allocation.assert_called_once_with(
-                instance_2.uuid, uuids.our_node_uuid, uuids.user_id,
-                uuids.project_id, mock.sentinel.resources)
+                self.context, instance_2.uuid, uuids.our_node_uuid,
+                uuids.user_id, uuids.project_id, mock.sentinel.resources)
 
             self.assertEqual(2, get_node.call_count)
 
@@ -3923,10 +3923,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.assertFalse(
                 rt.delete_allocation_for_evacuated_instance.called)
 
+    @mock.patch('nova.context.RequestContext.elevated')
     @mock.patch('nova.compute.utils.add_instance_fault_from_exc')
     @mock.patch.object(manager.ComputeManager,
                        '_error_out_instance_on_exception')
-    def test_rebuild_driver_error_evacuate(self, mock_error, mock_aiffe):
+    def test_rebuild_driver_error_evacuate(self, mock_error, mock_aiffe,
+                                           mock_elevated):
+        mock_elevated.return_value = self.context
         instance = fake_instance.fake_instance_obj(self.context)
         ex = test.TestingException('foo')
         with mock.patch.object(self.compute, '_get_resource_tracker') as mrt:
@@ -3935,7 +3938,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                               recreate=True, scheduled_node='foo')
             rt = mrt.return_value
             delete_alloc = rt.delete_allocation_for_evacuated_instance
-            delete_alloc.assert_called_once_with(instance, 'foo',
+            delete_alloc.assert_called_once_with(self.context, instance, 'foo',
                                                  node_type='destination')
 
     @mock.patch('nova.context.RequestContext.elevated')
@@ -4018,7 +4021,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         mock_validate_policy.assert_called_once_with(
             elevated_context, instance, {'group': [uuids.group]})
         mock_delete_allocation.assert_called_once_with(
-            instance, 'fake-node', node_type='destination')
+            elevated_context, instance, 'fake-node', node_type='destination')
         mock_notify.assert_called_once_with(
             elevated_context, instance, 'fake-mini', action='rebuild',
             bdms=None, exception=exc, phase='error')
@@ -6394,7 +6397,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             rt.get_node_uuid.assert_called_once_with(mock.sentinel.node)
             remove = mock_rc.remove_provider_from_instance_allocation
             remove.assert_called_once_with(
-                instance.uuid, rt.get_node_uuid.return_value,
+                self.context, instance.uuid, rt.get_node_uuid.return_value,
                 instance.user_id, instance.project_id,
                 mock_resources.return_value)
         do_it()
@@ -7023,7 +7026,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             # ...so we should have called the old style delete
             mock_delete.assert_not_called()
             fn = mock_rt.return_value.delete_allocation_for_migrated_instance
-            fn.assert_called_once_with(self.instance, self.instance.node)
+            fn.assert_called_once_with(self.context, self.instance,
+                                       self.instance.node)
 
     def test_post_live_migration_legacy(self):
         # We have no migrate_data...
@@ -7045,7 +7049,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             # ...so we should have called the old style delete
             mock_delete.assert_not_called()
             fn = mock_rt.return_value.delete_allocation_for_migrated_instance
-            fn.assert_called_once_with(self.instance, self.instance.node)
+            fn.assert_called_once_with(self.context, self.instance,
+                                       self.instance.node)
 
     def test_post_live_migration_cinder_v3_api(self):
         # Because live migration has succeeded, _post_live_migration
