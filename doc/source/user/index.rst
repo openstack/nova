@@ -9,6 +9,8 @@ End user guide
    :maxdepth: 1
 
    launch-instances
+   config-drive
+   metadata-service
 
 .. todo:: The rest of this document should probably move to the admin guide.
 
