@@ -73,15 +73,17 @@ Nova Database
     is desired for the purge, then run ``nova-manage db purge --before
     <date>`` manually after archiving is complete.
 
-``nova-manage db purge [--all] [--before <date>] [--verbose]``
+``nova-manage db purge [--all] [--before <date>] [--verbose] [--all-cells]``
 
     Delete rows from shadow tables. Specifying --all will delete all data from
     all shadow tables. Specifying --before will delete data from all shadow tables
     that is older than the date provided. Date strings may be fuzzy, such as
-    ``Oct 21 2015``. Returns exit code 0 if rows were deleted, 1 if required
-    arguments are not provided, 2 if an invalid date is provided, 3 if no data
-    was deleted. Specifying --verbose will cause information to be printed about
-    purged records.
+    ``Oct 21 2015``. Specifying --verbose will cause information to be printed about
+    purged records. Specifying --all-cells will cause the purge to be applied against
+    all cell databases. For --all-cells to work, the api database connection
+    information must be configured. Returns exit code 0 if rows were deleted, 1 if
+    required arguments are not provided, 2 if an invalid date is provided, 3 if no
+    data was deleted, 4 if the list of cells cannot be obtained.
 
 ``nova-manage db null_instance_uuid_scan [--delete]``
 
