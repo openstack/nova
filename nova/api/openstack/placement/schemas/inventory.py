@@ -13,7 +13,7 @@
 
 import copy
 
-from nova import db
+from nova.db import constants as db_const
 
 
 RESOURCE_CLASS_IDENTIFIER = "^[A-Z0-9_]+$"
@@ -25,32 +25,32 @@ BASE_INVENTORY_SCHEMA = {
         },
         "total": {
             "type": "integer",
-            "maximum": db.MAX_INT,
+            "maximum": db_const.MAX_INT,
             "minimum": 1,
         },
         "reserved": {
             "type": "integer",
-            "maximum": db.MAX_INT,
+            "maximum": db_const.MAX_INT,
             "minimum": 0,
         },
         "min_unit": {
             "type": "integer",
-            "maximum": db.MAX_INT,
+            "maximum": db_const.MAX_INT,
             "minimum": 1
         },
         "max_unit": {
             "type": "integer",
-            "maximum": db.MAX_INT,
+            "maximum": db_const.MAX_INT,
             "minimum": 1
         },
         "step_size": {
             "type": "integer",
-            "maximum": db.MAX_INT,
+            "maximum": db_const.MAX_INT,
             "minimum": 1
         },
         "allocation_ratio": {
             "type": "number",
-            "maximum": db.SQL_SP_FLOAT_MAX
+            "maximum": db_const.SQL_SP_FLOAT_MAX
         },
     },
     "required": [
