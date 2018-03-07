@@ -119,7 +119,7 @@ class RequestContext(context.RequestContext):
             # Only include required parts of service_catalog
             self.service_catalog = [s for s in service_catalog
                 if s.get('type') in ('image', 'block-storage', 'volumev3',
-                                     'key-manager', 'placement')]
+                                     'key-manager', 'placement', 'network')]
         else:
             # if list is empty or none
             self.service_catalog = []
