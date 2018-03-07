@@ -25,6 +25,7 @@ from nova import context
 from nova import exception
 from nova.objects import block_device as objects_block_dev
 from nova.objects import migration as migration_obj
+from nova.objects import service as service_obj
 from nova import test
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_flavor
@@ -91,7 +92,9 @@ class ComputeRpcAPITestCase(test.NoDBTestCase):
         self.flags(compute='auto', group='upgrade_levels')
         compute_rpcapi.LAST_VERSION = None
         rpcapi = compute_rpcapi.ComputeAPI()
-        self.assertEqual('4.11', rpcapi.router.version_cap)
+        history = service_obj.SERVICE_VERSION_HISTORY
+        current_version = history[service_obj.SERVICE_VERSION]['compute_rpc']
+        self.assertEqual(current_version, rpcapi.router.version_cap)
         mock_get_min.assert_called_once_with(mock.ANY, 'nova-compute')
         self.assertIsNone(compute_rpcapi.LAST_VERSION)
 
