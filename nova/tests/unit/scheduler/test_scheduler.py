@@ -321,6 +321,12 @@ class SchedulerManagerTestCase(test.NoDBTestCase):
                                               mock.sentinel.host_name,
                                               mock.sentinel.instance_uuids)
 
+    def test_reset(self):
+        with mock.patch.object(self.manager.driver.host_manager,
+                               'refresh_cells_caches') as mock_refresh:
+            self.manager.reset()
+            mock_refresh.assert_called_once_with()
+
     @mock.patch('nova.objects.host_mapping.discover_hosts')
     def test_discover_hosts(self, mock_discover):
         cm1 = objects.CellMapping(name='cell1')
