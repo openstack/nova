@@ -309,7 +309,7 @@ class FakeDriver(driver.ComputeDriver):
             self._mounts[instance_name] = {}
         self._mounts[instance_name][mountpoint] = connection_info
 
-    def detach_volume(self, connection_info, instance, mountpoint,
+    def detach_volume(self, context, connection_info, instance, mountpoint,
                       encryption=None):
         """Detach the disk attached to the instance."""
         try:

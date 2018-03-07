@@ -396,7 +396,7 @@ class VMwareVCDriver(driver.ComputeDriver):
         """Attach volume storage to VM instance."""
         return self._volumeops.attach_volume(connection_info, instance)
 
-    def detach_volume(self, connection_info, instance, mountpoint,
+    def detach_volume(self, context, connection_info, instance, mountpoint,
                       encryption=None):
         """Detach volume storage to VM instance."""
         return self._volumeops.detach_volume(connection_info, instance)

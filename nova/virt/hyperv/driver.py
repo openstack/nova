@@ -183,7 +183,7 @@ class HyperVDriver(driver.ComputeDriver):
         return self._volumeops.attach_volume(connection_info,
                                              instance.name)
 
-    def detach_volume(self, connection_info, instance, mountpoint,
+    def detach_volume(self, context, connection_info, instance, mountpoint,
                       encryption=None):
         return self._volumeops.detach_volume(connection_info,
                                              instance.name)

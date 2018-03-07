@@ -6901,7 +6901,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             for state in (power_state.RUNNING, power_state.PAUSED):
                 mock_dom.info.return_value = [state, 512, 512, 2, 1234, 5678]
                 mock_get_domain.return_value = mock_dom
-                drvr.detach_volume(connection_info, instance, '/dev/vdc')
+                drvr.detach_volume(
+                    self.context, connection_info, instance, '/dev/vdc')
 
                 mock_get_domain.assert_called_with(instance)
                 mock_dom.detachDeviceFlags.assert_called_with(
@@ -6911,7 +6912,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 </disk>
 """, flags=flags)
                 mock_disconnect_volume.assert_called_with(
-                    None, connection_info, instance, encryption=None)
+                    self.context, connection_info, instance, encryption=None)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
     @mock.patch('nova.virt.libvirt.host.Host._get_domain')
@@ -6933,11 +6934,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                       5678]
         mock_get_domain.return_value = mock_dom
 
-        drvr.detach_volume(connection_info, instance, '/dev/vdc')
+        drvr.detach_volume(
+            self.context, connection_info, instance, '/dev/vdc')
 
         mock_get_domain.assert_called_once_with(instance)
         mock_disconnect_volume.assert_called_once_with(
-            None, connection_info, instance, encryption=None)
+            self.context, connection_info, instance, encryption=None)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
@@ -6962,11 +6964,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                       5678]
         mock_get_domain.return_value = mock_dom
 
-        drvr.detach_volume(connection_info, instance, '/dev/vdc',
-                           encryption)
+        drvr.detach_volume(self.context, connection_info, instance,
+                           '/dev/vdc', encryption)
 
         mock_disconnect_volume.assert_called_once_with(
-            None, connection_info, instance, encryption=encryption)
+            self.context, connection_info, instance, encryption=encryption)
 
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_driver')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_encryptor')
@@ -6998,8 +7000,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                            "data": {"device_path": "/fake",
                                     "access_mode": "rw"}}
         encryption = {"provider": "NoOpEncryptor"}
-        drvr.detach_volume(connection_info, instance, '/dev/vdc',
-                encryption=encryption)
+        drvr.detach_volume(
+            self.context, connection_info, instance, '/dev/vdc',
+            encryption=encryption)
 
         mock_order.assert_has_calls([
             mock.call.detach_volume(),
@@ -15126,10 +15129,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mock.patch.object(drvr, '_disconnect_volume')
         ) as (_get_domain, _disconnect_volume):
             connection_info = {'driver_volume_type': 'fake'}
-            drvr.detach_volume(connection_info, instance, '/dev/sda')
+            drvr.detach_volume(
+                self.context, connection_info, instance, '/dev/sda')
             _get_domain.assert_called_once_with(instance)
-            _disconnect_volume.assert_called_once_with(None, connection_info,
-                                instance, encryption=None)
+            _disconnect_volume.assert_called_once_with(
+                self.context, connection_info, instance, encryption=None)
 
     def _test_attach_detach_interface_get_config(self, method_name):
         """Tests that the get_config() method is properly called in
