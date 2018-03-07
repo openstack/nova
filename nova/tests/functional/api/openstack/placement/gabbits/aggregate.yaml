@@ -57,6 +57,17 @@ tests:
   response_json_paths:
       $.errors[0].title: Not Found
 
+- name: put same aggregates twice
+  PUT: $LAST_URL
+  data:
+      - *agg_1
+      - *agg_1
+  status: 400
+  response_strings:
+      - has non-unique elements
+  response_json_paths:
+      $.errors[0].title: Bad Request
+
 - name: put some aggregates
   PUT: $LAST_URL
   data:
