@@ -6745,6 +6745,84 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_encryptor.detach_volume.called_once_with(self.context,
                                                       **encryption)
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_detach_encryptor')
+    @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_driver')
+    @mock.patch('nova.volume.cinder.API.get')
+    def test_disconnect_multiattach_single_connection(
+            self, mock_volume_get, mock_get_volume_driver,
+            mock_get_instances, mock_detach_encryptor):
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        mock_volume_driver = mock.MagicMock(
+            spec=volume_drivers.LibvirtBaseVolumeDriver)
+        mock_get_volume_driver.return_value = mock_volume_driver
+
+        attachments = (
+            [('70ab645f-6ffc-406a-b3d2-5007a0c01b82',
+              {'mountpoint': u'/dev/vdb',
+               'attachment_id': u'9402c249-99df-4f72-89e7-fd611493ee5d'}),
+             ('00803490-f768-4049-aa7d-151f54e6311e',
+              {'mountpoint': u'/dev/vdb',
+               'attachment_id': u'd6128a7b-19c8-4a3e-8036-011396df95ac'})])
+
+        mock_volume_get.return_value = (
+            {'attachments': OrderedDict(attachments), 'multiattach': True,
+             'id': 'd30559cf-f092-4693-8589-0d0a1e7d9b1f'})
+
+        fake_connection_info = {
+            'multiattach': True,
+            'volume_id': 'd30559cf-f092-4693-8589-0d0a1e7d9b1f'}
+        fake_instance_1 = fake_instance.fake_instance_obj(
+            self.context,
+            host='fake-host-1')
+
+        mock_get_instances.return_value = (
+            ['00803490-f768-4049-aa7d-151f54e6311e'])
+        drvr._disconnect_volume(
+            self.context, fake_connection_info, fake_instance_1)
+        mock_volume_driver.disconnect_volume.assert_called_once_with(
+            fake_connection_info, fake_instance_1)
+
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_detach_encryptor')
+    @mock.patch('nova.objects.InstanceList.get_uuids_by_host')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._get_volume_driver')
+    @mock.patch('nova.volume.cinder.API.get')
+    def test_disconnect_multiattach_multi_connection(
+            self, mock_volume_get, mock_get_volume_driver,
+            mock_get_instances, mock_detach_encryptor):
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        mock_volume_driver = mock.MagicMock(
+            spec=volume_drivers.LibvirtBaseVolumeDriver)
+        mock_get_volume_driver.return_value = mock_volume_driver
+
+        attachments = (
+            [('70ab645f-6ffc-406a-b3d2-5007a0c01b82',
+              {'mountpoint': u'/dev/vdb',
+               'attachment_id': u'9402c249-99df-4f72-89e7-fd611493ee5d'}),
+             ('00803490-f768-4049-aa7d-151f54e6311e',
+              {'mountpoint': u'/dev/vdb',
+               'attachment_id': u'd6128a7b-19c8-4a3e-8036-011396df95ac'})])
+
+        mock_volume_get.return_value = (
+            {'attachments': OrderedDict(attachments), 'multiattach': True,
+             'id': 'd30559cf-f092-4693-8589-0d0a1e7d9b1f'})
+
+        fake_connection_info = {
+            'multiattach': True,
+            'volume_id': 'd30559cf-f092-4693-8589-0d0a1e7d9b1f'}
+        fake_instance_1 = fake_instance.fake_instance_obj(
+            self.context,
+            host='fake-host-1')
+
+        mock_get_instances.return_value = (
+            ['00803490-f768-4049-aa7d-151f54e6311e',
+             '70ab645f-6ffc-406a-b3d2-5007a0c01b82'])
+        drvr._disconnect_volume(
+            self.context, fake_connection_info, fake_instance_1)
+        mock_volume_driver.disconnect_volume.assert_not_called()
+
     def test_attach_invalid_volume_type(self):
         self.create_fake_libvirt_mock()
         libvirt_driver.LibvirtDriver._conn.lookupByUUIDString \
