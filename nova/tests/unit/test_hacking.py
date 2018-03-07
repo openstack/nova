@@ -802,3 +802,25 @@ class HackingTestCase(test.NoDBTestCase):
                   import ab.cd.efg as d.efg
                """
         self._assert_has_no_errors(code, checks.no_redundant_import_alias)
+
+    def test_yield_followed_by_space(self):
+        code = """
+                  yield(x, y)
+                  yield{"type": "test"}
+                  yield[a, b, c]
+                  yield"test"
+                  yield'test'
+               """
+        errors = [(x + 1, 0, 'N360') for x in range(5)]
+        self._assert_has_errors(code, checks.yield_followed_by_space,
+                                expected_errors=errors)
+        code = """
+                  yield x
+                  yield (x, y)
+                  yield {"type": "test"}
+                  yield [a, b, c]
+                  yield "test"
+                  yield 'test'
+                  yieldx_func(a, b)
+               """
+        self._assert_has_no_errors(code, checks.yield_followed_by_space)
