@@ -108,7 +108,6 @@ class MigrateServerController(wsgi.Controller):
             raise exc.HTTPNotFound(explanation=e.format_message())
         except (exception.NoValidHost,
                 exception.ComputeServiceUnavailable,
-                exception.ComputeHostNotFound,
                 exception.InvalidHypervisorType,
                 exception.InvalidCPUInfo,
                 exception.UnableToMigrateToSelf,
@@ -127,6 +126,8 @@ class MigrateServerController(wsgi.Controller):
                 raise exc.HTTPBadRequest(explanation=ex.format_message())
         except exception.InstanceIsLocked as e:
             raise exc.HTTPConflict(explanation=e.format_message())
+        except exception.ComputeHostNotFound as e:
+            raise exc.HTTPBadRequest(explanation=e.format_message())
         except exception.InstanceInvalidState as state_error:
             common.raise_http_conflict_for_instance_invalid_state(state_error,
                     'os-migrateLive', id)
