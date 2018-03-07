@@ -6,7 +6,7 @@ function archive_deleted_rows {
     # NOTE(danms): Run this a few times to make sure that we end
     # up with nothing more to archive
     for i in `seq 30`; do
-        $MANAGE db archive_deleted_rows --verbose --max_rows 1000
+        $MANAGE $* db archive_deleted_rows --verbose --max_rows 1000
         RET=$?
         if [[ $RET -gt 1 ]]; then
             echo Archiving failed with result $RET
@@ -18,12 +18,21 @@ function archive_deleted_rows {
     done
 }
 
-archive_deleted_rows
+BASE=${BASE:-/opt/stack}
+source ${BASE}/new/devstack/functions-common
+source ${BASE}/new/devstack/lib/nova
+cell_conf=$(conductor_conf 1)
+# NOTE(danms): We need to pass the main config to get the api db
+# bits, and then also the cell config for the cell1 db (instead of
+# the cell0 config that is in the main config file). Later files
+# take precedence.
+conf="--config-file $NOVA_CONF --config-file $cell_conf"
+
+archive_deleted_rows $conf
 
 set -e
 # We need to get the admin credentials to run the OSC CLIs for Placement.
 set +x
-BASE=${BASE:-/opt/stack}
 source $BASE/new/devstack/openrc admin
 set -x
 
