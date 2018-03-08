@@ -3047,7 +3047,9 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_is_volume_backed.assert_called_once_with(self.context,
                                                           instance)
 
-    def _test_snapshot_volume_backed(self, quiesce_required, quiesce_fails,
+    def _test_snapshot_volume_backed(self, quiesce_required=False,
+                                     quiesce_fails=False,
+                                     quiesce_unsupported=False,
                                      vm_state=vm_states.ACTIVE,
                                      snapshot_fails=False, limits=None):
         fake_sys_meta = {'image_min_ram': '11',
@@ -3081,7 +3083,8 @@ class _ComputeAPIUnitTestMixIn(object):
             expect_meta['properties']['os_require_quiesce'] = 'yes'
 
         quiesced = [False, False]
-        quiesce_expected = not quiesce_fails and vm_state == vm_states.ACTIVE
+        quiesce_expected = not (quiesce_unsupported or quiesce_fails) \
+                           and vm_state == vm_states.ACTIVE
 
         @classmethod
         def fake_bdm_list_get_by_instance_uuid(cls, context, instance_uuid):
@@ -3100,9 +3103,11 @@ class _ComputeAPIUnitTestMixIn(object):
             return {'id': '%s-snapshot' % volume_id}
 
         def fake_quiesce_instance(context, instance):
-            if quiesce_fails:
+            if quiesce_unsupported:
                 raise exception.InstanceQuiesceNotSupported(
-                    instance_id=instance['uuid'], reason='test')
+                    instance_id=instance['uuid'], reason='unsupported')
+            if quiesce_fails:
+                raise oslo_exceptions.MessagingTimeout('quiece timeout')
             quiesced[0] = True
 
         def fake_unquiesce_instance(context, instance, mapping=None):
@@ -3249,14 +3254,21 @@ class _ComputeAPIUnitTestMixIn(object):
                                            instance.uuid)
 
     def test_snapshot_volume_backed(self):
-        self._test_snapshot_volume_backed(False, False)
+        self._test_snapshot_volume_backed(quiesce_required=False,
+                                          quiesce_unsupported=False)
 
-    def test_snapshot_volume_backed_with_quiesce(self):
-        self._test_snapshot_volume_backed(True, False)
+    def test_snapshot_volume_backed_with_quiesce_unsupported(self):
+        self._test_snapshot_volume_backed(quiesce_required=True,
+                                          quiesce_unsupported=False)
+
+    def test_snaphost_volume_backed_with_quiesce_failure(self):
+        self.assertRaises(oslo_exceptions.MessagingTimeout,
+                          self._test_snapshot_volume_backed,
+                          quiesce_required=True,
+                          quiesce_fails=True)
 
     def test_snapshot_volume_backed_with_quiesce_create_snap_fails(self):
         self._test_snapshot_volume_backed(quiesce_required=True,
-                                          quiesce_fails=False,
                                           snapshot_fails=True)
 
     def test_snapshot_volume_backed_unlimited_quota(self):
@@ -3264,8 +3276,7 @@ class _ComputeAPIUnitTestMixIn(object):
         don't perform a quota check.
         """
         limits = {'maxTotalSnapshots': -1, 'totalSnapshotsUsed': 0}
-        self._test_snapshot_volume_backed(
-            quiesce_required=False, quiesce_fails=False, limits=limits)
+        self._test_snapshot_volume_backed(limits=limits)
 
     def test_snapshot_volume_backed_over_quota_before_snapshot(self):
         """Tests that the up-front check on quota fails before actually
@@ -3274,26 +3285,31 @@ class _ComputeAPIUnitTestMixIn(object):
         limits = {'maxTotalSnapshots': 1, 'totalSnapshotsUsed': 1}
         self.assertRaises(exception.OverQuota,
                           self._test_snapshot_volume_backed,
-                          quiesce_required=False, quiesce_fails=False,
                           limits=limits)
 
     def test_snapshot_volume_backed_with_quiesce_skipped(self):
-        self._test_snapshot_volume_backed(False, True)
+        self._test_snapshot_volume_backed(quiesce_required=False,
+                                          quiesce_unsupported=True)
 
     def test_snapshot_volume_backed_with_quiesce_exception(self):
         self.assertRaises(exception.NovaException,
-                          self._test_snapshot_volume_backed, True, True)
+                          self._test_snapshot_volume_backed,
+                          quiesce_required=True,
+                          quiesce_unsupported=True)
 
     def test_snapshot_volume_backed_with_quiesce_stopped(self):
-        self._test_snapshot_volume_backed(True, True,
+        self._test_snapshot_volume_backed(quiesce_required=True,
+                                          quiesce_unsupported=True,
                                           vm_state=vm_states.STOPPED)
 
     def test_snapshot_volume_backed_with_quiesce_suspended(self):
-        self._test_snapshot_volume_backed(True, True,
+        self._test_snapshot_volume_backed(quiesce_required=True,
+                                          quiesce_unsupported=True,
                                           vm_state=vm_states.SUSPENDED)
 
     def test_snapshot_volume_backed_with_suspended(self):
-        self._test_snapshot_volume_backed(False, True,
+        self._test_snapshot_volume_backed(quiesce_required=False,
+                                          quiesce_unsupported=True,
                                           vm_state=vm_states.SUSPENDED)
 
     @mock.patch.object(context, 'set_target_cell')
