@@ -1,6 +1,4 @@
 .. -*- rst -*-
-.. TODO(sdague) parameter microversions need to be gone through in the
-   response (request side should be good)
 .. needs:example_verification
 .. needs:body_verification
 
@@ -242,6 +240,7 @@ Response
   - id: server_id
   - links: links
   - name: server_name
+  - servers_links: servers_links
 
 **Example List Servers**
 
@@ -338,22 +337,17 @@ Request
 
 
   - server: server
-  - name: server_name
   - flavorRef: flavorRef
-  - imageRef: imageRef
-  - security_groups: security_groups
-  - metadata: metadata
-  - accessIPv4: accessIPv4_in
-  - accessIPv6: accessIPv6_in
-  - adminPass: adminPass_request
-  - user_data: user_data
-  - availability_zone: os-availability-zone:availability_zone
+  - name: server_name
   - networks: networks
   - networks.uuid: network_uuid
   - networks.port: port
   - networks.fixed_ip: fixed_ip
   - networks.tag: device_tag_nic
-  - personality: personality
+  - accessIPv4: accessIPv4_in
+  - accessIPv6: accessIPv6_in
+  - adminPass: adminPass_request
+  - availability_zone: os-availability-zone:availability_zone
   - block_device_mapping_v2: block_device_mapping_v2
   - block_device_mapping_v2.boot_index: boot_index
   - block_device_mapping_v2.delete_on_termination: delete_on_termination
@@ -368,8 +362,13 @@ Request
   - block_device_mapping_v2.volume_size: volume_size
   - block_device_mapping_v2.tag: device_tag_bdm
   - config_drive: config_drive
+  - imageRef: imageRef
   - key_name: key_name
+  - metadata: metadata
   - OS-DCF:diskConfig: OS-DCF:diskConfig
+  - personality: personality
+  - security_groups: security_groups
+  - user_data: user_data
   - description: server_description
   - tags: server_tags_create
   - os:scheduler_hints: os:scheduler_hints
@@ -397,6 +396,7 @@ Response
 
 .. rest_parameters:: parameters.yaml
 
+  - Location: server_location
   - server: server
   - id: server_id
   - links: links
@@ -547,7 +547,10 @@ Response
 .. rest_parameters:: parameters.yaml
 
   - server: server
+  - accessIPv4: accessIPv4
+  - accessIPv6: accessIPv6
   - addresses: addresses
+  - config_drive: config_drive_resp
   - created: created
   - flavor: flavor_server
   - flavor.id: flavor_id_body_2_46
@@ -568,9 +571,6 @@ Response
   - links: links
   - metadata: metadata_compat
   - name: server_name
-  - accessIPv4: accessIPv4
-  - accessIPv6: accessIPv6
-  - config_drive: config_drive_resp
   - OS-DCF:diskConfig: disk_config
   - OS-EXT-AZ:availability_zone: OS-EXT-AZ:availability_zone
   - OS-EXT-SRV-ATTR:host: OS-EXT-SRV-ATTR:host
@@ -584,11 +584,9 @@ Response
   - os-extended-volumes:volumes_attached.delete_on_termination: os-extended-volumes:volumes_attached.delete_on_termination
   - OS-SRV-USG:launched_at: OS-SRV-USG:launched_at
   - OS-SRV-USG:terminated_at: OS-SRV-USG:terminated_at
-  - progress: progress
   - security_groups: security_groups_obj
   - security_group.name: name
   - status: server_status
-  - host_status: host_status
   - tenant_id: tenant_id_body
   - updated: updated
   - user_id: user_id
@@ -597,6 +595,8 @@ Response
   - fault.created: fault_created
   - fault.message: fault_message
   - fault.details: fault_details
+  - progress: progress
+  - servers_links: servers_links
   - OS-EXT-SRV-ATTR:hostname: server_hostname
   - OS-EXT-SRV-ATTR:reservation_id: server_reservation_id
   - OS-EXT-SRV-ATTR:launch_index: server_launch_index
@@ -605,6 +605,9 @@ Response
   - OS-EXT-SRV-ATTR:root_device_name: server_root_device_name
   - OS-EXT-SRV-ATTR:user_data: server_user_data
   - locked: locked
+  - host_status: host_status
+  - description: server_description_resp
+  - tags: tags
 
 **Example List Servers Detailed (2.47)**
 
@@ -651,7 +654,10 @@ Response
 .. rest_parameters:: parameters.yaml
 
   - server: server
+  - accessIPv4: accessIPv4
+  - accessIPv6: accessIPv6
   - addresses: addresses
+  - config_drive: config_drive_resp
   - created: created
   - flavor: flavor_server
   - flavor.id: flavor_id_body_2_46
@@ -672,9 +678,6 @@ Response
   - links: links
   - metadata: metadata_compat
   - name: server_name
-  - accessIPv4: accessIPv4
-  - accessIPv6: accessIPv6
-  - config_drive: config_drive_resp
   - OS-DCF:diskConfig: disk_config
   - OS-EXT-AZ:availability_zone: OS-EXT-AZ:availability_zone
   - OS-EXT-SRV-ATTR:host: OS-EXT-SRV-ATTR:host
@@ -688,11 +691,9 @@ Response
   - os-extended-volumes:volumes_attached.delete_on_termination: os-extended-volumes:volumes_attached.delete_on_termination
   - OS-SRV-USG:launched_at: OS-SRV-USG:launched_at
   - OS-SRV-USG:terminated_at: OS-SRV-USG:terminated_at
-  - progress: progress
   - security_groups: security_groups_obj
   - security_group.name: name
   - status: server_status
-  - host_status: host_status
   - tenant_id: tenant_id_body
   - updated: updated
   - user_id: user_id
@@ -701,6 +702,7 @@ Response
   - fault.created: fault_created
   - fault.message: fault_message
   - fault.details: fault_details
+  - progress: progress
   - OS-EXT-SRV-ATTR:hostname: server_hostname
   - OS-EXT-SRV-ATTR:reservation_id: server_reservation_id
   - OS-EXT-SRV-ATTR:launch_index: server_launch_index
@@ -709,6 +711,9 @@ Response
   - OS-EXT-SRV-ATTR:root_device_name: server_root_device_name
   - OS-EXT-SRV-ATTR:user_data: server_user_data
   - locked: locked
+  - host_status: host_status
+  - description: server_description_resp
+  - tags: tags
 
 **Example Show Server Details (2.47)**
 
@@ -733,6 +738,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - server_id: server_id_path
+  - server: server
   - accessIPv4: accessIPv4_in
   - accessIPv6: accessIPv6_in
   - name: server_name_optional
@@ -764,6 +770,8 @@ Response
 .. rest_parameters:: parameters.yaml
 
   - server: server
+  - accessIPv4: accessIPv4
+  - accessIPv6: accessIPv6
   - addresses: addresses
   - created: created
   - flavor: flavor_server
@@ -781,27 +789,11 @@ Response
   - hostId: hostId
   - id: server_id
   - image: image
-  - key_name: key_name
   - links: links
-  - metadata: metadata
+  - metadata: metadata_compat
   - name: server_name
-  - accessIPv4: accessIPv4
-  - accessIPv6: accessIPv6
-  - OS-DCF:diskConfig: OS-DCF:diskConfig
-  - OS-EXT-AZ:availability_zone: OS-EXT-AZ:availability_zone
-  - OS-EXT-SRV-ATTR:host: OS-EXT-SRV-ATTR:host
-  - OS-EXT-SRV-ATTR:hypervisor_hostname: OS-EXT-SRV-ATTR:hypervisor_hostname
-  - OS-EXT-SRV-ATTR:instance_name: OS-EXT-SRV-ATTR:instance_name
-  - OS-EXT-STS:power_state: OS-EXT-STS:power_state
-  - OS-EXT-STS:task_state: OS-EXT-STS:task_state
-  - OS-EXT-STS:vm_state: OS-EXT-STS:vm_state
-  - OS-SRV-USG:launched_at: OS-SRV-USG:launched_at
-  - OS-SRV-USG:terminated_at: OS-SRV-USG:terminated_at
-  - progress: progress
-  - security_groups: security_groups_obj
-  - security_group.name: name
+  - OS-DCF:diskConfig: disk_config
   - status: server_status
-  - host_status: host_status
   - tenant_id: tenant_id_body
   - updated: updated
   - user_id: user_id
@@ -810,14 +802,10 @@ Response
   - fault.created: fault_created
   - fault.message: fault_message
   - fault.details: fault_details
-  - OS-EXT-SRV-ATTR:hostname: server_hostname
-  - OS-EXT-SRV-ATTR:reservation_id: server_reservation_id
-  - OS-EXT-SRV-ATTR:launch_index: server_launch_index
-  - OS-EXT-SRV-ATTR:kernel_id: server_kernel_id
-  - OS-EXT-SRV-ATTR:ramdisk_id: server_ramdisk_id
-  - OS-EXT-SRV-ATTR:root_device_name: server_root_device_name
-  - OS-EXT-SRV-ATTR:user_data: server_user_data
+  - progress: progress
   - locked: locked
+  - description: server_description_resp
+  - tags: tags
 
 **Example Update server name (2.47)**
 
