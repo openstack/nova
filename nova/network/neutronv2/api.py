@@ -443,7 +443,8 @@ class API(base_api.NetworkAPI):
                      'network %(network_id)s.') %
                    {'ip': fixed_ip, 'network_id': network_id})
             raise exception.InvalidInput(reason=msg)
-        except neutron_client_exc.IpAddressInUseClient:
+        except (neutron_client_exc.IpAddressInUseClient,
+                neutron_client_exc.IpAddressAlreadyAllocatedClient):
             LOG.warning('Neutron error: Fixed IP %s is '
                         'already in use.', fixed_ip, instance=instance)
             msg = _("Fixed IP %s is already in use.") % fixed_ip
