@@ -1557,7 +1557,10 @@ class IronicDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(FAKE_CLIENT.node, 'set_provision_state')
     @mock.patch.object(ironic_driver.IronicDriver,
                        '_validate_instance_and_node')
-    def test_destroy_trigger_undeploy_fail(self, fake_validate, mock_sps):
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_cleanup_deploy')
+    def test_destroy_trigger_undeploy_fail(self, mock_clean, fake_validate,
+                                           mock_sps):
         node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
         node = ironic_utils.get_test_node(driver='fake', uuid=node_uuid,
                                           provision_state=ironic_states.ACTIVE)
@@ -1567,6 +1570,26 @@ class IronicDriverTestCase(test.NoDBTestCase):
         mock_sps.side_effect = exception.NovaException()
         self.assertRaises(exception.NovaException, self.driver.destroy,
                           self.ctx, instance, None, None)
+        mock_clean.assert_called_once_with(node, instance, None)
+
+    @mock.patch.object(FAKE_CLIENT.node, 'update')
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_validate_instance_and_node')
+    @mock.patch.object(ironic_driver.IronicDriver,
+                       '_cleanup_deploy')
+    def test_destroy_trigger_remove_info_fail(self, mock_clean, fake_validate,
+                                              mock_update):
+        node_uuid = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'
+        node = ironic_utils.get_test_node(
+            driver='fake', uuid=node_uuid,
+            provision_state=ironic_states.AVAILABLE)
+        fake_validate.return_value = node
+        instance = fake_instance.fake_instance_obj(self.ctx,
+                                                   node=node_uuid)
+        mock_update.side_effect = SystemError('unexpected error')
+        self.assertRaises(SystemError, self.driver.destroy,
+                          self.ctx, instance, None, None)
+        mock_clean.assert_called_once_with(node, instance, None)
 
     @mock.patch.object(FAKE_CLIENT.node, 'set_provision_state')
     @mock.patch.object(ironic_driver.IronicDriver,
