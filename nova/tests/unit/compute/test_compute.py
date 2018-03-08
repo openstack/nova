@@ -1702,8 +1702,12 @@ class ComputeTestCase(BaseTestCase,
         instance = self._create_fake_instance_obj(params)
         self.compute.build_and_run_instance(self.context, instance,
                 {}, {}, {}, block_device_mapping=[], limits=limits)
-        self.assertEqual(3072, cn.memory_mb_used)
-        self.assertEqual(768, cn.local_gb_used)
+
+        # NOTE(danms): Since we no longer claim memory and disk, this should
+        # complete normally. In reality, this would have been rejected by
+        # placement/scheduler before the instance got here.
+        self.assertEqual(11264, cn.memory_mb_used)
+        self.assertEqual(17152, cn.local_gb_used)
 
     def test_create_multiple_instance_with_neutron_port(self):
         def fake_is_neutron():
@@ -1771,54 +1775,6 @@ class ComputeTestCase(BaseTestCase,
         self.compute.build_and_run_instance(self.context, instance,
                           {}, {}, filter_properties, block_device_mapping=[])
 
-    def test_create_instance_with_oversubscribed_cpu(self):
-        # Test passing of oversubscribed cpu policy from the scheduler.
-
-        self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
-        self.rt.update_available_resource(self.context.elevated(), NODENAME)
-        limits = {'vcpu': 3}
-        filter_properties = {'limits': limits}
-
-        # get total memory as reported by virt driver:
-        resources = self.compute.driver.get_available_resource(NODENAME)
-        self.assertEqual(2, resources['vcpus'])
-
-        # build an instance, specifying an amount of memory that exceeds
-        # total_mem_mb, but is less than the oversubscribed limit:
-        params = {"flavor": {"memory_mb": 10, "root_gb": 1,
-                             "ephemeral_gb": 1, "vcpus": 2}}
-        instance = self._create_fake_instance_obj(params)
-        self.compute.build_and_run_instance(self.context, instance, {}, {},
-                filter_properties, block_device_mapping=[])
-
-        cn = self.rt.compute_nodes[NODENAME]
-        self.assertEqual(2, cn.vcpus_used)
-
-        # create one more instance:
-        params = {"flavor": {"memory_mb": 10, "root_gb": 1,
-                             "ephemeral_gb": 1, "vcpus": 1}}
-        instance = self._create_fake_instance_obj(params)
-        self.compute.build_and_run_instance(self.context, instance, {}, {},
-                filter_properties, block_device_mapping=[])
-
-        self.assertEqual(3, cn.vcpus_used)
-
-        # delete the instance:
-        instance['vm_state'] = vm_states.DELETED
-        self.rt.update_usage(self.context, instance, NODENAME)
-
-        self.assertEqual(2, cn.vcpus_used)
-
-        # now oversubscribe vcpus and fail:
-        params = {"flavor": {"memory_mb": 10, "root_gb": 1,
-                             "ephemeral_gb": 1, "vcpus": 2}}
-        instance = self._create_fake_instance_obj(params)
-
-        limits = {'vcpu': 3}
-        self.compute.build_and_run_instance(self.context, instance, {}, {},
-                {}, block_device_mapping=[], limits=limits)
-        self.assertEqual(vm_states.ERROR, instance.vm_state)
-
     def test_create_instance_with_oversubscribed_disk(self):
         # Test passing of oversubscribed disk policy from the scheduler.
 
@@ -1844,30 +1800,6 @@ class ComputeTestCase(BaseTestCase,
 
         cn = self.rt.compute_nodes[NODENAME]
         self.assertEqual(instance_gb, cn.local_gb_used)
-
-    def test_create_instance_with_oversubscribed_disk_fail(self):
-        """Test passing of oversubscribed disk policy from the scheduler, but
-        with insufficient disk.
-        """
-        self.flags(reserved_host_disk_mb=0, reserved_host_memory_mb=0)
-        self.rt.update_available_resource(self.context.elevated(), NODENAME)
-
-        # get total memory as reported by virt driver:
-        resources = self.compute.driver.get_available_resource(NODENAME)
-        total_disk_gb = resources['local_gb']
-
-        oversub_limit_gb = total_disk_gb * 1.5
-        instance_gb = int(total_disk_gb * 1.55)
-
-        # build an instance, specifying an amount of disk that exceeds
-        # total_disk_gb, but is less than the oversubscribed limit:
-        params = {"flavor": {"root_gb": instance_gb, "memory_mb": 10}}
-        instance = self._create_fake_instance_obj(params)
-
-        limits = {'disk_gb': oversub_limit_gb}
-        self.compute.build_and_run_instance(self.context, instance, {}, {},
-                {}, block_device_mapping=[], limits=limits)
-        self.assertEqual(vm_states.ERROR, instance.vm_state)
 
     def test_create_instance_without_node_param(self):
         instance = self._create_fake_instance_obj({'node': None})

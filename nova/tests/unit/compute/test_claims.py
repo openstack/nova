@@ -71,7 +71,7 @@ class ClaimTestCase(test.NoDBTestCase):
             requests=[]
         )
 
-    def _claim(self, limits=None, overhead=None, requests=None, **kwargs):
+    def _claim(self, limits=None, requests=None, **kwargs):
         numa_topology = kwargs.pop('numa_topology', None)
         instance = self._fake_instance(**kwargs)
         instance.flavor = self._fake_instance_type(**kwargs)
@@ -85,8 +85,6 @@ class ClaimTestCase(test.NoDBTestCase):
                 }
         else:
             db_numa_topology = None
-        if overhead is None:
-            overhead = {'memory_mb': 0}
 
         requests = requests or self.empty_requests
 
@@ -95,7 +93,7 @@ class ClaimTestCase(test.NoDBTestCase):
         def get_claim(mock_extra_get):
             return claims.Claim(self.context, instance, _NODENAME,
                                 self.tracker, self.resources, requests,
-                                overhead=overhead, limits=limits)
+                                limits=limits)
         return get_claim()
 
     def _fake_instance(self, **kwargs):
@@ -149,90 +147,6 @@ class ClaimTestCase(test.NoDBTestCase):
         if values:
             resources.update(values)
         return objects.ComputeNode(**resources)
-
-    def test_memory_unlimited(self):
-        self._claim(memory_mb=99999999)
-
-    def test_disk_unlimited_root(self):
-        self._claim(root_gb=999999)
-
-    def test_disk_unlimited_ephemeral(self):
-        self._claim(ephemeral_gb=999999)
-
-    def test_memory_with_overhead(self):
-        overhead = {'memory_mb': 8}
-        limits = {'memory_mb': 2048}
-        self._claim(memory_mb=2040, limits=limits,
-                    overhead=overhead)
-
-    def test_memory_with_overhead_insufficient(self):
-        overhead = {'memory_mb': 9}
-        limits = {'memory_mb': 2048}
-
-        self.assertRaises(exception.ComputeResourcesUnavailable,
-                          self._claim, limits=limits, overhead=overhead,
-                          memory_mb=2040)
-
-    def test_memory_oversubscription(self):
-        self._claim(memory_mb=4096)
-
-    def test_disk_with_overhead(self):
-        overhead = {'memory_mb': 0,
-                    'disk_gb': 1}
-        limits = {'disk_gb': 100}
-        claim_obj = self._claim(root_gb=99, ephemeral_gb=0, limits=limits,
-                                overhead=overhead)
-
-        self.assertEqual(100, claim_obj.disk_gb)
-
-    def test_disk_with_overhead_insufficient(self):
-        overhead = {'memory_mb': 0,
-                    'disk_gb': 2}
-        limits = {'disk_gb': 100}
-
-        self.assertRaises(exception.ComputeResourcesUnavailable,
-                          self._claim, limits=limits, overhead=overhead,
-                          root_gb=99, ephemeral_gb=0)
-
-    def test_disk_with_overhead_insufficient_no_root(self):
-        overhead = {'memory_mb': 0,
-                    'disk_gb': 2}
-        limits = {'disk_gb': 1}
-
-        self.assertRaises(exception.ComputeResourcesUnavailable,
-                          self._claim, limits=limits, overhead=overhead,
-                          root_gb=0, ephemeral_gb=0)
-
-    def test_memory_insufficient(self):
-        limits = {'memory_mb': 8192}
-        self.assertRaises(exception.ComputeResourcesUnavailable,
-                          self._claim, limits=limits, memory_mb=16384)
-
-    def test_disk_oversubscription(self):
-        limits = {'disk_gb': 60}
-        self._claim(root_gb=10, ephemeral_gb=40,
-                    limits=limits)
-
-    def test_disk_oversubscription_scheduler_limits_object(self):
-        """Tests that the Claim code can handle a SchedulerLimits object"""
-        limits = objects.SchedulerLimits.from_dict({'disk_gb': 60})
-        self._claim(root_gb=10, ephemeral_gb=40,
-                    limits=limits)
-
-    def test_disk_insufficient(self):
-        limits = {'disk_gb': 45}
-        self.assertRaisesRegex(
-                exception.ComputeResourcesUnavailable,
-                "disk",
-                self._claim, limits=limits, root_gb=10, ephemeral_gb=40)
-
-    def test_disk_and_memory_insufficient(self):
-        limits = {'disk_gb': 45, 'memory_mb': 8192}
-        self.assertRaisesRegex(
-                exception.ComputeResourcesUnavailable,
-                "memory.*disk",
-                self._claim, limits=limits, root_gb=10, ephemeral_gb=40,
-                memory_mb=16384)
 
     @mock.patch('nova.pci.stats.PciDeviceStats.support_requests',
                 return_value=True)
@@ -392,7 +306,7 @@ class ClaimTestCase(test.NoDBTestCase):
 
 class MoveClaimTestCase(ClaimTestCase):
 
-    def _claim(self, limits=None, overhead=None, requests=None,
+    def _claim(self, limits=None, requests=None,
                image_meta=None, **kwargs):
         instance_type = self._fake_instance_type(**kwargs)
         numa_topology = kwargs.pop('numa_topology', None)
@@ -409,8 +323,6 @@ class MoveClaimTestCase(ClaimTestCase):
                 }
         else:
             self.db_numa_topology = None
-        if overhead is None:
-            overhead = {'memory_mb': 0}
 
         requests = requests or self.empty_requests
 
@@ -422,7 +334,7 @@ class MoveClaimTestCase(ClaimTestCase):
             return claims.MoveClaim(self.context, self.instance, _NODENAME,
                                     instance_type, image_meta, self.tracker,
                                     self.resources, requests,
-                                    overhead=overhead, limits=limits)
+                                    limits=limits)
         return get_claim()
 
     @mock.patch('nova.objects.Instance.drop_migration_context')

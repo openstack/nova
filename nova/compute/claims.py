@@ -35,18 +35,6 @@ class NopClaim(object):
         self.migration = kwargs.pop('migration', None)
         self.claimed_numa_topology = None
 
-    @property
-    def disk_gb(self):
-        return 0
-
-    @property
-    def memory_mb(self):
-        return 0
-
-    @property
-    def vcpus(self):
-        return 0
-
     def __enter__(self):
         return self
 
@@ -56,10 +44,6 @@ class NopClaim(object):
 
     def abort(self):
         pass
-
-    def __str__(self):
-        return "[Claim: %d MB memory, %d GB disk]" % (self.memory_mb,
-                self.disk_gb)
 
 
 class Claim(NopClaim):
@@ -74,7 +58,7 @@ class Claim(NopClaim):
     """
 
     def __init__(self, context, instance, nodename, tracker, resources,
-                 pci_requests, overhead=None, limits=None):
+                 pci_requests, limits=None):
         super(Claim, self).__init__()
         # Stash a copy of the instance at the current point of time
         self.instance = instance.obj_clone()
@@ -82,31 +66,11 @@ class Claim(NopClaim):
         self._numa_topology_loaded = False
         self.tracker = tracker
         self._pci_requests = pci_requests
-
-        if not overhead:
-            overhead = {'memory_mb': 0,
-                        'disk_gb': 0}
-
-        self.overhead = overhead
         self.context = context
 
         # Check claim at constructor to avoid mess code
         # Raise exception ComputeResourcesUnavailable if claim failed
         self._claim_test(resources, limits)
-
-    @property
-    def disk_gb(self):
-        return (self.instance.flavor.root_gb +
-                self.instance.flavor.ephemeral_gb +
-                self.overhead.get('disk_gb', 0))
-
-    @property
-    def memory_mb(self):
-        return self.instance.flavor.memory_mb + self.overhead['memory_mb']
-
-    @property
-    def vcpus(self):
-        return self.instance.flavor.vcpus
 
     @property
     def numa_topology(self):
@@ -145,22 +109,9 @@ class Claim(NopClaim):
 
         # If an individual limit is None, the resource will be considered
         # unlimited:
-        memory_mb_limit = limits.get('memory_mb')
-        disk_gb_limit = limits.get('disk_gb')
-        vcpus_limit = limits.get('vcpu')
         numa_topology_limit = limits.get('numa_topology')
 
-        LOG.info("Attempting claim on node %(node)s: "
-                 "memory %(memory_mb)d MB, "
-                 "disk %(disk_gb)d GB, vcpus %(vcpus)d CPU",
-                 {'node': self.nodename, 'memory_mb': self.memory_mb,
-                  'disk_gb': self.disk_gb, 'vcpus': self.vcpus},
-                 instance=self.instance)
-
-        reasons = [self._test_memory(resources, memory_mb_limit),
-                   self._test_disk(resources, disk_gb_limit),
-                   self._test_vcpus(resources, vcpus_limit),
-                   self._test_numa_topology(resources, numa_topology_limit),
+        reasons = [self._test_numa_topology(resources, numa_topology_limit),
                    self._test_pci()]
         reasons = [r for r in reasons if r is not None]
         if len(reasons) > 0:
@@ -169,33 +120,6 @@ class Claim(NopClaim):
 
         LOG.info('Claim successful on node %s', self.nodename,
                  instance=self.instance)
-
-    def _test_memory(self, resources, limit):
-        type_ = _("memory")
-        unit = "MB"
-        total = resources.memory_mb
-        used = resources.memory_mb_used
-        requested = self.memory_mb
-
-        return self._test(type_, unit, total, used, requested, limit)
-
-    def _test_disk(self, resources, limit):
-        type_ = _("disk")
-        unit = "GB"
-        total = resources.local_gb
-        used = resources.local_gb_used
-        requested = self.disk_gb
-
-        return self._test(type_, unit, total, used, requested, limit)
-
-    def _test_vcpus(self, resources, limit):
-        type_ = _("vcpu")
-        unit = "VCPU"
-        total = resources.vcpus
-        used = resources.vcpus_used
-        requested = self.vcpus
-
-        return self._test(type_, unit, total, used, requested, limit)
 
     def _test_pci(self):
         pci_requests = self._pci_requests
@@ -270,7 +194,7 @@ class MoveClaim(Claim):
     Move can be either a migrate/resize, live-migrate or an evacuate operation.
     """
     def __init__(self, context, instance, nodename, instance_type, image_meta,
-                 tracker, resources, pci_requests, overhead=None, limits=None):
+                 tracker, resources, pci_requests, limits=None):
         self.context = context
         self.instance_type = instance_type
         if isinstance(image_meta, dict):
@@ -278,22 +202,8 @@ class MoveClaim(Claim):
         self.image_meta = image_meta
         super(MoveClaim, self).__init__(context, instance, nodename, tracker,
                                         resources, pci_requests,
-                                        overhead=overhead, limits=limits)
+                                        limits=limits)
         self.migration = None
-
-    @property
-    def disk_gb(self):
-        return (self.instance_type.root_gb +
-                self.instance_type.ephemeral_gb +
-                self.overhead.get('disk_gb', 0))
-
-    @property
-    def memory_mb(self):
-        return self.instance_type.memory_mb + self.overhead['memory_mb']
-
-    @property
-    def vcpus(self):
-        return self.instance_type.vcpus
 
     @property
     def numa_topology(self):
