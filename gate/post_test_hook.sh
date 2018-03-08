@@ -19,7 +19,7 @@ function archive_deleted_rows {
 }
 
 function purge_db {
-    $MANAGE $* db purge --all --verbose
+    $MANAGE db purge --all --verbose --all-cells
     RET=$?
     if [[ $RET -eq 0 ]]; then
         echo Purge successful
@@ -40,7 +40,7 @@ cell_conf=$(conductor_conf 1)
 conf="--config-file $NOVA_CONF --config-file $cell_conf"
 
 archive_deleted_rows $conf
-purge_db $conf
+purge_db
 
 set -e
 # We need to get the admin credentials to run the OSC CLIs for Placement.

@@ -5926,8 +5926,8 @@ def _purgeable_tables(metadata):
                 t.name.endswith('migrate_version'))]
 
 
-def purge_shadow_tables(before_date, status_fn=None):
-    engine = get_engine()
+def purge_shadow_tables(context, before_date, status_fn=None):
+    engine = get_engine(context=context)
     conn = engine.connect()
     metadata = MetaData()
     metadata.bind = engine

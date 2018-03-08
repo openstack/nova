@@ -479,7 +479,8 @@ Rows were archived, running purge...
         mock_db_archive.assert_has_calls([mock.call(20),
                                           mock.call(20),
                                           mock.call(20)])
-        mock_db_purge.assert_called_once_with(None, status_fn=mock.ANY)
+        mock_db_purge.assert_called_once_with(mock.ANY, None,
+                                              status_fn=mock.ANY)
 
     def test_archive_deleted_rows_until_stopped_quiet(self):
         self.test_archive_deleted_rows_until_stopped(verbose=False)
@@ -547,14 +548,15 @@ Rows were archived, running purge...
         mock_purge.return_value = 1
         ret = self.commands.purge(purge_all=True)
         self.assertEqual(0, ret)
-        mock_purge.assert_called_once_with(None, status_fn=mock.ANY)
+        mock_purge.assert_called_once_with(mock.ANY, None, status_fn=mock.ANY)
 
     @mock.patch('nova.db.sqlalchemy.api.purge_shadow_tables')
     def test_purge_date(self, mock_purge):
         mock_purge.return_value = 1
         ret = self.commands.purge(before='oct 21 2015')
         self.assertEqual(0, ret)
-        mock_purge.assert_called_once_with(datetime.datetime(2015, 10, 21),
+        mock_purge.assert_called_once_with(mock.ANY,
+                                           datetime.datetime(2015, 10, 21),
                                            status_fn=mock.ANY)
 
     @mock.patch('nova.db.sqlalchemy.api.purge_shadow_tables')
@@ -574,6 +576,44 @@ Rows were archived, running purge...
         mock_purge.return_value = 0
         ret = self.commands.purge(purge_all=True)
         self.assertEqual(3, ret)
+
+    @mock.patch('nova.db.sqlalchemy.api.purge_shadow_tables')
+    @mock.patch('nova.objects.CellMappingList.get_all')
+    def test_purge_all_cells(self, mock_get_cells, mock_purge):
+        cell1 = objects.CellMapping(uuid=uuidsentinel.cell1, name='cell1',
+                                    database_connection='foo1',
+                                    transport_url='bar1')
+        cell2 = objects.CellMapping(uuid=uuidsentinel.cell2, name='cell2',
+                                    database_connection='foo2',
+                                    transport_url='bar2')
+
+        mock_get_cells.return_value = [cell1, cell2]
+
+        values = [123, 456]
+
+        def fake_purge(*args, **kwargs):
+            val = values.pop(0)
+            kwargs['status_fn'](val)
+            return val
+        mock_purge.side_effect = fake_purge
+
+        ret = self.commands.purge(purge_all=True, all_cells=True, verbose=True)
+        self.assertEqual(0, ret)
+        mock_get_cells.assert_called_once_with(mock.ANY)
+        output = self.output.getvalue()
+        expected = """\
+Cell %s: 123
+Cell %s: 456
+""" % (cell1.identity, cell2.identity)
+
+        self.assertEqual(expected, output)
+
+    @mock.patch('nova.objects.CellMappingList.get_all')
+    def test_purge_all_cells_no_api_config(self, mock_get_cells):
+        mock_get_cells.side_effect = db_exc.DBError
+        ret = self.commands.purge(purge_all=True, all_cells=True)
+        self.assertEqual(4, ret)
+        self.assertIn('Unable to get cell list', self.output.getvalue())
 
     @mock.patch.object(migration, 'db_null_instance_uuid_scan',
                        return_value={'foo': 0})

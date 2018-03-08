@@ -178,7 +178,9 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
         def status(msg):
             lines.append(msg)
 
-        deleted = sqlalchemy_api.purge_shadow_tables(None, status_fn=status)
+        admin_context = context.get_admin_context()
+        deleted = sqlalchemy_api.purge_shadow_tables(admin_context,
+                                                     None, status_fn=status)
         self.assertNotEqual(0, deleted)
         self.assertNotEqual(0, len(lines))
         for line in lines:
@@ -199,7 +201,9 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
         pre_purge_results = self._get_table_counts()
 
         past = timeutils.utcnow() - datetime.timedelta(hours=1)
-        deleted = sqlalchemy_api.purge_shadow_tables(past)
+        admin_context = context.get_admin_context()
+        deleted = sqlalchemy_api.purge_shadow_tables(admin_context,
+                                                     past)
         # Make sure we didn't delete anything if the marker is before
         # we started
         self.assertEqual(0, deleted)
@@ -209,7 +213,7 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
         self.assertEqual(pre_purge_results, results)
 
         future = timeutils.utcnow() + datetime.timedelta(hours=1)
-        deleted = sqlalchemy_api.purge_shadow_tables(future)
+        deleted = sqlalchemy_api.purge_shadow_tables(admin_context, future)
         # Make sure we deleted things when the marker is after
         # we started
         self.assertNotEqual(0, deleted)
@@ -228,5 +232,6 @@ class TestDatabaseArchive(test_servers.ServersTestBase):
         results, deleted_ids = db.archive_deleted_rows(max_rows=1000)
         self.assertEqual([server_id], deleted_ids)
         date = dateutil_parser.parse('oct 21 2015', fuzzy=True)
-        deleted = sqlalchemy_api.purge_shadow_tables(date)
+        admin_context = context.get_admin_context()
+        deleted = sqlalchemy_api.purge_shadow_tables(admin_context, date)
         self.assertEqual(0, deleted)

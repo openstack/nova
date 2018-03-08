@@ -562,7 +562,10 @@ Error: %s""") % six.text_type(e))
           help='Purge all rows in the shadow tables')
     @args('--verbose', dest='verbose', action='store_true', default=False,
           help='Print information about purged records')
-    def purge(self, before=None, purge_all=False, verbose=False):
+    @args('--all-cells', dest='all_cells', action='store_true', default=False,
+          help='Run against all cell databases')
+    def purge(self, before=None, purge_all=False, verbose=False,
+              all_cells=False):
         if before is None and purge_all is False:
             print(_('Either --before or --all is required'))
             return 1
@@ -577,9 +580,28 @@ Error: %s""") % six.text_type(e))
 
         def status(msg):
             if verbose:
-                print(msg)
+                print('%s: %s' % (identity, msg))
 
-        deleted = sa_db.purge_shadow_tables(before_date, status_fn=status)
+        deleted = 0
+        admin_ctxt = context.get_admin_context()
+
+        if all_cells:
+            try:
+                cells = objects.CellMappingList.get_all(admin_ctxt)
+            except db_exc.DBError:
+                print(_('Unable to get cell list from API DB. '
+                        'Is it configured?'))
+                return 4
+            for cell in cells:
+                identity = _('Cell %s') % cell.identity
+                with context.target_cell(admin_ctxt, cell) as cctxt:
+                    deleted += sa_db.purge_shadow_tables(cctxt,
+                                                         before_date,
+                                                         status_fn=status)
+        else:
+            identity = _('DB')
+            deleted = sa_db.purge_shadow_tables(admin_ctxt,
+                                                before_date, status_fn=status)
         if deleted:
             return 0
         else:
