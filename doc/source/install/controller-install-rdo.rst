@@ -12,8 +12,8 @@ databases, service credentials, and API endpoints.
 
 #. To create the databases, complete these steps:
 
-   * Use the database access client to connect to the database server as the
-     ``root`` user:
+   * Use the database access client to connect to the database server
+     as the ``root`` user:
 
      .. code-block:: console
 
@@ -192,7 +192,9 @@ databases, service credentials, and API endpoints.
 
    .. code-block:: console
 
-      $ openstack service create --name placement --description "Placement API" placement
+      $ openstack service create --name placement \
+        --description "Placement API" placement
+
       +-------------+----------------------------------+
       | Field       | Value                            |
       +-------------+----------------------------------+
@@ -207,7 +209,9 @@ databases, service credentials, and API endpoints.
 
    .. code-block:: console
 
-      $ openstack endpoint create --region RegionOne placement public http://controller:8778
+      $ openstack endpoint create --region RegionOne \
+        placement public http://controller:8778
+
       +--------------+----------------------------------+
       | Field        | Value                            |
       +--------------+----------------------------------+
@@ -222,7 +226,9 @@ databases, service credentials, and API endpoints.
       | url          | http://controller:8778           |
       +--------------+----------------------------------+
 
-      $ openstack endpoint create --region RegionOne placement internal http://controller:8778
+      $ openstack endpoint create --region RegionOne \
+        placement internal http://controller:8778
+
       +--------------+----------------------------------+
       | Field        | Value                            |
       +--------------+----------------------------------+
@@ -237,7 +243,9 @@ databases, service credentials, and API endpoints.
       | url          | http://controller:8778           |
       +--------------+----------------------------------+
 
-      $ openstack endpoint create --region RegionOne placement admin http://controller:8778
+      $ openstack endpoint create --region RegionOne \
+        placement admin http://controller:8778
+
       +--------------+----------------------------------+
       | Field        | Value                            |
       +--------------+----------------------------------+
@@ -447,26 +455,26 @@ Install and configure components
 
       Ignore any deprecation messages in this output.
 
-4. Register the ``cell0`` database:
+#. Register the ``cell0`` database:
 
    .. code-block:: console
 
       # su -s /bin/sh -c "nova-manage cell_v2 map_cell0" nova
 
-5. Create the ``cell1`` cell:
+#. Create the ``cell1`` cell:
 
    .. code-block:: console
 
       # su -s /bin/sh -c "nova-manage cell_v2 create_cell --name=cell1 --verbose" nova
       109e1d4b-536a-40d0-83c6-5f121b82b650
 
-6. Populate the nova database:
+#. Populate the nova database:
 
    .. code-block:: console
 
       # su -s /bin/sh -c "nova-manage db sync" nova
 
-7. Verify nova cell0 and cell1 are registered correctly:
+#. Verify nova cell0 and cell1 are registered correctly:
 
    .. code-block:: console
 
