@@ -30,7 +30,6 @@ from nova.conf import conductor
 from nova.conf import configdrive
 from nova.conf import console
 from nova.conf import consoleauth
-from nova.conf import crypto
 from nova.conf import database
 from nova.conf import devices
 from nova.conf import ephemeral_storage
@@ -83,7 +82,6 @@ conductor.register_opts(CONF)
 configdrive.register_opts(CONF)
 console.register_opts(CONF)
 consoleauth.register_opts(CONF)
-crypto.register_opts(CONF)
 database.register_opts(CONF)
 devices.register_opts(CONF)
 ephemeral_storage.register_opts(CONF)
