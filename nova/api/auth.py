@@ -22,10 +22,10 @@ from oslo_serialization import jsonutils
 import webob.dec
 import webob.exc
 
+from nova.api import wsgi
 import nova.conf
 from nova import context
 from nova.i18n import _
-from nova import wsgi
 
 
 CONF = nova.conf.CONF

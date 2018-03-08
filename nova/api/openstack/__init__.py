@@ -24,14 +24,26 @@ import webob.dec
 import webob.exc
 
 from nova.api.openstack import wsgi
+from nova.api import wsgi as base_wsgi
 import nova.conf
 from nova.i18n import translate
-from nova import utils
-from nova import wsgi as base_wsgi
 
 
 LOG = logging.getLogger(__name__)
 CONF = nova.conf.CONF
+
+
+def walk_class_hierarchy(clazz, encountered=None):
+    """Walk class hierarchy, yielding most derived classes first."""
+    if not encountered:
+        encountered = []
+    for subclass in clazz.__subclasses__():
+        if subclass not in encountered:
+            encountered.append(subclass)
+            # drill down to leaves first
+            for subsubclass in walk_class_hierarchy(subclass, encountered):
+                yield subsubclass
+            yield subclass
 
 
 class FaultWrapper(base_wsgi.Middleware):
@@ -42,7 +54,7 @@ class FaultWrapper(base_wsgi.Middleware):
     @staticmethod
     def status_to_type(status):
         if not FaultWrapper._status_to_type:
-            for clazz in utils.walk_class_hierarchy(webob.exc.HTTPError):
+            for clazz in walk_class_hierarchy(webob.exc.HTTPError):
                 FaultWrapper._status_to_type[clazz.code] = clazz
         return FaultWrapper._status_to_type.get(
                                   status, webob.exc.HTTPInternalServerError)()

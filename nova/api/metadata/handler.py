@@ -27,13 +27,13 @@ import webob.dec
 import webob.exc
 
 from nova.api.metadata import base
+from nova.api import wsgi
 from nova import cache_utils
 import nova.conf
 from nova import context as nova_context
 from nova import exception
 from nova.i18n import _
 from nova.network.neutronv2 import api as neutronapi
-from nova import wsgi
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)

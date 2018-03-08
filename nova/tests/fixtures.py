@@ -39,6 +39,7 @@ from wsgi_intercept import interceptor
 from nova.api.openstack.compute import tenant_networks
 from nova.api.openstack.placement import deploy as placement_deploy
 from nova.api.openstack import wsgi_app
+from nova.api import wsgi
 from nova.compute import rpcapi as compute_rpcapi
 from nova import context
 from nova.db import migration
@@ -53,7 +54,6 @@ from nova import rpc
 from nova import service
 from nova.tests.functional.api import client
 from nova.tests import uuidsentinel
-from nova import wsgi
 
 _TRUE_VALUES = ('True', 'true', '1', 'yes')
 

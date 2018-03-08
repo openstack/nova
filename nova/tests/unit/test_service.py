@@ -263,7 +263,7 @@ class TestWSGIService(test.NoDBTestCase):
 
     def setUp(self):
         super(TestWSGIService, self).setUp()
-        self.stub_out('nova.wsgi.Loader.load_app',
+        self.stub_out('nova.api.wsgi.Loader.load_app',
                       lambda *a, **kw: mock.MagicMock())
 
     @mock.patch('nova.objects.Service.get_by_host_and_binary')

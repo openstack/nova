@@ -27,6 +27,7 @@ import oslo_messaging as messaging
 from oslo_service import service
 from oslo_utils import importutils
 
+from nova.api import wsgi as api_wsgi
 from nova import baserpc
 from nova import conductor
 import nova.conf
@@ -326,7 +327,7 @@ class WSGIService(service.Service):
         self.binary = 'nova-%s' % name
         self.topic = None
         self.manager = self._get_manager()
-        self.loader = loader or wsgi.Loader()
+        self.loader = loader or api_wsgi.Loader()
         self.app = self.loader.load_app(name)
         # inherit all compute_api worker counts from osapi_compute
         if name.startswith('openstack_compute_api'):

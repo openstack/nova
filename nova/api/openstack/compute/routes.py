@@ -93,8 +93,8 @@ from nova.api.openstack.compute import versionsV21
 from nova.api.openstack.compute import virtual_interfaces
 from nova.api.openstack.compute import volumes
 from nova.api.openstack import wsgi
+from nova.api import wsgi as base_wsgi
 import nova.conf
-from nova import wsgi as base_wsgi
 
 
 CONF = nova.conf.CONF

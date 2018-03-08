@@ -20,7 +20,7 @@ import webob.dec
 import webob.exc
 
 from nova.api.openstack import wsgi
-from nova import wsgi as base_wsgi
+from nova.api import wsgi as base_wsgi
 
 # TODO(sdague) maybe we can use a better name here for the logger
 LOG = logging.getLogger(__name__)
