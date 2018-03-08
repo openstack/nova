@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import datetime
 import sys
 
 import ddt
@@ -533,6 +534,39 @@ Archiving.....stopped
             self.assertEqual(expected, output)
         else:
             self.assertEqual(0, len(output))
+
+    @mock.patch('nova.db.sqlalchemy.api.purge_shadow_tables')
+    def test_purge_all(self, mock_purge):
+        mock_purge.return_value = 1
+        ret = self.commands.purge(purge_all=True)
+        self.assertEqual(0, ret)
+        mock_purge.assert_called_once_with(None, status_fn=mock.ANY)
+
+    @mock.patch('nova.db.sqlalchemy.api.purge_shadow_tables')
+    def test_purge_date(self, mock_purge):
+        mock_purge.return_value = 1
+        ret = self.commands.purge(before='oct 21 2015')
+        self.assertEqual(0, ret)
+        mock_purge.assert_called_once_with(datetime.datetime(2015, 10, 21),
+                                           status_fn=mock.ANY)
+
+    @mock.patch('nova.db.sqlalchemy.api.purge_shadow_tables')
+    def test_purge_date_fail(self, mock_purge):
+        ret = self.commands.purge(before='notadate')
+        self.assertEqual(2, ret)
+        self.assertFalse(mock_purge.called)
+
+    @mock.patch('nova.db.sqlalchemy.api.purge_shadow_tables')
+    def test_purge_no_args(self, mock_purge):
+        ret = self.commands.purge()
+        self.assertEqual(1, ret)
+        self.assertFalse(mock_purge.called)
+
+    @mock.patch('nova.db.sqlalchemy.api.purge_shadow_tables')
+    def test_purge_nothing_deleted(self, mock_purge):
+        mock_purge.return_value = 0
+        ret = self.commands.purge(purge_all=True)
+        self.assertEqual(3, ret)
 
     @mock.patch.object(migration, 'db_null_instance_uuid_scan',
                        return_value={'foo': 0})

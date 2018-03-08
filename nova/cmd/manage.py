@@ -29,6 +29,7 @@ import re
 import sys
 import traceback
 
+from dateutil import parser as dateutil_parser
 import decorator
 import netaddr
 from oslo_config import cfg
@@ -545,6 +546,36 @@ Error: %s""") % six.text_type(e))
                 print(_('Nothing was archived.'))
         # NOTE(danms): Return nonzero if we archived something
         return int(bool(table_to_rows_archived))
+
+    @args('--before', dest='before',
+          help='If specified, purge rows from shadow tables that are older '
+               'than this. Fuzzy time specs are allowed')
+    @args('--all', dest='purge_all', action='store_true',
+          help='Purge all rows in the shadow tables')
+    @args('--verbose', dest='verbose', action='store_true', default=False,
+          help='Print information about purged records')
+    def purge(self, before=None, purge_all=False, verbose=False):
+        if before is None and purge_all is False:
+            print(_('Either --before or --all is required'))
+            return 1
+        if before:
+            try:
+                before_date = dateutil_parser.parse(before, fuzzy=True)
+            except ValueError as e:
+                print(_('Invalid value for --before: %s') % e)
+                return 2
+        else:
+            before_date = None
+
+        def status(msg):
+            if verbose:
+                print(msg)
+
+        deleted = sa_db.purge_shadow_tables(before_date, status_fn=status)
+        if deleted:
+            return 0
+        else:
+            return 3
 
     @args('--delete', action='store_true', dest='delete',
           help='If specified, automatically delete any records found where '

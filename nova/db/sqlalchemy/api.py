@@ -5920,6 +5920,65 @@ def archive_deleted_rows(max_rows=None):
     return table_to_rows_archived, deleted_instance_uuids
 
 
+def _purgeable_tables(metadata):
+    return [t for t in metadata.sorted_tables
+            if (t.name.startswith(_SHADOW_TABLE_PREFIX) and not
+                t.name.endswith('migrate_version'))]
+
+
+def purge_shadow_tables(before_date, status_fn=None):
+    engine = get_engine()
+    conn = engine.connect()
+    metadata = MetaData()
+    metadata.bind = engine
+    metadata.reflect()
+    total_deleted = 0
+
+    if status_fn is None:
+        status_fn = lambda m: None
+
+    # Some things never get formally deleted, and thus deleted_at
+    # is never set. So, prefer specific timestamp columns here
+    # for those special cases.
+    overrides = {
+        'shadow_instance_actions': 'created_at',
+        'shadow_instance_actions_events': 'created_at',
+    }
+
+    for table in _purgeable_tables(metadata):
+        if before_date is None:
+            col = None
+        elif table.name in overrides:
+            col = getattr(table.c, overrides[table.name])
+        elif hasattr(table.c, 'deleted_at'):
+            col = table.c.deleted_at
+        elif hasattr(table.c, 'updated_at'):
+            col = table.c.updated_at
+        elif hasattr(table.c, 'created_at'):
+            col = table.c.created_at
+        else:
+            status_fn(_('Unable to purge table %(table)s because it '
+                        'has no timestamp column') % {
+                            'table': table.name})
+            continue
+
+        if col is not None:
+            delete = table.delete().where(col < before_date)
+        else:
+            delete = table.delete()
+
+        deleted = conn.execute(delete)
+        if deleted.rowcount > 0:
+            status_fn(_('Deleted %(rows)i rows from %(table)s based on '
+                        'timestamp column %(col)s') % {
+                            'rows': deleted.rowcount,
+                            'table': table.name,
+                            'col': col is None and '(n/a)' or col.name})
+        total_deleted += deleted.rowcount
+
+    return total_deleted
+
+
 @pick_context_manager_writer
 def service_uuids_online_data_migration(context, max_count):
     from nova.objects import service

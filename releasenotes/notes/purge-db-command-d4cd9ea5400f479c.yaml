@@ -1,0 +1,5 @@
+---
+features:
+  - |
+    The nova-manage command now has a 'db purge' command that will delete data
+    from the shadow tables after 'db archive_deleted_rows' has been run.
