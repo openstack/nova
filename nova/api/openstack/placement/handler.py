@@ -223,12 +223,12 @@ class PlacementHandler(object):
         except exception.NotFound as exc:
             raise webob.exc.HTTPNotFound(
                 exc, json_formatter=util.json_error_formatter)
-        # Trap the HTTPNotFound that can be raised by dispatch()
-        # when no route is found. The exception is passed through to
-        # the FaultWrap middleware without causing an alarming log
-        # message.
-        except webob.exc.HTTPNotFound:
-            raise
-        except Exception as exc:
-            LOG.exception("Uncaught exception")
-            raise
+        # Remaining uncaught exceptions will rise first to the Microversion
+        # middleware, where any WebOb generated exceptions will be caught and
+        # transformed into legit HTTP error responses (with microversion
+        # headers added), and then to the FaultWrapper middleware which will
+        # catch anything else and transform them into 500 responses.
+        # NOTE(cdent): There should be very few uncaught exceptions which are
+        # not WebOb exceptions at this stage as the handlers are contained by
+        # the wsgify decorator which will transform those exceptions to
+        # responses itself.

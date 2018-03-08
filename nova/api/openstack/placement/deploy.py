@@ -14,8 +14,8 @@
 import oslo_middleware
 from oslo_middleware import cors
 
-from nova.api import openstack as common_api
 from nova.api.openstack.placement import auth
+from nova.api.openstack.placement import fault_wrap
 from nova.api.openstack.placement import handler
 from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement import requestlog
@@ -56,7 +56,7 @@ def deploy(conf):
     context_middleware = auth.PlacementKeystoneContext
     req_id_middleware = oslo_middleware.RequestId
     microversion_middleware = microversion.MicroversionMiddleware
-    fault_wrap = common_api.FaultWrapper
+    fault_middleware = fault_wrap.FaultWrapper
     request_log = requestlog.RequestLog
 
     application = handler.PlacementHandler()
@@ -70,7 +70,7 @@ def deploy(conf):
     # all see the same contextual information including request id and
     # authentication information.
     for middleware in (microversion_middleware,
-                       fault_wrap,
+                       fault_middleware,
                        request_log,
                        context_middleware,
                        auth_middleware,
