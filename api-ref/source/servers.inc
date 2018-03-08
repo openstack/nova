@@ -194,8 +194,8 @@ Request
   - all_tenants: all_tenants_query
   - auto_disk_config: disk_config_query_server
   - availability_zone: availability_zone_query_server
-  - config_drive: config_drive_query_server
   - changes-since: changes_since_server
+  - config_drive: config_drive_query_server
   - created_at: created_at_query_server
   - deleted: deleted_query
   - description: description_query_server
@@ -214,8 +214,6 @@ Request
   - marker: marker
   - name: server_name_query
   - node: node_query_server
-  - not-tags: not_tags_query
-  - not-tags-any: not_tags_any_query
   - power_state: power_state_query_server
   - progress: progress_query_server
   - project_id: project_id_query_server
@@ -225,13 +223,15 @@ Request
   - sort_dir: sort_dir_server
   - sort_key: sort_key_server
   - status: server_status_query
-  - tags: tags_query
-  - tags-any: tags_any_query
   - task_state: task_state_query_server
   - terminated_at: terminated_at_query_server
   - user_id: user_id_query_server
   - uuid: server_uuid_query
   - vm_state: vm_state_query_server
+  - not-tags: not_tags_query
+  - not-tags-any: not_tags_any_query
+  - tags: tags_query
+  - tags-any: tags_any_query
 
 Response
 --------
@@ -491,8 +491,8 @@ Request
   - all_tenants: all_tenants_query
   - auto_disk_config: disk_config_query_server
   - availability_zone: availability_zone_query_server
-  - config_drive: config_drive_query_server
   - changes-since: changes_since_server
+  - config_drive: config_drive_query_server
   - created_at: created_at_query_server
   - deleted: deleted_query
   - description: description_query_server
@@ -511,8 +511,6 @@ Request
   - marker: marker
   - name: server_name_query
   - node: node_query_server
-  - not-tags: not_tags_query
-  - not-tags-any: not_tags_any_query
   - power_state: power_state_query_server
   - progress: progress_query_server
   - project_id: project_id_query_server
@@ -522,13 +520,15 @@ Request
   - sort_dir: sort_dir_server
   - sort_key: sort_key_server
   - status: server_status_query
-  - tags: tags_query
-  - tags-any: tags_any_query
   - task_state: task_state_query_server
   - terminated_at: terminated_at_query_server
   - user_id: user_id_query_server
   - uuid: server_uuid_query
   - vm_state: vm_state_query_server
+  - not-tags: not_tags_query
+  - not-tags-any: not_tags_any_query
+  - tags: tags_query
+  - tags-any: tags_any_query
 
 Response
 --------

@@ -385,9 +385,12 @@ all_tenants:
 all_tenants_query:
   description: |
     Specify the ``all_tenants`` query parameter to list all instances
-    for all projects. A value of `all_tenants`` need not be specified.
-    If it is specified, it must be 'boolean'.
-    By default this is only allowed by admin users.
+    for all projects. By default this is only allowed by administrators.
+    If the value of this parameter is not specified, it is treated as
+    ``True``. If the value is specified, ``1``, ``t``, ``true``,
+    ``on``, ``y`` and ``yes`` are treated as ``True``. ``0``, ``f``,
+    ``false``, ``off``, ``n`` and ``no`` are treated as ``False``.
+    (They are case-insensitive.)
   in: query
   required: false
   type: boolean
@@ -403,6 +406,9 @@ all_tenants_sec_grp_query:
 availability_zone_query_server:
   description: |
     Filter the server list result by server availability zone.
+
+    This parameter is only valid when specified by administrators.
+    If non-admin users specify this parameter, it is ignored.
   in: query
   required: false
   type: string
@@ -489,9 +495,12 @@ changes_since_server:
 config_drive_query_server:
   description: |
     Filter the server list result by the config drive setting of the server.
+
+    This parameter is only valid when specified by administrators.
+    If non-admin users specify this parameter, it is ignored.
   in: query
   required: false
-  type: boolean
+  type: string
 created_at_query_server:
   description: |
     Filter the server list result by a date and time stamp when server was created.
@@ -504,6 +513,9 @@ created_at_query_server:
     The ``±hh:mm`` value, if included, returns the time zone as an offset from UTC.
     For example, ``2015-08-27T09:49:58-05:00``.
     If you omit the time zone, the UTC time zone is assumed.
+
+    This parameter is only valid when specified by administrators.
+    If non-admin users specify this parameter, it is ignored.
   in: query
   required: false
   type: string
@@ -523,13 +535,20 @@ deleted_query:
   required: false
   type: boolean
   description: |
-    Show deleted items. In some circumstances deleted items will still
+    Show deleted items only. In some circumstances deleted items will still
     be accessible via the backend database, however there is no
     contract on how long, so this parameter should be used with
-    caution. It is typically only available to administrators.
+    caution. ``1``, ``t``, ``true``, ``on``, ``y`` and ``yes`` are treated as
+    ``True`` (case-insensitive). Other than them are treated as ``False``.
+
+    This parameter is only valid when specified by administrators.
+    If non-admin users specify this parameter, it is ignored.
 description_query_server:
   description: |
     Filter the server list result by description.
+
+    This parameter is only valid when specified by administrators.
+    If non-admin users specify this parameter, it is ignored.
 
     .. note::
 
@@ -553,6 +572,9 @@ disk_config_query_server:
 
     - ``AUTO``
     - ``MANUAL``
+
+    This parameter is only valid when specified by administrators.
+    If non-admin users specify this parameter, it is ignored.
   in: query
   required: false
   type: string
@@ -606,7 +628,10 @@ flavor_query:
   type: string
 host_query_server:
   description: |
-    Filter the server list result by the host name of compute node. Only allowed for Admin.
+    Filter the server list result by the host name of compute node.
+
+    This parameter is only valid when specified by administrators.
+    If non-admin users specify this parameter, it is ignored.
   in: query
   required: false
   type: string
@@ -619,6 +644,9 @@ host_query_service:
 hostname_query_server:
   description: |
     Filter the server list result by the host name of server.
+
+    This parameter is only valid when specified by administrators.
+    If non-admin users specify this parameter, it is ignored.
   in: query
   required: false
   type: string
@@ -742,10 +770,15 @@ instance_action_marker:
 ip6_query:
   description: |
     An IPv6 address to filter results by.
+
+    Up to microversion 2.4, this parameter is only valid when specified
+    by administrators. If non-admin users specify this parameter,
+    it is ignored.
+    Starting from microversion 2.5, this parameter is valid for no-admin users
+    as well as administrators.
   in: query
   required: false
   type: string
-  min_version: 2.5
 ip_query:
   description: |
     An IPv4 address to filter results by.
@@ -759,9 +792,15 @@ kernel_id_query_server:
   description: |
     Filter the server list result by the UUID of the kernel image
     when using an AMI.
+
+    This parameter is only valid when specified by administrators.
+    If non-admin users specify this parameter, it is ignored.
 key_name_query_server:
   description: |
     Filter the server list result by keypair name.
+
+    This parameter is only valid when specified by administrators.
+    If non-admin users specify this parameter, it is ignored.
   in: query
   required: false
   type: string
@@ -796,9 +835,12 @@ launch_index_query_server:
   description: |
     Filter the server list result by the sequence in which the
     servers were launched.
+
+    This parameter is only valid when specified by administrators.
+    If non-admin users specify this parameter, it is ignored.
   in: query
   required: false
-  type: string
+  type: integer
 launched_at_query_server:
   description: |
     Filter the server list result by a date and time stamp when the instance was launched.
@@ -810,6 +852,9 @@ launched_at_query_server:
     The ``±hh:mm`` value, if included, returns the time zone as an offset from UTC.
     For example, ``2015-08-27T09:49:58-05:00``.
     If you omit the time zone, the UTC time zone is assumed.
+
+    This parameter is only valid when specified by administrators.
+    If non-admin users specify this parameter, it is ignored.
   in: query
   required: false
   type: string
@@ -834,7 +879,10 @@ limit_simple:
 locked_by_query_server:
   description: |
     Filter the server list result by who locked the server, possible value
-    could be ``admin``, ``owner`` or ``none``.
+    could be ``admin`` or ``owner``.
+
+    This parameter is only valid when specified by administrators.
+    If non-admin users specify this parameter, it is ignored.
   in: query
   required: false
   type: string
@@ -919,7 +967,10 @@ minRam:
   type: integer
 node_query_server:
   description: |
-    Filter the server list result by the node. Only allowed for Admin.
+    Filter the server list result by the node.
+
+    This parameter is only valid when specified by administrators.
+    If non-admin users specify this parameter, it is ignored.
   in: query
   required: false
   type: string
@@ -951,12 +1002,41 @@ offset_simple:
 power_state_query_server:
   in: query
   required: false
-  type: string
+  type: integer
   description: |
     Filter the server list result by server power state.
+
+    Possible values are integer values that is mapped as::
+
+      0: NOSTATE
+      1: RUNNING
+      3: PAUSED
+      4: SHUTDOWN
+      6: CRASHED
+      7: SUSPENDED
+
+    This parameter is only valid when specified by administrators.
+    If non-admin users specify this parameter, it is ignored.
 progress_query_server:
   description: |
     Filter the server list result by the progress of the server.
+    The value could be from 0 to 100 as integer.
+
+    This parameter is only valid when specified by administrators.
+    If non-admin users specify this parameter, it is ignored.
+  in: query
+  required: false
+  type: integer
+project_id_query_server:
+  description: |
+    Filter the list of servers by the given project ID.
+
+    This filter only works when the ``all_tenants`` filter is also specified.
+
+    .. note::
+
+       'tenant_id' can also be requested which is alias of 'project_id'
+       but that is not recommended to use as that will be removed in future.
   in: query
   required: false
   type: string
@@ -967,6 +1047,9 @@ ramdisk_id_query_server:
   description: |
     Filter the server list result by the UUID of the ramdisk image when
     using an AMI.
+
+    This parameter is only valid when specified by administrators.
+    If non-admin users specify this parameter, it is ignored.
 reservation_id_query:
   in: query
   required: false
@@ -1003,19 +1086,29 @@ server_name_query:
   type: string
 server_root_device_name_query:
   in: query
-  required: true
+  required: false
   type: string
   description: |
-    Filter the server list result by the root device name of the server
+    Filter the server list result by the root device name of the server.
+
+    This parameter is only valid when specified by administrators.
+    If non-admin users specify this parameter, it is ignored.
 server_status_query:
   description: |
     Filters the response by a server status, as a string. For example, ``ACTIVE``.
+
+    Up to microversion 2.37, an empty list is returnd if an invalid status is
+    specified. Starting from microversion 2.38, a 400 error is returned
+    in that case.
   in: query
   required: false
   type: string
 server_uuid_query:
   description: |
     Filter the server list result by the UUID of the server.
+
+    This parameter is only valid when specified by administrators.
+    If non-admin users specify this parameter, it is ignored.
   in: query
   required: false
   type: string
@@ -1137,6 +1230,9 @@ task_state_query_server:
   type: string
   description: |
     Filter the server list result by task state.
+
+    This parameter is only valid when specified by administrators.
+    If non-admin users specify this parameter, it is ignored.
 tenant_id_query:
   description: |
     Specify the project ID (tenant ID) to show the rate and absolute limits.
@@ -1155,6 +1251,9 @@ terminated_at_query_server:
     The ``±hh:mm`` value, if included, returns the time zone as an offset from UTC.
     For example, ``2015-08-27T09:49:58-05:00``.
     If you omit the time zone, the UTC time zone is assumed.
+
+    This parameter is only valid when specified by administrators.
+    If non-admin users specify this parameter, it is ignored.
   in: query
   required: false
   type: string
@@ -1192,6 +1291,9 @@ user_id_query_quota_delete:
 user_id_query_server:
   description: |
     Filter the list of servers by the given user ID.
+
+    This parameter is only valid when specified by administrators.
+    If non-admin users specify this parameter, it is ignored.
   in: query
   required: false
   type: string
@@ -1204,6 +1306,24 @@ user_id_query_set_quota:
 vm_state_query_server:
   description: |
     Filter the server list result by vm state.
+
+    The value could be:
+
+    - ``ACTIVE``
+    - ``BUILDING``
+    - ``DELETED``
+    - ``ERROR``
+    - ``PAUSED``
+    - ``RESCUED``
+    - ``RESIZED``
+    - ``SHELVED``
+    - ``SHELVED_OFFLOADED``
+    - ``SOFT_DELETED``
+    - ``STOPPED``
+    - ``SUSPENDED``
+
+    This parameter is only valid when specified by administrators.
+    If non-admin users specify this parameter, it is ignored.
   in: query
   required: false
   type: string
@@ -4833,19 +4953,6 @@ project_id_instance_action:
     The UUID of the project that this server belongs to.
   in: body
   required: true
-  type: string
-project_id_query_server:
-  description: |
-    Filter the list of servers by the given project ID.
-
-    This filter only works when the ``all_tenants=1`` filter is also specified.
-
-    .. note::
-
-       'tenant_id' can also be requested which is alias of 'project_id'
-       but that is not recommended to use as that will be removed in future.
-  in: body
-  required: false
   type: string
 project_id_server_group:
   description: |
