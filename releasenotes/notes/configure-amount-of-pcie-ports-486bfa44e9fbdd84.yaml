@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    The amount of PCI Express ports (slots in virtual motherboard) can now be
+    configured using ``num_pcie_ports`` option in ``libvirt`` section of
+    ``nova.conf`` file.  This affects x86-64 with ``hw_machine_type`` set to
+    'pc-q35' value and AArch64 instances of 'virt' ``hw_machine_type`` (which
+    is default for that architecture). Due to QEMU's memory map limits on
+    aarch64/virt maximum value is limited to 28.
