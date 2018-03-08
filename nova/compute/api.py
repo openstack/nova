@@ -2942,6 +2942,17 @@ class API(base.Base):
                     LOG.info(_LI('Skipping quiescing instance: '
                                  '%(reason)s.'), {'reason': err},
                              instance=instance)
+            # NOTE(tasker): discovered that an uncaught exception could occur
+            #               after the instance has been frozen. catch and thaw.
+            except Exception as ex:
+                with excutils.save_and_reraise_exception():
+                    LOG.error(
+                        _LE("An error occurred during quiesce of instance. "
+                            "Unquiescing to ensure instance is thawed. "
+                            "Error: %s"), six.text_type(ex),
+                        instance=instance)
+                    self.compute_rpcapi.unquiesce_instance(context, instance,
+                                                           mapping=None)
 
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
