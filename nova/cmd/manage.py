@@ -495,7 +495,8 @@ Error: %s""") % six.text_type(e))
         """Move deleted rows from production tables to shadow tables.
 
         Returns 0 if nothing was archived, 1 if some number of rows were
-        archived, 2 if max_rows is invalid. If automating, this should be
+        archived, 2 if max_rows is invalid, 3 if no connection could be
+        established to the API DB. If automating, this should be
         run continuously while the result is 1, stopping at 0.
         """
         max_rows = int(max_rows)
@@ -506,6 +507,19 @@ Error: %s""") % six.text_type(e))
             print(_('max rows must be <= %(max_value)d') %
                   {'max_value': db.MAX_INT})
             return 2
+
+        ctxt = context.get_admin_context()
+        try:
+            # NOTE(tssurya): This check has been added to validate if the API
+            # DB is reachable or not as this is essential for purging the
+            # instance_mappings and request_specs of the deleted instances.
+            objects.CellMappingList.get_all(ctxt)
+        except db_exc.CantStartEngineError:
+            print(_('Failed to connect to API DB so aborting this archival '
+                    'attempt. Please check your config file to make sure that '
+                    'CONF.api_database.connection is set and run this '
+                    'command again.'))
+            return 3
 
         table_to_rows_archived = {}
         deleted_instance_uuids = []
@@ -525,7 +539,6 @@ Error: %s""") % six.text_type(e))
             if deleted_instance_uuids:
                 table_to_rows_archived.setdefault('instance_mappings', 0)
                 table_to_rows_archived.setdefault('request_specs', 0)
-                ctxt = context.get_admin_context()
                 deleted_mappings = objects.InstanceMappingList.destroy_bulk(
                                             ctxt, deleted_instance_uuids)
                 table_to_rows_archived['instance_mappings'] += deleted_mappings
