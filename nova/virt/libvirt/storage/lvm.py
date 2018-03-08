@@ -35,6 +35,7 @@ CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
 
 
+# TODO(sbauza): Remove the possibility to ask for a sparse LV.
 def create_volume(vg, lv, size, sparse=False):
     """Create LVM image.
 

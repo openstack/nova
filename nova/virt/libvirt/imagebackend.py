@@ -685,8 +685,8 @@ class Lvm(Image):
 
         super(Lvm, self).__init__(path, "block", "raw", is_block_dev=True)
 
-        # TODO(pbrady): possibly deprecate libvirt.sparse_logical_volumes
-        # for the more general preallocate_images
+        # TODO(sbauza): Remove the config option usage and default the
+        # LVM logical volume creation to preallocate the full size only.
         self.sparse = CONF.libvirt.sparse_logical_volumes
         self.preallocate = not self.sparse
 

@@ -665,6 +665,13 @@ Related options:
 """),
     cfg.BoolOpt('sparse_logical_volumes',
                 default=False,
+                deprecated_for_removal=True,
+                deprecated_since='18.0.0',
+                deprecated_reason="""
+Sparse logical volumes is a feature that is not tested hence not supported.
+LVM logical volumes are preallocated by default. If you want thin provisioning,
+use Cinder thin-provisioned volumes.
+""",
                 help="""
 Create sparse logical volumes (with virtualsize) if this flag is set to True.
 """),

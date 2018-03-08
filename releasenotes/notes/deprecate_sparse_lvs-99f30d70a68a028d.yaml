@@ -1,0 +1,10 @@
+---
+deprecations:
+  - |
+    The ``[libvirt]/sparse_logical_volumes`` configuration option is now
+    deprecated. Sparse logical volumes were never verified by tests in Nova
+    and some bugs were found without having fixes so we prefer to deprecate
+    that feature.
+    By default, the LVM image backend allocates all the disk size to a logical
+    volume. If you want to have the volume group having thin-provisioned
+    logical volumes, use Cinder with volume-backed instances.
