@@ -6407,13 +6407,16 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
     def test_live_migration_handles_dict(self):
         compute = manager.ComputeManager()
 
+        @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid')
         @mock.patch.object(compute, 'compute_rpcapi')
         @mock.patch.object(compute, 'driver')
-        def _test(mock_driver, mock_rpc):
+        def _test(mock_driver, mock_rpc, mock_get_bdms):
             migrate_data = migrate_data_obj.LiveMigrateData()
             migration = objects.Migration()
             migration.save = mock.MagicMock()
             mock_rpc.pre_live_migration.return_value = migrate_data
+            mock_get_bdms.return_value = objects.BlockDeviceMappingList(
+                objects=[])
             compute._do_live_migration(self.context, 'foo', {'uuid': 'foo'},
                                        False, migration, {})
             self.assertIsInstance(

@@ -6186,6 +6186,7 @@ class ComputeTestCase(BaseTestCase,
             is_shared_instance_path=False,
             is_shared_block_storage=False,
             block_migration=False)
+        bdms = objects.BlockDeviceMappingList(objects=[])
 
         with test.nested(
             mock.patch.object(
@@ -6196,7 +6197,8 @@ class ComputeTestCase(BaseTestCase,
             mock_migrate, mock_setup
         ):
             self.compute._post_live_migration(c, instance, dest,
-                                              migrate_data=migrate_data)
+                                              migrate_data=migrate_data,
+                                              source_bdms=bdms)
 
         self.assertIn('cleanup', result)
         self.assertTrue(result['cleanup'])
@@ -6225,6 +6227,7 @@ class ComputeTestCase(BaseTestCase,
         migration_obj = objects.Migration()
         migrate_data = migrate_data_obj.LiveMigrateData(
             migration=migration_obj)
+        bdms = objects.BlockDeviceMappingList(objects=[])
 
         # creating mocks
         with test.nested(
@@ -6249,8 +6252,8 @@ class ComputeTestCase(BaseTestCase,
             clear_events, update_available_resource, mig_save
         ):
             self.compute._post_live_migration(c, instance, dest,
-                                              migrate_data=migrate_data)
-
+                                              migrate_data=migrate_data,
+                                              source_bdms=bdms)
             post_live_migration.assert_has_calls([
                 mock.call(c, instance, {'swap': None, 'ephemerals': [],
                                         'root_device_name': None,
@@ -6296,6 +6299,7 @@ class ComputeTestCase(BaseTestCase,
         migration_obj = objects.Migration()
         migrate_data = migrate_data_obj.LiveMigrateData(
             migration=migration_obj)
+        bdms = objects.BlockDeviceMappingList(objects=[])
 
         # creating mocks
         with test.nested(
@@ -6321,7 +6325,8 @@ class ComputeTestCase(BaseTestCase,
             clear_events, update_available_resource, mig_save
         ):
             self.compute._post_live_migration(c, instance, dest,
-                                              migrate_data=migrate_data)
+                                              migrate_data=migrate_data,
+                                              source_bdms=bdms)
             update_available_resource.assert_has_calls([mock.call(c)])
             self.assertEqual('completed', migration_obj.status)
             # assert we did not log a success message
@@ -6360,20 +6365,18 @@ class ComputeTestCase(BaseTestCase,
                               'clear_events_for_instance'),
             mock.patch.object(self.compute,
                               '_get_instance_block_device_info'),
-            mock.patch.object(objects.BlockDeviceMappingList,
-                              'get_by_instance_uuid'),
             mock.patch.object(self.compute.driver, 'get_volume_connector'),
             mock.patch.object(cinder.API, 'terminate_connection')
         ) as (
             migrate_instance_start, post_live_migration_at_destination,
             setup_networks_on_host, clear_events_for_instance,
-            get_instance_volume_block_device_info, get_by_instance_uuid,
-            get_volume_connector, terminate_connection
+            get_instance_volume_block_device_info, get_volume_connector,
+            terminate_connection,
         ):
-            get_by_instance_uuid.return_value = bdms
             get_volume_connector.return_value = 'fake-connector'
 
-            self.compute._post_live_migration(c, instance, 'dest_host')
+            self.compute._post_live_migration(c, instance, 'dest_host',
+                                              source_bdms=bdms)
 
             terminate_connection.assert_called_once_with(
                     c, uuids.volume_id, 'fake-connector')
