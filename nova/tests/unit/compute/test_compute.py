@@ -6268,7 +6268,7 @@ class ComputeTestCase(BaseTestCase,
     @mock.patch('nova.objects.Migration.save')
     def test_live_migration_exception_rolls_back(self, mock_save,
                                 mock_rollback, mock_remove,
-                                mock_get_uuid,
+                                mock_get_bdms,
                                 mock_get_node, mock_pre, mock_get_disk):
         # Confirm exception when pre_live_migration fails.
         c = context.get_admin_context()
@@ -6283,27 +6283,39 @@ class ComputeTestCase(BaseTestCase,
         dest_host = updated_instance['host']
         dest_node = objects.ComputeNode(host=dest_host, uuid=uuids.dest_node)
         mock_get_node.return_value = dest_node
-        fake_bdms = objects.BlockDeviceMappingList(objects=[
+
+        # All the fake BDMs we've generated, in order
+        fake_bdms = []
+
+        def gen_fake_bdms(obj, instance):
+            # generate a unique fake connection_info every time we're called,
+            # simulating connection_info being mutated elsewhere.
+            bdms = objects.BlockDeviceMappingList(objects=[
                 objects.BlockDeviceMapping(
                     **fake_block_device.FakeDbBlockDeviceDict(
                         {'volume_id': uuids.volume_id_1,
                          'source_type': 'volume',
+                         'connection_info':
+                            jsonutils.dumps(uuidutils.generate_uuid()),
                          'destination_type': 'volume'})),
                 objects.BlockDeviceMapping(
                     **fake_block_device.FakeDbBlockDeviceDict(
                         {'volume_id': uuids.volume_id_2,
                          'source_type': 'volume',
+                         'connection_info':
+                            jsonutils.dumps(uuidutils.generate_uuid()),
                          'destination_type': 'volume'}))
-        ])
+            ])
+            for bdm in bdms:
+                bdm.save = mock.Mock()
+            fake_bdms.append(bdms)
+            return bdms
+
         migrate_data = migrate_data_obj.XenapiLiveMigrateData(
             block_migration=True)
 
-        block_device_info = {
-                'swap': None, 'ephemerals': [], 'block_device_mapping': [],
-                'root_device_name': None}
-        mock_get_disk.return_value = 'fake_disk'
         mock_pre.side_effect = test.TestingException
-        mock_get_uuid.return_value = fake_bdms
+        mock_get_bdms.side_effect = gen_fake_bdms
 
         # start test
         migration = objects.Migration(uuid=uuids.migration)
@@ -6333,12 +6345,26 @@ class ComputeTestCase(BaseTestCase,
         self.assertEqual(vm_states.ACTIVE, instance.vm_state)
         self.assertIsNone(instance.task_state)
         self.assertEqual('error', migration.status)
-        mock_get_disk.assert_called_once_with(instance,
-                block_device_info=block_device_info)
+        mock_get_disk.assert_called()
         mock_pre.assert_called_once_with(c,
-                instance, True, 'fake_disk', dest_host, migrate_data)
+                instance, True, mock_get_disk.return_value, dest_host,
+                migrate_data)
 
-        mock_get_uuid.assert_called_with(c, instance.uuid)
+        # Assert that _rollback_live_migration puts connection_info back to
+        # what it was before the call to pre_live_migration.
+        # BlockDeviceMappingList.get_by_instance_uuid is mocked to generate
+        # BDMs with unique connection_info every time it's called. These are
+        # stored in fake_bdms in the order they were generated. We assert here
+        # that the last BDMs generated (in _rollback_live_migration) now have
+        # the same connection_info as the first BDMs generated (before calling
+        # pre_live_migration), and that we saved them.
+        self.assertGreater(len(fake_bdms), 1)
+        for source_bdm, final_bdm in zip(fake_bdms[0], fake_bdms[-1]):
+            self.assertEqual(source_bdm.connection_info,
+                             final_bdm.connection_info)
+            final_bdm.save.assert_called()
+
+        mock_get_bdms.assert_called_with(c, instance.uuid)
         mock_remove.assert_has_calls([
             mock.call(c, instance, uuids.volume_id_1, dest_host),
             mock.call(c, instance, uuids.volume_id_2, dest_host)])
@@ -6710,6 +6736,7 @@ class ComputeTestCase(BaseTestCase,
         instance = mock.MagicMock()
         migration = objects.Migration(uuid=uuids.migration)
         migrate_data = objects.LibvirtLiveMigrateData(migration=migration)
+        source_bdms = objects.BlockDeviceMappingList()
 
         dest_node = objects.ComputeNode(host='foo', uuid=uuids.dest_node)
         mock_get_node.return_value = dest_node
@@ -6726,10 +6753,12 @@ class ComputeTestCase(BaseTestCase,
             if migration_status:
                 self.compute._rollback_live_migration(
                     c, instance, 'foo', migrate_data=migrate_data,
-                    migration_status=migration_status)
+                    migration_status=migration_status,
+                    source_bdms=source_bdms)
             else:
                 self.compute._rollback_live_migration(
-                    c, instance, 'foo', migrate_data=migrate_data)
+                    c, instance, 'foo', migrate_data=migrate_data,
+                    source_bdms=source_bdms)
             mock_notify.assert_has_calls([
                 mock.call(c, instance, self.compute.host,
                           action='live_migration_rollback', phase='start',
@@ -6767,6 +6796,7 @@ class ComputeTestCase(BaseTestCase,
         instance = fake_instance.fake_instance_obj(ctxt)
         migration = objects.Migration(ctxt, uuid=uuids.migration)
         migrate_data = objects.LibvirtLiveMigrateData(migration=migration)
+        source_bdms = objects.BlockDeviceMappingList()
 
         @mock.patch.object(self.compute, '_notify_about_instance_usage')
         @mock.patch('nova.compute.utils.notify_about_instance_action')
@@ -6782,7 +6812,8 @@ class ComputeTestCase(BaseTestCase,
             self.assertRaises(test.TestingException,
                               self.compute._rollback_live_migration,
                               ctxt, instance, 'dest-host', migrate_data,
-                              migration_status='goofballs')
+                              migration_status='goofballs',
+                              source_bdms=source_bdms)
             # setup_networks_on_host is called twice:
             # - once to re-setup networking on the source host, which for
             #   neutron doesn't actually do anything since the port's host
