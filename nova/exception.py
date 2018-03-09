@@ -1906,8 +1906,8 @@ class SocketPortInUseException(NovaException):
 
 
 class ImageSerialPortNumberInvalid(Invalid):
-    msg_fmt = _("Number of serial ports '%(num_ports)s' specified in "
-                "'%(property)s' isn't valid.")
+    msg_fmt = _("Number of serial ports specified in flavor is invalid: "
+                "expected an integer, got '%(num_ports)s'")
 
 
 class ImageSerialPortNumberExceedFlavorValue(Invalid):

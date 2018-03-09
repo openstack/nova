@@ -173,21 +173,16 @@ def get_number_of_serial_ports(flavor, image_meta):
 
     :returns: number of serial ports
     """
+    flavor_num_ports, image_num_ports = _get_flavor_image_meta(
+        'serial_port_count', flavor, image_meta)
+    if flavor_num_ports:
+        try:
+            flavor_num_ports = int(flavor_num_ports)
+        except ValueError:
+            raise exception.ImageSerialPortNumberInvalid(
+                num_ports=flavor_num_ports)
 
-    def get_number(obj, property):
-        num_ports = obj.get(property)
-        if num_ports is not None:
-            try:
-                num_ports = int(num_ports)
-            except ValueError:
-                raise exception.ImageSerialPortNumberInvalid(
-                    num_ports=num_ports, property=property)
-        return num_ports
-
-    flavor_num_ports = get_number(flavor.extra_specs, "hw:serial_port_count")
-    image_num_ports = image_meta.properties.get("hw_serial_port_count", None)
-
-    if (flavor_num_ports and image_num_ports) is not None:
+    if flavor_num_ports and image_num_ports:
         if image_num_ports > flavor_num_ports:
             raise exception.ImageSerialPortNumberExceedFlavorValue()
         return image_num_ports
