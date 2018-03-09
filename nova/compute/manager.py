@@ -2844,12 +2844,20 @@ class ComputeManager(manager.Manager):
         :param request_spec: a RequestSpec object used to schedule the instance
 
         """
+        # recreate=True means the instance is being evacuated from a failed
+        # host to a new destination host (this host). The 'recreate' variable
+        # name is confusing, so rename it to evacuate here at the top, which
+        # is simpler than renaming a parameter in an RPC versioned method.
+        evacuate = recreate
         context = context.elevated()
 
-        LOG.info("Rebuilding instance", instance=instance)
+        if evacuate:
+            LOG.info("Evacuating instance", instance=instance)
+        else:
+            LOG.info("Rebuilding instance", instance=instance)
 
         rt = self._get_resource_tracker()
-        if recreate:
+        if evacuate:
             # This is an evacuation to a new host, so we need to perform a
             # resource claim.
             rebuild_claim = rt.rebuild_claim
@@ -2862,11 +2870,11 @@ class ComputeManager(manager.Manager):
         if image_ref:
             image_meta = self.image_api.get(context, image_ref)
 
-        # NOTE(mriedem): On a recreate (evacuate), we need to update
+        # NOTE(mriedem): On an evacuate, we need to update
         # the instance's host and node properties to reflect it's
-        # destination node for the recreate.
+        # destination node for the evacuate.
         if not scheduled_node:
-            if recreate:
+            if evacuate:
                 try:
                     compute_node = self._get_compute_info(context, self.host)
                     scheduled_node = compute_node.hypervisor_hostname
@@ -2885,7 +2893,7 @@ class ComputeManager(manager.Manager):
                 self._do_rebuild_instance_with_claim(
                     claim_ctxt, context, instance, orig_image_ref,
                     image_ref, injected_files, new_pass, orig_sys_metadata,
-                    bdms, recreate, on_shared_storage, preserve_ephemeral,
+                    bdms, evacuate, on_shared_storage, preserve_ephemeral,
                     migration, request_spec)
             except (exception.ComputeResourcesUnavailable,
                     exception.RescheduledException) as e:
@@ -2923,7 +2931,7 @@ class ComputeManager(manager.Manager):
                 self._notify_instance_rebuild_error(context, instance, e, bdms)
             except Exception as e:
                 self._set_migration_status(migration, 'failed')
-                if recreate or scheduled_node is not None:
+                if evacuate or scheduled_node is not None:
                     rt.delete_allocation_for_evacuated_instance(
                         context, instance, scheduled_node,
                         node_type='destination')
@@ -2959,12 +2967,12 @@ class ComputeManager(manager.Manager):
 
     def _do_rebuild_instance(self, context, instance, orig_image_ref,
                              image_ref, injected_files, new_pass,
-                             orig_sys_metadata, bdms, recreate,
+                             orig_sys_metadata, bdms, evacuate,
                              on_shared_storage, preserve_ephemeral,
                              migration, request_spec):
         orig_vm_state = instance.vm_state
 
-        if recreate:
+        if evacuate:
             if request_spec:
                 # NOTE(gibi): Do a late check of server group policy as
                 # parallel scheduling could violate such policy. This will
@@ -2973,15 +2981,17 @@ class ComputeManager(manager.Manager):
                 hints = self._get_scheduler_hints({}, request_spec)
                 self._validate_instance_group_policy(context, instance, hints)
 
+            # TODO(mriedem): Rename the supports_recreate driver capability
+            # to supports_evacuate.
             if not self.driver.capabilities.get("supports_recreate", False):
                 raise exception.InstanceRecreateNotSupported
 
             self._check_instance_exists(context, instance)
 
             if on_shared_storage is None:
-                LOG.debug('on_shared_storage is not provided, using driver'
-                            'information to decide if the instance needs to'
-                            'be recreated')
+                LOG.debug('on_shared_storage is not provided, using driver '
+                          'information to decide if the instance needs to '
+                          'be evacuated')
                 on_shared_storage = self.driver.instance_on_disk(instance)
 
             elif (on_shared_storage !=
@@ -2993,11 +3003,11 @@ class ComputeManager(manager.Manager):
                             " storage"))
 
             if on_shared_storage:
-                LOG.info('disk on shared storage, recreating using'
+                LOG.info('disk on shared storage, evacuating using'
                          ' existing disk')
             else:
                 image_ref = orig_image_ref = instance.image_ref
-                LOG.info("disk not on shared storage, rebuilding from:"
+                LOG.info("disk not on shared storage, evacuating from:"
                          " '%s'", str(image_ref))
 
         if image_ref:
@@ -3034,7 +3044,7 @@ class ComputeManager(manager.Manager):
         instance.task_state = task_states.REBUILDING
         instance.save(expected_task_state=[task_states.REBUILDING])
 
-        if recreate:
+        if evacuate:
             self.network_api.setup_networks_on_host(
                     context, instance, self.host)
             # For nova-network this is needed to move floating IPs
@@ -3079,6 +3089,8 @@ class ComputeManager(manager.Manager):
 
         files = self._decode_files(injected_files)
 
+        # TODO(mriedem): Rename recreate->evacuate in the driver rebuild
+        # method signature.
         kwargs = dict(
             context=context,
             instance=instance,
@@ -3092,7 +3104,7 @@ class ComputeManager(manager.Manager):
             block_device_info=block_device_info,
             network_info=network_info,
             preserve_ephemeral=preserve_ephemeral,
-            recreate=recreate)
+            recreate=evacuate)
         try:
             with instance.mutated_migration_context():
                 self.driver.rebuild(**kwargs)
