@@ -7679,7 +7679,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         """
         migrate_data = objects.LibvirtLiveMigrateData(
             wait_for_vif_plugged=True)
-        mock_get_bdms.return_value = objects.BlockDeviceMappingList(objects=[])
+        source_bdms = objects.BlockDeviceMappingList(objects=[])
+        mock_get_bdms.return_value = source_bdms
         mock_pre_live_mig.return_value = migrate_data
         self.instance.info_cache = objects.InstanceInfoCache(
             network_info=network_model.NetworkInfo([
@@ -7698,7 +7699,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                 self.instance, None, self.migration, migrate_data)
         self.assertEqual('error', self.migration.status)
         mock_rollback_live_mig.assert_called_once_with(
-            self.context, self.instance, 'dest-host', migrate_data)
+            self.context, self.instance, 'dest-host',
+            migrate_data=migrate_data, source_bdms=source_bdms)
 
     @mock.patch('nova.compute.rpcapi.ComputeAPI.pre_live_migration')
     @mock.patch('nova.compute.manager.ComputeManager._rollback_live_migration')
@@ -7711,7 +7713,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         """
         migrate_data = objects.LibvirtLiveMigrateData(
             wait_for_vif_plugged=True)
-        mock_get_bdms.return_value = objects.BlockDeviceMappingList(objects=[])
+        source_bdms = objects.BlockDeviceMappingList(objects=[])
+        mock_get_bdms.return_value = source_bdms
         mock_pre_live_mig.return_value = migrate_data
         self.instance.info_cache = objects.InstanceInfoCache(
             network_info=network_model.NetworkInfo([
@@ -7731,7 +7734,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             self.assertIn('Timed out waiting for events', six.text_type(ex))
         self.assertEqual('error', self.migration.status)
         mock_rollback_live_mig.assert_called_once_with(
-            self.context, self.instance, 'dest-host', migrate_data)
+            self.context, self.instance, 'dest-host',
+            migrate_data=migrate_data, source_bdms=source_bdms)
 
     @mock.patch('nova.compute.rpcapi.ComputeAPI.pre_live_migration')
     @mock.patch('nova.compute.manager.ComputeManager._rollback_live_migration')
@@ -7790,7 +7794,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                                    mock_action_notify,
                                                    mock_usage_notify,
                                                    mock_get_bdms):
-        mock_get_bdms.return_value = objects.BlockDeviceMappingList(objects=[])
+        source_bdms = objects.BlockDeviceMappingList(objects=[])
+        mock_get_bdms.return_value = source_bdms
         migrate_data = objects.LibvirtLiveMigrateData(
             wait_for_vif_plugged=True)
         mock_rpc.return_value = migrate_data
@@ -7815,7 +7820,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             'dest-host', migrate_data)
         mock_rollback.assert_called_once_with(
             self.context, self.instance, 'dest-host', migrate_data,
-            'cancelled')
+            'cancelled', source_bdms=source_bdms)
         mock_usage_notify.assert_called_once_with(
             self.context, self.instance, 'live.migration.abort.end')
         mock_action_notify.assert_called_once_with(
@@ -8286,15 +8291,28 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         migrate_data.old_vol_attachment_ids = {
             volume_id: orig_attachment_id}
 
-        bdm = fake_block_device.fake_bdm_object(
-            self.context,
-            {'source_type': 'volume', 'destination_type': 'volume',
-             'volume_id': volume_id, 'device_name': '/dev/vdb',
-             'instance_uuid': instance.uuid})
+        def fake_bdm():
+            bdm = fake_block_device.fake_bdm_object(
+                self.context,
+                {'source_type': 'volume', 'destination_type': 'volume',
+                 'volume_id': volume_id, 'device_name': '/dev/vdb',
+                 'instance_uuid': instance.uuid})
+            bdm.save = mock.Mock()
+            return bdm
+
+        # NOTE(mdbooth): Use of attachment_id as connection_info is a
+        # test convenience. It just needs to be a string.
+        source_bdm = fake_bdm()
+        source_bdm.attachment_id = orig_attachment_id
+        source_bdm.connection_info = orig_attachment_id
+        source_bdms = objects.BlockDeviceMappingList(objects=[source_bdm])
+
+        bdm = fake_bdm()
         bdm.attachment_id = new_attachment_id
+        bdm.connection_info = new_attachment_id
+        bdms = objects.BlockDeviceMappingList(objects=[bdm])
 
         @mock.patch.object(compute.volume_api, 'attachment_delete')
-        @mock.patch.object(bdm, 'save')
         @mock.patch.object(compute_utils, 'notify_about_instance_action')
         @mock.patch.object(instance, 'save')
         @mock.patch.object(compute, '_notify_about_instance_usage')
@@ -8302,24 +8320,24 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(compute, 'network_api')
         @mock.patch.object(objects.BlockDeviceMappingList,
                            'get_by_instance_uuid')
-        def _test(mock_get_bdms, mock_net_api, mock_remove_conn,
-                  mock_usage, mock_instance_save, mock_action, mock_save,
-                  mock_attach_delete):
+        def _test(mock_get_bdms, mock_net_api, mock_remove_conn, mock_usage,
+                  mock_instance_save, mock_action, mock_attach_delete):
             # this tests that _rollback_live_migration replaces the bdm's
             # attachment_id with the original attachment id that is in
             # migrate_data.
-            mock_get_bdms.return_value = objects.BlockDeviceMappingList(
-                objects=[bdm])
+            mock_get_bdms.return_value = bdms
 
             compute._rollback_live_migration(self.context, instance, None,
-                                             migrate_data)
+                                             migrate_data=migrate_data,
+                                             source_bdms=source_bdms)
 
             mock_remove_conn.assert_called_once_with(self.context, instance,
                                                      bdm.volume_id, None)
             mock_attach_delete.called_once_with(self.context,
                                                 new_attachment_id)
             self.assertEqual(bdm.attachment_id, orig_attachment_id)
-            mock_save.assert_called_once_with()
+            self.assertEqual(orig_attachment_id, bdm.connection_info)
+            bdm.save.assert_called_once_with()
 
         _test()
 
@@ -8351,7 +8369,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                 exception.PortBindingDeletionFailed(
                     port_id=uuids.port_id, host='fake-dest-host')]
             self.compute._rollback_live_migration(
-                self.context, self.instance, 'fake-dest-host', migrate_data)
+                self.context, self.instance, 'fake-dest-host', migrate_data,
+                source_bdms=objects.BlockDeviceMappingList())
             self.assertEqual(1, mock_log_error.call_count)
             self.assertIn('Network cleanup failed for destination host',
                           mock_log_error.call_args[0][0])
