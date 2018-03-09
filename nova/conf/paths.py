@@ -24,6 +24,7 @@ ALL_OPTS = [
     cfg.StrOpt('pybasedir',
         default=os.path.abspath(os.path.join(os.path.dirname(__file__),
                                              '../../')),
+        sample_default='<Path>',
         help="""
 The directory where the Nova python modules are installed.
 
