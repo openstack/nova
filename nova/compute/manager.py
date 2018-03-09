@@ -490,11 +490,6 @@ class ComputeManager(manager.Manager):
 
     target = messaging.Target(version='5.0')
 
-    # How long to wait in seconds before re-issuing a shutdown
-    # signal to an instance during power off.  The overall
-    # time to wait is set by CONF.shutdown_timeout.
-    SHUTDOWN_RETRY_INTERVAL = 10
-
     def __init__(self, compute_driver=None, *args, **kwargs):
         """Load configuration options and connect to the hypervisor."""
         self.virtapi = ComputeVirtAPI(self)
@@ -2310,7 +2305,7 @@ class ComputeManager(manager.Manager):
             timeout = compute_utils.get_value_from_system_metadata(instance,
                           key='image_os_shutdown_timeout', type=int,
                           default=CONF.shutdown_timeout)
-            retry_interval = self.SHUTDOWN_RETRY_INTERVAL
+            retry_interval = CONF.compute.shutdown_retry_interval
         else:
             timeout = 0
             retry_interval = 0

@@ -643,6 +643,23 @@ Possible values:
 * Any positive integer representing a build failure count.
 * Zero to never auto-disable.
 """),
+    cfg.IntOpt("shutdown_retry_interval",
+        default=10,
+        min=1,
+        help="""
+Time to wait in seconds before resending an ACPI shutdown signal to
+instances.
+
+The overall time to wait is set by ``shutdown_timeout``.
+
+Possible values:
+
+* Any integer greater than 0 in seconds
+
+Related options:
+
+* ``shutdown_timeout``
+""")
 ]
 
 interval_opts = [

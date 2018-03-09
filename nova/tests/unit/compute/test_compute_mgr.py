@@ -1253,6 +1253,24 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             mock_instance_save.assert_called_once_with()
             self.assertIsNone(instance.task_state)
 
+    @mock.patch('nova.virt.fake.FakeDriver.power_off')
+    @mock.patch.object(compute_utils, 'get_value_from_system_metadata',
+            return_value=CONF.shutdown_timeout)
+    def test_power_off_values(self, mock_get_metadata, mock_power_off):
+        self.flags(shutdown_retry_interval=20, group='compute')
+        instance = fake_instance.fake_instance_obj(
+                self.context,
+                uuid=uuids.instance,
+                vm_state=vm_states.ACTIVE,
+                task_state=task_states.POWERING_OFF)
+        self.compute._power_off_instance(
+                self.context, instance,
+                clean_shutdown=True)
+        mock_power_off.assert_called_once_with(
+                instance,
+                CONF.shutdown_timeout,
+                20)
+
     @mock.patch('nova.context.RequestContext.elevated')
     @mock.patch('nova.objects.Instance.get_network_info')
     @mock.patch(

@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    The shutdown retry interval in powering off instances can now be set using
+    the configuration setting ``shutdown_retry_interval``, in the
+    compute configuration group.
