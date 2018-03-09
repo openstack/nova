@@ -9677,7 +9677,42 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                              migrate_data, guest, [],
                              libvirt_driver.MIN_MIGRATION_SPEED_BW))
             mupdate.assert_called_once_with(
-                guest, migrate_data, mock.ANY)
+                guest, migrate_data, mock.ANY, get_vif_config=None)
+
+    def test_live_migration_update_vifs_xml(self):
+        """Tests that when migrate_data.vifs is populated, the destination
+        guest xml is updated with the migrate_data.vifs configuration.
+        """
+        instance = objects.Instance(**self.test_instance)
+        migrate_data = objects.LibvirtLiveMigrateData(
+            serial_listen_addr='',
+            target_connect_addr=None,
+            bdms=[],
+            block_migration=False,
+            vifs=[objects.VIFMigrateData(port_id=uuids.port_id)])
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        guest = libvirt_guest.Guest(mock.MagicMock())
+        fake_xml = '<domain type="qemu"/>'
+
+        def fake_get_updated_guest_xml(guest, migrate_data, get_volume_config,
+                                       get_vif_config=None):
+            self.assertIsNotNone(get_vif_config)
+            return fake_xml
+
+        @mock.patch('nova.virt.libvirt.migration.get_updated_guest_xml',
+                    side_effect=fake_get_updated_guest_xml)
+        @mock.patch.object(drvr._host, 'has_min_version', return_value=True)
+        @mock.patch.object(guest, 'migrate')
+        def _test(migrate, has_min_version, get_updated_guest_xml):
+            drvr._live_migration_operation(
+                self.context, instance, 'dest.host', False,
+                migrate_data, guest, [],
+                CONF.libvirt.live_migration_bandwidth)
+            self.assertEqual(1, get_updated_guest_xml.call_count)
+            migrate.assert_called()
+
+        _test()
 
     @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     @mock.patch.object(fakelibvirt.virDomain, "migrateToURI3")
