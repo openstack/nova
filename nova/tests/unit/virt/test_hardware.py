@@ -252,7 +252,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
                     }
                 },
                 "expect": (
-                    2, -1, -1, 65536, 65536, 65536,
+                    2, 0, 0, 65536, 65536, 65536,
                 )
             },
             {  # Restrict use of threads
@@ -266,7 +266,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
                     }
                 },
                 "expect": (
-                    -1, -1, -1, 65536, 65536, 1,
+                    0, 0, 0, 65536, 65536, 1,
                 )
             },
             {  # Force use of at least two sockets
@@ -279,7 +279,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
                     "properties": {}
                 },
                 "expect": (
-                    -1, -1, -1, 65536, 8, 1
+                    0, 0, 0, 65536, 8, 1
                 )
             },
             {  # Image limits reduce flavor
@@ -294,7 +294,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
                     }
                 },
                 "expect": (
-                    -1, -1, -1, 65536, 4, 1
+                    0, 0, 0, 65536, 4, 1
                 )
             },
             {  # Image limits kill flavor preferred
@@ -310,7 +310,7 @@ class VCPUTopologyTest(test.NoDBTestCase):
                     }
                 },
                 "expect": (
-                    -1, -1, -1, 65536, 4, 65536
+                    0, 0, 0, 65536, 4, 65536
                 )
             },
             {  # Image limits cannot exceed flavor
