@@ -22,6 +22,7 @@ from oslo_config import cfg
 
 ALL_OPTS = [
     cfg.StrOpt('pybasedir',
+        sample_default='<Path>',
         default=os.path.abspath(os.path.join(os.path.dirname(__file__),
                                              '../../')),
         help="""
