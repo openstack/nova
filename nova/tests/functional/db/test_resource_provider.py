@@ -17,9 +17,9 @@ from oslo_db import exception as db_exc
 import sqlalchemy as sa
 
 import nova
+from nova.api.openstack.placement.objects import resource_provider as rp_obj
 from nova import context
 from nova import exception
-from nova.objects import resource_provider as rp_obj
 from nova import rc_fields as fields
 from nova import test
 from nova.tests import fixtures
@@ -504,8 +504,8 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         # NOTE(jaypipes): This is just disabling the online data migration that
         # occurs in _from_db_object() that sets root provider ID to ensure we
         # don't have any migrations messing with the end result.
-        with mock.patch('nova.objects.resource_provider.'
-                        '_set_root_provider_id'):
+        with mock.patch('nova.api.openstack.placement.objects.'
+                        'resource_provider._set_root_provider_id'):
             rps = rp_obj.ResourceProviderList.get_all_by_filters(
                 self.ctx,
                 filters={
@@ -658,7 +658,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
                           rp.set_inventory,
                           inv_list)
 
-    @mock.patch('nova.objects.resource_provider.LOG')
+    @mock.patch('nova.api.openstack.placement.objects.resource_provider.LOG')
     def test_set_inventory_over_capacity(self, mock_log):
         rp = rp_obj.ResourceProvider(context=self.ctx,
                                      uuid=uuidsentinel.rp_uuid,
@@ -875,7 +875,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         self.assertIn('No inventory of class DISK_GB found',
                       str(error))
 
-    @mock.patch('nova.objects.resource_provider.LOG')
+    @mock.patch('nova.api.openstack.placement.objects.resource_provider.LOG')
     def test_update_inventory_violates_allocation(self, mock_log):
         # Compute nodes that are reconfigured have to be able to set
         # their inventory to something that violates allocations so
@@ -2027,8 +2027,9 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
         rc.create()
         self.assertEqual(min_id + 1, rc.id)
 
-    @mock.patch.object(nova.objects.resource_provider.ResourceClass,
-                       "_get_next_id")
+    @mock.patch.object(
+        nova.api.openstack.placement.objects.resource_provider.ResourceClass,
+        "_get_next_id")
     def test_create_duplicate_id_retry(self, mock_get):
         # This order of ID generation will create rc1 with an ID of 42, try to
         # create rc2 with the same ID, and then return 43 in the retry loop.
@@ -2046,8 +2047,9 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
         self.assertEqual(rc1.id, 42)
         self.assertEqual(rc2.id, 43)
 
-    @mock.patch.object(nova.objects.resource_provider.ResourceClass,
-                       "_get_next_id")
+    @mock.patch.object(
+        nova.api.openstack.placement.objects.resource_provider.ResourceClass,
+        "_get_next_id")
     def test_create_duplicate_id_retry_failing(self, mock_get):
         """negative case for test_create_duplicate_id_retry"""
         # This order of ID generation will create rc1 with an ID of 44, try to

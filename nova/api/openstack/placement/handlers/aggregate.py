@@ -16,10 +16,10 @@ from oslo_utils import encodeutils
 from oslo_utils import timeutils
 
 from nova.api.openstack.placement import microversion
+from nova.api.openstack.placement.objects import resource_provider as rp_obj
 from nova.api.openstack.placement.schemas import aggregate as schema
 from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
-from nova.objects import resource_provider as rp_obj
 
 
 def _send_aggregates(req, aggregate_uuids):

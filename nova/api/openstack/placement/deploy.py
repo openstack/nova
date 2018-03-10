@@ -19,17 +19,11 @@ from nova.api.openstack.placement import fault_wrap
 from nova.api.openstack.placement import handler
 from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement import requestlog
-from nova import objects
 
 
 # TODO(cdent): NAME points to the config project being used, so for
 # now this is "nova" but we probably want "placement" eventually.
 NAME = "nova"
-
-
-# Make sure that objects are registered for this running of the
-# placement API.
-objects.register_all()
 
 
 def deploy(conf):

@@ -16,10 +16,10 @@ import six
 from oslo_utils import timeutils
 
 import nova
+from nova.api.openstack.placement.objects import resource_provider
 from nova import context
 from nova.db.sqlalchemy import api_models as models
 from nova import exception
-from nova.objects import resource_provider
 from nova import rc_fields as fields
 from nova import test
 from nova.tests.unit.objects import test_objects
@@ -247,9 +247,10 @@ class TestResourceProvider(test_objects._LocalTest):
 class TestInventoryNoDB(test_objects._LocalTest):
     USES_DB = False
 
-    @mock.patch('nova.objects.resource_provider._ensure_rc_cache',
-                side_effect=_fake_ensure_cache)
-    @mock.patch('nova.objects.resource_provider._get_inventory_by_provider_id')
+    @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
+                '_ensure_rc_cache', side_effect=_fake_ensure_cache)
+    @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
+                '_get_inventory_by_provider_id')
     def test_get_all_by_resource_provider(self, mock_get, mock_ensure_cache):
         expected = [dict(_INVENTORY_DB,
                          resource_provider_id=_RESOURCE_PROVIDER_ID),
@@ -350,8 +351,8 @@ class TestInventoryList(test_objects._LocalTest):
 class TestAllocation(test_objects._LocalTest):
     USES_DB = True
 
-    @mock.patch('nova.objects.resource_provider._ensure_rc_cache',
-            side_effect=_fake_ensure_cache)
+    @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
+                '_ensure_rc_cache', side_effect=_fake_ensure_cache)
     def test_create(self, mock_ensure_cache):
         rp = resource_provider.ResourceProvider(context=self.context,
                                                 uuid=_RESOURCE_PROVIDER_UUID,
@@ -415,9 +416,10 @@ class TestAllocation(test_objects._LocalTest):
 class TestAllocationListNoDB(test_objects._LocalTest):
     USES_DB = False
 
-    @mock.patch('nova.objects.resource_provider._ensure_rc_cache',
-            side_effect=_fake_ensure_cache)
-    @mock.patch('nova.objects.resource_provider.'
+    @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
+                '_ensure_rc_cache',
+                side_effect=_fake_ensure_cache)
+    @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
                 '_get_allocations_by_provider_id',
                 return_value=[_ALLOCATION_DB])
     def test_get_allocations(self, mock_get_allocations_from_db,
@@ -462,18 +464,21 @@ class TestTraits(test.NoDBTestCase):
         self.project_id = 'fake-project'
         self.context = context.RequestContext(self.user_id, self.project_id)
 
-    @mock.patch("nova.objects.resource_provider._trait_sync")
+    @mock.patch("nova.api.openstack.placement.objects.resource_provider."
+                "_trait_sync")
     def test_sync_flag(self, mock_sync):
-        synced = nova.objects.resource_provider._TRAITS_SYNCED
+        rp_obj = nova.api.openstack.placement.objects.resource_provider
+        synced = rp_obj._TRAITS_SYNCED
         self.assertFalse(synced)
         # Sync the traits
-        nova.objects.resource_provider._ensure_trait_sync(self.context)
-        synced = nova.objects.resource_provider._TRAITS_SYNCED
+        rp_obj._ensure_trait_sync(self.context)
+        synced = rp_obj._TRAITS_SYNCED
         self.assertTrue(synced)
 
-    @mock.patch('nova.objects.resource_provider.ResourceProvider.'
-                'obj_reset_changes')
-    @mock.patch('nova.objects.resource_provider._set_traits')
+    @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
+                'ResourceProvider.obj_reset_changes')
+    @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
+                '_set_traits')
     def test_set_traits_resets_changes(self, mock_set_traits, mock_reset):
         trait = resource_provider.Trait(name="HW_CPU_X86_AVX2")
         traits = resource_provider.TraitList(objects=[trait])

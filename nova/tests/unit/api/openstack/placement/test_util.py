@@ -26,8 +26,8 @@ import six.moves.urllib.parse as urlparse
 
 from nova.api.openstack.placement import lib as pl
 from nova.api.openstack.placement import microversion
+from nova.api.openstack.placement.objects import resource_provider as rp_obj
 from nova.api.openstack.placement import util
-from nova.objects import resource_provider as rp_obj
 from nova import test
 from nova.tests import uuidsentinel
 
