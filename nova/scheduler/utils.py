@@ -31,8 +31,8 @@ from nova import exception
 from nova.i18n import _, _LE, _LW
 from nova import objects
 from nova.objects import base as obj_base
-from nova.objects import fields
 from nova.objects import instance as obj_instance
+from nova import rc_fields as fields
 from nova import rpc
 
 

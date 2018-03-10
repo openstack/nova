@@ -45,6 +45,7 @@ from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova.objects import fields as obj_fields
+from nova import rc_fields
 from nova import servicegroup
 from nova import utils
 from nova.virt import configdrive
@@ -498,7 +499,7 @@ class IronicDriver(virt_driver.ComputeDriver):
 
     @staticmethod
     def _pike_flavor_migration_for_node(ctx, node_rc, instance_uuid):
-        normalized_rc = obj_fields.ResourceClass.normalize_name(node_rc)
+        normalized_rc = rc_fields.ResourceClass.normalize_name(node_rc)
         instance = objects.Instance.get_by_uuid(ctx, instance_uuid,
                                                 expected_attrs=["flavor"])
         specs = instance.flavor.extra_specs
@@ -754,9 +755,9 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         info = self._node_resource(node)
         result = {}
-        for rc, field in [(obj_fields.ResourceClass.VCPU, 'vcpus'),
-                          (obj_fields.ResourceClass.MEMORY_MB, 'memory_mb'),
-                          (obj_fields.ResourceClass.DISK_GB, 'local_gb')]:
+        for rc, field in [(rc_fields.ResourceClass.VCPU, 'vcpus'),
+                          (rc_fields.ResourceClass.MEMORY_MB, 'memory_mb'),
+                          (rc_fields.ResourceClass.DISK_GB, 'local_gb')]:
             # NOTE(dtantsur): any of these fields can be zero starting with
             # the Pike release.
             if info[field]:
@@ -773,7 +774,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         if rc_name is not None:
             # TODO(jaypipes): Raise an exception in Queens if Ironic doesn't
             # report a resource class for the node
-            norm_name = obj_fields.ResourceClass.normalize_name(rc_name)
+            norm_name = rc_fields.ResourceClass.normalize_name(rc_name)
             if norm_name is not None:
                 result[norm_name] = {
                     'total': 1,

@@ -21,7 +21,7 @@ from nova.compute import vm_states
 from nova import conf
 from nova import context
 from nova import objects
-from nova.objects import fields
+from nova import rc_fields as fields
 from nova import test
 from nova.tests.functional.api.openstack.placement import test_report_client
 from nova.tests import uuidsentinel as uuids

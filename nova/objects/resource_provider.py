@@ -41,6 +41,7 @@ from nova import exception
 from nova.i18n import _
 from nova.objects import base
 from nova.objects import fields
+from nova import rc_fields
 
 _TRAIT_TBL = models.Trait.__table__
 _ALLOC_TBL = models.Allocation.__table__
@@ -1602,7 +1603,7 @@ class Inventory(base.NovaObject, base.NovaTimestampObject):
     fields = {
         'id': fields.IntegerField(read_only=True),
         'resource_provider': fields.ObjectField('ResourceProvider'),
-        'resource_class': fields.ResourceClassField(read_only=True),
+        'resource_class': rc_fields.ResourceClassField(read_only=True),
         'total': fields.NonNegativeIntegerField(),
         'reserved': fields.NonNegativeIntegerField(default=0),
         'min_unit': fields.NonNegativeIntegerField(default=1),
@@ -1688,7 +1689,7 @@ class Allocation(base.NovaObject, base.NovaTimestampObject):
         'id': fields.IntegerField(),
         'resource_provider': fields.ObjectField('ResourceProvider'),
         'consumer_id': fields.UUIDField(),
-        'resource_class': fields.ResourceClassField(),
+        'resource_class': rc_fields.ResourceClassField(),
         'used': fields.IntegerField(),
         # The following two fields are allowed to be set to None to
         # support Allocations that were created before the fields were
@@ -2174,7 +2175,7 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
 class Usage(base.NovaObject):
 
     fields = {
-        'resource_class': fields.ResourceClassField(read_only=True),
+        'resource_class': rc_fields.ResourceClassField(read_only=True),
         'usage': fields.NonNegativeIntegerField(),
     }
 
@@ -2270,7 +2271,7 @@ class ResourceClass(base.NovaObject, base.NovaTimestampObject):
 
     fields = {
         'id': fields.IntegerField(read_only=True),
-        'name': fields.ResourceClassField(nullable=False),
+        'name': rc_fields.ResourceClassField(nullable=False),
     }
 
     @staticmethod
@@ -2317,14 +2318,14 @@ class ResourceClass(base.NovaObject, base.NovaTimestampObject):
         if 'name' not in self:
             raise exception.ObjectActionError(action='create',
                                               reason='name is required')
-        if self.name in fields.ResourceClass.STANDARD:
+        if self.name in rc_fields.ResourceClass.STANDARD:
             raise exception.ResourceClassExists(resource_class=self.name)
 
-        if not self.name.startswith(fields.ResourceClass.CUSTOM_NAMESPACE):
+        if not self.name.startswith(rc_fields.ResourceClass.CUSTOM_NAMESPACE):
             raise exception.ObjectActionError(
                 action='create',
                 reason='name must start with ' +
-                        fields.ResourceClass.CUSTOM_NAMESPACE)
+                        rc_fields.ResourceClass.CUSTOM_NAMESPACE)
 
         updates = self.obj_get_changes()
         # There is the possibility of a race when adding resource classes, as
@@ -2586,7 +2587,7 @@ class AllocationRequestResource(base.NovaObject):
 
     fields = {
         'resource_provider': fields.ObjectField('ResourceProvider'),
-        'resource_class': fields.ResourceClassField(read_only=True),
+        'resource_class': rc_fields.ResourceClassField(read_only=True),
         'amount': fields.NonNegativeIntegerField(),
     }
 
@@ -2605,7 +2606,7 @@ class AllocationRequest(base.NovaObject):
 class ProviderSummaryResource(base.NovaObject):
 
     fields = {
-        'resource_class': fields.ResourceClassField(read_only=True),
+        'resource_class': rc_fields.ResourceClassField(read_only=True),
         'capacity': fields.NonNegativeIntegerField(),
         'used': fields.NonNegativeIntegerField(),
     }

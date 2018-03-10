@@ -36,7 +36,7 @@ import six.moves.urllib.parse as urlparse
 import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova.objects import fields
+from nova import rc_fields as fields
 from nova.virt import driver
 from nova.virt.xenapi import host
 from nova.virt.xenapi import pool

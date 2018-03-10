@@ -21,7 +21,7 @@ import nova.conf
 from nova import context
 from nova import exception
 from nova import objects
-from nova.objects import fields
+from nova import rc_fields as fields
 from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
 from nova import test

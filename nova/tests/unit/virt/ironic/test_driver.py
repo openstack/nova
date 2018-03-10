@@ -34,7 +34,7 @@ from nova import context as nova_context
 from nova import exception
 from nova.network import model as network_model
 from nova import objects
-from nova.objects import fields
+from nova import rc_fields as fields
 from nova import servicegroup
 from nova import test
 from nova.tests import fixtures
