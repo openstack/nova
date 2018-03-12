@@ -73,6 +73,7 @@ from nova.objects import migrate_data as migrate_data_obj
 from nova.objects import virtual_interface as obj_vif
 from nova.pci import manager as pci_manager
 from nova.pci import utils as pci_utils
+import nova.privsep.fs
 import nova.privsep.libvirt
 from nova import rc_fields
 from nova import test
@@ -92,7 +93,6 @@ from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova import version
 from nova.virt import block_device as driver_block_device
-from nova.virt.disk import api as disk_api
 from nova.virt import driver
 from nova.virt import fake
 from nova.virt import firewall as base_firewall
@@ -346,7 +346,7 @@ _fake_cpu_info = {
     "features": ["feature1", "feature2"]
 }
 
-eph_default_ext = utils.get_hash_str(disk_api._DEFAULT_FILE_SYSTEM)[:7]
+eph_default_ext = utils.get_hash_str(nova.privsep.fs._DEFAULT_FILE_SYSTEM)[:7]
 
 
 def eph_name(size):
@@ -11876,7 +11876,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.stubs.Set(drvr, '_create_domain_and_network', fake_none)
         self.stubs.Set(drvr, 'get_info', fake_get_info)
         if mkfs:
-            self.stubs.Set(nova.virt.disk.api, '_MKFS_COMMAND',
+            self.stubs.Set(nova.privsep.fs, '_MKFS_COMMAND',
                        {os_type: 'mkfs.ext4 --label %(fs_label)s %(target)s'})
 
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
@@ -12120,7 +12120,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                               host='fake-source-host',
                                               receive=True)
 
-    @mock.patch('nova.virt.disk.api.get_file_extension_for_os_type')
+    @mock.patch('nova.privsep.fs.get_file_extension_for_os_type')
     def test_create_image_with_ephemerals(self, mock_get_ext):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         instance_ref = self.test_instance
@@ -12225,27 +12225,27 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         fake_mkfs.assert_has_calls([mock.call('ext4', '/dev/something',
                                               'myVol')])
 
-    def test_create_ephemeral_with_arbitrary(self):
+    @mock.patch('nova.privsep.fs.configurable_mkfs')
+    def test_create_ephemeral_with_arbitrary(self, fake_mkfs):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(nova.virt.disk.api, '_MKFS_COMMAND',
+        self.stubs.Set(nova.privsep.fs, '_MKFS_COMMAND',
                        {'linux': 'mkfs.ext4 --label %(fs_label)s %(target)s'})
-        self.mox.StubOutWithMock(utils, 'execute')
-        utils.execute('mkfs.ext4', '--label', 'myVol', '/dev/something',
-                      run_as_root=True)
-        self.mox.ReplayAll()
         drvr._create_ephemeral('/dev/something', 20, 'myVol', 'linux',
                                is_block_dev=True)
+        fake_mkfs.assert_has_calls([mock.call('linux', 'myVol',
+                                              '/dev/something', True, None,
+                                              None)])
 
-    def test_create_ephemeral_with_ext3(self):
+    @mock.patch('nova.privsep.fs.configurable_mkfs')
+    def test_create_ephemeral_with_ext3(self, fake_mkfs):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        self.stubs.Set(nova.virt.disk.api, '_MKFS_COMMAND',
+        self.stubs.Set(nova.privsep.fs, '_MKFS_COMMAND',
                        {'linux': 'mkfs.ext3 --label %(fs_label)s %(target)s'})
-        self.mox.StubOutWithMock(utils, 'execute')
-        utils.execute('mkfs.ext3', '--label', 'myVol', '/dev/something',
-                      run_as_root=True)
-        self.mox.ReplayAll()
         drvr._create_ephemeral('/dev/something', 20, 'myVol', 'linux',
                                is_block_dev=True)
+        fake_mkfs.assert_has_calls([mock.call('linux', 'myVol',
+                                              '/dev/something', True, None,
+                                              None)])
 
     @mock.patch.object(fake_libvirt_utils, 'create_ploop_image')
     def test_create_ephemeral_parallels(self, mock_create_ploop):
@@ -15517,8 +15517,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self._test_get_device_name_for_instance(new_bdm, '/dev/fda')
 
     def test_is_supported_fs_format(self):
-        supported_fs = [disk_api.FS_FORMAT_EXT2, disk_api.FS_FORMAT_EXT3,
-                        disk_api.FS_FORMAT_EXT4, disk_api.FS_FORMAT_XFS]
+        supported_fs = [nova.privsep.fs.FS_FORMAT_EXT2,
+                        nova.privsep.fs.FS_FORMAT_EXT3,
+                        nova.privsep.fs.FS_FORMAT_EXT4,
+                        nova.privsep.fs.FS_FORMAT_XFS]
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         for fs in supported_fs:
             self.assertTrue(drvr.is_supported_fs_format(fs))

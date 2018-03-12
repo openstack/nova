@@ -3460,12 +3460,12 @@ class LibvirtDriver(driver.ComputeDriver):
                                            fallback_from_host)
 
         # Lookup the filesystem type if required
-        os_type_with_default = disk_api.get_fs_type_for_os_type(
+        os_type_with_default = nova.privsep.fs.get_fs_type_for_os_type(
             instance.os_type)
         # Generate a file extension based on the file system
         # type and the mkfs commands configured if any
-        file_extension = disk_api.get_file_extension_for_os_type(
-                                                          os_type_with_default)
+        file_extension = nova.privsep.fs.get_file_extension_for_os_type(
+            os_type_with_default, CONF.default_ephemeral_format)
 
         vm_mode = fields.VMMode.get_from_instance(instance)
         ephemeral_gb = instance.flavor.ephemeral_gb
@@ -8710,5 +8710,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return block_device.prepend_dev(disk_info['dev'])
 
     def is_supported_fs_format(self, fs_type):
-        return fs_type in [disk_api.FS_FORMAT_EXT2, disk_api.FS_FORMAT_EXT3,
-                           disk_api.FS_FORMAT_EXT4, disk_api.FS_FORMAT_XFS]
+        return fs_type in [nova.privsep.fs.FS_FORMAT_EXT2,
+                           nova.privsep.fs.FS_FORMAT_EXT3,
+                           nova.privsep.fs.FS_FORMAT_EXT4,
+                           nova.privsep.fs.FS_FORMAT_XFS]
