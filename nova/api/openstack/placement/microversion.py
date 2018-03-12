@@ -64,6 +64,8 @@ VERSIONS = [
     '1.19',  # Include generation and conflict detection in provider aggregates
              # APIs
     '1.20',  # Return 200 with provider payload from POST /resource_providers
+    '1.21',  # Support ?member_of=<agg UUIDs> queryparam on
+             # GET /allocation_candidates
 ]
 
 

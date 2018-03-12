@@ -18,7 +18,7 @@ common library that both placement and its consumers can require."""
 
 class RequestGroup(object):
     def __init__(self, use_same_provider=True, resources=None,
-                 required_traits=None):
+                 required_traits=None, member_of=None):
         """Create a grouping of resource and trait requests.
 
         :param use_same_provider:
@@ -28,7 +28,9 @@ class RequestGroup(object):
             in any resource provider in the same tree, or a sharing provider.
         :param resources: A dict of { resource_class: amount, ... }
         :param required_traits: A set of { trait_name, ... }
+        :param member_of: A list of [ aggregate_UUID, ... ]
         """
         self.use_same_provider = use_same_provider
         self.resources = resources or {}
         self.required_traits = required_traits or set()
+        self.member_of = member_of or []

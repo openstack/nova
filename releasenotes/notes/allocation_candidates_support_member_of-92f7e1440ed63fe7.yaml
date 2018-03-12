@@ -1,0 +1,13 @@
+---
+features:
+  - |
+    Add support, in a new placement microversion 1.21, for the ``member_of``
+    query parameter, representing one or more aggregate UUIDs. When supplied,
+    it will filter the returned allocation candidates to only those
+    resource_providers that are associated with ("members of") the specified
+    aggregate(s). This parameter can have a value of either a single aggregate
+    UUID, or a comma-separated list of aggregate UUIDs. When specifying more
+    than one aggregate, a resource provider needs to be associated with at
+    least one of the aggregates in order to be included; it does not have to be
+    associated with all of them. Because of this, the list of UUIDs must be
+    prefixed with ``in:`` to represent the logical ``OR`` of the selection.

@@ -212,7 +212,9 @@ def list_allocation_candidates(req):
     context = req.environ['placement.context']
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     get_schema = schema.GET_SCHEMA_1_10
-    if want_version.matches((1, 17)):
+    if want_version.matches((1, 21)):
+        get_schema = schema.GET_SCHEMA_1_21
+    elif want_version.matches((1, 17)):
         get_schema = schema.GET_SCHEMA_1_17
     elif want_version.matches((1, 16)):
         get_schema = schema.GET_SCHEMA_1_16

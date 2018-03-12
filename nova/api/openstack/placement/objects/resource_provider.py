@@ -1064,7 +1064,7 @@ def _get_providers_with_shared_capacity(ctx, rc_id, amount):
 
 
 @db_api.api_context_manager.reader
-def _get_all_with_shared(ctx, resources):
+def _get_all_with_shared(ctx, resources, member_of=None):
     """Uses some more advanced SQL to find providers that either have the
     requested resources "locally" or are associated with a provider that shares
     those requested resources.
@@ -1142,6 +1142,10 @@ def _get_all_with_shared(ctx, resources):
     # LEFT JOIN resource_provider_aggregates AS sharing_{RC_NAME}
     #  ON shared_{RC_NAME}.aggregate_id = sharing_{RC_NAME}.aggregate_id
     #
+    # If the request specified limiting resource providers to one or more
+    # specific aggregates, we then join the above to another copy of the
+    # aggregate table and filter on the provided aggregates.
+    #
     # We calculate the WHERE conditions based on whether the resource class has
     # any shared providers.
     #
@@ -1182,7 +1186,8 @@ def _get_all_with_shared(ctx, resources):
     # To show an example, here is the exact SQL that will be generated in an
     # environment that has a shared storage pool and compute nodes that have
     # vCPU and RAM associated with the same aggregate as the provider
-    # representing the shared storage pool:
+    # representing the shared storage pool, and where the request specified
+    # aggregates that the compute nodes had to be associated with:
     #
     # SELECT rp.*
     # FROM resource_providers AS rp
@@ -1226,6 +1231,9 @@ def _get_all_with_shared(ctx, resources):
     # LEFT JOIN resource_provider_aggregates AS sharing_disk_gb
     #  ON shared_disk_gb.aggregate_id = sharing_disk_gb.aggregate_id
     # AND sharing_disk_gb.resource_provider_id IN ($RPS_SHARING_DISK)
+    # INNER JOIN resource_provider_aggregates AS member_aggs
+    #  ON rp.id = member_aggs.resource_provider_id
+    #  AND member_aggs.aggregate_id IN ($MEMBER_OF)
     # WHERE (
     #   (
     #     COALESCE(usage_vcpu.used, 0) + $AMOUNT_VCPU <=
@@ -1379,6 +1387,17 @@ def _get_all_with_shared(ctx, resources):
                     sharing.c.resource_provider_id.in_(sps),
                 ))
             join_chain = sharing_join
+
+    # If 'member_of' has values join with the PlacementAggregates to
+    # get those resource providers that are associated with any of the
+    # list of aggregate uuids provided with 'member_of'.
+    if member_of:
+        member_join = sa.join(join_chain, _RP_AGG_TBL,
+                _RP_AGG_TBL.c.resource_provider_id == rpt.c.id)
+        agg_join = sa.join(member_join, _AGG_TBL, sa.and_(
+                _AGG_TBL.c.id == _RP_AGG_TBL.c.aggregate_id,
+                _AGG_TBL.c.uuid.in_(member_of)))
+        join_chain = agg_join
 
     sel = sel.select_from(join_chain)
     sel = sel.where(sa.and_(*where_conds))
@@ -2782,7 +2801,8 @@ def _has_provider_trees(ctx):
 
 
 @db_api.api_context_manager.reader
-def _get_provider_ids_matching_all(ctx, resources, required_traits):
+def _get_provider_ids_matching_all(ctx, resources, required_traits,
+        member_of=None):
     """Returns a list of resource provider internal IDs that have available
     inventory to satisfy all the supplied requests for resources.
 
@@ -2796,6 +2816,10 @@ def _get_provider_ids_matching_all(ctx, resources, required_traits):
     :param required_traits: A map, keyed by trait string name, of required
                             trait internal IDs that each provider must have
                             associated with it
+    :param member_of: An optional list of aggregate UUIDs. If provided, the
+                      allocation_candidates returned will only be for resource
+                      providers that are members of one or more of the supplied
+                      aggregates.
     """
     trait_rps = None
     if required_traits:
@@ -2880,6 +2904,17 @@ def _get_provider_ids_matching_all(ctx, resources, required_traits):
             amount % inv_by_rc.c.step_size == 0,
         )
         where_conds.append(usage_cond)
+
+    # If 'member_of' has values join with the PlacementAggregates to
+    # get those resource providers that are associated with any of the
+    # list of aggregate uuids provided with 'member_of'.
+    if member_of:
+        member_join = sa.join(join_chain, _RP_AGG_TBL,
+                _RP_AGG_TBL.c.resource_provider_id == rpt.c.id)
+        agg_join = sa.join(member_join, _AGG_TBL, sa.and_(
+                _AGG_TBL.c.id == _RP_AGG_TBL.c.aggregate_id,
+                _AGG_TBL.c.uuid.in_(member_of)))
+        join_chain = agg_join
 
     sel = sel.select_from(join_chain)
     sel = sel.where(sa.and_(*where_conds))
@@ -3544,6 +3579,12 @@ class AllocationCandidates(base.VersionedObject):
                 missing = traits - set(trait_map)
                 raise exception.TraitNotFound(names=', '.join(missing))
 
+        # Microversions prior to 1.21 will not have 'member_of' in the groups.
+        # This allows earlier microversions to continue to work.
+        member_of = ""
+        if hasattr(sharing_groups[0], "member_of"):
+            member_of = sharing_groups[0].member_of
+
         # Contains a set of resource provider IDs that share some inventory for
         # each resource class requested. We do this here as an optimization. If
         # we have no sharing providers, the SQL to find matching providers for
@@ -3567,7 +3608,7 @@ class AllocationCandidates(base.VersionedObject):
             # provider IDs of provider trees instead of the resource provider
             # IDs.
             rp_ids = _get_provider_ids_matching_all(context, resources,
-                                                    trait_map)
+                                                    trait_map, member_of)
             alloc_request_objs, summary_objs = _alloc_candidates_no_shared(
                 context, resources, rp_ids)
         else:
@@ -3584,7 +3625,7 @@ class AllocationCandidates(base.VersionedObject):
             # and are related to a provider that is sharing some resources
             # with it. In other words, this is the list of resource provider
             # IDs that are NOT sharing resources.
-            rps = _get_all_with_shared(context, resources)
+            rps = _get_all_with_shared(context, resources, member_of)
             rp_ids = set([r[0] for r in rps])
             alloc_request_objs, summary_objs = _alloc_candidates_with_shared(
                 context, resources, trait_map, rp_ids, sharing_providers)

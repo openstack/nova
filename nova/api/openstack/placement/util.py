@@ -31,8 +31,10 @@ from nova.i18n import _
 # Querystring-related constants
 _QS_RESOURCES = 'resources'
 _QS_REQUIRED = 'required'
+_QS_MEMBER_OF = 'member_of'
 _QS_KEY_PATTERN = re.compile(
-    r"^(%s)([1-9][0-9]*)?$" % '|'.join((_QS_RESOURCES, _QS_REQUIRED)))
+        r"^(%s)([1-9][0-9]*)?$" % '|'.join(
+        (_QS_RESOURCES, _QS_REQUIRED, _QS_MEMBER_OF)))
 
 
 # NOTE(cdent): This registers a FormatChecker on the jsonschema
@@ -315,23 +317,53 @@ def normalize_traits_qs_param(val):
     return ret
 
 
+def normalize_member_of_qs_param(val):
+    """Parse a member_of query string parameter value.
+
+    Valid values are either a single UUID, or the prefix 'in:' followed by two
+    or more comma-separated UUIDs.
+
+    :param val: A member_of query parameter of either a single UUID, or a
+                comma-separated string of two or more UUIDs.
+    :return: A list of UUIDs
+    :raises `webob.exc.HTTPBadRequest` if the val parameter is not in the
+            expected format.
+    """
+    # Ensure that multiple values are prefixed with "in:"
+    if "," in val and not val.startswith("in:"):
+        msg = _("Multiple values for 'member_of' must be prefixed with the "
+                "'in:' keyword. Got: %s") % val
+        raise webob.exc.HTTPBadRequest(msg)
+    if val.startswith("in:"):
+        ret = val[3:].split(",")
+    else:
+        ret = [val]
+    # Ensure the UUIDs are valid
+    if not all([uuidutils.is_uuid_like(agg) for agg in ret]):
+        msg = _("Invalid query string parameters: Expected 'member_of' "
+                "parameter to contain valid UUID(s). Got: %s") % val
+        raise webob.exc.HTTPBadRequest(msg)
+    return ret
+
+
 def parse_qs_request_groups(qsdict):
-    """Parse numbered resources and traits groupings out of a querystring dict.
+    """Parse numbered resources, traits, and member_of groupings out of a
+    querystring dict.
 
     The input qsdict represents a query string of the form:
 
     ?resources=$RESOURCE_CLASS_NAME:$AMOUNT,$RESOURCE_CLASS_NAME:$AMOUNT
-    &required=$TRAIT_NAME,$TRAIT_NAME
+    &required=$TRAIT_NAME,$TRAIT_NAME&member_of=$AGG_UUID
     &resources1=$RESOURCE_CLASS_NAME:$AMOUNT,RESOURCE_CLASS_NAME:$AMOUNT
-    &required1=$TRAIT_NAME,$TRAIT_NAME
+    &required1=$TRAIT_NAME,$TRAIT_NAME&member_of1=$AGG_UUID
     &resources2=$RESOURCE_CLASS_NAME:$AMOUNT,RESOURCE_CLASS_NAME:$AMOUNT
-    &required2=$TRAIT_NAME,$TRAIT_NAME
+    &required2=$TRAIT_NAME,$TRAIT_NAME&member_of2=$AGG_UUID
 
     These are parsed in groups according to the numeric suffix of the key.
     For each group, a RequestGroup instance is created containing that group's
-    resources and required traits.  For the (single) group with no suffix, the
-    RequestGroup.use_same_provider attribute is False; for the numbered groups
-    it is True.
+    resources, required traits, and member_of. For the (single) group with no
+    suffix, the RequestGroup.use_same_provider attribute is False; for the
+    numbered groups it is True.
 
     The return is a list of these RequestGroup instances.
 
@@ -339,6 +371,7 @@ def parse_qs_request_groups(qsdict):
 
     ?resources=VCPU:2,MEMORY_MB:1024,DISK_GB=50
     &required=HW_CPU_X86_VMX,CUSTOM_STORAGE_RAID
+    &member_of=in:9323b2b1-82c9-4e91-bdff-e95e808ef954,8592a199-7d73-4465-8df6-ab00a6243c82   # noqa
     &resources1=SRIOV_NET_VF:2
     &required1=CUSTOM_PHYSNET_PUBLIC,CUSTOM_SWITCH_A
     &resources2=SRIOV_NET_VF:1
@@ -356,6 +389,10 @@ def parse_qs_request_groups(qsdict):
           required_traits=[
               "HW_CPU_X86_VMX",
               "CUSTOM_STORAGE_RAID",
+          ],
+          member_of=[
+            9323b2b1-82c9-4e91-bdff-e95e808ef954,
+            8592a199-7d73-4465-8df6-ab00a6243c82,
           ],
       ),
       RequestGroup(
@@ -397,7 +434,7 @@ def parse_qs_request_groups(qsdict):
         match = _QS_KEY_PATTERN.match(key)
         if not match:
             continue
-        # `prefix` is 'resources' or 'required'
+        # `prefix` is 'resources', 'required', or 'member_of'
         # `suffix` is an integer string, or None
         prefix, suffix = match.groups()
         request_group = get_request_group(suffix or '')
@@ -405,13 +442,22 @@ def parse_qs_request_groups(qsdict):
             request_group.resources = normalize_resources_qs_param(val)
         elif prefix == _QS_REQUIRED:
             request_group.required_traits = normalize_traits_qs_param(val)
+        elif prefix == _QS_MEMBER_OF:
+            request_group.member_of = normalize_member_of_qs_param(val)
 
-    # Ensure any group with 'required' also has 'resources'.
+    # Ensure any group with 'required' or 'member_of' also has 'resources'.
     orphans = [('required%s' % suff) for suff, group in by_suffix.items()
                if group.required_traits and not group.resources]
     if orphans:
         msg = _('All traits parameters must be associated with resources.  '
                 'Found the following orphaned traits keys: %s')
+        raise webob.exc.HTTPBadRequest(msg % ', '.join(orphans))
+    orphans = [('member_of%s' % suff) for suff, group in by_suffix.items()
+               if group.member_of and not group.resources]
+    if orphans:
+        msg = _('All member_of parameters must be associated with '
+                'resources. Found the following orphaned member_of '
+                ' values: %s')
         raise webob.exc.HTTPBadRequest(msg % ', '.join(orphans))
 
     # NOTE(efried): The sorting is not necessary for the API, but it makes

@@ -46,3 +46,9 @@ GET_SCHEMA_1_17 = copy.deepcopy(GET_SCHEMA_1_16)
 GET_SCHEMA_1_17['properties']['required'] = {
     "type": ["string"]
 }
+
+# Add member_of parameter.
+GET_SCHEMA_1_21 = copy.deepcopy(GET_SCHEMA_1_17)
+GET_SCHEMA_1_21['properties']['member_of'] = {
+    "type": ["string"]
+}
