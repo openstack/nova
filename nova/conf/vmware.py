@@ -181,6 +181,20 @@ Below options should be set to enable VNC client.
                help="""
 Total number of VNC ports.
 """),
+    cfg.StrOpt('vnc_keymap',
+               default='en-us',
+               help="""
+Keymap for VNC.
+
+The keyboard mapping (keymap) determines which keyboard layout a VNC
+session should use by default.
+
+Possible values:
+
+* A keyboard layout which is supported by the underlying hypervisor on
+  this node. This is usually an 'IETF language tag' (for example
+  'en-us').
+"""),
     cfg.BoolOpt('use_linked_clone',
                 default=True,
                 help="""
