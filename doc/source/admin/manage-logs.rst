@@ -10,7 +10,7 @@ the configuration file, add this line to the ``/etc/nova/nova.conf`` file:
 
 .. code-block:: ini
 
-   log-config=/etc/nova/logging.conf
+   log_config_append=/etc/nova/logging.conf
 
 To change the logging level, add ``DEBUG``, ``INFO``, ``WARNING``, or ``ERROR``
 as a parameter.
