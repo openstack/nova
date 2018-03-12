@@ -251,7 +251,6 @@ class PciDevice(base.NovaPersistentObject, base.NovaObject):
             if 'uuid' not in self:
                 self.uuid = uuidutils.generate_uuid()
             updates = self.obj_get_changes()
-            updates['extra_info'] = self.extra_info
 
             if 'extra_info' in updates:
                 updates['extra_info'] = jsonutils.dumps(updates['extra_info'])
