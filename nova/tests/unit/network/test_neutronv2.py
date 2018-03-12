@@ -5428,16 +5428,41 @@ class TestPortBindingWithMock(test.NoDBTestCase):
             return mock_response
 
         mock_client.return_value.post.side_effect = fake_post
-        mock_client.return_value.delete.return_value = (
-            fake_req.FakeResponse(204))
-        self.assertRaises(exception.PortBindingFailed,
-                          self.api.bind_ports_to_host, ctxt, inst, 'fake-host')
+        with mock.patch.object(self.api, 'delete_port_binding',
+                               # This will be logged but not re-raised.
+                               side_effect=exception.PortBindingDeletionFailed(
+                                   port_id=uuids.ok, host='fake-host'
+                               )) as mock_delete:
+            self.assertRaises(exception.PortBindingFailed,
+                              self.api.bind_ports_to_host,
+                              ctxt, inst, 'fake-host')
         # assert that post was called twice and delete once
         self.assertEqual(2, mock_client.return_value.post.call_count)
-        self.assertEqual(1, mock_client.return_value.delete.call_count)
-        # and that delete was called on the first port
-        self.assertIn(uuids.ok,
-                      mock_client.return_value.delete.call_args[0][0])
+        mock_delete.assert_called_once_with(ctxt, uuids.ok, 'fake-host')
+
+    @mock.patch('nova.network.neutronv2.api._get_ksa_client')
+    def test_delete_port_binding(self, mock_client):
+        # Create three ports where:
+        # - one is successfully unbound
+        # - one is not found
+        # - one fails to be unbound
+        ctxt = context.get_context()
+
+        def fake_delete(url, *args, **kwargs):
+            if uuids.ok in url:
+                return fake_req.FakeResponse(204)
+            else:
+                status_code = 404 if uuids.notfound in url else 500
+                return fake_req.FakeResponse(status_code)
+
+        mock_client.return_value.delete.side_effect = fake_delete
+        for port_id in (uuids.ok, uuids.notfound, uuids.fail):
+            if port_id == uuids.fail:
+                self.assertRaises(exception.PortBindingDeletionFailed,
+                                  self.api.delete_port_binding,
+                                  ctxt, port_id, 'fake-host')
+            else:
+                self.api.delete_port_binding(ctxt, port_id, 'fake-host')
 
 
 class TestAllocateForInstance(test.NoDBTestCase):
