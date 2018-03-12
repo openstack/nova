@@ -105,8 +105,6 @@
       post-test scripts to ensure those scripts are still working,
       e.g. archive_deleted_rows. In Queens, this job started testing the
       TLS console proxy code in the libvirt driver.
-    # TODO(mriedem): Make this voting once bug 1747511 is fixed.
-    voting: false
     run: playbooks/legacy/nova-next/run.yaml
     post-run: playbooks/legacy/nova-next/post.yaml
 
@@ -121,6 +119,7 @@
     gate:
       jobs:
         - nova-multiattach
+        - nova-next
         - nova-tox-functional
         - nova-tox-functional-py35
     experimental:
