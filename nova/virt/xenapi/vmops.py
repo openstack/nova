@@ -36,6 +36,7 @@ from oslo_utils import netutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import units
+from oslo_utils import versionutils
 import six
 
 from nova import block_device
@@ -2227,6 +2228,22 @@ class VMOps(object):
         host_uuid = self._get_host_uuid_from_aggregate(context, hostname)
         return self._session.call_xenapi("host.get_by_uuid", host_uuid)
 
+    def _get_host_ref_no_aggr(self):
+        # Pull the current host ref from Dom0's resident_on field.  This
+        # allows us a simple way to pull the accurate host without aggregates
+        dom0_rec = self._session.call_xenapi("VM.get_all_records_where",
+                                             'field "domid"="0"')
+        dom0_ref = list(dom0_rec.keys())[0]
+
+        return dom0_rec[dom0_ref]['resident_on']
+
+    def _get_host_software_versions(self):
+        # Get software versions from host.get_record.
+        # Works around aggregate checking as not all places use aggregates.
+        host_ref = self._get_host_ref_no_aggr()
+        host_rec = self._session.call_xenapi("host.get_record", host_ref)
+        return host_rec['software_version']
+
     def _get_network_ref(self):
         # Get the network to for migrate.
         # This is the one associated with the pif marked management. From cli:
@@ -2345,14 +2362,27 @@ class VMOps(object):
                 raise exception.MigrationError(reason=_('XAPI supporting '
                                 'relax-xsm-sr-check=true required'))
 
+        # TODO(bkaminski): This entire block needs to be removed from this
+        # if statement. Live Migration should assert_can_migrate either way.
         if ('block_migration' in dest_check_data and
                 dest_check_data.block_migration):
             vm_ref = self._get_vm_opaque_ref(instance_ref)
+            host_sw = self._get_host_software_versions()
+            host_pfv = host_sw['platform_version']
             try:
                 self._call_live_migrate_command(
                     "VM.assert_can_migrate", vm_ref, dest_check_data)
             except self._session.XenAPI.Failure as exc:
                 reason = exc.details[0]
+                # XCP>=2.1 Will error on this assert call if iSCSI are attached
+                # as the SR has not been configured on the hypervisor at this
+                # point in the migration. We swallow this exception until a
+                # more intensive refactor can be done to correct this.
+                if ("VDI_NOT_IN_MAP" in reason and
+                        host_sw['platform_name'] == "XCP" and
+                        versionutils.is_compatible("2.1.0", host_pfv)):
+                    LOG.debug("Skipping exception for XCP>=2.1.0, %s", reason)
+                    return dest_check_data
                 msg = _('assert_can_migrate failed because: %s') % reason
                 LOG.debug(msg, exc_info=True)
                 raise exception.MigrationPreCheckError(reason=msg)
