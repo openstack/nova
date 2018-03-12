@@ -2,4 +2,4 @@
 upgrade:
   - |
     The following commands are no longer required to be listed in your rootwrap
-    configuration: mkfs; tune2fs.
+    configuration: mkfs; tune2fs; xenstore_read.

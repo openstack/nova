@@ -54,6 +54,7 @@ from nova.network import model as network_model
 from nova.objects import diagnostics
 from nova.objects import fields as obj_fields
 import nova.privsep.fs
+import nova.privsep.xenapi
 from nova import utils
 from nova.virt import configdrive
 from nova.virt.disk import api as disk
@@ -2235,10 +2236,9 @@ def get_this_vm_uuid(session):
         # Some guest kernels (without 5c13f8067745efc15f6ad0158b58d57c44104c25)
         # cannot read from uuid after a reboot.  Fall back to trying xenstore.
         # See https://bugs.launchpad.net/ubuntu/+source/xen-api/+bug/1081182
-        domid, _ = utils.execute('xenstore-read', 'domid', run_as_root=True)
-        vm_key, _ = utils.execute('xenstore-read',
-                                 '/local/domain/%s/vm' % domid.strip(),
-                                 run_as_root=True)
+        domid, _ = nova.privsep.xenapi.xenstore_read('domid')
+        vm_key, _ = nova.privsep.xenapi.xenstore_read(
+            '/local/domain/%s/vm' % domid.strip())
         return vm_key.strip()[4:]
 
 
