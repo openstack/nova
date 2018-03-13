@@ -1279,7 +1279,11 @@ class CellV2Commands(object):
           help=_('Considered successful (exit code 0) only when an unmapped '
                  'host is discovered. Any other outcome will be considered a '
                  'failure (exit code 1).'))
-    def discover_hosts(self, cell_uuid=None, verbose=False, strict=False):
+    @args('--by-service', action='store_true', default=False,
+          dest='by_service',
+          help=_('Discover hosts by service instead of compute node'))
+    def discover_hosts(self, cell_uuid=None, verbose=False, strict=False,
+                       by_service=False):
         """Searches cells, or a single cell, and maps found hosts.
 
         When a new host is added to a deployment it will add a service entry
@@ -1292,7 +1296,8 @@ class CellV2Commands(object):
                 print(msg)
 
         ctxt = context.RequestContext()
-        hosts = host_mapping_obj.discover_hosts(ctxt, cell_uuid, status_fn)
+        hosts = host_mapping_obj.discover_hosts(ctxt, cell_uuid, status_fn,
+                                                by_service)
         # discover_hosts will return an empty list if no hosts are discovered
         if strict:
             return int(not hosts)
