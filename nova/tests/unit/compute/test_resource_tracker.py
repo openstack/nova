@@ -31,6 +31,7 @@ from nova.objects import base as obj_base
 from nova.objects import fields as obj_fields
 from nova.objects import pci_device
 from nova.pci import manager as pci_manager
+from nova import rc_fields
 from nova import test
 from nova.tests.unit import fake_notifier
 from nova.tests.unit.objects import test_pci_device as fake_pci_device
@@ -1352,19 +1353,19 @@ class TestNormalizatInventoryFromComputeNode(test.NoDBTestCase):
         # allocation_ratio or reserved amounts for some resources. Verify that
         # the information on the compute node fills in this information...
         inv = {
-            obj_fields.ResourceClass.VCPU: {
+            rc_fields.ResourceClass.VCPU: {
                 'total': vcpus,
                 'min_unit': 1,
                 'max_unit': vcpus,
                 'step_size': 1,
             },
-            obj_fields.ResourceClass.MEMORY_MB: {
+            rc_fields.ResourceClass.MEMORY_MB: {
                 'total': memory_mb,
                 'min_unit': 1,
                 'max_unit': memory_mb,
                 'step_size': 1,
             },
-            obj_fields.ResourceClass.DISK_GB: {
+            rc_fields.ResourceClass.DISK_GB: {
                 'total': disk_gb,
                 'min_unit': 1,
                 'max_unit': disk_gb,
@@ -1372,7 +1373,7 @@ class TestNormalizatInventoryFromComputeNode(test.NoDBTestCase):
             },
         }
         expected = {
-            obj_fields.ResourceClass.VCPU: {
+            rc_fields.ResourceClass.VCPU: {
                 'total': vcpus,
                 'reserved': 1,
                 'min_unit': 1,
@@ -1380,7 +1381,7 @@ class TestNormalizatInventoryFromComputeNode(test.NoDBTestCase):
                 'step_size': 1,
                 'allocation_ratio': 16.0,
             },
-            obj_fields.ResourceClass.MEMORY_MB: {
+            rc_fields.ResourceClass.MEMORY_MB: {
                 'total': memory_mb,
                 'reserved': 10,
                 'min_unit': 1,
@@ -1388,7 +1389,7 @@ class TestNormalizatInventoryFromComputeNode(test.NoDBTestCase):
                 'step_size': 1,
                 'allocation_ratio': 1.5,
             },
-            obj_fields.ResourceClass.DISK_GB: {
+            rc_fields.ResourceClass.DISK_GB: {
                 'total': disk_gb,
                 'reserved': 1,  # Rounded up from CONF.reserved_host_disk_mb
                 'min_unit': 1,
@@ -1425,7 +1426,7 @@ class TestNormalizatInventoryFromComputeNode(test.NoDBTestCase):
         # blocks for VCPU, MEMORY_MB, DISK_GB and the custom resource class
         # inventory items
         inv = {
-            obj_fields.ResourceClass.VCPU: {
+            rc_fields.ResourceClass.VCPU: {
                 'total': vcpus,
                 'reserved': 0,
                 'min_unit': 1,
@@ -1433,7 +1434,7 @@ class TestNormalizatInventoryFromComputeNode(test.NoDBTestCase):
                 'step_size': 1,
                 'allocation_ratio': 1.0,
             },
-            obj_fields.ResourceClass.MEMORY_MB: {
+            rc_fields.ResourceClass.MEMORY_MB: {
                 'total': memory_mb,
                 'reserved': 0,
                 'min_unit': 1,
@@ -1441,7 +1442,7 @@ class TestNormalizatInventoryFromComputeNode(test.NoDBTestCase):
                 'step_size': 1,
                 'allocation_ratio': 1.0,
             },
-            obj_fields.ResourceClass.DISK_GB: {
+            rc_fields.ResourceClass.DISK_GB: {
                 'total': disk_gb,
                 'reserved': 0,
                 'min_unit': 1,

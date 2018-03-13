@@ -35,10 +35,10 @@ from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova.objects import base as obj_base
-from nova.objects import fields
 from nova.objects import migration as migration_obj
 from nova.pci import manager as pci_manager
 from nova.pci import request as pci_request
+from nova import rc_fields as fields
 from nova import rpc
 from nova.scheduler import client as scheduler_client
 from nova.scheduler import utils as scheduler_utils

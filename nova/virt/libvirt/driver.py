@@ -89,6 +89,7 @@ from nova.pci import manager as pci_manager
 from nova.pci import utils as pci_utils
 import nova.privsep.libvirt
 import nova.privsep.path
+from nova import rc_fields
 from nova import utils
 from nova import version
 from nova.virt import block_device as driver_block_device
@@ -6054,7 +6055,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if not allocations:
             # If no allocations, there is no vGPU request.
             return {}
-        RC_VGPU = fields.ResourceClass.VGPU
+        RC_VGPU = rc_fields.ResourceClass.VGPU
         vgpu_allocations = {}
         for rp in allocations:
             res = allocations[rp]['resources']
@@ -6133,7 +6134,7 @@ class LibvirtDriver(driver.ComputeDriver):
                         'while at the moment libvirt only supports one. Only '
                         'the first allocation will be looked up.')
         alloc = six.next(six.itervalues(vgpu_allocations))
-        vgpus_asked = alloc['resources'][fields.ResourceClass.VGPU]
+        vgpus_asked = alloc['resources'][rc_fields.ResourceClass.VGPU]
 
         requested_types = self._get_supported_vgpu_types()
         # Which mediated devices are created but not assigned to a guest ?
@@ -6357,19 +6358,19 @@ class LibvirtDriver(driver.ComputeDriver):
         # the RT injects those values into the inventory dict based on the
         # compute_nodes record values.
         result = {
-            fields.ResourceClass.VCPU: {
+            rc_fields.ResourceClass.VCPU: {
                 'total': vcpus,
                 'min_unit': 1,
                 'max_unit': vcpus,
                 'step_size': 1,
             },
-            fields.ResourceClass.MEMORY_MB: {
+            rc_fields.ResourceClass.MEMORY_MB: {
                 'total': memory_mb,
                 'min_unit': 1,
                 'max_unit': memory_mb,
                 'step_size': 1,
             },
-            fields.ResourceClass.DISK_GB: {
+            rc_fields.ResourceClass.DISK_GB: {
                 'total': disk_gb,
                 'min_unit': 1,
                 'max_unit': disk_gb,
@@ -6379,7 +6380,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         if vgpus > 0:
             # Only provide VGPU resource classes if the driver supports it.
-            result[fields.ResourceClass.VGPU] = {
+            result[rc_fields.ResourceClass.VGPU] = {
                 'total': vgpus,
                 'min_unit': 1,
                 'max_unit': vgpus,

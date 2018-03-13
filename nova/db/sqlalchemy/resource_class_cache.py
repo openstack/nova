@@ -17,7 +17,7 @@ import sqlalchemy as sa
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models as models
 from nova import exception
-from nova.objects import fields
+from nova import rc_fields as fields
 
 _RC_TBL = models.ResourceClass.__table__
 _LOCKNAME = 'rc_cache'

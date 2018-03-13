@@ -31,8 +31,8 @@ from nova import context
 # NOTE(mriedem): We only use objects as a convenience to populate the database
 # in the tests, we don't use them in the actual CLI.
 from nova import objects
-from nova.objects import fields
 from nova.objects import resource_provider as rp_obj
+from nova import rc_fields as fields
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests import uuidsentinel as uuids

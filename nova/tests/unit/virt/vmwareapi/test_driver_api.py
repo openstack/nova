@@ -42,7 +42,7 @@ from nova import exception
 from nova.image import glance
 from nova.network import model as network_model
 from nova import objects
-from nova.objects import fields
+from nova import rc_fields as fields
 from nova import test
 from nova.tests.unit import fake_diagnostics
 from nova.tests.unit import fake_instance

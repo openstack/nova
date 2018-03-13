@@ -39,7 +39,7 @@ from nova import context as nova_context
 from nova.db.sqlalchemy import api as db_session
 from nova.i18n import _
 from nova.objects import cell_mapping as cell_mapping_obj
-from nova.objects import fields
+from nova import rc_fields as fields
 from nova import utils
 from nova import version
 

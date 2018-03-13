@@ -31,7 +31,7 @@ import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova import objects
-from nova.objects import fields
+from nova import rc_fields as fields
 from nova.scheduler import utils as scheduler_utils
 from nova import utils
 

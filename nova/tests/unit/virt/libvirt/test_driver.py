@@ -74,6 +74,7 @@ from nova.objects import virtual_interface as obj_vif
 from nova.pci import manager as pci_manager
 from nova.pci import utils as pci_utils
 import nova.privsep.libvirt
+from nova import rc_fields
 from nova import test
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_diagnostics
@@ -16822,19 +16823,19 @@ class TestGetInventory(test.NoDBTestCase):
                             total_vgpus=0):
         mock_vgpus.return_value = total_vgpus
         expected_inv = {
-            fields.ResourceClass.VCPU: {
+            rc_fields.ResourceClass.VCPU: {
                 'total': 24,
                 'min_unit': 1,
                 'max_unit': 24,
                 'step_size': 1,
             },
-            fields.ResourceClass.MEMORY_MB: {
+            rc_fields.ResourceClass.MEMORY_MB: {
                 'total': 1024,
                 'min_unit': 1,
                 'max_unit': 1024,
                 'step_size': 1,
             },
-            fields.ResourceClass.DISK_GB: {
+            rc_fields.ResourceClass.DISK_GB: {
                 'total': 200,
                 'min_unit': 1,
                 'max_unit': 200,
@@ -16843,7 +16844,7 @@ class TestGetInventory(test.NoDBTestCase):
         }
         if total_vgpus > 0:
             expected_inv.update({
-                fields.ResourceClass.VGPU: {
+                rc_fields.ResourceClass.VGPU: {
                     'total': total_vgpus,
                     'min_unit': 1,
                     'max_unit': total_vgpus,
@@ -19265,7 +19266,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             'rp1': {
                 'resources': {
                     # Just any resource class but VGPU
-                    fields.ResourceClass.VCPU: 1,
+                    rc_fields.ResourceClass.VCPU: 1,
                 }
             }
         }
@@ -19278,7 +19279,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         allocations = {
             'rp1': {
                 'resources': {
-                    fields.ResourceClass.VGPU: 1,
+                    rc_fields.ResourceClass.VGPU: 1,
                 }
             }
         }
@@ -19300,7 +19301,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         allocations = {
             'rp1': {
                 'resources': {
-                    fields.ResourceClass.VGPU: 1,
+                    rc_fields.ResourceClass.VGPU: 1,
                 }
             }
         }
@@ -19333,7 +19334,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         allocations = {
             'rp1': {
                 'resources': {
-                    fields.ResourceClass.VGPU: 1,
+                    rc_fields.ResourceClass.VGPU: 1,
                 }
             }
         }

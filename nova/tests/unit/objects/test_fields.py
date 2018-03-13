@@ -23,6 +23,7 @@ import six
 from nova import exception
 from nova.network import model as network_model
 from nova.objects import fields
+from nova import rc_fields
 from nova import test
 from nova.tests.unit import fake_instance
 from nova import utils
@@ -334,7 +335,7 @@ class TestVMMode(TestField):
 class TestResourceClass(TestString):
     def setUp(self):
         super(TestResourceClass, self).setUp()
-        self.field = fields.ResourceClassField()
+        self.field = rc_fields.ResourceClassField()
         self.coerce_good_values = [
             ('VCPU', 'VCPU'),
             ('MEMORY_MB', 'MEMORY_MB'),
@@ -361,7 +362,7 @@ class TestResourceClass(TestString):
             ("CUSTM_BOB", "CUSTOM_CUSTM_BOB"),
         ]
         for test_value, expected in values:
-            result = fields.ResourceClass.normalize_name(test_value)
+            result = rc_fields.ResourceClass.normalize_name(test_value)
             self.assertEqual(expected, result)
 
 

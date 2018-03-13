@@ -38,8 +38,8 @@ from nova.compute import utils as compute_utils
 import nova.conf
 from nova import exception
 from nova.i18n import _
-from nova.objects import fields as obj_fields
 import nova.privsep.path
+from nova import rc_fields as fields
 from nova.virt import driver
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import ds_util
@@ -366,21 +366,21 @@ class VMwareVCDriver(driver.ComputeDriver):
         reserved_disk_gb = compute_utils.convert_mb_to_ceil_gb(
             CONF.reserved_host_disk_mb)
         result = {
-            obj_fields.ResourceClass.VCPU: {
+            fields.ResourceClass.VCPU: {
                 'total': stats['cpu']['vcpus'],
                 'reserved': CONF.reserved_host_cpus,
                 'min_unit': 1,
                 'max_unit': stats['cpu']['max_vcpus_per_host'],
                 'step_size': 1,
             },
-            obj_fields.ResourceClass.MEMORY_MB: {
+            fields.ResourceClass.MEMORY_MB: {
                 'total': stats['mem']['total'],
                 'reserved': CONF.reserved_host_memory_mb,
                 'min_unit': 1,
                 'max_unit': stats['mem']['max_mem_mb_per_host'],
                 'step_size': 1,
             },
-            obj_fields.ResourceClass.DISK_GB: {
+            fields.ResourceClass.DISK_GB: {
                 'total': total_disk_capacity // units.Gi,
                 'reserved': reserved_disk_gb,
                 'min_unit': 1,

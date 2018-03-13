@@ -19,8 +19,8 @@ import nova
 from nova import context
 from nova.db.sqlalchemy import api_models as models
 from nova import exception
-from nova.objects import fields
 from nova.objects import resource_provider
+from nova import rc_fields as fields
 from nova import test
 from nova.tests.unit.objects import test_objects
 from nova.tests import uuidsentinel as uuids

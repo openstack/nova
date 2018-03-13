@@ -22,7 +22,7 @@ from nova import conf
 from nova import context
 from nova import exception
 from nova import objects
-from nova.objects import fields
+from nova import rc_fields as fields
 from nova.scheduler.client import report
 from nova import test
 from nova.tests import uuidsentinel as uuids
