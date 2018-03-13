@@ -25,13 +25,13 @@ from keystoneauth1 import loading as keystone
 from keystoneauth1 import session
 from oslo_utils import uuidutils
 
+from nova.api.openstack.placement.objects import resource_provider as rp_obj
 from nova.cmd import status
 import nova.conf
 from nova import context
 # NOTE(mriedem): We only use objects as a convenience to populate the database
 # in the tests, we don't use them in the actual CLI.
 from nova import objects
-from nova.objects import resource_provider as rp_obj
 from nova import rc_fields as fields
 from nova import test
 from nova.tests import fixtures as nova_fixtures

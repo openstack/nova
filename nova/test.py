@@ -49,6 +49,7 @@ from oslotest import moxstubout
 import six
 import testtools
 
+from nova.api.openstack.placement.objects import resource_provider
 from nova import context
 from nova import db
 from nova import exception
@@ -309,8 +310,8 @@ class TestCase(testtools.TestCase):
         utils._IS_NEUTRON = None
 
         # Reset the traits sync and rc cache flags
-        objects.resource_provider._TRAITS_SYNCED = False
-        objects.resource_provider._RC_CACHE = None
+        resource_provider._TRAITS_SYNCED = False
+        resource_provider._RC_CACHE = None
         # Reset the global QEMU version flag.
         images.QEMU_VERSION = None
 

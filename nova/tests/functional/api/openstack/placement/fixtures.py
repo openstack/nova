@@ -17,11 +17,10 @@ from oslo_middleware import cors
 from oslo_utils import uuidutils
 
 from nova.api.openstack.placement import deploy
+from nova.api.openstack.placement.objects import resource_provider as rp_obj
 from nova import conf
 from nova import config
 from nova import context
-from nova import objects
-from nova.objects import resource_provider as rp_obj
 from nova.tests import fixtures
 
 
@@ -96,8 +95,8 @@ class APIFixture(fixture.GabbiFixture):
         # flag to make sure the next run will recreate the traits and
         # reset the _RC_CACHE so that any cached resource classes
         # are flushed.
-        objects.resource_provider._TRAITS_SYNCED = False
-        objects.resource_provider._RC_CACHE = None
+        rp_obj._TRAITS_SYNCED = False
+        rp_obj._RC_CACHE = None
 
         self.output_stream_fixture.cleanUp()
         self.standard_logging_fixture.cleanUp()
