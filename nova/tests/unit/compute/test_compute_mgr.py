@@ -6851,8 +6851,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch.object(self.compute, '_get_compute_info')
         @mock.patch.object(self.compute.driver,
                            'post_live_migration_at_destination')
-        def _do_test(post_live_migration_at_destination, _get_compute_info,
-                     _get_power_state, _get_instance_block_device_info,
+        @mock.patch('nova.compute.utils.notify_about_instance_action')
+        def _do_test(mock_notify, post_live_migration_at_destination,
+                     _get_compute_info, _get_power_state,
+                     _get_instance_block_device_info,
                      _notify_about_instance_usage, migrate_instance_finish,
                      setup_networks_on_host, get_instance_nw_info, save):
 
@@ -6864,6 +6866,12 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
             self.compute.post_live_migration_at_destination(
                 self.context, self.instance, False)
+
+            mock_notify.assert_has_calls([
+                mock.call(self.context, self.instance, self.instance.host,
+                          action='live_migration_post_dest', phase='start'),
+                mock.call(self.context, self.instance, self.instance.host,
+                          action='live_migration_post_dest', phase='end')])
 
             setup_networks_calls = [
                 mock.call(self.context, self.instance, self.compute.host),
@@ -6918,8 +6926,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                host=uuids.fake_host))
         @mock.patch.object(self.compute.driver,
                            'post_live_migration_at_destination')
-        def _do_test(post_live_migration_at_destination, _get_compute_info,
-                     _get_power_state, _get_instance_block_device_info,
+        @mock.patch('nova.compute.utils.notify_about_instance_action')
+        def _do_test(mock_notify, post_live_migration_at_destination,
+                     _get_compute_info, _get_power_state,
+                     _get_instance_block_device_info,
                      _notify_about_instance_usage, network_api, save):
             cn = mock.Mock(spec_set=['hypervisor_hostname'])
             cn.hypervisor_hostname = 'test_host'
@@ -6927,6 +6937,11 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
             self.compute.post_live_migration_at_destination(
                 self.context, self.instance, False)
+            mock_notify.assert_has_calls([
+                mock.call(self.context, self.instance, self.instance.host,
+                          action='live_migration_post_dest', phase='start'),
+                mock.call(self.context, self.instance, self.instance.host,
+                          action='live_migration_post_dest', phase='end')])
             self.assertIsNone(self.instance.node)
 
         _do_test()

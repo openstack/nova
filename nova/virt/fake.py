@@ -691,8 +691,10 @@ class FakeLiveMigrateDriver(FakeDriver):
                        migrate_data=None):
         self._abort_migration = False
         self._migrating = True
-        while self._migrating:
+        count = 0
+        while self._migrating and count < 50:
             time.sleep(0.1)
+            count = count + 1
 
         if self._abort_migration:
             recover_method(context, instance, dest, migrate_data,
@@ -703,8 +705,14 @@ class FakeLiveMigrateDriver(FakeDriver):
 
     def live_migration_force_complete(self, instance):
         self._migrating = False
-        del self.instances[instance.uuid]
+        if instance.uuid in self.instances:
+            del self.instances[instance.uuid]
 
     def live_migration_abort(self, instance):
         self._abort_migration = True
         self._migrating = False
+
+    def post_live_migration(self, context, instance, block_device_info,
+                            migrate_data=None):
+        if instance.uuid in self.instances:
+            del self.instances[instance.uuid]

@@ -1,0 +1,13 @@
+{
+    "event_type":"instance.live_migration_post_dest.end",
+    "payload":{
+        "$ref": "common_payloads/InstanceActionPayload.json#",
+        "nova_object.data":{
+            "host": "host2",
+            "node": "host2",
+            "power_state": "pending"
+        }
+    },
+    "priority":"INFO",
+    "publisher_id":"nova-compute:host2"
+}

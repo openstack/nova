@@ -6382,6 +6382,10 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(
                      context, instance, "live_migration.post.dest.start",
                      network_info=network_info)
+        compute_utils.notify_about_instance_action(context, instance,
+                self.host,
+                action=fields.NotificationAction.LIVE_MIGRATION_POST_DEST,
+                phase=fields.NotificationPhase.START)
         block_device_info = self._get_instance_block_device_info(context,
                                                                  instance)
 
@@ -6420,6 +6424,10 @@ class ComputeManager(manager.Manager):
         self._notify_about_instance_usage(
                      context, instance, "live_migration.post.dest.end",
                      network_info=network_info)
+        compute_utils.notify_about_instance_action(context, instance,
+                self.host,
+                action=fields.NotificationAction.LIVE_MIGRATION_POST_DEST,
+                phase=fields.NotificationPhase.END)
 
     @wrap_exception()
     @wrap_instance_fault
