@@ -18,18 +18,14 @@
 
 from oslo_log import log as logging
 
-
-import nova.conf
 from nova import exception
 from nova import profiler
 from nova.virt import block_device as driver_block_device
 from nova.virt.libvirt import config as vconfig
-import nova.virt.libvirt.driver
 from nova.virt.libvirt import utils as libvirt_utils
 
-LOG = logging.getLogger(__name__)
 
-CONF = nova.conf.CONF
+LOG = logging.getLogger(__name__)
 
 
 @profiler.trace_cls("volume_api")

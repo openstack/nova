@@ -15,14 +15,11 @@
 
 from oslo_log import log as logging
 
-import nova.conf
 from nova.i18n import _LW
 from nova.scheduler import filters
 from nova.scheduler.filters import utils
 
 LOG = logging.getLogger(__name__)
-
-CONF = nova.conf.CONF
 
 
 class DiskFilter(filters.BaseHostFilter):

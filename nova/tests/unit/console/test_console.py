@@ -20,7 +20,6 @@ import fixtures
 import mock
 
 from nova.compute import rpcapi as compute_rpcapi
-import nova.conf
 from nova.console import api as console_api
 from nova.console import manager as console_manager
 from nova import context
@@ -30,8 +29,6 @@ from nova import objects
 from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_xvp_console_proxy
-
-CONF = nova.conf.CONF
 
 
 class ConsoleTestCase(test.TestCase):

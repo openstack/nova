@@ -15,7 +15,6 @@
 
 import struct
 
-from oslo_config import cfg
 from oslo_log import log as logging
 import six
 
@@ -26,8 +25,6 @@ from nova import exception
 from nova.i18n import _
 
 LOG = logging.getLogger(__name__)
-
-CONF = cfg.CONF
 
 
 class RFBSecurityProxy(base.SecurityProxy):

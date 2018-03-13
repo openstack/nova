@@ -14,14 +14,11 @@
 
 import datetime
 
-import nova.conf
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client as api_client
 from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import policy_fixture
-
-CONF = nova.conf.CONF
 
 
 class TestServerGet(test.TestCase):

@@ -11,7 +11,6 @@
 #    under the License.
 
 import mock
-from oslo_config import cfg
 
 from nova import context
 from nova import objects
@@ -20,9 +19,6 @@ from nova.tests import fixtures
 from nova.tests.unit import cast_as_call
 from nova.tests.unit import fake_network
 from nova.tests.unit import fake_server_actions
-
-
-CONF = cfg.CONF
 
 
 class ComputeManagerTestCase(test.TestCase):

@@ -19,7 +19,6 @@ from oslo_utils import strutils
 from oslo_utils import timeutils
 from oslo_utils import uuidutils
 
-import nova.conf
 from nova import db
 from nova import exception
 from nova.i18n import _
@@ -27,7 +26,7 @@ from nova.objects import base
 from nova.objects import fields
 from nova import utils
 
-CONF = nova.conf.CONF
+
 LOG = logging.getLogger(__name__)
 
 

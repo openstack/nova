@@ -17,12 +17,9 @@ import mock
 from six.moves import range
 
 from nova.cells import state
-import nova.conf
 from nova.db.sqlalchemy import models
 from nova import exception
 from nova.tests.functional.api_sample_tests import api_sample_base
-
-CONF = nova.conf.CONF
 
 
 class CellsSampleJsonTest(api_sample_base.ApiSampleTestBaseV21):

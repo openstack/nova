@@ -14,13 +14,9 @@ from keystoneauth1 import loading as ks_loading
 from keystoneauth1 import service_token
 import mock
 
-import nova.conf
 from nova import context
 from nova import service_auth
 from nova import test
-
-
-CONF = nova.conf.CONF
 
 
 class ServiceAuthTestCase(test.NoDBTestCase):

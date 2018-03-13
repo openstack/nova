@@ -16,12 +16,9 @@
 
 from oslo_serialization import jsonutils
 
-import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.pci import devspec
-
-CONF = nova.conf.CONF
 
 
 class Whitelist(object):

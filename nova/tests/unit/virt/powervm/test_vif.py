@@ -15,7 +15,6 @@
 #    under the License.
 
 import mock
-from oslo_config import cfg
 from pypowervm import exceptions as pvm_ex
 from pypowervm.wrappers import network as pvm_net
 
@@ -23,8 +22,6 @@ from nova import exception
 from nova.network import model
 from nova import test
 from nova.virt.powervm import vif
-
-CONF = cfg.CONF
 
 
 def cna(mac):

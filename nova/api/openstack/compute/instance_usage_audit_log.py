@@ -21,12 +21,9 @@ import webob.exc
 from nova.api.openstack import wsgi
 from nova import compute
 from nova.compute import rpcapi as compute_rpcapi
-import nova.conf
 from nova.i18n import _
 from nova.policies import instance_usage_audit_log as iual_policies
 from nova import utils
-
-CONF = nova.conf.CONF
 
 
 class InstanceUsageAuditLogController(wsgi.Controller):

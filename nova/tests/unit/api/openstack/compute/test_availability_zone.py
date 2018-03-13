@@ -16,7 +16,6 @@ import datetime
 
 import iso8601
 import mock
-from oslo_config import cfg
 
 from nova.api.openstack.compute import availability_zone as az_v21
 from nova.api.openstack.compute import servers as servers_v21
@@ -34,7 +33,6 @@ from nova.tests.unit.objects import test_service
 from nova.tests import uuidsentinel
 
 
-CONF = cfg.CONF
 FAKE_UUID = fakes.FAKE_UUID
 
 

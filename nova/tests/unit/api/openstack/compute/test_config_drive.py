@@ -14,7 +14,6 @@
 #    under the License.
 
 import mock
-from oslo_config import cfg
 from oslo_serialization import jsonutils
 
 from nova.api.openstack.compute import servers as servers_v21
@@ -25,8 +24,6 @@ from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit.image import fake
 from nova.tests import uuidsentinel as uuids
-
-CONF = cfg.CONF
 
 
 class ConfigDriveTestV21(test.TestCase):
