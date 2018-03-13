@@ -10,6 +10,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_utils import versionutils
 from sqlalchemy.sql.expression import asc
 
 from nova.db.sqlalchemy import api as db_api
@@ -22,7 +23,8 @@ from nova.objects import fields
 @base.NovaObjectRegistry.register
 class CellMapping(base.NovaTimestampObject, base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Added disabled field
+    VERSION = '1.1'
 
     CELL0_UUID = '00000000-0000-0000-0000-000000000000'
 
@@ -32,7 +34,15 @@ class CellMapping(base.NovaTimestampObject, base.NovaObject):
         'name': fields.StringField(nullable=True),
         'transport_url': fields.StringField(),
         'database_connection': fields.StringField(),
-        }
+        'disabled': fields.BooleanField(default=False),
+    }
+
+    def obj_make_compatible(self, primitive, target_version):
+        super(CellMapping, self).obj_make_compatible(primitive, target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 1):
+            if 'disabled' in primitive:
+                del primitive['disabled']
 
     @property
     def identity(self):
