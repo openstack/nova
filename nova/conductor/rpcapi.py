@@ -25,6 +25,7 @@ from nova import profiler
 from nova import rpc
 
 CONF = nova.conf.CONF
+RPC_TOPIC = 'conductor'
 
 
 @profiler.trace_cls("rpc")
@@ -211,7 +212,7 @@ class ConductorAPI(object):
 
     def __init__(self):
         super(ConductorAPI, self).__init__()
-        target = messaging.Target(topic=CONF.conductor.topic, version='3.0')
+        target = messaging.Target(topic=RPC_TOPIC, version='3.0')
         version_cap = self.VERSION_ALIASES.get(CONF.upgrade_levels.conductor,
                                                CONF.upgrade_levels.conductor)
         serializer = objects_base.NovaObjectSerializer()
@@ -284,7 +285,7 @@ class ComputeTaskAPI(object):
 
     def __init__(self):
         super(ComputeTaskAPI, self).__init__()
-        target = messaging.Target(topic=CONF.conductor.topic,
+        target = messaging.Target(topic=RPC_TOPIC,
                                   namespace='compute_task',
                                   version='1.0')
         serializer = objects_base.NovaObjectSerializer()

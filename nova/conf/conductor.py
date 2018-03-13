@@ -26,19 +26,6 @@ and finally, how many worker processes will be used.
 )
 
 ALL_OPTS = [
-    cfg.StrOpt(
-        'topic',
-        default='conductor',
-        deprecated_for_removal=True,
-        deprecated_since='15.0.0',
-        deprecated_reason="""
-There is no need to let users choose the RPC topic for all services - there
-is little gain from this. Furthermore, it makes it really easy to break Nova
-by using this option.
-""",
-        help="""
-Topic exchange name on which conductor nodes listen.
-"""),
     cfg.IntOpt(
         'workers',
         help="""

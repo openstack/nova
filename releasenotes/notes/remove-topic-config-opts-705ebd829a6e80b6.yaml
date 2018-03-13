@@ -1,0 +1,7 @@
+---
+upgrade:
+  - |
+    The ``[conductor] topic`` configuration option was previously deprecated
+    and is now removed from nova.  There was no need to let users choose the
+    RPC topics for all services. There was little benefit from this and it made
+    it really easy to break nova by changing the value of topic options.
