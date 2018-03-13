@@ -46,6 +46,8 @@ class QuotaTestCase(test.NoDBTestCase):
 
         # Create a server group the instances will use.
         group = objects.InstanceGroup(context=ctxt)
+        group.project_id = ctxt.project_id
+        group.user_id = ctxt.user_id
         group.create()
         instance_uuids = []
 

@@ -49,6 +49,7 @@ class ServerGroupPayload(base.NotificationPayloadBase):
         self.populate_schema(group=cgroup)
 
 
+@base.notification_sample('server_group-add_member.json')
 @base.notification_sample('server_group-create.json')
 @base.notification_sample('server_group-delete.json')
 @nova_base.NovaObjectRegistry.register_notification

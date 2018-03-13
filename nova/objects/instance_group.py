@@ -454,6 +454,7 @@ class InstanceGroup(base.NovaPersistentObject, base.NovaObject,
                                                     instance_uuids)
         compute_utils.notify_about_server_group_update(context,
                                                        "addmember", payload)
+        compute_utils.notify_about_server_group_add_member(context, group_uuid)
         return list(members)
 
     @base.remotable

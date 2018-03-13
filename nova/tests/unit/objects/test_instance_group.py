@@ -207,9 +207,11 @@ class _TestInstanceGroupObject(object):
         mock_notify.assert_called_once_with(self.context, "delete",
                                             {'server_group_id': _DB_UUID})
 
+    @mock.patch('nova.compute.utils.notify_about_server_group_add_member')
     @mock.patch('nova.compute.utils.notify_about_server_group_update')
     @mock.patch('nova.objects.InstanceGroup._add_members_in_db')
-    def test_add_members(self, mock_members_add_db, mock_notify):
+    def test_add_members(self, mock_members_add_db, mock_notify,
+                         mock_notify_add_member):
         fake_member_models = [{'instance_uuid': mock.sentinel.uuid}]
         fake_member_uuids = [mock.sentinel.uuid]
         mock_members_add_db.return_value = fake_member_models
@@ -225,6 +227,7 @@ class _TestInstanceGroupObject(object):
                 self.context, "addmember",
                 {'instance_uuids': fake_member_uuids,
                  'server_group_id': _DB_UUID})
+        mock_notify_add_member.assert_called_once_with(self.context, _DB_UUID)
 
     @mock.patch('nova.objects.InstanceList.get_by_filters')
     @mock.patch('nova.objects.InstanceGroup._get_from_db_by_uuid',
