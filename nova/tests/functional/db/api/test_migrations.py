@@ -686,6 +686,9 @@ class NovaAPIMigrationsWalk(test_migrations.WalkVersionsMixin):
         db_spec = jsonutils.loads(from_db_request_spec['spec'])
         self.assertDictEqual(expected_spec, db_spec)
 
+    def _check_058(self, engine, data):
+        self.assertColumnExists(engine, 'cell_mappings', 'disabled')
+
 
 class TestNovaAPIMigrationsWalkSQLite(NovaAPIMigrationsWalk,
                                       test_base.DbTestCase,
