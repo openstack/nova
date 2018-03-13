@@ -543,6 +543,36 @@ class TestProviderTree(test.NoDBTestCase):
         self.assertEqual(rp_gen, pt.data(cn.uuid).generation)
         self.assertTrue(pt.has_traits(cn.uuid, traits[-1:]))
 
+    def test_add_remove_traits(self):
+        cn = self.compute_node1
+        pt = self._pt_with_cns()
+        self.assertEqual(set([]), pt.data(cn.uuid).traits)
+        # Add a couple of traits
+        pt.add_traits(cn.uuid, "HW_GPU_API_DIRECT3D_V7_0", "HW_NIC_OFFLOAD_SG")
+        self.assertEqual(
+            set(["HW_GPU_API_DIRECT3D_V7_0", "HW_NIC_OFFLOAD_SG"]),
+            pt.data(cn.uuid).traits)
+        # set() behavior: add a trait that's already there, and one that's not.
+        # The unrelated one is unaffected.
+        pt.add_traits(cn.uuid, "HW_GPU_API_DIRECT3D_V7_0", "HW_CPU_X86_AVX")
+        self.assertEqual(
+            set(["HW_GPU_API_DIRECT3D_V7_0", "HW_NIC_OFFLOAD_SG",
+                 "HW_CPU_X86_AVX"]),
+            pt.data(cn.uuid).traits)
+        # Now remove a trait
+        pt.remove_traits(cn.uuid, "HW_NIC_OFFLOAD_SG")
+        self.assertEqual(
+            set(["HW_GPU_API_DIRECT3D_V7_0", "HW_CPU_X86_AVX"]),
+            pt.data(cn.uuid).traits)
+        # set() behavior: remove a trait that's there, and one that's not.
+        # The unrelated one is unaffected.
+        pt.remove_traits(cn.uuid,
+                         "HW_NIC_OFFLOAD_SG", "HW_GPU_API_DIRECT3D_V7_0")
+        self.assertEqual(set(["HW_CPU_X86_AVX"]), pt.data(cn.uuid).traits)
+        # Remove the last trait, and an unrelated one
+        pt.remove_traits(cn.uuid, "CUSTOM_FOO", "HW_CPU_X86_AVX")
+        self.assertEqual(set([]), pt.data(cn.uuid).traits)
+
     def test_have_aggregates_changed_no_existing_rp(self):
         pt = self._pt_with_cns()
         self.assertRaises(
@@ -597,3 +627,29 @@ class TestProviderTree(test.NoDBTestCase):
         self.assertTrue(pt.in_aggregates(cn.uuid, aggregates[-1:]))
         # Previously-taken data now differs
         self.assertTrue(pt.have_aggregates_changed(cn.uuid, cnsnap.aggregates))
+
+    def test_add_remove_aggregates(self):
+        cn = self.compute_node1
+        pt = self._pt_with_cns()
+        self.assertEqual(set([]), pt.data(cn.uuid).aggregates)
+        # Add a couple of aggregates
+        pt.add_aggregates(cn.uuid, uuids.agg1, uuids.agg2)
+        self.assertEqual(
+            set([uuids.agg1, uuids.agg2]),
+            pt.data(cn.uuid).aggregates)
+        # set() behavior: add an aggregate that's already there, and one that's
+        # not. The unrelated one is unaffected.
+        pt.add_aggregates(cn.uuid, uuids.agg1, uuids.agg3)
+        self.assertEqual(set([uuids.agg1, uuids.agg2, uuids.agg3]),
+                         pt.data(cn.uuid).aggregates)
+        # Now remove an aggregate
+        pt.remove_aggregates(cn.uuid, uuids.agg2)
+        self.assertEqual(set([uuids.agg1, uuids.agg3]),
+                         pt.data(cn.uuid).aggregates)
+        # set() behavior: remove an aggregate that's there, and one that's not.
+        # The unrelated one is unaffected.
+        pt.remove_aggregates(cn.uuid, uuids.agg2, uuids.agg3)
+        self.assertEqual(set([uuids.agg1]), pt.data(cn.uuid).aggregates)
+        # Remove the last aggregate, and an unrelated one
+        pt.remove_aggregates(cn.uuid, uuids.agg4, uuids.agg1)
+        self.assertEqual(set([]), pt.data(cn.uuid).aggregates)

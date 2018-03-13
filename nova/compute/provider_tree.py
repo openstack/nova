@@ -512,6 +512,30 @@ class ProviderTree(object):
             provider = self._find_with_lock(name_or_uuid)
             return provider.update_traits(traits, generation=generation)
 
+    def add_traits(self, name_or_uuid, *traits):
+        """Set traits on a provider, without affecting existing traits.
+
+        :param name_or_uuid: The name or UUID of the provider whose traits are
+                             to be affected.
+        :param traits: String names of traits to be added.
+        """
+        with self.lock:
+            provider = self._find_with_lock(name_or_uuid)
+            final_traits = provider.traits | set(traits)
+            provider.update_traits(final_traits)
+
+    def remove_traits(self, name_or_uuid, *traits):
+        """Unset traits on a provider, without affecting other existing traits.
+
+        :param name_or_uuid: The name or UUID of the provider whose traits are
+                             to be affected.
+        :param traits: String names of traits to be removed.
+        """
+        with self.lock:
+            provider = self._find_with_lock(name_or_uuid)
+            final_traits = provider.traits - set(traits)
+            provider.update_traits(final_traits)
+
     def in_aggregates(self, name_or_uuid, aggregates):
         """Given a name or UUID of a provider, query whether that provider is a
         member of *all* the specified aggregates.
@@ -567,3 +591,28 @@ class ProviderTree(object):
             provider = self._find_with_lock(name_or_uuid)
             return provider.update_aggregates(aggregates,
                                               generation=generation)
+
+    def add_aggregates(self, name_or_uuid, *aggregates):
+        """Set aggregates on a provider, without affecting existing aggregates.
+
+        :param name_or_uuid: The name or UUID of the provider whose aggregates
+                             are to be affected.
+        :param aggregates: String UUIDs of aggregates to be added.
+        """
+        with self.lock:
+            provider = self._find_with_lock(name_or_uuid)
+            final_aggs = provider.aggregates | set(aggregates)
+            provider.update_aggregates(final_aggs)
+
+    def remove_aggregates(self, name_or_uuid, *aggregates):
+        """Unset aggregates on a provider, without affecting other existing
+        aggregates.
+
+        :param name_or_uuid: The name or UUID of the provider whose aggregates
+                             are to be affected.
+        :param aggregates: String UUIDs of aggregates to be removed.
+        """
+        with self.lock:
+            provider = self._find_with_lock(name_or_uuid)
+            final_aggs = provider.aggregates - set(aggregates)
+            provider.update_aggregates(final_aggs)
