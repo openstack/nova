@@ -1,0 +1,8 @@
+---
+features:
+  - |
+    The nova-manage discover_hosts command now has a ``--by-service`` option which
+    allows discovering hosts in a cell purely by the presence of a nova-compute
+    binary. At this point, there is no need to use this unless you're using ironic,
+    as it is less efficient. However, if you are using ironic, this allows discovery
+    and mapping of hosts even when no ironic nodes are present.
