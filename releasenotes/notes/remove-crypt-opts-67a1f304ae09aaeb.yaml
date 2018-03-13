@@ -1,0 +1,16 @@
+---
+upgrade:
+  - |
+    The following options, previously found in the ``[crypto]`` group, have
+    been removed:
+
+    - ``ca_file``
+    - ``key_file``
+    - ``crl_file``
+    - ``keys_path``
+    - ``ca_path``
+    - ``use_project_ca``
+    - ``user_cert_subject``
+    - ``project_cert_subject``
+
+    These have not been used in recent releases.
