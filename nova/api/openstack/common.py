@@ -346,18 +346,6 @@ def raise_http_conflict_for_instance_invalid_state(exc, action, server_id):
     raise webob.exc.HTTPConflict(explanation=msg)
 
 
-def check_snapshots_enabled(f):
-    @functools.wraps(f)
-    def inner(*args, **kwargs):
-        if not CONF.api.allow_instance_snapshots:
-            LOG.warning('Rejecting snapshot request, snapshots currently'
-                        ' disabled')
-            msg = _("Instance snapshots are not permitted at this time.")
-            raise webob.exc.HTTPBadRequest(explanation=msg)
-        return f(*args, **kwargs)
-    return inner
-
-
 def url_join(*parts):
     """Convenience method for joining parts of a URL
 

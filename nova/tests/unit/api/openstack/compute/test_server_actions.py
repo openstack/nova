@@ -86,9 +86,7 @@ class ServerActionsControllerTestV21(test.TestCase):
         fakes.stub_out_nw_api(self)
         fakes.stub_out_compute_api_snapshot(self)
         fake.stub_out_image_service(self)
-        self.flags(allow_instance_snapshots=True,
-                   enable_instance_password=True,
-                   group='api')
+        self.flags(enable_instance_password=True, group='api')
         self._image_href = '155d900f-4e14-4e4c-a73d-069cbf4541e6'
 
         self.controller = self._get_controller()
@@ -1129,20 +1127,6 @@ class ServerActionsControllerTestV21(test.TestCase):
     def test_create_vol_backed_img_with_meta_from_vol_with_extra_meta(self):
         self._test_create_volume_backed_image_with_metadata_from_volume(
             extra_metadata={'a': 'b'})
-
-    def test_create_image_snapshots_disabled(self):
-        """Don't permit a snapshot if the allow_instance_snapshots flag is
-        False
-        """
-        self.flags(allow_instance_snapshots=False, group='api')
-        body = {
-            'createImage': {
-                'name': 'Snapshot 1',
-            },
-        }
-        self.assertRaises(webob.exc.HTTPBadRequest,
-                          self.controller._action_create_image,
-                          self.req, FAKE_UUID, body=body)
 
     def test_create_image_with_metadata(self):
         body = {
