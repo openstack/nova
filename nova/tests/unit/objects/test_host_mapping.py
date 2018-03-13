@@ -211,3 +211,73 @@ class TestHostMappingDiscovery(test.NoDBTestCase):
         self.assertTrue(mock_hm_create.called)
         self.assertEqual(['d'],
                          [hm.host for hm in hms])
+
+    @mock.patch('nova.objects.CellMappingList.get_all')
+    @mock.patch('nova.objects.HostMapping.get_by_host')
+    @mock.patch('nova.objects.HostMapping.create')
+    @mock.patch('nova.objects.ServiceList.get_by_binary')
+    def test_discover_services(self, mock_srv, mock_hm_create,
+                               mock_hm_get, mock_cm):
+        mock_cm.return_value = [
+            objects.CellMapping(uuid=uuids.cell1),
+            objects.CellMapping(uuid=uuids.cell2),
+        ]
+        mock_srv.side_effect = [
+            [objects.Service(host='host1'),
+             objects.Service(host='host2')],
+            [objects.Service(host='host3')],
+        ]
+
+        def fake_get_host_mapping(ctxt, host):
+            if host == 'host2':
+                return
+            else:
+                raise exception.HostMappingNotFound(name=host)
+
+        mock_hm_get.side_effect = fake_get_host_mapping
+
+        ctxt = context.get_admin_context()
+        mappings = host_mapping.discover_hosts(ctxt, by_service=True)
+        self.assertEqual(2, len(mappings))
+        self.assertEqual(['host1', 'host3'],
+                         sorted([m.host for m in mappings]))
+
+    @mock.patch('nova.objects.CellMapping.get_by_uuid')
+    @mock.patch('nova.objects.HostMapping.get_by_host')
+    @mock.patch('nova.objects.HostMapping.create')
+    @mock.patch('nova.objects.ServiceList.get_by_binary')
+    def test_discover_services_one_cell(self, mock_srv, mock_hm_create,
+                                        mock_hm_get, mock_cm):
+        mock_cm.return_value = objects.CellMapping(uuid=uuids.cell1)
+        mock_srv.return_value = [
+            objects.Service(host='host1'),
+            objects.Service(host='host2'),
+        ]
+
+        def fake_get_host_mapping(ctxt, host):
+            if host == 'host2':
+                return
+            else:
+                raise exception.HostMappingNotFound(name=host)
+
+        mock_hm_get.side_effect = fake_get_host_mapping
+
+        lines = []
+
+        def fake_status(msg):
+            lines.append(msg)
+
+        ctxt = context.get_admin_context()
+        mappings = host_mapping.discover_hosts(ctxt, cell_uuid=uuids.cell1,
+                                               status_fn=fake_status,
+                                               by_service=True)
+        self.assertEqual(1, len(mappings))
+        self.assertEqual(['host1'],
+                         sorted([m.host for m in mappings]))
+
+        expected = """\
+Getting computes from cell: %(cell)s
+Creating host mapping for service host1
+Found 1 unmapped computes in cell: %(cell)s""" % {'cell': uuids.cell1}
+
+        self.assertEqual(expected, '\n'.join(lines))
