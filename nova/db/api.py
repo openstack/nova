@@ -1572,17 +1572,6 @@ def flavor_extra_specs_delete(context, flavor_id, key):
     """Delete the given extra specs item."""
     IMPL.flavor_extra_specs_delete(context, flavor_id, key)
 
-
-def flavor_extra_specs_update_or_create(context, flavor_id,
-                                               extra_specs):
-    """Create or update instance type extra specs.
-
-    This adds or modifies the key/value pairs specified in the
-    extra specs dict argument
-    """
-    IMPL.flavor_extra_specs_update_or_create(context, flavor_id,
-                                                    extra_specs)
-
 ####################
 
 
