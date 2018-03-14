@@ -13882,6 +13882,50 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertEqual(0, drvr._get_disk_over_committed_size_total())
 
+    @mock.patch('nova.virt.libvirt.host.Host.list_instance_domains')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_get_instance_disk_info_from_config',
+                side_effect=exception.DiskNotFound(location='/opt/stack/foo'))
+    @mock.patch('nova.objects.BlockDeviceMappingList.bdms_by_instance_uuid',
+                return_value=objects.BlockDeviceMappingList())
+    @mock.patch('nova.objects.InstanceList.get_by_filters',
+                return_value=objects.InstanceList(objects=[
+                    objects.Instance(uuid=uuids.instance,
+                                     task_state=task_states.DELETING)]))
+    def test_disk_over_committed_size_total_disk_not_found_ignore(
+            self, mock_get, mock_bdms, mock_get_disk_info, mock_list_domains):
+        """Tests that we handle DiskNotFound gracefully for an instance that
+        is undergoing a task_state transition.
+        """
+        mock_dom = mock.Mock()
+        mock_dom.XMLDesc.return_value = "<domain/>"
+        mock_dom.UUIDString.return_value = uuids.instance
+        mock_list_domains.return_value = [mock_dom]
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertEqual(0, drvr._get_disk_over_committed_size_total())
+
+    @mock.patch('nova.virt.libvirt.host.Host.list_instance_domains')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.'
+                '_get_instance_disk_info_from_config',
+                side_effect=exception.DiskNotFound(location='/opt/stack/foo'))
+    @mock.patch('nova.objects.BlockDeviceMappingList.bdms_by_instance_uuid',
+                return_value=objects.BlockDeviceMappingList())
+    @mock.patch('nova.objects.InstanceList.get_by_filters',
+                return_value=objects.InstanceList(objects=[
+                    objects.Instance(uuid=uuids.instance, task_state=None)]))
+    def test_disk_over_committed_size_total_disk_not_found_reraise(
+            self, mock_get, mock_bdms, mock_get_disk_info, mock_list_domains):
+        """Tests that we handle DiskNotFound gracefully for an instance that
+        is NOT undergoing a task_state transition and the error is re-raised.
+        """
+        mock_dom = mock.Mock()
+        mock_dom.XMLDesc.return_value = "<domain/>"
+        mock_dom.UUIDString.return_value = uuids.instance
+        mock_list_domains.return_value = [mock_dom]
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        self.assertRaises(exception.DiskNotFound,
+                          drvr._get_disk_over_committed_size_total)
+
     def test_cpu_info(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
 

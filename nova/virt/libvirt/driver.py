@@ -7989,6 +7989,24 @@ class LibvirtDriver(driver.ComputeDriver):
                             'by concurrent operations such as resize. '
                             'Error: %(error)s',
                             {'i_name': guest.name, 'error': e})
+            except exception.DiskNotFound:
+                with excutils.save_and_reraise_exception() as err_ctxt:
+                    # If the instance is undergoing a task state transition,
+                    # like moving to another host or is being deleted, we
+                    # should ignore this instance and move on.
+                    if guest.uuid in local_instances:
+                        inst = local_instances[guest.uuid]
+                        if inst.task_state is not None:
+                            LOG.info('Periodic task is updating the host '
+                                     'stats; it is trying to get disk info '
+                                     'for %(i_name)s, but the backing disk '
+                                     'was removed by a concurrent operation '
+                                     '(task_state=%(task_state)s)',
+                                     {'i_name': guest.name,
+                                      'task_state': inst.task_state},
+                                     instance=inst)
+                            err_ctxt.reraise = False
+
             # NOTE(gtt116): give other tasks a chance.
             greenthread.sleep(0)
         return disk_over_committed_size
