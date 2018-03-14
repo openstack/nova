@@ -12087,28 +12087,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_hard_reboot.assert_called_once_with(self.context,
                                                  instance, [], None)
 
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._get_neutron_events')
-    @mock.patch('nova.virt.libvirt.LibvirtDriver.plug_vifs')
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._lxc_disk_handler')
-    @mock.patch('nova.virt.libvirt.LibvirtDriver._create_domain')
-    def test_create_domain_and_network_reboot(self, mock_create, mock_handler,
-                                              mock_plug, mock_events):
-        # Verify that we call get_neutron_events with reboot=True if
-        # create_domain_and_network was called with reboot=True
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        instance = objects.Instance(**self.test_instance)
-        network_info = _fake_network_info(self, 1)
-
-        @mock.patch.object(drvr.firewall_driver, 'setup_basic_filtering')
-        @mock.patch.object(drvr.firewall_driver, 'prepare_instance_filter')
-        @mock.patch.object(drvr.firewall_driver, 'apply_instance_filter')
-        def _do_create(mock_apply, mock_prepare, mock_setup):
-            drvr._create_domain_and_network(self.context, mock.sentinel.xml,
-                                            instance, network_info,
-                                            reboot=True)
-        _do_create()
-        mock_events.assert_called_once_with(network_info, reboot=True)
-
     @mock.patch('nova.virt.libvirt.LibvirtDriver.get_info')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._create_domain_and_network')
     @mock.patch('nova.virt.libvirt.LibvirtDriver._get_guest_xml')
@@ -12171,7 +12149,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         mock_create_domain_and_network.assert_called_once_with(self.context,
             dummyxml, instance, network_info,
-            block_device_info=block_device_info, reboot=True)
+            block_device_info=block_device_info, vifs_already_plugged=True)
 
     @mock.patch('oslo_utils.fileutils.ensure_tree')
     @mock.patch('oslo_service.loopingcall.FixedIntervalLoopingCall')
@@ -15063,19 +15041,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                         network_model.VIF(id='2', active=True)]
         events = drvr._get_neutron_events(network_info)
         self.assertEqual([('network-vif-plugged', '1')], events)
-
-    def test_get_neutron_events_reboot(self):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        bridge = network_model.VIF_TYPE_BRIDGE
-        ovs = network_model.VIF_TYPE_OVS
-        network_info = [network_model.VIF(id='1'),
-                        network_model.VIF(id='2', active=True),
-                        network_model.VIF(id='3', type=bridge),
-                        network_model.VIF(id='4', type=ovs)]
-        events = drvr._get_neutron_events(network_info, reboot=True)
-        self.assertEqual([('network-vif-plugged', '1'),
-                          ('network-vif-plugged', '2'),
-                          ('network-vif-plugged', '4')], events)
 
     def test_unplug_vifs_ignores_errors(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
