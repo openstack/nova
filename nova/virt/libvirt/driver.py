@@ -2750,9 +2750,14 @@ class LibvirtDriver(driver.ComputeDriver):
 
         # Initialize all the necessary networking, block devices and
         # start the instance.
-        self._create_domain_and_network(
-            context, xml, instance, network_info,
-            block_device_info=block_device_info, reboot=True)
+        # NOTE(melwitt): Pass vifs_already_plugged=True here even though we've
+        # unplugged vifs earlier. The behavior of neutron plug events depends
+        # on which vif type we're using and we are working with a stale network
+        # info cache here, so won't rely on waiting for neutron plug events.
+        # vifs_already_plugged=True means "do not wait for neutron plug events"
+        self._create_domain_and_network(context, xml, instance, network_info,
+                                        block_device_info=block_device_info,
+                                        vifs_already_plugged=True)
         self._prepare_pci_devices_for_use(
             pci_manager.get_instance_pci_devs(instance, 'all'))
 
@@ -5422,25 +5427,14 @@ class LibvirtDriver(driver.ComputeDriver):
         if CONF.vif_plugging_is_fatal:
             raise exception.VirtualInterfaceCreateException()
 
-    def _get_neutron_events(self, network_info, reboot=False):
-        def eventable(vif):
-            if reboot:
-                # NOTE(melwitt): We won't expect events for the bridge vif
-                # type during a reboot because the neutron agent might not
-                # detect that we have unplugged and plugged vifs with os-vif.
-                # We also disregard the 'active' status of the vif during a
-                # reboot because the stale network_info we get from the compute
-                # manager won't show active=False for the vifs we've unplugged.
-                return vif.get('type') != network_model.VIF_TYPE_BRIDGE
-            # NOTE(danms): We need to collect any VIFs that are currently
-            # down that we expect a down->up event for. Anything that is
-            # already up will not undergo that transition, and for
-            # anything that might be stale (cache-wise) assume it's
-            # already up so we don't block on it.
-            return vif.get('active', True) is False
-
+    def _get_neutron_events(self, network_info):
+        # NOTE(danms): We need to collect any VIFs that are currently
+        # down that we expect a down->up event for. Anything that is
+        # already up will not undergo that transition, and for
+        # anything that might be stale (cache-wise) assume it's
+        # already up so we don't block on it.
         return [('network-vif-plugged', vif['id'])
-                for vif in network_info if eventable(vif)]
+                for vif in network_info if vif.get('active', True) is False]
 
     def _cleanup_failed_start(self, context, instance, network_info,
                               block_device_info, guest, destroy_disks):
@@ -5456,33 +5450,14 @@ class LibvirtDriver(driver.ComputeDriver):
                                    block_device_info=None, power_on=True,
                                    vifs_already_plugged=False,
                                    post_xml_callback=None,
-                                   destroy_disks_on_failure=False,
-                                   reboot=False):
+                                   destroy_disks_on_failure=False):
 
-        """Do required network setup and create domain.
-
-        :param context: nova.context.RequestContext for volume API calls
-        :param xml: Guest domain XML
-        :param instance: nova.objects.Instance object
-        :param network_info: nova.network.model.NetworkInfo for the instance
-        :param block_device_info: Legacy block device info dict
-        :param power_on: Whether to power on the guest after creating the XML
-        :param vifs_already_plugged: False means "wait for neutron plug events"
-                                     if using neutron, qemu/kvm, power_on=True,
-                                     and CONF.vif_plugging_timeout configured
-        :param post_xml_callback: Optional callback to call after creating the
-                                  guest domain XML
-        :param destroy_disks_on_failure: Whether to destroy the disks if we
-                                         fail during guest domain creation
-        :param reboot: Whether or not this is being called during a reboot. If
-                       we are rebooting, we will need to handle waiting for
-                       neutron plug events differently
-        """
+        """Do required network setup and create domain."""
         timeout = CONF.vif_plugging_timeout
         if (self._conn_supports_start_paused and
             utils.is_neutron() and not
             vifs_already_plugged and power_on and timeout):
-            events = self._get_neutron_events(network_info, reboot=reboot)
+            events = self._get_neutron_events(network_info)
         else:
             events = []
 
