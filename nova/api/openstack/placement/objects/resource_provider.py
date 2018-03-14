@@ -27,6 +27,8 @@ from oslo_config import cfg
 from oslo_db import api as oslo_db_api
 from oslo_db import exception as db_exc
 from oslo_log import log as logging
+from oslo_versionedobjects import base
+from oslo_versionedobjects import fields
 import six
 import sqlalchemy as sa
 from sqlalchemy import exc as sqla_exc
@@ -39,8 +41,6 @@ from nova.db.sqlalchemy import api_models as models
 from nova.db.sqlalchemy import resource_class_cache as rc_cache
 from nova import exception
 from nova.i18n import _
-from nova.objects import base
-from nova.objects import fields
 from nova import rc_fields
 
 _TRAIT_TBL = models.Trait.__table__
@@ -652,8 +652,8 @@ def _delete_rp_record(context, _id):
         delete(synchronize_session=False)
 
 
-@base.NovaObjectRegistry.register_if(False)
-class ResourceProvider(base.NovaObject, base.NovaTimestampObject):
+@base.VersionedObjectRegistry.register_if(False)
+class ResourceProvider(base.VersionedObject, base.TimestampedObject):
     SETTABLE_FIELDS = ('name', 'parent_provider_uuid')
 
     fields = {
@@ -1377,8 +1377,8 @@ def _get_all_with_shared(ctx, resources):
     return [r for r in ctx.session.execute(sel)]
 
 
-@base.NovaObjectRegistry.register_if(False)
-class ResourceProviderList(base.ObjectListBase, base.NovaObject):
+@base.VersionedObjectRegistry.register_if(False)
+class ResourceProviderList(base.ObjectListBase, base.VersionedObject):
 
     fields = {
         'objects': fields.ListOfObjectsField('ResourceProvider'),
@@ -1597,8 +1597,8 @@ class ResourceProviderList(base.ObjectListBase, base.NovaObject):
                                   ResourceProvider, resource_providers)
 
 
-@base.NovaObjectRegistry.register_if(False)
-class Inventory(base.NovaObject, base.NovaTimestampObject):
+@base.VersionedObjectRegistry.register_if(False)
+class Inventory(base.VersionedObject, base.TimestampedObject):
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -1638,8 +1638,8 @@ def _get_inventory_by_provider_id(ctx, rp_id):
     return [dict(r) for r in ctx.session.execute(sel)]
 
 
-@base.NovaObjectRegistry.register_if(False)
-class InventoryList(base.ObjectListBase, base.NovaObject):
+@base.VersionedObjectRegistry.register_if(False)
+class InventoryList(base.ObjectListBase, base.VersionedObject):
 
     fields = {
         'objects': fields.ListOfObjectsField('Inventory'),
@@ -1682,8 +1682,8 @@ class InventoryList(base.ObjectListBase, base.NovaObject):
         return inv_list
 
 
-@base.NovaObjectRegistry.register_if(False)
-class Allocation(base.NovaObject, base.NovaTimestampObject):
+@base.VersionedObjectRegistry.register_if(False)
+class Allocation(base.VersionedObject, base.TimestampedObject):
 
     fields = {
         'id': fields.IntegerField(),
@@ -2006,8 +2006,8 @@ def _get_allocations_by_consumer_uuid(ctx, consumer_uuid):
     return [dict(r) for r in ctx.session.execute(sel)]
 
 
-@base.NovaObjectRegistry.register_if(False)
-class AllocationList(base.ObjectListBase, base.NovaObject):
+@base.VersionedObjectRegistry.register_if(False)
+class AllocationList(base.ObjectListBase, base.VersionedObject):
 
     fields = {
         'objects': fields.ListOfObjectsField('Allocation'),
@@ -2171,8 +2171,8 @@ class AllocationList(base.ObjectListBase, base.NovaObject):
         return "AllocationList[" + ", ".join(strings) + "]"
 
 
-@base.NovaObjectRegistry.register_if(False)
-class Usage(base.NovaObject):
+@base.VersionedObjectRegistry.register_if(False)
+class Usage(base.VersionedObject):
 
     fields = {
         'resource_class': rc_fields.ResourceClassField(read_only=True),
@@ -2194,8 +2194,8 @@ class Usage(base.NovaObject):
         return target
 
 
-@base.NovaObjectRegistry.register_if(False)
-class UsageList(base.ObjectListBase, base.NovaObject):
+@base.VersionedObjectRegistry.register_if(False)
+class UsageList(base.ObjectListBase, base.VersionedObject):
 
     fields = {
         'objects': fields.ListOfObjectsField('Usage'),
@@ -2255,8 +2255,8 @@ class UsageList(base.ObjectListBase, base.NovaObject):
         return "UsageList[" + ", ".join(strings) + "]"
 
 
-@base.NovaObjectRegistry.register_if(False)
-class ResourceClass(base.NovaObject, base.NovaTimestampObject):
+@base.VersionedObjectRegistry.register_if(False)
+class ResourceClass(base.VersionedObject, base.TimestampedObject):
 
     MIN_CUSTOM_RESOURCE_CLASS_ID = 10000
     """Any user-defined resource classes must have an identifier greater than
@@ -2422,8 +2422,8 @@ class ResourceClass(base.NovaObject, base.NovaTimestampObject):
             raise exception.ResourceClassExists(resource_class=name)
 
 
-@base.NovaObjectRegistry.register_if(False)
-class ResourceClassList(base.ObjectListBase, base.NovaObject):
+@base.VersionedObjectRegistry.register_if(False)
+class ResourceClassList(base.ObjectListBase, base.VersionedObject):
 
     fields = {
         'objects': fields.ListOfObjectsField('ResourceClass'),
@@ -2447,8 +2447,8 @@ class ResourceClassList(base.ObjectListBase, base.NovaObject):
         return "ResourceClassList[" + ", ".join(strings) + "]"
 
 
-@base.NovaObjectRegistry.register_if(False)
-class Trait(base.NovaObject, base.NovaTimestampObject):
+@base.VersionedObjectRegistry.register_if(False)
+class Trait(base.VersionedObject, base.TimestampedObject):
 
     # All the user-defined traits must begin with this prefix.
     CUSTOM_NAMESPACE = 'CUSTOM_'
@@ -2534,8 +2534,8 @@ class Trait(base.NovaObject, base.NovaTimestampObject):
         self._destroy_in_db(self._context, self.id, self.name)
 
 
-@base.NovaObjectRegistry.register_if(False)
-class TraitList(base.ObjectListBase, base.NovaObject):
+@base.VersionedObjectRegistry.register_if(False)
+class TraitList(base.ObjectListBase, base.VersionedObject):
 
     fields = {
         'objects': fields.ListOfObjectsField('Trait')
@@ -2582,8 +2582,8 @@ class TraitList(base.ObjectListBase, base.NovaObject):
         return base.obj_make_list(context, cls(context), Trait, db_traits)
 
 
-@base.NovaObjectRegistry.register_if(False)
-class AllocationRequestResource(base.NovaObject):
+@base.VersionedObjectRegistry.register_if(False)
+class AllocationRequestResource(base.VersionedObject):
 
     fields = {
         'resource_provider': fields.ObjectField('ResourceProvider'),
@@ -2592,8 +2592,8 @@ class AllocationRequestResource(base.NovaObject):
     }
 
 
-@base.NovaObjectRegistry.register_if(False)
-class AllocationRequest(base.NovaObject):
+@base.VersionedObjectRegistry.register_if(False)
+class AllocationRequest(base.VersionedObject):
 
     fields = {
         'resource_requests': fields.ListOfObjectsField(
@@ -2602,8 +2602,8 @@ class AllocationRequest(base.NovaObject):
     }
 
 
-@base.NovaObjectRegistry.register_if(False)
-class ProviderSummaryResource(base.NovaObject):
+@base.VersionedObjectRegistry.register_if(False)
+class ProviderSummaryResource(base.VersionedObject):
 
     fields = {
         'resource_class': rc_fields.ResourceClassField(read_only=True),
@@ -2612,8 +2612,8 @@ class ProviderSummaryResource(base.NovaObject):
     }
 
 
-@base.NovaObjectRegistry.register_if(False)
-class ProviderSummary(base.NovaObject):
+@base.VersionedObjectRegistry.register_if(False)
+class ProviderSummary(base.VersionedObject):
 
     fields = {
         'resource_provider': fields.ObjectField('ResourceProvider'),
@@ -3455,8 +3455,8 @@ def _trait_ids_from_names(ctx, names):
     return {r[0]: r[1] for r in ctx.session.execute(sel)}
 
 
-@base.NovaObjectRegistry.register_if(False)
-class AllocationCandidates(base.NovaObject):
+@base.VersionedObjectRegistry.register_if(False)
+class AllocationCandidates(base.VersionedObject):
     """The AllocationCandidates object is a collection of possible allocations
     that match some request for resources, along with some summary information
     about the resource providers involved in these allocation candidates.
