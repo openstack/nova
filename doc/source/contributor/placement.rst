@@ -54,11 +54,11 @@ additional resources should be considered a significant change requiring robust
 review from many stakeholders.
 
 The set of HTTP resources represents a concise and constrained grammar for
-expressing the management of resource providers, inventories, resource classes
-and allocations. If a solution is initially designed to need more resources or
-a more complex grammar that may be a sign that we need to give our goals
-greater scrutiny. Is there a way to do what we want with what we have already?
-Can some other service help? Is a new collaborating service required?
+expressing the management of resource providers, inventories, resource classes,
+traits, and allocations. If a solution is initially designed to need more
+resources or a more complex grammar that may be a sign that we need to give our
+goals greater scrutiny. Is there a way to do what we want with what we have
+already?  Can some other service help? Is a new collaborating service required?
 
 Minimal Framework
 =================
@@ -172,18 +172,12 @@ granular way to have different behavior per microversion. A
 ``Version`` instance can be treated as a tuple of two ints and
 compared as such or there is a ``matches`` method.
 
-In other cases there are some helper methods in the microversion
-package:
-
-* The ``raise_http_status_code_if_not_version`` utility will raise a
-  http status code if the requested microversion is not within a
-  described version window.
-* The ``version_handler`` decorator makes it possible to have
-  multiple different handler methods of the same (fully-qualified by
-  package) name, each available for a different microversion window.
-  If a request wants a microversion that's not available, a 404
-  response is returned. There is a unit test in place which will
-  fail if there are version intersections.
+A ``version_handler`` decorator is also available. It makes it possible to have
+multiple different handler methods of the same (fully-qualified by package)
+name, each available for a different microversion window.  If a request wants a
+microversion that's not available, a defined status code is returned (usually
+``404`` or ``405``). There is a unit test in place which will fail if there are
+version intersections.
 
 Adding a New Handler
 ====================
@@ -245,7 +239,8 @@ request, the caller is responsible for selecting the right one before calling
 ``extract_json``.
 
 When a handler needs to read or write the data store it should use methods on
-the objects found in the `nova.objects.resource_provider` package. Doing so
+the objects found in the
+`nova.api.openstack.placement.objects.resource_provider` package. Doing so
 requires a context which is provided to the handler method via the WSGI
 environment. It can be retrieved as follows::
 
@@ -266,9 +261,9 @@ Most of the handler code in the placement API is tested using `gabbi`_. Some
 utility code is tested with unit tests found in
 `nova/tests/unit/api/openstack/placement/`. The back-end objects are tested
 with a combination of unit and functional tests found in
-``nova/tests/unit/objects/test_resource_provider.py`` and
-`nova/tests/functional/db`. Adding unit and non-gabbi functional tests is done
-in the same way as other aspects of nova.
+``nova/tests/unit/api/openstack/placement/objects/test_resource_provider.py``
+and `nova/tests/functional/db`. Adding unit and non-gabbi functional tests is
+done in the same way as other aspects of nova.
 
 Using Gabbi
 -----------
@@ -283,12 +278,12 @@ application is run via `wsgi-intercept`_, meaning that real HTTP requests are
 being made over a file handle that appears to Python to be a socket.
 
 In the placement API the YAML files (aka "gabbits") can be found in
-``nova/tests/functional/api/openstack/placement/gabbits``. Fixture definitions are
-in ``fixtures.py`` in the parent directory. Tests are currently grouped by handlers
-(e.g., ``resource-provider.yaml`` and ``inventory.yaml``). This is not a
-requirement and as we increase the number of tests it makes sense to have more
-YAML files with fewer tests, divided up by the arc of API interaction that they
-test.
+``nova/tests/functional/api/openstack/placement/gabbits``. Fixture definitions
+are in ``fixtures.py`` in the parent directory. Tests are currently grouped by
+handlers (e.g., ``resource-provider.yaml`` and ``inventory.yaml``). This is not
+a requirement and as we increase the number of tests it makes sense to have
+more YAML files with fewer tests, divided up by the arc of API interaction that
+they test.
 
 The gabbi tests are integrated into the functional tox target, loaded via
 ``nova/tests/functional/api/openstack/placement/test_placement_api.py``. If you
@@ -307,10 +302,10 @@ the name in the yaml file, replacing space with ``_``::
 
     tox -efunctional placement_api.inventory_post_new_ipv4_address_inventory
 
-.. note:: `.testr.conf` in the nova repository is configured such that each
-          gabbi YAML is considered a group. Thus, all tests in the file will
-          be run in the same process when running testr concurrently (the
-          default).
+.. note:: ``tox.ini`` in the nova repository is configured by a ``group_regex``
+          so that each gabbi YAML is considered a group. Thus, all tests in the
+          file will be run in the same process when running stestr concurrently
+          (the default).
 
 Writing More Gabbi Tests
 ------------------------
@@ -365,20 +360,19 @@ To lessen the pain of the eventual extraction of placement the service has been
 developed in a way to limit dependency on the rest of the nova codebase and be
 self-contained:
 
-* Most code is in `nova/api/openstack/placement` except for oslo versioned
-  object code in ``nova/objects/resource_provider.py``.
-* Database query code is kept within the objects.
+* Most code is in `nova/api/openstack/placement`.
+* Database query code is kept within the objects in
+  `nova/api/openstack/placement/objects`.
 * The methods on the objects are not remotable, as the only intended caller is
   the placement API code.
 
-There are some exceptions to the self-contained rule (which will have to be
-addressed if the extraction ever happens):
+There are some exceptions to the self-contained rule (which are actively being
+addressed to prepare for the extraction):
 
 * Exceptions unique to the placement API are still within the `nova.exceptions`
   package.
 * Code related to a resource class cache is within the `nova.db` package.
 * Database models, migrations and tables use the nova api database.
-* The nova `FaultWrapper` middleware is being used.
 * `nova.i18n` package provides the ``_`` and related functions.
 * ``nova.conf`` is used for configuration.
 * Unit and functional tests depend on fixtures and other functionality in base
