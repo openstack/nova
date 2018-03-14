@@ -35,7 +35,7 @@ setuptools!=24.0.0,!=34.0.0,!=34.0.1,!=34.0.2,!=34.0.3,!=34.1.0,!=34.1.1,!=34.2.
 websockify>=0.8.0 # LGPLv3
 oslo.cache>=1.26.0 # Apache-2.0
 oslo.concurrency>=3.25.0 # Apache-2.0
-oslo.config>=5.1.0 # Apache-2.0
+oslo.config>=5.2.0 # Apache-2.0
 oslo.context>=2.19.2 # Apache-2.0
 oslo.log>=3.36.0 # Apache-2.0
 oslo.reports>=1.18.0 # Apache-2.0
