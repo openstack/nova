@@ -160,6 +160,13 @@ def set_vif_host_backend_vhostuser_config(conf, mode, path, rx_queue_size,
         conf.vhost_tx_queue_size = tx_queue_size
 
 
+def set_vif_mtu_config(conf, mtu):
+    """Populate a LibvirtConfigGuestInterface instance
+    with network mtu.
+    """
+    conf.mtu = mtu
+
+
 def set_vif_bandwidth_config(conf, inst_type):
     """Config vif inbound/outbound bandwidth limit. parameters are
     set in instance_type_extra_specs table, key is in  the format

@@ -219,3 +219,8 @@ class DesignerTestCase(test.NoDBTestCase):
         self.assertEqual('fake-path', conf.vhostuser_path)
         self.assertEqual(512, conf.vhost_rx_queue_size)
         self.assertIsNone(conf.vhost_tx_queue_size)
+
+    def test_set_vif_mtu_config(self):
+        conf = config.LibvirtConfigGuestInterface()
+        designer.set_vif_mtu_config(conf, 9000)
+        self.assertEqual(9000, conf.mtu)
