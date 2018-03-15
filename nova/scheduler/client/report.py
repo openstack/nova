@@ -1243,7 +1243,8 @@ class SchedulerReportClient(object):
         raise exception.ResourceProviderUpdateFailed(url=url, error=resp.text)
 
     @safe_connect
-    def set_aggregates_for_provider(self, context, rp_uuid, aggregates):
+    def set_aggregates_for_provider(self, context, rp_uuid, aggregates,
+            use_cache=True):
         """Replace a provider's aggregates with those specified.
 
         The provider must exist - this method does not attempt to create it.
@@ -1252,6 +1253,8 @@ class SchedulerReportClient(object):
         :param rp_uuid: The UUID of the provider whose aggregates are to be
                         updated.
         :param aggregates: Iterable of aggregates to set on the provider.
+        :param use_cache: If False, indicates not to update the cache of
+                          resource providers.
         :raises: ResourceProviderUpdateFailed on any placement API failure.
         """
         # TODO(efried): Handle generation conflicts when supported by placement
@@ -1262,7 +1265,8 @@ class SchedulerReportClient(object):
 
         if resp.status_code == 200:
             placement_aggs = resp.json()['aggregates']
-            self._provider_tree.update_aggregates(rp_uuid, placement_aggs)
+            if use_cache:
+                self._provider_tree.update_aggregates(rp_uuid, placement_aggs)
             return
 
         # Some error occurred; log it
@@ -1868,3 +1872,124 @@ class SchedulerReportClient(object):
             # TODO(efried): Raise these.  Right now this is being left a no-op
             # for backward compatibility.
             pass
+
+    @safe_connect
+    def _get_provider_by_name(self, context, name):
+        """Queries the placement API for resource provider information matching
+        a supplied name.
+
+        :param context: The security context
+        :param name: Name of the resource provider to look up
+        :return: A dict of resource provider information including the
+                 provider's UUID and generation
+        :raises: `exception.ResourceProviderNotFound` when no such provider was
+                 found
+        """
+        resp = self.get("/resource_providers?name=%s" % name,
+                        global_request_id=context.global_id)
+        if resp.status_code == 200:
+            data = resp.json()
+            records = data['resource_providers']
+            num_recs = len(records)
+            if num_recs == 1:
+                return records[0]
+            elif num_recs > 1:
+                msg = ("Found multiple resource provider records for resource "
+                       "provider name %(rp_name)s: %(rp_uuids)s. "
+                       "This should not happen.")
+                LOG.warning(msg, {
+                    'rp_name': name,
+                    'rp_uuids': ','.join([r['uuid'] for r in records])
+                })
+        elif resp.status_code != 404:
+            msg = ("Failed to retrieve resource provider information by name "
+                   "for resource provider %s. Got %d: %s")
+            LOG.warning(msg, name, resp.status_code, resp.text)
+
+        raise exception.ResourceProviderNotFound(name_or_uuid=name)
+
+    def aggregate_add_host(self, context, agg_uuid, host_name):
+        """Looks up a resource provider by the supplied host name, and adds the
+        aggregate with supplied UUID to that resource provider.
+
+        :note: This method does NOT use the cached provider tree. It is only
+               called from the Compute API when a nova host aggregate is
+               modified
+
+        :param context: The security context
+        :param agg_uuid: UUID of the aggregate being modified
+        :param host_name: Name of the nova-compute service worker to look up a
+                          resource provider for
+        :raises: `exceptions.ResourceProviderNotFound` if no resource provider
+                  matching the host name could be found from the placement API
+        :raises: `exception.ResourceProviderAggregateRetrievalFailed` when
+                 failing to get a provider's existing aggregates
+        :raises: `exception.ResourceProviderUpdateFailed` if there was a
+                 failure attempting to save the provider aggregates
+        """
+        rp = self._get_provider_by_name(context, host_name)
+        # NOTE(jaypipes): Unfortunately, due to @safe_connect,
+        # _get_provider_by_name() can return None. If that happens, raise an
+        # error so we can trap for it in the Nova API code and ignore in Rocky,
+        # blow up in Stein.
+        if rp is None:
+            raise exception.PlacementAPIConnectFailure()
+        rp_uuid = rp['uuid']
+
+        # Now attempt to add the aggregate to the resource provider. We don't
+        # want to overwrite any other aggregates the provider may be associated
+        # with, however, so we first grab the list of aggregates for this
+        # provider and add the aggregate to the list of aggregates it already
+        # has
+        existing_aggs = self._get_provider_aggregates(context, rp_uuid)
+        if agg_uuid in existing_aggs:
+            return
+
+        new_aggs = existing_aggs | set([agg_uuid])
+        # TODO(jaypipes): Send provider generation (which is in the rp dict)
+        # along to set_aggregates_for_provider()
+        self.set_aggregates_for_provider(
+            context, rp_uuid, new_aggs, use_cache=False)
+
+    def aggregate_remove_host(self, context, agg_uuid, host_name):
+        """Looks up a resource provider by the supplied host name, and removes
+        the aggregate with supplied UUID from that resource provider.
+
+        :note: This method does NOT use the cached provider tree. It is only
+               called from the Compute API when a nova host aggregate is
+               modified
+
+        :param context: The security context
+        :param agg_uuid: UUID of the aggregate being modified
+        :param host_name: Name of the nova-compute service worker to look up a
+                          resource provider for
+        :raises: `exceptions.ResourceProviderNotFound` if no resource provider
+                  matching the host name could be found from the placement API
+        :raises: `exception.ResourceProviderAggregateRetrievalFailed` when
+                 failing to get a provider's existing aggregates
+        :raises: `exception.ResourceProviderUpdateFailed` if there was a
+                 failure attempting to save the provider aggregates
+        """
+        rp = self._get_provider_by_name(context, host_name)
+        # NOTE(jaypipes): Unfortunately, due to @safe_connect,
+        # _get_provider_by_name() can return None. If that happens, raise an
+        # error so we can trap for it in the Nova API code and ignore in Rocky,
+        # blow up in Stein.
+        if rp is None:
+            raise exception.PlacementAPIConnectFailure()
+        rp_uuid = rp['uuid']
+
+        # Now attempt to remove the aggregate from the resource provider. We
+        # don't want to overwrite any other aggregates the provider may be
+        # associated with, however, so we first grab the list of aggregates for
+        # this provider and remove the aggregate from the list of aggregates it
+        # already has
+        existing_aggs = self._get_provider_aggregates(context, rp_uuid)
+        if agg_uuid not in existing_aggs:
+            return
+
+        new_aggs = existing_aggs - set([agg_uuid])
+        # TODO(jaypipes): Send provider generation (which is in the rp dict)
+        # along to set_aggregates_for_provider()
+        self.set_aggregates_for_provider(
+            context, rp_uuid, new_aggs, use_cache=False)

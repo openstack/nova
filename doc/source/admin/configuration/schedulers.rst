@@ -1191,6 +1191,14 @@ set`.
 Some scheduling filter operations can be performed by placement for
 increased speed and efficiency.
 
+.. note::
+
+    The nova-api service attempts (as of nova 18.0.0) to automatically mirror
+    the association of a compute host with an aggregate when an administrator
+    adds or removes a host to/from a nova host aggregate. This should alleviate
+    the need to manually create those association records in the placement API
+    using the ``openstack resource provider aggregate set`` CLI invocation.
+
 Tenant Isolation with Placement
 -------------------------------
 

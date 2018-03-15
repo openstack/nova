@@ -2144,9 +2144,17 @@ class ResourceProviderUpdateFailed(NovaException):
                 "%(error)s")
 
 
+class ResourceProviderNotFound(NotFound):
+    msg_fmt = _("No such resource provider %(name_or_uuid)s.")
+
+
 class ResourceProviderSyncFailed(NovaException):
     msg_fmt = _("Failed to synchronize the placement service with resource "
                 "provider information supplied by the compute host.")
+
+
+class PlacementAPIConnectFailure(NovaException):
+    msg_fmt = _("Unable to communicate with the Placement API.")
 
 
 class PlacementAPIConflict(NovaException):

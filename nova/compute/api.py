@@ -4961,6 +4961,7 @@ class AggregateAPI(base.Base):
     def __init__(self, **kwargs):
         self.compute_rpcapi = compute_rpcapi.ComputeAPI()
         self.scheduler_client = scheduler_client.SchedulerClient()
+        self.placement_client = self.scheduler_client.reportclient
         super(AggregateAPI, self).__init__(**kwargs)
 
     @wrap_exception()
@@ -5142,6 +5143,32 @@ class AggregateAPI(base.Base):
 
         aggregate.add_host(host_name)
         self.scheduler_client.update_aggregates(context, [aggregate])
+        try:
+            self.placement_client.aggregate_add_host(
+                context, aggregate.uuid, host_name)
+        except exception.PlacementAPIConnectFailure:
+            # NOTE(jaypipes): Rocky should be able to tolerate the nova-api
+            # service not communicating with the Placement API, so just log a
+            # warning here.
+            # TODO(jaypipes): Remove this in Stein, when placement must be able
+            # to be contacted from the nova-api service.
+            LOG.warning("Failed to associate %s with a placement "
+                        "aggregate: %s. There was a failure to communicate "
+                        "with the placement service.",
+                        host_name, aggregate.uuid)
+        except (exception.ResourceProviderNotFound,
+                exception.ResourceProviderAggregateRetrievalFailed,
+                exception.ResourceProviderUpdateFailed) as err:
+            # NOTE(jaypipes): We don't want a failure perform the mirroring
+            # action in the placement service to be returned to the user (they
+            # probably don't know anything about the placement service and
+            # would just be confused). So, we just log a warning here, noting
+            # that on the next run of nova-manage placement sync_aggregates
+            # things will go back to normal
+            LOG.warning("Failed to associate %s with a placement "
+                        "aggregate: %s. This may be corrected after running "
+                        "nova-manage placement sync_aggregates.",
+                        host_name, err)
         self._update_az_cache_for_host(context, host_name, aggregate.metadata)
         # NOTE(jogo): Send message to host to support resource pools
         self.compute_rpcapi.add_aggregate_host(context,
@@ -5181,6 +5208,32 @@ class AggregateAPI(base.Base):
 
         aggregate.delete_host(host_name)
         self.scheduler_client.update_aggregates(context, [aggregate])
+        try:
+            self.placement_client.aggregate_remove_host(
+                context, aggregate.uuid, host_name)
+        except exception.PlacementAPIConnectFailure:
+            # NOTE(jaypipes): Rocky should be able to tolerate the nova-api
+            # service not communicating with the Placement API, so just log a
+            # warning here.
+            # TODO(jaypipes): Remove this in Stein, when placement must be able
+            # to be contacted from the nova-api service.
+            LOG.warning("Failed to remove association of %s with a placement "
+                        "aggregate: %s. There was a failure to communicate "
+                        "with the placement service.",
+                        host_name, aggregate.uuid)
+        except (exception.ResourceProviderNotFound,
+                exception.ResourceProviderAggregateRetrievalFailed,
+                exception.ResourceProviderUpdateFailed) as err:
+            # NOTE(jaypipes): We don't want a failure perform the mirroring
+            # action in the placement service to be returned to the user (they
+            # probably don't know anything about the placement service and
+            # would just be confused). So, we just log a warning here, noting
+            # that on the next run of nova-manage placement sync_aggregates
+            # things will go back to normal
+            LOG.warning("Failed to remove association of %s with a placement "
+                        "aggregate: %s. This may be corrected after running "
+                        "nova-manage placement sync_aggregates.",
+                        host_name, err)
         self._update_az_cache_for_host(context, host_name, aggregate.metadata)
         self.compute_rpcapi.remove_aggregate_host(context,
                 aggregate=aggregate, host_param=host_name, host=host_name)

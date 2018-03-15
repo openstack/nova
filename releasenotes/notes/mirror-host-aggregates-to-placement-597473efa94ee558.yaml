@@ -1,0 +1,21 @@
+---
+features:
+  - |
+    We now attempt to mirror the association of compute host to host aggregate
+    into the placement API. When administrators use the ``POST
+    /os-aggregates/{aggregate_id}/action`` Compute API call to add or remove a
+    host from an aggregate, the nova-api service will attempt to ensure that a
+    corresponding record is created in the placement API for the resource
+    provider (compute host) and host aggregate UUID.
+
+    The nova-api service needs to understand how to connect to the placement
+    service in order for this mirroring process to work. Administrators should
+    ensure that there is a ``[placement]`` section in the nova.conf file which
+    is used by the nova-api service, and that credentials for interacting with
+    placement are contained in that section.
+
+    If the ``[placement]`` section is missing from the nova-api's nova.conf
+    file, nothing will break however there will be some warnings generated in
+    the nova-api's log file when administrators associate a compute host with a
+    host aggregate. However, this will become a failure starting in the 19.0.0
+    Stein release.
