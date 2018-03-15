@@ -266,6 +266,7 @@ looking parts of our architecture. These are collected below.
    reference/services
    reference/stable-api
    reference/threading
+   reference/update-provider-tree
    reference/vm-states
    user/index
    user/aggregates

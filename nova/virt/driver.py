@@ -845,23 +845,35 @@ class ComputeDriver(object):
         :note: Renaming a provider (by deleting it from provider_tree and
         re-adding it with a different name) is not supported at this time.
 
+        See the developer reference documentation for more details:
+
+        https://docs.openstack.org/nova/latest/reference/update-provider-tree.html   # noqa
+
         :param nova.compute.provider_tree.ProviderTree provider_tree:
-            A ProviderTree object representing all the providers associated
-            with the compute node, and any sharing providers (those with the
-            ``MISC_SHARES_VIA_AGGREGATE`` trait) associated via aggregate with
-            any of those providers (but not *their* tree- or aggregate-
-            associated providers), as currently known by placement.  This
-            object is fully owned by the ``update_provider_tree`` method, and
-            can therefore be modified without locking/concurrency
-            considerations.  Note, however, that it may contain providers not
-            directly owned/controlled by the compute host.  Care must be taken
-            not to remove or modify such providers inadvertently.
+            A nova.compute.provider_tree.ProviderTree object representing all
+            the providers in the tree associated with the compute node, and any
+            sharing providers (those with the ``MISC_SHARES_VIA_AGGREGATE``
+            trait) associated via aggregate with any of those providers (but
+            not *their* tree- or aggregate-associated providers), as currently
+            known by placement. This object is fully owned by the
+            update_provider_tree method, and can therefore be modified without
+            locking/concurrency considerations. In other words, the parameter
+            is passed *by reference* with the expectation that the virt driver
+            will modify the object. Note, however, that it may contain
+            providers not directly owned/controlled by the compute host. Care
+            must be taken not to remove or modify such providers inadvertently.
+            In addition, providers may be associated with traits and/or
+            aggregates maintained by outside agents. The
+            `update_provider_tree`` method must therefore also be careful only
+            to add/remove traits/aggregates it explicitly controls.
         :param nodename:
-            Name of the compute node for which the caller is updating providers
-            and inventory.  Drivers managing more than one node may use this in
-            an advisory capacity to restrict changes to only the providers
-            associated with that one node, but this is not a requirement: the
-            caller always subsumes all changes regardless.
+            String name of the compute node (i.e.
+            ComputeNode.hypervisor_hostname) for which the caller is requesting
+            updated provider information. Drivers may use this to help identify
+            the compute node provider in the ProviderTree. Drivers managing
+            more than one node (e.g. ironic) may also use it as a cue to
+            indicate which node is being processed by the caller.
+        :return: True if the provider_tree was changed; False otherwise.
         """
         raise NotImplementedError()
 
