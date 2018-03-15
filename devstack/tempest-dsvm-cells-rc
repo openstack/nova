@@ -42,23 +42,6 @@ r="$r|(?:tempest\.scenario\.test_aggregates_basic_ops)"
 # skip availability zone tests
 r="$r|(?:(tempest\.api\.compute\.)(servers\.|admin\.)(test_availability_zone*))"
 
-# skip fixed-ip tests
-r="$r|(?:tempest\.api\.compute\.admin\.test_fixed_ips)"
-
-# skip floating-ip tests
-r="$r|(?:tempest\.api\.compute\.floating_ips)"
-# https://bugs.launchpad.net/tempest/+bug/1513983 - The follow scenario tests rely on Neutron but use floating IPs
-# tempest.scenario.test_network_advanced_server_ops.TestNetworkAdvancedServerOps.test_server_connectivity_pause_unpause
-r="$r|(?:.*id\-2b2642db\-6568\-4b35\-b812\-eceed3fa20ce.*)"
-# tempest.scenario.test_network_basic_ops.TestNetworkBasicOps.test_network_basic_ops
-r="$r|(?:.*id\-f323b3ba\-82f8\-4db7\-8ea6\-6a895869ec49.*)"
-# tempest.scenario.test_network_basic_ops.TestNetworkBasicOps.test_update_router_admin_state
-r="$r|(?:.*id\-04b9fe4e\-85e8\-4aea\-b937\-ea93885ac59f.*)"
-# tempest.scenario.test_network_v6.TestGettingAddress.test_slaac_from_os
-r="$r|(?:.*id\-2c92df61\-29f0\-4eaa\-bee3\-7c65bef62a43.*)"
-# tempest.scenario.test_security_groups_basic_ops.TestSecurityGroupsBasicOps.test_cross_tenant_traffic
-r="$r|(?:.*id\-e79f879e\-debb\-440c\-a7e4\-efeda05b6848.*)"
-
 # exclude the slow tag
 r="$r|(?:.*\[.*\bslow\b.*\])"
 
