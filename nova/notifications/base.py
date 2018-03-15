@@ -263,6 +263,7 @@ def _send_versioned_instance_update(context, instance, payload, host, service):
                  for label, bw in payload['bandwidth'].items()]
 
     versioned_payload = instance_notification.InstanceUpdatePayload(
+        context=context,
         instance=instance,
         state_update=state_update,
         audit_period=audit_period,

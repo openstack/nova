@@ -19,5 +19,5 @@
         "tags": ["tag"]
     },
     "nova_object.name":"InstanceCreatePayload",
-    "nova_object.version": "1.7"
+    "nova_object.version": "1.8"
 }
