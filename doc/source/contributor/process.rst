@@ -36,8 +36,8 @@ If you are new to Nova, please read this first: :ref:`getting_involved`.
 Dates overview
 ==============
 
-For Queens, please see:
-https://wiki.openstack.org/wiki/Nova/Queens_Release_Schedule
+For Rocky, please see:
+https://wiki.openstack.org/wiki/Nova/Rocky_Release_Schedule
 
 .. note: Throughout this document any link which references the name of a
          release cycle in the link can usually be changed to the name of the
@@ -102,9 +102,9 @@ Why we have a Spec Freeze:
 
 By the freeze date, we expect all blueprints that will be approved for the
 cycle to be listed on launchpad and all relevant specs to be merged.
-For Queens, blueprints can be found at
-https://blueprints.launchpad.net/nova/queens and specs at
-https://specs.openstack.org/openstack/nova-specs/specs/queens/index.html
+For Rocky, blueprints can be found at
+https://blueprints.launchpad.net/nova/rocky and specs at
+https://specs.openstack.org/openstack/nova-specs/specs/rocky/index.html
 
 Starting with Liberty, we are keeping a backlog open for submission at all
 times.
@@ -131,7 +131,7 @@ Non-priority Feature Freeze
 This is a Nova specific process.
 
 This only applies to low priority blueprints in this list:
-https://blueprints.launchpad.net/nova/queens
+https://blueprints.launchpad.net/nova/rocky
 
 We currently have a very finite amount of review bandwidth. In order to
 make code review time for the agreed community wide priorities, we have
@@ -157,7 +157,7 @@ http://lists.openstack.org/pipermail/openstack-dev/2015-July/070920.html
 Exception process:
 
 -  Please add request in here:
-   https://etherpad.openstack.org/p/queens-nova-non-priority-feature-freeze
+   https://etherpad.openstack.org/p/rocky-nova-non-priority-feature-freeze
    (ideally with core reviewers to sponsor your patch, normally the
    folks who have already viewed those patches)
 -  make sure you make your request before the end of the feature freeze
@@ -382,7 +382,7 @@ For blueprint and spec features, do everything for blueprint-only
 features and also:
 
 -  If it's a project or subteam priority, add it to:
-   https://etherpad.openstack.org/p/queens-nova-priorities-tracking
+   https://etherpad.openstack.org/p/rocky-nova-priorities-tracking
 -  Ensure your spec is approved for the current release cycle.
 
 If your code is a project or subteam priority, the cores interested in
@@ -788,7 +788,7 @@ get, and increase the velocity of getting code merged.
 
 The first part is for subgroups to show they can do a great job of
 recommending patches. This is starting in here:
-https://etherpad.openstack.org/p/queens-nova-priorities-tracking
+https://etherpad.openstack.org/p/rocky-nova-priorities-tracking
 
 Ideally this would be done with gerrit user "tags" rather than an
 etherpad. There are some investigations by sdague in how feasible it

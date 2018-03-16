@@ -56,7 +56,7 @@ you don't understand. It's also OK to see some potential problems but put a +0.
 
 Another way is to look for a subteam you'd like to get involved with and review
 their patches. See:
-https://etherpad.openstack.org/p/queens-nova-priorities-tracking
+https://etherpad.openstack.org/p/rocky-nova-priorities-tracking
 
 Once you're ready to write code, take a look at some of the work already marked
 as low-hanging fruit:
@@ -264,7 +264,7 @@ reviews:
 -  Where do I start? What should I review?
 
    -  There are various tools, but a good place to start is:
-      https://etherpad.openstack.org/p/queens-nova-priorities-tracking
+      https://etherpad.openstack.org/p/rocky-nova-priorities-tracking
    -  Depending on the time in the cycle, it's worth looking at
       NeedsCodeReview blueprints:
       https://blueprints.launchpad.net/nova/
@@ -326,7 +326,7 @@ becoming a member of nova-core.
 How to do great nova-spec reviews?
 ==================================
 
-https://specs.openstack.org/openstack/nova-specs/specs/queens/template.html
+https://specs.openstack.org/openstack/nova-specs/specs/rocky/template.html
 
 https://docs.openstack.org/nova/latest/contributor/blueprints.html#specs
 
