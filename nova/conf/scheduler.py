@@ -63,6 +63,10 @@ Possible values:
 * You may also set this to the entry point name of a custom scheduler driver,
   but you will be responsible for creating and maintaining it in your setup.cfg
   file.
+
+Related options:
+
+* workers
 """),
     cfg.IntOpt("periodic_task_interval",
         default=60,
@@ -139,6 +143,13 @@ etc. of the scheduler.
 
 This option is only used by the FilterScheduler; if you use a different
 scheduler, this option has no effect.
+"""),
+    cfg.IntOpt("workers",
+        min=0,
+        help="""
+Number of workers for the nova-scheduler service. The default will be the
+number of CPUs available if using the "filter_scheduler" scheduler driver,
+otherwise the default will be 1.
 """),
 ]
 

@@ -1,0 +1,26 @@
+---
+features:
+  - |
+    It is now possible to configure multiple *nova-scheduler* workers via the
+    ``[scheduler]workers`` configuration option. By default, the option runs
+    ``ncpu`` workers if using the ``filter_scheduler`` scheduler driver,
+    otherwise the default is 1.
+
+    Since `blueprint placement-claims`_ in Pike, the FilterScheduler
+    uses the Placement service to create resource allocations (claims)
+    against a resource provider (i.e. compute node) chosen by the scheduler.
+    That reduces the risk of scheduling collisions when running multiple
+    schedulers.
+
+    Since other scheduler drivers, like the CachingScheduler, do not
+    use Placement, it is recommended to set workers=1 (default) for those
+    other scheduler drivers.
+
+    .. _blueprint placement-claims: https://specs.openstack.org/openstack/nova-specs/specs/pike/implemented/placement-claims.html
+upgrade:
+  - |
+    The new ``[scheduler]workers`` configuration option defaults to ``ncpu``
+    workers if using the ``filter_scheduler`` scheduler driver. If you are
+    running *nova-scheduler* on the same host as other services, you may want
+    to change this default value, or to otherwise account for running other
+    instances of the *nova-scheduler* service.
