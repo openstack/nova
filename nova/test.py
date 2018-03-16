@@ -312,7 +312,10 @@ class TestCase(testtools.TestCase):
         utils._IS_NEUTRON = None
 
         # Reset the traits sync and rc cache flags
-        resource_provider._TRAITS_SYNCED = False
+        def _reset_traits():
+            resource_provider._TRAITS_SYNCED = False
+        _reset_traits()
+        self.addCleanup(_reset_traits)
         resource_provider._RC_CACHE = None
         # Reset the global QEMU version flag.
         images.QEMU_VERSION = None

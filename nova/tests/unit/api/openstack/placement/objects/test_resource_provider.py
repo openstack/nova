@@ -338,7 +338,7 @@ class TestTraits(_TestCase):
         synced = resource_provider._TRAITS_SYNCED
         self.assertFalse(synced)
         # Sync the traits
-        resource_provider._ensure_trait_sync(self.context)
+        resource_provider.ensure_trait_sync(self.context)
         synced = resource_provider._TRAITS_SYNCED
         self.assertTrue(synced)
 

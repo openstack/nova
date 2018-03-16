@@ -14,6 +14,7 @@
 
 from oslo_utils import uuidutils
 
+from nova.api.openstack.placement import deploy
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement.objects import consumer as consumer_obj
 from nova.api.openstack.placement.objects import project as project_obj
@@ -55,25 +56,17 @@ class PlacementDbBaseTestCase(test.NoDBTestCase):
         self.useFixture(fixtures.Database())
         self.placement_db = self.useFixture(
                 fixtures.Database(database='placement'))
-        # Reset the _TRAITS_SYNCED global before we start and after
-        # we are done since other tests (notably the gabbi tests)
-        # may have caused it to change.
-        self._reset_traits_synced()
-        self.addCleanup(self._reset_traits_synced)
         self.ctx = context.RequestContext('fake-user', 'fake-project')
         self.user_obj = user_obj.User(self.ctx, external_id='fake-user')
         self.user_obj.create()
         self.project_obj = project_obj.Project(
             self.ctx, external_id='fake-project')
         self.project_obj.create()
+        # Do database syncs, such as traits sync.
+        deploy.update_database()
         # For debugging purposes, populated by _create_provider and used by
         # _validate_allocation_requests to make failure results more readable.
         self.rp_uuid_to_name = {}
-
-    @staticmethod
-    def _reset_traits_synced():
-        """Reset the _TRAITS_SYNCED boolean to base state."""
-        rp_obj._TRAITS_SYNCED = False
 
     def _create_provider(self, name, *aggs, **kwargs):
         parent = kwargs.get('parent')

@@ -2032,6 +2032,10 @@ class ResourceProviderTraitTestCase(tb.PlacementDbBaseTestCase):
         # in an exception, the sync transaction rolled back and the table
         # stayed empty; but _TRAITS_SYNCED got set to True, so it didn't resync
         # next time.
+        # NOTE(cdent): With change Ic87518948ed5bf4ab79f9819cd94714e350ce265
+        # syncing is no longer done in the same way, so the bug fix that this
+        # test was testing is gone, but this test has been left in place to
+        # make sure we still get behavior we expect.
         try:
             rp_obj.Trait.get_by_name(self.ctx, 'CUSTOM_GOLD')
         except exception.TraitNotFound:
@@ -2192,25 +2196,6 @@ class ResourceProviderTraitTestCase(tb.PlacementDbBaseTestCase):
         self._assert_traits_in(['CUSTOM_TRAIT_C'],
             rp_obj.TraitList.get_all(self.ctx,
                 filters={'associated': False}))
-
-    def test_sync_standard_traits(self):
-        """Tests that on a clean DB, we have zero traits in the DB but after
-        list all traits, os_traits have been synchronized.
-        """
-        std_traits = os_traits.get_traits()
-        conn = self.placement_db.get_engine().connect()
-
-        def _db_traits(conn):
-            sel = sa.select([rp_obj._TRAIT_TBL.c.name])
-            return [r[0] for r in conn.execute(sel).fetchall()]
-
-        self.assertEqual([], _db_traits(conn))
-
-        all_traits = [trait.name for trait in
-                      rp_obj.TraitList.get_all(self.ctx)]
-        self.assertEqual(set(std_traits), set(all_traits))
-        # confirm with a raw request
-        self.assertEqual(set(std_traits), set(_db_traits(conn)))
 
 
 class SharedProviderTestCase(tb.PlacementDbBaseTestCase):
