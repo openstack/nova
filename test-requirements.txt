@@ -10,10 +10,10 @@ mock>=2.0.0 # BSD
 mox3>=0.20.0 # Apache-2.0
 psycopg2>=2.6.2 # LGPL/ZPL
 PyMySQL>=0.7.6 # MIT License
-python-barbicanclient!=4.5.0,!=4.5.1,>=4.0.0 # Apache-2.0
+python-barbicanclient>=4.5.2 # Apache-2.0
 python-ironicclient>=2.2.0 # Apache-2.0
 requests-mock>=1.1.0 # Apache-2.0
-sphinx!=1.6.6,>=1.6.2 # BSD
+sphinx!=1.6.6,!=1.6.7,>=1.6.2 # BSD
 sphinxcontrib-actdiag>=0.8.5 # BSD
 sphinxcontrib-seqdiag>=0.8.4 # BSD
 os-api-ref>=1.4.0 # Apache-2.0
