@@ -58,7 +58,8 @@ identified by `{uuid}`.
 
 Normal Response Codes: 200
 
-Error response codes: itemNotFound(404)
+Error response codes: itemNotFound(404) if the provider does not exist. (If the
+provider has no aggregates, the result is 200 with an empty aggregate list.)
 
 Request
 -------
@@ -67,17 +68,31 @@ Request
 
   - uuid: resource_provider_uuid_path
 
-Response
---------
+Response (microversions 1.1 - 1.18)
+-----------------------------------
 
 .. rest_parameters:: parameters.yaml
 
   - aggregates: aggregates
 
-Response Example
-----------------
+Response Example (microversions 1.1 - 1.18)
+-------------------------------------------
 
 .. literalinclude:: ./samples/aggregates/get-aggregates.json
+   :language: javascript
+
+Response (microversions 1.19 - )
+--------------------------------
+
+.. rest_parameters:: parameters.yaml
+
+  - aggregates: aggregates
+  - resource_provider_generation: resource_provider_generation_v1_19
+
+Response Example (microversions 1.19 - )
+----------------------------------------
+
+.. literalinclude:: ./samples/aggregates/get-aggregates-1.19.json
    :language: javascript
 
 Update resource provider aggregates
@@ -89,31 +104,47 @@ Associate a list of aggregates with the resource provider identified by `{uuid}`
 
 Normal Response Codes: 200
 
-Error response codes: badRequest(400), itemNotFound(404)
+Error response codes: badRequest(400), itemNotFound(404), conflict(409)
 
-Request
--------
+Request (microversion 1.1 - 1.18)
+---------------------------------
 
 .. rest_parameters:: parameters.yaml
 
   - uuid: resource_provider_uuid_path
   - aggregates: aggregates
 
-Request example
----------------
+Request example (microversion 1.1 - 1.18)
+-----------------------------------------
 
 .. literalinclude:: ./samples/aggregates/update-aggregates-request.json
    :language: javascript
 
-Response
---------
+Request (microversion 1.19 - )
+---------------------------------
+
+.. rest_parameters:: parameters.yaml
+
+  - uuid: resource_provider_uuid_path
+  - aggregates: aggregates
+  - resource_provider_generation: resource_provider_generation_v1_19
+
+Request example (microversion 1.19 - )
+-----------------------------------------
+
+.. literalinclude:: ./samples/aggregates/update-aggregates-request-1.19.json
+   :language: javascript
+
+Response (microversion 1.19 - )
+----------------------------------
 
 .. rest_parameters:: parameters.yaml
 
   - aggregates: aggregates
+  - resource_provider_generation: resource_provider_generation_v1_19
 
-Response Example
-----------------
+Response Example (microversion 1.19 - )
+------------------------------------------
 
-.. literalinclude:: ./samples/aggregates/update-aggregates.json
+.. literalinclude:: ./samples/aggregates/update-aggregates-1.19.json
    :language: javascript

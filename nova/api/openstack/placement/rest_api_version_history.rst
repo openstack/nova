@@ -233,3 +233,13 @@ based on other query parameters.
 
 Trait names which are empty, do not exist, or are otherwise invalid will result
 in a 400 error.
+
+1.19 Include generation and conflict detection in provider aggregates APIs
+--------------------------------------------------------------------------
+
+Enhance the payloads for the `GET /resource_providers/{uuid}/aggregates`
+response and the `PUT /resource_providers/{uuid}/aggregates` request and
+response to be identical, and to include the ``resource_provider_generation``.
+As with other generation-aware APIs, if the ``resource_provider_generation``
+specified in the `PUT` request does not match the generation known by the
+server, a 409 Conflict error is returned.

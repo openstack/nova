@@ -310,6 +310,9 @@ resource_provider_generation_optional:
     concurrent resource provider updates. The value is ignored;
     it is present to preserve symmetry between read and
     write representations.
+resource_provider_generation_v1_19:
+  <<: *resource_provider_generation
+  min_version: 1.19
 resource_provider_links:
   type: array
   in: body

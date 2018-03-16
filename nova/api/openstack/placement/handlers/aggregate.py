@@ -11,23 +11,33 @@
 #    under the License.
 """Aggregate handlers for Placement API."""
 
+from oslo_db import exception as db_exc
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 from oslo_utils import timeutils
+import webob
 
 from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
 from nova.api.openstack.placement.schemas import aggregate as schema
 from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
+from nova import exception
+from nova.i18n import _
 
 
-def _send_aggregates(req, aggregate_uuids):
+_INCLUDE_GENERATION_VERSION = (1, 19)
+
+
+def _send_aggregates(req, resource_provider, aggregate_uuids):
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     response = req.response
     response.status = 200
+    payload = _serialize_aggregates(aggregate_uuids)
+    if want_version.matches(min_version=_INCLUDE_GENERATION_VERSION):
+        payload['resource_provider_generation'] = resource_provider.generation
     response.body = encodeutils.to_utf8(
-        jsonutils.dumps(_serialize_aggregates(aggregate_uuids)))
+        jsonutils.dumps(payload))
     response.content_type = 'application/json'
     if want_version.matches((1, 15)):
         req.response.cache_control = 'no-cache'
@@ -60,7 +70,7 @@ def get_aggregates(req):
         context, uuid)
     aggregate_uuids = resource_provider.get_aggregates()
 
-    return _send_aggregates(req, aggregate_uuids)
+    return _send_aggregates(req, resource_provider, aggregate_uuids)
 
 
 @wsgi_wrapper.PlacementWsgify
@@ -68,10 +78,32 @@ def get_aggregates(req):
 @microversion.version_handler('1.1')
 def set_aggregates(req):
     context = req.environ['placement.context']
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
+    consider_generation = want_version.matches(
+        min_version=_INCLUDE_GENERATION_VERSION)
+    put_schema = schema.PUT_AGGREGATES_SCHEMA_V1_1
+    if consider_generation:
+        put_schema = schema.PUT_AGGREGATES_SCHEMA_V1_19
     uuid = util.wsgi_path_item(req.environ, 'uuid')
     resource_provider = rp_obj.ResourceProvider.get_by_uuid(
         context, uuid)
-    aggregate_uuids = util.extract_json(req.body, schema.PUT_AGGREGATES_SCHEMA)
-    resource_provider.set_aggregates(aggregate_uuids)
+    data = util.extract_json(req.body, put_schema)
+    if consider_generation:
+        # Check for generation conflict
+        rp_gen = data['resource_provider_generation']
+        if resource_provider.generation != rp_gen:
+            raise webob.exc.HTTPConflict(
+                _("Resource provider's generation already changed. Please "
+                  "update the generation and try again."))
+        aggregate_uuids = data['aggregates']
+    else:
+        aggregate_uuids = data
+    try:
+        resource_provider.set_aggregates(
+            aggregate_uuids, increment_generation=consider_generation)
+    except (exception.ConcurrentUpdateDetected,
+            db_exc.DBDuplicateEntry) as exc:
+        raise webob.exc.HTTPConflict(
+            _('Update conflict: %(error)s') % {'error': exc})
 
-    return _send_aggregates(req, aggregate_uuids)
+    return _send_aggregates(req, resource_provider, aggregate_uuids)

@@ -146,7 +146,9 @@ tests:
 - name: associate an aggregate with rp1
   PUT: /resource_providers/$ENVIRON['RP_UUID']/aggregates
   data:
-      - 83a3d69d-8920-48e2-8914-cadfd8fa2f91
+      aggregates:
+        - 83a3d69d-8920-48e2-8914-cadfd8fa2f91
+      resource_provider_generation: $HISTORY['list resource providers providing disk and vcpu resources'].$RESPONSE['$.resource_providers[0].generation']
   status: 200
 
 - name: get by aggregates with resources
