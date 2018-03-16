@@ -534,10 +534,10 @@ class IronicDriverTestCase(test.NoDBTestCase):
     @mock.patch.object(objects.Instance, 'get_by_uuid')
     def test_list_instances_fail(self, mock_inst_by_uuid, mock_call):
         mock_call.side_effect = exception.NovaException
-        response = self.driver.list_instances()
+        self.assertRaises(exception.VirtDriverNotReady,
+                          self.driver.list_instances)
         mock_call.assert_called_with("node.list", associated=True, limit=0)
         self.assertFalse(mock_inst_by_uuid.called)
-        self.assertThat(response, matchers.HasLength(0))
 
     @mock.patch.object(cw.IronicClientWrapper, 'call')
     def test_list_instance_uuids(self, mock_call):
@@ -2311,9 +2311,9 @@ class IronicDriverTestCase(test.NoDBTestCase):
         result = self.driver._get_node_list()
         mock_error.assert_not_called()
         self.assertEqual(["node1", "node2"], result)
-        result = self.driver._get_node_list()
+        self.assertRaises(exception.VirtDriverNotReady,
+                          self.driver._get_node_list)
         mock_error.assert_called_once()
-        self.assertEqual([], result)
 
 
 class IronicDriverSyncTestCase(IronicDriverTestCase):
