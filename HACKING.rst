@@ -67,6 +67,7 @@ Nova Specific Commandments
   generate UUID instead of uuid4().
 - [N358] Return must always be followed by a space when returning a value.
 - [N359] Check for redundant import aliases.
+- [N360] Yield must always be followed by a space when yielding a value.
 
 Creating Unit Tests
 -------------------

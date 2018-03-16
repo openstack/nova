@@ -99,6 +99,7 @@ log_remove_context = re.compile(
 return_not_followed_by_space = re.compile(r"^\s*return(?:\(|{|\"|'|#).*$")
 uuid4_re = re.compile(r"uuid4\(\)($|[^\.]|\.hex)")
 redundant_import_alias_re = re.compile(r"import (?:.*\.)?(.+) as \1$")
+yield_not_followed_by_space = re.compile(r"^\s*yield(?:\(|{|\[|\"|').*$")
 
 
 class BaseASTChecker(ast.NodeVisitor):
@@ -235,7 +236,7 @@ def capital_cfg_help(logical_line, tokens):
             if tokens[t][1] == "help":
                 txt = tokens[t + 2][1]
                 if len(txt) > 1 and txt[1].islower():
-                    yield(0, msg)
+                    yield (0, msg)
 
 
 def assert_true_instance(logical_line):
@@ -258,8 +259,8 @@ def assert_equal_type(logical_line):
 
 def check_python3_xrange(logical_line):
     if re.search(r"\bxrange\s*\(", logical_line):
-        yield(0, "N327: Do not use xrange(). 'xrange()' is not compatible "
-              "with Python 3. Use range() or six.moves.range() instead.")
+        yield (0, "N327: Do not use xrange(). 'xrange()' is not compatible "
+                  "with Python 3. Use range() or six.moves.range() instead.")
 
 
 def no_translate_debug_logs(logical_line, filename):
@@ -276,7 +277,7 @@ def no_translate_debug_logs(logical_line, filename):
     N319
     """
     if logical_line.startswith("LOG.debug(_("):
-        yield(0, "N319 Don't translate debug level logs")
+        yield (0, "N319 Don't translate debug level logs")
 
 
 def no_import_translation_in_tests(logical_line, filename):
@@ -286,7 +287,7 @@ def no_import_translation_in_tests(logical_line, filename):
     if 'nova/tests/' in filename:
         res = import_translation_for_log_or_exception.match(logical_line)
         if res:
-            yield(0, "N337 Don't import translation in tests")
+            yield (0, "N337 Don't import translation in tests")
 
 
 def no_setting_conf_directly_in_tests(logical_line, filename):
@@ -329,7 +330,7 @@ def check_explicit_underscore_import(logical_line, filename):
         UNDERSCORE_IMPORT_FILES.append(filename)
     elif (translated_log.match(logical_line) or
          string_translation.match(logical_line)):
-        yield(0, "N323: Found use of _() without explicit import of _ !")
+        yield (0, "N323: Found use of _() without explicit import of _ !")
 
 
 def use_jsonutils(logical_line, filename):
@@ -359,7 +360,7 @@ def check_api_version_decorator(logical_line, previous_logical, blank_before,
            " on a method.")
     if blank_before == 0 and re.match(api_version_re, logical_line) \
            and re.match(decorator_re, previous_logical):
-        yield(0, msg)
+        yield (0, msg)
 
 
 class CheckForStrUnicodeExc(BaseASTChecker):
@@ -560,7 +561,7 @@ def check_http_not_implemented(logical_line, physical_line, filename):
     if ("nova/api/openstack/compute" not in filename):
         return
     if re.match(http_not_implemented_re, logical_line):
-        yield(0, msg)
+        yield (0, msg)
 
 
 def check_greenthread_spawns(logical_line, physical_line, filename):
@@ -587,7 +588,7 @@ def check_no_contextlib_nested(logical_line, filename):
            "more information. nova.test.nested() is an alternative as well.")
 
     if contextlib_nested.match(logical_line):
-        yield(0, msg)
+        yield (0, msg)
 
 
 def check_config_option_in_central_place(logical_line, filename):
@@ -616,7 +617,7 @@ def check_config_option_in_central_place(logical_line, filename):
         return
 
     if cfg_opt_re.match(logical_line):
-        yield(0, msg)
+        yield (0, msg)
 
 
 def check_policy_registration_in_central_place(logical_line, filename):
@@ -630,7 +631,7 @@ def check_policy_registration_in_central_place(logical_line, filename):
         return
 
     if rule_default_re.match(logical_line):
-        yield(0, msg)
+        yield (0, msg)
 
 
 def check_policy_enforce(logical_line, filename):
@@ -648,7 +649,7 @@ def check_policy_enforce(logical_line, filename):
            'Use the authorize() method instead.')
 
     if policy_enforce_re.match(logical_line):
-        yield(0, msg)
+        yield (0, msg)
 
 
 def check_doubled_words(physical_line, filename):
@@ -668,21 +669,21 @@ def check_python3_no_iteritems(logical_line):
     msg = ("N344: Use items() instead of dict.iteritems().")
 
     if re.search(r".*\.iteritems\(\)", logical_line):
-        yield(0, msg)
+        yield (0, msg)
 
 
 def check_python3_no_iterkeys(logical_line):
     msg = ("N345: Use six.iterkeys() instead of dict.iterkeys().")
 
     if re.search(r".*\.iterkeys\(\)", logical_line):
-        yield(0, msg)
+        yield (0, msg)
 
 
 def check_python3_no_itervalues(logical_line):
     msg = ("N346: Use six.itervalues() instead of dict.itervalues().")
 
     if re.search(r".*\.itervalues\(\)", logical_line):
-        yield(0, msg)
+        yield (0, msg)
 
 
 def no_os_popen(logical_line):
@@ -695,8 +696,8 @@ def no_os_popen(logical_line):
     """
 
     if 'os.popen(' in logical_line:
-        yield(0, 'N348 Deprecated library function os.popen(). '
-                 'Replace it using subprocess module. ')
+        yield (0, 'N348 Deprecated library function os.popen(). '
+                  'Replace it using subprocess module. ')
 
 
 def no_log_warn(logical_line):
@@ -729,11 +730,11 @@ def check_context_log(logical_line, physical_line, filename):
         return
 
     if log_remove_context.match(logical_line):
-        yield(0,
-              "N353: Nova is using oslo.context's RequestContext "
-              "which means the context object is in scope when "
-              "doing logging using oslo.log, so no need to pass it as"
-              "kwarg.")
+        yield (0,
+               "N353: Nova is using oslo.context's RequestContext "
+               "which means the context object is in scope when "
+               "doing logging using oslo.log, so no need to pass it as "
+               "kwarg.")
 
 
 def no_assert_equal_true_false(logical_line):
@@ -817,6 +818,23 @@ def no_redundant_import_alias(logical_line):
         yield (0, "N359: Import alias should not be redundant.")
 
 
+def yield_followed_by_space(logical_line):
+    """Yield should be followed by a space.
+
+    Yield should be followed by a space to clarify that yield is
+    not a function. Adding a space may force the developer to rethink
+    if there are unnecessary parentheses in the written code.
+
+    Not correct: yield(x), yield(a, b)
+    Correct: yield x, yield (a, b), yield a, b
+
+    N360
+    """
+    if yield_not_followed_by_space.match(logical_line):
+        yield (0,
+               "N360: Yield keyword should be followed by a space.")
+
+
 def factory(register):
     register(import_no_db_in_virt)
     register(no_db_session_in_public_api)
@@ -859,3 +877,4 @@ def factory(register):
     register(check_uuid4)
     register(return_followed_by_space)
     register(no_redundant_import_alias)
+    register(yield_followed_by_space)
