@@ -1,0 +1,11 @@
+sphinx!=1.6.6,!=1.6.7,>=1.6.2 # BSD
+sphinxcontrib-actdiag>=0.8.5 # BSD
+sphinxcontrib-seqdiag>=0.8.4 # BSD
+os-api-ref>=1.4.0 # Apache-2.0
+openstackdocstheme>=1.18.1 # Apache-2.0
+
+# releasenotes
+reno>=2.5.0 # Apache-2.0
+
+# redirect tests in docs
+whereto>=0.3.0 # Apache-2.0
