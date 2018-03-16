@@ -602,6 +602,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         If unable to connect ironic server, an empty list is returned.
 
         :returns: a list of raw node from ironic
+        :raises: VirtDriverNotReady
 
         """
         node_list = []
@@ -610,15 +611,18 @@ class IronicDriver(virt_driver.ComputeDriver):
         except exception.NovaException as e:
             LOG.error("Failed to get the list of nodes from the Ironic "
                       "inventory. Error: %s", e)
+            raise exception.VirtDriverNotReady()
         except Exception as e:
             LOG.error("An unknown error has occurred when trying to get the "
                       "list of nodes from the Ironic inventory. Error: %s", e)
+            raise exception.VirtDriverNotReady()
         return node_list
 
     def list_instances(self):
         """Return the names of all the instances provisioned.
 
         :returns: a list of instance names.
+        :raises: VirtDriverNotReady
 
         """
         # NOTE(lucasagomes): limit == 0 is an indicator to continue
@@ -633,6 +637,7 @@ class IronicDriver(virt_driver.ComputeDriver):
         """Return the UUIDs of all the instances provisioned.
 
         :returns: a list of instance UUIDs.
+        :raises: VirtDriverNotReady
 
         """
         # NOTE(lucasagomes): limit == 0 is an indicator to continue
