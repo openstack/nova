@@ -40,10 +40,11 @@ tests:
   response_strings:
       - admin required
 
-- name: post new resource provider
+- name: post new resource provider - old microversion
   POST: /resource_providers
   request_headers:
     content-type: application/json
+    openstack-api-version: placement 1.19
   data:
       name: $ENVIRON['RP_NAME']
       uuid: $ENVIRON['RP_UUID']
@@ -52,6 +53,29 @@ tests:
       location: //resource_providers/[a-f0-9-]+/
   response_forbidden_headers:
       - content-type
+
+- name: delete it
+  DELETE: $LOCATION
+  status: 204
+
+- name: post new resource provider - new microversion
+  POST: /resource_providers
+  request_headers:
+      content-type: application/json
+  data:
+      name: $ENVIRON['RP_NAME']
+      uuid: $ENVIRON['RP_UUID']
+  status: 200
+  response_headers:
+      location: //resource_providers/[a-f0-9-]+/
+  response_json_paths:
+      $.uuid: $ENVIRON['RP_UUID']
+      $.name: $ENVIRON['RP_NAME']
+      $.parent_provider_uuid: null
+      $.generation: 0
+      $.links[?rel = "self"].href: /resource_providers/$ENVIRON['RP_UUID']
+      $.links[?rel = "inventories"].href: /resource_providers/$ENVIRON['RP_UUID']/inventories
+      $.links[?rel = "usages"].href: /resource_providers/$ENVIRON['RP_UUID']/usages
 
 # On this one, don't test for which field was a duplicate because
 # that depends on how the database reports columns.
@@ -307,7 +331,12 @@ tests:
   data:
       name: parent
       uuid: $ENVIRON['PARENT_PROVIDER_UUID']
-  status: 201
+  status: 200
+  response_json_paths:
+      $.uuid: $ENVIRON['PARENT_PROVIDER_UUID']
+      $.name: parent
+      $.parent_provider_uuid: null
+      $.generation: 0
 
 - name: get provider with old microversion no root provider UUID field
   GET: /resource_providers/$ENVIRON['PARENT_PROVIDER_UUID']
@@ -380,11 +409,12 @@ tests:
   data:
       name: altwparent
       uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
-  status: 201
+  status: 200
   response_headers:
       location: //resource_providers/[a-f0-9-]+/
-  response_forbidden_headers:
-      - content-type
+  response_json_paths:
+      $.uuid: $ENVIRON['ALT_PARENT_PROVIDER_UUID']
+      $.name: altwparent
 
 - name: list all resource providers in a tree
   GET: /resource_providers?in_tree=$ENVIRON['ALT_PARENT_PROVIDER_UUID']
@@ -510,7 +540,7 @@ tests:
       content-type: application/json
   data:
       name: cow
-  status: 201
+  status: 200
 
 - name: try to rename that provider to existing name
   PUT: $LOCATION
@@ -565,7 +595,7 @@ tests:
     content-type: application/json
   data:
       name: a name
-  status: 201
+  status: 200
   response_headers:
       location: //resource_providers/[a-f0-9-]+/
 

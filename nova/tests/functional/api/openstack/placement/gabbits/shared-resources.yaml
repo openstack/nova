@@ -23,7 +23,7 @@ tests:
   data:
       name: cn1
       uuid: 8d830468-6395-46b0-b56a-f934a1d60bbe
-  status: 201
+  status: 200
 
 - name: cn1 inventory
   PUT: /resource_providers/8d830468-6395-46b0-b56a-f934a1d60bbe/inventories
@@ -41,7 +41,7 @@ tests:
   data:
       name: cn2
       uuid: ed6ea55d-01ce-4e11-ba97-13a4e5540b3e
-  status: 201
+  status: 200
 
 - name: cn2 inventory
   PUT: /resource_providers/ed6ea55d-01ce-4e11-ba97-13a4e5540b3e/inventories
@@ -65,7 +65,7 @@ tests:
   data:
       uuid: d450bd39-3b01-4355-9ea1-594f96594cf1
       name: custom magic share
-  status: 201
+  status: 200
 
 - name: shared 1 inventory
   PUT: /resource_providers/d450bd39-3b01-4355-9ea1-594f96594cf1/inventories

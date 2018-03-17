@@ -32,7 +32,7 @@ tests:
   data:
       name: $ENVIRON['RP_NAME']
       uuid: $ENVIRON['RP_UUID']
-  status: 201
+  status: 200
   response_headers:
       location: //resource_providers/[a-f0-9-]+/
 
