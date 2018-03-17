@@ -5767,12 +5767,17 @@ class LibvirtDriver(driver.ComputeDriver):
         hypervisor is capable of hosting.  Each tuple consists
         of the triplet (arch, hypervisor_type, vm_mode).
 
+        Supported hypervisor_type is filtered by virt_type,
+        a parameter set by operators via `nova.conf`.
+
         :returns: List of tuples describing instance capabilities
         """
         caps = self._host.get_capabilities()
         instance_caps = list()
         for g in caps.guests:
             for dt in g.domtype:
+                if dt != CONF.libvirt.virt_type:
+                    continue
                 instance_cap = (
                     fields.Architecture.canonicalize(g.arch),
                     fields.HVType.canonicalize(dt),
