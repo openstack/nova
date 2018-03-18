@@ -252,3 +252,12 @@ representing the newly-created resource provider, in the same format as the
 corresponding `GET /resource_providers/{uuid}` call. This is to allow the
 caller to glean automatically-set fields, such as UUID and generation, without
 a subsequent GET.
+
+1.21 Support ?member_of=<aggregates> queryparam on GET /allocation_candidates
+-----------------------------------------------------------------------------
+
+Add support for the `member_of` query parameter to the `GET
+/allocation_candidates` API. It accepts a comma-separated list of UUIDs for
+aggregates. If this parameter is provided, the only resource providers returned
+will be those in one of the specified aggregates that meet the other parts of
+the request.

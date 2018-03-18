@@ -304,6 +304,77 @@ class SharedStorageFixture(APIFixture):
         ss.set_aggregates([agg_uuid])
 
 
+class NonSharedStorageFixture(APIFixture):
+    """An APIFixture that has two compute nodes with local storage that do not
+    use shared storage.
+    """
+    def start_fixture(self):
+        super(NonSharedStorageFixture, self).start_fixture()
+        self.context = context.get_admin_context()
+
+        cn1_uuid = uuidutils.generate_uuid()
+        cn2_uuid = uuidutils.generate_uuid()
+        aggA_uuid = uuidutils.generate_uuid()
+        aggB_uuid = uuidutils.generate_uuid()
+        aggC_uuid = uuidutils.generate_uuid()
+        os.environ['CN1_UUID'] = cn1_uuid
+        os.environ['CN2_UUID'] = cn2_uuid
+        os.environ['AGGA_UUID'] = aggA_uuid
+        os.environ['AGGB_UUID'] = aggB_uuid
+        os.environ['AGGC_UUID'] = aggC_uuid
+
+        cn1 = rp_obj.ResourceProvider(
+            self.context,
+            name='cn1',
+            uuid=cn1_uuid)
+        cn1.create()
+
+        cn2 = rp_obj.ResourceProvider(
+            self.context,
+            name='cn2',
+            uuid=cn2_uuid)
+        cn2.create()
+
+        # Populate compute node inventory for VCPU and RAM
+        for cn in (cn1, cn2):
+            vcpu_inv = rp_obj.Inventory(
+                self.context,
+                resource_provider=cn,
+                resource_class='VCPU',
+                total=24,
+                reserved=0,
+                max_unit=24,
+                min_unit=1,
+                step_size=1,
+                allocation_ratio=16.0)
+            vcpu_inv.obj_set_defaults()
+            ram_inv = rp_obj.Inventory(
+                self.context,
+                resource_provider=cn,
+                resource_class='MEMORY_MB',
+                total=128 * 1024,
+                reserved=0,
+                max_unit=128 * 1024,
+                min_unit=256,
+                step_size=256,
+                allocation_ratio=1.5)
+            ram_inv.obj_set_defaults()
+            disk_inv = rp_obj.Inventory(
+                self.context,
+                resource_provider=cn,
+                resource_class='DISK_GB',
+                total=2000,
+                reserved=100,
+                max_unit=2000,
+                min_unit=10,
+                step_size=10,
+                allocation_ratio=1.0)
+            disk_inv.obj_set_defaults()
+            inv_list = rp_obj.InventoryList(objects=[vcpu_inv, ram_inv,
+                    disk_inv])
+            cn.set_inventory(inv_list)
+
+
 class CORSFixture(APIFixture):
     """An APIFixture that turns on CORS."""
 

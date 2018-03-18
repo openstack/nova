@@ -1,0 +1,88 @@
+# Tests of allocation candidates API
+
+fixtures:
+    - NonSharedStorageFixture
+
+defaults:
+    request_headers:
+        x-auth-token: admin
+        content-type: application/json
+        accept: application/json
+        openstack-api-version: placement 1.21
+
+tests:
+
+- name: get bad member_of microversion
+  GET: /allocation_candidates?resources=VCPU:1&member_of=in:$ENVIRON['AGGA_UUID'],$ENVIRON['AGGB_UUID']
+  request_headers:
+      openstack-api-version: placement 1.18
+  status: 400
+  response_strings:
+      - Invalid query string parameters
+      - "'member_of' was unexpected"
+
+- name: get allocation candidates invalid member_of value
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&member_of=INVALID_UUID
+  status: 400
+  response_strings:
+      - Invalid query string parameters
+      - Expected 'member_of' parameter to contain valid UUID(s)
+
+- name: get allocation candidates no 'in:' for multiple member_of
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&member_of=$ENVIRON['AGGA_UUID'],$ENVIRON['AGGB_UUID']
+  status: 400
+  response_strings:
+      - Multiple values for 'member_of' must be prefixed with the 'in:' keyword
+
+- name: get allocation candidates multiple member_of with 'in:' but invalid values
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&member_of=in:$ENVIRON['AGGA_UUID'],INVALID_UUID
+  status: 400
+  response_strings:
+      - Invalid query string parameters
+      - Expected 'member_of' parameter to contain valid UUID(s)
+
+- name: get allocation candidates with no match for member_of
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&member_of=$ENVIRON['AGGA_UUID']
+  status: 200
+  response_json_paths:
+      $.allocation_requests.`len`: 0
+
+- name: get compute node 1 state
+  GET: /resource_providers/$ENVIRON['CN1_UUID']
+
+- name: associate the first compute node with aggA
+  PUT: /resource_providers/$ENVIRON['CN1_UUID']/aggregates
+  data:
+      aggregates:
+        - $ENVIRON['AGGA_UUID']
+      resource_provider_generation: $HISTORY['get compute node 1 state'].$RESPONSE['$.generation']
+  status: 200
+
+- name: verify that the member_of call now returns 1 allocation_candidate
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&member_of=in:$ENVIRON['AGGA_UUID'],$ENVIRON['AGGB_UUID']
+  status: 200
+  response_json_paths:
+      $.allocation_requests.`len`: 1
+
+- name: get compute node 2 state
+  GET: /resource_providers/$ENVIRON['CN2_UUID']
+
+- name: associate the second compute node with aggB
+  PUT: /resource_providers/$ENVIRON['CN2_UUID']/aggregates
+  data:
+      aggregates:
+        - $ENVIRON['AGGB_UUID']
+      resource_provider_generation: $HISTORY['get compute node 2 state'].$RESPONSE['$.generation']
+  status: 200
+
+- name: verify that the member_of call now returns both RPs
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&member_of=in:$ENVIRON['AGGA_UUID'],$ENVIRON['AGGB_UUID']
+  status: 200
+  response_json_paths:
+      $.allocation_requests.`len`: 2
+
+- name: verify that aggC still returns no RPs
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&member_of=$ENVIRON['AGGC_UUID']
+  status: 200
+  response_json_paths:
+      $.allocation_requests.`len`: 0
