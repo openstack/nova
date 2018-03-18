@@ -63,7 +63,8 @@ Nova Database
 ``nova-manage db archive_deleted_rows [--max_rows <number>] [--verbose] [--until-complete] [--purge]``
     Move deleted rows from production tables to shadow tables. Note that the
     corresponding rows in the instance_mappings and request_specs tables of the
-    API database are purged when instance records are archived. Specifying
+    API database are purged when instance records are archived and thus,
+    CONF.api_database.connection is required in the config file. Specifying
     --verbose will print the results of the archive operation for any tables that
     were changed. Specifying --until-complete will make the command run
     continuously until all deleted rows are archived. Use the --max_rows option,
