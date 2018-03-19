@@ -1,0 +1,11 @@
+---
+feature:
+  - |
+    XenServer Pools with shared storage used to use aggregates in Nova,
+    however this support was not adequately tested and became broken in
+    a previous release.
+    Now live migration with shared storage is possible using native
+    XAPI pools - independently of Nova's aggregates.
+    The XenAPI/Nova integration expects one nova-compute per XenServer
+    host, so a nova-compute must be run for each slave XenServer host
+    in the pool as well as for the master.

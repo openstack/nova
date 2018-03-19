@@ -302,8 +302,8 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
         if vifs:
             # Still has vifs attached to this network
             for remain_vif in vifs:
-                # if remain vifs are on the local server, give up all the
-                # operations. If remain vifs are on the remote hosts, keep
+                # if the remain vifs are on the local server, give up all the
+                # operations. If the remain vifs are on the remote hosts, keep
                 # the network and delete the bridge
                 if self._get_host_by_vif(remain_vif) == self._session.host_ref:
                     return
@@ -521,9 +521,10 @@ class XenAPIOpenVswitchDriver(XenVIFDriver):
 
     def create_vif_interim_network(self, vif):
         net_name = self.get_vif_interim_net_name(vif['id'])
-        # In a pooled environment, make the network to be shared to ensure it
-        # can also be used in the target host while live migration. It will
-        # make no change if the environment is not pooled.
+        # In a pooled environment, make the network shared in order to ensure
+        # it can also be used in the target host while live migrating.
+        # "assume_network_is_shared" flag does not affect environments where
+        # storage pools are not used.
         network_rec = {'name_label': net_name,
                        'name_description': "interim network for vif[%s]"
                        % vif['id'],
