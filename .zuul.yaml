@@ -92,14 +92,9 @@
       Run tempest integration tests with volume multiattach support enabled.
       This job will only work starting with Queens.
       It uses the default Cinder volume type in devstack (lvm) and the
-      default compute driver in devstack (libvirt). It also disables the
-      Pike Ubuntu Cloud Archive because volume multiattach support with
-      the libvirt driver only works with qemu<2.10 or libvirt>=3.10 which
-      won't work with the Pike UCA.
+      default compute driver in devstack (libvirt).
     run: playbooks/legacy/nova-multiattach/run.yaml
     post-run: playbooks/legacy/nova-multiattach/post.yaml
-    # TODO(mriedem): Make this job voting and gating once bug 1763382 is fixed.
-    voting: false
 
 - job:
     name: nova-next
@@ -127,6 +122,7 @@
     gate:
       jobs:
         - nova-cells-v1
+        - nova-multiattach
         - nova-next
         - nova-tox-functional
         - nova-tox-functional-py35
