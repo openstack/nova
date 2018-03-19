@@ -11,6 +11,7 @@ End user guide
    launch-instances
    config-drive
    metadata-service
+   certificate-validation
 
 .. todo:: The rest of this document should probably move to the admin guide.
 

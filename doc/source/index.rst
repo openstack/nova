@@ -244,6 +244,7 @@ looking parts of our architecture. These are collected below.
    user/block-device-mapping
    user/cells
    user/cellsv2-layout
+   user/certificate-validation
    user/conductor
    user/config-drive
    user/feature-classification
