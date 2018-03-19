@@ -1638,6 +1638,15 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         # Check the return when strict=False
         self.assertIsNone(self.commands.discover_hosts())
 
+    @mock.patch('nova.objects.host_mapping.discover_hosts')
+    def test_discover_hosts_by_service(self, mock_discover_hosts):
+        mock_discover_hosts.return_value = ['fake']
+        ret = self.commands.discover_hosts(by_service=True, strict=True)
+        self.assertEqual(0, ret)
+        mock_discover_hosts.assert_called_once_with(mock.ANY, None,
+                                                    mock.ANY,
+                                                    True)
+
     def test_validate_transport_url_in_conf(self):
         from_conf = 'fake://user:pass@host:port/'
         self.flags(transport_url=from_conf)
