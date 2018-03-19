@@ -25,6 +25,7 @@ import six
 import nova.conf
 from nova import exception as nova_exception
 from nova.i18n import _
+from nova.privsep import libvirt
 from nova import utils
 from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt.libvirt.volume import fs
@@ -37,35 +38,48 @@ SOURCE_PROTOCOL = 'quobyte'
 SOURCE_TYPE = 'file'
 DRIVER_CACHE = 'none'
 DRIVER_IO = 'native'
+VALID_SYSD_STATES = ["starting", "running", "degraded"]
+SYSTEMCTL_CHECK_PATH = "/run/systemd/system"
+
+
+def is_systemd():
+    """Checks if the host is running systemd"""
+    if psutil.Process(1).name() == "systemd" or os.path.exists(
+            SYSTEMCTL_CHECK_PATH):
+        sysdout, sysderr = processutils.execute("systemctl",
+                                       "is-system-running",
+                                        check_exit_code=[0, 1])
+        for state in VALID_SYSD_STATES:
+            if state in sysdout:
+                return True
+    return False
 
 
 def mount_volume(volume, mnt_base, configfile=None):
     """Wraps execute calls for mounting a Quobyte volume"""
     fileutils.ensure_tree(mnt_base)
 
-    # NOTE(kaisers): disable xattrs to speed up io as this omits
-    # additional metadata requests in the backend. xattrs can be
-    # enabled without issues but will reduce performance.
-    command = ['mount.quobyte', '--disable-xattrs', volume, mnt_base]
-    if os.path.exists(" /run/systemd/system"):
-        # Note(kaisers): with systemd this requires a separate CGROUP to
-        # prevent Nova service stop/restarts from killing the mount.
-        command = ['systemd-run', '--scope', '--user', 'mount.quobyte',
-                   '--disable-xattrs', volume, mnt_base]
-    if configfile:
-        command.extend(['-c', configfile])
+    # Note(kaisers): with systemd this requires a separate CGROUP to
+    # prevent Nova service stop/restarts from killing the mount.
+    if is_systemd():
+        LOG.debug('Mounting volume %s at mount point %s via systemd-run',
+                  volume, mnt_base)
+        libvirt.systemd_run_qb_mount(volume, mnt_base, cfg_file=configfile)
+    else:
+        LOG.debug('Mounting volume %s at mount point %s via mount.quobyte',
+                  volume, mnt_base, cfg_file=configfile)
 
-    LOG.debug('Mounting volume %s at mount point %s ...',
-              volume,
-              mnt_base)
-    processutils.execute(*command)
+        libvirt.unprivileged_qb_mount(volume, mnt_base, cfg_file=configfile)
     LOG.info('Mounted volume: %s', volume)
 
 
 def umount_volume(mnt_base):
     """Wraps execute calls for unmouting a Quobyte volume"""
     try:
-        processutils.execute('umount.quobyte', mnt_base)
+        if is_systemd():
+            libvirt.qb_umount(mnt_base)
+        else:
+            libvirt.unprivileged_qb_umount(mnt_base)
     except processutils.ProcessExecutionError as exc:
         if 'Device or resource busy' in six.text_type(exc):
             LOG.error("The Quobyte volume at %s is still in use.", mnt_base)

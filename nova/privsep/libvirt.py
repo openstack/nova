@@ -255,3 +255,35 @@ def create_mdev(physical_device, mdev_type, uuid=None):
     with open(fpath, 'w') as f:
         f.write(uuid)
     return uuid
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def systemd_run_qb_mount(qb_vol, mnt_base, cfg_file=None):
+    """Mount QB volume in separate CGROUP"""
+    sysdr_cmd = ['systemd-run', '--scope', 'mount.quobyte', '--disable-xattrs',
+                 qb_vol, mnt_base]
+    if cfg_file:
+        sysdr_cmd.extend(['-c', cfg_file])
+    return processutils.execute(*sysdr_cmd)
+
+
+# NOTE(kaisers): this method is deliberately not wrapped in a privsep entryp.
+def unprivileged_qb_mount(qb_vol, mnt_base, cfg_file=None):
+    """Mount QB volume"""
+    mnt_cmd = ['mount.quobyte', '--disable-xattrs', qb_vol, mnt_base]
+    if cfg_file:
+        mnt_cmd.extend(['-c', cfg_file])
+    return processutils.execute(*mnt_cmd)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def qb_umount(mnt_base):
+    """Unmount QB volume"""
+    unprivileged_qb_umount(mnt_base)
+
+
+# NOTE(kaisers): this method is deliberately not wrapped in a privsep entryp.
+def unprivileged_qb_umount(mnt_base):
+    """Unmount QB volume"""
+    umnt_cmd = ['umount.quobyte', mnt_base]
+    return processutils.execute(*umnt_cmd)
