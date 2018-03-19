@@ -28,6 +28,7 @@ import webob
 
 from oslo_log import log as logging
 
+from nova.api.openstack.placement import exception
 from nova.api.openstack.placement.handlers import aggregate
 from nova.api.openstack.placement.handlers import allocation
 from nova.api.openstack.placement.handlers import allocation_candidate
@@ -39,7 +40,6 @@ from nova.api.openstack.placement.handlers import trait
 from nova.api.openstack.placement.handlers import usage
 from nova.api.openstack.placement import policy
 from nova.api.openstack.placement import util
-from nova import exception
 from nova.i18n import _
 
 LOG = logging.getLogger(__name__)

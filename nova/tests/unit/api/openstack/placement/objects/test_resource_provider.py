@@ -16,10 +16,10 @@ import six
 from oslo_utils import timeutils
 
 import nova
+from nova.api.openstack.placement import exception
 from nova.api.openstack.placement.objects import resource_provider
 from nova import context
 from nova.db.sqlalchemy import api_models as models
-from nova import exception
 from nova import rc_fields as fields
 from nova import test
 from nova.tests.unit.objects import test_objects

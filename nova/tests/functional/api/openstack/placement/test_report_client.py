@@ -20,6 +20,10 @@ from wsgi_intercept import interceptor
 from nova.api.openstack.placement import deploy
 from nova import conf
 from nova import context
+# TODO(cdent): This points to the nova, not placement, exception for
+# InvalidResourceClass. This test should probably move out of the
+# placement hierarchy since it expects a "standard" placement server
+# and is not testing the placement service itself.
 from nova import exception
 from nova import objects
 from nova import rc_fields as fields

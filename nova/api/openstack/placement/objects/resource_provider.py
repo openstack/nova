@@ -36,10 +36,10 @@ from sqlalchemy import func
 from sqlalchemy import sql
 from sqlalchemy.sql import null
 
+from nova.api.openstack.placement import exception
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models as models
 from nova.db.sqlalchemy import resource_class_cache as rc_cache
-from nova import exception
 from nova.i18n import _
 from nova import rc_fields
 

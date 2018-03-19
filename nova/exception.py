@@ -2068,11 +2068,6 @@ class LibguestfsCannotReadKernel(Invalid):
     msg_fmt = _("Libguestfs does not have permission to read host kernel.")
 
 
-class MaxDBRetriesExceeded(NovaException):
-    msg_fmt = _("Max retries of DB transaction exceeded attempting to "
-                "perform %(action)s.")
-
-
 class RealtimePolicyNotSupported(Invalid):
     msg_fmt = _("Realtime policy not supported by hypervisor")
 
@@ -2107,20 +2102,8 @@ class InvalidReservedMemoryPagesOption(Invalid):
                 "config-reference.")
 
 
-class ConcurrentUpdateDetected(NovaException):
-    msg_fmt = _("Another thread concurrently updated the data. "
-                "Please retry your update")
-
-
-class ResourceClassNotFound(NotFound):
-    msg_fmt = _("No such resource class %(resource_class)s.")
-
-
-class CannotDeleteParentResourceProvider(NovaException):
-    msg_fmt = _("Cannot delete resource provider that is a parent of "
-                "another. Delete child providers first.")
-
-
+# An exception with this name is used on both sides of the placement/
+# nova interaction.
 class ResourceProviderInUse(NovaException):
     msg_fmt = _("Resource provider has allocations.")
 
@@ -2168,29 +2151,8 @@ class ResourceProviderUpdateConflict(PlacementAPIConflict):
                 "provider %(uuid)s (generation %(generation)d): %(error)s")
 
 
-class InventoryWithResourceClassNotFound(NotFound):
-    msg_fmt = _("No inventory of class %(resource_class)s found.")
-
-
 class InvalidResourceClass(Invalid):
     msg_fmt = _("Resource class '%(resource_class)s' invalid.")
-
-
-class ResourceClassExists(NovaException):
-    msg_fmt = _("Resource class %(resource_class)s already exists.")
-
-
-class ResourceClassInUse(Invalid):
-    msg_fmt = _("Cannot delete resource class %(resource_class)s. "
-                "Class is in use in inventory.")
-
-
-class ResourceClassCannotDeleteStandard(Invalid):
-    msg_fmt = _("Cannot delete standard resource class %(resource_class)s.")
-
-
-class ResourceClassCannotUpdateStandard(Invalid):
-    msg_fmt = _("Cannot update standard resource class %(resource_class)s.")
 
 
 class InvalidResourceAmount(Invalid):
@@ -2202,29 +2164,13 @@ class InvalidInventory(Invalid):
                 "resource provider '%(resource_provider)s' invalid.")
 
 
+# An exception with this name is used on both sides of the placement/
+# nova interaction.
 class InventoryInUse(InvalidInventory):
     # NOTE(mriedem): This message cannot change without impacting the
     # nova.scheduler.client.report._RE_INV_IN_USE regex.
     msg_fmt = _("Inventory for '%(resource_classes)s' on "
                 "resource provider '%(resource_provider)s' in use.")
-
-
-class InvalidInventoryCapacity(InvalidInventory):
-    msg_fmt = _("Invalid inventory for '%(resource_class)s' on "
-                "resource provider '%(resource_provider)s'. "
-                "The reserved value is greater than or equal to total.")
-
-
-class InvalidAllocationCapacityExceeded(InvalidInventory):
-    msg_fmt = _("Unable to create allocation for '%(resource_class)s' on "
-                "resource provider '%(resource_provider)s'. The requested "
-                "amount would exceed the capacity.")
-
-
-class InvalidAllocationConstraintsViolated(InvalidInventory):
-    msg_fmt = _("Unable to create allocation for '%(resource_class)s' on "
-                "resource provider '%(resource_provider)s'. The requested "
-                "amount would violate inventory constraints.")
 
 
 class UnsupportedPointerModelRequested(Invalid):
@@ -2266,22 +2212,6 @@ class BadRequirementEmulatorThreadsPolicy(Invalid):
 class PowerVMAPIFailed(NovaException):
     msg_fmt = _("PowerVM API failed to complete for instance=%(inst_name)s.  "
                 "%(reason)s")
-
-
-class TraitNotFound(NotFound):
-    msg_fmt = _("No such trait(s): %(names)s.")
-
-
-class TraitExists(NovaException):
-    msg_fmt = _("The Trait %(name)s already exists")
-
-
-class TraitCannotDeleteStandard(Invalid):
-    msg_fmt = _("Cannot delete standard trait %(name)s.")
-
-
-class TraitInUse(Invalid):
-    msg_fmt = _("The trait %(name)s is in use by a resource provider.")
 
 
 class TraitRetrievalFailed(NovaException):
