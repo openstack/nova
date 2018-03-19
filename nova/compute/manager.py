@@ -342,7 +342,7 @@ class InstanceEvents(object):
 
         @utils.synchronized(self._lock_name(instance))
         def _pop_event():
-            if not self._events:
+            if self._events is None:
                 LOG.debug('Unexpected attempt to pop events during shutdown',
                           instance=instance)
                 return no_events_sentinel
