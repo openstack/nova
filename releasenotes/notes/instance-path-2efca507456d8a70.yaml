@@ -9,6 +9,6 @@ upgrade:
     ``/opt/stack/data/nova/instances/34198248-5541-4d52-a0b4-a6635a7802dd/``.
 
     In Newton backward compatibility is dropped. For instances that haven't
-    been restarted since Folsom and earlier maintanance should be scheduled
+    been restarted since Folsom and earlier maintenance should be scheduled
     before upgrade(stop, rename directory to instance.uuid, then start) so Nova
     will start using new paths for instances.
