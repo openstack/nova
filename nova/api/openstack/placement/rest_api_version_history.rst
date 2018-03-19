@@ -258,9 +258,10 @@ a subsequent GET.
 
 Add support for the `member_of` query parameter to the `GET
 /allocation_candidates` API. It accepts a comma-separated list of UUIDs for
-aggregates. If this parameter is provided, the only resource providers returned
-will be those in one of the specified aggregates that meet the other parts of
-the request.
+aggregates. Note that if more than one aggregate UUID is passed, the
+comma-separated list must be prefixed with the "in:" operator. If this
+parameter is provided, the only resource providers returned will be those in
+one of the specified aggregates that meet the other parts of the request.
 
 1.22 Support forbidden traits on resource providers and allocations candidates
 ------------------------------------------------------------------------------

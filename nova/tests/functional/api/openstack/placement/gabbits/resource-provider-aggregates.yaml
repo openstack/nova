@@ -53,7 +53,7 @@ tests:
   GET: '/resource_providers?member_of=not+a+uuid'
   status: 400
   response_strings:
-      - 'Invalid uuid value: not a uuid'
+      - Expected 'member_of' parameter to contain valid UUID(s).
   response_json_paths:
       $.errors[0].title: Bad Request
 
