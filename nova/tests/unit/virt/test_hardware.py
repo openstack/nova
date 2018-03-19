@@ -3170,3 +3170,29 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
             host_topo, [inst_topo1, inst_topo2])
         self.assertEqual(2, host_topo.cells[0].cpu_usage)
         self.assertEqual(set([0, 1]), host_topo.cells[0].pinned_cpus)
+
+    def test_asymmetric_host(self):
+        """Validate behavior with an asymmetric host topology.
+
+        The host has three cores, two of which are siblings, and the guest
+        requires all three of these - two for vCPUs and one for emulator
+        threads. Ensure that the sibling-ness of the cores is ignored if
+        necessary.
+        """
+        host_topo = objects.NUMATopology(
+            cells=[objects.NUMACell(id=0, cpuset=set([1, 2, 3]), memory=2048,
+                                    cpu_usage=0,
+                                    memory_usage=0,
+                                    siblings=[set([1]), set([2, 3])],
+                                    mempages=[], pinned_cpus=set([]))])
+        inst_topo = objects.InstanceNUMATopology(
+            emulator_threads_policy=(
+                fields.CPUEmulatorThreadsPolicy.ISOLATE),
+            cells=[objects.InstanceNUMACell(
+                id=0,
+                cpuset=set([0, 1]), memory=2048,
+                cpu_policy=fields.CPUAllocationPolicy.DEDICATED)])
+
+        inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
+        self.assertEqual({0: 1, 1: 2}, inst_topo.cells[0].cpu_pinning)
+        self.assertEqual(set([3]), inst_topo.cells[0].cpuset_reserved)
