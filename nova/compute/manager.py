@@ -7418,7 +7418,8 @@ class ComputeManager(manager.Manager):
                     try:
                         self._shutdown_instance(context, instance, bdms,
                                                 notify=False)
-                        self._cleanup_volumes(context, instance, bdms)
+                        self._cleanup_volumes(context, instance, bdms,
+                                              detach=False)
                     except Exception as e:
                         LOG.warning("Periodic cleanup failed to delete "
                                     "instance: %s",

@@ -6952,7 +6952,8 @@ class ComputeTestCase(BaseTestCase,
         mock_shutdown.assert_has_calls([
             mock.call(ctxt, inst1, bdms, notify=False),
             mock.call(ctxt, inst2, bdms, notify=False)])
-        mock_cleanup.assert_called_once_with(ctxt, inst2, bdms)
+        mock_cleanup.assert_called_once_with(ctxt, inst2, bdms,
+                                             detach=False)
         mock_get_uuid.assert_has_calls([
             mock.call(ctxt, inst1.uuid, use_slave=True),
             mock.call(ctxt, inst2.uuid, use_slave=True)])
