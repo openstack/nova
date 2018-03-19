@@ -353,7 +353,7 @@ class ResizeHelpersTestCase(VMUtilsTestBase):
         vm_utils._resize_part_and_fs('fake', 0, 20, 10, 'boot')
 
         mock_fsck.assert_has_calls([
-            mock.call(partition_path, flags='-fy')])
+            mock.call(partition_path)])
         mock_resize2fs.assert_has_calls([
             mock.call(partition_path, None, size='10s')])
         mock_resize.assert_has_calls([
@@ -393,8 +393,7 @@ class ResizeHelpersTestCase(VMUtilsTestBase):
         self.assertRaises(exception.ResizeError,
                           vm_utils._resize_part_and_fs,
                           "fake", 0, 20, 10, "boot")
-        mock_fsck.assert_has_calls([
-            mock.call('/dev/fake1', flags='-fy')])
+        mock_fsck.assert_has_calls([mock.call('/dev/fake1')])
 
     @mock.patch('nova.privsep.fs.ext_journal_disable')
     @mock.patch('nova.privsep.fs.ext_journal_enable')
@@ -409,7 +408,7 @@ class ResizeHelpersTestCase(VMUtilsTestBase):
         vm_utils._resize_part_and_fs('fake', 0, 20, 30, '')
 
         mock_fsck.assert_has_calls([
-            mock.call(partition_path, flags='-fy')])
+            mock.call(partition_path)])
         mock_resize2fs.assert_has_calls([
             mock.call(partition_path, None)])
         mock_resize.assert_has_calls([
