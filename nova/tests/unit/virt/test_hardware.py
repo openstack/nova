@@ -1280,14 +1280,17 @@ class NUMATopologyTest(test.NoDBTestCase):
             objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]), memory=1024,
                              cpu_usage=0, memory_usage=0, mempages=[
                                  hpages0_4K, hpages0_2M],
-                             siblings=[], pinned_cpus=set([])),
+                             siblings=[set([0]), set([1]), set([2]), set([3])],
+                             pinned_cpus=set([])),
             objects.NUMACell(id=1, cpuset=set([4, 6]), memory=512,
                              cpu_usage=0, memory_usage=0, mempages=[
                                  hpages1_4K, hpages1_2M],
-                             siblings=[], pinned_cpus=set([])),
+                             siblings=[set([4]), set([6])],
+                             pinned_cpus=set([])),
             objects.NUMACell(id=2, cpuset=set([5, 7]), memory=512,
                              cpu_usage=0, memory_usage=0, mempages=[],
-                             siblings=[], pinned_cpus=set([])),
+                             siblings=[set([5]), set([7])],
+                             pinned_cpus=set([])),
         ])
         instance1 = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(id=0, cpuset=set([0, 1, 2]), memory=256),
@@ -1344,13 +1347,16 @@ class NUMATopologyTest(test.NoDBTestCase):
         hosttopo = objects.NUMATopology(cells=[
             objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]), memory=1024,
                              cpu_usage=0, memory_usage=0, mempages=[],
-                             siblings=[], pinned_cpus=set([])),
+                             siblings=[set([0]), set([1]), set([2]), set([3])],
+                             pinned_cpus=set([])),
             objects.NUMACell(id=5, cpuset=set([4, 6]), memory=512,
                              cpu_usage=0, memory_usage=0, mempages=[],
-                             siblings=[], pinned_cpus=set([])),
+                             siblings=[set([4]), set([6])],
+                             pinned_cpus=set([])),
             objects.NUMACell(id=6, cpuset=set([5, 7]), memory=512,
                              cpu_usage=0, memory_usage=0, mempages=[],
-                             siblings=[], pinned_cpus=set([])),
+                             siblings=[set([5]), set([7])],
+                             pinned_cpus=set([])),
         ])
         instance1 = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(id=0, cpuset=set([0, 1, 2]), memory=256),
@@ -1400,13 +1406,16 @@ class NUMATopologyTest(test.NoDBTestCase):
         hosttopo = objects.NUMATopology(cells=[
             objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]), memory=1024,
                              cpu_usage=2, memory_usage=512, mempages=[],
-                             siblings=[], pinned_cpus=set([])),
+                             siblings=[set([0]), set([1]), set([2]), set([3])],
+                             pinned_cpus=set([])),
             objects.NUMACell(id=1, cpuset=set([4, 6]), memory=512,
                              cpu_usage=1, memory_usage=512, mempages=[],
-                             siblings=[], pinned_cpus=set([])),
+                             siblings=[set([4]), set([6])],
+                             pinned_cpus=set([])),
             objects.NUMACell(id=2, cpuset=set([5, 7]), memory=256,
                              cpu_usage=0, memory_usage=0, mempages=[],
-                             siblings=[], pinned_cpus=set([])),
+                             siblings=[set([5]), set([7])],
+                             pinned_cpus=set([])),
         ])
         instance1 = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(id=0, cpuset=set([0, 1, 2]), memory=512),
@@ -1449,7 +1458,8 @@ class NUMATopologyTest(test.NoDBTestCase):
                                      total=512,
                                      used=128,
                                      reserved=reserved[0][2048])],
-                             siblings=[], pinned_cpus=set([])),
+                             siblings=[set([0]), set([1])],
+                             pinned_cpus=set([])),
             objects.NUMACell(id=1, cpuset=set([2, 3]), memory=512,
                              cpu_usage=0, memory_usage=0, mempages=[
                                  objects.NUMAPagesTopology(
@@ -1457,7 +1467,8 @@ class NUMATopologyTest(test.NoDBTestCase):
                                      total=5,
                                      used=2,
                                      reserved=reserved[1][1048576])],
-                             siblings=[], pinned_cpus=set([])),
+                             siblings=[set([2]), set([3])],
+                             pinned_cpus=set([])),
         ])
         instance1 = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(
@@ -1516,10 +1527,12 @@ class NUMATopologyTest(test.NoDBTestCase):
         hosttopo = objects.NUMATopology(cells=[
             objects.NUMACell(id=0, cpuset=set([0, 1]), memory=512,
                              cpu_usage=0, memory_usage=0, mempages=[],
-                             siblings=[], pinned_cpus=set([])),
+                             siblings=[set([0]), set([1])],
+                             pinned_cpus=set([])),
             objects.NUMACell(id=1, cpuset=set([2, 3]), memory=512,
                              cpu_usage=0, memory_usage=0, mempages=[],
-                             siblings=[], pinned_cpus=set([])),
+                             siblings=[set([2]), set([3])],
+                             pinned_cpus=set([])),
         ])
         instance1 = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(id=0, cpuset=set([0, 1]), memory=256),
@@ -1550,10 +1563,12 @@ class NUMATopologyTest(test.NoDBTestCase):
         hosttopo = objects.NUMATopology(cells=[
             objects.NUMACell(id=0, cpuset=set([0, 1]), memory=512,
                              cpu_usage=0, memory_usage=0, mempages=[],
-                             siblings=[], pinned_cpus=set([])),
+                             siblings=[set([0]), set([1])],
+                             pinned_cpus=set([])),
             objects.NUMACell(id=1, cpuset=set([2, 3]), memory=512,
                              cpu_usage=0, memory_usage=0, mempages=[],
-                             siblings=[], pinned_cpus=set([])),
+                             siblings=[set([2]), set([3])],
+                             pinned_cpus=set([])),
         ])
         instance1_topo = objects.InstanceNUMATopology(cells=[
             objects.InstanceNUMACell(id=0, cpuset=set([0, 1]), memory=256),
@@ -1588,10 +1603,11 @@ class NUMATopologyTest(test.NoDBTestCase):
                 cells=[
                     objects.NUMACell(id=1, cpuset=set([1, 2]), memory=1024,
                                      cpu_usage=0, memory_usage=0, mempages=[],
-                                     siblings=[], pinned_cpus=set([])),
+                                     siblings=[set([1]), set([2])],
+                                     pinned_cpus=set([])),
                     objects.NUMACell(id=2, cpuset=set([3, 4]), memory=1024,
-                                     cpu_usage=0, memory_usage=0,
-                                     mempages=[], siblings=[],
+                                     cpu_usage=0, memory_usage=0, mempages=[],
+                                     siblings=[set([3]), set([4])],
                                      pinned_cpus=set([]))])
         got = objects.NUMATopology.obj_from_db_obj(expected._to_json())
 
@@ -1603,7 +1619,8 @@ class VirtNUMATopologyCellUsageTestCase(test.NoDBTestCase):
     def test_fit_instance_cell_success_no_limit(self):
         host_cell = objects.NUMACell(id=4, cpuset=set([1, 2]), memory=1024,
                                      cpu_usage=0, memory_usage=0, mempages=[],
-                                     siblings=[], pinned_cpus=set([]))
+                                     siblings=[set([1]), set([2])],
+                                     pinned_cpus=set([]))
         instance_cell = objects.InstanceNUMACell(
             id=0, cpuset=set([1, 2]), memory=1024)
         fitted_cell = hw._numa_fit_instance_cell(host_cell, instance_cell)
@@ -1612,9 +1629,9 @@ class VirtNUMATopologyCellUsageTestCase(test.NoDBTestCase):
 
     def test_fit_instance_cell_success_w_limit(self):
         host_cell = objects.NUMACell(id=4, cpuset=set([1, 2]), memory=1024,
-                                     cpu_usage=2,
-                                     memory_usage=1024,
-                                     mempages=[], siblings=[],
+                                     cpu_usage=2, memory_usage=1024,
+                                     mempages=[],
+                                     siblings=[set([1]), set([2])],
                                      pinned_cpus=set([]))
         limit_cell = objects.NUMATopologyLimits(
             cpu_allocation_ratio=2, ram_allocation_ratio=2)
@@ -1628,7 +1645,8 @@ class VirtNUMATopologyCellUsageTestCase(test.NoDBTestCase):
     def test_fit_instance_cell_self_overcommit(self):
         host_cell = objects.NUMACell(id=4, cpuset=set([1, 2]), memory=1024,
                                      cpu_usage=0, memory_usage=0, mempages=[],
-                                     siblings=[], pinned_cpus=set([]))
+                                     siblings=[set([1]), set([2])],
+                                     pinned_cpus=set([]))
         limit_cell = objects.NUMATopologyLimits(
             cpu_allocation_ratio=2, ram_allocation_ratio=2)
         instance_cell = objects.InstanceNUMACell(
@@ -1639,9 +1657,9 @@ class VirtNUMATopologyCellUsageTestCase(test.NoDBTestCase):
 
     def test_fit_instance_cell_fail_w_limit(self):
         host_cell = objects.NUMACell(id=4, cpuset=set([1, 2]), memory=1024,
-                                     cpu_usage=2,
-                                     memory_usage=1024,
-                                     mempages=[], siblings=[],
+                                     cpu_usage=2, memory_usage=1024,
+                                     mempages=[],
+                                     siblings=[set([1]), set([2])],
                                      pinned_cpus=set([]))
         instance_cell = objects.InstanceNUMACell(
             id=0, cpuset=set([1, 2]), memory=4096)
@@ -1666,11 +1684,13 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
                 cells=[
                     objects.NUMACell(id=1, cpuset=set([1, 2]), memory=2048,
                                      cpu_usage=2, memory_usage=2048,
-                                     mempages=[], siblings=[],
+                                     mempages=[],
+                                     siblings=[set([1]), set([2])],
                                      pinned_cpus=set([])),
                     objects.NUMACell(id=2, cpuset=set([3, 4]), memory=2048,
                                      cpu_usage=2, memory_usage=2048,
-                                     mempages=[], siblings=[],
+                                     mempages=[],
+                                     siblings=[set([3]), set([4])],
                                      pinned_cpus=set([]))])
 
         self.limits = objects.NUMATopologyLimits(
@@ -1835,10 +1855,12 @@ class HelperMethodsTestCase(test.NoDBTestCase):
         self.hosttopo = objects.NUMATopology(cells=[
             objects.NUMACell(id=0, cpuset=set([0, 1]), memory=512,
                              memory_usage=0, cpu_usage=0, mempages=[],
-                             siblings=[], pinned_cpus=set([])),
+                             siblings=[set([0]), set([1])],
+                             pinned_cpus=set([])),
             objects.NUMACell(id=1, cpuset=set([2, 3]), memory=512,
                              memory_usage=0, cpu_usage=0, mempages=[],
-                             siblings=[], pinned_cpus=set([])),
+                             siblings=[set([2]), set([3])],
+                             pinned_cpus=set([])),
         ])
         self.instancetopo = objects.InstanceNUMATopology(
             instance_uuid=uuids.instance,
@@ -2008,7 +2030,7 @@ class VirtMemoryPagesTestCase(test.NoDBTestCase):
                 size_kb=2048,
                 total=512,
                 used=0)],
-            siblings=[], pinned_cpus=set([]))
+            siblings=[set([0])], pinned_cpus=set([]))
 
         topo = hw._numa_pagesize_usage_from_cell(hostcell, instcell, 1)
         self.assertEqual(2048, topo[0].size_kb)
@@ -2099,7 +2121,7 @@ class VirtMemoryPagesTestCase(test.NoDBTestCase):
             id=0, cpuset=set([0]), memory=1024, mempages=[
                 objects.NUMAPagesTopology(size_kb=4, total=262144, used=0),
             ],
-            siblings=[], pinned_cpus=set([]))
+            siblings=[set([0])], pinned_cpus=set([]))
 
         inst_cell = objects.InstanceNUMACell(
             id=0, cpuset=set([0]), memory=1024, pagesize=hw.MEMPAGES_SMALL)
@@ -2126,7 +2148,7 @@ class VirtMemoryPagesTestCase(test.NoDBTestCase):
                 objects.NUMAPagesTopology(size_kb=4, total=256, used=0),
                 objects.NUMAPagesTopology(size_kb=2048, total=512, used=0)
             ],
-            siblings=[], pinned_cpus=set([]))
+            siblings=[set([0])], pinned_cpus=set([]))
 
         self.assertEqual(
             2048,
@@ -2140,7 +2162,7 @@ class VirtMemoryPagesTestCase(test.NoDBTestCase):
                 objects.NUMAPagesTopology(size_kb=4, total=256, used=0),
                 objects.NUMAPagesTopology(size_kb=2048, total=512, used=0)
             ],
-            siblings=[], pinned_cpus=set([]))
+            siblings=[set([0])], pinned_cpus=set([]))
 
         self.assertEqual(
             2048,
@@ -2155,7 +2177,7 @@ class VirtMemoryPagesTestCase(test.NoDBTestCase):
                 objects.NUMAPagesTopology(size_kb=4, total=256, used=0),
                 objects.NUMAPagesTopology(size_kb=2048, total=512, used=0)
             ],
-            siblings=[], pinned_cpus=set([]))
+            siblings=[set([0])], pinned_cpus=set([]))
         self.assertIsNone(hw._numa_cell_supports_pagesize_request(
             host_cell, inst_cell))
 
@@ -2168,7 +2190,7 @@ class VirtMemoryPagesTestCase(test.NoDBTestCase):
                 objects.NUMAPagesTopology(size_kb=4, total=256, used=0),
                 objects.NUMAPagesTopology(size_kb=2048, total=512, used=0)
             ],
-            siblings=[], pinned_cpus=set([]))
+            siblings=[set([0])], pinned_cpus=set([]))
         self.assertRaises(exception.MemoryPageSizeNotSupported,
                           hw._numa_cell_supports_pagesize_request,
                           host_cell, inst_cell)
@@ -2215,8 +2237,9 @@ class _CPUPinningTestCaseBase(object):
 class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
     def test_get_pinning_inst_too_large_cpu(self):
         host_pin = objects.NUMACell(id=0, cpuset=set([0, 1, 2]),
-                                    memory=2048, memory_usage=0, siblings=[],
-                                    mempages=[], pinned_cpus=set([]))
+                                    memory=2048, memory_usage=0, mempages=[],
+                                    siblings=[set([0]), set([1]), set([2])],
+                                    pinned_cpus=set([]))
         inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1, 2, 3]),
                                             memory=2048)
 
@@ -2226,7 +2249,8 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
     def test_get_pinning_inst_too_large_mem(self):
         host_pin = objects.NUMACell(id=0, cpuset=set([0, 1, 2]),
                                     memory=2048, memory_usage=1024,
-                                    siblings=[], mempages=[],
+                                    mempages=[],
+                                    siblings=[set([0]), set([1]), set([2])],
                                     pinned_cpus=set([]))
         inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1, 2]),
                                             memory=2048)
@@ -2236,9 +2260,10 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
 
     def test_get_pinning_inst_not_avail(self):
         host_pin = objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
-                                    memory=2048, memory_usage=0,
-                                    pinned_cpus=set([0]),
-                                    siblings=[], mempages=[])
+                                    memory=2048, memory_usage=0, mempages=[],
+                                    siblings=[set([0]), set([1]), set([2]),
+                                              set([3])],
+                                    pinned_cpus=set([0]))
         inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1, 2, 3]),
                                             memory=2048)
 
@@ -2247,8 +2272,9 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
 
     def test_get_pinning_no_sibling_fits_empty(self):
         host_pin = objects.NUMACell(id=0, cpuset=set([0, 1, 2]),
-                                    memory=2048, memory_usage=0, siblings=[],
-                                    mempages=[], pinned_cpus=set([]))
+                                    memory=2048, memory_usage=0, mempages=[],
+                                    siblings=[set([0]), set([1]), set([2])],
+                                    pinned_cpus=set([]))
         inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1, 2]), memory=2048)
 
         inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
@@ -2260,9 +2286,10 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
 
     def test_get_pinning_no_sibling_fits_w_usage(self):
         host_pin = objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
-                                    memory=2048, memory_usage=0,
-                                    pinned_cpus=set([1]), mempages=[],
-                                    siblings=[])
+                                    memory=2048, memory_usage=0, mempages=[],
+                                    siblings=[set([0]), set([1]), set([2]),
+                                              set([3])],
+                                    pinned_cpus=set([1]))
         inst_pin = objects.InstanceNUMACell(cpuset=set([0, 1, 2]), memory=1024)
 
         inst_pin = hw._numa_fit_instance_cell_with_pinning(host_pin, inst_pin)
@@ -2272,8 +2299,10 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
 
     def test_get_pinning_instance_siblings_fits(self):
         host_pin = objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
-                                    memory=2048, memory_usage=0, siblings=[],
-                                    mempages=[], pinned_cpus=set([]))
+                                    memory=2048, memory_usage=0, mempages=[],
+                                    siblings=[set([0]), set([1]), set([2]),
+                                              set([3])],
+                                    pinned_cpus=set([]))
         inst_pin = objects.InstanceNUMACell(
                 cpuset=set([0, 1, 2, 3]), memory=2048)
 
@@ -2366,10 +2395,10 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
     def test_get_pinning_require_policy_no_siblings(self):
         host_pin = objects.NUMACell(
                 id=0,
-                cpuset=set([0, 1, 2, 3, 4, 5, 6, 7]),
+                cpuset=set(range(0, 8)),
                 memory=4096, memory_usage=0,
                 pinned_cpus=set([]),
-                siblings=[],
+                siblings=[set([x]) for x in range(0, 8)],
                 mempages=[])
         inst_pin = objects.InstanceNUMACell(
                 cpuset=set([0, 1, 2, 3]),
@@ -2539,9 +2568,10 @@ class CPUPinningCellTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
 
     def test_get_pinning_isolate_policy_fits(self):
         host_pin = objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
-                                    memory=4096, memory_usage=0,
-                                    siblings=[],
-                                    mempages=[], pinned_cpus=set([]))
+                                    memory=4096, memory_usage=0, mempages=[],
+                                    siblings=[set([0]), set([1]), set([2]),
+                                              set([3])],
+                                    pinned_cpus=set([]))
         inst_pin = objects.InstanceNUMACell(
                 cpuset=set([0, 1]),
                 memory=2048,
@@ -2590,11 +2620,13 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
     def test_host_numa_fit_instance_to_host_single_cell(self):
         host_topo = objects.NUMATopology(
                 cells=[objects.NUMACell(id=0, cpuset=set([0, 1]), memory=2048,
-                                        memory_usage=0, siblings=[],
-                                        mempages=[], pinned_cpus=set([])),
+                                        memory_usage=0, mempages=[],
+                                        siblings=[set([0]), set([1])],
+                                        pinned_cpus=set([])),
                        objects.NUMACell(id=1, cpuset=set([2, 3]), memory=2048,
-                                        memory_usage=0, siblings=[],
-                                        mempages=[], pinned_cpus=set([]))]
+                                        memory_usage=0, mempages=[],
+                                        siblings=[set([2]), set([3])],
+                                        pinned_cpus=set([]))]
                 )
         inst_topo = objects.InstanceNUMATopology(
                 cells=[objects.InstanceNUMACell(
@@ -2608,13 +2640,14 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
 
     def test_host_numa_fit_instance_to_host_single_cell_w_usage(self):
         host_topo = objects.NUMATopology(
-                cells=[objects.NUMACell(id=0, cpuset=set([0, 1]),
-                                        pinned_cpus=set([0]), memory=2048,
-                                        memory_usage=0, siblings=[],
-                                        mempages=[]),
+                cells=[objects.NUMACell(id=0, cpuset=set([0, 1]), memory=2048,
+                                        memory_usage=0, mempages=[],
+                                        siblings=[set([0]), set([1])],
+                                        pinned_cpus=set([0])),
                        objects.NUMACell(id=1, cpuset=set([2, 3]), memory=2048,
-                                        memory_usage=0, siblings=[],
-                                        mempages=[], pinned_cpus=set([]))])
+                                        memory_usage=0, mempages=[],
+                                        siblings=[set([2]), set([3])],
+                                        pinned_cpus=set([]))])
         inst_topo = objects.InstanceNUMATopology(
                 cells=[objects.InstanceNUMACell(
                     cpuset=set([0, 1]), memory=2048,
@@ -2628,11 +2661,13 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
     def test_host_numa_fit_instance_to_host_single_cell_fail(self):
         host_topo = objects.NUMATopology(
                 cells=[objects.NUMACell(id=0, cpuset=set([0, 1]), memory=2048,
-                                        pinned_cpus=set([0]), memory_usage=0,
-                                        siblings=[], mempages=[]),
+                                        memory_usage=0, mempages=[],
+                                        siblings=[set([0]), set([1])],
+                                        pinned_cpus=set([0])),
                        objects.NUMACell(id=1, cpuset=set([2, 3]), memory=2048,
-                                        pinned_cpus=set([2]), memory_usage=0,
-                                        siblings=[], mempages=[])])
+                                        memory_usage=0, mempages=[],
+                                        siblings=[set([2]), set([3])],
+                                        pinned_cpus=set([2]))])
         inst_topo = objects.InstanceNUMATopology(
                 cells=[objects.InstanceNUMACell(
                     cpuset=set([0, 1]), memory=2048,
@@ -2645,11 +2680,15 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         host_topo = objects.NUMATopology(
                 cells=[objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
                                         memory=2048, memory_usage=0,
-                                        siblings=[], mempages=[],
+                                        mempages=[],
+                                        siblings=[set([0]), set([1]), set([2]),
+                                                  set([3])],
                                         pinned_cpus=set([])),
                        objects.NUMACell(id=1, cpuset=set([4, 5, 6, 7]),
                                         memory=2048, memory_usage=0,
-                                        siblings=[], mempages=[],
+                                        mempages=[],
+                                        siblings=[set([4]), set([5]), set([6]),
+                                                  set([7])],
                                         pinned_cpus=set([]))])
         inst_topo = objects.InstanceNUMATopology(
                 cells=[objects.InstanceNUMACell(
@@ -2666,17 +2705,24 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
     def test_host_numa_fit_instance_to_host_barely_fit(self):
         host_topo = objects.NUMATopology(
                 cells=[objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
-                                        memory=2048, pinned_cpus=set([0]),
-                                        siblings=[], mempages=[],
-                                        memory_usage=0),
+                                        memory=2048, memory_usage=0,
+                                        mempages=[],
+                                        siblings=[set([0]), set([1]), set([2]),
+                                                  set([3])],
+                                        pinned_cpus=set([0])),
                        objects.NUMACell(id=1, cpuset=set([4, 5, 6, 7]),
                                         memory=2048, memory_usage=0,
-                                        siblings=[], mempages=[],
+                                        mempages=[],
+                                        siblings=[set([4]), set([5]), set([6]),
+                                                  set([7])],
                                         pinned_cpus=set([4, 5, 6])),
                        objects.NUMACell(id=2, cpuset=set([8, 9, 10, 11]),
                                         memory=2048, memory_usage=0,
-                                        siblings=[], mempages=[],
+                                        mempages=[],
+                                        siblings=[set([8]), set([9]),
+                                                  set([10]), set([11])],
                                         pinned_cpus=set([10, 11]))])
+
         inst_topo = objects.InstanceNUMATopology(
                 cells=[objects.InstanceNUMACell(
                             cpuset=set([0, 1]), memory=2048,
@@ -2693,11 +2739,15 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         host_topo = objects.NUMATopology(
                 cells=[objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
                                         memory=4096, memory_usage=0,
-                                        mempages=[], siblings=[],
+                                        mempages=[],
+                                        siblings=[set([0]), set([1]), set([2]),
+                                                  set([3])],
                                         pinned_cpus=set([0])),
                        objects.NUMACell(id=1, cpuset=set([4, 5, 6, 7]),
                                         memory=4096, memory_usage=0,
-                                        siblings=[], mempages=[],
+                                        mempages=[],
+                                        siblings=[set([4]), set([5]), set([6]),
+                                                  set([7])],
                                         pinned_cpus=set([4, 5, 6]))])
         inst_topo = objects.InstanceNUMATopology(
                 cells=[objects.InstanceNUMACell(
@@ -2713,11 +2763,15 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         host_topo = objects.NUMATopology(
                 cells=[objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
                                         memory=4096, memory_usage=0,
-                                        siblings=[], mempages=[],
+                                        mempages=[],
+                                        siblings=[set([0]), set([1]), set([2]),
+                                                  set([3])],
                                         pinned_cpus=set([])),
                        objects.NUMACell(id=1, cpuset=set([4, 5, 6, 7]),
                                         memory=4096, memory_usage=0,
-                                        siblings=[], mempages=[],
+                                        mempages=[],
+                                        siblings=[set([4]), set([5]), set([6]),
+                                                  set([7])],
                                         pinned_cpus=set([]))])
         inst_topo = objects.InstanceNUMATopology(
                 cells=[objects.InstanceNUMACell(
@@ -2736,7 +2790,9 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         host_pin = objects.NUMATopology(
                 cells=[objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
                                         memory=4096, cpu_usage=0,
-                                        memory_usage=0, siblings=[],
+                                        memory_usage=0,
+                                        siblings=[set([0]), set([1]), set([2]),
+                                                  set([3])],
                                         mempages=[], pinned_cpus=set([]))])
         inst_pin_1 = objects.InstanceNUMATopology(
                 cells=[objects.InstanceNUMACell(
@@ -2758,7 +2814,9 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         host_pin = objects.NUMATopology(
             cells=[objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
                                     memory=4096, cpu_usage=0, memory_usage=0,
-                                    siblings=[], mempages=[],
+                                    mempages=[],
+                                    siblings=[set([0]), set([1]), set([2]),
+                                              set([3])],
                                     pinned_cpus=set([0, 1, 3]))])
         inst_pin_1 = objects.InstanceNUMATopology(
             cells=[objects.InstanceNUMACell(
@@ -2777,7 +2835,9 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
         host_pin = objects.NUMATopology(
                 cells=[objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
                                         memory=4096, cpu_usage=0,
-                                        memory_usage=0, siblings=[],
+                                        memory_usage=0,
+                                        siblings=[set([0]), set([1]), set([2]),
+                                                  set([3])],
                                         mempages=[], pinned_cpus=set([]))])
         inst_pin_1 = objects.InstanceNUMATopology(
                 cells=[objects.InstanceNUMACell(
@@ -2841,7 +2901,8 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
                 cells=[objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
                                         memory=4096, cpu_usage=0,
                                         memory_usage=0,
-                                        siblings=[],
+                                        siblings=[set([0]), set([1]), set([2]),
+                                                  set([3])],
                                         mempages=[], pinned_cpus=set([]))])
         inst_pin = objects.InstanceNUMATopology(
             cells=[objects.InstanceNUMACell(
@@ -2861,7 +2922,8 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
                 cells=[objects.NUMACell(id=0, cpuset=set([0, 1, 2, 3]),
                                         memory=4096, cpu_usage=4,
                                         memory_usage=0,
-                                        siblings=[],
+                                        siblings=[set([0]), set([1]), set([2]),
+                                                  set([3])],
                                         mempages=[],
                                         pinned_cpus=set([0, 1, 2, 3]))])
         inst_pin = objects.InstanceNUMATopology(
@@ -2882,7 +2944,8 @@ class CPUPinningTestCase(test.NoDBTestCase, _CPUPinningTestCaseBase):
 class CPUSReservedCellTestCase(test.NoDBTestCase):
     def _test_reserved(self, reserved):
         host_cell = objects.NUMACell(id=0, cpuset=set([0, 1, 2]),
-                                     memory=2048, memory_usage=0, siblings=[],
+                                     memory=2048, memory_usage=0,
+                                     siblings=[set([0]), set([1]), set([2])],
                                      mempages=[], pinned_cpus=set([]))
         inst_cell = objects.InstanceNUMACell(cpuset=set([0, 1]), memory=2048)
         return hw._numa_fit_instance_cell_with_pinning(
@@ -2942,12 +3005,12 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
     def _host_topology():
         return objects.NUMATopology(
             cells=[objects.NUMACell(id=0, cpuset=set([0, 1]), memory=2048,
-                                    cpu_usage=0,
-                                    memory_usage=0, siblings=[],
+                                    cpu_usage=0, memory_usage=0,
+                                    siblings=[set([0]), set([1])],
                                     mempages=[], pinned_cpus=set([])),
                    objects.NUMACell(id=1, cpuset=set([2, 3]), memory=2048,
-                                    cpu_usage=0,
-                                    memory_usage=0, siblings=[],
+                                    cpu_usage=0, memory_usage=0,
+                                    siblings=[set([2]), set([3])],
                                     mempages=[], pinned_cpus=set([]))])
 
     def test_single_node_not_defined(self):

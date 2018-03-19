@@ -22,12 +22,12 @@ fake_obj_numa = objects.NUMATopology(
             id=0, cpuset=set([1, 2]), memory=512,
             cpu_usage=2, memory_usage=256,
             mempages=[], pinned_cpus=set([]),
-            siblings=[]),
+            siblings=[set([1]), set([2])]),
         objects.NUMACell(
             id=1, cpuset=set([3, 4]), memory=512,
             cpu_usage=1, memory_usage=128,
             mempages=[], pinned_cpus=set([]),
-            siblings=[])])
+            siblings=[set([3]), set([4])])])
 
 
 class _TestNUMA(object):
@@ -72,12 +72,12 @@ class _TestNUMA(object):
             objects.NUMACell(
                 id=0, cpuset=set([1, 2]), memory=512,
                 cpu_usage=2, memory_usage=256,
-                pinned_cpus=set([1]), siblings=[],
+                pinned_cpus=set([1]), siblings=[set([1]), set([2])],
                 mempages=[]),
             objects.NUMACell(
                 id=1, cpuset=set([3, 4]), memory=512,
                 cpu_usage=1, memory_usage=128,
-                pinned_cpus=set([]), siblings=[],
+                pinned_cpus=set([]), siblings=[set([3]), set([4])],
                 mempages=[])
             ]
         )
@@ -85,10 +85,12 @@ class _TestNUMA(object):
         self.assertEqual(set([3, 4]), obj.cells[1].free_cpus)
 
     def test_pinning_logic(self):
-        numacell = objects.NUMACell(id=0, cpuset=set([1, 2, 3, 4]), memory=512,
-                                    cpu_usage=2, memory_usage=256,
-                                    pinned_cpus=set([1]), siblings=[],
-                                    mempages=[])
+        numacell = objects.NUMACell(
+            id=0, cpuset=set([1, 2, 3, 4]), memory=512,
+            cpu_usage=2, memory_usage=256,
+            pinned_cpus=set([1]),
+            siblings=[set([1]), set([2]), set([3]), set([4])],
+            mempages=[])
         numacell.pin_cpus(set([2, 3]))
         self.assertEqual(set([4]), numacell.free_cpus)
 
@@ -114,11 +116,11 @@ class _TestNUMA(object):
         self.assertEqual(set([1, 2, 3, 4]), numacell.free_cpus)
 
     def test_pinning_with_siblings(self):
-        numacell = objects.NUMACell(id=0, cpuset=set([1, 2, 3, 4]), memory=512,
-                                    cpu_usage=2, memory_usage=256,
-                                    pinned_cpus=set([]),
-                                    siblings=[set([1, 3]), set([2, 4])],
-                                    mempages=[])
+        numacell = objects.NUMACell(
+            id=0, cpuset=set([1, 2, 3, 4]), memory=512,
+            cpu_usage=2, memory_usage=256,
+            pinned_cpus=set([]), siblings=[set([1, 3]), set([2, 4])],
+            mempages=[])
 
         numacell.pin_cpus_with_siblings(set([1, 2]))
         self.assertEqual(set(), numacell.free_cpus)
@@ -137,12 +139,13 @@ class _TestNUMA(object):
         numacell.unpin_cpus_with_siblings(set([4]))
         self.assertEqual(set([1, 2, 3, 4]), numacell.free_cpus)
 
-    def test_pinning_with_siblings_with_empty_siblings_list(self):
-        numacell = objects.NUMACell(id=0, cpuset=set([1, 2, 3, 4]), memory=512,
-                                    cpu_usage=0, memory_usage=256,
-                                    pinned_cpus=set([]),
-                                    siblings=[],
-                                    mempages=[])
+    def test_pinning_with_siblings_no_host_siblings(self):
+        numacell = objects.NUMACell(
+            id=0, cpuset=set([1, 2, 3, 4]), memory=512,
+            cpu_usage=0, memory_usage=256,
+            pinned_cpus=set([]),
+            siblings=[set([1]), set([2]), set([3]), set([4])],
+            mempages=[])
 
         numacell.pin_cpus_with_siblings(set([1, 2]))
         self.assertEqual(set([1, 2]), numacell.pinned_cpus)
@@ -169,7 +172,7 @@ class _TestNUMA(object):
     def test_can_fit_hugepages(self):
         cell = objects.NUMACell(
             id=0, cpuset=set([1, 2]), memory=1024,
-            siblings=[], pinned_cpus=set([]),
+            siblings=[set([1]), set([2])], pinned_cpus=set([]),
             mempages=[
                 objects.NUMAPagesTopology(
                     size_kb=4, total=1548736, used=0),

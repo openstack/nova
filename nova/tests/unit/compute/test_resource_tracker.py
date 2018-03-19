@@ -164,11 +164,13 @@ _NUMA_HOST_TOPOLOGIES = {
         objects.NUMACell(id=0, cpuset=set([1, 2]), memory=_2MB,
                          cpu_usage=0, memory_usage=0,
                          mempages=[_NUMA_PAGE_TOPOLOGIES['2kb*8']],
-                         siblings=[], pinned_cpus=set([])),
+                         siblings=[set([1]), set([2])],
+                         pinned_cpus=set([])),
         objects.NUMACell(id=1, cpuset=set([3, 4]), memory=_2MB,
                          cpu_usage=0, memory_usage=0,
                          mempages=[_NUMA_PAGE_TOPOLOGIES['2kb*8']],
-                         siblings=[], pinned_cpus=set([]))]),
+                         siblings=[set([3]), set([4])],
+                         pinned_cpus=set([]))]),
 }
 
 
