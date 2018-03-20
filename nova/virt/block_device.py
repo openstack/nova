@@ -631,7 +631,17 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
         else:
             attachment_ref = volume_api.attachment_get(context,
                                                        self['attachment_id'])
+            # The _volume_attach method stashes a 'multiattach' flag in the
+            # BlockDeviceMapping.connection_info which is not persisted back
+            # in cinder so before we overwrite the BDM.connection_info (via
+            # the update_db decorator on this method), we need to make sure
+            # and preserve the multiattach flag if it's set. Note that this
+            # is safe to do across refreshes because the multiattach capability
+            # of a volume cannot be changed while the volume is in-use.
+            multiattach = self['connection_info'].get('multiattach', False)
             connection_info = attachment_ref['connection_info']
+            if multiattach:
+                connection_info['multiattach'] = True
 
         if 'serial' not in connection_info:
             connection_info['serial'] = self.volume_id
