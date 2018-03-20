@@ -48,13 +48,7 @@ class FlavorObjectTestCase(test.NoDBTestCase):
         self.useFixture(fixtures.Database(database='api'))
         self.context = context.RequestContext('fake-user', 'fake-project')
 
-    def _delete_main_flavors(self):
-        flavors = db_api.flavor_get_all(self.context)
-        for flavor in flavors:
-            db_api.flavor_destroy(self.context, flavor['flavorid'])
-
     def test_create(self):
-        self._delete_main_flavors()
         flavor = objects.Flavor(context=self.context, **fake_api_flavor)
         flavor.create()
         self.assertIn('id', flavor)
@@ -71,7 +65,6 @@ class FlavorObjectTestCase(test.NoDBTestCase):
                           flavor.flavorid)
 
     def test_get_with_no_projects(self):
-        self._delete_main_flavors()
         fields = dict(fake_api_flavor, projects=[])
         flavor = objects.Flavor(context=self.context, **fields)
         flavor.create()
@@ -79,7 +72,6 @@ class FlavorObjectTestCase(test.NoDBTestCase):
         self.assertEqual([], flavor.projects)
 
     def test_get_with_projects_and_specs(self):
-        self._delete_main_flavors()
         flavor = objects.Flavor(context=self.context, **fake_api_flavor)
         flavor.create()
         flavor = objects.Flavor.get_by_id(self.context, flavor.id)
@@ -98,7 +90,6 @@ class FlavorObjectTestCase(test.NoDBTestCase):
         self.assertEqual(flavor.id, flavor2.id)
 
     def test_query_api(self):
-        self._delete_main_flavors()
         flavor = objects.Flavor(context=self.context, **fake_api_flavor)
         flavor.create()
         self._test_query(flavor)
@@ -147,7 +138,6 @@ class FlavorObjectTestCase(test.NoDBTestCase):
                           flavor.name)
 
     def test_destroy_api(self):
-        self._delete_main_flavors()
         flavor = objects.Flavor(context=self.context, **fake_api_flavor)
         flavor.create()
         self._test_destroy(flavor)
@@ -181,7 +171,6 @@ class FlavorObjectTestCase(test.NoDBTestCase):
         self._test_get_all(expect_len + 1)
 
     def test_get_all_with_all_api_flavors(self):
-        self._delete_main_flavors()
         flavor = objects.Flavor(context=self.context, **fake_api_flavor)
         flavor.create()
         self._test_get_all(1)
