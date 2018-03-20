@@ -21,6 +21,7 @@ import os
 import shutil
 
 from castellan import key_manager
+from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_serialization import jsonutils
 from oslo_utils import excutils
@@ -259,7 +260,7 @@ class Image(object):
         can_fallocate = getattr(self.__class__, 'can_fallocate', None)
         if can_fallocate is None:
             test_path = self.path + '.fallocate_test'
-            _out, err = utils.trycmd('fallocate', '-l', '1', test_path)
+            _out, err = processutils.trycmd('fallocate', '-l', '1', test_path)
             fileutils.delete_if_exists(test_path)
             can_fallocate = not err
             self.__class__.can_fallocate = can_fallocate
