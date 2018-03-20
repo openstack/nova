@@ -1704,16 +1704,14 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         self._create_instance()
         with test.nested(
             mock.patch('os.path.exists', return_value=True),
-            mock.patch('{}.open'.format(driver.__name__), create=True),
             mock.patch('nova.privsep.path.last_bytes')
-        ) as (fake_exists, fake_open, fake_last_bytes):
-            fake_open.return_value = mock.MagicMock()
-            fake_fd = fake_open.return_value.__enter__.return_value
+        ) as (fake_exists, fake_last_bytes):
             fake_last_bytes.return_value = b'fira', 0
             output = self.conn.get_console_output(self.context, self.instance)
             fname = self.instance.uuid.replace('-', '')
-            fake_exists.assert_called_once_with('/opt/vspc/{}'.format(fname))
-            fake_last_bytes.assert_called_once_with(fake_fd,
+            fpath = '/opt/vspc/{}'.format(fname)
+            fake_exists.assert_called_once_with(fpath)
+            fake_last_bytes.assert_called_once_with(fpath,
                                                     driver.MAX_CONSOLE_BYTES)
         self.assertEqual(b'fira', output)
 

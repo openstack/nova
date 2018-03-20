@@ -290,10 +290,9 @@ class VMwareVCDriver(driver.ComputeDriver):
             LOG.warning('The console log is missing. Check your VSPC '
                         'configuration', instance=instance)
             return b""
-        with open(path, 'rb') as fp:
-            read_log_data, remaining = nova.privsep.path.last_bytes(
-                fp, MAX_CONSOLE_BYTES)
-            return read_log_data
+        read_log_data, remaining = nova.privsep.path.last_bytes(
+            path, MAX_CONSOLE_BYTES)
+        return read_log_data
 
     def _get_vcenter_uuid(self):
         """Retrieves the vCenter UUID."""
