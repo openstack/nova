@@ -7,9 +7,7 @@ Server for the Nova Conductor
 -----------------------------
 
 :Author: openstack@lists.openstack.org
-:Date:   2012-11-16
 :Copyright: OpenStack Foundation
-:Version: 2012.1
 :Manual section: 1
 :Manual group: cloud computing
 

@@ -7,9 +7,7 @@ Websocket serial Proxy for OpenStack Nova serial ports
 ------------------------------------------------------
 
 :Author: openstack@lists.launchpad.net
-:Date:   2014-03-15
 :Copyright: OpenStack Foundation
-:Version: 2014.2
 :Manual section: 1
 :Manual group: cloud computing
 

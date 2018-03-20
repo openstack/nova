@@ -7,9 +7,7 @@ Control and manage cloud computer instances
 -------------------------------------------
 
 :Author: openstack@lists.openstack.org
-:Date:   2017-01-15
 :Copyright: OpenStack Foundation
-:Version: 15.0.0
 :Manual section: 1
 :Manual group: cloud computing
 

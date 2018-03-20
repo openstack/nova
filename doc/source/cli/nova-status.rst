@@ -7,9 +7,7 @@ CLI interface for nova status commands
 --------------------------------------
 
 :Author: openstack@lists.openstack.org
-:Date:   2016-12-16
 :Copyright: OpenStack Foundation
-:Version: 15.0.0
 :Manual section: 1
 :Manual group: cloud computing
 
