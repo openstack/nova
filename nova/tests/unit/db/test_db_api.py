@@ -4058,13 +4058,6 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
         self._assertEqualObjects(flavor, self._get_base_values(),
                                  ignored_keys)
 
-    def test_flavor_create_with_projects(self):
-        projects = ['fake-project1', 'fake-project2']
-        flavor = self._create_flavor({}, projects + ['fake-project2'])
-        access = db.flavor_access_get_by_flavor_id(self.ctxt,
-                                                   flavor['flavorid'])
-        self.assertEqual(projects, [x.project_id for x in access])
-
     def test_flavor_destroy(self):
         specs1 = {'a': '1', 'b': '2'}
         flavor1 = self._create_flavor({'name': 'name1', 'flavorid': 'a1',
