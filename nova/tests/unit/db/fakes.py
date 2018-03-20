@@ -224,11 +224,6 @@ def fake_fixed_ip_update(context, address, values):
                 fif['virtual_interface'] = FakeModel(vif[0])
 
 
-def fake_flavor_get(context, id):
-    if flavor_fields['id'] == id:
-        return FakeModel(flavor_fields)
-
-
 def fake_virtual_interface_create(context, values):
     vif = dict(virtual_interface_fields)
     vif['id'] = max([m['id'] for m in virtual_interfaces] or [-1]) + 1
@@ -323,7 +318,6 @@ def stub_out_db_network_api(test):
              fake_fixed_ip_get_by_instance,
              fake_fixed_ip_get_by_address,
              fake_fixed_ip_update,
-             fake_flavor_get,
              fake_virtual_interface_create,
              fake_virtual_interface_delete_by_instance,
              fake_virtual_interface_get_by_instance,

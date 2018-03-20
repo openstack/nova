@@ -4704,18 +4704,6 @@ def flavor_get_all(context, inactive=False, filters=None,
     return [_dict_with_extra_specs(i) for i in inst_types]
 
 
-@require_context
-@pick_context_manager_reader
-def flavor_get(context, id):
-    """Returns a dict describing specific flavor."""
-    result = _flavor_get_query(context).\
-                        filter_by(id=id).\
-                        first()
-    if not result:
-        raise exception.FlavorNotFound(flavor_id=id)
-    return _dict_with_extra_specs(result)
-
-
 ####################
 
 
