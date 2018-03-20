@@ -1,0 +1,12 @@
+---
+features:
+  - |
+    Introduces the ``powervm`` configuration group which contains the
+    ``proc_units_factor`` configuration option. This allows the operator to
+    specify the physical processing power to assign per vCPU.
+upgrade:
+  - |
+    Previously the PowerVM driver would default to 0.5 physical processors per
+    vCPU, which is the default from the pypowervm library. The default will now
+    be 0.1 physical processors per vCPU, from the ``proc_units_factor``
+    configuration option in the ``powervm`` configuration group.

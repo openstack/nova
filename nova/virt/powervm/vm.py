@@ -35,11 +35,13 @@ from pypowervm.wrappers import shared_proc_pool as pvm_spp
 import six
 
 from nova.compute import power_state
+from nova import conf
 from nova import exception as exc
 from nova.i18n import _
 from nova.virt import hardware
 
 
+CONF = conf.CONF
 LOG = logging.getLogger(__name__)
 
 _POWERVM_STARTABLE_STATE = (pvm_bp.LPARState.NOT_ACTIVATED,)
@@ -406,7 +408,8 @@ class VMBuilder(object):
         """
         self.adapter = adapter
         self.host_w = host_w
-        self.stdz = lpar_bldr.DefaultStandardize(host_w)
+        kwargs = dict(proc_units_factor=CONF.powervm.proc_units_factor)
+        self.stdz = lpar_bldr.DefaultStandardize(host_w, **kwargs)
 
     def lpar_builder(self, inst):
         """Returns the pypowervm LPARBuilder for a given Nova flavor.
