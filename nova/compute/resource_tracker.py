@@ -944,7 +944,7 @@ class ResourceTracker(object):
             return
 
         uuid = migration.instance_uuid
-        LOG.info("Updating from migration %s", uuid)
+        LOG.info("Updating resource usage from migration", instance_uuid=uuid)
 
         incoming = (migration.dest_compute == self.host and
                     migration.dest_node == nodename)
