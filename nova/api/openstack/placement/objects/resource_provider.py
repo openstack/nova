@@ -2821,12 +2821,12 @@ def _has_provider_trees(ctx):
 @db_api.api_context_manager.reader
 def _get_provider_ids_matching(ctx, resources, required_traits,
         forbidden_traits, member_of=None):
-    """Returns a list of resource provider internal IDs that have available
-    inventory to satisfy all the supplied requests for resources.
+    """Returns a list of tuples of (internal provider ID, root provider ID)
+    that have available inventory to satisfy all the supplied requests for
+    resources.
 
     :note: This function is used for scenarios that do NOT involve sharing
-    providers. It also only looks at individual resource providers, not
-    provider trees.
+    providers.
 
     :param ctx: Session context to use
     :param resources: A dict, keyed by resource class ID, of the amount
@@ -2883,7 +2883,7 @@ def _get_provider_ids_matching(ctx, resources, required_traits,
         for rc_id in resources
     }
 
-    sel = sa.select([rpt.c.id])
+    sel = sa.select([rpt.c.id, rpt.c.root_provider_id])
 
     # List of the WHERE conditions we build up by iterating over the requested
     # resources
@@ -2947,7 +2947,7 @@ def _get_provider_ids_matching(ctx, resources, required_traits,
     sel = sel.select_from(join_chain)
     sel = sel.where(sa.and_(*where_conds))
 
-    return [r[0] for r in ctx.session.execute(sel)]
+    return [(r[0], r[1]) for r in ctx.session.execute(sel)]
 
 
 @db_api.api_context_manager.reader
@@ -2976,10 +2976,86 @@ def _provider_aggregates(ctx, rp_ids):
 
 
 @db_api.api_context_manager.reader
-def _get_trees_matching_all_resources(ctx, resources):
-    """Returns a list of root provider internal IDs for provider trees where
-    the nodes in the tree collectively have available inventory to satisfy all
-    the supplied requests for resources.
+def _get_providers_with_resource(ctx, rc_id, amount):
+    """Returns a set of tuples of (provider ID, root provider ID) of providers
+    that satisfy the request for a single resource class.
+
+    :param ctx: Session context to use
+    :param rc_id: Internal ID of resource class to check inventory for
+    :param amount: Amount of resource being requested
+    """
+    # SELECT rp.id, rp.root_provider_id
+    # FROM resource_providers AS rp
+    # JOIN inventories AS inv
+    #  ON rp.id = inv.resource_provider_id
+    #  AND inv.resource_class_id = $RC_ID
+    # LEFT JOIN (
+    #  SELECT
+    #    alloc.resource_provider_id,
+    #    SUM(allocs.used) AS used
+    #  FROM allocations AS alloc
+    #  WHERE allocs.resource_class_id = $RC_ID
+    #  GROUP BY allocs.resource_provider_id
+    # ) AS usage
+    #  ON inv.resource_provider_id = usage.resource_provider_id
+    # WHERE
+    #  used + $AMOUNT <= ((total - reserved) * inv.allocation_ratio)
+    #  AND inv.min_unit <= $AMOUNT
+    #  AND inv.max_unit >= $AMOUNT
+    #  AND $AMOUNT % inv.step_size == 0
+    rpt = sa.alias(_RP_TBL, name="rp")
+    inv = sa.alias(_INV_TBL, name="inv")
+    allocs = sa.alias(_ALLOC_TBL, name="alloc")
+    usage = sa.select([
+            allocs.c.resource_provider_id,
+            sql.func.sum(allocs.c.used).label('used')])
+    usage = usage.where(allocs.c.resource_class_id == rc_id)
+    usage = usage.group_by(allocs.c.resource_provider_id)
+    usage = sa.alias(usage, name="usage")
+    where_conds = [
+        sql.func.coalesce(usage.c.used, 0) + amount <= (
+            (inv.c.total - inv.c.reserved) * inv.c.allocation_ratio),
+        inv.c.min_unit <= amount,
+        inv.c.max_unit >= amount,
+        amount % inv.c.step_size == 0,
+    ]
+    rp_to_inv = sa.join(
+        rpt, inv, sa.and_(
+            rpt.c.id == inv.c.resource_provider_id,
+            inv.c.resource_class_id == rc_id))
+    inv_to_usage = sa.outerjoin(
+        rp_to_inv, usage,
+        inv.c.resource_provider_id == usage.c.resource_provider_id)
+    sel = sa.select([rpt.c.id, rpt.c.root_provider_id])
+    sel = sel.select_from(inv_to_usage)
+    sel = sel.where(sa.and_(*where_conds))
+    res = ctx.session.execute(sel).fetchall()
+    res = set((r[0], r[1]) for r in res)
+    return res
+
+
+@db_api.api_context_manager.reader
+def _get_trees_matching_all(ctx, resources, required_traits, forbidden_traits,
+        member_of):
+    """Returns a list of two-tuples (provider internal ID, root provider
+    internal ID) for providers that satisfy the request for resources.
+
+    If traits are also required, this function only returns results where the
+    set of providers within a tree that satisfy the resource request
+    collectively have all the required traits associated with them. This means
+    that given the following provider tree:
+
+    cn1
+     |
+     --> pf1 (SRIOV_NET_VF:2)
+     |
+     --> pf2 (SRIOV_NET_VF:1, HW_NIC_OFFLOAD_GENEVE)
+
+    If a user requests 1 SRIOV_NET_VF resource and no required traits will
+    return both pf1 and pf2. However, a request for 2 SRIOV_NET_VF and required
+    trait of HW_NIC_OFFLOAD_GENEVE will return no results (since pf1 is the
+    only provider with enough inventory of SRIOV_NET_VF but it does not have
+    the required HW_NIC_OFFLOAD_GENEVE trait).
 
     :note: This function is used for scenarios that do NOT involve sharing
     providers AND where there are nested providers present in the deployment.
@@ -2987,108 +3063,125 @@ def _get_trees_matching_all_resources(ctx, resources):
     :param ctx: Session context to use
     :param resources: A dict, keyed by resource class ID, of the amount
                       requested of that resource class.
+    :param required_traits: A map, keyed by trait string name, of required
+                            trait internal IDs that each provider TREE must
+                            COLLECTIVELY have associated with it
+    :param forbidden_traits: A map, keyed by trait string name, of trait
+                             internal IDs that a resource provider must
+                             not have.
+    :param member_of: An optional list of aggregate UUIDs. If provided, the
+                      allocation_candidates returned will only be for resource
+                      providers that are members of one or more of the supplied
+                      aggregates.
     """
-    # Imagine a request group that contains a request for the following
-    # resources:
-    #
-    # * VCPU: 2
-    # * MEMORY_MB: 2048
-    # * SRIOV_NET_VF: 1
-    #
-    # The SQL we want to produce looks like this:
-    #
-    # SELECT rp.root_provider_id
-    # FROM resource_providers AS rp
-    # JOIN inventories AS inv
-    #  ON rp.id = inv.resource_provider_id
-    # LEFT JOIN (
-    #     SELECT resource_provider_id, resource_class_id, SUM(used) AS used
-    #     FROM allocations
-    #     WHERE resource_class_id IN ($RESOURCES)
-    #     GROUP BY resource_provider_id, resource_class_id
-    # ) AS usages
-    #  ON inv.resource_provider_id = usages.resource_provider_id
-    #  AND inv.resource_class_id = usages.resource_class_id
-    #  WHERE inv.resource_class_id IN ($RESOURCES) AND
-    #  (
-    #     inv.resource_class_id = $VCPU
-    #     AND (((inv.total - inv.reserved) * inv.allocation_ratio) <
-    #          (COALESCE(usage.used, 0) + $VCPU_REQUESTED))
-    #     AND inv.min_unit >= $VCPU_REQUESTED
-    #     AND inv.max_unit <= $VCPU_REQUESTED
-    #     AND inv.step_size % $VCPU_REQUESTED = 0
-    #  ) OR (
-    #     inv.resource_class_id = $RAM
-    #     AND (((inv.total - inv.reserved) * inv.allocation_ratio) <
-    #          (COALESCE(usage.used, 0) + $RAM_REQUESTED))
-    #     AND inv.min_unit >= $RAM_REQUESTED
-    #     AND inv.max_unit <= $RAM_REQUESTED
-    #     AND inv.step_size % $RAM_REQUESTED = 0
-    #  ) OR (
-    #     inv.resource_class_id = $SRIOV_NET_VF
-    #     AND (((inv.total - inv.reserved) * inv.allocation_ratio) <
-    #          (COALESCE(usage.used, 0) + $VF_REQUESTED))
-    #     AND inv.min_unit >= $VF_REQUESTED
-    #     AND inv.max_unit <= $VF_REQUESTED
-    #     AND inv.step_size % $VF_REQUESTED = 0
-    #  )
-    #  GROUP BY rp.root_provider_id
-    #  HAVING COUNT(DISTINCT inv.resource_class_id) = 3;
-    rpt = sa.alias(_RP_TBL, name="rp")
-    inv = sa.alias(_INV_TBL, name="inv")
+    # We first grab the provider trees that have nodes that meet the request
+    # for each resource class.  Once we have this information, we'll then do a
+    # followup query to winnow the set of resource providers to only those
+    # provider *trees* that have all of the required traits.
+    provs_with_inv = set()
+    # provs_with_inv is a list of two-tuples with the second element being the
+    # root provider ID. Get the list of root provider IDs and get all trees
+    # that collectively have all required traits
+    trees_with_inv = set()
 
-    # Derived table containing usage numbers for all resource providers for
-    # each resource class involved in the request
-    usages = sa.alias(
-        sa.select([
-            _ALLOC_TBL.c.resource_provider_id,
-            _ALLOC_TBL.c.resource_class_id,
-            sql.func.sum(_ALLOC_TBL.c.used).label('used'),
-        ]).where(
-            _ALLOC_TBL.c.resource_class_id.in_(resources),
-        ).group_by(
-            _ALLOC_TBL.c.resource_provider_id,
-            _ALLOC_TBL.c.resource_class_id
-        ),
-        name='usage',
-    )
-
-    sel = sa.select([rpt.c.root_provider_id])
-
-    rp_inv_join = sa.join(rpt, inv, rpt.c.id == inv.c.resource_provider_id)
-    rp_inv_usage_join = sa.outerjoin(
-        rp_inv_join, usages,
-        sa.and_(
-            inv.c.resource_provider_id ==
-                usages.c.resource_provider_id,
-            inv.c.resource_class_id ==
-                usages.c.resource_class_id,
-        ))
-
-    usage_conds = []
     for rc_id, amount in resources.items():
-        usage_cond = sa.and_(
-            inv.c.resource_class_id == rc_id,
-            (
-                (sql.func.coalesce(usages.c.used, 0) + amount) <=
-                (inv.c.total - inv.c.reserved) * inv.c.allocation_ratio
-            ),
-            inv.c.min_unit <= amount,
-            inv.c.max_unit >= amount,
-            amount % inv.c.step_size == 0,
-        )
-        usage_conds.append(usage_cond)
+        rc_provs_with_inv = _get_providers_with_resource(ctx, rc_id, amount)
+        if not rc_provs_with_inv:
+            # If there's no providers that have one of the resource classes,
+            # then we can short-circuit
+            return []
+        rc_trees = set(p[1] for p in rc_provs_with_inv)
+        provs_with_inv |= rc_provs_with_inv
+        if trees_with_inv:
+            trees_with_inv &= rc_trees
+            if not trees_with_inv:
+                return []
+        else:
+            trees_with_inv = rc_trees
 
-    sel = sel.select_from(rp_inv_usage_join)
-    sel = sel.where(
-        sa.and_(inv.c.resource_class_id.in_(resources),
-                sa.or_(*usage_conds)))
-    sel = sel.group_by(rpt.c.root_provider_id)
-    sel = sel.having(
-        sql.func.count(
-            sql.func.distinct(inv.c.resource_class_id)) == len(resources))
+    # Select only those tuples where there are providers for all requested
+    # resource classes (trees_with_inv contains the root provider IDs of those
+    # trees that contain all our requested resources)
+    provs_with_inv = set(p for p in provs_with_inv if p[1] in trees_with_inv)
 
-    return [r[0] for r in ctx.session.execute(sel)]
+    if not provs_with_inv:
+        return []
+
+    # TODO(jaypipes): Handle filtering on member_of parameter
+
+    if not required_traits and not forbidden_traits:
+        # If there were no traits required, there's no difference in how we
+        # calculate allocation requests between nested and non-nested
+        # environments, so just short-circuit and return
+        return list(provs_with_inv)
+
+    # Return the providers where the providers have the available inventory
+    # capacity and that set of providers (grouped by their tree) have all
+    # of the required traits and none of the forbidden traits
+
+    # We now want to restrict the returned providers to only those provider
+    # trees that have all our required traits.
+    #
+    # The SQL we want looks like this:
+    #
+    # SELECT outer_rp.id, outer_rp.root_provider_id
+    # FROM resource_providers AS outer_rp
+    # JOIN (
+    #   SELECT rp.root_provider_id
+    #   FROM resource_providers AS rp
+    #   JOIN resource_provider_traits AS rptt
+    #   ON rp.id = rptt.resource_provider_id
+    #   WHERE rp.id IN ($RP_IDS_WITH_INV)
+    #   AND rptt.trait_id IN ($REQUIRED_TRAIT_IDS)
+    #   GROUP BY rp.root_provider_id
+    #   HAVING COUNT(DISTINCT rptt.trait_id) == $NUM_REQUIRED_TRAITS
+    # ) AS trees_with_traits
+    #  ON outer_rp.root_provider_id = trees_with_traits.root_provider_id
+    rp_ids_with_inv = set(p[0] for p in provs_with_inv)
+
+    # Build our inner subquery
+    rpt = sa.alias(_RP_TBL, name="rp")
+    rptt = sa.alias(_RP_TRAIT_TBL, name="rptt")
+    rpt_to_rptt = sa.join(
+        rpt, rptt, rpt.c.id == rptt.c.resource_provider_id)
+    subq = sa.select([rpt.c.root_provider_id])
+    subq = subq.select_from(rpt_to_rptt)
+    subq = subq.where(
+        sa.and_(
+            rpt.c.id.in_(rp_ids_with_inv),
+            rptt.c.trait_id.in_(required_traits.values())))
+
+    # Tack on an additional WHERE clause for the derived table if we've got
+    # forbidden traits in the mix.
+    # TODO(jaypipes): This approach is not efficient. We could potentially
+    # change _get_provider_ids_having_any_trait() to accept an optional rp_ids
+    # parameter that would further winnow results to a set of resource provider
+    # IDs (which we have here as we've already looked up the providers that
+    # have appropriate inventory capacity)
+    if forbidden_traits:
+        forbidden_rp_ids = _get_provider_ids_having_any_trait(
+            ctx, forbidden_traits)
+        subq = subq.where(~rpt.c.id.in_(forbidden_rp_ids))
+
+    subq = subq.group_by(rpt.c.root_provider_id)
+    # Only get the resource providers that have ALL the required traits, so we
+    # need to GROUP BY the resource provider and ensure that the
+    # COUNT(trait_id) is equal to the number of traits we are requiring
+    num_traits = len(required_traits)
+    having_cond = sa.func.count(sa.distinct(rptt.c.trait_id)) == num_traits
+    subq = subq.having(having_cond)
+    trees_with_traits = sa.alias(subq, name="trees_with_traits")
+
+    outer_rps = sa.alias(_RP_TBL, name="outer_rps")
+    outer_to_subq = sa.join(
+        outer_rps, trees_with_traits,
+        outer_rps.c.root_provider_id == trees_with_traits.c.root_provider_id)
+    sel = sa.select([outer_rps.c.id, outer_rps.c.root_provider_id])
+    sel = sel.select_from(outer_to_subq)
+
+    res = ctx.session.execute(sel).fetchall()
+
+    return [(rp_id, root_id) for rp_id, root_id in res]
 
 
 def _build_provider_summaries(context, usages, prov_traits):
@@ -3219,7 +3312,7 @@ def _allocation_request_for_provider(ctx, requested_resources, rp_uuid):
     return AllocationRequest(ctx, resource_requests=resource_requests)
 
 
-def _alloc_candidates_no_shared(ctx, requested_resources, rp_ids):
+def _alloc_candidates_no_shared(ctx, requested_resources, rps):
     """Returns a tuple of (allocation requests, provider summaries) for a
     supplied set of requested resource amounts and resource providers. The
     supplied resource providers have capacity to satisfy ALL of the resources
@@ -3235,13 +3328,14 @@ def _alloc_candidates_no_shared(ctx, requested_resources, rp_ids):
     :param ctx: nova.context.RequestContext object
     :param requested_resources: dict, keyed by resource class ID, of amounts
                                 being requested for that resource class
-    :param rp_ids: List of resource provider IDs for providers that matched the
-                   requested resources
+    :param rps: List of two-tuples of (provider ID, root provider ID)s for
+                providers that matched the requested resources
     """
-    if not rp_ids:
+    if not rps:
         return [], []
     # Grab usage summaries for each provider and resource class requested
     requested_rc_ids = list(requested_resources)
+    rp_ids = set(p[0] for p in rps)
     usages = _get_usages_by_provider_and_rc(ctx, rp_ids, requested_rc_ids)
 
     # Get a dict, keyed by resource provider internal ID, of trait string names
