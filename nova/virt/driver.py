@@ -1115,6 +1115,12 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    def get_cluster_metrics(self):
+        """Retrieve cluster metrics information.
+        :return: Dictionary describing the cluster information.
+        """
+        raise NotImplementedError()
+
     def pre_live_migration(self, context, instance, block_device_info,
                            network_info, disk_info, migrate_data):
         """Prepare an instance for live migration

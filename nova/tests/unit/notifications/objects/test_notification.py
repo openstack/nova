@@ -423,7 +423,7 @@ notification_object_data = {
     'KeypairPayload': '1.0-6daebbbde0e1bf35c1556b1ecd9385c1',
     'LibvirtErrorNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'LibvirtErrorPayload': '1.0-9e7a8f0b895dd15531d5a6f3aa95d58e',
-    'MetricPayload': '1.0-bcdbe85048f335132e4c82a1b8fa3da8',
+    'MetricPayload': '1.0-162fe3d7ebcb7c3affa641ab95eb4029',
     'MetricsNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'MetricsPayload': '1.0-65c69b15b4de5a8c01971cb5bb9ab650',
     'NotificationPublisher': '2.2-b6ad48126247e10b46b6b0240e52e614',

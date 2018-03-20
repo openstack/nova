@@ -72,3 +72,22 @@ class CPUMonitorBase(MonitorBase):
             fields.MonitorMetricType.CPU_IOWAIT_PERCENT,
             fields.MonitorMetricType.CPU_PERCENT,
         ])
+
+
+class VmwareMonitorBase(MonitorBase):
+
+    def get_metric_names(self):
+        return set([
+            fields.MonitorMetricType.CLUSTER_STORAGE_TOTAL,
+            fields.MonitorMetricType.CLUSTER_STORAGE_USED,
+            fields.MonitorMetricType.CLUSTER_STORAGE_FREE,
+            fields.MonitorMetricType.CLUSTER_STORAGE_PERCENTAGE_USE,
+            fields.MonitorMetricType.CLUSTER_MEMORY_TOTAL,
+            fields.MonitorMetricType.CLUSTER_MEMORY_FREE,
+            fields.MonitorMetricType.CLUSTER_MEMORY_USED,
+            fields.MonitorMetricType.CLUSTER_MEMORY_PERCENTAGE,
+            fields.MonitorMetricType.CLUSTER_CPU_TOTAL,
+            fields.MonitorMetricType.CLUSTER_CPU_USED,
+            fields.MonitorMetricType.CLUSTER_CPU_FREE,
+            fields.MonitorMetricType.CLUSTER_CPU_PERCENTAGE,
+        ])

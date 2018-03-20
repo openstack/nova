@@ -30,6 +30,7 @@ class MonitorHandler(object):
 
     NAMESPACES = [
         'nova.compute.monitors.cpu',
+        'nova.compute.monitors.compute_node'
     ]
 
     def __init__(self, resource_tracker):

@@ -709,6 +709,18 @@ class MonitorMetricType(BaseNovaEnum):
     CPU_PERCENT = "cpu.percent"
     NUMA_MEM_BW_MAX = "numa.membw.max"
     NUMA_MEM_BW_CURRENT = "numa.membw.current"
+    CLUSTER_STORAGE_PERCENTAGE_USE = "storage.percent.usage"
+    CLUSTER_STORAGE_TOTAL = "storage.total"
+    CLUSTER_STORAGE_USED = "storage.used"
+    CLUSTER_STORAGE_FREE = "storage.free"
+    CLUSTER_MEMORY_USED = "memory.used"
+    CLUSTER_MEMORY_TOTAL = "memory.total"
+    CLUSTER_MEMORY_PERCENTAGE = "memory.percent"
+    CLUSTER_MEMORY_FREE = "memory.free"
+    CLUSTER_CPU_FREE = "cpu.free"
+    CLUSTER_CPU_TOTAL = "cpu.total"
+    CLUSTER_CPU_USED = "cpu.used"
+    CLUSTER_CPU_PERCENTAGE = "cpu.percent.used"
 
     ALL = (
         CPU_FREQUENCY,
@@ -723,6 +735,18 @@ class MonitorMetricType(BaseNovaEnum):
         CPU_PERCENT,
         NUMA_MEM_BW_MAX,
         NUMA_MEM_BW_CURRENT,
+        CLUSTER_STORAGE_PERCENTAGE_USE,
+        CLUSTER_STORAGE_TOTAL,
+        CLUSTER_STORAGE_USED,
+        CLUSTER_STORAGE_FREE,
+        CLUSTER_MEMORY_USED,
+        CLUSTER_MEMORY_TOTAL,
+        CLUSTER_MEMORY_PERCENTAGE,
+        CLUSTER_MEMORY_FREE,
+        CLUSTER_CPU_FREE,
+        CLUSTER_CPU_TOTAL,
+        CLUSTER_CPU_USED,
+        CLUSTER_CPU_PERCENTAGE,
     )
 
 
