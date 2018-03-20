@@ -4379,21 +4379,6 @@ class InstanceTypeExtraSpecsTestCase(BaseInstanceTypeTestCase):
             real_specs = db.flavor_extra_specs_get(self.ctxt, it['flavorid'])
             self._assertEqualObjects(it['extra_specs'], real_specs)
 
-    def test_flavor_extra_specs_delete(self):
-        for it in self.flavors:
-            specs = it['extra_specs']
-            key = list(specs.keys())[0]
-            del specs[key]
-            db.flavor_extra_specs_delete(self.ctxt, it['flavorid'], key)
-            real_specs = db.flavor_extra_specs_get(self.ctxt, it['flavorid'])
-            self._assertEqualObjects(it['extra_specs'], real_specs)
-
-    def test_flavor_extra_specs_delete_failed(self):
-        for it in self.flavors:
-            self.assertRaises(exception.FlavorExtraSpecsNotFound,
-                          db.flavor_extra_specs_delete,
-                          self.ctxt, it['flavorid'], 'dummy')
-
 
 class InstanceTypeAccessTestCase(BaseInstanceTypeTestCase):
 
