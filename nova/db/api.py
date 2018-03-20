@@ -1562,11 +1562,6 @@ def flavor_access_remove(context, flavor_id, project_id):
     """Remove flavor access for project."""
     return IMPL.flavor_access_remove(context, flavor_id, project_id)
 
-
-def flavor_extra_specs_get(context, flavor_id):
-    """Get all extra specs for an instance type."""
-    return IMPL.flavor_extra_specs_get(context, flavor_id)
-
 ####################
 
 
