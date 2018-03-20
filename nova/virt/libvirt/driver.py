@@ -90,6 +90,7 @@ from nova.pci import manager as pci_manager
 from nova.pci import utils as pci_utils
 import nova.privsep.libvirt
 import nova.privsep.path
+import nova.privsep.utils
 from nova import rc_fields
 from nova import utils
 from nova import version
@@ -405,7 +406,7 @@ class LibvirtDriver(driver.ComputeDriver):
             # is safe for migration provided the filesystem is cache coherent
             # (cluster filesystems typically are, but things like NFS are not).
             self._disk_cachemode = "none"
-            if not utils.supports_direct_io(CONF.instances_path):
+            if not nova.privsep.utils.supports_direct_io(CONF.instances_path):
                 self._disk_cachemode = "writethrough"
         return self._disk_cachemode
 

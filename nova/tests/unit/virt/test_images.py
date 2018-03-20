@@ -49,7 +49,7 @@ class QemuTestCase(test.NoDBTestCase):
         self.assertTrue(image_info)
         self.assertTrue(str(image_info))
 
-    @mock.patch('nova.utils.supports_direct_io', return_value=True)
+    @mock.patch('nova.privsep.utils.supports_direct_io', return_value=True)
     @mock.patch.object(utils, 'execute',
                        side_effect=processutils.ProcessExecutionError)
     def test_convert_image_with_errors(self, mocked_execute, mock_direct_io):
@@ -101,8 +101,8 @@ class QemuTestCase(test.NoDBTestCase):
                                images.fetch_to_raw,
                                None, 'href123', '/no/path')
 
-    @mock.patch('nova.utils.supports_direct_io', return_value=True)
-    @mock.patch('nova.utils.execute')
+    @mock.patch('nova.privsep.utils.supports_direct_io', return_value=True)
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_convert_image_with_direct_io_support(self, mock_execute,
                                                   mock_direct_io):
         images._convert_image('source', 'dest', 'in_format', 'out_format',
@@ -111,8 +111,8 @@ class QemuTestCase(test.NoDBTestCase):
                     '-f', 'in_format', 'source', 'dest')
         self.assertTupleEqual(expected, mock_execute.call_args[0])
 
-    @mock.patch('nova.utils.supports_direct_io', return_value=False)
-    @mock.patch('nova.utils.execute')
+    @mock.patch('nova.privsep.utils.supports_direct_io', return_value=False)
+    @mock.patch('oslo_concurrency.processutils.execute')
     def test_convert_image_without_direct_io_support(self, mock_execute,
                                                      mock_direct_io):
         images._convert_image('source', 'dest', 'in_format', 'out_format',

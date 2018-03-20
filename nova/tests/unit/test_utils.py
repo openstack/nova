@@ -13,7 +13,6 @@
 #    under the License.
 
 import datetime
-import errno
 import hashlib
 import importlib
 import os
@@ -1392,93 +1391,3 @@ class GetEndpointTestCase(test.NoDBTestCase):
         self.adap.get_endpoint_data.assert_not_called()
         self.assertEqual(3, self.adap.get_endpoint.call_count)
         self.assertEqual('public', self.adap.interface)
-
-
-class SupportDirectIOTestCase(test.NoDBTestCase):
-
-    def setUp(self):
-        super(SupportDirectIOTestCase, self).setUp()
-        # O_DIRECT is not supported on all Python runtimes, so on platforms
-        # where it's not supported (e.g. Mac), we can still test the code-path
-        # by stubbing out the value.
-        if not hasattr(os, 'O_DIRECT'):
-            # `mock` seems to have trouble stubbing an attr that doesn't
-            # originally exist, so falling back to stubbing out the attribute
-            # directly.
-            os.O_DIRECT = 16384
-            self.addCleanup(delattr, os, 'O_DIRECT')
-        self.einval = OSError()
-        self.einval.errno = errno.EINVAL
-        self.test_path = os.path.join('.', '.directio.test')
-        self.io_flags = os.O_CREAT | os.O_WRONLY | os.O_DIRECT
-
-        open_patcher = mock.patch('os.open')
-        write_patcher = mock.patch('os.write')
-        close_patcher = mock.patch('os.close')
-        unlink_patcher = mock.patch('os.unlink')
-        self.addCleanup(open_patcher.stop)
-        self.addCleanup(write_patcher.stop)
-        self.addCleanup(close_patcher.stop)
-        self.addCleanup(unlink_patcher.stop)
-        self.mock_open = open_patcher.start()
-        self.mock_write = write_patcher.start()
-        self.mock_close = close_patcher.start()
-        self.mock_unlink = unlink_patcher.start()
-
-    def test_supports_direct_io(self):
-        self.mock_open.return_value = 3
-
-        self.assertTrue(utils.supports_direct_io('.'))
-
-        self.mock_open.assert_called_once_with(self.test_path, self.io_flags)
-        self.mock_write.assert_called_once_with(3, mock.ANY)
-        # ensure unlink(filepath) will actually remove the file by deleting
-        # the remaining link to it in close(fd)
-        self.mock_close.assert_called_once_with(3)
-        self.mock_unlink.assert_called_once_with(self.test_path)
-
-    def test_supports_direct_io_with_exception_in_write(self):
-        self.mock_open.return_value = 3
-        self.mock_write.side_effect = ValueError()
-
-        self.assertRaises(ValueError, utils.supports_direct_io, '.')
-
-        self.mock_open.assert_called_once_with(self.test_path, self.io_flags)
-        self.mock_write.assert_called_once_with(3, mock.ANY)
-        # ensure unlink(filepath) will actually remove the file by deleting
-        # the remaining link to it in close(fd)
-        self.mock_close.assert_called_once_with(3)
-        self.mock_unlink.assert_called_once_with(self.test_path)
-
-    def test_supports_direct_io_with_exception_in_open(self):
-        self.mock_open.side_effect = ValueError()
-
-        self.assertRaises(ValueError, utils.supports_direct_io, '.')
-
-        self.mock_open.assert_called_once_with(self.test_path, self.io_flags)
-        self.mock_write.assert_not_called()
-        self.mock_close.assert_not_called()
-        self.mock_unlink.assert_called_once_with(self.test_path)
-
-    def test_supports_direct_io_with_oserror_in_write(self):
-        self.mock_open.return_value = 3
-        self.mock_write.side_effect = self.einval
-
-        self.assertFalse(utils.supports_direct_io('.'))
-
-        self.mock_open.assert_called_once_with(self.test_path, self.io_flags)
-        self.mock_write.assert_called_once_with(3, mock.ANY)
-        # ensure unlink(filepath) will actually remove the file by deleting
-        # the remaining link to it in close(fd)
-        self.mock_close.assert_called_once_with(3)
-        self.mock_unlink.assert_called_once_with(self.test_path)
-
-    def test_supports_direct_io_with_oserror_in_open(self):
-        self.mock_open.side_effect = self.einval
-
-        self.assertFalse(utils.supports_direct_io('.'))
-
-        self.mock_open.assert_called_once_with(self.test_path, self.io_flags)
-        self.mock_write.assert_not_called()
-        self.mock_close.assert_not_called()
-        self.mock_unlink.assert_called_once_with(self.test_path)
