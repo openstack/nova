@@ -7555,10 +7555,16 @@ class ComputeManager(manager.Manager):
                     # yet (like Ironic), so just ignore this.
                     pass
                 except exception.NovaException as ex:
-                    LOG.warning("Detach interface failed, "
-                                "port_id=%(port_id)s, reason: %(msg)s",
-                                {'port_id': deleted_vif_id, 'msg': ex},
-                                instance=instance)
+                    # If the instance was deleted before the interface was
+                    # detached, just log it at debug.
+                    log_level = (logging.DEBUG
+                                 if isinstance(ex, exception.InstanceNotFound)
+                                 else logging.WARNING)
+                    LOG.log(log_level,
+                            "Detach interface failed, "
+                            "port_id=%(port_id)s, reason: %(msg)s",
+                            {'port_id': deleted_vif_id, 'msg': ex},
+                            instance=instance)
                 break
 
     @wrap_instance_event(prefix='compute')
