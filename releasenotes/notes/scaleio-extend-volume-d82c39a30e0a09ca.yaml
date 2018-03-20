@@ -1,0 +1,5 @@
+---
+features:
+  - Added ability to extend an attached ScaleIO volume
+    when using the libvirt compute driver.
+

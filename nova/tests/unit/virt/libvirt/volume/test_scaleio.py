@@ -58,3 +58,19 @@ class LibvirtScaleIOVolumeDriverTestCase(
         sio.disconnect_volume(conn, mock.sentinel.instance)
         sio.connector.disconnect_volume.assert_called_once_with(
             mock.sentinel.conn_data, None)
+
+    def test_libvirt_scaleio_driver_extend_volume(self):
+        def brick_extend_vol(data):
+            return data['size']
+
+        extended_vol_size = 8
+        sio = scaleio.LibvirtScaleIOVolumeDriver(self.fake_host)
+        disk_info = {'size': extended_vol_size,
+                     'name': 'vol01',
+                     'device_path': '/dev/vol01'}
+        conn = {'data': disk_info}
+        with mock.patch.object(sio.connector,
+                               'extend_volume',
+                               side_effect=brick_extend_vol):
+            self.assertEqual(extended_vol_size,
+                             sio.extend_volume(conn, mock.sentinel.instance))
