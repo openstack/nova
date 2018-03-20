@@ -4256,12 +4256,6 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
         self.assertRaises(exception.FlavorNotFound, db.flavor_get,
                 self.user_ctxt, flavor['id'])
 
-        # Regular user can see it after being granted access
-        db.flavor_access_add(self.ctxt, flavor['flavorid'],
-                self.user_ctxt.project_id)
-        flavor_by_id = db.flavor_get(self.user_ctxt, flavor['id'])
-        self._assertEqualObjects(flavor, flavor_by_id)
-
     def test_flavor_get_by_name(self):
         flavors = [{'name': 'abc', 'flavorid': '123'},
                    {'name': 'def', 'flavorid': '456'},
@@ -4289,12 +4283,6 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
         self.assertRaises(exception.FlavorNotFoundByName,
                 db.flavor_get_by_name, self.user_ctxt,
                 flavor['name'])
-
-        # Regular user can see it after being granted access
-        db.flavor_access_add(self.ctxt, flavor['flavorid'],
-                self.user_ctxt.project_id)
-        flavor_by_name = db.flavor_get_by_name(self.user_ctxt, flavor['name'])
-        self._assertEqualObjects(flavor, flavor_by_name)
 
     def test_flavor_get_by_flavor_id(self):
         flavors = [{'name': 'abc', 'flavorid': '123'},
@@ -4327,13 +4315,6 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
                 db.flavor_get_by_flavor_id, self.user_ctxt,
                 flavor['flavorid'])
 
-        # Regular user can see it after being granted access
-        db.flavor_access_add(self.ctxt, flavor['flavorid'],
-                self.user_ctxt.project_id)
-        flavor_by_fid = db.flavor_get_by_flavor_id(self.user_ctxt,
-                                                   flavor['flavorid'])
-        self._assertEqualObjects(flavor, flavor_by_fid)
-
     def test_flavor_get_by_flavor_id_deleted(self):
         flavor = self._create_flavor({'name': 'abc', 'flavorid': '123'})
 
@@ -4357,77 +4338,6 @@ class InstanceTypeTestCase(BaseInstanceTypeTestCase):
         flavor_by_fid = db.flavor_get_by_flavor_id(self.ctxt,
                 flavor['flavorid'], read_deleted='yes')
         self.assertEqual(flavor['id'], flavor_by_fid['id'])
-
-
-class InstanceTypeAccessTestCase(BaseInstanceTypeTestCase):
-
-    def _create_flavor_access(self, flavor_id, project_id):
-        return db.flavor_access_add(self.ctxt, flavor_id, project_id)
-
-    def test_flavor_access_get_by_flavor_id(self):
-        flavors = ({'name': 'n1', 'flavorid': 'f1'},
-                   {'name': 'n2', 'flavorid': 'f2'})
-        it1, it2 = tuple((self._create_flavor(v) for v in flavors))
-
-        access_it1 = [self._create_flavor_access(it1['flavorid'], 'pr1'),
-                      self._create_flavor_access(it1['flavorid'], 'pr2')]
-
-        access_it2 = [self._create_flavor_access(it2['flavorid'], 'pr1')]
-
-        for it, access_it in zip((it1, it2), (access_it1, access_it2)):
-            params = (self.ctxt, it['flavorid'])
-            real_access_it = db.flavor_access_get_by_flavor_id(*params)
-            self._assertEqualListsOfObjects(access_it, real_access_it)
-
-    def test_flavor_access_get_by_flavor_id_flavor_not_found(self):
-        self.assertRaises(exception.FlavorNotFound,
-                          db.flavor_get_by_flavor_id,
-                          self.ctxt, 'nonexists')
-
-    def test_flavor_access_add(self):
-        flavor = self._create_flavor({'flavorid': 'f1'})
-        project_id = 'p1'
-
-        access = self._create_flavor_access(flavor['flavorid'], project_id)
-        # NOTE(boris-42): Check that flavor_access_add doesn't fail and
-        #                 returns correct value. This is enough because other
-        #                 logic is checked by other methods.
-        self.assertIsNotNone(access['id'])
-        self.assertEqual(access['instance_type_id'], flavor['id'])
-        self.assertEqual(access['project_id'], project_id)
-
-    def test_flavor_access_add_to_non_existing_flavor(self):
-        self.assertRaises(exception.FlavorNotFound,
-                          self._create_flavor_access,
-                          'nonexists', 'does_not_matter')
-
-    def test_flavor_access_add_duplicate_project_id_flavor(self):
-        flavor = self._create_flavor({'flavorid': 'f1'})
-        params = (flavor['flavorid'], 'p1')
-
-        self._create_flavor_access(*params)
-        self.assertRaises(exception.FlavorAccessExists,
-                          self._create_flavor_access, *params)
-
-    def test_flavor_access_removed_after_flavor_destroy(self):
-        flavor1 = self._create_flavor({'flavorid': 'f1', 'name': 'n1'})
-        flavor2 = self._create_flavor({'flavorid': 'f2', 'name': 'n2'})
-        values = [
-            (flavor1['flavorid'], 'p1'),
-            (flavor1['flavorid'], 'p2'),
-            (flavor2['flavorid'], 'p3')
-        ]
-        for v in values:
-            self._create_flavor_access(*v)
-
-        db.flavor_destroy(self.ctxt, flavor1['flavorid'])
-
-        p = (self.ctxt, flavor1['flavorid'])
-        self.assertEqual(0, len(db.flavor_access_get_by_flavor_id(*p)))
-        p = (self.ctxt, flavor2['flavorid'])
-        self.assertEqual(1, len(db.flavor_access_get_by_flavor_id(*p)))
-        db.flavor_destroy(self.ctxt, flavor2['flavorid'])
-        self.assertEqual(0, len(db.flavor_access_get_by_flavor_id(*p)))
 
 
 @mock.patch('time.sleep', new=lambda x: None)

@@ -1552,11 +1552,6 @@ def flavor_access_get_by_flavor_id(context, flavor_id):
     """Get flavor access by flavor id."""
     return IMPL.flavor_access_get_by_flavor_id(context, flavor_id)
 
-
-def flavor_access_add(context, flavor_id, project_id):
-    """Add flavor access for project."""
-    return IMPL.flavor_access_add(context, flavor_id, project_id)
-
 ####################
 
 

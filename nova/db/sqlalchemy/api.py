@@ -4789,22 +4789,6 @@ def flavor_access_get_by_flavor_id(context, flavor_id):
     return access_refs
 
 
-@pick_context_manager_writer
-def flavor_access_add(context, flavor_id, project_id):
-    """Add given tenant to the flavor access list."""
-    instance_type_id = _flavor_get_id_from_flavor(context, flavor_id)
-
-    access_ref = models.InstanceTypeProjects()
-    access_ref.update({"instance_type_id": instance_type_id,
-                       "project_id": project_id})
-    try:
-        access_ref.save(context.session)
-    except db_exc.DBDuplicateEntry:
-        raise exception.FlavorAccessExists(flavor_id=flavor_id,
-                                            project_id=project_id)
-    return access_ref
-
-
 ####################
 
 
