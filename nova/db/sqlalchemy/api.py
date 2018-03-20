@@ -4716,18 +4716,6 @@ def flavor_get(context, id):
     return _dict_with_extra_specs(result)
 
 
-@require_context
-@pick_context_manager_reader
-def flavor_get_by_name(context, name):
-    """Returns a dict describing specific flavor."""
-    result = _flavor_get_query(context).\
-                        filter_by(name=name).\
-                        first()
-    if not result:
-        raise exception.FlavorNotFoundByName(flavor_name=name)
-    return _dict_with_extra_specs(result)
-
-
 ####################
 
 
