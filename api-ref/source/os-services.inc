@@ -10,7 +10,7 @@ Lists all running Compute services in a region, enables or disables
 scheduling for a Compute service and deletes a Compute service.
 
 For an overview of Compute services, see `OpenStack
-Compute <https://docs.openstack.org/ocata/install-guide-obs/common/get-started-compute.html>`__.
+Compute <https://docs.openstack.org/nova/latest/install/get-started-compute.html>`__.
 
 List Compute Services
 =====================
@@ -315,8 +315,13 @@ Delete Compute Service
 
 .. rest_method:: DELETE /os-services/{service_id}
 
-Deletes a Compute service. If it's a nova-compute service, then the
+Deletes a service. If it's a ``nova-compute`` service, then the
 corresponding host will be removed from all the host aggregates as well.
+
+.. important:: Be sure to stop the actual ``nova-compute`` process on the
+               physical host *before* deleting the service with this API.
+               Failing to do so can lead to the running service re-creating
+               orphaned **compute_nodes** table records in the database.
 
 Normal response codes: 204
 
