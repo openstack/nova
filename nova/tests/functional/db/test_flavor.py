@@ -152,16 +152,6 @@ class FlavorObjectTestCase(test.NoDBTestCase):
         self.assertEqual(expect_len, len(flavors))
         return flavors
 
-    def test_get_all(self):
-        expect_len = len(db_api.flavor_get_all(self.context))
-        self._test_get_all(expect_len)
-
-    def test_get_all_with_some_api_flavors(self):
-        expect_len = len(db_api.flavor_get_all(self.context))
-        flavor = objects.Flavor(context=self.context, **fake_api_flavor)
-        flavor.create()
-        self._test_get_all(expect_len + 1)
-
     def test_get_all_with_all_api_flavors(self):
         flavor = objects.Flavor(context=self.context, **fake_api_flavor)
         flavor.create()

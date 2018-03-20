@@ -274,8 +274,6 @@ class CreateInstanceTypeTest(test.TestCase):
         self.assertEqual(1.1, flavor.rxtx_factor)
 
     def test_rxtx_factor_must_be_within_sql_float_range(self):
-        _context = context.get_admin_context()
-        db.flavor_get_all(_context)
         # We do * 10 since this is an approximation and we need to make sure
         # the difference is noticeble.
         over_rxtx_factor = db.SQL_SP_FLOAT_MAX * 10
