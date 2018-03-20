@@ -268,7 +268,6 @@ class SchedulerReportClient(object):
         # Flush provider tree and associations so we start from a clean slate.
         self._provider_tree = provider_tree.ProviderTree()
         self.association_refresh_time = {}
-        # TODO(mriedem): Perform some version discovery at some point.
         client = utils.get_ksa_adapter('placement')
         # Set accept header on every request to ensure we notify placement
         # service of our response body media type preferences.
