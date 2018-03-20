@@ -4409,37 +4409,6 @@ class InstanceTypeAccessTestCase(BaseInstanceTypeTestCase):
         self.assertRaises(exception.FlavorAccessExists,
                           self._create_flavor_access, *params)
 
-    def test_flavor_access_remove(self):
-        flavors = ({'name': 'n1', 'flavorid': 'f1'},
-                   {'name': 'n2', 'flavorid': 'f2'})
-        it1, it2 = tuple((self._create_flavor(v) for v in flavors))
-
-        access_it1 = [self._create_flavor_access(it1['flavorid'], 'pr1'),
-                      self._create_flavor_access(it1['flavorid'], 'pr2')]
-
-        access_it2 = [self._create_flavor_access(it2['flavorid'], 'pr1')]
-
-        db.flavor_access_remove(self.ctxt, it1['flavorid'],
-                                access_it1[1]['project_id'])
-
-        for it, access_it in zip((it1, it2), (access_it1[:1], access_it2)):
-            params = (self.ctxt, it['flavorid'])
-            real_access_it = db.flavor_access_get_by_flavor_id(*params)
-            self._assertEqualListsOfObjects(access_it, real_access_it)
-
-    def test_flavor_access_remove_flavor_not_found(self):
-        self.assertRaises(exception.FlavorNotFound,
-                          db.flavor_access_remove,
-                          self.ctxt, 'nonexists', 'does_not_matter')
-
-    def test_flavor_access_remove_access_not_found(self):
-        flavor = self._create_flavor({'flavorid': 'f1'})
-        params = (flavor['flavorid'], 'p1')
-        self._create_flavor_access(*params)
-        self.assertRaises(exception.FlavorAccessNotFound,
-                          db.flavor_access_remove,
-                          self.ctxt, flavor['flavorid'], 'p2')
-
     def test_flavor_access_removed_after_flavor_destroy(self):
         flavor1 = self._create_flavor({'flavorid': 'f1', 'name': 'n1'})
         flavor2 = self._create_flavor({'flavorid': 'f2', 'name': 'n2'})

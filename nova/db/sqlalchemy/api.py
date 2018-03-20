@@ -4805,20 +4805,6 @@ def flavor_access_add(context, flavor_id, project_id):
     return access_ref
 
 
-@pick_context_manager_writer
-def flavor_access_remove(context, flavor_id, project_id):
-    """Remove given tenant from the flavor access list."""
-    instance_type_id = _flavor_get_id_from_flavor(context, flavor_id)
-
-    count = _flavor_access_query(context).\
-                    filter_by(instance_type_id=instance_type_id).\
-                    filter_by(project_id=project_id).\
-                    soft_delete(synchronize_session=False)
-    if count == 0:
-        raise exception.FlavorAccessNotFound(flavor_id=flavor_id,
-                                             project_id=project_id)
-
-
 ####################
 
 
