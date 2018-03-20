@@ -1293,6 +1293,39 @@ class TestDriverBlockDeviceNewFlow(TestDriverBlockDevice):
                           test_bdm.attach, self.context, instance,
                           self.volume_api, self.virt_driver)
 
+    @mock.patch('nova.objects.BlockDeviceMapping.save')
+    def test_refresh_connection_preserve_multiattach(self, mock_bdm_save):
+        """Tests that we've already attached a multiattach-capable volume
+        and when refreshing the connection_info from the attachment record,
+        the multiattach flag in the bdm.connection_info is preserved.
+        """
+        test_bdm = self.driver_classes['volume'](self.volume_bdm)
+        test_bdm['connection_info']['multiattach'] = True
+        volume_api = mock.Mock()
+        volume_api.attachment_get.return_value = {
+            'connection_info': {
+                'data': {
+                    'some': 'goodies'
+                }
+            }
+        }
+
+        test_bdm.refresh_connection_info(
+            self.context, mock.sentinel.instance,
+            volume_api, mock.sentinel.virt_driver)
+        volume_api.attachment_get.assert_called_once_with(
+            self.context, self.attachment_id)
+        mock_bdm_save.assert_called_once_with()
+        expected_connection_info = {
+            'data': {
+                'some': 'goodies'
+            },
+            'serial': self.volume_bdm.volume_id,
+            'multiattach': True
+        }
+        self.assertDictEqual(expected_connection_info,
+                             test_bdm['connection_info'])
+
 
 class TestGetVolumeId(test.NoDBTestCase):
 
