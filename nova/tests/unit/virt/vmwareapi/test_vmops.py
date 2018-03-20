@@ -1216,12 +1216,14 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     @mock.patch(
         'nova.virt.vmwareapi.imagecache.ImageCacheManager.enlist_image')
     @mock.patch.object(vmops.VMwareVMOps, 'build_virtual_machine')
+    @mock.patch.object(vm_util, 'update_cluster_placement')
     @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(images.VMwareImage, 'from_image')
     def test_spawn_non_root_block_device(self, from_image,
                                          get_extra_specs,
                                          get_vm_config_info,
+                                         update_cluster_placement,
                                          build_virtual_machine,
                                          enlist_image, fetch_image,
                                          use_disk_image,
@@ -1260,6 +1262,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             get_vm_config_info.assert_called_once_with(self._instance,
                 image_info, extra_specs)
             build_virtual_machine.assert_called_once_with(self._instance,
+                                                          self._context,
                 image_info, vi.dc_info, vi.datastore, [],
                 extra_specs, self._get_metadata())
             enlist_image.assert_called_once_with(image_info.image_id,
@@ -1277,12 +1280,14 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                        return_value='fake_vm_folder')
     @mock.patch('nova.virt.vmwareapi.vm_util.power_on_instance')
     @mock.patch.object(vmops.VMwareVMOps, 'build_virtual_machine')
+    @mock.patch.object(vm_util, 'update_cluster_placement')
     @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(images.VMwareImage, 'from_image')
     def test_spawn_with_no_image_and_block_devices(self, from_image,
                                                    get_extra_specs,
                                                    get_vm_config_info,
+                                                   update_cluster_placement,
                                                    build_virtual_machine,
                                                    power_on_instance,
                                                    create_folders,
@@ -1323,6 +1328,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
             get_vm_config_info.assert_called_once_with(self._instance,
                 image_info, extra_specs)
             build_virtual_machine.assert_called_once_with(self._instance,
+                                                          self._context,
                 image_info, vi.dc_info, vi.datastore, [],
                 extra_specs, self._get_metadata(is_image_used=False))
             volumeops.attach_root_volume.assert_called_once_with(
@@ -1339,12 +1345,14 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                        return_value='fake_vm_folder')
     @mock.patch('nova.virt.vmwareapi.vm_util.power_on_instance')
     @mock.patch.object(vmops.VMwareVMOps, 'build_virtual_machine')
+    @mock.patch.object(vm_util, 'update_cluster_placement')
     @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(images.VMwareImage, 'from_image')
     def test_spawn_unsupported_hardware(self, from_image,
                                         get_extra_specs,
                                         get_vm_config_info,
+                                        update_cluster_placement,
                                         build_virtual_machine,
                                         power_on_instance,
                                         create_folders):
@@ -1376,6 +1384,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         get_vm_config_info.assert_called_once_with(
             self._instance, image_info, extra_specs)
         build_virtual_machine.assert_called_once_with(self._instance,
+                                                      self._context,
             image_info, vi.dc_info, vi.datastore, [],
             extra_specs, self._get_metadata(is_image_used=False))
 
@@ -1570,6 +1579,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
 
     @mock.patch.object(vmops.VMwareVMOps, '_create_folders',
                        return_value='fake_vm_folder')
+    @mock.patch.object(vm_util, 'update_cluster_placement')
     @mock.patch(
         'nova.virt.vmwareapi.vmops.VMwareVMOps._update_vnic_index')
     @mock.patch(
@@ -1606,6 +1616,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                    mock_get_datastore,
                    mock_configure_config_drive,
                    mock_update_vnic_index,
+                   mock_update_cluster_placement,
                    mock_create_folders,
                    block_device_info=None,
                    extra_specs=None,
@@ -1850,12 +1861,14 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     @mock.patch(
         'nova.virt.vmwareapi.imagecache.ImageCacheManager.enlist_image')
     @mock.patch.object(vmops.VMwareVMOps, 'build_virtual_machine')
+    @mock.patch.object(vm_util, 'update_cluster_placement')
     @mock.patch.object(vmops.VMwareVMOps, '_get_vm_config_info')
     @mock.patch.object(vmops.VMwareVMOps, '_get_extra_specs')
     @mock.patch.object(images.VMwareImage, 'from_image')
     def test_spawn_with_ephemerals_and_swap(self, from_image,
                                             get_extra_specs,
                                             get_vm_config_info,
+                                            update_cluster_placement,
                                             build_virtual_machine,
                                             enlist_image,
                                             fetch_image,
@@ -1901,6 +1914,7 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         get_vm_config_info.assert_called_once_with(self._instance,
             image_info, extra_specs)
         build_virtual_machine.assert_called_once_with(self._instance,
+                                                      self._context,
             image_info, vi.dc_info, vi.datastore, [], extra_specs, metadata)
         enlist_image.assert_called_once_with(image_info.image_id,
                                              vi.datastore, vi.dc_info.ref)
@@ -2037,14 +2051,17 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     def test_create_swap_with_no_bdi(self):
         self._test_create_swap_from_instance(None)
 
+    @mock.patch.object(vm_util, 'update_cluster_placement')
     @mock.patch.object(vmops.VMwareVMOps, '_create_folders',
                        return_value='fake_vm_folder')
-    def test_build_virtual_machine(self, mock_create_folder):
+    def test_build_virtual_machine(self, mock_create_folder,
+                                   mock_update_cluster_placement):
         image = images.VMwareImage(image_id=self._image_id)
 
         extra_specs = vm_util.ExtraSpecs()
 
         vm_ref = self._vmops.build_virtual_machine(self._instance,
+                                                   self._context,
                                                    image, self._dc_info,
                                                    self._ds,
                                                    self.network_info,

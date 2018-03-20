@@ -27,6 +27,7 @@ from nova import context
 from nova import exception
 from nova import objects
 from nova.objects import fields as obj_fields
+from nova.virt.vmwareapi import cluster_util
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import vim_util
 from nova.virt.vmwareapi import vm_util
@@ -103,6 +104,8 @@ class VCState(object):
             (obj_fields.Architecture.X86_64,
              obj_fields.HVType.VMWARE,
              obj_fields.VMMode.HVM)]
+        data["resource_scheduling"] = cluster_util._is_drs_enabled(
+            self._session, self._cluster)
 
         self._stats = data
         if self._auto_service_disabled:

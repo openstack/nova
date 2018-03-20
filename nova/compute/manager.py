@@ -1455,6 +1455,10 @@ class ComputeManager(manager.Manager):
                 evacuated_instances)
             self._error_out_instances_whose_build_was_interrupted(
                 context, already_handled, nodes_by_uuid.keys())
+            # NOTE(gibi): If ironic and vcenter virt driver slow start time
+            # becomes problematic here then we should consider adding a config
+            # option or a driver flag to tell us if we should thread this out
+            # in the background on startup
 
         finally:
             if instances:
@@ -1688,7 +1692,10 @@ class ComputeManager(manager.Manager):
                     max_server = rules['max_server_per_host']
                 else:
                     max_server = 1
-                if len(members_on_host) >= max_server:
+                resource_scheduling = self.driver.capabilities.get(
+                                        "resource_scheduling", False)
+                if len(members_on_host) >= max_server and not \
+                        resource_scheduling:
                     msg = _("Anti-affinity instance group policy "
                             "was violated.")
                     raise exception.RescheduledException(

@@ -92,6 +92,7 @@ class _GroupAntiAffinityFilter(filters.BaseHostFilter):
         policy = instance_group.policy if instance_group else None
         if self.policy_name != policy:
             return True
+
         # NOTE(hanrong): Move operations like resize can check the same source
         # compute node where the instance is. That case, AntiAffinityFilter
         # must not return the source as a non-possible destination.

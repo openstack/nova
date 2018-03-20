@@ -269,7 +269,7 @@ class VMwareVMOps(object):
         # We cannot truncate the 'id' as this is unique across OpenStack.
         return '%s (%s)' % (name[:40], id[:36])
 
-    def build_virtual_machine(self, instance, image_info,
+    def build_virtual_machine(self, instance, context, image_info,
                               dc_info, datastore, network_info, extra_specs,
                               metadata):
         vif_infos = vmwarevif.get_vif_info(self._session,
@@ -302,6 +302,9 @@ class VMwareVMOps(object):
         # Create the VM
         vm_ref = vm_util.create_vm(self._session, instance, folder,
                                    config_spec, self._root_resource_pool)
+
+        vm_util.update_cluster_placement(self._session, context, instance,
+                                         self._cluster, vm_ref)
         return vm_ref
 
     def _get_extra_specs(self, flavor, image_meta=None):
@@ -745,6 +748,7 @@ class VMwareVMOps(object):
         # Creates the virtual machine. The virtual machine reference returned
         # is unique within Virtual Center.
         vm_ref = self.build_virtual_machine(instance,
+                                            context,
                                             image_info,
                                             vi.dc_info,
                                             vi.datastore,

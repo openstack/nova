@@ -67,6 +67,7 @@ class VMwareVCDriver(driver.ComputeDriver):
         "has_imagecache": True,
         "supports_evacuate": False,
         "supports_migrate_to_same_host": True,
+        "resource_scheduling": True,
         "supports_attach_interface": True,
         "supports_multiattach": False,
         "supports_trusted_certs": False,
@@ -149,6 +150,9 @@ class VMwareVCDriver(driver.ComputeDriver):
                                       self._nodename,
                                       self._cluster_ref,
                                       self._datastore_regex)
+        host_stats = self._vc_state.get_host_stats()
+        self.capabilities['resource_scheduling'] = host_stats.get(
+            'resource_scheduling')
 
         # Register the OpenStack extension
         self._register_openstack_extension()
