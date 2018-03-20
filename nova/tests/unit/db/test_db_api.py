@@ -3395,33 +3395,6 @@ class ServiceTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertEqual(0, done)
 
 
-class BaseInstanceTypeTestCase(test.TestCase, ModelsObjectComparatorMixin):
-    def setUp(self):
-        super(BaseInstanceTypeTestCase, self).setUp()
-        self.ctxt = context.get_admin_context()
-        self.user_ctxt = context.RequestContext('user', 'user')
-
-    def _get_base_values(self):
-        return {
-            'name': 'fake_name',
-            'memory_mb': 512,
-            'vcpus': 1,
-            'root_gb': 10,
-            'ephemeral_gb': 10,
-            'flavorid': 'fake_flavor',
-            'swap': 0,
-            'rxtx_factor': 0.5,
-            'vcpu_weight': 1,
-            'disabled': False,
-            'is_public': True
-        }
-
-    def _create_flavor(self, values, projects=None):
-        v = self._get_base_values()
-        v.update(values)
-        return db.flavor_create(self.ctxt, v, projects)
-
-
 class InstanceActionTestCase(test.TestCase, ModelsObjectComparatorMixin):
     IGNORED_FIELDS = [
         'id',
@@ -4047,42 +4020,12 @@ class InstanceFaultTestCase(test.TestCase, ModelsObjectComparatorMixin):
         self.assertFalse(mock_filter.called)
 
 
-class InstanceTypeTestCase(BaseInstanceTypeTestCase):
-
-    def test_flavor_create(self):
-        flavor = self._create_flavor({})
-        ignored_keys = ['id', 'deleted', 'deleted_at', 'updated_at',
-                        'created_at', 'extra_specs']
-
-        self.assertIsNotNone(flavor['id'])
-        self._assertEqualObjects(flavor, self._get_base_values(),
-                                 ignored_keys)
-
-    def test_flavor_create_duplicate_name(self):
-        self._create_flavor({})
-        self.assertRaises(exception.FlavorExists,
-                          self._create_flavor,
-                          {'flavorid': 'some_random_flavor'})
-
-    def test_flavor_create_duplicate_flavorid(self):
-        self._create_flavor({})
-        self.assertRaises(exception.FlavorIdExists,
-                          self._create_flavor,
-                          {'name': 'some_random_name'})
-
-    def test_flavor_create_with_extra_specs(self):
-        extra_specs = dict(a='abc', b='def', c='ghi')
-        flavor = self._create_flavor({'extra_specs': extra_specs})
-        ignored_keys = ['id', 'deleted', 'deleted_at', 'updated_at',
-                        'created_at', 'extra_specs']
-
-        self._assertEqualObjects(flavor, self._get_base_values(),
-                                 ignored_keys)
-        self._assertEqualObjects(extra_specs, flavor['extra_specs'])
-
-
 @mock.patch('time.sleep', new=lambda x: None)
-class FixedIPTestCase(BaseInstanceTypeTestCase):
+class FixedIPTestCase(test.TestCase, ModelsObjectComparatorMixin):
+    def setUp(self):
+        super(FixedIPTestCase, self).setUp()
+        self.ctxt = context.get_admin_context()
+
     def _timeout_test(self, ctxt, timeout, multi_host):
         instance = db.instance_create(ctxt, dict(host='foo'))
         net = db.network_create_safe(ctxt, dict(multi_host=multi_host,

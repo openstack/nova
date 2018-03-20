@@ -299,6 +299,7 @@ class TestOcataCheck(test.TestCase):
             'vcpu_weight': 1,
             'disabled': False,
             'is_public': True,
+            'deleted': 0
         }
         self.keypair_values = {
             'name': 'foo',
@@ -322,7 +323,8 @@ class TestOcataCheck(test.TestCase):
         self.migration.upgrade(self.engine)
 
     def test_upgrade_dirty_flavors(self):
-        db_api.flavor_create(self.context, self.flavor_values)
+        flavors = db_utils.get_table(self.engine, 'instance_types')
+        flavors.insert().execute(self.flavor_values)
         self.assertRaises(exception.ValidationError,
                           self.migration.upgrade, self.engine)
 
