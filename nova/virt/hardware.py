@@ -1182,7 +1182,25 @@ def _get_cpu_thread_policy_constraints(flavor, image_meta):
     return policy
 
 
-def _numa_get_constraints_manual(nodes, flavor, cpu_list, mem_list):
+def _get_numa_topology_auto(nodes, flavor):
+    if ((flavor.vcpus % nodes) > 0 or
+        (flavor.memory_mb % nodes) > 0):
+        raise exception.ImageNUMATopologyAsymmetric()
+
+    cells = []
+    for node in range(nodes):
+        ncpus = int(flavor.vcpus / nodes)
+        mem = int(flavor.memory_mb / nodes)
+        start = node * ncpus
+        cpuset = set(range(start, start + ncpus))
+
+        cells.append(objects.InstanceNUMACell(
+            id=node, cpuset=cpuset, memory=mem))
+
+    return objects.InstanceNUMATopology(cells=cells)
+
+
+def _get_numa_topology_manual(nodes, flavor, cpu_list, mem_list):
     cells = []
     totalmem = 0
 
@@ -1245,24 +1263,6 @@ def vcpus_realtime_topology(flavor, image):
         raise exception.RealtimeMaskNotFoundOrInvalid()
 
     return vcpus_rt
-
-
-def _numa_get_constraints_auto(nodes, flavor):
-    if ((flavor.vcpus % nodes) > 0 or
-        (flavor.memory_mb % nodes) > 0):
-        raise exception.ImageNUMATopologyAsymmetric()
-
-    cells = []
-    for node in range(nodes):
-        ncpus = int(flavor.vcpus / nodes)
-        mem = int(flavor.memory_mb / nodes)
-        start = node * ncpus
-        cpuset = set(range(start, start + ncpus))
-
-        cells.append(objects.InstanceNUMACell(
-            id=node, cpuset=cpuset, memory=mem))
-
-    return objects.InstanceNUMATopology(cells=cells)
 
 
 def get_emulator_threads_constraint(flavor, image_meta):
@@ -1378,10 +1378,10 @@ def numa_get_constraints(flavor, image_meta):
             raise exception.ImageNUMATopologyIncomplete()
 
         if cpu_list is None:
-            numa_topology = _numa_get_constraints_auto(
+            numa_topology = _get_numa_topology_auto(
                 nodes, flavor)
         else:
-            numa_topology = _numa_get_constraints_manual(
+            numa_topology = _get_numa_topology_manual(
                 nodes, flavor, cpu_list, mem_list)
 
         # We currently support same pagesize for all cells.
