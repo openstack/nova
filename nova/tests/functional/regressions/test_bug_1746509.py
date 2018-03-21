@@ -10,8 +10,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import six
-
 import nova.context
 from nova import db
 from nova import objects
@@ -57,13 +55,8 @@ class InstanceListWithServicesTestCase(test.TestCase):
                                 host='fake-host')
         inst.create()
 
-        # TODO(melwitt): Remove these asserts when the bug is fixed.
-        ex = self.assertRaises(TypeError, objects.InstanceList.get_by_filters,
-                               self.context, {}, expected_attrs=['services'])
-        self.assertIn("Can't upgrade a READER transaction to a WRITER "
-                      "mid-transaction", six.text_type(ex))
-
-        # TODO(melwitt): Uncomment this assert when the bug is fixed.
-        # insts = objects.InstanceList.get_by_filters(
-        #     self.context, {}, expected_attrs=['services'])
-        # self.assertEqual(1, len(insts))
+        insts = objects.InstanceList.get_by_filters(
+            self.context, {}, expected_attrs=['services'])
+        self.assertEqual(1, len(insts))
+        self.assertEqual(1, len(insts[0].services))
+        self.assertIsNotNone(insts[0].services[0].uuid)
