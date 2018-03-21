@@ -211,9 +211,9 @@ Nova Cells v2
     code 1).
 
 ``nova-manage cell_v2 list_cells [--verbose]``
-    Lists the v2 cells in the deployment. By default only the cell name and
-    uuid are shown. Use the --verbose option to see transport url and database
-    connection details.
+    By default the cell name, uuid, disabled state, masked transport URL and
+    database connection details are shown. Use the --verbose option to see
+    transport URL and database connection with their sensitive details.
 
 ``nova-manage cell_v2 delete_cell [--force] --cell_uuid <cell_uuid>``
     Delete a cell by the given uuid. Returns 0 if the empty cell is found and

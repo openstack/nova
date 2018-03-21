@@ -1398,14 +1398,16 @@ class CellV2Commands(object):
     def list_cells(self, verbose=False):
         """Lists the v2 cells in the deployment.
 
-        By default only the cell name and uuid are shown. Use the --verbose
-        option to see transport URL and database connection details.
+        By default the cell name, uuid, disabled state, masked transport
+        URL and database connection details are shown. Use the --verbose
+        option to see transport URL and database connection with their
+        sensitive details.
         """
         cell_mappings = objects.CellMappingList.get_all(
             context.get_admin_context())
 
         field_names = [_('Name'), _('UUID'), _('Transport URL'),
-                       _('Database Connection')]
+                       _('Database Connection'), _('Disabled')]
 
         t = prettytable.PrettyTable(field_names)
         for cell in sorted(cell_mappings, key=lambda _cell: _cell.name):
@@ -1416,6 +1418,7 @@ class CellV2Commands(object):
                 fields.extend([
                     mask_passwd_in_url(cell.transport_url),
                     mask_passwd_in_url(cell.database_connection)])
+            fields.extend([cell.disabled])
             t.add_row(fields)
         print(t)
         return 0
