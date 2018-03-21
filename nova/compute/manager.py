@@ -2849,23 +2849,14 @@ class ComputeManager(manager.Manager):
 
         LOG.info("Rebuilding instance", instance=instance)
 
-        # NOTE(gyee): there are three possible scenarios.
-        #
-        #   1. instance is being rebuilt on the same node. In this case,
-        #      recreate should be False and scheduled_node should be None.
-        #   2. instance is being rebuilt on a node chosen by the
-        #      scheduler (i.e. evacuate). In this case, scheduled_node should
-        #      be specified and recreate should be True.
-        #   3. instance is being rebuilt on a node chosen by the user. (i.e.
-        #      force evacuate). In this case, scheduled_node is not specified
-        #      and recreate is set to True.
-        #
-        # For scenarios #2 and #3, we must do rebuild claim as server is
-        # being evacuated to a different node.
         rt = self._get_resource_tracker()
-        if recreate or scheduled_node is not None:
+        if recreate:
+            # This is an evacuation to a new host, so we need to perform a
+            # resource claim.
             rebuild_claim = rt.rebuild_claim
         else:
+            # This is a rebuild to the same host, so we don't need to make
+            # a claim since the instance is already on this host.
             rebuild_claim = claims.NopClaim
 
         image_meta = {}

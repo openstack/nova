@@ -1230,7 +1230,10 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
             '/servers/%s/action' % server['id'], rebuild_req_body)
         self.assertIn('NoValidHost', six.text_type(ex))
 
-    def test_rebuild_with_new_image(self):
+    # A rebuild to the same host should never attempt a rebuild claim.
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.rebuild_claim',
+                new_callable=mock.NonCallableMock)
+    def test_rebuild_with_new_image(self, mock_rebuild_claim):
         """Rebuilds a server with a different image which will run it through
         the scheduler to validate the image is still OK with the compute host
         that the instance is running on.
