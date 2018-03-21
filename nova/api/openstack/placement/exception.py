@@ -15,13 +15,10 @@
 # were originally used. To prepare for extracting placement to its own
 # repository we wish to no longer do that. Instead, exceptions used by
 # placement should be in the placement hierarchy.
-# TODO(cdent): Because of the duplication it is likely that some of the
-# functionality provided by _BaseException is redundant and can be factored
-# out.
 
 from oslo_log import log as logging
 
-from nova.i18n import _, _LE
+from nova.i18n import _
 
 
 LOG = logging.getLogger(__name__)
@@ -55,7 +52,7 @@ class _BaseException(Exception):
     def _log_exception(self):
         # kwargs doesn't match a variable in the message
         # log the issue and the kwargs
-        LOG.exception(_LE('Exception in string format operation'))
+        LOG.exception('Exception in string format operation')
         for name, value in self.kwargs.items():
             LOG.error("%s: %s" % (name, value))  # noqa
 
