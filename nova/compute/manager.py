@@ -7317,7 +7317,12 @@ class ComputeManager(manager.Manager):
         compute_nodes_in_db = self._get_compute_nodes_in_db(context,
                                                             use_slave=True,
                                                             startup=startup)
-        nodenames = set(self.driver.get_available_nodes())
+        try:
+            nodenames = set(self.driver.get_available_nodes())
+        except exception.VirtDriverNotReady:
+            LOG.warning("Virt driver is not ready.")
+            return
+
         for nodename in nodenames:
             self.update_available_resource_for_node(context, nodename)
 

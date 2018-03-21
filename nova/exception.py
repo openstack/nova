@@ -2229,3 +2229,7 @@ class CannotMigrateWithTargetHost(NovaException):
 
 class CannotMigrateToSameHost(NovaException):
     msg_fmt = _("Cannot migrate to the host where the server exists.")
+
+
+class VirtDriverNotReady(NovaException):
+    msg_fmt = _("Virt driver is not ready.")

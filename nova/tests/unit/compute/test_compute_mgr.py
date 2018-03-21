@@ -250,6 +250,26 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             else:
                 self.assertFalse(db_node.destroy.called)
 
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                'delete_resource_provider')
+    @mock.patch.object(manager.ComputeManager,
+                       'update_available_resource_for_node')
+    @mock.patch.object(fake_driver.FakeDriver, 'get_available_nodes')
+    @mock.patch.object(manager.ComputeManager, '_get_compute_nodes_in_db')
+    def test_update_available_resource_not_ready(self, get_db_nodes,
+                                                 get_avail_nodes,
+                                                 update_mock,
+                                                 del_rp_mock):
+        db_nodes = [self._make_compute_node('node1', 1)]
+        get_db_nodes.return_value = db_nodes
+        get_avail_nodes.side_effect = exception.VirtDriverNotReady
+
+        self.compute.update_available_resource(self.context)
+
+        # these shouldn't get processed on VirtDriverNotReady
+        update_mock.assert_not_called()
+        del_rp_mock.assert_not_called()
+
     @mock.patch('nova.context.get_admin_context')
     def test_pre_start_hook(self, get_admin_context):
         """Very simple test just to make sure update_available_resource is
