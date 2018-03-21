@@ -317,3 +317,34 @@ class NovaManageCellV2Test(test.TestCase):
         cns = objects.ComputeNodeList.get_all(self.context)
         self.assertEqual(1, len(cns))
         self.assertEqual(0, cns[0].mapped)
+
+    def test_delete_cell_force_unmaps_computes(self):
+        cells = objects.CellMappingList.get_all(self.context)
+
+        self.commands.discover_hosts()
+
+        # We should have one host mapping
+        hms = objects.HostMappingList.get_all(self.context)
+        self.assertEqual(1, len(hms))
+
+        # We should have one mapped node
+        cns = objects.ComputeNodeList.get_all(self.context)
+        self.assertEqual(1, len(cns))
+        self.assertEqual(1, cns[0].mapped)
+
+        for cell in cells:
+            res = self.commands.delete_cell(cell.uuid, force=True)
+            self.assertEqual(0, res)
+
+        # The host mapping should be deleted since the force option is used
+        hms = objects.HostMappingList.get_all(self.context)
+        self.assertEqual(0, len(hms))
+
+        # All our cells should be deleted
+        cells = objects.CellMappingList.get_all(self.context)
+        self.assertEqual(0, len(cells))
+
+        # Our node should now be unmapped
+        cns = objects.ComputeNodeList.get_all(self.context)
+        self.assertEqual(1, len(cns))
+        self.assertEqual(0, cns[0].mapped)
