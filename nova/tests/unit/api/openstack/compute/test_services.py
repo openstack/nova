@@ -31,6 +31,7 @@ from nova import compute
 from nova import context
 from nova import exception
 from nova import objects
+from nova.scheduler.client import report as scheduler_report
 from nova.servicegroup.drivers import db as db_driver
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -554,7 +555,9 @@ class ServicesTestV21(test.TestCase):
                 self.controller.update, self.req, "disable-log-reason",
                 body=body)
 
-    def test_services_delete(self):
+    @mock.patch.object(scheduler_report.SchedulerReportClient,
+                       'delete_resource_provider')
+    def test_services_delete(self, mock_delete_rp):
         self.ext_mgr.extensions['os-extended-services-delete'] = True
 
         compute = self.host_api.db.service_create(self.ctxt,
@@ -563,12 +566,29 @@ class ServicesTestV21(test.TestCase):
              'topic': 'compute',
              'report_count': 0})
 
+        self.host_api.db.compute_node_create(self.ctxt,
+            {
+                'uuid': 'f1891d93-37a1-4230-aa10-433f63fb7d67',
+                'host': 'fake-compute-host',
+                'vcpus': 64,
+                'memory_mb': 1024,
+                'local_gb': 500,
+                'vcpus_used': 0,
+                'memory_mb_used': 128,
+                'local_gb_used': 20,
+                'hypervisor_type': 'QEMU',
+                'hypervisor_version': 2009000,
+                'cpu_info': '{"vendor": "Intel", "model": "Broadwell", '
+                            '"arch": "x86_64"}'
+            })
+
         with mock.patch.object(self.controller.host_api,
                                'service_delete') as service_delete:
             self.controller.delete(self.req, compute.id)
             service_delete.assert_called_once_with(
                 self.req.environ['nova.context'], compute.id)
             self.assertEqual(self.controller.delete.wsgi_code, 204)
+            mock_delete_rp.assert_called_once()
 
     def test_services_delete_not_found(self):
         self.ext_mgr.extensions['os-extended-services-delete'] = True
