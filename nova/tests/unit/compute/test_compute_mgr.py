@@ -272,7 +272,10 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertFalse(mock_log.error.called)
 
     @mock.patch('nova.compute.utils.notify_about_instance_action')
-    def test_delete_instance_without_info_cache(self, mock_notify):
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_detach_volume')
+    def test_delete_instance_without_info_cache(self, mock_detach,
+                                                mock_notify):
         instance = fake_instance.fake_instance_obj(
                 self.context,
                 uuid=uuids.instance,
@@ -3533,7 +3536,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertRaises(test.TestingException, do_test)
         set_error.assert_called_once_with(self.context, instance)
 
-    def test_cleanup_volumes(self):
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_detach_volume')
+    def test_cleanup_volumes(self, mock_detach):
         instance = fake_instance.fake_instance_obj(self.context)
         bdm_do_not_delete_dict = fake_block_device.FakeDbBlockDeviceDict(
             {'volume_id': 'fake-id1', 'source_type': 'image',
@@ -3546,11 +3551,17 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
 
         with mock.patch.object(self.compute.volume_api,
                 'delete') as volume_delete:
-            self.compute._cleanup_volumes(self.context, instance.uuid, bdms)
+            self.compute._cleanup_volumes(self.context, instance, bdms)
+            calls = [mock.call(self.context, bdm, instance,
+                               destroy_bdm=bdm.delete_on_termination)
+                     for bdm in bdms]
+            self.assertEqual(calls, mock_detach.call_args_list)
             volume_delete.assert_called_once_with(self.context,
                     bdms[1].volume_id)
 
-    def test_cleanup_volumes_exception_do_not_raise(self):
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_detach_volume')
+    def test_cleanup_volumes_exception_do_not_raise(self, mock_detach):
         instance = fake_instance.fake_instance_obj(self.context)
         bdm_dict1 = fake_block_device.FakeDbBlockDeviceDict(
             {'volume_id': 'fake-id1', 'source_type': 'image',
@@ -3564,12 +3575,17 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         with mock.patch.object(self.compute.volume_api,
                 'delete',
                 side_effect=[test.TestingException(), None]) as volume_delete:
-            self.compute._cleanup_volumes(self.context, instance.uuid, bdms,
+            self.compute._cleanup_volumes(self.context, instance, bdms,
                     raise_exc=False)
             calls = [mock.call(self.context, bdm.volume_id) for bdm in bdms]
             self.assertEqual(calls, volume_delete.call_args_list)
+            calls = [mock.call(self.context, bdm, instance,
+                               destroy_bdm=True) for bdm in bdms]
+            self.assertEqual(calls, mock_detach.call_args_list)
 
-    def test_cleanup_volumes_exception_raise(self):
+    @mock.patch('nova.compute.manager.ComputeManager.'
+                '_detach_volume')
+    def test_cleanup_volumes_exception_raise(self, mock_detach):
         instance = fake_instance.fake_instance_obj(self.context)
         bdm_dict1 = fake_block_device.FakeDbBlockDeviceDict(
             {'volume_id': 'fake-id1', 'source_type': 'image',
@@ -3584,10 +3600,31 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 'delete',
                 side_effect=[test.TestingException(), None]) as volume_delete:
             self.assertRaises(test.TestingException,
-                    self.compute._cleanup_volumes, self.context, instance.uuid,
+                    self.compute._cleanup_volumes, self.context, instance,
                     bdms)
             calls = [mock.call(self.context, bdm.volume_id) for bdm in bdms]
             self.assertEqual(calls, volume_delete.call_args_list)
+            calls = [mock.call(self.context, bdm, instance,
+                               destroy_bdm=bdm.delete_on_termination)
+                     for bdm in bdms]
+            self.assertEqual(calls, mock_detach.call_args_list)
+
+    @mock.patch('nova.compute.manager.ComputeManager._detach_volume',
+                side_effect=exception.CinderConnectionFailed(reason='idk'))
+    def test_cleanup_volumes_detach_fails_raise_exc(self, mock_detach):
+        instance = fake_instance.fake_instance_obj(self.context)
+        bdms = block_device_obj.block_device_make_list(
+            self.context,
+            [fake_block_device.FakeDbBlockDeviceDict(
+                {'volume_id': uuids.volume_id,
+                 'source_type': 'volume',
+                 'destination_type': 'volume',
+                 'delete_on_termination': False})])
+        self.assertRaises(exception.CinderConnectionFailed,
+                          self.compute._cleanup_volumes, self.context,
+                          instance, bdms)
+        mock_detach.assert_called_once_with(
+            self.context, bdms[0], instance, destroy_bdm=False)
 
     def test_stop_instance_task_state_none_power_state_shutdown(self):
         # Tests that stop_instance doesn't puke when the instance power_state
@@ -4258,7 +4295,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_clean_net.assert_called_once_with(self.context, self.instance,
                 self.requested_networks)
         mock_clean_vol.assert_called_once_with(self.context,
-                self.instance.uuid, self.block_device_mapping, raise_exc=False)
+                self.instance, self.block_device_mapping, raise_exc=False)
         mock_add.assert_called_once_with(self.context, self.instance,
                 mock.ANY, mock.ANY)
         mock_nil.assert_called_once_with(self.instance)
@@ -4491,7 +4528,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         mock_clean_net.assert_called_once_with(self.context, self.instance,
                 self.requested_networks)
         mock_clean_vol.assert_called_once_with(self.context,
-                self.instance.uuid, self.block_device_mapping,
+                self.instance, self.block_device_mapping,
                 raise_exc=False)
         mock_add.assert_called_once_with(self.context, self.instance,
                 mock.ANY, mock.ANY, fault_message=mock.ANY)
@@ -4636,7 +4673,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self._assert_build_instance_update(mock_save)
         if cleanup_volumes:
             mock_clean_vol.assert_called_once_with(self.context,
-                    self.instance.uuid, self.block_device_mapping,
+                    self.instance, self.block_device_mapping,
                     raise_exc=False)
         if nil_out_host_and_node:
             mock_nil.assert_called_once_with(self.instance)
