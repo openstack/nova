@@ -8006,7 +8006,7 @@ class LibvirtDriver(driver.ComputeDriver):
         """Used only for cleanup in case migrate_disk_and_power_off fails."""
         try:
             if os.path.exists(inst_base_resize):
-                utils.execute('rm', '-rf', inst_base)
+                shutil.rmtree(inst_base, ignore_errors=True)
                 utils.execute('mv', inst_base_resize, inst_base)
                 if not shared_storage:
                     self._remotefs.remove_dir(dest, inst_base)
