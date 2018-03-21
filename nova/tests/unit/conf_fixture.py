@@ -77,8 +77,7 @@ class ConfFixture(config_fixture.Config):
         self.conf.set_default('keep_alive', False, group="wsgi")
 
         # placement group
-        self.conf.set_default('os_region_name', 'RegionOne',
-                              group='placement')
+        self.conf.set_default('region_name', 'RegionOne', group='placement')
 
         config.parse_args([], default_config_files=[], configure_db=False,
                           init_rpc=False)
