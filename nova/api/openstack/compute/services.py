@@ -26,6 +26,7 @@ from nova import exception
 from nova.i18n import _
 from nova import objects
 from nova.policies import services as services_policies
+from nova.scheduler.client import report
 from nova import servicegroup
 from nova import utils
 
@@ -41,6 +42,7 @@ class ServiceController(wsgi.Controller):
         self.actions = {"enable": self._enable,
                         "disable": self._disable,
                         "disable-log-reason": self._disable_log_reason}
+        self.placementclient = report.SchedulerReportClient()
 
     def _get_services(self, req):
         # The API services are filtered out since they are not RPC services
@@ -233,6 +235,13 @@ class ServiceController(wsgi.Controller):
                     self.aggregate_api.remove_host_from_aggregate(context,
                                                                   ag.id,
                                                                   service.host)
+                # remove the corresponding resource provider record from
+                # placement for this compute node
+                self.placementclient.delete_resource_provider(
+                    context, service.compute_node, cascade=True)
+                # remove the host_mapping of this host.
+                hm = objects.HostMapping.get_by_host(context, service.host)
+                hm.destroy()
             self.host_api.service_delete(context, id)
 
         except exception.ServiceNotFound:

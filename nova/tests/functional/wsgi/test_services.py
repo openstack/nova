@@ -13,6 +13,7 @@
 import six
 
 from nova import context as nova_context
+from nova import exception
 from nova import objects
 from nova import rc_fields
 from nova.tests.functional.api import client as api_client
@@ -105,13 +106,13 @@ class TestServicesAPI(test_servers.ProviderUsageBaseTestCase):
             'os-hypervisors?hypervisor_hostname_pattern=%s' % service['host'],
             check_response_status=[404])
 
-        # FIXME(mriedem): This is bug 1756179 where the host mapping is not
-        # deleted. Once the bug is fixed, we should be able to change this
-        # to assert that HostMappingNotFound is raised.
-        objects.HostMapping.get_by_host(ctxt, service['host'])
+        # The host mapping should also be gone.
+        self.assertRaises(exception.HostMappingNotFound,
+                          objects.HostMapping.get_by_host,
+                          ctxt, service['host'])
 
-        # FIXME(mriedem): This is bug 1756179 where the compute node resource
-        # provider is not deleted. Once the bug is fixed, this should result
-        # in a 404 response.
+        # And finally, the resource provider should also be gone. The API
+        # will perform a cascading delete of the resource provider inventory
+        # and allocation information.
         resp = self.placement_api.get('/resource_providers/%s' % rp_uuid)
-        self.assertEqual(200, resp.status)
+        self.assertEqual(404, resp.status)
