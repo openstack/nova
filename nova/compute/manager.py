@@ -6649,6 +6649,18 @@ class ComputeManager(manager.Manager):
             self.compute_rpcapi.rollback_live_migration_at_destination(
                     context, instance, dest, destroy_disks=destroy_disks,
                     migrate_data=migrate_data)
+        elif utils.is_neutron():
+            # The port binding profiles need to be cleaned up.
+            with errors_out_migration_ctxt(migration):
+                try:
+                    self.network_api.setup_networks_on_host(
+                        context, instance, teardown=True)
+                except Exception:
+                    with excutils.save_and_reraise_exception():
+                        LOG.exception(
+                            'An error occurred while cleaning up networking '
+                            'during live migration rollback.',
+                            instance=instance)
 
         self._notify_about_instance_usage(context, instance,
                                           "live_migration._rollback.end")

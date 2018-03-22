@@ -6682,8 +6682,10 @@ class ComputeTestCase(BaseTestCase,
                 mock.call(c, instance, self.compute.host,
                           action='live_migration_rollback', phase='end',
                           bdms=bdms)])
-            mock_nw_api.setup_networks_on_host.assert_called_once_with(
-                c, instance, self.compute.host)
+            mock_nw_api.setup_networks_on_host.assert_has_calls([
+                mock.call(c, instance, self.compute.host),
+                mock.call(c, instance, teardown=True)
+            ])
             mock_ra.assert_called_once_with(mock.ANY, instance, migration)
             mock_mig_save.assert_called_once_with()
         _test()
@@ -6725,12 +6727,68 @@ class ComputeTestCase(BaseTestCase,
                 mock.call(c, instance, self.compute.host,
                           action='live_migration_rollback', phase='end',
                           bdms=bdms)])
-            mock_nw_api.setup_networks_on_host.assert_called_once_with(
-                c, instance, self.compute.host)
+            mock_nw_api.setup_networks_on_host.assert_has_calls([
+                mock.call(c, instance, self.compute.host),
+                mock.call(c, instance, teardown=True)
+            ])
+
         _test()
 
         self.assertEqual('fake', migration.status)
         migration.save.assert_called_once_with()
+
+    @mock.patch.object(objects.ComputeNode, 'get_by_host_and_nodename',
+                       return_value=objects.ComputeNode(
+                           host='dest-host', uuid=uuids.dest_node))
+    @mock.patch('nova.objects.BlockDeviceMappingList.get_by_instance_uuid',
+                return_value=objects.BlockDeviceMappingList())
+    def test_rollback_live_migration_network_teardown_fails(
+            self, mock_bdms, mock_get_node):
+        """Tests that _rollback_live_migration calls setup_networks_on_host
+        directly, which raises an exception, and the migration record status
+        is still set to 'error' before re-raising the error.
+        """
+        ctxt = context.get_admin_context()
+        instance = fake_instance.fake_instance_obj(ctxt)
+        migration = objects.Migration(ctxt, uuid=uuids.migration)
+        migrate_data = objects.LibvirtLiveMigrateData(migration=migration)
+
+        @mock.patch.object(self.compute, '_notify_about_instance_usage')
+        @mock.patch('nova.compute.utils.notify_about_instance_action')
+        @mock.patch.object(instance, 'save')
+        @mock.patch.object(migration, 'save')
+        @mock.patch.object(self.compute, '_revert_allocation')
+        @mock.patch.object(self.compute, '_live_migration_cleanup_flags',
+                           return_value=(False, False))
+        @mock.patch.object(self.compute.network_api, 'setup_networks_on_host',
+                           side_effect=(None, test.TestingException))
+        def _test(mock_nw_setup, _mock_lmcf, mock_ra, mock_mig_save,
+                  mock_inst_save, _mock_notify_action, mock_notify_usage):
+            self.assertRaises(test.TestingException,
+                              self.compute._rollback_live_migration,
+                              ctxt, instance, 'dest-host', migrate_data,
+                              migration_status='goofballs')
+            # setup_networks_on_host is called twice:
+            # - once to re-setup networking on the source host, which for
+            #   neutron doesn't actually do anything since the port's host
+            #   binding didn't change since live migration failed
+            # - once to teardown the 'migrating_to' information in the port
+            #   binding profile, where migrating_to points at the destination
+            #   host (that's done in pre_live_migration on the dest host). This
+            #   cleanup would happen in rollback_live_migration_at_destination
+            #   except _live_migration_cleanup_flags returned False for
+            #   'do_cleanup'.
+            mock_nw_setup.assert_has_calls([
+                mock.call(ctxt, instance, self.compute.host),
+                mock.call(ctxt, instance, teardown=True)
+            ])
+            mock_ra.assert_called_once_with(ctxt, instance, migration)
+            mock_mig_save.assert_called_once_with()
+            # Since we failed during rollback, the migration status gets set
+            # to 'error' instead of 'goofballs'.
+            self.assertEqual('error', migration.status)
+
+        _test()
 
     @mock.patch.object(fake.FakeDriver,
                        'rollback_live_migration_at_destination')
