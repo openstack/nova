@@ -1097,7 +1097,7 @@ object_data = {
     'ImageMetaProps': '1.19-dc9581ff2b80d8c33462889916b82df0',
     'Instance': '2.3-4f98ab23f4b0a25fabb1040c8f5edecc',
     'InstanceAction': '1.1-f9f293e526b66fca0d05c3b3a2d13914',
-    'InstanceActionEvent': '1.1-e56a64fa4710e43ef7af2ad9d6028b33',
+    'InstanceActionEvent': '1.2-b2f368b8a29d8d872b1f6ea841e820a0',
     'InstanceActionEventList': '1.1-13d92fb953030cdbfee56481756e02be',
     'InstanceActionList': '1.1-a2b2fb6006b47c27076d3a1d48baa759',
     'InstanceDeviceMetadata': '1.0-74d78dd36aa32d26d2769a1b57caf186',

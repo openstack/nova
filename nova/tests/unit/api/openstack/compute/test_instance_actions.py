@@ -53,12 +53,14 @@ def format_action(action, expect_traceback=True):
     return action
 
 
-def format_event(event, expect_traceback=True):
+def format_event(event, expect_traceback=True, expect_host=False):
     '''Remove keys that aren't serialized.'''
     to_delete = ['id', 'created_at', 'updated_at', 'deleted_at', 'deleted',
                  'action_id']
     if not expect_traceback:
         to_delete.append('traceback')
+    if not expect_host:
+        to_delete.append('host')
     for key in to_delete:
         if key in event:
             del(event[key])
