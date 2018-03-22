@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    Added a new flavor extra_spec, ``hide_hypervisor_id``, which hides
+    the hypervisor signature for the guest when true ('kvm' won't appear
+    in ``lscpu``). This acts exactly like and in parallel to the image
+    property ``img_hide_hypervisor_id`` and is useful for running the
+    nvidia drivers in the guest.
+    Currently, this is only supported in the libvirt driver.
