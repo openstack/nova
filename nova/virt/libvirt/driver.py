@@ -4305,16 +4305,6 @@ class LibvirtDriver(driver.ComputeDriver):
 
         return False
 
-    def _get_vcpu_realtime_scheduler(self, vcpus_rt):
-        """Returns the config object of LibvirtConfigGuestCPUTuneVCPUSched.
-        Prepares realtime config for the guest.
-        """
-        vcpusched = vconfig.LibvirtConfigGuestCPUTuneVCPUSched()
-        vcpusched.vcpus = vcpus_rt
-        vcpusched.scheduler = "fifo"
-        vcpusched.priority = CONF.libvirt.realtime_scheduler_priority
-        return vcpusched
-
     def _get_cell_pairs(self, guest_cpu_numa_config, host_topology):
         """Returns the lists of pairs(tuple) of an instance cell and
         corresponding host cell:
@@ -4451,7 +4441,10 @@ class LibvirtDriver(driver.ComputeDriver):
                         raise exception.RealtimePolicyNotSupported()
                     vcpus_rt = hardware.vcpus_realtime_topology(
                         flavor, image_meta)
-                    vcpusched = self._get_vcpu_realtime_scheduler(vcpus_rt)
+                    vcpusched = vconfig.LibvirtConfigGuestCPUTuneVCPUSched()
+                    designer.set_vcpu_realtime_scheduler(
+                        vcpusched, vcpus_rt,
+                        CONF.libvirt.realtime_scheduler_priority)
                     guest_cpu_tune.vcpusched.append(vcpusched)
 
                 cell_pairs = self._get_cell_pairs(guest_cpu_numa_config,

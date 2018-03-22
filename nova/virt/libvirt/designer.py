@@ -180,3 +180,10 @@ def set_numa_memnode(conf, guest_node_id, host_cell_id):
     conf.cellid = guest_node_id
     conf.nodeset = [host_cell_id]
     conf.mode = "strict"
+
+
+def set_vcpu_realtime_scheduler(conf, vcpus_rt, priority):
+    """Prepares realtime config for the guest."""
+    conf.vcpus = vcpus_rt
+    conf.scheduler = "fifo"
+    conf.priority = priority
