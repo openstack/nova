@@ -3265,14 +3265,9 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                               instance=instance,
                               new_pass=None)
 
-            if (expected_exception == exception.SetAdminPasswdNotSupported or
-                    expected_exception == exception.InstanceAgentNotEnabled or
-                    expected_exception == NotImplementedError):
+            if expected_exception != exception.InstancePasswordSetFailed:
                 instance_save_mock.assert_called_once_with(
                     expected_task_state=task_states.UPDATING_PASSWORD)
-            else:
-                # setting the instance to error state
-                instance_save_mock.assert_called_once_with()
 
             self.assertEqual(expected_vm_state, instance.vm_state)
             # check revert_task_state decorator
@@ -3290,7 +3285,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         exc = exception.Forbidden('Internal error')
         expected_exception = exception.InstancePasswordSetFailed
         self._do_test_set_admin_password_driver_error(
-            exc, vm_states.ERROR, None, expected_exception)
+            exc, vm_states.ACTIVE, None, expected_exception)
 
     def test_set_admin_password_driver_not_implemented(self):
         # Ensure expected exception is raised if set_admin_password not
