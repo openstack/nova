@@ -117,6 +117,7 @@ class CellMapping(API_BASE):
     name = Column(String(255))
     transport_url = Column(Text())
     database_connection = Column(Text())
+    disabled = Column(Boolean, default=False)
     host_mapping = orm.relationship('HostMapping',
                             backref=backref('cell_mapping', uselist=False),
                             foreign_keys=id,
