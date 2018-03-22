@@ -3512,7 +3512,6 @@ class ComputeManager(manager.Manager):
         except Exception:
             # Catch all here because this could be anything.
             LOG.exception('set_admin_password failed', instance=instance)
-            self._set_instance_obj_error_state(context, instance)
             # We create a new exception here so that we won't
             # potentially reveal password information to the
             # API caller.  The real exception is logged above
