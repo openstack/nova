@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    A new option ``disabled`` has been added to nova-manage cell_v2 create_cell
+    command by which users can create pre-disabled cells. Hence unless such cells
+    are enabled, no VMs will be spawned on the hosts in these cells.

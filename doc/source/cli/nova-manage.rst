@@ -188,7 +188,7 @@ Nova Cells v2
     instance which has instance mapping, and 4 if it is an archived instance
     which still has an instance mapping.
 
-``nova-manage cell_v2 create_cell [--name <cell_name>] [--transport-url <transport_url>] [--database_connection <database_connection>] [--verbose]``
+``nova-manage cell_v2 create_cell [--name <cell_name>] [--transport-url <transport_url>] [--database_connection <database_connection>] [--verbose] [--disabled]``
     Create a cell mapping to the database connection and message queue
     transport url. If a database_connection is not specified, it will use the
     one defined by ``[database]/connection`` in the configuration file passed
@@ -197,7 +197,9 @@ Nova Cells v2
     verbose option will print out the resulting cell mapping uuid.  Returns 0
     if the cell mapping was successfully created, 1 if the transport url or
     database connection was missing, and 2 if a cell is already using that
-    transport url and database connection combination.
+    transport url and database connection combination. All the cells created are
+    by default enabled. However passing the disabled option can create a pre-disabled
+    cell, meaning no scheduling will happen to this cell.
 
 ``nova-manage cell_v2 discover_hosts [--cell_uuid <cell_uuid>] [--verbose] [--strict]``
     Searches cells, or a single cell, and maps found hosts. This command will
