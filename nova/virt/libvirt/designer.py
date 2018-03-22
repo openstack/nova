@@ -172,3 +172,11 @@ def set_vif_bandwidth_config(conf, inst_type):
         if len(scope) > 1 and scope[0] == 'quota':
             if scope[1] in bandwidth_items:
                 setattr(conf, scope[1], value)
+
+
+def set_numa_memnode(conf, guest_node_id, host_cell_id):
+    """Prepares numa memory node config for the guest.
+    """
+    conf.cellid = guest_node_id
+    conf.nodeset = [host_cell_id]
+    conf.mode = "strict"

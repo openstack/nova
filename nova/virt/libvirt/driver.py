@@ -103,6 +103,7 @@ from nova.virt.image import model as imgmodel
 from nova.virt import images
 from nova.virt.libvirt import blockinfo
 from nova.virt.libvirt import config as vconfig
+from nova.virt.libvirt import designer
 from nova.virt.libvirt import firewall as libvirt_firewall
 from nova.virt.libvirt import guest as libvirt_guest
 from nova.virt.libvirt import host
@@ -4326,16 +4327,6 @@ class LibvirtDriver(driver.ComputeDriver):
                     cell_pairs.append((guest_config_cell, host_cell))
         return cell_pairs
 
-    def _get_numa_memnode(self, guest_node_id, host_cell_id):
-        """Returns the config object of LibvirtConfigGuestNUMATuneMemNode.
-        Prepares numa memory node config for the guest.
-        """
-        node = vconfig.LibvirtConfigGuestNUMATuneMemNode()
-        node.cellid = guest_node_id
-        node.nodeset = [host_cell_id]
-        node.mode = "strict"
-        return node
-
     def _get_pin_cpuset(self, vcpu, object_numa_cell, host_cell):
         """Returns the config object of LibvirtConfigGuestCPUTuneVCPUPin.
         Prepares vcpupin config for the guest with the following caveats:
@@ -4468,8 +4459,11 @@ class LibvirtDriver(driver.ComputeDriver):
                 for guest_node_id, (guest_config_cell, host_cell) in enumerate(
                         cell_pairs):
                     # set NUMATune for the cell
-                    guest_numa_tune.memnodes.append(
-                        self._get_numa_memnode(guest_node_id, host_cell.id))
+                    tnode = vconfig.LibvirtConfigGuestNUMATuneMemNode()
+                    designer.set_numa_memnode(
+                        tnode, guest_node_id, host_cell.id)
+                    guest_numa_tune.memnodes.append(tnode)
+
                     guest_numa_tune.memory.nodeset.append(host_cell.id)
 
                     # set CPUTune for the cell
