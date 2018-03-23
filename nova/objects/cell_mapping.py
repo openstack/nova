@@ -12,6 +12,8 @@
 
 from oslo_utils import versionutils
 from sqlalchemy.sql.expression import asc
+from sqlalchemy.sql import false
+from sqlalchemy.sql import true
 
 from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import api_models
@@ -130,7 +132,8 @@ class CellMapping(base.NovaTimestampObject, base.NovaObject):
 @base.NovaObjectRegistry.register
 class CellMappingList(base.ObjectListBase, base.NovaObject):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Add get_by_disabled()
+    VERSION = '1.1'
 
     fields = {
         'objects': fields.ListOfObjectsField('CellMapping'),
@@ -145,4 +148,20 @@ class CellMappingList(base.ObjectListBase, base.NovaObject):
     @base.remotable_classmethod
     def get_all(cls, context):
         db_mappings = cls._get_all_from_db(context)
+        return base.obj_make_list(context, cls(), CellMapping, db_mappings)
+
+    @staticmethod
+    @db_api.api_context_manager.reader
+    def _get_by_disabled_from_db(context, disabled):
+        if disabled:
+            return context.session.query(api_models.CellMapping).filter_by(
+                disabled=true()).order_by(asc(api_models.CellMapping.id)).all()
+        else:
+            return context.session.query(api_models.CellMapping).filter_by(
+                disabled=false()).order_by(asc(
+                    api_models.CellMapping.id)).all()
+
+    @base.remotable_classmethod
+    def get_by_disabled(cls, context, disabled):
+        db_mappings = cls._get_by_disabled_from_db(context, disabled)
         return base.obj_make_list(context, cls(), CellMapping, db_mappings)

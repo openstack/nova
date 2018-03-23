@@ -1065,7 +1065,7 @@ object_data = {
     'BuildRequest': '1.3-077dee42bed93f8a5b62be77657b7152',
     'BuildRequestList': '1.0-cd95608eccb89fbc702c8b52f38ec738',
     'CellMapping': '1.1-5d652928000a5bc369d79d5bde7e497d',
-    'CellMappingList': '1.0-4ee0d9efdfd681fed822da88376e04d2',
+    'CellMappingList': '1.1-496ef79bb2ab41041fff8bcb57996352',
     'ComputeNode': '1.18-431fafd8ac4a5f3559bd9b1f1332cc22',
     'ComputeNodeList': '1.17-52f3b0962b1c86b98590144463ebb192',
     'CpuDiagnostics': '1.0-d256f2e442d1b837735fd17dfe8e3d47',

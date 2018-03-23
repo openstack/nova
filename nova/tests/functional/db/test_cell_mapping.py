@@ -100,3 +100,21 @@ class CellMappingListTestCase(test.NoDBTestCase):
             mapping = mappings[db_mapping.uuid]
             for key in cell_mapping.CellMapping.fields.keys():
                 self.assertEqual(db_mapping[key], mapping[key])
+
+    def test_get_by_disabled(self):
+        enabled_mapping = create_mapping(disabled=False)
+        disabled_mapping = create_mapping(disabled=True)
+
+        ctxt = context.RequestContext()
+        mappings = cell_mapping.CellMappingList.get_all(ctxt)
+        self.assertEqual(2, len(mappings))
+        self.assertEqual(enabled_mapping['uuid'], mappings[0].uuid)
+        self.assertEqual(disabled_mapping['uuid'], mappings[1].uuid)
+        mappings = cell_mapping.CellMappingList.get_by_disabled(ctxt,
+                                                                disabled=False)
+        self.assertEqual(1, len(mappings))
+        self.assertEqual(enabled_mapping['uuid'], mappings[0].uuid)
+        mappings = cell_mapping.CellMappingList.get_by_disabled(ctxt,
+                                                                disabled=True)
+        self.assertEqual(1, len(mappings))
+        self.assertEqual(disabled_mapping['uuid'], mappings[0].uuid)

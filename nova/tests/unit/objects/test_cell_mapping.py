@@ -161,6 +161,35 @@ class _TestCellMappingListObject(object):
         # order
         self.assertEqual([1, 2, 3, 10], ids)
 
+    def test_get_by_disabled(self):
+        for ident in (4, 3):
+            # We start with id's 4 and 3 because we already have 2 enabled cell
+            # mappings in the base test case setup. 4 is before 3 to simply
+            # verify the sorting mechanism.
+            cm = objects.CellMapping(context=self.context,
+                                     id=ident,
+                                     uuid=getattr(uuids, 'cell%i' % ident),
+                                     transport_url='fake://%i' % ident,
+                                     database_connection='fake://%i' % ident,
+                                     disabled=True)
+            cm.create()
+        obj = objects.CellMappingList.get_all(self.context)
+        ids = [c.id for c in obj]
+        # Returns all the cells
+        self.assertEqual([1, 2, 3, 4], ids)
+
+        obj = objects.CellMappingList.get_by_disabled(self.context,
+                                                      disabled=False)
+        ids = [c.id for c in obj]
+        # Returns only the enabled ones
+        self.assertEqual([1, 2], ids)
+
+        obj = objects.CellMappingList.get_by_disabled(self.context,
+                                                      disabled=True)
+        ids = [c.id for c in obj]
+        # Returns only the disabled ones
+        self.assertEqual([3, 4], ids)
+
 
 class TestCellMappingListObject(test_objects._LocalTest,
                                 _TestCellMappingListObject):
