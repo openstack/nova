@@ -210,6 +210,8 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject,
 
 @base.NovaObjectRegistry.register
 class InstanceActionEventList(base.ObjectListBase, base.NovaObject):
+    # Version 1.0: Initial version
+    # Version 1.1: InstanceActionEvent <= 1.1
     VERSION = '1.1'
     fields = {
         'objects': fields.ListOfObjectsField('InstanceActionEvent'),
