@@ -1132,6 +1132,7 @@ class AggregateMetadata(BASE, NovaBase, models.SoftDeleteMixin):
             name="uniq_aggregate_metadata0aggregate_id0key0deleted"
             ),
         Index('aggregate_metadata_key_idx', 'key'),
+        Index('aggregate_metadata_value_idx', 'value'),
     )
     id = Column(Integer, primary_key=True)
     key = Column(String(255), nullable=False)
