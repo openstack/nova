@@ -1,0 +1,6 @@
+---
+deprecations:
+  - |
+    The ``fping_path`` configuration option has been deprecated.
+    /os-fping is used by nova-network and nova-network itself is
+    deprecated and will be removed in the future.
