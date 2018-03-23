@@ -1,4 +1,32 @@
 - job:
+    name: nova-dsvm-multinode-base
+    parent: legacy-dsvm-base-multinode
+    description: |
+      Base job for multinode nova devstack/tempest jobs.
+      Will setup firewall rules on all the nodes allowing them to talk to
+      each other.
+    timeout: 10800
+    required-projects:
+      - openstack-infra/devstack-gate
+      - openstack/nova
+      - openstack/tempest
+    irrelevant-files:
+      - ^(placement-)?api-.*$
+      - ^(test-|)requirements.txt$
+      - ^.*\.rst$
+      - ^.git.*$
+      - ^doc/.*$
+      - ^nova/hacking/.*$
+      - ^nova/locale/.*$
+      - ^nova/tests/.*$
+      - ^releasenotes/.*$
+      - ^setup.cfg$
+      - ^tests-py3.txt$
+      - ^tools/.*$
+      - ^tox.ini$
+    nodeset: legacy-ubuntu-xenial-2-node
+
+- job:
     name: nova-tox-functional
     parent: openstack-tox
     description: |
@@ -16,11 +44,19 @@
       tox_envlist: functional
     timeout: 3600
 
+- job:
+    name: nova-live-migration
+    parent: nova-dsvm-multinode-base
+    run: playbooks/legacy/nova-live-migration/run.yaml
+    post-run: playbooks/legacy/nova-live-migration/post.yaml
+
 - project:
     name: openstack/nova
     check:
       jobs:
+        - nova-live-migration
         - nova-tox-functional
     gate:
       jobs:
+        - nova-live-migration
         - nova-tox-functional
