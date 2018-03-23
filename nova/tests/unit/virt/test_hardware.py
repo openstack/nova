@@ -3213,12 +3213,8 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
 
         inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
 
-        # NOTE(tetsuro): Ideally, we'd like to allow getting a reserved cpu
-        # ignoring sibling-ness in contrast to pinning cpus for vcpu.
-        # Uncomment this when it is supported.
-        # self.assertEqual({0: 2, 1: 4}, inst_topo.cells[0].cpu_pinning)
-        # self.assertEqual(set([1]), inst_topo.cells[0].cpuset_reserved)
-        self.assertIsNone(inst_topo)
+        self.assertEqual({0: 2, 1: 4}, inst_topo.cells[0].cpu_pinning)
+        self.assertEqual(set([1]), inst_topo.cells[0].cpuset_reserved)
 
     def test_asymmetric_host(self):
         """Validate behavior with an asymmetric host topology.
@@ -3243,8 +3239,8 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
                 cpu_policy=fields.CPUAllocationPolicy.DEDICATED)])
 
         inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
-        self.assertEqual({0: 1, 1: 2}, inst_topo.cells[0].cpu_pinning)
-        self.assertEqual(set([3]), inst_topo.cells[0].cpuset_reserved)
+        self.assertEqual({0: 2, 1: 3}, inst_topo.cells[0].cpu_pinning)
+        self.assertEqual(set([1]), inst_topo.cells[0].cpuset_reserved)
 
     def test_asymmetric_host_w_isolate_thread_alloc(self):
         host_topo = objects.NUMATopology(
@@ -3266,9 +3262,5 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
 
         inst_topo = hw.numa_fit_instance_to_host(host_topo, inst_topo)
 
-        # NOTE(tetsuro): Ideally, we'd like to allow getting a reserved cpu
-        # ignoring sibling-ness in contrast to pinning cpus for vcpu.
-        # Uncomment this when it is supported.
-        # self.assertEqual({0: 2, 1: 4}, inst_topo.cells[0].cpu_pinning)
-        # self.assertEqual(set([1]), inst_topo.cells[0].cpuset_reserved)
-        self.assertIsNone(inst_topo)
+        self.assertEqual({0: 2, 1: 4}, inst_topo.cells[0].cpu_pinning)
+        self.assertEqual(set([1]), inst_topo.cells[0].cpuset_reserved)

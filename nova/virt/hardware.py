@@ -730,12 +730,11 @@ def _pack_instance_onto_cores(host_cell, instance_cell,
         return fractions.gcd(threads_per_core, _orphans(instance_cell,
                                                         threads_per_core))
 
-    def _get_pinning(threads_no, sibling_set, instance_cores,
-                     num_cpu_reserved=0):
+    def _get_pinning(threads_no, sibling_set, instance_cores):
         """Determines pCPUs/vCPUs mapping
 
         Determines the pCPUs/vCPUs mapping regarding the number of
-        threads which can be used per cores and pCPUs reserved.
+        threads which can be used per cores.
 
         :param threads_no: Number of host threads per cores which can
                            be used to pin vCPUs according to the
@@ -743,30 +742,27 @@ def _pack_instance_onto_cores(host_cell, instance_cell,
         :param sibling_set: List of available threads per host cores
                             on a specific host NUMA node.
         :param instance_cores: Set of vCPUs requested.
-        :param num_cpu_reserved: Number of additional host CPUs which
-                                 needs to be reserved.
 
         NOTE: Depending on how host is configured (HT/non-HT) a thread can
               be considered as an entire core.
         """
-        if threads_no * len(sibling_set) < (
-                len(instance_cores) + num_cpu_reserved):
-            return None, None
+        if threads_no * len(sibling_set) < (len(instance_cores)):
+            return None
 
         # Determines usable cores according the "threads number"
         # constraint.
         #
         # For a sibling_set=[(0, 1, 2, 3), (4, 5, 6, 7)] and thread_no 1:
-        # usable_cores=[(0), (4),]
+        # usable_cores=[[0], [4]]
         #
         # For a sibling_set=[(0, 1, 2, 3), (4, 5, 6, 7)] and thread_no 2:
-        # usable_cores=[(0, 1), (4, 5)]
+        # usable_cores=[[0, 1], [4, 5]]
         usable_cores = list(map(lambda s: list(s)[:threads_no], sibling_set))
 
         # Determines the mapping vCPUs/pCPUs based on the sets of
         # usable cores.
         #
-        # For an instance_cores=[2, 3], usable_cores=[(0), (4)]
+        # For an instance_cores=[2, 3], usable_cores=[[0], [4]]
         # vcpus_pinning=[(2, 0), (3, 4)]
         vcpus_pinning = list(zip(sorted(instance_cores),
                                  itertools.chain(*usable_cores)))
@@ -778,21 +774,47 @@ def _pack_instance_onto_cores(host_cell, instance_cell,
         }
         LOG.info(msg, msg_args)
 
+        return vcpus_pinning
+
+    def _get_reserved(sibling_set, vcpus_pinning, num_cpu_reserved=0,
+                      cpu_thread_isolate=False):
+        """Given available sibling_set, returns the pCPUs reserved
+        for hypervisor.
+
+        :param sibling_set: List of available threads per host cores
+                            on a specific host NUMA node.
+        :param vcpus_pinning: List of tuple of (pCPU, vCPU) mapping.
+        :param num_cpu_reserved: Number of additional host CPUs which
+                                 need to be reserved.
+        :param cpu_thread_isolate: True if CPUThreadAllocationPolicy
+                                   is ISOLATE.
+        """
+        if not vcpus_pinning:
+            return None
+
         cpuset_reserved = None
+        usable_cores = list(map(lambda s: list(s), sibling_set))
+
         if num_cpu_reserved:
-            # Updates the pCPUs used based on vCPUs pinned to
-            #
-            # For vcpus_pinning=[(0, 2), (1, 3)], usable_cores=[(2, 3), (4, 5)]
-            # usable_cores=[(), (4, 5)]
+            # Updates the pCPUs used based on vCPUs pinned to.
+            # For the case vcpus_pinning=[(0, 0), (1, 2)] and
+            # usable_cores=[[0, 1], [2, 3], [4, 5]],
+            # if CPUThreadAllocationPolicy is isolated, we want
+            # to update usable_cores=[[4, 5]].
+            # If CPUThreadAllocationPolicy is *not* isolated,
+            # we want to update usable_cores=[[1],[3],[4, 5]].
             for vcpu, pcpu in vcpus_pinning:
                 for sib in usable_cores:
                     if pcpu in sib:
-                        sib.remove(pcpu)
+                        if cpu_thread_isolate:
+                            usable_cores.remove(sib)
+                        else:
+                            sib.remove(pcpu)
 
             # Determines the pCPUs reserved for hypervisor
             #
-            # For usable_cores=[(), (4, 5)], num_cpu_reserved=1
-            # cpuset_reserved=[4]
+            # For usable_cores=[[1],[3],[4, 5]], num_cpu_reserved=1
+            # cpuset_reserved=set([1])
             cpuset_reserved = set(list(
                 itertools.chain(*usable_cores))[:num_cpu_reserved])
             msg = ("Computed NUMA topology reserved pCPUs: usable pCPUs: "
@@ -803,7 +825,7 @@ def _pack_instance_onto_cores(host_cell, instance_cell,
             }
             LOG.info(msg, msg_args)
 
-        return vcpus_pinning, cpuset_reserved
+        return cpuset_reserved or None
 
     if (instance_cell.cpu_thread_policy ==
             fields.CPUThreadAllocationPolicy.REQUIRE):
@@ -830,11 +852,16 @@ def _pack_instance_onto_cores(host_cell, instance_cell,
                       'for the isolate policy without this.')
             return
 
-        pinning, cpuset_reserved = _get_pinning(
+        pinning = _get_pinning(
             1,  # we only want to "use" one thread per core
             sibling_sets[threads_per_core],
-            instance_cell.cpuset,
-            num_cpu_reserved=num_cpu_reserved)
+            instance_cell.cpuset)
+        cpuset_reserved = _get_reserved(
+            sibling_sets[1], pinning, num_cpu_reserved=num_cpu_reserved,
+            cpu_thread_isolate=True)
+        if not pinning or (num_cpu_reserved and not cpuset_reserved):
+            pinning, cpuset_reserved = (None, None)
+
     else:  # REQUIRE, PREFER (explicit, implicit)
         if (instance_cell.cpu_thread_policy ==
                 fields.CPUThreadAllocationPolicy.REQUIRE):
@@ -862,12 +889,14 @@ def _pack_instance_onto_cores(host_cell, instance_cell,
                               ' the require policy', threads_no)
                     continue
 
-            pinning, cpuset_reserved = _get_pinning(
+            pinning = _get_pinning(
                 threads_no, sibling_set,
-                instance_cell.cpuset,
-                num_cpu_reserved=num_cpu_reserved)
-            if pinning:
-                break
+                instance_cell.cpuset)
+            cpuset_reserved = _get_reserved(
+                sibling_sets[1], pinning, num_cpu_reserved=num_cpu_reserved)
+            if not pinning or (num_cpu_reserved and not cpuset_reserved):
+                continue
+            break
 
         # NOTE(sfinucan): If siblings weren't available and we're using PREFER
         # (implicitly or explicitly), fall back to linear assignment across
@@ -886,14 +915,15 @@ def _pack_instance_onto_cores(host_cell, instance_cell,
             # maximize resource usage for almost-full nodes at the expense of a
             # possible performance impact to the guest.
             sibling_set = [set([x]) for x in itertools.chain(*sibling_sets[1])]
-            pinning, cpuset_reserved = _get_pinning(
+            pinning = _get_pinning(
                 threads_no, sibling_set,
-                instance_cell.cpuset,
-                num_cpu_reserved=num_cpu_reserved)
+                instance_cell.cpuset)
+            cpuset_reserved = _get_reserved(
+                sibling_set, pinning, num_cpu_reserved=num_cpu_reserved)
 
         threads_no = _threads(instance_cell, threads_no)
 
-    if not pinning:
+    if not pinning or (num_cpu_reserved and not cpuset_reserved):
         return
     LOG.debug('Selected cores for pinning: %s, in cell %s', pinning,
                                                             host_cell.id)
