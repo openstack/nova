@@ -101,9 +101,9 @@ class RequestContext(context.RequestContext):
                 authentication data.
         """
         if user_id:
-            kwargs['user'] = user_id
+            kwargs['user_id'] = user_id
         if project_id:
-            kwargs['tenant'] = project_id
+            kwargs['project_id'] = project_id
 
         super(RequestContext, self).__init__(is_admin=is_admin, **kwargs)
 
