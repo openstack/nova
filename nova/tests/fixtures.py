@@ -346,7 +346,8 @@ class SingleCellSimple(fixtures.Fixture):
                  'uuid': uuidsentinel.cell1,
                  'name': 'onlycell',
                  'transport_url': 'fake://nowhere/',
-                 'database_connection': 'sqlite:///'}]
+                 'database_connection': 'sqlite:///',
+                 'disabled': False}]
 
     @contextmanager
     def _fake_target_cell(self, context, target_cell):

@@ -1064,7 +1064,7 @@ object_data = {
     'BlockDeviceMappingList': '1.17-1e568eecb91d06d4112db9fd656de235',
     'BuildRequest': '1.3-077dee42bed93f8a5b62be77657b7152',
     'BuildRequestList': '1.0-cd95608eccb89fbc702c8b52f38ec738',
-    'CellMapping': '1.0-7f1a7e85a22bbb7559fc730ab658b9bd',
+    'CellMapping': '1.1-5d652928000a5bc369d79d5bde7e497d',
     'CellMappingList': '1.0-4ee0d9efdfd681fed822da88376e04d2',
     'ComputeNode': '1.18-431fafd8ac4a5f3559bd9b1f1332cc22',
     'ComputeNodeList': '1.17-52f3b0962b1c86b98590144463ebb192',

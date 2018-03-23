@@ -29,7 +29,8 @@ def get_db_mapping(**updates):
             'database_connection': 'sqlite:///',
             'created_at': None,
             'updated_at': None,
-            }
+            'disabled': False,
+    }
     db_mapping.update(updates)
     return db_mapping
 
@@ -115,6 +116,14 @@ class _TestCellMappingObject(object):
     def test_identity_with_name(self):
         cm = objects.CellMapping(uuid=uuids.cell1, name='foo')
         self.assertEqual('%s(foo)' % uuids.cell1, cm.identity)
+
+    def test_obj_make_compatible(self):
+        cell_mapping_obj = cell_mapping.CellMapping(context=self.context)
+        fake_cell_mapping_copy = dict(get_db_mapping())
+        self.assertIn('disabled', fake_cell_mapping_copy)
+        cell_mapping_obj.obj_make_compatible(fake_cell_mapping_copy, '1.0')
+        self.assertIn('uuid', fake_cell_mapping_copy)
+        self.assertNotIn('disabled', fake_cell_mapping_copy)
 
 
 class TestCellMappingObject(test_objects._LocalTest,
