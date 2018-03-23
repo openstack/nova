@@ -4742,6 +4742,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def test_rescheduled_exception(self, mock_hooks, mock_build_run,
                                    mock_build, mock_set, mock_nil,
                                    mock_save, mock_start, mock_finish):
+        self.flags(use_neutron=False)
         self._do_build_instance_update(mock_save, reschedule_update=True)
         mock_build_run.side_effect = exception.RescheduledException(reason='',
                 instance_uuid=self.instance.uuid)
@@ -4827,6 +4828,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             mock_macs_for_instance, mock_event_finish,
             mock_event_start, mock_ins_save,
             mock_build_ins, mock_build_and_run):
+        self.flags(use_neutron=False)
         instance = fake_instance.fake_instance_obj(self.context,
                 vm_state=vm_states.ACTIVE,
                 system_metadata={'network_allocated': 'True'},
@@ -4857,6 +4859,54 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             self.filter_properties, {})
         mock_cleanup_network.assert_called_once_with(
             self.context, instance, self.compute.host)
+        mock_build_ins.assert_called_once_with(self.context,
+            [instance], self.image, self.filter_properties,
+            self.admin_pass, self.injected_files, self.requested_networks,
+            self.security_groups, self.block_device_mapping,
+            request_spec={}, host_lists=[fake_host_list])
+
+    @mock.patch.object(manager.ComputeManager, '_build_and_run_instance')
+    @mock.patch.object(manager.ComputeManager, '_cleanup_allocated_networks')
+    @mock.patch.object(conductor_api.ComputeTaskAPI, 'build_instances')
+    @mock.patch.object(objects.Instance, 'save')
+    @mock.patch.object(objects.InstanceActionEvent, 'event_start')
+    @mock.patch.object(objects.InstanceActionEvent,
+                       'event_finish_with_failure')
+    @mock.patch.object(virt_driver.ComputeDriver, 'macs_for_instance')
+    def test_rescheduled_exception_with_network_allocated_with_neutron(self,
+            mock_macs_for_instance, mock_event_finish, mock_event_start,
+            mock_ins_save, mock_build_ins, mock_cleanup_network,
+            mock_build_and_run):
+        """Tests that we always cleanup allocated networks for the instance
+        when using neutron and before we reschedule off the failed host.
+        """
+        instance = fake_instance.fake_instance_obj(self.context,
+                vm_state=vm_states.ACTIVE,
+                system_metadata={'network_allocated': 'True'},
+                expected_attrs=['metadata', 'system_metadata', 'info_cache'])
+        mock_ins_save.return_value = instance
+        mock_macs_for_instance.return_value = []
+        mock_build_and_run.side_effect = exception.RescheduledException(
+            reason='', instance_uuid=self.instance.uuid)
+
+        self.compute._do_build_and_run_instance(self.context, instance,
+            self.image, request_spec={},
+            filter_properties=self.filter_properties,
+            injected_files=self.injected_files,
+            admin_password=self.admin_pass,
+            requested_networks=self.requested_networks,
+            security_groups=self.security_groups,
+            block_device_mapping=self.block_device_mapping, node=self.node,
+            limits=self.limits, host_list=fake_host_list)
+
+        mock_build_and_run.assert_called_once_with(self.context,
+            instance,
+            self.image, self.injected_files, self.admin_pass,
+            self.requested_networks, self.security_groups,
+            self.block_device_mapping, self.node, self.limits,
+            self.filter_properties, {})
+        mock_cleanup_network.assert_called_once_with(
+            self.context, instance, self.requested_networks)
         mock_build_ins.assert_called_once_with(self.context,
             [instance], self.image, self.filter_properties,
             self.admin_pass, self.injected_files, self.requested_networks,
@@ -4983,6 +5033,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
             mock_build_run, mock_build, mock_deallocate, mock_nil,
             mock_clean_net, mock_save, mock_start,
             mock_finish):
+        self.flags(use_neutron=False)
         self._do_build_instance_update(mock_save, reschedule_update=True)
         mock_build_run.side_effect = exception.RescheduledException(reason='',
                 instance_uuid=self.instance.uuid)
@@ -5426,6 +5477,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     def test_reschedule_on_resources_unavailable(self, mock_claim,
                 mock_build, mock_nil, mock_save, mock_start,
                 mock_finish, mock_notify):
+        self.flags(use_neutron=False)
         reason = 'resource unavailable'
         exc = exception.ComputeResourcesUnavailable(reason=reason)
         mock_claim.side_effect = exc
