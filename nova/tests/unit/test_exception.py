@@ -229,6 +229,23 @@ class NovaExceptionTestCase(test.NoDBTestCase):
         exc = FakeNovaException_Remote(lame_arg='lame')
         self.assertEqual("some message %(somearg)s", exc.format_message())
 
+    def test_repr(self):
+        class FakeNovaException(exception.NovaException):
+            msg_fmt = "some message"
+
+        mock_exc = FakeNovaException(code=500)
+
+        exc_repr = repr(mock_exc)
+
+        eval_repr = eval(exc_repr)
+        exc_kwargs = eval_repr.get('kwargs')
+
+        self.assertIsNotNone(exc_kwargs)
+
+        self.assertEqual(500, exc_kwargs.get('code'))
+        self.assertEqual('some message', eval_repr.get('message'))
+        self.assertEqual('FakeNovaException', eval_repr.get('class'))
+
 
 class ConvertedExceptionTestCase(test.NoDBTestCase):
     def test_instantiate(self):
