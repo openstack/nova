@@ -1433,7 +1433,11 @@ class ResourceProviderList(base.ObjectListBase, base.VersionedObject):
         name = filters.pop('name', None)
         uuid = filters.pop('uuid', None)
         member_of = filters.pop('member_of', [])
-        required = filters.pop('required', [])
+        required = set(filters.pop('required', []))
+        forbidden = set([trait for trait in required
+                         if trait.startswith('!')])
+        required = required - forbidden
+        forbidden = set([trait.lstrip('!') for trait in forbidden])
 
         resources = filters.pop('resources', {})
         # NOTE(sbauza): We want to key the dict by the resource class IDs
@@ -1513,6 +1517,17 @@ class ResourceProviderList(base.ObjectListBase, base.VersionedObject):
                 # If no providers have the required traits, we're done
                 return []
             query = query.where(rp.c.id.in_(rp_ids))
+
+        # If 'forbidden' has values, filter out those providers that have
+        # that trait as one their traits.
+        if forbidden:
+            trait_map = _trait_ids_from_names(context, forbidden)
+            if len(trait_map) != len(forbidden):
+                missing = forbidden - set(trait_map)
+                raise exception.TraitNotFound(names=', '.join(missing))
+            rp_ids = _get_provider_ids_having_any_trait(context, trait_map)
+            if rp_ids:
+                query = query.where(~rp.c.id.in_(rp_ids))
 
         if not resources:
             # Returns quickly the list in case we don't need to check the

@@ -1136,6 +1136,49 @@ class ResourceProviderListTestCase(ResourceProviderBaseCase):
                                    [uuidsentinel.agg_1, uuidsentinel.agg_2]})
         self.assertEqual(0, len(resource_providers))
 
+    def test_get_all_by_required(self):
+        # Create some resource providers and give them each 0 or more traits.
+        # rp_name_0: no traits
+        # rp_name_1: CUSTOM_TRAIT_A
+        # rp_name_2: CUSTOM_TRAIT_A, CUSTOM_TRAIT_B
+        # rp_name_3: CUSTOM_TRAIT_A, CUSTOM_TRAIT_B, CUSTOM_TRAIT_C
+        trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B',
+                       'CUSTOM_TRAIT_C']
+        trait_objects = []
+        for trait in trait_names:
+            trait_object = rp_obj.Trait(self.ctx, name=trait)
+            trait_object.create()
+            trait_objects.append(trait_object)
+        for rp_i in [0, 1, 2, 3]:
+            uuid = getattr(uuidsentinel, 'rp_uuid_' + str(rp_i))
+            name = 'rp_name_' + str(rp_i)
+            rp = rp_obj.ResourceProvider(self.ctx, name=name, uuid=uuid)
+            rp.create()
+            if rp_i:
+                traits = trait_objects[0:rp_i]
+                rp.set_traits(traits)
+
+        # Three rps (1, 2, 3) should have CUSTOM_TRAIT_A
+        custom_a_rps = rp_obj.ResourceProviderList.get_all_by_filters(
+            self.ctx, filters={'required': ['CUSTOM_TRAIT_A']})
+        self.assertEqual(3, len(custom_a_rps))
+        rp_names = [a_rp.name for a_rp in custom_a_rps]
+        expected_names = ['rp_name_%s' % i for i in [1, 2, 3]]
+        self.assertEqual(expected_names, sorted(rp_names))
+
+        # One rp (rp 1) if we forbid CUSTOM_TRAIT_B, with a single trait of
+        # CUSTOM_TRAIT_A
+        custom_a_rps = rp_obj.ResourceProviderList.get_all_by_filters(
+            self.ctx,
+            filters={'required': ['CUSTOM_TRAIT_A', '!CUSTOM_TRAIT_B']})
+        self.assertEqual(1, len(custom_a_rps))
+        self.assertEqual(uuidsentinel.rp_uuid_1, custom_a_rps[0].uuid)
+        self.assertEqual('rp_name_1', custom_a_rps[0].name)
+        traits = rp_obj.TraitList.get_all_by_resource_provider(
+            self.ctx, custom_a_rps[0])
+        self.assertEqual(1, len(traits))
+        self.assertEqual('CUSTOM_TRAIT_A', traits[0].name)
+
 
 class TestResourceProviderAggregates(test.NoDBTestCase):
 
