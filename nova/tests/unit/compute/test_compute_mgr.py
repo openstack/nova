@@ -3731,6 +3731,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         # Tests that we fail init_host if the placement section is
         # configured incorrectly.
         self.flags(os_region_name=None, group='placement')
+        self.flags(region_name=None, group='placement')
         self.assertRaises(exception.PlacementNotConfigured,
                           self.compute.init_host)
 
