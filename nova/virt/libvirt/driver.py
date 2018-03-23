@@ -4414,99 +4414,89 @@ class LibvirtDriver(driver.ComputeDriver):
             # across NUMA nodes and expose the topology to the
             # instance as an optimisation
             return GuestNumaConfig(allowed_cpus, None, None, None)
-        else:
-            if topology:
-                # Now get configuration from the numa_topology
-                # Init CPUTune configuration
-                guest_cpu_tune = vconfig.LibvirtConfigGuestCPUTune()
-                guest_cpu_tune.emulatorpin = (
-                    vconfig.LibvirtConfigGuestCPUTuneEmulatorPin())
-                guest_cpu_tune.emulatorpin.cpuset = set([])
 
-                # Init NUMATune configuration
-                guest_numa_tune = vconfig.LibvirtConfigGuestNUMATune()
-                guest_numa_tune.memory = (
-                    vconfig.LibvirtConfigGuestNUMATuneMemory())
-                guest_numa_tune.memnodes = []
+        if not topology:
+            # No NUMA topology defined for host - This will only happen with
+            # some libvirt versions and certain platforms.
+            return GuestNumaConfig(allowed_cpus, None,
+                                   guest_cpu_numa_config, None)
 
-                emulator_threads_isolated = (
-                    instance_numa_topology.emulator_threads_isolated)
+        # Now get configuration from the numa_topology
+        # Init CPUTune configuration
+        guest_cpu_tune = vconfig.LibvirtConfigGuestCPUTune()
+        guest_cpu_tune.emulatorpin = (
+            vconfig.LibvirtConfigGuestCPUTuneEmulatorPin())
+        guest_cpu_tune.emulatorpin.cpuset = set([])
 
-                # Set realtime scheduler for CPUTune
-                vcpus_rt = set([])
-                wants_realtime = hardware.is_realtime_enabled(flavor)
-                if wants_realtime:
-                    if not self._host.has_min_version(
-                            MIN_LIBVIRT_REALTIME_VERSION):
-                        raise exception.RealtimePolicyNotSupported()
-                    vcpus_rt = hardware.vcpus_realtime_topology(
-                        flavor, image_meta)
-                    vcpusched = vconfig.LibvirtConfigGuestCPUTuneVCPUSched()
-                    designer.set_vcpu_realtime_scheduler(
-                        vcpusched, vcpus_rt,
-                        CONF.libvirt.realtime_scheduler_priority)
-                    guest_cpu_tune.vcpusched.append(vcpusched)
+        # Init NUMATune configuration
+        guest_numa_tune = vconfig.LibvirtConfigGuestNUMATune()
+        guest_numa_tune.memory = vconfig.LibvirtConfigGuestNUMATuneMemory()
+        guest_numa_tune.memnodes = []
 
-                cell_pairs = self._get_cell_pairs(guest_cpu_numa_config,
-                                                  topology)
-                for guest_node_id, (guest_config_cell, host_cell) in enumerate(
-                        cell_pairs):
-                    # set NUMATune for the cell
-                    tnode = vconfig.LibvirtConfigGuestNUMATuneMemNode()
-                    designer.set_numa_memnode(
-                        tnode, guest_node_id, host_cell.id)
-                    guest_numa_tune.memnodes.append(tnode)
+        emulator_threads_isolated = (
+            instance_numa_topology.emulator_threads_isolated)
 
-                    guest_numa_tune.memory.nodeset.append(host_cell.id)
+        # Set realtime scheduler for CPUTune
+        vcpus_rt = set([])
+        wants_realtime = hardware.is_realtime_enabled(flavor)
+        if wants_realtime:
+            if not self._host.has_min_version(MIN_LIBVIRT_REALTIME_VERSION):
+                raise exception.RealtimePolicyNotSupported()
+            vcpus_rt = hardware.vcpus_realtime_topology(flavor, image_meta)
+            vcpusched = vconfig.LibvirtConfigGuestCPUTuneVCPUSched()
+            designer.set_vcpu_realtime_scheduler(
+                vcpusched, vcpus_rt, CONF.libvirt.realtime_scheduler_priority)
+            guest_cpu_tune.vcpusched.append(vcpusched)
 
-                    # set CPUTune for the cell
-                    object_numa_cell = instance_numa_topology.cells[
-                                                                guest_node_id]
-                    for cpu in guest_config_cell.cpus:
-                        pin_cpuset = self._get_pin_cpuset(
-                            cpu, object_numa_cell, host_cell)
-                        guest_cpu_tune.vcpupin.append(pin_cpuset)
+        cell_pairs = self._get_cell_pairs(guest_cpu_numa_config, topology)
+        for guest_node_id, (guest_config_cell, host_cell) in enumerate(
+                cell_pairs):
+            # set NUMATune for the cell
+            tnode = vconfig.LibvirtConfigGuestNUMATuneMemNode()
+            designer.set_numa_memnode(tnode, guest_node_id, host_cell.id)
+            guest_numa_tune.memnodes.append(tnode)
+            guest_numa_tune.memory.nodeset.append(host_cell.id)
 
-                        emu_pin_cpuset = self._get_emulatorpin_cpuset(
-                            cpu, object_numa_cell, vcpus_rt,
-                            emulator_threads_isolated,
-                            wants_realtime, pin_cpuset)
-                        guest_cpu_tune.emulatorpin.cpuset.update(
-                            emu_pin_cpuset)
+            # set CPUTune for the cell
+            object_numa_cell = instance_numa_topology.cells[guest_node_id]
+            for cpu in guest_config_cell.cpus:
+                pin_cpuset = self._get_pin_cpuset(cpu, object_numa_cell,
+                                                  host_cell)
+                guest_cpu_tune.vcpupin.append(pin_cpuset)
 
-                # TODO(berrange) When the guest has >1 NUMA node, it will
-                # span multiple host NUMA nodes. By pinning emulator threads
-                # to the union of all nodes, we guarantee there will be
-                # cross-node memory access by the emulator threads when
-                # responding to guest I/O operations. The only way to avoid
-                # this would be to pin emulator threads to a single node and
-                # tell the guest OS to only do I/O from one of its virtual
-                # NUMA nodes. This is not even remotely practical.
-                #
-                # The long term solution is to make use of a new QEMU feature
-                # called "I/O Threads" which will let us configure an explicit
-                # I/O thread for each guest vCPU or guest NUMA node. It is
-                # still TBD how to make use of this feature though, especially
-                # how to associate IO threads with guest devices to eliminate
-                # cross NUMA node traffic. This is an area of investigation
-                # for QEMU community devs.
+                emu_pin_cpuset = self._get_emulatorpin_cpuset(
+                    cpu, object_numa_cell, vcpus_rt,
+                    emulator_threads_isolated, wants_realtime, pin_cpuset)
+                guest_cpu_tune.emulatorpin.cpuset.update(emu_pin_cpuset)
 
-                # Sort the vcpupin list per vCPU id for human-friendlier XML
-                guest_cpu_tune.vcpupin.sort(key=operator.attrgetter("id"))
+        # TODO(berrange) When the guest has >1 NUMA node, it will
+        # span multiple host NUMA nodes. By pinning emulator threads
+        # to the union of all nodes, we guarantee there will be
+        # cross-node memory access by the emulator threads when
+        # responding to guest I/O operations. The only way to avoid
+        # this would be to pin emulator threads to a single node and
+        # tell the guest OS to only do I/O from one of its virtual
+        # NUMA nodes. This is not even remotely practical.
+        #
+        # The long term solution is to make use of a new QEMU feature
+        # called "I/O Threads" which will let us configure an explicit
+        # I/O thread for each guest vCPU or guest NUMA node. It is
+        # still TBD how to make use of this feature though, especially
+        # how to associate IO threads with guest devices to eliminate
+        # cross NUMA node traffic. This is an area of investigation
+        # for QEMU community devs.
 
-                # normalize cell.id
-                for i, (cell, memnode) in enumerate(
-                                            zip(guest_cpu_numa_config.cells,
+        # Sort the vcpupin list per vCPU id for human-friendlier XML
+        guest_cpu_tune.vcpupin.sort(key=operator.attrgetter("id"))
+
+        # normalize cell.id
+        for i, (cell, memnode) in enumerate(zip(guest_cpu_numa_config.cells,
                                                 guest_numa_tune.memnodes)):
-                    cell.id = i
-                    memnode.cellid = i
+            cell.id = i
+            memnode.cellid = i
 
-                return GuestNumaConfig(None, guest_cpu_tune,
-                                       guest_cpu_numa_config,
-                                       guest_numa_tune)
-            else:
-                return GuestNumaConfig(allowed_cpus, None,
-                                       guest_cpu_numa_config, None)
+        return GuestNumaConfig(None, guest_cpu_tune, guest_cpu_numa_config,
+                               guest_numa_tune)
 
     def _get_guest_os_type(self, virt_type):
         """Returns the guest OS type based on virt type."""
