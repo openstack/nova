@@ -880,6 +880,11 @@ class PortBindingDeletionFailed(NovaException):
                 "%(host)s.")
 
 
+class PortBindingActivationFailed(NovaException):
+    msg_fmt = _("Failed to activate binding for port %(port_id)s and host "
+                "%(host)s.")
+
+
 class PortUpdateFailed(Invalid):
     msg_fmt = _("Port update failed for port %(port_id)s: %(reason)s")
 

@@ -5464,6 +5464,43 @@ class TestPortBindingWithMock(test.NoDBTestCase):
             else:
                 self.api.delete_port_binding(ctxt, port_id, 'fake-host')
 
+    @mock.patch('nova.network.neutronv2.api._get_ksa_client')
+    def test_activate_port_binding(self, mock_client):
+        """Tests the happy path of activating an inactive port binding."""
+        ctxt = context.get_context()
+        resp = fake_req.FakeResponse(200)
+        mock_client.return_value.put.return_value = resp
+        self.api.activate_port_binding(ctxt, uuids.port_id, 'fake-host')
+        mock_client.return_value.put.assert_called_once_with(
+            '/v2.0/ports/%s/bindings/fake-host/activate' % uuids.port_id,
+            raise_exc=False)
+
+    @mock.patch('nova.network.neutronv2.api._get_ksa_client')
+    @mock.patch('nova.network.neutronv2.api.LOG.warning')
+    def test_activate_port_binding_already_active(
+            self, mock_log_warning, mock_client):
+        """Tests the 409 case of activating an already active port binding."""
+        ctxt = context.get_context()
+        mock_client.return_value.put.return_value = fake_req.FakeResponse(409)
+        self.api.activate_port_binding(ctxt, uuids.port_id, 'fake-host')
+        mock_client.return_value.put.assert_called_once_with(
+            '/v2.0/ports/%s/bindings/fake-host/activate' % uuids.port_id,
+            raise_exc=False)
+        self.assertEqual(1, mock_log_warning.call_count)
+        self.assertIn('is already active', mock_log_warning.call_args[0][0])
+
+    @mock.patch('nova.network.neutronv2.api._get_ksa_client')
+    def test_activate_port_binding_fails(self, mock_client):
+        """Tests the unknown error case of binding activation."""
+        ctxt = context.get_context()
+        mock_client.return_value.put.return_value = fake_req.FakeResponse(500)
+        self.assertRaises(exception.PortBindingActivationFailed,
+                          self.api.activate_port_binding,
+                          ctxt, uuids.port_id, 'fake-host')
+        mock_client.return_value.put.assert_called_once_with(
+            '/v2.0/ports/%s/bindings/fake-host/activate' % uuids.port_id,
+            raise_exc=False)
+
 
 class TestAllocateForInstance(test.NoDBTestCase):
     def setUp(self):
