@@ -1,4 +1,4 @@
-# Copyright 2016, 2017 IBM Corp.
+# Copyright 2016, 2018 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -26,6 +26,7 @@ from pypowervm.wrappers import virtual_io_server as pvm_vios
 from nova import exception
 from nova import test
 from nova.tests.unit.virt import powervm
+from nova.virt.driver import ComputeDriver
 from nova.virt import hardware
 from nova.virt.powervm.disk import ssp
 from nova.virt.powervm import driver
@@ -49,6 +50,25 @@ class TestPowerVMDriver(test.NoDBTestCase):
 
         # Create an instance to test with
         self.inst = powervm.TEST_INSTANCE
+
+    def test_driver_capabilities(self):
+        """Test the driver capabilities."""
+        # check that the driver reports all capabilities
+        self.assertEqual(set(ComputeDriver.capabilities),
+                         set(self.drv.capabilities))
+        # check the values for each capability
+        self.assertFalse(self.drv.capabilities['has_imagecache'])
+        self.assertFalse(self.drv.capabilities['supports_recreate'])
+        self.assertFalse(
+            self.drv.capabilities['supports_migrate_to_same_host'])
+        self.assertFalse(self.drv.capabilities['supports_attach_interface'])
+        self.assertFalse(self.drv.capabilities['supports_device_tagging'])
+        self.assertFalse(
+            self.drv.capabilities['supports_tagged_attach_interface'])
+        self.assertFalse(
+            self.drv.capabilities['supports_tagged_attach_volume'])
+        self.assertFalse(self.drv.capabilities['supports_extend_volume'])
+        self.assertFalse(self.drv.capabilities['supports_multiattach'])
 
     @mock.patch('nova.image.API')
     @mock.patch('pypowervm.tasks.storage.ComprehensiveScrub', autospec=True)

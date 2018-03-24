@@ -1,4 +1,4 @@
-# Copyright 2014, 2017 IBM Corp.
+# Copyright 2014, 2018 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -52,6 +52,19 @@ class PowerVMDriver(driver.ComputeDriver):
     """
 
     def __init__(self, virtapi):
+        # NOTE(edmondsw) some of these will be dynamic in future, so putting
+        # capabilities on the instance rather than on the class.
+        self.capabilities = {
+            'has_imagecache': False,
+            'supports_recreate': False,
+            'supports_migrate_to_same_host': False,
+            'supports_attach_interface': False,
+            'supports_device_tagging': False,
+            'supports_tagged_attach_interface': False,
+            'supports_tagged_attach_volume': False,
+            'supports_extend_volume': False,
+            'supports_multiattach': False,
+        }
         super(PowerVMDriver, self).__init__(virtapi)
 
     def init_host(self, host):
