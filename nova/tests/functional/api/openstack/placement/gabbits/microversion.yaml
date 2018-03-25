@@ -13,7 +13,7 @@ tests:
 - name: root has microversion header
   GET: /
   response_headers:
-      vary: /OpenStack-API-Version/
+      vary: /openstack-api-version/
       openstack-api-version: /^placement \d+\.\d+$/
 
 - name: root has microversion info
@@ -44,7 +44,7 @@ tests:
   request_headers:
       openstack-api-version: placement latest
   response_headers:
-      vary: /OpenStack-API-Version/
+      vary: /openstack-api-version/
       openstack-api-version: placement 1.21
 
 - name: other accept header bad version

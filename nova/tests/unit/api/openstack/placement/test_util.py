@@ -16,6 +16,7 @@
 import datetime
 
 import fixtures
+import microversion_parse
 import mock
 from oslo_middleware import request_id
 from oslo_utils import timeutils
@@ -228,7 +229,7 @@ class TestJSONErrorFormatter(test.NoDBTestCase):
         # parsing was successful), no version info
         # required.
         status = '406 Not Acceptable'
-        version_obj = microversion.parse_version_string('2.3')
+        version_obj = microversion_parse.parse_version_string('2.3')
         self.environ[microversion.MICROVERSION_ENVIRON] = version_obj
 
         result = util.json_error_formatter(
