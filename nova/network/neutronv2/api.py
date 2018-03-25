@@ -367,7 +367,23 @@ class API(base_api.NetworkAPI):
 
     def setup_networks_on_host(self, context, instance, host=None,
                                teardown=False):
-        """Setup or teardown the network structures."""
+        """Setup or teardown the network structures.
+
+        :param context: The user request context.
+        :param instance: The instance with attached ports.
+        :param host: Optional host used to control the setup. If provided and
+            is not the same as the current instance.host, this method assumes
+            the instance is being migrated and sets the "migrating_to"
+            attribute in the binding profile for the attached ports.
+        :param teardown: Whether or not network information for the ports
+            should be cleaned up. If True, at a minimum the "migrating_to"
+            attribute is cleared in the binding profile for the ports. If a
+            host is also provided, then port bindings for that host are
+            deleted when teardown is True as long as the host does not match
+            the current instance.host.
+        :raises: nova.exception.PortBindingDeletionFailed if host is not None,
+            teardown is True, and port binding deletion fails.
+        """
         # Check if the instance is migrating to a new host.
         port_migrating = host and (instance.host != host)
         # If the port is migrating to a new host or if it is a
@@ -385,6 +401,16 @@ class API(base_api.NetworkAPI):
                 # Reset the port profile
                 self._clear_migration_port_profile(
                     context, instance, admin_client, ports)
+                # If a host was provided, delete any bindings between that
+                # host and the ports as long as the host isn't the same as
+                # the current instance.host.
+                has_binding_ext = self.supports_port_binding_extension(context)
+                if port_migrating and has_binding_ext:
+                    for port in ports:
+                        # This call is safe in that 404s for non-existing
+                        # bindings are ignored.
+                        self.delete_port_binding(
+                            context, port['id'], host)
             elif port_migrating:
                 # Setup the port profile
                 self._setup_migration_port_profile(
