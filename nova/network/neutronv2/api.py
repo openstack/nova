@@ -2491,10 +2491,73 @@ class API(base_api.NetworkAPI):
         client.update_floatingip(fip['id'], {'floatingip': {'port_id': None}})
 
     def migrate_instance_start(self, context, instance, migration):
-        """Start to migrate the network of an instance."""
-        # NOTE(wenjianhn): just pass to make migrate instance doesn't
-        # raise for now.
-        pass
+        """Start to migrate the network of an instance.
+
+        If the instance has port bindings on the destination compute host,
+        they are activated in this method which will atomically change the
+        source compute host port binding to inactive and also change the port
+        "binding:host_id" attribute to the destination host.
+
+        If there are no binding resources for the attached ports on the given
+        destination host, this method is a no-op.
+
+        :param context: The user request context.
+        :param instance: The instance being migrated.
+        :param migration: dict with required keys::
+
+            "source_compute": The name of the source compute host.
+            "dest_compute": The name of the destination compute host.
+
+        :raises: nova.exception.PortBindingActivationFailed if any port binding
+            activation fails
+        """
+        if not self.supports_port_binding_extension(context):
+            # If neutron isn't new enough yet for the port "binding-extended"
+            # API extension, we just no-op. The port binding host will be
+            # be updated in migrate_instance_finish, which is functionally OK,
+            # it's just not optimal.
+            LOG.debug('Neutron is not new enough to perform early destination '
+                      'host port binding activation. Port bindings will be '
+                      'updated later.', instance=instance)
+            return
+
+        client = _get_ksa_client(context, admin=True)
+        dest_host = migration['dest_compute']
+        for vif in instance.get_network_info():
+            # Not all compute migration flows use the port binding-extended
+            # API yet, so first check to see if there is a binding for the
+            # port and destination host.
+            resp = client.get('/v2.0/ports/%s/bindings/%s' %
+                              (vif['id'], dest_host), raise_exc=False)
+            if resp:
+                if resp.json()['binding']['status'] != 'ACTIVE':
+                    self.activate_port_binding(context, vif['id'], dest_host)
+                    # TODO(mriedem): Do we need to call
+                    # _clear_migration_port_profile? migrate_instance_finish
+                    # would normally take care of clearing the "migrating_to"
+                    # attribute on each port when updating the port's
+                    # binding:host_id to point to the destination host.
+                else:
+                    # We might be racing with another thread that's handling
+                    # post-migrate operations and already activated the port
+                    # binding for the destination host.
+                    LOG.debug('Port %s binding to destination host %s is '
+                              'already ACTIVE.', vif['id'], dest_host,
+                              instance=instance)
+            elif resp.status_code == 404:
+                # If there is no port binding record for the destination host,
+                # we can safely assume none of the ports attached to the
+                # instance are using the binding-extended API in this flow and
+                # exit early.
+                return
+            else:
+                # We don't raise an exception here because we assume that
+                # port bindings will be updated correctly when
+                # migrate_instance_finish runs.
+                LOG.error('Unexpected error trying to get binding info '
+                          'for port %s and destination host %s. Code: %s. '
+                          'Error: %s', vif['id'], dest_host, resp.status_code,
+                          resp.text)
 
     def migrate_instance_finish(self, context, instance, migration):
         """Finish migrating the network of an instance."""

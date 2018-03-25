@@ -5162,6 +5162,110 @@ class TestNeutronv2WithMock(_TestNeutronv2Common):
                               self.context, instance,
                               '172.24.5.15', '10.1.0.9')
 
+    @mock.patch('nova.network.neutronv2.api._get_ksa_client',
+                new_callable=mock.NonCallableMock)  # asserts not called
+    def test_migrate_instance_start_no_binding_ext(self, get_client_mock):
+        """Tests that migrate_instance_start exits early if neutron doesn't
+        have the binding-extended API extension.
+        """
+        with mock.patch.object(self.api, 'supports_port_binding_extension',
+                               return_value=False):
+            self.api.migrate_instance_start(
+                self.context, mock.sentinel.instance, {})
+
+    @mock.patch('nova.network.neutronv2.api._get_ksa_client')
+    def test_migrate_instance_start_activate(self, get_client_mock):
+        """Tests the happy path for migrate_instance_start where the binding
+        for the port(s) attached to the instance are activated on the
+        destination host.
+        """
+        binding = {'binding': {'status': 'INACTIVE'}}
+        resp = fake_req.FakeResponse(200, content=jsonutils.dumps(binding))
+        get_client_mock.return_value.get.return_value = resp
+        # Just create a simple instance with a single port.
+        instance = objects.Instance(info_cache=objects.InstanceInfoCache(
+            network_info=model.NetworkInfo([model.VIF(uuids.port_id)])))
+        migration = {'source_compute': 'source', 'dest_compute': 'dest'}
+        with mock.patch.object(self.api, 'activate_port_binding') as activate:
+            with mock.patch.object(self.api, 'supports_port_binding_extension',
+                                   return_value=True):
+                self.api.migrate_instance_start(
+                    self.context, instance, migration)
+        activate.assert_called_once_with(self.context, uuids.port_id, 'dest')
+        get_client_mock.return_value.get.assert_called_once_with(
+            '/v2.0/ports/%s/bindings/dest' % uuids.port_id, raise_exc=False)
+
+    @mock.patch('nova.network.neutronv2.api._get_ksa_client')
+    def test_migrate_instance_start_already_active(self, get_client_mock):
+        """Tests the case that the destination host port binding is already
+        ACTIVE when migrate_instance_start is called so we don't try to
+        activate it again, which would result in a 409 from Neutron.
+        """
+        binding = {'binding': {'status': 'ACTIVE'}}
+        resp = fake_req.FakeResponse(200, content=jsonutils.dumps(binding))
+        get_client_mock.return_value.get.return_value = resp
+        # Just create a simple instance with a single port.
+        instance = objects.Instance(info_cache=objects.InstanceInfoCache(
+            network_info=model.NetworkInfo([model.VIF(uuids.port_id)])))
+        migration = {'source_compute': 'source', 'dest_compute': 'dest'}
+        with mock.patch.object(self.api, 'activate_port_binding',
+                               new_callable=mock.NonCallableMock):
+            with mock.patch.object(self.api, 'supports_port_binding_extension',
+                                   return_value=True):
+                self.api.migrate_instance_start(
+                    self.context, instance, migration)
+        get_client_mock.return_value.get.assert_called_once_with(
+            '/v2.0/ports/%s/bindings/dest' % uuids.port_id, raise_exc=False)
+
+    @mock.patch('nova.network.neutronv2.api._get_ksa_client')
+    def test_migrate_instance_start_no_bindings(self, get_client_mock):
+        """Tests the case that migrate_instance_start is running against new
+        enough neutron for the binding-extended API but the ports don't have
+        a binding resource against the destination host, so no activation
+        happens.
+        """
+        get_client_mock.return_value.get.return_value = (
+            fake_req.FakeResponse(404))
+        # Create an instance with two ports so we can test the short circuit
+        # when we find that the first port doesn't have a dest host binding.
+        instance = objects.Instance(info_cache=objects.InstanceInfoCache(
+            network_info=model.NetworkInfo([
+                model.VIF(uuids.port1), model.VIF(uuids.port2)])))
+        migration = {'source_compute': 'source', 'dest_compute': 'dest'}
+        with mock.patch.object(self.api, 'activate_port_binding',
+                               new_callable=mock.NonCallableMock):
+            with mock.patch.object(self.api, 'supports_port_binding_extension',
+                                   return_value=True):
+                self.api.migrate_instance_start(
+                    self.context, instance, migration)
+        get_client_mock.return_value.get.assert_called_once_with(
+            '/v2.0/ports/%s/bindings/dest' % uuids.port1, raise_exc=False)
+
+    @mock.patch('nova.network.neutronv2.api._get_ksa_client')
+    def test_migrate_instance_start_get_error(self, get_client_mock):
+        """Tests the case that migrate_instance_start is running against new
+        enough neutron for the binding-extended API but getting the port
+        binding information results in an error response from neutron.
+        """
+        get_client_mock.return_value.get.return_value = (
+            fake_req.FakeResponse(500))
+        instance = objects.Instance(info_cache=objects.InstanceInfoCache(
+            network_info=model.NetworkInfo([
+                model.VIF(uuids.port1), model.VIF(uuids.port2)])))
+        migration = {'source_compute': 'source', 'dest_compute': 'dest'}
+        with mock.patch.object(self.api, 'activate_port_binding',
+                               new_callable=mock.NonCallableMock):
+            with mock.patch.object(self.api, 'supports_port_binding_extension',
+                                   return_value=True):
+                self.api.migrate_instance_start(
+                    self.context, instance, migration)
+        self.assertEqual(2, get_client_mock.return_value.get.call_count)
+        get_client_mock.return_value.get.assert_has_calls([
+            mock.call('/v2.0/ports/%s/bindings/dest' % uuids.port1,
+                      raise_exc=False),
+            mock.call('/v2.0/ports/%s/bindings/dest' % uuids.port2,
+                      raise_exc=False)])
+
 
 class TestNeutronv2ModuleMethods(test.NoDBTestCase):
 
