@@ -806,19 +806,9 @@ class LibvirtDriver(driver.ComputeDriver):
             instance_info)
         if isinstance(instance_info, objects.Flavor):
             # A flavor object is passed during case of migrate
-            # TODO(sahid): We do not have any way to retrieve the
-            # image meta related to the instance so if the cpu_policy
-            # has been set in image_meta we will get an
-            # exception. Until we fix it we specifically set the
-            # cpu_policy in dedicated in an ImageMeta object so if the
-            # emulator threads has been requested nothing is going to
-            # fail.
-            image_meta = objects.ImageMeta.from_dict({"properties": {
-                "hw_cpu_policy": fields.CPUAllocationPolicy.DEDICATED,
-            }})
-            if (hardware.get_emulator_threads_constraint(
-                    instance_info, image_meta)
-                == fields.CPUEmulatorThreadsPolicy.ISOLATE):
+            emu_policy = hardware.get_emulator_thread_policy_constraint(
+                instance_info)
+            if emu_policy == fields.CPUEmulatorThreadsPolicy.ISOLATE:
                 overhead['vcpus'] += 1
         else:
             # An instance object is passed during case of spawing or a
