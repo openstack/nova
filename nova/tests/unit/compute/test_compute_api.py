@@ -35,6 +35,7 @@ from nova.compute import task_states
 from nova.compute import utils as compute_utils
 from nova.compute import vm_states
 from nova import conductor
+import nova.conf
 from nova import context
 from nova import db
 from nova import exception
@@ -59,6 +60,8 @@ from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.volume import cinder
 
+
+CONF = nova.conf.CONF
 
 FAKE_IMAGE_REF = 'fake-image-ref'
 NODENAME = 'fakenode1'
@@ -6008,6 +6011,10 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
 
     def test_delete_volume_backed_instance_in_shelved_offloaded(self):
         self._test_delete_volume_backed_instance(vm_states.SHELVED_OFFLOADED)
+
+    def test_compute_api_host(self):
+        self.assertTrue(hasattr(self.compute_api, 'host'))
+        self.assertEqual(self.compute_api.host, CONF.host)
 
 
 class Cellsv1DeprecatedTestMixIn(object):

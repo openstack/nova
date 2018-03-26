@@ -260,7 +260,8 @@ class API(base.Base):
         self.notifier = rpc.get_notifier('compute', CONF.host)
         if CONF.ephemeral_storage_encryption.enabled:
             self.key_manager = key_manager.API()
-
+        # Help us to record host in EventReporter
+        self.host = CONF.host
         super(API, self).__init__(**kwargs)
 
     @property
