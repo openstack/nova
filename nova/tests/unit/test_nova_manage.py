@@ -1769,12 +1769,12 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         self.assertEqual(0, self.commands.list_cells())
         output = self.output.getvalue().strip()
         self.assertEqual('''\
-+-------+--------------------------------------+---------------------------+-----------------------------+
-|  Name |                 UUID                 |       Transport URL       |     Database Connection     |
-+-------+--------------------------------------+---------------------------+-----------------------------+
-| cell0 | %(uuid_map0)s |  none://user1:****@host1/ | fake://user1:****@host1/db0 |
-| cell1 | %(uuid_map1)s | none://user1@host1/vhost1 |    fake://user1@host1/db0   |
-+-------+--------------------------------------+---------------------------+-----------------------------+''' %  # noqa
++-------+--------------------------------------+---------------------------+-----------------------------+----------+
+|  Name |                 UUID                 |       Transport URL       |     Database Connection     | Disabled |
++-------+--------------------------------------+---------------------------+-----------------------------+----------+
+| cell0 | %(uuid_map0)s |  none://user1:****@host1/ | fake://user1:****@host1/db0 |  False   |
+| cell1 | %(uuid_map1)s | none://user1@host1/vhost1 |    fake://user1@host1/db0   |  False   |
++-------+--------------------------------------+---------------------------+-----------------------------+----------+''' %  # noqa
                 {"uuid_map0": uuidsentinel.map0,
                  "uuid_map1": uuidsentinel.map1},
                 output)
@@ -1789,7 +1789,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         cell_mapping1 = objects.CellMapping(
             context=ctxt, uuid=uuidsentinel.map1,
             database_connection='fake:///dblon', transport_url='fake:///mqlon',
-            name='london')
+            name='london', disabled=True)
         cell_mapping1.create()
         cell_mapping2 = objects.CellMapping(
             context=ctxt, uuid=uuidsentinel.map2,
@@ -1799,13 +1799,13 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         self.assertEqual(0, self.commands.list_cells(verbose=True))
         output = self.output.getvalue().strip()
         self.assertEqual('''\
-+--------+--------------------------------------+---------------+---------------------+
-|  Name  |                 UUID                 | Transport URL | Database Connection |
-+--------+--------------------------------------+---------------+---------------------+
-| cell0  | %(uuid_map0)s |    none:///   |     fake:///db0     |
-| dallas | %(uuid_map2)s | fake:///mqdal |    fake:///dbdal    |
-| london | %(uuid_map1)s | fake:///mqlon |    fake:///dblon    |
-+--------+--------------------------------------+---------------+---------------------+''' %  # noqa
++--------+--------------------------------------+---------------+---------------------+----------+
+|  Name  |                 UUID                 | Transport URL | Database Connection | Disabled |
++--------+--------------------------------------+---------------+---------------------+----------+
+| cell0  | %(uuid_map0)s |    none:///   |     fake:///db0     |  False   |
+| dallas | %(uuid_map2)s | fake:///mqdal |    fake:///dbdal    |  False   |
+| london | %(uuid_map1)s | fake:///mqlon |    fake:///dblon    |   True   |
++--------+--------------------------------------+---------------+---------------------+----------+''' %  # noqa
                 {"uuid_map0": uuidsentinel.map0,
                  "uuid_map1": uuidsentinel.map1,
                  "uuid_map2": uuidsentinel.map2},
