@@ -617,3 +617,27 @@ FAQs
    **NO**. Those options are for Cells v1 usage only and are not used at all
    for Cells v2. That includes the ``nova-cells`` service - it has nothing
    to do with Cells v2.
+
+#. Can I create a cell but have it disabled from scheduling?
+
+   Yes. It is possible to create a pre-disabled cell such that it does not
+   become a candidate for scheduling new VMs. This can be done by running the
+   ``nova-manage cell_v2 create_cell`` command with the ``--disabled`` option.
+
+#. How can I disable a cell so that the new server create requests do not go to
+   it while I perform maintenance?
+
+   Existing cells can be disabled by running ``nova-manage cell_v2 update_cell
+   --cell_uuid <cell_uuid> --disable`` and can be re-enabled once the
+   maintenance period is over by running ``nova-manage cell_v2 update_cell
+   --cell_uuid <cell_uuid> --enable``
+
+#. I disabled (or enabled) a cell using the ``nova-manage cell_v2 update_cell``
+   or I created a new (pre-disabled) cell(mapping) using the
+   ``nova-manage cell_v2 create_cell`` command but the scheduler is still using
+   the old settings.
+
+   The cell mappings are cached in the scheduler worker so you will either need
+   to restart the scheduler process to refresh the cache, or send a SIGHUP
+   signal to the scheduler by which it will automatically refresh the cells
+   cache and the changes will take effect.
