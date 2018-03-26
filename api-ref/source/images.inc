@@ -8,7 +8,10 @@
 
    These APIs are proxy calls to the Image service. Nova has
    deprecated all the proxy APIs and users should use the native APIs
-   instead. These will fail with a 404 starting from microversion 2.36.
+   instead. All the Image services proxy APIs except image metadata
+   APIs will fail with a 404 starting from microversion 2.36.
+   The image metadata APIs will fail with a 404 starting from
+   microversion 2.39.
    See: `Relevant Image APIs
    <https://developer.openstack.org/api-ref/image/v2/index.html>`__.
 
