@@ -1703,52 +1703,6 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             headers={'X-Openstack-Request-Id': self.context.global_id})
         self.assertEqual(rpjson, result)
 
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_provider_traits')
-    def test_get_sharing_providers_old(self, mock_get_traits):
-        # Run _get_sharing_providers() through the pre-1.18 code path
-        resp_mock = mock.Mock(status_code=200)
-        rpjson = [
-            {
-                'uuid': uuids.compute_node,
-                'name': 'compute_host',
-                'generation': 42,
-                'parent_provider_uuid': None,
-                'root_provider_uuid': None,
-                'links': [],
-            },
-            {
-                'uuid': uuids.sharing,
-                'name': 'storage_provider',
-                'generation': 42,
-                'parent_provider_uuid': None,
-                'root_provider_uuid': None,
-                'links': [],
-            },
-        ]
-        resp_mock.json.return_value = {'resource_providers': rpjson}
-        # Simulate 1.18 not supported
-        self.ks_adap_mock.get.side_effect = (
-            mock.Mock(status_code=406), resp_mock)
-
-        mock_get_traits.side_effect = [
-            set(['MISC_SHARES_VIA_AGGREGATE', 'CUSTOM_FOO']),
-            set(['CUSTOM_BAR']),
-        ]
-        result = self.client._get_sharing_providers(
-            self.context, [uuids.agg1, uuids.agg2])
-
-        expected_url2 = ('/resource_providers?member_of=in:' +
-                         ','.join((uuids.agg1, uuids.agg2)))
-        expected_url1 = (expected_url2 + '&required=MISC_SHARES_VIA_AGGREGATE')
-        call_kwargs = dict(
-            raise_exc=False,
-            headers={'X-Openstack-Request-Id': self.context.global_id})
-        self.ks_adap_mock.get.assert_has_calls((
-            mock.call(expected_url1, microversion='1.18', **call_kwargs),
-            mock.call(expected_url2, microversion='1.3', **call_kwargs)))
-        self.assertEqual(rpjson[:1], result)
-
     def test_get_sharing_providers_emptylist(self):
         self.assertEqual(
             [], self.client._get_sharing_providers(self.context, []))
@@ -1833,30 +1787,6 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.assertTrue(logging_mock.called)
         self.assertEqual('req-' + uuids.request_id,
                          logging_mock.call_args[0][1]['placement_req_id'])
-
-    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
-                '_get_resource_provider')
-    def test_create_resource_provider_legacy(self, mock_get):
-        """Test that _create_resource_provider() sends a dict of resource
-        provider information without a parent provider UUID.
-        """
-        uuid = uuids.compute_node
-        name = 'computehost'
-        resp406_mock = mock.Mock(status_code=406)
-        resp201_mock = mock.Mock(status_code=201)
-        self.ks_adap_mock.post.side_effect = (resp406_mock, resp201_mock)
-
-        self.assertEqual(
-            mock_get.return_value,
-            self.client._create_resource_provider(self.context, uuid, name))
-
-        self.ks_adap_mock.post.assert_has_calls([
-            mock.call(
-                '/resource_providers', microversion=mver,
-                json={'uuid': uuid, 'name': name}, raise_exc=False,
-                headers={'X-Openstack-Request-Id': self.context.global_id})
-            for mver in ('1.20', '1.14')])
-        mock_get.assert_called_once_with(self.context, uuid)
 
     def test_create_resource_provider(self):
         """Test that _create_resource_provider() sends a dict of resource
