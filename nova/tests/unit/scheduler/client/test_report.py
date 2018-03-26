@@ -14,7 +14,6 @@ import time
 
 from keystoneauth1 import exceptions as ks_exc
 import mock
-import requests
 from six.moves.urllib import parse
 
 import nova.conf
@@ -25,6 +24,7 @@ from nova import rc_fields as fields
 from nova.scheduler.client import report
 from nova.scheduler import utils as scheduler_utils
 from nova import test
+from nova.tests.unit import fake_requests
 from nova.tests import uuidsentinel as uuids
 
 CONF = nova.conf.CONF
@@ -1925,12 +1925,9 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         # record.
         uuid = uuids.compute_node
         name = 'computehost'
-        resp_mock = requests.Response()
-        resp_mock.status_code = 409
-        resp_mock.headers = {'x-openstack-request-id': uuids.request_id}
-        resp_mock._content = 'not a name conflict'.encode('utf-8')
-        resp_mock.encoding = 'utf-8'
-        self.ks_adap_mock.post.return_value = resp_mock
+        self.ks_adap_mock.post.return_value = fake_requests.FakeResponse(
+            409, content='not a name conflict',
+            headers={'x-openstack-request-id': uuids.request_id})
 
         get_rp_mock.return_value = mock.sentinel.get_rp
 
@@ -1955,13 +1952,9 @@ class TestProviderOperations(SchedulerReportClientTestCase):
     def test_create_resource_provider_name_conflict(self):
         # When the API call to create the resource provider fails 409 with a
         # name conflict, we raise an exception.
-        resp_mock = requests.Response()
-        resp_mock.status_code = 409
-        resp_mock._content = (
-            '<stuff>Conflicting resource provider name: '
-            'foo already exists.</stuff>').encode('utf-8')
-        resp_mock.encoding = 'utf-8'
-        self.ks_adap_mock.post.return_value = resp_mock
+        self.ks_adap_mock.post.return_value = fake_requests.FakeResponse(
+            409, content='<stuff>Conflicting resource provider name: foo '
+                         'already exists.</stuff>')
 
         self.assertRaises(
             exception.ResourceProviderCreationFailed,
@@ -1975,11 +1968,8 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         # deal with
         uuid = uuids.compute_node
         name = 'computehost'
-        resp_mock = requests.Response()
-        resp_mock.status_code = 503
-        self.ks_adap_mock.post.return_value = resp_mock
-        self.ks_adap_mock.post.return_value.headers = {
-            'x-openstack-request-id': uuids.request_id}
+        self.ks_adap_mock.post.return_value = fake_requests.FakeResponse(
+            503, headers={'x-openstack-request-id': uuids.request_id})
 
         self.assertRaises(
             exception.ResourceProviderCreationFailed,
@@ -2011,7 +2001,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             url, json=[], raise_exc=False, microversion=None, headers={})
 
     def test_delete_provider(self):
-        delete_mock = requests.Response()
+        delete_mock = fake_requests.FakeResponse(None)
         self.ks_adap_mock.delete.return_value = delete_mock
 
         for status_code in (204, 404):
@@ -2032,7 +2022,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             self.ks_adap_mock.delete.reset_mock()
 
     def test_delete_provider_fail(self):
-        delete_mock = requests.Response()
+        delete_mock = fake_requests.FakeResponse(None)
         self.ks_adap_mock.delete.return_value = delete_mock
         resp_exc_map = {409: exception.ResourceProviderInUse,
                         503: exception.ResourceProviderDeletionFailed}
@@ -2232,9 +2222,7 @@ class TestTraits(SchedulerReportClientTestCase):
         get_mock = mock.Mock(status_code=200)
         get_mock.json.return_value = {'traits': []}
         self.ks_adap_mock.get.return_value = get_mock
-        put_mock = requests.Response()
-        put_mock.status_code = 400
-        self.ks_adap_mock.put.return_value = put_mock
+        self.ks_adap_mock.put.return_value = fake_requests.FakeResponse(400)
 
         self.assertRaises(exception.TraitCreationFailed,
                           self.client._ensure_traits,
@@ -2925,13 +2913,8 @@ class TestInventory(SchedulerReportClientTestCase):
             'resource_provider_generation': 42,
             'inventories': {},
         }
-        try:
-            mock_put.return_value.__nonzero__.return_value = False
-        except AttributeError:
-            # Thanks py3
-            mock_put.return_value.__bool__.return_value = False
-        mock_put.return_value.headers = {'x-openstack-request-id':
-                                         uuids.request_id}
+        mock_put.return_value = fake_requests.FakeResponse(
+            400, headers={'x-openstack-request-id': uuids.request_id})
 
         inv_data = report._compute_node_to_inventory_dict(compute_node)
         result = self.client._update_inventory_attempt(
@@ -3334,11 +3317,7 @@ class TestAllocations(SchedulerReportClientTestCase):
         cn = objects.ComputeNode(uuid=uuids.cn)
         inst = objects.Instance(uuid=uuids.inst, project_id=uuids.project,
                                 user_id=uuids.user)
-        try:
-            mock_put.return_value.__nonzero__.return_value = False
-        except AttributeError:
-            # NOTE(danms): LOL @ py3
-            mock_put.return_value.__bool__.return_value = False
+        mock_put.return_value = fake_requests.FakeResponse(400)
         self.client.update_instance_allocation(self.context, cn, inst, 1)
         self.assertTrue(mock_warn.called)
 
@@ -3359,11 +3338,7 @@ class TestAllocations(SchedulerReportClientTestCase):
                                                       mock_delete):
         cn = objects.ComputeNode(uuid=uuids.cn)
         inst = objects.Instance(uuid=uuids.inst)
-        try:
-            mock_delete.return_value.__nonzero__.return_value = False
-        except AttributeError:
-            # NOTE(danms): LOL @ py3
-            mock_delete.return_value.__bool__.return_value = False
+        mock_delete.return_value = fake_requests.FakeResponse(400)
         self.client.update_instance_allocation(self.context, cn, inst, -1)
         self.assertTrue(mock_warn.called)
 
@@ -3375,13 +3350,7 @@ class TestAllocations(SchedulerReportClientTestCase):
         """Tests that we don't log a warning on a 404 response when trying to
         delete an allocation record.
         """
-        mock_response = mock.MagicMock(status_code=404)
-        try:
-            mock_response.__nonzero__.return_value = False
-        except AttributeError:
-            # py3 uses __bool__
-            mock_response.__bool__.return_value = False
-        mock_delete.return_value = mock_response
+        mock_delete.return_value = fake_requests.FakeResponse(404)
         self.client.delete_allocation_for_instance(self.context, uuids.rp_uuid)
         # make sure we didn't screw up the logic or the mock
         mock_log.info.assert_not_called()
@@ -3443,12 +3412,7 @@ class TestAllocations(SchedulerReportClientTestCase):
         self.client._provider_tree.new_root(uuids.cn, uuids.cn, 1)
         cn = objects.ComputeNode(uuid=uuids.cn, host="fake_host",
                 hypervisor_hostname="fake_hostname", )
-        resp_mock = mock.MagicMock(status_code=204)
-        try:
-            resp_mock.__nonzero__.return_value = True
-        except AttributeError:
-            # py3 uses __bool__
-            resp_mock.__bool__.return_value = True
+        resp_mock = fake_requests.FakeResponse(204)
         mock_delete.return_value = resp_mock
         self.client.delete_resource_provider(self.context, cn)
         # With a 204, only the info should be called
@@ -3458,11 +3422,6 @@ class TestAllocations(SchedulerReportClientTestCase):
         # Now check a 404 response
         mock_log.reset_mock()
         resp_mock.status_code = 404
-        try:
-            resp_mock.__nonzero__.return_value = False
-        except AttributeError:
-            # py3 uses __bool__
-            resp_mock.__bool__.return_value = False
         self.client.delete_resource_provider(self.context, cn)
         # With a 404, neither log message should be called
         self.assertEqual(0, mock_log.info.call_count)
@@ -3500,9 +3459,7 @@ class TestResourceClass(SchedulerReportClientTestCase):
             self.mock_put.assert_not_called()
 
     def test_ensure_resource_classes_put_fail(self):
-        resp = requests.Response()
-        resp.status_code = 503
-        self.mock_put.return_value = resp
+        self.mock_put.return_value = fake_requests.FakeResponse(503)
         rcs = ['VCPU', 'MEMORY_MB', 'CUSTOM_BAD']
         self.assertRaises(
             exception.InvalidResourceClass,

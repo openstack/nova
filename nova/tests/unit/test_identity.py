@@ -21,30 +21,7 @@ import webob
 
 from nova.api.openstack import identity
 from nova import test
-
-
-class FakeResponse(object):
-    """A basic response constainer that simulates requests.Response.
-
-    One of the critical things is that a success error code makes the
-    object return true.
-
-    """
-    def __init__(self, status_code, content=""):
-        self.status_code = status_code
-        self.content = content
-
-    def __bool__(self):
-        # python 3
-        return self.__nonzero__()
-
-    def __nonzero__(self):
-        # python 2
-        return self.status_code < 400
-
-    @property
-    def text(self):
-        return self.content
+from nova.tests.unit import fake_requests
 
 
 class IdentityValidationTest(test.NoDBTestCase):
@@ -89,7 +66,7 @@ class IdentityValidationTest(test.NoDBTestCase):
         found the project exists.
 
         """
-        self.mock_adap.get.return_value = FakeResponse(200)
+        self.mock_adap.get.return_value = fake_requests.FakeResponse(200)
         self.assertTrue(identity.verify_project_id(mock.MagicMock(), "foo"))
         self.validate_common()
 
@@ -100,7 +77,7 @@ class IdentityValidationTest(test.NoDBTestCase):
         definitively found the project does not exist.
 
         """
-        self.mock_adap.get.return_value = FakeResponse(404)
+        self.mock_adap.get.return_value = fake_requests.FakeResponse(404)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           identity.verify_project_id,
                           mock.MagicMock(), "foo")
@@ -113,7 +90,7 @@ class IdentityValidationTest(test.NoDBTestCase):
         and assume the project exists.
 
         """
-        self.mock_adap.get.return_value = FakeResponse(403)
+        self.mock_adap.get.return_value = fake_requests.FakeResponse(403)
         self.assertTrue(identity.verify_project_id(mock.MagicMock(), "foo"))
         self.validate_common()
 
@@ -124,7 +101,8 @@ class IdentityValidationTest(test.NoDBTestCase):
         side. We don't want to fail on our side.
 
         """
-        self.mock_adap.get.return_value = FakeResponse(500, "Oh noes!")
+        self.mock_adap.get.return_value = fake_requests.FakeResponse(
+            500, content="Oh noes!")
         self.assertTrue(identity.verify_project_id(mock.MagicMock(), "foo"))
         self.validate_common()
 
