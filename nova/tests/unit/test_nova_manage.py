@@ -1711,6 +1711,7 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         self.assertEqual(kwargs['database_connection'],
                          cell2.database_connection)
         self.assertEqual(kwargs['transport_url'], cell2.transport_url)
+        self.assertIs(cell2.disabled, False)
 
     def test_create_cell_use_config_values(self):
         settings = dict(
@@ -1751,6 +1752,20 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         status = self.commands.create_cell(transport_url='fake-transport-url')
         self.assertEqual(1, status)
         self.assertIn('--database_connection', self.output.getvalue())
+
+    def test_create_cell_pre_disabled(self):
+        ctxt = context.get_context()
+        kwargs = dict(
+            name='fake-name1',
+            transport_url='fake-transport-url1',
+            database_connection='fake-db-connection1')
+        status1 = self.commands.create_cell(verbose=True, disabled=True,
+                                            **kwargs)
+        self.assertEqual(0, status1)
+        cell_uuid1 = self.output.getvalue().strip()
+        cell1 = objects.CellMapping.get_by_uuid(ctxt, cell_uuid1)
+        self.assertEqual(kwargs['name'], cell1.name)
+        self.assertIs(cell1.disabled, True)
 
     def test_list_cells_no_cells_verbose_false(self):
         ctxt = context.RequestContext()

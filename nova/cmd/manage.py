@@ -1383,8 +1383,10 @@ class CellV2Commands(object):
           help=_('The transport url for the cell message queue'))
     @args('--verbose', action='store_true',
           help=_('Output the uuid of the created cell'))
+    @args('--disabled', action='store_true',
+          help=_('To create a pre-disabled cell.'))
     def create_cell(self, name=None, database_connection=None,
-                    transport_url=None, verbose=False):
+                    transport_url=None, verbose=False, disabled=False):
         ctxt = context.get_context()
         transport_url = transport_url or CONF.transport_url
         if not transport_url:
@@ -1405,7 +1407,8 @@ class CellV2Commands(object):
             ctxt,
             uuid=cell_mapping_uuid, name=name,
             transport_url=transport_url,
-            database_connection=database_connection)
+            database_connection=database_connection,
+            disabled=disabled)
         cell_mapping.create()
         if verbose:
             print(cell_mapping_uuid)
