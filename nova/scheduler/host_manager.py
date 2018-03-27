@@ -635,8 +635,16 @@ class HostManager(object):
 
     def _load_cells(self, context):
         if not self.cells:
+            temp_cells = objects.CellMappingList.get_all(context)
+            # NOTE(tssurya): filtering cell0 from the list since it need
+            # not be considered for scheduling.
+            for c in temp_cells:
+                if c.is_cell0():
+                    temp_cells.objects.remove(c)
+                    # once its done break for optimization
+                    break
             # NOTE(danms): global list of cells cached forever right now
-            self.cells = objects.CellMappingList.get_all(context)
+            self.cells = temp_cells
             LOG.debug('Found %(count)i cells: %(cells)s',
                       {'count': len(self.cells),
                        'cells': ', '.join([c.uuid for c in self.cells])})
