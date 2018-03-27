@@ -213,6 +213,14 @@ tests:
   response_strings:
       - "Invalid query string parameters: Expected 'required' parameter value of the form: HW_CPU_X86_VMX,CUSTOM_MAGIC."
 
+- name: get allocation candidates with forbidden trait pre-forbidden
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&required=!CUSTOM_MAGIC
+  status: 400
+  request_headers:
+      openstack-api-version: placement 1.17
+  response_strings:
+      - "Invalid query string parameters: Expected 'required' parameter value of the form: HW_CPU_X86_VMX,CUSTOM_MAGIC."
+
 - name: get allocation candidates with required trait
   GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&required=HW_CPU_X86_SSE
   status: 200
