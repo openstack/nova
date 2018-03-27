@@ -53,6 +53,7 @@ from nova import version
 from nova.virt import configdrive
 from nova.virt import driver
 from nova.virt import hardware
+from nova.virt.vmwareapi import cluster_util
 from nova.virt.vmwareapi import constants
 from nova.virt.vmwareapi import ds_util
 from nova.virt.vmwareapi import error_util
@@ -1065,10 +1066,27 @@ class VMwareVMOps(object):
             self._session._wait_for_task(reset_task)
             LOG.debug("Did hard reboot of VM", instance=instance)
 
-    def _destroy_instance(self, instance, destroy_disks=True):
+    def _destroy_instance(self, context, instance, destroy_disks=True):
         # Destroy a VM instance
         try:
             vm_ref = vm_util.get_vm_ref(self._session, instance)
+
+            server_group_info = vm_util._get_server_group(context, instance)
+            if server_group_info:
+                cluster = cluster_util.validate_vm_group(self._session, vm_ref)
+
+                for key, group in enumerate(cluster.propSet[0].val.group):
+                    if not hasattr(group, 'vm'):
+                        continue
+
+                    for vm in group.vm:
+                        if vm.value == vm_ref.value and len(group.vm) == 1:
+                            cluster_util.delete_vm_group(self._session,
+                                cluster.obj,
+                                cluster.propSet[0].val.group[key])
+                            break
+                    break
+
             lst_properties = ["config.files.vmPathName", "runtime.powerState",
                               "datastore"]
             props = self._session._call_method(vutil,
@@ -1129,7 +1147,7 @@ class VMwareVMOps(object):
         finally:
             vm_util.vm_ref_cache_delete(instance.uuid)
 
-    def destroy(self, instance, destroy_disks=True):
+    def destroy(self, context, instance, destroy_disks=True):
         """Destroy a VM instance.
 
         Steps followed for each VM are:
@@ -1138,7 +1156,7 @@ class VMwareVMOps(object):
         3. Delete the contents of the folder holding the VM related data.
         """
         LOG.debug("Destroying instance", instance=instance)
-        self._destroy_instance(instance, destroy_disks=destroy_disks)
+        self._destroy_instance(context, instance, destroy_disks=destroy_disks)
         LOG.debug("Instance destroyed", instance=instance)
 
     def pause(self, instance):

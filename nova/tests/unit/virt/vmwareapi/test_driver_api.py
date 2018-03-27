@@ -184,7 +184,7 @@ class VMwareSessionTestCase(test.NoDBTestCase):
             fake_invoke.assert_called_once_with(module, 'fira')
 
 
-class VMwareAPIVMTestCase(test.NoDBTestCase,
+class VMwareAPIVMTestCase(test.TestCase,
                           test_diagnostics.DiagnosticsComparisonMixin):
     """Unit tests for Vmware API connection calls."""
 
@@ -707,7 +707,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         mock_power_off.assert_called_once_with(self.instance)
         mock_detach_volume.assert_called_once_with(
             None, connection_info, self.instance, 'fake-name')
-        mock_destroy.assert_called_once_with(self.instance, True)
+        mock_destroy.assert_called_once_with(self.context,
+                                             self.instance, True)
 
     @mock.patch.object(vm_util, 'update_cluster_placement')
     @mock.patch.object(vmops.VMwareVMOps, 'power_off',
@@ -727,7 +728,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         self.conn.destroy(self.context, self.instance, self.network_info,
                           block_device_info=bdi)
         mock_power_off.assert_called_once_with(self.instance)
-        mock_destroy.assert_called_once_with(self.instance, True)
+        mock_destroy.assert_called_once_with(self.context,
+                                             self.instance, True)
 
     @mock.patch.object(vm_util, 'update_cluster_placement')
     @mock.patch.object(driver.VMwareVCDriver, 'detach_volume',
@@ -767,7 +769,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         mock_detach_volume.assert_called_once_with(
             None, connection_info, self.instance, 'fake-name')
         self.assertTrue(mock_destroy.called)
-        mock_destroy.assert_called_once_with(self.instance, True)
+        mock_destroy.assert_called_once_with(self.context,
+                                             self.instance, True)
 
     @mock.patch.object(vm_util, 'update_cluster_placement')
     def test_spawn(self, mock_update_cluster_placement):
@@ -1637,7 +1640,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
             self.conn.destroy(self.context, self.instance,
                               self.network_info,
                               None, self.destroy_disks)
-            mock_destroy.assert_called_once_with(self.instance,
+            mock_destroy.assert_called_once_with(self.context,
+                                                 self.instance,
                                                  self.destroy_disks)
 
     def test_destroy_instance_without_compute(self):
@@ -1686,7 +1690,8 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                                "destroy") as mock_destroy:
             self.conn.destroy(self.context, self.instance, self.network_info,
                               bdi, self.destroy_disks)
-            mock_destroy.assert_called_once_with(self.instance,
+            mock_destroy.assert_called_once_with(self.context,
+                                                 self.instance,
                                                  self.destroy_disks)
 
     def _rescue(self, config_drive=False):

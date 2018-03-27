@@ -684,7 +684,7 @@ class VMwareVCDriver(driver.ComputeDriver):
                 LOG.warning('Instance does not exists. Proceeding to '
                             'delete instance properties on datastore',
                             instance=instance)
-        self._vmops.destroy(instance, destroy_disks)
+        self._vmops.destroy(context, instance, destroy_disks)
 
     def pause(self, instance):
         """Pause VM instance."""
