@@ -322,7 +322,7 @@ class WSGIService(service.Service):
 
         """
         self.name = name
-        # NOTE(danms): Name can be metadata, osapi_compute, or ec2, per
+        # NOTE(danms): Name can be metadata, osapi_compute, per
         # nova.service's enabled_apis
         self.binary = 'nova-%s' % name
         self.topic = None

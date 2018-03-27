@@ -88,7 +88,7 @@ class HostController(wsgi.Controller):
         services = self.api.service_get_all(context, filters=filters,
                                             set_zones=True, all_cells=True)
         hosts = []
-        api_services = ('nova-osapi_compute', 'nova-ec2', 'nova-metadata')
+        api_services = ('nova-osapi_compute', 'nova-metadata')
         for service in services:
             if service.binary not in api_services:
                 hosts.append({'host_name': service['host'],

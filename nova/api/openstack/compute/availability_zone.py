@@ -65,7 +65,7 @@ class AvailabilityZoneController(wsgi.Controller):
 
         zone_hosts = {}
         host_services = {}
-        api_services = ('nova-osapi_compute', 'nova-ec2', 'nova-metadata')
+        api_services = ('nova-osapi_compute', 'nova-metadata')
         for service in enabled_services:
             if service.binary in api_services:
                 # Skip API services in the listing since they are not

@@ -45,7 +45,7 @@ class ServiceController(wsgi.Controller):
         # The API services are filtered out since they are not RPC services
         # and therefore their state is not reported through the service group
         # API, so they would always be reported as 'down' (see bug 1543625).
-        api_services = ('nova-osapi_compute', 'nova-ec2', 'nova-metadata')
+        api_services = ('nova-osapi_compute', 'nova-metadata')
 
         context = req.environ['nova.context']
         context.can(services_policies.BASE_POLICY_NAME)

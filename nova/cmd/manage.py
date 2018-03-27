@@ -44,7 +44,6 @@ import six
 import six.moves.urllib.parse as urlparse
 from sqlalchemy.engine import url as sqla_url
 
-from nova.api.ec2 import ec2utils
 from nova.cmd import common as cmd_common
 import nova.conf
 from nova import config
@@ -81,16 +80,6 @@ _EXTRA_DEFAULT_LOG_LEVELS = ['oslo_concurrency=INFO',
 # Decorators for actions
 args = cmd_common.args
 action_description = cmd_common.action_description
-
-
-def param2id(object_id):
-    """Helper function to convert various volume id types to internal id.
-    args: [object_id], e.g. 'vol-0000000a' or 'volume-0000000a' or '10'
-    """
-    if '-' in object_id:
-        return ec2utils.ec2_vol_id_to_uuid(object_id)
-    else:
-        return object_id
 
 
 def mask_passwd_in_url(url):
