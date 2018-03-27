@@ -4345,7 +4345,8 @@ class LibvirtDriver(driver.ComputeDriver):
         emulatorpin_cpuset = set([])
 
         if emulator_threads_isolated:
-            emulatorpin_cpuset = object_numa_cell.cpuset_reserved
+            if object_numa_cell.cpuset_reserved:
+                emulatorpin_cpuset = object_numa_cell.cpuset_reserved
         elif not wants_realtime or vcpu not in vcpus_rt:
             emulatorpin_cpuset = pin_cpuset.cpuset
 
