@@ -61,6 +61,8 @@ VERSIONS = [
     '1.20',  # Return 200 with provider payload from POST /resource_providers
     '1.21',  # Support ?member_of=<agg UUIDs> queryparam on
              # GET /allocation_candidates
+    '1.22',  # Support forbidden traits in the required parameter of
+             # GET /resource_providers and GET /allocation_candidates
 ]
 
 

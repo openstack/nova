@@ -205,6 +205,14 @@ tests:
   response_strings:
       - "Invalid query string parameters: Expected 'required' parameter value of the form: HW_CPU_X86_VMX,CUSTOM_MAGIC."
 
+- name: get allocation candidates with empty required value 1.22
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&required=
+  status: 400
+  request_headers:
+      openstack-api-version: placement 1.22
+  response_strings:
+      - "Invalid query string parameters: Expected 'required' parameter value of the form: HW_CPU_X86_VMX,!CUSTOM_MAGIC."
+
 - name: get allocation candidates with invalid required value
   GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&required=,,
   status: 400
@@ -233,6 +241,19 @@ tests:
       $.provider_summaries["$ENVIRON['CN1_UUID']"].traits.`sorted`:
           - HW_CPU_X86_SSE
           - HW_CPU_X86_SSE2
+
+- name: get allocation candidates with forbidden trait
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&required=!HW_CPU_X86_SSE
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.22
+  response_json_paths:
+      # There are no allocations for CN1
+      $.allocation_requests.`len`: 1
+      $.allocation_requests[0].allocations.`len`: 2
+      $.allocation_requests[0].allocations["$ENVIRON['CN2_UUID']"].resources.VCPU: 1
+      $.allocation_requests[0].allocations["$ENVIRON['CN2_UUID']"].resources.MEMORY_MB: 1024
+      $.allocation_requests[0].allocations["$ENVIRON['SS_UUID']"].resources.DISK_GB: 100
 
 - name: get allocation candidates with multiple required traits
   GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&required=HW_CPU_X86_SSE,HW_CPU_X86_SSE2

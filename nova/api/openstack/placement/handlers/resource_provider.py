@@ -191,6 +191,8 @@ def list_resource_providers(req):
     elif want_version.matches((1, 3)):
         schema = rp_schema.GET_RPS_SCHEMA_1_3
 
+    allow_forbidden = want_version.matches((1, 22))
+
     util.validate_query_params(req, schema)
 
     filters = {}
@@ -217,7 +219,8 @@ def list_resource_providers(req):
             elif attr == 'resources':
                 value = util.normalize_resources_qs_param(value)
             elif attr == 'required':
-                value = util.normalize_traits_qs_param(value)
+                value = util.normalize_traits_qs_param(
+                    value, allow_forbidden=allow_forbidden)
             filters[attr] = value
     try:
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
