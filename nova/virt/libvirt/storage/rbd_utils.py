@@ -30,7 +30,6 @@ from oslo_serialization import jsonutils
 from oslo_service import loopingcall
 from oslo_utils import encodeutils
 from oslo_utils import excutils
-from oslo_utils import units
 
 from nova import exception
 from nova.i18n import _
@@ -366,11 +365,32 @@ class RBDDriver(object):
                 self._destroy_volume(client, volume)
 
     def get_pool_info(self):
-        with RADOSClient(self) as client:
-            stats = client.cluster.get_cluster_stats()
-            return {'total': stats['kb'] * units.Ki,
-                    'free': stats['kb_avail'] * units.Ki,
-                    'used': stats['kb_used'] * units.Ki}
+        # NOTE(melwitt): We're executing 'ceph df' here instead of calling
+        # the RADOSClient.get_cluster_stats python API because we need
+        # access to the MAX_AVAIL stat, which reports the available bytes
+        # taking replication into consideration. The global available stat
+        # from the RADOSClient.get_cluster_stats python API does not take
+        # replication size into consideration and will simply return the
+        # available storage per OSD, added together across all OSDs. The
+        # MAX_AVAIL stat will divide by the replication size when doing the
+        # calculation.
+        args = ['ceph', 'df', '--format=json'] + self.ceph_args()
+        out, _ = processutils.execute(*args)
+        stats = jsonutils.loads(out)
+
+        # Find the pool for which we are configured.
+        pool_stats = None
+        for pool in stats['pools']:
+            if pool['name'] == self.pool:
+                pool_stats = pool['stats']
+                break
+
+        if pool_stats is None:
+            raise exception.NotFound('Pool %s could not be found.' % self.pool)
+
+        return {'total': stats['stats']['total_bytes'],
+                'free': pool_stats['max_avail'],
+                'used': pool_stats['bytes_used']}
 
     def create_snap(self, volume, name, pool=None, protect=False):
         """Create a snapshot of an RBD volume.

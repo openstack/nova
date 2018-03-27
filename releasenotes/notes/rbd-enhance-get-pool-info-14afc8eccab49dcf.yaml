@@ -1,0 +1,9 @@
+---
+other:
+  - |
+    The reporting for bytes available for RBD has been enhanced to accomodate
+    `unrecommended
+    <http://docs.ceph.com/docs/luminous/start/hardware-recommendations/#hard-disk-drives>`_
+    Ceph deployments where multiple OSDs are running on a single disk. The new
+    reporting method takes the number of configured replicas into consideration
+    when reporting bytes available.
