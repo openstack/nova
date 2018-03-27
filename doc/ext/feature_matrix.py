@@ -337,8 +337,7 @@ class FeatureMatrixDirective(rst.Directive):
         summaryhead.append(header)
 
         # then one column for each hypervisor driver
-        impls = matrix.targets.keys()
-        impls.sort()
+        impls = sorted(matrix.targets.keys())
         for key in impls:
             target = matrix.targets[key]
             implcol = nodes.entry()
@@ -378,8 +377,7 @@ class FeatureMatrixDirective(rst.Directive):
                 classes=["fm_maturity_" + feature.maturity]))
 
             # and then one column for each hypervisor driver
-            impls = matrix.targets.keys()
-            impls.sort()
+            impls = sorted(matrix.targets.keys())
             for key in impls:
                 target = matrix.targets[key]
                 impl = feature.implementations[key]
