@@ -1,0 +1,11 @@
+---
+upgrade:
+  - |
+    The following deprecated options have been removed from the ``placement``
+    group of ``nova.conf``:
+
+    - ``os_region_name`` (use ``region_name`` instead)
+    - ``os_interface`` (use ``valid_interfaces`` instead)
+
+    These were deprecated in 17.0.0 as they have been superseded by their
+    respective keystoneauth1 Adapter configuration options.
