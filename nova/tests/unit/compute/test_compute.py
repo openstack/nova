@@ -391,7 +391,8 @@ class ComputeVolumeTestCase(BaseTestCase):
             self.compute.attach_volume(self.context, instance, bdm=fake_bdm)
             self.assertEqual(self.cinfo.get('serial'), uuids.volume_id)
             mock_event.assert_called_once_with(
-                self.context, 'compute_attach_volume', instance.uuid)
+                self.context, 'compute_attach_volume', CONF.host,
+                instance.uuid)
 
     @mock.patch.object(compute_utils, 'EventReporter')
     @mock.patch('nova.context.RequestContext.elevated')
@@ -430,7 +431,8 @@ class ComputeVolumeTestCase(BaseTestCase):
                           exception=expected_exception),
             ])
             mock_event.assert_called_once_with(
-                self.context, 'compute_attach_volume', instance.uuid)
+                self.context, 'compute_attach_volume', CONF.host,
+                instance.uuid)
 
     @mock.patch('nova.context.RequestContext.elevated')
     @mock.patch('nova.compute.utils.notify_about_volume_attach_detach')
@@ -488,7 +490,8 @@ class ComputeVolumeTestCase(BaseTestCase):
                     self.context, uuids.volume, instance, 'fake_id')
             self.assertFalse(mock_destroy.called)
             mock_event.assert_called_once_with(
-                self.context, 'compute_detach_volume', instance.uuid)
+                self.context, 'compute_detach_volume', CONF.host,
+                instance.uuid)
 
     @mock.patch.object(compute_utils, 'EventReporter')
     def test_detach_volume_bdm_destroyed(self, mock_event):
@@ -512,7 +515,8 @@ class ComputeVolumeTestCase(BaseTestCase):
                                                 uuids.attachment_id)
             self.assertTrue(mock_destroy.called)
             mock_event.assert_called_once_with(
-                self.context, 'compute_detach_volume', instance.uuid)
+                self.context, 'compute_detach_volume', CONF.host,
+                instance.uuid)
 
     def test_await_block_device_created_too_slow(self):
         self.flags(block_device_allocate_retries=2)
@@ -3470,6 +3474,7 @@ class ComputeTestCase(BaseTestCase,
                                   instance=inst_obj)
                 mock_event.assert_called_once_with(self.context,
                                                    'compute_snapshot_instance',
+                                                   CONF.host,
                                                    inst_obj.uuid)
             else:
                 self.assertRaises(test.TestingException,
@@ -3479,6 +3484,7 @@ class ComputeTestCase(BaseTestCase,
                                   rotation=1)
                 mock_event.assert_called_once_with(self.context,
                                                    'compute_backup_instance',
+                                                   CONF.host,
                                                    inst_obj.uuid)
 
         self.assertEqual(expected_state, self.fake_image_delete_called)
@@ -6267,7 +6273,7 @@ class ComputeTestCase(BaseTestCase,
 
         self.assertIsNone(ret)
         mock_event.assert_called_with(
-                c, 'compute_live_migration', instance.uuid)
+                c, 'compute_live_migration', CONF.host, instance.uuid)
         # cleanup
         instance.destroy()
 
@@ -10541,7 +10547,7 @@ class ComputeAPITestCase(BaseTestCase):
                                                 instance.uuid,
                                                 '/dev/vdb')
             mock_event.assert_called_once_with(
-                self.context, 'api_attach_volume', instance.uuid
+                self.context, 'api_attach_volume', CONF.host, instance.uuid
             )
             self.assertTrue(mock_attach.called)
 
@@ -10678,6 +10684,7 @@ class ComputeAPITestCase(BaseTestCase):
             self.context, instance, instance_actions.DETACH_VOLUME)
         mock_event.assert_called_once_with(self.context,
                                            'api_detach_volume',
+                                           CONF.host,
                                            instance.uuid)
         self.assertTrue(mock_local_cleanup.called)
 
@@ -10979,6 +10986,7 @@ class ComputeAPITestCase(BaseTestCase):
         )
         mock_event.assert_called_once_with(ctxt,
                                            'api_lock',
+                                           CONF.host,
                                            instance.uuid)
 
     @mock.patch('nova.context.RequestContext.elevated')
@@ -10996,6 +11004,7 @@ class ComputeAPITestCase(BaseTestCase):
         )
         mock_event.assert_called_once_with(ctxt,
                                            'api_unlock',
+                                           CONF.host,
                                            instance.uuid)
 
     def test_add_remove_security_group(self):

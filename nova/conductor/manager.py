@@ -281,7 +281,7 @@ class ComputeTaskManager(base.Base):
         elif not live and not rebuild and flavor:
             instance_uuid = instance.uuid
             with compute_utils.EventReporter(context, 'cold_migrate',
-                                             instance_uuid):
+                                             self.host, instance_uuid):
                 self._cold_migrate(context, instance, flavor,
                                    scheduler_hint['filter_properties'],
                                    clean_shutdown, request_spec,
@@ -737,7 +737,7 @@ class ComputeTaskManager(base.Base):
             # instance during the shelve process
             if image_id:
                 with compute_utils.EventReporter(
-                    context, 'get_image_info', instance.uuid):
+                        context, 'get_image_info', self.host, instance.uuid):
                     try:
                         image = safe_image_show(context, image_id)
                     except exception.ImageNotFound:
@@ -753,7 +753,7 @@ class ComputeTaskManager(base.Base):
 
             try:
                 with compute_utils.EventReporter(context, 'schedule_instances',
-                                                 instance.uuid):
+                                                 self.host, instance.uuid):
                     if not request_spec:
                         # NOTE(sbauza): We were unable to find an original
                         # RequestSpec object - probably because the instance is
@@ -883,7 +883,7 @@ class ComputeTaskManager(base.Base):
                          request_spec=None):
 
         with compute_utils.EventReporter(context, 'rebuild_server',
-                                          instance.uuid):
+                                         self.host, instance.uuid):
             node = limits = None
 
             try:
