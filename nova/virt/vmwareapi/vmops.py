@@ -275,6 +275,7 @@ class VMwareVMOps(object):
                                            utils.is_neutron(),
                                            image_info.vif_model,
                                            network_info)
+        LOG.debug('Instance VIF info %s', vif_infos, instance=instance)
 
         if extra_specs.storage_policy:
             profile_spec = vm_util.get_storage_profile_spec(
