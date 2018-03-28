@@ -226,6 +226,7 @@ class VMwareImagesTestCase(test.NoDBTestCase):
         raw_disk_size_in_bytes = raw_disk_size_in_gb * units.Gi
         mdata = {'size': raw_disk_size_in_bytes,
                  'disk_format': 'vmdk',
+                 'owner': '',
                  'properties': {
                      "vmware_ostype": constants.DEFAULT_OS_TYPE,
                      "vmware_adaptertype": constants.DEFAULT_ADAPTER_TYPE,
@@ -262,6 +263,7 @@ class VMwareImagesTestCase(test.NoDBTestCase):
 
         mdata = {'size': raw_disk_size_in_btyes,
                  'disk_format': disk_format,
+                 'owner': '',
                  'properties': {
                      "vmware_ostype": os_type,
                      "vmware_adaptertype": adapter_type,

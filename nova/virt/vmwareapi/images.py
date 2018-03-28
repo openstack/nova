@@ -17,18 +17,18 @@
 Utility functions for Image transfer and manipulation.
 """
 
+from lxml import etree
 import os
 import tarfile
 
-from lxml import etree
 from oslo_config import cfg
 from oslo_log import log as logging
 from oslo_service import loopingcall
 from oslo_utils import encodeutils
 from oslo_utils import strutils
 from oslo_utils import units
+from oslo_vmware import exceptions as vexc
 from oslo_vmware import rw_handles
-
 
 from nova import exception
 from nova.i18n import _
@@ -62,7 +62,8 @@ class VMwareImage(object):
                  file_type=constants.DEFAULT_DISK_FORMAT,
                  linked_clone=None,
                  vsphere_location=None,
-                 vif_model=constants.DEFAULT_VIF_MODEL):
+                 vif_model=constants.DEFAULT_VIF_MODEL,
+                 owner=None):
         """VMwareImage holds values for use in building VMs.
 
             image_id (str): uuid of the image
@@ -75,6 +76,7 @@ class VMwareImage(object):
             linked_clone (bool): use linked clone, or don't
             vsphere_location (str): image location in datastore or None
             vif_model (str): virtual machine network interface
+            owner (str): uuid of the owning project
         """
         self.image_id = image_id
         self.file_size = file_size
@@ -84,6 +86,7 @@ class VMwareImage(object):
         self.disk_type = disk_type
         self.file_type = file_type
         self.vsphere_location = vsphere_location
+        self.owner = owner
 
         # NOTE(vui): This should be removed when we restore the
         # descriptor-based validation.
@@ -142,7 +145,8 @@ class VMwareImage(object):
             'image_id': image_id,
             'linked_clone': linked_clone,
             'container_format': container_format,
-            'vsphere_location': get_vsphere_location(context, image_id)
+            'vsphere_location': get_vsphere_location(context, image_id),
+            'owner': image_meta.owner
         }
 
         if image_meta.obj_attr_is_set('size'):
@@ -353,23 +357,91 @@ def fetch_image_stream_optimized(context, instance, session, vm_name,
     read_iter = IMAGE_API.download(context, image_ref)
     read_handle = rw_handles.ImageReadHandle(read_iter)
 
-    write_handle = rw_handles.VmdkWriteHandle(session,
-                                              session._host,
-                                              session._port,
-                                              res_pool_ref,
-                                              vm_folder_ref,
-                                              vm_import_spec,
-                                              file_size)
-    image_transfer(read_handle, write_handle)
+    # retry in order to handle conflicts in case of parallel execution
+    # (multiple agents or previously failed import of the same image
+    max_attempts = 3
+    imported_vm_ref = None
+    for i in range(max_attempts):
+        try:
+            write_handle = rw_handles.VmdkWriteHandle(session,
+                                                      session._host,
+                                                      session._port,
+                                                      res_pool_ref,
+                                                      vm_folder_ref,
+                                                      vm_import_spec,
+                                                      file_size)
+            image_transfer(read_handle, write_handle)
+            imported_vm_ref = write_handle.get_imported_vm()
 
-    imported_vm_ref = write_handle.get_imported_vm()
+            break
+        except vexc.DuplicateName:
+            LOG.debug("Handling name duplication during import of VM %s",
+                      vm_name)
+            vm_ref = vm_util.get_vm_ref_from_name(session, vm_name)
+            waited_for_ongoing_import = _wait_for_import_task(session, vm_ref)
+            if waited_for_ongoing_import:
+                imported_vm_ref = vm_ref
+                break
+            else:
+                try:
+                    destroy_task = session._call_method(session.vim,
+                                                        "Destroy_Task",
+                                                        vm_ref)
+                    session._wait_for_task(destroy_task)
+                    vm_util.vm_ref_cache_delete(vm_name)
+                except vexc.ManagedObjectNotFoundException:
+                    # another agent destroyed the VM in the meantime
+                    pass
+
+    if not imported_vm_ref:
+        raise vexc.VMwareDriverException("Could not import image %s within "
+            "%d attempts." % (vm_name, max_attempts))
 
     LOG.info("Downloaded image file data %(image_ref)s",
              {'image_ref': instance.image_ref}, instance=instance)
     vmdk = vm_util.get_vmdk_info(session, imported_vm_ref, vm_name)
     session._call_method(session.vim, "UnregisterVM", imported_vm_ref)
-    LOG.info("The imported VM was unregistered", instance=instance)
-    return vmdk.capacity_in_bytes
+    return vmdk.capacity_in_bytes, vmdk.path
+
+
+def _wait_for_import_task(session, vm_ref):
+    client_factory = session.vim.client.factory
+    task_filter_spec = client_factory.create('ns0:TaskFilterSpec')
+    task_filter_spec.entity = client_factory.create(
+        'ns0:TaskFilterSpecByEntity')
+    task_filter_spec.entity.entity = vm_ref
+    task_filter_spec.entity.recursion = "self"
+    task_filter_spec.state = ["queued", "running"]
+
+    waited = False
+    task_collector = None
+
+    try:
+        task_collector = session._call_method(
+            session.vim, "CreateCollectorForTasks",
+            session.vim.service_content.taskManager, filter=task_filter_spec)
+
+        while True:
+            page_tasks = session._call_method(session.vim, "ReadNextTasks",
+                                              task_collector, maxCount=10)
+            if len(page_tasks) == 0:
+                break
+
+            for ti in page_tasks:
+                if ti.descriptionId == "ResourcePool.ImportVAppLRO":
+                    try:
+                        session._wait_for_task(ti.task)
+                        waited = True
+                    except vexc.VimException as e:
+                        LOG.debug("Awaiting previous import on VM %s failed "
+                                  "with %s", vm_ref, e)
+
+                    return waited
+    finally:
+        if task_collector:
+            session._call_method(session.vim,
+                                 "DestroyCollector", task_collector)
+    return waited
 
 
 def get_vmdk_name_from_ovf(xmlstr):
@@ -436,7 +508,12 @@ def fetch_image_ova(context, instance, session, vm_name, ds_name,
                                      imported_vm_ref)
                 LOG.info("The imported VM was unregistered",
                          instance=instance)
-                return vmdk.capacity_in_bytes
+                try:
+                    return vmdk.capacity_in_bytes, vmdk.path.parent
+                except AttributeError:
+                    from oslo_vmware.objects.datastore import DatastorePath
+                    return (vmdk.capacity_in_bytes,
+                        DatastorePath.parse(vmdk.path).parent)
         raise exception.ImageUnacceptable(
             reason=_("Extracting vmdk from OVA failed."),
             image_id=image_ref)

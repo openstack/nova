@@ -206,6 +206,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
             'id': image_ref,
             'disk_format': 'vmdk',
             'size': int(metadata['size']),
+            'owner': ''
         })
         self.fake_image_uuid = self.image.id
         self.vnc_host = 'ha-host'
@@ -1252,7 +1253,9 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
         self._check_vm_info(info, power_state.RUNNING)
         self.assertIsNone(func_call_matcher.match())
 
-    def test_snapshot(self):
+    @mock.patch.object(vm_util, 'get_vmdk_info')
+    def test_snapshot(self, mock_get_vmdk_info):
+        mock_get_vmdk_info.return_value = self.get_fake_vmdk()
         self._create_vm()
         self._test_snapshot()
 
@@ -1268,13 +1271,16 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
                           self.context, self.instance, "Test-Snapshot",
                           lambda *args, **kwargs: None)
 
+    @mock.patch.object(vm_util, 'get_vmdk_info')
     @mock.patch('nova.virt.vmwareapi.vmops.VMwareVMOps._delete_vm_snapshot')
     @mock.patch('nova.virt.vmwareapi.vmops.VMwareVMOps._create_vm_snapshot')
     @mock.patch('nova.virt.vmwareapi.volumeops.VMwareVolumeOps.'
                 'attach_volume')
     def test_snapshot_delete_vm_snapshot(self, mock_attach_volume,
                                          mock_create_vm_snapshot,
-                                         mock_delete_vm_snapshot):
+                                         mock_delete_vm_snapshot,
+                                         mock_get_vmdk):
+        mock_get_vmdk.return_value = self.get_fake_vmdk()
         self._create_vm()
         fake_vm = self._get_vm_record()
         snapshot_ref = vmwareapi_fake.ManagedObjectReference(
@@ -1286,11 +1292,25 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
 
         self._test_snapshot()
 
-        mock_create_vm_snapshot.assert_called_once_with(self.instance,
-                                                        fake_vm.obj)
         mock_delete_vm_snapshot.assert_called_once_with(self.instance,
                                                         fake_vm.obj,
                                                         snapshot_ref)
+
+    def get_fake_vmdk(self):
+        ds_ref = vmwareapi_fake.ManagedObjectReference(value='fake-ref')
+        ds = ds_obj.Datastore(ds_ref, 'ds1')
+        device = vmwareapi_fake.DataObject()
+        backing = vmwareapi_fake.DataObject()
+        backing.datastore = ds.ref
+        device.backing = backing
+        device.key = 'fake-key'
+        vmdk = vm_util.VmdkInfo('[fake] uuid/root.vmdk',
+                                'fake-adapter',
+                                'fake-disk',
+                                1024,
+                                device)
+
+        return vmdk
 
     def _snapshot_delete_vm_snapshot_exception(self, exception, call_count=1):
         self._create_vm()

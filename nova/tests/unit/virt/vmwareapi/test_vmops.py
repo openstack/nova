@@ -120,7 +120,8 @@ class VMwareVMOpsTestCase(test.TestCase):
                                         mock.Mock,
                                         cluster=cluster.obj)
         self._cluster = cluster
-        self._image_meta = objects.ImageMeta.from_dict({'id': self._image_id})
+        self._image_meta = objects.ImageMeta.from_dict({'id': self._image_id,
+                                                        'owner': ''})
         subnet_4 = network_model.Subnet(cidr='192.168.0.1/24',
                                         dns=[network_model.IP('192.168.0.1')],
                                         gateway=
@@ -1942,6 +1943,7 @@ class VMwareVMOpsTestCase(test.TestCase):
             'id': self._image_id,
             'disk_format': 'vmdk',
             'size': image_size,
+            'owner': ''
         }
         image = objects.ImageMeta.from_dict(image)
         image_info = images.VMwareImage(
@@ -2877,9 +2879,15 @@ class VMwareVMOpsTestCase(test.TestCase):
                 cookies='Fake-CookieJar')
 
     @mock.patch.object(images, 'fetch_image_stream_optimized',
-                       return_value=123)
-    def test_fetch_image_as_vapp(self, mock_fetch_image):
+                       return_value=(123, '123'))
+    @mock.patch.object(vmops.VMwareVMOps, '_get_project_folder')
+    @mock.patch.object(vmops.VMwareVMOps, '_get_image_template_vm_name',
+                       return_value='fake-name')
+    def test_fetch_image_as_vapp(self, mock_template_vm_name,
+                                 mock_get_project_folder,
+                                 mock_fetch_image):
         vi = self._make_vm_config_info()
+        mock_get_project_folder.return_value = vi.dc_info.vmFolder
         image_ds_loc = mock.Mock()
         image_ds_loc.parent.basename = 'fake-name'
         self._vmops._fetch_image_as_vapp(self._context, vi, image_ds_loc)
@@ -2893,12 +2901,23 @@ class VMwareVMOpsTestCase(test.TestCase):
                 self._vmops._root_resource_pool)
         self.assertEqual(vi.ii.file_size, 123)
 
-    @mock.patch.object(images, 'fetch_image_ova', return_value=123)
-    def test_fetch_image_as_ova(self, mock_fetch_image):
+    @mock.patch.object(images, 'fetch_image_ova', return_value=(123, '123'))
+    @mock.patch.object(vmops.VMwareVMOps, '_get_project_folder')
+    @mock.patch.object(vmops.VMwareVMOps, '_get_image_template_vm_name',
+                       return_value='fake-name')
+    def test_fetch_image_as_ova(self, mock_template_vm_name,
+                                mock_get_project_folder,
+                                mock_fetch_image):
         vi = self._make_vm_config_info()
+        mock_get_project_folder.return_value = vi.dc_info.vmFolder
         image_ds_loc = mock.Mock()
         image_ds_loc.parent.basename = 'fake-name'
         self._vmops._fetch_image_as_ova(self._context, vi, image_ds_loc)
+
+        mock_template_vm_name.assert_called_once_with(
+            vi.ii.image_id, vi.datastore.name
+        )
+
         mock_fetch_image.assert_called_once_with(
                 self._context,
                 vi.instance,

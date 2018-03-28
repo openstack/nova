@@ -369,6 +369,17 @@ all clusters in the environment.
 Example: "vmx-13" for vSphere 6.5.
 Versions can be looked up here: https://kb.vmware.com/s/article/1003746
 """),
+    cfg.BoolOpt('full_clone_snapshots',
+                default=False,
+                help="""
+Use full clones for creating image snapshots instead of linked clones.
+With the right hardware support, it might be faster, especially on the export.
+"""),
+    cfg.BoolOpt('clone_from_snapshot',
+                default=True,
+                help="""
+Create a snapshot of the VM before cloning it
+"""),
 ]
 
 ALL_VMWARE_OPTS = (vmwareapi_vif_opts +
