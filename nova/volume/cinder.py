@@ -29,10 +29,12 @@ from cinderclient import exceptions as cinder_exception
 from keystoneauth1 import exceptions as keystone_exception
 from keystoneauth1 import loading as ks_loading
 from oslo_log import log as logging
+from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
 from oslo_utils import excutils
 from oslo_utils import strutils
 import six
+from six.moves import urllib
 
 from nova import availability_zones as az
 import nova.conf
@@ -72,36 +74,16 @@ def _load_auth_plugin(conf):
     raise cinder_exception.Unauthorized(401, message=err_msg)
 
 
-def _check_microversion(url, microversion):
-    """Checks to see if the requested microversion is supported by the current
-    version of python-cinderclient and the volume API endpoint.
-
-    :param url: Cinder API endpoint URL.
-    :param microversion: Requested microversion. If not available at the given
-        API endpoint URL, a CinderAPIVersionNotAvailable exception is raised.
-    :returns: The microversion if it is available. This can be used to
-        construct the cinder v3 client object.
-    :raises: CinderAPIVersionNotAvailable if the microversion is not available.
-    """
-    max_api_version = cinder_client.get_highest_client_server_version(url)
-    # get_highest_client_server_version returns a float which we need to cast
-    # to a str and create an APIVersion object to do our version comparison.
-    max_api_version = cinder_api_versions.APIVersion(str(max_api_version))
-    # Check if the max_api_version matches the requested minimum microversion.
-    if max_api_version.matches(microversion):
-        # The requested microversion is supported by the client and the server.
-        return microversion
-    raise exception.CinderAPIVersionNotAvailable(version=microversion)
-
-
-def _get_cinderclient_parameters(context):
-    global _ADMIN_AUTH
+def _load_session():
     global _SESSION
 
     if not _SESSION:
         _SESSION = ks_loading.load_session_from_conf_options(
             CONF, nova.conf.cinder.cinder_group.name)
 
+
+def _get_auth(context):
+    global _ADMIN_AUTH
     # NOTE(lixipeng): Auth token is none when call
     # cinder API from compute periodic tasks, context
     # from them generated from 'context.get_admin_context'
@@ -110,9 +92,104 @@ def _get_cinderclient_parameters(context):
     if context.is_admin and not context.auth_token:
         if not _ADMIN_AUTH:
             _ADMIN_AUTH = _load_auth_plugin(CONF)
-        auth = _ADMIN_AUTH
+        return _ADMIN_AUTH
     else:
-        auth = service_auth.get_auth_plugin(context)
+        return service_auth.get_auth_plugin(context)
+
+
+# NOTE(efried): Bug #1752152
+# This method is copied/adapted from cinderclient.client.get_server_version so
+# we can use _SESSION.get rather than a raw requests.get to retrieve the
+# version document. This enables HTTPS by gleaning cert info from the session
+# config.
+def _get_server_version(context, url):
+    """Queries the server via the naked endpoint and gets version info.
+
+    :param context: The nova request context for auth.
+    :param url: url of the cinder endpoint
+    :returns: APIVersion object for min and max version supported by
+              the server
+    """
+    min_version = "2.0"
+    current_version = "2.0"
+
+    _load_session()
+    auth = _get_auth(context)
+
+    try:
+        u = urllib.parse.urlparse(url)
+        version_url = None
+
+        # NOTE(andreykurilin): endpoint URL has at least 2 formats:
+        #   1. The classic (legacy) endpoint:
+        #       http://{host}:{optional_port}/v{1 or 2 or 3}/{project-id}
+        #       http://{host}:{optional_port}/v{1 or 2 or 3}
+        #   3. Under wsgi:
+        #       http://{host}:{optional_port}/volume/v{1 or 2 or 3}
+        for ver in ['v1', 'v2', 'v3']:
+            if u.path.endswith(ver) or "/{0}/".format(ver) in u.path:
+                path = u.path[:u.path.rfind(ver)]
+                version_url = '%s://%s%s' % (u.scheme, u.netloc, path)
+                break
+
+        if not version_url:
+            # NOTE(andreykurilin): probably, it is one of the next cases:
+            #  * https://volume.example.com/
+            #  * https://example.com/volume
+            # leave as is without cropping.
+            version_url = url
+
+        response = _SESSION.get(version_url, auth=auth)
+        data = jsonutils.loads(response.text)
+        versions = data['versions']
+        for version in versions:
+            if '3.' in version['version']:
+                min_version = version['min_version']
+                current_version = version['version']
+                break
+    except cinder_exception.ClientException as e:
+        LOG.warning("Error in server version query:%s\n"
+                    "Returning APIVersion 2.0", six.text_type(e.message))
+    return (cinder_api_versions.APIVersion(min_version),
+            cinder_api_versions.APIVersion(current_version))
+
+
+# NOTE(efried): Bug #1752152
+# This method is copied/adapted from
+# cinderclient.client.get_highest_client_server_version.  See note on
+# _get_server_version.
+def _get_highest_client_server_version(context, url):
+    """Returns highest APIVersion supported version by client and server."""
+    min_server, max_server = _get_server_version(context, url)
+    max_client = cinder_api_versions.APIVersion(
+        cinder_api_versions.MAX_VERSION)
+    return min(max_server, max_client)
+
+
+def _check_microversion(context, url, microversion):
+    """Checks to see if the requested microversion is supported by the current
+    version of python-cinderclient and the volume API endpoint.
+
+    :param context: The nova request context for auth.
+    :param url: Cinder API endpoint URL.
+    :param microversion: Requested microversion. If not available at the given
+        API endpoint URL, a CinderAPIVersionNotAvailable exception is raised.
+    :returns: The microversion if it is available. This can be used to
+        construct the cinder v3 client object.
+    :raises: CinderAPIVersionNotAvailable if the microversion is not available.
+    """
+    max_api_version = _get_highest_client_server_version(context, url)
+    # Check if the max_api_version matches the requested minimum microversion.
+    if max_api_version.matches(microversion):
+        # The requested microversion is supported by the client and the server.
+        return microversion
+    raise exception.CinderAPIVersionNotAvailable(version=microversion)
+
+
+def _get_cinderclient_parameters(context):
+    _load_session()
+
+    auth = _get_auth(context)
 
     url = None
 
@@ -132,13 +209,13 @@ def _get_cinderclient_parameters(context):
 
 
 def is_microversion_supported(context, microversion):
+    # NOTE(efried): Work around bug #1752152.  Call the cinderclient() builder
+    # in a way that just does a microversion check.
+    cinderclient(context, microversion=microversion, check_only=True)
 
-    _, _, url = _get_cinderclient_parameters(context)
 
-    _check_microversion(url, microversion)
-
-
-def cinderclient(context, microversion=None, skip_version_check=False):
+def cinderclient(context, microversion=None, skip_version_check=False,
+                 check_only=False):
     """Constructs a cinder client object for making API requests.
 
     :param context: The nova request context for auth.
@@ -150,6 +227,14 @@ def cinderclient(context, microversion=None, skip_version_check=False):
         requested, the version discovery check is skipped and the microversion
         is used directly. This should only be used if a previous check for the
         same microversion was successful.
+    :param check_only: If True, don't build the actual client; just do the
+        setup and version checking.
+    :raises: UnsupportedCinderAPIVersion if a major version other than 3 is
+        requested.
+    :raises: CinderAPIVersionNotAvailable if microversion checking is requested
+        and the specified microversion is higher than what the service can
+        handle.
+    :returns: A cinderclient.client.Client wrapper, unless check_only is False.
     """
 
     endpoint_override = None
@@ -173,7 +258,10 @@ def cinderclient(context, microversion=None, skip_version_check=False):
         if skip_version_check:
             version = microversion
         else:
-            version = _check_microversion(url, microversion)
+            version = _check_microversion(context, url, microversion)
+
+    if check_only:
+        return
 
     return cinder_client.Client(version,
                                 session=_SESSION,
