@@ -222,6 +222,24 @@ class TestDriverBlockDevice(test.NoDBTestCase):
         self.blank_bdm = fake_block_device.fake_bdm_object(
             self.context, self.blank_bdm_dict)
 
+    @mock.patch('nova.virt.block_device.LOG')
+    @mock.patch('os_brick.encryptors')
+    def test_driver_detach_passes_failed(self, enc, log):
+        virt = mock.MagicMock()
+        virt.detach_volume.side_effect = exception.DeviceDetachFailed(
+            device='sda', reason='because testing')
+        driver_bdm = self.driver_classes['volume'](self.volume_bdm)
+        inst = mock.MagicMock(),
+        vol_api = mock.MagicMock()
+
+        # Make sure we pass through DeviceDetachFailed,
+        # but don't log it as an exception, just a warning
+        self.assertRaises(exception.DeviceDetachFailed,
+                          driver_bdm.driver_detach,
+                          self.context, inst, vol_api, virt)
+        self.assertFalse(log.exception.called)
+        self.assertTrue(log.warning.called)
+
     def test_no_device_raises(self):
         for name, cls in self.driver_classes.items():
             bdm = fake_block_device.fake_bdm_object(
