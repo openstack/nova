@@ -265,6 +265,19 @@ with a combination of unit and functional tests found in
 and `nova/tests/functional/db`. Adding unit and non-gabbi functional tests is
 done in the same way as other aspects of nova.
 
+When writing tests for handler code (that is, the code found in
+``nova/api/openstack/placement/handlers``) a good rule of thumb is that if you
+feel like there needs to be a unit test for some of the code in the handler,
+that is a good sign that the piece of code should be extracted to a separate
+method. That method should be independent of the handler method itself (the one
+decorated by the ``wsgify`` method) and testable as a unit, without mocks if
+possible. If the extracted method is useful for multiple resources consider
+putting it in the ``util`` package.
+
+As a general guide, handler code should be relatively short and where there are
+conditionals and branching, they should be reachable via the gabbi functional
+tests. This is merely a design goal, not a strict constraint.
+
 Using Gabbi
 -----------
 
