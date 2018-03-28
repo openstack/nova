@@ -20897,6 +20897,14 @@ class LibvirtSnapshotTests(_BaseSnapshotTests):
         self._test_snapshot(disk_format='qcow2',
                             extra_properties=extra_properties)
 
+    @mock.patch.object(libvirt_driver.LOG, 'exception')
+    def test_snapshot_update_task_state_failed(self, mock_exception):
+        res = [None, exception.InstanceNotFound(instance_id='foo')]
+        self.mock_update_task_state.side_effect = res
+        self.assertRaises(exception.InstanceNotFound, self._test_snapshot,
+                          disk_format='qcow2')
+        self.assertFalse(mock_exception.called)
+
     @mock.patch.object(host.Host, 'get_guest')
     @mock.patch.object(host.Host, 'write_instance_config')
     def test_failing_domain_not_found(self, mock_write_config, mock_get_guest):
