@@ -181,12 +181,25 @@ def monkey_patch_blockdiag():
     text width rather than on word boundaries. There's a patch submitted to
     resolve this [1]_ but it's unlikely to merge anytime soon.
 
+    In addition, blockdiag monkey patches a core library function,
+    ``codecs.getreader`` [2]_, to work around some Python 3 issues. Because
+    this operates in the same environment as other code that uses this library,
+    it ends up causing issues elsewhere. We undo these destructive changes
+    pending a fix.
+
     TODO: Remove this once blockdiag is bumped to 1.6, which will hopefully
     include the fix.
 
     .. [1] https://bitbucket.org/blockdiag/blockdiag/pull-requests/16/
+    .. [2] https://bitbucket.org/blockdiag/blockdiag/src/1.5.3/src/blockdiag/utils/compat.py # noqa
     """
+    import codecs
+    from codecs import getreader
+
     from blockdiag.imagedraw import textfolder
+
+    # oh, blockdiag. Let's undo the mess you made.
+    codecs.getreader = getreader
 
     def splitlabel(text):
         """Split text to lines as generator.
