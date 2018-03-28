@@ -33,6 +33,7 @@ from nova.i18n import _
 from nova.network import linux_net
 from nova.network import model as network_model
 from nova.network import os_vif_util
+from nova.network import utils as net_utils
 from nova import objects
 from nova import profiler
 from nova import utils
@@ -578,14 +579,14 @@ class LibvirtGenericVIFDriver(object):
         br_name = self.get_br_name(vif['id'])
         v1_name, v2_name = self.get_veth_pair_names(vif['id'])
 
-        if not linux_net.device_exists(br_name):
+        if not net_utils.device_exists(br_name):
             nova.privsep.libvirt.add_bridge(br_name)
             nova.privsep.libvirt.zero_bridge_forward_delay(br_name)
             nova.privsep.libvirt.disable_bridge_stp(br_name)
             nova.privsep.libvirt.disable_multicast_snooping(br_name)
             nova.privsep.libvirt.disable_ipv6(br_name)
 
-        if not linux_net.device_exists(v2_name):
+        if not net_utils.device_exists(v2_name):
             mtu = vif['network'].get_meta('mtu')
             linux_net._create_veth_pair(v1_name, v2_name, mtu)
             nova.privsep.libvirt.toggle_interface(br_name, 'up')

@@ -609,7 +609,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                      "share_address": False}, "fakemac")
         self.assertEqual(2, mock_add_rule.call_count)
 
-    @mock.patch.object(linux_net, 'device_exists')
+    @mock.patch('nova.network.utils.device_exists')
     @mock.patch.object(utils, 'execute')
     def test_linux_ovs_driver_plug_exception(self, mock_execute,
                                              mock_device_exists):
@@ -1140,7 +1140,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                 ]
             }
         with test.nested(
-            mock.patch.object(linux_net, 'device_exists', return_value=True),
+            mock.patch('nova.network.utils.device_exists', return_value=True),
             mock.patch.object(linux_net, '_execute', return_value=('', '')),
             mock.patch.object(netifaces, 'ifaddresses')
         ) as (device_exists, _execute, ifaddresses):
@@ -1159,7 +1159,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                 return ('', '')
 
         with test.nested(
-            mock.patch.object(linux_net, 'device_exists', return_value=True),
+            mock.patch('nova.network.utils.device_exists', return_value=True),
             mock.patch.object(linux_net, '_execute', fake_execute)
         ) as (device_exists, _):
             driver = linux_net.LinuxBridgeInterfaceDriver()
@@ -1176,7 +1176,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
                 return ('', '')
 
         with test.nested(
-            mock.patch.object(linux_net, 'device_exists', return_value=False),
+            mock.patch('nova.network.utils.device_exists', return_value=False),
             mock.patch.object(linux_net, '_execute', fake_execute)
         ) as (device_exists, _):
             driver = linux_net.LinuxBridgeInterfaceDriver()
@@ -1303,7 +1303,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.assertEqual(expected_execute_args, mock_execute.mock_calls)
 
     @mock.patch.object(linux_net, '_execute')
-    @mock.patch.object(linux_net, 'device_exists', return_value=False)
+    @mock.patch('nova.network.utils.device_exists', return_value=False)
     @mock.patch.object(linux_net, '_set_device_mtu')
     def test_ensure_vlan(self, mock_set_device_mtu, mock_device_exists,
                          mock_execute):
@@ -1324,7 +1324,7 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         mock_set_device_mtu.assert_called_once_with('vlan_name', 'MTU')
 
     @mock.patch.object(linux_net, '_execute')
-    @mock.patch.object(linux_net, 'device_exists', return_value=True)
+    @mock.patch('nova.network.utils.device_exists', return_value=True)
     @mock.patch.object(linux_net, '_set_device_mtu')
     def test_ensure_vlan_device_exists(self, mock_set_device_mtu,
                                        mock_device_exists, mock_execute):
