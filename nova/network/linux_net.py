@@ -1221,30 +1221,6 @@ def _ip_bridge_cmd(action, params, device):
     return cmd
 
 
-def _set_device_mtu(dev, mtu=None):
-    """Set the device MTU."""
-    if mtu:
-        utils.execute('ip', 'link', 'set', dev, 'mtu',
-                      mtu, run_as_root=True,
-                      check_exit_code=[0, 2, 254])
-
-
-def _create_veth_pair(dev1_name, dev2_name, mtu=None):
-    """Create a pair of veth devices with the specified names,
-    deleting any previous devices with those names.
-    """
-    for dev in [dev1_name, dev2_name]:
-        delete_net_dev(dev)
-
-    utils.execute('ip', 'link', 'add', dev1_name, 'type', 'veth', 'peer',
-                  'name', dev2_name, run_as_root=True)
-    for dev in [dev1_name, dev2_name]:
-        utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True)
-        utils.execute('ip', 'link', 'set', dev, 'promisc', 'on',
-                      run_as_root=True)
-        _set_device_mtu(dev, mtu)
-
-
 def _ovs_vsctl(args):
     full_args = ['ovs-vsctl', '--timeout=%s' % CONF.ovs_vsctl_timeout] + args
     try:
@@ -1296,7 +1272,7 @@ def create_fp_dev(dev, sockpath, sockmode):
     if not net_utils.device_exists(dev):
         utils.execute('fp-vdev', 'add', dev, '--sockpath', sockpath,
                       '--sockmode', sockmode, run_as_root=True)
-        _set_device_mtu(dev)
+        net_utils.set_device_mtu(dev)
         utils.execute('ip', 'link', 'set', dev, 'up', run_as_root=True,
                     check_exit_code=[0, 2, 254])
 
@@ -1304,18 +1280,6 @@ def create_fp_dev(dev, sockpath, sockmode):
 def delete_fp_dev(dev):
     if net_utils.device_exists(dev):
         utils.execute('fp-vdev', 'del', dev, run_as_root=True)
-
-
-def delete_net_dev(dev):
-    """Delete a network device only if it exists."""
-    if net_utils.device_exists(dev):
-        try:
-            utils.execute('ip', 'link', 'delete', dev, run_as_root=True,
-                          check_exit_code=[0, 2, 254])
-            LOG.debug("Net device removed: '%s'", dev)
-        except processutils.ProcessExecutionError:
-            with excutils.save_and_reraise_exception():
-                LOG.error("Failed removing net device: '%s'", dev)
 
 
 def delete_bridge_dev(dev):
@@ -1463,7 +1427,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
                      check_exit_code=[0, 2, 254])
         # NOTE(vish): set mtu every time to ensure that changes to mtu get
         #             propagated
-        _set_device_mtu(interface, mtu)
+        net_utils.set_device_mtu(interface, mtu)
         return interface
 
     @staticmethod
@@ -1471,7 +1435,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
     def remove_vlan(vlan_num):
         """Delete a vlan."""
         vlan_interface = 'vlan%s' % vlan_num
-        delete_net_dev(vlan_interface)
+        net_utils.delete_net_dev(vlan_interface)
 
     @staticmethod
     @utils.synchronized('lock_bridge', external=True)
@@ -1744,7 +1708,7 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
                         'external-ids:attached-mac=%s' % mac_address])
             _execute('ip', 'link', 'set', dev, 'address', mac_address,
                      run_as_root=True)
-            _set_device_mtu(dev, network.get('mtu'))
+            net_utils.set_device_mtu(dev, network.get('mtu'))
             _execute('ip', 'link', 'set', dev, 'up', run_as_root=True)
             if not gateway:
                 # If we weren't instructed to act as a gateway then add the
@@ -1828,7 +1792,7 @@ class NeutronLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
         if not net_utils.device_exists(dev):
             return None
         else:
-            delete_net_dev(dev)
+            net_utils.delete_net_dev(dev)
             return dev
 
     def get_dev(self, network):
