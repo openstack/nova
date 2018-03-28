@@ -2357,6 +2357,29 @@ event_finish_time:
   in: body
   required: true
   type: string
+event_host:
+  min_version: 2.62
+  description: |
+    The name of the host on which the event occurred.
+
+    Policy defaults enable only users with the administrative role to see
+    an instance action event host. Cloud providers can change these
+    permissions through the ``policy.json`` file.
+  in: body
+  required: false
+  type: string
+event_hostId:
+  min_version: 2.62
+  description: |
+    An obfuscated hashed host ID string, or the empty string if there is no
+    host for the event. This is a hashed value so will not actually look like
+    a hostname, and is hashed with data from the project_id, so the same
+    physical host as seen by two different project_ids will be different.
+    This is useful when within the same project you need to determine if two
+    events occurred on the same or different physical hosts.
+  in: body
+  required: true
+  type: string
 event_name:
   description: |
     The event name. A valid value is ``network-changed``, ``network-vif-plugged``,

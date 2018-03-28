@@ -122,3 +122,20 @@ class ServerActionsV258SampleJsonTest(ServerActionsV251AdminSampleJsonTest):
 
 class ServerActionsV258NonAdminSampleJsonTest(ServerActionsV258SampleJsonTest):
     ADMIN_API = False
+
+
+class ServerActionsV262SampleJsonTest(ServerActionsV258SampleJsonTest):
+    microversion = '2.62'
+    scenarios = [('v2_62', {'api_major_version': 'v2.1'})]
+
+    def _get_subs(self):
+        return {
+            'uuid': self.uuid,
+            'project_id': self.action_stop['project_id'],
+            'event_host': r'\w+',
+            'event_hostId': '[a-f0-9]+'
+        }
+
+
+class ServerActionsV262NonAdminSampleJsonTest(ServerActionsV262SampleJsonTest):
+    ADMIN_API = False

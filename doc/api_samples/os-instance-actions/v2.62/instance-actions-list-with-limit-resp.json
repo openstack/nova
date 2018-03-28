@@ -1,0 +1,20 @@
+{
+    "instanceActions": [
+        {
+            "action": "stop",
+            "instance_uuid": "7a580cc0-3469-441a-9736-d5fce91003f9",
+            "message": null,
+            "project_id": "6f70656e737461636b20342065766572",
+            "request_id": "req-b8ffb713-61a2-4e7c-a705-37052cba9d6e",
+            "start_time": "2018-04-25T01:26:28.955571",
+            "updated_at": "2018-04-25T01:26:29.414973",
+            "user_id": "fake"
+        }
+    ],
+    "links": [
+        {
+            "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/servers/7a580cc0-3469-441a-9736-d5fce91003f9/os-instance-actions?limit=1&marker=req-b8ffb713-61a2-4e7c-a705-37052cba9d6e",
+            "rel": "next"
+        }
+    ]
+}

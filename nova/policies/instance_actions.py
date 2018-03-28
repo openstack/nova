@@ -31,7 +31,10 @@ instance_actions_policies = [
 This check is performed only after the check
 os_compute_api:os-instance-actions passes. Beginning with
 Microversion 2.51, events details are always included; traceback
-information is provided per event if policy enforcement passes.""",
+information is provided per event if policy enforcement passes.
+Beginning with Microversion 2.62, each event includes a hashed
+host identifier and, if policy enforcement passes, the name of
+the host.""",
         [
             {
                 'method': 'GET',

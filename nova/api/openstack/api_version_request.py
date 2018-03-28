@@ -146,6 +146,8 @@ REST_API_VERSION_HISTORY = """REST API Version History:
     * 2.61 - Exposes flavor extra_specs in the flavor representation. Flavor
              extra_specs will be included in Response body of GET, POST, PUT
              /flavors APIs.
+    * 2.62 - Add ``host`` and ``hostId`` fields to instance action detail API
+             responses.
 """
 
 # The minimum and maximum versions of the API supported
@@ -154,7 +156,7 @@ REST_API_VERSION_HISTORY = """REST API Version History:
 # Note(cyeoh): This only applies for the v2.1 API once microversions
 # support is fully merged. It does not affect the V2 API.
 _MIN_API_VERSION = "2.1"
-_MAX_API_VERSION = "2.61"
+_MAX_API_VERSION = "2.62"
 DEFAULT_API_VERSION = _MIN_API_VERSION
 
 # Almost all proxy APIs which are related to network, images and baremetal
