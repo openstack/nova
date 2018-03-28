@@ -65,6 +65,20 @@ tests:
       openstack-api-version: placement 1.9
   status: 400
 
+- name: get empty usages with project id
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID]
+  request_headers:
+      openstack-api-version: placement 1.9
+  response_json_paths:
+      usages: {}
+
+- name: get empty usages with project id and user id
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']&user_id=78725f09-5c01-4c9e-97a5-98d75e1e32b1
+  request_headers:
+      openstack-api-version: placement 1.9
+  response_json_paths:
+      usages: {}
+
 - name: get total usages project_id less than min length
   GET: /usages?project_id=
   request_headers:
@@ -96,3 +110,11 @@ tests:
   status: 400
   response_strings:
       - "Failed validating 'maxLength'"
+
+- name: get total usages with additional param
+  GET: /usages?project_id=$ENVIRON['PROJECT_ID']&user_id=78725f09-5c01-4c9e-97a5-98d75e1e32b1&dummy=1
+  request_headers:
+      openstack-api-version: placement 1.9
+  status: 400
+  response_strings:
+      - "Additional properties are not allowed"
