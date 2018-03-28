@@ -19,6 +19,7 @@ from nova import test
 from nova.tests.unit import matchers
 from nova.virt.libvirt import config
 from nova.virt.libvirt import designer
+from nova.virt.libvirt import host
 
 
 class DesignerTestCase(test.NoDBTestCase):
@@ -55,7 +56,7 @@ class DesignerTestCase(test.NoDBTestCase):
 
     def test_set_vif_host_backend_ethernet_config_libvirt_1_3_3(self):
         conf = config.LibvirtConfigGuestInterface()
-        mock_host = mock.Mock(autospec='nova.virt.libvirt.host.Host')
+        mock_host = mock.Mock(autospec=host.Host)
         mock_host.has_min_version.return_value = True
         designer.set_vif_host_backend_ethernet_config(
             conf, 'fake-tap', mock_host)
@@ -65,7 +66,7 @@ class DesignerTestCase(test.NoDBTestCase):
 
     def test_set_vif_host_backend_ethernet_config_libvirt_pre_1_3_3(self):
         conf = config.LibvirtConfigGuestInterface()
-        mock_host = mock.Mock(autospec='nova.virt.libvirt.host.Host')
+        mock_host = mock.Mock(autospec=host.Host)
         mock_host.has_min_version.return_value = False
         designer.set_vif_host_backend_ethernet_config(
             conf, 'fake-tap', mock_host)

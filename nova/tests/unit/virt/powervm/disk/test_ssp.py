@@ -78,13 +78,11 @@ class TestSSPDiskAdapter(test.NoDBTestCase):
         self.mock_get_tier.return_value = self.tier_wrap
 
         # A FeedTask
-        self.mock_afs = self.useFixture(fixtures.MockPatch(
-            'pypowervm.utils.transaction.FeedTask.add_functor_subtask',
-            autospec=True)).mock
         self.mock_wtsk = mock.create_autospec(
             pvm_tx.WrapperTask, instance=True)
         self.mock_wtsk.configure_mock(wrapper=self.vio_wrap)
         self.mock_ftsk = mock.create_autospec(pvm_tx.FeedTask, instance=True)
+        self.mock_afs = self.mock_ftsk.add_functor_subtask
         self.mock_ftsk.configure_mock(
             wrapper_tasks={self.vio_wrap.uuid: self.mock_wtsk})
 

@@ -24,6 +24,7 @@ from keystoneauth1 import exceptions as ks_exc
 from keystoneauth1 import loading as keystone
 from keystoneauth1 import session
 from oslo_utils import uuidutils
+from requests import models
 
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
 from nova.cmd import status
@@ -133,7 +134,7 @@ class TestPlacementCheck(test.NoDBTestCase):
             self.assertIn('endpoint_filter', kw)
             self.assertEqual(expected_interface,
                              kw['endpoint_filter']['interface'])
-            return mock.Mock(autospec='requests.models.Response')
+            return mock.Mock(autospec=models.Response)
 
         mock_get.side_effect = fake_request
         self.cmd._placement_get(mock.sentinel.path)

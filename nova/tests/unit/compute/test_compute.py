@@ -8309,13 +8309,13 @@ class ComputeAPITestCase(BaseTestCase):
         # run. We do this to avoid possible races with other tests
         # that actually test those methods and mock things out within
         # them, like conductor tests.
-        self.schedule_and_build_instances_mock = mock.Mock(autospec=True)
-        self.compute_api.compute_task_api.schedule_and_build_instances = \
-            self.schedule_and_build_instances_mock
-
-        self.rebuild_instance_mock = mock.Mock(autospec=True)
-        self.compute_api.compute_task_api.rebuild_instance = \
-            self.rebuild_instance_mock
+        _patch = mock.patch.object(self.compute_api.compute_task_api,
+                                   'schedule_and_build_instances',
+                                   autospec=True)
+        self.schedule_and_build_instances_mock = _patch.start()
+        _patch = mock.patch.object(self.compute_api.compute_task_api,
+                                   'rebuild_instance', autospec=True)
+        self.rebuild_instance_mock = _patch.start()
 
         # Assume that we're always OK for network quota.
         def fake_validate_networks(context, requested_networks, num_instances):
