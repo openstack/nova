@@ -92,6 +92,7 @@ class ConfigDriveTestCase(test.NoDBTestCase):
             'id': image_ref,
             'disk_format': 'vmdk',
             'size': int(metadata['size']),
+            'owner': '',
         })
 
         class FakeInstanceMetadata(object):

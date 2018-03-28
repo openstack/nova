@@ -278,7 +278,18 @@ host or they have a shared file system.
 Possible values:
 
 * Any string representing the cache prefix to the folder
-""")
+"""),
+    cfg.BoolOpt('full_clone_snapshots',
+                default=False,
+                help="""
+Use full clones for creating image snapshots instead of linked clones.
+With the right hardware support, it might be faster, especially on the export.
+"""),
+    cfg.BoolOpt('clone_from_snapshot',
+                default=True,
+                help="""
+Create a snapshot of the VM before cloning it
+"""),
 ]
 
 ALL_VMWARE_OPTS = (vmwareapi_vif_opts +
