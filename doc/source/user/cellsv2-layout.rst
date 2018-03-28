@@ -300,15 +300,13 @@ thus be configured as an API-level service with access to the
 Consoleauth service and console proxies
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The consoleauth service should be global across all cells and thus be
-configured as an API-level service with access to the
-``[api_database]/connection`` information. The various console proxies
-should also be global across all cells but they don't need access to the
-API database.
+`As of Rocky`__, the ``nova-consoleauth`` service has been deprecated and cell
+databases are used for storing token authorizations. All new consoles will be
+supported by the database backend and existing consoles will be reset. Console
+proxies must be run per cell because the new console token authorizations are
+stored in cell databases.
 
-Future work will deprecate the consoleauth service, store token
-authorizations in the cell databases, and require console proxies running
-per cell instead of globally.
+.. __: https://specs.openstack.org/openstack/nova-specs/specs/rocky/approved/convert-consoles-to-objects.html
 
 Operations Requiring upcalls
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
