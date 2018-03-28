@@ -13,12 +13,14 @@ Compute is configured with the following default scheduler options in the
 
 .. code-block:: ini
 
-   scheduler_driver_task_period = 60
-   scheduler_driver = nova.scheduler.filter_scheduler.FilterScheduler
-   scheduler_available_filters = nova.scheduler.filters.all_filters
-   scheduler_default_filters = RetryFilter, AvailabilityZoneFilter, ComputeFilter, ComputeCapabilitiesFilter, ImagePropertiesFilter, ServerGroupAntiAffinityFilter, ServerGroupAffinityFilter
+   [scheduler]
+   driver = filter_scheduler
 
-By default, the ``scheduler_driver`` is configured as a filter scheduler, as
+   [filter_scheduler]
+   available_filters = nova.scheduler.filters.all_filters
+   enabled_filters = RetryFilter, AvailabilityZoneFilter, ComputeFilter, ComputeCapabilitiesFilter, ImagePropertiesFilter, ServerGroupAntiAffinityFilter, ServerGroupAffinityFilter
+
+By default, the scheduler ``driver`` is configured as a filter scheduler, as
 described in the next section. In the default configuration, this scheduler
 considers hosts that meet all the following criteria:
 
@@ -39,29 +41,13 @@ considers hosts that meet all the following criteria:
 
 * Are in a set of group hosts (if requested) (``ServerGroupAffinityFilter``).
 
-The scheduler caches its list of available hosts; use the
-``scheduler_driver_task_period`` option to specify how often the list is
-updated.
-
-.. note::
-
-   Do not configure ``service_down_time`` to be much smaller than
-   ``scheduler_driver_task_period``; otherwise, hosts appear to be dead while
-   the host list is being cached.
-
-For information about the volume scheduler, see the `Block Storage section
-<https://docs.openstack.org/admin-guide/blockstorage-manage-volumes.html>`_ of
-OpenStack Administrator Guide.
-
 The scheduler chooses a new host when an instance is migrated.
 
 When evacuating instances from a host, the scheduler service honors the target
 host defined by the administrator on the :command:`nova evacuate` command.  If
 a target is not defined by the administrator, the scheduler determines the
-target host. For information about instance evacuation, see `Evacuate instances
-<https://docs.openstack.org/admin-guide/
-compute-node-down.html#evacuate-instances>`_ section of the OpenStack
-Administrator Guide.
+target host. For information about instance evacuation, see
+:ref:`Evacuate instances <node-down-evacuate-instances>`.
 
 .. _compute-scheduler-filters:
 
@@ -84,14 +70,15 @@ request, described in the :ref:`weights` section.
 
 .. figure:: /figures/filteringWorkflow1.png
 
-The ``scheduler_available_filters`` configuration option in ``nova.conf``
-provides the Compute service with the list of the filters that are used by the
-scheduler. The default setting specifies all of the filter that are included
-with the Compute service:
+The ``available_filters`` configuration option in ``nova.conf``
+provides the Compute service with the list of the filters that are available
+for use by the scheduler. The default setting specifies all of the filters that
+are included with the Compute service:
 
 .. code-block:: ini
 
-   scheduler_available_filters = nova.scheduler.filters.all_filters
+   [filter_scheduler]
+   available_filters = nova.scheduler.filters.all_filters
 
 This configuration option can be specified multiple times.  For example, if you
 implemented your own custom filter in Python called ``myfilter.MyFilter`` and
@@ -100,16 +87,18 @@ you wanted to use both the built-in filters and your custom filter, your
 
 .. code-block:: ini
 
-   scheduler_available_filters = nova.scheduler.filters.all_filters
-   scheduler_available_filters = myfilter.MyFilter
+   [filter_scheduler]
+   available_filters = nova.scheduler.filters.all_filters
+   available_filters = myfilter.MyFilter
 
-The ``scheduler_default_filters`` configuration option in ``nova.conf`` defines
+The ``enabled_filters`` configuration option in ``nova.conf`` defines
 the list of filters that are applied by the ``nova-scheduler`` service. The
 default filters are:
 
 .. code-block:: ini
 
-   scheduler_default_filters = RetryFilter, AvailabilityZoneFilter, ComputeCapabilitiesFilter, ImagePropertiesFilter, ServerGroupAntiAffinityFilter, ServerGroupAffinityFilter
+   [filter_scheduler]
+   enabled_filters = RetryFilter, AvailabilityZoneFilter, ComputeCapabilitiesFilter, ImagePropertiesFilter, ServerGroupAntiAffinityFilter, ServerGroupAffinityFilter
 
 Compute filters
 ~~~~~~~~~~~~~~~

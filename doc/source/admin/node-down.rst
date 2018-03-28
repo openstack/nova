@@ -5,6 +5,8 @@ Recover from a failed compute node
 If you deploy Compute with a shared file system, you can use several methods to
 quickly recover from a node failure. This section discusses manual recovery.
 
+.. _node-down-evacuate-instances:
+
 Evacuate instances
 ~~~~~~~~~~~~~~~~~~
 
