@@ -381,7 +381,7 @@ def delete_allocations(req):
         # when allocation is deleted from allocations list by some other
         # activity. In that case, delete_all() will throw a NotFound exception.
         except exception.NotFound as exc:
-            raise webob.exc.HTPPNotFound(
+            raise webob.exc.HTTPNotFound(
                   _("Allocation for consumer with id %(id)s not found."
                     "error: %(error)s") %
                   {'id': consumer_uuid, 'error': exc})
