@@ -813,3 +813,107 @@ class TestUpgradeCheckIronicFlavorMigration(test.NoDBTestCase):
                     for cell_id in
                     sorted(unmigrated_instance_count_by_cell.keys())),
             result.details)
+
+
+class TestUpgradeCheckAPIServiceVersion(test.NoDBTestCase):
+    """Tests for the nova-status upgrade API service version specific check."""
+
+    # We'll setup the database ourselves because we need to use cells fixtures
+    # for multiple cell mappings.
+    USES_DB_SELF = True
+
+    # This will create three cell mappings: cell0, cell1 (default) and cell2
+    NUMBER_OF_CELLS = 2
+
+    def setUp(self):
+        super(TestUpgradeCheckAPIServiceVersion, self).setUp()
+        self.output = StringIO()
+        self.useFixture(fixtures.MonkeyPatch('sys.stdout', self.output))
+        self.useFixture(nova_fixtures.Database(database='api'))
+        self.cmd = status.UpgradeCommands()
+
+    def test_check_cells_v1_enabled(self):
+        """This is a 'success' case since the API service version check is
+        ignored when running cells v1.
+        """
+        self.flags(enable=True, group='cells')
+        result = self.cmd._check_api_service_version()
+        self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
+
+    def test_check_no_cell_mappings_warning(self):
+        """Warn when there are no cell mappings."""
+        result = self.cmd._check_api_service_version()
+        self.assertEqual(status.UpgradeCheckCode.WARNING, result.code)
+        self.assertEqual('Unable to determine API service versions without '
+                         'cell mappings.', result.details)
+
+    @staticmethod
+    def _create_service(ctxt, host, binary, version):
+        svc = objects.Service(ctxt, host=host, binary=binary)
+        svc.version = version
+        svc.create()
+        return svc
+
+    def test_check_warning(self):
+        """This is a failure scenario where we have the following setup:
+
+        Three cells where:
+
+        1. The first cell has two API services, one with version < 15 and one
+           with version >= 15.
+        2. The second cell has two services, one with version < 15 but it's
+           deleted so it gets filtered out, and one with version >= 15.
+        3. The third cell doesn't have any API services, just old compute
+           services which should be filtered out.
+
+        In this scenario, the first cell should be reported with a warning.
+        """
+        self._setup_cells()
+        ctxt = context.get_admin_context()
+        cell0 = self.cell_mappings['cell0']
+        with context.target_cell(ctxt, cell0) as cctxt:
+            self._create_service(cctxt, host='cell0host1',
+                                 binary='nova-osapi_compute', version=14)
+            self._create_service(cctxt, host='cell0host2',
+                                 binary='nova-osapi_compute', version=15)
+
+        cell1 = self.cell_mappings['cell1']
+        with context.target_cell(ctxt, cell1) as cctxt:
+            svc = self._create_service(
+                cctxt, host='cell1host1', binary='nova-osapi_compute',
+                version=14)
+            # This deleted record with the old version should get filtered out.
+            svc.destroy()
+            self._create_service(cctxt, host='cell1host2',
+                                 binary='nova-osapi_compute', version=16)
+
+        cell2 = self.cell_mappings['cell2']
+        with context.target_cell(ctxt, cell2) as cctxt:
+            self._create_service(cctxt, host='cell2host1',
+                                 binary='nova-compute', version=14)
+
+        result = self.cmd._check_api_service_version()
+        self.assertEqual(status.UpgradeCheckCode.WARNING, result.code)
+        # The only cell in the message should be cell0.
+        self.assertIn(cell0.uuid, result.details)
+        self.assertNotIn(cell1.uuid, result.details)
+        self.assertNotIn(cell2.uuid, result.details)
+
+    def test_check_success(self):
+        """Tests the success scenario where we have cell0 with a current API
+        service, cell1 with no API services, and an empty cell2.
+        """
+        self._setup_cells()
+        ctxt = context.get_admin_context()
+        cell0 = self.cell_mappings['cell0']
+        with context.target_cell(ctxt, cell0) as cctxt:
+            self._create_service(cctxt, host='cell0host1',
+                                 binary='nova-osapi_compute', version=15)
+
+        cell1 = self.cell_mappings['cell1']
+        with context.target_cell(ctxt, cell1) as cctxt:
+            self._create_service(cctxt, host='cell1host1',
+                                 binary='nova-compute', version=15)
+
+        result = self.cmd._check_api_service_version()
+        self.assertEqual(status.UpgradeCheckCode.SUCCESS, result.code)
