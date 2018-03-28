@@ -14,5 +14,11 @@
             ],
             "name": "new-server-test"
         }
+    ],
+    "servers_links": [
+        {
+            "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/servers?limit=1&marker=6e3a87e6-a133-452e-86e1-a31291c1b1c8",
+            "rel": "next"
+        }
     ]
 }

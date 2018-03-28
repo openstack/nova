@@ -82,5 +82,11 @@
             "updated": "%(isotime)s",
             "user_id": "fake"
         }
+    ],
+    "servers_links": [
+        {
+            "href": "%(versioned_compute_endpoint)s/servers/detail?limit=1&marker=%(id)s",
+            "rel": "next"
+        }
     ]
 }

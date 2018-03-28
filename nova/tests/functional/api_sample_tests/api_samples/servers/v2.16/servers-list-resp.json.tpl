@@ -14,5 +14,11 @@
             ],
             "name": "new-server-test"
         }
+    ],
+    "servers_links": [
+        {
+            "href": "%(versioned_compute_endpoint)s/servers?limit=1&marker=%(id)s",
+            "rel": "next"
+        }
     ]
 }

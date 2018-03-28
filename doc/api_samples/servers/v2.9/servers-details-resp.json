@@ -89,5 +89,11 @@
             "user_id": "fake",
             "locked": false
         }
+    ],
+    "servers_links": [
+        {
+            "href": "http://openstack.example.com/v2.1/6f70656e737461636b20342065766572/servers/detail?limit=1&marker=f5dc173b-6804-445a-a6d8-c705dad5b5eb",
+            "rel": "next"
+        }
     ]
 }

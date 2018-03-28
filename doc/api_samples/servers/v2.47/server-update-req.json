@@ -3,6 +3,7 @@
         "accessIPv4": "1.2.3.4",
         "accessIPv6": "80fe::",
         "OS-DCF:diskConfig": "AUTO",
-        "name" : "new-server-test"
+        "name": "new-server-test",
+        "description": "Sample description"
     }
 }

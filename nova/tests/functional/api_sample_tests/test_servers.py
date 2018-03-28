@@ -120,7 +120,7 @@ class ServersSampleJsonTest(ServersSampleBase):
 
     def test_servers_list(self):
         uuid = self._post_server()
-        response = self._do_get('servers')
+        response = self._do_get('servers?limit=1')
         subs = {'id': uuid}
         self._verify_response('servers-list-resp', subs, response, 200)
 
@@ -128,7 +128,7 @@ class ServersSampleJsonTest(ServersSampleBase):
         self.stub_out('nova.db.block_device_mapping_get_all_by_instance_uuids',
                       fakes.stub_bdm_get_all_by_instance_uuids)
         uuid = self.test_servers_post()
-        response = self._do_get('servers/detail')
+        response = self._do_get('servers/detail?limit=1')
         subs = {}
         subs['hostid'] = '[a-f0-9]+'
         subs['id'] = uuid
@@ -288,7 +288,7 @@ class ServersSampleJson263Test(ServersSampleBase):
 
     def test_servers_details(self):
         uuid = self._post_server(use_common_server_api_samples=False)
-        response = self._do_get('servers/detail')
+        response = self._do_get('servers/detail?limit=1')
         subs = self.common_subs.copy()
         subs['id'] = uuid
         self._verify_response('servers-details-resp', subs, response, 200)
@@ -621,9 +621,9 @@ class ServersSampleMultiStatusJsonTest(ServersSampleBase):
 
     def test_servers_list(self):
         uuid = self._post_server()
-        response = self._do_get('servers?status=active&status=error')
-        subs = {'id': uuid}
-        self._verify_response('servers-list-resp', subs, response, 200)
+        response = self._do_get('servers?limit=1&status=active&status=error')
+        subs = {'id': uuid, 'status': 'error'}
+        self._verify_response('servers-list-status-resp', subs, response, 200)
 
 
 class ServerTriggerCrashDumpJsonTest(ServersSampleBase):
