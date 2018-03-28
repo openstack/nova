@@ -175,7 +175,7 @@ class HostMappingList(base.ObjectListBase, base.NovaObject):
         return base.obj_make_list(context, cls(), HostMapping, db_mappings)
 
 
-def _check_and_create_host_mappings(ctxt, cm, compute_nodes, status_fn):
+def _check_and_create_node_host_mappings(ctxt, cm, compute_nodes, status_fn):
     host_mappings = []
     for compute in compute_nodes:
         status_fn(_("Checking host mapping for compute host "
@@ -197,7 +197,41 @@ def _check_and_create_host_mappings(ctxt, cm, compute_nodes, status_fn):
     return host_mappings
 
 
-def discover_hosts(ctxt, cell_uuid=None, status_fn=None):
+def _check_and_create_service_host_mappings(ctxt, cm, services, status_fn):
+    host_mappings = []
+    for service in services:
+        try:
+            HostMapping.get_by_host(ctxt, service.host)
+        except exception.HostMappingNotFound:
+            status_fn(_('Creating host mapping for service %(srv)s') %
+                        {'srv': service.host})
+            host_mapping = HostMapping(
+                ctxt, host=service.host,
+                cell_mapping=cm)
+            host_mapping.create()
+            host_mappings.append(host_mapping)
+    return host_mappings
+
+
+def _check_and_create_host_mappings(ctxt, cm, status_fn, by_service):
+    from nova import objects
+
+    if by_service:
+        services = objects.ServiceList.get_by_binary(
+            ctxt, 'nova-compute', include_disabled=True)
+        added_hm = _check_and_create_service_host_mappings(ctxt, cm,
+                                                           services,
+                                                           status_fn)
+    else:
+        compute_nodes = objects.ComputeNodeList.get_all_by_not_mapped(
+            ctxt, 1)
+        added_hm = _check_and_create_node_host_mappings(ctxt, cm,
+                                                        compute_nodes,
+                                                        status_fn)
+    return added_hm
+
+
+def discover_hosts(ctxt, cell_uuid=None, status_fn=None, by_service=False):
     # TODO(alaski): If this is not run on a host configured to use the API
     # database most of the lookups below will fail and may not provide a
     # great error message. Add a check which will raise a useful error
@@ -220,21 +254,19 @@ def discover_hosts(ctxt, cell_uuid=None, status_fn=None):
             status_fn(_('Skipping cell0 since it does not contain hosts.'))
             continue
         if 'name' in cm and cm.name:
-            status_fn(_("Getting compute nodes from cell '%(name)s': "
+            status_fn(_("Getting computes from cell '%(name)s': "
                         "%(uuid)s") % {'name': cm.name,
                                        'uuid': cm.uuid})
         else:
-            status_fn(_("Getting compute nodes from cell: %(uuid)s") %
+            status_fn(_("Getting computes from cell: %(uuid)s") %
                       {'uuid': cm.uuid})
         with context.target_cell(ctxt, cm) as cctxt:
-            compute_nodes = objects.ComputeNodeList.get_all_by_not_mapped(
-                cctxt, 1)
+            added_hm = _check_and_create_host_mappings(cctxt, cm, status_fn,
+                                                       by_service)
             status_fn(_('Found %(num)s unmapped computes in cell: %(uuid)s') %
-                      {'num': len(compute_nodes),
+                      {'num': len(added_hm),
                        'uuid': cm.uuid})
-            added_hm = _check_and_create_host_mappings(cctxt, cm,
-                                                       compute_nodes,
-                                                       status_fn)
+
             host_mappings.extend(added_hm)
 
     return host_mappings
