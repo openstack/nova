@@ -1172,6 +1172,80 @@ Now, when a user requests an instance with the ``ssd.large`` flavor,
 the scheduler only considers hosts with the ``ssd=true`` key-value pair.
 In this example, these are ``node1`` and ``node2``.
 
+Aggregates in Placement
+-----------------------
+
+Aggregates also exist in placement and are not the same thing as host
+aggregates in nova. These aggregates are defined (purely) as groupings
+of related resource providers. Since compute nodes in nova are
+represented in placement as resource providers, they can be added to a
+placement aggregate as well. For example, get the uuid of the compute
+node using :command:`nova hypervisor-list` and add it to an
+aggregate in placement using :command:`openstack placement aggregate
+set`.
+
+.. code-block:: console
+
+  $ openstack --os-compute-api-version=2.53 hypervisor list
+  +--------------------------------------+---------------------+-----------------+-----------------+-------+
+  | ID                                   | Hypervisor Hostname | Hypervisor Type | Host IP         | State |
+  +--------------------------------------+---------------------+-----------------+-----------------+-------+
+  | 815a5634-86fb-4e1e-8824-8a631fee3e06 | node1               | QEMU            | 192.168.1.123   | up    |
+  +--------------------------------------+---------------------+-----------------+-----------------+-------+
+
+  $ openstack --os-placement-api-version=1.2 resource provider aggregate set --aggregate df4c74f3-d2c4-4991-b461-f1a678e1d161 815a5634-86fb-4e1e-8824-8a631fee3e06
+
+Some scheduling filter operations can be performed by placement for
+increased speed and efficiency.
+
+Tenant Isolation with Placement
+-------------------------------
+
+In order to use placement to isolate tenants, there must be placement
+aggregates that match the membership and UUID of nova host aggregates
+that you want to use for isolation. The same key pattern in aggregate
+metadata used by the `AggregateMultiTenancyIsolation` filter controls
+this function, and is enabled by setting
+`[scheduler]/limit_tenants_to_placement_aggregate=True`.
+
+.. code-block:: console
+
+  $ openstack --os-compute-api-version=2.53 aggregate create myagg
+  +-------------------+--------------------------------------+
+  | Field             | Value                                |
+  +-------------------+--------------------------------------+
+  | availability_zone | None                                 |
+  | created_at        | 2018-03-29T16:22:23.175884           |
+  | deleted           | False                                |
+  | deleted_at        | None                                 |
+  | id                | 4                                    |
+  | name              | myagg                                |
+  | updated_at        | None                                 |
+  | uuid              | 019e2189-31b3-49e1-aff2-b220ebd91c24 |
+  +-------------------+--------------------------------------+
+
+  $ openstack --os-compute-api-version=2.53 aggregate add host myagg node1
+  +-------------------+--------------------------------------+
+  | Field             | Value                                |
+  +-------------------+--------------------------------------+
+  | availability_zone | None                                 |
+  | created_at        | 2018-03-29T16:22:23.175884           |
+  | deleted           | False                                |
+  | deleted_at        | None                                 |
+  | hosts             | [u'node1']                           |
+  | id                | 4                                    |
+  | name              | myagg                                |
+  | updated_at        | None                                 |
+  | uuid              | 019e2189-31b3-49e1-aff2-b220ebd91c24 |
+  +-------------------+--------------------------------------+
+
+  $ openstack project list -f value | grep 'demo'
+  9691591f913949818a514f95286a6b90 demo
+
+  $ openstack aggregate set --property filter_tenant_id=9691591f913949818a514f95286a6b90 myagg
+
+  $ openstack --os-placement-api-version=1.2 resource provider aggregate set --aggregate 019e2189-31b3-49e1-aff2-b220ebd91c24 815a5634-86fb-4e1e-8824-8a631fee3e06
+
 XenServer hypervisor pools to support live migration
 ----------------------------------------------------
 
