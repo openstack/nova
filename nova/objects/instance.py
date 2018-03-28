@@ -1235,18 +1235,24 @@ class InstanceList(base.ObjectListBase, base.NovaObject):
             db_inst_list = db.instance_get_all_by_filters(
                 context, filters, sort_key, sort_dir, limit=limit,
                 marker=marker, columns_to_join=_expected_cols(expected_attrs))
-        return _make_instance_list(context, cls(), db_inst_list,
-                                   expected_attrs)
+        return db_inst_list
 
     @base.remotable_classmethod
     def get_by_filters(cls, context, filters,
                        sort_key='created_at', sort_dir='desc', limit=None,
                        marker=None, expected_attrs=None, use_slave=False,
                        sort_keys=None, sort_dirs=None):
-        return cls._get_by_filters_impl(
+        db_inst_list = cls._get_by_filters_impl(
             context, filters, sort_key=sort_key, sort_dir=sort_dir,
             limit=limit, marker=marker, expected_attrs=expected_attrs,
             use_slave=use_slave, sort_keys=sort_keys, sort_dirs=sort_dirs)
+        # NOTE(melwitt): _make_instance_list could result in joined objects'
+        # (from expected_attrs) _from_db_object methods being called during
+        # Instance._from_db_object, each of which might choose to perform
+        # database writes. So, we call this outside of _get_by_filters_impl to
+        # avoid being nested inside a 'reader' database transaction context.
+        return _make_instance_list(context, cls(), db_inst_list,
+                                   expected_attrs)
 
     @staticmethod
     @db.select_db_reader_mode
