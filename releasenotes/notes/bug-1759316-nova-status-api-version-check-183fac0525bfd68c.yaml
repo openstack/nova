@@ -1,0 +1,13 @@
+---
+upgrade:
+  - |
+    A new check is added to ``nova-status upgrade check`` which will scan
+    all cells looking for ``nova-osapi_compute`` service versions which are
+    from before Ocata and which may cause issues with how the compute API
+    finds instances. This will result in a warning if:
+
+    * No cell mappings are found
+    * The minimum ``nova-osapi_compute`` service version is less than 15 in
+      any given cell
+
+    See https://bugs.launchpad.net/nova/+bug/1759316 for more details.

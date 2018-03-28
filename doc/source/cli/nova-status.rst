@@ -106,6 +106,11 @@ Upgrade
   * Checks for the Placement API are modified to require version 1.17.
   * Checks that ironic instances have had their embedded flavors migrated to
     use custom resource classes. This check was backported from Rocky.
+  * Checks for ``nova-osapi_compute`` service versions that are less than 15
+    across all cell mappings which might cause issues when querying instances
+    depending on how the **nova-api** service is configured.
+    See https://bugs.launchpad.net/nova/+bug/1759316 for details.
+    This check was backported from Rocky.
 
 See Also
 ========
