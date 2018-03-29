@@ -66,9 +66,10 @@ class APIFixture(fixture.GabbiFixture):
         config.parse_args([], default_config_files=[], configure_db=False,
                           init_rpc=False)
 
-        # NOTE(cdent): api and main database are not used but we still need
-        # to manage them to make the fixtures work correctly and not cause
+        # NOTE(cdent): The main database is not used but we still need to
+        # manage it to make the fixtures work correctly and not cause
         # conflicts with other tests in the same process.
+        self._reset_db_flags()
         self.api_db_fixture = fixtures.Database('api')
         self.main_db_fixture = fixtures.Database('main')
         self.api_db_fixture.reset()
@@ -95,13 +96,17 @@ class APIFixture(fixture.GabbiFixture):
         # flag to make sure the next run will recreate the traits and
         # reset the _RC_CACHE so that any cached resource classes
         # are flushed.
-        rp_obj._TRAITS_SYNCED = False
-        rp_obj._RC_CACHE = None
+        self._reset_db_flags()
 
         self.output_stream_fixture.cleanUp()
         self.standard_logging_fixture.cleanUp()
         if self.conf:
             self.conf.reset()
+
+    @staticmethod
+    def _reset_db_flags():
+        rp_obj._TRAITS_SYNCED = False
+        rp_obj._RC_CACHE = None
 
 
 class AllocationFixture(APIFixture):
