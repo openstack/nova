@@ -957,7 +957,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         with test.nested(
                 mock.patch('nova.network.utils.device_exists',
                            return_value=False),
-                mock.patch.object(linux_net, '_create_veth_pair'),
+                mock.patch('nova.network.utils.create_veth_pair'),
                 mock.patch.object(linux_net, 'create_ivs_vif_port'),
                 mock.patch.object(os.path, 'exists', return_value=True),
                 mock.patch('nova.privsep.libvirt.disable_multicast_snooping'),
@@ -967,7 +967,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                 mock.patch('nova.privsep.libvirt.disable_bridge_stp'),
                 mock.patch('nova.privsep.libvirt.toggle_interface'),
                 mock.patch('nova.privsep.libvirt.bridge_add_interface')
-        ) as (device_exists, _create_veth_pair, create_ivs_vif_port,
+        ) as (device_exists, create_veth_pair, create_ivs_vif_port,
               path_exists, disable_multicast_snooping, disable_ipv6,
               add_bridge, zero_bridge_forward_delay, disable_bridge_stp,
               toggle_interface, bridge_add_interface):
@@ -983,7 +983,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
 
             device_exists.assert_has_calls([mock.call(qbr_want),
                                             mock.call(qvo_want)])
-            _create_veth_pair.assert_has_calls(
+            create_veth_pair.assert_has_calls(
                 [mock.call(qvb_want, qvo_want, None)])
             create_ivs_vif_port.assert_has_calls(
                 [mock.call(qvo_want, uuids.ovs,
