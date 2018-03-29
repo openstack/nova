@@ -3084,8 +3084,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                     id=1, cpuset=set([2, 3]),
                     memory=1024, pagesize=2048,
                     cpu_policy=fields.CPUAllocationPolicy.DEDICATED,
-                    cpu_pinning={2: 7, 3: 8},
-                    cpuset_reserved=set([]))])
+                    cpu_pinning={2: 7, 3: 8})])
 
         instance_ref = objects.Instance(**self.test_instance)
         instance_ref.numa_topology = instance_topology

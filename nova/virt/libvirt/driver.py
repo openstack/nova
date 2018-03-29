@@ -4402,8 +4402,9 @@ class LibvirtDriver(driver.ComputeDriver):
                                 else:
                                     pin_cpuset.cpuset = host_cell.cpuset
                                 if emulator_threads_isolated:
-                                    emupcpus.extend(
-                                        object_numa_cell.cpuset_reserved)
+                                    if object_numa_cell.cpuset_reserved:
+                                        emupcpus.extend(
+                                            object_numa_cell.cpuset_reserved)
                                 elif not wants_realtime or cpu not in vcpus_rt:
                                     # - If realtime IS NOT enabled, the
                                     #   emulator threads are allowed to float
