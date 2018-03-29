@@ -465,7 +465,7 @@ class TestUtils(test.NoDBTestCase):
             utils.claim_resources_on_destination(
                 self.context, reportclient, instance, source_node, dest_node)
             mock_get_allocs.assert_called_once_with(
-                uuids.source_node, instance.uuid)
+                self.context, uuids.source_node, instance.uuid)
 
         test()
 
@@ -505,7 +505,7 @@ class TestUtils(test.NoDBTestCase):
                               self.context, reportclient, instance,
                               source_node, dest_node)
             mock_get_allocs.assert_called_once_with(
-                uuids.source_node, instance.uuid)
+                self.context, uuids.source_node, instance.uuid)
             mock_claim.assert_called_once_with(
                 self.context, instance.uuid, dest_alloc_request,
                 instance.project_id, instance.user_id,

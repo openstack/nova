@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    The SchedulerReportClient
+    (``nova.scheduler.client.report.SchedulerReportClient``) sends requests
+    with the global request ID in the ``X-Openstack-Request-Id`` header
+    to the placement service. `Bug 1734625`_
+
+    .. _Bug 1734625: https://bugs.launchpad.net/nova/+bug/1734625

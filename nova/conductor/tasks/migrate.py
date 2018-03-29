@@ -45,7 +45,7 @@ def replace_allocation_with_migration(context, instance, migration):
     reportclient = schedclient.reportclient
 
     orig_alloc = reportclient.get_allocations_for_consumer_by_provider(
-        source_cn.uuid, instance.uuid)
+        context, source_cn.uuid, instance.uuid)
     if not orig_alloc:
         LOG.debug('Unable to find existing allocations for instance on '
                   'source compute node: %s. This is normal if you are not '
