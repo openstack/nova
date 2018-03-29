@@ -661,7 +661,7 @@ class Guest(object):
                 # In the python2 libvirt bindings, strings passed to
                 # migrateToURI3 via params must not be unicode.
                 if six.PY2:
-                    params = {key: str(value) if isinstance(value, unicode)
+                    params = {key: str(value) if isinstance(value, unicode)  # noqa
                                               else value
                               for key, value in params.items()}
 

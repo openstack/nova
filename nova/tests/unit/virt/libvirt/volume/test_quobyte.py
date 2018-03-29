@@ -227,7 +227,6 @@ class QuobyteTestCase(test.NoDBTestCase):
         drv = quobyte
 
         def statMockCall(*args):
-            print (args)
             if args[0] == self.TEST_MNT_POINT:
                 raise nova_exception.InvalidVolume()
         stat_mock.side_effect = [os.stat, statMockCall]
