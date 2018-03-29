@@ -618,7 +618,7 @@ class LibvirtGenericVIFDriver(object):
         # TODO(vladikr): This code can be removed once the minimum version of
         # Libvirt is incleased above 1.3.5, as vlan will be set by libvirt
         if vif['vnic_type'] == network_model.VNIC_TYPE_MACVTAP:
-            linux_net.set_vf_interface_vlan(
+            linux_net_utils.set_vf_interface_vlan(
                 vif['profile']['pci_slot'],
                 mac_addr=vif['address'],
                 vlan=vif['details'][network_model.VIF_DETAILS_VLAN])
@@ -788,8 +788,8 @@ class LibvirtGenericVIFDriver(object):
             # The ip utility doesn't accept the MAC 00:00:00:00:00:00.
             # Therefore, keep the MAC unchanged.  Later operations on
             # the same VF will not be affected by the existing MAC.
-            linux_net.set_vf_interface_vlan(vif['profile']['pci_slot'],
-                                            mac_addr=vif['address'])
+            linux_net_utils.set_vf_interface_vlan(vif['profile']['pci_slot'],
+                                                  mac_addr=vif['address'])
 
     def unplug_hostdev_physical(self, instance, vif):
         pass
