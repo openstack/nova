@@ -1133,7 +1133,7 @@ class ComputeManager(manager.Manager):
         # NOTE(sbauza): We want the compute node to hard fail if it won't be
         # able to provide its resources to the placement API, or it will not
         # be able to be eligible as a destination.
-        if CONF.placement.os_region_name is None:
+        if CONF.placement.region_name is None:
             raise exception.PlacementNotConfigured()
 
         self.driver.init_host(host=self.host)
