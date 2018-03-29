@@ -634,6 +634,21 @@ class _TestRequestSpecObject(object):
                               objects.SecurityGroupList)
         self.assertIn('security_groups', req_obj)
 
+    def test_destination_aggregates_default(self):
+        destination = objects.Destination()
+        self.assertIsNone(destination.aggregates)
+
+    def test_destination_require_aggregates(self):
+        destination = objects.Destination()
+        destination.require_aggregates(['foo', 'bar'])
+        destination.require_aggregates(['baz'])
+        self.assertEqual(['foo,bar', 'baz'], destination.aggregates)
+
+    def test_destination_1dotoh(self):
+        destination = objects.Destination(aggregates=['foo'])
+        primitive = destination.obj_to_primitive(target_version='1.0')
+        self.assertNotIn('aggregates', primitive['nova_object.data'])
+
 
 class TestRequestSpecObject(test_objects._LocalTest,
                             _TestRequestSpecObject):
