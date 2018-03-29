@@ -20,6 +20,7 @@ the system.
 
 import datetime
 
+from keystoneauth1 import exceptions as ks_exc
 from oslo_context import context as common_context
 from oslo_log import log
 from oslo_utils import excutils
@@ -394,8 +395,20 @@ def info_from_instance(context, instance, network_info,
         modifications.
 
     """
-    image_ref_url = image_api.API().generate_image_url(instance.image_ref,
-                                                       context)
+    try:
+        # TODO(mriedem): We can eventually drop this when we no longer support
+        # legacy notifications since versioned notifications don't use this.
+        image_ref_url = image_api.API().generate_image_url(instance.image_ref,
+                                                           context)
+    except ks_exc.EndpointNotFound:
+        # We might be running from a periodic task with no auth token and
+        # CONF.glance.api_servers isn't set, so we can't get the image API
+        # endpoint URL from the service catalog, therefore just use the image
+        # id for the URL (yes it's a lie, but it's best effort at this point).
+        with excutils.save_and_reraise_exception() as exc_ctx:
+            if context.auth_token is None:
+                image_ref_url = instance.image_ref
+                exc_ctx.reraise = False
 
     instance_type = instance.get_flavor()
     instance_type_name = instance_type.get('name', '')

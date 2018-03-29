@@ -1,0 +1,9 @@
+---
+upgrade:
+  - |
+    The ``image_ref_url`` entry in legacy instance notification payloads will
+    be just the instance image id if ``[glance]/api_servers`` is not set
+    and the notification is being sent from a periodic task. In this case the
+    periodic task does not have a token to get the image service endpoint URL
+    from the identity service so only the image id is in the payload. This
+    does not affect versioned notifications.

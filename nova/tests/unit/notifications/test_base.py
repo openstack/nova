@@ -14,11 +14,13 @@
 #    under the License.
 import datetime
 
+from keystoneauth1 import exceptions as ks_exc
 import mock
 
 from nova import context as nova_context
 from nova.notifications import base
 from nova import test
+from nova.tests.unit import fake_instance
 from nova.tests import uuidsentinel as uuids
 from nova import utils
 
@@ -80,6 +82,41 @@ class TestSendInstanceUpdateNotification(test.NoDBTestCase):
 
         mock_get_notifier.return_value.info.assert_called_once_with(
             mock.sentinel.ctxt, 'compute.instance.update', mock.ANY)
+
+    @mock.patch('nova.image.api.API.generate_image_url',
+                side_effect=ks_exc.EndpointNotFound)
+    def test_info_from_instance_image_api_endpoint_not_found_no_token(
+            self, mock_gen_image_url):
+        """Tests the case that we fail to generate the image ref url because
+        CONF.glance.api_servers isn't set and we have a context without an
+        auth token, like in the case of a periodic task using an admin context.
+        In this case, we expect the payload field 'image_ref_url' to just be
+        the instance.image_ref (image ID for a non-volume-backed server).
+        """
+        ctxt = nova_context.get_admin_context()
+        instance = fake_instance.fake_instance_obj(ctxt, image_ref=uuids.image)
+        instance.system_metadata = {}
+        instance.metadata = {}
+        payload = base.info_from_instance(
+            ctxt, instance, network_info=None, system_metadata=None)
+        self.assertEqual(instance.image_ref, payload['image_ref_url'])
+        mock_gen_image_url.assert_called_once_with(instance.image_ref, ctxt)
+
+    @mock.patch('nova.image.api.API.generate_image_url',
+                side_effect=ks_exc.EndpointNotFound)
+    def test_info_from_instance_image_api_endpoint_not_found_with_token(
+            self, mock_gen_image_url):
+        """Tests the case that we fail to generate the image ref url because
+        an EndpointNotFound error is raised up from the image API but the
+        context does have a token so we pass the error through.
+        """
+        ctxt = nova_context.RequestContext(
+            'fake-user', 'fake-project', auth_token='fake-token')
+        instance = fake_instance.fake_instance_obj(ctxt, image_ref=uuids.image)
+        self.assertRaises(ks_exc.EndpointNotFound, base.info_from_instance,
+                          ctxt, instance, network_info=None,
+                          system_metadata=None)
+        mock_gen_image_url.assert_called_once_with(instance.image_ref, ctxt)
 
 
 class TestBandwidthUsage(test.NoDBTestCase):
