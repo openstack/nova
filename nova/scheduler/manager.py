@@ -35,6 +35,7 @@ from nova import objects
 from nova.objects import host_mapping as host_mapping_obj
 from nova import quota
 from nova.scheduler import client as scheduler_client
+from nova.scheduler import request_filter
 from nova.scheduler import utils
 
 
@@ -115,6 +116,12 @@ class SchedulerManager(manager.Manager):
             spec_obj = objects.RequestSpec.from_primitives(ctxt,
                                                            request_spec,
                                                            filter_properties)
+
+        try:
+            request_filter.process_reqspec(ctxt, spec_obj)
+        except exception.RequestFilterFailed as e:
+            raise exception.NoValidHost(reason=e.message)
+
         resources = utils.resources_from_request_spec(spec_obj)
         alloc_reqs_by_rp_uuid, provider_summaries, allocation_request_version \
             = None, None, None
