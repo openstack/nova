@@ -979,7 +979,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                 'NovaVMPort', self.vif_vrouter['devname'],
                 self.vif_vrouter['address'], '0.0.0.0', None)
 
-    @mock.patch('nova.network.linux_net.create_tap_dev')
+    @mock.patch('nova.network.linux_utils.create_tap_dev')
     @mock.patch('nova.privsep.libvirt.plug_contrail_vif')
     def test_plug_vrouter_with_details_multiqueue(
             self, mock_plug_contrail, mock_create_tap_dev):
