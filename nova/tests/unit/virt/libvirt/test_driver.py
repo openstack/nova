@@ -1288,6 +1288,39 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         mock_guest.set_user_password.assert_called_once_with("root", "123")
 
+    @mock.patch('nova.objects.Instance.save')
+    @mock.patch('oslo_serialization.base64.encode_as_text')
+    @mock.patch('nova.api.metadata.password.convert_password')
+    @mock.patch('nova.crypto.ssh_encrypt_text')
+    @mock.patch('nova.utils.get_image_from_system_metadata')
+    @mock.patch.object(host.Host,
+                       'has_min_version', return_value=True)
+    @mock.patch('nova.virt.libvirt.host.Host.get_guest')
+    def test_set_admin_password_saves_sysmeta(self, mock_get_guest,
+                                              ver, mock_image, mock_encrypt,
+                                              mock_convert, mock_encode,
+                                              mock_save):
+        self.flags(virt_type='kvm', group='libvirt')
+        instance = objects.Instance(**self.test_instance)
+        # Password will only be saved in sysmeta if the key_data is present
+        instance.key_data = 'ssh-rsa ABCFEFG'
+        mock_image.return_value = {"properties": {
+            "hw_qemu_guest_agent": "yes"}}
+        mock_guest = mock.Mock(spec=libvirt_guest.Guest)
+        mock_get_guest.return_value = mock_guest
+        mock_convert.return_value = {'password_0': 'converted-password'}
+
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        drvr.set_admin_password(instance, "123")
+
+        mock_guest.set_user_password.assert_called_once_with("root", "123")
+        mock_encrypt.assert_called_once_with(instance.key_data, '123')
+        mock_encode.assert_called_once_with(mock_encrypt.return_value)
+        mock_convert.assert_called_once_with(None, mock_encode.return_value)
+        self.assertEqual('converted-password',
+                         instance.system_metadata['password_0'])
+        mock_save.assert_called_once_with()
+
     @mock.patch.object(host.Host,
                        'has_min_version', return_value=True)
     @mock.patch('nova.virt.libvirt.host.Host.get_guest')
@@ -1390,8 +1423,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_get_guest.return_value = mock_guest
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.assertRaises(exception.NovaException,
-                          drvr.set_admin_password, instance, "123")
+        with mock.patch.object(
+                drvr, '_save_instance_password_if_sshkey_present') as save_p:
+            self.assertRaises(exception.NovaException,
+                              drvr.set_admin_password, instance, "123")
+            save_p.assert_not_called()
 
     @mock.patch('nova.utils.get_image_from_system_metadata')
     @mock.patch.object(host.Host,
