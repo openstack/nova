@@ -157,6 +157,10 @@ html_extra_path = ['_extra']
 # using the given strftime format.
 html_last_updated_fmt = '%Y-%m-%d %H:%M'
 
+# Disable smartquotes to ensure all quoted example config options can be copied
+# from the docs without later causing unicode errors within Nova.
+html_use_smartypants = False
+
 # -- Options for LaTeX output -------------------------------------------------
 
 # Grouping the document tree into LaTeX files. List of tuples
