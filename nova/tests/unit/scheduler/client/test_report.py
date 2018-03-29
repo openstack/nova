@@ -1520,9 +1520,12 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             'trait:CUSTOM_TRAIT1': 'required',
             'trait:CUSTOM_TRAIT2': 'preferred',
         })
+        resources.get_request_group(None).member_of = [
+            ('agg1', 'agg2', 'agg3'), ('agg1', 'agg2')]
         expected_path = '/allocation_candidates'
         expected_query = {'resources': ['MEMORY_MB:1024,VCPU:1'],
                           'required': ['CUSTOM_TRAIT1'],
+                          'member_of': ['in:agg1,agg2'],
                           'limit': ['1000']}
 
         resp_mock.json.return_value = json_data
@@ -1532,7 +1535,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                 self.client.get_allocation_candidates(self.context, resources)
 
         self.ks_adap_mock.get.assert_called_once_with(
-            mock.ANY, raise_exc=False, microversion='1.17',
+            mock.ANY, raise_exc=False, microversion='1.21',
             headers={'X-Openstack-Request-Id': self.context.global_id})
         url = self.ks_adap_mock.get.call_args[0][0]
         split_url = parse.urlsplit(url)
@@ -1564,7 +1567,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
                 self.client.get_allocation_candidates(self.context, resources)
 
         self.ks_adap_mock.get.assert_called_once_with(
-            mock.ANY, raise_exc=False, microversion='1.17',
+            mock.ANY, raise_exc=False, microversion='1.21',
             headers={'X-Openstack-Request-Id': self.context.global_id})
         url = self.ks_adap_mock.get.call_args[0][0]
         split_url = parse.urlsplit(url)
@@ -1591,7 +1594,7 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         res = self.client.get_allocation_candidates(self.context, resources)
 
         self.ks_adap_mock.get.assert_called_once_with(
-            mock.ANY, raise_exc=False, microversion='1.17',
+            mock.ANY, raise_exc=False, microversion='1.21',
             headers={'X-Openstack-Request-Id': self.context.global_id})
         url = self.ks_adap_mock.get.call_args[0][0]
         split_url = parse.urlsplit(url)

@@ -285,8 +285,8 @@ def merge_resources(original_resources, new_resources, sign=1):
 
 
 def resources_from_request_spec(spec_obj):
-    """Given a RequestSpec object, returns a ResourceRequest of the resources
-    and traits it represents.
+    """Given a RequestSpec object, returns a ResourceRequest of the resources,
+    traits, and aggregates it represents.
     """
     spec_resources = {
         fields.ResourceClass.VCPU: spec_obj.vcpus,
@@ -332,6 +332,13 @@ def resources_from_request_spec(spec_obj):
     # Add the (remaining) items from the spec_resources to the sharing group
     for rclass, amount in spec_resources.items():
         res_req.get_request_group(None).resources[rclass] = amount
+
+    if 'requested_destination' in spec_obj:
+        destination = spec_obj.requested_destination
+        if destination and destination.aggregates:
+            grp = res_req.get_request_group(None)
+            grp.member_of = [tuple(ored.split(','))
+                             for ored in destination.aggregates]
 
     return res_req
 

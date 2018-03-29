@@ -104,6 +104,10 @@ Upgrade
 
   * Checks for the Placement API are modified to require version 1.17.
 
+  **18.0.0 (Rocky)**
+
+  * Checks for the Placement API are modified to require version 1.21.
+
 See Also
 ========
 
