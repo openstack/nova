@@ -37,6 +37,7 @@ import six
 import nova.conf
 from nova import exception
 from nova.i18n import _
+from nova.network import utils as net_utils
 from nova import objects
 from nova.pci import utils as pci_utils
 from nova import utils
@@ -931,7 +932,7 @@ def get_dhcp_opts(context, network_ref, fixedips):
 
 
 def release_dhcp(dev, address, mac_address):
-    if device_exists(dev):
+    if net_utils.device_exists(dev):
         try:
             utils.execute('dhcp_release', dev, address, mac_address,
                           run_as_root=True)
@@ -1163,11 +1164,6 @@ def _execute(*cmd, **kwargs):
         return utils.execute(*cmd, **kwargs)
 
 
-def device_exists(device):
-    """Check if ethernet device exists."""
-    return os.path.exists('/sys/class/net/%s' % device)
-
-
 def _dhcp_file(dev, kind):
     """Return path to a pid, leases, hosts or conf file for a bridge/device."""
     fileutils.ensure_tree(CONF.networks_path)
@@ -1272,7 +1268,7 @@ def delete_ivs_vif_port(dev):
 
 
 def create_tap_dev(dev, mac_address=None, multiqueue=False):
-    if not device_exists(dev):
+    if not net_utils.device_exists(dev):
         try:
             # First, try with 'ip'
             cmd = ('ip', 'tuntap', 'add', dev, 'mode', 'tap')
@@ -1297,7 +1293,7 @@ def create_tap_dev(dev, mac_address=None, multiqueue=False):
 
 
 def create_fp_dev(dev, sockpath, sockmode):
-    if not device_exists(dev):
+    if not net_utils.device_exists(dev):
         utils.execute('fp-vdev', 'add', dev, '--sockpath', sockpath,
                       '--sockmode', sockmode, run_as_root=True)
         _set_device_mtu(dev)
@@ -1306,13 +1302,13 @@ def create_fp_dev(dev, sockpath, sockmode):
 
 
 def delete_fp_dev(dev):
-    if device_exists(dev):
+    if net_utils.device_exists(dev):
         utils.execute('fp-vdev', 'del', dev, run_as_root=True)
 
 
 def delete_net_dev(dev):
     """Delete a network device only if it exists."""
-    if device_exists(dev):
+    if net_utils.device_exists(dev):
         try:
             utils.execute('ip', 'link', 'delete', dev, run_as_root=True,
                           check_exit_code=[0, 2, 254])
@@ -1324,7 +1320,7 @@ def delete_net_dev(dev):
 
 def delete_bridge_dev(dev):
     """Delete a network bridge."""
-    if device_exists(dev):
+    if net_utils.device_exists(dev):
         try:
             utils.execute('ip', 'link', 'set', dev, 'down', run_as_root=True)
             utils.execute('brctl', 'delbr', dev, run_as_root=True)
@@ -1451,7 +1447,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
         """Create a vlan unless it already exists."""
         if interface is None:
             interface = 'vlan%s' % vlan_num
-        if not device_exists(interface):
+        if not net_utils.device_exists(interface):
             LOG.debug('Starting VLAN interface %s', interface)
             _execute('ip', 'link', 'add', 'link', bridge_interface,
                      'name', interface, 'type', 'vlan',
@@ -1496,7 +1492,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
         interface onto the bridge and reset the default gateway if necessary.
 
         """
-        if not device_exists(bridge):
+        if not net_utils.device_exists(bridge):
             LOG.debug('Starting Bridge %s', bridge)
             out, err = _execute('brctl', 'addbr', bridge,
                                 check_exit_code=False, run_as_root=True)
@@ -1582,7 +1578,7 @@ class LinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
     @utils.synchronized('lock_bridge', external=True)
     def remove_bridge(bridge, gateway=True, filtering=True):
         """Delete a bridge."""
-        if not device_exists(bridge):
+        if not net_utils.device_exists(bridge):
             return
         else:
             if filtering:
@@ -1736,7 +1732,7 @@ class LinuxOVSInterfaceDriver(LinuxNetInterfaceDriver):
 
     def plug(self, network, mac_address, gateway=True):
         dev = self.get_dev(network)
-        if not device_exists(dev):
+        if not net_utils.device_exists(dev):
             bridge = CONF.linuxnet_ovs_integration_bridge
             _ovs_vsctl(['--', '--may-exist', 'add-port', bridge, dev,
                         '--', 'set', 'Interface', dev, 'type=internal',
@@ -1809,7 +1805,7 @@ class NeutronLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
         create_tap_dev(dev, mac_address)
 
-        if not device_exists(bridge):
+        if not net_utils.device_exists(bridge):
             LOG.debug("Starting bridge %s ", bridge)
             utils.execute('brctl', 'addbr', bridge, run_as_root=True)
             utils.execute('brctl', 'setfd', bridge, str(0), run_as_root=True)
@@ -1829,7 +1825,7 @@ class NeutronLinuxBridgeInterfaceDriver(LinuxNetInterfaceDriver):
 
     def unplug(self, network):
         dev = self.get_dev(network)
-        if not device_exists(dev):
+        if not net_utils.device_exists(dev):
             return None
         else:
             delete_net_dev(dev)
