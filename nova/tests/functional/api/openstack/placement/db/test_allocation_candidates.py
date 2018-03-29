@@ -62,10 +62,20 @@ class ProviderDBBase(test.NoDBTestCase):
         super(ProviderDBBase, self).setUp()
         self.useFixture(fixtures.Database())
         self.api_db = self.useFixture(fixtures.Database(database='api'))
+        # Reset the _TRAITS_SYNCED global before we start and after
+        # we are done since other tests (notably the gabbi tests)
+        # may have caused it to change.
+        self._reset_traits_synced()
+        self.addCleanup(self._reset_traits_synced)
         self.ctx = context.RequestContext('fake-user', 'fake-project')
         # For debugging purposes, populated by _create_provider and used by
         # _validate_allocation_requests to make failure results more readable.
         self.rp_uuid_to_name = {}
+
+    @staticmethod
+    def _reset_traits_synced():
+        """Reset the _TRAITS_SYNCED boolean to base state."""
+        rp_obj._TRAITS_SYNCED = False
 
     def _create_provider(self, name, *aggs, **kwargs):
         parent = kwargs.get('parent')
