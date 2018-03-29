@@ -116,7 +116,7 @@ class MigrationsController(wsgi.Controller):
     @wsgi.Controller.api_version("2.1", "2.22")  # noqa
     @wsgi.expected_errors(())
     @validation.query_schema(schema_migrations.list_query_schema_v20,
-                             "2.1", "2.22")
+                             "2.0", "2.22")
     def index(self, req):
         """Return all migrations using the query parameters as filters."""
         return self._index(req)
