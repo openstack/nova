@@ -20,6 +20,7 @@ import copy
 import string
 
 import mock
+from oslo_serialization import jsonutils
 from oslo_utils import uuidutils
 import six
 
@@ -28,6 +29,7 @@ from nova.compute import manager
 from nova.compute import power_state
 from nova.compute import task_states
 from nova.compute import utils as compute_utils
+from nova.compute import vm_states
 from nova import context
 from nova import exception
 from nova.image import glance
@@ -1068,6 +1070,36 @@ class ComputeUtilsTestCase(test.NoDBTestCase):
                       'delete.end', system_metadata=instance.system_metadata)
         ]
         mock_notify_usage.assert_has_calls(expected_notify_calls)
+
+    def test_get_stashed_volume_connector_none(self):
+        inst = fake_instance.fake_instance_obj(self.context)
+        # connection_info isn't set
+        bdm = objects.BlockDeviceMapping(self.context)
+        self.assertIsNone(
+            compute_utils.get_stashed_volume_connector(bdm, inst))
+        # connection_info is None
+        bdm.connection_info = None
+        self.assertIsNone(
+            compute_utils.get_stashed_volume_connector(bdm, inst))
+        # connector is not set in connection_info
+        bdm.connection_info = jsonutils.dumps({})
+        self.assertIsNone(
+            compute_utils.get_stashed_volume_connector(bdm, inst))
+        # connector is set but different host
+        conn_info = {'connector': {'host': 'other_host'}}
+        bdm.connection_info = jsonutils.dumps(conn_info)
+        self.assertIsNone(
+            compute_utils.get_stashed_volume_connector(bdm, inst))
+
+    def test_may_have_ports_or_volumes(self):
+        inst = objects.Instance()
+        for vm_state, expected_result in ((vm_states.ERROR, True),
+                                          (vm_states.SHELVED_OFFLOADED, True),
+                                          (vm_states.BUILDING, False)):
+            inst.vm_state = vm_state
+            self.assertEqual(
+                expected_result, compute_utils.may_have_ports_or_volumes(inst),
+                vm_state)
 
 
 class ServerGroupTestCase(test.TestCase):

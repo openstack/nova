@@ -29,7 +29,6 @@ from castellan import key_manager
 from oslo_log import log as logging
 from oslo_messaging import exceptions as oslo_exceptions
 from oslo_serialization import base64 as base64utils
-from oslo_serialization import jsonutils
 from oslo_utils import excutils
 from oslo_utils import strutils
 from oslo_utils import timeutils
@@ -1798,7 +1797,8 @@ class API(base.Base):
         # in error state), the instance has been scheduled and sent to a
         # cell/compute which means it was pulled from the cell db.
         # Normal delete should be attempted.
-        may_have_ports_or_volumes = self._may_have_ports_or_volumes(instance)
+        may_have_ports_or_volumes = compute_utils.may_have_ports_or_volumes(
+            instance)
         if not instance.host and not may_have_ports_or_volumes:
             try:
                 if self._delete_while_booting(context, instance):
@@ -1951,16 +1951,6 @@ class API(base.Base):
             # NOTE(comstud): Race condition. Instance already gone.
             pass
 
-    def _may_have_ports_or_volumes(self, instance):
-        # NOTE(melwitt): When an instance build fails in the compute manager,
-        # the instance host and node are set to None and the vm_state is set
-        # to ERROR. In the case, the instance with host = None has actually
-        # been scheduled and may have ports and/or volumes allocated on the
-        # compute node.
-        if instance.vm_state in (vm_states.SHELVED_OFFLOADED, vm_states.ERROR):
-            return True
-        return False
-
     def _confirm_resize_on_deleting(self, context, instance):
         # If in the middle of a resize, use confirm_resize to
         # ensure the original instance is cleaned up too
@@ -1991,40 +1981,6 @@ class API(base.Base):
         self.compute_rpcapi.confirm_resize(context,
                 instance, migration, src_host, cast=False)
 
-    def _get_stashed_volume_connector(self, bdm, instance):
-        """Lookup a connector dict from the bdm.connection_info if set
-
-        Gets the stashed connector dict out of the bdm.connection_info if set
-        and the connector host matches the instance host.
-
-        :param bdm: nova.objects.block_device.BlockDeviceMapping
-        :param instance: nova.objects.instance.Instance
-        :returns: volume connector dict or None
-        """
-        if 'connection_info' in bdm and bdm.connection_info is not None:
-            # NOTE(mriedem): We didn't start stashing the connector in the
-            # bdm.connection_info until Mitaka so it might not be there on old
-            # attachments. Also, if the volume was attached when the instance
-            # was in shelved_offloaded state and it hasn't been unshelved yet
-            # we don't have the attachment/connection information either.
-            connector = jsonutils.loads(bdm.connection_info).get('connector')
-            if connector:
-                if connector.get('host') == instance.host:
-                    return connector
-                LOG.debug('Found stashed volume connector for instance but '
-                          'connector host %(connector_host)s does not match '
-                          'the instance host %(instance_host)s.',
-                          {'connector_host': connector.get('host'),
-                           'instance_host': instance.host}, instance=instance)
-                if (instance.host is None and
-                        self._may_have_ports_or_volumes(instance)):
-                    LOG.debug('Allowing use of stashed volume connector with '
-                              'instance host None because instance with '
-                              'vm_state %(vm_state)s has been scheduled in '
-                              'the past.', {'vm_state': instance.vm_state},
-                              instance=instance)
-                    return connector
-
     def _local_cleanup_bdm_volumes(self, bdms, instance, context):
         """The method deletes the bdm records and, if a bdm is a volume, call
         the terminate connection and the detach volume via the Volume API.
@@ -2037,7 +1993,7 @@ class API(base.Base):
                         self.volume_api.attachment_delete(context,
                                                           bdm.attachment_id)
                     else:
-                        connector = self._get_stashed_volume_connector(
+                        connector = compute_utils.get_stashed_volume_connector(
                             bdm, instance)
                         if connector:
                             self.volume_api.terminate_connection(context,

@@ -1473,26 +1473,6 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_destroy.assert_called_once_with()
         do_test(self)
 
-    def test_get_stashed_volume_connector_none(self):
-        inst = self._create_instance_obj()
-        # connection_info isn't set
-        bdm = objects.BlockDeviceMapping(self.context)
-        self.assertIsNone(
-            self.compute_api._get_stashed_volume_connector(bdm, inst))
-        # connection_info is None
-        bdm.connection_info = None
-        self.assertIsNone(
-            self.compute_api._get_stashed_volume_connector(bdm, inst))
-        # connector is not set in connection_info
-        bdm.connection_info = jsonutils.dumps({})
-        self.assertIsNone(
-            self.compute_api._get_stashed_volume_connector(bdm, inst))
-        # connector is set but different host
-        conn_info = {'connector': {'host': 'other_host'}}
-        bdm.connection_info = jsonutils.dumps(conn_info)
-        self.assertIsNone(
-            self.compute_api._get_stashed_volume_connector(bdm, inst))
-
     @mock.patch.object(objects.BlockDeviceMapping, 'destroy')
     def test_local_cleanup_bdm_volumes_stashed_connector_host_none(
             self, mock_destroy):
