@@ -85,7 +85,7 @@ import_translation_for_log_or_exception = re.compile(
     r"(.)*(from\snova.i18n\simport)\s_")
 # We need this for cases where they have created their own _ function.
 custom_underscore_check = re.compile(r"(.)*_\s*=\s*(.)*")
-api_version_re = re.compile(r"@.*api_version")
+api_version_re = re.compile(r"@.*\bapi_version\b")
 dict_constructor_with_list_copy_re = re.compile(r".*\bdict\((\[)?(\(|\[)")
 decorator_re = re.compile(r"@.*")
 http_not_implemented_re = re.compile(r"raise .*HTTPNotImplemented\(")

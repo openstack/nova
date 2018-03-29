@@ -381,13 +381,22 @@ class HackingTestCase(test.NoDBTestCase):
                                 expected_errors=[(1, 0, "N335")])
 
     def test_api_version_decorator_check_no_errors(self):
-        code = """
-               class ControllerClass():
-                   @wsgi.api_version("2.5")
-                   def my_method():
-                       pass
-               """
-        self._assert_has_no_errors(code, checks.check_api_version_decorator)
+        codelist = [
+            """
+            class ControllerClass():
+                @wsgi.api_version("2.5")
+                def my_method():
+                    pass
+            """,
+            """
+            @some_other_decorator
+            @mock.patch('foo', return_value=api_versions.APIVersion("2.5"))
+            def my_method():
+                pass
+            """]
+        for code in codelist:
+            self._assert_has_no_errors(
+                code, checks.check_api_version_decorator)
 
     def test_trans_add(self):
 
