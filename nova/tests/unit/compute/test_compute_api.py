@@ -1283,6 +1283,11 @@ class _ComputeAPIUnitTestMixIn(object):
                         delete_type='delete')
                 mock_local_delete.assert_not_called()
 
+    def test_delete_forced_when_task_state_is_not_none(self):
+        for vm_state in self._get_vm_states():
+            self._test_delete('force_delete', vm_state=vm_state,
+                              task_state=task_states.RESIZE_MIGRATING)
+
     def test_delete_fast_if_host_not_set(self):
         self.useFixture(fixtures.AllServicesCurrent())
         inst = self._create_instance_obj()
