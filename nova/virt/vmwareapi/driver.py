@@ -404,6 +404,8 @@ class VMwareVCDriver(driver.ComputeDriver):
     def detach_volume(self, context, connection_info, instance, mountpoint,
                       encryption=None):
         """Detach volume storage to VM instance."""
+        # NOTE(claudiub): if context parameter is to be used in the future,
+        # the _detach_instance_volumes method will have to be updated as well.
         return self._volumeops.detach_volume(connection_info, instance)
 
     def get_volume_connector(self, instance):
@@ -435,7 +437,9 @@ class VMwareVCDriver(driver.ComputeDriver):
             for disk in block_device_mapping:
                 connection_info = disk['connection_info']
                 try:
-                    self.detach_volume(connection_info, instance,
+                    # NOTE(claudiub): Passing None as the context, as it is
+                    # not currently used.
+                    self.detach_volume(None, connection_info, instance,
                                        disk.get('device_name'))
                 except exception.DiskNotFound:
                     LOG.warning('The volume %s does not exist!',
