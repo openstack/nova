@@ -75,7 +75,14 @@ class VFSGuestFS(vfs.VFS):
     def inspect_capabilities(self):
         """Determines whether guestfs is well configured."""
         try:
-            g = tpool.Proxy(guestfs.GuestFS())
+            # If guestfs debug is enabled, we can't launch in a thread because
+            # the debug logging callback can make eventlet try to switch
+            # threads and then the launch hangs, causing eternal sadness.
+            if CONF.guestfs.debug:
+                LOG.debug('Inspecting guestfs capabilities non-threaded.')
+                g = guestfs.GuestFS()
+            else:
+                g = tpool.Proxy(guestfs.GuestFS())
             g.add_drive("/dev/null")  # sic
             g.launch()
         except Exception as e:
