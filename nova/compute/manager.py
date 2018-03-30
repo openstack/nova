@@ -6020,6 +6020,53 @@ class ComputeManager(manager.Manager):
         LOG.debug('pre_live_migration result data is %s', migrate_data)
         return migrate_data
 
+    @staticmethod
+    def _neutron_failed_live_migration_callback(event_name, instance):
+        msg = ('Neutron reported failure during live migration '
+               'with %(event)s for instance %(uuid)s')
+        msg_args = {'event': event_name, 'uuid': instance.uuid}
+        if CONF.vif_plugging_is_fatal:
+            raise exception.VirtualInterfacePlugException(msg % msg_args)
+        LOG.error(msg, msg_args)
+
+    @staticmethod
+    def _get_neutron_events_for_live_migration(instance):
+        # We don't generate events if CONF.vif_plugging_timeout=0
+        # or if waiting during live migration is disabled,
+        # meaning that the operator disabled using them.
+        if (CONF.vif_plugging_timeout and utils.is_neutron() and
+                CONF.compute.live_migration_wait_for_vif_plug):
+            return [('network-vif-plugged', vif['id'])
+                    for vif in instance.get_network_info()]
+        else:
+            return []
+
+    def _cleanup_pre_live_migration(self, context, dest, instance,
+                                    migration, migrate_data):
+        """Helper method for when pre_live_migration fails
+
+        Sets the migration status to "error" and rolls back the live migration
+        setup on the destination host.
+
+        :param context: The user request context.
+        :type context: nova.context.RequestContext
+        :param dest: The live migration destination hostname.
+        :type dest: str
+        :param instance: The instance being live migrated.
+        :type instance: nova.objects.Instance
+        :param migration: The migration record tracking this live migration.
+        :type migration: nova.objects.Migration
+        :param migrate_data: Data about the live migration, populated from
+                             the destination host.
+        :type migrate_data: Subclass of nova.objects.LiveMigrateData
+        """
+        self._set_migration_status(migration, 'error')
+        # Make sure we set this for _rollback_live_migration()
+        # so it can find it, as expected if it was called later
+        migrate_data.migration = migration
+        self._rollback_live_migration(context, instance, dest,
+                                      migrate_data)
+
     def _do_live_migration(self, context, dest, instance, block_migration,
                            migration, migrate_data):
         # NOTE(danms): We should enhance the RT to account for migrations
@@ -6028,6 +6075,7 @@ class ComputeManager(manager.Manager):
         # reporting
         self._set_migration_status(migration, 'preparing')
 
+        events = self._get_neutron_events_for_live_migration(instance)
         try:
             if ('block_migration' in migrate_data and
                     migrate_data.block_migration):
@@ -6038,19 +6086,37 @@ class ComputeManager(manager.Manager):
             else:
                 disk = None
 
-            migrate_data = self.compute_rpcapi.pre_live_migration(
-                context, instance,
-                block_migration, disk, dest, migrate_data)
+            deadline = CONF.vif_plugging_timeout
+            error_cb = self._neutron_failed_live_migration_callback
+            # In order to avoid a race with the vif plugging that the virt
+            # driver does on the destination host, we register our events
+            # to wait for before calling pre_live_migration.
+            with self.virtapi.wait_for_instance_event(
+                    instance, events, deadline=deadline,
+                    error_callback=error_cb):
+                migrate_data = self.compute_rpcapi.pre_live_migration(
+                    context, instance,
+                    block_migration, disk, dest, migrate_data)
+        except exception.VirtualInterfacePlugException:
+            with excutils.save_and_reraise_exception():
+                LOG.exception('Failed waiting for network virtual interfaces '
+                              'to be plugged on the destination host %s.',
+                              dest, instance=instance)
+                self._cleanup_pre_live_migration(
+                    context, dest, instance, migration, migrate_data)
+        except eventlet.timeout.Timeout:
+            msg = 'Timed out waiting for events: %s'
+            LOG.warning(msg, events, instance=instance)
+            if CONF.vif_plugging_is_fatal:
+                self._cleanup_pre_live_migration(
+                    context, dest, instance, migration, migrate_data)
+                raise exception.MigrationError(reason=msg % events)
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.exception('Pre live migration failed at %s',
                               dest, instance=instance)
-                self._set_migration_status(migration, 'error')
-                # Make sure we set this for _rollback_live_migration()
-                # so it can find it, as expected if it was called later
-                migrate_data.migration = migration
-                self._rollback_live_migration(context, instance, dest,
-                                              migrate_data)
+                self._cleanup_pre_live_migration(
+                    context, dest, instance, migration, migrate_data)
 
         self._set_migration_status(migration, 'running')
 

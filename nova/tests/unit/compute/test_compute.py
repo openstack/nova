@@ -6116,15 +6116,16 @@ class ComputeTestCase(BaseTestCase,
         fake_notifier.NOTIFICATIONS = []
         migrate_data = objects.LibvirtLiveMigrateData(
             is_shared_instance_path=False)
-        mock_pre.return_value = None
+        mock_pre.return_value = migrate_data
 
         with mock.patch.object(self.compute.network_api,
                                'setup_networks_on_host') as mock_setup:
+            self.flags(live_migration_wait_for_vif_plug=True, group='compute')
             ret = self.compute.pre_live_migration(c, instance=instance,
                                                   block_migration=False,
                                                   disk=None,
                                                   migrate_data=migrate_data)
-        self.assertIsNone(ret)
+        self.assertIs(migrate_data, ret)
         self.assertEqual(len(fake_notifier.NOTIFICATIONS), 2)
         msg = fake_notifier.NOTIFICATIONS[0]
         self.assertEqual(msg.event_type,
@@ -6171,7 +6172,9 @@ class ComputeTestCase(BaseTestCase,
 
         instance = self._create_fake_instance_obj(
             {'host': 'src_host',
-             'task_state': task_states.MIGRATING})
+             'task_state': task_states.MIGRATING,
+             'info_cache': objects.InstanceInfoCache(
+                 network_info=network_model.NetworkInfo([]))})
         updated_instance = self._create_fake_instance_obj(
                                                {'host': 'fake-dest-host'})
         dest_host = updated_instance['host']
@@ -6256,7 +6259,9 @@ class ComputeTestCase(BaseTestCase,
         # Confirm live_migration() works as expected correctly.
         # creating instance testdata
         c = context.get_admin_context()
-        instance = self._create_fake_instance_obj(context=c)
+        params = {'info_cache': objects.InstanceInfoCache(
+            network_info=network_model.NetworkInfo([]))}
+        instance = self._create_fake_instance_obj(params=params, context=c)
         instance.host = self.compute.host
         dest = 'desthost'
 
@@ -6310,7 +6315,9 @@ class ComputeTestCase(BaseTestCase,
         # Confirm live_migration() works as expected correctly.
         # creating instance testdata
         c = context.get_admin_context()
-        instance = self._create_fake_instance_obj(context=c)
+        params = {'info_cache': objects.InstanceInfoCache(
+            network_info=network_model.NetworkInfo([]))}
+        instance = self._create_fake_instance_obj(params=params, context=c)
         instance.host = self.compute.host
         dest = 'desthost'
 
