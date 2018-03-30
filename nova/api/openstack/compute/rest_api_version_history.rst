@@ -765,3 +765,18 @@ From this version of the API users can attach a ``multiattach`` capable volume
 to multiple instances. The API request for creating the additional attachments
 is the same. The chosen virt driver and the volume back end has to support the
 functionality as well.
+
+2.61
+----
+
+Exposes flavor extra_specs in the flavor representation. Now users can see the
+flavor extra-specs in flavor APIs response and do not need to call
+``GET /flavors/{flavor_id}/os-extra_specs`` API. If the user is prevented by
+policy from indexing extra-specs, then the ``extra_specs`` field will not be
+included in the flavor information. Flavor extra_specs will be included in
+Response body of the following APIs:
+
+* ``GET /flavors/detail``
+* ``GET /flavors/{flavor_id}``
+* ``POST /flavors``
+* ``PUT /flavors/{flavor_id}``

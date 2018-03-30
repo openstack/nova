@@ -1,0 +1,5 @@
+{
+    "flavor": {
+        "description": "updated description"
+    }
+}

@@ -2332,6 +2332,15 @@ extra_specs_2_47:
   in: body
   required: false
   type: object
+extra_specs_2_61:
+  min_version: 2.61
+  description: |
+    A dictionary of the flavor's extra-specs key-and-value pairs.  This will
+    only be included if the user is allowed by policy to index flavor
+    extra_specs.
+  in: body
+  required: false
+  type: object
 fault:
   description: |
     A fault object. Only displayed in the failed response.

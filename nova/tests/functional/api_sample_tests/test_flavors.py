@@ -57,3 +57,26 @@ class FlavorsSampleJsonTest2_55(FlavorsSampleJsonTest):
         new_flavor.create()
         self.flavor_show_id = new_flavor_id
         self.subs = {'flavorid': new_flavor_id}
+
+
+class FlavorsSampleJsonTest2_61(FlavorsSampleJsonTest):
+    microversion = '2.61'
+    scenarios = [('v2_61', {'api_major_version': 'v2.1'})]
+
+    def setUp(self):
+        super(FlavorsSampleJsonTest2_61, self).setUp()
+        # Get the existing flavors created by DefaultFlavorsFixture.
+        ctxt = nova_context.get_admin_context()
+        flavors = objects.FlavorList.get_all(ctxt)
+        # Flavors are sorted by flavorid in ascending order by default, so
+        # get the last flavor in the list and create a new flavor with an
+        # incremental flavorid so we have a predictable sort order for the
+        # sample response.
+        new_flavor_id = int(flavors[-1].flavorid) + 1
+        new_flavor = objects.Flavor(
+            ctxt, memory_mb=2048, vcpus=1, root_gb=20, flavorid=new_flavor_id,
+            name='m1.small.description', description='test description',
+            extra_specs={"key1": "value1", "key2": "value2"})
+        new_flavor.create()
+        self.flavor_show_id = new_flavor_id
+        self.subs = {'flavorid': new_flavor_id}

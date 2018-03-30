@@ -705,7 +705,8 @@ FLAVORS = {
         vcpu_weight=None,
         disabled=False,
         is_public=True,
-        description=None
+        description=None,
+        extra_specs={"key1": "value1", "key2": "value2"}
     ),
     '2': objects.Flavor(
         id=2,
@@ -720,7 +721,8 @@ FLAVORS = {
         vcpu_weight=None,
         disabled=True,
         is_public=True,
-        description='flavor 2 description'
+        description='flavor 2 description',
+        extra_specs={}
     ),
 }
 

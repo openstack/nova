@@ -21,6 +21,7 @@ from nova.compute import flavors
 from nova import exception
 from nova import objects
 from nova.policies import base
+from nova.policies import flavor_extra_specs as fes_policies
 from nova.policies import flavor_manage as fm_policies
 from nova import policy
 
@@ -110,7 +111,17 @@ class FlavorManageController(wsgi.Controller):
                 exception.FlavorIdExists) as err:
             raise webob.exc.HTTPConflict(explanation=err.format_message())
 
-        return self._view_builder.show(req, flavor, include_description)
+        include_extra_specs = False
+        if api_version_request.is_supported(
+                req, flavors_view.FLAVOR_EXTRA_SPECS_MICROVERSION):
+            include_extra_specs = context.can(
+                fes_policies.POLICY_ROOT % 'index', fatal=False)
+            # NOTE(yikun): This empty extra_spec only for keeping consistent
+            # with other related flavor api.
+            flavor.extra_specs = {}
+
+        return self._view_builder.show(req, flavor, include_description,
+                                       include_extra_specs=include_extra_specs)
 
     @wsgi.Controller.api_version(flavors_view.FLAVOR_DESCRIPTION_MICROVERSION)
     @wsgi.action('update')
@@ -133,4 +144,10 @@ class FlavorManageController(wsgi.Controller):
         # Cache the flavor so the flavor_access and flavor_rxtx extensions
         # can add stuff to the response.
         req.cache_db_flavor(flavor)
-        return self._view_builder.show(req, flavor, include_description=True)
+        include_extra_specs = False
+        if api_version_request.is_supported(
+                req, flavors_view.FLAVOR_EXTRA_SPECS_MICROVERSION):
+            include_extra_specs = context.can(
+                fes_policies.POLICY_ROOT % 'index', fatal=False)
+        return self._view_builder.show(req, flavor, include_description=True,
+                                       include_extra_specs=include_extra_specs)

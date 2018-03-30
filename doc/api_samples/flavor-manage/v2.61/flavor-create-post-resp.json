@@ -1,0 +1,26 @@
+{
+    "flavor": {
+        "OS-FLV-DISABLED:disabled": false,
+        "disk": 10,
+        "OS-FLV-EXT-DATA:ephemeral": 0,
+        "os-flavor-access:is_public": true,
+        "id": "10",
+        "links": [
+            {
+                "href": "http://openstack.example.com/v2/6f70656e737461636b20342065766572/flavors/10",
+                "rel": "self"
+            },
+            {
+                "href": "http://openstack.example.com/6f70656e737461636b20342065766572/flavors/10",
+                "rel": "bookmark"
+            }
+        ],
+        "name": "test_flavor",
+        "ram": 1024,
+        "swap": "",
+        "rxtx_factor": 2.0,
+        "vcpus": 2,
+        "description": "test description",
+        "extra_specs": {}
+    }
+}
