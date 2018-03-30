@@ -141,6 +141,9 @@ class IronicDriver(virt_driver.ComputeDriver):
     # migration has been completed.
     requires_allocation_refresh = True
 
+    # This driver is capable of rebalancing nodes between computes.
+    rebalances_nodes = True
+
     def __init__(self, virtapi, read_only=False):
         super(IronicDriver, self).__init__(virtapi)
         global ironic

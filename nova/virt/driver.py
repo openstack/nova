@@ -134,6 +134,11 @@ class ComputeDriver(object):
 
     requires_allocation_refresh = False
 
+    # Indicates if this driver will rebalance nodes among compute service
+    # hosts. This is really here for ironic and should not be used by any
+    # other driver.
+    rebalances_nodes = False
+
     def __init__(self, virtapi):
         self.virtapi = virtapi
         self._compute_event_callback = None
