@@ -3327,31 +3327,6 @@ def _alloc_candidates_with_shared(ctx, requested_resources, required_traits,
         ns_prov_traits = set(prov_traits.get(ns_rp_id, []))
         missing_traits = set(required_traits) - ns_prov_traits
 
-        # Determine if the non-sharing provider actually has all the
-        # resources requested. If not, we need to add an AllocationRequest
-        # alternative containing this resource for each sharing provider.
-        # NOTE(jaypipes): If a provider has inventory for a resource class and
-        # ALSO has that resource class shared with it, we currently ALWAYS take
-        # the non-shared inventory.
-        # See: https://bugs.launchpad.net/nova/+bug/1724613
-        has_all = len(shared_resources) == 0
-        if has_all:
-            # If this resource provider has all the requested resources, then
-            # require that it must also have ALL required traits.
-            # TODO(jaypipes): This is kind of buggy behaviour. We should be
-            # able to consider permutations of non-sharing providers that have
-            # all the resources but have missing required traits with sharing
-            # providers that have those missing traits.
-            if missing_traits:
-                LOG.debug('Excluding non-sharing provider %s: it has all '
-                          'resources but is missing traits (%s).',
-                          ns_rp_uuid, ', '.join(missing_traits))
-                continue
-            req = _allocation_request_for_provider(ctx, requested_resources,
-                                                   ns_rp_uuid)
-            alloc_requests.append(req)
-            continue
-
         has_none = len(ns_resources) == 0
         if has_none:
             # This resource provider doesn't actually provide any requested
