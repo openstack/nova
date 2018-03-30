@@ -6042,6 +6042,13 @@ class ComputeManager(manager.Manager):
                                        disk,
                                        migrate_data)
         LOG.debug('driver pre_live_migration data is %s', migrate_data)
+        # driver.pre_live_migration is what plugs vifs on the destination host
+        # so now we can set the wait_for_vif_plugged flag in the migrate_data
+        # object which the source compute will use to determine if it should
+        # wait for a 'network-vif-plugged' event from neutron before starting
+        # the actual guest transfer in the hypervisor
+        migrate_data.wait_for_vif_plugged = (
+            CONF.compute.live_migration_wait_for_vif_plug)
 
         # Volume connections are complete, tell cinder that all the
         # attachments have completed.
@@ -6074,6 +6081,51 @@ class ComputeManager(manager.Manager):
         LOG.debug('pre_live_migration result data is %s', migrate_data)
         return migrate_data
 
+    @staticmethod
+    def _neutron_failed_live_migration_callback(event_name, instance):
+        msg = ('Neutron reported failure during live migration '
+               'with %(event)s for instance %(uuid)s')
+        msg_args = {'event': event_name, 'uuid': instance.uuid}
+        if CONF.vif_plugging_is_fatal:
+            raise exception.VirtualInterfacePlugException(msg % msg_args)
+        LOG.error(msg, msg_args)
+
+    @staticmethod
+    def _get_neutron_events_for_live_migration(instance):
+        # We don't generate events if CONF.vif_plugging_timeout=0
+        # meaning that the operator disabled using them.
+        if CONF.vif_plugging_timeout and utils.is_neutron():
+            return [('network-vif-plugged', vif['id'])
+                    for vif in instance.get_network_info()]
+        else:
+            return []
+
+    def _cleanup_pre_live_migration(self, context, dest, instance,
+                                    migration, migrate_data):
+        """Helper method for when pre_live_migration fails
+
+        Sets the migration status to "error" and rolls back the live migration
+        setup on the destination host.
+
+        :param context: The user request context.
+        :type context: nova.context.RequestContext
+        :param dest: The live migration destination hostname.
+        :type dest: str
+        :param instance: The instance being live migrated.
+        :type instance: nova.objects.Instance
+        :param migration: The migration record tracking this live migration.
+        :type migration: nova.objects.Migration
+        :param migrate_data: Data about the live migration, populated from
+                             the destination host.
+        :type migrate_data: Subclass of nova.objects.LiveMigrateData
+        """
+        self._set_migration_status(migration, 'error')
+        # Make sure we set this for _rollback_live_migration()
+        # so it can find it, as expected if it was called later
+        migrate_data.migration = migration
+        self._rollback_live_migration(context, instance, dest,
+                                      migrate_data)
+
     def _do_live_migration(self, context, dest, instance, block_migration,
                            migration, migrate_data):
         # NOTE(danms): We should enhance the RT to account for migrations
@@ -6082,6 +6134,15 @@ class ComputeManager(manager.Manager):
         # reporting
         self._set_migration_status(migration, 'preparing')
 
+        class _BreakWaitForInstanceEvent(Exception):
+            """Used as a signal to stop waiting for the network-vif-plugged
+            event when we discover that
+            [compute]/live_migration_wait_for_vif_plug is not set on the
+            destination.
+            """
+            pass
+
+        events = self._get_neutron_events_for_live_migration(instance)
         try:
             if ('block_migration' in migrate_data and
                     migrate_data.block_migration):
@@ -6092,19 +6153,54 @@ class ComputeManager(manager.Manager):
             else:
                 disk = None
 
-            migrate_data = self.compute_rpcapi.pre_live_migration(
-                context, instance,
-                block_migration, disk, dest, migrate_data)
+            deadline = CONF.vif_plugging_timeout
+            error_cb = self._neutron_failed_live_migration_callback
+            # In order to avoid a race with the vif plugging that the virt
+            # driver does on the destination host, we register our events
+            # to wait for before calling pre_live_migration. Then if the
+            # dest host reports back that we shouldn't wait, we can break
+            # out of the context manager using _BreakWaitForInstanceEvent.
+            with self.virtapi.wait_for_instance_event(
+                    instance, events, deadline=deadline,
+                    error_callback=error_cb):
+                migrate_data = self.compute_rpcapi.pre_live_migration(
+                    context, instance,
+                    block_migration, disk, dest, migrate_data)
+                wait_for_vif_plugged = (
+                    'wait_for_vif_plugged' in migrate_data and
+                    migrate_data.wait_for_vif_plugged)
+                if events and not wait_for_vif_plugged:
+                    raise _BreakWaitForInstanceEvent
+        except _BreakWaitForInstanceEvent:
+            if events:
+                LOG.debug('Not waiting for events after pre_live_migration: '
+                          '%s. ', events, instance=instance)
+            # This is a bit weird, but we need to clear sys.exc_info() so that
+            # oslo.log formatting does not inadvertently use it later if an
+            # error message is logged without an explicit exc_info. This is
+            # only a problem with python 2.
+            if six.PY2:
+                sys.exc_clear()
+        except exception.VirtualInterfacePlugException:
+            with excutils.save_and_reraise_exception():
+                LOG.exception('Failed waiting for network virtual interfaces '
+                              'to be plugged on the destination host %s.',
+                              dest, instance=instance)
+                self._cleanup_pre_live_migration(
+                    context, dest, instance, migration, migrate_data)
+        except eventlet.timeout.Timeout:
+            msg = 'Timed out waiting for events: %s'
+            LOG.warning(msg, events, instance=instance)
+            if CONF.vif_plugging_is_fatal:
+                self._cleanup_pre_live_migration(
+                    context, dest, instance, migration, migrate_data)
+                raise exception.MigrationError(reason=msg % events)
         except Exception:
             with excutils.save_and_reraise_exception():
                 LOG.exception('Pre live migration failed at %s',
                               dest, instance=instance)
-                self._set_migration_status(migration, 'error')
-                # Make sure we set this for _rollback_live_migration()
-                # so it can find it, as expected if it was called later
-                migrate_data.migration = migration
-                self._rollback_live_migration(context, instance, dest,
-                                              migrate_data)
+                self._cleanup_pre_live_migration(
+                    context, dest, instance, migration, migrate_data)
 
         self._set_migration_status(migration, 'running')
 

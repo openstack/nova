@@ -33,6 +33,11 @@ class LiveMigrateData(obj_base.NovaObject):
         # for each volume so they can be restored on a migration rollback. The
         # key is the volume_id, and the value is the attachment_id.
         'old_vol_attachment_ids': fields.DictOfStringsField(),
+        # wait_for_vif_plugged is set in pre_live_migration on the destination
+        # compute host based on the [compute]/live_migration_wait_for_vif_plug
+        # config option value; a default value is not set here since the
+        # default for the config option may change in the future
+        'wait_for_vif_plugged': fields.BooleanField()
     }
 
     def to_legacy_dict(self, pre_migration_result=False):
@@ -127,7 +132,8 @@ class LibvirtLiveMigrateData(LiveMigrateData):
     # Version 1.3: Added 'supported_perf_events'
     # Version 1.4: Added old_vol_attachment_ids
     # Version 1.5: Added src_supports_native_luks
-    VERSION = '1.5'
+    # Version 1.6: Added wait_for_vif_plugged
+    VERSION = '1.6'
 
     fields = {
         'filename': fields.StringField(),
@@ -153,6 +159,8 @@ class LibvirtLiveMigrateData(LiveMigrateData):
         super(LibvirtLiveMigrateData, self).obj_make_compatible(
             primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 6) and 'wait_for_vif_plugged' in primitive:
+            del primitive['wait_for_vif_plugged']
         if target_version < (1, 5):
             if 'src_supports_native_luks' in primitive:
                 del primitive['src_supports_native_luks']
@@ -248,7 +256,8 @@ class XenapiLiveMigrateData(LiveMigrateData):
     # Version 1.0: Initial version
     # Version 1.1: Added vif_uuid_map
     # Version 1.2: Added old_vol_attachment_ids
-    VERSION = '1.2'
+    # Version 1.3: Added wait_for_vif_plugged
+    VERSION = '1.3'
 
     fields = {
         'block_migration': fields.BooleanField(nullable=True),
@@ -300,6 +309,8 @@ class XenapiLiveMigrateData(LiveMigrateData):
         super(XenapiLiveMigrateData, self).obj_make_compatible(
             primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 3) and 'wait_for_vif_plugged' in primitive:
+            del primitive['wait_for_vif_plugged']
         if target_version < (1, 2):
             if 'old_vol_attachment_ids' in primitive:
                 del primitive['old_vol_attachment_ids']
@@ -313,7 +324,8 @@ class HyperVLiveMigrateData(LiveMigrateData):
     # Version 1.0: Initial version
     # Version 1.1: Added is_shared_instance_path
     # Version 1.2: Added old_vol_attachment_ids
-    VERSION = '1.2'
+    # Version 1.3: Added wait_for_vif_plugged
+    VERSION = '1.3'
 
     fields = {'is_shared_instance_path': fields.BooleanField()}
 
@@ -321,6 +333,8 @@ class HyperVLiveMigrateData(LiveMigrateData):
         super(HyperVLiveMigrateData, self).obj_make_compatible(
             primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 3) and 'wait_for_vif_plugged' in primitive:
+            del primitive['wait_for_vif_plugged']
         if target_version < (1, 2):
             if 'old_vol_attachment_ids' in primitive:
                 del primitive['old_vol_attachment_ids']
@@ -346,7 +360,8 @@ class PowerVMLiveMigrateData(LiveMigrateData):
     # Version 1.0: Initial version
     # Version 1.1: Added the Virtual Ethernet Adapter VLAN mappings.
     # Version 1.2: Added old_vol_attachment_ids
-    VERSION = '1.2'
+    # Version 1.3: Added wait_for_vif_plugged
+    VERSION = '1.3'
 
     fields = {
         'host_mig_data': fields.DictOfNullableStringsField(),
@@ -363,6 +378,8 @@ class PowerVMLiveMigrateData(LiveMigrateData):
         super(PowerVMLiveMigrateData, self).obj_make_compatible(
             primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 3) and 'wait_for_vif_plugged' in primitive:
+            del primitive['wait_for_vif_plugged']
         if target_version < (1, 2):
             if 'old_vol_attachment_ids' in primitive:
                 del primitive['old_vol_attachment_ids']

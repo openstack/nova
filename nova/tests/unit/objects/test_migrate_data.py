@@ -75,11 +75,15 @@ class _TestLiveMigrateData(object):
         props = {
             'serial_listen_addr': '127.0.0.1',
             'serial_listen_ports': [1000, 10001, 10002, 10003],
+            'wait_for_vif_plugged': True
         }
 
         obj = migrate_data.LibvirtLiveMigrateData(**props)
         primitive = obj.obj_to_primitive()
         self.assertIn('serial_listen_ports', primitive['nova_object.data'])
+        self.assertIn('wait_for_vif_plugged', primitive['nova_object.data'])
+        obj.obj_make_compatible(primitive['nova_object.data'], '1.5')
+        self.assertNotIn('wait_for_vif_plugged', primitive['nova_object.data'])
         obj.obj_make_compatible(primitive['nova_object.data'], '1.1')
         self.assertNotIn('serial_listen_ports', primitive['nova_object.data'])
 
@@ -362,12 +366,15 @@ class _TestXenapiLiveMigrateData(object):
             migrate_send_data={'key': 'val'},
             sr_uuid_map={'apple': 'banana'},
             vif_uuid_map={'orange': 'lemon'},
-            old_vol_attachment_ids={uuids.volume: uuids.attachment})
+            old_vol_attachment_ids={uuids.volume: uuids.attachment},
+            wait_for_vif_plugged=True)
         primitive = obj.obj_to_primitive('1.0')
         self.assertNotIn('vif_uuid_map', primitive['nova_object.data'])
         primitive2 = obj.obj_to_primitive('1.1')
         self.assertIn('vif_uuid_map', primitive2['nova_object.data'])
         self.assertNotIn('old_vol_attachment_ids', primitive2)
+        primitive3 = obj.obj_to_primitive('1.2')['nova_object.data']
+        self.assertNotIn('wait_for_vif_plugged', primitive3)
 
 
 class TestXenapiLiveMigrateData(test_objects._LocalTest,
@@ -384,7 +391,8 @@ class _TestHyperVLiveMigrateData(object):
     def test_obj_make_compatible(self):
         obj = migrate_data.HyperVLiveMigrateData(
             is_shared_instance_path=True,
-            old_vol_attachment_ids={'yes': 'no'})
+            old_vol_attachment_ids={'yes': 'no'},
+            wait_for_vif_plugged=True)
 
         data = lambda x: x['nova_object.data']
 
@@ -394,6 +402,8 @@ class _TestHyperVLiveMigrateData(object):
         self.assertNotIn('is_shared_instance_path', primitive)
         primitive = data(obj.obj_to_primitive(target_version='1.1'))
         self.assertNotIn('old_vol_attachment_ids', primitive)
+        primitive = data(obj.obj_to_primitive(target_version='1.2'))
+        self.assertNotIn('wait_for_vif_plugged', primitive)
 
     def test_to_legacy_dict(self):
         obj = migrate_data.HyperVLiveMigrateData(
@@ -435,7 +445,8 @@ class _TestPowerVMLiveMigrateData(object):
             dest_proc_compat='POWER7',
             vol_data=dict(three=4),
             vea_vlan_mappings=dict(five=6),
-            old_vol_attachment_ids=dict(seven=8))
+            old_vol_attachment_ids=dict(seven=8),
+            wait_for_vif_plugged=True)
 
     @staticmethod
     def _mk_leg():
@@ -449,6 +460,7 @@ class _TestPowerVMLiveMigrateData(object):
             'vol_data': {'three': '4'},
             'vea_vlan_mappings': {'five': '6'},
             'old_vol_attachment_ids': {'seven': '8'},
+            'wait_for_vif_plugged': True
         }
 
     def test_migrate_data(self):
@@ -468,6 +480,8 @@ class _TestPowerVMLiveMigrateData(object):
         self.assertNotIn('vea_vlan_mappings', primitive)
         primitive = data(obj.obj_to_primitive(target_version='1.1'))
         self.assertNotIn('old_vol_attachment_ids', primitive)
+        primitive = data(obj.obj_to_primitive(target_version='1.2'))
+        self.assertNotIn('wait_for_vif_plugged', primitive)
 
     def test_to_legacy_dict(self):
         self.assertEqual(self._mk_leg(), self._mk_obj().to_legacy_dict())
