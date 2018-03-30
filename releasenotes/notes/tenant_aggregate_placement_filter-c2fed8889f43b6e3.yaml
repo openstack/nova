@@ -1,0 +1,11 @@
+---
+features:
+  - |
+    The scheduler can now use placement to more efficiently query for hosts within a
+    tenant-restricted aggregate. This requires that a host aggregate is created in
+    nova with the ``filter_tenant_id`` key (optionally suffixed with any string for
+    multiple tenants, like ``filter_tenant_id3=$tenantid``) and the same aggregate
+    is created in placement with an identical UUID. The
+    ``[scheduler]/limit_tenants_to_placement_aggregate`` config option enables this
+    behavior and ``[scheduler]/placement_aggregate_required_for_tenants`` makes it
+    either optional or mandatory, allowing only some tenants to be restricted.

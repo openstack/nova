@@ -151,6 +151,34 @@ Number of workers for the nova-scheduler service. The default will be the
 number of CPUs available if using the "filter_scheduler" scheduler driver,
 otherwise the default will be 1.
 """),
+    cfg.BoolOpt("limit_tenants_to_placement_aggregate",
+                default=False,
+                help="""
+This setting causes the scheduler to look up a host aggregate with the
+metadata key of `filter_tenant_id` set to the project of an incoming
+request, and request results from placement be limited to that aggregate.
+Multiple tenants may be added to a single aggregate by appending a serial
+number to the key, such as `filter_tenant_id:123`.
+
+The matching aggregate UUID must be mirrored in placement for proper
+operation. If no host aggregate with the tenant id is found, or that
+aggregate does not match one in placement, the result will be the same
+as not finding any suitable hosts for the request.
+
+See also the placement_aggregate_required_for_tenants option.
+"""),
+    cfg.BoolOpt("placement_aggregate_required_for_tenants",
+                default=False,
+                help="""
+This setting, when limit_tenants_to_placement_aggregate=True, will control
+whether or not a tenant with no aggregate affinity will be allowed to schedule
+to any available node. If aggregates are used to limit some tenants but
+not all, then this should be False. If all tenants should be confined via
+aggregate, then this should be True to prevent them from receiving unrestricted
+scheduling to any available node.
+
+See also the limit_tenants_to_placement_aggregate option.
+"""),
 ]
 
 filter_scheduler_group = cfg.OptGroup(name="filter_scheduler",
