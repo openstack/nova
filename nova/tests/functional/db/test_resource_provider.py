@@ -841,7 +841,6 @@ class TestAllocation(ResourceProviderBaseCase):
                          disk_allocation.used)
         self.assertEqual(DISK_ALLOCATION['consumer_id'],
                          disk_allocation.consumer_id)
-        self.assertIsInstance(disk_allocation.id, int)
 
         allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
             self.ctx, resource_provider.uuid)
@@ -997,12 +996,13 @@ class TestAllocation(ResourceProviderBaseCase):
         allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
             self.ctx, rp.uuid)
         self.assertEqual(1, len(allocations))
-        objects.Allocation._destroy(self.ctx, allocation.id)
+        allocation_id = allocations[0].id
+        objects.Allocation._destroy(self.ctx, allocation_id)
         allocations = objects.AllocationList.get_all_by_resource_provider_uuid(
             self.ctx, rp.uuid)
         self.assertEqual(0, len(allocations))
         self.assertRaises(exception.NotFound, objects.Allocation._destroy,
-                          self.ctx, allocation.id)
+                          self.ctx, allocation_id)
 
     def test_get_allocations_from_db(self):
         rp, allocation = self._make_allocation()
