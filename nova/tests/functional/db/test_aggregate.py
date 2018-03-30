@@ -181,7 +181,7 @@ class AggregateObjectDbTestCase(test.TestCase):
         _create_aggregate(self.context,
                           values={'name': 'aggregate_3'},
                           metadata={'badkey': 'good'})
-        rl1 = aggregate_obj._get_by_metadata_key_from_db(self.context,
+        rl1 = aggregate_obj._get_by_metadata_from_db(self.context,
                                                      key='goodkey')
         self.assertEqual(2, len(rl1))
 
@@ -204,8 +204,8 @@ class AggregateObjectDbTestCase(test.TestCase):
                                                 metadata={'goodkey': 'good'})
         result = aggregate_obj._aggregate_get_from_db(self.context,
                                                       agg.id)
-        md = aggregate_obj._get_by_metadata_key_from_db(self.context,
-                                                        key='goodkey')
+        md = aggregate_obj._get_by_metadata_from_db(self.context,
+                                                    key='goodkey')
         self.assertEqual(len(md), 1)
         self.assertEqual(md[0]['id'], agg.id)
         self.assertEqual(result.name, fake_create_aggregate['name'])
@@ -538,3 +538,26 @@ class AggregateObjectTestCase(test.TestCase):
             result = aggregate_obj.Aggregate.get_by_id(self.context, i)
             compare_obj(self, agg, fake_agg)
             compare_obj(self, result, fake_agg)
+
+    def test_get_by_metadata(self):
+        agg = aggregate_obj.Aggregate.get_by_id(self.context, 1)
+        agg.update_metadata({'foo': 'bar'})
+
+        agg = aggregate_obj.Aggregate.get_by_id(self.context, 2)
+        agg.update_metadata({'foo': 'baz',
+                             'fu': 'bar'})
+
+        aggs = aggregate_obj.AggregateList.get_by_metadata(
+            self.context, key='foo', value='bar')
+        self.assertEqual(1, len(aggs))
+        self.assertEqual(1, aggs[0].id)
+
+        aggs = aggregate_obj.AggregateList.get_by_metadata(
+            self.context, value='bar')
+        self.assertEqual(2, len(aggs))
+        self.assertEqual(set([1, 2]), set([a.id for a in aggs]))
+
+    def test_get_by_metadata_from_db_assertion(self):
+        self.assertRaises(AssertionError,
+                          aggregate_obj._get_by_metadata_from_db,
+                          self.context)
