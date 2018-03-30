@@ -8,4 +8,7 @@ features:
     is created in placement with an identical UUID. The
     ``[scheduler]/limit_tenants_to_placement_aggregate`` config option enables this
     behavior and ``[scheduler]/placement_aggregate_required_for_tenants`` makes it
-    either optional or mandatory, allowing only some tenants to be restricted.
+    either optional or mandatory, allowing only some tenants to be restricted. For
+    more information, see the schedulers section__ of the administration guide.
+
+    __ https://docs.openstack.org/nova/latest/admin/configuration/schedulers.html#aggregates-in-placement
