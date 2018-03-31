@@ -298,7 +298,7 @@ class InstanceEvents(object):
     def _lock_name(instance):
         return '%s-%s' % (instance.uuid, 'events')
 
-    def prepare_for_instance_event(self, instance, event_name):
+    def prepare_for_instance_event(self, instance, name, tag):
         """Prepare to receive an event for an instance.
 
         This will register an event for the given instance that we will
@@ -307,7 +307,8 @@ class InstanceEvents(object):
         object should be wait()'d on to ensure completion.
 
         :param instance: the instance for which the event will be generated
-        :param event_name: the name of the event we're expecting
+        :param name: the name of the event we're expecting
+        :param tag: the tag associated with the event we're expecting
         :returns: an event object that should be wait()'d on
         """
         if self._events is None:
@@ -319,10 +320,10 @@ class InstanceEvents(object):
         @utils.synchronized(self._lock_name(instance))
         def _create_or_get_event():
             instance_events = self._events.setdefault(instance.uuid, {})
-            return instance_events.setdefault(event_name,
+            return instance_events.setdefault((name, tag),
                                               eventlet.event.Event())
-        LOG.debug('Preparing to wait for external event %(event)s',
-                  {'event': event_name}, instance=instance)
+        LOG.debug('Preparing to wait for external event %(name)s-%(tag)s',
+                  {'name': name, 'tag': tag}, instance=instance)
         return _create_or_get_event()
 
     def pop_instance_event(self, instance, event):
@@ -349,7 +350,7 @@ class InstanceEvents(object):
             events = self._events.get(instance.uuid)
             if not events:
                 return no_events_sentinel
-            _event = events.pop(event.key, None)
+            _event = events.pop((event.name, event.tag), None)
             if not events:
                 del self._events[instance.uuid]
             if _event is None:
@@ -386,7 +387,11 @@ class InstanceEvents(object):
                 LOG.debug('Unexpected attempt to clear events during shutdown',
                           instance=instance)
                 return dict()
-            return self._events.pop(instance.uuid, {})
+            # NOTE(danms): We have historically returned the raw internal
+            # format here, which is {event.key: [events, ...])} so just
+            # trivially convert it here.
+            return {'%s-%s' % k: e
+                    for k, e in self._events.pop(instance.uuid, {}).items()}
         return _clear_events()
 
     def cancel_all_events(self):
@@ -398,12 +403,12 @@ class InstanceEvents(object):
         self._events = None
 
         for instance_uuid, events in our_events.items():
-            for event_name, eventlet_event in events.items():
-                LOG.debug('Canceling in-flight event %(event)s for '
+            for (name, tag), eventlet_event in events.items():
+                LOG.debug('Canceling in-flight event %(name)s-%(tag)s for '
                           'instance %(instance_uuid)s',
-                          {'event': event_name,
+                          {'name': name,
+                           'tag': tag,
                            'instance_uuid': instance_uuid})
-                name, tag = event_name.rsplit('-', 1)
                 event = objects.InstanceExternalEvent(
                     instance_uuid=instance_uuid,
                     name=name, status='failed',
@@ -444,9 +449,9 @@ class ComputeVirtAPI(virtapi.VirtAPI):
         or raise an exception which will bubble up to the waiter.
 
         :param instance: The instance for which an event is expected
-        :param event_names: A list of event names. Each element can be a
-                            string event name or tuple of strings to
-                            indicate (name, tag).
+        :param event_names: A list of event names. Each element is a
+                            tuple of strings to indicate (name, tag),
+                            where name is required, but tag may be None.
         :param deadline: Maximum number of seconds we should wait for all
                          of the specified events to arrive.
         :param error_callback: A function to be called if an event arrives
@@ -457,14 +462,12 @@ class ComputeVirtAPI(virtapi.VirtAPI):
             error_callback = self._default_error_callback
         events = {}
         for event_name in event_names:
-            if isinstance(event_name, tuple):
-                name, tag = event_name
-                event_name = objects.InstanceExternalEvent.make_key(
-                    name, tag)
+            name, tag = event_name
+            event_name = objects.InstanceExternalEvent.make_key(name, tag)
             try:
                 events[event_name] = (
                     self._compute.instance_events.prepare_for_instance_event(
-                        instance, event_name))
+                        instance, name, tag))
             except exception.NovaException:
                 error_callback(event_name, instance)
                 # NOTE(danms): Don't wait for any of the events. They

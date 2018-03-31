@@ -10545,8 +10545,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         def fake_recover():
             pass
 
-        def fake_prepare(instance, event_name):
-            ev = mock.MagicMock(instance=instance, event_name=event_name)
+        def fake_prepare(instance, name, tag):
+            ev = mock.MagicMock(instance=instance,
+                                event_name='%s-%s' % (name, tag))
             ev.wait.return_value = mock.MagicMock(status='completed')
             generated_events.append(ev)
             return ev
@@ -10577,7 +10578,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             CONF.libvirt.live_migration_bandwidth)
 
         prepare.assert_has_calls([
-            mock.call(instance, 'network-vif-plugged-%s' % uuids.vif_1)])
+            mock.call(instance, 'network-vif-plugged', uuids.vif_1)])
         for event in generated_events:
             event.wait.assert_called_once_with()
 
@@ -15760,10 +15761,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 event.status = 'completed'
             return event
 
-        def fake_prepare(instance, event_name):
+        def fake_prepare(instance, name, tag):
             m = mock.MagicMock()
             m.instance = instance
-            m.event_name = event_name
+            m.event_name = '%s-%s' % (name, tag)
             m.wait.side_effect = wait_timeout
             generated_events.append(m)
             return m
@@ -15802,8 +15803,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         if utils.is_neutron() and CONF.vif_plugging_timeout and power_on:
             prepare.assert_has_calls([
-                mock.call(instance, 'network-vif-plugged-%s' % uuids.vif_1),
-                mock.call(instance, 'network-vif-plugged-%s' % uuids.vif_2)])
+                mock.call(instance, 'network-vif-plugged', uuids.vif_1),
+                mock.call(instance, 'network-vif-plugged', uuids.vif_2)])
             for event in generated_events:
                 if neutron_failure and generated_events.index(event) != 0:
                     self.assertEqual(0, event.call_count)
