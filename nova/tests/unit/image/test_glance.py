@@ -680,12 +680,11 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
                                                   mock.sentinel.dst_path,
                                                   mock.sentinel.loc_meta)
 
-    @mock.patch.object(six.moves.builtins, 'open')
     @mock.patch('nova.image.glance.GlanceImageServiceV2._get_transfer_module')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
     @mock.patch('nova.image.glance.GlanceImageServiceV2._safe_fsync')
     def test_download_direct_exception_fallback_v2(
-            self, fsync_mock, show_mock, get_tran_mock, open_mock):
+            self, fsync_mock, show_mock, get_tran_mock):
         # Test that we fall back to downloading to the dst_path
         # if the download method of the transfer module raised
         # an exception.
@@ -705,10 +704,12 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         client.call.return_value = fake_glance_response([1, 2, 3])
         ctx = mock.sentinel.ctx
         writer = mock.MagicMock()
-        open_mock.return_value = writer
-        service = glance.GlanceImageServiceV2(client)
-        res = service.download(ctx, mock.sentinel.image_id,
-                               dst_path=mock.sentinel.dst_path)
+
+        with mock.patch.object(six.moves.builtins, 'open') as open_mock:
+            open_mock.return_value = writer
+            service = glance.GlanceImageServiceV2(client)
+            res = service.download(ctx, mock.sentinel.image_id,
+                                   dst_path=mock.sentinel.dst_path)
 
         self.assertIsNone(res)
         show_mock.assert_called_once_with(ctx,
@@ -734,12 +735,11 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
                 ]
         )
 
-    @mock.patch.object(six.moves.builtins, 'open')
     @mock.patch('nova.image.glance.GlanceImageServiceV2._get_transfer_module')
     @mock.patch('nova.image.glance.GlanceImageServiceV2.show')
     @mock.patch('nova.image.glance.GlanceImageServiceV2._safe_fsync')
     def test_download_direct_no_mod_fallback(
-            self, fsync_mock, show_mock, get_tran_mock, open_mock):
+            self, fsync_mock, show_mock, get_tran_mock):
         # Test that we fall back to downloading to the dst_path
         # if no appropriate transfer module is found...
         # an exception.
@@ -757,10 +757,12 @@ class TestDownloadNoDirectUri(test.NoDBTestCase):
         client.call.return_value = fake_glance_response([1, 2, 3])
         ctx = mock.sentinel.ctx
         writer = mock.MagicMock()
-        open_mock.return_value = writer
-        service = glance.GlanceImageServiceV2(client)
-        res = service.download(ctx, mock.sentinel.image_id,
-                               dst_path=mock.sentinel.dst_path)
+
+        with mock.patch.object(six.moves.builtins, 'open') as open_mock:
+            open_mock.return_value = writer
+            service = glance.GlanceImageServiceV2(client)
+            res = service.download(ctx, mock.sentinel.image_id,
+                                   dst_path=mock.sentinel.dst_path)
 
         self.assertIsNone(res)
         show_mock.assert_called_once_with(ctx,
