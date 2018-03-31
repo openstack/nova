@@ -3301,6 +3301,10 @@ def _alloc_candidates_with_shared(ctx, requested_resources, required_traits,
     prov_aggregates = _provider_aggregates(ctx, all_rp_ids)
 
     for ns_rp_id in ns_rp_ids:
+        # Build a dict, keyed by resource class ID, of lists of
+        # AllocationRequestResource objects
+        res_req_dict = collections.defaultdict(list)
+
         if ns_rp_id not in summaries:
             # This resource provider is not providing any resources that have
             # been requested. This means that this resource provider has some
@@ -3319,13 +3323,6 @@ def _alloc_candidates_with_shared(ctx, requested_resources, required_traits,
             rc_id for rc_id in requested_resources
             if _RC_CACHE.string_from_id(rc_id) in ns_resource_class_names
         )
-        shared_resources = set(requested_resources) - ns_resources
-
-        # We need to figure out which traits are NOT provided by the "local"
-        # provider and that would need to be provided by the sharing
-        # provider(s)
-        ns_prov_traits = set(prov_traits.get(ns_rp_id, []))
-        missing_traits = set(required_traits) - ns_prov_traits
 
         has_none = len(ns_resources) == 0
         if has_none:
@@ -3335,18 +3332,16 @@ def _alloc_candidates_with_shared(ctx, requested_resources, required_traits,
             # list it in provider_summaries.
             continue
 
-        # Add an AllocationRequest that includes resources from the
-        # non-sharing provider AND shared resources from each sharing
-        # provider of that resource class. This is where we construct all the
-        # possible permutations of non-shared resources and shared resources.
-        ns_res_requests = [
-            AllocationRequestResource(
-                ctx, resource_provider=ResourceProvider(ctx, uuid=ns_rp_uuid),
-                resource_class=_RC_CACHE.string_from_id(rc_id),
-                amount=amount,
-            ) for rc_id, amount in requested_resources.items()
-            if rc_id in ns_resources
-        ]
+        # Get AllocationRequestResource(s) from the non-sharing provider
+        for rc_id, amount in requested_resources.items():
+            if rc_id not in ns_resources:
+                continue
+            res_req_dict[rc_id].append(
+                AllocationRequestResource(
+                    ctx, resource_provider=ResourceProvider(ctx,
+                                                            uuid=ns_rp_uuid),
+                    resource_class=_RC_CACHE.string_from_id(rc_id),
+                    amount=amount))
 
         # Build a dict, keyed by resource class ID, of lists of
         # AllocationRequestResource objects that represent each
@@ -3355,48 +3350,50 @@ def _alloc_candidates_with_shared(ctx, requested_resources, required_traits,
                                     ctx, ns_rp_id, requested_resources,
                                     sharing, summaries, prov_aggregates)
 
-        # A list of lists of AllocationRequestResource objects for each type of
-        # shared resource class
-        shared_request_groups = [
-            sharing_resource_requests[shared_rc_id]
-            for shared_rc_id in shared_resources
-        ]
-        for shared_res_requests in itertools.product(*shared_request_groups):
-            # Before we add the allocation request to our list, we first need
-            # to ensure that the sharing providers involved in this allocation
-            # request have all of the traits that the non-sharing providers
-            # don't have
-            sharing_prov_ids = set()
-            sharing_traits = set()
-            for shared_res_req in shared_res_requests:
-                sharing_rp_uuid = shared_res_req.resource_provider.uuid
-                shared_rp_id = None
-                for rp_id, summary in summaries.items():
-                    if summary.resource_provider.uuid == sharing_rp_uuid:
-                        shared_rp_id = rp_id
-                        break
-                sharing_prov_ids.add(shared_rp_id)
-                share_prov_traits = prov_traits.get(shared_rp_id, [])
-                sharing_traits |= set(share_prov_traits)
+        # Get AllocationRequestResource(s) from sharing provider(s)
+        for rc_id in sharing_resource_requests:
+            sharing_res_reqs = sharing_resource_requests[rc_id]
+            res_req_dict[rc_id].extend(sharing_res_reqs)
 
-            # Check if there are missing traits with sharing providers
-            still_missing_traits = missing_traits - sharing_traits
-            if still_missing_traits:
-                LOG.debug('Excluding non-sharing provider %s with sharing '
-                          'providers %s: missing traits %s are not satisfied '
-                          'by sharing providers.',
-                          ns_rp_uuid, sharing_prov_ids,
-                          ','.join(still_missing_traits))
+        # Get request_groups, lists of lists of AllocationRequestResource
+        # for each resource class, which makes no distinction between
+        # non-sharing resource providers and sharing resource providers.
+        request_groups = res_req_dict.values()
+
+        # Add an AllocationRequest that includes resources from the
+        # non-sharing provider AND shared resources from each sharing
+        # provider of that resource class. This is where we construct all the
+        # possible permutations of non-shared resources and shared resources.
+        for res_requests in itertools.product(*request_groups):
+            # Before we add the allocation request to our list, we first need
+            # to ensure that the resource providers involved in this allocation
+            # request have all of the traits
+            all_prov_ids = set()
+            all_traits = set()
+            for res_req in res_requests:
+                rp_uuid = res_req.resource_provider.uuid
+                rp_id = None
+                for id, summary in summaries.items():
+                    if summary.resource_provider.uuid == rp_uuid:
+                        rp_id = id
+                        break
+                all_prov_ids.add(rp_id)
+                all_traits |= set(prov_traits.get(rp_id, []))
+
+            # Check if there are missing traits
+            missing_traits = set(required_traits) - all_traits
+            if missing_traits:
+                LOG.debug('Excluding a set of allocation candidate %s : '
+                          'missing traits %s are not satisfied.',
+                          all_prov_ids, ','.join(missing_traits))
                 continue
 
             # Check if we already have this combination in alloc_requests
-            prov_ids = set([ns_rp_id]) | sharing_prov_ids
-            if prov_ids in alloc_prov_ids:
+            if all_prov_ids in alloc_prov_ids:
                 continue
 
-            alloc_prov_ids.append(prov_ids)
-            resource_requests = ns_res_requests + list(shared_res_requests)
-            req = AllocationRequest(ctx, resource_requests=resource_requests)
+            alloc_prov_ids.append(all_prov_ids)
+            req = AllocationRequest(ctx, resource_requests=list(res_requests))
             alloc_requests.append(req)
 
     # The process above may have removed some previously-identified resource
