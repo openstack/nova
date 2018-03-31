@@ -15906,10 +15906,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 event.status = 'completed'
             return event
 
-        def fake_prepare(instance, event_name):
+        def fake_prepare(instance, name, tag):
             m = mock.MagicMock()
             m.instance = instance
-            m.event_name = event_name
+            m.event_name = '%s-%s' % (name, tag)
             m.wait.side_effect = wait_timeout
             generated_events.append(m)
             return m
@@ -15948,8 +15948,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         if utils.is_neutron() and CONF.vif_plugging_timeout and power_on:
             prepare.assert_has_calls([
-                mock.call(instance, 'network-vif-plugged-vif1'),
-                mock.call(instance, 'network-vif-plugged-vif2')])
+                mock.call(instance, 'network-vif-plugged', vifs[0]['id']),
+                mock.call(instance, 'network-vif-plugged', vifs[1]['id'])])
             for event in generated_events:
                 if neutron_failure and generated_events.index(event) != 0:
                     self.assertEqual(0, event.call_count)
