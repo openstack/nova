@@ -116,10 +116,14 @@ def _transform_allocation_requests_list(alloc_reqs):
     return results
 
 
-def _transform_provider_summaries(p_sums, include_traits=False):
+def _transform_provider_summaries(p_sums, requests, include_traits=False,
+                                  include_all_resources=False):
     """Turn supplied list of ProviderSummary objects into a dict, keyed by
-    resource provider UUID, of dicts of provider and inventory information. The
-    traits only show up when `include_traits` is `True`.
+    resource provider UUID, of dicts of provider and inventory information.
+    The traits only show up when `include_traits` is `True`.
+    When `include_all_resources` is `True`, all the resource classes are
+    shown while only requested resources are included in the
+    `provider_summaries` when `include_all_resources` is `False`.
 
     {
        RP_UUID_1: {
@@ -158,13 +162,21 @@ def _transform_provider_summaries(p_sums, include_traits=False):
     """
 
     ret = {}
+    requested_resources = set()
 
+    for requested_group in requests.values():
+        requested_resources |= set(requested_group.resources.keys())
+
+    # if include_all_resources is false, only requested resources are
+    # included in the provider_summaries.
     for ps in p_sums:
         resources = {
             psr.resource_class: {
                 'capacity': psr.capacity,
                 'used': psr.used,
-            } for psr in ps.resources
+            } for psr in ps.resources if (
+                include_all_resources or
+                psr.resource_class in requested_resources)
         }
 
         ret[ps.resource_provider.uuid] = {'resources': resources}
@@ -176,7 +188,7 @@ def _transform_provider_summaries(p_sums, include_traits=False):
     return ret
 
 
-def _transform_allocation_candidates(alloc_cands, want_version):
+def _transform_allocation_candidates(alloc_cands, requests, want_version):
     """Turn supplied AllocationCandidates object into a dict containing
     allocation requests and provider summaries.
 
@@ -193,8 +205,11 @@ def _transform_allocation_candidates(alloc_cands, want_version):
             alloc_cands.allocation_requests)
 
     include_traits = want_version.matches((1, 17))
-    p_sums = _transform_provider_summaries(alloc_cands.provider_summaries,
-                                           include_traits=include_traits)
+    include_all_resources = want_version.matches((1, 27))
+    p_sums = _transform_provider_summaries(
+        alloc_cands.provider_summaries, requests,
+        include_traits=include_traits,
+        include_all_resources=include_all_resources)
     return {
         'allocation_requests': a_reqs,
         'provider_summaries': p_sums,
@@ -255,7 +270,7 @@ def list_allocation_candidates(req):
         raise webob.exc.HTTPBadRequest(six.text_type(exc))
 
     response = req.response
-    trx_cands = _transform_allocation_candidates(cands, want_version)
+    trx_cands = _transform_allocation_candidates(cands, requests, want_version)
     json_data = jsonutils.dumps(trx_cands)
     response.body = encodeutils.to_utf8(json_data)
     response.content_type = 'application/json'

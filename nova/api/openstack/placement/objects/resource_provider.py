@@ -3684,45 +3684,16 @@ def _merge_candidates(candidates, group_policy=None):
 
     # Now we have to produce provider summaries.  The provider summaries in
     # the candidates input contain all the information; we just need to
-    # filter it down to only the providers and resource classes* in our
-    # merged list of allocation requests.
-    # *With blueprint placement-return-all-resources, all resource classes
-    # should be included, so that condition will need to be removed either
-    # here or there, depending which lands first.
-    # To make this easier, first index all our allocation requests as a
-    # dict, keyed by resource provider UUID, of sets of resource class
-    # names.
-    rcs_by_rp = collections.defaultdict(set)
+    # filter it down to only the providers in our merged list of allocation
+    # requests.
+    rps_in_areq = set()
     for areq in areqs:
         for arr in areq.resource_requests:
-            rcs_by_rp[arr.resource_provider.uuid].add(arr.resource_class)
-    # Now walk the input candidates' provider summaries, building a dict,
-    # keyed by resource provider UUID, of ProviderSummary representing
-    # that provider, and including any of its resource classes found in the
-    # index we built from our allocation requests above*.
-    # *See above.
-    psums_by_rp = {}
-    for psum in all_psums:
-        rp_uuid = psum.resource_provider.uuid
-        # If everything from this provider was filtered out, don't add an
-        # (empty) entry for it.
-        if rp_uuid not in rcs_by_rp:
-            continue
-        if rp_uuid not in psums_by_rp:
-            psums_by_rp[rp_uuid] = ProviderSummary(
-                resource_provider=psum.resource_provider, resources=[],
-                # Should always be the same; no need to check/update below.
-                traits=psum.traits)
-        # NOTE(efried): To subsume blueprint placement-return-all-resources
-        # replace this loop with:
-        # psums_by_rp[rp_uuid].resources = psum.resources
-        resources = set(psums_by_rp[rp_uuid].resources)
-        for psumres in psum.resources:
-            if psumres.resource_class in rcs_by_rp[rp_uuid]:
-                resources.add(psumres)
-        psums_by_rp[rp_uuid].resources = list(resources)
+            rps_in_areq.add(arr.resource_provider.uuid)
+    psums = [psum for psum in all_psums if
+                psum.resource_provider.uuid in rps_in_areq]
 
-    return areqs, list(psums_by_rp.values())
+    return areqs, psums
 
 
 @base.VersionedObjectRegistry.register_if(False)

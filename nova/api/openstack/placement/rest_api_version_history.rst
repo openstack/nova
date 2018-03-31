@@ -329,3 +329,10 @@ non-sharing tree or associated via the specified aggregate(s).
 
 Starting with this version, it is allowed to set the reserved value of the
 resource provider inventory to be equal to total.
+
+1.27 Include all resource class inventories in provider_summaries
+-----------------------------------------------------------------
+
+Include all resource class inventories in the ``provider_summaries`` field in
+response of the ``GET /allocation_candidates`` API even if the resource class
+is not in the requested resources.

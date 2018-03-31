@@ -399,12 +399,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         expected = {
             'cn1': set([
                 (fields.ResourceClass.VCPU, 8, 0),
-                # TODO(tetsuro) - Bug#1760276: provider_summaries should
-                # include all the resources that the resource provider has,
-                # but currently it includes only resources that are requested.
-                #
-                # (fields.ResourceClass.MEMORY_MB, 2048, 0),
-                # (fields.ResourceClass.DISK_GB, 2000, 0),
+                (fields.ResourceClass.MEMORY_MB, 2048, 0),
+                (fields.ResourceClass.DISK_GB, 2000, 0)
             ]),
         }
         self._validate_provider_summary_resources(expected, alloc_cands)
@@ -1104,6 +1100,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             'cn': set([
                 (fields.ResourceClass.VCPU, 24, 0),
                 (fields.ResourceClass.MEMORY_MB, 2048, 0),
+                (fields.ResourceClass.DISK_GB, 1600, 0),
             ]),
             'ss': set([
                 (fields.ResourceClass.DISK_GB, 2000, 0),
@@ -1154,10 +1151,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             'cn': set([
                 (fields.ResourceClass.VCPU, 24, 0),
                 (fields.ResourceClass.MEMORY_MB, 2048, 0),
-                # NOTE(efried): We don't (yet) populate provider summaries with
-                # provider resources that aren't part of the result. With
-                # blueprint placement-return-all-requests, uncomment this line:
-                # (fields.ResourceClass.DISK_GB, 1600, 0),
+                (fields.ResourceClass.DISK_GB, 1600, 0),
             ]),
             'ss': set([
                 (fields.ResourceClass.DISK_GB, 1600, 0),
@@ -1370,10 +1364,12 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         expected = {
             'cn1': set([
-                (fields.ResourceClass.VCPU, 24, 0)
+                (fields.ResourceClass.VCPU, 24, 0),
+                (fields.ResourceClass.MEMORY_MB, 2048, 0),
             ]),
             'cn2': set([
-                (fields.ResourceClass.VCPU, 24, 0)
+                (fields.ResourceClass.VCPU, 24, 0),
+                (fields.ResourceClass.MEMORY_MB, 2048, 0),
             ]),
             'ss1': set([
                 (fields.ResourceClass.DISK_GB, 1600, 0),
@@ -1434,9 +1430,11 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         expected = {
             'cn1': set([
                 (fields.ResourceClass.VCPU, 24, 0),
+                (fields.ResourceClass.MEMORY_MB, 2048, 0),
             ]),
             'cn2': set([
                 (fields.ResourceClass.VCPU, 24, 0),
+                (fields.ResourceClass.MEMORY_MB, 2048, 0),
             ]),
             'ss1': set([
                 (fields.ResourceClass.DISK_GB, 1600, 0),

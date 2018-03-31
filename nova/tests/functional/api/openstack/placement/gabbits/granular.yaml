@@ -167,6 +167,9 @@ tests:
           MEMORY_MB:
             capacity: 4096
             used: 0
+          DISK_GB:
+            capacity: 500
+            used: 0
       $.provider_summaries["$ENVIRON['CN_MIDDLE']"].resources:
           VCPU:
             capacity: 8

@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    From microversion 1.27, the ``provider_summaries`` field in the
+    response of the ``GET /allocation_candidates`` API includes all
+    the resource class inventories, while it had only requested
+    resource class inventories with older microversions.
+    Now callers can use this additional inventory information in
+    making further sorting or filtering decisions.

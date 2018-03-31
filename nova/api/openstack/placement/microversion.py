@@ -70,6 +70,9 @@ VERSIONS = [
              # querystring groups in GET /allocation_candidates
     '1.26',  # Add ability to specify inventory with reserved value equal to
              # total.
+    '1.27',  # Include all resource class inventories in `provider_summaries`
+             # field in response of `GET /allocation_candidates` API even if
+             # the resource class is not in the requested resources.
 ]
 
 

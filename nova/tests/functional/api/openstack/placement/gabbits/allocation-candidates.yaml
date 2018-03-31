@@ -277,13 +277,51 @@ tests:
       $.allocation_requests.`len`: 0
       $.provider_summaries.`len`: 0
 
-# Bug#1760276: provider_summaries should include all the resources that the
-# resource provider has, ut currently it includes only resources that are requested.
+# Before microversion 1.27, the ``provider_summaries`` field in the response
+# of the ``GET /allocation_candidates`` API included inventories of resource
+# classes that are requested.
 - name: get allocation candidates provider summaries with requested resource
   GET: /allocation_candidates?resources=VCPU:1
   status: 200
+  request_headers:
+      openstack-api-version: placement 1.26
   response_json_paths:
       $.allocation_requests.`len`: 2
       $.provider_summaries.`len`: 2
       $.provider_summaries["$ENVIRON['CN1_UUID']"].resources.`len`: 1
+      $.provider_summaries["$ENVIRON['CN1_UUID']"].resources:
+        VCPU:
+          capacity: 384 # 16.0 * 24
+          used: 0
       $.provider_summaries["$ENVIRON['CN2_UUID']"].resources.`len`: 1
+      $.provider_summaries["$ENVIRON['CN2_UUID']"].resources:
+        VCPU:
+          capacity: 384 # 16.0 * 24
+          used: 0
+
+# From microversion 1.27, the ``provider_summaries`` field includes
+# all the resource class inventories regardless of whether it is requested.
+- name: get allocation candidates provider summaries with all resources
+  GET: /allocation_candidates?resources=VCPU:1
+  status: 200
+  request_headers:
+      openstack-api-version: placement 1.27
+  response_json_paths:
+      $.allocation_requests.`len`: 2
+      $.provider_summaries.`len`: 2
+      $.provider_summaries["$ENVIRON['CN1_UUID']"].resources.`len`: 2
+      $.provider_summaries["$ENVIRON['CN1_UUID']"].resources:
+        VCPU:
+          capacity: 384 # 16.0 * 24
+          used: 0
+        MEMORY_MB:
+          capacity: 196608 # 1.5 * 128G
+          used: 0
+      $.provider_summaries["$ENVIRON['CN2_UUID']"].resources.`len`: 2
+      $.provider_summaries["$ENVIRON['CN2_UUID']"].resources:
+        VCPU:
+          capacity: 384 # 16.0 * 24
+          used: 0
+        MEMORY_MB:
+          capacity: 196608 # 1.5 * 128G
+          used: 0
