@@ -247,3 +247,14 @@ tests:
   response_json_paths:
       $.allocation_requests.`len`: 0
       $.provider_summaries.`len`: 0
+
+# Bug#1760276: provider_summaries should include all the resources that the
+# resource provider has, ut currently it includes only resources that are requested.
+- name: get allocation candidates provider summaries with requested resource
+  GET: /allocation_candidates?resources=VCPU:1
+  status: 200
+  response_json_paths:
+      $.allocation_requests.`len`: 2
+      $.provider_summaries.`len`: 2
+      $.provider_summaries["$ENVIRON['CN1_UUID']"].resources.`len`: 1
+      $.provider_summaries["$ENVIRON['CN2_UUID']"].resources.`len`: 1
