@@ -3238,10 +3238,10 @@ def _alloc_candidates_with_shared(ctx, requested_resources, required_traits,
     """Returns a tuple of (allocation requests, provider summaries) for a
     supplied set of requested resource amounts and resource providers.
 
-    The allocation requests will contain resource providers that EITHER have
-    all the resources to satisfy each requested resource amount OR can satisfy
-    some of the requested resources AND are associated by aggregate to a
-    resource provider that shares the missing resources with it.
+    The allocation requests will contain BOTH resource providers that locally
+    have all the resources to satisfy each requested resource amount AND
+    combinations of resource providers and shared providers in same aggregate
+    that can collectively satisfy requested resource.
 
     :param ctx: nova.context.RequestContext object
     :param requested_resources: dict, keyed by resource class ID, of amounts
@@ -3256,7 +3256,7 @@ def _alloc_candidates_with_shared(ctx, requested_resources, required_traits,
                       resources. In other words, this is the list of resource
                       provider IDs for all providers that are NOT sharing a
                       resource.
-    :param sharing: dict, keyed by resource class ID, of a set of resource
+    :param sharing: dict, keyed by resource class ID, of a list of resource
                     provider IDs that share that resource class
     """
     # We need to grab usage information for all the providers identified as
