@@ -34,8 +34,8 @@ of all filters are merged with a boolean `AND`.
   - uuid: resource_provider_uuid_query
   - member_of: member_of
   - resources: resources_query
-  - required: resource_provider_required_query
   - in_tree: resource_provider_tree_query
+  - required: resource_provider_required_query
 
 Response
 --------
@@ -106,7 +106,7 @@ Response (microversions 1.20 - )
   - uuid: resource_provider_uuid
   - links: resource_provider_links_v1_20
   - name: resource_provider_name
-  - parent_provider_uuid: resource_provider_parent_provider_uuid
+  - parent_provider_uuid: resource_provider_parent_provider_uuid_required
   - root_provider_uuid: resource_provider_root_provider_uuid_no_min
 
 Response Example (microversions 1.20 - )
