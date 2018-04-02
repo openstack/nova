@@ -65,7 +65,7 @@ SESSION_CONFIGURED = False
 class ServiceFixture(fixtures.Fixture):
     """Run a service as a test fixture."""
 
-    def __init__(self, name, host=None, **kwargs):
+    def __init__(self, name, host=None, cell=None, **kwargs):
         name = name
         # If not otherwise specified, the host will default to the
         # name of the service. Some things like aggregates care that
@@ -73,12 +73,18 @@ class ServiceFixture(fixtures.Fixture):
         host = host or name
         kwargs.setdefault('host', host)
         kwargs.setdefault('binary', 'nova-%s' % name)
+        self.cell = cell
         self.kwargs = kwargs
 
     def setUp(self):
         super(ServiceFixture, self).setUp()
-        self.service = service.Service.create(**self.kwargs)
-        self.service.start()
+        self.ctxt = context.get_admin_context()
+        if self.cell:
+            context.set_target_cell(self.ctxt, self.cell)
+        with mock.patch('nova.context.get_admin_context',
+                        return_value=self.ctxt):
+            self.service = service.Service.create(**self.kwargs)
+            self.service.start()
         self.addCleanup(self.service.kill)
 
 
