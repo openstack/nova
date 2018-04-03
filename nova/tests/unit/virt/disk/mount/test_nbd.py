@@ -155,22 +155,23 @@ class NbdTestCase(test.NoDBTestCase):
         self.assertTrue(n.error.startswith('qemu-nbd error'))
 
     @mock.patch('random.shuffle')
-    @mock.patch('os.path.exists', side_effect=[True, False, False, False,
-                                               False, False, False, False])
     @mock.patch('os.listdir', return_value=['nbd0', 'nbd1', 'loop0'])
     @mock.patch('nova.privsep.fs.nbd_connect', return_value=('', ''))
     @mock.patch('nova.privsep.fs.nbd_disconnect', return_value=('', ''))
     @mock.patch('time.sleep')
     def test_inner_get_dev_qemu_timeout(self, mock_sleep, mock_nbd_disconnct,
-                                        mock_nbd_connect, mock_exists,
-                                        mock_listdir, mock_shuffle):
+                                        mock_nbd_connect, mock_listdir,
+                                        mock_shuffle):
         self.flags(timeout_nbd=3)
         tempdir = self.useFixture(fixtures.TempDir()).path
-        n = nbd.NbdMount(self.file, tempdir)
 
-        # Error logged, no device consumed
-        self.assertFalse(n._inner_get_dev())
-        self.assertTrue(n.error.endswith('did not show up'))
+        with mock.patch('os.path.exists', side_effect=[
+                    True, False, False, False, False, False, False, False]):
+            n = nbd.NbdMount(self.file, tempdir)
+
+            # Error logged, no device consumed
+            self.assertFalse(n._inner_get_dev())
+            self.assertTrue(n.error.endswith('did not show up'))
 
     @mock.patch('random.shuffle')
     @mock.patch('os.path.exists', side_effect=[True, False, False, False,
