@@ -78,6 +78,27 @@ class HostManagerTestCase(test.NoDBTestCase):
         filters = self.host_manager._load_filters()
         self.assertEqual(filters, ['FakeFilterClass1'])
 
+    def test_load_cells_except_cell0(self):
+        ctxt = nova_context.RequestContext('fake-user', 'fake_project')
+        self.assertIsNone(self.host_manager.cells)
+        self.host_manager._load_cells(ctxt)
+        # Loading the non-cell0 mapping from the base test class.
+        self.assertEqual(1, len(self.host_manager.cells))
+        self.host_manager.cells = None
+        cell_uuid0 = objects.CellMapping.CELL0_UUID
+        cell_mapping0 = objects.CellMapping(context=ctxt,
+                                            uuid=cell_uuid0,
+                                            database_connection='fake:///db1',
+                                            transport_url='fake:///mq1')
+        cells = objects.CellMappingList(cell_mapping0)
+        # Mocking the return value of get_all cell_mappings to return only
+        # the cell0 mapping to check if load_cells() filters it or not.
+        with mock.patch('nova.objects.CellMappingList.get_all',
+                        return_value=cells) as mock_cm:
+            self.host_manager._load_cells(ctxt)
+            mock_cm.assert_called_once_with(ctxt)
+        self.assertEqual(0, len(self.host_manager.cells))
+
     @mock.patch.object(nova.objects.InstanceList, 'get_by_filters')
     @mock.patch.object(nova.objects.ComputeNodeList, 'get_all')
     def test_init_instance_info_batches(self, mock_get_all,
