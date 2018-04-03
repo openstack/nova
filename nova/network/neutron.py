@@ -3112,7 +3112,8 @@ class API:
         elif vif_type == network_model.VIF_TYPE_DVS:
             # The name of the DVS port group will contain the neutron
             # network id
-            bridge = port['network_id']
+            bridge = port_details.get(network_model.VIF_DETAILS_BRIDGE_NAME,
+                                      port['network_id'])
         elif (vif_type == network_model.VIF_TYPE_VHOSTUSER and
          port_details.get(network_model.VIF_DETAILS_VHOSTUSER_OVS_PLUG,
                           False)):
