@@ -1549,7 +1549,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # NOTE(lyarwood): https://bugzilla.redhat.com/show_bug.cgi?id=760547
         encryption = self._get_volume_encryption(context, old_connection_info)
         if encryption and self._use_native_luks(encryption):
-            raise NotImplementedError(_("Swap volume is not supported for"
+            raise NotImplementedError(_("Swap volume is not supported for "
                 "encrypted volumes when native LUKS decryption is enabled."))
 
         guest = self._host.get_guest(instance)
