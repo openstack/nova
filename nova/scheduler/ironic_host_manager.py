@@ -117,7 +117,6 @@ class IronicHostManager(host_manager.HostManager):
     def _init_instance_info(self, computes_by_cell=None):
         """Ironic hosts should not pass instance info."""
         context = context_module.RequestContext()
-        self._load_cells(context)
         if not computes_by_cell:
             computes_by_cell = {}
             for cell in self.cells:

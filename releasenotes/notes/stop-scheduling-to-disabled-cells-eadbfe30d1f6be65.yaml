@@ -1,0 +1,16 @@
+---
+features:
+  - |
+    Support for filtering out disabled cells during scheduling for server
+    create requests has been added. Firstly the concept of disabled
+    cells has been introduced which means such disabled cells will not be
+    candidates for the scheduler. Secondly changes have been made to the filter
+    scheduler to ensure that it chooses only the enabled cells for scheduling
+    and filters out the disabled ones. Note that operations on existing
+    instances already inside a disabled cell like move operations will not be
+    blocked.
+upgrade:
+  - |
+    If the scheduler service is started before the cell mappings are created or
+    setup, nova-scheduler needs to be restarted or SIGHUP-ed for the newly
+    added cells to get registered in the scheduler cache.

@@ -82,6 +82,13 @@ class SchedulerManager(manager.Manager):
     def _run_periodic_tasks(self, context):
         self.driver.run_periodic_tasks(context)
 
+    def reset(self):
+        # NOTE(tssurya): This is a SIGHUP handler which will reset the cells
+        # and enabled cells caches in the host manager. So every time an
+        # existing cell is disabled or enabled or a new cell is created, a
+        # SIGHUP signal has to be sent to the scheduler for proper scheduling.
+        self.driver.host_manager.refresh_cells_caches()
+
     @messaging.expected_exceptions(exception.NoValidHost)
     def select_destinations(self, ctxt, request_spec=None,
             filter_properties=None, spec_obj=_sentinel, instance_uuids=None,

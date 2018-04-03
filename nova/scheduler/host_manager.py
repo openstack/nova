@@ -340,7 +340,7 @@ class HostManager(object):
         return HostState(host, node, cell)
 
     def __init__(self):
-        self.cells = None
+        self.refresh_cells_caches()
         self.filter_handler = filters.HostFilterHandler()
         filter_classes = self.filter_handler.get_matching_classes(
                 CONF.filter_scheduler.available_filters)
@@ -417,7 +417,6 @@ class HostManager(object):
 
         def _async_init_instance_info(computes_by_cell):
             context = context_module.RequestContext()
-            self._load_cells(context)
             LOG.debug("START:_async_init_instance_info")
             self._instance_info = {}
 
@@ -633,25 +632,41 @@ class HostManager(object):
                              include_disabled=True)})
         return compute_nodes, services
 
-    def _load_cells(self, context):
-        if not self.cells:
-            temp_cells = objects.CellMappingList.get_all(context)
-            # NOTE(tssurya): filtering cell0 from the list since it need
-            # not be considered for scheduling.
-            for c in temp_cells:
-                if c.is_cell0():
-                    temp_cells.objects.remove(c)
-                    # once its done break for optimization
-                    break
-            # NOTE(danms): global list of cells cached forever right now
-            self.cells = temp_cells
-            LOG.debug('Found %(count)i cells: %(cells)s',
-                      {'count': len(self.cells),
-                       'cells': ', '.join([c.uuid for c in self.cells])})
+    def refresh_cells_caches(self):
+        # NOTE(tssurya): This function is called from the scheduler manager's
+        # reset signal handler and also upon startup of the scheduler.
+        context = context_module.RequestContext()
+        temp_cells = objects.CellMappingList.get_all(context)
+        # NOTE(tssurya): filtering cell0 from the list since it need
+        # not be considered for scheduling.
+        for c in temp_cells:
+            if c.is_cell0():
+                temp_cells.objects.remove(c)
+                # once its done break for optimization
+                break
+        # NOTE(danms, tssurya): global list of cells cached which
+        # will be refreshed every time a SIGHUP is sent to the scheduler.
+        self.cells = temp_cells
+        LOG.debug('Found %(count)i cells: %(cells)s',
+                  {'count': len(self.cells),
+                   'cells': ', '.join([c.uuid for c in self.cells])})
+        # NOTE(tssurya): Global cache of only the enabled cells. This way
+        # scheduling is limited only to the enabled cells. However this
+        # cache will be refreshed every time a cell is disabled or enabled
+        # or when a new cell is created as long as a SIGHUP signal is sent
+        # to the scheduler.
+        self.enabled_cells = [c for c in self.cells if not c.disabled]
+        # Filtering the disabled cells only for logging purposes.
+        disabled_cells = [c for c in self.cells if c.disabled]
+        LOG.debug('Found %(count)i disabled cells: %(cells)s',
+                  {'count': len(disabled_cells),
+                   'cells': ', '.join(
+                   [c.identity for c in disabled_cells])})
 
     def get_host_states_by_uuids(self, context, compute_uuids, spec_obj):
 
-        self._load_cells(context)
+        if not self.cells:
+            LOG.warning("No cells were found")
         if (spec_obj and 'requested_destination' in spec_obj and
                 spec_obj.requested_destination and
                 'cell' in spec_obj.requested_destination):
@@ -662,7 +677,7 @@ class HostManager(object):
         if only_cell:
             cells = [only_cell]
         else:
-            cells = self.cells
+            cells = self.enabled_cells
 
         compute_nodes, services = self._get_computes_for_cells(
             context, cells, compute_uuids=compute_uuids)
@@ -673,7 +688,6 @@ class HostManager(object):
         the HostManager knows about. Also, each of the consumable resources
         in HostState are pre-populated and adjusted based on data in the db.
         """
-        self._load_cells(context)
         compute_nodes, services = self._get_computes_for_cells(context,
                                                                self.cells)
         return self._get_host_states(context, compute_nodes, services)

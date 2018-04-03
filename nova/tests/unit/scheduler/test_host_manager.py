@@ -78,13 +78,44 @@ class HostManagerTestCase(test.NoDBTestCase):
         filters = self.host_manager._load_filters()
         self.assertEqual(filters, ['FakeFilterClass1'])
 
-    def test_load_cells_except_cell0(self):
-        ctxt = nova_context.RequestContext('fake-user', 'fake_project')
-        self.assertIsNone(self.host_manager.cells)
-        self.host_manager._load_cells(ctxt)
+    def test_refresh_cells_caches(self):
+        ctxt = nova_context.RequestContext('fake', 'fake')
         # Loading the non-cell0 mapping from the base test class.
+        self.assertEqual(1, len(self.host_manager.enabled_cells))
         self.assertEqual(1, len(self.host_manager.cells))
-        self.host_manager.cells = None
+        # Creating cell mappings for mocking the list of cell_mappings obtained
+        # so that the refreshing mechanism can be properly tested. This will in
+        # turn ignore the loaded cell mapping from the base test case setup.
+        cell_uuid1 = uuids.cell1
+        cell_mapping1 = objects.CellMapping(context=ctxt,
+                                            uuid=cell_uuid1,
+                                            database_connection='fake:///db1',
+                                            transport_url='fake:///mq1',
+                                            disabled=False)
+        cell_uuid2 = uuids.cell2
+        cell_mapping2 = objects.CellMapping(context=ctxt,
+                                            uuid=cell_uuid2,
+                                            database_connection='fake:///db2',
+                                            transport_url='fake:///mq2',
+                                            disabled=True)
+        cell_uuid3 = uuids.cell3
+        cell_mapping3 = objects.CellMapping(context=ctxt,
+                                            uuid=cell_uuid3,
+                                            database_connection='fake:///db3',
+                                            transport_url='fake:///mq3',
+                                            disabled=False)
+        cells = [cell_mapping1, cell_mapping2, cell_mapping3]
+        with mock.patch('nova.objects.CellMappingList.get_all',
+                        return_value=cells) as mock_cm:
+            self.host_manager.refresh_cells_caches()
+            mock_cm.assert_called_once()
+        self.assertEqual(2, len(self.host_manager.enabled_cells))
+        self.assertEqual(cell_uuid3, self.host_manager.enabled_cells[1].uuid)
+        self.assertEqual(3, len(self.host_manager.cells))
+        self.assertEqual(cell_uuid2, self.host_manager.cells[1].uuid)
+
+    def test_refresh_cells_caches_except_cell0(self):
+        ctxt = nova_context.RequestContext('fake-user', 'fake_project')
         cell_uuid0 = objects.CellMapping.CELL0_UUID
         cell_mapping0 = objects.CellMapping(context=ctxt,
                                             uuid=cell_uuid0,
@@ -92,11 +123,11 @@ class HostManagerTestCase(test.NoDBTestCase):
                                             transport_url='fake:///mq1')
         cells = objects.CellMappingList(cell_mapping0)
         # Mocking the return value of get_all cell_mappings to return only
-        # the cell0 mapping to check if load_cells() filters it or not.
+        # the cell0 mapping to check if its filtered or not.
         with mock.patch('nova.objects.CellMappingList.get_all',
                         return_value=cells) as mock_cm:
-            self.host_manager._load_cells(ctxt)
-            mock_cm.assert_called_once_with(ctxt)
+            self.host_manager.refresh_cells_caches()
+            mock_cm.assert_called_once()
         self.assertEqual(0, len(self.host_manager.cells))
 
     @mock.patch.object(nova.objects.InstanceList, 'get_by_filters')
