@@ -80,9 +80,8 @@ same time.
 
 #. During maintenance window:
 
-   * Several nova services rely on the external placement service, and while
-     efforts are made for the nova code to work with older versions of the
-     placement API, it is generally best to upgrade placement before any nova
+   * Several nova services rely on the external placement service being at the
+     latest level. Therefore, you must upgrade placement before any nova
      services. See the
      :ref:`placement upgrade notes <placement-upgrade-notes>` for more
      details on upgrading the placement service.
