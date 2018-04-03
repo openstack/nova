@@ -1,0 +1,18 @@
+---
+features:
+  - |
+    The libvirt driver now supports additional Cinder front-end
+    QoS specs, allowing the specification of additional IO
+    burst limits applied for each attached disk, individually.
+
+    - quota:read_bytes_sec_max
+    - quota:write_bytes_sec_max
+    - quota:total_bytes_sec_max
+    - quota:read_iops_sec_max
+    - quota:write_iops_sec_max
+    - quota:total_iops_sec_max
+    - quota:size_iops_sec
+
+    For more information, see the Cinder admin guide:
+
+    https://docs.openstack.org/cinder/latest/admin/blockstorage-basic-volume-qos.html

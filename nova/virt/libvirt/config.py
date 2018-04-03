@@ -707,6 +707,13 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         self.disk_write_iops_sec = None
         self.disk_total_bytes_sec = None
         self.disk_total_iops_sec = None
+        self.disk_read_bytes_sec_max = None
+        self.disk_write_bytes_sec_max = None
+        self.disk_total_bytes_sec_max = None
+        self.disk_read_iops_sec_max = None
+        self.disk_write_iops_sec_max = None
+        self.disk_total_iops_sec_max = None
+        self.disk_size_iops_sec = None
         self.logical_block_size = None
         self.physical_block_size = None
         self.readonly = False
@@ -717,6 +724,64 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         self.boot_order = None
         self.mirror = None
         self.encryption = None
+
+    def _format_iotune(self, dev):
+        iotune = etree.Element("iotune")
+
+        if self.disk_read_bytes_sec is not None:
+            iotune.append(self._text_node("read_bytes_sec",
+                          self.disk_read_bytes_sec))
+
+        if self.disk_read_iops_sec is not None:
+            iotune.append(self._text_node("read_iops_sec",
+                          self.disk_read_iops_sec))
+
+        if self.disk_write_bytes_sec is not None:
+            iotune.append(self._text_node("write_bytes_sec",
+                          self.disk_write_bytes_sec))
+
+        if self.disk_write_iops_sec is not None:
+            iotune.append(self._text_node("write_iops_sec",
+                          self.disk_write_iops_sec))
+
+        if self.disk_total_bytes_sec is not None:
+            iotune.append(self._text_node("total_bytes_sec",
+                          self.disk_total_bytes_sec))
+
+        if self.disk_total_iops_sec is not None:
+            iotune.append(self._text_node("total_iops_sec",
+                          self.disk_total_iops_sec))
+
+        if self.disk_read_bytes_sec_max is not None:
+            iotune.append(self._text_node("read_bytes_sec_max",
+                          self.disk_read_bytes_sec_max))
+
+        if self.disk_write_bytes_sec_max is not None:
+            iotune.append(self._text_node("write_bytes_sec_max",
+                          self.disk_write_bytes_sec_max))
+
+        if self.disk_total_bytes_sec_max is not None:
+            iotune.append(self._text_node("total_bytes_sec_max",
+                          self.disk_total_bytes_sec_max))
+
+        if self.disk_read_iops_sec_max is not None:
+            iotune.append(self._text_node("read_iops_sec_max",
+                          self.disk_read_iops_sec_max))
+
+        if self.disk_write_iops_sec_max is not None:
+            iotune.append(self._text_node("write_iops_sec_max",
+                          self.disk_write_iops_sec_max))
+
+        if self.disk_total_iops_sec_max is not None:
+            iotune.append(self._text_node("total_iops_sec_max",
+                          self.disk_total_iops_sec_max))
+
+        if self.disk_size_iops_sec is not None:
+            iotune.append(self._text_node("size_iops_sec",
+                          self.disk_size_iops_sec))
+
+        if len(iotune) > 0:
+            dev.append(iotune)
 
     def format_dom(self):
         dev = super(LibvirtConfigGuestDisk, self).format_dom()
@@ -774,34 +839,7 @@ class LibvirtConfigGuestDisk(LibvirtConfigGuestDevice):
         if self.serial is not None:
             dev.append(self._text_node("serial", self.serial))
 
-        iotune = etree.Element("iotune")
-
-        if self.disk_read_bytes_sec is not None:
-            iotune.append(self._text_node("read_bytes_sec",
-                self.disk_read_bytes_sec))
-
-        if self.disk_read_iops_sec is not None:
-            iotune.append(self._text_node("read_iops_sec",
-                self.disk_read_iops_sec))
-
-        if self.disk_write_bytes_sec is not None:
-            iotune.append(self._text_node("write_bytes_sec",
-                self.disk_write_bytes_sec))
-
-        if self.disk_write_iops_sec is not None:
-            iotune.append(self._text_node("write_iops_sec",
-                self.disk_write_iops_sec))
-
-        if self.disk_total_bytes_sec is not None:
-            iotune.append(self._text_node("total_bytes_sec",
-                self.disk_total_bytes_sec))
-
-        if self.disk_total_iops_sec is not None:
-            iotune.append(self._text_node("total_iops_sec",
-                self.disk_total_iops_sec))
-
-        if len(iotune) > 0:
-            dev.append(iotune)
+        self._format_iotune(dev)
 
         # Block size tuning
         if (self.logical_block_size is not None or
