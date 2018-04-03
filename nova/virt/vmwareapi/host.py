@@ -38,12 +38,17 @@ LOG = logging.getLogger(__name__)
 
 def _get_ds_capacity_and_freespace(session, cluster=None,
                                    datastore_regex=None):
+    capacity = 0
+    freespace = 0
     try:
-        ds = ds_util.get_datastore(session, cluster,
-                                   datastore_regex)
-        return ds.capacity, ds.freespace
+        for ds in ds_util.get_available_datastores(session, cluster,
+                                                   datastore_regex):
+            capacity += ds.capacity
+            freespace += ds.freespace
     except exception.DatastoreNotFound:
-        return 0, 0
+        pass
+
+    return capacity, freespace
 
 
 class VCState(object):

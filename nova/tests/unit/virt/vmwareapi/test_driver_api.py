@@ -2269,7 +2269,7 @@ class VMwareAPIVMTestCase(test.TestCase,
         self.assertEqual(self.conn._datastore_regex,
                 self.conn._vc_state._datastore_regex)
 
-    @mock.patch('nova.virt.vmwareapi.ds_util.get_datastore')
+    @mock.patch('nova.virt.vmwareapi.ds_util.get_available_datastores')
     def test_datastore_regex_configured_vcstate(self, mock_get_ds_ref):
         vcstate = self.conn._vc_state
         self.conn.get_available_resource(self.node_name)
