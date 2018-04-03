@@ -70,6 +70,7 @@ class _TestInstanceObject(object):
         db_inst['user_id'] = self.context.user_id
         db_inst['project_id'] = self.context.project_id
         db_inst['tags'] = []
+        db_inst['trusted_certs'] = []
 
         db_inst['info_cache'] = dict(test_instance_info_cache.fake_info_cache,
                                      instance_uuid=db_inst['uuid'])
@@ -144,11 +145,12 @@ class _TestInstanceObject(object):
         exp_cols.remove('migration_context')
         exp_cols.remove('keypairs')
         exp_cols.remove('device_metadata')
+        exp_cols.remove('trusted_certs')
         exp_cols = [exp_col for exp_col in exp_cols if 'flavor' not in exp_col]
         exp_cols.extend(['extra', 'extra.numa_topology', 'extra.pci_requests',
                          'extra.flavor', 'extra.vcpu_model',
                          'extra.migration_context', 'extra.keypairs',
-                         'extra.device_metadata'])
+                         'extra.device_metadata', 'extra.trusted_certs'])
 
         fake_topology = (test_instance_numa_topology.
                          fake_db_topology['numa_topology'])
@@ -167,6 +169,8 @@ class _TestInstanceObject(object):
             objects.KeyPair(name='foo')])
         fake_keypairs = jsonutils.dumps(
             fake_keypairlist.obj_to_primitive())
+        fake_trusted_certs = jsonutils.dumps(
+            objects.TrustedCerts(ids=['123foo']).obj_to_primitive())
         fake_service = {'created_at': None, 'updated_at': None,
                         'deleted_at': None, 'deleted': False, 'id': 123,
                         'host': 'fake-host', 'binary': 'nova-compute',
@@ -185,6 +189,7 @@ class _TestInstanceObject(object):
                                  'vcpu_model': fake_vcpu_model,
                                  'migration_context': fake_mig_context,
                                  'keypairs': fake_keypairs,
+                                 'trusted_certs': fake_trusted_certs,
                                  })
 
         mock_get.return_value = fake_instance
@@ -199,6 +204,7 @@ class _TestInstanceObject(object):
             self.assertTrue(inst.obj_attr_is_set(attr))
         self.assertEqual(123, inst.services[0].id)
         self.assertEqual('foo', inst.keypairs[0].name)
+        self.assertEqual(['123foo'], inst.trusted_certs.ids)
 
         mock_get.assert_called_once_with(self.context, 'uuid',
             columns_to_join=exp_cols)
@@ -1028,6 +1034,7 @@ class _TestInstanceObject(object):
                     'numa_topology': None,
                     'pci_requests': None,
                     'device_metadata': None,
+                    'trusted_certs': None,
                 }}
         fake_inst = fake_instance.fake_db_instance(**vals)
         mock_create.return_value = fake_inst
@@ -1057,6 +1064,7 @@ class _TestInstanceObject(object):
                     'numa_topology': None,
                     'pci_requests': None,
                     'device_metadata': None,
+                    'trusted_certs': None,
                 }}
         fake_inst = fake_instance.fake_db_instance(**vals)
         mock_create.return_value = fake_inst
@@ -1072,7 +1080,9 @@ class _TestInstanceObject(object):
         extras = {'vcpu_model': None,
                   'numa_topology': None,
                   'pci_requests': None,
-                  'device_metadata': None}
+                  'device_metadata': None,
+                  'trusted_certs': None,
+                  }
         mock_create.return_value = self.fake_instance
         inst = objects.Instance(context=self.context)
         inst.create()
@@ -1108,6 +1118,7 @@ class _TestInstanceObject(object):
                     objects.InstancePCIRequest(count=123,
                                                spec=[])]),
             vcpu_model=test_vcpu_model.fake_vcpumodel,
+            trusted_certs=objects.TrustedCerts(ids=['123foo']),
             )
         inst.create()
         self.assertIsNotNone(inst.numa_topology)
@@ -1124,6 +1135,7 @@ class _TestInstanceObject(object):
         vcpu_model = objects.VirtCPUModel.get_by_instance_uuid(
             self.context, inst.uuid)
         self.assertEqual('fake-model', vcpu_model.model)
+        self.assertEqual(['123foo'], inst.trusted_certs.ids)
 
     def test_recreate_fails(self):
         inst = objects.Instance(context=self.context,
@@ -1161,6 +1173,7 @@ class _TestInstanceObject(object):
                                 'numa_topology': None,
                                 'pci_requests': None,
                                 'device_metadata': None,
+                                'trusted_certs': None,
                             },
                             })
 

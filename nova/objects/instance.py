@@ -57,7 +57,7 @@ _INSTANCE_OPTIONAL_NON_COLUMN_FIELDS = ['flavor', 'old_flavor',
 # These are fields that are optional and in instance_extra
 _INSTANCE_EXTRA_FIELDS = ['numa_topology', 'pci_requests',
                           'flavor', 'vcpu_model', 'migration_context',
-                          'keypairs', 'device_metadata']
+                          'keypairs', 'device_metadata', 'trusted_certs']
 # These are fields that applied/drooped by migration_context
 _MIGRATION_CONTEXT_ATTRS = ['numa_topology', 'pci_requests',
                             'pci_devices']
@@ -112,7 +112,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     # Version 2.1: Added services
     # Version 2.2: Added keypairs
     # Version 2.3: Added device_metadata
-    VERSION = '2.3'
+    # Version 2.4: Added trusted_certs
+    VERSION = '2.4'
 
     fields = {
         'id': fields.IntegerField(),
@@ -212,6 +213,7 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         'migration_context': fields.ObjectField('MigrationContext',
                                                 nullable=True),
         'keypairs': fields.ObjectField('KeyPairList'),
+        'trusted_certs': fields.ObjectField('TrustedCerts', nullable=True),
         }
 
     obj_extra_fields = ['name']
@@ -219,6 +221,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
     def obj_make_compatible(self, primitive, target_version):
         super(Instance, self).obj_make_compatible(primitive, target_version)
         target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (2, 4) and 'trusted_certs' in primitive:
+            del primitive['trusted_certs']
         if target_version < (2, 3) and 'device_metadata' in primitive:
             del primitive['device_metadata']
         if target_version < (2, 2) and 'keypairs' in primitive:
@@ -453,6 +457,12 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         if 'keypairs' in expected_attrs:
             if have_extra:
                 instance._load_keypairs(db_inst['extra'].get('keypairs'))
+        if 'trusted_certs' in expected_attrs:
+            if have_extra:
+                instance._load_trusted_certs(
+                    db_inst['extra'].get('trusted_certs'))
+            else:
+                instance.trusted_certs = None
         if any([x in expected_attrs for x in ('flavor',
                                               'old_flavor',
                                               'new_flavor')]):
@@ -560,6 +570,13 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
                 jsonutils.dumps(vcpu_model.obj_to_primitive()))
         else:
             updates['extra']['vcpu_model'] = None
+        trusted_certs = updates.pop('trusted_certs', None)
+        expected_attrs.append('trusted_certs')
+        if trusted_certs:
+            updates['extra']['trusted_certs'] = jsonutils.dumps(
+                trusted_certs.obj_to_primitive())
+        else:
+            updates['extra']['trusted_certs'] = None
         db_inst = db.instance_create(self._context, updates)
         self._from_db_object(self._context, self, db_inst, expected_attrs)
 
@@ -977,6 +994,16 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         self.tags = objects.TagList.get_by_resource_id(
             self._context, self.uuid)
 
+    def _load_trusted_certs(self, db_trusted_certs=_NO_DATA_SENTINEL):
+        if db_trusted_certs is None:
+            self.trusted_certs = None
+        elif db_trusted_certs is _NO_DATA_SENTINEL:
+            self.trusted_certs = objects.TrustedCerts.get_by_instance_uuid(
+                self._context, self.uuid)
+        else:
+            self.trusted_certs = objects.TrustedCerts.obj_from_primitive(
+                jsonutils.loads(db_trusted_certs))
+
     def apply_migration_context(self):
         if self.migration_context:
             self._set_migration_context_to_instance(prefix='new_')
@@ -1072,6 +1099,8 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
             # NOTE(danms): Let keypairs control its own destiny for
             # resetting changes.
             return self._load_keypairs()
+        elif attrname == 'trusted_certs':
+            return self._load_trusted_certs()
         elif attrname == 'security_groups':
             self._load_security_groups()
         elif attrname == 'pci_devices':
