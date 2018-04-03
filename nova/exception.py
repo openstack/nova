@@ -2139,6 +2139,11 @@ class ResourceProviderUpdateFailed(NovaException):
                 "%(error)s")
 
 
+class ResourceProviderSyncFailed(NovaException):
+    msg_fmt = _("Failed to synchronize the placement service with resource "
+                "provider information supplied by the compute host.")
+
+
 class PlacementAPIConflict(NovaException):
     """Any 409 error from placement APIs should use (a subclass of) this
     exception.

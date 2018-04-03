@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import contextlib
 import copy
 import functools
 import re
@@ -696,12 +697,25 @@ class SchedulerReportClient(object):
         # NOTE(efried): We currently have no code path where we need to set the
         # parent_provider_uuid on a previously-parent-less provider - so we do
         # NOT handle that scenario here.
-        if self._provider_tree.exists(uuid):
-            # If we had the requested provider locally, refresh it and its
-            # descendants, but only if stale.
-            for u in self._provider_tree.get_provider_uuids(uuid):
-                self._refresh_associations(context, u, force=False)
-            return uuid
+        # TODO(efried): Reinstate this optimization if possible.
+        # For now, this is removed due to the following:
+        # - update_provider_tree adds a child with some bogus inventory (bad
+        #   resource class) or trait (invalid trait name).
+        # - update_from_provider_tree creates the child in placement and adds
+        #   it to the cache, then attempts to add the bogus inventory/trait.
+        #   The latter fails, so update_from_provider_tree invalidates the
+        #   cache entry by removing the child from the cache.
+        # - Ordinarily, we would rely on the code below (_get_providers_in_tree
+        #   and _provider_tree.populate_from_iterable) to restore the child to
+        #   the cache on the next iteration.  BUT since the root is still
+        #   present in the cache, the commented-out block will cause that part
+        #   of this method to be skipped.
+        # if self._provider_tree.exists(uuid):
+        #     # If we had the requested provider locally, refresh it and its
+        #     # descendants, but only if stale.
+        #     for u in self._provider_tree.get_provider_uuids(uuid):
+        #         self._refresh_associations(context, u, force=False)
+        #     return uuid
 
         # We don't have it locally; check placement or create it.
         created_rp = None
@@ -719,6 +733,9 @@ class SchedulerReportClient(object):
         # At this point, the whole tree exists in the local cache.
 
         for rp_to_refresh in rps_to_refresh:
+            # NOTE(efried): _refresh_associations doesn't refresh inventory
+            # (yet) - see that method's docstring for the why.
+            self._refresh_and_get_inventory(context, rp_to_refresh['uuid'])
             self._refresh_associations(
                 context, rp_to_refresh['uuid'],
                 generation=rp_to_refresh.get('generation'), force=True)
@@ -1376,6 +1393,122 @@ class SchedulerReportClient(object):
         # if an out-of-band update occurs between when we GET the latest and
         # when we invoke the DELETE.  See bug #1746374.
         self._update_inventory(context, compute_node.uuid, inv_data)
+
+    def update_from_provider_tree(self, context, new_tree):
+        """Flush changes from a specified ProviderTree back to placement.
+
+        The specified ProviderTree is compared against the local cache.  Any
+        changes are flushed back to the placement service.  Upon successful
+        completion, the local cache should reflect the specified ProviderTree.
+
+        This method is best-effort and not atomic.  When exceptions are raised,
+        it is possible that some of the changes have been flushed back, leaving
+        the placement database in an inconsistent state.  This should be
+        recoverable through subsequent calls.
+
+        :param context: The security context
+        :param new_tree: A ProviderTree instance representing the desired state
+                         of providers in placement.
+        :raises: ResourceProviderSyncFailed if any errors were encountered
+                 attempting to perform the necessary API operations.
+        """
+        # NOTE(efried): We currently do not handle the "rename" case.  This is
+        # where new_tree contains a provider named Y whose UUID already exists
+        # but is named X.  Today the only way the consumer could accomplish
+        # this is by deleting the provider and recreating it with the new name.
+
+        @contextlib.contextmanager
+        def catch_all(rp_uuid):
+            """Convert all "expected" exceptions from placement API helpers to
+            True or False.  Saves having to do try/except for every helper call
+            below.
+            """
+            class Status(object):
+                success = True
+            s = Status()
+            # TODO(efried): Make a base exception class from which all these
+            # can inherit.
+            helper_exceptions = (
+                exception.InvalidResourceClass,
+                exception.InventoryInUse,
+                exception.ResourceProviderAggregateRetrievalFailed,
+                exception.ResourceProviderDeletionFailed,
+                exception.ResourceProviderInUse,
+                exception.ResourceProviderRetrievalFailed,
+                exception.ResourceProviderTraitRetrievalFailed,
+                exception.ResourceProviderUpdateConflict,
+                exception.ResourceProviderUpdateFailed,
+                exception.TraitCreationFailed,
+                exception.TraitRetrievalFailed,
+            )
+            try:
+                yield s
+            except helper_exceptions:
+                s.success = False
+                # Invalidate the caches
+                try:
+                    self._provider_tree.remove(rp_uuid)
+                except ValueError:
+                    pass
+                self.association_refresh_time.pop(rp_uuid, None)
+
+        # Overall indicator of success.  Will be set to False on any exception.
+        success = True
+
+        # Helper methods herein will be updating the local cache (this is
+        # intentional) so we need to grab up front any data we need to operate
+        # on in its "original" form.
+        old_tree = self._provider_tree
+        old_uuids = old_tree.get_provider_uuids()
+        new_uuids = new_tree.get_provider_uuids()
+
+        # Do provider deletion first, since it has the best chance of failing
+        # for non-generation-conflict reasons (i.e. allocations).
+        uuids_to_remove = set(old_uuids) - set(new_uuids)
+        # We have to do deletions in bottom-up order, so we don't error
+        # attempting to delete a parent who still has children.
+        for uuid in reversed(old_uuids):
+            if uuid not in uuids_to_remove:
+                continue
+            with catch_all(uuid) as status:
+                self._delete_provider(uuid)
+            success = success and status.success
+
+        # Now create (or load) any "new" providers
+        uuids_to_add = set(new_uuids) - set(old_uuids)
+        # We have to do additions in top-down order, so we don't error
+        # attempting to create a child before its parent exists.
+        for uuid in new_uuids:
+            if uuid not in uuids_to_add:
+                continue
+            provider = new_tree.data(uuid)
+            with catch_all(uuid) as status:
+                self._ensure_resource_provider(
+                    context, uuid, name=provider.name,
+                    parent_provider_uuid=provider.parent_uuid)
+            success = success and status.success
+
+        # At this point the local cache should have all the same providers as
+        # new_tree.  Whether we added them or not, walk through and diff/flush
+        # inventories, traits, and aggregates as necessary (the helper methods
+        # are set up to check and short out when the relevant property does not
+        # differ from what's in the cache).
+        # If we encounter any error and remove a provider from the cache, all
+        # its descendants are also removed, and set_*_for_provider methods on
+        # it wouldn't be able to get started. Walking the tree in bottom-up
+        # order ensures we at least try to process all of the providers.
+        for uuid in reversed(new_uuids):
+            pd = new_tree.data(uuid)
+            with catch_all(pd.uuid) as status:
+                self._set_inventory_for_provider(
+                    context, pd.uuid, pd.inventory)
+                self.set_aggregates_for_provider(
+                    context, pd.uuid, pd.aggregates)
+                self.set_traits_for_provider(context, pd.uuid, pd.traits)
+            success = success and status.success
+
+        if not success:
+            raise exception.ResourceProviderSyncFailed()
 
     @safe_connect
     def get_allocations_for_consumer(self, context, consumer):
