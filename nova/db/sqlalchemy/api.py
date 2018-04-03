@@ -1746,6 +1746,7 @@ def instance_create(context, values):
         {'numa_topology': None,
          'pci_requests': None,
          'vcpu_model': None,
+         'trusted_certs': None,
          })
     instance_ref['extra'].update(values.pop('extra', {}))
     instance_ref.update(values)
@@ -2983,7 +2984,7 @@ def instance_extra_get_by_instance_uuid(context, instance_uuid,
         filter_by(instance_uuid=instance_uuid)
     if columns is None:
         columns = ['numa_topology', 'pci_requests', 'flavor', 'vcpu_model',
-                   'migration_context']
+                   'trusted_certs', 'migration_context']
     for column in columns:
         query = query.options(undefer(column))
     instance_extra = query.first()
