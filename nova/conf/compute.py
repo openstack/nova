@@ -946,7 +946,7 @@ Possible values:
         default=60,
         min=1,
         help="""
-Total time to wait in seconds for an instance toperform a clean
+Total time to wait in seconds for an instance to perform a clean
 shutdown.
 
 It determines the overall period (in seconds) a VM is allowed to
