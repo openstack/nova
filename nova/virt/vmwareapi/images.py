@@ -63,6 +63,7 @@ class VMwareImage(object):
                  linked_clone=None,
                  vsphere_location=None,
                  vif_model=constants.DEFAULT_VIF_MODEL,
+                 direct_url=None,
                  owner=None):
         """VMwareImage holds values for use in building VMs.
 
@@ -84,6 +85,7 @@ class VMwareImage(object):
         self.adapter_type = adapter_type
         self.container_format = container_format
         self.disk_type = disk_type
+        self.direct_url = direct_url
         self.file_type = file_type
         self.vsphere_location = vsphere_location
         self.owner = owner
