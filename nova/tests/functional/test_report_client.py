@@ -17,6 +17,10 @@ import mock
 import requests
 from wsgi_intercept import interceptor
 
+# NOTE(cdent): When placement is extracted, placement will need to
+# expose a fixture of some kind which operates as deploy does here,
+# providing a WSGI application to be intercepted, but it will also
+# need to be responsible for having a reasonable persistence layer
 from nova.api.openstack.placement import deploy
 from nova.compute import provider_tree
 from nova import conf
