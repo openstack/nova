@@ -14,6 +14,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from oslo_middleware import request_id
 import webob.dec
 import webob.exc
 
@@ -53,10 +54,10 @@ class NoAuthMiddlewareBase(base_wsgi.Middleware):
         if CONF.api.use_forwarded_for:
             remote_address = req.headers.get('X-Forwarded-For', remote_address)
         is_admin = always_admin or (user_id == 'admin')
-        ctx = context.RequestContext(user_id,
-                                     project_id,
-                                     is_admin=is_admin,
-                                     remote_address=remote_address)
+        ctx = context.RequestContext(
+            user_id, project_id, is_admin=is_admin,
+            remote_address=remote_address,
+            request_id=req.environ.get(request_id.ENV_REQUEST_ID))
 
         req.environ['nova.context'] = ctx
         return self.application
