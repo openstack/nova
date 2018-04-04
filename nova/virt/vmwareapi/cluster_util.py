@@ -32,10 +32,10 @@ def reconfigure_cluster(session, cluster, config_spec):
     session.wait_for_task(reconfig_task)
 
 
-def _create_vm_group_spec(client_factory, name, vm_refs,
+def _create_vm_group_spec(client_factory, group_info, vm_refs,
                           operation="add", group=None):
     group = group or client_factory.create('ns0:ClusterVmGroup')
-    group.name = name
+    group.name = group_info.uuid
 
     # On vCenter UI, it is not possible to create VM group without
     # VMs attached to it. But, using APIs, it is possible to create
@@ -56,7 +56,7 @@ def _get_vm_group(cluster_config, group_info):
     if not hasattr(cluster_config, 'group'):
         return
     for group in cluster_config.group:
-        if group.name == group_info.name:
+        if group.name == group_info.uuid:
             return group
 
 
@@ -139,7 +139,7 @@ def update_placement(session, cluster, vm_ref, group_info):
         if not group:
             """Creating group"""
             config_spec.groupSpec = _create_vm_group_spec(
-                client_factory, group_info.name, [vm_ref], operation="add",
+                client_factory, group_info, [vm_ref], operation="add",
                 group=group)
 
         if group:
@@ -147,7 +147,7 @@ def update_placement(session, cluster, vm_ref, group_info):
             # created by VC admin. Add instance to this vm group and let
             # the placement policy defined by the VC admin take over
             config_spec.groupSpec = _create_vm_group_spec(
-                client_factory, group_info.name, [vm_ref], operation="edit",
+                client_factory, group_info, [vm_ref], operation="edit",
                 group=group)
 
         # If server group policies are defined (by tenants), then
@@ -160,7 +160,7 @@ def update_placement(session, cluster, vm_ref, group_info):
         if group_info.policies:
             # VM group does not exist on cluster
             policy = group_info.policies[0]
-            rule_name = "%s-%s" % (group_info.name, policy)
+            rule_name = "%s-%s" % (group_info.uuid, policy)
             rule = _get_rule(cluster_config, rule_name)
             operation = "edit" if rule else "add"
             config_spec.rulesSpec = _create_cluster_rules_spec(

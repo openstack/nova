@@ -157,7 +157,7 @@ VmdkInfo = collections.namedtuple('VmdkInfo', ['path', 'adapter_type',
                                                'capacity_in_bytes',
                                                'device'])
 
-GroupInfo = collections.namedtuple('GroupInfo', ['name', 'policies'])
+GroupInfo = collections.namedtuple('GroupInfo', ['uuid', 'policies'])
 
 
 def _iface_id_option_value(client_factory, iface_id, port_index):
@@ -1233,12 +1233,11 @@ def get_stats_from_cluster(session, cluster):
 def _get_server_group(context, instance):
     server_group_info = None
     try:
-        LOG.debug(objects.instance_group.InstanceGroup)
         instance_group_object = objects.instance_group.InstanceGroup
         server_group = instance_group_object.get_by_instance_uuid(
             context, instance.uuid)
         if server_group:
-            server_group_info = GroupInfo(server_group.name,
+            server_group_info = GroupInfo(server_group.uuid,
                                           server_group.policies)
     except nova.exception.InstanceGroupNotFound:
         pass
