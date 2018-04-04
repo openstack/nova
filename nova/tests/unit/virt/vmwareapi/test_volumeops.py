@@ -79,7 +79,8 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
             fake_device.backing = vmwareapi_fake.DataObject()
             fake_device.backing.fileName = 'fake_path'
             fake_device.key = 'fake_key'
-            self._volumeops.detach_disk_from_vm('fake_vm_ref', self._instance,
+            fake_vm_ref = vmwareapi_fake.ManagedObjectReference()
+            self._volumeops.detach_disk_from_vm(fake_vm_ref, self._instance,
                                                 fake_device, destroy_disk)
             _wait_for_task.assert_has_calls([
                    mock.call('fake_configure_task')])
@@ -542,20 +543,20 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
         get_vmdk_base_volume_device.return_value = original_device
 
         new_file_name = mock.sentinel.new_file_name
-        datastore = mock.sentinel.datastore
+        datastore = vmwareapi_fake.ManagedObjectReference()
         new_backing = mock.Mock(fileName=new_file_name, datastore=datastore)
         device = mock.Mock(backing=new_backing)
 
-        host = mock.sentinel.host
+        host = vmwareapi_fake.ManagedObjectReference()
         get_host_of_vm.return_value = host
-        rp = mock.sentinel.rp
+        rp = vmwareapi_fake.ManagedObjectReference()
         get_res_pool_of_host.return_value = rp
 
         detach_disk_from_vm.side_effect = [
             oslo_vmw_exceptions.FileNotFoundException]
         instance = self._instance
-        volume_ref = mock.sentinel.volume_ref
-        vm_ref = mock.sentinel.vm_ref
+        volume_ref = vmwareapi_fake.ManagedObjectReference()
+        vm_ref = vmwareapi_fake.ManagedObjectReference()
         adapter_type = constants.ADAPTER_TYPE_BUSLOGIC
         disk_type = constants.DISK_TYPE_EAGER_ZEROED_THICK
 
@@ -588,21 +589,21 @@ class VMwareVolumeOpsTestCase(test.NoDBTestCase):
         get_vmdk_base_volume_device.return_value = original_device
 
         new_file_name = mock.sentinel.new_file_name
-        datastore = mock.sentinel.datastore
+        datastore = vmwareapi_fake.ManagedObjectReference()
         new_backing = mock.Mock(fileName=new_file_name, datastore=datastore)
         device = mock.Mock(backing=new_backing)
 
-        host = mock.sentinel.host
+        host = vmwareapi_fake.ManagedObjectReference()
         get_host_of_vm.return_value = host
-        rp = mock.sentinel.rp
+        rp = vmwareapi_fake.ManagedObjectReference()
         get_res_pool_of_host.return_value = rp
 
         relocate_vm.side_effect = [
             oslo_vmw_exceptions.FileNotFoundException, None]
 
         instance = mock.sentinel.instance
-        volume_ref = mock.sentinel.volume_ref
-        vm_ref = mock.sentinel.vm_ref
+        volume_ref = vmwareapi_fake.ManagedObjectReference()
+        vm_ref = vmwareapi_fake.ManagedObjectReference()
         adapter_type = constants.ADAPTER_TYPE_BUSLOGIC
         disk_type = constants.DISK_TYPE_EAGER_ZEROED_THICK
 
