@@ -1345,7 +1345,7 @@ class VMwareAPIVMTestCase(test.TestCase,
 
     def test_snapshot_no_root_disk(self):
         self._iso_disk_type_created(flavor='m1.micro')
-        self.assertRaises(error_util.NoRootDiskDefined, self.conn.snapshot,
+        self.assertRaises(AttributeError, self.conn.snapshot,
                           self.context, self.instance, "Test-Snapshot",
                           lambda *args, **kwargs: None)
 

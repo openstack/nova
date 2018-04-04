@@ -27,7 +27,6 @@ from oslo_service import loopingcall
 from oslo_utils import excutils
 from oslo_utils import units
 from oslo_vmware import exceptions as vexc
-from oslo_vmware.objects import datastore as ds_obj
 from oslo_vmware import pbm
 from oslo_vmware import vim_util as vutil
 
@@ -704,10 +703,7 @@ def get_vmdk_info(session, vm_ref, uuid=None):
     capacity_in_bytes = 0
 
     # Determine if we need to get the details of the root disk
-    root_disk = None
     root_device = None
-    if uuid:
-        root_disk = '%s.vmdk' % uuid
     vmdk_device = None
 
     adapter_type_dict = {}
@@ -715,15 +711,17 @@ def get_vmdk_info(session, vm_ref, uuid=None):
         if device.__class__.__name__ == "VirtualDisk":
             if device.backing.__class__.__name__ == \
                     "VirtualDiskFlatVer2BackingInfo":
-                path = ds_obj.DatastorePath.parse(device.backing.fileName)
-                if root_disk and path.basename == root_disk:
+                if not root_device or \
+                    root_device.controllerKey > device.controllerKey or \
+                    root_device.controllerKey == device.controllerKey and \
+                    root_device.unitNumber > device.unitNumber:
                     root_device = device
                 vmdk_device = device
         elif device.__class__.__name__ in CONTROLLER_TO_ADAPTER_TYPE:
             adapter_type_dict[device.key] = CONTROLLER_TO_ADAPTER_TYPE[
                 device.__class__.__name__]
 
-    if root_disk:
+    if uuid:
         vmdk_device = root_device
 
     if vmdk_device:
