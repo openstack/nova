@@ -711,10 +711,7 @@ def get_vmdk_info(session, vm_ref, uuid=None):
     capacity_in_bytes = 0
 
     # Determine if we need to get the details of the root disk
-    root_disk = None
     root_device = None
-    if uuid:
-        root_disk = '%s.vmdk' % uuid
     vmdk_device = None
 
     adapter_type_dict = {}
@@ -723,14 +720,19 @@ def get_vmdk_info(session, vm_ref, uuid=None):
             if device.backing.__class__.__name__ == \
                     "VirtualDiskFlatVer2BackingInfo":
                 path = ds_obj.DatastorePath.parse(device.backing.fileName)
-                if root_disk and path.basename == root_disk:
+                if not path.basename.endswith('.vmdk'):
+                    continue
+                if not root_device or \
+                        root_device.controllerKey > device.controllerKey or \
+                        root_device.controllerKey == device.controllerKey and \
+                        root_device.unitNumber > device.unitNumber:
                     root_device = device
                 vmdk_device = device
         elif device.__class__.__name__ in CONTROLLER_TO_ADAPTER_TYPE:
             adapter_type_dict[device.key] = CONTROLLER_TO_ADAPTER_TYPE[
                 device.__class__.__name__]
 
-    if root_disk:
+    if uuid:
         vmdk_device = root_device
 
     if vmdk_device:

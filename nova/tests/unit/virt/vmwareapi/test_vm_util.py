@@ -379,6 +379,30 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
         devices = [disk, e_disk, controller]
         return devices
 
+    def _vmdk_path_and_adapter_type_devices_nomatch(self, filename,
+                                                    parent=None):
+        # Test the adapter_type returned for a lsiLogic sas controller
+        controller_key = 1000
+        disk = fake.DataObject()
+        disk.controllerKey = controller_key
+        disk_backing = fake.VirtualDiskFlatVer2BackingInfo()
+        disk_backing.fileName = filename
+        disk.capacityInBytes = 1024
+        if parent:
+            disk_backing.parent = parent
+        disk.backing = disk_backing
+        # Ephemeral disk
+        e_disk = fake.DataObject()
+        e_disk.controllerKey = controller_key
+        disk_backing = fake.VirtualDiskFlatVer2BackingInfo()
+        disk_backing.fileName = '[test_datastore] uuid/ephemeral_0.vmdk'
+        e_disk.capacityInBytes = 512
+        e_disk.backing = disk_backing
+        controller = fake.VirtualLsiLogicSASController()
+        controller.key = controller_key
+        devices = [disk, e_disk, controller]
+        return devices
+
     def test_get_vmdk_path_and_adapter_type(self):
         filename = '[test_datastore] uuid/uuid.vmdk'
         devices = self._vmdk_path_and_adapter_type_devices(filename)
@@ -407,7 +431,7 @@ class VMwareVMUtilTestCase(test.NoDBTestCase):
     def test_get_vmdk_path_and_adapter_type_with_nomatch(self):
         n_filename = '[test_datastore] diuu/diuu.vmdk'
         session = fake.FakeSession()
-        devices = self._vmdk_path_and_adapter_type_devices(n_filename)
+        devices = self._vmdk_path_and_adapter_type_devices_nomatch(n_filename)
         with mock.patch.object(session, '_call_method', return_value=devices):
             vmdk = vm_util.get_vmdk_info(session, None, uuid='uuid')
             self.assertIsNone(vmdk.adapter_type)
