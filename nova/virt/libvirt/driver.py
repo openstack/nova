@@ -216,8 +216,8 @@ patch_tpool_proxy()
 # versions. Over time, this will become a common min version
 # for all architectures/hypervisors, as this value rises to
 # meet them.
-MIN_LIBVIRT_VERSION = (1, 2, 9)
-MIN_QEMU_VERSION = (2, 1, 0)
+MIN_LIBVIRT_VERSION = (1, 3, 1)
+MIN_QEMU_VERSION = (2, 5, 0)
 # TODO(berrange): Re-evaluate this at start of each release cycle
 # to decide if we want to plan a future min version bump.
 # MIN_LIBVIRT_VERSION can be updated to match this after
@@ -244,17 +244,12 @@ BAD_LIBVIRT_CPU_POLICY_VERSIONS = [(1, 2, 10)]
 
 # Virtuozzo driver support
 MIN_VIRTUOZZO_VERSION = (7, 0, 0)
-MIN_LIBVIRT_VIRTUOZZO_VERSION = (1, 2, 12)
 
 # Ability to set the user guest password with Qemu
 MIN_LIBVIRT_SET_ADMIN_PASSWD = (1, 2, 16)
 
 # Ability to set the user guest password with parallels
 MIN_LIBVIRT_PARALLELS_SET_ADMIN_PASSWD = (2, 0, 0)
-
-# s/390 & s/390x architectures with KVM
-MIN_LIBVIRT_KVM_S390_VERSION = (1, 2, 13)
-MIN_QEMU_S390_VERSION = (2, 3, 0)
 
 # libvirt < 1.3 reported virt_functions capability
 # only when VFs are enabled.
@@ -265,10 +260,6 @@ MIN_LIBVIRT_PF_WITH_NO_VFS_CAP_VERSION = (1, 3, 0)
 MIN_LIBVIRT_VIRTLOGD = (1, 3, 3)
 MIN_QEMU_VIRTLOGD = (2, 7, 0)
 
-# ppc64/ppc64le architectures with KVM
-# NOTE(rfolco): Same levels for Libvirt/Qemu on Big Endian and Little
-# Endian giving the nuance around guest vs host architectures
-MIN_LIBVIRT_KVM_PPC64_VERSION = (1, 2, 12)
 
 # aarch64 architecture with KVM
 # 'chardev' support got sorted out in 3.6.0
@@ -293,17 +284,7 @@ MIN_LIBVIRT_POSTCOPY_VERSION = (1, 3, 3)
 MIN_QEMU_POSTCOPY_VERSION = (2, 5, 0)
 
 MIN_LIBVIRT_OTHER_ARCH = {
-    fields.Architecture.S390: MIN_LIBVIRT_KVM_S390_VERSION,
-    fields.Architecture.S390X: MIN_LIBVIRT_KVM_S390_VERSION,
-    fields.Architecture.PPC: MIN_LIBVIRT_KVM_PPC64_VERSION,
-    fields.Architecture.PPC64: MIN_LIBVIRT_KVM_PPC64_VERSION,
-    fields.Architecture.PPC64LE: MIN_LIBVIRT_KVM_PPC64_VERSION,
     fields.Architecture.AARCH64: MIN_LIBVIRT_KVM_AARCH64_VERSION,
-}
-
-MIN_QEMU_OTHER_ARCH = {
-    fields.Architecture.S390: MIN_QEMU_S390_VERSION,
-    fields.Architecture.S390X: MIN_QEMU_S390_VERSION,
 }
 
 # perf events support
@@ -550,12 +531,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 raise exception.InternalError(
                     _('Nova requires Virtuozzo version %s or greater.') %
                     libvirt_utils.version_to_string(MIN_VIRTUOZZO_VERSION))
-            if not self._host.has_min_version(MIN_LIBVIRT_VIRTUOZZO_VERSION):
-                raise exception.InternalError(
-                    _('Running Nova with parallels virt_type requires '
-                      'libvirt version %s') %
-                    libvirt_utils.version_to_string(
-                        MIN_LIBVIRT_VIRTUOZZO_VERSION))
 
         # Give the cloud admin a heads up if we are intending to
         # change the MIN_LIBVIRT_VERSION in the next release.
@@ -579,19 +554,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if (CONF.libvirt.virt_type in ('kvm', 'qemu') and
             kvm_arch in MIN_LIBVIRT_OTHER_ARCH and
                 not self._host.has_min_version(
-                                        MIN_LIBVIRT_OTHER_ARCH.get(kvm_arch),
-                                        MIN_QEMU_OTHER_ARCH.get(kvm_arch))):
-            if MIN_QEMU_OTHER_ARCH.get(kvm_arch):
-                raise exception.InternalError(
-                    _('Running Nova with qemu/kvm virt_type on %(arch)s '
-                      'requires libvirt version %(libvirt_ver)s and '
-                      'qemu version %(qemu_ver)s, or greater') %
-                    {'arch': kvm_arch,
-                     'libvirt_ver': libvirt_utils.version_to_string(
-                         MIN_LIBVIRT_OTHER_ARCH.get(kvm_arch)),
-                     'qemu_ver': libvirt_utils.version_to_string(
-                         MIN_QEMU_OTHER_ARCH.get(kvm_arch))})
-            # no qemu version in the error message
+                    MIN_LIBVIRT_OTHER_ARCH.get(kvm_arch))):
             raise exception.InternalError(
                 _('Running Nova with qemu/kvm virt_type on %(arch)s '
                   'requires libvirt version %(libvirt_ver)s or greater') %

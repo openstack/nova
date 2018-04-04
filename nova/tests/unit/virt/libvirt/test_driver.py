@@ -1055,73 +1055,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr.init_host("dummyhost")
         self.assertEqual(images.QEMU_VERSION, mock.sentinel.qemu_version)
 
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
-                       return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_LIBVIRT_OTHER_ARCH.get(
-                               fields.Architecture.PPC64)) - 1)
     @mock.patch.object(fields.Architecture, "from_host",
                        return_value=fields.Architecture.PPC64)
-    def test_min_version_ppc_old_libvirt(self, mock_libv, mock_arch):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.assertRaises(exception.NovaException,
-                          drvr.init_host,
-                          "dummyhost")
-
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
-                       return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_LIBVIRT_OTHER_ARCH.get(
-                               fields.Architecture.PPC64)))
-    @mock.patch.object(fields.Architecture, "from_host",
-                       return_value=fields.Architecture.PPC64)
-    def test_min_version_ppc_ok(self, mock_libv, mock_arch):
+    def test_min_version_ppc_ok(self, mock_arch):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr.init_host("dummyhost")
 
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
-                       return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_LIBVIRT_OTHER_ARCH.get(
-                               fields.Architecture.S390X)) - 1)
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
-                       return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_QEMU_OTHER_ARCH.get(
-                               fields.Architecture.S390X)))
     @mock.patch.object(fields.Architecture, "from_host",
                        return_value=fields.Architecture.S390X)
-    def test_min_version_s390_old_libvirt(self, mock_libv, mock_qemu,
-                                          mock_arch):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.assertRaises(exception.NovaException,
-                          drvr.init_host,
-                          "dummyhost")
-
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
-                       return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_LIBVIRT_OTHER_ARCH.get(
-                               fields.Architecture.S390X)))
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
-                       return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_QEMU_OTHER_ARCH.get(
-                               fields.Architecture.S390X)) - 1)
-    @mock.patch.object(fields.Architecture, "from_host",
-                       return_value=fields.Architecture.S390X)
-    def test_min_version_s390_old_qemu(self, mock_libv, mock_qemu,
-                                       mock_arch):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.assertRaises(exception.NovaException,
-                          drvr.init_host,
-                          "dummyhost")
-
-    @mock.patch.object(fakelibvirt.Connection, 'getLibVersion',
-                       return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_LIBVIRT_OTHER_ARCH.get(
-                               fields.Architecture.S390X)))
-    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
-                       return_value=versionutils.convert_version_to_int(
-                           libvirt_driver.MIN_QEMU_OTHER_ARCH.get(
-                               fields.Architecture.S390X)))
-    @mock.patch.object(fields.Architecture, "from_host",
-                       return_value=fields.Architecture.S390X)
-    def test_min_version_s390_ok(self, mock_libv, mock_qemu, mock_arch):
+    def test_min_version_s390_ok(self, mock_arch):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         drvr.init_host("dummyhost")
 
@@ -9123,13 +9065,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 'instance', data, block_device_info=bdi))
         self.assertEqual(0, mock_get_instance_disk_info.call_count)
 
-    def test_live_migration_update_graphics_xml(self):
+    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
+    @mock.patch.object(fakelibvirt.virDomain, "migrateToURI3")
+    @mock.patch.object(fakelibvirt.virDomain, "XMLDesc")
+    def test_live_migration_update_graphics_xml(self, mock_xml,
+                                                      mock_migrateToURI3,
+                                                      mock_min_version):
         self.compute = manager.ComputeManager()
-        instance_dict = dict(self.test_instance)
-        instance_dict.update({'host': 'fake',
-                              'power_state': power_state.RUNNING,
-                              'vm_state': vm_states.ACTIVE})
-        instance_ref = objects.Instance(**instance_dict)
+        instance_ref = self.test_instance
 
         xml_tmpl = ("<domain type='kvm'>"
                     "<devices>"
@@ -9153,20 +9096,18 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
         # Preparing mocks
-        vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
-        guest = libvirt_guest.Guest(vdmock)
-        self.mox.StubOutWithMock(vdmock, "migrateToURI2")
-        _bandwidth = libvirt_driver.MIN_MIGRATION_SPEED_BW
-        vdmock.XMLDesc(flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE).AndReturn(
-                initial_xml)
-        vdmock.migrateToURI2(drvr._live_migration_uri('dest'),
-                             miguri=None,
-                             dxml=target_xml,
-                             flags=mox.IgnoreArg(),
-                             bandwidth=_bandwidth).AndRaise(
-                                fakelibvirt.libvirtError("ERR"))
+        mock_xml.return_value = initial_xml
+        mock_migrateToURI3.side_effect = fakelibvirt.libvirtError("ERR")
+
+        disk_paths = ['vda', 'vdb']
+        params = {
+            'migrate_disks': ['vda', 'vdb'],
+            'bandwidth': libvirt_driver.MIN_MIGRATION_SPEED_BW,
+            'destination_xml': target_xml,
+        }
 
         # start test
+        bandwidth = libvirt_driver.MIN_MIGRATION_SPEED_BW
         migrate_data = objects.LibvirtLiveMigrateData(
             graphics_listen_addr_vnc='10.0.0.1',
             graphics_listen_addr_spice='10.0.0.2',
@@ -9174,12 +9115,19 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             target_connect_addr=None,
             bdms=[],
             block_migration=False)
-        self.mox.ReplayAll()
+        dom = fakelibvirt.virDomain
+        guest = libvirt_guest.Guest(dom)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
                           self.context, instance_ref, 'dest',
-                          False, migrate_data, guest, [],
-                          _bandwidth)
+                          False, migrate_data, guest, disk_paths,
+                          bandwidth=bandwidth)
+        mock_xml.assert_called_once_with(
+                flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE)
+        mock_migrateToURI3.assert_called_once_with(
+                drvr._live_migration_uri('dest'),
+                params=params, flags=0)
 
     def test_live_migration_parallels_no_new_xml(self):
         self.flags(virt_type='parallels', group='libvirt')
@@ -9297,17 +9245,35 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             mupdate.assert_called_once_with(
                 guest, migrate_data, mock.ANY)
 
-    def test_live_migration_with_valid_target_connect_addr(self):
+    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
+    @mock.patch.object(fakelibvirt.virDomain, "migrateToURI3")
+    @mock.patch.object(nova.virt.libvirt.migration,
+                       'get_updated_guest_xml', return_value='')
+    @mock.patch.object(fakelibvirt.virDomain, "XMLDesc")
+    def test_live_migration_with_valid_target_connect_addr(self, mock_xml,
+                                                      mock_updated_guest_xml,
+                                                      mock_migrateToURI3,
+                                                      mock_min_version):
         self.compute = manager.ComputeManager()
-        instance_dict = dict(self.test_instance)
-        instance_dict.update({'host': 'fake',
-                              'power_state': power_state.RUNNING,
-                              'vm_state': vm_states.ACTIVE})
-        instance_ref = objects.Instance(**instance_dict)
+        instance_ref = self.test_instance
+        target_connection = '127.0.0.2'
+
         target_xml = self.device_xml_tmpl.format(
             device_path='/dev/disk/by-path/'
             'ip-1.2.3.4:3260-iqn.'
             'cde.67890.opst-lun-Z')
+
+        # Prepare mocks
+        mock_xml.return_value = target_xml
+
+        disk_paths = ['vda', 'vdb']
+        params = {
+            'migrate_disks': disk_paths,
+            'migrate_uri': 'tcp://127.0.0.2',
+            'bandwidth': libvirt_driver.MIN_MIGRATION_SPEED_BW,
+            'destination_xml': target_xml,
+        }
+
         # start test
         connection_info = {
             u'driver_volume_type': u'iscsi',
@@ -9326,26 +9292,21 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             connection_info=connection_info)
         migrate_data = objects.LibvirtLiveMigrateData(
             serial_listen_addr='',
-            target_connect_addr='127.0.0.2',
+            target_connect_addr=target_connection,
             bdms=[bdm],
             block_migration=False)
-
+        dom = fakelibvirt.virDomain
+        guest = libvirt_guest.Guest(dom)
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        test_mock = mock.MagicMock()
-        guest = libvirt_guest.Guest(test_mock)
+
         _bandwidth = libvirt_driver.MIN_MIGRATION_SPEED_BW
-
-        with mock.patch.object(libvirt_migrate,
-                               'get_updated_guest_xml') as mupdate:
-
-            test_mock.XMLDesc.return_value = target_xml
-            drvr._live_migration_operation(self.context, instance_ref,
-                                           'dest', False, migrate_data,
-                                           guest, [], _bandwidth)
-            test_mock.migrateToURI2.assert_called_once_with(
-                'qemu+tcp://127.0.0.2/system',
-                miguri='tcp://127.0.0.2',
-                dxml=mupdate(), flags=0, bandwidth=_bandwidth)
+        mock_updated_guest_xml.return_value = target_xml
+        drvr._live_migration_operation(self.context, instance_ref,
+                                       target_connection, False, migrate_data,
+                                       guest, disk_paths, _bandwidth)
+        mock_migrateToURI3.assert_called_once_with(
+                drvr._live_migration_uri(target_connection),
+                params=params, flags=0)
 
     def test_update_volume_xml(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -9581,12 +9542,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                 drvr._get_volume_config)
             self.assertEqual(target_xml, config)
 
+    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
     @mock.patch.object(libvirt_driver.LibvirtDriver,
                        '_get_serial_ports_from_guest')
-    @mock.patch.object(fakelibvirt.virDomain, "migrateToURI2")
+    @mock.patch.object(fakelibvirt.virDomain, "migrateToURI3")
     @mock.patch.object(fakelibvirt.virDomain, "XMLDesc")
     def test_live_migration_update_serial_console_xml(self, mock_xml,
-                                                      mock_migrate, mock_get):
+                                                      mock_migrateToURI3,
+                                                      mock_get,
+                                                      mock_min_version):
         self.compute = manager.ComputeManager()
         instance_ref = self.test_instance
 
@@ -9607,7 +9571,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         # Preparing mocks
         mock_xml.return_value = initial_xml
-        mock_migrate.side_effect = fakelibvirt.libvirtError("ERR")
+        mock_migrateToURI3.side_effect = fakelibvirt.libvirtError("ERR")
+
+        disk_paths = ['vda', 'vdb']
+        params = {
+            'migrate_disks': ['vda', 'vdb'],
+            'bandwidth': libvirt_driver.MIN_MIGRATION_SPEED_BW,
+            'destination_xml': target_xml,
+        }
 
         # start test
         bandwidth = libvirt_driver.MIN_MIGRATION_SPEED_BW
@@ -9625,13 +9596,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
                           self.context, instance_ref, 'dest',
-                          False, migrate_data, guest, [],
+                          False, migrate_data, guest, disk_paths,
                           bandwidth=bandwidth)
         mock_xml.assert_called_once_with(
                 flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE)
-        mock_migrate.assert_called_once_with(
-                drvr._live_migration_uri('dest'), miguri=None,
-                dxml=target_xml, flags=mock.ANY, bandwidth=bandwidth)
+        mock_migrateToURI3.assert_called_once_with(
+                drvr._live_migration_uri('dest'),
+                params=params, flags=0)
 
     def test_live_migration_fails_without_serial_console_address(self):
         self.compute = manager.ComputeManager()
@@ -9801,49 +9772,47 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             drvr._live_migration_uri('dest'),
             params=params, flags=expected_flags)
 
-    def test_live_migration_raises_exception(self):
-        # Confirms recover method is called when exceptions are raised.
-        # Preparing data
+    @mock.patch.object(host.Host, 'has_min_version', return_value=True)
+    @mock.patch.object(fakelibvirt.virDomain, "migrateToURI3")
+    @mock.patch('nova.virt.libvirt.guest.Guest.get_xml_desc',
+                return_value='<xml/>')
+    def test_live_migration_raises_exception(self, mock_xml,
+                                             mock_migrateToURI3,
+                                             mock_min_version):
+        # Prepare data
         self.compute = manager.ComputeManager()
-        instance_dict = dict(self.test_instance)
-        instance_dict.update({'host': 'fake',
-                              'power_state': power_state.RUNNING,
-                              'vm_state': vm_states.ACTIVE})
-        instance_ref = objects.Instance(**instance_dict)
+        instance_ref = self.test_instance
 
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        # Prepare mocks
+        mock_migrateToURI3.side_effect = fakelibvirt.libvirtError("ERR")
 
-        # Preparing mocks
-        vdmock = self.mox.CreateMock(fakelibvirt.virDomain)
-        guest = libvirt_guest.Guest(vdmock)
-        self.mox.StubOutWithMock(vdmock, "migrateToURI2")
-        _bandwidth = libvirt_driver.MIN_MIGRATION_SPEED_BW
-        vdmock.XMLDesc(flags=fakelibvirt.VIR_DOMAIN_XML_MIGRATABLE
-        ).AndReturn(FakeVirtDomain().XMLDesc(flags=0))
-        vdmock.migrateToURI2(drvr._live_migration_uri('dest'),
-                             miguri=None,
-                             dxml=mox.IgnoreArg(),
-                             flags=mox.IgnoreArg(),
-                             bandwidth=_bandwidth).AndRaise(
-                                     fakelibvirt.libvirtError('ERR'))
+        disk_paths = ['vda', 'vdb']
+        params = {
+            'migrate_disks': disk_paths,
+            'bandwidth': libvirt_driver.MIN_MIGRATION_SPEED_BW,
+            'destination_xml': '<xml/>',
+        }
 
-        # start test
+        # Start test
+        bandwidth = libvirt_driver.MIN_MIGRATION_SPEED_BW
         migrate_data = objects.LibvirtLiveMigrateData(
-            graphics_listen_addr_vnc='127.0.0.1',
-            graphics_listen_addr_spice='127.0.0.1',
+            graphics_listen_addr_vnc='10.0.0.1',
+            graphics_listen_addr_spice='10.0.0.2',
             serial_listen_addr='127.0.0.1',
             target_connect_addr=None,
             bdms=[],
             block_migration=False)
-        self.mox.ReplayAll()
+        dom = fakelibvirt.virDomain
+        guest = libvirt_guest.Guest(dom)
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
         self.assertRaises(fakelibvirt.libvirtError,
                           drvr._live_migration_operation,
                           self.context, instance_ref, 'dest',
-                          False, migrate_data, guest, [],
-                          _bandwidth)
-
-        self.assertEqual(vm_states.ACTIVE, instance_ref.vm_state)
-        self.assertEqual(power_state.RUNNING, instance_ref.power_state)
+                          False, migrate_data, guest, disk_paths,
+                          bandwidth=bandwidth)
+        mock_migrateToURI3.assert_called_once_with(
+                drvr._live_migration_uri('dest'),
+                params=params, flags=0)
 
     @mock.patch('shutil.rmtree')
     @mock.patch('os.path.exists', return_value=True)
@@ -16934,49 +16903,21 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_virtuozzo_min_version_fail(self):
         self.flags(virt_type='parallels', group='libvirt')
         driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        with test.nested(
-                    mock.patch.object(
-                        driver._conn, 'getVersion'),
-                    mock.patch.object(
-                        driver._conn, 'getLibVersion'))\
-            as (mock_getver, mock_getlibver):
+        with mock.patch.object(driver._conn, 'getVersion') as mock_getver:
             mock_getver.return_value = \
                 versionutils.convert_version_to_int(
-                    libvirt_driver.MIN_VIRTUOZZO_VERSION) - 1
-            mock_getlibver.return_value = \
-                versionutils.convert_version_to_int(
-                    libvirt_driver.MIN_LIBVIRT_VIRTUOZZO_VERSION)
+                libvirt_driver.MIN_VIRTUOZZO_VERSION) - 1
 
             self.assertRaises(exception.NovaException,
                               driver.init_host, 'wibble')
 
-            mock_getver.return_value = \
-                versionutils.convert_version_to_int(
-                    libvirt_driver.MIN_VIRTUOZZO_VERSION)
-            mock_getlibver.return_value = \
-                versionutils.convert_version_to_int(
-                    libvirt_driver.MIN_LIBVIRT_VIRTUOZZO_VERSION) - 1
-
-            self.assertRaises(exception.NovaException,
-                              driver.init_host, 'wibble')
-
-    def test_virtuozzo_min_version_ok(self):
+    @mock.patch.object(fakelibvirt.Connection, 'getVersion',
+                       return_value=versionutils.convert_version_to_int(
+                           libvirt_driver.MIN_VIRTUOZZO_VERSION))
+    def test_virtuozzo_min_version_ok(self, mock_get_virtuozzo_version):
         self.flags(virt_type='parallels', group='libvirt')
         driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        with test.nested(
-                    mock.patch.object(
-                        driver._conn, 'getVersion'),
-                    mock.patch.object(
-                        driver._conn, 'getLibVersion'))\
-            as (mock_getver, mock_getlibver):
-            mock_getver.return_value = \
-                versionutils.convert_version_to_int(
-                    libvirt_driver.MIN_VIRTUOZZO_VERSION)
-            mock_getlibver.return_value = \
-                versionutils.convert_version_to_int(
-                    libvirt_driver.MIN_LIBVIRT_VIRTUOZZO_VERSION)
-
-            driver.init_host('wibble')
+        driver.init_host('wibble')
 
     def test_get_guest_config_parallels_vm(self):
         self.flags(virt_type='parallels', group='libvirt')

@@ -109,8 +109,8 @@ class TestSerialConsoleLiveMigrate(test.TestCase):
         mock_get_job_info.return_value = libvirt_guest.JobInfo(
                     type=fakelibvirt.VIR_DOMAIN_JOB_COMPLETED)
         fake_connection = fakelibvirt.Connection('qemu:///system',
-                                                 version=1002007,
-                                                 hv_version=2001000)
+                                version=fakelibvirt.FAKE_LIBVIRT_VERSION,
+                                hv_version=fakelibvirt.FAKE_QEMU_VERSION)
         mock_host_get_connection.return_value = fake_connection
 
         server_attr = dict(name='server1',
