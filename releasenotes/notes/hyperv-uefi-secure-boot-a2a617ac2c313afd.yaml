@@ -7,7 +7,7 @@ features:
     * Images should be prepared for Generation 2 VMs. The image property
       "hw_machine_type=hyperv-gen2" is mandatory.
     * The guest OS type must be specified in order to properly spawn the VMs.
-      It can be specifed through the image property "os_type", and the
+      It can be specified through the image property "os_type", and the
       acceptable values are "windows" or "linux".
     * The UEFI Secure Boot feature can be requested through the image property
       "os_secure_boot" (acceptable values: "disabled", "optional", "required")

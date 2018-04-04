@@ -8,7 +8,7 @@ features:
     has expired. In order to use this functionality a service user needs to
     be created. Add service user configurations in ``nova.conf`` under
     ``service_user`` group and set ``send_service_user_token`` flag to
-    ``True``. The minimum Keytone API version 3.8 and Keystone middleware
+    ``True``. The minimum Keystone API version 3.8 and Keystone middleware
     version 4.12.0 is required to use this functionality.
     This only currently works with Nova - Cinder and Nova - Neutron API
     interactions.
