@@ -1831,3 +1831,20 @@ def set_vf_interface_vlan(pci_addr, mac_addr, vlan=0):
                   port_state,
                   run_as_root=True,
                   check_exit_code=exit_code)
+
+
+def set_vf_trusted(pci_addr, trusted):
+    """Configures the VF to be trusted or not
+
+    :param pci_addr: PCI slot of the device
+    :param trusted: Boolean value to indicate whether to
+                    enable/disable 'trusted' capability
+    """
+    pf_ifname = pci_utils.get_ifname_by_pci_address(pci_addr,
+                                                    pf_interface=True)
+    vf_num = pci_utils.get_vf_num_by_pci_address(pci_addr)
+    utils.execute('ip', 'link', 'set', pf_ifname,
+                  'vf', vf_num,
+                  'trust', bool(trusted) and 'on' or 'off',
+                  run_as_root=True,
+                  check_exit_code=[0, 2, 254])

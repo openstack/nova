@@ -1407,3 +1407,25 @@ class LinuxNetworkTestCase(test.NoDBTestCase):
         self.assertRaises(processutils.ProcessExecutionError,
                           linux_net.create_tap_dev,
                           'tap42', multiqueue=True)
+
+    @mock.patch('nova.pci.utils.get_vf_num_by_pci_address')
+    @mock.patch('nova.pci.utils.get_ifname_by_pci_address')
+    @mock.patch('nova.utils.execute')
+    def test_set_vf_trusted_on(self, mexecute, mget_ifname, mget_vfnum):
+        mget_ifname.return_value = 'eth0'
+        mget_vfnum.return_value = 2
+        linux_net.set_vf_trusted('PCI_ADDR', True)
+        mexecute.assert_called_once_with(
+            'ip', 'link', 'set', 'eth0', 'vf', 2, 'trust', 'on',
+            check_exit_code=[0, 2, 254], run_as_root=True)
+
+    @mock.patch('nova.pci.utils.get_vf_num_by_pci_address')
+    @mock.patch('nova.pci.utils.get_ifname_by_pci_address')
+    @mock.patch('nova.utils.execute')
+    def test_set_vf_trusted_off(self, mexecute, mget_ifname, mget_vfnum):
+        mget_ifname.return_value = 'eth0'
+        mget_vfnum.return_value = 2
+        linux_net.set_vf_trusted('PCI_ADDR', False)
+        mexecute.assert_called_once_with(
+            'ip', 'link', 'set', 'eth0', 'vf', 2, 'trust', 'off',
+            check_exit_code=[0, 2, 254], run_as_root=True)
