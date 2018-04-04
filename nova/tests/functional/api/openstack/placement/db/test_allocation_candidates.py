@@ -439,6 +439,43 @@ class AllocationCandidatesTestCase(ProviderDBBase):
                           rp_obj.AllocationCandidates.get_by_requests,
                           self.ctx, requests)
 
+    def test_allc_req_and_prov_summary(self):
+        """Simply test with one resource provider that the allocation
+        requests returned by AllocationCandidates have valid
+        allocation_requests and provider_summaries.
+        """
+        cn1 = self._create_provider('cn1')
+        _add_inventory(cn1, fields.ResourceClass.VCPU, 8)
+        _add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)
+        _add_inventory(cn1, fields.ResourceClass.DISK_GB, 2000)
+
+        alloc_cands = self._get_allocation_candidates([
+            placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    fields.ResourceClass.VCPU: 1
+                }
+            )]
+        )
+
+        expected = [
+            [('cn1', fields.ResourceClass.VCPU, 1)]
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
+
+        expected = {
+            'cn1': set([
+                (fields.ResourceClass.VCPU, 8, 0),
+                # TODO(tetsuro) - Bug#1760276: provider_summaries should
+                # include all the resources that the resource provider has,
+                # but currently it includes only resources that are requested.
+                #
+                # (fields.ResourceClass.MEMORY_MB, 2048, 0),
+                # (fields.ResourceClass.DISK_GB, 2000, 0),
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
+
     def test_all_local(self):
         """Create some resource providers that can satisfy the request for
         resources with local (non-shared) resources and verify that the
