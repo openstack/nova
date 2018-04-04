@@ -17,12 +17,12 @@ from oslo_utils import encodeutils
 from oslo_utils import timeutils
 import webob
 
+from nova.api.openstack.placement import exception
 from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
 from nova.api.openstack.placement.schemas import aggregate as schema
 from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
-from nova import exception
 from nova.i18n import _
 
 
@@ -51,6 +51,27 @@ def _send_aggregates(req, resource_provider, aggregate_uuids):
 
 def _serialize_aggregates(aggregate_uuids):
     return {'aggregates': aggregate_uuids}
+
+
+def _set_aggregates(resource_provider, aggregate_uuids,
+                    increment_generation=False):
+    """Set aggregates for the resource provider.
+
+    If increment generation is true, the resource provider generation
+    will be incremented if possible. If that fails (because something
+    else incremented the generation in another thread), a
+    ConcurrentUpdateDetected will be raised.
+    """
+    # NOTE(cdent): It's not clear what the DBDuplicateEntry handling
+    # is doing here, set_aggregates already handles that, but I'm leaving
+    # it here because it was already there.
+    try:
+        resource_provider.set_aggregates(
+            aggregate_uuids, increment_generation=increment_generation)
+    except (exception.ConcurrentUpdateDetected,
+            db_exc.DBDuplicateEntry) as exc:
+        raise webob.exc.HTTPConflict(
+            _('Update conflict: %(error)s') % {'error': exc})
 
 
 @wsgi_wrapper.PlacementWsgify
@@ -98,12 +119,7 @@ def set_aggregates(req):
         aggregate_uuids = data['aggregates']
     else:
         aggregate_uuids = data
-    try:
-        resource_provider.set_aggregates(
-            aggregate_uuids, increment_generation=consider_generation)
-    except (exception.ConcurrentUpdateDetected,
-            db_exc.DBDuplicateEntry) as exc:
-        raise webob.exc.HTTPConflict(
-            _('Update conflict: %(error)s') % {'error': exc})
+    _set_aggregates(resource_provider, aggregate_uuids,
+                    increment_generation=consider_generation)
 
     return _send_aggregates(req, resource_provider, aggregate_uuids)
