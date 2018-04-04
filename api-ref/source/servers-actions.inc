@@ -628,6 +628,8 @@ Rescue Server (rescue Action)
 
 Puts a server in rescue mode and changes its status to ``RESCUE``.
 
+.. note:: This API is not supported for volume-backed instances.
+
 Specify the ``rescue`` action in the request body.
 
 If you specify the ``rescue_image_ref`` extended attribute,
