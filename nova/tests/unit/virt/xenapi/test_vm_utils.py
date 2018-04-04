@@ -88,56 +88,56 @@ class VMUtilsTestBase(stubs.XenAPITestBaseNoDB):
 class LookupTestCase(VMUtilsTestBase):
     def setUp(self):
         super(LookupTestCase, self).setUp()
-        self.session = self.mox.CreateMockAnything('Fake Session')
+        self.session = mock.Mock()
         self.name_label = 'my_vm'
 
-    def _do_mock(self, result):
-        self.session.call_xenapi(
-            "VM.get_by_name_label", self.name_label).AndReturn(result)
-        self.mox.ReplayAll()
-
     def test_normal(self):
-        self._do_mock(['x'])
+        self.session.call_xenapi.return_value = ['x']
         result = vm_utils.lookup(self.session, self.name_label)
         self.assertEqual('x', result)
+        self.session.call_xenapi.assert_called_once_with(
+            "VM.get_by_name_label", self.name_label)
 
     def test_no_result(self):
-        self._do_mock([])
+        self.session.call_xenapi.return_value = []
         result = vm_utils.lookup(self.session, self.name_label)
         self.assertIsNone(result)
+        self.session.call_xenapi.assert_called_once_with(
+            "VM.get_by_name_label", self.name_label)
 
     def test_too_many(self):
-        self._do_mock(['a', 'b'])
+        self.session.call_xenapi.return_value = ['a', 'b']
         self.assertRaises(exception.InstanceExists,
                           vm_utils.lookup,
                           self.session, self.name_label)
+        self.session.call_xenapi.assert_called_once_with(
+            "VM.get_by_name_label", self.name_label)
 
     def test_rescue_none(self):
-        self.session.call_xenapi(
-            "VM.get_by_name_label", self.name_label + '-rescue').AndReturn([])
-        self._do_mock(['x'])
+        self.session.call_xenapi.side_effect = [[], ['x']]
         result = vm_utils.lookup(self.session, self.name_label,
                                  check_rescue=True)
         self.assertEqual('x', result)
+        self.session.call_xenapi.assert_has_calls([
+            mock.call("VM.get_by_name_label", self.name_label + '-rescue'),
+            mock.call("VM.get_by_name_label", self.name_label)])
 
     def test_rescue_found(self):
-        self.session.call_xenapi(
-            "VM.get_by_name_label",
-            self.name_label + '-rescue').AndReturn(['y'])
-        self.mox.ReplayAll()
+        self.session.call_xenapi.return_value = ['y']
         result = vm_utils.lookup(self.session, self.name_label,
                                  check_rescue=True)
         self.assertEqual('y', result)
+        self.session.call_xenapi.assert_called_once_with(
+            "VM.get_by_name_label", self.name_label + '-rescue')
 
     def test_rescue_too_many(self):
-        self.session.call_xenapi(
-            "VM.get_by_name_label",
-            self.name_label + '-rescue').AndReturn(['a', 'b', 'c'])
-        self.mox.ReplayAll()
+        self.session.call_xenapi.return_value = ['a', 'b', 'c']
         self.assertRaises(exception.InstanceExists,
                           vm_utils.lookup,
                           self.session, self.name_label,
                           check_rescue=True)
+        self.session.call_xenapi.assert_called_once_with(
+            "VM.get_by_name_label", self.name_label + '-rescue')
 
 
 class GenerateConfigDriveTestCase(VMUtilsTestBase):
@@ -187,27 +187,27 @@ class GenerateConfigDriveTestCase(VMUtilsTestBase):
 
 
 class XenAPIGetUUID(VMUtilsTestBase):
-    def test_get_this_vm_uuid_new_kernel(self):
-        self.mox.StubOutWithMock(vm_utils, '_get_sys_hypervisor_uuid')
+    @mock.patch.object(vm_utils, '_get_sys_hypervisor_uuid',
+                       return_value='2f46f0f5-f14c-ef1b-1fac-9eeca0888a3f')
+    def test_get_this_vm_uuid_new_kernel(self, mock_get_sys_hypervisor_uuid):
+        result = vm_utils.get_this_vm_uuid(None)
 
-        vm_utils._get_sys_hypervisor_uuid().AndReturn(
-            '2f46f0f5-f14c-ef1b-1fac-9eeca0888a3f')
+        self.assertEqual('2f46f0f5-f14c-ef1b-1fac-9eeca0888a3f', result)
+        mock_get_sys_hypervisor_uuid.assert_called_once_with()
 
-        self.mox.ReplayAll()
-        self.assertEqual('2f46f0f5-f14c-ef1b-1fac-9eeca0888a3f',
-                         vm_utils.get_this_vm_uuid(None))
-        self.mox.VerifyAll()
-
-    @mock.patch('nova.virt.xenapi.vm_utils._get_sys_hypervisor_uuid')
-    @mock.patch('nova.privsep.xenapi.xenstore_read')
+    @mock.patch('nova.virt.xenapi.vm_utils._get_sys_hypervisor_uuid',
+                side_effect=IOError(13, 'Permission denied'))
+    @mock.patch('nova.privsep.xenapi.xenstore_read',
+                side_effect=[('27', ''),
+                             ('/vm/2f46f0f5-f14c-ef1b-1fac-9eeca0888a3f', '')])
     def test_get_this_vm_uuid_old_kernel_reboot(self, fake_read, fake_uuid):
-        fake_uuid.side_effect = IOError(13, 'Permission denied')
-        fake_read.side_effect = [
-            ('27', ''),
-            ('/vm/2f46f0f5-f14c-ef1b-1fac-9eeca0888a3f', '')]
+        result = vm_utils.get_this_vm_uuid(None)
 
-        self.assertEqual('2f46f0f5-f14c-ef1b-1fac-9eeca0888a3f',
-                         vm_utils.get_this_vm_uuid(None))
+        self.assertEqual('2f46f0f5-f14c-ef1b-1fac-9eeca0888a3f', result)
+        fake_read.assert_has_calls([
+            mock.call('domid'),
+            mock.call('/local/domain/27/vm')])
+        fake_uuid.assert_called_once_with()
 
 
 class FakeSession(object):
@@ -234,21 +234,38 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
         self.instance = {"uuid": "uuid"}
         self.flags(group='glance', api_servers=['http://localhost:9292'])
 
-        self.mox.StubOutWithMock(vm_utils, '_make_uuid_stack')
-        vm_utils._make_uuid_stack().AndReturn(["uuid_stack"])
+        make_uuid_stack_patcher = mock.patch.object(
+            vm_utils, '_make_uuid_stack', return_value=["uuid_stack"])
+        self.addCleanup(make_uuid_stack_patcher.stop)
+        self.mock_make_uuid_stack = make_uuid_stack_patcher.start()
 
-        self.mox.StubOutWithMock(vm_utils, 'get_sr_path')
-        vm_utils.get_sr_path(self.session).AndReturn('sr_path')
+        get_sr_path_patcher = mock.patch.object(
+            vm_utils, 'get_sr_path', return_value='sr_path')
+        self.addCleanup(get_sr_path_patcher.stop)
+        self.mock_get_sr_path = get_sr_path_patcher.start()
 
     def _stub_glance_download_vhd(self, raise_exc=None):
-        self.mox.StubOutWithMock(
-                self.session, 'call_plugin_serialized_with_retry')
-        func = self.session.call_plugin_serialized_with_retry(
+        call_plugin_patcher = mock.patch.object(
+            self.session, 'call_plugin_serialized_with_retry')
+        self.addCleanup(call_plugin_patcher.stop)
+        self.mock_call_plugin = call_plugin_patcher.start()
+
+        if raise_exc:
+            self.mock_call_plugin.side_effect = raise_exc
+        else:
+            self.mock_call_plugin.return_value = {'root': {'uuid': 'vdi'}}
+
+    def _assert_make_uuid_stack_and_get_sr_path(self):
+        self.mock_make_uuid_stack.assert_called_once_with()
+        self.mock_get_sr_path.assert_called_once_with(self.session)
+
+    def _assert_call_plugin_serialized_with_retry(self):
+        self.mock_call_plugin.assert_called_once_with(
                 'glance.py',
                 'download_vhd2',
                 0,
-                mox.IgnoreArg(),
-                mox.IgnoreArg(),
+                mock.ANY,
+                mock.ANY,
                 extra_headers={'X-Auth-Token': 'auth_token',
                                'X-Roles': '',
                                'X-Tenant-Id': None,
@@ -258,69 +275,59 @@ class FetchVhdImageTestCase(VMUtilsTestBase):
                 uuid_stack=["uuid_stack"],
                 sr_path='sr_path')
 
-        if raise_exc:
-            func.AndRaise(raise_exc)
-        else:
-            func.AndReturn({'root': {'uuid': 'vdi'}})
-
-    def test_fetch_vhd_image_works_with_glance(self):
+    @mock.patch.object(vm_utils, '_check_vdi_size')
+    @mock.patch.object(vm_utils, '_scan_sr')
+    @mock.patch.object(vm_utils, 'safe_find_sr', return_value="sr")
+    def test_fetch_vhd_image_works_with_glance(self, mock_safe_find_sr,
+                                               mock_scan_sr,
+                                               mock_check_vdi_size):
         self._stub_glance_download_vhd()
 
-        self.mox.StubOutWithMock(vm_utils, 'safe_find_sr')
-        vm_utils.safe_find_sr(self.session).AndReturn("sr")
+        result = vm_utils._fetch_vhd_image(self.context, self.session,
+                                           self.instance, 'image_id')
 
-        self.mox.StubOutWithMock(vm_utils, '_scan_sr')
-        vm_utils._scan_sr(self.session, "sr")
+        self.assertEqual("vdi", result['root']['uuid'])
+        mock_safe_find_sr.assert_called_once_with(self.session)
+        mock_scan_sr.assert_called_once_with(self.session, "sr")
+        mock_check_vdi_size.assert_called_once_with(self.context, self.session,
+                                                    self.instance, "vdi")
+        self._assert_call_plugin_serialized_with_retry()
+        self._assert_make_uuid_stack_and_get_sr_path()
 
-        self.mox.StubOutWithMock(vm_utils, '_check_vdi_size')
-        vm_utils._check_vdi_size(
-                self.context, self.session, self.instance, "vdi")
-
-        self.mox.ReplayAll()
-
-        self.assertEqual("vdi", vm_utils._fetch_vhd_image(self.context,
-            self.session, self.instance, 'image_id')['root']['uuid'])
-
-        self.mox.VerifyAll()
-
-    def test_fetch_vhd_image_cleans_up_vdi_on_fail(self):
+    @mock.patch.object(vm_utils, 'destroy_vdi',
+                       side_effect=exception.StorageError(reason=""))
+    @mock.patch.object(FakeSession, 'call_xenapi', return_value="ref")
+    @mock.patch.object(
+        vm_utils, '_check_vdi_size',
+        side_effect=exception.FlavorDiskSmallerThanImage(flavor_size=0,
+                                                         image_size=1))
+    @mock.patch.object(vm_utils, '_scan_sr')
+    @mock.patch.object(vm_utils, 'safe_find_sr', return_value="sr")
+    def test_fetch_vhd_image_cleans_up_vdi_on_fail(
+            self, mock_safe_find_sr, mock_scan_sr, mock_check_vdi_size,
+            mock_call_xenapi, mock_destroy_vdi):
         self._stub_glance_download_vhd()
-
-        self.mox.StubOutWithMock(vm_utils, 'safe_find_sr')
-        vm_utils.safe_find_sr(self.session).AndReturn("sr")
-
-        self.mox.StubOutWithMock(vm_utils, '_scan_sr')
-        vm_utils._scan_sr(self.session, "sr")
-
-        self.mox.StubOutWithMock(vm_utils, '_check_vdi_size')
-        vm_utils._check_vdi_size(self.context, self.session, self.instance,
-                "vdi").AndRaise(exception.FlavorDiskSmallerThanImage(
-                flavor_size=0, image_size=1))
-
-        self.mox.StubOutWithMock(self.session, 'call_xenapi')
-        self.session.call_xenapi("VDI.get_by_uuid", "vdi").AndReturn("ref")
-
-        self.mox.StubOutWithMock(vm_utils, 'destroy_vdi')
-        vm_utils.destroy_vdi(self.session,
-                "ref").AndRaise(exception.StorageError(reason=""))
-
-        self.mox.ReplayAll()
 
         self.assertRaises(exception.FlavorDiskSmallerThanImage,
                 vm_utils._fetch_vhd_image, self.context, self.session,
                 self.instance, 'image_id')
 
-        self.mox.VerifyAll()
+        mock_safe_find_sr.assert_called_once_with(self.session)
+        mock_scan_sr.assert_called_once_with(self.session, "sr")
+        mock_check_vdi_size.assert_called_once_with(self.context, self.session,
+                                                    self.instance, "vdi")
+        mock_call_xenapi.assert_called_once_with("VDI.get_by_uuid", "vdi")
+        mock_destroy_vdi.assert_called_once_with(self.session, "ref")
+        self._assert_call_plugin_serialized_with_retry()
+        self._assert_make_uuid_stack_and_get_sr_path()
 
     def test_fetch_vhd_image_download_exception(self):
         self._stub_glance_download_vhd(raise_exc=RuntimeError)
 
-        self.mox.ReplayAll()
-
         self.assertRaises(RuntimeError, vm_utils._fetch_vhd_image,
                 self.context, self.session, self.instance, 'image_id')
-
-        self.mox.VerifyAll()
+        self._assert_call_plugin_serialized_with_retry()
+        self._assert_make_uuid_stack_and_get_sr_path()
 
 
 class TestImageCompression(VMUtilsTestBase):
