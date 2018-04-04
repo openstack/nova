@@ -1,4 +1,4 @@
-# Copyright 2015, 2017 IBM Corp.
+# Copyright 2015, 2018 IBM Corp.
 #
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
@@ -27,6 +27,17 @@ class TestVMTasks(test.NoDBTestCase):
         super(TestVMTasks, self).setUp()
         self.apt = mock.Mock()
         self.instance = mock.Mock()
+
+    @mock.patch('nova.virt.powervm.vm.get_instance_wrapper', autospec=True)
+    def test_get(self, mock_get_wrap):
+        get = tf_vm.Get(self.apt, self.instance)
+        get.execute()
+        mock_get_wrap.assert_called_once_with(self.apt, self.instance)
+
+        # Validate args on taskflow.task.Task instantiation
+        with mock.patch('taskflow.task.Task.__init__') as tf:
+            tf_vm.Get(self.apt, self.instance)
+        tf.assert_called_once_with(name='get_vm', provides='lpar_wrap')
 
     @mock.patch('pypowervm.tasks.storage.add_lpar_storage_scrub_tasks',
                 autospec=True)
