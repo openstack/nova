@@ -1300,7 +1300,7 @@ def get_vmdk_backed_disk_device(hardware_devices, uuid):
         if (device.__class__.__name__ == "VirtualDisk" and
                 device.backing.__class__.__name__ ==
                 "VirtualDiskFlatVer2BackingInfo" and
-                device.backing.uuid == uuid):
+                getattr(device.backing, 'uuid', None) == uuid):
             return device
 
 
