@@ -1432,12 +1432,9 @@ class ProviderUsageBaseTestCase(test.TestCase,
         return self.placement_api.get(
             '/allocations/%s' % server_uuid).body['allocations']
 
-    def _get_traits(self):
-        return self.placement_api.get('/traits', version='1.6').body['traits']
-
     def _get_all_providers(self):
         return self.placement_api.get(
-            '/resource_providers').body['resource_providers']
+            '/resource_providers', version='1.14').body['resource_providers']
 
     def _get_provider_traits(self, provider_uuid):
         return self.placement_api.get(
@@ -1460,6 +1457,23 @@ class ProviderUsageBaseTestCase(test.TestCase,
         return self.placement_api.put(
             '/resource_providers/%s/traits' % rp_uuid,
             put_traits_req, version='1.6')
+
+    def _get_all_resource_classes(self):
+        dicts = self.placement_api.get(
+            '/resource_classes', version='1.2').body['resource_classes']
+        return [d['name'] for d in dicts]
+
+    def _get_all_traits(self):
+        return self.placement_api.get('/traits', version='1.6').body['traits']
+
+    def _get_provider_inventory(self, rp_uuid):
+        return self.placement_api.get(
+            '/resource_providers/%s/inventories' % rp_uuid).body['inventories']
+
+    def _get_provider_aggregates(self, rp_uuid):
+        return self.placement_api.get(
+            '/resource_providers/%s/aggregates' % rp_uuid,
+            version='1.1').body['aggregates']
 
     def assertFlavorMatchesAllocation(self, flavor, allocation):
         self.assertEqual(flavor['vcpus'], allocation['VCPU'])
@@ -1609,6 +1623,270 @@ class ProviderUsageBaseTestCase(test.TestCase,
         LOG.info('Finished with periodics')
 
 
+class ProviderTreeTests(ProviderUsageBaseTestCase):
+    compute_driver = 'fake.SmallFakeDriver'
+
+    def setUp(self):
+        super(ProviderTreeTests, self).setUp()
+        _p = mock.patch.object(fake.SmallFakeDriver, 'update_provider_tree')
+        self.addCleanup(_p.stop)
+        self.mock_upt = _p.start()
+
+        # Before starting compute, placement has no providers registered
+        self.assertEqual([], self._get_all_providers())
+
+        self.compute = self._start_compute(host='host1')
+
+        # The compute host should have been created in placement with empty
+        # inventory and no traits
+        rps = self._get_all_providers()
+        self.assertEqual(1, len(rps))
+        self.assertEqual(self.compute.host, rps[0]['name'])
+        self.host_uuid = self._get_provider_uuid_by_host(self.compute.host)
+        self.assertEqual({}, self._get_provider_inventory(self.host_uuid))
+        self.assertEqual([], self._get_provider_traits(self.host_uuid))
+
+    def _run_update_available_resource_and_assert_sync_error(self):
+        """Invoke ResourceTracker.update_available_resource and assert that it
+        results in ResourceProviderSyncFailed.
+
+        _run_periodicals is a little too high up in the call stack to be useful
+        for this, because ResourceTracker.update_available_resource_for_node
+        swallows all exceptions.
+        """
+        ctx = context.get_admin_context()
+        rt = self.compute._get_resource_tracker()
+        self.assertRaises(
+            exception.ResourceProviderSyncFailed,
+            rt.update_available_resource, ctx, self.compute.host)
+
+    def test_update_provider_tree_associated_info(self):
+        """Inventory in some standard and custom resource classes.  Standard
+        and custom traits.  Aggregates.  Custom resource class and trait get
+        created; inventory, traits, and aggregates get set properly.
+        """
+        inv = {
+            'VCPU': {
+                'total': 10,
+                'reserved': 0,
+                'min_unit': 1,
+                'max_unit': 2,
+                'step_size': 1, 'allocation_ratio': 10.0,
+            },
+            'MEMORY_MB': {
+                'total': 1048576,
+                'reserved': 2048,
+                'min_unit': 1024,
+                'max_unit': 131072,
+                'step_size': 1024,
+                'allocation_ratio': 1.0,
+            },
+            'CUSTOM_BANDWIDTH': {
+                'total': 1250000,
+                'reserved': 10000,
+                'min_unit': 5000,
+                'max_unit': 250000,
+                'step_size': 5000,
+                'allocation_ratio': 8.0,
+            },
+        }
+        traits = set(['HW_CPU_X86_AVX', 'HW_CPU_X86_AVX2', 'CUSTOM_GOLD'])
+        aggs = set([uuids.agg1, uuids.agg2])
+
+        def update_provider_tree(prov_tree, nodename):
+            prov_tree.update_inventory(self.compute.host, inv, None)
+            prov_tree.update_traits(self.compute.host, traits)
+            prov_tree.update_aggregates(self.compute.host, aggs)
+        self.mock_upt.side_effect = update_provider_tree
+
+        self.assertNotIn('CUSTOM_BANDWIDTH', self._get_all_resource_classes())
+        self.assertNotIn('CUSTOM_GOLD', self._get_all_traits())
+
+        self._run_periodics()
+
+        self.assertIn('CUSTOM_BANDWIDTH', self._get_all_resource_classes())
+        self.assertIn('CUSTOM_GOLD', self._get_all_traits())
+        self.assertEqual(inv, self._get_provider_inventory(self.host_uuid))
+        self.assertEqual(traits,
+                         set(self._get_provider_traits(self.host_uuid)))
+        self.assertEqual(aggs,
+                         set(self._get_provider_aggregates(self.host_uuid)))
+
+    def test_update_provider_tree_multiple_providers(self):
+        """Make update_provider_tree create multiple providers, including an
+        additional root as a sharing provider; and some descendants in the
+        compute node's tree.
+        """
+        def update_provider_tree(prov_tree, nodename):
+            # Create a shared storage provider as a root
+            prov_tree.new_root('ssp', uuids.ssp, None)
+            prov_tree.update_traits(
+                'ssp', ['MISC_SHARES_VIA_AGGREGATE', 'STORAGE_DISK_SSD'])
+            prov_tree.update_aggregates('ssp', [uuids.agg])
+            # Compute node is in the same aggregate
+            prov_tree.update_aggregates(self.compute.host, [uuids.agg])
+            # Create two NUMA nodes as children
+            prov_tree.new_child('numa1', self.host_uuid, uuid=uuids.numa1)
+            prov_tree.new_child('numa2', self.host_uuid, uuid=uuids.numa2)
+            # Give the NUMA nodes the proc/mem inventory.  NUMA 2 has twice as
+            # much as NUMA 1 (so we can validate later that everything is where
+            # it should be).
+            for n in (1, 2):
+                inv = {
+                    'VCPU': {
+                        'total': 10 * n,
+                        'reserved': 0,
+                        'min_unit': 1,
+                        'max_unit': 2,
+                        'step_size': 1,
+                        'allocation_ratio': 10.0,
+                    },
+                    'MEMORY_MB': {
+                         'total': 1048576 * n,
+                         'reserved': 2048,
+                         'min_unit': 1024,
+                         'max_unit': 131072,
+                         'step_size': 1024,
+                         'allocation_ratio': 1.0,
+                     },
+                }
+                prov_tree.update_inventory('numa%d' % n, inv, None)
+            # Each NUMA node has two PFs providing VF inventory on one of two
+            # networks
+            for n in (1, 2):
+                for p in (1, 2):
+                    name = 'pf%d_%d' % (n, p)
+                    prov_tree.new_child(
+                        name, getattr(uuids, 'numa%d' % n),
+                        uuid=getattr(uuids, name))
+                    trait = 'CUSTOM_PHYSNET_%d' % ((n + p) % 2)
+                    prov_tree.update_traits(name, [trait])
+                    inv = {
+                        'SRIOV_NET_VF': {
+                            'total': n + p,
+                            'reserved': 0,
+                            'min_unit': 1,
+                            'max_unit': 1,
+                            'step_size': 1,
+                            'allocation_ratio': 1.0,
+                        },
+                    }
+                    prov_tree.update_inventory(name, inv, None)
+        self.mock_upt.side_effect = update_provider_tree
+
+        self._run_periodics()
+
+        # Create a dict, keyed by provider UUID, of all the providers
+        rps_by_uuid = {}
+        for rp_dict in self._get_all_providers():
+            rps_by_uuid[rp_dict['uuid']] = rp_dict
+
+        # All and only the expected providers got created.
+        all_uuids = set([self.host_uuid, uuids.ssp, uuids.numa1, uuids.numa2,
+                         uuids.pf1_1, uuids.pf1_2, uuids.pf2_1, uuids.pf2_2])
+        self.assertEqual(all_uuids, set(rps_by_uuid))
+
+        # Validate tree roots
+        tree_uuids = [self.host_uuid, uuids.numa1, uuids.numa2,
+                      uuids.pf1_1, uuids.pf1_2, uuids.pf2_1, uuids.pf2_2]
+        for tree_uuid in tree_uuids:
+            self.assertEqual(self.host_uuid,
+                             rps_by_uuid[tree_uuid]['root_provider_uuid'])
+        self.assertEqual(uuids.ssp,
+                         rps_by_uuid[uuids.ssp]['root_provider_uuid'])
+
+        # SSP has the right traits
+        self.assertEqual(
+            set(['MISC_SHARES_VIA_AGGREGATE', 'STORAGE_DISK_SSD']),
+            set(self._get_provider_traits(uuids.ssp)))
+
+        # SSP and compute are in the same aggregate
+        agg_uuids = set([self.host_uuid, uuids.ssp])
+        for uuid in agg_uuids:
+            self.assertEqual(set([uuids.agg]),
+                             set(self._get_provider_aggregates(uuid)))
+
+        # The rest aren't in aggregates
+        for uuid in (all_uuids - agg_uuids):
+            self.assertEqual(set(), set(self._get_provider_aggregates(uuid)))
+
+        # NUMAs have the right inventory and parentage
+        for n in (1, 2):
+            numa_uuid = getattr(uuids, 'numa%d' % n)
+            self.assertEqual(self.host_uuid,
+                             rps_by_uuid[numa_uuid]['parent_provider_uuid'])
+            inv = self._get_provider_inventory(numa_uuid)
+            self.assertEqual(10 * n, inv['VCPU']['total'])
+            self.assertEqual(1048576 * n, inv['MEMORY_MB']['total'])
+
+        # PFs have the right inventory, physnet, and parentage
+        self.assertEqual(uuids.numa1,
+                         rps_by_uuid[uuids.pf1_1]['parent_provider_uuid'])
+        self.assertEqual(['CUSTOM_PHYSNET_0'],
+                         self._get_provider_traits(uuids.pf1_1))
+        self.assertEqual(
+            2,
+            self._get_provider_inventory(uuids.pf1_1)['SRIOV_NET_VF']['total'])
+
+        self.assertEqual(uuids.numa1,
+                         rps_by_uuid[uuids.pf1_2]['parent_provider_uuid'])
+        self.assertEqual(['CUSTOM_PHYSNET_1'],
+                         self._get_provider_traits(uuids.pf1_2))
+        self.assertEqual(
+            3,
+            self._get_provider_inventory(uuids.pf1_2)['SRIOV_NET_VF']['total'])
+
+        self.assertEqual(uuids.numa2,
+                         rps_by_uuid[uuids.pf2_1]['parent_provider_uuid'])
+        self.assertEqual(['CUSTOM_PHYSNET_1'],
+                         self._get_provider_traits(uuids.pf2_1))
+        self.assertEqual(
+            3,
+            self._get_provider_inventory(uuids.pf2_1)['SRIOV_NET_VF']['total'])
+
+        self.assertEqual(uuids.numa2,
+                         rps_by_uuid[uuids.pf2_2]['parent_provider_uuid'])
+        self.assertEqual(['CUSTOM_PHYSNET_0'],
+                         self._get_provider_traits(uuids.pf2_2))
+        self.assertEqual(
+            4,
+            self._get_provider_inventory(uuids.pf2_2)['SRIOV_NET_VF']['total'])
+
+        # Compute and NUMAs don't have any traits
+        for uuid in (self.host_uuid, uuids.numa1, uuids.numa2):
+            self.assertEqual([], self._get_provider_traits(uuid))
+
+    def test_update_provider_tree_bogus_resource_class(self):
+        def update_provider_tree(prov_tree, nodename):
+            prov_tree.update_inventory(self.compute.host, {'FOO': {}}, None)
+        self.mock_upt.side_effect = update_provider_tree
+
+        rcs = self._get_all_resource_classes()
+        self.assertIn('VCPU', rcs)
+        self.assertNotIn('FOO', rcs)
+
+        self._run_update_available_resource_and_assert_sync_error()
+
+        rcs = self._get_all_resource_classes()
+        self.assertIn('VCPU', rcs)
+        self.assertNotIn('FOO', rcs)
+
+    def test_update_provider_tree_bogus_trait(self):
+        def update_provider_tree(prov_tree, nodename):
+            prov_tree.update_traits(self.compute.host, ['FOO'])
+        self.mock_upt.side_effect = update_provider_tree
+
+        traits = self._get_all_traits()
+        self.assertIn('HW_CPU_X86_AVX', traits)
+        self.assertNotIn('FOO', traits)
+
+        self._run_update_available_resource_and_assert_sync_error()
+
+        traits = self._get_all_traits()
+        self.assertIn('HW_CPU_X86_AVX', traits)
+        self.assertNotIn('FOO', traits)
+
+
 class TraitsTrackingTests(ProviderUsageBaseTestCase):
     compute_driver = 'fake.SmallFakeDriver'
 
@@ -1617,14 +1895,14 @@ class TraitsTrackingTests(ProviderUsageBaseTestCase):
         traits = ['CUSTOM_FOO', 'HW_CPU_X86_VMX']
         mock_traits.return_value = traits
 
-        self.assertNotIn('CUSTOM_FOO', self._get_traits())
+        self.assertNotIn('CUSTOM_FOO', self._get_all_traits())
         self.assertEqual([], self._get_all_providers())
 
         self.compute = self._start_compute(host='host1')
 
         rp_uuid = self._get_provider_uuid_by_host('host1')
         self.assertEqual(traits, sorted(self._get_provider_traits(rp_uuid)))
-        self.assertIn('CUSTOM_FOO', self._get_traits())
+        self.assertIn('CUSTOM_FOO', self._get_all_traits())
 
 
 class ServerMovingTests(ProviderUsageBaseTestCase):

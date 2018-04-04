@@ -438,6 +438,7 @@ def setup_rt(hostname, virt_resources=_VIRT_DRIVER_AVAIL_RESOURCES,
     vd.get_available_resource.return_value = virt_resources
     vd.get_inventory.side_effect = NotImplementedError
     vd.get_traits.side_effect = NotImplementedError
+    vd.update_provider_tree.side_effect = NotImplementedError
     vd.get_host_ip_addr.return_value = _NODENAME
     vd.estimate_instance_overhead.side_effect = estimate_overhead
     vd.rebalances_nodes = False
@@ -1324,6 +1325,50 @@ class TestUpdateComputeNode(BaseTestCase):
             mock.sentinel.traits,
         )
         self.driver_mock.get_traits.assert_called_once_with(_NODENAME)
+
+    @mock.patch('nova.compute.resource_tracker.'
+                '_normalize_inventory_from_cn_obj')
+    @mock.patch('nova.objects.ComputeNode.save')
+    def test_existing_node_update_provider_tree_implemented(self, save_mock,
+            norm_mock):
+        """The update_provider_tree() virt driver method is only implemented
+        for some virt drivers. This method returns inventory, trait, and
+        aggregate information for resource providers in a tree associated with
+        the compute node.  If this method doesn't raise a NotImplementedError,
+        it triggers _update() to call the update_from_provider_tree() method of
+        the reporting client instead of set_inventory_for_provider() (old) or
+        update_compute_node() (older).
+        """
+        self._setup_rt()
+        rc_mock = self.rt.reportclient
+        gptaer_mock = rc_mock.get_provider_tree_and_ensure_root
+        gptaer_mock.return_value = mock.sentinel.pt1
+
+        # Emulate a driver that has implemented the update_from_provider_tree()
+        # virt driver method
+        self.driver_mock.update_provider_tree.side_effect = None
+
+        orig_compute = _COMPUTE_NODE_FIXTURES[0].obj_clone()
+        self.rt.compute_nodes[_NODENAME] = orig_compute
+        self.rt.old_resources[_NODENAME] = orig_compute
+
+        # Deliberately changing local_gb to trigger updating inventory
+        new_compute = orig_compute.obj_clone()
+        new_compute.local_gb = 210000
+
+        self.rt._update(mock.sentinel.ctx, new_compute)
+
+        save_mock.assert_called_once_with()
+        gptaer_mock.assert_called_once_with(
+            mock.sentinel.ctx, new_compute.uuid,
+            name=new_compute.hypervisor_hostname)
+        self.driver_mock.update_provider_tree.assert_called_once_with(
+            mock.sentinel.pt1, new_compute.hypervisor_hostname)
+        rc_mock.update_from_provider_tree.assert_called_once_with(
+            mock.sentinel.ctx, mock.sentinel.pt1)
+        norm_mock.assert_not_called()
+        self.sched_client_mock.update_compute_node.assert_not_called()
+        self.sched_client_mock.set_inventory_for_provider.assert_not_called()
 
     def test_get_node_uuid(self):
         self._setup_rt()
