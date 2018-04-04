@@ -54,7 +54,7 @@ from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_network
-from nova.tests.unit import test_identity
+from nova.tests.unit import fake_requests
 from nova.tests import uuidsentinel as uuids
 from nova import utils
 from nova.virt import netutils
@@ -856,9 +856,11 @@ class OpenStackMetadataTestCase(test.TestCase):
 
     def _test_vendordata2_response_inner(self, request_mock, response_code,
                                          include_rest_result=True):
-        fake_response = test_identity.FakeResponse(response_code)
+        content = None
         if include_rest_result:
-            fake_response.content = '{"color": "blue"}'
+            content = '{"color": "blue"}'
+        fake_response = fake_requests.FakeResponse(response_code,
+                                                   content=content)
         request_mock.return_value = fake_response
 
         with utils.tempdir() as tmpdir:
