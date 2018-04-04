@@ -2061,7 +2061,8 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_inst_save.side_effect = _check_state
 
             if allow_same_host:
-                filter_properties = {'ignore_hosts': []}
+                filter_properties = {'ignore_hosts': [],
+                                      'force_nodes': ['fakenode1']}
             else:
                 filter_properties = {'ignore_hosts': [fake_inst['host']]}
 

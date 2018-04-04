@@ -4140,6 +4140,8 @@ class API:
         filter_properties = {'ignore_hosts': []}
         if not self._allow_resize_to_same_host(same_flavor, instance):
             filter_properties['ignore_hosts'].append(instance.host)
+        else:
+            filter_properties['force_nodes'] = [instance.node]
 
         request_spec = objects.RequestSpec.get_by_instance_uuid(
             context, instance.uuid)
