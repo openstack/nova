@@ -62,7 +62,6 @@ class VMwareVolumeOps(object):
                           disk_size=None, linked_clone=False,
                           device_name=None, disk_io_limits=None):
         """Attach disk to VM by reconfiguration."""
-        instance_name = instance.name
         client_factory = self._session.vim.client.factory
         devices = vm_util.get_hardware_devices(self._session, vm_ref)
         (controller_key, unit_number,
@@ -78,18 +77,20 @@ class VMwareVolumeOps(object):
         if controller_spec:
             vmdk_attach_config_spec.deviceChange.append(controller_spec)
 
-        LOG.debug("Reconfiguring VM instance %(instance_name)s to attach "
+        LOG.debug("Reconfiguring VM instance %(vm_ref)s to attach "
                   "disk %(vmdk_path)s or device %(device_name)s with type "
                   "%(disk_type)s",
-                  {'instance_name': instance_name, 'vmdk_path': vmdk_path,
-                   'device_name': device_name, 'disk_type': disk_type},
+                  {'vm_ref': vutil.get_moref_value(vm_ref),
+                   'vmdk_path': vmdk_path, 'device_name': device_name,
+                   'disk_type': disk_type},
                   instance=instance)
         vm_util.reconfigure_vm(self._session, vm_ref, vmdk_attach_config_spec)
-        LOG.debug("Reconfigured VM instance %(instance_name)s to attach "
+        LOG.debug("Reconfigured VM instance %(vm_ref)s to attach "
                   "disk %(vmdk_path)s or device %(device_name)s with type "
                   "%(disk_type)s",
-                  {'instance_name': instance_name, 'vmdk_path': vmdk_path,
-                   'device_name': device_name, 'disk_type': disk_type},
+                  {'vm_ref': vutil.get_moref_value(vm_ref),
+                   'vmdk_path': vmdk_path, 'device_name': device_name,
+                   'disk_type': disk_type},
                   instance=instance)
 
     def _update_volume_details(self, vm_ref, volume_uuid, device_uuid):
@@ -114,19 +115,20 @@ class VMwareVolumeOps(object):
     def detach_disk_from_vm(self, vm_ref, instance, device,
                             destroy_disk=False):
         """Detach disk from VM by reconfiguration."""
-        instance_name = instance.name
         client_factory = self._session.vim.client.factory
         vmdk_detach_config_spec = vm_util.get_vmdk_detach_config_spec(
                                     client_factory, device, destroy_disk)
         disk_key = device.key
-        LOG.debug("Reconfiguring VM instance %(instance_name)s to detach "
+        LOG.debug("Reconfiguring VM instance %(vm_ref)s to detach "
                   "disk %(disk_key)s",
-                  {'instance_name': instance_name, 'disk_key': disk_key},
+                  {'vm_ref': vutil.get_moref_value(vm_ref),
+                   'disk_key': disk_key},
                   instance=instance)
         vm_util.reconfigure_vm(self._session, vm_ref, vmdk_detach_config_spec)
-        LOG.debug("Reconfigured VM instance %(instance_name)s to detach "
+        LOG.debug("Reconfigured VM instance %(vm_ref)s to detach "
                   "disk %(disk_key)s",
-                  {'instance_name': instance_name, 'disk_key': disk_key},
+                  {'vm_ref': vutil.get_moref_value(vm_ref),
+                   'disk_key': disk_key},
                   instance=instance)
 
     def _iscsi_get_target(self, data):
@@ -519,8 +521,10 @@ class VMwareVolumeOps(object):
         detached = False
         LOG.debug("Relocating volume's backing: %(backing)s to resource "
                   "pool: %(rp)s, datastore: %(ds)s, host: %(host)s.",
-                  {'backing': volume_ref, 'rp': res_pool, 'ds': datastore,
-                   'host': host})
+                  {'backing': vutil.get_moref_value(volume_ref),
+                   'rp': vutil.get_moref_value(res_pool),
+                   'ds': vutil.get_moref_value(datastore),
+                   'host': vutil.get_moref_value(host)})
         try:
             vm_util.relocate_vm(self._session, volume_ref, res_pool, datastore,
                                 host)
