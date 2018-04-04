@@ -860,6 +860,21 @@ class AllocationCandidatesTestCase(ProviderDBBase):
         ]
         self._validate_allocation_requests(expected, alloc_cands)
 
+        expected = {
+            'cn1': set([
+                (fields.ResourceClass.VCPU, 24 * 16.0, 0),
+                (fields.ResourceClass.MEMORY_MB, 1024 * 1.5, 0),
+            ]),
+            'cn2': set([
+                (fields.ResourceClass.VCPU, 24 * 16.0, 0),
+                (fields.ResourceClass.MEMORY_MB, 1024 * 1.5, 0),
+            ]),
+            'shared custom resource provider': set([
+                (magic_rc.name, 1024, 0)
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
+
     def test_mix_local_and_shared(self):
         # Create three compute node providers with VCPU and RAM, but only
         # the third compute node has DISK. The first two computes will
@@ -1053,6 +1068,18 @@ class AllocationCandidatesTestCase(ProviderDBBase):
 
         self._validate_allocation_requests(expected, alloc_cands)
 
+        expected = {
+            'cn': set([
+                (fields.ResourceClass.VCPU, 24, 0),
+                (fields.ResourceClass.MEMORY_MB, 2048, 0),
+                (fields.ResourceClass.DISK_GB, 1600, 0),
+            ]),
+            'ss': set([
+                (fields.ResourceClass.DISK_GB, 1600, 0),
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
+
     def test_common_rc_traits_split(self):
         """Validate filters when traits are split across cn and shared RPs."""
         # NOTE(efried): This test case only applies to the scenario where we're
@@ -1091,6 +1118,19 @@ class AllocationCandidatesTestCase(ProviderDBBase):
         ]
         self._validate_allocation_requests(expected, alloc_cands)
 
+        # expected = {}
+        expected = {
+            'cn': set([
+                (fields.ResourceClass.VCPU, 24, 0),
+                (fields.ResourceClass.MEMORY_MB, 2048, 0),
+                (fields.ResourceClass.DISK_GB, 1600, 0),
+            ]),
+            'ss': set([
+                (fields.ResourceClass.DISK_GB, 1600, 0),
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
+
     def test_only_one_sharing_provider(self):
         ss1 = self._create_provider('ss1', uuids.agg1)
         _set_traits(ss1, "MISC_SHARES_VIA_AGGREGATE")
@@ -1116,6 +1156,15 @@ class AllocationCandidatesTestCase(ProviderDBBase):
         ]
         self._validate_allocation_requests(expected, alloc_cands)
 
+        expected = {
+            'ss1': set([
+                (fields.ResourceClass.IPV4_ADDRESS, 24, 0),
+                (fields.ResourceClass.SRIOV_NET_VF, 16, 0),
+                (fields.ResourceClass.DISK_GB, 1600, 0),
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
+
     def test_all_sharing_providers_no_rc_overlap(self):
         ss1 = self._create_provider('ss1', uuids.agg1)
         _set_traits(ss1, "MISC_SHARES_VIA_AGGREGATE")
@@ -1140,6 +1189,16 @@ class AllocationCandidatesTestCase(ProviderDBBase):
              ('ss2', fields.ResourceClass.DISK_GB, 1500)],
         ]
         self._validate_allocation_requests(expected, alloc_cands)
+
+        expected = {
+            'ss1': set([
+                (fields.ResourceClass.IPV4_ADDRESS, 24, 0),
+            ]),
+            'ss2': set([
+                (fields.ResourceClass.DISK_GB, 1600, 0),
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
 
     def test_all_sharing_providers_no_rc_overlap_more_classes(self):
         ss1 = self._create_provider('ss1', uuids.agg1)
@@ -1168,6 +1227,17 @@ class AllocationCandidatesTestCase(ProviderDBBase):
              ('ss2', fields.ResourceClass.DISK_GB, 1500)]
         ]
         self._validate_allocation_requests(expected, alloc_cands)
+
+        expected = {
+            'ss1': set([
+                (fields.ResourceClass.IPV4_ADDRESS, 24, 0),
+                (fields.ResourceClass.SRIOV_NET_VF, 16, 0)
+            ]),
+            'ss2': set([
+                (fields.ResourceClass.DISK_GB, 1600, 0),
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
 
     def test_all_sharing_providers(self):
         ss1 = self._create_provider('ss1', uuids.agg1)
@@ -1202,6 +1272,18 @@ class AllocationCandidatesTestCase(ProviderDBBase):
              ('ss2', fields.ResourceClass.DISK_GB, 1500)],
         ]
         self._validate_allocation_requests(expected, alloc_cands)
+
+        expected = {
+            'ss1': set([
+                (fields.ResourceClass.IPV4_ADDRESS, 24, 0),
+                (fields.ResourceClass.SRIOV_NET_VF, 16, 0),
+                (fields.ResourceClass.DISK_GB, 1600, 0)
+            ]),
+            'ss2': set([
+                (fields.ResourceClass.DISK_GB, 1600, 0),
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
 
     def test_two_non_sharing_connect_to_one_sharing_different_aggregate(self):
         # Covering the following setup:
@@ -1240,6 +1322,19 @@ class AllocationCandidatesTestCase(ProviderDBBase):
              ('ss1', fields.ResourceClass.DISK_GB, 1500)],
         ]
         self._validate_allocation_requests(expected, alloc_cands)
+
+        expected = {
+            'cn1': set([
+                (fields.ResourceClass.VCPU, 24, 0)
+            ]),
+            'cn2': set([
+                (fields.ResourceClass.VCPU, 24, 0)
+            ]),
+            'ss1': set([
+                (fields.ResourceClass.DISK_GB, 1600, 0),
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
 
     def test_two_non_sharing_one_common_and_two_unique_sharing(self):
         # Covering the following setup:
@@ -1289,8 +1384,26 @@ class AllocationCandidatesTestCase(ProviderDBBase):
              ('ss1', fields.ResourceClass.DISK_GB, 1500),
              ('ss2', fields.ResourceClass.IPV4_ADDRESS, 2)],
         ]
-
         self._validate_allocation_requests(expected, alloc_cands)
+
+        expected = {
+            'cn1': set([
+                (fields.ResourceClass.VCPU, 24, 0),
+            ]),
+            'cn2': set([
+                (fields.ResourceClass.VCPU, 24, 0),
+            ]),
+            'ss1': set([
+                (fields.ResourceClass.DISK_GB, 1600, 0),
+            ]),
+            'ss2': set([
+                (fields.ResourceClass.IPV4_ADDRESS, 24, 0),
+            ]),
+            'ss3': set([
+                (fields.ResourceClass.IPV4_ADDRESS, 24, 0),
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
 
     def test_rc_split_between_sharing_and_non_sharing(self):
         # cn1(VCPU,MEM,DISK)   Non-sharing RP with all resources
@@ -1316,8 +1429,19 @@ class AllocationCandidatesTestCase(ProviderDBBase):
              ('cn1', fields.ResourceClass.MEMORY_MB, 64),
              ('ss1', fields.ResourceClass.DISK_GB, 1500)],
         ]
-
         self._validate_allocation_requests(expected, alloc_cands)
+
+        expected = {
+            'cn1': set([
+                (fields.ResourceClass.VCPU, 24, 0),
+                (fields.ResourceClass.MEMORY_MB, 2048, 0),
+                (fields.ResourceClass.DISK_GB, 2000, 0),
+            ]),
+            'ss1': set([
+                (fields.ResourceClass.DISK_GB, 2000, 0),
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
 
     def test_rc_not_split_between_sharing_and_non_sharing(self):
         # cn1(VCPU,MEM)   Non-sharing RP with some of the resources
@@ -1355,6 +1479,26 @@ class AllocationCandidatesTestCase(ProviderDBBase):
         ]
 
         self._validate_allocation_requests(expected, alloc_cands)
+
+        expected = {
+            'cn1': set([
+                (fields.ResourceClass.VCPU, 24, 0),
+                (fields.ResourceClass.MEMORY_MB, 2048, 0),
+            ]),
+            'ss1': set([
+                (fields.ResourceClass.DISK_GB, 2000, 0),
+            ]),
+            'cn2': set([
+                (fields.ResourceClass.VCPU, 24, 0),
+            ]),
+            'ss2_1': set([
+                (fields.ResourceClass.MEMORY_MB, 2048, 0),
+            ]),
+            'ss2_2': set([
+                (fields.ResourceClass.DISK_GB, 2000, 0),
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
 
     def test_multiple_sharing_providers_with_same_rc(self):
         #       cn1(VCPU,MEM)       Non-sharing with some of the resources;
@@ -1396,8 +1540,30 @@ class AllocationCandidatesTestCase(ProviderDBBase):
              ('ss2_1', fields.ResourceClass.MEMORY_MB, 64),
              ('ss2_2', fields.ResourceClass.DISK_GB, 1500)],
         ]
-
         self._validate_allocation_requests(expected, alloc_cands)
+
+        expected = {
+            'cn1': set([
+                (fields.ResourceClass.VCPU, 24, 0),
+                (fields.ResourceClass.MEMORY_MB, 2048, 0),
+            ]),
+            'ss1_1': set([
+                (fields.ResourceClass.DISK_GB, 2000, 0),
+            ]),
+            'ss1_2': set([
+                (fields.ResourceClass.DISK_GB, 2000, 0),
+            ]),
+            'cn2': set([
+                (fields.ResourceClass.VCPU, 24, 0),
+            ]),
+            'ss2_1': set([
+                (fields.ResourceClass.MEMORY_MB, 2048, 0),
+            ]),
+            'ss2_2': set([
+                (fields.ResourceClass.DISK_GB, 2000, 0),
+            ]),
+        }
+        self._validate_provider_summary_resources(expected, alloc_cands)
 
     def test_simple_tree_of_providers(self):
         """Create a hierarchy of resource providers with various inventories on
