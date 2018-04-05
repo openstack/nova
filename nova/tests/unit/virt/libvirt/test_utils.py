@@ -28,6 +28,7 @@ from nova import context
 from nova import exception
 from nova import objects
 from nova.objects import fields as obj_fields
+import nova.privsep.fs
 from nova import test
 from nova.tests.unit import fake_instance
 from nova.tests.unit.virt.libvirt import fakelibvirt
@@ -368,7 +369,7 @@ ID        TAG                 VM SIZE                DATE       VM CLOCK
                'expected_fs_type': 'some_fs_type'},
               {'fs_type': None,
                'default_eph_format': None,
-               'expected_fs_type': disk.FS_FORMAT_EXT4},
+               'expected_fs_type': nova.privsep.fs.FS_FORMAT_EXT4},
               {'fs_type': None,
                'default_eph_format': 'eph_format',
                'expected_fs_type': 'eph_format'})

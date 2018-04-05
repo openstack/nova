@@ -29,10 +29,10 @@ from oslo_utils import fileutils
 import nova.conf
 from nova.i18n import _
 from nova.objects import fields as obj_fields
+import nova.privsep.fs
 import nova.privsep.idmapshift
 import nova.privsep.libvirt
 from nova import utils
-from nova.virt.disk import api as disk
 from nova.virt import images
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt.volume import remotefs
@@ -105,7 +105,7 @@ def create_ploop_image(disk_format, path, size, fs_type):
     """
     if not fs_type:
         fs_type = CONF.default_ephemeral_format or \
-                  disk.FS_FORMAT_EXT4
+                  nova.privsep.fs.FS_FORMAT_EXT4
     fileutils.ensure_tree(path)
     disk_path = os.path.join(path, 'root.hds')
     nova.privsep.libvirt.ploop_init(size, disk_format, fs_type, disk_path)

@@ -2,4 +2,4 @@
 upgrade:
   - |
     The following commands are no longer required to be listed in your rootwrap
-    configuration: tune2fs.
+    configuration: mkfs; tune2fs.
