@@ -258,7 +258,7 @@ class SchedulerReportClient(object):
         # provider and inventory information
         self._provider_tree = provider_tree.ProviderTree()
         # Track the last time we updated providers' aggregates and traits
-        self.association_refresh_time = {}
+        self._association_refresh_time = {}
         self._client = self._create_client()
         # NOTE(danms): Keep track of how naggy we've been
         self._warn_count = 0
@@ -268,7 +268,7 @@ class SchedulerReportClient(object):
         """Create the HTTP session accessing the placement service."""
         # Flush provider tree and associations so we start from a clean slate.
         self._provider_tree = provider_tree.ProviderTree()
-        self.association_refresh_time = {}
+        self._association_refresh_time = {}
         client = utils.get_ksa_adapter('placement')
         # Set accept header on every request to ensure we notify placement
         # service of our response body media type preferences.
@@ -756,7 +756,7 @@ class SchedulerReportClient(object):
                 self._provider_tree.remove(rp_uuid)
             except ValueError:
                 pass
-            self.association_refresh_time.pop(rp_uuid, None)
+            self._association_refresh_time.pop(rp_uuid, None)
             return
 
         msg = ("[%(placement_req_id)s] Failed to delete resource provider "
@@ -870,16 +870,16 @@ class SchedulerReportClient(object):
                     self._refresh_associations(context, rp['uuid'],
                                                force=force,
                                                refresh_sharing=False)
-            self.association_refresh_time[rp_uuid] = time.time()
+            self._association_refresh_time[rp_uuid] = time.time()
 
     def _associations_stale(self, uuid):
         """Respond True if aggregates and traits have not been refreshed
         "recently".
 
-        It is old if association_refresh_time for this uuid is not set
-        or more than ASSOCIATION_REFRESH seconds ago.
+        Associations are stale if association_refresh_time for this uuid is not
+        set or is more than ASSOCIATION_REFRESH seconds ago.
         """
-        refresh_time = self.association_refresh_time.get(uuid, 0)
+        refresh_time = self._association_refresh_time.get(uuid, 0)
         return (time.time() - refresh_time) > ASSOCIATION_REFRESH
 
     def _update_inventory_attempt(self, context, rp_uuid, inv_data):
@@ -945,9 +945,8 @@ class SchedulerReportClient(object):
             #    trigger a delete of the old allocation records and then set
             #    the new inventory, and then set the allocation record to the
             #    new CUSTOM_IRON_SILVER record.
-            match = _RE_INV_IN_USE.search(result.text)
-            if match:
-                rc = match.group(1)
+            rc = _extract_inventory_in_use(result.text)
+            if rc is not None:
                 raise exception.InventoryInUse(
                     resource_classes=rc,
                     resource_provider=rp_uuid,
@@ -1172,9 +1171,8 @@ class SchedulerReportClient(object):
         if resp.status_code == 409:
             # If a conflict attempting to remove inventory in a resource class
             # with active allocations, raise InventoryInUse
-            match = _RE_INV_IN_USE.search(resp.text)
-            if match:
-                rc = match.group(1)
+            rc = _extract_inventory_in_use(resp.text)
+            if rc is not None:
                 raise exception.InventoryInUse(
                     resource_classes=rc,
                     resource_provider=rp_uuid,
@@ -1450,7 +1448,7 @@ class SchedulerReportClient(object):
                     self._provider_tree.remove(rp_uuid)
                 except ValueError:
                     pass
-                self.association_refresh_time.pop(rp_uuid, None)
+                self._association_refresh_time.pop(rp_uuid, None)
 
         # Overall indicator of success.  Will be set to False on any exception.
         success = True

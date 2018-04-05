@@ -862,7 +862,6 @@ class ComputeDriver(object):
             an advisory capacity to restrict changes to only the providers
             associated with that one node, but this is not a requirement: the
             caller always subsumes all changes regardless.
-        :return: True if the provider_tree was changed; False otherwise.
         """
         raise NotImplementedError()
 

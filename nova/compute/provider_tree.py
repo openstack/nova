@@ -249,7 +249,9 @@ class ProviderTree(object):
         providers that do not exist in the tree already and will REPLACE
         providers in the tree if provider_dicts contains providers that are
         already in the tree. This method will NOT remove providers from the
-        tree that are not in provider_dicts.
+        tree that are not in provider_dicts.  But if a parent provider is in
+        provider_dicts and the descendents are not, this method will remove the
+        descendents from the tree.
 
         :param provider_dicts: An iterable of dicts of resource provider
                                information.  If a provider is present in
@@ -355,7 +357,7 @@ class ProviderTree(object):
                 exists = False
 
             if exists:
-                err = _("Provider %s already exists as a root.")
+                err = _("Provider %s already exists.")
                 raise ValueError(err % uuid)
 
             p = _Provider(name, uuid=uuid, generation=generation)
@@ -402,9 +404,19 @@ class ProviderTree(object):
         :param generation: Generation to set for the new child provider
         :returns: the UUID of the new provider
 
-        :raises ValueError if parent_uuid points to a non-existing provider.
+        :raises ValueError if a provider with the specified uuid or name
+                already exists; or if parent_uuid points to a nonexistent
+                provider.
         """
         with self.lock:
+            try:
+                self._find_with_lock(uuid or name)
+            except ValueError:
+                pass
+            else:
+                err = _("Provider %s already exists.")
+                raise ValueError(err % (uuid or name))
+
             parent_node = self._find_with_lock(parent)
             p = _Provider(name, uuid, generation, parent_node.uuid)
             parent_node.add_child(p)
