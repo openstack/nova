@@ -102,6 +102,11 @@ class NovaException(Exception):
         # which should be our full NovaException message, (see __init__)
         return self.args[0]
 
+    def __repr__(self):
+        dict_repr = self.__dict__
+        dict_repr['class'] = self.__class__.__name__
+        return str(dict_repr)
+
 
 class EncryptionFailure(NovaException):
     msg_fmt = _("Failed to encrypt text: %(reason)s")
