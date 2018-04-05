@@ -48,7 +48,6 @@ class TestProviderTree(test.NoDBTestCase):
             pt.new_root,
             cn1.hypervisor_hostname,
             cn1.uuid,
-            1,
         )
 
         self.assertTrue(pt.exists(cn1.uuid))
@@ -117,7 +116,7 @@ class TestProviderTree(test.NoDBTestCase):
         )
         self.assertFalse(pt.exists(cn3.uuid))
         self.assertFalse(pt.exists(cn3.hypervisor_hostname))
-        pt.new_root(cn3.hypervisor_hostname, cn3.uuid, 1)
+        pt.new_root(cn3.hypervisor_hostname, cn3.uuid)
 
         self.assertTrue(pt.exists(cn3.uuid))
         self.assertTrue(pt.exists(cn3.hypervisor_hostname))
@@ -127,7 +126,6 @@ class TestProviderTree(test.NoDBTestCase):
             pt.new_root,
             cn3.hypervisor_hostname,
             cn3.uuid,
-            1,
         )
 
         self.assertRaises(
@@ -432,7 +430,6 @@ class TestProviderTree(test.NoDBTestCase):
             pt.update_inventory,
             uuids.non_existing_rp,
             {},
-            1,
         )
 
     def test_has_inventory_changed(self):
@@ -467,11 +464,13 @@ class TestProviderTree(test.NoDBTestCase):
             },
         }
         self.assertTrue(pt.has_inventory_changed(cn.uuid, cn_inv))
-        self.assertTrue(pt.update_inventory(cn.uuid, cn_inv, rp_gen))
+        self.assertTrue(pt.update_inventory(cn.uuid, cn_inv,
+                                            generation=rp_gen))
 
         # Updating with the same inventory info should return False
         self.assertFalse(pt.has_inventory_changed(cn.uuid, cn_inv))
-        self.assertFalse(pt.update_inventory(cn.uuid, cn_inv, rp_gen))
+        self.assertFalse(pt.update_inventory(cn.uuid, cn_inv,
+                                             generation=rp_gen))
 
         # A data-grab's inventory should be "equal" to the original
         cndata = pt.data(cn.uuid)
@@ -479,23 +478,27 @@ class TestProviderTree(test.NoDBTestCase):
 
         cn_inv['VCPU']['total'] = 6
         self.assertTrue(pt.has_inventory_changed(cn.uuid, cn_inv))
-        self.assertTrue(pt.update_inventory(cn.uuid, cn_inv, rp_gen))
+        self.assertTrue(pt.update_inventory(cn.uuid, cn_inv,
+                                            generation=rp_gen))
 
         # The data() result was not affected; now the tree's copy is different
         self.assertTrue(pt.has_inventory_changed(cn.uuid, cndata.inventory))
 
         self.assertFalse(pt.has_inventory_changed(cn.uuid, cn_inv))
-        self.assertFalse(pt.update_inventory(cn.uuid, cn_inv, rp_gen))
+        self.assertFalse(pt.update_inventory(cn.uuid, cn_inv,
+                                             generation=rp_gen))
 
         # Deleting a key in the new record should NOT result in changes being
         # recorded...
         del cn_inv['VCPU']['allocation_ratio']
         self.assertFalse(pt.has_inventory_changed(cn.uuid, cn_inv))
-        self.assertFalse(pt.update_inventory(cn.uuid, cn_inv, rp_gen))
+        self.assertFalse(pt.update_inventory(cn.uuid, cn_inv,
+                                             generation=rp_gen))
 
         del cn_inv['MEMORY_MB']
         self.assertTrue(pt.has_inventory_changed(cn.uuid, cn_inv))
-        self.assertTrue(pt.update_inventory(cn.uuid, cn_inv, rp_gen))
+        self.assertTrue(pt.update_inventory(cn.uuid, cn_inv,
+                                            generation=rp_gen))
 
     def test_have_traits_changed_no_existing_rp(self):
         pt = self._pt_with_cns()

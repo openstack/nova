@@ -797,9 +797,15 @@ class SchedulerReportClient(object):
             return None
 
         cur_gen = curr['resource_provider_generation']
+        # TODO(efried): This condition banks on the generation for a new RP
+        # starting at zero, which isn't part of the API.  It also is only
+        # useful as an optimization on a freshly-created RP to which nothing
+        # has ever been done.  And it's not much of an optimization, because
+        # updating the cache is super cheap.  We should remove the condition.
         if cur_gen:
             curr_inv = curr['inventories']
-            self._provider_tree.update_inventory(rp_uuid, curr_inv, cur_gen)
+            self._provider_tree.update_inventory(rp_uuid, curr_inv,
+                                                 generation=cur_gen)
         return curr
 
     def _refresh_associations(self, context, rp_uuid, generation=None,
@@ -861,7 +867,8 @@ class SchedulerReportClient(object):
                         # context of this compute's RP, it doesn't matter if a
                         # sharing RP is part of a tree.
                         self._provider_tree.new_root(
-                            rp['name'], rp['uuid'], rp['generation'])
+                            rp['name'], rp['uuid'],
+                            generation=rp['generation'])
                     # Now we have to (populate or) refresh that guy's traits
                     # and aggregates (but not *his* aggregate-associated
                     # providers).  No need to override force=True for newly-
@@ -991,7 +998,8 @@ class SchedulerReportClient(object):
         updated_inventories_result = result.json()
         new_gen = updated_inventories_result['resource_provider_generation']
 
-        self._provider_tree.update_inventory(rp_uuid, inv_data, new_gen)
+        self._provider_tree.update_inventory(rp_uuid, inv_data,
+                                             generation=new_gen)
         LOG.debug('Updated inventory for %s at generation %i',
                   rp_uuid, new_gen)
         return True

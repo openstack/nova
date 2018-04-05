@@ -724,7 +724,7 @@ class SchedulerReportClientTests(test.TestCase):
 
         with self._interceptor():
             # Populate with a provider with no inventories, aggregates, traits
-            new_tree.new_root('root', uuids.root, None)
+            new_tree.new_root('root', uuids.root)
             self.client.update_from_provider_tree(self.context, new_tree)
             assert_ptrees_equal()
 
@@ -734,7 +734,7 @@ class SchedulerReportClientTests(test.TestCase):
             new_tree.update_aggregates('child1', [uuids.agg1, uuids.agg2])
             new_tree.new_child('grandchild1_1', uuids.child1, uuid=uuids.gc1_1)
             new_tree.update_traits(uuids.gc1_1, ['CUSTOM_PHYSNET_2'])
-            new_tree.new_root('ssp', uuids.ssp, None)
+            new_tree.new_root('ssp', uuids.ssp)
             new_tree.update_inventory('ssp', {
                 fields.ResourceClass.DISK_GB: {
                     'total': 100,
@@ -744,7 +744,7 @@ class SchedulerReportClientTests(test.TestCase):
                     'step_size': 2,
                     'allocation_ratio': 10.0,
                 },
-            }, None)
+            })
             self.client.update_from_provider_tree(self.context, new_tree)
             assert_ptrees_equal()
 
@@ -767,7 +767,7 @@ class SchedulerReportClientTests(test.TestCase):
                     'step_size': 1024,
                     'allocation_ratio': 1.0,
                 },
-            }, None)
+            })
             new_tree.update_aggregates(uuids.root, [uuids.agg1])
             new_tree.update_traits(uuids.root, ['HW_CPU_X86_AVX',
                                                 'HW_CPU_X86_AVX2'])
@@ -784,7 +784,7 @@ class SchedulerReportClientTests(test.TestCase):
                     'allocation_ratio': 1.0,
                 },
             }
-            new_tree.update_inventory('grandchild1_1', ipv4_inv, None)
+            new_tree.update_inventory('grandchild1_1', ipv4_inv)
             # Shared storage provider gets traits
             new_tree.update_traits('ssp', set(['MISC_SHARES_VIA_AGGREGATE',
                                                'STORAGE_DISK_SSD']))
@@ -803,7 +803,7 @@ class SchedulerReportClientTests(test.TestCase):
                          'max_unit': 250000,
                          'step_size': 5000,
                          'allocation_ratio': 8.0,
-                     }), None)
+                     }))
             self.assertRaises(
                 exception.ResourceProviderSyncFailed,
                 self.client.update_from_provider_tree, self.context, new_tree)
@@ -825,7 +825,7 @@ class SchedulerReportClientTests(test.TestCase):
                          'max_unit': 250000,
                          'step_size': 5000,
                          'allocation_ratio': 8.0,
-                     }), None)
+                     }))
 
             # Add a bogus trait
             new_tree.update_traits(uuids.root, ['HW_CPU_X86_AVX',

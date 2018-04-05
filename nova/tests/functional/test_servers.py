@@ -1694,7 +1694,7 @@ class ProviderTreeTests(ProviderUsageBaseTestCase):
         aggs = set([uuids.agg1, uuids.agg2])
 
         def update_provider_tree(prov_tree, nodename):
-            prov_tree.update_inventory(self.compute.host, inv, None)
+            prov_tree.update_inventory(self.compute.host, inv)
             prov_tree.update_traits(self.compute.host, traits)
             prov_tree.update_aggregates(self.compute.host, aggs)
         self.mock_upt.side_effect = update_provider_tree
@@ -1719,7 +1719,7 @@ class ProviderTreeTests(ProviderUsageBaseTestCase):
         """
         def update_provider_tree(prov_tree, nodename):
             # Create a shared storage provider as a root
-            prov_tree.new_root('ssp', uuids.ssp, None)
+            prov_tree.new_root('ssp', uuids.ssp)
             prov_tree.update_traits(
                 'ssp', ['MISC_SHARES_VIA_AGGREGATE', 'STORAGE_DISK_SSD'])
             prov_tree.update_aggregates('ssp', [uuids.agg])
@@ -1750,7 +1750,7 @@ class ProviderTreeTests(ProviderUsageBaseTestCase):
                          'allocation_ratio': 1.0,
                      },
                 }
-                prov_tree.update_inventory('numa%d' % n, inv, None)
+                prov_tree.update_inventory('numa%d' % n, inv)
             # Each NUMA node has two PFs providing VF inventory on one of two
             # networks
             for n in (1, 2):
@@ -1771,7 +1771,7 @@ class ProviderTreeTests(ProviderUsageBaseTestCase):
                             'allocation_ratio': 1.0,
                         },
                     }
-                    prov_tree.update_inventory(name, inv, None)
+                    prov_tree.update_inventory(name, inv)
         self.mock_upt.side_effect = update_provider_tree
 
         self._run_periodics()
@@ -1858,7 +1858,7 @@ class ProviderTreeTests(ProviderUsageBaseTestCase):
 
     def test_update_provider_tree_bogus_resource_class(self):
         def update_provider_tree(prov_tree, nodename):
-            prov_tree.update_inventory(self.compute.host, {'FOO': {}}, None)
+            prov_tree.update_inventory(self.compute.host, {'FOO': {}})
         self.mock_upt.side_effect = update_provider_tree
 
         rcs = self._get_all_resource_classes()
