@@ -548,16 +548,26 @@ class ComputeManager(manager.Manager):
         self._syncs_in_progress = {}
         self.send_instance_updates = (
             CONF.filter_scheduler.track_instance_changes)
-        if CONF.max_concurrent_builds != 0:
+        if CONF.max_concurrent_builds > 0:
             self._build_semaphore = eventlet.semaphore.Semaphore(
                 CONF.max_concurrent_builds)
         else:
             self._build_semaphore = compute_utils.UnlimitedSemaphore()
+
         if CONF.max_concurrent_snapshots > 0:
             self._snapshot_semaphore = eventlet.semaphore.Semaphore(
                 CONF.max_concurrent_snapshots)
         else:
             self._snapshot_semaphore = compute_utils.UnlimitedSemaphore()
+
+        if CONF.max_concurrent_builds_per_project > 0:
+            self._per_project_build_semaphore = nova.utils.Semaphores(
+                semaphore_default=lambda: eventlet.semaphore.Semaphore(
+                    CONF.max_concurrent_builds_per_project))
+        else:
+            self._per_project_build_semaphore = nova.utils.Semaphores(
+                compute_utils.UnlimitedSemaphore)
+
         if CONF.max_concurrent_live_migrations > 0:
             self._live_migration_executor = futurist.GreenThreadPoolExecutor(
                 max_workers=CONF.max_concurrent_live_migrations)
@@ -2117,42 +2127,46 @@ class ComputeManager(manager.Manager):
             # locked because we could wait in line to build this instance
             # for a while and we want to make sure that nothing else tries
             # to do anything with this instance while we wait.
-            with self._build_semaphore:
-                try:
-                    result = self._do_build_and_run_instance(*args, **kwargs)
-                except Exception:
-                    # NOTE(mriedem): This should really only happen if
-                    # _decode_files in _do_build_and_run_instance fails, and
-                    # that's before a guest is spawned so it's OK to remove
-                    # allocations for the instance for this node from Placement
-                    # below as there is no guest consuming resources anyway.
-                    # The _decode_files case could be handled more specifically
-                    # but that's left for another day.
-                    result = build_results.FAILED
-                    raise
-                finally:
-                    if result == build_results.FAILED:
-                        # Remove the allocation records from Placement for the
-                        # instance if the build failed. The instance.host is
-                        # likely set to None in _do_build_and_run_instance
-                        # which means if the user deletes the instance, it
-                        # will be deleted in the API, not the compute service.
-                        # Setting the instance.host to None in
-                        # _do_build_and_run_instance means that the
-                        # ResourceTracker will no longer consider this instance
-                        # to be claiming resources against it, so we want to
-                        # reflect that same thing in Placement.  No need to
-                        # call this for a reschedule, as the allocations will
-                        # have already been removed in
-                        # self._do_build_and_run_instance().
-                        self.reportclient.delete_allocation_for_instance(
-                            context, instance.uuid, force=True)
+            with self._per_project_build_semaphore.get(instance.project_id):
+                with self._build_semaphore:
+                    try:
+                        result = self._do_build_and_run_instance(*args,
+                                                                 **kwargs)
+                    except Exception:
+                        # NOTE(mriedem): This should really only happen if
+                        # _decode_files in _do_build_and_run_instance fails,
+                        # and that's before a guest is spawned so it's OK to
+                        # remove allocations for the instance for this node
+                        # from Placement below as there is no guest consuming
+                        # resources anyway. The _decode_files case could be
+                        # handled more specifically but that's left for
+                        # another day.
+                        result = build_results.FAILED
+                        raise
+                    finally:
+                        if result == build_results.FAILED:
+                            # Remove the allocation records from Placement for
+                            # the instance if the build failed. The
+                            # instance.host is likely set to None in
+                            # _do_build_and_run_instance which means if the
+                            # user deletes the instance, it will be deleted in
+                            # the API, not the compute service.
+                            # Setting the instance.host to None in
+                            # _do_build_and_run_instance means that the
+                            # ResourceTracker will no longer consider this
+                            # instance to be claiming resources against it, so
+                            # we want to reflect that same thing in Placement.
+                            # No need to call this for a reschedule, as the
+                            # allocations will have already been removed in
+                            # self._do_build_and_run_instance().
+                            self.reportclient.delete_allocation_for_instance(
+                                context, instance.uuid, force=True)
 
-                    if result in (build_results.FAILED,
-                                  build_results.RESCHEDULED):
-                        self._build_failed(node)
-                    else:
-                        self._build_succeeded(node)
+                        if result in (build_results.FAILED,
+                                      build_results.RESCHEDULED):
+                            self._build_failed(node)
+                        else:
+                            self._build_succeeded(node)
 
         # NOTE(danms): We spawn here to return the RPC worker thread back to
         # the pool. Since what follows could take a really long time, we don't

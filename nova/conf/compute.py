@@ -691,6 +691,11 @@ Possible values:
 * Any positive integer representing maximum number of live migrations
   to run concurrently.
 """),
+    cfg.IntOpt('max_concurrent_builds_per_project',
+        default=0,
+        help="""
+Maximum number of instance builds to run concurrently per project
+"""),
     cfg.IntOpt('block_device_allocate_retries',
         default=60,
         min=0,
@@ -736,7 +741,7 @@ for performance reasons, for example, with Ironic.
 Possible values:
 
 * Any positive integer representing greenthreads count.
-""")
+"""),
 ]
 
 compute_group_opts = [

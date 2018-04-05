@@ -773,7 +773,8 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase,
 
         with mock.patch.object(self.compute,
                                '_build_semaphore') as mock_sem:
-            instance = objects.Instance(uuid=uuidutils.generate_uuid())
+            instance = objects.Instance(uuid=uuidutils.generate_uuid(),
+                                        project_id=1)
             for i in (1, 2, 3):
                 self.compute.build_and_run_instance(self.context, instance,
                                                     mock.sentinel.image,
@@ -7136,7 +7137,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
     @mock.patch('nova.compute.stats.Stats.build_failed')
     def test_build_failures_reported(self, mock_failed, mock_dbari):
         mock_dbari.return_value = build_results.FAILED
-        instance = objects.Instance(uuid=uuids.instance)
+        instance = objects.Instance(uuid=uuids.instance, project_id=1)
         for i in range(0, 10):
             self.compute.build_and_run_instance(self.context, instance, None,
                                                 None, None, [])
@@ -7149,7 +7150,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self.flags(consecutive_build_service_disable_threshold=0,
                    group='compute')
         mock_dbari.return_value = build_results.FAILED
-        instance = objects.Instance(uuid=uuids.instance)
+        instance = objects.Instance(uuid=uuids.instance, project_id=1)
         for i in range(0, 10):
             self.compute.build_and_run_instance(self.context, instance, None,
                                                 None, None, [])
@@ -7173,7 +7174,8 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 return build_results.ACTIVE
 
         mock_dbari.side_effect = _fake_build
-        instance = objects.Instance(uuid=uuids.instance)
+        instance = objects.Instance(uuid=uuids.instance,
+                                    project_id=self.context.project_id)
         for i in range(0, 10):
             self.compute.build_and_run_instance(self.context, instance, None,
                                                 None, None, [])
@@ -7188,7 +7190,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                                         mock_failed,
                                         mock_dbari):
         mock_dbari.return_value = build_results.RESCHEDULED
-        instance = objects.Instance(uuid=uuids.instance)
+        instance = objects.Instance(uuid=uuids.instance, project_id=1)
         for i in range(0, 10):
             self.compute.build_and_run_instance(self.context, instance, None,
                                                 None, None, [])
@@ -7211,7 +7213,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
         self, mock_succeeded, mock_failed, mock_dbari,
     ):
         mock_dbari.side_effect = test.TestingException()
-        instance = objects.Instance(uuid=uuids.instance,
+        instance = objects.Instance(uuid=uuids.instance, project_id=1,
                                     task_state=None)
         for i in range(0, 10):
             self.assertRaises(test.TestingException,
