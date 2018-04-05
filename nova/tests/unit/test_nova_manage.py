@@ -2062,6 +2062,89 @@ class CellV2CommandsTestCase(test.NoDBTestCase):
         output = self.output.getvalue().strip()
         self.assertEqual('', output)
 
+    def test_update_cell_disable_and_enable(self):
+        ctxt = context.get_admin_context()
+        objects.CellMapping(context=ctxt, uuid=uuidsentinel.cell1,
+                            name='cell1',
+                            transport_url='fake://mq',
+                            database_connection='fake:///db').create()
+        self.assertEqual(4, self.commands.update_cell(uuidsentinel.cell1,
+                                                      disable=True,
+                                                      enable=True))
+        output = self.output.getvalue().strip()
+        self.assertEqual('Cell cannot be disabled and enabled at the same '
+                         'time.', output)
+
+    def test_update_cell_disable_cell0(self):
+        ctxt = context.get_admin_context()
+        uuid0 = objects.CellMapping.CELL0_UUID
+        objects.CellMapping(context=ctxt, uuid=uuid0, name='cell0',
+                            transport_url='fake://mq',
+                            database_connection='fake:///db').create()
+        self.assertEqual(5, self.commands.update_cell(uuid0, disable=True))
+        output = self.output.getvalue().strip()
+        self.assertEqual('Cell0 cannot be disabled.', output)
+
+    def test_update_cell_disable_success(self):
+        ctxt = context.get_admin_context()
+        uuid = uuidsentinel.cell1
+        objects.CellMapping(context=ctxt, uuid=uuid,
+                            name='cell1',
+                            transport_url='fake://mq',
+                            database_connection='fake:///db').create()
+        cm = objects.CellMapping.get_by_uuid(ctxt, uuid)
+        self.assertFalse(cm.disabled)
+        self.assertEqual(0, self.commands.update_cell(uuid, disable=True))
+        cm = objects.CellMapping.get_by_uuid(ctxt, uuid)
+        self.assertTrue(cm.disabled)
+        output = self.output.getvalue().strip()
+        self.assertEqual('', output)
+
+    def test_update_cell_enable_success(self):
+        ctxt = context.get_admin_context()
+        uuid = uuidsentinel.cell1
+        objects.CellMapping(context=ctxt, uuid=uuid,
+                            name='cell1',
+                            transport_url='fake://mq',
+                            database_connection='fake:///db',
+                            disabled=True).create()
+        cm = objects.CellMapping.get_by_uuid(ctxt, uuid)
+        self.assertTrue(cm.disabled)
+        self.assertEqual(0, self.commands.update_cell(uuid, enable=True))
+        cm = objects.CellMapping.get_by_uuid(ctxt, uuid)
+        self.assertFalse(cm.disabled)
+        output = self.output.getvalue().strip()
+        self.assertEqual('', output)
+
+    def test_update_cell_disable_already_disabled(self):
+        ctxt = context.get_admin_context()
+        objects.CellMapping(context=ctxt, uuid=uuidsentinel.cell1,
+                            name='cell1',
+                            transport_url='fake://mq',
+                            database_connection='fake:///db',
+                            disabled=True).create()
+        cm = objects.CellMapping.get_by_uuid(ctxt, uuidsentinel.cell1)
+        self.assertTrue(cm.disabled)
+        self.assertEqual(0, self.commands.update_cell(uuidsentinel.cell1,
+                                                      disable=True))
+        self.assertTrue(cm.disabled)
+        output = self.output.getvalue().strip()
+        self.assertIn('is already disabled', output)
+
+    def test_update_cell_enable_already_enabled(self):
+        ctxt = context.get_admin_context()
+        objects.CellMapping(context=ctxt, uuid=uuidsentinel.cell1,
+                            name='cell1',
+                            transport_url='fake://mq',
+                            database_connection='fake:///db').create()
+        cm = objects.CellMapping.get_by_uuid(ctxt, uuidsentinel.cell1)
+        self.assertFalse(cm.disabled)
+        self.assertEqual(0, self.commands.update_cell(uuidsentinel.cell1,
+                                                      enable=True))
+        self.assertFalse(cm.disabled)
+        output = self.output.getvalue().strip()
+        self.assertIn('is already enabled', output)
+
     def test_list_hosts(self):
         ctxt = context.get_admin_context()
         # create the cell mapping

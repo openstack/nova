@@ -1541,19 +1541,32 @@ class CellV2Commands(object):
           dest='db_connection',
           help=_('Set the cell database_connection. NOTE that running nodes '
                  'will not see the change until restart!'))
+    @args('--disable', action='store_true', dest='disable',
+          help=_('Disables the cell. Note that the scheduling will be blocked '
+                 'to this cell until its enabled and followed by a SIGHUP of '
+                 'nova-scheduler service.'))
+    @args('--enable', action='store_true', dest='enable',
+          help=_('Enables the cell. Note that this makes a disabled cell '
+                 'available for scheduling after a SIGHUP of the '
+                 'nova-scheduler service'))
     def update_cell(self, cell_uuid, name=None, transport_url=None,
-                    db_connection=None):
+                    db_connection=None, disable=False, enable=False):
         """Updates the properties of a cell by the given uuid.
 
         If the cell is not found by uuid, this command will return an exit
         code of 1. If the provided transport_url or/and database_connection
         is/are same as another cell, this command will return an exit code
-        of 3. If the properties cannot be set, this will return 2.
+        of 3. If the properties cannot be set, this will return 2. If an
+        attempt is made to disable and enable a cell at the same time, this
+        command will exit with a return code of 4. If an attempt is made to
+        disable or enable cell0 this command will exit with a return code of 5.
         Otherwise, the exit code will be 0.
 
         NOTE: Updating the transport_url or database_connection fields on
         a running system will NOT result in all nodes immediately using the
         new values. Use caution when changing these values.
+        NOTE (tssurya): The scheduler will not notice that a cell has been
+        enabled/disabled until it is restarted or sent the SIGHUP signal.
         """
         ctxt = context.get_admin_context()
         try:
@@ -1579,6 +1592,22 @@ class CellV2Commands(object):
 
         if db_connection:
             cell_mapping.database_connection = db_connection
+
+        if disable and enable:
+            print(_('Cell cannot be disabled and enabled at the same time.'))
+            return 4
+        if disable or enable:
+            if cell_mapping.is_cell0():
+                print(_('Cell0 cannot be disabled.'))
+                return 5
+            elif disable and not cell_mapping.disabled:
+                cell_mapping.disabled = True
+            elif enable and cell_mapping.disabled:
+                cell_mapping.disabled = False
+            elif disable and cell_mapping.disabled:
+                print(_('Cell %s is already disabled') % cell_uuid)
+            elif enable and not cell_mapping.disabled:
+                print(_('Cell %s is already enabled') % cell_uuid)
 
         try:
             cell_mapping.save()
