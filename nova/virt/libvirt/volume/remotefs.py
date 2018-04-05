@@ -14,9 +14,7 @@
 #    under the License.
 
 import abc
-import functools
 import os
-import tempfile
 
 from oslo_concurrency import processutils
 from oslo_log import log as logging
@@ -196,81 +194,60 @@ class SshDriver(RemoteFilesystemDriver):
                       on_execute=on_execute, on_completion=on_completion)
 
 
-def create_tmp_dir(function):
-    """Creates temporary directory for rsync purposes.
-    Removes created directory in the end.
-    """
-
-    @functools.wraps(function)
-    def decorated_function(*args, **kwargs):
-        # Create directory
-        tmp_dir_path = tempfile.mkdtemp()
-        kwargs['tmp_dir_path'] = tmp_dir_path
-
-        try:
-            return function(*args, **kwargs)
-        finally:
-            # Remove directory
-            utils.execute('rm', '-rf', tmp_dir_path)
-
-    return decorated_function
-
-
 class RsyncDriver(RemoteFilesystemDriver):
 
-    @create_tmp_dir
-    def create_file(self, host, dst_path, on_execute, on_completion, **kwargs):
-        dir_path = os.path.dirname(os.path.normpath(dst_path))
+    def create_file(self, host, dst_path, on_execute, on_completion):
+        with utils.tempdir() as tempdir:
+            dir_path = os.path.dirname(os.path.normpath(dst_path))
 
-        # Create target dir inside temporary directory
-        local_tmp_dir = os.path.join(kwargs['tmp_dir_path'],
-                                     dir_path.strip(os.path.sep))
-        utils.execute('mkdir', '-p', local_tmp_dir,
-                      on_execute=on_execute, on_completion=on_completion)
+            # Create target dir inside temporary directory
+            local_tmp_dir = os.path.join(tempdir,
+                                         dir_path.strip(os.path.sep))
+            utils.execute('mkdir', '-p', local_tmp_dir,
+                          on_execute=on_execute, on_completion=on_completion)
 
-        # Create file in directory
-        file_name = os.path.basename(os.path.normpath(dst_path))
-        local_tmp_file = os.path.join(local_tmp_dir, file_name)
-        utils.execute('touch', local_tmp_file,
-                      on_execute=on_execute, on_completion=on_completion)
-        RsyncDriver._synchronize_object(kwargs['tmp_dir_path'],
-                                        host, dst_path,
-                                        on_execute=on_execute,
-                                        on_completion=on_completion)
+            # Create file in directory
+            file_name = os.path.basename(os.path.normpath(dst_path))
+            local_tmp_file = os.path.join(local_tmp_dir, file_name)
+            utils.execute('touch', local_tmp_file,
+                          on_execute=on_execute, on_completion=on_completion)
+            RsyncDriver._synchronize_object(tempdir,
+                                            host, dst_path,
+                                            on_execute=on_execute,
+                                            on_completion=on_completion)
 
-    @create_tmp_dir
-    def remove_file(self, host, dst, on_execute, on_completion, **kwargs):
-        # Delete file
-        RsyncDriver._remove_object(kwargs['tmp_dir_path'], host, dst,
-                                   on_execute=on_execute,
-                                   on_completion=on_completion)
+    def remove_file(self, host, dst, on_execute, on_completion):
+        with utils.tempdir() as tempdir:
+            RsyncDriver._remove_object(tempdir, host, dst,
+                                       on_execute=on_execute,
+                                       on_completion=on_completion)
 
-    @create_tmp_dir
-    def create_dir(self, host, dst_path, on_execute, on_completion, **kwargs):
-        dir_path = os.path.normpath(dst_path)
+    def create_dir(self, host, dst_path, on_execute, on_completion):
+        with utils.tempdir() as tempdir:
+            dir_path = os.path.normpath(dst_path)
 
-        # Create target dir inside temporary directory
-        local_tmp_dir = os.path.join(kwargs['tmp_dir_path'],
-                                 dir_path.strip(os.path.sep))
-        utils.execute('mkdir', '-p', local_tmp_dir,
-                      on_execute=on_execute, on_completion=on_completion)
-        RsyncDriver._synchronize_object(kwargs['tmp_dir_path'],
-                                        host, dst_path,
-                                        on_execute=on_execute,
-                                        on_completion=on_completion)
+            # Create target dir inside temporary directory
+            local_tmp_dir = os.path.join(tempdir,
+                                         dir_path.strip(os.path.sep))
+            utils.execute('mkdir', '-p', local_tmp_dir,
+                          on_execute=on_execute, on_completion=on_completion)
+            RsyncDriver._synchronize_object(tempdir,
+                                            host, dst_path,
+                                            on_execute=on_execute,
+                                            on_completion=on_completion)
 
-    @create_tmp_dir
-    def remove_dir(self, host, dst, on_execute, on_completion, **kwargs):
+    def remove_dir(self, host, dst, on_execute, on_completion):
         # Remove remote directory's content
-        utils.execute('rsync', '--archive', '--delete-excluded',
-                      kwargs['tmp_dir_path'] + os.path.sep,
-                      utils.format_remote_path(host, dst),
-                      on_execute=on_execute, on_completion=on_completion)
+        with utils.tempdir() as tempdir:
+            utils.execute('rsync', '--archive', '--delete-excluded',
+                          tempdir + os.path.sep,
+                          utils.format_remote_path(host, dst),
+                          on_execute=on_execute, on_completion=on_completion)
 
-        # Delete empty directory
-        RsyncDriver._remove_object(kwargs['tmp_dir_path'], host, dst,
-                                   on_execute=on_execute,
-                                   on_completion=on_completion)
+            # Delete empty directory
+            RsyncDriver._remove_object(tempdir, host, dst,
+                                       on_execute=on_execute,
+                                       on_completion=on_completion)
 
     @staticmethod
     def _remove_object(src, host, dst, on_execute, on_completion):
