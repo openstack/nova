@@ -804,9 +804,19 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
             vmwareapi_fake.assertPathExists(self, str(root))
             self.assertEqual(1, fake_extend_virtual_disk[0].call_count)
 
+    @mock.patch.object(ds_util, 'get_datastore')
     @mock.patch.object(nova.virt.vmwareapi.images.VMwareImage,
                        'from_image')
-    def test_spawn_disk_extend_sparse(self, mock_from_image):
+    def test_spawn_disk_extend_sparse(self, mock_from_image,
+                                      mock_get_datastore):
+        fake_ds_ref = vmwareapi_fake.ManagedObjectReference(value='ds1')
+        fake_ds = ds_obj.Datastore(
+            ref=fake_ds_ref, name='ds1',
+            capacity=10 * units.Gi,
+            freespace=10 * units.Gi)
+
+        mock_get_datastore.return_value = fake_ds
+
         img_props = images.VMwareImage(
             image_id=self.fake_image_uuid,
             file_size=units.Ki,

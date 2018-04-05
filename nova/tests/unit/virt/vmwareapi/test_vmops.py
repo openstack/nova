@@ -61,7 +61,7 @@ class DsPathMatcher(object):
         return str(ds_path_param) == self.expected_ds_path_str
 
 
-class VMwareVMOpsTestCase(test.NoDBTestCase):
+class VMwareVMOpsTestCase(test.TestCase):
     def setUp(self):
         super(VMwareVMOpsTestCase, self).setUp()
         ds_util.dc_cache_reset()
@@ -1422,18 +1422,19 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     @mock.patch.object(vmops.VMwareVMOps, 'build_virtual_machine')
     @mock.patch.object(vmops.VMwareVMOps, 'update_cluster_placement')
     @mock.patch.object(vmops.lockutils, 'lock')
-    def test_spawn_mask_block_device_info_password(self, mock_lock,
-        mock_update_cluster_placement,
-        mock_build_virtual_machine, mock_get_vm_config_info,
-        mock_fetch_image_if_missing, mock_debug, mock_glance,
-        mock_is_volume_backed):
+    @mock.patch.object(ds_util, 'get_datastore')
+    def test_spawn_mask_block_device_info_password(self, mock_get_datastore,
+            mock_lock, mock_update_cluster_placement,
+            mock_build_virtual_machine, mock_get_vm_config_info,
+            mock_fetch_image_if_missing, mock_debug, mock_glance,
+            mock_is_volume_backed):
         # Very simple test that just ensures block_device_info auth_password
         # is masked when logged; the rest of the test just fails out early.
         data = {'auth_password': 'scrubme'}
         bdm = [{'boot_index': 0, 'disk_bus': constants.DEFAULT_ADAPTER_TYPE,
                 'connection_info': {'data': data}}]
         bdi = {'block_device_mapping': bdm}
-
+        mock_get_datastore.return_value = self._ds
         self.password_logged = False
 
         # Tests that the parameters to the to_xml method are sanitized for
@@ -1447,11 +1448,26 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self.flags(flat_injected=False)
         self.flags(enabled=False, group='vnc')
 
-        mock_vi = mock.Mock()
-        mock_vi.root_gb = 1
-        mock_vi.ii.file_size = 2 * units.Gi
-        mock_vi.instance.flavor.root_gb = 1
-        mock_get_vm_config_info.return_value = mock_vi
+        extra_specs = vm_util.ExtraSpecs()
+        flavor_fits_image = False
+        file_size = 10 * units.Gi if flavor_fits_image else 5 * units.Gi
+        image_info = images.VMwareImage(
+            image_id=self._image_id,
+            file_size=file_size,
+            linked_clone=False)
+
+        cache_root_folder = self._ds.build_path("vmware_base", self._image_id)
+        mock_imagecache = mock.Mock()
+        mock_imagecache.get_image_cache_folder.return_value = cache_root_folder
+        dc_info = ds_util.DcInfo(
+            ref=self._cluster, name='fake_dc',
+            vmFolder=vmwareapi_fake.ManagedObjectReference(
+                name='Folder',
+                value='fake_vm_folder'))
+        vi = vmops.VirtualMachineInstanceConfigInfo(
+            self._instance, image_info,
+            self._ds, dc_info, mock_imagecache, extra_specs)
+        mock_get_vm_config_info.return_value = vi
 
         # Call spawn(). We don't care what it does as long as it generates
         # the log message, which we check below.
@@ -1694,9 +1710,11 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
     @mock.patch.object(
             vmops.VMwareVMOps, '_sized_image_exists', return_value=False)
     @mock.patch.object(vmops.VMwareVMOps, '_extend_virtual_disk')
+    @mock.patch.object(vmops.VMwareVMOps, '_extend_if_required')
     @mock.patch.object(vm_util, 'copy_virtual_disk')
     def _test_use_disk_image_as_linked_clone(self,
                                              mock_copy_virtual_disk,
+                                             mock_extend_if_required,
                                              mock_extend_virtual_disk,
                                              mock_sized_image_exists,
                                              flavor_fits_image=False):
@@ -1727,11 +1745,10 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 str(vi.cache_image_path),
                 str(sized_cached_image_ds_loc))
 
-        if not flavor_fits_image:
-            mock_extend_virtual_disk.assert_called_once_with(
-                    self._instance, vi.root_gb * units.Mi,
-                    str(sized_cached_image_ds_loc),
-                    self._dc_info.ref)
+        mock_extend_if_required.assert_called_once_with(
+            self._dc_info,
+            vi.ii,
+            vi.instance, str(sized_cached_image_ds_loc))
 
         mock_attach_disk_to_vm.assert_called_once_with(
                 "fake_vm_ref", self._instance, vi.ii.adapter_type,
@@ -1747,9 +1764,11 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
         self._test_use_disk_image_as_linked_clone(flavor_fits_image=True)
 
     @mock.patch.object(vmops.VMwareVMOps, '_extend_virtual_disk')
+    @mock.patch.object(vmops.VMwareVMOps, '_extend_if_required')
     @mock.patch.object(vm_util, 'copy_virtual_disk')
     def _test_use_disk_image_as_full_clone(self,
                                           mock_copy_virtual_disk,
+                                          mock_extend_if_required,
                                           mock_extend_virtual_disk,
                                           flavor_fits_image=False):
         extra_specs = vm_util.ExtraSpecs()
@@ -1778,10 +1797,10 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 str(vi.cache_image_path),
                 fake_path)
 
-        if not flavor_fits_image:
-            mock_extend_virtual_disk.assert_called_once_with(
-                    self._instance, vi.root_gb * units.Mi,
-                    fake_path, self._dc_info.ref)
+        mock_extend_if_required.assert_called_once_with(
+            self._dc_info,
+            vi.ii,
+            vi.instance, fake_path)
 
         mock_attach_disk_to_vm.assert_called_once_with(
                 "fake_vm_ref", self._instance, vi.ii.adapter_type,
@@ -1952,10 +1971,11 @@ class VMwareVMOpsTestCase(test.NoDBTestCase):
                 mock.patch.object(self._vmops, '_get_extra_specs',
                                   return_value=extra_specs),
                 mock.patch.object(self._vmops, '_get_instance_metadata',
-                                  return_value='fake-metadata')
+                                  return_value='fake-metadata'),
+                mock.patch.object(ds_util, 'file_size', return_value=0)
         ) as (_wait_for_task, _call_method, _generate_uuid, _fetch_image,
               _get_img_svc, _get_inventory_path, _get_extra_specs,
-              _get_instance_metadata):
+              _get_instance_metadata, file_size):
             self._vmops.spawn(self._context, self._instance, image,
                               injected_files='fake_files',
                               admin_password='password',
