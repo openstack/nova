@@ -22,6 +22,8 @@ The following is a dive into some of the internals in nova.
   based on eventlet, and may not be familiar to everyone.
 * :doc:`/reference/notifications`: How the notifications subsystem works in
   nova, and considerations when adding notifications.
+* :doc:`/reference/update-provider-tree`: A detailed explanation of the
+  ``ComputeDriver.update_provider_tree`` method.
 
 Debugging
 =========
