@@ -1252,3 +1252,22 @@ XenServer hypervisor pools to support live migration
 When using the XenAPI-based hypervisor, the Compute service uses host
 aggregates to manage XenServer Resource pools, which are used in supporting
 live migration.
+
+Cells considerations
+~~~~~~~~~~~~~~~~~~~~
+
+By default cells are enabled for scheduling new instances but they can be
+disabled (new schedulings to the cell are blocked). This may be useful for
+users while performing cell maintenance, failures or other interventions. It is
+to be noted that creating pre-disabled cells and enabling/disabling existing
+cells should either be followed by a restart or SIGHUP of the nova-scheduler
+service for the changes to take effect.
+
+Command-line interface
+----------------------
+
+The :command:`nova-manage` command-line client supports the cell-disable
+related commands. To enable or disable a cell, use
+:command:`nova-manage cell_v2 update_cell` and to create pre-disabled cells,
+use :command:`nova-manage cell_v2 create_cell`. See the
+:ref:`man-page-cells-v2` man page for details on command usage.
