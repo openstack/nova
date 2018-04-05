@@ -198,22 +198,16 @@ class XenAPIGetUUID(VMUtilsTestBase):
                          vm_utils.get_this_vm_uuid(None))
         self.mox.VerifyAll()
 
-    def test_get_this_vm_uuid_old_kernel_reboot(self):
-        self.mox.StubOutWithMock(vm_utils, '_get_sys_hypervisor_uuid')
-        self.mox.StubOutWithMock(utils, 'execute')
+    @mock.patch('nova.virt.xenapi.vm_utils._get_sys_hypervisor_uuid')
+    @mock.patch('nova.privsep.xenapi.xenstore_read')
+    def test_get_this_vm_uuid_old_kernel_reboot(self, fake_read, fake_uuid):
+        fake_uuid.side_effect = IOError(13, 'Permission denied')
+        fake_read.side_effect = [
+            ('27', ''),
+            ('/vm/2f46f0f5-f14c-ef1b-1fac-9eeca0888a3f', '')]
 
-        vm_utils._get_sys_hypervisor_uuid().AndRaise(
-            IOError(13, 'Permission denied'))
-        utils.execute('xenstore-read', 'domid', run_as_root=True).AndReturn(
-            ('27', ''))
-        utils.execute('xenstore-read', '/local/domain/27/vm',
-                      run_as_root=True).AndReturn(
-            ('/vm/2f46f0f5-f14c-ef1b-1fac-9eeca0888a3f', ''))
-
-        self.mox.ReplayAll()
         self.assertEqual('2f46f0f5-f14c-ef1b-1fac-9eeca0888a3f',
                          vm_utils.get_this_vm_uuid(None))
-        self.mox.VerifyAll()
 
 
 class FakeSession(object):
