@@ -15,7 +15,6 @@
 #    under the License.
 
 import datetime
-import uuid
 
 import mock
 from oslo_serialization import base64
@@ -25,7 +24,6 @@ from nova.api.openstack.compute import servers
 from nova.api.openstack.compute import user_data
 from nova.compute import flavors
 from nova import exception
-from nova.network import manager
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
@@ -33,14 +31,6 @@ from nova.tests.unit.image import fake
 
 
 FAKE_UUID = fakes.FAKE_UUID
-
-
-def fake_gen_uuid():
-    return FAKE_UUID
-
-
-def return_security_group(context, instance_id, security_group_id):
-    pass
 
 
 class ServersControllerCreateTest(test.TestCase):
@@ -105,27 +95,25 @@ class ServersControllerCreateTest(test.TestCase):
             inst.update(params)
             return (inst, inst)
 
-        def fake_method(*args, **kwargs):
-            pass
-
         def project_get_networks(context, user_id):
             return dict(id='1', host='localhost')
 
         fakes.stub_out_key_pair_funcs(self)
         fake.stub_out_image_service(self)
 
-        self.stubs.Set(uuid, 'uuid4', fake_gen_uuid)
+        self.stub_out('uuid.uuid4', lambda: FAKE_UUID)
         self.stub_out('nova.db.instance_add_security_group',
-                      return_security_group)
+                      lambda c, i, s: None)
         self.stub_out('nova.db.project_get_networks', project_get_networks)
         self.stub_out('nova.db.instance_create', instance_create)
-        self.stub_out('nova.db.instance_system_metadata_update', fake_method)
+        self.stub_out('nova.db.instance_system_metadata_update',
+                      lambda c, i, m, d: None)
         self.stub_out('nova.db.instance_get', instance_get)
         self.stub_out('nova.db.instance_update', instance_update)
         self.stub_out('nova.db.instance_update_and_get_original',
                       server_update)
-        self.stubs.Set(manager.VlanManager, 'allocate_fixed_ip',
-                       fake_method)
+        self.stub_out('nova.network.manager.VlanManager.allocate_fixed_ip',
+                      lambda self, c, i, n, **k: None)
 
     def _test_create_extra(self, params, no_image=False,
                            legacy_v2=False):
