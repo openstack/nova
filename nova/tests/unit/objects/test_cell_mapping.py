@@ -119,11 +119,14 @@ class _TestCellMappingObject(object):
 
     def test_obj_make_compatible(self):
         cell_mapping_obj = cell_mapping.CellMapping(context=self.context)
-        fake_cell_mapping_copy = dict(get_db_mapping())
-        self.assertIn('disabled', fake_cell_mapping_copy)
-        cell_mapping_obj.obj_make_compatible(fake_cell_mapping_copy, '1.0')
-        self.assertIn('uuid', fake_cell_mapping_copy)
-        self.assertNotIn('disabled', fake_cell_mapping_copy)
+        fake_cell_mapping_obj = cell_mapping.CellMapping(context=self.context,
+                                                         uuid=uuids.cell,
+                                                         disabled=False)
+        obj_primitive = fake_cell_mapping_obj.obj_to_primitive('1.0')
+        obj = cell_mapping_obj.obj_from_primitive(obj_primitive)
+        self.assertIn('uuid', obj)
+        self.assertEqual(uuids.cell, obj.uuid)
+        self.assertNotIn('disabled', obj)
 
 
 class TestCellMappingObject(test_objects._LocalTest,
