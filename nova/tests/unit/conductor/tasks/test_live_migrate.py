@@ -323,7 +323,6 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.assertIn('across cells', six.text_type(ex))
 
     def test_find_destination_works(self):
-        self.mox.StubOutWithMock(utils, 'get_image_from_system_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(objects.RequestSpec,
                                  'reset_forced_destinations')
@@ -333,8 +332,6 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 '_check_compatible_with_source_hypervisor')
         self.mox.StubOutWithMock(self.task, '_call_livem_checks_on_host')
 
-        utils.get_image_from_system_metadata(
-            self.instance.system_metadata).AndReturn("image")
         scheduler_utils.setup_instance_group(
             self.context, self.fake_spec)
         self.fake_spec.reset_forced_destinations()
@@ -412,7 +409,6 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
         self.assertEqual(("host1", "node1"), self.task._find_destination())
 
     def _test_find_destination_retry_hypervisor_raises(self, error):
-        self.mox.StubOutWithMock(utils, 'get_image_from_system_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.task.scheduler_client,
                                  'select_destinations')
@@ -420,8 +416,6 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 '_check_compatible_with_source_hypervisor')
         self.mox.StubOutWithMock(self.task, '_call_livem_checks_on_host')
 
-        utils.get_image_from_system_metadata(
-            self.instance.system_metadata).AndReturn("image")
         scheduler_utils.setup_instance_group(self.context, self.fake_spec)
         self.task.scheduler_client.select_destinations(self.context,
                 self.fake_spec, [self.instance.uuid], return_objects=True,
@@ -452,7 +446,6 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
     def test_find_destination_retry_with_invalid_livem_checks(self):
         self.flags(migrate_max_retries=1)
-        self.mox.StubOutWithMock(utils, 'get_image_from_system_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.task.scheduler_client,
                                  'select_destinations')
@@ -460,8 +453,6 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 '_check_compatible_with_source_hypervisor')
         self.mox.StubOutWithMock(self.task, '_call_livem_checks_on_host')
 
-        utils.get_image_from_system_metadata(
-            self.instance.system_metadata).AndReturn("image")
         scheduler_utils.setup_instance_group(self.context, self.fake_spec)
         self.task.scheduler_client.select_destinations(self.context,
                 self.fake_spec, [self.instance.uuid], return_objects=True,
@@ -485,7 +476,6 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
     def test_find_destination_retry_with_failed_migration_pre_checks(self):
         self.flags(migrate_max_retries=1)
-        self.mox.StubOutWithMock(utils, 'get_image_from_system_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.task.scheduler_client,
                                  'select_destinations')
@@ -493,8 +483,6 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
                 '_check_compatible_with_source_hypervisor')
         self.mox.StubOutWithMock(self.task, '_call_livem_checks_on_host')
 
-        utils.get_image_from_system_metadata(
-            self.instance.system_metadata).AndReturn("image")
         scheduler_utils.setup_instance_group(self.context, self.fake_spec)
         self.task.scheduler_client.select_destinations(self.context,
                 self.fake_spec, [self.instance.uuid], return_objects=True,
@@ -518,15 +506,12 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
 
     def test_find_destination_retry_exceeds_max(self):
         self.flags(migrate_max_retries=0)
-        self.mox.StubOutWithMock(utils, 'get_image_from_system_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.task.scheduler_client,
                                  'select_destinations')
         self.mox.StubOutWithMock(self.task,
                 '_check_compatible_with_source_hypervisor')
 
-        utils.get_image_from_system_metadata(
-            self.instance.system_metadata).AndReturn("image")
         scheduler_utils.setup_instance_group(self.context, self.fake_spec)
         self.task.scheduler_client.select_destinations(self.context,
                 self.fake_spec, [self.instance.uuid], return_objects=True,
@@ -549,12 +534,9 @@ class LiveMigrationTaskTestCase(test.NoDBTestCase):
             remove_allocs.assert_called_once_with('host1', 'node1')
 
     def test_find_destination_when_runs_out_of_hosts(self):
-        self.mox.StubOutWithMock(utils, 'get_image_from_system_metadata')
         self.mox.StubOutWithMock(scheduler_utils, 'setup_instance_group')
         self.mox.StubOutWithMock(self.task.scheduler_client,
                                  'select_destinations')
-        utils.get_image_from_system_metadata(
-            self.instance.system_metadata).AndReturn("image")
         scheduler_utils.setup_instance_group(self.context, self.fake_spec)
         self.task.scheduler_client.select_destinations(self.context,
                 self.fake_spec, [self.instance.uuid], return_objects=True,
