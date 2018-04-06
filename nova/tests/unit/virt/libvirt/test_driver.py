@@ -18000,18 +18000,15 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         with test.nested(
                 mock.patch.object(os.path, 'exists'),
                 mock.patch.object(libvirt_utils, 'get_instance_path'),
-                mock.patch.object(utils, 'execute'),
                 mock.patch.object(shutil, 'rmtree')) as (
-                mock_exists, mock_get_path, mock_exec, mock_rmtree):
+                mock_exists, mock_get_path, mock_rmtree):
             mock_exists.return_value = True
             mock_get_path.return_value = '/fake/inst'
 
             drvr._cleanup_resize(
                 self.context, ins_ref, _fake_network_info(self, 1))
             mock_get_path.assert_called_once_with(ins_ref)
-            mock_exec.assert_called_once_with('rm', '-rf', '/fake/inst_resize',
-                                              delay_on_retry=True, attempts=5)
-            mock_rmtree.assert_not_called()
+            self.assertEqual(5, mock_rmtree.call_count)
 
     def test_cleanup_resize_not_same_host(self):
         CONF.set_override('policy_dirs', [], group='oslo_policy')
@@ -18029,21 +18026,18 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                            return_value=False),
                 mock.patch.object(os.path, 'exists'),
                 mock.patch.object(libvirt_utils, 'get_instance_path'),
-                mock.patch.object(utils, 'execute'),
                 mock.patch.object(shutil, 'rmtree'),
                 mock.patch.object(drvr, '_undefine_domain'),
                 mock.patch.object(drvr, 'unplug_vifs'),
                 mock.patch.object(drvr, 'unfilter_instance')
         ) as (mock_volume_backed, mock_exists, mock_get_path,
-              mock_exec, mock_rmtree, mock_undef, mock_unplug, mock_unfilter):
+              mock_rmtree, mock_undef, mock_unplug, mock_unfilter):
             mock_exists.return_value = True
             mock_get_path.return_value = '/fake/inst'
 
             drvr._cleanup_resize(self.context, ins_ref, fake_net)
             mock_get_path.assert_called_once_with(ins_ref)
-            mock_exec.assert_called_once_with('rm', '-rf', '/fake/inst_resize',
-                                              delay_on_retry=True, attempts=5)
-            mock_rmtree.assert_called_once_with('/fake/inst')
+            self.assertEqual(6, mock_rmtree.call_count)
             mock_undef.assert_called_once_with(ins_ref)
             mock_unplug.assert_called_once_with(ins_ref, fake_net)
             mock_unfilter.assert_called_once_with(ins_ref, fake_net)
@@ -18068,21 +18062,18 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                            return_value=True),
                 mock.patch.object(os.path, 'exists'),
                 mock.patch.object(libvirt_utils, 'get_instance_path'),
-                mock.patch.object(utils, 'execute'),
                 mock.patch.object(shutil, 'rmtree'),
                 mock.patch.object(drvr, '_undefine_domain'),
                 mock.patch.object(drvr, 'unplug_vifs'),
                 mock.patch.object(drvr, 'unfilter_instance')
         ) as (mock_volume_backed, mock_exists, mock_get_path,
-              mock_exec, mock_rmtree, mock_undef, mock_unplug, mock_unfilter):
+              mock_rmtree, mock_undef, mock_unplug, mock_unfilter):
             mock_exists.return_value = True
             mock_get_path.return_value = '/fake/inst'
 
             drvr._cleanup_resize(self.context, ins_ref, fake_net)
             mock_get_path.assert_called_once_with(ins_ref)
-            mock_exec.assert_called_once_with('rm', '-rf', '/fake/inst_resize',
-                                              delay_on_retry=True, attempts=5)
-            mock_rmtree.assert_not_called()
+            self.assertEqual(5, mock_rmtree.call_count)
             mock_undef.assert_called_once_with(ins_ref)
             mock_unplug.assert_called_once_with(ins_ref, fake_net)
             mock_unfilter.assert_called_once_with(ins_ref, fake_net)
@@ -18097,22 +18088,18 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         with test.nested(
                 mock.patch.object(os.path, 'exists'),
                 mock.patch.object(libvirt_utils, 'get_instance_path'),
-                mock.patch.object(utils, 'execute'),
                 mock.patch.object(shutil, 'rmtree'),
                 mock.patch.object(drvr.image_backend, 'remove_snap')) as (
-                mock_exists, mock_get_path, mock_exec, mock_rmtree,
-                mock_remove):
+                mock_exists, mock_get_path, mock_rmtree, mock_remove):
             mock_exists.return_value = True
             mock_get_path.return_value = '/fake/inst'
 
             drvr._cleanup_resize(
                 self.context, ins_ref, _fake_network_info(self, 1))
             mock_get_path.assert_called_once_with(ins_ref)
-            mock_exec.assert_called_once_with('rm', '-rf', '/fake/inst_resize',
-                                              delay_on_retry=True, attempts=5)
             mock_remove.assert_called_once_with(
                     libvirt_utils.RESIZE_SNAPSHOT_NAME, ignore_errors=True)
-            self.assertFalse(mock_rmtree.called)
+            self.assertEqual(5, mock_rmtree.call_count)
 
     def test_cleanup_resize_snap_backend_image_does_not_exist(self):
         CONF.set_override('policy_dirs', [], group='oslo_policy')
@@ -18127,19 +18114,16 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                            return_value=False),
                 mock.patch.object(os.path, 'exists'),
                 mock.patch.object(libvirt_utils, 'get_instance_path'),
-                mock.patch.object(utils, 'execute'),
                 mock.patch.object(shutil, 'rmtree'),
                 mock.patch.object(drvr.image_backend, 'remove_snap')) as (
                 mock_volume_backed, mock_exists, mock_get_path,
-                mock_exec, mock_rmtree, mock_remove):
+                mock_rmtree, mock_remove):
             mock_exists.return_value = True
             mock_get_path.return_value = '/fake/inst'
 
             drvr._cleanup_resize(
                 self.context, ins_ref, _fake_network_info(self, 1))
             mock_get_path.assert_called_once_with(ins_ref)
-            mock_exec.assert_called_once_with('rm', '-rf', '/fake/inst_resize',
-                                              delay_on_retry=True, attempts=5)
             self.assertFalse(mock_remove.called)
             mock_rmtree.called_once_with('/fake/inst')
 
