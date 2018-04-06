@@ -26,8 +26,8 @@ def all_things_equal(obj_a, obj_b):
         return False
 
     for name in obj_a.fields:
-        set_a = obj_a.obj_attr_is_set(name)
-        set_b = obj_b.obj_attr_is_set(name)
+        set_a = name in obj_a
+        set_b = name in obj_b
         if set_a != set_b:
             return False
         elif not set_a:
@@ -43,7 +43,8 @@ class NUMACell(base.NovaObject):
     # Version 1.0: Initial version
     # Version 1.1: Added pinned_cpus and siblings fields
     # Version 1.2: Added mempages field
-    VERSION = '1.2'
+    # Version 1.3: Add network_metadata field
+    VERSION = '1.3'
 
     fields = {
         'id': fields.IntegerField(read_only=True),
@@ -54,7 +55,14 @@ class NUMACell(base.NovaObject):
         'pinned_cpus': fields.SetOfIntegersField(),
         'siblings': fields.ListOfSetsOfIntegersField(),
         'mempages': fields.ListOfObjectsField('NUMAPagesTopology'),
+        'network_metadata': fields.ObjectField('NetworkMetadata'),
         }
+
+    def obj_make_compatible(self, primitive, target_version):
+        super(NUMACell, self).obj_make_compatible(primitive, target_version)
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 3):
+            primitive.pop('network_metadata', None)
 
     def __eq__(self, other):
         return all_things_equal(self, other)
