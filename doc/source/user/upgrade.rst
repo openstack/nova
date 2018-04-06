@@ -70,7 +70,7 @@ same time.
      including all the python dependencies.
 
    * Using the newly installed nova code, run the DB sync.
-     (``nova-manage db sync``; ``nova-manage api_db sync``). These schema
+     (``nova-manage api_db sync``; ``nova-manage db sync``). These schema
      change operations should have minimal or no effect on performance, and
      should not cause any operations to fail.
 
@@ -169,6 +169,15 @@ Schema migrations are defined in
 the routines that transform our database structure, which should be
 additive and able to be applied to a running system before service
 code has been upgraded.
+
+.. note::
+
+  The API database migrations should be assumed to run before the
+  migrations for the main/cell databases. This is because the former
+  contains information about how to find and connect to the latter.
+  Some management commands that operate on multiple cells will attempt
+  to list and iterate over cell mapping records, which require a
+  functioning API database schema.
 
 
 Data Migrations
