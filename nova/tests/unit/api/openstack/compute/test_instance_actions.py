@@ -123,7 +123,10 @@ class InstanceActionsTestV21(test.NoDBTestCase):
         self.controller = self.instance_actions.InstanceActionsController()
         self.fake_actions = copy.deepcopy(fake_server_actions.FAKE_ACTIONS)
         self.fake_events = copy.deepcopy(fake_server_actions.FAKE_EVENTS)
-        self.stubs.Set(compute_api.API, 'get', self.fake_get)
+        get_patcher = mock.patch.object(compute_api.API, 'get',
+                                        side_effect=self.fake_get)
+        self.addCleanup(get_patcher.stop)
+        self.mock_get = get_patcher.start()
 
     def _get_http_req(self, action, use_admin_context=False):
         fake_url = '/123/servers/12/%s' % action
@@ -211,20 +214,22 @@ class InstanceActionsTestV21(test.NoDBTestCase):
                           FAKE_UUID, FAKE_REQUEST_ID)
 
     def test_index_instance_not_found(self):
-        def fake_get(self, context, instance_uuid, expected_attrs=None):
-            raise exception.InstanceNotFound(instance_id=instance_uuid)
-        self.stubs.Set(compute_api.API, 'get', fake_get)
+        self.mock_get.side_effect = exception.InstanceNotFound(
+            instance_id=FAKE_UUID)
         req = self._get_http_req('os-instance-actions')
         self.assertRaises(exc.HTTPNotFound, self.controller.index, req,
                           FAKE_UUID)
+        self.mock_get.assert_called_once_with(req.environ['nova.context'],
+                                              FAKE_UUID, expected_attrs=None)
 
     def test_show_instance_not_found(self):
-        def fake_get(self, context, instance_uuid, expected_attrs=None):
-            raise exception.InstanceNotFound(instance_id=instance_uuid)
-        self.stubs.Set(compute_api.API, 'get', fake_get)
+        self.mock_get.side_effect = exception.InstanceNotFound(
+            instance_id=FAKE_UUID)
         req = self._get_http_req('os-instance-actions/fake')
         self.assertRaises(exc.HTTPNotFound, self.controller.show, req,
                           FAKE_UUID, 'fake')
+        self.mock_get.assert_called_once_with(req.environ['nova.context'],
+                                              FAKE_UUID, expected_attrs=None)
 
 
 class InstanceActionsTestV221(InstanceActionsTestV21):
