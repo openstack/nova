@@ -2536,9 +2536,9 @@ class ProviderSummary(base.VersionedObject):
 
 
 @db_api.placement_context_manager.reader
-def _get_usages_by_provider(ctx, rp_ids):
-    """Returns a row iterator of usage records grouped by resource provider ID
-    and resource class ID for all resource providers
+def _get_usages_by_provider_tree(ctx, root_ids):
+    """Returns a row iterator of usage records grouped by provider ID
+    for all resource providers in all trees indicated in the ``root_ids``.
     """
     # We build up a SQL expression that looks like this:
     # SELECT
@@ -2551,39 +2551,41 @@ def _get_usages_by_provider(ctx, rp_ids):
     # , inv.max_unit
     # , usage.used
     # FROM resource_providers AS rp
-    # JOIN inventories AS inv
+    # LEFT JOIN inventories AS inv
     #  ON rp.id = inv.resource_provider_id
     # LEFT JOIN (
     #   SELECT resource_provider_id, resource_class_id, SUM(used) as used
     #   FROM allocations
-    #   WHERE resource_provider_id IN ($rp_ids)
+    #   JOIN resource_providers
+    #     ON allocations.resource_provider_id = resource_providers.id
+    #     AND resource_providers.root_provider_id IN($root_ids)
     #   GROUP BY resource_provider_id, resource_class_id
     # )
     # AS usages
     #   ON inv.resource_provider_id = usage.resource_provider_id
     #   AND inv.resource_class_id = usage.resource_class_id
-    # WHERE rp.id IN ($rp_ids)
+    # WHERE rp.root_provider_id IN ($root_ids)
     rpt = sa.alias(_RP_TBL, name="rp")
     inv = sa.alias(_INV_TBL, name="inv")
     # Build our derived table (subquery in the FROM clause) that sums used
     # amounts for resource provider and resource class
+    derived_alloc_to_rp = sa.join(
+        _ALLOC_TBL, _RP_TBL,
+        sa.and_(_ALLOC_TBL.c.resource_provider_id == _RP_TBL.c.id,
+                _RP_TBL.c.root_provider_id.in_(root_ids)))
     usage = sa.alias(
         sa.select([
             _ALLOC_TBL.c.resource_provider_id,
             _ALLOC_TBL.c.resource_class_id,
             sql.func.sum(_ALLOC_TBL.c.used).label('used'),
-        ]).where(
-            sa.and_(
-                _ALLOC_TBL.c.resource_provider_id.in_(rp_ids)
-            ),
-        ).group_by(
+        ]).select_from(derived_alloc_to_rp).group_by(
             _ALLOC_TBL.c.resource_provider_id,
             _ALLOC_TBL.c.resource_class_id
         ),
-        name='usage',
-    )
+        name='usage')
     # Build a join between the resource providers and inventories table
-    rpt_inv_join = sa.join(rpt, inv, rpt.c.id == inv.c.resource_provider_id)
+    rpt_inv_join = sa.outerjoin(rpt, inv,
+                                rpt.c.id == inv.c.resource_provider_id)
     # And then join to the derived table of usages
     usage_join = sa.outerjoin(
         rpt_inv_join,
@@ -2602,7 +2604,7 @@ def _get_usages_by_provider(ctx, rp_ids):
         inv.c.allocation_ratio,
         inv.c.max_unit,
         usage.c.used,
-    ]).select_from(usage_join).where(rpt.c.id.in_(rp_ids))
+    ]).select_from(usage_join).where(rpt.c.root_provider_id.in_(root_ids))
     return ctx.session.execute(query).fetchall()
 
 
@@ -3139,26 +3141,32 @@ def _build_provider_summaries(context, usages, prov_traits):
     for usage in usages:
         rp_id = usage['resource_provider_id']
         rp_uuid = usage['resource_provider_uuid']
+        summary = summaries.get(rp_id)
+        if not summary:
+            summary = ProviderSummary(
+                context,
+                resource_provider=ResourceProvider.get_by_uuid(context,
+                                                               uuid=rp_uuid),
+                resources=[],
+            )
+            summaries[rp_id] = summary
+
+        traits = prov_traits[rp_id]
+        summary.traits = [Trait(context, name=tname) for tname in traits]
+
         rc_id = usage['resource_class_id']
+        if rc_id is None:
+            # NOTE(tetsuro): This provider doesn't have any inventory itself.
+            # But we include this provider in summaries since another
+            # provider in the same tree will be in the "allocation_request".
+            # Let's skip the following and leave "ProviderSummary.resources"
+            # field empty.
+            continue
         # NOTE(jaypipes): usage['used'] may be None due to the LEFT JOIN of
         # the usages subquery, so we coerce NULL values to 0 here.
         used = usage['used'] or 0
         allocation_ratio = usage['allocation_ratio']
         cap = int((usage['total'] - usage['reserved']) * allocation_ratio)
-        traits = prov_traits.get(rp_id) or []
-
-        summary = summaries.get(rp_id)
-        if not summary:
-            summary = ProviderSummary(
-                context,
-                resource_provider=ResourceProvider.get_by_uuid(
-                    context,
-                    rp_uuid,
-                ),
-                resources=[],
-            )
-            summaries[rp_id] = summary
-
         rc_name = _RC_CACHE.string_from_id(rc_id)
         rpsr = ProviderSummaryResource(
             context,
@@ -3168,7 +3176,6 @@ def _build_provider_summaries(context, usages, prov_traits):
             max_unit=usage['max_unit'],
         )
         summary.resources.append(rpsr)
-        summary.traits = [Trait(context, name=tname) for tname in traits]
     return summaries
 
 
@@ -3306,7 +3313,7 @@ def _check_traits_for_alloc_request(res_requests, summaries, prov_traits,
     return all_prov_ids
 
 
-def _alloc_candidates_single_provider(ctx, requested_resources, rps):
+def _alloc_candidates_single_provider(ctx, requested_resources, rp_tuples):
     """Returns a tuple of (allocation requests, provider summaries) for a
     supplied set of requested resource amounts and resource providers. The
     supplied resource providers have capacity to satisfy ALL of the resources
@@ -3324,18 +3331,21 @@ def _alloc_candidates_single_provider(ctx, requested_resources, rps):
     :param ctx: nova.context.RequestContext object
     :param requested_resources: dict, keyed by resource class ID, of amounts
                                 being requested for that resource class
-    :param rps: List of two-tuples of (provider ID, root provider ID)s for
-                providers that matched the requested resources
+    :param rp_tuples: List of two-tuples of (provider ID, root provider ID)s
+                      for providers that matched the requested resources
     """
-    if not rps:
+    if not rp_tuples:
         return [], []
+
+    # Get all root resource provider IDs.
+    root_ids = set(p[1] for p in rp_tuples)
+
     # Grab usage summaries for each provider
-    rp_ids = set(p[0] for p in rps)
-    usages = _get_usages_by_provider(ctx, rp_ids)
+    usages = _get_usages_by_provider_tree(ctx, root_ids)
 
     # Get a dict, keyed by resource provider internal ID, of trait string names
     # that provider has associated with it
-    prov_traits = _provider_traits(ctx, rp_ids)
+    prov_traits = _get_traits_by_provider_tree(ctx, root_ids)
 
     # Get a dict, keyed by resource provider internal ID, of ProviderSummary
     # objects for all providers
@@ -3345,7 +3355,7 @@ def _alloc_candidates_single_provider(ctx, requested_resources, rps):
     # are AllocationRequest objects, containing resource provider UUIDs,
     # resource class names and amounts to consume from that resource provider
     alloc_requests = []
-    for rp_id in rp_ids:
+    for rp_id, root_id in rp_tuples:
         rp_summary = summaries[rp_id]
         req_obj = _allocation_request_for_provider(
                 ctx, requested_resources, rp_summary.resource_provider)
@@ -3389,21 +3399,24 @@ def _alloc_candidates_multiple_providers(ctx, requested_resources,
     :param forbidden_traits: A map, keyed by trait string name, of trait
                              internal IDs that a resource provider must
                              not have.
-    :param rp_tuples: List of tuples of (provider ID, root provider ID,
+    :param rp_tuples: List of tuples of (provider ID, anchor root provider ID,
                       resource class ID)s for providers that matched the
                       requested resources
     """
     if not rp_tuples:
         return [], []
 
-    # Grab usage summaries for each provider including root providers
-    # that don't provide the requested resources
-    rp_ids = set(p[0] for p in rp_tuples) | set(p[1] for p in rp_tuples)
-    usages = _get_usages_by_provider(ctx, rp_ids)
+    # Get all the root resource provider IDs. We should include the first
+    # values of rp_tuples because while sharing providers are root providers,
+    # they have their "anchor" providers for the second value.
+    root_ids = set(p[0] for p in rp_tuples) | set(p[1] for p in rp_tuples)
+
+    # Grab usage summaries for each provider in the trees
+    usages = _get_usages_by_provider_tree(ctx, root_ids)
 
     # Get a dict, keyed by resource provider internal ID, of trait string names
     # that provider has associated with it
-    prov_traits = _provider_traits(ctx, rp_ids)
+    prov_traits = _get_traits_by_provider_tree(ctx, root_ids)
 
     # Get a dict, keyed by resource provider internal ID, of ProviderSummary
     # objects for all providers
@@ -3462,24 +3475,27 @@ def _alloc_candidates_multiple_providers(ctx, requested_resources,
 
 
 @db_api.placement_context_manager.reader
-def _provider_traits(ctx, rp_ids):
-    """Given a list of resource provider internal IDs, returns a dict, keyed by
-    those provider IDs, of string trait names associated with that provider.
+def _get_traits_by_provider_tree(ctx, root_ids):
+    """Returns a dict, keyed by provider IDs for all resource providers
+    in all trees indicated in the ``root_ids``, of string trait names
+    associated with that provider.
 
-    :raises: ValueError when rp_ids is empty.
+    :raises: ValueError when root_ids is empty.
 
     :param ctx: nova.context.RequestContext object
-    :param rp_ids: list of resource provider IDs
+    :param root_ids: list of root resource provider IDs
     """
-    if not rp_ids:
-        raise ValueError(_("Expected rp_ids to be a list of resource provider "
-                           "internal IDs, but got an empty list."))
+    if not root_ids:
+        raise ValueError(_("Expected root_ids to be a list of root resource"
+                           "provider internal IDs, but got an empty list."))
 
+    rpt = sa.alias(_RP_TBL, name='rpt')
     rptt = sa.alias(_RP_TRAIT_TBL, name='rptt')
     tt = sa.alias(_TRAIT_TBL, name='t')
-    j = sa.join(rptt, tt, rptt.c.trait_id == tt.c.id)
+    rpt_rptt = sa.join(rpt, rptt, rpt.c.id == rptt.c.resource_provider_id)
+    j = sa.join(rpt_rptt, tt, rptt.c.trait_id == tt.c.id)
     sel = sa.select([rptt.c.resource_provider_id, tt.c.name]).select_from(j)
-    sel = sel.where(rptt.c.resource_provider_id.in_(rp_ids))
+    sel = sel.where(rpt.c.root_provider_id.in_(root_ids))
     res = collections.defaultdict(list)
     for r in ctx.session.execute(sel):
         res[r[0]].append(r[1])
@@ -3743,14 +3759,14 @@ def _merge_candidates(candidates, group_policy=None):
 
     # Now we have to produce provider summaries.  The provider summaries in
     # the candidates input contain all the information; we just need to
-    # filter it down to only the providers in our merged list of allocation
-    # requests.
-    rps_in_areq = set()
+    # filter it down to only the providers in trees represented by our merged
+    # list of allocation requests.
+    tree_uuids = set()
     for areq in areqs:
         for arr in areq.resource_requests:
-            rps_in_areq.add(arr.resource_provider.uuid)
+            tree_uuids.add(arr.resource_provider.root_provider_uuid)
     psums = [psum for psum in all_psums if
-                psum.resource_provider.uuid in rps_in_areq]
+             psum.resource_provider.root_provider_uuid in tree_uuids]
 
     return areqs, psums
 
