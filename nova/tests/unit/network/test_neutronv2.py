@@ -4284,6 +4284,23 @@ class TestNeutronv2WithMock(test.TestCase):
         self.api._setup_migration_port_profile.assert_not_called()
         self.api._clear_migration_port_profile.assert_not_called()
 
+    def test__setup_migration_port_profile_no_update(self):
+        """Tests the case that the port binding profile already has the
+        "migrating_to" attribute set to the provided host so the port update
+        call is skipped.
+        """
+        ports = [{
+            neutronapi.BINDING_HOST_ID: 'source-host',
+            neutronapi.BINDING_PROFILE: {
+                neutronapi.MIGRATING_ATTR: 'dest-host'
+            }
+        }] * 2
+        with mock.patch.object(self.api, '_update_port_with_migration_profile',
+                               new_callable=mock.NonCallableMock):
+            self.api._setup_migration_port_profile(
+                self.context, mock.sentinel.instance, 'dest-host',
+                mock.sentinel.admin_client, ports)
+
     @mock.patch.object(neutronapi, 'get_client', return_value=mock.Mock())
     def test_update_port_profile_for_migration_teardown_true_with_profile(
         self, get_client_mock):

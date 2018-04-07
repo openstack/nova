@@ -319,14 +319,18 @@ class API(base_api.NetworkAPI):
             host_id = p.get(BINDING_HOST_ID)
             if host_id != host:
                 port_profile = _get_binding_profile(p)
-                port_profile[MIGRATING_ATTR] = host
-                self._update_port_with_migration_profile(
-                    instance, p['id'], port_profile, admin_client)
-                LOG.debug("Port %(port_id)s updated with migration "
-                          "profile %(profile_data)s successfully",
-                          {'port_id': p['id'],
-                           'profile_data': port_profile},
-                          instance=instance)
+                # If the "migrating_to" attribute already points at the given
+                # host, then skip the port update call since we're not changing
+                # anything.
+                if host != port_profile.get(MIGRATING_ATTR):
+                    port_profile[MIGRATING_ATTR] = host
+                    self._update_port_with_migration_profile(
+                        instance, p['id'], port_profile, admin_client)
+                    LOG.debug("Port %(port_id)s updated with migration "
+                              "profile %(profile_data)s successfully",
+                              {'port_id': p['id'],
+                               'profile_data': port_profile},
+                              instance=instance)
 
     def setup_networks_on_host(self, context, instance, host=None,
                                teardown=False):
