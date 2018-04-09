@@ -14,21 +14,14 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-"""Base class for classes that need modular database access."""
+"""Base class for classes that need database access."""
 
-from oslo_utils import importutils
-
-import nova.conf
-
-
-CONF = nova.conf.CONF
+import nova.db
 
 
 class Base(object):
     """DB driver is injected in the init method."""
 
-    def __init__(self, db_driver=None):
+    def __init__(self):
         super(Base, self).__init__()
-        if not db_driver:
-            db_driver = CONF.db_driver
-        self.db = importutils.import_module(db_driver)
+        self.db = nova.db

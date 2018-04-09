@@ -1,0 +1,7 @@
+---
+upgrade:
+  - |
+    The ``db_driver`` configuration option was deprecated in a previous release
+    and has now been removed. This option allowed you to replace the SQLAlchemy
+    database layer with one of your own. The approach was deprecated and
+    unsupported, and it is now time to remove it completely.
