@@ -1551,8 +1551,10 @@ class LibvirtDriver(driver.ComputeDriver):
                     new_connection_info, instance, mountpoint, resize_to):
 
         # NOTE(lyarwood): https://bugzilla.redhat.com/show_bug.cgi?id=760547
-        encryption = self._get_volume_encryption(context, old_connection_info)
-        if encryption and self._use_native_luks(encryption):
+        old_encrypt = self._get_volume_encryption(context, old_connection_info)
+        new_encrypt = self._get_volume_encryption(context, new_connection_info)
+        if ((old_encrypt and self._use_native_luks(old_encrypt)) or
+            (new_encrypt and self._use_native_luks(new_encrypt))):
             raise NotImplementedError(_("Swap volume is not supported for "
                 "encrypted volumes when native LUKS decryption is enabled."))
 
