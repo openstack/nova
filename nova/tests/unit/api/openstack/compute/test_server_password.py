@@ -15,10 +15,8 @@
 
 import mock
 
-from nova.api.metadata import password
 from nova.api.openstack.compute import server_password \
     as server_password_v21
-from nova import compute
 from nova import exception
 from nova import test
 from nova.tests.unit.api.openstack import fakes
@@ -33,26 +31,24 @@ class ServerPasswordTestV21(test.NoDBTestCase):
     def setUp(self):
         super(ServerPasswordTestV21, self).setUp()
         fakes.stub_out_nw_api(self)
-        self.stubs.Set(
-            compute.api.API, 'get',
-            lambda self, ctxt, *a, **kw:
-                fake_instance.fake_instance_obj(
-                ctxt,
-                system_metadata={},
-                expected_attrs=['system_metadata']))
+        self.stub_out('nova.compute.api.API.get',
+                      lambda self, ctxt, *a, **kw:
+                          fake_instance.fake_instance_obj(
+                          ctxt,
+                          system_metadata={},
+                          expected_attrs=['system_metadata']))
         self.password = 'fakepass'
         self.controller = self.server_password.ServerPasswordController()
         self.fake_req = fakes.HTTPRequest.blank('')
-
-        def fake_extract_password(instance):
-            return self.password
 
         def fake_convert_password(context, password):
             self.password = password
             return {}
 
-        self.stubs.Set(password, 'extract_password', fake_extract_password)
-        self.stubs.Set(password, 'convert_password', fake_convert_password)
+        self.stub_out('nova.api.metadata.password.extract_password',
+                      lambda i: self.password)
+        self.stub_out('nova.api.metadata.password.convert_password',
+                      fake_convert_password)
 
     def test_get_password(self):
         res = self.controller.index(self.fake_req, 'fake')
