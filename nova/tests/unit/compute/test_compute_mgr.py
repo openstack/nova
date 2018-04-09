@@ -5184,10 +5184,13 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
                 exception.UnexpectedDeletingTaskStateError(
                     instance_uuid=uuids.instance, expected={}, actual={}))
 
-    def test_build_and_run_buildabort_exception(self):
+    @mock.patch('nova.compute.manager.LOG.error')
+    def test_build_and_run_buildabort_exception(self, mock_le):
         self._test_build_and_run_exceptions(
             exception.BuildAbortException(instance_uuid='', reason=''),
             set_error=True, cleanup_volumes=True, nil_out_host_and_node=True)
+        mock_le.assert_called_once_with('Build of instance  aborted: ',
+                                        instance=mock.ANY)
 
     def test_build_and_run_unhandled_exception(self):
         self._test_build_and_run_exceptions(test.TestingException(),

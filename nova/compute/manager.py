@@ -1914,7 +1914,7 @@ class ComputeManager(manager.Manager):
                     requested_networks)
             return build_results.FAILED
         except exception.BuildAbortException as e:
-            LOG.exception(e.format_message(), instance=instance)
+            LOG.error(e.format_message(), instance=instance)
             self._cleanup_allocated_networks(context, instance,
                     requested_networks)
             self._cleanup_volumes(context, instance,
