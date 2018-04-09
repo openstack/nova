@@ -22,11 +22,9 @@ import webob
 
 from nova.api.openstack.compute import server_metadata \
         as server_metadata_v21
-from nova.compute import rpcapi as compute_rpcapi
 from nova.compute import vm_states
 import nova.db
 from nova import exception
-from nova import objects
 from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_instance
@@ -125,8 +123,9 @@ class ServerMetaDataTestV21(test.TestCase):
         self.stub_out('nova.db.instance_metadata_get',
                       return_server_metadata)
 
-        self.stubs.Set(compute_rpcapi.ComputeAPI, 'change_instance_metadata',
-                       fake_change_instance_metadata)
+        self.stub_out(
+            'nova.compute.rpcapi.ComputeAPI.change_instance_metadata',
+            fake_change_instance_metadata)
         self._set_up_resources()
 
     def _set_up_resources(self):
@@ -213,7 +212,7 @@ class ServerMetaDataTestV21(test.TestCase):
                           self.controller.delete, req, self.uuid, 'key6')
 
     def test_create(self):
-        self.stubs.Set(objects.Instance, 'save', fake_instance_save)
+        self.stub_out('nova.objects.Instance.save', fake_instance_save)
         req = self._get_request()
         req.method = 'POST'
         req.content_type = "application/json"
@@ -312,7 +311,7 @@ class ServerMetaDataTestV21(test.TestCase):
                           self.controller.create, req, self.uuid, body=body)
 
     def test_update_metadata(self):
-        self.stubs.Set(objects.Instance, 'save', fake_instance_save)
+        self.stub_out('nova.objects.Instance.save', fake_instance_save)
         req = self._get_request()
         req.method = 'POST'
         req.content_type = 'application/json'
@@ -327,7 +326,7 @@ class ServerMetaDataTestV21(test.TestCase):
         self.assertEqual(expected, response)
 
     def test_update_all(self):
-        self.stubs.Set(objects.Instance, 'save', fake_instance_save)
+        self.stub_out('nova.objects.Instance.save', fake_instance_save)
         req = self._get_request()
         req.method = 'PUT'
         req.content_type = "application/json"
@@ -343,7 +342,7 @@ class ServerMetaDataTestV21(test.TestCase):
         self.assertEqual(expected, res_dict)
 
     def test_update_all_empty_container(self):
-        self.stubs.Set(objects.Instance, 'save', fake_instance_save)
+        self.stub_out('nova.objects.Instance.save', fake_instance_save)
         req = self._get_request()
         req.method = 'PUT'
         req.content_type = "application/json"
@@ -427,7 +426,7 @@ class ServerMetaDataTestV21(test.TestCase):
                           req, self.uuid, body=body)
 
     def test_update_item(self):
-        self.stubs.Set(objects.Instance, 'save', fake_instance_save)
+        self.stub_out('nova.objects.Instance.save', fake_instance_save)
         req = self._get_request('/key1')
         req.method = 'PUT'
         body = {"meta": {"key1": "value1"}}
@@ -634,8 +633,6 @@ class ServerMetaDataTestV21(test.TestCase):
     def test_invalid_metadata_items_on_update_item(self):
         self.stub_out('nova.db.instance_metadata_update',
                       return_create_instance_metadata)
-        self.stub_out('nova.db.instance_metadata_update',
-                      return_create_instance_metadata)
         data = {"metadata": {}}
         for num in range(CONF.quota.metadata_items + 1):
             data['metadata']['key%i' % num] = "blah"
@@ -673,8 +670,9 @@ class BadStateServerMetaDataTestV21(test.TestCase):
         fakes.stub_out_key_pair_funcs(self)
         self.stub_out('nova.db.instance_metadata_get',
                       return_server_metadata)
-        self.stubs.Set(compute_rpcapi.ComputeAPI, 'change_instance_metadata',
-                       fake_change_instance_metadata)
+        self.stub_out(
+            'nova.compute.rpcapi.ComputeAPI.change_instance_metadata',
+            fake_change_instance_metadata)
         self.stub_out('nova.db.instance_get', self._return_server_in_build)
         self.stub_out('nova.db.instance_get_by_uuid',
                       self._return_server_in_build_by_uuid)
