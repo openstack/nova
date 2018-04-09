@@ -711,18 +711,16 @@ class Instance(base.NovaPersistentObject, base.NovaObject,
         """Save updates to this instance
 
         Column-wise updates will be made based on the result of
-        self.what_changed(). If expected_task_state is provided,
+        self.obj_what_changed(). If expected_task_state is provided,
         it will be checked against the in-database copy of the
         instance before updates are made.
 
-        :param:context: Security context
-        :param:expected_task_state: Optional tuple of valid task states
-        for the instance to be in
-        :param:expected_vm_state: Optional tuple of valid vm states
-        for the instance to be in
+        :param expected_vm_state: Optional tuple of valid vm states
+                                  for the instance to be in
+        :param expected_task_state: Optional tuple of valid task states
+                                    for the instance to be in
         :param admin_state_reset: True if admin API is forcing setting
-        of task_state/vm_state
-
+                                  of task_state/vm_state
         """
         # Store this on the class because _cell_name_blocks_sync is useless
         # after the db update call below.
