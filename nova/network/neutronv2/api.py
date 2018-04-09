@@ -2520,6 +2520,13 @@ class API(base_api.NetworkAPI):
 
     def cleanup_instance_network_on_host(self, context, instance, host):
         """Cleanup network for specified instance on host."""
+        # TODO(mriedem): This should likely be implemented at least for the
+        # shelve offload operation because the instance is being removed from
+        # a compute host, VIFs are unplugged, etc, so the ports should also
+        # be unbound, albeit still logically attached to the instance (for the
+        # shelve scenario). If _unbind_ports was going to be leveraged here, it
+        # would have to be adjusted a bit since it currently clears the
+        # device_id field on the port which is not what we'd want for shelve.
         pass
 
     def _get_pci_devices_from_migration_context(self, migration_context,
@@ -2579,6 +2586,10 @@ class API(base_api.NetworkAPI):
             # same host, there is nothing to do.
             if p.get(BINDING_HOST_ID) != host:
                 updates[BINDING_HOST_ID] = host
+                # If the host changed, the AZ could have also changed so we
+                # need to update the device_owner.
+                updates['device_owner'] = (
+                        'compute:%s' % instance.availability_zone)
                 # NOTE: Before updating the port binding make sure we
                 # remove the pre-migration status from the binding profile
                 if binding_profile.get(MIGRATING_ATTR):
