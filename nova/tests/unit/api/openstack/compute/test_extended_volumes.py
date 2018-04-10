@@ -19,7 +19,6 @@ from oslo_serialization import jsonutils
 from nova.api.openstack.compute import (extended_volumes
                                                    as extended_volumes_v21)
 from nova.api.openstack import wsgi as os_wsgi
-from nova import compute
 from nova import context as nova_context
 from nova import objects
 from nova.objects import instance as instance_obj
@@ -28,7 +27,6 @@ from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
 from nova.tests import uuidsentinel as uuids
-from nova import volume
 
 UUID1 = '00000000-0000-0000-0000-000000000001'
 UUID2 = '00000000-0000-0000-0000-000000000002'
@@ -80,10 +78,6 @@ def fake_bdms_get_all_by_instance_uuids(*args, **kwargs):
     ]
 
 
-def fake_volume_get(*args, **kwargs):
-    pass
-
-
 class ExtendedVolumesTestV21(test.TestCase):
     content_type = 'application/json'
     prefix = 'os-extended-volumes:'
@@ -98,8 +92,8 @@ class ExtendedVolumesTestV21(test.TestCase):
         super(ExtendedVolumesTestV21, self).setUp()
         fakes.stub_out_nw_api(self)
         fakes.stub_out_secgroup_api(self)
-        self.stubs.Set(compute.api.API, 'get', fake_compute_get)
-        self.stubs.Set(compute.api.API, 'get_all', fake_compute_get_all)
+        self.stub_out('nova.compute.api.API.get', fake_compute_get)
+        self.stub_out('nova.compute.api.API.get_all', fake_compute_get_all)
         self.stub_out('nova.db.block_device_mapping_get_all_by_instance_uuids',
                        fake_bdms_get_all_by_instance_uuids)
         self._setUp()
@@ -112,7 +106,7 @@ class ExtendedVolumesTestV21(test.TestCase):
 
     def _setUp(self):
         self.Controller = extended_volumes_v21.ExtendedVolumesController()
-        self.stubs.Set(volume.cinder.API, 'get', fake_volume_get)
+        self.stub_out('nova.volume.cinder.API.get', lambda *a, **k: None)
 
     def _make_request(self, url, body=None):
         req = fakes.HTTPRequest.blank('/v2/fake/servers' + url)
