@@ -1786,6 +1786,9 @@ def numa_usage_from_instances(host, instances, free=False):
             cpu_usage=0, memory_usage=0, mempages=hostcell.mempages,
             pinned_cpus=hostcell.pinned_cpus, siblings=hostcell.siblings)
 
+        if 'network_metadata' in hostcell:
+            newcell.network_metadata = hostcell.network_metadata
+
         for instance in instances:
             for cellid, instancecell in enumerate(instance.cells):
                 if instancecell.id != hostcell.id:

@@ -17,6 +17,7 @@
 from oslo_config import fixture as config_fixture
 from oslo_policy import opts as policy_opts
 
+from nova.conf import neutron
 from nova.conf import paths
 from nova import config
 from nova import ipv6
@@ -79,5 +80,6 @@ class ConfFixture(config_fixture.Config):
         config.parse_args([], default_config_files=[], configure_db=False,
                           init_rpc=False)
         policy_opts.set_defaults(self.conf)
+        neutron.register_dynamic_opts(self.conf)
         self.addCleanup(utils.cleanup_dns_managers)
         self.addCleanup(ipv6.api.reset_backend)

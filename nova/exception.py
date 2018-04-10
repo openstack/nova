@@ -2243,6 +2243,10 @@ class BadRequirementEmulatorThreadsPolicy(Invalid):
                 "CPU policy option.")
 
 
+class InvalidNetworkNUMAAffinity(Invalid):
+    msg_fmt = _("Invalid NUMA network affinity configured: %(reason)s")
+
+
 class PowerVMAPIFailed(NovaException):
     msg_fmt = _("PowerVM API failed to complete for instance=%(inst_name)s.  "
                 "%(reason)s")

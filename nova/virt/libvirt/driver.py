@@ -6275,6 +6275,46 @@ class LibvirtDriver(driver.ComputeDriver):
             cell = self._reserved_hugepages.get(cell_id, {})
             return cell.get(page_size, 0)
 
+        def _get_physnet_numa_affinity():
+            affinities = {cell.id: set() for cell in topology.cells}
+            for physnet in CONF.neutron.physnets:
+                # This will error out if the group is not registered, which is
+                # exactly what we want as that would be a bug
+                group = getattr(CONF, 'neutron_physnet_%s' % physnet)
+
+                if not group.numa_nodes:
+                    msg = ("the physnet '%s' was listed in '[neutron] "
+                           "physnets' but no corresponding "
+                           "'[neutron_physnet_%s] numa_nodes' option was "
+                           "defined." % (physnet, physnet))
+                    raise exception.InvalidNetworkNUMAAffinity(reason=msg)
+
+                for node in group.numa_nodes:
+                    if node not in affinities:
+                        msg = ("node %d for physnet %s is not present in host "
+                               "affinity set %r" % (node, physnet, affinities))
+                        # The config option referenced an invalid node
+                        raise exception.InvalidNetworkNUMAAffinity(reason=msg)
+                    affinities[node].add(physnet)
+
+            return affinities
+
+        def _get_tunnel_numa_affinity():
+            affinities = {cell.id: False for cell in topology.cells}
+
+            for node in CONF.neutron_tunnel.numa_nodes:
+                if node not in affinities:
+                    msg = ("node %d for tunneled networks is not present "
+                           "in host affinity set %r" % (node, affinities))
+                    # The config option referenced an invalid node
+                    raise exception.InvalidNetworkNUMAAffinity(reason=msg)
+                affinities[node] = True
+
+            return affinities
+
+        physnet_affinities = _get_physnet_numa_affinity()
+        tunnel_affinities = _get_tunnel_numa_affinity()
+
         for cell in topology.cells:
             cpuset = set(cpu.id for cpu in cell.cpus)
             siblings = sorted(map(set,
@@ -6296,12 +6336,17 @@ class LibvirtDriver(driver.ComputeDriver):
                         self, cell.id, pages.size))
                 for pages in cell.mempages]
 
+            network_metadata = objects.NetworkMetadata(
+                physnets=physnet_affinities[cell.id],
+                tunneled=tunnel_affinities[cell.id])
+
             cell = objects.NUMACell(id=cell.id, cpuset=cpuset,
                                     memory=cell.memory / units.Ki,
                                     cpu_usage=0, memory_usage=0,
                                     siblings=siblings,
                                     pinned_cpus=set([]),
-                                    mempages=mempages)
+                                    mempages=mempages,
+                                    network_metadata=network_metadata)
             cells.append(cell)
 
         return objects.NUMATopology(cells=cells)
