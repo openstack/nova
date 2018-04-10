@@ -58,11 +58,11 @@ class ResourceClass(fields.StringField):
     def normalize_name(cls, rc_name):
         if rc_name is None:
             return None
-        norm_name = rc_name.upper()
-        cust_prefix = cls.CUSTOM_NAMESPACE
-        norm_name = cust_prefix + norm_name
-        # Replace some punctuation characters with underscores
-        norm_name = re.sub('[^0-9A-Z]+', '_', norm_name)
+        # Replace non-alphanumeric characters with underscores
+        norm_name = re.sub('[^0-9A-Za-z]+', '_', rc_name)
+        # Bug #1762789: Do .upper after replacing non alphanumerics.
+        norm_name = norm_name.upper()
+        norm_name = cls.CUSTOM_NAMESPACE + norm_name
         return norm_name
 
 
