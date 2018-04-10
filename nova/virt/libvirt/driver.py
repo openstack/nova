@@ -8105,7 +8105,7 @@ class LibvirtDriver(driver.ComputeDriver):
         try:
             if os.path.exists(inst_base_resize):
                 shutil.rmtree(inst_base, ignore_errors=True)
-                utils.execute('mv', inst_base_resize, inst_base)
+                os.rename(inst_base_resize, inst_base)
                 if not shared_storage:
                     self._remotefs.remove_dir(dest, inst_base)
         except Exception:
@@ -8198,7 +8198,7 @@ class LibvirtDriver(driver.ComputeDriver):
         disk_info = self._get_instance_disk_info(instance, block_device_info)
 
         try:
-            utils.execute('mv', inst_base, inst_base_resize)
+            os.rename(inst_base, inst_base_resize)
             # if we are migrating the instance with shared storage then
             # create the directory.  If it is a remote node the directory
             # has already been created
@@ -8261,7 +8261,7 @@ class LibvirtDriver(driver.ComputeDriver):
         path_qcow = path + '_qcow'
         utils.execute('qemu-img', 'convert', '-f', 'raw',
                       '-O', 'qcow2', path, path_qcow)
-        utils.execute('mv', path_qcow, path)
+        os.rename(path_qcow, path)
 
     @staticmethod
     def _disk_qcow2_to_raw(path):
@@ -8269,7 +8269,7 @@ class LibvirtDriver(driver.ComputeDriver):
         path_raw = path + '_raw'
         utils.execute('qemu-img', 'convert', '-f', 'qcow2',
                       '-O', 'raw', path, path_raw)
-        utils.execute('mv', path_raw, path)
+        os.rename(path_raw, path)
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance,
@@ -8391,7 +8391,7 @@ class LibvirtDriver(driver.ComputeDriver):
         # failure happened early.
         if os.path.exists(inst_base_resize):
             self._cleanup_failed_migration(inst_base)
-            utils.execute('mv', inst_base_resize, inst_base)
+            os.rename(inst_base_resize, inst_base)
 
         root_disk = self.image_backend.by_name(instance, 'disk')
         # Once we rollback, the snapshot is no longer needed, so remove it
@@ -8709,12 +8709,12 @@ class LibvirtDriver(driver.ComputeDriver):
         target_del = target + '_del'
         for i in range(2):
             try:
-                utils.execute('mv', target, target_del)
+                os.rename(target, target_del)
                 break
             except Exception:
                 pass
             try:
-                utils.execute('mv', target_resize, target_del)
+                os.rename(target_resize, target_del)
                 break
             except Exception:
                 pass

@@ -17434,57 +17434,47 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         return instance
 
-    def test_migrate_disk_and_power_off_exception(self):
+    @mock.patch(('nova.virt.libvirt.driver.LibvirtDriver.'
+                 '_get_instance_disk_info'), return_value=[])
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._destroy')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_host_ip_addr',
+                return_value='10.0.0.1')
+    @mock.patch(('nova.virt.libvirt.driver.LibvirtDriver.'
+                 '_is_storage_shared_with'), return_value=False)
+    @mock.patch('os.rename')
+    @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('nova.utils.execute', side_effect=test.TestingException)
+    def test_migrate_disk_and_power_off_exception(
+            self, mock_execute, mock_exists, mock_rename, mock_is_shared,
+            mock_get_host_ip, mock_destroy, mock_get_disk_info):
         """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
         .migrate_disk_and_power_off.
         """
-
-        self.counter = 0
-        self.checked_shared_storage = False
-
-        def fake_get_instance_disk_info(instance, block_device_info):
-            return []
-
-        def fake_destroy(instance):
-            pass
-
-        def fake_get_host_ip_addr():
-            return '10.0.0.1'
-
-        def fake_execute(*args, **kwargs):
-            self.counter += 1
-            if self.counter == 1:
-                assert False, "intentional failure"
-
-        def fake_os_path_exists(path):
-            return True
-
-        def fake_is_storage_shared(dest, inst_base):
-            self.checked_shared_storage = True
-            return False
-
-        self.stubs.Set(self.drvr, '_get_instance_disk_info',
-                       fake_get_instance_disk_info)
-        self.stubs.Set(self.drvr, '_destroy', fake_destroy)
-        self.stubs.Set(self.drvr, 'get_host_ip_addr',
-                       fake_get_host_ip_addr)
-        self.stubs.Set(self.drvr, '_is_storage_shared_with',
-                       fake_is_storage_shared)
-        self.stubs.Set(utils, 'execute', fake_execute)
-        self.stub_out('os.path.exists', fake_os_path_exists)
 
         ins_ref = self._create_instance()
         flavor = {'root_gb': 10, 'ephemeral_gb': 20}
         flavor_obj = objects.Flavor(**flavor)
 
-        self.assertRaises(AssertionError,
+        self.assertRaises(test.TestingException,
                           self.drvr.migrate_disk_and_power_off,
                           context.get_admin_context(), ins_ref, '10.0.0.2',
                           flavor_obj, None)
 
-    def _test_migrate_disk_and_power_off(self, ctxt, flavor_obj,
-                                         block_device_info=None,
-                                         params_for_instance=None):
+    @mock.patch(('nova.virt.libvirt.driver.LibvirtDriver.'
+                 '_get_instance_disk_info'))
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._destroy')
+    @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_host_ip_addr',
+                return_value='10.0.0.1')
+    @mock.patch(('nova.virt.libvirt.driver.LibvirtDriver.'
+                 '_is_storage_shared_with'), return_value=False)
+    @mock.patch('os.rename')
+    @mock.patch('os.path.exists', return_value=True)
+    @mock.patch('nova.utils.execute')
+    def _test_migrate_disk_and_power_off(
+            self, ctxt, flavor_obj, mock_execute, mock_exists, mock_rename,
+            mock_is_shared, mock_get_host_ip, mock_destroy,
+            mock_get_disk_info, block_device_info=None,
+            params_for_instance=None):
         """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
         .migrate_disk_and_power_off.
         """
@@ -17492,32 +17482,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         instance = self._create_instance(params=params_for_instance)
         disk_info = list(fake_disk_info_byname(instance).values())
         disk_info_text = jsonutils.dumps(disk_info)
-
-        def fake_get_instance_disk_info(instance, block_device_info):
-            return disk_info
-
-        def fake_destroy(instance):
-            pass
-
-        def fake_get_host_ip_addr():
-            return '10.0.0.1'
-
-        def fake_execute(*args, **kwargs):
-            pass
-
-        def fake_copy_image(src, dest, host=None, receive=False,
-                            on_execute=None, on_completion=None,
-                            compression=True):
-            self.assertIsNotNone(on_execute)
-            self.assertIsNotNone(on_completion)
-
-        self.stubs.Set(self.drvr, '_get_instance_disk_info',
-                       fake_get_instance_disk_info)
-        self.stubs.Set(self.drvr, '_destroy', fake_destroy)
-        self.stubs.Set(self.drvr, 'get_host_ip_addr',
-                       fake_get_host_ip_addr)
-        self.stubs.Set(utils, 'execute', fake_execute)
-        self.stubs.Set(libvirt_utils, 'copy_image', fake_copy_image)
+        mock_get_disk_info.return_value = disk_info
 
         # dest is different host case
         out = self.drvr.migrate_disk_and_power_off(
@@ -17586,7 +17551,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         disconnect_volume.assert_called_with(self.context,
             mock.sentinel.conn_info_vda, mock.ANY)
 
-    @mock.patch('nova.utils.execute')
+    @mock.patch('os.rename')
     @mock.patch('nova.virt.libvirt.utils.copy_image')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._destroy')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver.get_host_ip_addr')
@@ -17596,11 +17561,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                              get_host_ip_addr,
                                              mock_destroy,
                                              mock_copy_image,
-                                             mock_execute):
+                                             mock_rename):
         """Test for nova.virt.libvirt.libvirt_driver.LivirtConnection
         .migrate_disk_and_power_off.
         """
-        self.copy_or_move_swap_called = False
 
         # Original instance config
         instance = self._create_instance({'flavor': {'root_gb': 10,
@@ -17609,19 +17573,6 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         disk_info = list(fake_disk_info_byname(instance).values())
         mock_get_disk_info.return_value = disk_info
         get_host_ip_addr.return_value = '10.0.0.1'
-
-        def fake_copy_image(*args, **kwargs):
-            # disk.swap should not be touched since it is skipped over
-            if '/test/disk.swap' in list(args):
-                self.copy_or_move_swap_called = True
-
-        def fake_execute(*args, **kwargs):
-            # disk.swap should not be touched since it is skipped over
-            if set(['mv', '/test/disk.swap']).issubset(list(args)):
-                self.copy_or_move_swap_called = True
-
-        mock_copy_image.side_effect = fake_copy_image
-        mock_execute.side_effect = fake_execute
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
 
@@ -17637,9 +17588,16 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         mock_get_disk_info.assert_called_once_with(instance, None)
         self.assertTrue(get_host_ip_addr.called)
         mock_destroy.assert_called_once_with(instance)
-        self.assertFalse(self.copy_or_move_swap_called)
         disk_info_text = jsonutils.dumps(disk_info)
         self.assertEqual(disk_info_text, out)
+
+        # disk.swap isn't moved
+        for call in mock_rename.mock_calls:
+            self.assertFalse(call[0].endswith('.swap'))
+
+        # disk.swap isn't copied
+        for call in mock_copy_image.mock_calls:
+            self.assertFalse(call[0].endswith('.swap'))
 
     def _test_migrate_disk_and_power_off_resize_check(self, expected_exc):
         """Test for nova.virt.libvirt.libvirt_driver.LibvirtConnection
@@ -17673,6 +17631,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
               None, instance, '10.0.0.1', flavor_obj, None)
 
     @mock.patch('nova.utils.execute')
+    @mock.patch('os.rename')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._destroy')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
                 '._get_instance_disk_info')
@@ -17683,6 +17642,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                                       mock_is_shared_storage,
                                                       mock_get_disk_info,
                                                       mock_destroy,
+                                                      mock_rename,
                                                       mock_execute):
         self.convert_file_called = False
         flavor = {'root_gb': 20, 'ephemeral_gb': 30, 'swap': 0}
@@ -17852,6 +17812,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         flavor_obj = objects.Flavor(**flavor)
         self._test_migrate_disk_and_power_off(self.context, flavor_obj)
 
+    @mock.patch('os.rename')
     @mock.patch('nova.utils.execute')
     @mock.patch('nova.virt.libvirt.utils.copy_image')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._destroy')
@@ -17860,13 +17821,9 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                 '._is_storage_shared_with')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver'
                 '._get_instance_disk_info')
-    def test_migrate_disk_and_power_off_resize_copy_disk_info(self,
-                                                              mock_disk_info,
-                                                              mock_shared,
-                                                              mock_path,
-                                                              mock_destroy,
-                                                              mock_copy,
-                                                              mock_execuate):
+    def test_migrate_disk_and_power_off_resize_copy_disk_info(
+            self, mock_disk_info, mock_shared, mock_path, mock_destroy,
+            mock_copy, mock_execute, mock_rename):
 
         instance = self._create_instance()
         disk_info = list(fake_disk_info_byname(instance).values())
@@ -17925,26 +17882,30 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                                   'uuid': 'other_uuid'})
 
     @mock.patch('nova.utils.execute')
-    def test_disk_raw_to_qcow2(self, mock_execute):
+    @mock.patch('os.rename')
+    def test_disk_raw_to_qcow2(self, mock_rename, mock_execute):
         path = '/test/disk'
         _path_qcow = path + '_qcow'
 
         self.drvr._disk_raw_to_qcow2(path)
         mock_execute.assert_has_calls([
             mock.call('qemu-img', 'convert', '-f', 'raw',
-                      '-O', 'qcow2', path, _path_qcow),
-            mock.call('mv', _path_qcow, path)])
+                      '-O', 'qcow2', path, _path_qcow)])
+        mock_rename.assert_has_calls([
+            mock.call(_path_qcow, path)])
 
     @mock.patch('nova.utils.execute')
-    def test_disk_qcow2_to_raw(self, mock_execute):
+    @mock.patch('os.rename')
+    def test_disk_qcow2_to_raw(self, mock_rename, mock_execute):
         path = '/test/disk'
         _path_raw = path + '_raw'
 
         self.drvr._disk_qcow2_to_raw(path)
         mock_execute.assert_has_calls([
             mock.call('qemu-img', 'convert', '-f', 'qcow2',
-                      '-O', 'raw', path, _path_raw),
-            mock.call('mv', _path_raw, path)])
+                      '-O', 'raw', path, _path_raw)])
+        mock_rename.assert_has_calls([
+            mock.call(_path_raw, path)])
 
     @mock.patch.object(libvirt_driver.LibvirtDriver, '_inject_data')
     @mock.patch.object(libvirt_driver.LibvirtDriver, 'get_info')
@@ -18141,12 +18102,12 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
         with test.nested(
                 mock.patch.object(os.path, 'exists', return_value=backup_made),
                 mock.patch.object(libvirt_utils, 'get_instance_path'),
-                mock.patch.object(utils, 'execute'),
+                mock.patch.object(os, 'rename'),
                 mock.patch.object(drvr, '_create_domain_and_network'),
                 mock.patch.object(drvr, '_get_guest_xml'),
                 mock.patch.object(shutil, 'rmtree'),
                 mock.patch.object(loopingcall, 'FixedIntervalLoopingCall'),
-        ) as (mock_stat, mock_path, mock_exec, mock_cdn, mock_ggx,
+        ) as (mock_stat, mock_path, mock_rename, mock_cdn, mock_ggx,
               mock_rmtree, mock_looping_call):
             mock_path.return_value = '/fake/foo'
             if del_inst_failed:
@@ -18154,10 +18115,10 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                                                   'test exception')
             drvr.finish_revert_migration(context, ins_ref, [])
             if backup_made:
-                mock_exec.assert_called_once_with('mv', '/fake/foo_resize',
-                                                  '/fake/foo')
+                mock_rename.assert_called_once_with('/fake/foo_resize',
+                                                    '/fake/foo')
             else:
-                self.assertFalse(mock_exec.called)
+                self.assertFalse(mock_rename.called)
 
     def test_finish_revert_migration_after_crash(self):
         self._test_finish_revert_migration_after_crash(backup_made=True)
@@ -19099,158 +19060,167 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
             mock.ANY, instance.uuid + '_disk.rescue')
 
     @mock.patch('shutil.rmtree')
-    @mock.patch('nova.utils.execute')
+    @mock.patch('os.rename')
     @mock.patch('os.path.exists')
     @mock.patch('nova.virt.libvirt.utils.get_instance_path')
-    def test_delete_instance_files(self, get_instance_path, exists, exe,
-                                   shutil):
-        get_instance_path.return_value = '/path'
+    def test_delete_instance_files(self, mock_get_instance_path,
+                                   mock_exists, mock_rename,
+                                   mock_shutil):
+        mock_get_instance_path.return_value = '/path'
         instance = objects.Instance(uuid=uuids.instance, id=1)
 
-        exists.side_effect = [False, False, True, False]
+        mock_exists.side_effect = [False, False, True, False]
 
         result = self.drvr.delete_instance_files(instance)
-        get_instance_path.assert_called_with(instance)
-        exe.assert_called_with('mv', '/path', '/path_del')
-        shutil.assert_called_with('/path_del')
+        mock_get_instance_path.assert_called_with(instance)
+        mock_rename.assert_called_with('/path', '/path_del')
+        mock_shutil.assert_called_with('/path_del')
         self.assertTrue(result)
 
     @mock.patch('shutil.rmtree')
-    @mock.patch('nova.utils.execute')
+    @mock.patch('os.rename')
     @mock.patch('os.path.exists')
     @mock.patch('os.kill')
     @mock.patch('nova.virt.libvirt.utils.get_instance_path')
     def test_delete_instance_files_kill_running(
-            self, get_instance_path, kill, exists, exe, shutil):
-        get_instance_path.return_value = '/path'
+            self, mock_get_instance_path, mock_kill, mock_exists,
+            mock_rename, mock_shutil):
+        mock_get_instance_path.return_value = '/path'
         instance = objects.Instance(uuid=uuids.instance, id=1)
         self.drvr.job_tracker.jobs[instance.uuid] = [3, 4]
 
-        exists.side_effect = [False, False, True, False]
+        mock_exists.side_effect = [False, False, True, False]
 
         result = self.drvr.delete_instance_files(instance)
-        get_instance_path.assert_called_with(instance)
-        exe.assert_called_with('mv', '/path', '/path_del')
-        kill.assert_has_calls([mock.call(3, signal.SIGKILL), mock.call(3, 0),
-                               mock.call(4, signal.SIGKILL), mock.call(4, 0)])
-        shutil.assert_called_with('/path_del')
+        mock_get_instance_path.assert_called_with(instance)
+        mock_rename.assert_called_with('/path', '/path_del')
+        mock_kill.assert_has_calls(
+            [mock.call(3, signal.SIGKILL), mock.call(3, 0),
+             mock.call(4, signal.SIGKILL), mock.call(4, 0)])
+        mock_shutil.assert_called_with('/path_del')
         self.assertTrue(result)
         self.assertNotIn(instance.uuid, self.drvr.job_tracker.jobs)
 
     @mock.patch('shutil.rmtree')
-    @mock.patch('nova.utils.execute')
+    @mock.patch('os.rename')
     @mock.patch('os.path.exists')
     @mock.patch('nova.virt.libvirt.utils.get_instance_path')
-    def test_delete_instance_files_resize(self, get_instance_path, exists,
-                                          exe, shutil):
-        get_instance_path.return_value = '/path'
+    def test_delete_instance_files_resize(self, mock_get_instance_path,
+                                          mock_exists, mock_rename,
+                                          mock_shutil):
+        mock_get_instance_path.return_value = '/path'
         instance = objects.Instance(uuid=uuids.instance, id=1)
 
-        nova.utils.execute.side_effect = [Exception(), None]
-        exists.side_effect = [False, False, True, False]
+        mock_rename.side_effect = [Exception(), None]
+        mock_exists.side_effect = [False, False, True, False]
 
         result = self.drvr.delete_instance_files(instance)
-        get_instance_path.assert_called_with(instance)
-        expected = [mock.call('mv', '/path', '/path_del'),
-                    mock.call('mv', '/path_resize', '/path_del')]
-        self.assertEqual(expected, exe.mock_calls)
-        shutil.assert_called_with('/path_del')
+        mock_get_instance_path.assert_called_with(instance)
+        expected = [mock.call('/path', '/path_del'),
+                    mock.call('/path_resize', '/path_del')]
+        self.assertEqual(expected, mock_rename.mock_calls)
+        mock_shutil.assert_called_with('/path_del')
         self.assertTrue(result)
 
     @mock.patch('shutil.rmtree')
-    @mock.patch('nova.utils.execute')
+    @mock.patch('os.rename')
     @mock.patch('os.path.exists')
     @mock.patch('nova.virt.libvirt.utils.get_instance_path')
-    def test_delete_instance_files_failed(self, get_instance_path, exists, exe,
-                                          shutil):
-        get_instance_path.return_value = '/path'
+    def test_delete_instance_files_failed(self, mock_get_instance_path,
+                                          mock_exists, mock_rename,
+                                          mock_shutil):
+        mock_get_instance_path.return_value = '/path'
         instance = objects.Instance(uuid=uuids.instance, id=1)
 
-        exists.side_effect = [False, False, True, True]
+        mock_exists.side_effect = [False, False, True, True]
 
         result = self.drvr.delete_instance_files(instance)
-        get_instance_path.assert_called_with(instance)
-        exe.assert_called_with('mv', '/path', '/path_del')
-        shutil.assert_called_with('/path_del')
+        mock_get_instance_path.assert_called_with(instance)
+        mock_rename.assert_called_with('/path', '/path_del')
+        mock_shutil.assert_called_with('/path_del')
         self.assertFalse(result)
 
     @mock.patch('shutil.rmtree')
-    @mock.patch('nova.utils.execute')
+    @mock.patch('os.rename')
     @mock.patch('os.path.exists')
     @mock.patch('nova.virt.libvirt.utils.get_instance_path')
-    def test_delete_instance_files_mv_failed(self, get_instance_path, exists,
-                                             exe, shutil):
-        get_instance_path.return_value = '/path'
+    def test_delete_instance_files_mv_failed(self, mock_get_instance_path,
+                                             mock_exists, mock_rename,
+                                             mock_shutil):
+        mock_get_instance_path.return_value = '/path'
         instance = objects.Instance(uuid=uuids.instance, id=1)
 
-        nova.utils.execute.side_effect = Exception()
-        exists.side_effect = [True, True]
+        mock_rename.side_effect = Exception()
+        mock_exists.side_effect = [True, True]
 
         result = self.drvr.delete_instance_files(instance)
-        get_instance_path.assert_called_with(instance)
-        expected = [mock.call('mv', '/path', '/path_del'),
-                    mock.call('mv', '/path_resize', '/path_del')] * 2
-        self.assertEqual(expected, exe.mock_calls)
+        mock_get_instance_path.assert_called_with(instance)
+        expected = [mock.call('/path', '/path_del'),
+                    mock.call('/path_resize', '/path_del')] * 2
+        self.assertEqual(expected, mock_rename.mock_calls)
         self.assertFalse(result)
 
     @mock.patch('shutil.rmtree')
-    @mock.patch('nova.utils.execute')
+    @mock.patch('os.rename')
     @mock.patch('os.path.exists')
     @mock.patch('nova.virt.libvirt.utils.get_instance_path')
-    def test_delete_instance_files_resume(self, get_instance_path, exists,
-                                             exe, shutil):
-        get_instance_path.return_value = '/path'
+    def test_delete_instance_files_resume(self, mock_get_instance_path,
+                                          mock_exists, mock_rename,
+                                          mock_shutil):
+        mock_get_instance_path.return_value = '/path'
         instance = objects.Instance(uuid=uuids.instance, id=1)
 
-        nova.utils.execute.side_effect = Exception()
-        exists.side_effect = [False, False, True, False]
+        mock_rename.side_effect = Exception()
+        mock_exists.side_effect = [False, False, True, False]
 
         result = self.drvr.delete_instance_files(instance)
-        get_instance_path.assert_called_with(instance)
-        expected = [mock.call('mv', '/path', '/path_del'),
-                    mock.call('mv', '/path_resize', '/path_del')] * 2
-        self.assertEqual(expected, exe.mock_calls)
+        mock_get_instance_path.assert_called_with(instance)
+        expected = [mock.call('/path', '/path_del'),
+                    mock.call('/path_resize', '/path_del')] * 2
+        self.assertEqual(expected, mock_rename.mock_calls)
         self.assertTrue(result)
 
     @mock.patch('shutil.rmtree')
-    @mock.patch('nova.utils.execute')
+    @mock.patch('os.rename')
     @mock.patch('os.path.exists')
     @mock.patch('nova.virt.libvirt.utils.get_instance_path')
-    def test_delete_instance_files_none(self, get_instance_path, exists,
-                                        exe, shutil):
-        get_instance_path.return_value = '/path'
+    def test_delete_instance_files_none(self, mock_get_instance_path,
+                                        mock_exists, mock_rename,
+                                        mock_shutil):
+        mock_get_instance_path.return_value = '/path'
         instance = objects.Instance(uuid=uuids.instance, id=1)
 
-        nova.utils.execute.side_effect = Exception()
-        exists.side_effect = [False, False, False, False]
+        mock_rename.side_effect = Exception()
+        mock_exists.side_effect = [False, False, False, False]
 
         result = self.drvr.delete_instance_files(instance)
-        get_instance_path.assert_called_with(instance)
-        expected = [mock.call('mv', '/path', '/path_del'),
-                    mock.call('mv', '/path_resize', '/path_del')] * 2
-        self.assertEqual(expected, exe.mock_calls)
-        self.assertEqual(0, len(shutil.mock_calls))
+        mock_get_instance_path.assert_called_with(instance)
+        expected = [mock.call('/path', '/path_del'),
+                    mock.call('/path_resize', '/path_del')] * 2
+        self.assertEqual(expected, mock_rename.mock_calls)
+        self.assertEqual(0, len(mock_shutil.mock_calls))
         self.assertTrue(result)
 
     @mock.patch('shutil.rmtree')
-    @mock.patch('nova.utils.execute')
+    @mock.patch('os.rename')
     @mock.patch('os.path.exists')
     @mock.patch('nova.virt.libvirt.utils.get_instance_path')
-    def test_delete_instance_files_concurrent(self, get_instance_path, exists,
-                                              exe, shutil):
-        get_instance_path.return_value = '/path'
+    def test_delete_instance_files_concurrent(self, mock_get_instance_path,
+                                              mock_exists, mock_rename,
+                                              mock_shutil):
+        mock_get_instance_path.return_value = '/path'
         instance = objects.Instance(uuid=uuids.instance, id=1)
 
-        nova.utils.execute.side_effect = [Exception(), Exception(), None]
-        exists.side_effect = [False, False, True, False]
+        mock_rename.side_effect = [Exception(), Exception(), None]
+        mock_exists.side_effect = [False, False, True, False]
 
         result = self.drvr.delete_instance_files(instance)
-        get_instance_path.assert_called_with(instance)
-        expected = [mock.call('mv', '/path', '/path_del'),
-                    mock.call('mv', '/path_resize', '/path_del')]
+        mock_get_instance_path.assert_called_with(instance)
+        expected = [mock.call('/path', '/path_del'),
+                    mock.call('/path_resize', '/path_del')]
         expected.append(expected[0])
-        self.assertEqual(expected, exe.mock_calls)
-        shutil.assert_called_with('/path_del')
+        self.assertEqual(expected, mock_rename.mock_calls)
+        mock_shutil.assert_called_with('/path_del')
         self.assertTrue(result)
 
     def _assert_on_id_map(self, idmap, klass, start, target, count):
