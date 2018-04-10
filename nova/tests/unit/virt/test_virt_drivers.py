@@ -112,23 +112,6 @@ class _FakeDriverBackendTestCase(object):
                    sysinfo_serial='none',
                    group='libvirt')
 
-        def fake_extend(image, size):
-            pass
-
-        def fake_migrate(_self, destination, migrate_uri=None, params=None,
-                         flags=0, domain_xml=None, bandwidth=0):
-            pass
-
-        def fake_make_drive(_self, _path):
-            pass
-
-        def fake_get_instance_disk_info_from_config(
-                _self, guest_config, block_device_info):
-            return []
-
-        def fake_delete_instance_files(_self, _instance):
-            pass
-
         def fake_wait():
             pass
 
@@ -141,30 +124,21 @@ class _FakeDriverBackendTestCase(object):
                                 live=live)
             return fake_wait
 
-        import nova.virt.libvirt.driver
-
-        self.stubs.Set(nova.virt.libvirt.driver.LibvirtDriver,
-                       '_get_instance_disk_info_from_config',
-                       fake_get_instance_disk_info_from_config)
-
-        self.stubs.Set(nova.virt.libvirt.driver.disk_api,
-                       'extend', fake_extend)
-
-        self.stubs.Set(nova.virt.libvirt.driver.LibvirtDriver,
-                       'delete_instance_files',
-                       fake_delete_instance_files)
-
-        self.stubs.Set(nova.virt.libvirt.guest.Guest,
-                       'detach_device_with_retry',
-                       fake_detach_device_with_retry)
-
-        self.stubs.Set(nova.virt.libvirt.guest.Guest,
-                       'migrate', fake_migrate)
-
+        self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.'
+                      '_get_instance_disk_info_from_config',
+                      lambda self, guest_config, block_device_info: [])
+        self.stub_out('nova.virt.disk.api.extend', lambda image, size: None)
+        self.stub_out('nova.virt.libvirt.driver.LibvirtDriver.'
+                      'delete_instance_files', lambda self, instance: None)
+        self.stub_out('nova.virt.libvirt.guest.Guest.detach_device_with_retry',
+                      fake_detach_device_with_retry)
+        self.stub_out('nova.virt.libvirt.guest.Guest.migrate',
+                      lambda self, destination, migrate_uri, params, flags,
+                      domain_xml, bandwidth: None)
         # We can't actually make a config drive v2 because ensure_tree has
         # been faked out
-        self.stubs.Set(nova.virt.configdrive.ConfigDriveBuilder,
-                       'make_drive', fake_make_drive)
+        self.stub_out('nova.virt.configdrive.ConfigDriveBuilder.make_drive',
+                      lambda self, path: None)
 
     def _teardown_fakelibvirt(self):
         # Restore libvirt
@@ -210,14 +184,11 @@ class VirtDriverLoaderTestCase(_FakeDriverBackendTestCase, test.TestCase):
             self.assertEqual(cm.driver.__class__.__name__, driver,
                              "Could't load driver %s" % cls)
 
-    def test_fail_to_load_new_drivers(self):
+    @mock.patch.object(sys, 'exit', side_effect=test.TestingException())
+    def test_fail_to_load_new_drivers(self, mock_exit):
         self.flags(compute_driver='nova.virt.amiga')
-
-        def _fake_exit(error):
-            raise test.TestingException()
-
-        self.stubs.Set(sys, 'exit', _fake_exit)
         self.assertRaises(test.TestingException, manager.ComputeManager)
+        mock_exit.assert_called_once_with(1)
 
 
 class _VirtDriverTestCase(_FakeDriverBackendTestCase):
@@ -233,8 +204,9 @@ class _VirtDriverTestCase(_FakeDriverBackendTestCase):
         # writing and chowning that complicate testing too much by requiring
         # using real directories with proper permissions.  Just stub it out
         # here; we test it in test_imagebackend.py
-        self.stubs.Set(imagebackend.Image, 'resolve_driver_format',
-                       imagebackend.Image._get_driver_format)
+        self.stub_out('nova.virt.libvirt.imagebackend.Image.'
+                      'resolve_driver_format',
+                      imagebackend.Image._get_driver_format)
         os_vif.initialize()
 
     def _get_running_instance(self, obj=True):
@@ -876,11 +848,7 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         # Point _VirtDriverTestCase at the right module
         self.driver_module = 'nova.virt.libvirt.LibvirtDriver'
         super(LibvirtConnTestCase, self).setUp()
-        self.stubs.Set(self.connection,
-                       '_set_host_enabled', mock.MagicMock())
-        self.useFixture(fixtures.MonkeyPatch(
-            'nova.context.get_admin_context',
-            self._fake_admin_context))
+        self.stub_out('nova.context.get_admin_context', lambda: self.ctxt)
         # This is needed for the live migration tests which spawn off the
         # operation for monitoring.
         self.useFixture(nova_fixtures.SpawnIsSynchronousFixture())
@@ -888,9 +856,6 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
         # will try to execute some commands which hangs tests so let's just
         # stub out the unplug call to os-vif since we don't care about it.
         self.stub_out('os_vif.unplug', lambda a, kw: None)
-
-    def _fake_admin_context(self, *args, **kwargs):
-        return self.ctxt
 
     def test_force_hard_reboot(self):
         self.flags(wait_soft_reboot_seconds=0, group='libvirt')
@@ -902,7 +867,6 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
                       " needed to override superclass.")
 
     def test_internal_set_host_enabled(self):
-        self.mox.UnsetStubs()
         service_mock = mock.MagicMock()
 
         # Previous status of the service: disabled: False
@@ -915,7 +879,6 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
             self.assertEqual(service_mock.disabled_reason, 'AUTO: ERROR!')
 
     def test_set_host_enabled_when_auto_disabled(self):
-        self.mox.UnsetStubs()
         service_mock = mock.MagicMock()
 
         # Previous status of the service: disabled: True, 'AUTO: ERROR'
@@ -928,7 +891,6 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
             self.assertIsNone(service_mock.disabled_reason)
 
     def test_set_host_enabled_when_manually_disabled(self):
-        self.mox.UnsetStubs()
         service_mock = mock.MagicMock()
 
         # Previous status of the service: disabled: True, 'Manually disabled'
@@ -941,7 +903,6 @@ class LibvirtConnTestCase(_VirtDriverTestCase, test.TestCase):
             self.assertEqual(service_mock.disabled_reason, 'Manually disabled')
 
     def test_set_host_enabled_dont_override_manually_disabled(self):
-        self.mox.UnsetStubs()
         service_mock = mock.MagicMock()
 
         # Previous status of the service: disabled: True, 'Manually disabled'
