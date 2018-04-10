@@ -77,6 +77,42 @@ needs to create a resource in Neutron it will requery Neutron for the
 extensions that it has loaded.  Setting value to 0 will refresh the
 extensions with no wait.
 """),
+    cfg.ListOpt('physnets',
+        default=[],
+        help="""
+List of physnets present on this host.
+
+For each *physnet* listed, an additional section,
+``[neutron_physnet_$PHYSNET]``, will be added to the configuration file. Each
+section must be configured with a single configuration option, ``numa_nodes``,
+which should be a list of node IDs for all NUMA nodes this physnet is
+associated with. For example::
+
+    [neutron]
+    physnets = foo, bar
+
+    [neutron_physnet_foo]
+    numa_nodes = 0
+
+    [neutron_physnet_bar]
+    numa_nodes = 0,1
+
+Any *physnet* that is not listed using this option will be treated as having no
+particular NUMA node affinity.
+
+Tunnelled networks (VXLAN, GRE, ...) cannot be accounted for in this way and
+are instead configured using the ``[neutron_tunnel]`` group. For example::
+
+    [neutron_tunnel]
+    numa_nodes = 1
+
+Related options:
+
+* ``[neutron_tunnel] numa_nodes`` can be used to configure NUMA affinity for
+  all tunneled networks
+* ``[neutron_physnet_$PHYSNET] numa_nodes`` must be configured for each value
+  of ``$PHYSNET`` specified by this option
+"""),
 ]
 
 metadata_proxy_opts = [
@@ -116,6 +152,26 @@ def register_opts(conf):
     # CONF.neutron.endpoint_override in the code, and we need to be able to use
     # the former to trigger the legacy behavior.
     confutils.register_ksa_opts(conf, neutron_group, DEFAULT_SERVICE_TYPE)
+
+
+def register_dynamic_opts(conf):
+    """Register dynamically-generated options and groups.
+
+    This must be called by the service that wishes to use the options **after**
+    the initial configuration has been loaded.
+    """
+    opt = cfg.ListOpt('numa_nodes', default=[], item_type=cfg.types.Integer())
+
+    # Register the '[neutron_tunnel] numa_nodes' opt, implicitly
+    # registering the '[neutron_tunnel]' group in the process. This could
+    # be done statically but is done to avoid this group appearing in
+    # nova.conf documentation while the other group does not.
+    conf.register_opt(opt, group='neutron_tunnel')
+
+    # Register the '[neutron_physnet_$PHYSNET] numa_nodes' opts, implicitly
+    # registering the '[neutron_physnet_$PHYSNET]' groups in the process
+    for physnet in conf.neutron.physnets:
+        conf.register_opt(opt, group='neutron_physnet_%s' % physnet)
 
 
 def list_opts():
