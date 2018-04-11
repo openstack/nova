@@ -143,11 +143,12 @@ class TestRequestSpecRetryReschedule(test.TestCase,
         self.admin_api.post_server_action(server['id'], data)
         server = self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
         self.assertEqual('host2', server['OS-EXT-SRV-ATTR:host'])
-        migrations = self.admin_api.api_get(
-            'os-migrations?instance_uuid=%s&migration_type=live-migration' %
-            server['id']).body['migrations']
-        self.assertEqual(1, len(migrations))
-        self.assertEqual('completed', migrations[0]['status'])
+        # NOTE(mriedem): The instance status effectively goes to ACTIVE before
+        # the migration status is changed to "completed" since
+        # post_live_migration_at_destination changes the instance status
+        # and _post_live_migration changes the migration status later. So we
+        # need to poll the migration record until it's complete or we timeout.
+        self._wait_for_migration_status(server, ['completed'])
         reqspec = objects.RequestSpec.get_by_instance_uuid(
             nova_context.get_admin_context(), server['id'])
         self.assertIsNone(reqspec.retry)
