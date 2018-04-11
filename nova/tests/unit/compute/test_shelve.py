@@ -141,7 +141,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
         if clean_shutdown:
             mock_power_off_call_list.append(
                 mock.call(instance, CONF.shutdown_timeout,
-                          self.compute.SHUTDOWN_RETRY_INTERVAL))
+                          CONF.compute.shutdown_retry_interval))
         else:
             mock_power_off_call_list.append(mock.call(instance, 0, 0))
 
@@ -183,7 +183,7 @@ class ShelveComputeManagerTestCase(test_compute.BaseTestCase):
     def test_shelve_offload(self, mock_power_off):
         instance = self._shelve_offload()
         mock_power_off.assert_called_once_with(instance,
-            CONF.shutdown_timeout, self.compute.SHUTDOWN_RETRY_INTERVAL)
+            CONF.shutdown_timeout, CONF.compute.shutdown_retry_interval)
 
     @mock.patch.object(nova.virt.fake.SmallFakeDriver, 'power_off')
     def test_shelve_offload_forced_shutdown(self, mock_power_off):
