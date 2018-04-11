@@ -17,7 +17,7 @@ from nova.cmd import manage
 from nova import context
 from nova import objects
 from nova import test
-from nova.tests.functional import test_servers
+from nova.tests.functional import integrated_helpers
 
 
 class NovaManageDBIronicTest(test.TestCase):
@@ -355,7 +355,7 @@ class NovaManageCellV2Test(test.TestCase):
 
 
 class TestNovaManagePlacementHealAllocations(
-        test_servers.ProviderUsageBaseTestCase):
+        integrated_helpers.ProviderUsageBaseTestCase):
     """Functional tests for nova-manage placement heal_allocations"""
 
     # This is required by the parent class.

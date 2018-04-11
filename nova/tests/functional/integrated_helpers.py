@@ -24,13 +24,19 @@ import time
 from oslo_log import log as logging
 
 import nova.conf
+from nova import context
+from nova import db
 import nova.image.glance
 from nova import test
 from nova.tests import fixtures as nova_fixtures
 from nova.tests.functional.api import client as api_client
 from nova.tests.unit import cast_as_call
+from nova.tests.unit import fake_network
+from nova.tests.unit import fake_notifier
 import nova.tests.unit.image.fake
+from nova.tests.unit import policy_fixture
 from nova.tests import uuidsentinel as uuids
+from nova.virt import fake
 
 
 CONF = nova.conf.CONF
@@ -339,3 +345,295 @@ class InstanceHelperMixin(object):
             time.sleep(0.5)
         self.fail('Timed out waiting for migration with status "%s" for '
                   'instance: %s' % (expected_statuses, server['id']))
+
+
+class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
+    """Base test class for functional tests that check provider usage
+    and consumer allocations in Placement during various operations.
+
+    Subclasses must define a **compute_driver** attribute for the virt driver
+    to use.
+
+    This class sets up standard fixtures and controller services but does not
+    start any compute services, that is left to the subclass.
+    """
+
+    microversion = 'latest'
+
+    def setUp(self):
+        self.flags(compute_driver=self.compute_driver)
+        super(ProviderUsageBaseTestCase, self).setUp()
+
+        self.useFixture(policy_fixture.RealPolicyFixture())
+        self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.useFixture(nova_fixtures.AllServicesCurrent())
+
+        placement = self.useFixture(nova_fixtures.PlacementFixture())
+        self.placement_api = placement.api
+        api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
+            api_version='v2.1'))
+
+        self.admin_api = api_fixture.admin_api
+        self.admin_api.microversion = self.microversion
+        self.api = self.admin_api
+
+        # the image fake backend needed for image discovery
+        nova.tests.unit.image.fake.stub_out_image_service(self)
+
+        self.start_service('conductor')
+        self.scheduler_service = self.start_service('scheduler')
+
+        self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
+        fake_network.set_stub_network_methods(self)
+
+        self.computes = {}
+
+    def _start_compute(self, host, cell_name=None):
+        """Start a nova compute service on the given host
+
+        :param host: the name of the host that will be associated to the
+                     compute service.
+        :param cell_name: optional name of the cell in which to start the
+                          compute service (defaults to cell1)
+        :return: the nova compute service object
+        """
+        fake.set_nodes([host])
+        self.addCleanup(fake.restore_nodes)
+        compute = self.start_service('compute', host=host, cell=cell_name)
+        self.computes[host] = compute
+        return compute
+
+    def _get_provider_uuid_by_host(self, host):
+        # NOTE(gibi): the compute node id is the same as the compute node
+        # provider uuid on that compute
+        resp = self.admin_api.api_get(
+            'os-hypervisors?hypervisor_hostname_pattern=%s' % host).body
+        return resp['hypervisors'][0]['id']
+
+    def _get_provider_usages(self, provider_uuid):
+        return self.placement_api.get(
+            '/resource_providers/%s/usages' % provider_uuid).body['usages']
+
+    def _get_allocations_by_server_uuid(self, server_uuid):
+        return self.placement_api.get(
+            '/allocations/%s' % server_uuid).body['allocations']
+
+    def _get_all_providers(self):
+        return self.placement_api.get(
+            '/resource_providers', version='1.14').body['resource_providers']
+
+    def _get_provider_traits(self, provider_uuid):
+        return self.placement_api.get(
+            '/resource_providers/%s/traits' % provider_uuid,
+            version='1.6').body['traits']
+
+    def _set_provider_traits(self, rp_uuid, traits):
+        """This will overwrite any existing traits.
+
+        :param rp_uuid: UUID of the resource provider to update
+        :param traits: list of trait strings to set on the provider
+        :returns: APIResponse object with the results
+        """
+        provider = self.placement_api.get(
+            '/resource_providers/%s' % rp_uuid).body
+        put_traits_req = {
+            'resource_provider_generation': provider['generation'],
+            'traits': traits
+        }
+        return self.placement_api.put(
+            '/resource_providers/%s/traits' % rp_uuid,
+            put_traits_req, version='1.6')
+
+    def _get_all_resource_classes(self):
+        dicts = self.placement_api.get(
+            '/resource_classes', version='1.2').body['resource_classes']
+        return [d['name'] for d in dicts]
+
+    def _get_all_traits(self):
+        return self.placement_api.get('/traits', version='1.6').body['traits']
+
+    def _get_provider_inventory(self, rp_uuid):
+        return self.placement_api.get(
+            '/resource_providers/%s/inventories' % rp_uuid).body['inventories']
+
+    def _get_provider_aggregates(self, rp_uuid):
+        return self.placement_api.get(
+            '/resource_providers/%s/aggregates' % rp_uuid,
+            version='1.1').body['aggregates']
+
+    def _post_resource_provider(self, rp_name):
+        return self.placement_api.post(
+            url='/resource_providers',
+            version='1.20', body={'name': rp_name}).body
+
+    def _set_inventory(self, rp_uuid, inv_body):
+        """This will set the inventory for a given resource provider.
+
+        :param rp_uuid: UUID of the resource provider to update
+        :param inv_body: inventory to set on the provider
+        :returns: APIResponse object with the results
+        """
+        return self.placement_api.post(
+            url= ('/resource_providers/%s/inventories' % rp_uuid),
+            version='1.15', body=inv_body).body
+
+    def _get_resource_provider_by_uuid(self, rp_uuid):
+        return self.placement_api.get(
+            '/resource_providers/%s' % rp_uuid, version='1.15').body
+
+    def _set_aggregate(self, rp_uuid, agg_id):
+        provider = self.placement_api.get(
+            '/resource_providers/%s' % rp_uuid).body
+        post_agg_req = {"aggregates": [agg_id],
+                        "resource_provider_generation": provider['generation']}
+        return self.placement_api.put(
+            '/resource_providers/%s/aggregates' % rp_uuid, version='1.19',
+            body=post_agg_req).body
+
+    def assertFlavorMatchesAllocation(self, flavor, allocation):
+        self.assertEqual(flavor['vcpus'], allocation['VCPU'])
+        self.assertEqual(flavor['ram'], allocation['MEMORY_MB'])
+        self.assertEqual(flavor['disk'], allocation['DISK_GB'])
+
+    def assertFlavorsMatchAllocation(self, old_flavor, new_flavor, allocation):
+        self.assertEqual(old_flavor['vcpus'] + new_flavor['vcpus'],
+                         allocation['VCPU'])
+        self.assertEqual(old_flavor['ram'] + new_flavor['ram'],
+                         allocation['MEMORY_MB'])
+        self.assertEqual(old_flavor['disk'] + new_flavor['disk'],
+                         allocation['DISK_GB'])
+
+    def get_migration_uuid_for_instance(self, instance_uuid):
+        # NOTE(danms): This is too much introspection for a test like this, but
+        # we can't see the migration uuid from the API, so we just encapsulate
+        # the peek behind the curtains here to keep it out of the tests.
+        # TODO(danms): Get the migration uuid from the API once it is exposed
+        ctxt = context.get_admin_context()
+        migrations = db.migration_get_all_by_filters(
+            ctxt, {'instance_uuid': instance_uuid})
+        self.assertEqual(1, len(migrations),
+                         'Test expected a single migration, '
+                         'but found %i' % len(migrations))
+        return migrations[0].uuid
+
+    def _boot_and_check_allocations(self, flavor, source_hostname):
+        """Boot an instance and check that the resource allocation is correct
+
+        After booting an instance on the given host with a given flavor it
+        asserts that both the providers usages and resource allocations match
+        with the resources requested in the flavor. It also asserts that
+        running the periodic update_available_resource call does not change the
+        resource state.
+
+        :param flavor: the flavor the instance will be booted with
+        :param source_hostname: the name of the host the instance will be
+                                booted on
+        :return: the API representation of the booted instance
+        """
+        server_req = self._build_minimal_create_server_request(
+            self.api, 'some-server', flavor_id=flavor['id'],
+            image_uuid='155d900f-4e14-4e4c-a73d-069cbf4541e6',
+            networks=[])
+        server_req['availability_zone'] = 'nova:%s' % source_hostname
+        LOG.info('booting on %s', source_hostname)
+        created_server = self.api.post_server({'server': server_req})
+        server = self._wait_for_state_change(
+            self.admin_api, created_server, 'ACTIVE')
+
+        # Verify that our source host is what the server ended up on
+        self.assertEqual(source_hostname, server['OS-EXT-SRV-ATTR:host'])
+
+        source_rp_uuid = self._get_provider_uuid_by_host(source_hostname)
+
+        # Before we run periodics, make sure that we have allocations/usages
+        # only on the source host
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertFlavorMatchesAllocation(flavor, source_usages)
+
+        # Check that the other providers has no usage
+        for rp_uuid in [self._get_provider_uuid_by_host(hostname)
+                        for hostname in self.computes.keys()
+                        if hostname != source_hostname]:
+            usages = self._get_provider_usages(rp_uuid)
+            self.assertEqual({'VCPU': 0,
+                              'MEMORY_MB': 0,
+                              'DISK_GB': 0}, usages)
+
+        # Check that the server only allocates resource from the host it is
+        # booted on
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations),
+                         'No allocation for the server on the host it '
+                         'is booted on')
+        allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(flavor, allocation)
+
+        self._run_periodics()
+
+        # After running the periodics but before we start any other operation,
+        # we should have exactly the same allocation/usage information as
+        # before running the periodics
+
+        # Check usages on the selected host after boot
+        source_usages = self._get_provider_usages(source_rp_uuid)
+        self.assertFlavorMatchesAllocation(flavor, source_usages)
+
+        # Check that the server only allocates resource from the host it is
+        # booted on
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(1, len(allocations),
+                         'No allocation for the server on the host it '
+                         'is booted on')
+        allocation = allocations[source_rp_uuid]['resources']
+        self.assertFlavorMatchesAllocation(flavor, allocation)
+
+        # Check that the other providers has no usage
+        for rp_uuid in [self._get_provider_uuid_by_host(hostname)
+                        for hostname in self.computes.keys()
+                        if hostname != source_hostname]:
+            usages = self._get_provider_usages(rp_uuid)
+            self.assertEqual({'VCPU': 0,
+                              'MEMORY_MB': 0,
+                              'DISK_GB': 0}, usages)
+        return server
+
+    def _delete_and_check_allocations(self, server):
+        """Delete the instance and asserts that the allocations are cleaned
+
+        :param server: The API representation of the instance to be deleted
+        """
+
+        self.api.delete_server(server['id'])
+        self._wait_until_deleted(server)
+        # NOTE(gibi): The resource allocation is deleted after the instance is
+        # destroyed in the db so wait_until_deleted might return before the
+        # the resource are deleted in placement. So we need to wait for the
+        # instance.delete.end notification as that is emitted after the
+        # resources are freed.
+
+        fake_notifier.wait_for_versioned_notifications('instance.delete.end')
+
+        for rp_uuid in [self._get_provider_uuid_by_host(hostname)
+                        for hostname in self.computes.keys()]:
+            usages = self._get_provider_usages(rp_uuid)
+            self.assertEqual({'VCPU': 0,
+                              'MEMORY_MB': 0,
+                              'DISK_GB': 0}, usages)
+
+        # and no allocations for the deleted server
+        allocations = self._get_allocations_by_server_uuid(server['id'])
+        self.assertEqual(0, len(allocations))
+
+    def _run_periodics(self):
+        """Run the update_available_resource task on every compute manager
+
+        This runs periodics on the computes in an undefined order; some child
+        class redefined this function to force a specific order.
+        """
+
+        ctx = context.get_admin_context()
+        for compute in self.computes.values():
+            LOG.info('Running periodic for compute (%s)',
+                compute.manager.host)
+            compute.manager.update_available_resource(ctx)
+        LOG.info('Finished with periodics')

@@ -17,10 +17,10 @@ from nova import exception
 from nova import objects
 from nova import rc_fields
 from nova.tests.functional.api import client as api_client
-from nova.tests.functional import test_servers
+from nova.tests.functional import integrated_helpers
 
 
-class TestServicesAPI(test_servers.ProviderUsageBaseTestCase):
+class TestServicesAPI(integrated_helpers.ProviderUsageBaseTestCase):
     compute_driver = 'fake.SmallFakeDriver'
 
     def test_compute_service_delete_ensure_related_cleanup(self):
