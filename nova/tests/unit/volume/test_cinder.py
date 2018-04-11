@@ -1062,11 +1062,15 @@ class CinderClientTestCase(test.NoDBTestCase):
         get_volume_api.assert_called_once_with(
             self.mock_session.get_endpoint.return_value)
 
+    @mock.patch('nova.volume.cinder.LOG.error')
     @mock.patch.object(ks_loading, 'load_auth_from_conf_options')
-    def test_load_auth_plugin_failed(self, mock_load_from_conf):
+    def test_load_auth_plugin_failed(self, mock_load_from_conf, mock_log_err):
         mock_load_from_conf.return_value = None
         self.assertRaises(cinder_exception.Unauthorized,
                           cinder._load_auth_plugin, CONF)
+        mock_log_err.assert_called()
+        self.assertIn('The [cinder] section of your nova configuration file',
+                      mock_log_err.call_args[0][0])
 
     @mock.patch('nova.volume.cinder._ADMIN_AUTH')
     def test_admin_context_without_token(self,
