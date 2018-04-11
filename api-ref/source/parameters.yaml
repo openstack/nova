@@ -1176,6 +1176,9 @@ sort_key_server:
     - ``user_id``
     - ``uuid``
     - ``vm_state``
+
+    ``host`` and ``node`` are only allowed for admin.
+    If non-admin users specify them, a 403 error is returned.
   in: query
   required: false
   type: string
@@ -1874,9 +1877,11 @@ config_drive_diagnostics:
 config_drive_resp:
   description: |
     Indicates whether or not a config drive was used for this server.
+    The value is ``True`` or an empty string. An empty string stands for
+    ``False``.
   in: body
   required: true
-  type: boolean
+  type: string
 configure_project_cloudpipe:
   description: |
     VPN IP and Port information to configure the cloudpipe instance..
@@ -4396,14 +4401,16 @@ network_uuid:
   type: string
 networks:
   description: |
-    A ``networks`` object. Required parameter when there are multiple networks defined
-    for the tenant. When you do not specify the networks parameter, the server attaches
-    to the only network created for the current tenant.  Optionally, you can create
-    one or more NICs on the server.  To provision the server instance with a NIC for
-    a network, specify the UUID of the network in the ``uuid`` attribute in a ``networks``
-    object.  To provision the server instance with a NIC for an already existing port,
-    specify the port-id in the ``port`` attribute in a ``networks`` object.
-    
+    A list of ``network`` object. Required parameter when there are multiple
+    networks defined for the tenant. When you do not specify the networks
+    parameter, the server attaches to the only network created for the
+    current tenant.  Optionally, you can create one or more NICs on the server.
+    To provision the server instance with a NIC for a network, specify
+    the UUID of the network in the ``uuid`` attribute in a ``networks``
+    object.  To provision the server instance with a NIC for an already
+    existing port, specify the port-id in the ``port`` attribute in a
+    ``networks`` object.
+
     If multiple networks are defined, the order in which they appear in the
     guest operating system will not necessarily reflect the order in which they
     are given in the server boot request. Guests should therefore not depend
@@ -4422,18 +4429,18 @@ networks:
     attribute.
 
     Starting with microversion 2.37, this field is required and the special
-    values *auto* and *none* can be specified for networks. *auto* tells the
-    Compute service to use a network that is available to the project, if one
-    exists. If one does not exist, the Compute service will attempt to
-    automatically allocate a network for the project (if possible). *none*
-    tells the Compute service to not allocate a network for the instance. The
-    *auto* and *none* values cannot be used with any other network values,
-    including other network uuids, ports, fixed IPs or device tags. These are
-    requested as strings for the networks value, not in a list. See the
-    associated example.
+    string values *auto* and *none* can be specified for networks. *auto*
+    tells the Compute service to use a network that is available to the
+    project, if one exists. If one does not exist, the Compute service will
+    attempt to automatically allocate a network for the project (if possible).
+    *none* tells the Compute service to not allocate a network for the
+    instance. The *auto* and *none* values cannot be used with any other
+    network values, including other network uuids, ports, fixed IPs or device
+    tags. These are requested as strings for the networks value, not in a
+    list. See the associated example.
   in: body
   required: true
-  type: object
+  type: array
 networks_quota_optional: &networks_quota_optional
   description: |
     The number of private networks that can be created per project.
@@ -5058,9 +5065,11 @@ private_key:
   type: string
 progress:
   description: |
-    A percentage value of the build progress.
+    A percentage value of the operation progress.
+    This parameter only appears when the server status is ``ACTIVE``,
+    ``BUILD``, ``REBUILD``, ``RESIZE``, ``VERIFY_RESIZE`` or ``MIGRATING``.
   in: body
-  required: true
+  required: false
   type: integer
 project_id:
   description: |
@@ -5538,10 +5547,11 @@ server_groups_quota_optional:
   type: integer
 server_hostname:
   in: body
-  required: true
+  required: false
   type: string
   description: |
     The hostname set on the instance when it is booted.
+    By default, it appears in the response for administrative users only.
   min_version: 2.3
 server_id:
   description: |
@@ -5557,18 +5567,20 @@ server_id_optional:
   type: string
 server_kernel_id:
   in: body
-  required: true
+  required: false
   type: string
   description: |
     The UUID of the kernel image when using an AMI. Will be null if not.
+    By default, it appears in the response for administrative users only.
   min_version: 2.3
 server_launch_index:
   in: body
-  required: true
+  required: false
   type: integer
   description: |
     When servers are launched via multiple create, this is the
     sequence in which the servers were launched.
+    By default, it appears in the response for administrative users only.
   min_version: 2.3
 server_links:
   description: |
@@ -5593,26 +5605,29 @@ server_name_optional:
   type: string
 server_ramdisk_id:
   in: body
-  required: true
+  required: false
   type: string
   description: |
     The UUID of the ramdisk image when using an AMI. Will be null if not.
+    By default, it appears in the response for administrative users only.
   min_version: 2.3
 server_reservation_id:
   in: body
-  required: true
+  required: false
   type: string
   description: |
     The reservation id for the server. This is an id that can
     be useful in tracking groups of servers created with multiple
     create, that will all have the same reservation_id.
+    By default, it appears in the response for administrative users only.
   min_version: 2.3
 server_root_device_name:
   in: body
-  required: true
+  required: false
   type: string
   description: |
     The root device name for the instance
+    By default, it appears in the response for administrative users only.
   min_version: 2.3
 server_status:
   description: |
