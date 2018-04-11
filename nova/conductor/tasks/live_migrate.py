@@ -266,13 +266,13 @@ class LiveMigrationTask(base.TaskBase):
             This is generally at least seeded with the source host.
         :returns: nova.objects.RequestSpec object
         """
-        image = utils.get_image_from_system_metadata(
-            self.instance.system_metadata)
-        filter_properties = {'ignore_hosts': attempted_hosts}
         if not self.request_spec:
             # NOTE(sbauza): We were unable to find an original RequestSpec
             # object - probably because the instance is old.
             # We need to mock that the old way
+            image = utils.get_image_from_system_metadata(
+                self.instance.system_metadata)
+            filter_properties = {'ignore_hosts': attempted_hosts}
             request_spec = objects.RequestSpec.from_components(
                 self.context, self.instance.uuid, image,
                 self.instance.flavor, self.instance.numa_topology,
