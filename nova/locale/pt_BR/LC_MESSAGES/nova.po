@@ -19,16 +19,16 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-02-17 16:08+0000\n"
+"POT-Creation-Date: 2018-04-11 03:31+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "PO-Revision-Date: 2016-04-12 06:08+0000\n"
 "Last-Translator: Copied by Zanata <copied-by-zanata@zanata.org>\n"
-"Language: pt-BR\n"
+"Language: pt_BR\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "Generated-By: Babel 2.0\n"
-"X-Generator: Zanata 3.9.6\n"
+"X-Generator: Zanata 4.3.3\n"
 "Language-Team: Portuguese (Brazil)\n"
 
 #, python-format
@@ -67,14 +67,6 @@ msgstr ""
 "código de saída: %(code)r.\n"
 "stdout: %(stdout)r\n"
 "stderr: %(stderr)r"
-
-#, python-format
-msgid ""
-"%(event_type)s is not a versioned notification and not whitelisted. See ./"
-"doc/source/notification.rst"
-msgstr ""
-"%(event_type)s não é uma notificação com versão e não é incluída em uma "
-"lista de desbloqueio. Consulte ./doc/source/notification.rst"
 
 #, python-format
 msgid "%(field)s should not be part of the updates."
@@ -1517,22 +1509,6 @@ msgid "Image that the instance was started with could not be found."
 msgstr "A imagem que foi iniciada pela instância não pode ser localizada."
 
 #, python-format
-msgid ""
-"Image vCPU limits %(sockets)d:%(cores)d:%(threads)d exceeds permitted "
-"%(maxsockets)d:%(maxcores)d:%(maxthreads)d"
-msgstr ""
-"Limites de vCPU de imagem %(sockets)d:%(cores)d:%(threads)d excede o "
-"permitido %(maxsockets)d:%(maxcores)d:%(maxthreads)d"
-
-#, python-format
-msgid ""
-"Image vCPU topology %(sockets)d:%(cores)d:%(threads)d exceeds permitted "
-"%(maxsockets)d:%(maxcores)d:%(maxthreads)d"
-msgstr ""
-"Topologia de vCPU de imagem %(sockets)d:%(cores)d:%(threads)d excede o "
-"permitido %(maxsockets)d:%(maxcores)d:%(maxthreads)d"
-
-#, python-format
 msgid "Image's config drive option '%(config_drive)s' is invalid"
 msgstr "Opção de unidade de configuração da imagem '%(config_drive)s' inválida"
 
@@ -1713,9 +1689,6 @@ msgstr "Recriação da instância não é suportada."
 #, python-format
 msgid "Instance rollback performed due to: %s"
 msgstr "Retrocesso de instância executado devido a: %s"
-
-msgid "Instance snapshots are not permitted at this time."
-msgstr "Capturas instantâneas da instância não são permitidas nesse momento."
 
 #, python-format
 msgid ""
@@ -2546,14 +2519,6 @@ msgstr "Nova requer a versão libvirt %s ou superior."
 
 msgid "Number of Rows Archived"
 msgstr "Número de Linhas Arquivadas"
-
-#, python-format
-msgid ""
-"Number of serial ports '%(num_ports)s' specified in '%(property)s' isn't "
-"valid."
-msgstr ""
-"O número de portas seriais '%(num_ports)s' especificado em '%(property)s' "
-"não é válido."
 
 #, python-format
 msgid "OVS configuration failed with: %(inner_exception)s."

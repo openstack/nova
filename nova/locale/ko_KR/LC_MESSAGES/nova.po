@@ -14,16 +14,16 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-02-17 16:08+0000\n"
+"POT-Creation-Date: 2018-04-11 03:31+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "PO-Revision-Date: 2017-03-02 12:00+0000\n"
 "Last-Translator: Ian Y. Choi <ianyrchoi@gmail.com>\n"
-"Language: ko-KR\n"
+"Language: ko_KR\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
-"X-Generator: Zanata 3.9.6\n"
+"X-Generator: Zanata 4.3.3\n"
 "Language-Team: Korean (South Korea)\n"
 
 #, python-format
@@ -61,14 +61,6 @@ msgstr ""
 "종료 코드: %(code)r\n"
 "stdout: %(stdout)r\n"
 "stderr: %(stderr)r"
-
-#, python-format
-msgid ""
-"%(event_type)s is not a versioned notification and not whitelisted. See ./"
-"doc/source/notification.rst"
-msgstr ""
-"%(event_type)s이(가) 버전화된 알림이 아니므로 화이트리스트에 표시되지 않습니"
-"다. /doc/source/notification.rst를 참조하십시오."
 
 #, python-format
 msgid "%(field)s should not be part of the updates."
@@ -590,10 +582,6 @@ msgstr "변경하면 다음 자원에 대한 사용량이 0보다 작아집니�
 #, python-format
 msgid "Class %(class_name)s could not be found: %(exception)s"
 msgstr "%(class_name)s 클래스를 찾을 수 없음: %(exception)s"
-
-#, python-format
-msgid "Client exception during Migration Pre check: %(reason)s"
-msgstr "마이그레이션 사전 점검 동안의 클라이언트 예외: %(reason)s"
 
 #, python-format
 msgid ""
@@ -1502,22 +1490,6 @@ msgid "Image that the instance was started with could not be found."
 msgstr "인스턴스가 시작되었던 해당 이미지를 찾을 수 없음. "
 
 #, python-format
-msgid ""
-"Image vCPU limits %(sockets)d:%(cores)d:%(threads)d exceeds permitted "
-"%(maxsockets)d:%(maxcores)d:%(maxthreads)d"
-msgstr ""
-"이미지 vCPU 한계 %(sockets)d:%(cores)d:%(threads)d이(가) 허용값 "
-"%(maxsockets)d:%(maxcores)d:%(maxthreads)d을(를) 초과함"
-
-#, python-format
-msgid ""
-"Image vCPU topology %(sockets)d:%(cores)d:%(threads)d exceeds permitted "
-"%(maxsockets)d:%(maxcores)d:%(maxthreads)d"
-msgstr ""
-"이미지 vCPU 토폴로지 %(sockets)d:%(cores)d:%(threads)d이(가) 허용값 "
-"%(maxsockets)d:%(maxcores)d:%(maxthreads)d을(를) 초과함"
-
-#, python-format
 msgid "Image's config drive option '%(config_drive)s' is invalid"
 msgstr ""
 "이미지의 구성 드라이브 옵션 '%(config_drive)s'이(가) 올바르지 않습니다. "
@@ -1693,9 +1665,6 @@ msgstr "인스턴스 재작성이 지원되지 않습니다."
 #, python-format
 msgid "Instance rollback performed due to: %s"
 msgstr "인스턴스 롤백이 수행됨. 원인: %s"
-
-msgid "Instance snapshots are not permitted at this time."
-msgstr "인스턴스 스냅샷은 지금 허용되지 않습니다. "
 
 #, python-format
 msgid ""
@@ -2518,14 +2487,6 @@ msgstr "Nova에 libvirt 버전 %s 이상이 필요합니다."
 
 msgid "Number of Rows Archived"
 msgstr "보관된 행 수"
-
-#, python-format
-msgid ""
-"Number of serial ports '%(num_ports)s' specified in '%(property)s' isn't "
-"valid."
-msgstr ""
-"'%(property)s'에 지정된 직렬 포트의 수 '%(num_ports)s'이(가) 올바르지 않습니"
-"다."
 
 #, python-format
 msgid "OVS configuration failed with: %(inner_exception)s."

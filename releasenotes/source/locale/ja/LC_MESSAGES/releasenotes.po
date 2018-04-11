@@ -1,20 +1,20 @@
 # KATO Tomoyuki <kato.tomoyuki@jp.fujitsu.com>, 2016. #zanata
 # Hidekazu Nakamura <hid-nakamura@vf.jp.nec.com>, 2017. #zanata
 # Yuko Fukuda <fukuda.yuko@jp.fujitsu.com>, 2017. #zanata
-# Shu Muto <shu-mutou@rf.jp.nec.com>, 2018. #zanata
+# Shu Muto <shu.mutow@gmail.com>, 2018. #zanata
 msgid ""
 msgstr ""
-"Project-Id-Version: Nova Release Notes\n"
+"Project-Id-Version: nova\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2018-02-17 16:02+0000\n"
+"POT-Creation-Date: 2018-04-11 03:27+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "PO-Revision-Date: 2018-02-07 01:54+0000\n"
-"Last-Translator: Shu Muto <shu-mutou@rf.jp.nec.com>\n"
+"Last-Translator: Shu Muto <shu.mutow@gmail.com>\n"
 "Language-Team: Japanese\n"
 "Language: ja\n"
-"X-Generator: Zanata 3.9.6\n"
+"X-Generator: Zanata 4.3.3\n"
 "Plural-Forms: nplurals=1; plural=0\n"
 
 msgid "'3840x2160' is only available on Windows / Hyper-V Server 2016."
@@ -197,15 +197,6 @@ msgstr "16.0.3"
 
 msgid "16.0.4"
 msgstr "16.0.4"
-
-msgid "17.0.0.0b1"
-msgstr "17.0.0.0b1"
-
-msgid "17.0.0.0b2"
-msgstr "17.0.0.0b2"
-
-msgid "17.0.0.0b3"
-msgstr "17.0.0.0b3"
 
 msgid "204 NoContent on success"
 msgstr "204 NoContent on success"

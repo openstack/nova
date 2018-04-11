@@ -15,7 +15,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-02-17 16:08+0000\n"
+"POT-Creation-Date: 2018-04-11 03:31+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -25,7 +25,7 @@ msgstr ""
 "Language-Team: German\n"
 "Plural-Forms: nplurals=2; plural=(n != 1)\n"
 "Generated-By: Babel 2.2.0\n"
-"X-Generator: Zanata 3.9.6\n"
+"X-Generator: Zanata 4.3.3\n"
 
 #, python-format
 msgid "%(address)s is not a valid IP address."
@@ -63,14 +63,6 @@ msgstr ""
 "Abschlusscode: %(code)r\n"
 "Stdout: %(stdout)r\n"
 "Stderr: %(stderr)r"
-
-#, python-format
-msgid ""
-"%(event_type)s is not a versioned notification and not whitelisted. See ./"
-"doc/source/notification.rst"
-msgstr ""
-"%(event_type)s ist keine versionierte Benachrichtigung und nicht in der "
-"Zulassungsliste enthalten. Siehe ./doc/source/notification.rst"
 
 #, python-format
 msgid "%(field)s should not be part of the updates."
@@ -1576,22 +1568,6 @@ msgstr ""
 "Image, mit dem die Instanz gestartet wurde, konnte nicht gefunden werden."
 
 #, python-format
-msgid ""
-"Image vCPU limits %(sockets)d:%(cores)d:%(threads)d exceeds permitted "
-"%(maxsockets)d:%(maxcores)d:%(maxthreads)d"
-msgstr ""
-"Image-vCPU-Grenzwerte %(sockets)d:%(cores)d:%(threads)d überschreiten die "
-"zugelassenen Werte %(maxsockets)d:%(maxcores)d:%(maxthreads)d"
-
-#, python-format
-msgid ""
-"Image vCPU topology %(sockets)d:%(cores)d:%(threads)d exceeds permitted "
-"%(maxsockets)d:%(maxcores)d:%(maxthreads)d"
-msgstr ""
-"Image-vCPU-Topologie %(sockets)d:%(cores)d:%(threads)d überschreitet den "
-"zulässigen Grenzwert %(maxsockets)d:%(maxcores)d:%(maxthreads)d"
-
-#, python-format
 msgid "Image's config drive option '%(config_drive)s' is invalid"
 msgstr ""
 "Die Konfigurationslaufwerkoption '%(config_drive)s' des Image ist ungültig"
@@ -1776,9 +1752,6 @@ msgstr "Erneute Erstellung von Instanz wird nicht unterstützt."
 #, python-format
 msgid "Instance rollback performed due to: %s"
 msgstr "Instanz-Rollback ausgeführt. Ursache: %s"
-
-msgid "Instance snapshots are not permitted at this time."
-msgstr "Instanz-Momentaufnahmen sind derzeit nicht zulässig."
 
 #, python-format
 msgid ""
@@ -2627,14 +2600,6 @@ msgstr "Nova erfordert libvirt ab Version %s."
 
 msgid "Number of Rows Archived"
 msgstr "Anzahl der archivierten Zeilen"
-
-#, python-format
-msgid ""
-"Number of serial ports '%(num_ports)s' specified in '%(property)s' isn't "
-"valid."
-msgstr ""
-"Die Anzahl '%(num_ports)s' der seriellen Ports, die in '%(property)s' "
-"angegeben ist, ist nicht gültig. "
 
 #, python-format
 msgid "OVS configuration failed with: %(inner_exception)s."
