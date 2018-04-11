@@ -68,25 +68,16 @@ def safe_connect(f):
             return f(self, *a, **k)
         except ks_exc.EndpointNotFound:
             warn_limit(
-                self,
-                'The placement API endpoint not found. Placement is optional '
-                'in Newton, but required in Ocata. Please enable the '
-                'placement service before upgrading.')
+                self, 'The placement API endpoint was not found.')
             # Reset client session so there is a new catalog, which
             # gets cached when keystone is first successfully contacted.
             self._client = self._create_client()
         except ks_exc.MissingAuthPlugin:
             warn_limit(
-                self,
-                'No authentication information found for placement API. '
-                'Placement is optional in Newton, but required in Ocata. '
-                'Please enable the placement service before upgrading.')
+                self, 'No authentication information found for placement API.')
         except ks_exc.Unauthorized:
             warn_limit(
-                self,
-                'Placement service credentials do not work. Placement is '
-                'optional in Newton, but required in Ocata. Please enable the '
-                'placement service before upgrading.')
+                self, 'Placement service credentials do not work.')
         except ks_exc.DiscoveryFailure:
             # TODO(_gryf): Looks like DiscoveryFailure is not the only missing
             # exception here. In Pike we should take care about keystoneauth1
