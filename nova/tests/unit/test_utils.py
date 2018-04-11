@@ -26,7 +26,6 @@ from keystoneauth1 import exceptions as ks_exc
 from keystoneauth1.identity import base as ks_identity
 from keystoneauth1 import session as ks_session
 import mock
-from mox3 import mox
 import netaddr
 from oslo_concurrency import processutils
 from oslo_config import cfg
@@ -1384,25 +1383,11 @@ class GetEndpointTestCase(test.NoDBTestCase):
         self.assertEqual(3, self.adap.get_endpoint.call_count)
         self.assertEqual('public', self.adap.interface)
 
-    def _behave_supports_direct_io(self, raise_open=False, raise_write=False,
-                                   exc=ValueError()):
-        open_behavior = os.open(os.path.join('.', '.directio.test'),
-                                os.O_CREAT | os.O_WRONLY | os.O_DIRECT)
-        if raise_open:
-            open_behavior.AndRaise(exc)
-        else:
-            open_behavior.AndReturn(3)
-            write_bahavior = os.write(3, mox.IgnoreArg())
-            if raise_write:
-                write_bahavior.AndRaise(exc)
 
-            # ensure unlink(filepath) will actually remove the file by deleting
-            # the remaining link to it in close(fd)
-            os.close(3)
+class SupportDirectIOTestCase(test.NoDBTestCase):
 
-        os.unlink(3)
-
-    def test_supports_direct_io(self):
+    def setUp(self):
+        super(SupportDirectIOTestCase, self).setUp()
         # O_DIRECT is not supported on all Python runtimes, so on platforms
         # where it's not supported (e.g. Mac), we can still test the code-path
         # by stubbing out the value.
@@ -1412,25 +1397,78 @@ class GetEndpointTestCase(test.NoDBTestCase):
             # directly.
             os.O_DIRECT = 16384
             self.addCleanup(delattr, os, 'O_DIRECT')
+        self.einval = OSError()
+        self.einval.errno = errno.EINVAL
+        self.test_path = os.path.join('.', '.directio.test')
+        self.io_flags = os.O_CREAT | os.O_WRONLY | os.O_DIRECT
 
-        einval = OSError()
-        einval.errno = errno.EINVAL
-        self.mox.StubOutWithMock(os, 'open')
-        self.mox.StubOutWithMock(os, 'write')
-        self.mox.StubOutWithMock(os, 'close')
-        self.mox.StubOutWithMock(os, 'unlink')
-        _supports_direct_io = utils.supports_direct_io
+        open_patcher = mock.patch('os.open')
+        write_patcher = mock.patch('os.write')
+        close_patcher = mock.patch('os.close')
+        unlink_patcher = mock.patch('os.unlink')
+        self.addCleanup(open_patcher.stop)
+        self.addCleanup(write_patcher.stop)
+        self.addCleanup(close_patcher.stop)
+        self.addCleanup(unlink_patcher.stop)
+        self.mock_open = open_patcher.start()
+        self.mock_write = write_patcher.start()
+        self.mock_close = close_patcher.start()
+        self.mock_unlink = unlink_patcher.start()
 
-        self._behave_supports_direct_io()
-        self._behave_supports_direct_io(raise_write=True)
-        self._behave_supports_direct_io(raise_open=True)
-        self._behave_supports_direct_io(raise_write=True, exc=einval)
-        self._behave_supports_direct_io(raise_open=True, exc=einval)
+    def test_supports_direct_io(self):
+        self.mock_open.return_value = 3
 
-        self.mox.ReplayAll()
-        self.assertTrue(_supports_direct_io('.'))
-        self.assertRaises(ValueError, _supports_direct_io, '.')
-        self.assertRaises(ValueError, _supports_direct_io, '.')
-        self.assertFalse(_supports_direct_io('.'))
-        self.assertFalse(_supports_direct_io('.'))
-        self.mox.VerifyAll()
+        self.assertTrue(utils.supports_direct_io('.'))
+
+        self.mock_open.assert_called_once_with(self.test_path, self.io_flags)
+        self.mock_write.assert_called_once_with(3, mock.ANY)
+        # ensure unlink(filepath) will actually remove the file by deleting
+        # the remaining link to it in close(fd)
+        self.mock_close.assert_called_once_with(3)
+        self.mock_unlink.assert_called_once_with(self.test_path)
+
+    def test_supports_direct_io_with_exception_in_write(self):
+        self.mock_open.return_value = 3
+        self.mock_write.side_effect = ValueError()
+
+        self.assertRaises(ValueError, utils.supports_direct_io, '.')
+
+        self.mock_open.assert_called_once_with(self.test_path, self.io_flags)
+        self.mock_write.assert_called_once_with(3, mock.ANY)
+        # ensure unlink(filepath) will actually remove the file by deleting
+        # the remaining link to it in close(fd)
+        self.mock_close.assert_called_once_with(3)
+        self.mock_unlink.assert_called_once_with(self.test_path)
+
+    def test_supports_direct_io_with_exception_in_open(self):
+        self.mock_open.side_effect = ValueError()
+
+        self.assertRaises(ValueError, utils.supports_direct_io, '.')
+
+        self.mock_open.assert_called_once_with(self.test_path, self.io_flags)
+        self.mock_write.assert_not_called()
+        self.mock_close.assert_not_called()
+        self.mock_unlink.assert_called_once_with(self.test_path)
+
+    def test_supports_direct_io_with_oserror_in_write(self):
+        self.mock_open.return_value = 3
+        self.mock_write.side_effect = self.einval
+
+        self.assertFalse(utils.supports_direct_io('.'))
+
+        self.mock_open.assert_called_once_with(self.test_path, self.io_flags)
+        self.mock_write.assert_called_once_with(3, mock.ANY)
+        # ensure unlink(filepath) will actually remove the file by deleting
+        # the remaining link to it in close(fd)
+        self.mock_close.assert_called_once_with(3)
+        self.mock_unlink.assert_called_once_with(self.test_path)
+
+    def test_supports_direct_io_with_oserror_in_open(self):
+        self.mock_open.side_effect = self.einval
+
+        self.assertFalse(utils.supports_direct_io('.'))
+
+        self.mock_open.assert_called_once_with(self.test_path, self.io_flags)
+        self.mock_write.assert_not_called()
+        self.mock_close.assert_not_called()
+        self.mock_unlink.assert_called_once_with(self.test_path)
