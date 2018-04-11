@@ -355,21 +355,32 @@ Request
   - networks.tag: device_tag_nic
   - personality: personality
   - block_device_mapping_v2: block_device_mapping_v2
-  - block_device_mapping_v2.device_name: device_name
-  - block_device_mapping_v2.source_type: source_type
-  - block_device_mapping_v2.destination_type: destination_type
-  - block_device_mapping_v2.delete_on_termination: delete_on_termination
-  - block_device_mapping_v2.guest_format: guest_format
   - block_device_mapping_v2.boot_index: boot_index
-  - block_device_mapping_v2.uuid: block_device_uuid
-  - block_device_mapping_v2.tag: device_tag_bdm
+  - block_device_mapping_v2.delete_on_termination: delete_on_termination
+  - block_device_mapping_v2.destination_type: destination_type
+  - block_device_mapping_v2.device_name: device_name
+  - block_device_mapping_v2.device_type: device_type
   - block_device_mapping_v2.disk_bus: disk_bus
+  - block_device_mapping_v2.guest_format: guest_format
+  - block_device_mapping_v2.no_device: no_device
+  - block_device_mapping_v2.source_type: source_type
+  - block_device_mapping_v2.uuid: block_device_uuid
+  - block_device_mapping_v2.volume_size: volume_size
+  - block_device_mapping_v2.tag: device_tag_bdm
   - config_drive: config_drive
   - key_name: key_name
-  - os:scheduler_hints: os:scheduler_hints
   - OS-DCF:diskConfig: OS-DCF:diskConfig
   - description: server_description
   - tags: server_tags_create
+  - os:scheduler_hints: os:scheduler_hints
+  - os:scheduler_hints.build_near_host_ip: os:scheduler_hints_build_near_host_ip
+  - os:scheduler_hints.cidr: os:scheduler_hints_cidr
+  - os:scheduler_hints.different_cell: os:scheduler_hints_different_cell
+  - os:scheduler_hints.different_host: os:scheduler_hints_different_host
+  - os:scheduler_hints.group: os:scheduler_hints_group
+  - os:scheduler_hints.query: os:scheduler_hints_query
+  - os:scheduler_hints.same_host: os:scheduler_hints_same_host
+  - os:scheduler_hints.target_cell: os:scheduler_hints_target_cell
 
 **Example Create Server**
 
@@ -581,6 +592,11 @@ Response
   - tenant_id: tenant_id_body
   - updated: updated
   - user_id: user_id
+  - fault: fault
+  - fault.code: fault_code
+  - fault.created: fault_created
+  - fault.message: fault_message
+  - fault.details: fault_details
   - OS-EXT-SRV-ATTR:hostname: server_hostname
   - OS-EXT-SRV-ATTR:reservation_id: server_reservation_id
   - OS-EXT-SRV-ATTR:launch_index: server_launch_index
@@ -681,6 +697,10 @@ Response
   - updated: updated
   - user_id: user_id
   - fault: fault
+  - fault.code: fault_code
+  - fault.created: fault_created
+  - fault.message: fault_message
+  - fault.details: fault_details
   - OS-EXT-SRV-ATTR:hostname: server_hostname
   - OS-EXT-SRV-ATTR:reservation_id: server_reservation_id
   - OS-EXT-SRV-ATTR:launch_index: server_launch_index
@@ -785,6 +805,11 @@ Response
   - tenant_id: tenant_id_body
   - updated: updated
   - user_id: user_id
+  - fault: fault
+  - fault.code: fault_code
+  - fault.created: fault_created
+  - fault.message: fault_message
+  - fault.details: fault_details
   - OS-EXT-SRV-ATTR:hostname: server_hostname
   - OS-EXT-SRV-ATTR:reservation_id: server_reservation_id
   - OS-EXT-SRV-ATTR:launch_index: server_launch_index

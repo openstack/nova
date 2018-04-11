@@ -1809,8 +1809,8 @@ boot_index:
     hypervisors support booting from multiple devices but only if the devices are
     of different types. For example, a disk and CD-ROM.
   in: body
-  required: true
-  type: string
+  required: false
+  type: integer
 certificate:
   description: |
     The certificate object.
@@ -2064,7 +2064,7 @@ delete_on_termination:
     Otherwise, specify ``false``. Default: ``false``
   in: body
   required: false
-  type: string
+  type: boolean
 deleted:
   description: |
     A boolean indicates whether this aggregate is deleted or not, if it has
@@ -2117,7 +2117,7 @@ device_name:
     longer honors a user-supplied device name. This is the same behavior as if
     the device name parameter is not supplied on the request.
   in: body
-  required: true
+  required: false
   type: string
 device_resp:
   description: |
@@ -2175,6 +2175,12 @@ device_tag_nic_attachment:
   required: false
   type: string
   min_version: 2.49
+device_type:
+  description: |
+    The device type. For example, ``disk``, ``cdrom``.
+  in: body
+  required: false
+  type: string
 # Optional input parameter in the body for PUT /os-services/{service_id} added
 # in microversion 2.53.
 disabled_reason_2_53_in:
@@ -2454,14 +2460,45 @@ extra_specs_2_47:
   type: object
 fault:
   description: |
-    A fault object. Only displayed in the failed response.
-    Default keys are ``code``, ``created``, and ``message``
-    (response code, created time, and message respectively).
-    In addition, the key ``details`` (stack trace) is available
-    if you have the administrator privilege.
+    A fault object. Only displayed when the server status is ``ERROR`` or
+    ``DELETED`` and a fault occurred.
   in: body
   required: false
   type: object
+fault_code:
+  description: |
+    The error response code.
+  in: body
+  required: true
+  type: integer
+fault_created:
+  description: |
+    The date and time when the exception was raised. The date and time
+    stamp format is `ISO 8601 <https://en.wikipedia.org/wiki/ISO_8601>`_
+
+    ::
+
+      CCYY-MM-DDThh:mm:ss±hh:mm
+
+    For example, ``2015-08-27T09:49:58-05:00``. The ``±hh:mm``
+    value, if included, is the time zone as an offset from UTC.  In
+    the previous example, the offset value is ``-05:00``.
+  in: body
+  required: true
+  type: string
+fault_details:
+  description: |
+    The stack trace. It is available if the response code is not 500 or
+    you have the administrator privilege
+  in: body
+  required: false
+  type: string
+fault_message:
+  description: |
+    The error message.
+  in: body
+  required: true
+  type: string
 fixed_address:
   description: |
     The fixed IP address with which you want to associate the floating IP address.
@@ -3187,10 +3224,12 @@ host_status:
 
     - ``MAINTENANCE`` if nova-compute is disabled.
 
-    - Empty string indicates there is no host for server.  This attribute
-      appears in the response only if the policy permits.
+    - Empty string indicates there is no host for server.
+
+    This attribute appears in the response only if the policy permits.
+    By default, only administrators can get this parameter.
   in: body
-  required: true
+  required: false
   type: string
   min_version: 2.16
 host_status_body:
@@ -3479,7 +3518,7 @@ imageRef:
     In all other cases it is required and must be a valid UUID
     otherwise API will return 400.
   in: body
-  required: true
+  required: false
   type: string
 imageRef_rebuild:
   description: |
@@ -4442,6 +4481,12 @@ nic_details_diagnostics:
   required: true
   type: array
   min_version: 2.48
+no_device:
+  description: |
+    It is no device if ``True``.
+  in: body
+  required: false
+  type: boolean
 num_cpus_diagnostics:
   description: |
     The number of vCPUs.
@@ -4768,6 +4813,82 @@ os:scheduler_hints:
   in: body
   required: false
   type: object
+os:scheduler_hints_build_near_host_ip:
+  description: |
+    Schedule the server on a host in the network specified with this parameter
+    and a cidr (``os:scheduler_hints.cidr``).
+    It is available when ``SimpleCIDRAffinityFilter`` is available
+    on cloud side.
+  in: body
+  required: false
+  type: string
+os:scheduler_hints_cidr:
+  description: |
+    Schedule the server on a host in the network specified with an IP address
+    (``os:scheduler_hints:build_near_host_ip``) and this parameter.
+    If ``os:scheduler_hints:build_near_host_ip`` is specified and
+    this paramete is omitted, ``/24`` is used.
+    It is available when ``SimpleCIDRAffinityFilter`` is available
+    on cloud side.
+  in: body
+  required: false
+  type: string
+os:scheduler_hints_different_cell:
+  description: |
+    A list of cell routes or a cell route (string).
+    Schedule the server in a cell that is not specifiled.
+    It is available when ``DifferentCellFilter`` is available on cloud side
+    that is cell v1 environment.
+  in: body
+  required: false
+  type: array
+os:scheduler_hints_different_host:
+  description: |
+    A list of server UUIDs or a server UUID.
+    Schedule the server on a different host from a set of servers.
+    It is available when ``DifferentHostFilter`` is available on cloud side.
+  in: body
+  required: false
+  type: array
+os:scheduler_hints_group:
+  description: |
+    The server group UUID. Schedule the server according to a policy of
+    the server group (``anti-affinity``, ``affinity``, ``soft-anti-affinity``
+    or ``soft-affinity``).
+    It is available when ``ServerGroupAffinityFilter``,
+    ``ServerGroupAntiAffinityFilter``, ``ServerGroupSoftAntiAffinityWeigher``,
+    ``ServerGroupSoftAffinityWeigher`` are available on cloud side.
+  in: body
+  required: false
+  type: string
+os:scheduler_hints_query:
+  description: |
+    Schedule the server by using a custom filter in JSON format.
+    For example::
+
+      "query": "[&gt;=,$free_ram_mb,1024]"
+
+    It is available when ``JsonFilter`` is available on cloud side.
+  in: body
+  required: false
+  type: string
+os:scheduler_hints_same_host:
+  description: |
+    A list of server UUIDs or a server UUID.
+    Schedule the server on the same host as another server in a set of
+    servers.
+    It is available when ``SameHostFilter`` is available on cloud side.
+  in: body
+  required: false
+  type: array
+os:scheduler_hints_target_cell:
+  description: |
+    A target cell name. Schedule the server in a host in the cell specifiled.
+    It is available when ``TargetCellFilter`` is available on cloud side
+    that is cell v1 environment.
+  in: body
+  required: false
+  type: string
 overall_status:
   description: |
     The overall status of instance audit tasks.
@@ -5533,10 +5654,11 @@ server_usages_optional:
   type: array
 server_user_data:
   in: body
-  required: true
+  required: false
   type: string
   description: |
     The user_data the instance was created with.
+    By default, it appears in the response for administrative users only.
   min_version: 2.3
 server_uuid:
   description: |
@@ -5552,16 +5674,26 @@ servers:
   in: body
   required: true
   type: array
+servers_links:
+  description: |
+    Links to the next server. It is available when the number of servers exceeds
+    ``limit`` parameter or ``[api]/max_limit`` in the configuration file.
+    See `API Guide / Links and References
+    <http://developer.openstack.org/api-guide/compute/links_and_references.html>`_
+    for more info.
+  in: body
+  type: array
+  required: false
 servers_max_count:
   in: body
   required: false
-  type: string
+  type: integer
   description: |
     The max number of servers to be created. Defaults to the value of ``min_count``.
 servers_min_count:
   in: body
   required: false
-  type: string
+  type: integer
   description: |
     The min number of servers to be created. Defaults to 1.
 servers_multiple_create_name:
@@ -5571,7 +5703,10 @@ servers_multiple_create_name:
   description: |
     A base name for creating unique names during multiple create. A
     unique string will be appended to the end of this base name for
-    every server created.
+    every server created. The templete is defined in
+    ``multi_instance_display_name_template`` option in the configuration file.
+    The server names become ``{name}-1``, ``{name}-2``, ``{name}-3``, ...
+    by default.
 service:
   description: |
     Object representing a compute service.
@@ -5730,10 +5865,11 @@ snapshots:
   type: array
 source_type:
   description: |
-    The source type of the volume. A valid value is ``blank``, ``snapshot``, ``volume``,
-    or ``image``.
+    The source type of the volume. A valid value is ``blank``, ``snapshot``,
+    ``volume``, or ``image``. If ``no_device`` is not specified,
+    this parameter is required.
   in: body
-  required: true
+  required: false
   type: string
 start_simple_tenant_usage_body:
   description: |
@@ -6244,6 +6380,14 @@ volume_id_resp:
   in: body
   required: true
   type: string
+volume_size:
+  description: |
+    The size of the volume (in GB).
+    This is integer value from range 1 to 2147483647
+    which can be requested as integer and string.
+  in: body
+  required: false
+  type: integer
 volume_status:
   description: |
     The status of the volume.
