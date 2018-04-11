@@ -467,3 +467,8 @@ def is_mounted(mount_path, source=None):
 
 def is_valid_hostname(hostname):
     return re.match(r"^[\w\-\.:]+$", hostname)
+
+
+def version_to_string(version):
+    """Returns string version based on tuple"""
+    return '.'.join([str(x) for x in version])

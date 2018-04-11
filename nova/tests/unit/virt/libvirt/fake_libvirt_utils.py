@@ -165,3 +165,7 @@ def chown_for_id_maps(path, id_maps):
 
 def get_arch(image_meta):
     return libvirt_utils.get_arch(image_meta)
+
+
+def version_to_string(version):
+    return libvirt_utils.version_to_string(version)

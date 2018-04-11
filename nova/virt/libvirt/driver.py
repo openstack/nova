@@ -505,9 +505,6 @@ class LibvirtDriver(driver.ComputeDriver):
                  {'enabled': enabled, 'reason': reason})
         self._set_host_enabled(enabled, reason)
 
-    def _version_to_string(self, version):
-        return '.'.join([str(x) for x in version])
-
     def init_host(self, host):
         self._host.initialize()
 
@@ -536,7 +533,7 @@ class LibvirtDriver(driver.ComputeDriver):
         if not self._host.has_min_version(MIN_LIBVIRT_VERSION):
             raise exception.InternalError(
                 _('Nova requires libvirt version %s or greater.') %
-                self._version_to_string(MIN_LIBVIRT_VERSION))
+                libvirt_utils.version_to_string(MIN_LIBVIRT_VERSION))
 
         if CONF.libvirt.virt_type in ("qemu", "kvm"):
             if self._host.has_min_version(hv_ver=MIN_QEMU_VERSION):
@@ -546,18 +543,19 @@ class LibvirtDriver(driver.ComputeDriver):
             else:
                 raise exception.InternalError(
                     _('Nova requires QEMU version %s or greater.') %
-                    self._version_to_string(MIN_QEMU_VERSION))
+                    libvirt_utils.version_to_string(MIN_QEMU_VERSION))
 
         if CONF.libvirt.virt_type == 'parallels':
             if not self._host.has_min_version(hv_ver=MIN_VIRTUOZZO_VERSION):
                 raise exception.InternalError(
                     _('Nova requires Virtuozzo version %s or greater.') %
-                    self._version_to_string(MIN_VIRTUOZZO_VERSION))
+                    libvirt_utils.version_to_string(MIN_VIRTUOZZO_VERSION))
             if not self._host.has_min_version(MIN_LIBVIRT_VIRTUOZZO_VERSION):
                 raise exception.InternalError(
                     _('Running Nova with parallels virt_type requires '
                       'libvirt version %s') %
-                    self._version_to_string(MIN_LIBVIRT_VIRTUOZZO_VERSION))
+                    libvirt_utils.version_to_string(
+                        MIN_LIBVIRT_VIRTUOZZO_VERSION))
 
         # Give the cloud admin a heads up if we are intending to
         # change the MIN_LIBVIRT_VERSION in the next release.
@@ -566,7 +564,7 @@ class LibvirtDriver(driver.ComputeDriver):
                         '%(version)s is deprecated. The required minimum '
                         'version of libvirt will be raised to %(version)s '
                         'in the next release.',
-                        {'version': self._version_to_string(
+                        {'version': libvirt_utils.version_to_string(
                             NEXT_MIN_LIBVIRT_VERSION)})
         if (CONF.libvirt.virt_type in ("qemu", "kvm") and
             not self._host.has_min_version(hv_ver=NEXT_MIN_QEMU_VERSION)):
@@ -574,7 +572,7 @@ class LibvirtDriver(driver.ComputeDriver):
                         '%(version)s is deprecated. The required minimum '
                         'version of QEMU will be raised to %(version)s '
                         'in the next release.',
-                        {'version': self._version_to_string(
+                        {'version': libvirt_utils.version_to_string(
                             NEXT_MIN_QEMU_VERSION)})
 
         kvm_arch = fields.Architecture.from_host()
@@ -589,16 +587,16 @@ class LibvirtDriver(driver.ComputeDriver):
                       'requires libvirt version %(libvirt_ver)s and '
                       'qemu version %(qemu_ver)s, or greater') %
                     {'arch': kvm_arch,
-                     'libvirt_ver': self._version_to_string(
+                     'libvirt_ver': libvirt_utils.version_to_string(
                          MIN_LIBVIRT_OTHER_ARCH.get(kvm_arch)),
-                     'qemu_ver': self._version_to_string(
+                     'qemu_ver': libvirt_utils.version_to_string(
                          MIN_QEMU_OTHER_ARCH.get(kvm_arch))})
             # no qemu version in the error message
             raise exception.InternalError(
                 _('Running Nova with qemu/kvm virt_type on %(arch)s '
                   'requires libvirt version %(libvirt_ver)s or greater') %
                 {'arch': kvm_arch,
-                 'libvirt_ver': self._version_to_string(
+                 'libvirt_ver': libvirt_utils.version_to_string(
                      MIN_LIBVIRT_OTHER_ARCH.get(kvm_arch))})
 
         # TODO(sbauza): Remove this code once mediated devices are persisted
@@ -4312,7 +4310,7 @@ class LibvirtDriver(driver.ComputeDriver):
     def _has_cpu_policy_support(self):
         for ver in BAD_LIBVIRT_CPU_POLICY_VERSIONS:
             if self._host.has_version(ver):
-                ver_ = self._version_to_string(ver)
+                ver_ = libvirt_utils.version_to_string(ver)
                 raise exception.CPUPinningNotSupported(reason=_(
                     'Invalid libvirt version %(version)s') % {'version': ver_})
         return True
@@ -6234,7 +6232,7 @@ class LibvirtDriver(driver.ComputeDriver):
                                 'which is known to have broken NUMA support. '
                                 'Consider patching or updating libvirt on '
                                 'this host if you need NUMA support.',
-                                self._version_to_string(ver))
+                                libvirt_utils.version_to_string(ver))
                     self._bad_libvirt_numa_version_warn = True
                 return False
 
