@@ -748,6 +748,10 @@ Cell filters
 
 The following sections describe the available cell filters.
 
+.. note::
+
+   These filters are only available for cellsv1 which is deprecated.
+
 DifferentCellFilter
 -------------------
 
