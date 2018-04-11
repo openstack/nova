@@ -263,12 +263,16 @@ class TestNeutronClient(test.NoDBTestCase):
         client1.list_networks(retrieve_all=False)
         self.assertEqual('new_token2', client1.httpclient.auth.get_token(None))
 
+    @mock.patch('nova.network.neutronv2.api.LOG.error')
     @mock.patch.object(ks_loading, 'load_auth_from_conf_options')
-    def test_load_auth_plugin_failed(self, mock_load_from_conf):
+    def test_load_auth_plugin_failed(self, mock_load_from_conf, mock_log_err):
         mock_load_from_conf.return_value = None
         from neutronclient.common import exceptions as neutron_client_exc
         self.assertRaises(neutron_client_exc.Unauthorized,
                           neutronapi._load_auth_plugin, CONF)
+        mock_log_err.assert_called()
+        self.assertIn('The [neutron] section of your nova configuration file',
+                      mock_log_err.call_args[0][0])
 
     @mock.patch.object(client.Client, "list_networks",
                        side_effect=exceptions.Unauthorized())

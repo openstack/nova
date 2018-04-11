@@ -72,6 +72,16 @@ def _load_auth_plugin(conf):
     if auth_plugin:
         return auth_plugin
 
+    if conf.neutron.auth_type is None:
+        # If we're coming in through a REST API call for something like
+        # creating a server, the end user is going to get a 500 response
+        # which is accurate since the system is mis-configured, but we should
+        # leave a breadcrumb for the operator that is checking the logs.
+        LOG.error('The [neutron] section of your nova configuration file '
+                  'must be configured for authentication with the networking '
+                  'service endpoint. See the networking service install guide '
+                  'for details: '
+                  'https://docs.openstack.org/neutron/latest/install/')
     err_msg = _('Unknown auth type: %s') % conf.neutron.auth_type
     raise neutron_client_exc.Unauthorized(message=err_msg)
 
