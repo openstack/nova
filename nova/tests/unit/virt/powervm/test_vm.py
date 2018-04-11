@@ -63,7 +63,7 @@ class TestVMBuilder(test.NoDBTestCase):
             name='lpar_name', uuid='lpar_uuid',
             flavor=mock.Mock(memory_mb='mem', vcpus='vcpus', extra_specs={}))
         vmb = vm.VMBuilder('host', 'adap')
-        mock_def_stdz.assert_called_once_with('host')
+        mock_def_stdz.assert_called_once_with('host', proc_units_factor=0.1)
         self.assertEqual(mock_lpar_bldr.return_value,
                          vmb.lpar_builder(inst))
         self.san_lpar_name.assert_called_once_with('lpar_name')
@@ -74,6 +74,12 @@ class TestVMBuilder(test.NoDBTestCase):
                      'memory': 'mem',
                      'vcpu': 'vcpus',
                      'srr_capability': True}, mock_def_stdz.return_value)
+
+        # Assert non-default proc_units_factor.
+        mock_def_stdz.reset_mock()
+        self.flags(proc_units_factor=0.2, group='powervm')
+        vmb = vm.VMBuilder('host', 'adap')
+        mock_def_stdz.assert_called_once_with('host', proc_units_factor=0.2)
 
     def test_format_flavor(self):
         """Perform tests against _format_flavor."""
