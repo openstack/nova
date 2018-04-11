@@ -28,7 +28,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-02-17 16:08+0000\n"
+"POT-Creation-Date: 2018-04-11 03:31+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -37,7 +37,7 @@ msgstr ""
 "Language: fr\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 "Generated-By: Babel 2.0\n"
-"X-Generator: Zanata 3.9.6\n"
+"X-Generator: Zanata 4.3.3\n"
 "Language-Team: French\n"
 
 #, python-format
@@ -76,14 +76,6 @@ msgstr ""
 "Code de sortie: %(code)r\n"
 "stdout: %(stdout)r\n"
 "stderr: %(stderr)r"
-
-#, python-format
-msgid ""
-"%(event_type)s is not a versioned notification and not whitelisted. See ./"
-"doc/source/notification.rst"
-msgstr ""
-"%(event_type)s n'est pas une notification associée à une version et ne "
-"figure pas dans la liste approuvée. Voir ./doc/source/notification.rst"
 
 #, python-format
 msgid "%(field)s should not be part of the updates."
@@ -1553,22 +1545,6 @@ msgid "Image that the instance was started with could not be found."
 msgstr "L'image par laquelle l'instance a été démarrée est introuvable."
 
 #, python-format
-msgid ""
-"Image vCPU limits %(sockets)d:%(cores)d:%(threads)d exceeds permitted "
-"%(maxsockets)d:%(maxcores)d:%(maxthreads)d"
-msgstr ""
-"Les limites de l'image vCPU %(sockets)d:%(cores)d:%(threads)d dépassent "
-"celles autorisées %(maxsockets)d:%(maxcores)d:%(maxthreads)d."
-
-#, python-format
-msgid ""
-"Image vCPU topology %(sockets)d:%(cores)d:%(threads)d exceeds permitted "
-"%(maxsockets)d:%(maxcores)d:%(maxthreads)d"
-msgstr ""
-"Les topologies de l'image vCPU %(sockets)d:%(cores)d:%(threads)d dépassent "
-"celles autorisées %(maxsockets)d:%(maxcores)d:%(maxthreads)d."
-
-#, python-format
 msgid "Image's config drive option '%(config_drive)s' is invalid"
 msgstr ""
 "L'option du lecteur de configuration de l'image '%(config_drive)s' est "
@@ -1750,9 +1726,6 @@ msgstr "La récréation de l'instance n'est pas supporté."
 #, python-format
 msgid "Instance rollback performed due to: %s"
 msgstr "Retour-arrière de l'instance réalisé du à: %s"
-
-msgid "Instance snapshots are not permitted at this time."
-msgstr "Instantanés d'instance non autorisés pour l'instant."
 
 #, python-format
 msgid ""
@@ -2593,14 +2566,6 @@ msgstr "Nova nécessite libvirt %s ou une version ultérieure."
 
 msgid "Number of Rows Archived"
 msgstr "Nombre de lignes archivées"
-
-#, python-format
-msgid ""
-"Number of serial ports '%(num_ports)s' specified in '%(property)s' isn't "
-"valid."
-msgstr ""
-"Le nombre de ports série '%(num_ports)s' spécifié dans '%(property)s' n'est "
-"pas valide."
 
 #, python-format
 msgid "OVS configuration failed with: %(inner_exception)s."

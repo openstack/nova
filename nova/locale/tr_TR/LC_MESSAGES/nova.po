@@ -10,16 +10,16 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-02-17 16:08+0000\n"
+"POT-Creation-Date: 2018-04-11 03:31+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "PO-Revision-Date: 2016-04-12 06:09+0000\n"
 "Last-Translator: Copied by Zanata <copied-by-zanata@zanata.org>\n"
-"Language: tr-TR\n"
+"Language: tr_TR\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
-"X-Generator: Zanata 3.9.6\n"
+"X-Generator: Zanata 4.3.3\n"
 "Language-Team: Turkish (Turkey)\n"
 
 #, python-format
@@ -1172,22 +1172,6 @@ msgid "Image that the instance was started with could not be found."
 msgstr "Sunucunun başlatıldığı imaj bulunamadı."
 
 #, python-format
-msgid ""
-"Image vCPU limits %(sockets)d:%(cores)d:%(threads)d exceeds permitted "
-"%(maxsockets)d:%(maxcores)d:%(maxthreads)d"
-msgstr ""
-"İmaj vCPU sınırları %(sockets)d:%(cores)d:%(threads)d izin verilen "
-"%(maxsockets)d:%(maxcores)d:%(maxthreads)d yi aşıyor"
-
-#, python-format
-msgid ""
-"Image vCPU topology %(sockets)d:%(cores)d:%(threads)d exceeds permitted "
-"%(maxsockets)d:%(maxcores)d:%(maxthreads)d"
-msgstr ""
-"İmaj vCPU topolojisi %(sockets)d:%(cores)d:%(threads)d izin verilen "
-"%(maxsockets)d:%(maxcores)d:%(maxthreads)d yi aşıyor"
-
-#, python-format
 msgid "Image's config drive option '%(config_drive)s' is invalid"
 msgstr "İmajın yapılandırma sürücüsü seçeneği '%(config_drive)s' geçersiz"
 
@@ -1338,9 +1322,6 @@ msgstr "Sunucu yeniden oluşturma desteklenmiyor."
 #, python-format
 msgid "Instance rollback performed due to: %s"
 msgstr "Sunucu geri döndürme şu sebepten yapıldı: %s"
-
-msgid "Instance snapshots are not permitted at this time."
-msgstr "Örnek sistem görüntüleri şu an onaylanmadı."
 
 #, python-format
 msgid "Insufficient compute resources: %(reason)s."
@@ -2036,14 +2017,6 @@ msgstr "Rbd'de depolanmadı"
 #, python-format
 msgid "Nova requires libvirt version %s or greater."
 msgstr "Nova libvirt sürüm %s ya da daha yenisine ihtiyaç duyar."
-
-#, python-format
-msgid ""
-"Number of serial ports '%(num_ports)s' specified in '%(property)s' isn't "
-"valid."
-msgstr ""
-"'%(property)s' de belirtilen seri bağlantı noktası sayısı '%(num_ports)s' "
-"geçerli değil."
 
 #, python-format
 msgid "Object action %(action)s failed because: %(reason)s"

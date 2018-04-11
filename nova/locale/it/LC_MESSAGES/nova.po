@@ -13,7 +13,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-02-17 16:08+0000\n"
+"POT-Creation-Date: 2018-04-11 03:31+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
@@ -22,7 +22,7 @@ msgstr ""
 "Language: it\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "Generated-By: Babel 2.0\n"
-"X-Generator: Zanata 3.9.6\n"
+"X-Generator: Zanata 4.3.3\n"
 "Language-Team: Italian\n"
 
 #, python-format
@@ -61,14 +61,6 @@ msgstr ""
 "codice di uscita: %(code)r\n"
 "stdout: %(stdout)r\n"
 "stderr: %(stderr)r"
-
-#, python-format
-msgid ""
-"%(event_type)s is not a versioned notification and not whitelisted. See ./"
-"doc/source/notification.rst"
-msgstr ""
-"%(event_type)s non è una notifica con versione e non è presente nella "
-"whitelist. Vedere ./doc/source/notification.rst"
 
 #, python-format
 msgid "%(field)s should not be part of the updates."
@@ -1530,22 +1522,6 @@ msgid "Image that the instance was started with could not be found."
 msgstr "Impossibile trovare l'immagine con cui è stata avviata l'istanza."
 
 #, python-format
-msgid ""
-"Image vCPU limits %(sockets)d:%(cores)d:%(threads)d exceeds permitted "
-"%(maxsockets)d:%(maxcores)d:%(maxthreads)d"
-msgstr ""
-"I limiti vCPU dell'immagine %(sockets)d:%(cores)d:%(threads)d superano "
-"quelli consentiti %(maxsockets)d:%(maxcores)d:%(maxthreads)d"
-
-#, python-format
-msgid ""
-"Image vCPU topology %(sockets)d:%(cores)d:%(threads)d exceeds permitted "
-"%(maxsockets)d:%(maxcores)d:%(maxthreads)d"
-msgstr ""
-"La topologia vCPU dell'immagine %(sockets)d:%(cores)d:%(threads)d supera "
-"quella consentita %(maxsockets)d:%(maxcores)d:%(maxthreads)d"
-
-#, python-format
 msgid "Image's config drive option '%(config_drive)s' is invalid"
 msgstr ""
 "L'opzione dell'unità di configurazione dell'immagine '%(config_drive)s' non "
@@ -1729,9 +1705,6 @@ msgstr "La nuova creazione dell'istanza non è supportata."
 #, python-format
 msgid "Instance rollback performed due to: %s"
 msgstr "Ripristino dell'istanza eseguito a causa di: %s"
-
-msgid "Instance snapshots are not permitted at this time."
-msgstr "Le istantanee dell'istanza non sono consentite in questo momento."
 
 #, python-format
 msgid ""
@@ -2563,14 +2536,6 @@ msgstr "Nova richiede libvirt versione %s o successiva."
 
 msgid "Number of Rows Archived"
 msgstr "Numero di righe archiviate"
-
-#, python-format
-msgid ""
-"Number of serial ports '%(num_ports)s' specified in '%(property)s' isn't "
-"valid."
-msgstr ""
-"Il numero di porte seriali '%(num_ports)s' specificato nella '%(property)s' "
-"non è valido."
 
 #, python-format
 msgid "OVS configuration failed with: %(inner_exception)s."

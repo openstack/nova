@@ -35,17 +35,17 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-02-17 16:08+0000\n"
+"POT-Creation-Date: 2018-04-11 03:31+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "PO-Revision-Date: 2017-06-24 04:35+0000\n"
 "Last-Translator: blkart <blkart.org@gmail.com>\n"
-"Language: zh-CN\n"
+"Language: zh_CN\n"
 "Language-Team: Chinese (China)\n"
 "Plural-Forms: nplurals=1; plural=0\n"
 "Generated-By: Babel 2.2.0\n"
-"X-Generator: Zanata 3.9.6\n"
+"X-Generator: Zanata 4.3.3\n"
 
 msgid "\"Look for the VDIs failed"
 msgstr "查找VDI失败"
@@ -84,14 +84,6 @@ msgstr ""
 "退出码: %(code)r\n"
 "标准输出: %(stdout)r\n"
 "标准错误输出: %(stderr)r"
-
-#, python-format
-msgid ""
-"%(event_type)s is not a versioned notification and not whitelisted. See ./"
-"doc/source/notification.rst"
-msgstr ""
-"%(event_type)s 并非版本化通知，并且未列入白名单。请参阅 ./doc/source/"
-"notification.rst"
 
 #, python-format
 msgid "%(field)s should not be part of the updates."
@@ -1496,22 +1488,6 @@ msgid "Image that the instance was started with could not be found."
 msgstr "实例启动的镜像没有找到。"
 
 #, python-format
-msgid ""
-"Image vCPU limits %(sockets)d:%(cores)d:%(threads)d exceeds permitted "
-"%(maxsockets)d:%(maxcores)d:%(maxthreads)d"
-msgstr ""
-"镜像 vCPU 限制 %(sockets)d:%(cores)d:%(threads)d 超过许可的%(maxsockets)d:"
-"%(maxcores)d:%(maxthreads)d"
-
-#, python-format
-msgid ""
-"Image vCPU topology %(sockets)d:%(cores)d:%(threads)d exceeds permitted "
-"%(maxsockets)d:%(maxcores)d:%(maxthreads)d"
-msgstr ""
-"映像 vCPU 拓扑 %(sockets)d:%(cores)d:%(threads)d 超过许可的%(maxsockets)d:"
-"%(maxcores)d:%(maxthreads)d"
-
-#, python-format
 msgid "Image's config drive option '%(config_drive)s' is invalid"
 msgstr "镜像的配置驱动器选项“%(config_drive)s”无效"
 
@@ -1683,9 +1659,6 @@ msgstr "不支持实例重创建"
 #, python-format
 msgid "Instance rollback performed due to: %s"
 msgstr "由于%s，实例回滚已被执行"
-
-msgid "Instance snapshots are not permitted at this time."
-msgstr "该时刻实例快照是不允许的。"
 
 #, python-format
 msgid ""
@@ -2502,12 +2475,6 @@ msgstr "Nova请求的 libvirt 版本%s 或更高。"
 
 msgid "Number of Rows Archived"
 msgstr "已归档行数"
-
-#, python-format
-msgid ""
-"Number of serial ports '%(num_ports)s' specified in '%(property)s' isn't "
-"valid."
-msgstr "“%(property)s”中指定的串口数“%(num_ports)s”无效。"
 
 #, python-format
 msgid "OVS configuration failed with: %(inner_exception)s."

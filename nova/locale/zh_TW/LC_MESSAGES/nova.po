@@ -12,16 +12,16 @@ msgid ""
 msgstr ""
 "Project-Id-Version: nova VERSION\n"
 "Report-Msgid-Bugs-To: https://bugs.launchpad.net/openstack-i18n/\n"
-"POT-Creation-Date: 2018-02-17 16:08+0000\n"
+"POT-Creation-Date: 2018-04-11 03:31+0000\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "PO-Revision-Date: 2016-04-12 06:10+0000\n"
 "Last-Translator: Copied by Zanata <copied-by-zanata@zanata.org>\n"
-"Language: zh-TW\n"
+"Language: zh_TW\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 "Generated-By: Babel 2.0\n"
-"X-Generator: Zanata 3.9.6\n"
+"X-Generator: Zanata 4.3.3\n"
 "Language-Team: Chinese (Taiwan)\n"
 
 #, python-format
@@ -58,14 +58,6 @@ msgstr ""
 "結束碼：%(code)r\n"
 "標準輸出：%(stdout)r\n"
 "標準錯誤：%(stderr)r"
-
-#, python-format
-msgid ""
-"%(event_type)s is not a versioned notification and not whitelisted. See ./"
-"doc/source/notification.rst"
-msgstr ""
-"%(event_type)s 不是版本化通知，且未列入白名單。請參閱 ./doc/source/"
-"notification.rst"
 
 #, python-format
 msgid "%(field)s should not be part of the updates."
@@ -1380,22 +1372,6 @@ msgid "Image that the instance was started with could not be found."
 msgstr "找不到已用來啟動實例的映像檔。"
 
 #, python-format
-msgid ""
-"Image vCPU limits %(sockets)d:%(cores)d:%(threads)d exceeds permitted "
-"%(maxsockets)d:%(maxcores)d:%(maxthreads)d"
-msgstr ""
-"映像檔 vCPU 限制 %(sockets)d:%(cores)d:%(threads)d 超過所允許"
-"的%(maxsockets)d:%(maxcores)d:%(maxthreads)d"
-
-#, python-format
-msgid ""
-"Image vCPU topology %(sockets)d:%(cores)d:%(threads)d exceeds permitted "
-"%(maxsockets)d:%(maxcores)d:%(maxthreads)d"
-msgstr ""
-"映像檔 vCPU 拓蹼 %(sockets)d:%(cores)d:%(threads)d 超過所允許"
-"的%(maxsockets)d:%(maxcores)d:%(maxthreads)d"
-
-#, python-format
 msgid "Image's config drive option '%(config_drive)s' is invalid"
 msgstr "映像檔的配置驅動選項 '%(config_drive)s' 無效"
 
@@ -1564,9 +1540,6 @@ msgstr "不支援重建實例。"
 #, python-format
 msgid "Instance rollback performed due to: %s"
 msgstr "已執行實例回復作業，原因：%s"
-
-msgid "Instance snapshots are not permitted at this time."
-msgstr "此時不接受實例 Snapshot。"
 
 #, python-format
 msgid ""
@@ -2350,12 +2323,6 @@ msgstr "Nova 需要 libVirt %s 版或更高版本。"
 
 msgid "Number of Rows Archived"
 msgstr "已保存的列數"
-
-#, python-format
-msgid ""
-"Number of serial ports '%(num_ports)s' specified in '%(property)s' isn't "
-"valid."
-msgstr "'%(property)s' 中指定的序列埠數目 '%(num_ports)s'無效。"
 
 #, python-format
 msgid "OVS configuration failed with: %(inner_exception)s."
