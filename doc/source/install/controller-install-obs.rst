@@ -380,6 +380,11 @@ Install and configure components
         Compute firewall driver by using the
         ``nova.virt.firewall.NoopFirewallDriver`` firewall driver.
 
+   * Configure the ``[neutron]`` section of **/etc/nova/nova.conf**. See the
+     `Networking service install guide`__ for more details.
+
+     .. __: https://docs.openstack.org/neutron/latest/install/controller-install-obs.html#configure-the-compute-service-to-use-the-networking-service
+
    * In the ``[vnc]`` section, configure the VNC proxy to use the management
      interface IP address of the controller node:
 
