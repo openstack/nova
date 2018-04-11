@@ -42,6 +42,43 @@ LOG = logging.getLogger(__name__)
 
 RESIZE_SNAPSHOT_NAME = 'nova-resize'
 
+# Mapping used to convert libvirt cpu features to traits, for more details, see
+# https://github.com/libvirt/libvirt/blob/master/src/cpu/cpu_map.xml.
+CPU_TRAITS_MAPPING = {
+    '3dnow': 'HW_CPU_X86_3DNOW',
+    'abm': 'HW_CPU_X86_ABM',
+    'aes': 'HW_CPU_X86_AESNI',
+    'avx': 'HW_CPU_X86_AVX',
+    'avx2': 'HW_CPU_X86_AVX2',
+    'avx512bw': 'HW_CPU_X86_AVX512BW',
+    'avx512cd': 'HW_CPU_X86_AVX512CD',
+    'avx512dq': 'HW_CPU_X86_AVX512DQ',
+    'avx512er': 'HW_CPU_X86_AVX512ER',
+    'avx512f': 'HW_CPU_X86_AVX512F',
+    'avx512pf': 'HW_CPU_X86_AVX512PF',
+    'avx512vl': 'HW_CPU_X86_AVX512VL',
+    'bmi1': 'HW_CPU_X86_BMI',
+    'bmi2': 'HW_CPU_X86_BMI2',
+    'pclmuldq': 'HW_CPU_X86_CLMUL',
+    'f16c': 'HW_CPU_X86_F16C',
+    'fma': 'HW_CPU_X86_FMA3',
+    'fma4': 'HW_CPU_X86_FMA4',
+    'mmx': 'HW_CPU_X86_MMX',
+    'mpx': 'HW_CPU_X86_MPX',
+    'sha-ni': 'HW_CPU_X86_SHA',
+    'sse': 'HW_CPU_X86_SSE',
+    'sse2': 'HW_CPU_X86_SSE2',
+    'sse3': 'HW_CPU_X86_SSE3',
+    'sse4.1': 'HW_CPU_X86_SSE41',
+    'sse4.2': 'HW_CPU_X86_SSE42',
+    'sse4a': 'HW_CPU_X86_SSE4A',
+    'ssse3': 'HW_CPU_X86_SSSE3',
+    'svm': 'HW_CPU_X86_SVM',
+    'tbm': 'HW_CPU_X86_TBM',
+    'vmx': 'HW_CPU_X86_VMX',
+    'xop': 'HW_CPU_X86_XOP'
+}
+
 
 def create_image(disk_format, path, size):
     """Create a disk image
@@ -483,3 +520,25 @@ def is_valid_hostname(hostname):
 def version_to_string(version):
     """Returns string version based on tuple"""
     return '.'.join([str(x) for x in version])
+
+
+def cpu_features_to_traits(features):
+    """Returns this driver's CPU traits dict where keys are trait names from
+    CPU_TRAITS_MAPPING, values are boolean indicates whether the trait should
+    be set in the provider tree.
+    """
+    traits = {trait_name: False for trait_name in CPU_TRAITS_MAPPING.values()}
+    for f in features:
+        if f in CPU_TRAITS_MAPPING:
+            traits[CPU_TRAITS_MAPPING[f]] = True
+
+    return traits
+
+
+def get_cpu_model_from_arch(arch):
+    mode = 'qemu64'
+    if arch == obj_fields.Architecture.I686:
+        mode = 'qemu32'
+    elif arch == obj_fields.Architecture.PPC64LE:
+        mode = 'POWER8'
+    return mode

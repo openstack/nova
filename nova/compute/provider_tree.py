@@ -558,6 +558,8 @@ class ProviderTree(object):
                              to be affected.
         :param traits: String names of traits to be added.
         """
+        if not traits:
+            return
         with self.lock:
             provider = self._find_with_lock(name_or_uuid)
             final_traits = provider.traits | set(traits)
@@ -570,6 +572,8 @@ class ProviderTree(object):
                              to be affected.
         :param traits: String names of traits to be removed.
         """
+        if not traits:
+            return
         with self.lock:
             provider = self._find_with_lock(name_or_uuid)
             final_traits = provider.traits - set(traits)

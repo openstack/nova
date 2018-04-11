@@ -421,6 +421,9 @@ class ProviderUsageBaseTestCase(test.TestCase, InstanceHelperMixin):
         return self.placement_api.get(
             '/resource_providers', version='1.14').body['resource_providers']
 
+    def _create_trait(self, trait):
+        return self.placement_api.put('/traits/%s' % trait, {}, version='1.6')
+
     def _get_provider_traits(self, provider_uuid):
         return self.placement_api.get(
             '/resource_providers/%s/traits' % provider_uuid,
