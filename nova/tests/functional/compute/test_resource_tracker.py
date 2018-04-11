@@ -23,7 +23,7 @@ from nova import context
 from nova import objects
 from nova import rc_fields as fields
 from nova import test
-from nova.tests.functional.api.openstack.placement import test_report_client
+from nova.tests.functional import test_report_client
 from nova.tests import uuidsentinel as uuids
 from nova.virt import driver as virt_driver
 
