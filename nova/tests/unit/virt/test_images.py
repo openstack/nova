@@ -32,7 +32,7 @@ class QemuTestCase(test.NoDBTestCase):
 
     @mock.patch.object(os.path, 'exists', return_value=True)
     def test_qemu_info_with_errors(self, path_exists):
-        self.assertRaises(exception.InvalidDiskInfo,
+        self.assertRaises(exception.DiskNotFound,
                           images.qemu_img_info,
                           '/fake/path')
 
@@ -65,6 +65,24 @@ class QemuTestCase(test.NoDBTestCase):
                                 images.qemu_img_info,
                                 '/fake/path')
         self.assertIn('qemu-img aborted by prlimits', six.text_type(exc))
+
+    @mock.patch.object(utils, 'execute')
+    @mock.patch.object(os.path, 'exists', return_value=True)
+    def test_qemu_img_info_with_disk_not_found(self, exists, mocked_execute):
+        """Tests that the initial os.path.exists check passes but the qemu-img
+        command fails because the path is gone by the time the command runs.
+        """
+        path = '/opt/stack/data/nova/instances/some-uuid/disk'
+        stderr = (u"qemu-img: Could not open "
+                  "'/opt/stack/data/nova/instances/some-uuid/disk': "
+                  "Could not open '/opt/stack/data/nova/instances/some-uuid/"
+                  "disk': No such file or directory\n")
+        mocked_execute.side_effect = (
+            processutils.ProcessExecutionError(
+                exit_code=1, stderr=stderr))
+        self.assertRaises(exception.DiskNotFound, images.qemu_img_info, path)
+        exists.assert_called_once_with(path)
+        mocked_execute.assert_called_once()
 
     @mock.patch.object(images, 'convert_image',
                        side_effect=exception.ImageUnacceptable)

@@ -72,10 +72,15 @@ def qemu_img_info(path, format=None):
             cmd = cmd + ('--force-share',)
         out, err = utils.execute(*cmd, prlimit=QEMU_IMG_LIMITS)
     except processutils.ProcessExecutionError as exp:
-        # this means we hit prlimits, make the exception more specific
         if exp.exit_code == -9:
+            # this means we hit prlimits, make the exception more specific
             msg = (_("qemu-img aborted by prlimits when inspecting "
                     "%(path)s : %(exp)s") % {'path': path, 'exp': exp})
+        elif exp.exit_code == 1 and 'No such file or directory' in exp.stderr:
+            # The os.path.exists check above can race so this is a simple
+            # best effort at catching that type of failure and raising a more
+            # specific error.
+            raise exception.DiskNotFound(location=path)
         else:
             msg = (_("qemu-img failed to execute on %(path)s : %(exp)s") %
                    {'path': path, 'exp': exp})
