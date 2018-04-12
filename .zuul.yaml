@@ -99,6 +99,8 @@
     branches: ^(?!stable/(newton|ocata|pike)).*$
     run: playbooks/legacy/nova-multiattach/run.yaml
     post-run: playbooks/legacy/nova-multiattach/post.yaml
+    # TODO(mriedem): Make this job voting and gating once bug 1763382 is fixed.
+    voting: false
 
 - job:
     name: nova-next
@@ -126,7 +128,6 @@
     gate:
       jobs:
         - nova-cells-v1
-        - nova-multiattach
         - nova-next
         - nova-tox-functional
         - nova-tox-functional-py35
