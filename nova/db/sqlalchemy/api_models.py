@@ -417,6 +417,7 @@ class InstanceGroupPolicy(API_BASE):
     policy = Column(String(255))
     group_id = Column(Integer, ForeignKey('instance_groups.id'),
                       nullable=False)
+    rules = Column(Text)
 
 
 class InstanceGroup(API_BASE):
