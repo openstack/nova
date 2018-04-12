@@ -1,0 +1,10 @@
+{
+    "$ref": "InstanceActionPayload.json",
+    "nova_object.data": {
+        "new_volume_id": "227cc671-f30b-4488-96fd-7d0bf13648d8",
+        "old_volume_id": "a07f71dc-8151-4e7d-a0cc-cd24a3f11113"
+    },
+    "nova_object.name": "InstanceActionVolumeSwapPayload",
+    "nova_object.namespace": "nova",
+    "nova_object.version": "1.5"
+}
