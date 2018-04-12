@@ -2764,14 +2764,14 @@ class ComputeManager(manager.Manager):
                               injected_files, admin_password, allocations,
                               bdms, detach_block_devices, attach_block_devices,
                               network_info=None,
-                              recreate=False, block_device_info=None,
+                              evacuate=False, block_device_info=None,
                               preserve_ephemeral=False):
         if preserve_ephemeral:
             # The default code path does not support preserving ephemeral
             # partitions.
             raise exception.PreserveEphemeralNotSupported()
 
-        if recreate:
+        if evacuate:
             detach_block_devices(context, bdms)
         else:
             self._power_off_instance(context, instance, clean_shutdown=True)
@@ -2982,10 +2982,8 @@ class ComputeManager(manager.Manager):
                 hints = self._get_scheduler_hints({}, request_spec)
                 self._validate_instance_group_policy(context, instance, hints)
 
-            # TODO(mriedem): Rename the supports_recreate driver capability
-            # to supports_evacuate.
-            if not self.driver.capabilities.get("supports_recreate", False):
-                raise exception.InstanceRecreateNotSupported
+            if not self.driver.capabilities.get("supports_evacuate", False):
+                raise exception.InstanceEvacuateNotSupported
 
             self._check_instance_exists(context, instance)
 
@@ -3090,8 +3088,6 @@ class ComputeManager(manager.Manager):
 
         files = self._decode_files(injected_files)
 
-        # TODO(mriedem): Rename recreate->evacuate in the driver rebuild
-        # method signature.
         kwargs = dict(
             context=context,
             instance=instance,
@@ -3105,7 +3101,7 @@ class ComputeManager(manager.Manager):
             block_device_info=block_device_info,
             network_info=network_info,
             preserve_ephemeral=preserve_ephemeral,
-            recreate=evacuate)
+            evacuate=evacuate)
         try:
             with instance.mutated_migration_context():
                 self.driver.rebuild(**kwargs)

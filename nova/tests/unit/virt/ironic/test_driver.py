@@ -128,8 +128,8 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.assertFalse(self.driver.capabilities['has_imagecache'],
                          'Driver capabilities for \'has_imagecache\''
                          'is invalid')
-        self.assertFalse(self.driver.capabilities['supports_recreate'],
-                         'Driver capabilities for \'supports_recreate\''
+        self.assertFalse(self.driver.capabilities['supports_evacuate'],
+                         'Driver capabilities for \'supports_evacuate\''
                          'is invalid')
         self.assertFalse(self.driver.capabilities[
                              'supports_migrate_to_same_host'],

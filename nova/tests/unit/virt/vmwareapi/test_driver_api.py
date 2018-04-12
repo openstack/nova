@@ -284,7 +284,7 @@ class VMwareAPIVMTestCase(test.NoDBTestCase,
 
     def test_driver_capabilities(self):
         self.assertTrue(self.conn.capabilities['has_imagecache'])
-        self.assertFalse(self.conn.capabilities['supports_recreate'])
+        self.assertFalse(self.conn.capabilities['supports_evacuate'])
         self.assertTrue(
             self.conn.capabilities['supports_migrate_to_same_host'])
 

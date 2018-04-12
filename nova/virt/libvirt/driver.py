@@ -335,7 +335,7 @@ MIN_MIGRATION_SPEED_BW = 1  # 1 MiB/s
 class LibvirtDriver(driver.ComputeDriver):
     capabilities = {
         "has_imagecache": True,
-        "supports_recreate": True,
+        "supports_evacuate": True,
         "supports_migrate_to_same_host": False,
         "supports_attach_interface": True,
         "supports_device_tagging": True,

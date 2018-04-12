@@ -840,8 +840,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertTrue(drvr.capabilities['has_imagecache'],
                         'Driver capabilities for \'has_imagecache\' '
                         'is invalid')
-        self.assertTrue(drvr.capabilities['supports_recreate'],
-                        'Driver capabilities for \'supports_recreate\' '
+        self.assertTrue(drvr.capabilities['supports_evacuate'],
+                        'Driver capabilities for \'supports_evacuate\' '
                         'is invalid')
         self.assertFalse(drvr.capabilities['supports_migrate_to_same_host'],
                          'Driver capabilities for '

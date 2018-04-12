@@ -131,7 +131,7 @@ class IronicDriver(virt_driver.ComputeDriver):
     """Hypervisor driver for Ironic - bare metal provisioning."""
 
     capabilities = {"has_imagecache": False,
-                    "supports_recreate": False,
+                    "supports_evacuate": False,
                     "supports_migrate_to_same_host": False,
                     "supports_attach_interface": True,
                     "supports_multiattach": False
@@ -1496,7 +1496,7 @@ class IronicDriver(virt_driver.ComputeDriver):
     def rebuild(self, context, instance, image_meta, injected_files,
                 admin_password, allocations, bdms, detach_block_devices,
                 attach_block_devices, network_info=None,
-                recreate=False, block_device_info=None,
+                evacuate=False, block_device_info=None,
                 preserve_ephemeral=False):
         """Rebuild/redeploy an instance.
 
@@ -1530,7 +1530,7 @@ class IronicDriver(virt_driver.ComputeDriver):
             usage. Ignored by this driver.
         :param network_info: Instance network information. Ignored by
             this driver.
-        :param recreate: Boolean value; if True the instance is
+        :param evacuate: Boolean value; if True the instance is
             recreated on a new hypervisor - all the cleanup of old state is
             skipped. Ignored by this driver.
         :param block_device_info: Instance block device
