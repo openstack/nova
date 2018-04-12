@@ -1,84 +1,22 @@
 {
     "event_type": "instance.update",
     "payload": {
+        "$ref":"common_payloads/InstanceUpdatePayload.json#",
         "nova_object.data": {
-            "architecture": "x86_64",
-            "audit_period": {
-                "nova_object.data": {
-                    "audit_period_beginning": "2012-10-01T00:00:00Z",
-                    "audit_period_ending": "2012-10-29T13:42:11Z"},
-                "nova_object.name": "AuditPeriodPayload",
-                "nova_object.namespace": "nova",
-                "nova_object.version": "1.0"
-            },
-            "availability_zone": "nova",
-            "block_devices": [],
-            "bandwidth": [],
-            "created_at": "2012-10-29T13:42:11Z",
-            "deleted_at": null,
-            "display_name": "some-server",
-            "display_description":"some-server",
-            "host": "compute",
-            "host_name": "some-server",
-            "image_uuid": "155d900f-4e14-4e4c-a73d-069cbf4541e6",
-            "key_name": "my-key",
-            "kernel_id": "",
-            "launched_at": null,
-            "metadata": {},
-            "locked":false,
-            "node": "fake-mini",
-            "old_display_name": null,
-            "os_type": null,
-            "progress": 0,
-            "ramdisk_id": "",
-            "reservation_id": "r-sd3ygfjj",
-            "state": "building",
-            "task_state": "scheduling",
-            "power_state": "pending",
             "ip_addresses": [],
+            "updated_at": null,
+            "power_state": "pending",
+            "launched_at": null,
+            "task_state": "scheduling",
             "state_update": {
                 "nova_object.data": {
-                    "new_task_state": null,
                     "old_state": "building",
-                    "old_task_state": null,
                     "state": "building"},
                 "nova_object.name": "InstanceStateUpdatePayload",
                 "nova_object.namespace": "nova",
-                "nova_object.version": "1.0"},
-            "tenant_id": "6f70656e737461636b20342065766572",
-            "terminated_at": null,
-            "auto_disk_config":"MANUAL",
-            "flavor": {
-                "nova_object.name": "FlavorPayload",
-                "nova_object.data": {
-                    "flavorid": "a22d5517-147c-4147-a0d1-e698df5cd4e3",
-                    "name": "test_flavor",
-                    "root_gb": 1,
-                    "vcpus": 1,
-                    "ephemeral_gb": 0,
-                    "memory_mb": 512,
-                    "disabled": false,
-                    "rxtx_factor": 1.0,
-                    "extra_specs": {
-                        "hw:watchdog_action": "disabled"
-                    },
-                    "projects": null,
-                    "swap": 0,
-                    "is_public": true,
-                    "vcpu_weight": 0,
-                    "description":null
-                },
-                "nova_object.version": "1.4",
-                "nova_object.namespace": "nova"
-            },
-            "tags": [],
-            "user_id": "fake",
-            "uuid": "c03c0bf9-f46e-4e4f-93f1-817568567ee2",
-            "updated_at": null
-        },
-        "nova_object.name": "InstanceUpdatePayload",
-        "nova_object.namespace": "nova",
-        "nova_object.version": "1.6"},
+                "nova_object.version": "1.0"}
+        }
+    },
     "priority": "INFO",
     "publisher_id": "nova-compute:fake-mini"
 }
