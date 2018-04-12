@@ -873,7 +873,6 @@ class ComputeDriver(object):
             the compute node provider in the ProviderTree. Drivers managing
             more than one node (e.g. ironic) may also use it as a cue to
             indicate which node is being processed by the caller.
-        :return: True if the provider_tree was changed; False otherwise.
         """
         raise NotImplementedError()
 
