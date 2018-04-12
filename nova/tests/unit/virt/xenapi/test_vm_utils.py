@@ -17,7 +17,6 @@ import contextlib
 
 from eventlet import greenthread
 import mock
-from mox3 import mox
 import os_xenapi
 from oslo_concurrency import lockutils
 from oslo_concurrency import processutils
@@ -343,26 +342,12 @@ class ResizeHelpersTestCase(VMUtilsTestBase):
         super(ResizeHelpersTestCase, self).setUp()
         self.context = context.RequestContext('user', 'project')
 
-    def test_repair_filesystem(self):
-        self.mox.StubOutWithMock(utils, 'execute')
-
-        utils.execute('e2fsck', '-f', "-y", "fakepath",
-            run_as_root=True, check_exit_code=[0, 1, 2]).AndReturn(
-                ("size is: 42", ""))
-
-        self.mox.ReplayAll()
-
+    @mock.patch.object(utils, 'execute', return_value=("size is: 42", ""))
+    def test_repair_filesystem(self, mock_execute):
         vm_utils._repair_filesystem("fakepath")
-
-    def _call_parted_mkpart(self, path, start, end):
-        utils.execute('parted', '--script', path, 'rm', '1',
-            run_as_root=True)
-        utils.execute('parted', '--script', path, 'mkpart',
-            'primary', '%ds' % start, '%ds' % end, run_as_root=True)
-
-    def _call_parted_boot_flag(self, path):
-        utils.execute('parted', '--script', path, 'set', '1',
-            'boot', 'on', run_as_root=True)
+        mock_execute.assert_called_once_with(
+            'e2fsck', '-f', "-y", "fakepath", run_as_root=True,
+             check_exit_code=[0, 1, 2])
 
     @mock.patch('nova.privsep.fs.ext_journal_disable')
     @mock.patch('nova.privsep.fs.ext_journal_enable')
@@ -385,27 +370,26 @@ class ResizeHelpersTestCase(VMUtilsTestBase):
         mock_enable_journal.assert_has_calls([
             mock.call(partition_path)])
 
-    def test_log_progress_if_required(self):
-        self.mox.StubOutWithMock(vm_utils.LOG, "debug")
-        vm_utils.LOG.debug("Sparse copy in progress, "
-                           "%(complete_pct).2f%% complete. "
-                           "%(left)s bytes left to copy",
-                           {"complete_pct": 50.0, "left": 1})
+    @mock.patch.object(vm_utils.LOG, 'debug')
+    def test_log_progress_if_required(self, mock_debug):
         current = timeutils.utcnow()
         time_fixture = self.useFixture(utils_fixture.TimeFixture(current))
         time_fixture.advance_time_seconds(
             vm_utils.PROGRESS_INTERVAL_SECONDS + 1)
-        self.mox.ReplayAll()
         vm_utils._log_progress_if_required(1, current, 2)
+        mock_debug.assert_called_once_with(
+            "Sparse copy in progress, %(complete_pct).2f%% complete. "
+            "%(left)s bytes left to copy",
+            {"complete_pct": 50.0, "left": 1})
 
-    def test_log_progress_if_not_required(self):
-        self.mox.StubOutWithMock(vm_utils.LOG, "debug")
+    @mock.patch.object(vm_utils.LOG, 'debug')
+    def test_log_progress_if_not_required(self, mock_debug):
         current = timeutils.utcnow()
         time_fixture = self.useFixture(utils_fixture.TimeFixture(current))
         time_fixture.advance_time_seconds(
             vm_utils.PROGRESS_INTERVAL_SECONDS - 1)
-        self.mox.ReplayAll()
         vm_utils._log_progress_if_required(1, current, 2)
+        mock_debug.assert_not_called()
 
     @mock.patch('nova.privsep.fs.ext_journal_disable')
     @mock.patch.object(vm_utils, '_repair_filesystem')
@@ -455,40 +439,35 @@ class CheckVDISizeTestCase(VMUtilsTestBase):
         self.instance = objects.Instance(uuid=uuids.fake)
         self.flavor = objects.Flavor()
         self.vdi_uuid = 'fakeuuid'
+        self.stub_out('nova.objects.Instance.get_flavor',
+                      lambda *a, **kw: self.flavor)
 
-    def test_not_too_large(self):
-        self.mox.StubOutWithMock(vm_utils, '_get_vdi_chain_size')
-        vm_utils._get_vdi_chain_size(self.session,
-                self.vdi_uuid).AndReturn(1073741824)
+    @mock.patch.object(vm_utils, '_get_vdi_chain_size',
+                       return_value=1073741824)
+    def test_not_too_large(self, mock_get_vdi_chain_size):
+        self.flavor.root_gb = 1
 
-        self.mox.ReplayAll()
+        vm_utils._check_vdi_size(self.context, self.session, self.instance,
+                                 self.vdi_uuid)
 
-        with mock.patch.object(self.instance, 'get_flavor') as get:
-            self.flavor.root_gb = 1
-            get.return_value = self.flavor
-            vm_utils._check_vdi_size(self.context, self.session, self.instance,
-                                     self.vdi_uuid)
+        mock_get_vdi_chain_size.assert_called_once_with(self.session,
+                                                        self.vdi_uuid)
 
-    def test_too_large(self):
-        self.mox.StubOutWithMock(vm_utils, '_get_vdi_chain_size')
-        vm_utils._get_vdi_chain_size(self.session,
-                self.vdi_uuid).AndReturn(11811160065)  # 10GB overhead allowed
+    @mock.patch.object(vm_utils, '_get_vdi_chain_size',
+                       return_value=11811160065)  # 10GB overhead allowed
+    def test_too_large(self, mock_get_vdi_chain_size):
+        self.flavor.root_gb = 1
+        self.assertRaises(exception.FlavorDiskSmallerThanImage,
+                          vm_utils._check_vdi_size, self.context,
+                          self.session, self.instance, self.vdi_uuid)
 
-        self.mox.ReplayAll()
-
-        with mock.patch.object(self.instance, 'get_flavor') as get:
-            self.flavor.root_gb = 1
-            get.return_value = self.flavor
-            self.assertRaises(exception.FlavorDiskSmallerThanImage,
-                              vm_utils._check_vdi_size, self.context,
-                              self.session, self.instance, self.vdi_uuid)
+        mock_get_vdi_chain_size.assert_called_once_with(self.session,
+                                                        self.vdi_uuid)
 
     def test_zero_root_gb_disables_check(self):
-        with mock.patch.object(self.instance, 'get_flavor') as get:
-            self.flavor.root_gb = 0
-            get.return_value = self.flavor
-            vm_utils._check_vdi_size(self.context, self.session, self.instance,
-                                     self.vdi_uuid)
+        self.flavor.root_gb = 0
+        vm_utils._check_vdi_size(self.context, self.session, self.instance,
+                                 self.vdi_uuid)
 
 
 class GetInstanceForVdisForSrTestCase(VMUtilsTestBase):
@@ -724,37 +703,33 @@ class DestroyCachedImageTestCase(VMUtilsTestBase):
         self.assertEqual(expected_return, uuid_return)
 
 
+@mock.patch.object(vm_utils, 'is_vm_shutdown', return_value=True)
 class ShutdownTestCase(VMUtilsTestBase):
 
-    def test_hardshutdown_should_return_true_when_vm_is_shutdown(self):
-        self.mock = mox.Mox()
+    def test_hardshutdown_should_return_true_when_vm_is_shutdown(
+            self, mock_is_vm_shutdown):
         session = FakeSession()
         instance = "instance"
         vm_ref = "vm-ref"
-        self.mock.StubOutWithMock(vm_utils, 'is_vm_shutdown')
-        vm_utils.is_vm_shutdown(session, vm_ref).AndReturn(True)
-        self.mock.StubOutWithMock(vm_utils, 'LOG')
         self.assertTrue(vm_utils.hard_shutdown_vm(
             session, instance, vm_ref))
+        mock_is_vm_shutdown.assert_called_once_with(session, vm_ref)
 
-    def test_cleanshutdown_should_return_true_when_vm_is_shutdown(self):
-        self.mock = mox.Mox()
+    def test_cleanshutdown_should_return_true_when_vm_is_shutdown(
+            self, mock_is_vm_shutdown):
         session = FakeSession()
         instance = "instance"
         vm_ref = "vm-ref"
-        self.mock.StubOutWithMock(vm_utils, 'is_vm_shutdown')
-        vm_utils.is_vm_shutdown(session, vm_ref).AndReturn(True)
-        self.mock.StubOutWithMock(vm_utils, 'LOG')
         self.assertTrue(vm_utils.clean_shutdown_vm(
             session, instance, vm_ref))
+        mock_is_vm_shutdown.assert_called_once_with(session, vm_ref)
 
 
+@mock.patch.object(FakeSession, 'call_xenapi', return_value='vbd_ref')
 class CreateVBDTestCase(VMUtilsTestBase):
     def setUp(self):
         super(CreateVBDTestCase, self).setUp()
         self.session = FakeSession()
-        self.mock = mox.Mox()
-        self.mock.StubOutWithMock(self.session, 'call_xenapi')
         self.vbd_rec = self._generate_vbd_rec()
 
     def _generate_vbd_rec(self):
@@ -773,55 +748,46 @@ class CreateVBDTestCase(VMUtilsTestBase):
         vbd_rec['qos_supported_algorithms'] = []
         return vbd_rec
 
-    def test_create_vbd_default_args(self):
-        self.session.call_xenapi('VBD.create',
-                self.vbd_rec).AndReturn("vbd_ref")
-        self.mock.ReplayAll()
-
+    def test_create_vbd_default_args(self, mock_call_xenapi):
         result = vm_utils.create_vbd(self.session, "vm_ref", "vdi_ref", 0)
         self.assertEqual(result, "vbd_ref")
-        self.mock.VerifyAll()
+        mock_call_xenapi.assert_called_once_with('VBD.create', self.vbd_rec)
 
-    def test_create_vbd_osvol(self):
-        self.session.call_xenapi('VBD.create',
-                self.vbd_rec).AndReturn("vbd_ref")
-        self.session.call_xenapi('VBD.add_to_other_config', "vbd_ref",
-                                 "osvol", "True")
-        self.mock.ReplayAll()
+    def test_create_vbd_osvol(self, mock_call_xenapi):
         result = vm_utils.create_vbd(self.session, "vm_ref", "vdi_ref", 0,
                                      osvol=True)
-        self.assertEqual(result, "vbd_ref")
-        self.mock.VerifyAll()
 
-    def test_create_vbd_extra_args(self):
+        self.assertEqual(result, "vbd_ref")
+        mock_call_xenapi.assert_has_calls([
+            mock.call('VBD.create', self.vbd_rec),
+            mock.call('VBD.add_to_other_config', "vbd_ref", "osvol", "True")])
+
+    def test_create_vbd_extra_args(self, mock_call_xenapi):
         self.vbd_rec['VDI'] = 'OpaqueRef:NULL'
         self.vbd_rec['type'] = 'a'
         self.vbd_rec['mode'] = 'RO'
         self.vbd_rec['bootable'] = True
         self.vbd_rec['empty'] = True
         self.vbd_rec['unpluggable'] = False
-        self.session.call_xenapi('VBD.create',
-                self.vbd_rec).AndReturn("vbd_ref")
-        self.mock.ReplayAll()
 
         result = vm_utils.create_vbd(self.session, "vm_ref", None, 0,
                 vbd_type="a", read_only=True, bootable=True,
                 empty=True, unpluggable=False)
         self.assertEqual(result, "vbd_ref")
-        self.mock.VerifyAll()
+        mock_call_xenapi.assert_called_once_with('VBD.create', self.vbd_rec)
 
-    def test_attach_cd(self):
-        self.mock.StubOutWithMock(vm_utils, 'create_vbd')
-
-        vm_utils.create_vbd(self.session, "vm_ref", None, 1,
-                vbd_type='cd', read_only=True, bootable=True,
-                empty=True, unpluggable=False).AndReturn("vbd_ref")
-        self.session.call_xenapi('VBD.insert', "vbd_ref", "vdi_ref")
-        self.mock.ReplayAll()
+    @mock.patch.object(vm_utils, 'create_vbd', return_value='vbd_ref')
+    def test_attach_cd(self, mock_create_vbd, mock_call_xenapi):
+        mock_call_xenapi.return_value = None
 
         result = vm_utils.attach_cd(self.session, "vm_ref", "vdi_ref", 1)
+
         self.assertEqual(result, "vbd_ref")
-        self.mock.VerifyAll()
+        mock_create_vbd.assert_called_once_with(
+            self.session, "vm_ref", None, 1, vbd_type='cd', read_only=True,
+            bootable=True, empty=True, unpluggable=False)
+        mock_call_xenapi.assert_called_once_with('VBD.insert', 'vbd_ref',
+                                                 'vdi_ref')
 
 
 class UnplugVbdTestCase(VMUtilsTestBase):
