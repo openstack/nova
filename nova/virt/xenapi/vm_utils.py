@@ -814,9 +814,14 @@ def _find_cached_images(session, sr_ref):
 def _find_cached_image(session, image_id, sr_ref):
     """Returns the vdi-ref of the cached image."""
     name_label = _get_image_vdi_label(image_id)
-    recs = session.call_xenapi("VDI.get_all_records_where",
-                               'field "name__label"="%s"'
-                               % name_label)
+    # For not pooled hosts, only name_lable is enough to get a cached image.
+    # When in a xapi pool, each host may have a cached image using the
+    # same name while xapi api will search all of them. Add SR to the filter
+    # to ensure only one image returns.
+    expr = ('field "name__label"="%(name_label)s" and field "SR" = "%(SR)s"'
+            % {'name_label': name_label, 'SR': sr_ref})
+    recs = session.call_xenapi("VDI.get_all_records_where", expr)
+
     number_found = len(recs)
     if number_found > 0:
         if number_found > 1:
@@ -2618,3 +2623,8 @@ def set_other_config_pci(session, vm_ref, params):
     other_config = session.call_xenapi("VM.get_other_config", vm_ref)
     other_config['pci'] = params
     session.call_xenapi("VM.set_other_config", vm_ref, other_config)
+
+
+def host_in_this_pool(session, host_ref):
+    rec_dict = session.host.get_all_records()
+    return host_ref in rec_dict.keys()

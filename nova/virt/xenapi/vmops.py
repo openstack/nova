@@ -2249,7 +2249,8 @@ class VMOps(object):
         # This is the one associated with the pif marked management. From cli:
         # uuid=`xe pif-list --minimal management=true`
         # xe pif-param-get param-name=network-uuid uuid=$uuid
-        expr = 'field "management" = "true"'
+        expr = ('field "management" = "true" and field "host" = "%s"' %
+                self._session.host_ref)
         pifs = self._session.call_xenapi('PIF.get_all_records_where',
                                          expr)
         if len(pifs) != 1:
@@ -2492,12 +2493,15 @@ class VMOps(object):
                     self._generate_vdi_map(
                         sr_uuid_map[sr_uuid], vm_ref, sr_ref))
         vif_map = {}
-        vif_uuid_map = None
-        if 'vif_uuid_map' in migrate_data:
-            vif_uuid_map = migrate_data.vif_uuid_map
-        if vif_uuid_map:
-            vif_map = self._generate_vif_network_map(vm_ref, vif_uuid_map)
-            LOG.debug("Generated vif_map for live migration: %s", vif_map)
+        # For block migration, need to pass vif map to the destination hosts.
+        if not vm_utils.host_in_this_pool(self._session,
+                                          migrate_send_data.get('host')):
+            vif_uuid_map = None
+            if 'vif_uuid_map' in migrate_data:
+                vif_uuid_map = migrate_data.vif_uuid_map
+            if vif_uuid_map:
+                vif_map = self._generate_vif_network_map(vm_ref, vif_uuid_map)
+                LOG.debug("Generated vif_map for live migration: %s", vif_map)
         options = {}
         self._session.call_xenapi(command_name, vm_ref,
                                   migrate_send_data, True,
@@ -2641,7 +2645,7 @@ class VMOps(object):
         # Unplug VIFs and delete networks
         for vif in network_info:
             try:
-                self.vif_driver.delete_network_and_bridge(instance, vif)
+                self.vif_driver.delete_network_and_bridge(instance, vif['id'])
             except Exception:
                 LOG.exception(_('Failed to delete networks and bridges with '
                                 'VIF %s'), vif['id'], instance=instance)

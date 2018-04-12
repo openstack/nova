@@ -355,7 +355,8 @@ def _create_local_pif(host_ref):
                               'IP': '10.1.1.1',
                               'IPv6': '',
                               'uuid': '',
-                              'management': 'true'})
+                              'management': 'true',
+                              'host': 'fake_host_ref'})
     _db_content['PIF'][pif_ref]['uuid'] = pif_ref
     return pif_ref
 

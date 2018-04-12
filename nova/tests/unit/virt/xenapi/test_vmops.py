@@ -1746,12 +1746,15 @@ class LiveMigrateHelperTestCase(VMOpsTestBase):
                                "_generate_vdi_map") as mock_gen_vdi_map, \
                 mock.patch.object(self.vmops._session,
                                   'call_xenapi') as mock_call_xenapi, \
+                mock.patch.object(vm_utils, 'host_in_this_pool'
+                                  ) as mock_host_in_this_pool, \
                 mock.patch.object(self.vmops,
                                   "_generate_vif_network_map") as mock_vif_map:
             mock_call_xenapi.side_effect = side_effect
             mock_gen_vdi_map.side_effect = [
                     {"vdi": "sr_ref"}, {"vdi": "sr_ref_2"}]
             mock_vif_map.return_value = {"vif_ref1": "dest_net_ref"}
+            mock_host_in_this_pool.return_value = False
 
             self.vmops._call_live_migrate_command(command_name,
                                                   vm_ref, migrate_data)
@@ -1924,7 +1927,7 @@ class LiveMigrateHelperTestCase(VMOpsTestBase):
 
     def test_delete_networks_and_bridges(self):
         self.vmops.vif_driver = mock.Mock()
-        network_info = ['fake_vif']
+        network_info = [{'id': 'fake_vif'}]
         self.vmops._delete_networks_and_bridges('fake_instance', network_info)
         self.vmops.vif_driver.delete_network_and_bridge.\
             assert_called_once_with('fake_instance', 'fake_vif')
