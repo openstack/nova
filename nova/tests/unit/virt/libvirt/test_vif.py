@@ -957,9 +957,9 @@ class LibvirtVifTestCase(test.NoDBTestCase):
 
     def test_plug_ivs_hybrid(self):
         with test.nested(
-                mock.patch('nova.network.utils.device_exists',
+                mock.patch('nova.network.linux_utils.device_exists',
                            return_value=False),
-                mock.patch('nova.network.utils.create_veth_pair'),
+                mock.patch('nova.network.linux_utils.create_veth_pair'),
                 mock.patch.object(linux_net, 'create_ivs_vif_port'),
                 mock.patch.object(os.path, 'exists', return_value=True),
                 mock.patch('nova.privsep.libvirt.disable_multicast_snooping'),
@@ -1042,7 +1042,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         d = vif.LibvirtGenericVIFDriver()
         d.unplug(self.instance, self.vif_iovisor)
 
-    @mock.patch('nova.network.utils.device_exists')
+    @mock.patch('nova.network.linux_utils.device_exists')
     @mock.patch('nova.privsep.libvirt.plug_plumgrid_vif')
     def test_plug_iovisor(self, mock_plug, device_exists):
         device_exists.return_value = True
@@ -1234,7 +1234,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         self._assertTypeAndMacEquals(node, "ethernet", "target", "dev",
                                      self.vif_tap, br_want)
 
-    @mock.patch('nova.network.utils.device_exists')
+    @mock.patch('nova.network.linux_utils.device_exists')
     def test_plug_tap(self, device_exists):
         device_exists.return_value = True
         d = vif.LibvirtGenericVIFDriver()

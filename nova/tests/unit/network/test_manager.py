@@ -1917,11 +1917,11 @@ class VlanNetworkTestCase(test.TestCase):
                                                  'DE:AD:BE:EF:00:00',
                                                  run_as_root=True)
 
-    @mock.patch('nova.network.utils.device_exists', return_value=True)
+    @mock.patch('nova.network.linux_utils.device_exists', return_value=True)
     def test_deallocate_fixed_with_dhcp(self, mock_dev_exists):
         self._deallocate_fixed_with_dhcp(mock_dev_exists)
 
-    @mock.patch('nova.network.utils.device_exists', return_value=False)
+    @mock.patch('nova.network.linux_utils.device_exists', return_value=False)
     def test_deallocate_fixed_without_dhcp(self, mock_dev_exists):
         self._deallocate_fixed_with_dhcp(mock_dev_exists)
 

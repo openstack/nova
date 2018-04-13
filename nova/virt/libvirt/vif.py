@@ -31,9 +31,9 @@ import nova.conf
 from nova import exception
 from nova.i18n import _
 from nova.network import linux_net
+from nova.network import linux_utils as linux_net_utils
 from nova.network import model as network_model
 from nova.network import os_vif_util
-from nova.network import utils as net_utils
 from nova import objects
 from nova import profiler
 from nova import utils
@@ -591,16 +591,16 @@ class LibvirtGenericVIFDriver(object):
         br_name = self.get_br_name(vif['id'])
         v1_name, v2_name = self.get_veth_pair_names(vif['id'])
 
-        if not net_utils.device_exists(br_name):
+        if not linux_net_utils.device_exists(br_name):
             nova.privsep.libvirt.add_bridge(br_name)
             nova.privsep.libvirt.zero_bridge_forward_delay(br_name)
             nova.privsep.libvirt.disable_bridge_stp(br_name)
             nova.privsep.libvirt.disable_multicast_snooping(br_name)
             nova.privsep.libvirt.disable_ipv6(br_name)
 
-        if not net_utils.device_exists(v2_name):
+        if not linux_net_utils.device_exists(v2_name):
             mtu = vif['network'].get_meta('mtu')
-            net_utils.create_veth_pair(v1_name, v2_name, mtu)
+            linux_net_utils.create_veth_pair(v1_name, v2_name, mtu)
             nova.privsep.libvirt.toggle_interface(br_name, 'up')
             nova.privsep.libvirt.bridge_add_interface(br_name, v1_name)
             linux_net.create_ivs_vif_port(v2_name, iface_id,
@@ -701,7 +701,7 @@ class LibvirtGenericVIFDriver(object):
         linux_net.create_tap_dev(dev, mac)
         network = vif.get('network')
         mtu = network.get_meta('mtu') if network else None
-        net_utils.set_device_mtu(dev, mtu)
+        linux_net_utils.set_device_mtu(dev, mtu)
 
     def plug_vhostuser(self, instance, vif):
         pass
@@ -864,7 +864,7 @@ class LibvirtGenericVIFDriver(object):
         port_id = vif['id']
         try:
             nova.privsep.libvirt.unplug_midonet_vif(port_id)
-            net_utils.delete_net_dev(dev)
+            linux_net_utils.delete_net_dev(dev)
         except processutils.ProcessExecutionError:
             LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
@@ -872,7 +872,7 @@ class LibvirtGenericVIFDriver(object):
         """Unplug a VIF_TYPE_TAP virtual interface."""
         dev = self.get_vif_devname(vif)
         try:
-            net_utils.delete_net_dev(dev)
+            linux_net_utils.delete_net_dev(dev)
         except processutils.ProcessExecutionError:
             LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
@@ -885,7 +885,7 @@ class LibvirtGenericVIFDriver(object):
         dev = self.get_vif_devname(vif)
         try:
             nova.privsep.libvirt.unplug_plumgrid_vif(dev)
-            net_utils.delete_net_dev(dev)
+            linux_net_utils.delete_net_dev(dev)
         except processutils.ProcessExecutionError:
             LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
@@ -901,7 +901,7 @@ class LibvirtGenericVIFDriver(object):
         port_id = vif['id']
         try:
             nova.privsep.libvirt.unplug_contrail_vif(port_id)
-            net_utils.delete_net_dev(dev)
+            linux_net_utils.delete_net_dev(dev)
         except processutils.ProcessExecutionError:
             LOG.exception(_("Failed while unplugging vif"), instance=instance)
 
