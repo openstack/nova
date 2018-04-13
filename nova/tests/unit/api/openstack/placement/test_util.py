@@ -23,7 +23,6 @@ from oslo_utils import timeutils
 import webob
 
 import six
-import six.moves.urllib.parse as urlparse
 
 from nova.api.openstack.placement import lib as pl
 from nova.api.openstack.placement import microversion
@@ -427,15 +426,21 @@ class TestNormalizeTraitsQsParam(test.NoDBTestCase):
                               util.normalize_traits_qs_param, fmt % traits)
 
 
-class TestParseQsResourcesAndTraits(test.NoDBTestCase):
+class TestParseQsRequestGroups(test.NoDBTestCase):
 
     @staticmethod
-    def do_parse(qstring, allow_forbidden=False):
+    def do_parse(qstring, version=(1, 18)):
         """Converts a querystring to a MultiDict, mimicking request.GET, and
         runs parse_qs_request_groups on it.
         """
-        return util.parse_qs_request_groups(webob.multidict.MultiDict(
-            urlparse.parse_qsl(qstring)), allow_forbidden=allow_forbidden)
+        req = webob.Request.blank('?' + qstring)
+        mv_parsed = microversion_parse.Version(*version)
+        mv_parsed.max_version = microversion_parse.parse_version_string(
+            microversion.max_version_string())
+        mv_parsed.min_version = microversion_parse.parse_version_string(
+            microversion.min_version_string())
+        req.environ['placement.microversion'] = mv_parsed
+        return util.parse_qs_request_groups(req)
 
     def assertRequestGroupsEqual(self, expected, observed):
         self.assertEqual(len(expected), len(observed))
@@ -463,6 +468,59 @@ class TestParseQsResourcesAndTraits(test.NoDBTestCase):
             ),
         ]
         self.assertRequestGroupsEqual(expected, self.do_parse(qs))
+
+    def test_member_of_single_agg(self):
+        """Unnumbered resources with one member_of query param."""
+        agg1_uuid = uuidsentinel.agg1
+        qs = ('resources=VCPU:2,MEMORY_MB:2048'
+              '&member_of=%s' % agg1_uuid)
+        expected = [
+            pl.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    'VCPU': 2,
+                    'MEMORY_MB': 2048,
+                },
+                member_of=[
+                    set([agg1_uuid])
+                ]
+            ),
+        ]
+        self.assertRequestGroupsEqual(expected, self.do_parse(qs))
+
+    def test_member_of_multiple_aggs_prior_microversion(self):
+        """Unnumbered resources with multiple member_of query params before the
+        supported microversion should raise a 400.
+        """
+        agg1_uuid = uuidsentinel.agg1
+        agg2_uuid = uuidsentinel.agg2
+        qs = ('resources=VCPU:2,MEMORY_MB:2048'
+              '&member_of=%s'
+              '&member_of=%s' % (agg1_uuid, agg2_uuid))
+        self.assertRaises(webob.exc.HTTPBadRequest, self.do_parse, qs)
+
+    def test_member_of_multiple_aggs(self):
+        """Unnumbered resources with multiple member_of query params."""
+        agg1_uuid = uuidsentinel.agg1
+        agg2_uuid = uuidsentinel.agg2
+        qs = ('resources=VCPU:2,MEMORY_MB:2048'
+              '&member_of=%s'
+              '&member_of=%s' % (agg1_uuid, agg2_uuid))
+        expected = [
+            pl.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    'VCPU': 2,
+                    'MEMORY_MB': 2048,
+                },
+                member_of=[
+                    set([agg1_uuid]),
+                    set([agg2_uuid])
+                ]
+            ),
+        ]
+        self.assertRequestGroupsEqual(
+            expected, self.do_parse(qs, version=(1, 24)))
 
     def test_unnumbered_resources_only(self):
         """Validate the bit that can be used for 1.10 and earlier."""
@@ -566,6 +624,40 @@ class TestParseQsResourcesAndTraits(test.NoDBTestCase):
         ]
         self.assertRequestGroupsEqual(expected, self.do_parse(qs))
 
+    def test_member_of_multiple_aggs_numbered(self):
+        """Numbered resources with multiple member_of query params."""
+        agg1_uuid = uuidsentinel.agg1
+        agg2_uuid = uuidsentinel.agg2
+        agg3_uuid = uuidsentinel.agg3
+        agg4_uuid = uuidsentinel.agg4
+        qs = ('resources1=VCPU:2'
+              '&member_of1=%s'
+              '&member_of1=%s'
+              '&resources2=VCPU:2'
+              '&member_of2=in:%s,%s' % (
+                  agg1_uuid, agg2_uuid, agg3_uuid, agg4_uuid))
+        expected = [
+            pl.RequestGroup(
+                resources={
+                    'VCPU': 2,
+                },
+                member_of=[
+                    set([agg1_uuid]),
+                    set([agg2_uuid])
+                ]
+            ),
+            pl.RequestGroup(
+                resources={
+                    'VCPU': 2,
+                },
+                member_of=[
+                    set([agg3_uuid, agg4_uuid]),
+                ]
+            ),
+        ]
+        self.assertRequestGroupsEqual(
+            expected, self.do_parse(qs, version=(1, 24)))
+
     def test_400_malformed_resources(self):
         # Somewhat duplicates TestNormalizeResourceQsParam.test_400*.
         qs = ('resources=VCPU:0,MEMORY_MB:4096,DISK_GB:10'
@@ -617,6 +709,13 @@ class TestParseQsResourcesAndTraits(test.NoDBTestCase):
               '&resources3=CUSTOM_MAGIC:123')
         self.assertRaises(webob.exc.HTTPBadRequest, self.do_parse, qs)
 
+    def test_400_member_of_no_resources_numbered(self):
+        agg1_uuid = uuidsentinel.agg1
+        qs = ('resources=VCPU:7,MEMORY_MB:4096,DISK_GB:10'
+              '&required=HW_CPU_X86_VMX,CUSTOM_MEM_FLASH,STORAGE_DISK_SSD'
+              '&member_of2=%s' % agg1_uuid)
+        self.assertRaises(webob.exc.HTTPBadRequest, self.do_parse, qs)
+
     def test_forbidden_one_group(self):
         """When forbidden are allowed this will parse, but otherwise will
         indicate an invalid trait.
@@ -645,7 +744,7 @@ class TestParseQsResourcesAndTraits(test.NoDBTestCase):
         exc = self.assertRaises(webob.exc.HTTPBadRequest, self.do_parse, qs)
         self.assertEqual(expected_message, six.text_type(exc))
         self.assertRequestGroupsEqual(
-            expected_forbidden, self.do_parse(qs, allow_forbidden=True))
+            expected_forbidden, self.do_parse(qs, version=(1, 22)))
 
     def test_forbidden_conflict(self):
         qs = ('resources=VCPU:2,MEMORY_MB:2048'
@@ -656,7 +755,7 @@ class TestParseQsResourcesAndTraits(test.NoDBTestCase):
             'in the following traits keys: required: (CUSTOM_PHYSNET1)')
 
         exc = self.assertRaises(webob.exc.HTTPBadRequest, self.do_parse, qs,
-            allow_forbidden=True)
+            version=(1, 22))
         self.assertEqual(expected_message, six.text_type(exc))
 
     def test_forbidden_two_groups(self):
@@ -684,7 +783,7 @@ class TestParseQsResourcesAndTraits(test.NoDBTestCase):
         ]
 
         self.assertRequestGroupsEqual(
-            expected, self.do_parse(qs, allow_forbidden=True))
+            expected, self.do_parse(qs, version=(1, 22)))
 
     def test_forbidden_separate_groups_no_conflict(self):
         qs = ('resources1=CUSTOM_MAGIC:1&required1=CUSTOM_PHYSNET1'
@@ -711,7 +810,7 @@ class TestParseQsResourcesAndTraits(test.NoDBTestCase):
         ]
 
         self.assertRequestGroupsEqual(
-            expected, self.do_parse(qs, allow_forbidden=True))
+            expected, self.do_parse(qs, version=(1, 22)))
 
 
 class TestPickLastModified(test.NoDBTestCase):

@@ -196,13 +196,16 @@ def list_resource_providers(req):
     util.validate_query_params(req, schema)
 
     filters = {}
-    qpkeys = ('uuid', 'name', 'member_of', 'in_tree', 'resources', 'required')
+    # special handling of member_of qparam since we allow multiple member_of
+    # params at microversion 1.24.
+    if 'member_of' in req.GET:
+        filters['member_of'] = util.normalize_member_of_qs_params(req)
+
+    qpkeys = ('uuid', 'name', 'in_tree', 'resources', 'required')
     for attr in qpkeys:
         if attr in req.GET:
             value = req.GET[attr]
-            if attr == 'member_of':
-                value = util.normalize_member_of_qs_param(value)
-            elif attr == 'resources':
+            if attr == 'resources':
                 value = util.normalize_resources_qs_param(value)
             elif attr == 'required':
                 value = util.normalize_traits_qs_param(

@@ -1,0 +1,20 @@
+---
+features:
+  - |
+    A new 1.24 placement API microversion adds the ability to specify multiple
+    `member_of` query parameters for the `GET /resource_providers` and `GET
+    allocation_candidates` endpoints.
+    When multiple `member_of` query parameters are received, the placement
+    service will return resource providers that match all of the requested
+    aggregate memberships. The `member_of=in:<agg uuids>` format is still
+    supported and continues to indicate an IN() operation for aggregate
+    membership. Some examples for using the new functionality:
+    Get all providers that are associated with BOTH agg1 and agg2:
+    ?member_of=agg1&member_of=agg2
+    Get all providers that are associated with agg1 OR agg2:
+    ?member_of=in:agg1,agg2
+    Get all providers that are associated with agg1 and ANY OF (agg2, agg3):
+    ?member_of=agg1&member_of=in:agg2,agg3
+    Get all providers that are associated with ANY OF (agg1, agg2) AND are also
+    associated with ANY OF (agg3, agg4):
+    ?member_of=in:agg1,agg2&member_of=in:agg3,agg4

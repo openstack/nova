@@ -347,17 +347,39 @@ def normalize_traits_qs_param(val, allow_forbidden=False):
     return ret
 
 
-def normalize_member_of_qs_param(value):
-    """We need to handle member_of as a special case to always make its value a
-    list, either by accepting the single value, or if it starts with 'in:'
-    splitting on ','.
+def normalize_member_of_qs_params(req, suffix=''):
+    """Given a webob.Request object, validate that the member_of querystring
+    parameters are correct. We begin supporting multiple member_of params in
+    microversion 1.24.
 
-    NOTE(cdent): This will all change when we start using
-    JSONSchema validation of query params.
+    :param req: webob.Request object
+    :return: A list containing sets of UUIDs of aggregates to filter on
+    :raises `webob.exc.HTTPBadRequest` if the microversion requested is <1.24
+            and the request contains multiple member_of querystring params
+    :raises `webob.exc.HTTPBadRequest` if the val parameter is not in the
+            expected format.
+    """
+    microversion = nova.api.openstack.placement.microversion
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
+    multi_member_of = want_version.matches((1, 24))
+    if not multi_member_of and len(req.GET.getall('member_of' + suffix)) > 1:
+        raise webob.exc.HTTPBadRequest(
+            _('Multiple member_of%s parameters are not supported') % suffix)
+    values = []
+    for value in req.GET.getall('member_of' + suffix):
+        values.append(normalize_member_of_qs_param(value))
+    return values
+
+
+def normalize_member_of_qs_param(value):
+    """Parse a member_of query string parameter value.
+
+    Valid values are either a single UUID, or the prefix 'in:' followed by two
+    or more comma-separated UUIDs.
 
     :param value: A member_of query parameter of either a single UUID, or a
-                  comma-separated string of one or more UUIDs, prefixed with
-                  the "in:" operator.
+                  comma-separated string of two or more UUIDs, prefixed with
+                  the "in:" operator
     :return: A set of UUIDs
     :raises `webob.exc.HTTPBadRequest` if the value parameter is not in the
             expected format.
@@ -374,12 +396,12 @@ def normalize_member_of_qs_param(value):
     for aggr_uuid in value:
         if not uuidutils.is_uuid_like(aggr_uuid):
             msg = _("Invalid query string parameters: Expected 'member_of' "
-                    "parameter to contain valid UUID(s). Got: %s") % value
+                    "parameter to contain valid UUID(s). Got: %s") % aggr_uuid
             raise webob.exc.HTTPBadRequest(msg)
     return value
 
 
-def parse_qs_request_groups(qsdict, allow_forbidden=False):
+def parse_qs_request_groups(req):
     """Parse numbered resources, traits, and member_of groupings out of a
     querystring dict.
 
@@ -455,12 +477,15 @@ def parse_qs_request_groups(qsdict, allow_forbidden=False):
       ),
     ]
 
-    :param qsdict: The MultiDict representing the querystring on a GET.
-    :param allow_forbidden: If True, parse for forbidden traits.
+    :param req: webob.Request object
     :return: A list of RequestGroup instances.
     :raises `webob.exc.HTTPBadRequest` if any value is malformed, or if a
             trait list is given without corresponding resources.
     """
+    microversion = nova.api.openstack.placement.microversion
+    want_version = req.environ[microversion.MICROVERSION_ENVIRON]
+    # Control whether we handle forbidden traits.
+    allow_forbidden = want_version.matches((1, 22))
     # Temporary dict of the form: { suffix: RequestGroup }
     by_suffix = {}
 
@@ -470,21 +495,31 @@ def parse_qs_request_groups(qsdict, allow_forbidden=False):
             by_suffix[suffix] = rq_grp
         return by_suffix[suffix]
 
-    for key, val in qsdict.items():
+    for key, val in req.GET.items():
         match = _QS_KEY_PATTERN.match(key)
         if not match:
             continue
         # `prefix` is 'resources', 'required', or 'member_of'
         # `suffix` is an integer string, or None
         prefix, suffix = match.groups()
-        request_group = get_request_group(suffix or '')
+        suffix = suffix or ''
+        request_group = get_request_group(suffix)
         if prefix == _QS_RESOURCES:
             request_group.resources = normalize_resources_qs_param(val)
         elif prefix == _QS_REQUIRED:
             request_group.required_traits = normalize_traits_qs_param(
                 val, allow_forbidden=allow_forbidden)
         elif prefix == _QS_MEMBER_OF:
-            request_group.member_of = normalize_member_of_qs_param(val)
+            # special handling of member_of qparam since we allow multiple
+            # member_of params at microversion 1.24.
+            # NOTE(jaypipes): Yes, this is inefficient to do this when there
+            # are multiple member_of query parameters, but we do this so we can
+            # error out if someone passes an "orphaned" member_of request
+            # group.
+            # TODO(jaypipes): Do validation of query parameters using
+            # JSONSchema
+            request_group.member_of = normalize_member_of_qs_params(
+                req, suffix)
 
     # Ensure any group with 'required' or 'member_of' also has 'resources'.
     orphans = [('required%s' % suff) for suff, group in by_suffix.items()

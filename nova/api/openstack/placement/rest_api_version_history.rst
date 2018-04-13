@@ -280,3 +280,15 @@ that identifies the type of this error. This can be used to distinguish errors
 that are different but use the same HTTP status code. Any error response which
 does not specifically define a code will have the code
 ``placement.undefined_code``.
+
+1.24 Support multiple ?member_of queryparams
+--------------------------------------------
+
+Add support for specifying multiple ``member_of`` query parameters to the ``GET
+/resource_providers`` API. When multiple ``member_of`` query parameters are
+found, they are AND'd together in the final query. For example, issuing a
+request for ``GET /resource_providers?member_of=agg1&member_of=agg2`` means get
+the resource providers that are associated with BOTH agg1 and agg2. Issuing a
+request for ``GET /resource_providers?member_of=in:agg1,agg2&member_of=agg3``
+means get the resource providers that are associated with agg3 and are also
+associated with *any of* (agg1, agg2).

@@ -373,7 +373,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         rps = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx,
             filters={
-                'member_of': [uuidsentinel.agg],
+                'member_of': [[uuidsentinel.agg]],
                 'in_tree': uuidsentinel.grandchild_rp,
             }
         )
@@ -1105,7 +1105,7 @@ class ResourceProviderListTestCase(ResourceProviderBaseCase):
                 rp.set_aggregates(aggregate_uuids)
 
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
-            self.ctx, filters={'member_of': [uuidsentinel.agg_a]})
+            self.ctx, filters={'member_of': [[uuidsentinel.agg_a]]})
 
         self.assertEqual(2, len(resource_providers))
         names = [_rp.name for _rp in resource_providers]
@@ -1116,24 +1116,24 @@ class ResourceProviderListTestCase(ResourceProviderBaseCase):
 
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx, filters={'member_of':
-                                   [uuidsentinel.agg_a, uuidsentinel.agg_b]})
+                                   [[uuidsentinel.agg_a, uuidsentinel.agg_b]]})
         self.assertEqual(2, len(resource_providers))
 
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx, filters={'member_of':
-                                   [uuidsentinel.agg_a, uuidsentinel.agg_b],
+                                   [[uuidsentinel.agg_a, uuidsentinel.agg_b]],
                                    'name': u'rp_name_1'})
         self.assertEqual(1, len(resource_providers))
 
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx, filters={'member_of':
-                                   [uuidsentinel.agg_a, uuidsentinel.agg_b],
+                                   [[uuidsentinel.agg_a, uuidsentinel.agg_b]],
                                    'name': u'barnabas'})
         self.assertEqual(0, len(resource_providers))
 
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx, filters={'member_of':
-                                   [uuidsentinel.agg_1, uuidsentinel.agg_2]})
+                                   [[uuidsentinel.agg_1, uuidsentinel.agg_2]]})
         self.assertEqual(0, len(resource_providers))
 
     def test_get_all_by_required(self):

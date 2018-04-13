@@ -220,11 +220,7 @@ def list_allocation_candidates(req):
         get_schema = schema.GET_SCHEMA_1_16
     util.validate_query_params(req, get_schema)
 
-    # Control whether we handle forbidden traits.
-    allow_forbidden = want_version.matches((1, 22))
-
-    requests = util.parse_qs_request_groups(
-        req.GET, allow_forbidden=allow_forbidden)
+    requests = util.parse_qs_request_groups(req)
     limit = req.GET.getall('limit')
     # JSONschema has already confirmed that limit has the form
     # of an integer.

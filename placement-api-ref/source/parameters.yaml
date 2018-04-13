@@ -74,6 +74,15 @@ member_of: &member_of
 
         member_of=5e08ea53-c4c6-448e-9334-ac4953de3cfa
         member_of=in:42896e0d-205d-4fe3-bd1e-100924931787,5e08ea53-c4c6-448e-9334-ac4953de3cfa
+
+    **Starting from microversion 1.24** specifying multiple ``member_of`` query
+    string parameters is possible. Multiple ``member_of`` parameters will
+    result in filtering providers that are associated with aggregates listed in
+    all of the ``member_of`` query string values. For example, to get the
+    providers that are associated with aggregate A as well as associated with
+    any of aggregates B or C, the user could issue the following query::
+
+        member_of=AGGA_UUID&member_of=in:AGGB_UUID,AGGC_UUID
   min_version: 1.3
 member_of_1_21:
   <<: *member_of
