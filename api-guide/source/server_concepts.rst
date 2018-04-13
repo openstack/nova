@@ -890,7 +890,11 @@ address (169.254.169.254). For more details, see
 Config Drive
 ------------
 
-TODO
+Nova is able to write metadata to a special configuration drive that attaches
+to the server when it boots. The server can mount this drive and read files
+from it to get information that is normally available through the metadata
+service. For more details, see
+`Config Drive <https://docs.openstack.org/nova/latest/user/config-drive.html>`_.
 
 User data
 ---------
