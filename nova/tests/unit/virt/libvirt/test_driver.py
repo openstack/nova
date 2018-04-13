@@ -15943,10 +15943,23 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_swap_volume_native_luks_blocked(self, mock_use_native_luks,
                                              mock_get_encryption):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
-        mock_get_encryption.return_value = {'provider': 'luks'}
         mock_use_native_luks.return_value = True
+
+        # dest volume is encrypted
+        mock_get_encryption.side_effect = [{}, {'provider': 'luks'}]
         self.assertRaises(NotImplementedError, drvr.swap_volume, self.context,
-                         {}, {}, None, None, None)
+                            {}, {}, None, None, None)
+
+        # src volume is encrypted
+        mock_get_encryption.side_effect = [{'provider': 'luks'}, {}]
+        self.assertRaises(NotImplementedError, drvr.swap_volume, self.context,
+                            {}, {}, None, None, None)
+
+        # both volumes are encrypted
+        mock_get_encryption.side_effect = [{'provider': 'luks'},
+                                           {'provider': 'luks'}]
+        self.assertRaises(NotImplementedError, drvr.swap_volume, self.context,
+                            {}, {}, None, None, None)
 
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete',
                 return_value=True)
