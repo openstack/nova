@@ -24,11 +24,13 @@ import traceback
 
 import netifaces
 from oslo_log import log
+from oslo_serialization import jsonutils
 import six
 
 from nova import block_device
 from nova.compute import power_state
 from nova.compute import task_states
+from nova.compute import vm_states
 import nova.conf
 from nova import exception
 from nova import notifications
@@ -939,6 +941,59 @@ def remove_shelved_keys_from_system_metadata(instance):
     for key in ['shelved_at', 'shelved_image_id', 'shelved_host']:
         if key in instance.system_metadata:
             del (instance.system_metadata[key])
+
+
+def may_have_ports_or_volumes(instance):
+    """Checks to see if an instance may have ports or volumes based on vm_state
+
+    This is primarily only useful when instance.host is None.
+
+    :param instance: The nova.objects.Instance in question.
+    :returns: True if the instance may have ports of volumes, False otherwise
+    """
+    # NOTE(melwitt): When an instance build fails in the compute manager,
+    # the instance host and node are set to None and the vm_state is set
+    # to ERROR. In the case, the instance with host = None has actually
+    # been scheduled and may have ports and/or volumes allocated on the
+    # compute node.
+    if instance.vm_state in (vm_states.SHELVED_OFFLOADED, vm_states.ERROR):
+        return True
+    return False
+
+
+def get_stashed_volume_connector(bdm, instance):
+    """Lookup a connector dict from the bdm.connection_info if set
+
+    Gets the stashed connector dict out of the bdm.connection_info if set
+    and the connector host matches the instance host.
+
+    :param bdm: nova.objects.block_device.BlockDeviceMapping
+    :param instance: nova.objects.instance.Instance
+    :returns: volume connector dict or None
+    """
+    if 'connection_info' in bdm and bdm.connection_info is not None:
+        # NOTE(mriedem): We didn't start stashing the connector in the
+        # bdm.connection_info until Mitaka so it might not be there on old
+        # attachments. Also, if the volume was attached when the instance
+        # was in shelved_offloaded state and it hasn't been unshelved yet
+        # we don't have the attachment/connection information either.
+        connector = jsonutils.loads(bdm.connection_info).get('connector')
+        if connector:
+            if connector.get('host') == instance.host:
+                return connector
+            LOG.debug('Found stashed volume connector for instance but '
+                      'connector host %(connector_host)s does not match '
+                      'the instance host %(instance_host)s.',
+                      {'connector_host': connector.get('host'),
+                       'instance_host': instance.host}, instance=instance)
+            if (instance.host is None and
+                    may_have_ports_or_volumes(instance)):
+                LOG.debug('Allowing use of stashed volume connector with '
+                          'instance host None because instance with '
+                          'vm_state %(vm_state)s has been scheduled in '
+                          'the past.', {'vm_state': instance.vm_state},
+                          instance=instance)
+                return connector
 
 
 class EventReporter(object):
