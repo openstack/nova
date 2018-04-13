@@ -1257,6 +1257,15 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
             return self.placement_api.get(
                 '/allocations/%s' % server_uuid).body['allocations']
 
+        def _set_provider_inventory(rp_uuid, resource_class, inventory):
+            # Get the resource provider generation for the inventory update.
+            rp = self.placement_api.get(
+                '/resource_providers/%s' % rp_uuid).body
+            inventory['resource_provider_generation'] = rp['generation']
+            return self.placement_api.put(
+                '/resource_providers/%s/inventories/%s' %
+                (rp_uuid, resource_class), inventory).body
+
         def assertFlavorMatchesAllocation(flavor, allocation):
             self.assertEqual(flavor['vcpus'], allocation['VCPU'])
             self.assertEqual(flavor['ram'], allocation['MEMORY_MB'])
@@ -1284,6 +1293,9 @@ class ServerRebuildTestCase(integrated_helpers._IntegratedTestBase,
         self._wait_for_state_change(self.api, server, 'ACTIVE')
 
         flavor = self.api.api_get('/flavors/1').body['flavor']
+
+        # make the compute node full and ensure rebuild still succeed
+        _set_provider_inventory(rp_uuid, "VCPU", {"total": 1})
 
         # There should be usage for the server on the compute node now.
         rp_usages = _get_provider_usages(rp_uuid)
