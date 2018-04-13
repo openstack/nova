@@ -13,6 +13,7 @@
 #    under the License.
 
 from oslo_utils import timeutils
+from oslo_utils import versionutils
 
 from nova import db
 from nova import objects
@@ -120,7 +121,8 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject,
                           base.NovaObjectDictCompat):
     # Version 1.0: Initial version
     # Version 1.1: event_finish_with_failure decorated with serialize_args
-    VERSION = '1.1'
+    # Version 1.2: Add 'host' field
+    VERSION = '1.2'
     fields = {
         'id': fields.IntegerField(),
         'event': fields.StringField(nullable=True),
@@ -129,7 +131,13 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject,
         'finish_time': fields.DateTimeField(nullable=True),
         'result': fields.StringField(nullable=True),
         'traceback': fields.StringField(nullable=True),
+        'host': fields.StringField(nullable=True),
         }
+
+    def obj_make_compatible(self, primitive, target_version):
+        target_version = versionutils.convert_version_to_tuple(target_version)
+        if target_version < (1, 2) and 'host' in primitive:
+            del primitive['host']
 
     @staticmethod
     def _from_db_object(context, event, db_event):
@@ -140,11 +148,13 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject,
         return event
 
     @staticmethod
-    def pack_action_event_start(context, instance_uuid, event_name):
+    def pack_action_event_start(context, instance_uuid, event_name,
+                                host=None):
         values = {'event': event_name,
                   'instance_uuid': instance_uuid,
                   'request_id': context.request_id,
-                  'start_time': timeutils.utcnow()}
+                  'start_time': timeutils.utcnow(),
+                  'host': host}
         return values
 
     @staticmethod
@@ -168,9 +178,10 @@ class InstanceActionEvent(base.NovaPersistentObject, base.NovaObject,
         return cls._from_db_object(context, cls(), db_event)
 
     @base.remotable_classmethod
-    def event_start(cls, context, instance_uuid, event_name, want_result=True):
+    def event_start(cls, context, instance_uuid, event_name, want_result=True,
+                    host=None):
         values = cls.pack_action_event_start(context, instance_uuid,
-                                             event_name)
+                                             event_name, host=host)
         db_event = db.action_event_start(context, values)
         if want_result:
             return cls._from_db_object(context, cls(), db_event)

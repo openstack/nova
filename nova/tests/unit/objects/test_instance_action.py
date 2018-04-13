@@ -54,6 +54,7 @@ fake_event = {
     'finish_time': None,
     'result': 'fake-result',
     'traceback': 'fake-tb',
+    'host': 'fake-host',
 }
 
 

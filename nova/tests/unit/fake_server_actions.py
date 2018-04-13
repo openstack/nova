@@ -70,6 +70,7 @@ FAKE_EVENTS = {
                        'updated_at': None,
                        'deleted_at': None,
                        'deleted': False,
+                       'host': 'host1'
                       },
                       {'id': 2,
                        'action_id': FAKE_ACTION_ID1,
@@ -84,6 +85,7 @@ FAKE_EVENTS = {
                        'updated_at': None,
                        'deleted_at': None,
                        'deleted': False,
+                       'host': 'host1'
                        }
     ],
     FAKE_ACTION_ID2: [{'id': 3,
@@ -99,6 +101,7 @@ FAKE_EVENTS = {
                        'updated_at': None,
                        'deleted_at': None,
                        'deleted': False,
+                       'host': 'host2'
                        }
    ]
 }
