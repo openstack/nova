@@ -1,0 +1,18 @@
+---
+features:
+  - |
+    Exposes flavor extra_specs in the flavor representation since microversion
+    2.61. Flavor extra_specs will be included in Response body of the
+    following APIs:
+
+    * ``GET /flavors/detail``
+    * ``GET /flavors/{flavor_id}``
+    * ``POST /flavors``
+    * ``PUT /flavors/{flavor_id}``
+
+    Now users can see the flavor extra-specs in flavor APIs response and do
+    not need to call ``GET /flavors/{flavor_id}/os-extra_specs`` API. The
+    visibility of the flavor extra_specs within the flavor resource will be
+    controlled by the same policy rules as are used for showing the flavor
+    extra_specs. If the user has no access to query extra_specs, the
+    ``flavor.extra_specs`` will not be included.

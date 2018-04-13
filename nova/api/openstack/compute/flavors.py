@@ -26,6 +26,7 @@ from nova.compute import flavors
 from nova import exception
 from nova.i18n import _
 from nova import objects
+from nova.policies import flavor_extra_specs as fes_policies
 from nova import utils
 
 ALIAS = 'flavors'
@@ -47,9 +48,16 @@ class FlavorsController(wsgi.Controller):
     @wsgi.expected_errors(400)
     def detail(self, req):
         """Return all flavors in detail."""
+        context = req.environ['nova.context']
         limited_flavors = self._get_flavors(req)
         req.cache_db_flavors(limited_flavors)
-        return self._view_builder.detail(req, limited_flavors)
+        include_extra_specs = False
+        if api_version_request.is_supported(
+                req, flavors_view.FLAVOR_EXTRA_SPECS_MICROVERSION):
+            include_extra_specs = context.can(
+                fes_policies.POLICY_ROOT % 'index', fatal=False)
+        return self._view_builder.detail(
+            req, limited_flavors, include_extra_specs=include_extra_specs)
 
     @wsgi.expected_errors(404)
     def show(self, req, id):
@@ -61,9 +69,16 @@ class FlavorsController(wsgi.Controller):
         except exception.FlavorNotFound as e:
             raise webob.exc.HTTPNotFound(explanation=e.format_message())
 
+        include_extra_specs = False
+        if api_version_request.is_supported(
+                req, flavors_view.FLAVOR_EXTRA_SPECS_MICROVERSION):
+            include_extra_specs = context.can(
+                fes_policies.POLICY_ROOT % 'index', fatal=False)
         include_description = api_version_request.is_supported(
             req, flavors_view.FLAVOR_DESCRIPTION_MICROVERSION)
-        return self._view_builder.show(req, flavor, include_description)
+        return self._view_builder.show(
+            req, flavor, include_description=include_description,
+            include_extra_specs=include_extra_specs)
 
     def _parse_is_public(self, is_public):
         """Parse is_public into something usable."""

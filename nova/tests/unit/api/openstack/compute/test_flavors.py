@@ -52,6 +52,8 @@ class FlavorsTestV21(test.TestCase):
     microversion = '2.1'
     # Flag to tell the test if a description should be expected in a response.
     expect_description = False
+    # Flag to tell the test if a extra_specs should be expected in a response.
+    expect_extra_specs = False
 
     def setUp(self):
         super(FlavorsTestV21, self).setUp()
@@ -73,6 +75,8 @@ class FlavorsTestV21(test.TestCase):
         expected['swap'] = flavor.swap
         if self.expect_description:
             expected['description'] = flavor.description
+        if self.expect_extra_specs:
+            expected['extra_specs'] = flavor.extra_specs
 
     @mock.patch('nova.objects.Flavor.get_by_flavor_id',
                 side_effect=return_flavor_not_found)
@@ -767,6 +771,12 @@ class FlavorsTestV2_55(FlavorsTestV21):
     """Run the same tests as we would for v2.1 but with a description."""
     microversion = '2.55'
     expect_description = True
+
+
+class FlavorsTestV2_61(FlavorsTestV2_55):
+    """Run the same tests as we would for v2.55 but with a extra_specs."""
+    microversion = '2.61'
+    expect_extra_specs = True
 
 
 class FlavorsPolicyEnforcementV21(test.NoDBTestCase):
