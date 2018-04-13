@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import contextlib
-
 from eventlet import greenthread
 import mock
 import os_xenapi
@@ -67,11 +65,6 @@ def get_fake_connection_data(sr_type):
                           'target_portal': u'localhost:3260',
                           'target_discovered': False}, }
     return fakes[sr_type]
-
-
-@contextlib.contextmanager
-def contextified(result):
-    yield result
 
 
 def _fake_noop(*args, **kwargs):
@@ -1181,18 +1174,8 @@ class GenerateEphemeralTestCase(VMUtilsTestBase):
                       'ephemeral', 1048576, None, 'ephemeral2')])
 
 
-class FakeFile(object):
-    def __init__(self):
-        self._file_operations = []
-
-    def seek(self, offset):
-        self._file_operations.append((self.seek, offset))
-
-
-@mock.patch.object(six.moves.builtins, 'open')
 @mock.patch.object(vm_utils, '_write_partition')
-@mock.patch.object(vm_utils.utils, 'temporary_chown',
-                   return_value=contextified(None))
+@mock.patch.object(vm_utils.utils, 'temporary_chown')
 @mock.patch.object(vm_utils.utils, 'make_dev_path', return_value='some_path')
 class StreamDiskTestCase(VMUtilsTestBase):
 
@@ -1203,35 +1186,37 @@ class StreamDiskTestCase(VMUtilsTestBase):
         self.image_service_func = mock.Mock()
 
     def test_non_ami(self, mock_make_dev_path, mock_temporary_chown,
-                     mock_write_partition, mock_open):
-        fake_file = FakeFile()
-        mock_open.return_value = contextified(fake_file)
+                     mock_write_partition):
+        mock_temporary_chown.return_value.__enter__.return_value = None
 
-        vm_utils._stream_disk("session", self.image_service_func,
-                              vm_utils.ImageType.KERNEL, None, 'dev')
+        mock_open = mock.mock_open()
+        with mock.patch.object(six.moves.builtins, 'open', mock_open):
+            vm_utils._stream_disk("session", self.image_service_func,
+                                  vm_utils.ImageType.KERNEL, None, 'dev')
 
-        self.assertEqual([(fake_file.seek, 0)], fake_file._file_operations)
         mock_make_dev_path.assert_called_once_with('dev')
         mock_temporary_chown.assert_called_once_with('some_path')
         mock_write_partition.assert_not_called()
         mock_open.assert_called_once_with('some_path', 'wb')
+        fake_file = mock_open()
+        fake_file.seek.assert_called_once_with(0)
         self.image_service_func.assert_called_once_with(fake_file)
 
     def test_ami_disk(self, mock_make_dev_path, mock_temporary_chown,
-                      mock_write_partition, mock_open):
-        fake_file = FakeFile()
-        mock_open.return_value = contextified(fake_file)
+                      mock_write_partition):
+        mock_temporary_chown.return_value.__enter__.return_value = None
 
-        vm_utils._stream_disk("session", self.image_service_func,
-                              vm_utils.ImageType.DISK, 100, 'dev')
+        mock_open = mock.mock_open()
+        with mock.patch.object(six.moves.builtins, 'open', mock_open):
+            vm_utils._stream_disk("session", self.image_service_func,
+                                  vm_utils.ImageType.DISK, 100, 'dev')
 
-        self.assertEqual(
-            [(fake_file.seek, vm_utils.MBR_SIZE_BYTES)],
-            fake_file._file_operations)
         mock_write_partition.assert_called_once_with("session", 100, 'dev')
         mock_make_dev_path.assert_called_once_with('dev')
         mock_temporary_chown.assert_called_once_with('some_path')
         mock_open.assert_called_once_with('some_path', 'wb')
+        fake_file = mock_open()
+        fake_file.seek.assert_called_once_with(vm_utils.MBR_SIZE_BYTES)
         self.image_service_func.assert_called_once_with(fake_file)
 
 
