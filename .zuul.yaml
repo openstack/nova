@@ -96,7 +96,6 @@
       Pike Ubuntu Cloud Archive because volume multiattach support with
       the libvirt driver only works with qemu<2.10 or libvirt>=3.10 which
       won't work with the Pike UCA.
-    branches: ^(?!stable/(newton|ocata|pike)).*$
     run: playbooks/legacy/nova-multiattach/run.yaml
     post-run: playbooks/legacy/nova-multiattach/post.yaml
     # TODO(mriedem): Make this job voting and gating once bug 1763382 is fixed.
