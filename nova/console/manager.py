@@ -101,7 +101,7 @@ class ConsoleProxyManager(manager.Manager):
         except exception.NotFound:
             # NOTE(mdragon): Right now, the only place this info exists is the
             #                compute worker's flagfile, at least for
-            #                xenserver. Thus we ned to ask.
+            #                xenserver. Thus we need to ask.
             pool_info = self.compute_rpcapi.get_console_pool_info(context,
                         instance_host, console_type)
             pool_info['password'] = self.driver.fix_pool_password(
