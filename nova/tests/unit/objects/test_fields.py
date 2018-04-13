@@ -370,13 +370,8 @@ class TestResourceClass(TestString):
         py3.  Make sure normalize_name handles it properly.
         """
         name = u'Fu\xdfball'
-        if six.PY2:
-            self.assertEqual(u'CUSTOM_FU_BALL',
-                             rc_fields.ResourceClass.normalize_name(name))
-        else:
-            # TODO(efried): When bug #1762789 is resolved, remove this branch.
-            self.assertEqual(u'CUSTOM_FUSSBALL',
-                             rc_fields.ResourceClass.normalize_name(name))
+        self.assertEqual(u'CUSTOM_FU_BALL',
+                         rc_fields.ResourceClass.normalize_name(name))
 
 
 class TestInteger(TestField):
