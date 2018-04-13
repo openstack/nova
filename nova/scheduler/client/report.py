@@ -492,38 +492,16 @@ class SchedulerReportClient(object):
             return []
 
         aggs = ','.join(agg_uuids)
-        url = "/resource_providers?member_of=in:" + aggs
-        # First try microversion 1.18 with the `required` queryparam.
-        resp = self.get(
-            url + '&required=' + os_traits.MISC_SHARES_VIA_AGGREGATE,
-            version='1.18', global_request_id=context.global_id)
+        url = "/resource_providers?member_of=in:%s&required=%s" % (
+            aggs, os_traits.MISC_SHARES_VIA_AGGREGATE)
+        resp = self.get(url, version='1.18',
+                        global_request_id=context.global_id)
         if resp.status_code == 200:
             return resp.json()['resource_providers']
 
-        if resp.status_code == 406:
-            # TODO(efried): Remove this branch when placement minimum is 1.18
-            # Fall back to less efficient algorithm - we have to get traits
-            # for every provider in the aggregate to filter out non-sharing.
-            resp = self.get(
-                url, version='1.3', global_request_id=context.global_id)
-            if resp.status_code == 200:
-                rps = []
-                for rp in resp.json()['resource_providers']:
-                    traits = self._get_provider_traits(context, rp['uuid'])
-                    if os_traits.MISC_SHARES_VIA_AGGREGATE in traits:
-                        rps.append(rp)
-                return rps
-            # In this error case, the word 'sharing' isn't appropriate.
-            msg = _("[%(placement_req_id)s] Failed to retrieve resource "
-                    "providers associated with the following aggregates from "
-                    "placement API: %(aggs)s. Got %(status_code)d: "
-                    "%(err_text)s.")
-        else:
-            msg = _("[%(placement_req_id)s] Failed to retrieve sharing "
-                    "resource providers associated with the following "
-                    "aggregates from placement API: %(aggs)s. Got "
-                    "%(status_code)d: %(err_text)s.")
-
+        msg = _("[%(placement_req_id)s] Failed to retrieve sharing resource "
+                "providers associated with the following aggregates from "
+                "placement API: %(aggs)s. Got %(status_code)d: %(err_text)s.")
         args = {
             'aggs': aggs,
             'status_code': resp.status_code,
@@ -593,15 +571,6 @@ class SchedulerReportClient(object):
                          version=POST_RPS_RETURNS_PAYLOAD_API_VERSION,
                          global_request_id=context.global_id)
 
-        # TODO(efried): Remove this block when minimum placement
-        # version always returns new provider payload.
-        if resp.status_code == 406:
-            # Bug #1746075 cont'd: Otherwise, use the "silent" version and
-            # retrieve the newly-created provider via GET.
-            resp = self.post(
-                url, payload, version=NESTED_PROVIDER_API_VERSION,
-                global_request_id=context.global_id)
-
         placement_req_id = get_placement_request_id(resp)
 
         if resp:
@@ -614,12 +583,7 @@ class SchedulerReportClient(object):
                 'placement_req_id': placement_req_id,
             }
             LOG.info(msg, args)
-            if resp.status_code == 200:
-                return resp.json()
-            else:
-                # TODO(efried): Remove this branch when minimum placement
-                # version always returns new provider payload.
-                return self._get_resource_provider(context, uuid)
+            return resp.json()
 
         # TODO(efried): Push error codes from placement, and use 'em.
         name_conflict = 'Conflicting resource provider name:'
