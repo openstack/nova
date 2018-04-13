@@ -288,7 +288,7 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
 
     def test_conductor_host(self):
         self.assertTrue(hasattr(self.conductor_manager, 'host'))
-        self.assertEqual(self.conductor_manager.host, CONF.host)
+        self.assertEqual(CONF.host, self.conductor_manager.host)
 
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
