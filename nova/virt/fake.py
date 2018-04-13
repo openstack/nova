@@ -129,7 +129,8 @@ class FakeDriver(driver.ComputeDriver):
         "supports_tagged_attach_interface": True,
         "supports_tagged_attach_volume": True,
         "supports_extend_volume": True,
-        "supports_multiattach": True
+        "supports_multiattach": True,
+        "supports_trusted_certs": True,
         }
 
     # Since we don't have a real hypervisor, pretend we have lots of

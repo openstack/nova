@@ -763,6 +763,7 @@ def _create_test_instance():
         'vcpu_model': None,
         'host': 'fake-host',
         'task_state': None,
+        'trusted_certs': None
     }
 
 
@@ -853,6 +854,10 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                         'is invalid')
         self.assertFalse(drvr.requires_allocation_refresh,
                          'Driver does not need allocation refresh')
+        self.assertTrue(drvr.capabilities['supports_trusted_certs'],
+                        'Driver capabilities for '
+                        '\'supports_trusted_certs\' '
+                        'is invalid')
 
     def create_fake_libvirt_mock(self, **kwargs):
         """Defining mocks for LibvirtDriver(libvirt is not used)."""
@@ -11112,8 +11117,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         base_dir = os.path.join(CONF.instances_path,
                                 CONF.image_cache_subdirectory_name)
+        trusted_certs = objects.TrustedCerts(
+            ids=['0b5d2c72-12cc-4ba6-a8d7-3ff5cc1d8cb8',
+                 '674736e3-f25c-405c-8362-bbf991e0ce0a'])
         self.test_instance.update({'user_id': 'fake-user',
                                    'os_type': None,
+                                   'trusted_certs': trusted_certs,
                                    'kernel_id': uuids.kernel_id,
                                    'ramdisk_id': uuids.ramdisk_id,
                                    'project_id': 'fake-project'})
@@ -11154,9 +11163,12 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             fetch_image_mock.assert_has_calls([
                 mock.call(context=self.context,
                           target=backfile_path,
-                          image_id=self.test_instance['image_ref']),
-                mock.call(self.context, kernel_path, instance.kernel_id),
-                mock.call(self.context, ramdisk_path, instance.ramdisk_id)
+                          image_id=self.test_instance['image_ref'],
+                          trusted_certs=trusted_certs),
+                mock.call(self.context, kernel_path, instance.kernel_id,
+                          trusted_certs),
+                mock.call(self.context, ramdisk_path, instance.ramdisk_id,
+                          trusted_certs)
             ])
 
         mock_utime.assert_called()
@@ -11226,7 +11238,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
             fetch_image_mock.assert_called_once_with(
                 context=self.context, image_id=instance.image_ref,
-                target=root_backing)
+                target=root_backing, trusted_certs=instance.trusted_certs)
 
             verify_base_size_mock.assert_has_calls([
                 mock.call(root_backing, instance.flavor.root_gb * units.Gi),
@@ -17529,7 +17541,7 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
 
         # Attributes which we need to be set so they don't touch the db,
         # but it's not worth the effort to fake properly
-        for field in ['numa_topology', 'vcpu_model']:
+        for field in ['numa_topology', 'vcpu_model', 'trusted_certs']:
             setattr(instance, field, None)
 
         return instance

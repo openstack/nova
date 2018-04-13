@@ -66,7 +66,8 @@ class VMwareVCDriver(driver.ComputeDriver):
         "supports_recreate": False,
         "supports_migrate_to_same_host": True,
         "supports_attach_interface": True,
-        "supports_multiattach": False
+        "supports_multiattach": False,
+        "supports_trusted_certs": False,
     }
 
     # Legacy nodename is of the form: <mo id>(<cluster name>)
