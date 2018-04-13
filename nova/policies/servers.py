@@ -18,6 +18,7 @@ from nova.policies import base
 
 RULE_AOO = base.RULE_ADMIN_OR_OWNER
 SERVERS = 'os_compute_api:servers:%s'
+ZERO_DISK_FLAVOR = SERVERS % 'create:zero_disk_flavor'
 
 rules = [
     policy.RuleDefault(SERVERS % 'index', RULE_AOO),
@@ -33,6 +34,7 @@ rules = [
     policy.RuleDefault(SERVERS % 'create:forced_host', base.RULE_ADMIN_API),
     policy.RuleDefault(SERVERS % 'create:attach_volume', RULE_AOO),
     policy.RuleDefault(SERVERS % 'create:attach_network', RULE_AOO),
+    policy.RuleDefault(ZERO_DISK_FLAVOR, RULE_AOO),
     policy.RuleDefault(SERVERS % 'delete', RULE_AOO),
     policy.RuleDefault(SERVERS % 'update', RULE_AOO),
     policy.RuleDefault(SERVERS % 'confirm_resize', RULE_AOO),

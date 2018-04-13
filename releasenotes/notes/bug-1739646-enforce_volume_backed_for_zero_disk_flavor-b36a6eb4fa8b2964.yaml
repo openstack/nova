@@ -1,0 +1,20 @@
+---
+security:
+  - |
+    A new policy rule, ``os_compute_api:servers:create:zero_disk_flavor``, has
+    been introduced which defaults to ``rule:admin_or_owner`` for backward
+    compatibility, but can be configured to make the compute
+    API enforce that server create requests using a flavor with zero root disk
+    must be volume-backed or fail with a ``403 HTTPForbidden`` error.
+
+    Allowing image-backed servers with a zero root disk flavor can be
+    potentially hazardous if users are allowed to upload their own images,
+    since an instance created with a zero root disk flavor gets its size
+    from the image, which can be unexpectedly large and exhaust local disk
+    on the compute host. See https://bugs.launchpad.net/nova/+bug/1739646 for
+    more details.
+
+    While this is introduced in a backward-compatible way, the default will
+    be changed to ``rule:admin_api`` in a subsequent release. It is advised
+    that you communicate this change to your users before turning on
+    enforcement since it will result in a compute API behavior change.

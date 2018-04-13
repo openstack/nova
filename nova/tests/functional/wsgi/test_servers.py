@@ -10,8 +10,14 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import six
+
+from nova.policies import base as base_policies
+from nova.policies import servers as servers_policies
 from nova import test
 from nova.tests import fixtures as nova_fixtures
+from nova.tests.functional.api import client as api_client
+from nova.tests.functional import integrated_helpers
 from nova.tests.unit.image import fake as fake_image
 from nova.tests.unit import policy_fixture
 
@@ -176,3 +182,79 @@ class ServersPreSchedulingTestCase(test.TestCase):
 
     def test_instance_list_from_buildrequests_old_service(self):
         self._test_instance_list_from_buildrequests()
+
+
+class EnforceVolumeBackedForZeroDiskFlavorTestCase(
+        test.TestCase, integrated_helpers.InstanceHelperMixin):
+    """Tests for the os_compute_api:servers:create:zero_disk_flavor policy rule
+
+    These tests explicitly rely on microversion 2.1.
+    """
+
+    def setUp(self):
+        super(EnforceVolumeBackedForZeroDiskFlavorTestCase, self).setUp()
+        fake_image.stub_out_image_service(self)
+        self.addCleanup(fake_image.FakeImageService_reset)
+        self.useFixture(nova_fixtures.NeutronFixture(self))
+        self.policy_fixture = (
+            self.useFixture(policy_fixture.RealPolicyFixture()))
+        api_fixture = self.useFixture(nova_fixtures.OSAPIFixture(
+            api_version='v2.1'))
+
+        self.api = api_fixture.api
+        self.admin_api = api_fixture.admin_api
+        # We need a zero disk flavor for the tests in this class.
+        flavor_req = {
+            "flavor": {
+                "name": "zero-disk-flavor",
+                "ram": 1024,
+                "vcpus": 2,
+                "disk": 0
+            }
+        }
+        self.zero_disk_flavor = self.admin_api.post_flavor(flavor_req)
+
+    def test_create_image_backed_server_with_zero_disk_fails(self):
+        """Tests that a non-admin trying to create an image-backed server
+        using a flavor with 0 disk will result in a 403 error when rule
+        os_compute_api:servers:create:zero_disk_flavor is set to admin-only.
+        """
+        self.policy_fixture.set_rules({
+            servers_policies.ZERO_DISK_FLAVOR: base_policies.RULE_ADMIN_API},
+            overwrite=False)
+        server_req = self._build_minimal_create_server_request(
+            self.api,
+            'test_create_image_backed_server_with_zero_disk_fails',
+            fake_image.AUTO_DISK_CONFIG_ENABLED_IMAGE_UUID,
+            self.zero_disk_flavor['id'])
+        ex = self.assertRaises(api_client.OpenStackApiException,
+                               self.api.post_server, {'server': server_req})
+        self.assertIn('Only volume-backed servers are allowed for flavors '
+                      'with zero disk.', six.text_type(ex))
+        self.assertEqual(403, ex.response.status_code)
+
+    def test_create_volume_backed_server_with_zero_disk_allowed(self):
+        """Tests that creating a volume-backed server with a zero-root
+        disk flavor will be allowed for admins.
+        """
+        # For this test, we want to start conductor and the scheduler but
+        # we don't start compute so that scheduling fails; we don't really
+        # care about successfully building an active server here.
+        self.useFixture(nova_fixtures.PlacementFixture())
+        self.useFixture(nova_fixtures.CinderFixture(self))
+        self.start_service('conductor')
+        self.start_service('scheduler')
+        server_req = self._build_minimal_create_server_request(
+            self.api,
+            'test_create_volume_backed_server_with_zero_disk_allowed',
+            flavor_id=self.zero_disk_flavor['id'])
+        server_req.pop('imageRef', None)
+        server_req['block_device_mapping_v2'] = [{
+            'uuid': nova_fixtures.CinderFixture.IMAGE_BACKED_VOL,
+            'source_type': 'volume',
+            'destination_type': 'volume',
+            'boot_index': 0
+        }]
+        server = self.admin_api.post_server({'server': server_req})
+        server = self._wait_for_state_change(self.api, server, 'ERROR')
+        self.assertIn('No valid host', server['fault']['message'])
