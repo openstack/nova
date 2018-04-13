@@ -104,7 +104,7 @@ class LibvirtGenericVIFDriver(object):
         return prefix + devname[3:]
 
     def get_base_config(self, instance, mac, image_meta,
-                        inst_type, virt_type, vnic_type):
+                        inst_type, virt_type, vnic_type, host):
         conf = vconfig.LibvirtConfigGuestInterface()
         # Default to letting libvirt / the hypervisor choose the model
         model = None
@@ -226,7 +226,8 @@ class LibvirtGenericVIFDriver(object):
                           inst_type, virt_type, host):
         """Get VIF configurations for bridge type."""
         conf = self.get_base_config(instance, vif['address'], image_meta,
-                                    inst_type, virt_type, vif['vnic_type'])
+                                    inst_type, virt_type, vif['vnic_type'],
+                                    host)
 
         designer.set_vif_host_backend_bridge_config(
             conf, self.get_bridge_name(vif),
@@ -258,7 +259,8 @@ class LibvirtGenericVIFDriver(object):
                                     image_meta,
                                     inst_type,
                                     virt_type,
-                                    vif['vnic_type'])
+                                    vif['vnic_type'],
+                                    host)
 
         dev = self.get_vif_devname(vif)
         designer.set_vif_host_backend_ethernet_config(conf, dev, host)
@@ -283,7 +285,8 @@ class LibvirtGenericVIFDriver(object):
     def get_config_802qbg(self, instance, vif, image_meta,
                           inst_type, virt_type, host):
         conf = self.get_base_config(instance, vif['address'], image_meta,
-                                    inst_type, virt_type, vif['vnic_type'])
+                                    inst_type, virt_type, vif['vnic_type'],
+                                    host)
 
         params = vif["qbg_params"]
         designer.set_vif_host_backend_802qbg_config(
@@ -300,7 +303,8 @@ class LibvirtGenericVIFDriver(object):
     def get_config_802qbh(self, instance, vif, image_meta,
                           inst_type, virt_type, host):
         conf = self.get_base_config(instance, vif['address'], image_meta,
-                                    inst_type, virt_type, vif['vnic_type'])
+                                    inst_type, virt_type, vif['vnic_type'],
+                                    host)
 
         profile = vif["profile"]
         vif_details = vif["details"]
@@ -319,7 +323,8 @@ class LibvirtGenericVIFDriver(object):
     def get_config_hw_veb(self, instance, vif, image_meta,
                             inst_type, virt_type, host):
         conf = self.get_base_config(instance, vif['address'], image_meta,
-                                    inst_type, virt_type, vif['vnic_type'])
+                                    inst_type, virt_type, vif['vnic_type'],
+                                    host)
 
         profile = vif["profile"]
         vif_details = vif["details"]
@@ -347,7 +352,8 @@ class LibvirtGenericVIFDriver(object):
     def get_config_macvtap(self, instance, vif, image_meta,
                            inst_type, virt_type, host):
         conf = self.get_base_config(instance, vif['address'], image_meta,
-                                    inst_type, virt_type, vif['vnic_type'])
+                                    inst_type, virt_type, vif['vnic_type'],
+                                    host)
 
         vif_details = vif['details']
         macvtap_src = vif_details.get(network_model.VIF_DETAILS_MACVTAP_SOURCE)
@@ -378,7 +384,8 @@ class LibvirtGenericVIFDriver(object):
     def get_config_iovisor(self, instance, vif, image_meta,
                            inst_type, virt_type, host):
         conf = self.get_base_config(instance, vif['address'], image_meta,
-                                    inst_type, virt_type, vif['vnic_type'])
+                                    inst_type, virt_type, vif['vnic_type'],
+                                    host)
 
         dev = self.get_vif_devname(vif)
         designer.set_vif_host_backend_ethernet_config(conf, dev, host)
@@ -390,7 +397,8 @@ class LibvirtGenericVIFDriver(object):
     def get_config_midonet(self, instance, vif, image_meta,
                            inst_type, virt_type, host):
         conf = self.get_base_config(instance, vif['address'], image_meta,
-                                    inst_type, virt_type, vif['vnic_type'])
+                                    inst_type, virt_type, vif['vnic_type'],
+                                    host)
 
         dev = self.get_vif_devname(vif)
         designer.set_vif_host_backend_ethernet_config(conf, dev, host)
@@ -400,7 +408,8 @@ class LibvirtGenericVIFDriver(object):
     def get_config_tap(self, instance, vif, image_meta,
                        inst_type, virt_type, host):
         conf = self.get_base_config(instance, vif['address'], image_meta,
-                                    inst_type, virt_type, vif['vnic_type'])
+                                    inst_type, virt_type, vif['vnic_type'],
+                                    host)
 
         dev = self.get_vif_devname(vif)
         designer.set_vif_host_backend_ethernet_config(conf, dev, host)
@@ -420,7 +429,8 @@ class LibvirtGenericVIFDriver(object):
     def get_config_vhostuser(self, instance, vif, image_meta,
                             inst_type, virt_type, host):
         conf = self.get_base_config(instance, vif['address'], image_meta,
-                                    inst_type, virt_type, vif['vnic_type'])
+                                    inst_type, virt_type, vif['vnic_type'],
+                                    host)
         mode, sock_path = self._get_vhostuser_settings(vif)
         designer.set_vif_host_backend_vhostuser_config(conf, mode, sock_path)
         # (vladikr) Not setting up driver and queues for vhostuser
@@ -439,7 +449,8 @@ class LibvirtGenericVIFDriver(object):
     def get_config_vrouter(self, instance, vif, image_meta,
                            inst_type, virt_type, host):
         conf = self.get_base_config(instance, vif['address'], image_meta,
-                                    inst_type, virt_type, vif['vnic_type'])
+                                    inst_type, virt_type, vif['vnic_type'],
+                                    host)
         dev = self.get_vif_devname(vif)
         designer.set_vif_host_backend_ethernet_config(conf, dev, host)
 
@@ -519,7 +530,8 @@ class LibvirtGenericVIFDriver(object):
 
         # Do the config that's common to all vif types
         conf = self.get_base_config(instance, vif.address, image_meta,
-                                    inst_type, virt_type, vnic_type)
+                                    inst_type, virt_type, vnic_type,
+                                    host)
 
         # Do the VIF type specific config
         viffunc = "_set_config_" + vif.obj_name()
