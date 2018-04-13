@@ -70,10 +70,23 @@ def mkfs(os_type, fs_label, target, run_as_root=True, specified_fs=None):
 
 
 def resize2fs(image, check_exit_code=False, run_as_root=False):
-    if run_as_root:
-        nova.privsep.fs.resize2fs(image, check_exit_code)
+    # NOTE(mikal): note that the check_exit_code kwarg here only refers to
+    # resize2fs, not the precursor e2fsck. Yes, I agree it's confusing.
+    try:
+        if run_as_root:
+            nova.privsep.fs.e2fsck(image)
+        else:
+            nova.privsep.fs.unprivileged_e2fsck(image)
+
+    except processutils.ProcessExecutionError as exc:
+        LOG.debug("Checking the file system with e2fsck has failed, "
+                  "the resize will be aborted. (%s)", exc)
+
     else:
-        nova.privsep.fs.unprivileged_resize2fs(image, check_exit_code)
+        if run_as_root:
+            nova.privsep.fs.resize2fs(image, check_exit_code)
+        else:
+            nova.privsep.fs.unprivileged_resize2fs(image, check_exit_code)
 
 
 def get_disk_size(path):

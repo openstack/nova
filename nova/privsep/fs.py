@@ -138,24 +138,28 @@ def get_filesystem_type(device):
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint
-def resize2fs(image, check_exit_code):
-    unprivileged_resize2fs(image, check_exit_code)
+def e2fsck(image, flags='-fp'):
+    unprivileged_e2fsck(image, flags=flags)
 
 
 # NOTE(mikal): this method is deliberately not wrapped in a privsep entrypoint
-def unprivileged_resize2fs(image, check_exit_code):
-    try:
-        processutils.execute('e2fsck',
-                             '-fp',
-                             image,
-                             check_exit_code=[0, 1, 2])
-    except processutils.ProcessExecutionError as exc:
-        LOG.debug("Checking the file system with e2fsck has failed, "
-                  "the resize will be aborted. (%s)", exc)
+def unprivileged_e2fsck(image, flags='-fp'):
+    processutils.execute('e2fsck', flags, image, check_exit_code=[0, 1, 2])
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def resize2fs(image, check_exit_code, size=None):
+    unprivileged_resize2fs(image, check_exit_code=check_exit_code, size=size)
+
+
+# NOTE(mikal): this method is deliberately not wrapped in a privsep entrypoint
+def unprivileged_resize2fs(image, check_exit_code, size=None):
+    if size:
+        cmd = ['resize2fs', image, size]
     else:
-        processutils.execute('resize2fs',
-                             image,
-                             check_exit_code=check_exit_code)
+        cmd = ['resize2fs', image]
+
+    processutils.execute(*cmd, check_exit_code=check_exit_code)
 
 
 @nova.privsep.sys_admin_pctxt.entrypoint

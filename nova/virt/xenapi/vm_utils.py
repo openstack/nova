@@ -2283,13 +2283,6 @@ def _write_partition(session, virtual_size, dev):
     LOG.debug('Writing partition table %s done.', dev_path)
 
 
-def _repair_filesystem(partition_path):
-    # Exit Code 1 = File system errors corrected
-    #           2 = File system errors corrected, system needs a reboot
-    utils.execute('e2fsck', '-f', '-y', partition_path, run_as_root=True,
-        check_exit_code=[0, 1, 2])
-
-
 def _resize_part_and_fs(dev, start, old_sectors, new_sectors, flags):
     """Resize partition and fileystem.
 
@@ -2303,7 +2296,7 @@ def _resize_part_and_fs(dev, start, old_sectors, new_sectors, flags):
     partition_path = utils.make_dev_path(dev, partition=1)
 
     # Replay journal if FS wasn't cleanly unmounted
-    _repair_filesystem(partition_path)
+    nova.privsep.fs.e2fsck(partition_path, flags='-fy')
 
     # Remove ext3 journal (making it ext2)
     nova.privsep.fs.ext_journal_disable(partition_path)
@@ -2311,8 +2304,7 @@ def _resize_part_and_fs(dev, start, old_sectors, new_sectors, flags):
     if new_sectors < old_sectors:
         # Resizing down, resize filesystem before partition resize
         try:
-            utils.execute('resize2fs', partition_path, '%ds' % size,
-                          run_as_root=True)
+            nova.privsep.fs.resize2fs(partition_path, None, size='%ds' % size)
         except processutils.ProcessExecutionError as exc:
             LOG.error(six.text_type(exc))
             reason = _("Shrinking the filesystem down with resize2fs "
@@ -2325,7 +2317,7 @@ def _resize_part_and_fs(dev, start, old_sectors, new_sectors, flags):
 
     if new_sectors > old_sectors:
         # Resizing up, resize filesystem after partition resize
-        utils.execute('resize2fs', partition_path, run_as_root=True)
+        nova.privsep.fs.resize2fs(partition_path, None)
 
     # Add back journal
     nova.privsep.fs.ext_journal_enable(partition_path)

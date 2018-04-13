@@ -77,7 +77,9 @@ class APITestCase(test.NoDBTestCase):
 
     @mock.patch('oslo_concurrency.processutils.execute')
     @mock.patch('nova.privsep.fs.resize2fs')
-    def test_resize2fs_success_as_root(self, mock_resize, mock_exec):
+    @mock.patch('nova.privsep.fs.e2fsck')
+    def test_resize2fs_success_as_root(self, mock_fsck, mock_resize,
+                                       mock_exec):
         imgfile = tempfile.NamedTemporaryFile()
         self.addCleanup(imgfile.close)
 
@@ -85,6 +87,7 @@ class APITestCase(test.NoDBTestCase):
 
         mock_exec.assert_not_called()
         mock_resize.assert_called()
+        mock_fsck.assert_called()
 
     @mock.patch('oslo_concurrency.processutils.execute', autospec=True,
                 side_effect=processutils.ProcessExecutionError("fs error"))
