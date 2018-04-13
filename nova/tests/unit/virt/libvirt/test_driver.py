@@ -16786,8 +16786,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                                               instance))
 
     def test_version_to_string(self):
-        driver = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        string_ver = driver._version_to_string((4, 33, 173))
+        string_ver = libvirt_utils.version_to_string((4, 33, 173))
         self.assertEqual("4.33.173", string_ver)
 
     def test_virtuozzo_min_version_fail(self):
