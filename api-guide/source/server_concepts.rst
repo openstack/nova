@@ -885,7 +885,7 @@ Metadata API
 Nova provides a metadata api for servers to retrieve server specific metadata.
 Neutron ensures this metadata api can be accessed through a predefined ip
 address (169.254.169.254). For more details, see
-`Metadata Service <https://docs.openstack.org/nova/latest/admin/networking-nova.html#metadata-service>`_.
+`Metadata Service <https://docs.openstack.org/nova/latest/user/metadata-service.html>`_.
 
 Config Drive
 ------------
