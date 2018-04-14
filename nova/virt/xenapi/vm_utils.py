@@ -2296,7 +2296,7 @@ def _resize_part_and_fs(dev, start, old_sectors, new_sectors, flags):
     partition_path = utils.make_dev_path(dev, partition=1)
 
     # Replay journal if FS wasn't cleanly unmounted
-    nova.privsep.fs.e2fsck(partition_path, flags='-fy')
+    nova.privsep.fs.e2fsck(partition_path)
 
     # Remove ext3 journal (making it ext2)
     nova.privsep.fs.ext_journal_disable(partition_path)
