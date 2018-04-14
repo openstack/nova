@@ -2812,8 +2812,8 @@ def _has_provider_trees(ctx):
 
 
 @db_api.api_context_manager.reader
-def _get_provider_ids_matching_all(ctx, resources, required_traits,
-        member_of=None):
+def _get_provider_ids_matching(ctx, resources, required_traits,
+        forbidden_traits, member_of=None):
     """Returns a list of resource provider internal IDs that have available
     inventory to satisfy all the supplied requests for resources.
 
@@ -2827,16 +2827,23 @@ def _get_provider_ids_matching_all(ctx, resources, required_traits,
     :param required_traits: A map, keyed by trait string name, of required
                             trait internal IDs that each provider must have
                             associated with it
+    :param forbidden_traits: A map, keyed by trait string name, of forbidden
+                             trait internal IDs that each provider must not
+                             have associated with it
     :param member_of: An optional list of aggregate UUIDs. If provided, the
                       allocation_candidates returned will only be for resource
                       providers that are members of one or more of the supplied
                       aggregates.
     """
     trait_rps = None
+    forbidden_rp_ids = None
     if required_traits:
         trait_rps = _get_provider_ids_having_all_traits(ctx, required_traits)
         if not trait_rps:
             return []
+    if forbidden_traits:
+        forbidden_rp_ids = _get_provider_ids_having_any_trait(
+            ctx, forbidden_traits)
 
     rpt = sa.alias(_RP_TBL, name="rp")
 
@@ -2878,6 +2885,9 @@ def _get_provider_ids_matching_all(ctx, resources, required_traits,
     # First filter by the resource providers that had all the required traits
     if trait_rps:
         where_conds.append(rpt.c.id.in_(trait_rps))
+    # or have any forbidden trait
+    if forbidden_rp_ids:
+        where_conds.append(~rpt.c.id.in_(forbidden_rp_ids))
 
     # The chain of joins that we eventually pass to select_from()
     join_chain = rpt
@@ -3249,7 +3259,7 @@ def _alloc_candidates_no_shared(ctx, requested_resources, rp_ids):
 
 
 def _alloc_candidates_with_shared(ctx, requested_resources, required_traits,
-                                  ns_rp_ids, sharing):
+                                  forbidden_traits, ns_rp_ids, sharing):
     """Returns a tuple of (allocation requests, provider summaries) for a
     supplied set of requested resource amounts and resource providers.
 
@@ -3265,6 +3275,9 @@ def _alloc_candidates_with_shared(ctx, requested_resources, required_traits,
                             trait internal IDs that each *allocation request's
                             set of providers* must *collectively* have
                             associated with them
+    :param forbidden_traits: A map, keyed by trait string name, of trait
+                             internal IDs that a resource provider must
+                             not have.
     :param ns_rp_ids: List of resource provider IDs for providers that EITHER
                       match all of the requested resources or are associated
                       with sharing providers that can satisfy missing requested
@@ -3339,6 +3352,16 @@ def _alloc_candidates_with_shared(ctx, requested_resources, required_traits,
             if _RC_CACHE.string_from_id(rc_id) in ns_resource_class_names
         )
 
+        # Identify traits which are forbidden and exclude those providers.
+        ns_prov_traits = set(prov_traits.get(ns_rp_id, []))
+        conflict_traits = set(forbidden_traits) & ns_prov_traits
+
+        if conflict_traits:
+            LOG.debug('Excluding non-sharing provider %s: it has '
+                      'forbidden traits: (%s).',
+                      ns_rp_uuid, ', '. join(conflict_traits))
+            continue
+
         has_none = len(ns_resources) == 0
         if has_none:
             # This resource provider doesn't actually provide any requested
@@ -3392,8 +3415,17 @@ def _alloc_candidates_with_shared(ctx, requested_resources, required_traits,
                     if summary.resource_provider.uuid == rp_uuid:
                         rp_id = id
                         break
+
+                rp_traits = set(prov_traits.get(rp_id, []))
+                conflict_traits = set(forbidden_traits) & set(rp_traits)
+                if conflict_traits:
+                    LOG.debug('Excluding sharing provider %s, it has '
+                              'forbidden traits: (%s).',
+                              rp_id, ', '.join(conflict_traits))
+                    continue
+
                 all_prov_ids.add(rp_id)
-                all_traits |= set(prov_traits.get(rp_id, []))
+                all_traits |= rp_traits
 
             # Check if there are missing traits
             missing_traits = set(required_traits) - all_traits
@@ -3552,15 +3584,18 @@ class AllocationCandidates(base.VersionedObject):
             for key, value in sharing_groups[0].resources.items()
         }
 
-        traits = sharing_groups[0].required_traits
         # maps the trait name to the trait internal ID
-        trait_map = {}
-        if traits:
-            trait_map = _trait_ids_from_names(context, traits)
-            # Double-check that we found a trait ID for each requested name
-            if len(trait_map) != len(traits):
-                missing = traits - set(trait_map)
-                raise exception.TraitNotFound(names=', '.join(missing))
+        required_trait_map = {}
+        forbidden_trait_map = {}
+        for trait_map, traits in (
+            (required_trait_map, sharing_groups[0].required_traits),
+            (forbidden_trait_map, sharing_groups[0].forbidden_traits)):
+            if traits:
+                trait_map.update(_trait_ids_from_names(context, traits))
+                # Double-check that we found a trait ID for each requested name
+                if len(trait_map) != len(traits):
+                    missing = traits - set(trait_map)
+                    raise exception.TraitNotFound(names=', '.join(missing))
 
         # Microversions prior to 1.21 will not have 'member_of' in the groups.
         # This allows earlier microversions to continue to work.
@@ -3590,14 +3625,19 @@ class AllocationCandidates(base.VersionedObject):
             # add new code paths or modify this code path to return root
             # provider IDs of provider trees instead of the resource provider
             # IDs.
-            rp_ids = _get_provider_ids_matching_all(context, resources,
-                                                    trait_map, member_of)
+            rp_ids = _get_provider_ids_matching(context, resources,
+                                                required_trait_map,
+                                                forbidden_trait_map,
+                                                member_of)
             alloc_request_objs, summary_objs = _alloc_candidates_no_shared(
                 context, resources, rp_ids)
         else:
-            if trait_map:
-                trait_rps = _get_provider_ids_having_any_trait(context,
-                                                               trait_map)
+            if required_trait_map:
+                # TODO(cdent): Now that there is also a forbidden_trait_map
+                # it should be possible to further optimize this attempt at
+                # a quick return, but we leave that to future patches for now.
+                trait_rps = _get_provider_ids_having_any_trait(
+                    context, required_trait_map)
                 if not trait_rps:
                     # If there aren't any providers that have any of the
                     # required traits, just exit early...
@@ -3611,7 +3651,8 @@ class AllocationCandidates(base.VersionedObject):
             rps = _get_all_with_shared(context, resources, member_of)
             rp_ids = set([r[0] for r in rps])
             alloc_request_objs, summary_objs = _alloc_candidates_with_shared(
-                context, resources, trait_map, rp_ids, sharing_providers)
+                context, resources, required_trait_map, forbidden_trait_map,
+                rp_ids, sharing_providers)
 
         # Limit the number of allocation request objects. We do this after
         # creating all of them so that we can do a random slice without

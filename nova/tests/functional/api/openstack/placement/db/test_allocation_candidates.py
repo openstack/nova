@@ -92,7 +92,7 @@ class ProviderDBBase(test.NoDBTestCase):
 
 class ProviderDBHelperTestCase(ProviderDBBase):
 
-    def test_get_provider_ids_matching_all(self):
+    def test_get_provider_ids_matching(self):
         # These RPs are named based on whether we expect them to be 'incl'uded
         # or 'excl'uded in the result.
 
@@ -224,7 +224,7 @@ class ProviderDBHelperTestCase(ProviderDBBase):
         }
 
         # Run it!
-        res = rp_obj._get_provider_ids_matching_all(self.ctx, resources, {})
+        res = rp_obj._get_provider_ids_matching(self.ctx, resources, {}, {})
 
         # We should get all the incl_* RPs
         expected = [incl_biginv_noalloc, incl_extra_full]
@@ -235,19 +235,19 @@ class ProviderDBHelperTestCase(ProviderDBBase):
         # that this results in no results returned, since we haven't yet
         # associated any traits with the providers
         avx2_t = rp_obj.Trait.get_by_name(self.ctx, os_traits.HW_CPU_X86_AVX2)
-        # _get_provider_ids_matching_all()'s required_traits argument is a map,
-        # keyed by trait name, of the trait internal ID
+        # _get_provider_ids_matching()'s required_traits and forbidden_traits
+        # arguments maps, keyed by trait name, of the trait internal ID
         req_traits = {os_traits.HW_CPU_X86_AVX2: avx2_t.id}
-        res = rp_obj._get_provider_ids_matching_all(self.ctx, resources,
-                                                    req_traits)
+        res = rp_obj._get_provider_ids_matching(self.ctx, resources,
+                                                req_traits, {})
 
         self.assertEqual([], res)
 
         # OK, now add the trait to one of the providers and verify that
         # provider now shows up in our results
         incl_biginv_noalloc.set_traits([avx2_t])
-        res = rp_obj._get_provider_ids_matching_all(self.ctx, resources,
-                                                    req_traits)
+        res = rp_obj._get_provider_ids_matching(self.ctx, resources,
+                                                req_traits, {})
 
         self.assertEqual([incl_biginv_noalloc.id], res)
 
@@ -581,6 +581,21 @@ class AllocationCandidatesTestCase(ProviderDBBase):
         }
         self._validate_provider_summary_traits(expected, alloc_cands)
 
+        # Confirm that forbidden traits changes the results to get cn1.
+        alloc_cands = self._get_allocation_candidates([
+            placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources=self.requested_resources,
+                forbidden_traits=set([os_traits.HW_CPU_X86_AVX2])
+            )],
+        )
+        expected = [
+            [('cn1', fields.ResourceClass.VCPU, 1),
+             ('cn1', fields.ResourceClass.MEMORY_MB, 64),
+             ('cn1', fields.ResourceClass.DISK_GB, 1500)],
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
+
     def test_all_local_limit(self):
         """Create some resource providers that can satisfy the request for
         resources with local (non-shared) resources, limit them, and verify
@@ -792,6 +807,55 @@ class AllocationCandidatesTestCase(ProviderDBBase):
             'shared storage': set(['MISC_SHARES_VIA_AGGREGATE']),
         }
         self._validate_provider_summary_traits(expected, alloc_cands)
+
+        # Forbid the AVX2 trait
+        alloc_cands = self._get_allocation_candidates([
+            placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources=self.requested_resources,
+                forbidden_traits=set([os_traits.HW_CPU_X86_AVX2]),
+            )]
+        )
+        # Should be no results as both cn1 and cn2 have the trait.
+        expected = []
+        self._validate_allocation_requests(expected, alloc_cands)
+
+        # Require the AVX2 trait but forbid CUSTOM_EXTRA_FASTER, which is
+        # added to cn2
+        _set_traits(cn2, 'CUSTOM_EXTRA_FASTER')
+        alloc_cands = self._get_allocation_candidates([
+            placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources=self.requested_resources,
+                required_traits=set([os_traits.HW_CPU_X86_AVX2]),
+                forbidden_traits=set(['CUSTOM_EXTRA_FASTER']),
+            )]
+        )
+        expected = [
+            [('cn1', fields.ResourceClass.VCPU, 1),
+             ('cn1', fields.ResourceClass.MEMORY_MB, 64),
+             ('shared storage', fields.ResourceClass.DISK_GB, 1500)],
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
+
+        # Add disk to cn1, forbid sharing, and require the AVX2 trait.
+        # This should result in getting only cn1.
+        _add_inventory(cn1, fields.ResourceClass.DISK_GB, 2048,
+                       allocation_ratio=1.5)
+        alloc_cands = self._get_allocation_candidates([
+            placement_lib.RequestGroup(
+                use_same_provider=False,
+                resources=self.requested_resources,
+                required_traits=set([os_traits.HW_CPU_X86_AVX2]),
+                forbidden_traits=set(['MISC_SHARES_VIA_AGGREGATE']),
+            )]
+        )
+        expected = [
+            [('cn1', fields.ResourceClass.VCPU, 1),
+             ('cn1', fields.ResourceClass.MEMORY_MB, 64),
+             ('cn1', fields.ResourceClass.DISK_GB, 1500)],
+        ]
+        self._validate_allocation_requests(expected, alloc_cands)
 
     def test_local_with_shared_custom_resource(self):
         """Create some resource providers that can satisfy the request for
