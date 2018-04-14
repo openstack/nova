@@ -430,12 +430,12 @@ class TestNormalizeTraitsQsParam(test.NoDBTestCase):
 class TestParseQsResourcesAndTraits(test.NoDBTestCase):
 
     @staticmethod
-    def do_parse(qstring):
+    def do_parse(qstring, allow_forbidden=False):
         """Converts a querystring to a MultiDict, mimicking request.GET, and
         runs parse_qs_request_groups on it.
         """
         return util.parse_qs_request_groups(webob.multidict.MultiDict(
-            urlparse.parse_qsl(qstring)))
+            urlparse.parse_qsl(qstring)), allow_forbidden=allow_forbidden)
 
     def assertRequestGroupsEqual(self, expected, observed):
         self.assertEqual(len(expected), len(observed))
@@ -616,6 +616,102 @@ class TestParseQsResourcesAndTraits(test.NoDBTestCase):
               '&required2=CUSTOM_SWITCH_BIG,CUSTOM_PHYSNET_PROD'
               '&resources3=CUSTOM_MAGIC:123')
         self.assertRaises(webob.exc.HTTPBadRequest, self.do_parse, qs)
+
+    def test_forbidden_one_group(self):
+        """When forbidden are allowed this will parse, but otherwise will
+        indicate an invalid trait.
+        """
+        qs = ('resources=VCPU:2,MEMORY_MB:2048'
+              '&required=CUSTOM_PHYSNET1,!CUSTOM_SWITCH_BIG')
+        expected_forbidden = [
+            pl.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    'VCPU': 2,
+                    'MEMORY_MB': 2048,
+                },
+                required_traits={
+                    'CUSTOM_PHYSNET1',
+                },
+                forbidden_traits={
+                    'CUSTOM_SWITCH_BIG',
+                }
+            ),
+        ]
+        expected_message = (
+            "Invalid query string parameters: Expected 'required' parameter "
+            "value of the form: HW_CPU_X86_VMX,CUSTOM_MAGIC. Got: "
+            "CUSTOM_PHYSNET1,!CUSTOM_SWITCH_BIG")
+        exc = self.assertRaises(webob.exc.HTTPBadRequest, self.do_parse, qs)
+        self.assertEqual(expected_message, six.text_type(exc))
+        self.assertRequestGroupsEqual(
+            expected_forbidden, self.do_parse(qs, allow_forbidden=True))
+
+    def test_forbidden_conflict(self):
+        qs = ('resources=VCPU:2,MEMORY_MB:2048'
+              '&required=CUSTOM_PHYSNET1,!CUSTOM_PHYSNET1')
+
+        expected_message = (
+            'Conflicting required and forbidden traits found '
+            'in the following traits keys: required: (CUSTOM_PHYSNET1)')
+
+        exc = self.assertRaises(webob.exc.HTTPBadRequest, self.do_parse, qs,
+            allow_forbidden=True)
+        self.assertEqual(expected_message, six.text_type(exc))
+
+    def test_forbidden_two_groups(self):
+        qs = ('resources=VCPU:2,MEMORY_MB:2048&resources1=CUSTOM_MAGIC:1'
+              '&required1=CUSTOM_PHYSNET1,!CUSTOM_PHYSNET2')
+        expected = [
+            pl.RequestGroup(
+                use_same_provider=False,
+                resources={
+                    'VCPU': 2,
+                    'MEMORY_MB': 2048,
+                },
+            ),
+            pl.RequestGroup(
+                resources={
+                    'CUSTOM_MAGIC': 1,
+                },
+                required_traits={
+                    'CUSTOM_PHYSNET1',
+                },
+                forbidden_traits={
+                    'CUSTOM_PHYSNET2',
+                }
+            ),
+        ]
+
+        self.assertRequestGroupsEqual(
+            expected, self.do_parse(qs, allow_forbidden=True))
+
+    def test_forbidden_separate_groups_no_conflict(self):
+        qs = ('resources1=CUSTOM_MAGIC:1&required1=CUSTOM_PHYSNET1'
+              '&resources2=CUSTOM_MAGIC:1&required2=!CUSTOM_PHYSNET1')
+        expected = [
+            pl.RequestGroup(
+                use_same_provider=True,
+                resources={
+                    'CUSTOM_MAGIC': 1,
+                },
+                required_traits={
+                    'CUSTOM_PHYSNET1',
+                }
+            ),
+            pl.RequestGroup(
+                use_same_provider=True,
+                resources={
+                    'CUSTOM_MAGIC': 1,
+                },
+                forbidden_traits={
+                    'CUSTOM_PHYSNET1',
+                }
+            ),
+        ]
+
+        self.assertRequestGroupsEqual(
+            expected, self.do_parse(qs, allow_forbidden=True))
 
 
 class TestPickLastModified(test.NoDBTestCase):

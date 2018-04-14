@@ -292,7 +292,17 @@ def normalize_resources_qs_param(qs):
     return result
 
 
-def normalize_traits_qs_param(val):
+def valid_trait(trait, allow_forbidden):
+    """Return True if the provided trait is the expected form.
+
+    When allow_forbidden is True, then a leading '!' is acceptable.
+    """
+    if trait.startswith('!') and not allow_forbidden:
+        return False
+    return True
+
+
+def normalize_traits_qs_param(val, allow_forbidden=False):
     """Parse a traits query string parameter value.
 
     Note that this method doesn't know or care about the query parameter key,
@@ -304,15 +314,22 @@ def normalize_traits_qs_param(val):
 
     :param val: A traits query parameter value: a comma-separated string of
                 trait names.
+    :param allow_forbidden: If True, accept forbidden traits (that is, traits
+                            prefixed by '!') as a valid form when notifying
+                            the caller that the provided value is not properly
+                            formed.
     :return: A set of trait names.
     :raises `webob.exc.HTTPBadRequest` if the val parameter is not in the
             expected format.
     """
     ret = set(substr.strip() for substr in val.split(','))
-    if not all(trait for trait in ret):
+    expected_form = 'HW_CPU_X86_VMX,CUSTOM_MAGIC'
+    if allow_forbidden:
+        expected_form = 'HW_CPU_X86_VMX,!CUSTOM_MAGIC'
+    if not all(trait and valid_trait(trait, allow_forbidden) for trait in ret):
         msg = _("Invalid query string parameters: Expected 'required' "
-                "parameter value of the form: HW_CPU_X86_VMX,CUSTOM_MAGIC. "
-                "Got: %s") % val
+                "parameter value of the form: %(form)s. "
+                "Got: %(val)s") % {'form': expected_form, 'val': val}
         raise webob.exc.HTTPBadRequest(msg)
     return ret
 
@@ -346,7 +363,7 @@ def normalize_member_of_qs_param(val):
     return ret
 
 
-def parse_qs_request_groups(qsdict):
+def parse_qs_request_groups(qsdict, allow_forbidden=False):
     """Parse numbered resources, traits, and member_of groupings out of a
     querystring dict.
 
@@ -365,6 +382,12 @@ def parse_qs_request_groups(qsdict):
     suffix, the RequestGroup.use_same_provider attribute is False; for the
     numbered groups it is True.
 
+    If a trait in the required parameter is prefixed with ``!`` this
+    indicates that that trait must not be present on the resource
+    providers in the group. That is, the trait is forbidden. Forbidden traits
+    are only processed  if ``allow_forbidden`` is True. This allows the
+    caller to control processing based on microversion handling.
+
     The return is a list of these RequestGroup instances.
 
     As an example, if qsdict represents the query string:
@@ -375,7 +398,7 @@ def parse_qs_request_groups(qsdict):
     &resources1=SRIOV_NET_VF:2
     &required1=CUSTOM_PHYSNET_PUBLIC,CUSTOM_SWITCH_A
     &resources2=SRIOV_NET_VF:1
-    &required2=CUSTOM_PHYSNET_PRIVATE
+    &required2=!CUSTOM_PHYSNET_PUBLIC
 
     ...the return value will be:
 
@@ -410,13 +433,14 @@ def parse_qs_request_groups(qsdict):
           resources={
               "SRIOV_NET_VF": 1,
           },
-          required_traits=[
-              "CUSTOM_PHYSNET_PRIVATE",
+          forbidden_traits=[
+              "CUSTOM_PHYSNET_PUBLIC",
           ],
       ),
     ]
 
     :param qsdict: The MultiDict representing the querystring on a GET.
+    :param allow_forbidden: If True, parse for forbidden traits.
     :return: A list of RequestGroup instances.
     :raises `webob.exc.HTTPBadRequest` if any value is malformed, or if a
             trait list is given without corresponding resources.
@@ -441,7 +465,8 @@ def parse_qs_request_groups(qsdict):
         if prefix == _QS_RESOURCES:
             request_group.resources = normalize_resources_qs_param(val)
         elif prefix == _QS_REQUIRED:
-            request_group.required_traits = normalize_traits_qs_param(val)
+            request_group.required_traits = normalize_traits_qs_param(
+                val, allow_forbidden=allow_forbidden)
         elif prefix == _QS_MEMBER_OF:
             request_group.member_of = normalize_member_of_qs_param(val)
 
@@ -459,6 +484,25 @@ def parse_qs_request_groups(qsdict):
                 'resources. Found the following orphaned member_of '
                 ' values: %s')
         raise webob.exc.HTTPBadRequest(msg % ', '.join(orphans))
+
+    # Make adjustments for forbidden traits by stripping forbidden out
+    # of required.
+    if allow_forbidden:
+        conflicting_traits = []
+        for suff, group in by_suffix.items():
+            forbidden = [trait for trait in group.required_traits
+                         if trait.startswith('!')]
+            group.required_traits = (group.required_traits - set(forbidden))
+            group.forbidden_traits = set([trait.lstrip('!') for trait in
+                                          forbidden])
+            conflicts = group.forbidden_traits & group.required_traits
+            if conflicts:
+                conflicting_traits.append('required%s: (%s)'
+                                          % (suff, ', '.join(conflicts)))
+        if conflicting_traits:
+            msg = _('Conflicting required and forbidden traits found in the '
+                    'following traits keys: %s')
+            raise webob.exc.HTTPBadRequest(msg % ', '.join(conflicting_traits))
 
     # NOTE(efried): The sorting is not necessary for the API, but it makes
     # testing easier.
