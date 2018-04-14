@@ -1,0 +1,9 @@
+---
+features:
+  - |
+    Placement microversion '1.22' adds support for expressing traits which are
+    forbidden when filtering ``GET /resource_providers`` or ``GET
+    /allocation_candidates``. A forbidden trait is a properly formatted trait
+    in the existing ``required`` parameter, prefixed by a ``!``. For example
+    ``required=!STORAGE_DISK_SSD`` asks that the results not include any
+    resource providers that provide solid state disk.

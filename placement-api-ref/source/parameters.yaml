@@ -59,7 +59,9 @@ allocation_candidates_required:
     Accepts a list of comma-separated traits. Allocation requests in the
     response will be for resource providers that have capacity for all
     requested resources and the set of those resource providers will
-    *collectively* contain all of the required traits.
+    *collectively* contain all of the required traits. **Starting from
+    microversion 1.22** traits which are forbidden from any resource provider
+    may be expressed by prefixing a trait with a ``!``.
 member_of:
   type: string
   in: query
@@ -91,7 +93,9 @@ resource_provider_required_query:
   required: false
   description: >
     A comma-delimited list of string trait names. Results will be filtered to
-    include only resource providers having all the specified traits.
+    include only resource providers having all the specified traits. **Starting
+    from microversion 1.22** traits which are forbidden from any resource
+    provider may be expressed by prefixing a trait with a ``!``.
   min_version: 1.18
 resource_provider_tree_query:
   type: string

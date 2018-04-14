@@ -463,6 +463,59 @@ tests:
       # Only RP_UUID satisfies both the tree and trait constraint
       $.resource_providers[?uuid="$ENVIRON['RP_UUID']"].root_provider_uuid: $ENVIRON['PARENT_PROVIDER_UUID']
 
+- name: list providers for full count
+  GET: /resource_providers
+  response_json_paths:
+      $.resource_providers.`len`: 3
+
+- name: list providers forbidden 1.22
+  GET: /resource_providers?required=!STORAGE_DISK_SSD
+  response_json_paths:
+      $.resource_providers.`len`: 1
+
+- name: confirm forbidden trait not there
+  GET: /resource_providers/$RESPONSE['$.resource_providers[0].uuid']/traits
+  response_json_paths:
+      $.traits: []
+
+- name: list providers forbidden 1.21
+  GET: /resource_providers?required=!STORAGE_DISK_SSD
+  request_headers:
+      openstack-api-version: placement 1.21
+  status: 400
+  response_strings:
+      - "Invalid query string parameters: Expected 'required' parameter value of the form: HW_CPU_X86_VMX,CUSTOM_MAGIC. Got: !STORAGE_DISK_SSD"
+
+- name: list providers forbidden again
+  GET: /resource_providers?required=!MISC_SHARES_VIA_AGGREGATE
+  response_json_paths:
+      $.resource_providers.`len`: 2
+
+- name: mixed required and forbidden
+  GET: /resource_providers?required=!HW_CPU_X86_SGX,STORAGE_DISK_SSD
+  response_json_paths:
+      $.resource_providers.`len`: 1
+
+- name: confirm mixed required and forbidden
+  GET: /resource_providers/$RESPONSE['$.resource_providers[0].uuid']/traits
+  response_json_paths:
+      $.traits.`sorted`: ['MISC_SHARES_VIA_AGGREGATE', 'STORAGE_DISK_SSD']
+
+- name: multiple forbidden
+  GET: /resource_providers?required=!MISC_SHARES_VIA_AGGREGATE,!HW_CPU_X86_SGX
+  response_json_paths:
+      $.resource_providers.`len`: 1
+
+- name: confirm multiple forbidden
+  GET: /resource_providers/$RESPONSE['$.resource_providers[0].uuid']/traits
+  response_json_paths:
+      $.traits: []
+
+- name: forbidden no apply
+  GET: /resource_providers?required=!HW_CPU_X86_VMX
+  response_json_paths:
+      $.resource_providers.`len`: 3
+
 - name: create some inventory
   PUT: /resource_providers/$ENVIRON['ALT_PARENT_PROVIDER_UUID']/inventories
   request_headers:
@@ -493,6 +546,16 @@ tests:
   GET: /resource_providers?required=
   status: 400
   response_strings:
+      - "Invalid query string parameters: Expected 'required' parameter value of the form: HW_CPU_X86_VMX,!CUSTOM_MAGIC."
+  response_json_paths:
+      $.errors[0].title: Bad Request
+
+- name: invalid 'required' parameter 1.21
+  GET: /resource_providers?required=
+  request_headers:
+      openstack-api-version: placement 1.21
+  status: 400
+  response_strings:
       - "Invalid query string parameters: Expected 'required' parameter value of the form: HW_CPU_X86_VMX,CUSTOM_MAGIC."
   response_json_paths:
       $.errors[0].title: Bad Request
@@ -501,7 +564,7 @@ tests:
   GET: /resource_providers?required=STORAGE_DISK_SSD,,MISC_SHARES_VIA_AGGREGATE
   status: 400
   response_strings:
-      - "Invalid query string parameters: Expected 'required' parameter value of the form: HW_CPU_X86_VMX,CUSTOM_MAGIC."
+      - "Invalid query string parameters: Expected 'required' parameter value of the form: HW_CPU_X86_VMX,!CUSTOM_MAGIC."
   response_json_paths:
       $.errors[0].title: Bad Request
 
