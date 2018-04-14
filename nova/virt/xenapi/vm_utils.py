@@ -2399,14 +2399,8 @@ def _copy_partition(session, src_ref, dst_ref, partition, virtual_size):
                 _sparse_copy(src_path, dst_path, virtual_size)
             else:
                 num_blocks = virtual_size / SECTOR_SIZE
-                utils.execute('dd',
-                              'if=%s' % src_path,
-                              'of=%s' % dst_path,
-                              'bs=%d' % DD_BLOCKSIZE,
-                              'count=%d' % num_blocks,
-                              'iflag=direct,sync',
-                              'oflag=direct,sync',
-                              run_as_root=True)
+                nova.privsep.xenapi.block_copy(
+                    src_path, dst_path, DD_BLOCKSIZE, num_blocks)
 
 
 def _mount_filesystem(dev_path, mount_point):

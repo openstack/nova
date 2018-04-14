@@ -24,3 +24,14 @@ import nova.privsep
 @nova.privsep.sys_admin_pctxt.entrypoint
 def xenstore_read(path):
     return processutils.execute('xenstore-read', path)
+
+
+@nova.privsep.sys_admin_pctxt.entrypoint
+def block_copy(src_path, dst_path, block_size, num_blocks):
+    processutils.execute('dd',
+                         'if=%s' % src_path,
+                         'of=%s' % dst_path,
+                         'bs=%d' % block_size,
+                         'count=%d' % num_blocks,
+                         'iflag=direct,sync',
+                         'oflag=direct,sync')
