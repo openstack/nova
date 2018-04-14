@@ -286,6 +286,10 @@ class ConductorTestCase(_BaseTestCase, test.TestCase):
         result = self.conductor.provider_fw_rule_get_all(self.context)
         self.assertEqual([], result)
 
+    def test_conductor_host(self):
+        self.assertTrue(hasattr(self.conductor_manager, 'host'))
+        self.assertEqual(self.conductor_manager.host, CONF.host)
+
 
 class ConductorRPCAPITestCase(_BaseTestCase, test.TestCase):
     """Conductor RPC API Tests."""

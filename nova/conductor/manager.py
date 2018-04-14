@@ -230,6 +230,8 @@ class ComputeTaskManager(base.Base):
         self.scheduler_client = scheduler_client.SchedulerClient()
         self.report_client = self.scheduler_client.reportclient
         self.notifier = rpc.get_notifier('compute', CONF.host)
+        # Help us to record host in EventReporter
+        self.host = CONF.host
 
     def reset(self):
         LOG.info('Reloading compute RPC API')
