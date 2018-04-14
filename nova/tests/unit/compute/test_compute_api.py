@@ -5994,7 +5994,7 @@ class ComputeAPIUnitTestCase(_ComputeAPIUnitTestMixIn, test.NoDBTestCase):
 
     def test_compute_api_host(self):
         self.assertTrue(hasattr(self.compute_api, 'host'))
-        self.assertEqual(self.compute_api.host, CONF.host)
+        self.assertEqual(CONF.host, self.compute_api.host)
 
 
 class Cellsv1DeprecatedTestMixIn(object):
