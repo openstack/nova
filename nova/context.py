@@ -19,6 +19,7 @@
 
 from contextlib import contextmanager
 import copy
+import warnings
 
 import eventlet.queue
 import eventlet.timeout
@@ -89,13 +90,16 @@ class RequestContext(context.RequestContext):
     def __init__(self, user_id=None, project_id=None, is_admin=None,
                  read_deleted="no", remote_address=None, timestamp=None,
                  quota_class=None, service_catalog=None,
-                 instance_lock_checked=False, user_auth_plugin=None, **kwargs):
+                 user_auth_plugin=None, **kwargs):
         """:param read_deleted: 'no' indicates deleted records are hidden,
                 'yes' indicates deleted records are visible,
                 'only' indicates that *only* deleted records are visible.
 
            :param overwrite: Set to False to ensure that the greenthread local
                 copy of the index is not overwritten.
+
+           :param instance_lock_checked: This is not used and will be removed
+                in a future release.
 
            :param user_auth_plugin: The auth plugin for the current request's
                 authentication data.
@@ -104,6 +108,12 @@ class RequestContext(context.RequestContext):
             kwargs['user_id'] = user_id
         if project_id:
             kwargs['project_id'] = project_id
+
+        if kwargs.pop('instance_lock_checked', None) is not None:
+            # TODO(mriedem): Let this be a hard failure in 19.0.0 (S).
+            warnings.warn("The 'instance_lock_checked' kwarg to "
+                          "nova.context.RequestContext is no longer used and "
+                          "will be removed in a future version.")
 
         super(RequestContext, self).__init__(is_admin=is_admin, **kwargs)
 
@@ -123,8 +133,6 @@ class RequestContext(context.RequestContext):
         else:
             # if list is empty or none
             self.service_catalog = []
-
-        self.instance_lock_checked = instance_lock_checked
 
         # NOTE(markmc): this attribute is currently only used by the
         # rs_limits turnstile pre-processor.
@@ -181,8 +189,6 @@ class RequestContext(context.RequestContext):
             'user_name': getattr(self, 'user_name', None),
             'service_catalog': getattr(self, 'service_catalog', None),
             'project_name': getattr(self, 'project_name', None),
-            'instance_lock_checked': getattr(self, 'instance_lock_checked',
-                                             False)
         })
         # NOTE(tonyb): This can be removed once we're certain to have a
         # RequestContext contains 'is_admin_project', We can only get away with
@@ -207,7 +213,6 @@ class RequestContext(context.RequestContext):
             timestamp=values.get('timestamp'),
             quota_class=values.get('quota_class'),
             service_catalog=values.get('service_catalog'),
-            instance_lock_checked=values.get('instance_lock_checked', False),
         )
 
     def elevated(self, read_deleted=None):

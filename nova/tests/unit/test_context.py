@@ -181,7 +181,6 @@ class ContextTestCase(test.NoDBTestCase):
         values2 = ctx.to_dict()
         expected_values = {'auth_token': None,
                            'domain': None,
-                           'instance_lock_checked': False,
                            'is_admin': False,
                            'is_admin_project': True,
                            'project_id': 222,
