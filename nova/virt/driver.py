@@ -251,6 +251,7 @@ class ComputeDriver(object):
         "supports_image_type_vhdx": False,
         "supports_image_type_vmdk": False,
         "supports_image_type_ploop": False,
+        "driver_specific_device_name": False
     }
 
     # Indicates if this driver will rebalance nodes among compute service

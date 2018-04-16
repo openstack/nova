@@ -2111,8 +2111,11 @@ class ComputeManager(manager.Manager):
             return self.driver.get_device_name_for_instance(
                 instance, bdms, block_device_obj)
         except NotImplementedError:
-            return compute_utils.get_device_name_for_instance(
-                instance, bdms, block_device_obj.get("device_name"))
+            @utils.synchronized(instance.uuid + "-bdms")
+            def _do_get_device_name_for_instance():
+                return compute_utils.get_device_name_for_instance(
+                    instance, bdms, block_device_obj.get("device_name"))
+            return _do_get_device_name_for_instance()
 
     def _default_block_device_names(self, instance, image_meta, block_devices):
         """Verify that all the devices have the device_name set. If not,
@@ -7519,7 +7522,22 @@ class ComputeManager(manager.Manager):
             raise exception.MultiattachNotSupportedByVirtDriver(
                 volume_id=volume_id)
 
-        @utils.synchronized(instance.uuid)
+        # There is only one driver, which calls out to the hypervisor for that,
+        # so we need to lock the instance against manipulations
+        # Otherwise, we can do our own logic and have to synchronise that
+        # Since we do NOT hold a lock on instance level, we need to introduce
+        # one on the instance bdm level in _get_device_name_for_instance, so
+        # that we are protected against concurrency issues with other calls to
+        # that function
+        driver_specific_device_name = self.driver.capabilities.get(
+            "driver_specific_device_name", False)
+        if driver_specific_device_name:
+            synchronized = utils.synchronized(instance.uuid)
+        else:
+            def synchronized(f):
+                return f
+
+        @synchronized
         def do_reserve():
             bdms = (
                 objects.BlockDeviceMappingList.get_by_instance_uuid(

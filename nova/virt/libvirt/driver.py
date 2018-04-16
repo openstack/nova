@@ -446,6 +446,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 self.image_backend.backend().SUPPORTS_LUKS,
             "supports_ephemeral_encryption_luks":
                 self.image_backend.backend().SUPPORTS_LUKS,
+            "driver_specific_device_name": True,
         }
         super(LibvirtDriver, self).__init__(virtapi)
 
