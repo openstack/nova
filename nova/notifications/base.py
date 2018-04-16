@@ -210,7 +210,7 @@ def send_instance_update_notification(context, instance, old_vm_state=None,
     about instance state changes.
     """
 
-    payload = info_from_instance(context, instance, None, None)
+    payload = info_from_instance(context, instance, None)
 
     # determine how we'll report states
     payload.update(
@@ -379,21 +379,12 @@ def null_safe_isotime(s):
         return str(s) if s else ''
 
 
-def info_from_instance(context, instance, network_info,
-                system_metadata, **kw):
+def info_from_instance(context, instance, network_info, **kw):
     """Get detailed instance information for an instance which is common to all
     notifications.
 
     :param:instance: nova.objects.Instance
     :param:network_info: network_info provided if not None
-    :param:system_metadata: system_metadata DB entries for the instance,
-    if not None
-
-    .. note::
-
-        Currently unused here in trunk, but needed for potential custom
-        modifications.
-
     """
     try:
         # TODO(mriedem): We can eventually drop this when we no longer support

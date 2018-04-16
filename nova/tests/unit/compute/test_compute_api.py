@@ -1035,13 +1035,11 @@ class _ComputeAPIUnitTestMixIn(object):
         if 'soft' in delete_type:
             compute_utils.notify_about_instance_usage(
                 self.compute_api.notifier,
-                self.context, inst, 'delete.end',
-                system_metadata=inst.system_metadata)
+                self.context, inst, 'delete.end')
         else:
             compute_utils.notify_about_instance_usage(
                 self.compute_api.notifier,
-                self.context, inst, '%s.end' % delete_type,
-                system_metadata=inst.system_metadata)
+                self.context, inst, '%s.end' % delete_type)
         cell = objects.CellMapping(uuid=uuids.cell,
                                    transport_url='fake://',
                                    database_connection='fake://')
@@ -1343,7 +1341,7 @@ class _ComputeAPIUnitTestMixIn(object):
                                 constraint='constraint').AndReturn(fake_inst)
             compute_utils.notify_about_instance_usage(
                     self.compute_api.notifier, self.context,
-                    inst, 'delete.end', system_metadata={})
+                    inst, 'delete.end')
 
         self.mox.ReplayAll()
 
@@ -1392,8 +1390,7 @@ class _ComputeAPIUnitTestMixIn(object):
         inst.destroy()
         compute_utils.notify_about_instance_usage(
                     self.compute_api.notifier, self.context,
-                    inst, 'delete.end',
-                    system_metadata=inst.system_metadata)
+                    inst, 'delete.end')
 
         self.mox.ReplayAll()
         self.compute_api._local_delete(self.context, inst, bdms,
@@ -1521,40 +1518,6 @@ class _ComputeAPIUnitTestMixIn(object):
             mock_destroy.assert_called_once_with()
 
         do_test(self)
-
-    def test_local_delete_without_info_cache(self):
-        inst = self._create_instance_obj()
-
-        with test.nested(
-            mock.patch.object(inst, 'destroy'),
-            mock.patch.object(self.context, 'elevated'),
-            mock.patch.object(self.compute_api.network_api,
-                              'deallocate_for_instance'),
-            mock.patch.object(db, 'instance_system_metadata_get'),
-            mock.patch.object(compute_utils,
-                              'notify_about_instance_usage')
-        ) as (
-            inst_destroy, context_elevated, net_api_deallocate_for_instance,
-            db_instance_system_metadata_get, notify_about_instance_usage
-        ):
-
-            compute_utils.notify_about_instance_usage(
-                        self.compute_api.notifier, self.context,
-                        inst, 'delete.start')
-            self.context.elevated().MultipleTimes().AndReturn(self.context)
-            if self.cell_type != 'api':
-                self.compute_api.network_api.deallocate_for_instance(
-                            self.context, inst)
-
-            inst.destroy()
-            compute_utils.notify_about_instance_usage(
-                        self.compute_api.notifier, self.context,
-                        inst, 'delete.end',
-                        system_metadata=inst.system_metadata)
-            inst.info_cache = None
-            self.compute_api._local_delete(self.context, inst, [],
-                                           'delete',
-                                           self._fake_do_delete)
 
     def test_delete_disabled(self):
         inst = self._create_instance_obj()

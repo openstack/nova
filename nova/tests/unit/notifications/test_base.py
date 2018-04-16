@@ -97,8 +97,7 @@ class TestSendInstanceUpdateNotification(test.NoDBTestCase):
         instance = fake_instance.fake_instance_obj(ctxt, image_ref=uuids.image)
         instance.system_metadata = {}
         instance.metadata = {}
-        payload = base.info_from_instance(
-            ctxt, instance, network_info=None, system_metadata=None)
+        payload = base.info_from_instance(ctxt, instance, network_info=None)
         self.assertEqual(instance.image_ref, payload['image_ref_url'])
         mock_gen_image_url.assert_called_once_with(instance.image_ref, ctxt)
 
@@ -114,8 +113,7 @@ class TestSendInstanceUpdateNotification(test.NoDBTestCase):
             'fake-user', 'fake-project', auth_token='fake-token')
         instance = fake_instance.fake_instance_obj(ctxt, image_ref=uuids.image)
         self.assertRaises(ks_exc.EndpointNotFound, base.info_from_instance,
-                          ctxt, instance, network_info=None,
-                          system_metadata=None)
+                          ctxt, instance, network_info=None)
         mock_gen_image_url.assert_called_once_with(instance.image_ref, ctxt)
 
 

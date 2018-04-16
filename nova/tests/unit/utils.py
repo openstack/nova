@@ -314,8 +314,7 @@ def assert_instance_delete_notification_by_uuid(
         mock.call(expected_notifier,
                   expected_context,
                   match_by_instance_uuid,
-                  'delete.end',
-                  system_metadata={})])
+                  'delete.end')])
 
     for call in mock_notify.call_args_list:
         if expect_targeted_context:

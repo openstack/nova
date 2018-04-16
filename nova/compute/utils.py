@@ -268,16 +268,16 @@ def notify_usage_exists(notifier, context, instance_ref, current_period=False,
     usage auditing purposes.
 
     :param notifier: a messaging.Notifier
-
+    :param context: request context for the current operation
+    :param instance_ref: nova.objects.Instance object from which to report
+        usage
     :param current_period: if True, this will generate a usage for the
         current usage period; if False, this will generate a usage for the
         previous audit period.
-
     :param ignore_missing_network_data: if True, log any exceptions generated
         while getting network info; if False, raise the exception.
-    :param system_metadata: system_metadata DB entries for the instance,
-        if not None.  *NOTE*: Currently unused here in trunk, but needed for
-        potential custom modifications.
+    :param system_metadata: system_metadata override for the instance. If
+        None, the instance_ref.system_metadata will be used.
     :param extra_usage_info: Dictionary containing extra values to add or
         override in the notification if not None.
     """
@@ -301,12 +301,12 @@ def notify_usage_exists(notifier, context, instance_ref, current_period=False,
         extra_info.update(extra_usage_info)
 
     notify_about_instance_usage(notifier, context, instance_ref, 'exists',
-            system_metadata=system_metadata, extra_usage_info=extra_info)
+                                extra_usage_info=extra_info)
 
 
 def notify_about_instance_usage(notifier, context, instance, event_suffix,
-                                network_info=None, system_metadata=None,
-                                extra_usage_info=None, fault=None):
+                                network_info=None, extra_usage_info=None,
+                                fault=None):
     """Send an unversioned legacy notification about an instance.
 
     All new notifications should use notify_about_instance_action which sends
@@ -315,8 +315,6 @@ def notify_about_instance_usage(notifier, context, instance, event_suffix,
     :param notifier: a messaging.Notifier
     :param event_suffix: Event type like "delete.start" or "exists"
     :param network_info: Networking information, if provided.
-    :param system_metadata: system_metadata DB entries for the instance,
-        if provided.
     :param extra_usage_info: Dictionary containing extra values to add or
         override in the notification.
     """
@@ -324,7 +322,7 @@ def notify_about_instance_usage(notifier, context, instance, event_suffix,
         extra_usage_info = {}
 
     usage_info = notifications.info_from_instance(context, instance,
-            network_info, system_metadata, **extra_usage_info)
+            network_info, **extra_usage_info)
 
     if fault:
         # NOTE(johngarbutt) mirrors the format in wrap_exception
@@ -1057,15 +1055,10 @@ class UnlimitedSemaphore(object):
 @contextlib.contextmanager
 def notify_about_instance_delete(notifier, context, instance,
                                  delete_type='delete'):
-    # Pre-load system_metadata because if this context is around an
-    # instance.destroy(), lazy-loading it later would result in an
-    # InstanceNotFound error.
-    system_metadata = instance.system_metadata
     try:
         notify_about_instance_usage(notifier, context, instance,
                                     "%s.start" % delete_type)
         yield
     finally:
         notify_about_instance_usage(notifier, context, instance,
-                                    "%s.end" % delete_type,
-                                    system_metadata=system_metadata)
+                                    "%s.end" % delete_type)
