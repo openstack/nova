@@ -52,7 +52,7 @@ A very basic controller of a v2.1 API::
         # Defining support for other RESTFul methods based on resouce.
 
 
-See `servers.py for ref <http://git.openstack.org/cgit/openstack/nova/tree/nova/nova/api/openstack/compute/servers.py>`_.
+See `servers.py <http://git.openstack.org/cgit/openstack/nova/tree/nova/api/openstack/compute/servers.py>`_ for ref.
 
 All of the controller modules should live in the ``nova/api/openstack/compute`` directory.
 
