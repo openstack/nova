@@ -1432,15 +1432,26 @@ class ServersControllerTest(ControllerTest):
             self.assertEqual(s['name'], 'server%d' % (i + 1))
 
     def test_get_servers_joins_services(self):
+
         def fake_get_all(compute_self, context, search_opts=None,
                          limit=None, marker=None,
                          expected_attrs=None, sort_keys=None, sort_dirs=None):
-            self.assertIn('services', expected_attrs)
+            cur = api_version_request.APIVersionRequest(self.wsgi_api_version)
+            v216 = api_version_request.APIVersionRequest('2.16')
+            if cur >= v216:
+                self.assertIn('services', expected_attrs)
+            else:
+                self.assertNotIn('services', expected_attrs)
             return objects.InstanceList()
 
-        self.stubs.Set(compute_api.API, 'get_all', fake_get_all)
+        self.stub_out("nova.compute.api.API.get_all", fake_get_all)
 
         req = self.req('/fake/servers/detail', use_admin_context=True)
+        self.assertIn('servers', self.controller.detail(req))
+
+        req = fakes.HTTPRequest.blank('/fake/servers/detail',
+                                      use_admin_context=True,
+                                      version=self.wsgi_api_version)
         self.assertIn('servers', self.controller.detail(req))
 
 
