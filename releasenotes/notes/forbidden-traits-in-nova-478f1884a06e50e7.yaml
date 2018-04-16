@@ -1,0 +1,21 @@
+---
+features:
+  - |
+    Added support for forbidden traits to the scheduler. A flavor extra spec
+    is extended to support specifying the forbidden traits. The syntax of
+    extra spec is ``trait:<trait_name>=forbidden``, for example:
+
+    - trait:HW_CPU_X86_AVX2=forbidden
+    - trait:STORAGE_DISK_SSD=forbidden
+
+    The scheduler will pass the forbidden traits to the
+    ``GET /allocation_candidates`` endpoint in the Placement API to include
+    only resource providers that do not include the forbidden traits. Currently
+    the only valid values are ``required`` and ``forbidden``. Any other values
+    will be considered invalid.
+
+    This requires that the Placement API version 1.22 is available before
+    the ``nova-scheduler`` service can use this feature.
+
+    The FilterScheduler is currently the only scheduler driver that supports
+    this feature.
