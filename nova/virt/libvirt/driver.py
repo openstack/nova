@@ -423,6 +423,7 @@ class LibvirtDriver(driver.ComputeDriver):
             "supports_bfv_rescue": True,
             "supports_vtpm": CONF.libvirt.swtpm_enabled,
             "supports_socket_pci_numa_affinity": True,
+            "driver_specific_device_name": True,
         }
         super(LibvirtDriver, self).__init__(virtapi)
 
