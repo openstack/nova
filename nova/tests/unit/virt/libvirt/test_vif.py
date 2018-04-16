@@ -681,6 +681,44 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         self.assertIsNone(conf.vhost_queues)
         self.assertIsNone(conf.driver_name)
 
+    def _test_virtio_config_queue_sizes(self):
+        self.flags(rx_queue_size=512, group='libvirt')
+        self.flags(tx_queue_size=1024, group='libvirt')
+        hostimpl = host.Host("qemu:///system")
+        v = vif.LibvirtGenericVIFDriver()
+        conf = v.get_base_config(
+            None, 'ca:fe:de:ad:be:ef', {}, objects.Flavor(), 'kvm', 'normal',
+            hostimpl)
+        return hostimpl, v, conf
+
+    @mock.patch.object(host.Host, "has_min_version", return_value=True)
+    def test_virtio_vhost_queue_sizes(self, has_min_version):
+        _, _, conf = self._test_virtio_config_queue_sizes()
+        self.assertEqual(512, conf.vhost_rx_queue_size)
+        self.assertIsNone(conf.vhost_tx_queue_size)
+
+    @mock.patch.object(host.Host, "has_min_version", return_value=False)
+    def test_virtio_vhost_queue_sizes_nover(self, has_min_version):
+        _, _, conf = self._test_virtio_config_queue_sizes()
+        self.assertIsNone(conf.vhost_rx_queue_size)
+        self.assertIsNone(conf.vhost_tx_queue_size)
+
+    @mock.patch.object(host.Host, "has_min_version", return_value=True)
+    def test_virtio_vhostuser_osvif_queue_sizes(self, has_min_version):
+        hostimpl, v, conf = self._test_virtio_config_queue_sizes()
+        v._set_config_VIFVHostUser(self.instance, self.os_vif_vhostuser,
+                                   conf, hostimpl)
+        self.assertEqual(512, conf.vhost_rx_queue_size)
+        self.assertEqual(1024, conf.vhost_tx_queue_size)
+
+    @mock.patch.object(host.Host, "has_min_version", return_value=False)
+    def test_virtio_vhostuser_osvif_queue_sizes_ver_err(self, has_min_version):
+        hostimpl, v, conf = self._test_virtio_config_queue_sizes()
+        v._set_config_VIFVHostUser(self.instance, self.os_vif_vhostuser,
+                                   conf, hostimpl)
+        self.assertIsNone(conf.vhost_rx_queue_size)
+        self.assertIsNone(conf.vhost_tx_queue_size)
+
     def test_multiple_nics(self):
         conf = self._get_conf()
         # Tests multiple nic configuration and that target_dev is
@@ -789,7 +827,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         d.get_base_config(None, 'ca:fe:de:ad:be:ef', image_meta,
                           None, 'kvm', 'normal', hostimpl)
         mock_set.assert_called_once_with(mock.ANY, 'ca:fe:de:ad:be:ef',
-                                         'virtio', None, None)
+                                         'virtio', None, None, None)
 
     @mock.patch.object(vif.designer, 'set_vif_guest_frontend_config')
     def test_model_sriov_multi_queue_not_set(self, mock_set):
@@ -806,7 +844,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         conf = d.get_base_config(None, 'ca:fe:de:ad:be:ef', image_meta,
                                  None, 'kvm', 'direct', hostimpl)
         mock_set.assert_called_once_with(mock.ANY, 'ca:fe:de:ad:be:ef',
-                                         'virtio', None, None)
+                                         'virtio', None, None, None)
         self.assertIsNone(conf.vhost_queues)
         self.assertIsNone(conf.driver_name)
 
@@ -1428,6 +1466,30 @@ class LibvirtVifTestCase(test.NoDBTestCase):
                                "source", "type", "unix")
         self._assertMacEquals(node, self.vif_vhostuser)
         self._assertModel(xml, network_model.VIF_MODEL_VIRTIO)
+
+    def test_vhostuser_driver_queue_sizes(self):
+        self.flags(rx_queue_size=512, group='libvirt')
+        self.flags(tx_queue_size=1024, group='libvirt')
+        d = vif.LibvirtGenericVIFDriver()
+        xml = self._get_instance_xml(d, self.vif_vhostuser)
+        self._assertXmlEqual("""
+         <domain type="qemu">
+          <uuid>fake-uuid</uuid>
+          <name>fake-name</name>
+          <memory>102400</memory>
+          <vcpu>4</vcpu>
+          <os>
+           <type>None</type>
+          </os>
+          <devices>
+           <interface type="vhostuser">
+            <mac address="ca:fe:de:ad:be:ef"/>
+            <model type="virtio"/>
+            <driver rx_queue_size="512" tx_queue_size="1024"/>
+            <source mode="client" path="/tmp/vif-xxx-yyy-zzz" type="unix"/>
+           </interface>
+          </devices>
+        </domain>""", xml)
 
     def test_vhostuser_no_queues(self):
         d = vif.LibvirtGenericVIFDriver()

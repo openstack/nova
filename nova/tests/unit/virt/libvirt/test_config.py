@@ -1959,6 +1959,31 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
         obj2.parse_str(xml)
         self.assertXmlEqual(xml, obj2.to_xml())
 
+    def test_config_vhostuser_queue_size(self):
+        obj = config.LibvirtConfigGuestInterface()
+        obj.net_type = "vhostuser"
+        obj.vhostuser_type = "unix"
+        obj.vhostuser_mode = "server"
+        obj.mac_addr = "DE:AD:BE:EF:CA:FE"
+        obj.vhostuser_path = "/vhost-user/test.sock"
+        obj.vhost_rx_queue_size = 512
+        obj.vhost_tx_queue_size = 1024
+        obj.model = "virtio"
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <interface type="vhostuser">
+              <mac address="DE:AD:BE:EF:CA:FE"/>
+              <model type="virtio"/>
+              <driver rx_queue_size="512" tx_queue_size="1024"/>
+              <source type="unix" mode="server" path="/vhost-user/test.sock"/>
+            </interface>""")
+
+        # parse the xml from the first object into a new object and make sure
+        # they are the same
+        obj2 = config.LibvirtConfigGuestInterface()
+        obj2.parse_str(xml)
+        self.assertXmlEqual(xml, obj2.to_xml())
+
     def test_config_interface_address(self):
         xml = """
             <interface type='network'>

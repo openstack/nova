@@ -1134,6 +1134,33 @@ Related options:
 ),
 ]
 
+
+# The queue size requires value to be a power of two from [256, 1024]
+# range.
+# https://libvirt.org/formatdomain.html#elementsDriverBackendOptions
+QueueSizeType = types.Integer(choices=(256, 512, 1024))
+
+libvirt_virtio_queue_sizes = [
+    cfg.Opt('rx_queue_size',
+            type=QueueSizeType,
+            help="""
+Configure virtio rx queue size.
+
+This option is only usable for virtio-net device with vhost and
+vhost-user backend. Available only with QEMU/KVM. Requires libvirt
+v2.3 QEMU v2.7."""),
+    cfg.Opt('tx_queue_size',
+            type=QueueSizeType,
+            help="""
+Configure virtio tx queue size.
+
+This option is only usable for virtio-net device with vhost-user
+backend. Available only with QEMU/KVM. Requires libvirt v3.7 QEMU
+v2.10."""),
+
+]
+
+
 ALL_OPTS = list(itertools.chain(
     libvirt_general_opts,
     libvirt_imagebackend_opts,
@@ -1151,6 +1178,7 @@ ALL_OPTS = list(itertools.chain(
     libvirt_volume_smbfs_opts,
     libvirt_remotefs_opts,
     libvirt_volume_vzstorage_opts,
+    libvirt_virtio_queue_sizes,
 ))
 
 

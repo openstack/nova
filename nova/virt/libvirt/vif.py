@@ -39,7 +39,9 @@ from nova import profiler
 from nova import utils
 from nova.virt.libvirt import config as vconfig
 from nova.virt.libvirt import designer
+from nova.virt.libvirt import utils as libvirt_utils
 from nova.virt import osinfo
+
 
 LOG = logging.getLogger(__name__)
 
@@ -49,6 +51,13 @@ CONF = nova.conf.CONF
 MIN_LIBVIRT_VHOSTUSER_MQ = (1, 2, 17)
 #  vlan tag for macvtap passthrough mode on SRIOV VFs
 MIN_LIBVIRT_MACVTAP_PASSTHROUGH_VLAN = (1, 3, 5)
+
+# virtio-net.rx_queue_size support
+MIN_LIBVIRT_RX_QUEUE_SIZE = (2, 3, 0)
+MIN_QEMU_RX_QUEUE_SIZE = (2, 7, 0)
+# virtio-net.tx_queue_size support
+MIN_LIBVIRT_TX_QUEUE_SIZE = (3, 7, 0)
+MIN_QEMU_TX_QUEUE_SIZE = (2, 10, 0)
 
 
 def is_vif_model_valid_for_virt(virt_type, vif_model):
@@ -105,6 +114,10 @@ class LibvirtGenericVIFDriver(object):
 
     def get_base_config(self, instance, mac, image_meta,
                         inst_type, virt_type, vnic_type, host):
+        # TODO(sahid): We should rewrite it. This method handles too
+        # many unrelated things. We probably need to have a specific
+        # virtio, vhost, vhostuser functions.
+
         conf = vconfig.LibvirtConfigGuestInterface()
         # Default to letting libvirt / the hypervisor choose the model
         model = None
@@ -138,10 +151,30 @@ class LibvirtGenericVIFDriver(object):
             vnic_type not in network_model.VNIC_TYPES_SRIOV):
             vhost_drv, vhost_queues = self._get_virtio_mq_settings(image_meta,
                                                                    inst_type)
+            # TODO(sahid): It seems that we return driver 'vhost' even
+            # for vhostuser interface where for vhostuser interface
+            # the driver should be 'vhost-user'. That currently does
+            # not create any issue since QEMU ignores the driver
+            # argument for vhostuser interface but we should probably
+            # fix that anyway. Also we should enforce that the driver
+            # use vhost and not None.
             driver = vhost_drv or driver
 
+        rx_queue_size = None
+        if driver == 'vhost' or driver is None:
+            # vhost backend only supports update of RX queue size
+            rx_queue_size, _ = self._get_virtio_queue_sizes(host)
+            if rx_queue_size:
+                # TODO(sahid): Specifically force driver to be vhost
+                # that because if None we don't generate the XML
+                # driver element needed to set the queue size
+                # attribute. This can be removed when get_base_config
+                # will be fixed and rewrite to set the correct
+                # backend.
+                driver = 'vhost'
+
         designer.set_vif_guest_frontend_config(
-            conf, mac, model, driver, vhost_queues)
+            conf, mac, model, driver, vhost_queues, rx_queue_size)
 
         return conf
 
@@ -438,7 +471,10 @@ class LibvirtGenericVIFDriver(object):
         conf.driver_name = None
 
         mode, sock_path = self._get_vhostuser_settings(vif)
-        designer.set_vif_host_backend_vhostuser_config(conf, mode, sock_path)
+        rx_queue_size, tx_queue_size = self._get_virtio_queue_sizes(host)
+        designer.set_vif_host_backend_vhostuser_config(
+            conf, mode, sock_path, rx_queue_size, tx_queue_size)
+
         # (vladikr) Not setting up driver and queues for vhostuser
         # as queues are not supported in Libvirt until version 1.2.17
         if not host.has_min_version(MIN_LIBVIRT_VHOSTUSER_MQ):
@@ -446,6 +482,38 @@ class LibvirtGenericVIFDriver(object):
             conf.vhost_queues = None
 
         return conf
+
+    def _get_virtio_queue_sizes(self, host):
+        """Returns rx/tx queue sizes configured or (None, None)
+
+        Based on tx/rx queue sizes configured on host (nova.conf). The
+        methods check whether the versions of libvirt and QEMU are
+        corrects.
+        """
+        # TODO(sahid): For vhostuser interface this function is called
+        # from get_base_config and also from the method reponsible to
+        # configure vhostuser interface meaning that the logs can be
+        # duplicated. In future we want to rewrite get_base_config.
+        rx, tx = CONF.libvirt.rx_queue_size, CONF.libvirt.tx_queue_size
+        if rx and not host.has_min_version(
+                MIN_LIBVIRT_RX_QUEUE_SIZE, MIN_QEMU_RX_QUEUE_SIZE):
+            LOG.warning('Setting RX queue size requires libvirt %s and QEMU '
+                        '%s version or greater.',
+                        libvirt_utils.version_to_string(
+                            MIN_LIBVIRT_RX_QUEUE_SIZE),
+                        libvirt_utils.version_to_string(
+                            MIN_QEMU_RX_QUEUE_SIZE))
+            rx = None
+        if tx and not host.has_min_version(
+                MIN_LIBVIRT_TX_QUEUE_SIZE, MIN_QEMU_TX_QUEUE_SIZE):
+            LOG.warning('Setting TX queue size requires libvirt %s and QEMU '
+                        '%s version or greater.',
+                        libvirt_utils.version_to_string(
+                            MIN_LIBVIRT_TX_QUEUE_SIZE),
+                        libvirt_utils.version_to_string(
+                            MIN_QEMU_TX_QUEUE_SIZE))
+            tx = None
+        return rx, tx
 
     def get_config_ib_hostdev(self, instance, vif, image_meta,
                               inst_type, virt_type, host):
@@ -485,8 +553,9 @@ class LibvirtGenericVIFDriver(object):
         # and rewrite to set the correct backend.
         conf.driver_name = None
 
+        rx_queue_size, tx_queue_size = self._get_virtio_queue_sizes(host)
         designer.set_vif_host_backend_vhostuser_config(
-            conf, vif.mode, vif.path)
+            conf, vif.mode, vif.path, rx_queue_size, tx_queue_size)
         if not host.has_min_version(MIN_LIBVIRT_VHOSTUSER_MQ):
             LOG.debug('Queues are not a vhostuser supported feature.')
             conf.vhost_queues = None
