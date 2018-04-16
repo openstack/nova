@@ -137,6 +137,16 @@ def get_disk_size(path):
     return images.qemu_img_info(path).virtual_size
 
 
+def get_allocated_disk_size(path):
+    """Get the allocated size of a disk image
+
+    :param path: Path to the disk image
+    :returns: Size (in bytes) of the given disk image as allocated on the
+              filesystem
+    """
+    return images.qemu_img_info(path).disk_size
+
+
 def extend(image, size):
     """Increase image to size.
 
