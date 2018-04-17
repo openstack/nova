@@ -59,7 +59,10 @@ class IsolatedHostsFilter(filters.BaseHostFilter):
             return ((not restrict_isolated_hosts_to_isolated_images) or
                    (host_state.host not in isolated_hosts))
 
-        image_ref = spec_obj.image.id if spec_obj.image else None
+        # Check to see if the image id is set since volume-backed instances
+        # can be created without an imageRef in the server create request.
+        image_ref = spec_obj.image.id \
+            if spec_obj.image and 'id' in spec_obj.image else None
         image_isolated = image_ref in isolated_images
         host_isolated = host_state.host in isolated_hosts
 
