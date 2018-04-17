@@ -15275,6 +15275,26 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_cleanup_encryption_volume_detach_failed(self):
         self._test_cleanup_encryption_process_execution_error(not_found=False)
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_volume_encryption')
+    def test_swap_volume_native_luks_blocked(self, mock_get_encryption):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI())
+
+        # dest volume is encrypted
+        mock_get_encryption.side_effect = [{}, {'provider': 'luks'}]
+        self.assertRaises(NotImplementedError, drvr.swap_volume, self.context,
+                            {}, {}, None, None, None)
+
+        # src volume is encrypted
+        mock_get_encryption.side_effect = [{'provider': 'luks'}, {}]
+        self.assertRaises(NotImplementedError, drvr.swap_volume, self.context,
+                            {}, {}, None, None, None)
+
+        # both volumes are encrypted
+        mock_get_encryption.side_effect = [{'provider': 'luks'},
+                                           {'provider': 'luks'}]
+        self.assertRaises(NotImplementedError, drvr.swap_volume, self.context,
+                            {}, {}, None, None, None)
+
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete',
                 return_value=True)
     def _test_swap_volume(self, mock_is_job_complete, source_type,
@@ -15404,8 +15424,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         conf = mock.MagicMock(source_path='/fake-new-volume')
         get_volume_config.return_value = conf
 
-        conn.swap_volume(old_connection_info, new_connection_info, instance,
-                         '/dev/vdb', 1)
+        conn.swap_volume(self.context, old_connection_info,
+                         new_connection_info, instance, '/dev/vdb', 1)
 
         get_guest.assert_called_once_with(instance)
         connect_volume.assert_called_once_with(new_connection_info, disk_info,
@@ -15424,6 +15444,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     def test_swap_volume_driver_source_is_snapshot(self):
         self._test_swap_volume_driver(source_type='snapshot')
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_volume_encryption')
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.rebase')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._connect_volume')
@@ -15433,7 +15454,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('nova.virt.libvirt.host.Host.write_instance_config')
     def test_swap_volume_disconnect_new_volume_on_rebase_error(self,
             write_config, get_guest, get_disk, get_volume_config,
-            connect_volume, disconnect_volume, rebase):
+            connect_volume, disconnect_volume, rebase,
+            get_volume_encryption):
         """Assert that disconnect_volume is called for the new volume if an
            error is encountered while rebasing
         """
@@ -15441,12 +15463,13 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         instance = objects.Instance(**self.test_instance)
         guest = libvirt_guest.Guest(mock.MagicMock())
         get_guest.return_value = guest
+        get_volume_encryption.return_value = {}
         exc = fakelibvirt.make_libvirtError(fakelibvirt.libvirtError,
               'internal error', error_code=fakelibvirt.VIR_ERR_INTERNAL_ERROR)
         rebase.side_effect = exc
 
         self.assertRaises(exception.VolumeRebaseFailed, conn.swap_volume,
-                          mock.sentinel.old_connection_info,
+                          self.context, mock.sentinel.old_connection_info,
                           mock.sentinel.new_connection_info,
                           instance, '/dev/vdb', 0)
         connect_volume.assert_called_once_with(
@@ -15455,6 +15478,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         disconnect_volume.assert_called_once_with(
                 mock.sentinel.new_connection_info, 'vdb', instance)
 
+    @mock.patch.object(libvirt_driver.LibvirtDriver, '_get_volume_encryption')
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.is_job_complete')
     @mock.patch('nova.virt.libvirt.guest.BlockDevice.abort_job')
     @mock.patch('nova.virt.libvirt.driver.LibvirtDriver._disconnect_volume')
@@ -15465,7 +15489,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
     @mock.patch('nova.virt.libvirt.host.Host.write_instance_config')
     def test_swap_volume_disconnect_new_volume_on_pivot_error(self,
             write_config, get_guest, get_disk, get_volume_config,
-            connect_volume, disconnect_volume, abort_job, is_job_complete):
+            connect_volume, disconnect_volume, abort_job, is_job_complete,
+            get_volume_encryption):
         """Assert that disconnect_volume is called for the new volume if an
            error is encountered while pivoting to the new volume
         """
@@ -15473,13 +15498,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         instance = objects.Instance(**self.test_instance)
         guest = libvirt_guest.Guest(mock.MagicMock())
         get_guest.return_value = guest
+        get_volume_encryption.return_value = {}
         exc = fakelibvirt.make_libvirtError(fakelibvirt.libvirtError,
               'internal error', error_code=fakelibvirt.VIR_ERR_INTERNAL_ERROR)
         is_job_complete.return_value = True
         abort_job.side_effect = [None, exc]
 
         self.assertRaises(exception.VolumeRebaseFailed, conn.swap_volume,
-                          mock.sentinel.old_connection_info,
+                          self.context, mock.sentinel.old_connection_info,
                           mock.sentinel.new_connection_info,
                           instance, '/dev/vdb', 0)
         connect_volume.assert_called_once_with(
