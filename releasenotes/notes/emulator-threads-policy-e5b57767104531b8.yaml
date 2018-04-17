@@ -1,0 +1,15 @@
+---
+features:
+  - |
+    Introduces ``[compute]/cpu_shared_set`` option for compute nodes.
+    Some workloads run best when the hypervisor overhead processes
+    (emulator threads in libvirt/QEMU) can be placed on different
+    physical host CPUs than other guest CPU resources. This allows
+    those workloads to prevent latency spikes for guest vCPU threads.
+
+    To place a workload's emulator threads on a set of isolated
+    physical CPUs, set the ``[compute]/cpu_shared_set`` configuration
+    option to the set of host CPUs that should be used for best-effort
+    CPU resources. Then set a flavor extra spec to
+    ``hw:emulator_threads_policy=share`` to instruct nova to place
+    that workload's emulator threads on that set of host CPUs.
