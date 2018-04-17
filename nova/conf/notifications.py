@@ -94,7 +94,10 @@ Specifies which notification format shall be used by nova.
 The default value is fine for most deployments and rarely needs to be changed.
 This value can be set to 'versioned' once the infrastructure moves closer to
 consuming the newer format of notifications. After this occurs, this option
-will be removed (possibly in the "P" release).
+will be removed.
+
+Note that notifications can be completely disabled by setting ``driver=noop``
+in the ``[oslo_messaging_notifications]`` group.
 
 Possible values:
 * unversioned: Only the legacy unversioned notifications are emitted.
