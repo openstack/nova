@@ -26,4 +26,4 @@ gabbi>=1.35.0 # Apache-2.0
 oslo.vmware>=2.17.0 # Apache-2.0
 
 # placement functional tests
-wsgi-intercept>=1.4.1 # MIT License
+wsgi-intercept>=1.7.0 # MIT License
