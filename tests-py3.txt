@@ -3,6 +3,5 @@
 # careful before you re-enable them
 ##########################################################################
 nova.tests.unit.virt.xenapi.test_vmops.BootableTestCase
-nova.tests.unit.virt.xenapi.test_vmops.SpawnTestCase
 nova.tests.unit.virt.xenapi.test_volumeops.VolumeDetachTestCase
 nova.tests.unit.virt.xenapi.test_xenapi.XenAPIMigrateInstance
