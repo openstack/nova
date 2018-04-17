@@ -54,7 +54,9 @@ class EventType(NotificationObject):
     #              NotificationActionField enum
     # Version 1.8: IMPORT value is added to NotificationActionField enum
     # Version 1.9: ADD_MEMBER value is added to NotificationActionField enum
-    VERSION = '1.9'
+    # Version 1.10: UPDATE_METADATA value is added to the
+    #               NotificationActionField enum
+    VERSION = '1.10'
 
     fields = {
         'object': fields.StringField(nullable=False),

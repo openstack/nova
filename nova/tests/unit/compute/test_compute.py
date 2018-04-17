@@ -11653,7 +11653,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                           self.api.update_aggregate,
                           self.context, aggr2.id, metadata)
 
-    def test_update_aggregate_metadata(self):
+    @mock.patch('nova.compute.utils.notify_about_aggregate_action')
+    def test_update_aggregate_metadata(self, mock_notify):
         # Ensure metadata can be updated.
         aggr = self.api.create_aggregate(self.context, 'fake_aggregate',
                                          'fake_zone')
@@ -11672,6 +11673,11 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         msg = fake_notifier.NOTIFICATIONS[1]
         self.assertEqual(msg.event_type,
                          'aggregate.updatemetadata.end')
+        mock_notify.assert_has_calls([
+            mock.call(context=self.context, aggregate=aggr,
+                      action='update_metadata', phase='start'),
+            mock.call(context=self.context, aggregate=aggr,
+                      action='update_metadata', phase='end')])
         fake_notifier.NOTIFICATIONS = []
         metadata['foo_key1'] = None
         expected_payload_meta_data = {'foo_key1': None,
@@ -11690,7 +11696,8 @@ class ComputeAPIAggrTestCase(BaseTestCase):
                         matchers.DictMatches({'availability_zone': 'fake_zone',
                         'foo_key2': 'foo_value2'}))
 
-    def test_update_aggregate_metadata_no_az(self):
+    @mock.patch('nova.compute.utils.notify_about_aggregate_action')
+    def test_update_aggregate_metadata_no_az(self, mock_notify):
         # Ensure metadata without availability zone can be
         # updated,even the aggregate contains hosts belong
         # to another availability zone
@@ -11712,6 +11719,11 @@ class ComputeAPIAggrTestCase(BaseTestCase):
         msg = fake_notifier.NOTIFICATIONS[1]
         self.assertEqual(msg.event_type,
                          'aggregate.updatemetadata.end')
+        mock_notify.assert_has_calls([
+            mock.call(context=self.context, aggregate=aggr2,
+                      action='update_metadata', phase='start'),
+            mock.call(context=self.context, aggregate=aggr2,
+                      action='update_metadata', phase='end')])
         self.assertThat(aggr2.metadata,
                         matchers.DictMatches({'foo_key2': 'foo_value3'}))
 

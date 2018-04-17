@@ -3293,7 +3293,8 @@ class XenAPIAggregateTestCase(stubs.XenAPITestBase):
                           self.conn.remove_from_aggregate, self.context,
                           aggregate, 'fake_host')
 
-    def test_add_aggregate_host_raise_err(self):
+    @mock.patch('nova.compute.utils.notify_about_aggregate_action')
+    def test_add_aggregate_host_raise_err(self, mock_notify):
         # Ensure the undo operation works correctly on add.
         def fake_driver_add_to_aggregate(context, aggregate, host, **_ignore):
             raise exception.AggregateError(

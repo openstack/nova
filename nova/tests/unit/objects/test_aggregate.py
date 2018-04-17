@@ -122,7 +122,13 @@ class _TestAggregateObject(object):
 
     @mock.patch('nova.objects.aggregate._metadata_delete_from_db')
     @mock.patch('nova.objects.aggregate._metadata_add_to_db')
-    def test_update_metadata_api(self, mock_api_metadata_add,
+    @mock.patch('nova.compute.utils.notify_about_aggregate_action')
+    @mock.patch('oslo_versionedobjects.base.VersionedObject.'
+                'obj_from_primitive')
+    def test_update_metadata_api(self,
+                                 mock_obj_from_primitive,
+                                 mock_notify,
+                                 mock_api_metadata_add,
                                  mock_api_metadata_delete):
         fake_notifier.NOTIFICATIONS = []
         agg = aggregate.Aggregate()
@@ -130,6 +136,8 @@ class _TestAggregateObject(object):
         agg.id = 123
         agg.metadata = {'foo': 'bar'}
         agg.obj_reset_changes()
+        mock_obj_from_primitive.return_value = agg
+
         agg.update_metadata({'todelete': None, 'toadd': 'myval'})
         self.assertEqual(2, len(fake_notifier.NOTIFICATIONS))
         msg = fake_notifier.NOTIFICATIONS[0]
@@ -138,6 +146,11 @@ class _TestAggregateObject(object):
                          msg.payload['meta_data'])
         msg = fake_notifier.NOTIFICATIONS[1]
         self.assertEqual('aggregate.updatemetadata.end', msg.event_type)
+        mock_notify.assert_has_calls([
+            mock.call(context=self.context, aggregate=agg,
+                      action='update_metadata', phase='start'),
+            mock.call(context=self.context, aggregate=agg,
+                      action='update_metadata', phase='end')])
         self.assertEqual({'todelete': None, 'toadd': 'myval'},
                          msg.payload['meta_data'])
         self.assertEqual({'foo': 'bar', 'toadd': 'myval'}, agg.metadata)
