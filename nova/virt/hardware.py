@@ -54,6 +54,22 @@ def get_vcpu_pin_set():
     return cpuset_ids
 
 
+def get_cpu_shared_set():
+    """Parse cpu_shared_set config.
+
+    :returns: a set of pcpu ids can be used for best effort workloads
+    """
+    if not CONF.compute.cpu_shared_set:
+        return None
+
+    shared_ids = parse_cpu_spec(CONF.compute.cpu_shared_set)
+    if not shared_ids:
+        raise exception.Invalid(_("No CPUs available after parsing "
+                                  "cpu_shared_set config. %r ") %
+                                CONF.compute.cpu_shared_set)
+    return shared_ids
+
+
 def parse_cpu_spec(spec):
     """Parse a CPU set specification.
 
