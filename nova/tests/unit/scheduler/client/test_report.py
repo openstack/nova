@@ -1421,14 +1421,18 @@ class TestProviderOperations(SchedulerReportClientTestCase):
             'resources1:DISK_GB': '30',
             'trait:CUSTOM_TRAIT1': 'required',
             'trait:CUSTOM_TRAIT2': 'preferred',
+            'trait:CUSTOM_TRAIT3': 'forbidden',
+            'trait:CUSTOM_TRAIT4': 'forbidden',
         })
         resources.get_request_group(None).member_of = [
             ('agg1', 'agg2', 'agg3'), ('agg1', 'agg2')]
         expected_path = '/allocation_candidates'
-        expected_query = {'resources': ['MEMORY_MB:1024,VCPU:1'],
-                          'required': ['CUSTOM_TRAIT1'],
-                          'member_of': ['in:agg1,agg2'],
-                          'limit': ['1000']}
+        expected_query = {
+            'resources': ['MEMORY_MB:1024,VCPU:1'],
+            'required': ['CUSTOM_TRAIT1,!CUSTOM_TRAIT3,!CUSTOM_TRAIT4'],
+            'member_of': ['in:agg1,agg2'],
+            'limit': ['1000']
+        }
 
         resp_mock.json.return_value = json_data
         self.ks_adap_mock.get.return_value = resp_mock

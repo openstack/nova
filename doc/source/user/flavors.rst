@@ -632,9 +632,26 @@ Required traits
 
     The scheduler will pass required traits to the
     ``GET /allocation_candidates`` endpoint in the Placement API to include
-    only resource providers that can satisfy the required traits. Currently
-    the only valid value is ``required``. Any other value will be considered
+    only resource providers that can satisfy the required traits. In 17.0.0
+    the only valid value is ``required``. In 18.0.0 ``forbidden`` is added (see
+    below). Any other value will be considered
     invalid.
+
+    The FilterScheduler is currently the only scheduler driver that supports
+    this feature.
+
+Forbidden traits
+    Added in the 18.0.0 Rocky release.
+
+    Forbidden traits are similar to required traits, described above, but
+    instead of specifying the set of traits that must be satisfied by a compute
+    node, forbidden traits must **not** be present.
+
+    The syntax of the extra spec is ``trait:<trait_name>=forbidden``, for
+    example:
+
+    - trait:HW_CPU_X86_AVX2=forbidden
+    - trait:STORAGE_DISK_SSD=forbidden
 
     The FilterScheduler is currently the only scheduler driver that supports
     this feature.

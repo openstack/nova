@@ -85,17 +85,20 @@ class ResourceRequest(object):
         self.get_request_group(groupid).resources[rclass] = amount
 
     def _add_trait(self, groupid, trait_name, trait_type):
-        # Currently the only valid value for a trait entry is 'required'.
-        trait_vals = ('required',)
-        # Ensure the value is supported.
-        if trait_type not in trait_vals:
+        # Currently the only valid values for a trait entry are 'required'
+        # and 'forbidden'
+        trait_vals = ('required', 'forbidden')
+        if trait_type == 'required':
+            self.get_request_group(groupid).required_traits.add(trait_name)
+        elif trait_type == 'forbidden':
+            self.get_request_group(groupid).forbidden_traits.add(trait_name)
+        else:
             LOG.warning(
                 "Only (%(tvals)s) traits are supported. Received '%(val)s' "
                 "for key trait%(groupid)s.",
                 {"tvals": ', '.join(trait_vals), "groupid": groupid,
                  "val": trait_type})
-            return
-        self.get_request_group(groupid).required_traits.add(trait_name)
+        return
 
     @classmethod
     def from_extra_specs(cls, extra_specs):

@@ -339,6 +339,7 @@ class SchedulerReportClient(object):
         # and traits in the query string (via a new method on ResourceRequest).
         res = resources.get_request_group(None).resources
         required_traits = resources.get_request_group(None).required_traits
+        forbidden_traits = resources.get_request_group(None).forbidden_traits
         aggregates = resources.get_request_group(None).member_of
 
         resource_query = ",".join(
@@ -350,6 +351,14 @@ class SchedulerReportClient(object):
         }
         if required_traits:
             qs_params['required'] = ",".join(required_traits)
+        if forbidden_traits:
+            # Sorted to make testing easier to manage and for
+            # predictability.
+            forbiddens = ',!'.join(sorted(forbidden_traits))
+            if qs_params['required']:
+                qs_params['required'] += ',!' + forbiddens
+            else:
+                qs_params['required'] = '!' + forbiddens
         if aggregates:
             # NOTE(danms): In 1.21, placement cannot take an AND'd
             # set of aggregates, only an OR'd set. Thus, if we have

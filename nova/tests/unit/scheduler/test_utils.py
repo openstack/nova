@@ -373,6 +373,7 @@ class TestUtils(test.NoDBTestCase):
             # Key skipped because no colons
             'nocolons': '42',
             'trait:CUSTOM_MAGIC': 'required',
+            'trait:CUSTOM_BRONZE': 'forbidden',
             # Resource skipped because invalid resource class name
             'resources86:CUTSOM_MISSPELLED': '86',
             'resources1:SRIOV_NET_VF': '1',
@@ -384,6 +385,7 @@ class TestUtils(test.NoDBTestCase):
             # Trait skipped because unsupported value
             'trait86:CUSTOM_GOLD': 'preferred',
             'trait1:CUSTOM_PHYSNET_NET1': 'required',
+            'trait1:CUSTOM_PHYSNET_NET2': 'forbidden',
             'resources2:SRIOV_NET_VF': '1',
             'resources2:IPV4_ADDRESS': '2',
             'trait2:CUSTOM_PHYSNET_NET2': 'required',
@@ -405,7 +407,10 @@ class TestUtils(test.NoDBTestCase):
             required_traits={
                 'HW_CPU_X86_AVX',
                 'CUSTOM_MAGIC',
-            }
+            },
+            forbidden_traits={
+                'CUSTOM_BRONZE',
+            },
         )
         expected._rg_by_id['1'] = plib.RequestGroup(
             resources={
@@ -414,7 +419,10 @@ class TestUtils(test.NoDBTestCase):
             },
             required_traits={
                 'CUSTOM_PHYSNET_NET1',
-            }
+            },
+            forbidden_traits={
+                'CUSTOM_PHYSNET_NET2',
+            },
         )
         expected._rg_by_id['2'] = plib.RequestGroup(
             resources={
