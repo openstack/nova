@@ -1909,6 +1909,114 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
             self.ctx, migration_uuid)
         self.assertEqual(0, len(allocations))
 
+    def test_create_exceeding_capacity_allocation(self):
+        """Tests on a list of allocations which contains an invalid allocation
+        exceeds resource provider's capacity.
+
+        Expect InvalidAllocationCapacityExceeded to be raised and all
+        allocations in the list should not be applied.
+
+        """
+        empty_rp = rp_obj.ResourceProvider(
+            context=self.ctx,
+            uuid=uuidsentinel.empty_rp,
+            name=uuidsentinel.empty_rp,
+        )
+        empty_rp.create()
+
+        full_rp = rp_obj.ResourceProvider(
+            context=self.ctx,
+            uuid=uuidsentinel.full_rp,
+            name=uuidsentinel.full_rp,
+        )
+        full_rp.create()
+
+        for rp in (empty_rp, full_rp):
+            cpu_inv = rp_obj.Inventory(
+                context=self.ctx,
+                resource_provider=rp,
+                resource_class=fields.ResourceClass.VCPU,
+                total=24,
+                reserved=0,
+                min_unit=1,
+                max_unit=24,
+                step_size=1,
+                allocation_ratio=16.0)
+            ram_inv = rp_obj.Inventory(
+                context=self.ctx,
+                resource_provider=rp,
+                resource_class=fields.ResourceClass.MEMORY_MB,
+                total=1024,
+                reserved=0,
+                min_unit=64,
+                max_unit=1024,
+                step_size=64,
+                allocation_ratio=1.0)
+            inv_list = rp_obj.InventoryList(context=self.ctx,
+                objects=[cpu_inv, ram_inv])
+            rp.set_inventory(inv_list)
+
+        # First create a allocation to consume full_rp's resource.
+        alloc_list = rp_obj.AllocationList(context=self.ctx,
+            objects=[
+                rp_obj.Allocation(
+                    context=self.ctx,
+                    consumer_id=uuidsentinel.instance,
+                    resource_provider=full_rp,
+                    resource_class=fields.ResourceClass.VCPU,
+                    used=12),
+                rp_obj.Allocation(
+                    context=self.ctx,
+                    consumer_id=uuidsentinel.instance,
+                    resource_provider=full_rp,
+                    resource_class=fields.ResourceClass.MEMORY_MB,
+                    used=1024)
+            ])
+        alloc_list.create_all()
+
+        # Create a allocation list consists of valid requests and a invalid
+        # request exceeds memory full_rp can provide.
+        alloc_list = rp_obj.AllocationList(context=self.ctx,
+            objects=[
+                rp_obj.Allocation(
+                    context=self.ctx,
+                    consumer_id=uuidsentinel.instance2,
+                    resource_provider=empty_rp,
+                    resource_class=fields.ResourceClass.VCPU,
+                    used=12),
+                rp_obj.Allocation(
+                    context=self.ctx,
+                    consumer_id=uuidsentinel.instance2,
+                    resource_provider=empty_rp,
+                    resource_class=fields.ResourceClass.MEMORY_MB,
+                    used=512),
+                rp_obj.Allocation(
+                    context=self.ctx,
+                    consumer_id=uuidsentinel.instance2,
+                    resource_provider=full_rp,
+                    resource_class=fields.ResourceClass.VCPU,
+                    used=12),
+                rp_obj.Allocation(
+                    context=self.ctx,
+                    consumer_id=uuidsentinel.instance2,
+                    resource_provider=full_rp,
+                    resource_class=fields.ResourceClass.MEMORY_MB,
+                    used=512),
+            ])
+
+        self.assertRaises(exception.InvalidAllocationCapacityExceeded,
+                          alloc_list.create_all)
+
+        # Make sure that allocations of both empty_rp and full_rp remains
+        # unchanged.
+        allocations = rp_obj.AllocationList.get_all_by_resource_provider(
+            self.ctx, full_rp)
+        self.assertEqual(2, len(allocations))
+
+        allocations = rp_obj.AllocationList.get_all_by_resource_provider(
+            self.ctx, empty_rp)
+        self.assertEqual(0, len(allocations))
+
 
 class UsageListTestCase(ResourceProviderBaseCase):
 
