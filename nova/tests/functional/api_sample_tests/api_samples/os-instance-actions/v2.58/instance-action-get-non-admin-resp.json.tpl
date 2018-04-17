@@ -7,7 +7,7 @@
         "project_id": "%(project_id)s",
         "start_time": "%(strtime)s",
         "updated_at": "%(strtime)s",
-        "message": "",
+        "message": null,
         "events": [
             {
                 "event": "compute_stop_instance",
