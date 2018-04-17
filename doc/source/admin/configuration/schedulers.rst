@@ -497,6 +497,12 @@ isolated hosts, and the isolated hosts can only run isolated images.  The flag
 ``restrict_isolated_hosts_to_isolated_images`` can be used to force isolated
 hosts to only run isolated images.
 
+The logic within the filter depends on the
+``restrict_isolated_hosts_to_isolated_images`` config option, which defaults
+to True. When True, a volume-backed instance will not be put on an isolated
+host. When False, a volume-backed instance can go on any host, isolated or
+not.
+
 The admin must specify the isolated set of images and hosts in the
 ``nova.conf`` file using the ``isolated_hosts`` and ``isolated_images``
 configuration options. For example:
