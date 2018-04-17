@@ -101,7 +101,7 @@ There are many standard filter classes which may be used
   fall back to the global default ``cpu_allocation_ratio``. If more than one value
   is found for a host (meaning the host is in two different aggregates with
   different ratio settings), the minimum value will be used.
-* |IsolatedHostsFilter| - filter based on ``image_isolated``, ``host_isolated``
+* |IsolatedHostsFilter| - filter based on ``isolated_images``, ``isolated_hosts``
   and ``restrict_isolated_hosts_to_isolated_images`` flags.
 * |JsonFilter| - allows simple JSON-based grammar for selecting hosts.
 * |RamFilter| - filters hosts by their RAM. Only hosts with sufficient RAM
@@ -239,9 +239,9 @@ enabled and operational.
 Now we are going to |IsolatedHostsFilter|. There can be some special hosts
 reserved for specific images. These hosts are called **isolated**. So the
 images to run on the isolated hosts are also called isolated. The filter
-checks if ``image_isolated`` flag named in instance specifications is the same
-as the host. Isolated hosts can run non isolated images if the flag
-``restrict_isolated_hosts_to_isolated_images`` is set to false.
+checks if ``isolated_images`` flag named in instance specifications is the same
+as the host specified in ``isolated_hosts``. Isolated hosts can run non-isolated
+images if the flag ``restrict_isolated_hosts_to_isolated_images`` is set to false.
 
 |DifferentHostFilter| - method ``host_passes`` returns ``True`` if the host to
 place an instance on is different from all the hosts used by a set of instances.
