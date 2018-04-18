@@ -245,9 +245,6 @@ BAD_LIBVIRT_CPU_POLICY_VERSIONS = [(1, 2, 10)]
 # Virtuozzo driver support
 MIN_VIRTUOZZO_VERSION = (7, 0, 0)
 
-# Ability to set the user guest password with Qemu
-MIN_LIBVIRT_SET_ADMIN_PASSWD = (1, 2, 16)
-
 # Ability to set the user guest password with parallels
 MIN_LIBVIRT_PARALLELS_SET_ADMIN_PASSWD = (2, 0, 0)
 
@@ -2007,9 +2004,6 @@ class LibvirtDriver(driver.ComputeDriver):
                    MIN_LIBVIRT_PARALLELS_SET_ADMIN_PASSWD):
                 raise exception.SetAdminPasswdNotSupported()
         elif CONF.libvirt.virt_type in ('kvm', 'qemu'):
-            if not self._host.has_min_version(
-                   MIN_LIBVIRT_SET_ADMIN_PASSWD):
-                raise exception.SetAdminPasswdNotSupported()
             if not image_meta.properties.get('hw_qemu_guest_agent', False):
                 raise exception.QemuGuestAgentNotEnabled()
         else:

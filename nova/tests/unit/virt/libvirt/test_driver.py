@@ -1368,20 +1368,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
     @mock.patch('nova.utils.get_image_from_system_metadata')
     @mock.patch.object(host.Host,
-                       'has_min_version', return_value=False)
-    def test_set_admin_password_bad_version(self, mock_svc, mock_image):
-
-        instance = objects.Instance(**self.test_instance)
-        mock_image.return_value = {"properties": {
-            "hw_qemu_guest_agent": "yes"}}
-        for hyp in ('kvm', 'parallels'):
-            self.flags(virt_type=hyp, group='libvirt')
-            drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-            self.assertRaises(exception.SetAdminPasswdNotSupported,
-                              drvr.set_admin_password, instance, "123")
-
-    @mock.patch('nova.utils.get_image_from_system_metadata')
-    @mock.patch.object(host.Host,
                        'has_min_version', return_value=True)
     def test_set_admin_password_bad_hyp(self, mock_svc, mock_image):
         self.flags(virt_type='lxc', group='libvirt')
