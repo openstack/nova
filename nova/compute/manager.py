@@ -5495,18 +5495,21 @@ class ComputeManager(manager.Manager):
             # currently implementing swap_volume, will modify the contents of
             # new_cinfo when connect_volume is called. This is then saved to
             # the BDM in swap_volume for future use outside of this flow.
-            LOG.debug("swap_volume: Calling driver volume swap with "
-                      "connection infos: new: %(new_cinfo)s; "
-                      "old: %(old_cinfo)s",
-                      {'new_cinfo': new_cinfo, 'old_cinfo': old_cinfo},
-                      instance=instance)
+            msg = ("swap_volume: Calling driver volume swap with "
+                   "connection infos: new: %(new_cinfo)s; "
+                   "old: %(old_cinfo)s" %
+                   {'new_cinfo': new_cinfo, 'old_cinfo': old_cinfo})
+            # Both new and old info might contain password
+            LOG.debug(strutils.mask_password(msg), instance=instance)
+
             self.driver.swap_volume(context, old_cinfo, new_cinfo, instance,
                                     mountpoint, resize_to)
             if new_attachment_id:
                 self.volume_api.attachment_complete(context, new_attachment_id)
-            LOG.debug("swap_volume: Driver volume swap returned, new "
-                      "connection_info is now : %(new_cinfo)s",
-                      {'new_cinfo': new_cinfo})
+            msg = ("swap_volume: Driver volume swap returned, new "
+                   "connection_info is now : %(new_cinfo)s" %
+                   {'new_cinfo': new_cinfo})
+            LOG.debug(strutils.mask_password(msg))
         except Exception as ex:
             failed = True
             with excutils.save_and_reraise_exception():
