@@ -30,8 +30,12 @@ class QemuTestCase(test.NoDBTestCase):
                           images.qemu_img_info,
                           '/path/that/does/not/exist')
 
+    @mock.patch.object(utils, 'execute')
     @mock.patch.object(os.path, 'exists', return_value=True)
-    def test_qemu_info_with_errors(self, path_exists):
+    def test_qemu_info_with_errors(self, path_exists, mock_exec):
+        err = processutils.ProcessExecutionError(
+            exit_code=1, stderr='No such file or directory')
+        mock_exec.side_effect = err
         self.assertRaises(exception.DiskNotFound,
                           images.qemu_img_info,
                           '/fake/path')
