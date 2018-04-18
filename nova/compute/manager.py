@@ -631,10 +631,11 @@ class ComputeManager(manager.Manager):
         While nova-compute was down, the instances running on it could be
         evacuated to another host. This method looks for evacuation migration
         records where this is the source host and which were either started
-        (accepted) or complete (done). From those migration records, local
-        instances reported by the hypervisor are compared to the instances
-        for the migration records and those local guests are destroyed, along
-        with instance allocation records in Placement for this node.
+        (accepted), in-progress (pre-migrating) or migrated (done). From those
+        migration records, local instances reported by the hypervisor are
+        compared to the instances for the migration records and those local
+        guests are destroyed, along with instance allocation records in
+        Placement for this node.
         """
         filters = {
             'source_compute': self.host,
@@ -642,7 +643,13 @@ class ComputeManager(manager.Manager):
             # included in case the source node comes back up while instances
             # are being evacuated to another host. We don't want the same
             # instance being reported from multiple hosts.
-            'status': ['accepted', 'done'],
+            # NOTE(lyarwood): pre-migrating is also included here as the
+            # source compute can come back online shortly after the RT
+            # claims on the destination that in-turn moves the migration to
+            # pre-migrating. If the evacuate fails on the destination host,
+            # the user can rebuild the instance (in ERROR state) on the source
+            # host.
+            'status': ['accepted', 'pre-migrating', 'done'],
             'migration_type': 'evacuation',
         }
         with utils.temporary_mutation(context, read_deleted='yes'):
@@ -709,6 +716,7 @@ class ComputeManager(manager.Manager):
 
             migration.status = 'completed'
             migration.save()
+        return evacuations
 
     def _is_instance_storage_shared(self, context, instance, host=None):
         shared_storage = True
@@ -1158,9 +1166,14 @@ class ComputeManager(manager.Manager):
 
         try:
             # checking that instance was not already evacuated to other host
-            self._destroy_evacuated_instances(context)
+            evacuated_instances = self._destroy_evacuated_instances(context)
+
+            # Initialise instances on the host that are not evacuating
             for instance in instances:
-                self._init_instance(context, instance)
+                if (not evacuated_instances or
+                        instance.uuid not in evacuated_instances):
+                    self._init_instance(context, instance)
+
         finally:
             if CONF.defer_iptables_apply:
                 self.driver.filter_defer_apply_off()
