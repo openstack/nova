@@ -25,13 +25,9 @@ class TestEvacuationWithSourceReturningDuringRebuild(
         test.TestCase, integrated_helpers.InstanceHelperMixin):
     """Assert the behaviour of evacuating instances when the src returns early.
 
-    This test asserts that evacuating instances end up in an ERROR state on the
-    source when that host comes back online during an evacuation while the
-    migration record is in a pre-migrating state.
-
-    This currently leads to a race between the source initialising the instance
-    and destination claim during the rebuild, both of which attempt to update
-    the underlying task_state of the instance.
+    This test asserts that evacuating instances end up in an ACTIVE state on
+    the destination even when the source host comes back online during an
+    evacuation while the migration record is in a pre-migrating state.
     """
 
     def setUp(self):
@@ -113,8 +109,15 @@ class TestEvacuationWithSourceReturningDuringRebuild(
         # Start evacuating the instance from the source_host
         self.api.post_server_action(server['id'], {'evacuate': {}})
 
-        # FIXME(lyarwood): Assert that the evacuation fails at present with the
-        # instance remaining on the source in an ERROR state.
-        self._wait_for_state_change(self.api, server, 'ERROR')
+        # Wait for the instance to go into an ACTIVE state
+        self._wait_for_state_change(self.api, server, 'ACTIVE')
         server = self.api.get_server(server['id'])
-        self.assertEqual(self.source_compute, server['OS-EXT-SRV-ATTR:host'])
+        host = server['OS-EXT-SRV-ATTR:host']
+        migrations = self.api.get_migrations()
+
+        # Assert that we have a single `done` migration record after the evac
+        self.assertEqual(1, len(migrations))
+        self.assertEqual('done', migrations[0]['status'])
+
+        # Assert that the instance is now on the dest
+        self.assertNotEqual(self.source_compute, host)
