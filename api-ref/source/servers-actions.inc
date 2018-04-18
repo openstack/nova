@@ -170,8 +170,7 @@ server in the compute node that OpenStack Compute manages.
 **Preconditions**
 
 You can only confirm the resized server where the status is
-``VERIFY_RESIZED``, the vm_status is ``RESIZED``, and the
-migration_status is ``finished`` or ``confirming``.
+``VERIFY_RESIZE``.
 
 If the server is locked, you must have administrator privileges
 to confirm the server.
