@@ -141,8 +141,14 @@ CONSOLE = "console=tty0 console=ttyS0"
 GuestNumaConfig = collections.namedtuple(
     'GuestNumaConfig', ['cpuset', 'cputune', 'numaconfig', 'numatune'])
 
-InjectionInfo = collections.namedtuple(
-    'InjectionInfo', ['network_info', 'files', 'admin_pass'])
+
+class InjectionInfo(collections.namedtuple(
+        'InjectionInfo', ['network_info', 'files', 'admin_pass'])):
+    __slots__ = ()
+
+    def __repr__(self):
+        return ('InjectionInfo(network_info=%r, files=%r, '
+                'admin_pass=<SANITIZED>)') % (self.network_info, self.files)
 
 libvirt_volume_drivers = [
     'iscsi=nova.virt.libvirt.volume.iscsi.LibvirtISCSIVolumeDriver',
