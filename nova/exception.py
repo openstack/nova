@@ -2207,12 +2207,6 @@ class NeutronAdminCredentialConfigurationInvalid(Invalid):
     msg_fmt = _("Networking client is experiencing an unauthorized exception.")
 
 
-class PlacementNotConfigured(NovaException):
-    msg_fmt = _("This compute is not configured to talk to the placement "
-                "service. Configure the [placement] section of nova.conf "
-                "and restart the service.")
-
-
 class InvalidEmulatorThreadsPolicy(Invalid):
     msg_fmt = _("CPU emulator threads option requested is invalid, "
                 "given: '%(requested)s', available: '%(available)s'.")
