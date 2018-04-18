@@ -1766,6 +1766,42 @@ class VirtNUMAHostTopologyTestCase(test.NoDBTestCase):
         self.assertIsInstance(fitted_instance2, objects.InstanceNUMATopology)
         self.assertEqual(2, fitted_instance2.cells[0].id)
 
+    @mock.patch.object(hw, '_numa_cells_support_network_metadata',
+                       return_value=True)
+    def test_get_fitting_success_limits_with_networks(self, mock_supports):
+        network_metadata = objects.NetworkMetadata(
+            physnets=set(), tunneled=False)
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2.0,
+            ram_allocation_ratio=2.0,
+            network_metadata=network_metadata)
+
+        fitted_instance = hw.numa_fit_instance_to_host(
+            self.host, self.instance1, limits=limits)
+
+        self.assertIsInstance(fitted_instance, objects.InstanceNUMATopology)
+        mock_supports.assert_called_once_with(
+            self.host, [self.host.cells[0]], network_metadata)
+
+    @mock.patch.object(hw, '_numa_cells_support_network_metadata',
+                       return_value=False)
+    def test_get_fitting_fails_limits_with_networks(self, mock_supports):
+        network_metadata = objects.NetworkMetadata(
+            physnets=set(), tunneled=False)
+        limits = objects.NUMATopologyLimits(
+            cpu_allocation_ratio=2.0,
+            ram_allocation_ratio=2.0,
+            network_metadata=network_metadata)
+
+        fitted_instance = hw.numa_fit_instance_to_host(
+            self.host, self.instance1, limits=limits)
+
+        self.assertIsNone(fitted_instance)
+        mock_supports.assert_has_calls([
+            mock.call(self.host, [self.host.cells[0]], network_metadata),
+            mock.call(self.host, [self.host.cells[1]], network_metadata),
+        ])
+
     def test_get_fitting_pci_success(self):
         pci_request = objects.InstancePCIRequest(count=1,
             spec=[{'vendor_id': '8086'}])
@@ -3260,3 +3296,118 @@ class EmulatorThreadsTestCase(test.NoDBTestCase):
 
         self.assertEqual({0: 2, 1: 4}, inst_topo.cells[0].cpu_pinning)
         self.assertEqual(set([1]), inst_topo.cells[0].cpuset_reserved)
+
+
+class NetworkRequestSupportTestCase(test.NoDBTestCase):
+    """Validate behavior of '_numa_cells_support_network_metadata'."""
+
+    def setUp(self):
+        super(NetworkRequestSupportTestCase, self).setUp()
+
+        self.network_a = objects.NetworkMetadata(
+            physnets=set(['foo', 'bar']), tunneled=False)
+        self.network_b = objects.NetworkMetadata(
+            physnets=set(), tunneled=True)
+
+        self.host = objects.NUMATopology(cells=[
+            objects.NUMACell(id=1, cpuset=set([1, 2]), memory=4096,
+                             cpu_usage=2, memory_usage=0, mempages=[],
+                             siblings=[set([1]), set([2])],
+                             pinned_cpus=set([]),
+                             network_metadata=self.network_a),
+            objects.NUMACell(id=2, cpuset=set([3, 4]), memory=4096,
+                             cpu_usage=2, memory_usage=0, mempages=[],
+                             siblings=[set([3]), set([4])],
+                             pinned_cpus=set([]),
+                             network_metadata=self.network_b)])
+
+        self.instance = objects.InstanceNUMATopology(cells=[
+            objects.InstanceNUMACell(id=0, cpuset=set([1, 2]),
+                                     memory=2048)])
+
+    def test_no_required_networks(self):
+        """Validate behavior if the user doesn't request networks.
+
+        No networks == no affinity to worry about.
+        """
+        network_metadata = objects.NetworkMetadata(
+            physnets=set(), tunneled=False)
+        supports = hw._numa_cells_support_network_metadata(
+            self.host, [self.host.cells[0]], network_metadata)
+        self.assertTrue(supports)
+
+    def test_missing_networks(self):
+        """Validate behavior with a physical network without affinity.
+
+        If we haven't recorded NUMA affinity for a given physical network, we
+        clearly shouldn't fail to build.
+        """
+        network_metadata = objects.NetworkMetadata(
+            physnets=set(['baz']), tunneled=False)
+        supports = hw._numa_cells_support_network_metadata(
+            self.host, [self.host.cells[0]], network_metadata)
+        self.assertTrue(supports)
+
+    def test_physnet_networks(self):
+        """Validate behavior with a single physical network."""
+        network_metadata = objects.NetworkMetadata(
+            physnets=set(['foo']), tunneled=False)
+
+        # The required network is affined to host NUMA node 0 so this should
+        # pass
+        supports = hw._numa_cells_support_network_metadata(
+            self.host, [self.host.cells[0]], network_metadata)
+        self.assertTrue(supports)
+
+        # ...while it should fail for the other host NUMA node
+        supports = hw._numa_cells_support_network_metadata(
+            self.host, [self.host.cells[1]], network_metadata)
+        self.assertFalse(supports)
+
+        # ...but it will pass if we chose both host NUMA nodes
+        supports = hw._numa_cells_support_network_metadata(
+            self.host, self.host.cells, network_metadata)
+        self.assertTrue(supports)
+
+    def test_tunnel_network(self):
+        """Validate behavior with a single tunneled network.
+
+        Neutron currently only allows a single tunnel provider network so this
+        is realistic anyway.
+        """
+        network_metadata = objects.NetworkMetadata(
+            physnets=set(), tunneled=True)
+
+        # The required network is affined to host NUMA node 1 so this should
+        # fail
+        supports = hw._numa_cells_support_network_metadata(
+            self.host, [self.host.cells[0]], network_metadata)
+        self.assertFalse(supports)
+
+        # ...but it will pass for the other host NUMA node
+        supports = hw._numa_cells_support_network_metadata(
+            self.host, [self.host.cells[1]], network_metadata)
+        self.assertTrue(supports)
+
+    def test_multiple_networks(self):
+        """Validate behavior with multiple networks.
+
+        If a we request multiple networks that are spread across host NUMA
+        nodes, we're going to need to use multiple host instances.
+        """
+        network_metadata = objects.NetworkMetadata(
+            physnets=set(['foo', 'bar']), tunneled=True)
+
+        # Because the requested networks are spread across multiple host nodes,
+        # this should fail because no single node can satisfy the request
+        supports = hw._numa_cells_support_network_metadata(
+            self.host, [self.host.cells[0]], network_metadata)
+        self.assertFalse(supports)
+        supports = hw._numa_cells_support_network_metadata(
+            self.host, [self.host.cells[1]], network_metadata)
+        self.assertFalse(supports)
+
+        # ...but it will pass if we provide all necessary nodes
+        supports = hw._numa_cells_support_network_metadata(
+            self.host, self.host.cells, network_metadata)
+        self.assertTrue(supports)
