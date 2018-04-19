@@ -2100,12 +2100,26 @@ class AttachInterfaceTestCase(VMOpsTestBase):
         self.vmops.vif_driver.unplug.assert_called_once_with(
             self.fake_instance, self.fake_vif, 'fake_vm_ref')
 
+    @mock.patch('nova.virt.xenapi.vmops.LOG.exception')
     @mock.patch.object(vmops.VMOps, '_get_vm_opaque_ref')
-    def test_detach_interface_exception(self, mock_get_vm_opaque_ref):
+    def test_detach_interface_exception(self, mock_get_vm_opaque_ref,
+                                        mock_log_exception):
         mock_get_vm_opaque_ref.return_value = 'fake_vm_ref'
         self.vmops.vif_driver.unplug.side_effect =\
             exception.VirtualInterfaceUnplugException('Failed to unplug VIF')
 
         self.assertRaises(exception.VirtualInterfaceUnplugException,
+                          self.vmops.detach_interface,
+                          self.fake_instance, self.fake_vif)
+        mock_log_exception.assert_called()
+
+    @mock.patch('nova.virt.xenapi.vmops.LOG.exception',
+                new_callable=mock.NonCallableMock)
+    @mock.patch.object(vmops.VMOps, '_get_vm_opaque_ref',
+                       side_effect=exception.InstanceNotFound(
+                           instance_id='fake_vm_ref'))
+    def test_detach_interface_instance_not_found(
+            self, mock_get_vm_opaque_ref, mock_log_exception):
+        self.assertRaises(exception.InstanceNotFound,
                           self.vmops.detach_interface,
                           self.fake_instance, self.fake_vif)

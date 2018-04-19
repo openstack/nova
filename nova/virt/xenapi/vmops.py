@@ -2695,6 +2695,10 @@ class VMOps(object):
         try:
             vm_ref = self._get_vm_opaque_ref(instance)
             self.vif_driver.unplug(instance, vif, vm_ref)
+        except exception.InstanceNotFound:
+            # Let this go up to the compute manager which will log a message
+            # for it.
+            raise
         except exception.NovaException:
             with excutils.save_and_reraise_exception():
                 LOG.exception(_('detach network interface %s failed.'),
