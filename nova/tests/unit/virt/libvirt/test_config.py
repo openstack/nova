@@ -1933,6 +1933,32 @@ class LibvirtConfigGuestInterfaceTest(LibvirtConfigBaseTest):
         obj2.parse_str(xml)
         self.assertXmlEqual(xml, obj2.to_xml())
 
+    def test_config_vhostuser_ensure_driver_never_set(self):
+        obj = config.LibvirtConfigGuestInterface()
+        # Even if 'driver_name' attribute is set we should never set
+        # it in the domain XML for vhostuser interface.
+        obj.driver_name = "vhost-user"
+
+        obj.net_type = "vhostuser"
+        obj.vhostuser_type = "unix"
+        obj.vhostuser_mode = "server"
+        obj.mac_addr = "DE:AD:BE:EF:CA:FE"
+        obj.vhostuser_path = "/vhost-user/test.sock"
+        obj.model = "virtio"
+        xml = obj.to_xml()
+        self.assertXmlEqual(xml, """
+            <interface type="vhostuser">
+              <mac address="DE:AD:BE:EF:CA:FE"/>
+              <model type="virtio"/>
+              <source type="unix" mode="server" path="/vhost-user/test.sock"/>
+            </interface>""")
+
+        # parse the xml from the first object into a new object and make sure
+        # they are the same
+        obj2 = config.LibvirtConfigGuestInterface()
+        obj2.parse_str(xml)
+        self.assertXmlEqual(xml, obj2.to_xml())
+
     def test_config_interface_address(self):
         xml = """
             <interface type='network'>

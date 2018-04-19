@@ -431,13 +431,18 @@ class LibvirtGenericVIFDriver(object):
         conf = self.get_base_config(instance, vif['address'], image_meta,
                                     inst_type, virt_type, vif['vnic_type'],
                                     host)
+        # TODO(sahid): We should never configure a driver backend for
+        # vhostuser interface. Specifically override driver to use
+        # None. This can be removed when get_base_config will be fixed
+        # and rewrite to set the correct backend.
+        conf.driver_name = None
+
         mode, sock_path = self._get_vhostuser_settings(vif)
         designer.set_vif_host_backend_vhostuser_config(conf, mode, sock_path)
         # (vladikr) Not setting up driver and queues for vhostuser
         # as queues are not supported in Libvirt until version 1.2.17
         if not host.has_min_version(MIN_LIBVIRT_VHOSTUSER_MQ):
             LOG.debug('Queues are not a vhostuser supported feature.')
-            conf.driver_name = None
             conf.vhost_queues = None
 
         return conf
@@ -474,11 +479,16 @@ class LibvirtGenericVIFDriver(object):
         self._set_config_VIFPortProfile(instance, vif, conf)
 
     def _set_config_VIFVHostUser(self, instance, vif, conf, host=None):
+        # TODO(sahid): We should never configure a driver backend for
+        # vhostuser interface. Specifically override driver to use
+        # None. This can be removed when get_base_config will be fixed
+        # and rewrite to set the correct backend.
+        conf.driver_name = None
+
         designer.set_vif_host_backend_vhostuser_config(
             conf, vif.mode, vif.path)
         if not host.has_min_version(MIN_LIBVIRT_VHOSTUSER_MQ):
             LOG.debug('Queues are not a vhostuser supported feature.')
-            conf.driver_name = None
             conf.vhost_queues = None
 
     def _set_config_VIFHostDevice(self, instance, vif, conf, host=None):
