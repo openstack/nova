@@ -102,6 +102,14 @@ In OpenStack, customer VMs may run in either PV or HVM mode.  However, the
 OpenStack domU (that's the one running ``nova-compute``) must be running in PV
 mode.
 
+xapi pool
+---------
+
+A resource pool comprises multiple XenServer host installations, bound together
+into a single managed entity which can host virtual machines. When combined with
+shared storage, VMs could dynamically move between XenServer hosts, with minimal
+downtime since no block copying is needed.
+
 XenAPI deployment architecture
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -225,6 +233,14 @@ The following steps need to be completed after the hypervisor's installation:
 #. Create a paravirtualized virtual machine that can run ``nova-compute``.
 
 #. Install and configure ``nova-compute`` in the above virtual machine.
+
+#. To support live migration requiring no block device migration, you should
+   add the current host to a xapi pool using shared storage. You need to know
+   the pool master ip address, user name and password:
+
+.. code-block:: console
+
+    xe pool-join master-address=MASTER_IP master-username=root master-password=MASTER_PASSWORD
 
 Install XAPI plug-ins
 ---------------------
