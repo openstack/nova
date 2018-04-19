@@ -412,6 +412,33 @@ class TestAllocation(test_objects._LocalTest):
                                                       objects=[obj])
         self.assertRaises(exception.ObjectActionError, alloc_list.create_all)
 
+    def test_create_exceed_capacity_fails(self):
+        rp = resource_provider.ResourceProvider(context=self.context,
+                                                uuid=_RESOURCE_PROVIDER_UUID,
+                                                name=_RESOURCE_PROVIDER_NAME)
+        rp.create()
+        inv = resource_provider.Inventory(context=self.context,
+                                resource_provider=rp,
+                                resource_class=_RESOURCE_CLASS_NAME,
+                                total=16,
+                                reserved=2,
+                                min_unit=1,
+                                max_unit=16,
+                                step_size=1,
+                                allocation_ratio=1.0)
+        inv_list = resource_provider.InventoryList(context=self.context,
+                                                   objects=[inv])
+        rp.set_inventory(inv_list)
+        obj = resource_provider.Allocation(context=self.context,
+                                           resource_provider=rp,
+                                           resource_class=_RESOURCE_CLASS_NAME,
+                                           consumer_id=uuids.fake_instance,
+                                           used=16)
+        alloc_list = resource_provider.AllocationList(self.context,
+                                                      objects=[obj])
+        self.assertRaises(exception.InvalidAllocationCapacityExceeded,
+                          alloc_list.create_all)
+
 
 class TestAllocationListNoDB(test_objects._LocalTest):
     USES_DB = False

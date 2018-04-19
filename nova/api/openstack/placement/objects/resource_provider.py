@@ -1823,11 +1823,12 @@ def _check_capacity_exceeded(ctx, allocs):
     #    SELECT resource_provider_id, resource_class_id, SUM(used) AS used
     #    FROM allocations
     #    WHERE resource_class_id IN ($RESOURCE_CLASSES)
+    #    AND resource_provider_id IN ($RESOURCE_PROVIDERS)
     #    GROUP BY resource_provider_id, resource_class_id
     # ) AS allocs
     # ON inv.resource_provider_id = allocs.resource_provider_id
     # AND inv.resource_class_id = allocs.resource_class_id
-    # WHERE rp.uuid IN ($RESOURCE_PROVIDERS)
+    # WHERE rp.id IN ($RESOURCE_PROVIDERS)
     # AND inv.resource_class_id IN ($RESOURCE_CLASSES)
     #
     # We then take the results of the above and determine if any of the
@@ -1835,11 +1836,13 @@ def _check_capacity_exceeded(ctx, allocs):
     rc_ids = set([_RC_CACHE.id_from_string(a.resource_class)
                        for a in allocs])
     provider_uuids = set([a.resource_provider.uuid for a in allocs])
-
+    provider_ids = set([a.resource_provider.id for a in allocs])
     usage = sa.select([_ALLOC_TBL.c.resource_provider_id,
                        _ALLOC_TBL.c.resource_class_id,
                        sql.func.sum(_ALLOC_TBL.c.used).label('used')])
-    usage = usage.where(_ALLOC_TBL.c.resource_class_id.in_(rc_ids))
+    usage = usage.where(
+            sa.and_(_ALLOC_TBL.c.resource_class_id.in_(rc_ids),
+                    _ALLOC_TBL.c.resource_provider_id.in_(provider_ids)))
     usage = usage.group_by(_ALLOC_TBL.c.resource_provider_id,
                            _ALLOC_TBL.c.resource_class_id)
     usage = sa.alias(usage, name='usage')
@@ -1868,7 +1871,7 @@ def _check_capacity_exceeded(ctx, allocs):
 
     sel = sa.select(cols_in_output).select_from(primary_join)
     sel = sel.where(
-            sa.and_(_RP_TBL.c.uuid.in_(provider_uuids),
+            sa.and_(_RP_TBL.c.id.in_(provider_ids),
                     _INV_TBL.c.resource_class_id.in_(rc_ids)))
     records = ctx.session.execute(sel)
     # Create a map keyed by (rp_uuid, res_class) for the records in the DB
