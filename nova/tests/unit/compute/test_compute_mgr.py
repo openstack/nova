@@ -3022,7 +3022,11 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         ex = exception.InstanceNotFound(instance_id=instance.uuid)
         self._test_rebuild_ex(instance, ex)
 
-    def test_rebuild_node_not_updated_if_not_recreate(self):
+    # A rebuild to the same host should never attempt a rebuild claim.
+    @mock.patch('nova.compute.resource_tracker.ResourceTracker.rebuild_claim',
+                new_callable=mock.NonCallableMock)
+    def test_rebuild_node_not_updated_if_not_recreate(self,
+                                                      mock_rebuild_claim):
         node = uuidutils.generate_uuid()  # ironic node uuid
         instance = fake_instance.fake_instance_obj(self.context, node=node)
         instance.migration_context = None
