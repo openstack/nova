@@ -30,7 +30,6 @@
           cat << 'EOF' >>"/tmp/dg-local.conf"
           [[local|localrc]]
           ENABLE_VOLUME_MULTIATTACH=True
-          ENABLE_UBUNTU_CLOUD_ARCHIVE=False
 
           EOF
         executable: /bin/bash
