@@ -1,7 +1,7 @@
 {
     "hypervisors": [
         {
-            "hypervisor_hostname": "host1",
+            "hypervisor_hostname": "fake-mini",
             "id": 2,
             "state": "up",
             "status": "enabled"
