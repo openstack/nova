@@ -57,7 +57,6 @@ from nova.virt import configdrive
 from nova.virt import driver as virt_driver
 from nova.virt import firewall
 from nova.virt.xenapi import agent as xapi_agent
-from nova.virt.xenapi import pool_states
 from nova.virt.xenapi import vm_utils
 from nova.virt.xenapi import volume_utils
 from nova.virt.xenapi import volumeops
@@ -2208,25 +2207,18 @@ class VMOps(object):
         self.firewall_driver.unfilter_instance(instance_ref,
                                                network_info=network_info)
 
-    def _get_host_uuid_from_aggregate(self, context, hostname):
-        aggregate_list = objects.AggregateList.get_by_host(
-            context, CONF.host, key=pool_states.POOL_FLAG)
-
-        reason = _('Destination host:%s must be in the same '
-                   'aggregate as the source server') % hostname
-        if len(aggregate_list) == 0:
+    def _get_host_opaque_ref(self, hostname):
+        host_ref_set = self._session.host.get_by_name_label(hostname)
+        # If xenapi can't get host ref by the name label, it means the
+        # destination host is not in the same pool with the source host.
+        if host_ref_set is None or host_ref_set == []:
+            return None
+        # It should be only one host with the name, or there would be
+        # a confuse on which host is required
+        if len(host_ref_set) > 1:
+            reason = _('Multiple hosts have the same hostname: %s.') % hostname
             raise exception.MigrationPreCheckError(reason=reason)
-        if hostname not in aggregate_list[0].metadata:
-            raise exception.MigrationPreCheckError(reason=reason)
-
-        return aggregate_list[0].metadata[hostname]
-
-    def _ensure_host_in_aggregate(self, context, hostname):
-        self._get_host_uuid_from_aggregate(context, hostname)
-
-    def _get_host_opaque_ref(self, context, hostname):
-        host_uuid = self._get_host_uuid_from_aggregate(context, hostname)
-        return self._session.call_xenapi("host.get_by_uuid", host_uuid)
+        return host_ref_set[0]
 
     def _get_host_ref_no_aggr(self):
         # Pull the current host ref from Dom0's resident_on field.  This
@@ -2312,13 +2304,20 @@ class VMOps(object):
         """
         dest_check_data = objects.XenapiLiveMigrateData()
 
+        src = instance_ref.host
+
+        def _host_in_this_pool(host_name_label):
+            host_ref = self._get_host_opaque_ref(host_name_label)
+            if not host_ref:
+                return False
+            return vm_utils.host_in_this_pool(self._session, host_ref)
+
+        # Check if migrate happen in a xapi pool
+        pooled_migrate = _host_in_this_pool(src)
         # Notes(eliqiao): if block_migration is None, we calculate it
-        # by checking if src and dest node are in same aggregate
+        # by checking if src and dest node are in same xapi pool
         if block_migration is None:
-            src = instance_ref['host']
-            try:
-                self._ensure_host_in_aggregate(ctxt, src)
-            except exception.MigrationPreCheckError:
+            if not pooled_migrate:
                 block_migration = True
             else:
                 sr_ref = vm_utils.safe_find_sr(self._session)
@@ -2332,11 +2331,13 @@ class VMOps(object):
                 self._session)
         else:
             dest_check_data.block_migration = False
-            src = instance_ref['host']
             # TODO(eilqiao): There is still one case that block_migration is
             # passed from admin user, so we need this check until
             # block_migration flag is removed from API
-            self._ensure_host_in_aggregate(ctxt, src)
+            if not pooled_migrate:
+                reason = _("Destination host is not in the same shared storage"
+                           "pool as source host %s.") % src
+                raise exception.MigrationPreCheckError(reason=reason)
             # TODO(johngarbutt) we currently assume
             # instance is on a SR shared with other destination
             # block migration work will be able to resolve this
@@ -2580,8 +2581,14 @@ class VMOps(object):
                 for sr_ref in iscsi_srs:
                     volume_utils.forget_sr(self._session, sr_ref)
             else:
-                host_ref = self._get_host_opaque_ref(context,
-                                                     destination_hostname)
+                host_ref = self._get_host_opaque_ref(destination_hostname)
+                if not host_ref:
+                    LOG.exception(_("Destination host %s was not found in the"
+                                    " same shared storage pool as source "
+                                    "host."), destination_hostname)
+                    raise exception.MigrationError(
+                        reason=_('No host with name %s found')
+                        % destination_hostname)
                 self._session.call_xenapi("VM.pool_migrate", vm_ref,
                                           host_ref, {"live": "true"})
             post_method(context, instance, destination_hostname,

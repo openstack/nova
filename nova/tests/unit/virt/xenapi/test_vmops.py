@@ -1504,19 +1504,26 @@ class XenstoreCallsTestCase(VMOpsTestBase):
 class LiveMigrateTestCase(VMOpsTestBase):
 
     @mock.patch.object(vmops.VMOps, '_get_network_ref')
-    @mock.patch.object(vmops.VMOps, '_ensure_host_in_aggregate')
+    @mock.patch.object(vm_utils, 'host_in_this_pool')
     def _test_check_can_live_migrate_destination_shared_storage(
                                                 self,
                                                 shared,
-                                                mock_ensure_host,
+                                                mock_is_same_pool,
                                                 mock_net_ref):
-        fake_instance = {"name": "fake_instance", "host": "fake_host"}
+        fake_instance = objects.Instance(host="fake_host")
         block_migration = None
         disk_over_commit = False
         ctxt = 'ctxt'
         mock_net_ref.return_value = 'fake_net_ref'
+        if shared:
+            mock_is_same_pool.return_value = True
+        else:
+            mock_is_same_pool.return_value = False
 
-        with mock.patch.object(self._session, 'get_rec') as fake_sr_rec:
+        with mock.patch.object(self._session, 'get_rec') as fake_sr_rec, \
+                mock.patch.object(self._session, 'host.get_by_name_label') \
+                as fake_get_ref:
+            fake_get_ref.return_value = ['fake_host_ref']
             fake_sr_rec.return_value = {'shared': shared}
             migrate_data_ret = self.vmops.check_can_live_migrate_destination(
                 ctxt, fake_instance, block_migration, disk_over_commit)
@@ -1535,50 +1542,83 @@ class LiveMigrateTestCase(VMOpsTestBase):
         self._test_check_can_live_migrate_destination_shared_storage(False)
 
     @mock.patch.object(vmops.VMOps, '_get_network_ref')
-    @mock.patch.object(vmops.VMOps, '_ensure_host_in_aggregate',
-                       side_effect=exception.MigrationPreCheckError(reason=""))
     def test_check_can_live_migrate_destination_block_migration(
-                                                self,
-                                                mock_ensure_host,
-                                                mock_net_ref):
-        fake_instance = {"name": "fake_instance", "host": "fake_host"}
+                                                                self,
+                                                                mock_net_ref):
+        fake_instance = objects.Instance(host="fake_host")
         block_migration = None
         disk_over_commit = False
         ctxt = 'ctxt'
         mock_net_ref.return_value = 'fake_net_ref'
 
-        migrate_data_ret = self.vmops.check_can_live_migrate_destination(
-            ctxt, fake_instance, block_migration, disk_over_commit)
+        with mock.patch.object(self._session, 'host.get_by_name_label') \
+                as fake_get_ref:
+            fake_get_ref.return_value = ['fake_host_ref']
+            migrate_data_ret = self.vmops.check_can_live_migrate_destination(
+                ctxt, fake_instance, block_migration, disk_over_commit)
 
-        self.assertTrue(migrate_data_ret.block_migration)
-        self.assertEqual(vm_utils.safe_find_sr(self._session),
-                         migrate_data_ret.destination_sr_ref)
-        self.assertEqual({'value': 'fake_migrate_data'},
-                         migrate_data_ret.migrate_send_data)
-        self.assertEqual({'': 'fake_net_ref'},
-                         migrate_data_ret.vif_uuid_map)
+            self.assertTrue(migrate_data_ret.block_migration)
+            self.assertEqual(vm_utils.safe_find_sr(self._session),
+                             migrate_data_ret.destination_sr_ref)
+            self.assertEqual({'value': 'fake_migrate_data'},
+                             migrate_data_ret.migrate_send_data)
+            self.assertEqual({'': 'fake_net_ref'},
+                             migrate_data_ret.vif_uuid_map)
 
-    @mock.patch.object(vmops.objects.AggregateList, 'get_by_host')
-    def test_get_host_uuid_from_aggregate_no_aggr(self, mock_get_by_host):
-        mock_get_by_host.return_value = objects.AggregateList(objects=[])
-        context = "ctx"
-        hostname = "other_host"
-        self.assertRaises(exception.MigrationPreCheckError,
-                          self.vmops._get_host_uuid_from_aggregate,
-                          context, hostname)
+    @mock.patch.object(vmops.VMOps, '_migrate_receive')
+    @mock.patch.object(vm_utils, 'safe_find_sr')
+    @mock.patch.object(vmops.VMOps, '_get_network_ref')
+    def test_no_hosts_found_with_the_name_label(self,
+                                                mock_get_network_ref,
+                                                mock_safe_find_sr,
+                                                mock_migrate_receive):
+        # Can find the dest host in current pool, do block live migrate
+        fake_instance = objects.Instance(host="fake_host")
+        mock_migrate_receive.return_value = {'fake_key': 'fake_data'}
+        mock_safe_find_sr.return_value = 'fake_destination_sr_ref'
+        mock_get_network_ref.return_value = 'fake_net_ref'
+        block_migration = None
+        disk_over_commit = False
+        ctxt = 'ctxt'
+        with mock.patch.object(self._session, 'host.get_by_name_label') \
+                as fake_get_ref:
+            fake_get_ref.return_value = []
+            migrate_data_ret = self.vmops.check_can_live_migrate_destination(
+                ctxt, fake_instance, block_migration, disk_over_commit)
+            self.assertTrue(migrate_data_ret.block_migration)
+            self.assertEqual(migrate_data_ret.vif_uuid_map,
+                             {'': 'fake_net_ref'})
 
-    @mock.patch.object(vmops.objects.AggregateList, 'get_by_host')
-    def test_get_host_uuid_from_aggregate_bad_aggr(self, mock_get_by_host):
-        context = "ctx"
-        hostname = "other_host"
-        fake_aggregate_obj = objects.Aggregate(hosts=['fake'],
-                                               metadata={'this': 'that'})
-        fake_aggr_list = objects.AggregateList(objects=[fake_aggregate_obj])
-        mock_get_by_host.return_value = fake_aggr_list
+    def test_multiple_hosts_found_with_same_name(self):
+        # More than one host found with the dest host name, raise exception
+        fake_instance = objects.Instance(host="fake_host")
+        block_migration = None
+        disk_over_commit = False
+        ctxt = 'ctxt'
+        with mock.patch.object(self._session, 'host.get_by_name_label') \
+                as fake_get_ref:
+            fake_get_ref.return_value = ['fake_host_ref1', 'fake_host_ref2']
+            self.assertRaises(exception.MigrationPreCheckError,
+                              self.vmops.check_can_live_migrate_destination,
+                              ctxt, fake_instance, block_migration,
+                              disk_over_commit)
 
-        self.assertRaises(exception.MigrationPreCheckError,
-                          self.vmops._get_host_uuid_from_aggregate,
-                          context, hostname)
+    @mock.patch.object(vm_utils, 'host_in_this_pool')
+    def test_request_pool_migrate_to_outer_pool_host(self, mock_is_same_pool):
+        # Caller asks for no block live migrate while the dest host is not in
+        # the same pool with the src host, raise exception
+        fake_instance = objects.Instance(host="fake_host")
+        block_migration = False
+        disk_over_commit = False
+        ctxt = 'ctxt'
+        mock_is_same_pool.return_value = False
+        with mock.patch.object(self._session, 'host.get_by_name_label') \
+                as fake_get_ref:
+            fake_get_ref.return_value = ['fake_host_ref1']
+            self.assertRaises(exception.MigrationPreCheckError,
+                              self.vmops.check_can_live_migrate_destination,
+                              ctxt, fake_instance, block_migration,
+                              disk_over_commit)
 
     @mock.patch.object(vmops.VMOps, 'create_interim_networks')
     @mock.patch.object(vmops.VMOps, 'connect_block_device_volumes')
