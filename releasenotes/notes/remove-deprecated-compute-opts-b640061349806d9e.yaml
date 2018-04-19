@@ -1,0 +1,10 @@
+---
+upgrade:
+  - |
+    The following deprecated configuration options have been removed from the
+    ``compute`` section of ``nova.conf``:
+
+    - ``multi_instance_display_name_template``
+
+    These were deprecated in the 15.0.0 release as they allowed for
+    inconsistent API behavior across deployments.

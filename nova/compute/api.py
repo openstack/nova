@@ -506,25 +506,9 @@ class API(base.Base):
             'auto_disk_config': auto_disk_config
         }
 
-    def _new_instance_name_from_template(self, uuid, display_name, index):
-        params = {
-            'uuid': uuid,
-            'name': display_name,
-            'count': index + 1,
-        }
-        try:
-            new_name = (CONF.multi_instance_display_name_template %
-                        params)
-        except (KeyError, TypeError):
-            LOG.exception('Failed to set instance name using '
-                          'multi_instance_display_name_template.')
-            new_name = display_name
-        return new_name
-
-    def _apply_instance_name_template(self, context, instance, index):
+    def _apply_instance_name_template(self, instance, index):
         original_name = instance.display_name
-        new_name = self._new_instance_name_from_template(instance.uuid,
-                instance.display_name, index)
+        new_name = '%s-%d' % (original_name, index + 1)
         instance.display_name = new_name
         if not instance.get('hostname', None):
             if utils.sanitize_hostname(original_name) == "":
@@ -1506,8 +1490,7 @@ class API(base.Base):
         self._populate_instance_names(instance, num_instances)
         instance.shutdown_terminate = shutdown_terminate
         if num_instances > 1 and self.cell_type != 'api':
-            instance = self._apply_instance_name_template(context, instance,
-                                                          index)
+            instance = self._apply_instance_name_template(instance, index)
 
         return instance
 
