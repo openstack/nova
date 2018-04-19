@@ -4162,8 +4162,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         @mock.patch.object(dmcrypt, 'delete_volume')
         @mock.patch.object(conn._host, 'get_domain', return_value=dom)
-        def detach_encrypted_volumes(block_device_info, mock_get_domain,
-                                     mock_delete_volume):
+        @mock.patch.object(libvirt_driver.disk_api, 'get_allocated_disk_size')
+        def detach_encrypted_volumes(block_device_info, mock_get_alloc_size,
+                                     mock_get_domain, mock_delete_volume):
             conn._detach_encrypted_volumes(instance, block_device_info)
 
             mock_get_domain.assert_called_once_with(instance)
@@ -8158,6 +8159,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                               is_shared_instance_path=False)
         with test.nested(
                 mock.patch.object(os.path, 'getsize', mock_getsize),
+                mock.patch.object(libvirt_driver.disk_api,
+                                  'get_allocated_disk_size', mock_getsize),
                 mock.patch.object(host.Host, 'get_domain', mock_lookup)):
             self.assertFalse(drvr._is_shared_block_storage(
                                     instance, data,
@@ -10625,9 +10628,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         fake_libvirt_utils.disk_sizes['/test/disk.local'] = 20 * units.Gi
         fake_libvirt_utils.disk_backing_files['/test/disk.local'] = 'file'
 
-        self.mox.StubOutWithMock(os.path, "getsize")
-        os.path.getsize('/test/disk').AndReturn((10737418240))
-        os.path.getsize('/test/disk.local').AndReturn((3328599655))
+        self.mox.StubOutWithMock(libvirt_driver.disk_api,
+                                 'get_allocated_disk_size')
+        path = '/test/disk'
+        size = 10737418240
+        libvirt_driver.disk_api.get_allocated_disk_size(path).AndReturn((size))
+        path = '/test/disk.local'
+        size = 3328599655
+        libvirt_driver.disk_api.get_allocated_disk_size(path).AndReturn((size))
 
         ret = ("image: /test/disk.local\n"
                "file format: qcow2\n"
@@ -10735,9 +10743,14 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         fake_libvirt_utils.disk_sizes['/test/disk.local'] = 20 * units.Gi
         fake_libvirt_utils.disk_backing_files['/test/disk.local'] = 'file'
 
-        self.mox.StubOutWithMock(os.path, "getsize")
-        os.path.getsize('/test/disk').AndReturn((10737418240))
-        os.path.getsize('/test/disk.local').AndReturn((3328599655))
+        self.mox.StubOutWithMock(libvirt_driver.disk_api,
+                                 'get_allocated_disk_size')
+        path = '/test/disk'
+        size = 10737418240
+        libvirt_driver.disk_api.get_allocated_disk_size(path).AndReturn((size))
+        path = '/test/disk.local'
+        size = 3328599655
+        libvirt_driver.disk_api.get_allocated_disk_size(path).AndReturn((size))
 
         ret = ("image: /test/disk.local\n"
                "file format: qcow2\n"
@@ -10801,8 +10814,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
 
         fake_libvirt_utils.disk_sizes['/test/disk'] = 10 * units.Gi
 
-        self.mox.StubOutWithMock(os.path, "getsize")
-        os.path.getsize('/test/disk').AndReturn((10737418240))
+        self.mox.StubOutWithMock(libvirt_driver.disk_api,
+                                 "get_allocated_disk_size")
+        path = '/test/disk'
+        size = 10737418240
+        libvirt_driver.disk_api.get_allocated_disk_size(path).AndReturn((size))
 
         self.mox.ReplayAll()
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
@@ -10811,8 +10827,8 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         info = jsonutils.loads(info)
         self.assertEqual(1, len(info))
         self.assertEqual(info[0]['type'], 'raw')
-        self.assertEqual(info[0]['path'], '/test/disk')
-        self.assertEqual(info[0]['disk_size'], 10737418240)
+        self.assertEqual(info[0]['path'], path)
+        self.assertEqual(info[0]['disk_size'], size)
         self.assertEqual(info[0]['backing_file'], "")
         self.assertEqual(info[0]['over_committed_disk_size'], 0)
 

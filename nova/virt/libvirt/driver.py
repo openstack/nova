@@ -7354,7 +7354,7 @@ class LibvirtDriver(driver.ComputeDriver):
                             fp = os.path.join(dirpath, f)
                             dk_size += os.path.getsize(fp)
                 else:
-                    dk_size = int(os.path.getsize(path))
+                    dk_size = disk_api.get_allocated_disk_size(path)
             elif disk_type == 'block' and block_device_info:
                 dk_size = lvm.get_volume_size(path)
             else:
