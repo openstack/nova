@@ -470,7 +470,8 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                 with excutils.save_and_reraise_exception():
                     if do_driver_attach:
                         try:
-                            virt_driver.detach_volume(connection_info,
+                            virt_driver.detach_volume(context,
+                                                      connection_info,
                                                       instance,
                                                       self['mount_device'],
                                                       encryption=encryption)
@@ -566,7 +567,8 @@ class DriverVolumeBlockDevice(DriverBlockDevice):
                 if do_driver_attach:
                     # Disconnect the volume from the host.
                     try:
-                        virt_driver.detach_volume(connection_info,
+                        virt_driver.detach_volume(context,
+                                                  connection_info,
                                                   instance,
                                                   self['mount_device'],
                                                   encryption=encryption)
