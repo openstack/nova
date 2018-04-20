@@ -17,7 +17,6 @@
 import collections
 import datetime
 import ddt
-import uuid
 
 import fixtures
 import iso8601
@@ -52,7 +51,6 @@ from nova.db.sqlalchemy import api as db_api
 from nova.db.sqlalchemy import models
 from nova import exception
 from nova.image import glance
-from nova.network import manager
 from nova import objects
 from nova.objects import instance as instance_obj
 from nova.objects import tag
@@ -75,10 +73,6 @@ FAKE_UUID = fakes.FAKE_UUID
 
 INSTANCE_IDS = {FAKE_UUID: 1}
 FIELDS = instance_obj.INSTANCE_DEFAULT_FIELDS
-
-
-def fake_gen_uuid():
-    return FAKE_UUID
 
 
 def instance_update_and_get_original(context, instance_uuid, values,
@@ -1723,7 +1717,7 @@ class ServersControllerDeleteTest(ControllerTest):
                 raise exception.InstanceNotFound(instance_id=instance.uuid)
             self.server_delete_called = True
 
-        self.stubs.Set(compute_api.API, 'delete', fake_delete)
+        self.stub_out('nova.compute.api.API.delete', fake_delete)
 
     def _create_delete_request(self, uuid):
         fakes.stub_out_instance_quota(self, 0, 10)
@@ -1756,15 +1750,16 @@ class ServersControllerDeleteTest(ControllerTest):
 
         self.assertTrue(self.server_delete_called)
 
-    def test_delete_locked_server(self):
+    @mock.patch.object(compute_api.API, 'delete',
+                       side_effect=exception.InstanceIsLocked(
+                           instance_uuid=FAKE_UUID))
+    def test_delete_locked_server(self, mock_delete):
         req = self._create_delete_request(FAKE_UUID)
-        self.stubs.Set(compute_api.API, 'soft_delete',
-                       fakes.fake_actions_to_locked_server)
-        self.stubs.Set(compute_api.API, 'delete',
-                       fakes.fake_actions_to_locked_server)
 
         self.assertRaises(webob.exc.HTTPConflict, self.controller.delete,
                           req, FAKE_UUID)
+        mock_delete.assert_called_once_with(
+            req.environ['nova.context'], test.MatchType(objects.Instance))
 
     def test_delete_server_instance_while_resize(self):
         req = self._create_delete_request(FAKE_UUID)
@@ -1922,74 +1917,73 @@ class ServersControllerRebuildInstanceTest(ControllerTest):
                           self.controller._action_rebuild, self.req,
                           FAKE_UUID, body=self.body)
 
-    def test_rebuild_instance_fails_when_min_ram_too_small(self):
+    @mock.patch.object(fake._FakeImageService, 'show',
+                       return_value=dict(
+                           id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
+                           name='public image', is_public=True,
+                           status='active', properties={'key1': 'value1'},
+                           min_ram="4096", min_disk="10"))
+    def test_rebuild_instance_fails_when_min_ram_too_small(self, mock_show):
         # make min_ram larger than our instance ram size
-        def fake_get_image(self, context, image_href, **kwargs):
-            return dict(id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
-                        name='public image', is_public=True,
-                        status='active', properties={'key1': 'value1'},
-                        min_ram="4096", min_disk="10")
-
-        self.stubs.Set(fake._FakeImageService, 'show', fake_get_image)
-
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_rebuild,
                           self.req, FAKE_UUID, body=self.body)
+        mock_show.assert_called_once_with(
+            self.req.environ['nova.context'], self.image_uuid,
+            include_locations=False, show_deleted=True)
 
-    def test_rebuild_instance_fails_when_min_disk_too_small(self):
+    @mock.patch.object(fake._FakeImageService, 'show',
+                       return_value=dict(
+                           id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
+                           name='public image', is_public=True,
+                           status='active', properties={'key1': 'value1'},
+                           min_ram="128", min_disk="100000"))
+    def test_rebuild_instance_fails_when_min_disk_too_small(self, mock_show):
         # make min_disk larger than our instance disk size
-        def fake_get_image(self, context, image_href, **kwargs):
-            return dict(id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
-                        name='public image', is_public=True,
-                        status='active', properties={'key1': 'value1'},
-                        min_ram="128", min_disk="100000")
-
-        self.stubs.Set(fake._FakeImageService, 'show', fake_get_image)
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_rebuild, self.req,
                           FAKE_UUID, body=self.body)
+        mock_show.assert_called_once_with(
+            self.req.environ['nova.context'], self.image_uuid,
+            include_locations=False, show_deleted=True)
 
-    def test_rebuild_instance_image_too_large(self):
+    @mock.patch.object(fake._FakeImageService, 'show',
+                       return_value=dict(
+                           id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
+                           name='public image', is_public=True,
+                           status='active', size=str(1000 * (1024 ** 3))))
+    def test_rebuild_instance_image_too_large(self, mock_show):
         # make image size larger than our instance disk size
-        size = str(1000 * (1024 ** 3))
-
-        def fake_get_image(self, context, image_href, **kwargs):
-            return dict(id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
-                        name='public image', is_public=True,
-                        status='active', size=size)
-
-        self.stubs.Set(fake._FakeImageService, 'show', fake_get_image)
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_rebuild,
                           self.req, FAKE_UUID, body=self.body)
+        mock_show.assert_called_once_with(
+            self.req.environ['nova.context'], self.image_uuid,
+            include_locations=False, show_deleted=True)
 
     def test_rebuild_instance_name_all_blank(self):
-        def fake_get_image(self, context, image_href, **kwargs):
-            return dict(id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
-                        name='public image', is_public=True, status='active')
-
-        self.stubs.Set(fake._FakeImageService, 'show', fake_get_image)
         self.body['rebuild']['name'] = '     '
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(exception.ValidationError,
                           self.controller._action_rebuild,
                           self.req, FAKE_UUID, body=self.body)
 
-    def test_rebuild_instance_with_deleted_image(self):
-        def fake_get_image(self, context, image_href, **kwargs):
-            return dict(id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
-                        name='public image', is_public=True,
-                        status='DELETED')
-
-        self.stubs.Set(fake._FakeImageService, 'show', fake_get_image)
-
+    @mock.patch.object(fake._FakeImageService, 'show',
+                       return_value=dict(
+                           id='76fa36fc-c930-4bf3-8c8a-ea2a2420deb6',
+                           name='public image', is_public=True,
+                           status='DELETED'))
+    def test_rebuild_instance_with_deleted_image(self, mock_show):
         self.req.body = jsonutils.dump_as_bytes(self.body)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self.controller._action_rebuild,
                           self.req, FAKE_UUID, body=self.body)
+        mock_show.assert_called_once_with(
+            self.req.environ['nova.context'], self.image_uuid,
+            include_locations=False, show_deleted=True)
 
     def test_rebuild_instance_onset_file_limit_over_quota(self):
         def fake_get_image(self, context, image_href, **kwargs):
@@ -2706,11 +2700,6 @@ class ServerStatusTest(test.TestCase):
         self.assertEqual(response['server']['status'], 'HARD_REBOOT')
 
     def test_reboot_resize_policy_fail(self):
-        def fake_get_server(context, req, id):
-            return fakes.stub_instance(id)
-
-        self.stubs.Set(self.controller, '_get_server', fake_get_server)
-
         rule = {'compute:reboot': 'role:admin'}
         policy.set_rules(oslo_policy.Rules.from_dict(rule))
         req = fakes.HTTPRequestV21.blank('/fake/servers/1234/action')
@@ -2733,11 +2722,6 @@ class ServerStatusTest(test.TestCase):
         self.assertEqual(response['server']['status'], 'RESIZE')
 
     def test_confirm_resize_policy_fail(self):
-        def fake_get_server(context, req, id):
-            return fakes.stub_instance(id)
-
-        self.stubs.Set(self.controller, '_get_server', fake_get_server)
-
         rule = {'compute:confirm_resize': 'role:admin'}
         policy.set_rules(oslo_policy.Rules.from_dict(rule))
         req = fakes.HTTPRequestV21.blank('/fake/servers/1234/action')
@@ -2754,11 +2738,6 @@ class ServerStatusTest(test.TestCase):
         self.assertEqual(response['server']['status'], 'REVERT_RESIZE')
 
     def test_revert_resize_policy_fail(self):
-        def fake_get_server(context, req, id):
-            return fakes.stub_instance(id)
-
-        self.stubs.Set(self.controller, '_get_server', fake_get_server)
-
         rule = {'compute:revert_resize': 'role:admin'}
         policy.set_rules(oslo_policy.Rules.from_dict(rule))
         req = fakes.HTTPRequestV21.blank('/fake/servers/1234/action')
@@ -2838,24 +2817,20 @@ class ServersControllerCreateTest(test.TestCase):
             inst.update(params)
             return (inst, inst)
 
-        def fake_method(*args, **kwargs):
-            pass
-
-        def project_get_networks(context, user_id):
-            return dict(id='1', host='localhost')
-
         fakes.stub_out_key_pair_funcs(self)
         fake.stub_out_image_service(self)
-        self.stubs.Set(uuid, 'uuid4', fake_gen_uuid)
-        self.stub_out('nova.db.project_get_networks', project_get_networks)
+        self.stub_out('uuid.uuid4', lambda: FAKE_UUID)
+        self.stub_out('nova.db.project_get_networks',
+                      lambda c, u: dict(id='1', host='localhost'))
         self.stub_out('nova.db.instance_create', instance_create)
-        self.stub_out('nova.db.instance_system_metadata_update', fake_method)
+        self.stub_out('nova.db.instance_system_metadata_update',
+                      lambda *a, **kw: None)
         self.stub_out('nova.db.instance_get', instance_get)
         self.stub_out('nova.db.instance_update', instance_update)
         self.stub_out('nova.db.instance_update_and_get_original',
                 server_update_and_get_original)
-        self.stubs.Set(manager.VlanManager, 'allocate_fixed_ip',
-                       fake_method)
+        self.stub_out('nova.network.manager.VlanManager.allocate_fixed_ip',
+                      lambda *a, **kw: None)
         self.body = {
             'server': {
                 'name': 'server_test',
@@ -3061,15 +3036,13 @@ class ServersControllerCreateTest(test.TestCase):
     #     self.stubs.Set(compute_api.API, 'create', create)
     #     self._test_create_extra(params)
 
-    def test_create_instance_with_port_with_no_fixed_ips(self):
-        port_id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
-        requested_networks = [{'port': port_id}]
+    @mock.patch.object(compute_api.API, 'create',
+                       side_effect=exception.PortRequiresFixedIP(
+                           port_id=uuids.port))
+    def test_create_instance_with_port_with_no_fixed_ips(self, mock_create):
+        requested_networks = [{'port': uuids.port}]
         params = {'networks': requested_networks}
 
-        def fake_create(*args, **kwargs):
-            raise exception.PortRequiresFixedIP(port_id=port_id)
-
-        self.stubs.Set(compute_api.API, 'create', fake_create)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._test_create_extra, params)
 
@@ -3081,28 +3054,22 @@ class ServersControllerCreateTest(test.TestCase):
         # Make sure the failure was about user_data and not something else.
         self.assertIn('user_data', six.text_type(ex))
 
-    def test_create_instance_with_network_with_no_subnet(self):
-        network = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
-        requested_networks = [{'uuid': network}]
+    @mock.patch.object(compute_api.API, 'create',
+                       side_effect=exception.NetworkRequiresSubnet(
+                           network_uuid=uuids.network))
+    def test_create_instance_with_network_with_no_subnet(self, mock_create):
+        requested_networks = [{'uuid': uuids.network}]
         params = {'networks': requested_networks}
-
-        def fake_create(*args, **kwargs):
-            raise exception.NetworkRequiresSubnet(network_uuid=network)
-
-        self.stubs.Set(compute_api.API, 'create', fake_create)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._test_create_extra, params)
 
-    def test_create_instance_with_non_unique_secgroup_name(self):
-        network = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
-        requested_networks = [{'uuid': network}]
+    @mock.patch.object(compute_api.API, 'create',
+                       side_effect=exception.NoUniqueMatch(
+                           "No Unique match found for ..."))
+    def test_create_instance_with_non_unique_secgroup_name(self, mock_create):
+        requested_networks = [{'uuid': uuids.network}]
         params = {'networks': requested_networks,
                   'security_groups': [{'name': 'dup'}, {'name': 'dup'}]}
-
-        def fake_create(*args, **kwargs):
-            raise exception.NoUniqueMatch("No Unique match found for ...")
-
-        self.stubs.Set(compute_api.API, 'create', fake_create)
         self.assertRaises(webob.exc.HTTPConflict,
                           self._test_create_extra, params)
 
@@ -3115,10 +3082,10 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(exception.ValidationError,
                           self._test_create_extra, params)
 
+    @mock.patch.object(compute_api.API, 'create')
     def test_create_instance_secgroup_leading_trailing_spaces_compat_mode(
-            self):
-        network = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
-        requested_networks = [{'uuid': network}]
+            self, mock_create):
+        requested_networks = [{'uuid': uuids.network}]
         params = {'networks': requested_networks,
                   'security_groups': [{'name': '  sg  '}]}
 
@@ -3126,8 +3093,8 @@ class ServersControllerCreateTest(test.TestCase):
             self.assertEqual(['  sg  '], kwargs['security_groups'])
             return (objects.InstanceList(objects=[fakes.stub_instance_obj(
                 self.req.environ['nova.context'])]), None)
+        mock_create.side_effect = fake_create
 
-        self.stubs.Set(compute_api.API, 'create', fake_create)
         self.req.set_legacy_v2()
         self._test_create_extra(params)
 
@@ -3144,8 +3111,8 @@ class ServersControllerCreateTest(test.TestCase):
             self.assertEqual(result, kwargs['requested_networks'].as_tuples())
             return old_create(*args, **kwargs)
 
-        self.stubs.Set(compute_api.API, 'create', create)
-        self._test_create_extra(params)
+        with mock.patch('nova.compute.api.API.create', create):
+            self._test_create_extra(params)
 
     def test_create_instance_with_pass_disabled(self):
         # test with admin passwords disabled See lp bug 921814
@@ -3492,7 +3459,9 @@ class ServersControllerCreateTest(test.TestCase):
                ' already used 9 of 10 cores')
         self._do_test_create_instance_above_quota('cores', 1, 10, msg)
 
-    def test_create_instance_above_quota_server_group_members(self):
+    @mock.patch.object(fakes.QUOTAS, 'limit_check')
+    def test_create_instance_above_quota_server_group_members(
+            self, mock_limit_check):
         ctxt = self.req.environ['nova.context']
         fake_group = objects.InstanceGroup(ctxt)
         fake_group.project_id = ctxt.project_id
@@ -3517,16 +3486,17 @@ class ServersControllerCreateTest(test.TestCase):
         def fake_instance_destroy(context, uuid, constraint):
             return fakes.stub_instance(1)
 
-        self.stubs.Set(fakes.QUOTAS, 'count_as_dict', fake_count)
-        self.stubs.Set(fakes.QUOTAS, 'limit_check', fake_limit_check)
+        mock_limit_check.side_effect = fake_limit_check
         self.stub_out('nova.db.instance_destroy', fake_instance_destroy)
         self.body['os:scheduler_hints'] = {'group': fake_group.uuid}
         self.req.body = jsonutils.dump_as_bytes(self.body)
         expected_msg = "Quota exceeded, too many servers in group"
 
         try:
-            self.controller.create(self.req, body=self.body).obj
-            self.fail('expected quota to be exceeded')
+            with mock.patch.object(fakes.QUOTAS, 'count_as_dict',
+                                   side_effect=fake_count):
+                self.controller.create(self.req, body=self.body).obj
+                self.fail('expected quota to be exceeded')
         except webob.exc.HTTPForbidden as e:
             self.assertEqual(e.explanation, expected_msg)
 
@@ -3566,16 +3536,11 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(exception.ValidationError,
                           self.controller.create, self.req, body=self.body)
 
-    def test_create_instance_with_neutronv2_port_in_use(self):
-        network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
-        port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
-        requested_networks = [{'uuid': network, 'port': port}]
+    @mock.patch.object(compute_api.API, 'create',
+                      side_effect=exception.PortInUse(port_id=uuids.port))
+    def test_create_instance_with_neutronv2_port_in_use(self, mock_create):
+        requested_networks = [{'uuid': uuids.network, 'port': uuids.port}]
         params = {'networks': requested_networks}
-
-        def fake_create(*args, **kwargs):
-            raise exception.PortInUse(port_id=port)
-
-        self.stubs.Set(compute_api.API, 'create', fake_create)
         self.assertRaises(webob.exc.HTTPConflict,
                           self._test_create_extra, params)
 
@@ -3604,45 +3569,34 @@ class ServersControllerCreateTest(test.TestCase):
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._test_create_extra, params)
 
-    def test_create_multiple_instance_with_neutronv2_port(self):
-        network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
-        port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
-        requested_networks = [{'uuid': network, 'port': port}]
+    @mock.patch.object(compute_api.API, 'create',
+                       side_effect=exception.MultiplePortsNotApplicable(
+                           reason="Unable to launch multiple instances with "
+                                  "a single configured port ID. Please "
+                                  "launch your instance one by one with "
+                                  "different ports."))
+    def test_create_multiple_instance_with_neutronv2_port(self, mock_create):
+        requested_networks = [{'uuid': uuids.network, 'port': uuids.port}]
         params = {'networks': requested_networks}
         self.body['server']['max_count'] = 2
-
-        def fake_create(*args, **kwargs):
-            msg = ("Unable to launch multiple instances with"
-                   " a single configured port ID. Please launch your"
-                   " instance one by one with different ports.")
-            raise exception.MultiplePortsNotApplicable(reason=msg)
-
-        self.stubs.Set(compute_api.API, 'create', fake_create)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._test_create_extra, params)
 
-    def test_create_instance_with_neutronv2_not_found_network(self):
-        network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
-        requested_networks = [{'uuid': network}]
+    @mock.patch.object(compute_api.API, 'create',
+                       side_effect=exception.NetworkNotFound(
+                           network_id=uuids.network))
+    def test_create_instance_with_neutronv2_not_found_network(
+            self, mock_create):
+        requested_networks = [{'uuid': uuids.network}]
         params = {'networks': requested_networks}
-
-        def fake_create(*args, **kwargs):
-            raise exception.NetworkNotFound(network_id=network)
-
-        self.stubs.Set(compute_api.API, 'create', fake_create)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._test_create_extra, params)
 
-    def test_create_instance_with_neutronv2_port_not_found(self):
-        network = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa'
-        port = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
-        requested_networks = [{'uuid': network, 'port': port}]
+    @mock.patch.object(compute_api.API, 'create',
+                       side_effect=exception.PortNotFound(port_id=uuids.port))
+    def test_create_instance_with_neutronv2_port_not_found(self, mock_create):
+        requested_networks = [{'uuid': uuids.network, 'port': uuids.port}]
         params = {'networks': requested_networks}
-
-        def fake_create(*args, **kwargs):
-            raise exception.PortNotFound(port_id=port)
-
-        self.stubs.Set(compute_api.API, 'create', fake_create)
         self.assertRaises(webob.exc.HTTPBadRequest,
                           self._test_create_extra, params)
 
@@ -4879,14 +4833,11 @@ class ServersAllExtensionsTestCase(test.TestCase):
         super(ServersAllExtensionsTestCase, self).setUp()
         self.app = compute.APIRouterV21()
 
-    def test_create_missing_server(self):
+    @mock.patch.object(compute_api.API, 'create',
+                       side_effect=test.TestingException(
+                           "Should not reach the compute API."))
+    def test_create_missing_server(self, mock_create):
         # Test create with malformed body.
-
-        def fake_create(*args, **kwargs):
-            raise test.TestingException("Should not reach the compute API.")
-
-        self.stubs.Set(compute_api.API, 'create', fake_create)
-
         req = fakes.HTTPRequestV21.blank('/fake/servers')
         req.method = 'POST'
         req.content_type = 'application/json'
