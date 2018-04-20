@@ -7053,12 +7053,14 @@ class LibvirtDriver(driver.ComputeDriver):
             if CONF.serial_console.enabled:
                 serial_ports = list(self._get_serial_ports_from_guest(guest))
 
+            LOG.debug("About to invoke the migrate API", instance=instance)
             guest.migrate(self._live_migration_uri(dest),
                           migrate_uri=migrate_uri,
                           flags=migration_flags,
                           params=params,
                           domain_xml=new_xml_str,
                           bandwidth=bandwidth)
+            LOG.debug("Migrate API has completed", instance=instance)
 
             for hostname, port in serial_ports:
                 serial_console.release_port(host=hostname, port=port)
