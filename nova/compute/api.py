@@ -2209,6 +2209,22 @@ class API(base.Base):
         # merged replica instead of the cell directly, so fall through
         # here in that case as well.
         if service_version < 15 or CONF.cells.enable:
+            # If not using cells v1, we need to log a warning about the API
+            # service version being less than 15 (that check was added in
+            # newton), which indicates there is some lingering data during the
+            # transition to cells v2 which could cause an InstanceNotFound
+            # here. The warning message is a sort of breadcrumb.
+            # This can all go away once we drop cells v1 and assert that all
+            # deployments have upgraded from a base cells v2 setup with
+            # mappings.
+            if not CONF.cells.enable:
+                LOG.warning('The nova-osapi_compute service version is from '
+                            'before Ocata and may cause problems looking up '
+                            'instances in a cells v2 setup. Check your '
+                            'nova-api service configuration and cell '
+                            'mappings. You may need to remove stale '
+                            'nova-osapi_compute service records from the cell '
+                            'database.')
             return objects.Instance.get_by_uuid(context, instance_uuid,
                                                 expected_attrs=expected_attrs)
         inst_map = self._get_instance_map_or_none(context, instance_uuid)
