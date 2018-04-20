@@ -1925,9 +1925,10 @@ class LibvirtDriver(driver.ComputeDriver):
 
         update_task_state(task_state=task_states.IMAGE_PENDING_UPLOAD)
 
+        update_task_state(task_state=task_states.IMAGE_UPLOADING,
+                          expected_state=task_states.IMAGE_PENDING_UPLOAD)
+
         try:
-            update_task_state(task_state=task_states.IMAGE_UPLOADING,
-                              expected_state=task_states.IMAGE_PENDING_UPLOAD)
             metadata['location'] = root_disk.direct_snapshot(
                 context, snapshot_name, image_format, image_id,
                 instance.image_ref)
