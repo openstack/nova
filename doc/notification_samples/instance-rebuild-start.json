@@ -3,7 +3,7 @@
     "event_type": "instance.rebuild.start",
     "publisher_id": "nova-compute:compute",
     "payload": {
-        "$ref":"common_payloads/InstanceActionPayload.json#",
+        "$ref":"common_payloads/InstanceActionRebuildPayload.json#",
         "nova_object.data": {
             "architecture": null,
             "image_uuid": "a2459075-d96c-40d5-893e-577ff92e721c",

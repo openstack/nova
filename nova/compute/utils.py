@@ -715,6 +715,37 @@ def notify_about_server_group_add_member(context, group_id):
     notification.emit(context)
 
 
+@rpc.if_notifications_enabled
+def notify_about_instance_rebuild(context, instance, host, phase=None,
+                                  exception=None, bdms=None):
+    """Send versioned notification about instance rebuild
+
+    :param instance: the instance which the action performed on
+    :param host: the host emitting the notification
+    :param phase: the phase of the action
+    :param exception: the thrown exception (used in error notifications)
+    :param bdms: BlockDeviceMappingList object for the instance. If it is not
+                provided then we will load it from the db if so configured
+    """
+    fault, priority = _get_fault_and_priority_from_exc(exception)
+    payload = instance_notification.InstanceActionRebuildPayload(
+            context=context,
+            instance=instance,
+            fault=fault,
+            bdms=bdms)
+    notification = instance_notification.InstanceActionRebuildNotification(
+            context=context,
+            priority=priority,
+            publisher=notification_base.NotificationPublisher(
+                host=host, source=fields.NotificationSource.COMPUTE),
+            event_type=notification_base.EventType(
+                    object='instance',
+                    action=fields.NotificationAction.REBUILD,
+                    phase=phase),
+            payload=payload)
+    notification.emit(context)
+
+
 def refresh_info_cache_for_instance(context, instance):
     """Refresh the info cache for an instance.
 

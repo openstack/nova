@@ -314,9 +314,11 @@ class TestInstanceNotificationSample(
             self._wait_for_state_change(self.admin_api, server, 'ACTIVE')
 
     def test_create_delete_server(self):
+        fake_trusted_certs = ['cert-id-1', 'cert-id-2']
         server = self._boot_a_server(
             extra_params={'networks': [{'port': self.neutron.port_1['id']}],
-                          'tags': ['tag']})
+                          'tags': ['tag'],
+                          'trusted_image_certificates': fake_trusted_certs})
         self._attach_volume_to_server(server, self.cinder.SWAP_OLD_VOL)
         self.api.delete_server(server['id'])
         self._wait_until_deleted(server)
@@ -356,10 +358,12 @@ class TestInstanceNotificationSample(
 
         mock_build.side_effect = _build_resources
 
+        fake_trusted_certs = ['cert-id-1', 'cert-id-2']
         server = self._boot_a_server(
             expected_status='ERROR',
             extra_params={'networks': [{'port': self.neutron.port_1['id']}],
-                          'tags': ['tag']})
+                          'tags': ['tag'],
+                          'trusted_image_certificates': fake_trusted_certs})
 
         self.assertEqual(2, len(fake_notifier.VERSIONED_NOTIFICATIONS))
 
@@ -1009,7 +1013,72 @@ class TestInstanceNotificationSample(
         post = {
             'rebuild': {
                 'imageRef': 'a2459075-d96c-40d5-893e-577ff92e721c',
-                'metadata': {}
+                'metadata': {},
+            }
+        }
+        self.api.post_server_action(server['id'], post)
+        # Before going back to ACTIVE state
+        # server state need to be changed to REBUILD state
+        self._wait_for_state_change(self.api, server,
+                                    expected_status='REBUILD')
+        self._wait_for_state_change(self.api, server,
+                                    expected_status='ACTIVE')
+
+        # The compute/manager will detach every volume during rebuild
+        self.assertEqual(5, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        self._verify_notification(
+            'instance-rebuild-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id'],
+                'trusted_image_certificates': None},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[1])
+        self._verify_notification(
+            'instance-volume_detach-start',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'task_state': 'rebuilding',
+                'architecture': None,
+                'image_uuid': 'a2459075-d96c-40d5-893e-577ff92e721c',
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[2])
+        self._verify_notification(
+            'instance-volume_detach-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'task_state': 'rebuilding',
+                'architecture': None,
+                'image_uuid': 'a2459075-d96c-40d5-893e-577ff92e721c',
+                'uuid': server['id']},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])
+        self._verify_notification(
+            'instance-rebuild-end',
+            replacements={
+                'reservation_id': server['reservation_id'],
+                'uuid': server['id'],
+                'trusted_image_certificates': None},
+            actual=fake_notifier.VERSIONED_NOTIFICATIONS[4])
+
+    def test_rebuild_server_with_trusted_cert(self):
+        # NOTE(gabor_antal): Rebuild changes the image used by the instance,
+        # therefore the actions tested in test_instance_action had to be in
+        # specific order. To avoid this problem, rebuild was moved from
+        # test_instance_action to its own method.
+
+        create_trusted_certs = ['cert-id-1', 'cert-id-2']
+        server = self._boot_a_server(
+            extra_params={'networks': [{'port': self.neutron.port_1['id']}],
+                          'trusted_image_certificates': create_trusted_certs})
+        self._attach_volume_to_server(server, self.cinder.SWAP_OLD_VOL)
+
+        fake_notifier.reset()
+
+        rebuild_trusted_certs = ['rebuild-cert-id-1', 'rebuild-cert-id-2']
+        post = {
+            'rebuild': {
+                'imageRef': 'a2459075-d96c-40d5-893e-577ff92e721c',
+                'metadata': {},
+                'trusted_image_certificates': rebuild_trusted_certs,
             }
         }
         self.api.post_server_action(server['id'], post)
@@ -1081,7 +1150,8 @@ class TestInstanceNotificationSample(
             'instance-rebuild-error',
             replacements={
                 'reservation_id': server['reservation_id'],
-                'uuid': server['id']},
+                'uuid': server['id'],
+                'trusted_image_certificates': None},
             actual=notification[0])
 
     def _test_restore_server(self, server):
@@ -1573,3 +1643,8 @@ class TestInstanceNotificationSampleOldAttachFlow(
     @mock.patch('nova.volume.cinder.API.attach')
     def _test_attach_volume_error(self, server, mock_attach):
         self._do_test_attach_volume_error(server, mock_attach)
+
+    def test_rebuild_server_with_trusted_cert(self):
+        # Skipping this test as trusted cert support needs a later service
+        # version than this test class is limited to.
+        pass

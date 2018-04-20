@@ -16,8 +16,12 @@
                 }
             }
         ],
-        "tags": ["tag"]
+        "tags": ["tag"],
+        "trusted_image_certificates": [
+            "cert-id-1",
+            "cert-id-2"
+        ]
     },
     "nova_object.name":"InstanceCreatePayload",
-    "nova_object.version": "1.8"
+    "nova_object.version": "1.9"
 }

@@ -1,0 +1,11 @@
+{
+    "$ref": "InstanceActionPayload.json",
+    "nova_object.data": {
+        "trusted_image_certificates": [
+            "rebuild-cert-id-1",
+            "rebuild-cert-id-2"
+        ]
+    },
+    "nova_object.name": "InstanceActionRebuildPayload",
+    "nova_object.version": "1.7"
+}
