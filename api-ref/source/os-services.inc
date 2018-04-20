@@ -318,6 +318,10 @@ Delete Compute Service
 Deletes a service. If it's a ``nova-compute`` service, then the
 corresponding host will be removed from all the host aggregates as well.
 
+Attempts to delete a ``nova-compute`` service which is still hosting instances
+will result in a 409 HTTPConflict response. The instances will need to be
+migrated or deleted before a compute service can be deleted.
+
 .. important:: Be sure to stop the actual ``nova-compute`` process on the
                physical host *before* deleting the service with this API.
                Failing to do so can lead to the running service re-creating
@@ -325,7 +329,8 @@ corresponding host will be removed from all the host aggregates as well.
 
 Normal response codes: 204
 
-Error response codes: badRequest(400), unauthorized(401), forbidden(403), itemNotFound(404)
+Error response codes: badRequest(400), unauthorized(401), forbidden(403),
+itemNotFound(404), conflict(409)
 
 Request
 -------

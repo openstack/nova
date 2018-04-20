@@ -10,9 +10,12 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import six
+
 from nova import context as nova_context
 from nova import objects
 from nova import rc_fields
+from nova.tests.functional.api import client as api_client
 from nova.tests.functional import test_servers
 
 
@@ -73,12 +76,24 @@ class TestServicesAPI(test_servers.ProviderUsageBaseTestCase):
         # update_available_resource periodic task.
         self.admin_api.put_service(service['id'], {'forced_down': True})
         compute.stop()
-        # FIXME(mriedem): This is bug 1763183 where the compute node has
-        # an instance running on it but we allow you to delete the service
-        # and compute node anyway, which will affect the allocations for the
-        # instance and orphans the compute node resource provider in Placement.
-        # Once the bug is fixed, this should fail until the instance is either
-        # migrated or deleted.
+        # The first attempt should fail since there is an instance on the
+        # compute host.
+        ex = self.assertRaises(api_client.OpenStackApiException,
+                               self.admin_api.api_delete,
+                               '/os-services/%s' % service['id'])
+        self.assertIn('Unable to delete compute service that is hosting '
+                      'instances.', six.text_type(ex))
+        self.assertEqual(409, ex.response.status_code)
+
+        # Now delete the instance and wait for it to be gone.
+        # Note that we can't use self._delete_and_check_allocations here
+        # because of bug 1679750 where allocations are not deleted when
+        # an instance is deleted and the compute service it's running on
+        # is down.
+        self.api.delete_server(server['id'])
+        self._wait_until_deleted(server)
+
+        # Now we can delete the service.
         self.admin_api.api_delete('/os-services/%s' % service['id'])
 
         # Make sure the service is deleted.
