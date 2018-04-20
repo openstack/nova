@@ -250,6 +250,13 @@ class API(base.Base):
         self.image_api = image_api or image.API()
         self.network_api = network_api or network.API()
         self.volume_api = volume_api or cinder.API()
+        # NOTE(mriedem): This looks a bit weird but we get the reportclient
+        # via SchedulerClient since it lazy-loads SchedulerReportClient on
+        # the first usage which helps to avoid a bunch of lockutils spam in
+        # the nova-api logs every time the service is restarted (remember
+        # that pretty much all of the REST API controllers construct this
+        # API class).
+        self.placementclient = scheduler_client.SchedulerClient().reportclient
         self.security_group_api = (security_group_api or
             openstack_driver.get_openstack_security_group_driver())
         self.consoleauth_rpcapi = consoleauth_rpcapi.ConsoleAuthAPI()
@@ -2042,6 +2049,10 @@ class API(base.Base):
 
             # cleanup volumes
             self._local_cleanup_bdm_volumes(bdms, instance, context)
+            # Cleanup allocations in Placement since we can't do it from the
+            # compute service.
+            self.placementclient.delete_allocation_for_instance(
+                context, instance.uuid)
             cb(context, instance, bdms, local=True)
             instance.destroy()
 
