@@ -706,6 +706,15 @@ class ComputeTaskManager(base.Base):
         with compute_utils.EventReporter(context, 'rebuild_server',
                                           instance.uuid):
             node = limits = None
+
+            try:
+                migration = objects.Migration.get_by_instance_and_status(
+                    context, instance.uuid, 'accepted')
+            except exception.MigrationNotFoundByStatus:
+                LOG.debug("No migration record for the rebuild/evacuate "
+                          "request.", instance=instance)
+                migration = None
+
             if not host:
                 if not request_spec:
                     # NOTE(sbauza): We were unable to find an original
@@ -744,6 +753,9 @@ class ComputeTaskManager(base.Base):
                                           host_dict['nodename'],
                                           host_dict['limits'])
                 except exception.NoValidHost as ex:
+                    if migration:
+                        migration.status = 'error'
+                        migration.save()
                     # Rollback the image_ref if a new one was provided (this
                     # only happens in the rebuild case, not evacuate).
                     if orig_image_ref and orig_image_ref != image_ref:
@@ -759,6 +771,9 @@ class ComputeTaskManager(base.Base):
                         compute_utils.add_instance_fault_from_exc(context,
                             instance, ex, sys.exc_info())
                 except exception.UnsupportedPolicyException as ex:
+                    if migration:
+                        migration.status = 'error'
+                        migration.save()
                     # Rollback the image_ref if a new one was provided (this
                     # only happens in the rebuild case, not evacuate).
                     if orig_image_ref and orig_image_ref != image_ref:
@@ -774,14 +789,6 @@ class ComputeTaskManager(base.Base):
                                     instance=instance)
                         compute_utils.add_instance_fault_from_exc(context,
                             instance, ex, sys.exc_info())
-
-            try:
-                migration = objects.Migration.get_by_instance_and_status(
-                    context, instance.uuid, 'accepted')
-            except exception.MigrationNotFoundByStatus:
-                LOG.debug("No migration record for the rebuild/evacuate "
-                          "request.", instance=instance)
-                migration = None
 
             compute_utils.notify_about_instance_usage(
                 self.notifier, context, instance, "rebuild.scheduled")
