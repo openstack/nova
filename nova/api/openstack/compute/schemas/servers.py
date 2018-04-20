@@ -379,6 +379,7 @@ query_params_v21 = {
         'sort_key': multi_params(VALID_SORT_KEYS),
         'sort_dir': parameter_types.common_query_param,
         'all_tenants': parameter_types.common_query_param,
+        'soft_deleted': parameter_types.common_query_param,
         'deleted': parameter_types.common_query_param,
         'status': parameter_types.common_query_param,
         'changes-since': multi_params({'type': 'string',

@@ -218,6 +218,7 @@ Request
   - ramdisk_id: ramdisk_id_query_server
   - reservation_id: reservation_id_query
   - root_device_name: server_root_device_name_query
+  - soft_deleted: soft_deleted_server
   - sort_dir: sort_dir_server
   - sort_key: sort_key_server
   - status: server_status_query
@@ -528,6 +529,7 @@ Request
   - ramdisk_id: ramdisk_id_query_server
   - reservation_id: reservation_id_query
   - root_device_name: server_root_device_name_query
+  - soft_deleted: soft_deleted_server
   - sort_dir: sort_dir_server
   - sort_key: sort_key_server
   - status: server_status_query
