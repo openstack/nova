@@ -63,6 +63,7 @@ VERSIONS = [
              # GET /allocation_candidates
     '1.22',  # Support forbidden traits in the required parameter of
              # GET /resource_providers and GET /allocation_candidates
+    '1.23',  # Add support for error codes in error response JSON
 ]
 
 

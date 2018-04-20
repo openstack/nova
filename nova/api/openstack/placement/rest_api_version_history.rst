@@ -270,3 +270,12 @@ Add support for expressing traits which are forbidden when filtering
 trait is a properly formatted trait in the existing ``required`` parameter,
 prefixed by a ``!``. For example ``required=!STORAGE_DISK_SSD`` asks that the
 results not include any resource providers that provide solid state disk.
+
+1.23 Include code attribute in JSON error responses
+---------------------------------------------------
+
+JSON formatted error responses gain a new attribute, ``code``, with a value
+that identifies the type of this error. This can be used to distinguish errors
+that are different but use the same HTTP status code. Any error response which
+does not specifically define a code will have the code
+``placement.undefined_code``.
