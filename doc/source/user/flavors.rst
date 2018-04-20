@@ -600,6 +600,28 @@ PCI passthrough
   - COUNT: (integer) The amount of PCI devices of type ALIAS to be assigned to
     a guest.
 
+Hiding hypervisor signature
+  Some hypervisors add a signature to their guests. While the presence
+  of the signature can enable some paravirtualization features on the
+  guest, it can also have the effect of preventing some drivers from
+  loading. Hiding the signature by setting this property to true may
+  allow such drivers to load and work.
+
+  .. note::
+
+     As of the 18.0.0 Rocky release, this is only supported by the libvirt
+     driver.
+
+  .. code:: console
+
+     $ openstack flavor set FLAVOR-NAME \
+         --property hide_hypervisor_id=VALUE
+
+  Where:
+
+  - VALUE: (string) 'true' or 'false'. 'false' is equivalent to the
+    property not existing.
+
 Secure Boot
   When your Compute services use the Hyper-V hypervisor, you can enable secure
   boot for Windows and Linux instances.

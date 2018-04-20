@@ -79,6 +79,7 @@ from nova import rc_fields
 from nova import test
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_diagnostics
+from nova.tests.unit import fake_flavor
 from nova.tests.unit import fake_instance
 from nova.tests.unit import fake_network
 import nova.tests.unit.image.fake
@@ -5422,6 +5423,108 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             any(isinstance(feature, vconfig.LibvirtConfigGuestFeatureKvmHidden)
                            for feature in cfg.features))
 
+    def test_get_guest_config_with_hiding_hypervisor_id_flavor_extra_specs(
+            self):
+        # Input to the test: flavor extra_specs
+        flavor_hide_id = fake_flavor.fake_flavor_obj(self.context,
+            extra_specs={"hide_hypervisor_id": "true"},
+            expected_attrs={"extra_specs"})
+
+        self.flags(virt_type='kvm', group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.flavor = flavor_hide_id
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw"})
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+        cfg = drvr._get_guest_config(instance_ref,
+                                     [],
+                                     image_meta,
+                                     disk_info)
+
+        self.assertTrue(
+            any(isinstance(feature, vconfig.LibvirtConfigGuestFeatureKvmHidden)
+                           for feature in cfg.features))
+
+    def test_get_guest_config_with_hiding_hypervisor_id_img_and_flavor(
+            self):
+        # Input to the test: image metadata (true) and flavor
+        #     extra_specs (true)
+        flavor_hide_id = fake_flavor.fake_flavor_obj(self.context,
+            extra_specs={"hide_hypervisor_id": "true"},
+            expected_attrs={"extra_specs"})
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {"img_hide_hypervisor_id": "true"}})
+
+        self.flags(virt_type='kvm', group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.flavor = flavor_hide_id
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+        cfg = drvr._get_guest_config(instance_ref,
+                                     [],
+                                     image_meta,
+                                     disk_info)
+
+        self.assertTrue(
+            any(isinstance(feature, vconfig.LibvirtConfigGuestFeatureKvmHidden)
+                           for feature in cfg.features))
+
+    def test_get_guest_config_with_hiding_hypervisor_id_img_or_flavor(
+            self):
+        # Input to the test: image metadata (false) and flavor
+        #     extra_specs (true)
+        flavor_hide_id = fake_flavor.fake_flavor_obj(self.context,
+            extra_specs={"hide_hypervisor_id": "true"},
+            expected_attrs={"extra_specs"})
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {"img_hide_hypervisor_id": "false"}})
+
+        self.flags(virt_type='kvm', group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.flavor = flavor_hide_id
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+        cfg = drvr._get_guest_config(instance_ref,
+                                     [],
+                                     image_meta,
+                                     disk_info)
+
+        self.assertTrue(
+            any(isinstance(feature, vconfig.LibvirtConfigGuestFeatureKvmHidden)
+                           for feature in cfg.features))
+
+        # Input to the test: image metadata (true) and flavor
+        #     extra_specs (false)
+        flavor_hide_id = fake_flavor.fake_flavor_obj(self.context,
+            extra_specs={"hide_hypervisor_id": "false"},
+            expected_attrs={"extra_specs"})
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw",
+            "properties": {"img_hide_hypervisor_id": "true"}})
+
+        instance_ref.flavor = flavor_hide_id
+
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+        cfg = drvr._get_guest_config(instance_ref,
+                                     [],
+                                     image_meta,
+                                     disk_info)
+
+        self.assertTrue(
+            any(isinstance(feature, vconfig.LibvirtConfigGuestFeatureKvmHidden)
+                           for feature in cfg.features))
+
     def test_get_guest_config_without_hiding_hypervisor_id(self):
         self.flags(virt_type='kvm', group='libvirt')
 
@@ -5437,6 +5540,30 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                                             instance_ref,
                                             image_meta)
 
+        cfg = drvr._get_guest_config(instance_ref,
+                                     [],
+                                     image_meta,
+                                     disk_info)
+
+        self.assertFalse(
+            any(isinstance(feature, vconfig.LibvirtConfigGuestFeatureKvmHidden)
+                           for feature in cfg.features))
+
+    def test_get_guest_config_without_hiding_hypervisor_id_flavor_extra_specs(
+            self):
+        flavor_hide_id = fake_flavor.fake_flavor_obj(self.context,
+            extra_specs={"hide_hypervisor_id": "false"},
+            expected_attrs={"extra_specs"})
+
+        self.flags(virt_type='qemu', group='libvirt')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        instance_ref.flavor = flavor_hide_id
+        image_meta = objects.ImageMeta.from_dict({
+            "disk_format": "raw"})
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
         cfg = drvr._get_guest_config(instance_ref,
                                      [],
                                      image_meta,
