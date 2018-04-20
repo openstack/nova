@@ -252,8 +252,8 @@ environment. It can be retrieved as follows::
           changes in a patch that is separate from and prior to the HTTP API
           change.
 
-If a handler needs to return an error response, with the advent of `link to
-spec once it merges`_, it is possible to include a code in the JSON error
+If a handler needs to return an error response, with the advent of `Placement
+API Error Handling`_, it is possible to include a code in the JSON error
 response.  This can be used to distinguish different errors with the same HTTP
 response status code (a common case is a generation conflict versus an
 inventory in use conflict). Error codes are simple namespaced strings (e.g.,
@@ -430,3 +430,4 @@ for an eventual extraction and avoid creating unnecessary interdependencies.
 .. _gabbi-run: http://gabbi.readthedocs.io/en/latest/runner.html
 .. _errors: http://specs.openstack.org/openstack/api-wg/guidelines/errors.html
 .. _API Reference: https://developer.openstack.org/api-ref/placement/
+.. _Placement API Error Handling: http://specs.openstack.org/openstack/nova-specs/specs/rocky/approved/placement-api-error-handling.html
