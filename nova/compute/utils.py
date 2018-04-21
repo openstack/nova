@@ -368,6 +368,7 @@ def notify_about_instance_action(context, instance, host, action, phase=None,
     """
     fault, priority = _get_fault_and_priority_from_exc(exception)
     payload = instance_notification.InstanceActionPayload(
+            context=context,
             instance=instance,
             fault=fault,
             bdms=bdms)
@@ -399,6 +400,7 @@ def notify_about_instance_create(context, instance, host, phase=None,
     """
     fault, priority = _get_fault_and_priority_from_exc(exception)
     payload = instance_notification.InstanceCreatePayload(
+        context=context,
         instance=instance,
         fault=fault,
         bdms=bdms)
@@ -428,6 +430,7 @@ def notify_about_volume_attach_detach(context, instance, host, action, phase,
     """
     fault, priority = _get_fault_and_priority_from_exc(exception)
     payload = instance_notification.InstanceActionVolumePayload(
+            context=context,
             instance=instance,
             fault=fault,
             volume_id=volume_id)
@@ -457,6 +460,7 @@ def notify_about_instance_rescue_action(
     """
     fault, priority = _get_fault_and_priority_from_exc(exception)
     payload = instance_notification.InstanceActionRescuePayload(
+            context=context,
             instance=instance,
             fault=fault,
             rescue_image_ref=rescue_image_ref)
@@ -512,6 +516,7 @@ def notify_about_volume_swap(context, instance, host, phase,
     """
     fault, priority = _get_fault_and_priority_from_exc(exception)
     payload = instance_notification.InstanceActionVolumeSwapPayload(
+        context=context,
         instance=instance,
         fault=fault,
         old_volume_id=old_volume_id,
@@ -542,6 +547,7 @@ def notify_about_instance_snapshot(context, instance, host, phase,
     :param snapshot_image_id: the ID of the snapshot
     """
     payload = instance_notification.InstanceActionSnapshotPayload(
+        context=context,
         instance=instance,
         fault=None,
         snapshot_image_id=snapshot_image_id)
@@ -572,6 +578,7 @@ def notify_about_resize_prep_instance(context, instance, host, phase,
     """
 
     payload = instance_notification.InstanceActionResizePrepPayload(
+        context=context,
         instance=instance,
         fault=None,
         new_flavor=flavor_notification.FlavorPayload(flavor=new_flavor))

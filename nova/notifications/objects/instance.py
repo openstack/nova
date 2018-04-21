@@ -65,7 +65,8 @@ class InstancePayload(base.NotificationPayloadBase):
     # Version 1.3: Add key_name field
     # Version 1.4: Add BDM related data
     # Version 1.5: Add updated_at field
-    VERSION = '1.5'
+    # Version 1.6: Add request_id field
+    VERSION = '1.6'
     fields = {
         'uuid': fields.UUIDField(),
         'user_id': fields.StringField(nullable=True),
@@ -105,10 +106,12 @@ class InstancePayload(base.NotificationPayloadBase):
 
         'metadata': fields.DictOfStringsField(),
         'locked': fields.BooleanField(),
-        'auto_disk_config': fields.DiskConfigField()
+        'auto_disk_config': fields.DiskConfigField(),
+
+        'request_id': fields.StringField(nullable=True),
     }
 
-    def __init__(self, instance, bdms=None):
+    def __init__(self, context, instance, bdms=None):
         super(InstancePayload, self).__init__()
         network_info = instance.get_network_info()
         self.ip_addresses = IpPayload.from_network_info(network_info)
@@ -117,6 +120,12 @@ class InstancePayload(base.NotificationPayloadBase):
             self.block_devices = BlockDevicePayload.from_bdms(bdms)
         else:
             self.block_devices = BlockDevicePayload.from_instance(instance)
+        # NOTE(Kevin_Zheng): Don't include request_id for periodic tasks,
+        # RequestContext for periodic tasks does not include project_id
+        # and user_id. Consider modify this once periodic tasks got a
+        # consistent request_id.
+        self.request_id = context.request_id if (context.project_id and
+                                                 context.user_id) else None
 
         self.populate_schema(instance=instance)
 
@@ -130,13 +139,16 @@ class InstanceActionPayload(InstancePayload):
     # Version 1.3: Added key_name field to InstancePayload
     # Version 1.4: Add BDM related data
     # Version 1.5: Added updated_at field to InstancePayload
-    VERSION = '1.5'
+    # Version 1.6: Added request_id field to InstancePayload
+    VERSION = '1.6'
     fields = {
         'fault': fields.ObjectField('ExceptionPayload', nullable=True),
+        'request_id': fields.StringField(nullable=True),
     }
 
-    def __init__(self, instance, fault, bdms=None):
-        super(InstanceActionPayload, self).__init__(instance=instance,
+    def __init__(self, context, instance, fault, bdms=None):
+        super(InstanceActionPayload, self).__init__(context=context,
+                                                    instance=instance,
                                                     bdms=bdms)
         self.fault = fault
 
@@ -147,14 +159,16 @@ class InstanceActionVolumePayload(InstanceActionPayload):
     # Version 1.1: Added key_name field to InstancePayload
     # Version 1.2: Add BDM related data
     # Version 1.3: Added updated_at field to InstancePayload
+    # Version 1.4: Added request_id field to InstancePayload
 
-    VERSION = '1.3'
+    VERSION = '1.4'
     fields = {
         'volume_id': fields.UUIDField()
     }
 
-    def __init__(self, instance, fault, volume_id):
+    def __init__(self, context, instance, fault, volume_id):
         super(InstanceActionVolumePayload, self).__init__(
+                context=context,
                 instance=instance,
                 fault=fault)
         self.volume_id = volume_id
@@ -169,14 +183,16 @@ class InstanceActionVolumeSwapPayload(InstanceActionPayload):
     # Version 1.3: Added key_name field to InstancePayload
     # Version 1.4: Add BDM related data
     # Version 1.5: Added updated_at field to InstancePayload
-    VERSION = '1.5'
+    # Version 1.6: Added request_id field to InstancePayload
+    VERSION = '1.6'
     fields = {
         'old_volume_id': fields.UUIDField(),
         'new_volume_id': fields.UUIDField(),
     }
 
-    def __init__(self, instance, fault, old_volume_id, new_volume_id):
+    def __init__(self, context, instance, fault, old_volume_id, new_volume_id):
         super(InstanceActionVolumeSwapPayload, self).__init__(
+                context=context,
                 instance=instance,
                 fault=fault)
         self.old_volume_id = old_volume_id
@@ -197,15 +213,17 @@ class InstanceCreatePayload(InstanceActionPayload):
     #         1.5: Add BDM related data to InstancePayload
     #         1.6: Add tags field to InstanceCreatePayload
     #         1.7: Added updated_at field to InstancePayload
-    VERSION = '1.7'
+    #         1.8: Added request_id field to InstancePayload
+    VERSION = '1.8'
 
     fields = {
         'keypairs': fields.ListOfObjectsField('KeypairPayload'),
         'tags': fields.ListOfStringsField(),
     }
 
-    def __init__(self, instance, fault, bdms):
+    def __init__(self, context, instance, fault, bdms):
         super(InstanceCreatePayload, self).__init__(
+            context=context,
             instance=instance,
             fault=fault,
             bdms=bdms)
@@ -220,13 +238,15 @@ class InstanceActionResizePrepPayload(InstanceActionPayload):
     # No SCHEMA as all the additional fields are calculated
 
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Added request_id field to InstancePayload
+    VERSION = '1.1'
     fields = {
         'new_flavor': fields.ObjectField('FlavorPayload', nullable=True)
     }
 
-    def __init__(self, instance, fault, new_flavor):
+    def __init__(self, context, instance, fault, new_flavor):
         super(InstanceActionResizePrepPayload, self).__init__(
+                context=context,
                 instance=instance,
                 fault=fault)
         self.new_flavor = new_flavor
@@ -241,7 +261,8 @@ class InstanceUpdatePayload(InstancePayload):
     # Version 1.4: Added key_name field to InstancePayload
     # Version 1.5: Add BDM related data
     # Version 1.6: Added updated_at field to InstancePayload
-    VERSION = '1.6'
+    # Version 1.7: Added request_id field to InstancePayload
+    VERSION = '1.7'
     fields = {
         'state_update': fields.ObjectField('InstanceStateUpdatePayload'),
         'audit_period': fields.ObjectField('AuditPeriodPayload'),
@@ -250,9 +271,10 @@ class InstanceUpdatePayload(InstancePayload):
         'tags': fields.ListOfStringsField(),
     }
 
-    def __init__(self, instance, state_update, audit_period, bandwidth,
-                 old_display_name):
-        super(InstanceUpdatePayload, self).__init__(instance=instance)
+    def __init__(self, context, instance, state_update, audit_period,
+                 bandwidth, old_display_name):
+        super(InstanceUpdatePayload, self).__init__(
+            context=context, instance=instance)
         self.state_update = state_update
         self.audit_period = audit_period
         self.bandwidth = bandwidth
@@ -264,13 +286,15 @@ class InstanceUpdatePayload(InstancePayload):
 @nova_base.NovaObjectRegistry.register_notification
 class InstanceActionRescuePayload(InstanceActionPayload):
     # Version 1.0: Initial version
-    VERSION = '1.0'
+    # Version 1.1: Added request_id field to InstancePayload
+    VERSION = '1.1'
     fields = {
         'rescue_image_ref': fields.UUIDField(nullable=True)
     }
 
-    def __init__(self, instance, fault, rescue_image_ref):
+    def __init__(self, context, instance, fault, rescue_image_ref):
         super(InstanceActionRescuePayload, self).__init__(
+                context=context,
                 instance=instance,
                 fault=fault)
         self.rescue_image_ref = rescue_image_ref
@@ -591,13 +615,15 @@ class InstanceActionSnapshotPayload(InstanceActionPayload):
     #              from using InstanceActionPayload 1.5 to this new payload and
     #              also it added a new field so we wanted to keep the version
     #              number increasing to signal the change.
-    VERSION = '1.6'
+    # Version 1.7: Added request_id field to InstancePayload
+    VERSION = '1.7'
     fields = {
         'snapshot_image_id': fields.UUIDField(),
     }
 
-    def __init__(self, instance, fault, snapshot_image_id):
+    def __init__(self, context, instance, fault, snapshot_image_id):
         super(InstanceActionSnapshotPayload, self).__init__(
+                context=context,
                 instance=instance,
                 fault=fault)
         self.snapshot_image_id = snapshot_image_id

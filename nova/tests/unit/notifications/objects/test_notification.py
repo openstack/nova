@@ -379,26 +379,26 @@ notification_object_data = {
     'FlavorNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'FlavorPayload': '1.4-2e7011b8b4e59167fe8b7a0a81f0d452',
     'InstanceActionNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceActionPayload': '1.5-fb2804ce9b681bfb217e729153c22611',
+    'InstanceActionPayload': '1.6-e9e4cbb94e07d3bcaa22743f41e094c8',
     'InstanceActionRescueNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceActionRescuePayload': '1.0-a29f3339d0b8c3bcc997ab5d19d898d5',
+    'InstanceActionRescuePayload': '1.1-99b9b25574b77abf6d3e5a0cea341b06',
     'InstanceActionResizePrepNotification':
         '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceActionResizePrepPayload': '1.0-3a23d3dd6516964a51c256b2f8b4646c',
+    'InstanceActionResizePrepPayload': '1.1-9dd5cd4124c660a86e3f00a2df222b8e',
     'InstanceActionVolumeNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceActionVolumePayload': '1.3-f175b22ac6d6d0aea2bac21e12156e77',
+    'InstanceActionVolumePayload': '1.4-83fcb4c12327da998116844ef4a16235',
     'InstanceActionVolumeSwapNotification':
     '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceActionVolumeSwapPayload': '1.5-bccb88cda36276d20a9b3e427b999929',
+    'InstanceActionVolumeSwapPayload': '1.6-bb322fd649d3626c7a83d5f2d9a866d4',
     'InstanceCreateNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceCreatePayload': '1.7-a35b2f3aa64dcc262ebb830e78939bdb',
-    'InstancePayload': '1.5-201d852973dbcb5caab89082a3140487',
+    'InstanceCreatePayload': '1.8-aab72bba998af21dc2e34b31e3c376ea',
+    'InstancePayload': '1.6-b1e7818c7adf158e8a6e87e0944b0b21',
     'InstanceActionSnapshotNotification':
         '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceActionSnapshotPayload': '1.6-6f96ad137957d802aac94c90337fd950',
+    'InstanceActionSnapshotPayload': '1.7-73f96d93ca47750bb6a45e4ab1d268fd',
     'InstanceStateUpdatePayload': '1.0-07e111c0fa0f6db0f79b0726d593e3da',
     'InstanceUpdateNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
-    'InstanceUpdatePayload': '1.6-9145c7cac4208eb841ceaaa9c10b2d9b',
+    'InstanceUpdatePayload': '1.7-d48dd2cf8310c8f250dfeb65fd9df97a',
     'IpPayload': '1.0-8ecf567a99e516d4af094439a7632d34',
     'KeypairNotification': '1.0-a73147b93b520ff0061865849d3dfa56',
     'KeypairPayload': '1.0-6daebbbde0e1bf35c1556b1ecd9385c1',
@@ -500,8 +500,12 @@ class TestInstanceNotification(test.NoDBTestCase):
         self.instance.tags = objects.TagList()
         # Make sure that the notification payload chooses the values in
         # instance.flavor.$value instead of instance.$value
+        mock_context = mock.MagicMock()
+        mock_context.project_id = 'fake_project_id'
+        mock_context.user_id = 'fake_user_id'
+        mock_context.request_id = 'fake_req_id'
         notification_base._send_versioned_instance_update(
-            mock.MagicMock(),
+            mock_context,
             self.instance,
             self.payload,
             'host',

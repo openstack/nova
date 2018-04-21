@@ -1,0 +1,9 @@
+---
+
+features:
+  - |
+    The ``request_id`` field has been added to all
+    instance action and instance update versioned
+    notification payloads. Note that notifications
+    triggered by periodic tasks will have the
+    ``request_id`` field set to be ``None``.

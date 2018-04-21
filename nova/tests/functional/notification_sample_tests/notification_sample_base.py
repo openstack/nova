@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import mock
 import os
 import time
 
@@ -83,6 +84,12 @@ class NotificationSampleTestBase(test.TestCase,
         nova.tests.unit.image.fake.stub_out_image_service(self)
         self.addCleanup(nova.tests.unit.image.fake.FakeImageService_reset)
         self.useFixture(nova_fixtures.PlacementFixture())
+
+        context_patcher = self.mock_gen_request_id = mock.patch(
+            'oslo_context.context.generate_request_id',
+            return_value='req-5b6c791d-5709-4f36-8fbe-c3e02869e35d')
+        self.mock_gen_request_id = context_patcher.start()
+        self.addCleanup(context_patcher.stop)
 
         self.start_service('conductor')
         self.start_service('scheduler')
