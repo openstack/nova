@@ -147,8 +147,6 @@ class TestPlacementCheck(test.NoDBTestCase):
 
     def test_placement_get_interface_internal(self):
         """Tests that "internal" is specified for interface when configured."""
-        # TODO(efried): Test that the deprecated opts (e.g. os_interface) still
-        #               work once bug #1709728 is resolved.
         self.flags(valid_interfaces='internal', group='placement')
         self._test_placement_get_interface(['internal'])
 
