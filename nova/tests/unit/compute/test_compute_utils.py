@@ -1160,7 +1160,9 @@ class ServerGroupTestCase(test.TestCase):
                                            user_id=self.user_id,
                                            project_id=self.project_id,
                                            name="test-server-group",
-                                           policies=["anti-affinity"])
+                                           policy="anti-affinity",
+                                           policies=["anti-affinity"],
+                                           rules={"max_server_per_host": 3})
 
     def test_notify_about_server_group_action(self):
         compute_utils.notify_about_server_group_action(self.context,
@@ -1174,6 +1176,8 @@ class ServerGroupTestCase(test.TestCase):
                         'nova_object.data': {
                             'name': u'test-server-group',
                             'policies': [u'anti-affinity'],
+                            'policy': u'anti-affinity',
+                            'rules': {"max_server_per_host": "3"},
                             'project_id': u'fake',
                             'user_id': u'fake',
                             'uuid': uuids.server_group,
@@ -1182,7 +1186,7 @@ class ServerGroupTestCase(test.TestCase):
                         },
                         'nova_object.name': 'ServerGroupPayload',
                         'nova_object.namespace': 'nova',
-                        'nova_object.version': '1.0'
+                        'nova_object.version': '1.1'
                    }
             }
         self.assertEqual(notification, expected)
@@ -1204,6 +1208,8 @@ class ServerGroupTestCase(test.TestCase):
                         'nova_object.data': {
                             'name': u'test-server-group',
                             'policies': [u'anti-affinity'],
+                            'policy': u'anti-affinity',
+                            'rules': {"max_server_per_host": "3"},
                             'project_id': u'fake',
                             'user_id': u'fake',
                             'uuid': uuids.server_group,
@@ -1212,7 +1218,7 @@ class ServerGroupTestCase(test.TestCase):
                         },
                         'nova_object.name': 'ServerGroupPayload',
                         'nova_object.namespace': 'nova',
-                        'nova_object.version': '1.0'
+                        'nova_object.version': '1.1'
                    }
             }
         self.assertEqual(notification, expected)
