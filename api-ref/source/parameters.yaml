@@ -1812,7 +1812,7 @@ boot_index:
     hypervisors support booting from multiple devices but only if the devices are
     of different types. For example, a disk and CD-ROM.
   in: body
-  required: false
+  required: true
   type: integer
 certificate:
   description: |
