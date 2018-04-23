@@ -1603,7 +1603,7 @@ class ResourceProviderList(base.ObjectListBase, base.VersionedObject):
             for (r_idx, amount) in resources.items()]
         query = query.select_from(usage_join)
         query = query.where(sa.or_(*where_clauses))
-        query = query.group_by(rp.c.id)
+        query = query.group_by(rp.c.id, root_rp.c.uuid, parent_rp.c.uuid)
         # NOTE(sbauza): Only RPs having all the asked resources can be provided
         query = query.having(sql.func.count(
             sa.distinct(_INV_TBL.c.resource_class_id)) == len(resources))
