@@ -12,6 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 from oslo_log import log as logging
+from oslo_utils import excutils
 from oslo_versionedobjects import exception as ovo_exception
 
 from nova import exception
@@ -136,6 +137,11 @@ class NotificationPayloadBase(NotificationObject):
                 # properly initialized or the payload field needs to be defined
                 # as nullable
                 setattr(self, key, None)
+            except Exception:
+                with excutils.save_and_reraise_exception():
+                    LOG.error('Failed trying to populate attribute "%s" '
+                              'using field: %s', key, field)
+
         self.populated = True
 
         # the schema population will create changed fields but we don't need
