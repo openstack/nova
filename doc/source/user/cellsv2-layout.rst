@@ -328,6 +328,9 @@ following:
 #. Instance affinity reporting from the compute nodes to scheduler
 #. The late anti-affinity check during server create and evacuate
 #. Querying host aggregates from the cell
+
+   .. note:: This has been resolved in the Rocky release [#]_.
+
 #. Attaching a volume and ``[cinder]/cross_az_attach=False``
 
 The first is simple: if you boot an instance, it gets scheduled to a
@@ -369,3 +372,4 @@ top-level superconductor which would eliminate this AZ up-call check problem.
 
 .. [#] https://blueprints.launchpad.net/nova/+spec/efficient-multi-cell-instance-list-and-sort
 .. [#] https://specs.openstack.org/openstack/nova-specs/specs/queens/approved/return-alternate-hosts.html
+.. [#] https://blueprints.launchpad.net/nova/+spec/live-migration-in-xapi-pool
