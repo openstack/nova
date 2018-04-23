@@ -1010,6 +1010,26 @@ class SpawnIsSynchronousFixture(fixtures.Fixture):
             'nova.utils.spawn', _FakeGreenThread))
 
 
+class SynchronousThreadPoolExecutorFixture(fixtures.Fixture):
+    """Make ThreadPoolExecutor.submit() synchronous.
+
+    The function passed to submit() will be executed and a mock.Mock
+    object will be returned as the Future where Future.result() will
+    return the result of the call to the submitted function.
+    """
+    def setUp(self):
+        super(SynchronousThreadPoolExecutorFixture, self).setUp()
+
+        def fake_submit(_self, fn, *args, **kwargs):
+            result = fn(*args, **kwargs)
+            future = mock.Mock(spec='concurrent.futures.Future')
+            future.return_value.result.return_value = result
+            return future
+        self.useFixture(fixtures.MonkeyPatch(
+            'concurrent.futures.ThreadPoolExecutor.submit',
+            fake_submit))
+
+
 class BannedDBSchemaOperations(fixtures.Fixture):
     """Ban some operations for migrations"""
     def __init__(self, banned_resources=None):

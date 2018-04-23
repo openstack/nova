@@ -27,6 +27,9 @@ terminating it.
 
 import base64
 import binascii
+# If py2, concurrent.futures comes from the futures library otherwise it
+# comes from the py3 standard library.
+from concurrent import futures
 import contextlib
 import functools
 import inspect
@@ -521,10 +524,16 @@ class ComputeManager(manager.Manager):
         else:
             self._build_semaphore = compute_utils.UnlimitedSemaphore()
         if max(CONF.max_concurrent_live_migrations, 0) != 0:
-            self._live_migration_semaphore = eventlet.semaphore.Semaphore(
-                CONF.max_concurrent_live_migrations)
+            self._live_migration_executor = futures.ThreadPoolExecutor(
+                max_workers=CONF.max_concurrent_live_migrations)
         else:
-            self._live_migration_semaphore = compute_utils.UnlimitedSemaphore()
+            # Starting in python 3.5, this is technically bounded, but it's
+            # ncpu * 5 which is probably much higher than anyone would sanely
+            # use for concurrently running live migrations.
+            self._live_migration_executor = futures.ThreadPoolExecutor()
+        # This is a dict, keyed by migration uuid, to a two-item tuple of
+        # migration object and Future for the queued live migration.
+        self._waiting_live_migrations = {}
 
         super(ComputeManager, self).__init__(service_name="compute",
                                              *args, **kwargs)
@@ -1152,6 +1161,26 @@ class ComputeManager(manager.Manager):
         self.driver.register_event_listener(None)
         self.instance_events.cancel_all_events()
         self.driver.cleanup_host(host=self.host)
+        self._cleanup_live_migrations_in_pool()
+
+    def _cleanup_live_migrations_in_pool(self):
+        # Shutdown the pool so we don't get new requests.
+        self._live_migration_executor.shutdown(wait=False)
+        # For any queued migrations, cancel the migration and update
+        # its status.
+        for migration, future in self._waiting_live_migrations.values():
+            # If we got here before the Future was submitted then we need
+            # to move on since there isn't anything we can do.
+            if future is None:
+                continue
+            if future.cancel():
+                self._set_migration_status(migration, 'cancelled')
+                LOG.info('Successfully cancelled queued live migration.',
+                         instance_uuid=migration.instance_uuid)
+            else:
+                LOG.warning('Unable to cancel live migration.',
+                            instance_uuid=migration.instance_uuid)
+        self._waiting_live_migrations.clear()
 
     def pre_start_hook(self):
         """After the service is initialized, but before we fully bring
@@ -6146,6 +6175,9 @@ class ComputeManager(manager.Manager):
         # done on source/destination. For now, this is just here for status
         # reporting
         self._set_migration_status(migration, 'preparing')
+        # NOTE(Kevin_Zheng): The migration is no longer in the `queued` status
+        # so lets remove it from the mapping.
+        self._waiting_live_migrations.pop(instance.uuid)
 
         class _BreakWaitForInstanceEvent(Exception):
             """Used as a signal to stop waiting for the network-vif-plugged
@@ -6257,18 +6289,23 @@ class ComputeManager(manager.Manager):
 
         """
         self._set_migration_status(migration, 'queued')
-
-        def dispatch_live_migration(*args, **kwargs):
-            with self._live_migration_semaphore:
-                self._do_live_migration(*args, **kwargs)
-
-        # NOTE(danms): We spawn here to return the RPC worker thread back to
-        # the pool. Since what follows could take a really long time, we don't
-        # want to tie up RPC workers.
-        utils.spawn_n(dispatch_live_migration,
-                      context, dest, instance,
-                      block_migration, migration,
-                      migrate_data)
+        # NOTE(Kevin_Zheng): Submit the live_migration job to the pool and
+        # put the returned Future object into dict mapped with migration.uuid
+        # in order to be able to track and abort it in the future.
+        self._waiting_live_migrations[instance.uuid] = (None, None)
+        try:
+            future = self._live_migration_executor.submit(
+                self._do_live_migration, context, dest, instance,
+                block_migration, migration, migrate_data)
+            self._waiting_live_migrations[instance.uuid] = (migration, future)
+        except RuntimeError:
+            # ThreadPoolExecutor.submit will raise RuntimeError if the pool
+            # is shutdown, which happens in _cleanup_live_migrations_in_pool.
+            LOG.info('Migration %s failed to submit as the compute service '
+                     'is shutting down.', migration.uuid, instance=instance)
+            self._set_migration_status(migration, 'error')
+            raise exception.LiveMigrationNotSubmitted(
+                migration_uuid=migration.uuid, instance_uuid=instance.uuid)
 
     @wrap_exception()
     @wrap_instance_event(prefix='compute')

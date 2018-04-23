@@ -697,6 +697,33 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 mock.call(self.compute.handle_events), mock.call(None)])
             mock_driver.cleanup_host.assert_called_once_with(host='fake-mini')
 
+    def test_cleanup_live_migrations_in_pool_with_record(self):
+        fake_future = mock.MagicMock()
+        fake_instance_uuid = uuids.instance
+        fake_migration = objects.Migration(
+            uuid=uuids.migration, instance_uuid=fake_instance_uuid)
+        fake_migration.save = mock.MagicMock()
+        self.compute._waiting_live_migrations[fake_instance_uuid] = (
+            fake_migration, fake_future)
+
+        with mock.patch.object(self.compute, '_live_migration_executor'
+                               ) as mock_migration_pool:
+            self.compute._cleanup_live_migrations_in_pool()
+
+            mock_migration_pool.shutdown.assert_called_once_with(wait=False)
+            self.assertEqual('cancelled', fake_migration.status)
+            fake_future.cancel.assert_called_once_with()
+            self.assertEqual({}, self.compute._waiting_live_migrations)
+
+            # test again with Future is None
+            self.compute._waiting_live_migrations[fake_instance_uuid] = (
+                None, None)
+            self.compute._cleanup_live_migrations_in_pool()
+
+            mock_migration_pool.shutdown.assert_called_with(wait=False)
+            self.assertEqual(2, mock_migration_pool.shutdown.call_count)
+            self.assertEqual({}, self.compute._waiting_live_migrations)
+
     def test_init_virt_events_disabled(self):
         self.flags(handle_virt_lifecycle_events=False, group='workarounds')
         with mock.patch.object(self.compute.driver,
@@ -6238,6 +6265,7 @@ class ComputeManagerErrorsOutMigrationTestCase(test.NoDBTestCase):
         mock_obj_as_admin.assert_called_once_with()
 
 
+@ddt.ddt
 class ComputeManagerMigrationTestCase(test.NoDBTestCase):
     class TestResizeError(Exception):
         pass
@@ -6895,7 +6923,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         @mock.patch('nova.objects.Migration.save')
         def _do_it(mock_mig_save):
             instance = objects.Instance(uuid=uuids.fake)
-            migration = objects.Migration()
+            migration = objects.Migration(uuid=uuids.migration)
             self.compute.live_migration(self.context,
                                         mock.sentinel.dest,
                                         instance,
@@ -6906,10 +6934,10 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             migration.save.assert_called_once_with()
 
         with mock.patch.object(self.compute,
-                               '_live_migration_semaphore') as mock_sem:
+                               '_live_migration_executor') as mock_exc:
             for i in (1, 2, 3):
                 _do_it()
-        self.assertEqual(3, mock_sem.__enter__.call_count)
+        self.assertEqual(3, mock_exc.submit.call_count)
 
     def test_max_concurrent_live_limited(self):
         self.flags(max_concurrent_live_migrations=2)
@@ -6919,25 +6947,19 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         self.flags(max_concurrent_live_migrations=0)
         self._test_max_concurrent_live()
 
-    def test_max_concurrent_live_semaphore_limited(self):
+    @mock.patch('concurrent.futures.ThreadPoolExecutor')
+    def test_max_concurrent_live_semaphore_limited(self, mock_executor):
         self.flags(max_concurrent_live_migrations=123)
-        self.assertEqual(
-            123,
-            manager.ComputeManager()._live_migration_semaphore.balance)
+        manager.ComputeManager()
+        mock_executor.assert_called_once_with(max_workers=123)
 
-    def test_max_concurrent_live_semaphore_unlimited(self):
-        self.flags(max_concurrent_live_migrations=0)
-        compute = manager.ComputeManager()
-        self.assertEqual(0, compute._live_migration_semaphore.balance)
-        self.assertIsInstance(compute._live_migration_semaphore,
-                              compute_utils.UnlimitedSemaphore)
-
-    def test_max_concurrent_live_semaphore_negative(self):
-        self.flags(max_concurrent_live_migrations=-2)
-        compute = manager.ComputeManager()
-        self.assertEqual(0, compute._live_migration_semaphore.balance)
-        self.assertIsInstance(compute._live_migration_semaphore,
-                              compute_utils.UnlimitedSemaphore)
+    @ddt.data(0, -2)
+    def test_max_concurrent_live_semaphore_unlimited(self, max_concurrent):
+        self.flags(max_concurrent_live_migrations=max_concurrent)
+        with mock.patch(
+                'concurrent.futures.ThreadPoolExecutor') as mock_executor:
+            manager.ComputeManager()
+        mock_executor.assert_called_once_with()
 
     def test_pre_live_migration_cinder_v3_api(self):
         # This tests that pre_live_migration with a bdm with an
@@ -7109,6 +7131,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             network_info=network_model.NetworkInfo([
                 network_model.VIF(uuids.port1), network_model.VIF(uuids.port2)
             ]))
+        self.compute._waiting_live_migrations[self.instance.uuid] = (
+            self.migration, mock.MagicMock()
+        )
         with mock.patch.object(self.compute.virtapi,
                                'wait_for_instance_event') as wait_for_event:
             self.compute._do_live_migration(
@@ -7136,6 +7161,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         self.instance.info_cache = objects.InstanceInfoCache(
             network_info=network_model.NetworkInfo([
                 network_model.VIF(uuids.port1)]))
+        self.compute._waiting_live_migrations[self.instance.uuid] = (
+            self.migration, mock.MagicMock()
+        )
         with mock.patch.object(
                 self.compute.virtapi, 'wait_for_instance_event'):
             self.compute._do_live_migration(
@@ -7160,6 +7188,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         self.instance.info_cache = objects.InstanceInfoCache(
             network_info=network_model.NetworkInfo([
                 network_model.VIF(uuids.port1)]))
+        self.compute._waiting_live_migrations[self.instance.uuid] = (
+            self.migration, mock.MagicMock()
+        )
         with mock.patch.object(
                 self.compute.virtapi,
                 'wait_for_instance_event') as wait_for_event:
@@ -7187,6 +7218,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         self.instance.info_cache = objects.InstanceInfoCache(
             network_info=network_model.NetworkInfo([
                 network_model.VIF(uuids.port1)]))
+        self.compute._waiting_live_migrations[self.instance.uuid] = (
+            self.migration, mock.MagicMock()
+        )
         with mock.patch.object(
                 self.compute.virtapi,
                 'wait_for_instance_event') as wait_for_event:
@@ -7218,6 +7252,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         self.instance.info_cache = objects.InstanceInfoCache(
             network_info=network_model.NetworkInfo([
                 network_model.VIF(uuids.port1)]))
+        self.compute._waiting_live_migrations[self.instance.uuid] = (
+            self.migration, mock.MagicMock()
+        )
         with mock.patch.object(
                 self.compute.virtapi,
                 'wait_for_instance_event') as wait_for_event:
@@ -7228,6 +7265,19 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                 self.migration, migrate_data)
         self.assertEqual('running', self.migration.status)
         mock_rollback_live_mig.assert_not_called()
+
+    @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
+    @mock.patch('nova.compute.utils.notify_about_instance_action')
+    def test_live_migration_submit_failed(self, mock_notify, mock_exc):
+        migration = objects.Migration(uuid=uuids.migration)
+        migration.save = mock.MagicMock()
+        with mock.patch.object(
+                self.compute._live_migration_executor, 'submit') as mock_sub:
+            mock_sub.side_effect = RuntimeError
+            self.assertRaises(exception.LiveMigrationNotSubmitted,
+                              self.compute.live_migration, self.context,
+                              'fake', self.instance, True, migration, {})
+            self.assertEqual('error', migration.status)
 
     def test_live_migration_force_complete_succeeded(self):
         migration = objects.Migration()

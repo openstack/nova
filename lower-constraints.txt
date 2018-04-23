@@ -33,6 +33,7 @@ fixtures==3.0.0
 flake8==2.5.5
 future==0.16.0
 futurist==1.6.0
+futures==3.0.0
 gabbi==1.35.0
 gitdb2==2.0.3
 GitPython==2.1.8
