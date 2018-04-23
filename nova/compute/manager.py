@@ -2325,6 +2325,9 @@ class ComputeManager(manager.Manager):
                     reason=msg)
 
         try:
+            # Perform any driver preparation work for the driver.
+            self.driver.prepare_for_spawn(instance)
+
             # Depending on a virt driver, some network configuration is
             # necessary before preparing block devices.
             self.driver.prepare_networks_before_block_device_mapping(
@@ -2352,12 +2355,14 @@ class ComputeManager(manager.Manager):
                     network_info.wait(do_raise=False)
                     self.driver.clean_networks_preparation(instance,
                                                            network_info)
+                self.driver.failed_spawn_cleanup(instance)
         except (exception.UnexpectedTaskStateError,
                 exception.OverQuota, exception.InvalidBDM) as e:
             # Make sure the async call finishes
             if network_info is not None:
                 network_info.wait(do_raise=False)
                 self.driver.clean_networks_preparation(instance, network_info)
+            self.driver.failed_spawn_cleanup(instance)
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=e.format_message())
         except Exception:
@@ -2367,6 +2372,7 @@ class ComputeManager(manager.Manager):
             if network_info is not None:
                 network_info.wait(do_raise=False)
                 self.driver.clean_networks_preparation(instance, network_info)
+            self.driver.failed_spawn_cleanup(instance)
             msg = _('Failure prepping block device.')
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                     reason=msg)
@@ -2381,6 +2387,7 @@ class ComputeManager(manager.Manager):
             # Make sure the async call finishes
             if network_info is not None:
                 network_info.wait(do_raise=False)
+            self.driver.failed_spawn_cleanup(instance)
             msg = _('Failure retrieving placement allocations')
             raise exception.BuildAbortException(instance_uuid=instance.uuid,
                                                 reason=msg)

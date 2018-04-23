@@ -272,6 +272,34 @@ class ComputeDriver(object):
         """
         raise NotImplementedError()
 
+    def prepare_for_spawn(self, instance):
+        """Prepare to spawn instance.
+
+        Perform any pre-flight checks, tagging, etc. that the virt driver
+        must perform before executing the spawn process for a new instance.
+
+        :param instance: nova.objects.instance.Instance
+                         This function should use the data there to guide
+                         the creation of the new instance.
+        """
+        pass
+
+    def failed_spawn_cleanup(self, instance):
+        """Cleanup from the instance spawn.
+
+        Perform any hypervisor clean-up required should the spawn operation
+        fail, such as the removal of tags that were added during the
+        prepare_for_spawn method.
+
+        This method should be idempotent.
+
+        :param instance: nova.objects.instance.Instance
+                         This function should use the data there to guide
+                         the creation of the new instance.
+
+        """
+        pass
+
     def spawn(self, context, instance, image_meta, injected_files,
               admin_password, allocations, network_info=None,
               block_device_info=None):
