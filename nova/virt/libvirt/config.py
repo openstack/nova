@@ -1339,11 +1339,21 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         if self.model:
             dev.append(etree.Element("model", type=self.model))
 
+        drv_elem = None
         if self.driver_name:
             drv_elem = etree.Element("driver", name=self.driver_name)
+        if self.net_type == "vhostuser":
+            # For vhostuser interface we should not set the driver
+            # name.
+            drv_elem = etree.Element("driver")
+        if drv_elem is not None:
             if self.vhost_queues is not None:
                 drv_elem.set('queues', str(self.vhost_queues))
-            dev.append(drv_elem)
+
+            if drv_elem.get('name') or drv_elem.get('queues'):
+                # Append the driver element into the dom only if name
+                # or queues attributes are set.
+                dev.append(drv_elem)
 
         if self.net_type == "ethernet":
             if self.script is not None:

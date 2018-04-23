@@ -672,7 +672,7 @@ class LibvirtVifTestCase(test.NoDBTestCase):
         d._set_config_VIFVHostUser(self.instance, self.os_vif_vhostuser,
                                    conf, hostimpl)
         self.assertEqual(4, conf.vhost_queues)
-        self.assertEqual('vhost', conf.driver_name)
+        self.assertIsNone(conf.driver_name)
         has_min_version.assert_called_once_with(MIN_LIBVIRT_VHOSTUSER_MQ)
 
         has_min_version.return_value = False
