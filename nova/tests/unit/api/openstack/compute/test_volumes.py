@@ -16,6 +16,7 @@
 
 import datetime
 
+import fixtures
 import mock
 from oslo_serialization import jsonutils
 from oslo_utils import encodeutils
@@ -40,6 +41,7 @@ from nova import test
 from nova.tests.unit.api.openstack import fakes
 from nova.tests.unit import fake_block_device
 from nova.tests.unit import fake_instance
+from nova.tests import uuidsentinel as uuids
 from nova.volume import cinder
 
 CONF = nova.conf.CONF
@@ -72,20 +74,6 @@ def fake_get_volume(self, context, id):
     return {'id': id, 'status': status, 'attach_status': attach_status}
 
 
-def fake_attach_volume(self, context, instance, volume_id, device, tag=None,
-                       supports_multiattach=False):
-    pass
-
-
-def fake_detach_volume(self, context, instance, volume):
-    pass
-
-
-def fake_swap_volume(self, context, instance, old_volume, new_volume):
-    if old_volume['id'] != FAKE_UUID_A:
-        raise exception.VolumeBDMNotFound(volume_id=old_volume['id'])
-
-
 def fake_create_snapshot(self, context, volume, name, description):
     return {'id': 123,
             'volume_id': 'fakeVolId',
@@ -102,11 +90,6 @@ def fake_delete_snapshot(self, context, snapshot_id):
 
 def fake_compute_volume_snapshot_delete(self, context, volume_id, snapshot_id,
                                         delete_info):
-    pass
-
-
-def fake_compute_volume_snapshot_create(self, context, volume_id,
-                                        create_info):
     pass
 
 
@@ -132,8 +115,8 @@ class BootFromVolumeTest(test.TestCase):
 
     def setUp(self):
         super(BootFromVolumeTest, self).setUp()
-        self.stubs.Set(compute_api.API, 'create',
-                       self._get_fake_compute_api_create())
+        self.stub_out('nova.compute.api.API.create',
+                      self._get_fake_compute_api_create())
         fakes.stub_out_nw_api(self)
         self._block_device_mapping_seen = None
         self._legacy_bdm_seen = True
@@ -225,9 +208,11 @@ class VolumeApiTestV21(test.NoDBTestCase):
         super(VolumeApiTestV21, self).setUp()
         fakes.stub_out_networking(self)
 
-        self.stubs.Set(cinder.API, "delete", fakes.stub_volume_delete)
-        self.stubs.Set(cinder.API, "get", fakes.stub_volume_get)
-        self.stubs.Set(cinder.API, "get_all", fakes.stub_volume_get_all)
+        self.stub_out('nova.volume.cinder.API.delete',
+                      lambda self, context, volume_id: None)
+        self.stub_out('nova.volume.cinder.API.get', fakes.stub_volume_get)
+        self.stub_out('nova.volume.cinder.API.get_all',
+                      fakes.stub_volume_get_all)
 
         self.context = context.get_admin_context()
 
@@ -236,7 +221,8 @@ class VolumeApiTestV21(test.NoDBTestCase):
         return fakes.wsgi_app_v21()
 
     def test_volume_create(self):
-        self.stubs.Set(cinder.API, "create", fakes.stub_volume_create)
+        self.stub_out('nova.volume.cinder.API.create',
+                      fakes.stub_volume_create)
 
         vol = {"size": 100,
                "display_name": "Volume Test Name",
@@ -261,13 +247,11 @@ class VolumeApiTestV21(test.NoDBTestCase):
         self.assertEqual(vol['availability_zone'],
                          resp_dict['volume']['availabilityZone'])
 
-    def _test_volume_translate_exception(self, cinder_exc, api_exc):
+    @mock.patch.object(cinder.API, 'create')
+    def _test_volume_translate_exception(self, cinder_exc, api_exc,
+                                         mock_create):
         """Tests that cinder exceptions are correctly translated"""
-        def fake_volume_create(self, context, size, name, description,
-                               snapshot, **param):
-            raise cinder_exc
-
-        self.stubs.Set(cinder.API, "create", fake_volume_create)
+        mock_create.side_effect = cinder_exc
 
         vol = {"size": '10',
                "display_name": "Volume Test Name",
@@ -279,6 +263,10 @@ class VolumeApiTestV21(test.NoDBTestCase):
         self.assertRaises(api_exc,
                           volumes_v21.VolumeController().create, req,
                           body=body)
+        mock_create.assert_called_once_with(
+            req.environ['nova.context'], '10', 'Volume Test Name',
+            'Volume Test Desc', availability_zone='zone1:host1',
+            metadata=None, snapshot=None, volume_type=None)
 
     @mock.patch.object(cinder.API, 'get_snapshot')
     @mock.patch.object(cinder.API, 'create')
@@ -315,14 +303,18 @@ class VolumeApiTestV21(test.NoDBTestCase):
         resp = req.get_response(self.app)
         self.assertEqual(200, resp.status_int)
 
-    def test_volume_show_no_volume(self):
-        self.stubs.Set(cinder.API, "get", fakes.stub_volume_notfound)
-
-        req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes/456')
+    @mock.patch.object(cinder.API, 'get',
+                       side_effect=exception.VolumeNotFound(
+                           volume_id=uuids.volume))
+    def test_volume_show_no_volume(self, mock_get):
+        req = fakes.HTTPRequest.blank('%s/os-volumes/%s' % (self.url_prefix,
+                                                            uuids.volume))
         resp = req.get_response(self.app)
         self.assertEqual(404, resp.status_int)
-        self.assertIn('Volume 456 could not be found.',
+        self.assertIn('Volume %s could not be found.' % uuids.volume,
                       encodeutils.safe_decode(resp.body))
+        mock_get.assert_called_once_with(req.environ['nova.context'],
+                                         uuids.volume)
 
     def test_volume_delete(self):
         req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes/123')
@@ -330,15 +322,19 @@ class VolumeApiTestV21(test.NoDBTestCase):
         resp = req.get_response(self.app)
         self.assertEqual(202, resp.status_int)
 
-    def test_volume_delete_no_volume(self):
-        self.stubs.Set(cinder.API, "delete", fakes.stub_volume_notfound)
-
-        req = fakes.HTTPRequest.blank(self.url_prefix + '/os-volumes/456')
+    @mock.patch.object(cinder.API, 'delete',
+                       side_effect=exception.VolumeNotFound(
+                           volume_id=uuids.volume))
+    def test_volume_delete_no_volume(self, mock_delete):
+        req = fakes.HTTPRequest.blank('%s/os-volumes/%s' % (self.url_prefix,
+                                                            uuids.volume))
         req.method = 'DELETE'
         resp = req.get_response(self.app)
         self.assertEqual(404, resp.status_int)
-        self.assertIn('Volume 456 could not be found.',
+        self.assertIn('Volume %s could not be found.' % uuids.volume,
                       encodeutils.safe_decode(resp.body))
+        mock_delete.assert_called_once_with(req.environ['nova.context'],
+                                            uuids.volume)
 
     def _test_list_with_invalid_filter(self, url):
         prefix = '/os-volumes'
@@ -427,8 +423,8 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         self.stub_out('nova.objects.BlockDeviceMapping'
                       '.get_by_volume_and_instance',
                       fake_bdm_get_by_volume_and_instance)
-        self.stubs.Set(compute_api.API, 'get', fake_get_instance)
-        self.stubs.Set(cinder.API, 'get', fake_get_volume)
+        self.stub_out('nova.compute.api.API.get', fake_get_instance)
+        self.stub_out('nova.volume.cinder.API.get', fake_get_volume)
         self.context = context.get_admin_context()
         self.expected_show = {'volumeAttachment':
             {'device': '/dev/fake0',
@@ -478,9 +474,8 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
                           FAKE_UUID_NOTEXIST)
 
     def test_detach(self):
-        self.stubs.Set(compute_api.API,
-                       'detach_volume',
-                       fake_detach_volume)
+        self.stub_out('nova.compute.api.API.detach_volume',
+                      lambda self, context, instance, volume: None)
         inst = fake_instance.fake_instance_obj(self.context,
                                                **{'uuid': FAKE_UUID})
         with mock.patch.object(common, 'get_instance',
@@ -533,9 +528,8 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         self.assertTrue(mock_detach.called)
 
     def test_detach_vol_not_found(self):
-        self.stubs.Set(compute_api.API,
-                       'detach_volume',
-                       fake_detach_volume)
+        self.stub_out('nova.compute.api.API.detach_volume',
+                      lambda self, context, instance, volume: None)
 
         self.assertRaises(exc.HTTPNotFound,
                           self.attachments.delete,
@@ -553,21 +547,24 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
                           FAKE_UUID,
                           FAKE_UUID_A)
 
-    def test_detach_volume_from_locked_server(self):
-        def fake_detach_volume_from_locked_server(self, context,
-                                                  instance, volume):
-            raise exception.InstanceIsLocked(instance_uuid=instance['uuid'])
-
-        self.stubs.Set(compute_api.API,
-                       'detach_volume',
-                       fake_detach_volume_from_locked_server)
+    @mock.patch.object(compute_api.API, 'detach_volume')
+    def test_detach_volume_from_locked_server(self, mock_detach_volume):
+        mock_detach_volume.side_effect = exception.InstanceIsLocked(
+            instance_uuid=FAKE_UUID)
         self.assertRaises(webob.exc.HTTPConflict, self.attachments.delete,
                           self.req, FAKE_UUID, FAKE_UUID_A)
+        mock_detach_volume.assert_called_once_with(
+            self.req.environ['nova.context'],
+            test.MatchType(objects.Instance),
+            {'attach_status': 'attached',
+             'status': 'in-use',
+             'id': FAKE_UUID_A})
 
     def test_attach_volume(self):
-        self.stubs.Set(compute_api.API,
-                       'attach_volume',
-                       fake_attach_volume)
+        self.stub_out('nova.compute.api.API.attach_volume',
+                      lambda self, context, instance, volume_id,
+                              device, tag=None,
+                              supports_multiattach=False: None)
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
                                     'device': '/dev/fake'}}
         result = self.attachments.create(self.req, FAKE_UUID, body=body)
@@ -631,25 +628,23 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
                          result['volumeAttachment']['id'])
         self.assertEqual('/dev/myfake', result['volumeAttachment']['device'])
 
-    def test_attach_volume_to_locked_server(self):
-        def fake_attach_volume_to_locked_server(self, context, instance,
-                                                volume_id, device=None,
-                                                tag=None,
-                                                supports_multiattach=False):
-            raise exception.InstanceIsLocked(instance_uuid=instance['uuid'])
-
-        self.stubs.Set(compute_api.API,
-                       'attach_volume',
-                       fake_attach_volume_to_locked_server)
+    @mock.patch.object(compute_api.API, 'attach_volume',
+                       side_effect=exception.InstanceIsLocked(
+                           instance_uuid=uuids.instance))
+    def test_attach_volume_to_locked_server(self, mock_attach_volume):
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_A,
                                     'device': '/dev/fake'}}
         self.assertRaises(webob.exc.HTTPConflict, self.attachments.create,
                           self.req, FAKE_UUID, body=body)
+        mock_attach_volume.assert_called_once_with(
+            self.req.environ['nova.context'],
+            test.MatchType(objects.Instance), FAKE_UUID_A, '/dev/fake',
+            supports_multiattach=False, tag=None)
 
     def test_attach_volume_bad_id(self):
-        self.stubs.Set(compute_api.API,
-                       'attach_volume',
-                       fake_attach_volume)
+        self.stub_out('nova.compute.api.API.attach_volume',
+                      lambda self, context, instance, volume_id, device,
+                             tag=None, supports_multiattach=False: None)
 
         body = {
             'volumeAttachment': {
@@ -675,9 +670,9 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
                           self.req, FAKE_UUID, body=body)
 
     def test_attach_volume_without_volumeId(self):
-        self.stubs.Set(compute_api.API,
-                       'attach_volume',
-                       fake_attach_volume)
+        self.stub_out('nova.compute.api.API.attach_volume',
+                      lambda self, context, instance, volume_id, device,
+                             tag=None, supports_multiattach=False: None)
 
         body = {
             'volumeAttachment': {
@@ -713,26 +708,27 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         self.assertRaises(exc.HTTPBadRequest, self.attachments.create,
                           req, FAKE_UUID, body=body)
 
-    def _test_swap(self, attachments, uuid=FAKE_UUID_A,
-                   fake_func=None, body=None):
-        fake_func = fake_func or fake_swap_volume
-        self.stubs.Set(compute_api.API,
-                       'swap_volume',
-                       fake_func)
+    def _test_swap(self, attachments, uuid=FAKE_UUID_A, body=None):
         body = body or {'volumeAttachment': {'volumeId': FAKE_UUID_B}}
-        return attachments.update(self.req, FAKE_UUID, uuid, body=body)
+        return attachments.update(self.req, uuids.instance, uuid, body=body)
 
-    def test_swap_volume_for_locked_server(self):
-
-        def fake_swap_volume_for_locked_server(self, context, instance,
-                                                old_volume, new_volume):
-            raise exception.InstanceIsLocked(instance_uuid=instance['uuid'])
-
+    @mock.patch.object(compute_api.API, 'swap_volume',
+                       side_effect=exception.InstanceIsLocked(
+                           instance_uuid=uuids.instance))
+    def test_swap_volume_for_locked_server(self, mock_swap_volume):
         self.assertRaises(webob.exc.HTTPConflict, self._test_swap,
-                          self.attachments,
-                          fake_func=fake_swap_volume_for_locked_server)
+                          self.attachments)
+        mock_swap_volume.assert_called_once_with(
+            self.req.environ['nova.context'], test.MatchType(objects.Instance),
+            {'attach_status': 'attached',
+             'status': 'in-use',
+             'id': FAKE_UUID_A},
+            {'attach_status': 'detached',
+             'status': 'available',
+             'id': FAKE_UUID_B})
 
-    def test_swap_volume(self):
+    @mock.patch.object(compute_api.API, 'swap_volume')
+    def test_swap_volume(self, mock_swap_volume):
         result = self._test_swap(self.attachments)
         # NOTE: on v2.1, http status code is set as wsgi_code of API
         # method instead of status_int in a response object.
@@ -742,18 +738,29 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
         else:
             status_int = result.status_int
         self.assertEqual(202, status_int)
+        mock_swap_volume.assert_called_once_with(
+            self.req.environ['nova.context'], test.MatchType(objects.Instance),
+            {'attach_status': 'attached',
+             'status': 'in-use',
+             'id': FAKE_UUID_A},
+            {'attach_status': 'detached',
+             'status': 'available',
+             'id': FAKE_UUID_B})
 
     def test_swap_volume_with_nonexistent_uri(self):
         self.assertRaises(exc.HTTPNotFound, self._test_swap,
                           self.attachments, uuid=FAKE_UUID_C)
 
     @mock.patch.object(cinder.API, 'get')
-    def test_swap_volume_with_nonexistent_dest_in_body(self, mock_update):
-        mock_update.side_effect = [
+    def test_swap_volume_with_nonexistent_dest_in_body(self, mock_get):
+        mock_get.side_effect = [
             None, exception.VolumeNotFound(volume_id=FAKE_UUID_C)]
         body = {'volumeAttachment': {'volumeId': FAKE_UUID_C}}
         self.assertRaises(exc.HTTPBadRequest, self._test_swap,
                           self.attachments, body=body)
+        mock_get.assert_has_calls([
+            mock.call(self.req.environ['nova.context'], FAKE_UUID_A),
+            mock.call(self.req.environ['nova.context'], FAKE_UUID_C)])
 
     def test_swap_volume_without_volumeId(self):
         body = {'volumeAttachment': {'device': '/dev/fake'}}
@@ -771,15 +778,20 @@ class VolumeAttachTestsV21(test.NoDBTestCase):
                           self.attachments,
                           body=body)
 
-    def test_swap_volume_for_bdm_not_found(self):
-
-        def fake_swap_volume_for_bdm_not_found(self, context, instance,
-                                           old_volume, new_volume):
-            raise exception.VolumeBDMNotFound(volume_id=FAKE_UUID_C)
-
+    @mock.patch.object(compute_api.API, 'swap_volume',
+                       side_effect=exception.VolumeBDMNotFound(
+                           volume_id=FAKE_UUID_B))
+    def test_swap_volume_for_bdm_not_found(self, mock_swap_volume):
         self.assertRaises(webob.exc.HTTPNotFound, self._test_swap,
-                          self.attachments,
-                          fake_func=fake_swap_volume_for_bdm_not_found)
+                          self.attachments)
+        mock_swap_volume.assert_called_once_with(
+            self.req.environ['nova.context'], test.MatchType(objects.Instance),
+            {'attach_status': 'attached',
+             'status': 'in-use',
+             'id': FAKE_UUID_A},
+            {'attach_status': 'detached',
+             'status': 'available',
+             'id': FAKE_UUID_B})
 
     def _test_list_with_invalid_filter(self, url):
         prefix = '/servers/id/os-volume_attachments'
@@ -1031,18 +1043,21 @@ class AssistedSnapshotCreateTestCaseV21(test.NoDBTestCase):
 
         self.controller = \
             self.assisted_snaps.AssistedVolumeSnapshotsController()
-        self.stubs.Set(compute_api.API, 'volume_snapshot_create',
-                       fake_compute_volume_snapshot_create)
 
-    def test_assisted_create(self):
+    @mock.patch.object(compute_api.API, 'volume_snapshot_create')
+    def test_assisted_create(self, mock_volume_snapshot_create):
         req = fakes.HTTPRequest.blank('/v2/fake/os-assisted-volume-snapshots')
-        body = {'snapshot':
-                   {'volume_id': '1',
-                    'create_info': {'type': 'qcow2',
-                                    'new_file': 'new_file',
-                                    'snapshot_id': 'snapshot_id'}}}
+        expected_create_info = {'type': 'qcow2',
+                                'new_file': 'new_file',
+                                'snapshot_id': 'snapshot_id'}
+        body = {'snapshot': {'volume_id': uuids.volume_to_snapshot,
+                             'create_info': expected_create_info}}
         req.method = 'POST'
         self.controller.create(req, body=body)
+
+        mock_volume_snapshot_create.assert_called_once_with(
+            req.environ['nova.context'], uuids.volume_to_snapshot,
+            expected_create_info)
 
     def test_assisted_create_missing_create_info(self):
         req = fakes.HTTPRequest.blank('/v2/fake/os-assisted-volume-snapshots')
@@ -1071,8 +1086,6 @@ class AssistedSnapshotCreateTestCaseV21(test.NoDBTestCase):
     @mock.patch('nova.objects.BlockDeviceMapping.get_by_volume',
                 side_effect=exception.VolumeBDMIsMultiAttach(volume_id='1'))
     def test_assisted_create_multiattach_fails(self, bdm_get_by_volume):
-        # unset the stub on volume_snapshot_create from setUp
-        self.mox.UnsetStubs()
         req = fakes.HTTPRequest.blank('/v2/fake/os-assisted-volume-snapshots')
         body = {'snapshot':
                    {'volume_id': '1',
@@ -1084,8 +1097,6 @@ class AssistedSnapshotCreateTestCaseV21(test.NoDBTestCase):
             webob.exc.HTTPBadRequest, self.controller.create, req, body=body)
 
     def _test_assisted_create_instance_conflict(self, api_error):
-        # unset the stub on volume_snaphost_create from setUp
-        self.mox.UnsetStubs()
         req = fakes.HTTPRequest.blank('/v2/fake/os-assisted-volume-snapshots')
         body = {'snapshot':
                    {'volume_id': '1',
@@ -1122,8 +1133,9 @@ class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
 
         self.controller = \
             self.assisted_snaps.AssistedVolumeSnapshotsController()
-        self.stubs.Set(compute_api.API, 'volume_snapshot_delete',
-                       fake_compute_volume_snapshot_delete)
+        self.mock_volume_snapshot_delete = self.useFixture(
+            fixtures.MockPatchObject(compute_api.API,
+                                     'volume_snapshot_delete')).mock
 
     def test_assisted_delete(self):
         params = {
@@ -1144,7 +1156,7 @@ class AssistedSnapshotDeleteTestCaseV21(test.NoDBTestCase):
 
     def _test_assisted_delete_instance_conflict(self, api_error):
         # unset the stub on volume_snapshot_delete from setUp
-        self.mox.UnsetStubs()
+        self.mock_volume_snapshot_delete.stop()
         params = {
             'delete_info': jsonutils.dumps({'volume_id': '1'}),
         }
