@@ -3140,12 +3140,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
             self.assertEqual(set([5, 6]),
                 guest_numa_config.numaconfig.cells[2].cpus)
 
-    @mock.patch.object(host.Host, 'has_version', return_value=True)
-    def test_has_cpu_policy_support(self, mock_has_version):
-        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
-        self.assertRaises(exception.CPUPinningNotSupported,
-                          drvr._has_cpu_policy_support)
-
     @mock.patch.object(libvirt_driver.LibvirtDriver, "_has_numa_support",
                        return_value=True)
     @mock.patch.object(host.Host, "get_capabilities")
