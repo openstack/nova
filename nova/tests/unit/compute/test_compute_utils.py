@@ -1080,7 +1080,7 @@ class ComputeUtilsTestCase(test.NoDBTestCase):
             mock.call(mock.sentinel.notifier, self.context, instance,
                       'delete.start'),
             mock.call(mock.sentinel.notifier, self.context, instance,
-                      'delete.end', system_metadata=instance.system_metadata)
+                      'delete.end')
         ]
         mock_notify_usage.assert_has_calls(expected_notify_calls)
 

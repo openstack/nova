@@ -730,24 +730,20 @@ class ComputeManager(manager.Manager):
         """Complete deletion for instances in DELETED status but not marked as
         deleted in the DB
         """
-        system_meta = instance.system_metadata
         instance.destroy()
         bdms = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
         self._complete_deletion(context,
                                 instance,
-                                bdms,
-                                system_meta)
+                                bdms)
 
-    def _complete_deletion(self, context, instance, bdms,
-                           system_meta):
+    def _complete_deletion(self, context, instance, bdms):
         self._update_resource_tracker(context, instance)
 
         rt = self._get_resource_tracker()
         rt.reportclient.delete_allocation_for_instance(context, instance.uuid)
 
-        self._notify_about_instance_usage(context, instance, "delete.end",
-                system_metadata=system_meta)
+        self._notify_about_instance_usage(context, instance, "delete.end")
         compute_utils.notify_about_instance_action(context, instance,
                 self.host, action=fields.NotificationAction.DELETE,
                 phase=fields.NotificationPhase.END, bdms=bdms)
@@ -1630,12 +1626,11 @@ class ComputeManager(manager.Manager):
         self.scheduler_client.sync_instance_info(context, self.host, uuids)
 
     def _notify_about_instance_usage(self, context, instance, event_suffix,
-                                     network_info=None, system_metadata=None,
-                                     extra_usage_info=None, fault=None):
+                                     network_info=None, extra_usage_info=None,
+                                     fault=None):
         compute_utils.notify_about_instance_usage(
             self.notifier, context, instance, event_suffix,
             network_info=network_info,
-            system_metadata=system_metadata,
             extra_usage_info=extra_usage_info, fault=fault)
 
     def _deallocate_network(self, context, instance,
@@ -2511,13 +2506,11 @@ class ComputeManager(manager.Manager):
         instance.power_state = power_state.NOSTATE
         instance.terminated_at = timeutils.utcnow()
         instance.save()
-        system_meta = instance.system_metadata
         instance.destroy()
 
         self._complete_deletion(context,
                                 instance,
-                                bdms,
-                                system_meta)
+                                bdms)
 
     @wrap_exception()
     @reverts_task_state

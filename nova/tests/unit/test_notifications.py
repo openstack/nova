@@ -356,20 +356,20 @@ class NotificationsTestCase(test.TestCase):
 
     def test_payload_has_fixed_ip_labels(self):
         info = notifications.info_from_instance(self.context, self.instance,
-                                                  self.net_info, None)
+                                                  self.net_info)
         self.assertIn("fixed_ips", info)
         self.assertEqual(info["fixed_ips"][0]["label"], "test1")
 
     def test_payload_has_vif_mac_address(self):
         info = notifications.info_from_instance(self.context, self.instance,
-                                                  self.net_info, None)
+                                                  self.net_info)
         self.assertIn("fixed_ips", info)
         self.assertEqual(self.net_info[0]['address'],
                          info["fixed_ips"][0]["vif_mac"])
 
     def test_payload_has_cell_name_empty(self):
         info = notifications.info_from_instance(self.context, self.instance,
-                                                  self.net_info, None)
+                                                  self.net_info)
         self.assertIn("cell_name", info)
         self.assertIsNone(self.instance.cell_name)
         self.assertEqual("", info["cell_name"])
@@ -377,13 +377,13 @@ class NotificationsTestCase(test.TestCase):
     def test_payload_has_cell_name(self):
         self.instance.cell_name = "cell1"
         info = notifications.info_from_instance(self.context, self.instance,
-                                                  self.net_info, None)
+                                                  self.net_info)
         self.assertIn("cell_name", info)
         self.assertEqual("cell1", info["cell_name"])
 
     def test_payload_has_progress_empty(self):
         info = notifications.info_from_instance(self.context, self.instance,
-                                                  self.net_info, None)
+                                                  self.net_info)
         self.assertIn("progress", info)
         self.assertIsNone(self.instance.progress)
         self.assertEqual("", info["progress"])
@@ -391,7 +391,7 @@ class NotificationsTestCase(test.TestCase):
     def test_payload_has_progress(self):
         self.instance.progress = 50
         info = notifications.info_from_instance(self.context, self.instance,
-                                                  self.net_info, None)
+                                                  self.net_info)
         self.assertIn("progress", info)
         self.assertEqual(50, info["progress"])
 
@@ -406,7 +406,7 @@ class NotificationsTestCase(test.TestCase):
         self.instance.flavor.memory_mb = 30
         self.instance.flavor.ephemeral_gb = 40
         info = notifications.info_from_instance(self.context, self.instance,
-                                                self.net_info, None)
+                                                self.net_info)
         self.assertEqual(10, info['vcpus'])
         self.assertEqual(20, info['root_gb'])
         self.assertEqual(30, info['memory_mb'])
@@ -421,7 +421,7 @@ class NotificationsTestCase(test.TestCase):
         self.instance.launched_at = time
 
         info = notifications.info_from_instance(self.context, self.instance,
-                                                self.net_info, None)
+                                                self.net_info)
 
         self.assertEqual('2017-02-02T16:45:00.000000', info['terminated_at'])
         self.assertEqual('2017-02-02T16:45:00.000000', info['launched_at'])
