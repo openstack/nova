@@ -105,7 +105,7 @@ class DriverBlockDevice(dict):
     _fields = set()
     _legacy_fields = set()
 
-    _proxy_as_attr_inherited = set(['uuid'])
+    _proxy_as_attr_inherited = set(['uuid', 'is_volume'])
     _update_on_save = {'disk_bus': None,
                        'device_name': None,
                        'device_type': None}
