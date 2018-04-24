@@ -2360,8 +2360,10 @@ class API(base.Base):
         # IP address filtering cannot be applied at the DB layer, remove any DB
         # limit so that it can be applied after the IP filter.
         filter_ip = 'ip6' in filters or 'ip' in filters
+        skip_build_request = False
         orig_limit = limit
         if filter_ip:
+            skip_build_request = True
             if self.network_api.has_substr_port_filtering_extension(context):
                 # We're going to filter by IP using Neutron so set filter_ip
                 # to False so we don't attempt post-DB query filtering in
@@ -2392,21 +2394,27 @@ class API(base.Base):
                 LOG.debug('Removing limit for DB query due to IP filter')
                 limit = None
 
-        # The ordering of instances will be
-        # [sorted instances with no host] + [sorted instances with host].
-        # This means BuildRequest and cell0 instances first, then cell
-        # instances
-        try:
-            build_requests = objects.BuildRequestList.get_by_filters(
-                context, filters, limit=limit, marker=marker,
-                sort_keys=sort_keys, sort_dirs=sort_dirs)
-            # If we found the marker in we need to set it to None
-            # so we don't expect to find it in the cells below.
-            marker = None
-        except exception.MarkerNotFound:
-            # If we didn't find the marker in the build requests then keep
-            # looking for it in the cells.
+        # Skip get BuildRequest if filtering by IP address, as building
+        # instances will not have IP addresses.
+        if skip_build_request:
             build_requests = objects.BuildRequestList()
+        else:
+            # The ordering of instances will be
+            # [sorted instances with no host] + [sorted instances with host].
+            # This means BuildRequest and cell0 instances first, then cell
+            # instances
+            try:
+                build_requests = objects.BuildRequestList.get_by_filters(
+                    context, filters, limit=limit, marker=marker,
+                    sort_keys=sort_keys, sort_dirs=sort_dirs)
+                # If we found the marker in we need to set it to None
+                # so we don't expect to find it in the cells below.
+                marker = None
+            except exception.MarkerNotFound:
+                # If we didn't find the marker in the build requests then keep
+                # looking for it in the cells.
+                build_requests = objects.BuildRequestList()
+
         build_req_instances = objects.InstanceList(
             objects=[build_req.instance for build_req in build_requests])
         # Only subtract from limit if it is not None
