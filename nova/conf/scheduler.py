@@ -431,7 +431,7 @@ Possible values:
         default=1.0,
         deprecated_group="DEFAULT",
         help="""
-Ram weight multipler ratio.
+RAM weight multipler ratio.
 
 This option determines how hosts with more or less available RAM are weighed. A
 positive value will result in the scheduler preferring hosts with more
@@ -450,6 +450,29 @@ Possible values:
 
 * An integer or float value, where the value corresponds to the multipler
   ratio for this weigher.
+"""),
+    cfg.FloatOpt("cpu_weight_multiplier",
+         default=1.0,
+         help="""
+CPU weight multiplier ratio.
+
+Multiplier used for weighting free vCPUs. Negative numbers indicate stacking
+rather than spreading.
+
+This option is only used by the FilterScheduler and its subclasses; if you use
+a different scheduler, this option has no effect. Also note that this setting
+only affects scheduling if the 'cpu' weigher is enabled.
+
+Possible values:
+
+* An integer or float value, where the value corresponds to the multipler
+  ratio for this weigher.
+
+Related options:
+
+* ``filter_scheduler.weight_classes``: This weigher must be added to list of
+  enabled weight classes if the ``weight_classes`` setting is set to a
+  non-default value.
 """),
     cfg.FloatOpt("disk_weight_multiplier",
         default=1.0,
