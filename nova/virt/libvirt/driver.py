@@ -226,9 +226,6 @@ MIN_QEMU_VERSION = (2, 5, 0)
 NEXT_MIN_LIBVIRT_VERSION = (3, 0, 0)
 NEXT_MIN_QEMU_VERSION = (2, 8, 0)
 
-# Versions of libvirt with known NUMA topology issues
-# See bug #1449028
-BAD_LIBVIRT_NUMA_VERSIONS = [(1, 2, 9, 2)]
 # Versions of libvirt with broken cpu pinning support. This excludes
 # versions of libvirt with broken NUMA support since pinning needs
 # NUMA
@@ -6192,17 +6189,6 @@ class LibvirtDriver(driver.ComputeDriver):
     def _has_numa_support(self):
         # This means that the host can support LibvirtConfigGuestNUMATune
         # and the nodeset field in LibvirtConfigGuestMemoryBackingPage
-        for ver in BAD_LIBVIRT_NUMA_VERSIONS:
-            if self._host.has_version(ver):
-                if not getattr(self, '_bad_libvirt_numa_version_warn', False):
-                    LOG.warning('You are running with libvirt version %s '
-                                'which is known to have broken NUMA support. '
-                                'Consider patching or updating libvirt on '
-                                'this host if you need NUMA support.',
-                                libvirt_utils.version_to_string(ver))
-                    self._bad_libvirt_numa_version_warn = True
-                return False
-
         caps = self._host.get_capabilities()
 
         if (caps.host.cpu.arch in (fields.Architecture.I686,
