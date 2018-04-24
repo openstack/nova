@@ -993,6 +993,19 @@ class ComputeUtilsTestCase(test.NoDBTestCase):
         self.context = context.RequestContext(self.user_id,
                                               self.project_id)
 
+    @mock.patch.object(compute_utils, 'EventReporter')
+    def test_wrap_instance_event_without_host(self, mock_event):
+        inst = objects.Instance(uuid=uuids.instance)
+
+        @compute_utils.wrap_instance_event(prefix='compute')
+        def fake_event(self, context, instance):
+            pass
+
+        fake_event(self.compute, self.context, instance=inst)
+        # if the class doesn't include a self.host, the default host is None
+        mock_event.assert_called_once_with(self.context, 'compute_fake_event',
+                                           None, uuids.instance)
+
     @mock.patch.object(objects.InstanceActionEvent, 'event_start')
     @mock.patch.object(objects.InstanceActionEvent,
                        'event_finish_with_failure')

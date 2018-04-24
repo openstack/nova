@@ -1872,7 +1872,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                     mock.call(self.context, f_instance, e,
                               mock.ANY)])
             event.assert_called_once_with(
-                self.context, 'compute_attach_interface',
+                self.context, 'compute_attach_interface', CONF.host,
                 f_instance.uuid)
 
         with mock.patch.dict(self.compute.driver.capabilities,
@@ -1899,7 +1899,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             add_fault.assert_has_calls(
                    [mock.call(self.context, f_instance, mock.ANY, mock.ANY)])
             event.assert_called_once_with(
-                self.context, 'compute_detach_interface',
+                self.context, 'compute_detach_interface', CONF.host,
                 f_instance.uuid)
 
         do_test()
@@ -2048,6 +2048,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                                         uuids.old_volume, uuids.new_volume)
         mock_event.assert_called_once_with(self.context,
                                            'compute_swap_volume',
+                                           CONF.host,
                                            instance1.uuid)
 
     def _assert_volume_api(self, context, volume, *args):
@@ -2492,7 +2493,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                 self.context, instance=instance,
                 dest_check_data=dest_check_data)
         mock_event.assert_called_once_with(
-            self.context, 'compute_check_can_live_migrate_source',
+            self.context, 'compute_check_can_live_migrate_source', CONF.host,
             instance.uuid)
         mock_check.assert_called_once_with(self.context, instance,
                                            dest_check_data,
@@ -2558,7 +2559,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.assertEqual(mig_data, result)
             mock_event.assert_called_once_with(
                 self.context, 'compute_check_can_live_migrate_destination',
-                instance.uuid)
+                CONF.host, instance.uuid)
 
     def test_check_can_live_migrate_destination_success(self):
         self._test_check_can_live_migrate_destination()
@@ -4638,7 +4639,7 @@ class ComputeManagerBuildInstanceTestCase(test.NoDBTestCase):
 
     def _instance_action_events(self, mock_start, mock_finish):
         mock_start.assert_called_once_with(self.context, self.instance.uuid,
-                mock.ANY, want_result=False)
+                mock.ANY, host=CONF.host, want_result=False)
         mock_finish.assert_called_once_with(self.context, self.instance.uuid,
                 mock.ANY, exc_val=mock.ANY, exc_tb=mock.ANY, want_result=False)
 

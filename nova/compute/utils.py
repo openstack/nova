@@ -1006,15 +1006,17 @@ def get_stashed_volume_connector(bdm, instance):
 class EventReporter(object):
     """Context manager to report instance action events."""
 
-    def __init__(self, context, event_name, *instance_uuids):
+    def __init__(self, context, event_name, host, *instance_uuids):
         self.context = context
         self.event_name = event_name
         self.instance_uuids = instance_uuids
+        self.host = host
 
     def __enter__(self):
         for uuid in self.instance_uuids:
             objects.InstanceActionEvent.event_start(
-                self.context, uuid, self.event_name, want_result=False)
+                self.context, uuid, self.event_name, want_result=False,
+                host=self.host)
 
         return self
 
@@ -1043,7 +1045,8 @@ def wrap_instance_event(prefix):
             instance_uuid = keyed_args['instance']['uuid']
 
             event_name = '{0}_{1}'.format(prefix, function.__name__)
-            with EventReporter(context, event_name, instance_uuid):
+            host = self.host if hasattr(self, 'host') else None
+            with EventReporter(context, event_name, host, instance_uuid):
                 return function(self, context, *args, **kwargs)
         return decorated_function
     return helper
