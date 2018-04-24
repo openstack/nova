@@ -1396,5 +1396,4 @@ def generate_hostid(host, project_id):
         data = (project_id + host).encode('utf-8')
         sha_hash = hashlib.sha224(data)
         return sha_hash.hexdigest()
-    else:
-        return ""
+    return ""

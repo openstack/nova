@@ -243,11 +243,11 @@ class GenericUtilsTestCase(test.NoDBTestCase):
         host = 'host'
         project_id = '9b9e3c847e904b0686e8ffb20e4c6381'
         hostId = 'fa123c6f74efd4aad95f84096f9e187caa0625925a9e7837b2b46792'
-        self.assertEqual(utils.generate_hostid(host, project_id), hostId)
+        self.assertEqual(hostId, utils.generate_hostid(host, project_id))
 
     def test_generate_hostid_with_none_host(self):
         project_id = '9b9e3c847e904b0686e8ffb20e4c6381'
-        self.assertEqual(utils.generate_hostid(None, project_id), '')
+        self.assertEqual('', utils.generate_hostid(None, project_id))
 
 
 class TestCachedFile(test.NoDBTestCase):
