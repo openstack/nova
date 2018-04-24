@@ -226,8 +226,6 @@ MIN_QEMU_VERSION = (2, 5, 0)
 NEXT_MIN_LIBVIRT_VERSION = (3, 0, 0)
 NEXT_MIN_QEMU_VERSION = (2, 8, 0)
 
-# PowerPC based hosts that support NUMA using libvirt
-MIN_LIBVIRT_NUMA_VERSION_PPC = (1, 2, 19)
 # Versions of libvirt with known NUMA topology issues
 # See bug #1449028
 BAD_LIBVIRT_NUMA_VERSIONS = [(1, 2, 9, 2)]
@@ -6213,9 +6211,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 self._host.has_min_version(hv_type=host.HV_DRIVER_QEMU)):
             return True
         elif (caps.host.cpu.arch in (fields.Architecture.PPC64,
-                                     fields.Architecture.PPC64LE) and
-                self._host.has_min_version(MIN_LIBVIRT_NUMA_VERSION_PPC,
-                                           hv_type=host.HV_DRIVER_QEMU)):
+                                     fields.Architecture.PPC64LE)):
             return True
 
         return False
