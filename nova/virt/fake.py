@@ -37,6 +37,7 @@ from nova.console import type as ctype
 from nova import exception
 from nova.i18n import _LW
 from nova.objects import fields as obj_fields
+from nova.objects import migrate_data
 from nova.virt import diagnostics
 from nova.virt import driver
 from nova.virt import hardware
@@ -489,11 +490,27 @@ class FakeDriver(driver.ComputeDriver):
                                            src_compute_info, dst_compute_info,
                                            block_migration=False,
                                            disk_over_commit=False):
-        return {}
+        data = migrate_data.LibvirtLiveMigrateData()
+        data.filename = 'fake'
+        data.image_type = CONF.libvirt.images_type
+        data.graphics_listen_addr_vnc = CONF.vnc.vncserver_listen
+        data.graphics_listen_addr_spice = CONF.spice.server_listen
+        data.serial_listen_addr = None
+        # Notes(eliqiao): block_migration and disk_over_commit are not
+        # nullable, so just don't set them if they are None
+        if block_migration is not None:
+            data.block_migration = block_migration
+        if disk_over_commit is not None:
+            data.disk_over_commit = disk_over_commit
+        data.disk_available_mb = 100000
+        data.is_shared_block_storage = True
+        data.is_shared_instance_path = True
+
+        return data
 
     def check_can_live_migrate_source(self, context, instance,
                                       dest_check_data, block_device_info=None):
-        return
+        return dest_check_data
 
     def finish_migration(self, context, migration, instance, disk_info,
                          network_info, image_meta, resize_instance,
@@ -505,7 +522,7 @@ class FakeDriver(driver.ComputeDriver):
 
     def pre_live_migration(self, context, instance, block_device_info,
                            network_info, disk_info, migrate_data):
-        return
+        return migrate_data
 
     def unfilter_instance(self, instance, network_info):
         return
