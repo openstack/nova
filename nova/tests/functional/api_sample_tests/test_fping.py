@@ -25,7 +25,8 @@ class FpingSampleJsonTests(test_servers.ServersSampleBase):
 
         def fake_check_fping(self):
             pass
-        self.stub_out("nova.utils.execute", test_fping.execute)
+        self.stub_out("oslo_concurrency.processutils.execute",
+                      test_fping.execute)
         self.stub_out("nova.api.openstack.compute.fping."
                       "FpingController.check_fping",
                       fake_check_fping)

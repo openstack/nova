@@ -42,7 +42,7 @@ class FpingTestV21(test.TestCase):
                       return_servers)
         self.stub_out("nova.db.instance_get_by_uuid",
                       return_server)
-        self.stub_out('nova.utils.execute',
+        self.stub_out('oslo_concurrency.processutils.execute',
                       execute)
         self.stub_out("nova.api.openstack.compute.fping.FpingController."
                       "check_fping",

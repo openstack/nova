@@ -20,6 +20,8 @@ import os
 
 from webob import exc
 
+from oslo_concurrency import processutils
+
 from nova.api.openstack.api_version_request \
     import MAX_PROXY_API_SUPPORT_VERSION
 from nova.api.openstack import common
@@ -30,7 +32,6 @@ from nova import compute
 import nova.conf
 from nova.i18n import _
 from nova.policies import fping as fping_policies
-from nova import utils
 
 CONF = nova.conf.CONF
 
@@ -48,8 +49,8 @@ class FpingController(wsgi.Controller):
 
     @staticmethod
     def fping(ips):
-        fping_ret = utils.execute(CONF.api.fping_path, *ips,
-                                  check_exit_code=False)
+        fping_ret = processutils.execute(CONF.api.fping_path, *ips,
+                                         check_exit_code=False)
         if not fping_ret:
             return set()
         alive_ips = set()
