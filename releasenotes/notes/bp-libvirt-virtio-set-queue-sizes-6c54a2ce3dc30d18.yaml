@@ -1,0 +1,15 @@
+---
+features:
+  - |
+    libvirt: add support for virtio-net rx/tx queue sizes
+
+    Add support for configuring the ``rx_queue_size`` and
+    ``tx_queue_size`` options in the QEMU virtio-net driver by way of
+    nova.conf. Only supported for vhost/vhostuser interfaces
+
+    Currently, valid values for the ring buffer sizes are 256, 512,
+    and 1024.
+
+    Adjustable RX queue sizes requires QEMU 2.7.0, and libvirt 2.3.0
+    (or newer) Adjustable TX queue sizes requires QEMU 2.10.0, and
+    libvirt 3.7.0 (or newer)

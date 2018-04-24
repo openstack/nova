@@ -1320,6 +1320,8 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         self.vhostuser_path = None
         self.vhostuser_type = None
         self.vhost_queues = None
+        self.vhost_rx_queue_size = None
+        self.vhost_tx_queue_size = None
         self.vif_inbound_peak = None
         self.vif_inbound_burst = None
         self.vif_inbound_average = None
@@ -1349,10 +1351,16 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
         if drv_elem is not None:
             if self.vhost_queues is not None:
                 drv_elem.set('queues', str(self.vhost_queues))
+            if self.vhost_rx_queue_size is not None:
+                drv_elem.set('rx_queue_size', str(self.vhost_rx_queue_size))
+            if self.vhost_tx_queue_size is not None:
+                drv_elem.set('tx_queue_size', str(self.vhost_tx_queue_size))
 
-            if drv_elem.get('name') or drv_elem.get('queues'):
+            if (drv_elem.get('name') or drv_elem.get('queues') or
+                drv_elem.get('rx_queue_size') or
+                drv_elem.get('tx_queue_size')):
                 # Append the driver element into the dom only if name
-                # or queues attributes are set.
+                # or queues or tx/rx attributes are set.
                 dev.append(drv_elem)
 
         if self.net_type == "ethernet":
@@ -1444,6 +1452,8 @@ class LibvirtConfigGuestInterface(LibvirtConfigGuestDevice):
             elif c.tag == 'driver':
                 self.driver_name = c.get('name')
                 self.vhost_queues = c.get('queues')
+                self.vhost_rx_queue_size = c.get('rx_queue_size')
+                self.vhost_tx_queue_size = c.get('tx_queue_size')
             elif c.tag == 'source':
                 if self.net_type == 'direct':
                     self.source_dev = c.get('dev')

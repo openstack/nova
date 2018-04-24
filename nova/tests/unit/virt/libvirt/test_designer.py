@@ -40,11 +40,23 @@ class DesignerTestCase(test.NoDBTestCase):
         conf = config.LibvirtConfigGuestInterface()
         designer.set_vif_guest_frontend_config(conf, 'fake-mac',
                                                'fake-model', 'fake-driver',
-                                               'fake-queues')
+                                               'fake-queues', None)
         self.assertEqual('fake-mac', conf.mac_addr)
         self.assertEqual('fake-model', conf.model)
         self.assertEqual('fake-driver', conf.driver_name)
         self.assertEqual('fake-queues', conf.vhost_queues)
+        self.assertIsNone(conf.vhost_rx_queue_size)
+
+    def test_set_vif_guest_frontend_config_rx_queue_size(self):
+        conf = config.LibvirtConfigGuestInterface()
+        designer.set_vif_guest_frontend_config(conf, 'fake-mac',
+                                               'fake-model', 'fake-driver',
+                                               'fake-queues', 1024)
+        self.assertEqual('fake-mac', conf.mac_addr)
+        self.assertEqual('fake-model', conf.model)
+        self.assertEqual('fake-driver', conf.driver_name)
+        self.assertEqual('fake-queues', conf.vhost_queues)
+        self.assertEqual(1024, conf.vhost_rx_queue_size)
 
     def test_set_vif_host_backend_bridge_config(self):
         conf = config.LibvirtConfigGuestInterface()
@@ -175,8 +187,21 @@ class DesignerTestCase(test.NoDBTestCase):
     def test_set_vif_host_backend_vhostuser_config(self):
         conf = config.LibvirtConfigGuestInterface()
         designer.set_vif_host_backend_vhostuser_config(conf, 'fake-mode',
-                                                       'fake-path')
+                                                       'fake-path', None, None)
         self.assertEqual('vhostuser', conf.net_type)
         self.assertEqual('unix', conf.vhostuser_type)
         self.assertEqual('fake-mode', conf.vhostuser_mode)
         self.assertEqual('fake-path', conf.vhostuser_path)
+        self.assertIsNone(conf.vhost_rx_queue_size)
+        self.assertIsNone(conf.vhost_tx_queue_size)
+
+    def test_set_vif_host_backend_vhostuser_config_queue_size(self):
+        conf = config.LibvirtConfigGuestInterface()
+        designer.set_vif_host_backend_vhostuser_config(conf, 'fake-mode',
+                                                       'fake-path', 512, 1024)
+        self.assertEqual('vhostuser', conf.net_type)
+        self.assertEqual('unix', conf.vhostuser_type)
+        self.assertEqual('fake-mode', conf.vhostuser_mode)
+        self.assertEqual('fake-path', conf.vhostuser_path)
+        self.assertEqual(512, conf.vhost_rx_queue_size)
+        self.assertEqual(1024, conf.vhost_tx_queue_size)
