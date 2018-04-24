@@ -68,40 +68,14 @@ class RealTimeServersTest(ServersTestBase):
             client.OpenStackApiException,
             self.api.post_server, {'server': server})
 
-    def test_invalid_libvirt_version(self):
-        host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
-                                             cpu_cores=2, cpu_threads=2,
-                                             kB_mem=15740000)
-        fake_connection = fakelibvirt.Connection('qemu:///system',
-                                                 version=1002009,
-                                                 hv_version=2001000,
-                                                 host_info=host_info)
-        with mock.patch('nova.virt.libvirt.host.Host.get_connection',
-                        return_value=fake_connection):
-            self.compute = self.start_service('compute', host='test_compute0')
-            fake_network.set_stub_network_methods(self)
-
-            flavor = self._create_flavor(extra_spec={
-                'hw:cpu_realtime': 'yes', 'hw:cpu_policy': 'dedicated',
-                'hw:cpu_realtime_mask': '^1'})
-            server = self._build_server(flavor)
-            created = self.api.post_server({'server': server})
-
-            instance = self.api.get_server(created['id'])
-            instance = self._wait_for_state_change(instance, 'BUILD')
-
-            # Realtime policy not supported by hypervisor
-            self.assertEqual('ERROR', instance['status'])
-            self._delete_server(instance['id'])
-
     def test_success(self):
         host_info = fakelibvirt.NUMAHostInfo(cpu_nodes=2, cpu_sockets=1,
                                              cpu_cores=2, cpu_threads=2,
                                              kB_mem=15740000)
         fake_connection = fakelibvirt.Connection('qemu:///system',
-                                                 version=1002013,
-                                                 hv_version=2001000,
-                                                 host_info=host_info)
+                                version=fakelibvirt.FAKE_LIBVIRT_VERSION,
+                                hv_version=fakelibvirt.FAKE_QEMU_VERSION,
+                                host_info=host_info)
         with mock.patch('nova.virt.libvirt.host.Host.get_connection',
                         return_value=fake_connection):
             self.compute = self.start_service('compute', host='test_compute0')
