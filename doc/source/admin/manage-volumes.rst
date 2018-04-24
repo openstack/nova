@@ -27,6 +27,8 @@ SHELVED_OFFLOADED is supported. Ultimately the ability to perform
 these actions depends on the compute host and hypervisor driver that
 is being used.
 
+There is also a `recorded overview and demo`_ for volume multi-attach.
+
 Requirements
 ~~~~~~~~~~~~
 
@@ -71,6 +73,7 @@ package mirror so that it gets qemu<2.10.
 
 .. _added support for multiattach volumes: https://specs.openstack.org/openstack/nova-specs/specs/queens/implemented/multi-attach-volume.html
 .. _block storage admin guide: https://docs.openstack.org/cinder/latest/admin/blockstorage-volume-multiattach.html
+.. _recorded overview and demo: https://www.youtube.com/watch?v=hZg6wqxdEHk
 .. _2.60: https://docs.openstack.org/nova/latest/reference/api-microversion-history.html#maximum-in-queens
 .. _feature support matrix: https://docs.openstack.org/nova/latest/user/support-matrix.html#operation_multiattach_volume
 .. _nova repository: http://git.openstack.org/cgit/openstack/nova/tree/playbooks/legacy/nova-multiattach/run.yaml
