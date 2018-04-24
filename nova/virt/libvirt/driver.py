@@ -226,11 +226,6 @@ MIN_QEMU_VERSION = (2, 5, 0)
 NEXT_MIN_LIBVIRT_VERSION = (3, 0, 0)
 NEXT_MIN_QEMU_VERSION = (2, 8, 0)
 
-# When the above version matches/exceeds this version
-# delete it & corresponding code using it
-# Libvirt version 1.2.17 is required for successful block live migration
-# of vm booted from image with attached devices
-MIN_LIBVIRT_BLOCK_LM_WITH_VOLUMES_VERSION = (1, 2, 17)
 # PowerPC based hosts that support NUMA using libvirt
 MIN_LIBVIRT_NUMA_VERSION_PPC = (1, 2, 19)
 # Versions of libvirt with known NUMA topology issues
@@ -6607,27 +6602,6 @@ class LibvirtDriver(driver.ComputeDriver):
                                         block_device_info)
             if block_device_info:
                 bdm = block_device_info.get('block_device_mapping')
-                # NOTE(pkoniszewski): libvirt from version 1.2.17 upwards
-                # supports selective block device migration. It means that it
-                # is possible to define subset of block devices to be copied
-                # during migration. If they are not specified - block devices
-                # won't be migrated. However, it does not work when live
-                # migration is tunnelled through libvirt.
-                if bdm and not self._host.has_min_version(
-                        MIN_LIBVIRT_BLOCK_LM_WITH_VOLUMES_VERSION):
-                    # NOTE(stpierre): if this instance has mapped volumes,
-                    # we can't do a block migration, since that will result
-                    # in volumes being copied from themselves to themselves,
-                    # which is a recipe for disaster.
-                    ver = ".".join([str(x) for x in
-                                    MIN_LIBVIRT_BLOCK_LM_WITH_VOLUMES_VERSION])
-                    msg = (_('Cannot block migrate instance %(uuid)s with'
-                             ' mapped volumes. Selective block device'
-                             ' migration feature requires libvirt version'
-                             ' %(libvirt_ver)s') %
-                           {'uuid': instance.uuid, 'libvirt_ver': ver})
-                    LOG.error(msg, instance=instance)
-                    raise exception.MigrationPreCheckError(reason=msg)
                 # NOTE(eliqiao): Selective disk migrations are not supported
                 # with tunnelled block migrations so we can block them early.
                 if (bdm and
@@ -6973,7 +6947,6 @@ class LibvirtDriver(driver.ComputeDriver):
                     libvirt.VIR_MIGRATE_TUNNELLED == 0):
                     migrate_uri = self._migrate_uri(dest)
 
-            params = None
             new_xml_str = None
             if CONF.libvirt.virt_type != "parallels":
                 new_xml_str = libvirt_migrate.get_updated_guest_xml(
@@ -6981,24 +6954,21 @@ class LibvirtDriver(driver.ComputeDriver):
                     # the method _get_volume_config and we should to find
                     # a way to avoid this in future.
                     guest, migrate_data, self._get_volume_config)
-            if self._host.has_min_version(
-                    MIN_LIBVIRT_BLOCK_LM_WITH_VOLUMES_VERSION):
-                params = {
-                    'destination_xml': new_xml_str,
-                    'migrate_disks': device_names,
-                }
-                # NOTE(pkoniszewski): Because of precheck which blocks
-                # tunnelled block live migration with mapped volumes we
-                # can safely remove migrate_disks when tunnelling is on.
-                # Otherwise we will block all tunnelled block migrations,
-                # even when an instance does not have volumes mapped.
-                # This is because selective disk migration is not
-                # supported in tunnelled block live migration. Also we
-                # cannot fallback to migrateToURI2 in this case because of
-                # bug #1398999
-                if (migration_flags &
-                    libvirt.VIR_MIGRATE_TUNNELLED != 0):
-                    params.pop('migrate_disks')
+            params = {
+               'destination_xml': new_xml_str,
+               'migrate_disks': device_names,
+            }
+            # NOTE(pkoniszewski): Because of precheck which blocks
+            # tunnelled block live migration with mapped volumes we
+            # can safely remove migrate_disks when tunnelling is on.
+            # Otherwise we will block all tunnelled block migrations,
+            # even when an instance does not have volumes mapped.
+            # This is because selective disk migration is not
+            # supported in tunnelled block live migration. Also we
+            # cannot fallback to migrateToURI2 in this case because of
+            # bug #1398999
+            if (migration_flags & libvirt.VIR_MIGRATE_TUNNELLED != 0):
+                params.pop('migrate_disks')
 
             # TODO(sahid): This should be in
             # post_live_migration_at_source but no way to retrieve
@@ -7085,12 +7055,8 @@ class LibvirtDriver(driver.ComputeDriver):
         device_names = []
         block_devices = []
 
-        # TODO(pkoniszewski): Remove version check when we bump min libvirt
-        # version to >= 1.2.17.
         if (self._block_migration_flags &
-                libvirt.VIR_MIGRATE_TUNNELLED == 0 and
-                self._host.has_min_version(
-                    MIN_LIBVIRT_BLOCK_LM_WITH_VOLUMES_VERSION)):
+                libvirt.VIR_MIGRATE_TUNNELLED == 0):
             bdm_list = objects.BlockDeviceMappingList.get_by_instance_uuid(
                 context, instance.uuid)
             block_device_info = driver.get_block_device_info(instance,
