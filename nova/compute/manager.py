@@ -81,6 +81,7 @@ from nova.network import model as network_model
 from nova.network.security_group import openstack_driver
 from nova import objects
 from nova.objects import base as obj_base
+from nova.objects import console_auth_token as obj_console_auth_token
 from nova.objects import fields
 from nova.objects import instance as obj_instance
 from nova.objects import migrate_data as migrate_data_obj
@@ -747,6 +748,7 @@ class ComputeManager(manager.Manager):
         compute_utils.notify_about_instance_action(context, instance,
                 self.host, action=fields.NotificationAction.DELETE,
                 phase=fields.NotificationPhase.END, bdms=bdms)
+        self._clean_instance_console_tokens(context, instance)
         self._delete_scheduler_instance_info(context, instance.uuid)
 
     def _init_instance(self, context, instance):
@@ -3117,6 +3119,9 @@ class ComputeManager(manager.Manager):
             instance.progress = 0
             instance.save()
             self.stop_instance(context, instance, False)
+        # TODO(melwitt): We should clean up instance console tokens here in the
+        # case of evacuate. The instance is on a new host and will need to
+        # establish a new console connection.
         self._update_scheduler_instance_info(context, instance)
         self._notify_about_instance_usage(
                 context, instance, "rebuild.end",
@@ -4488,6 +4493,9 @@ class ComputeManager(manager.Manager):
             network_info = self._finish_resize(context, instance, migration,
                                                disk_info, image_meta, bdms)
 
+        # TODO(melwitt): We should clean up instance console tokens here. The
+        # instance is on a new host and will need to establish a new console
+        # connection.
         self._update_scheduler_instance_info(context, instance)
         self._notify_about_instance_usage(
             context, instance, "finish_resize.end",
@@ -4854,6 +4862,9 @@ class ComputeManager(manager.Manager):
         self._nil_out_instance_obj_host_and_node(instance)
         instance.save(expected_task_state=None)
 
+        # TODO(melwitt): We should clean up instance console tokens here. The
+        # instance has no host at this point and will need to establish a new
+        # console connection in the future after it is unshelved.
         self._delete_scheduler_instance_info(context, instance.uuid)
         self._notify_about_instance_usage(context, instance,
                 'shelve_offload.end')
@@ -6302,6 +6313,7 @@ class ComputeManager(manager.Manager):
             LOG.info('Migrating instance to %s finished successfully.',
                      dest, instance=instance)
 
+        self._clean_instance_console_tokens(ctxt, instance)
         if migrate_data and migrate_data.obj_attr_is_set('migration'):
             migrate_data.migration.status = 'completed'
             migrate_data.migration.save()
@@ -6340,6 +6352,14 @@ class ComputeManager(manager.Manager):
         return (CONF.vnc.enabled or CONF.spice.enabled or
                 CONF.rdp.enabled or CONF.serial_console.enabled or
                 CONF.mks.enabled)
+
+    def _clean_instance_console_tokens(self, ctxt, instance):
+        """Clean console tokens stored for an instance."""
+        # If the database backend isn't in use, don't bother trying to clean
+        # tokens. The database backend is not supported for cells v1.
+        if not CONF.cells.enable and self._consoles_enabled():
+            obj_console_auth_token.ConsoleAuthToken.\
+                clean_console_auths_for_instance(ctxt, instance.uuid)
 
     @wrap_exception()
     @wrap_instance_event(prefix='compute')
@@ -7813,3 +7833,18 @@ class ComputeManager(manager.Manager):
                               error, instance=instance)
         image_meta = objects.ImageMeta.from_instance(instance)
         self.driver.unquiesce(context, instance, image_meta)
+
+    @periodic_task.periodic_task(spacing=CONF.instance_delete_interval)
+    def _cleanup_expired_console_auth_tokens(self, context):
+        """Remove expired console auth tokens for this host.
+
+        Console authorization tokens and their connection data are stored
+        in the database when a user asks for a console connection to an
+        instance. After a time they expire. We periodically remove any expired
+        tokens from the database.
+        """
+        # If the database backend isn't in use, don't bother looking for
+        # expired tokens. The database backend is not supported for cells v1.
+        if not CONF.cells.enable:
+            obj_console_auth_token.ConsoleAuthToken.\
+                clean_expired_console_auths_for_host(context, self.host)

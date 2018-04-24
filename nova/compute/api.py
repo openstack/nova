@@ -1860,6 +1860,11 @@ class API(base.Base):
             # NOTE(dtp): cells.enable = False means "use cells v2".
             # Run everywhere except v1 compute cells.
             if not CONF.cells.enable or self.cell_type == 'api':
+                # TODO(melwitt): In Rocky, we store console authorizations
+                # in both the consoleauth service and the database while
+                # we convert to using the database. Remove the consoleauth
+                # line below when authorizations are no longer being
+                # stored in consoleauth, in Stein.
                 self.consoleauth_rpcapi.delete_tokens_for_instance(
                     context, instance.uuid)
 
@@ -4179,6 +4184,11 @@ class API(base.Base):
         self._record_action_start(context, instance,
                                   instance_actions.LIVE_MIGRATION)
 
+        # TODO(melwitt): In Rocky, we store console authorizations
+        # in both the consoleauth service and the database while
+        # we convert to using the database. Remove the consoleauth
+        # line below when authorizations are no longer being
+        # stored in consoleauth, in Stein.
         self.consoleauth_rpcapi.delete_tokens_for_instance(
             context, instance.uuid)
 

@@ -18,6 +18,7 @@ import time
 
 from cinderclient import exceptions as cinder_exception
 from cursive import exception as cursive_exception
+import ddt
 from eventlet import event as eventlet_event
 import mock
 import netaddr
@@ -76,6 +77,7 @@ CONF = nova.conf.CONF
 fake_host_list = [mock.sentinel.host1]
 
 
+@ddt.ddt
 class ComputeManagerUnitTestCase(test.NoDBTestCase):
     def setUp(self):
         super(ComputeManagerUnitTestCase, self).setUp()
@@ -295,11 +297,13 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertTrue(mock_log.warning.called)
         self.assertFalse(mock_log.error.called)
 
+    @mock.patch('nova.objects.ConsoleAuthToken.'
+                'clean_console_auths_for_instance')
     @mock.patch('nova.compute.utils.notify_about_instance_action')
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_detach_volume')
     def test_delete_instance_without_info_cache(self, mock_detach,
-                                                mock_notify):
+                                                mock_notify, mock_clean):
         instance = fake_instance.fake_instance_obj(
                 self.context,
                 uuid=uuids.instance,
@@ -325,6 +329,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
                       action='delete', phase='start', bdms=[]),
             mock.call(self.context, instance, 'fake-mini',
                       action='delete', phase='end', bdms=[])])
+        mock_clean.assert_called_once_with(self.context, instance.uuid)
 
     def test_check_device_tagging_no_tagging(self):
         bdms = objects.BlockDeviceMappingList(objects=[
@@ -4300,6 +4305,60 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         self.assertEqual(args[1], self.compute.host)
         self.assertEqual(args[2], mock.sentinel.inst_uuid)
 
+    @ddt.data(('vnc', 'spice', 'rdp', 'serial_console', 'mks'),
+              ('spice', 'vnc', 'rdp', 'serial_console', 'mks'),
+              ('rdp', 'vnc', 'spice', 'serial_console', 'mks'),
+              ('serial_console', 'vnc', 'spice', 'rdp', 'mks'),
+              ('mks', 'vnc', 'spice', 'rdp', 'serial_console'))
+    @ddt.unpack
+    @mock.patch('nova.objects.ConsoleAuthToken.'
+                'clean_console_auths_for_instance')
+    def test_clean_instance_console_tokens(self, g1, g2, g3, g4, g5,
+                                           mock_clean):
+        # Make sure cells v1 is disabled
+        self.flags(enable=False, group='cells')
+        # Enable one of each of the console types and disable the rest
+        self.flags(enabled=True, group=g1)
+        for g in [g2, g3, g4, g5]:
+            self.flags(enabled=False, group=g)
+        instance = objects.Instance(uuid=uuids.instance)
+        self.compute._clean_instance_console_tokens(self.context, instance)
+        mock_clean.assert_called_once_with(self.context, instance.uuid)
+
+    @mock.patch('nova.objects.ConsoleAuthToken.'
+                'clean_console_auths_for_instance')
+    def test_clean_instance_console_tokens_no_consoles_enabled(self,
+                                                               mock_clean):
+        for g in ['vnc', 'spice', 'rdp', 'serial_console', 'mks']:
+            self.flags(enabled=False, group=g)
+        instance = objects.Instance(uuid=uuids.instance)
+        self.compute._clean_instance_console_tokens(self.context, instance)
+        mock_clean.assert_not_called()
+
+    @mock.patch('nova.objects.ConsoleAuthToken.'
+                'clean_console_auths_for_instance')
+    def test_clean_instance_console_tokens_cells_v1_enabled(self, mock_clean):
+        # Enable cells v1
+        self.flags(enable=True, group='cells')
+        self.flags(enabled=True, group='vnc')
+        instance = objects.Instance(uuid=uuids.instance)
+        self.compute._clean_instance_console_tokens(self.context, instance)
+        mock_clean.assert_not_called()
+
+    @mock.patch('nova.objects.ConsoleAuthToken.'
+                'clean_expired_console_auths_for_host')
+    def test_cleanup_expired_console_auth_tokens(self, mock_clean):
+        # Make sure cells v1 is disabled
+        self.flags(enable=False, group='cells')
+        self.compute._cleanup_expired_console_auth_tokens(self.context)
+        mock_clean.assert_called_once_with(self.context, self.compute.host)
+
+        # Enable cells v1
+        mock_clean.reset_mock()
+        self.flags(enable=True, group='cells')
+        self.compute._cleanup_expired_console_auth_tokens(self.context)
+        mock_clean.assert_not_called()
+
     @mock.patch.object(nova.context.RequestContext, 'elevated')
     @mock.patch.object(nova.objects.InstanceList, 'get_by_host')
     @mock.patch.object(nova.scheduler.client.SchedulerClient,
@@ -7085,7 +7144,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
         _do_test()
 
-    def _call_post_live_migration(self, *args, **kwargs):
+    @mock.patch('nova.objects.ConsoleAuthToken.'
+                'clean_console_auths_for_instance')
+    def _call_post_live_migration(self, mock_clean, *args, **kwargs):
         @mock.patch.object(self.compute, 'update_available_resource')
         @mock.patch.object(self.compute, 'compute_rpcapi')
         @mock.patch.object(self.compute, '_notify_about_instance_usage')
@@ -7096,7 +7157,9 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                                                      self.instance,
                                                      'foo',
                                                      *args, **kwargs)
-        return _do_call()
+        result = _do_call()
+        mock_clean.assert_called_once_with(self.context, self.instance.uuid)
+        return result
 
     def test_post_live_migration_new_allocations(self):
         # We have a migrate_data with a migration...
@@ -7207,6 +7270,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
         migrate_data.old_vol_attachment_ids = {volume_id: orig_attachment_id}
         image_bdm.attachment_id = uuids.attachment3
 
+        @mock.patch('nova.objects.ConsoleAuthToken.'
+                    'clean_console_auths_for_instance')
         @mock.patch.object(migrate_data.migration, 'save',
                            new=lambda: None)
         @mock.patch.object(compute.reportclient,
@@ -7224,7 +7289,8 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
                            'get_by_instance_uuid')
         def _test(mock_get_bdms, mock_net_api, mock_notify, mock_driver,
                   mock_rpc, mock_get_bdm_info, mock_attach_delete,
-                  mock_update_resource, mock_bdm_save, mock_rt, mock_ga):
+                  mock_update_resource, mock_bdm_save, mock_rt, mock_ga,
+                  mock_clean):
             mock_rt.return_value = mock.Mock()
             mock_get_bdms.return_value = [vol_bdm, image_bdm]
 
@@ -7233,6 +7299,7 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
 
             mock_attach_delete.assert_called_once_with(
                 self.context, orig_attachment_id)
+            mock_clean.assert_called_once_with(self.context, instance.uuid)
 
         _test()
 
