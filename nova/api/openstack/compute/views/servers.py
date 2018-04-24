@@ -14,8 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-import hashlib
-
 from oslo_log import log as logging
 
 from nova.api.openstack import api_version_request
@@ -134,7 +132,7 @@ class ViewBuilder(common.ViewBuilder):
                 "tenant_id": instance.get("project_id") or "",
                 "user_id": instance.get("user_id") or "",
                 "metadata": self._get_metadata(instance),
-                "hostId": self._get_host_id(instance) or "",
+                "hostId": self._get_host_id(instance),
                 "image": self._get_image(request, instance),
                 "flavor": self._get_flavor(request, instance,
                                            show_extra_specs),
@@ -236,10 +234,7 @@ class ViewBuilder(common.ViewBuilder):
     def _get_host_id(instance):
         host = instance.get("host")
         project = str(instance.get("project_id"))
-        if host:
-            data = (project + host).encode('utf-8')
-            sha_hash = hashlib.sha224(data)
-            return sha_hash.hexdigest()
+        return utils.generate_hostid(host, project)
 
     def _get_addresses(self, request, instance, extend_address=False):
         context = request.environ["nova.context"]

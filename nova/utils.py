@@ -1380,3 +1380,21 @@ def supports_direct_io(dirpath):
             pass
 
     return hasDirectIO
+
+
+def generate_hostid(host, project_id):
+    """Generate an obfuscated host id representing the host.
+
+    This is a hashed value so will not actually look like a hostname, and is
+    hashed with data from the project_id.
+
+    :param host: The name of the compute host.
+    :param project_id: The UUID of the project.
+    :return: An obfuscated hashed host id string, return "" if host is empty
+    """
+    if host:
+        data = (project_id + host).encode('utf-8')
+        sha_hash = hashlib.sha224(data)
+        return sha_hash.hexdigest()
+    else:
+        return ""
