@@ -2409,19 +2409,16 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
             rp_obj.Trait.get_by_name, self.ctx, 'CUSTOM_TRAIT_A')
 
     def test_bug_1760322(self):
-        # If the first hit to the traits table results in an exception, the
-        # sync transaction rolls back and the table stays empty.  But
-        # _TRAITS_SYNCED got set to True, so it doesn't resync next time.
+        # Under bug # #1760322, if the first hit to the traits table resulted
+        # in an exception, the sync transaction rolled back and the table
+        # stayed empty; but _TRAITS_SYNCED got set to True, so it didn't resync
+        # next time.
         try:
             rp_obj.Trait.get_by_name(self.ctx, 'CUSTOM_GOLD')
         except exception.TraitNotFound:
             pass
-        # FIXME(efried): Bug #1760322: Should still succeed for a "real" trait.
-        # rp_obj.Trait.get_by_name(self.ctx, os_traits.HW_CPU_X86_AVX2)
-        # ...but instead raises TraitNotFound.
-        self.assertRaises(
-            exception.TraitNotFound,
-            rp_obj.Trait.get_by_name, self.ctx, os_traits.HW_CPU_X86_AVX2)
+        # Under bug #1760322, this raised TraitNotFound.
+        rp_obj.Trait.get_by_name(self.ctx, os_traits.HW_CPU_X86_AVX2)
 
     def test_trait_destroy(self):
         t = rp_obj.Trait(self.ctx)

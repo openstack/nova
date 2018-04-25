@@ -78,7 +78,9 @@ def _ensure_rc_cache(ctx):
 
 
 @oslo_db_api.wrap_db_retry(max_retries=5, retry_on_deadlock=True)
-@db_api.api_context_manager.writer
+# Bug #1760322: If the caller raises an exception, we don't want the trait
+# sync rolled back; so use an .independent transaction
+@db_api.api_context_manager.writer.independent
 def _trait_sync(ctx):
     """Sync the os_traits symbols to the database.
 
