@@ -416,23 +416,6 @@ greater than ``1.0``:
    space, as the value approaching ``0`` may result in the incorrect
    functioning of instances using it at the moment.
 
-ExactCoreFilter
----------------
-
-Only schedules instances on hosts if host has the exact number of CPU cores.
-
-ExactDiskFilter
----------------
-
-Only schedules instances on hosts if host has the exact amount of disk
-available.
-
-ExactRamFilter
---------------
-
-Only schedules instances on hosts if host has the exact number of RAM
-available.
-
 .. _ImagePropertiesFilter:
 
 ImagePropertiesFilter
