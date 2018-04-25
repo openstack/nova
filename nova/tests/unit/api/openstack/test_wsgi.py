@@ -99,7 +99,7 @@ class RequestTest(MicroversionedTest):
 
     def test_from_request(self):
         request = wsgi.Request.blank('/')
-        accepted = 'bogus;q=1.1, en-gb;q=0.7,en-us,en;q=.5,*;q=.7'
+        accepted = 'bogus;q=1, en-gb;q=0.7,en-us,en;q=0.5,*;q=0.7'
         request.headers = {'Accept-Language': accepted}
         self.assertEqual(request.best_match_language(), 'en_US')
 
@@ -107,7 +107,7 @@ class RequestTest(MicroversionedTest):
         # asterisk should match first available if there
         # are not any other available matches
         request = wsgi.Request.blank('/')
-        accepted = '*,es;q=.5'
+        accepted = '*,es;q=0.5'
         request.headers = {'Accept-Language': accepted}
         self.assertEqual(request.best_match_language(), 'en_GB')
 
@@ -119,7 +119,7 @@ class RequestTest(MicroversionedTest):
 
     def test_secondary(self):
         request = wsgi.Request.blank('/')
-        accepted = 'nn,en-gb;q=.5'
+        accepted = 'nn,en-gb;q=0.5'
         request.headers = {'Accept-Language': accepted}
         self.assertEqual(request.best_match_language(), 'en_GB')
 
