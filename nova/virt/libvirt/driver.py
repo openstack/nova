@@ -6050,7 +6050,18 @@ class LibvirtDriver(driver.ComputeDriver):
         """
         allocated_mdevs = {}
         if instance:
-            guest = self._host.get_guest(instance)
+            # NOTE(sbauza): In some cases (like a migration issue), the
+            # instance can exist in the Nova database but libvirt doesn't know
+            # about it. For such cases, the way to fix that is to hard reboot
+            # the instance, which will recreate the libvirt guest.
+            # For that reason, we need to support that case by making sure
+            # we don't raise an exception if the libvirt guest doesn't exist.
+            try:
+                guest = self._host.get_guest(instance)
+            except exception.InstanceNotFound:
+                # Bail out early if libvirt doesn't know about it since we
+                # can't know the existing mediated devices
+                return {}
             guests = [guest]
         else:
             guests = self._host.list_guests(only_running=False)
