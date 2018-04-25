@@ -19567,6 +19567,15 @@ class LibvirtDriverTestCase(test.NoDBTestCase):
                          drvr._get_all_assigned_mediated_devices(fake_inst))
         get_guest.assert_called_once_with(fake_inst)
 
+    @mock.patch.object(host.Host, 'get_guest')
+    def test_get_all_assigned_mediated_devices_for_a_non_existing_instance(
+            self, get_guest):
+        get_guest.side_effect = exception.InstanceNotFound(instance_id='fake')
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
+        fake_inst = objects.Instance()
+        self.assertEqual({},
+                         drvr._get_all_assigned_mediated_devices(fake_inst))
+
     def test_allocate_mdevs_with_no_vgpu_allocations(self):
         allocations = {
             'rp1': {
