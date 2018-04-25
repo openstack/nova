@@ -92,7 +92,7 @@ class ExtraSpecs(object):
     def __init__(self, cpu_limits=None, hw_version=None,
                  storage_policy=None, cores_per_socket=None,
                  memory_limits=None, disk_io_limits=None,
-                 vif_limits=None, firmware=None):
+                 vif_limits=None, firmware=None, hw_video_ram=None):
         """ExtraSpecs object holds extra_specs for the instance."""
         self.cpu_limits = cpu_limits or Limits()
         self.memory_limits = memory_limits or Limits()
@@ -102,6 +102,7 @@ class ExtraSpecs(object):
         self.storage_policy = storage_policy
         self.cores_per_socket = cores_per_socket
         self.firmware = firmware
+        self.hw_video_ram = hw_video_ram
 
 
 def vm_refs_cache_reset():
@@ -257,6 +258,11 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
     if serial_port_spec:
         devices.append(serial_port_spec)
 
+    virtual_device_config_spec = create_video_card_spec(client_factory,
+                                                        extra_specs)
+    if virtual_device_config_spec:
+        devices.append(virtual_device_config_spec)
+
     config_spec.deviceChange = devices
 
     # add vm-uuid and iface-id.x values for Neutron
@@ -296,6 +302,18 @@ def get_vm_create_spec(client_factory, instance, data_store_name,
     config_spec.managedBy = managed_by
 
     return config_spec
+
+
+def create_video_card_spec(client_factory, extra_specs):
+    if extra_specs.hw_video_ram:
+        video_card = client_factory.create('ns0:VirtualMachineVideoCard')
+        video_card.videoRamSizeInKB = extra_specs.hw_video_ram
+        video_card.key = -1
+        virtual_device_config_spec = client_factory.create(
+            'ns0:VirtualDeviceConfigSpec')
+        virtual_device_config_spec.operation = "add"
+        virtual_device_config_spec.device = video_card
+        return virtual_device_config_spec
 
 
 def create_serial_port_spec(client_factory):

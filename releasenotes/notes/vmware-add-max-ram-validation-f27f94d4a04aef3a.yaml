@@ -1,0 +1,11 @@
+---
+features:
+  - |
+    For the VMware vCenter driver, added support for the configured video ram ``hw_video_ram`` from the image,
+    which will be checked against the maximum allowed video ram ``hw_video:ram_max_mb``
+    from the flavor.
+    If the selected video ram from the image is less than or equal to the maximum allowed ram,
+    the ``videoRamSizeInKB`` will be set.
+    If the selected ram is more than the maximum allowed one, then server creation will fail for the given
+    image and flavor.
+    If the maximum allowed video ram is not set in the flavor we do not set ``videoRamSizeInKB`` in the VM.
