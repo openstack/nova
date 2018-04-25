@@ -9,9 +9,10 @@
                     "module_name": "nova.tests.functional.notification_sample_tests.test_instance",
                     "exception_message": "Virtual Interface creation failed",
                     "function_name": "_virtual_interface_create_failed",
-                    "exception": "VirtualInterfaceCreateException"
+                    "exception": "VirtualInterfaceCreateException",
+                    "traceback": "Traceback (most recent call last):\n  File \"nova/compute/manager.py\", line ..."
                 },
-                "nova_object.version": "1.0",
+                "nova_object.version": "1.1",
                 "nova_object.namespace": "nova"
             },
             "architecture": null,

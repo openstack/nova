@@ -104,7 +104,7 @@ class WrapExceptionTestCase(test.NoDBTestCase):
 
         payload = notification['payload']
         self.assertEqual('ExceptionPayload', payload['nova_object.name'])
-        self.assertEqual('1.0', payload['nova_object.version'])
+        self.assertEqual('1.1', payload['nova_object.version'])
 
         payload = payload['nova_object.data']
         self.assertEqual('TestingException', payload['exception'])
@@ -112,6 +112,7 @@ class WrapExceptionTestCase(test.NoDBTestCase):
         self.assertEqual('bad_function_exception', payload['function_name'])
         self.assertEqual('nova.tests.unit.test_exception',
                          payload['module_name'])
+        self.assertIn('bad_function_exception', payload['traceback'])
 
     @mock.patch('nova.rpc.NOTIFIER')
     @mock.patch('nova.notifications.objects.exception.'

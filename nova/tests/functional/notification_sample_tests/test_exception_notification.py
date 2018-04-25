@@ -34,6 +34,11 @@ class TestExceptionNotificationSample(
                           self.admin_api.api_post, 'os-aggregates', post)
 
         self.assertEqual(4, len(fake_notifier.VERSIONED_NOTIFICATIONS))
+        traceback = fake_notifier.VERSIONED_NOTIFICATIONS[3][
+            'payload']['nova_object.data']['traceback']
+        self.assertIn('AggregateNameExists', traceback)
         self._verify_notification(
             'compute-exception',
+            replacements={
+                'traceback': self.ANY},
             actual=fake_notifier.VERSIONED_NOTIFICATIONS[3])

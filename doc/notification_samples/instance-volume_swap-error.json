@@ -10,11 +10,12 @@
                     "exception": "TypeError",
                     "exception_message": "'tuple' object does not support item assignment",
                     "function_name": "_init_volume_connection",
-                    "module_name": "nova.compute.manager"
+                    "module_name": "nova.compute.manager",
+                    "traceback": "Traceback (most recent call last):\n  File \"nova/compute/manager.py\", line ..."
                 },
                 "nova_object.name": "ExceptionPayload",
                 "nova_object.namespace": "nova",
-                "nova_object.version": "1.0"
+                "nova_object.version": "1.1"
             }
         }
     },
