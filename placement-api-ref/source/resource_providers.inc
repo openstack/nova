@@ -33,7 +33,7 @@ of all filters are merged with a boolean `AND`.
   - name: resource_provider_name_query
   - uuid: resource_provider_uuid_query
   - member_of: member_of
-  - resources: resources_query
+  - resources: resources_query_1_4
   - in_tree: resource_provider_tree_query
   - required: resource_provider_required_query
 

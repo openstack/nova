@@ -17,11 +17,13 @@ from oslo_middleware import cors
 from oslo_utils import uuidutils
 
 from nova.api.openstack.placement import deploy
+from nova.api.openstack.placement import exception
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
 from nova import conf
 from nova import config
 from nova import context
 from nova.tests import fixtures
+from nova.tests import uuidsentinel as uuids
 
 
 CONF = conf.CONF
@@ -390,3 +392,125 @@ class CORSFixture(APIFixture):
         # wants to load the CORS middleware, it will not.
         self.conf.set_override('allowed_origin', 'http://valid.example.com',
                                group='cors')
+
+
+# TODO(efried): Common with test_allocation_candidates
+def _add_inventory(rp, rc, total, **kwargs):
+    kwargs.setdefault('max_unit', total)
+    inv = rp_obj.Inventory(rp._context, resource_provider=rp,
+                           resource_class=rc, total=total, **kwargs)
+    inv.obj_set_defaults()
+    rp.add_inventory(inv)
+
+
+# TODO(efried): Common with test_allocation_candidates
+def _set_traits(rp, *traits):
+    tlist = []
+    for tname in traits:
+        try:
+            trait = rp_obj.Trait.get_by_name(rp._context, tname)
+        except exception.TraitNotFound:
+            trait = rp_obj.Trait(rp._context, name=tname)
+            trait.create()
+        tlist.append(trait)
+    rp.set_traits(rp_obj.TraitList(objects=tlist))
+
+
+class GranularFixture(APIFixture):
+    """An APIFixture that sets up the following provider environment for
+    testing granular resource requests.
+
++========================++========================++========================+
+|cn_left                 ||cn_middle               ||cn_right                |
+|VCPU: 8                 ||VCPU: 8                 ||VCPU: 8                 |
+|MEMORY_MB: 4096         ||MEMORY_MB: 4096         ||MEMORY_MB: 4096         |
+|DISK_GB: 500            ||SRIOV_NET_VF: 8         ||DISK_GB: 500            |
+|VGPU: 8                 ||CUSTOM_NET_MBPS: 4000   ||VGPU: 8                 |
+|SRIOV_NET_VF: 8         ||traits: HW_CPU_X86_AVX, ||  - max_unit: 2         |
+|CUSTOM_NET_MBPS: 4000   ||        HW_CPU_X86_AVX2,||traits: HW_CPU_X86_MMX, |
+|traits: HW_CPU_X86_AVX, ||        HW_CPU_X86_SSE, ||        HW_GPU_API_DXVA,|
+|        HW_CPU_X86_AVX2,||        HW_NIC_ACCEL_TLS||        CUSTOM_DISK_SSD,|
+|        HW_GPU_API_DXVA,|+=+=====+================++==+========+============+
+|        HW_NIC_DCB_PFC, |  :     :                    :        : a
+|        CUSTOM_FOO      +..+     +--------------------+        : g
++========================+  : a   :                             : g
+                            : g   :                             : C
++========================+  : g   :             +===============+======+
+|shr_disk_1              |  : A   :             |shr_net               |
+|DISK_GB: 1000           +..+     :             |SRIOV_NET_VF: 16      |
+|traits: CUSTOM_DISK_SSD,|  :     : a           |CUSTOM_NET_MBPS: 40000|
+|  MISC_SHARES_VIA_AGG...|  :     : g           |traits: MISC_SHARES...|
++========================+  :     : g           +======================+
++=======================+   :     : B
+|shr_disk_2             +...+     :
+|DISK_GB: 1000          |         :
+|traits: MISC_SHARES... +.........+
++=======================+
+    """
+    def _create_provider(self, name, *aggs, **kwargs):
+        # TODO(efried): Common with test_allocation_candidates.ProviderDBBase
+        parent = kwargs.get('parent')
+        rp = rp_obj.ResourceProvider(self.ctx, name=name,
+                                     uuid=getattr(uuids, name))
+        if parent:
+            rp.parent_provider_uuid = parent
+        rp.create()
+        if aggs:
+            rp.set_aggregates(aggs)
+        return rp
+
+    def start_fixture(self):
+        super(GranularFixture, self).start_fixture()
+        self.ctx = context.get_admin_context()
+
+        rp_obj.ResourceClass(context=self.ctx, name='CUSTOM_NET_MBPS').create()
+
+        os.environ['AGGA'] = uuids.aggA
+        os.environ['AGGB'] = uuids.aggB
+        os.environ['AGGC'] = uuids.aggC
+
+        cn_left = self._create_provider('cn_left', uuids.aggA)
+        os.environ['CN_LEFT'] = cn_left.uuid
+        _add_inventory(cn_left, 'VCPU', 8)
+        _add_inventory(cn_left, 'MEMORY_MB', 4096)
+        _add_inventory(cn_left, 'DISK_GB', 500)
+        _add_inventory(cn_left, 'VGPU', 8)
+        _add_inventory(cn_left, 'SRIOV_NET_VF', 8)
+        _add_inventory(cn_left, 'CUSTOM_NET_MBPS', 4000)
+        _set_traits(cn_left, 'HW_CPU_X86_AVX', 'HW_CPU_X86_AVX2',
+                    'HW_GPU_API_DXVA', 'HW_NIC_DCB_PFC', 'CUSTOM_FOO')
+
+        cn_middle = self._create_provider('cn_middle', uuids.aggA, uuids.aggB)
+        os.environ['CN_MIDDLE'] = cn_middle.uuid
+        _add_inventory(cn_middle, 'VCPU', 8)
+        _add_inventory(cn_middle, 'MEMORY_MB', 4096)
+        _add_inventory(cn_middle, 'SRIOV_NET_VF', 8)
+        _add_inventory(cn_middle, 'CUSTOM_NET_MBPS', 4000)
+        _set_traits(cn_middle, 'HW_CPU_X86_AVX', 'HW_CPU_X86_AVX2',
+                    'HW_CPU_X86_SSE', 'HW_NIC_ACCEL_TLS')
+
+        cn_right = self._create_provider('cn_right', uuids.aggB, uuids.aggC)
+        os.environ['CN_RIGHT'] = cn_right.uuid
+        _add_inventory(cn_right, 'VCPU', 8)
+        _add_inventory(cn_right, 'MEMORY_MB', 4096)
+        _add_inventory(cn_right, 'DISK_GB', 500)
+        _add_inventory(cn_right, 'VGPU', 8, max_unit=2)
+        _set_traits(cn_right, 'HW_CPU_X86_MMX', 'HW_GPU_API_DXVA',
+                    'CUSTOM_DISK_SSD')
+
+        shr_disk_1 = self._create_provider('shr_disk_1', uuids.aggA)
+        os.environ['SHR_DISK_1'] = shr_disk_1.uuid
+        _add_inventory(shr_disk_1, 'DISK_GB', 1000)
+        _set_traits(shr_disk_1, 'MISC_SHARES_VIA_AGGREGATE', 'CUSTOM_DISK_SSD')
+
+        shr_disk_2 = self._create_provider(
+            'shr_disk_2', uuids.aggA, uuids.aggB)
+        os.environ['SHR_DISK_2'] = shr_disk_2.uuid
+        _add_inventory(shr_disk_2, 'DISK_GB', 1000)
+        _set_traits(shr_disk_2, 'MISC_SHARES_VIA_AGGREGATE')
+
+        shr_net = self._create_provider('shr_net', uuids.aggC)
+        os.environ['SHR_NET'] = shr_net.uuid
+        _add_inventory(shr_net, 'SRIOV_NET_VF', 16)
+        _add_inventory(shr_net, 'CUSTOM_NET_MBPS', 40000)
+        _set_traits(shr_net, 'MISC_SHARES_VIA_AGGREGATE')

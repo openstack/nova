@@ -264,9 +264,9 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
     def _get_allocation_candidates(self, requests=None, limit=None):
         if requests is None:
-            requests = [placement_lib.RequestGroup(
+            requests = {'': placement_lib.RequestGroup(
                 use_same_provider=False,
-                resources=self.requested_resources)]
+                resources=self.requested_resources)}
         return rp_obj.AllocationCandidates.get_by_requests(self.ctx, requests,
                                                            limit)
 
@@ -363,18 +363,11 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         self.assertEqual(expected, observed)
 
-    def test_no_resources_in_first_request_group(self):
-        requests = [placement_lib.RequestGroup(use_same_provider=False,
-                                               resources={})]
-        self.assertRaises(ValueError,
-                          rp_obj.AllocationCandidates.get_by_requests,
-                          self.ctx, requests)
-
     def test_unknown_traits(self):
         missing = set(['UNKNOWN_TRAIT'])
-        requests = [placement_lib.RequestGroup(
+        requests = {'': placement_lib.RequestGroup(
             use_same_provider=False, resources=self.requested_resources,
-            required_traits=missing)]
+            required_traits=missing)}
         self.assertRaises(exception.TraitNotFound,
                           rp_obj.AllocationCandidates.get_by_requests,
                           self.ctx, requests)
@@ -389,13 +382,13 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         tb.add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)
         tb.add_inventory(cn1, fields.ResourceClass.DISK_GB, 2000)
 
-        alloc_cands = self._get_allocation_candidates([
-            placement_lib.RequestGroup(
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources={
                     fields.ResourceClass.VCPU: 1
                 }
-            )]
+            )}
         )
 
         expected = [
@@ -476,12 +469,12 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # Now let's add traits into the mix. Currently, none of the compute
         # nodes has the AVX2 trait associated with it, so we should get 0
         # results if we required AVX2
-        alloc_cands = self._get_allocation_candidates([
-            placement_lib.RequestGroup(
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources,
                 required_traits=set([os_traits.HW_CPU_X86_AVX2])
-            )],
+            )},
         )
         self._validate_allocation_requests([], alloc_cands)
 
@@ -489,12 +482,12 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # get back just that compute node in the provider summaries
         tb.set_traits(cn2, 'HW_CPU_X86_AVX2')
 
-        alloc_cands = self._get_allocation_candidates([
-            placement_lib.RequestGroup(
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources,
                 required_traits=set([os_traits.HW_CPU_X86_AVX2])
-            )],
+            )},
         )
         # Only cn2 should be in our allocation requests now since that's the
         # only one with the required trait
@@ -522,12 +515,12 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         self._validate_provider_summary_traits(expected, alloc_cands)
 
         # Confirm that forbidden traits changes the results to get cn1.
-        alloc_cands = self._get_allocation_candidates([
-            placement_lib.RequestGroup(
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources,
                 forbidden_traits=set([os_traits.HW_CPU_X86_AVX2])
-            )],
+            )},
         )
         expected = [
             [('cn1', fields.ResourceClass.VCPU, 1),
@@ -663,12 +656,12 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # #1705071, this resulted in a KeyError
 
         alloc_cands = self._get_allocation_candidates(
-            requests=[placement_lib.RequestGroup(
+            requests={'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources={
                     'DISK_GB': 10,
                 }
-            )]
+            )}
         )
 
         # We should only have provider summary information for the sharing
@@ -693,12 +686,12 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # Now we're going to add a set of required traits into the request mix.
         # To start off, let's request a required trait that we know has not
         # been associated yet with any provider, and ensure we get no results
-        alloc_cands = self._get_allocation_candidates([
-            placement_lib.RequestGroup(
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources,
                 required_traits=set([os_traits.HW_CPU_X86_AVX2]),
-            )]
+            )}
         )
 
         # We have not yet associated the AVX2 trait to any provider, so we
@@ -713,12 +706,12 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         cn1.set_traits([avx2_t])
         cn2.set_traits([avx2_t])
 
-        alloc_cands = self._get_allocation_candidates([
-            placement_lib.RequestGroup(
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources,
                 required_traits=set([os_traits.HW_CPU_X86_AVX2]),
-            )]
+            )}
         )
 
         # There should be 2 compute node providers and 1 shared storage
@@ -749,12 +742,12 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         self._validate_provider_summary_traits(expected, alloc_cands)
 
         # Forbid the AVX2 trait
-        alloc_cands = self._get_allocation_candidates([
-            placement_lib.RequestGroup(
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources,
                 forbidden_traits=set([os_traits.HW_CPU_X86_AVX2]),
-            )]
+            )}
         )
         # Should be no results as both cn1 and cn2 have the trait.
         expected = []
@@ -763,13 +756,13 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # Require the AVX2 trait but forbid CUSTOM_EXTRA_FASTER, which is
         # added to cn2
         tb.set_traits(cn2, 'CUSTOM_EXTRA_FASTER')
-        alloc_cands = self._get_allocation_candidates([
-            placement_lib.RequestGroup(
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources,
                 required_traits=set([os_traits.HW_CPU_X86_AVX2]),
                 forbidden_traits=set(['CUSTOM_EXTRA_FASTER']),
-            )]
+            )}
         )
         expected = [
             [('cn1', fields.ResourceClass.VCPU, 1),
@@ -782,13 +775,13 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # This should result in getting only cn1.
         tb.add_inventory(cn1, fields.ResourceClass.DISK_GB, 2048,
                          allocation_ratio=1.5)
-        alloc_cands = self._get_allocation_candidates([
-            placement_lib.RequestGroup(
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources,
                 required_traits=set([os_traits.HW_CPU_X86_AVX2]),
                 forbidden_traits=set(['MISC_SHARES_VIA_AGGREGATE']),
-            )]
+            )}
         )
         expected = [
             [('cn1', fields.ResourceClass.VCPU, 1),
@@ -843,8 +836,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         }
 
         alloc_cands = self._get_allocation_candidates(
-            requests=[placement_lib.RequestGroup(
-                use_same_provider=False, resources=requested_resources)])
+            requests={'': placement_lib.RequestGroup(
+                use_same_provider=False, resources=requested_resources)})
 
         # Verify the allocation requests that are returned. There should be 2
         # allocation requests, one for each compute node, containing 3
@@ -946,12 +939,12 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # Now we're going to add a set of required traits into the request mix.
         # To start off, let's request a required trait that we know has not
         # been associated yet with any provider, and ensure we get no results
-        alloc_cands = self._get_allocation_candidates([
-            placement_lib.RequestGroup(
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources,
                 required_traits=set([os_traits.HW_CPU_X86_AVX2]),
-            )]
+            )}
         )
 
         # We have not yet associated the AVX2 trait to any provider, so we
@@ -967,12 +960,12 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         for cn in (cn1, cn2, cn3):
             tb.set_traits(cn, os_traits.HW_CPU_X86_AVX2)
 
-        alloc_cands = self._get_allocation_candidates(requests=[
+        alloc_cands = self._get_allocation_candidates(requests={'':
             placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources,
                 required_traits=set([os_traits.HW_CPU_X86_AVX2]),
-            )]
+            )}
         )
 
         # There should be 3 compute node providers and 1 shared storage
@@ -1015,14 +1008,15 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         tb.set_traits(cn3, os_traits.HW_CPU_X86_AVX2,
                       os_traits.STORAGE_DISK_SSD)
 
-        alloc_cands = self._get_allocation_candidates([
+        alloc_cands = self._get_allocation_candidates(
+            {'':
             placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources,
                 required_traits=set([
                     os_traits.HW_CPU_X86_AVX2, os_traits.STORAGE_DISK_SSD
                 ]),
-            )]
+            )}
         )
 
         # There should be only cn3 in the returned allocation candidates
@@ -1103,13 +1097,13 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # The shared storage's disk is RAID
         tb.set_traits(ss, 'MISC_SHARES_VIA_AGGREGATE', 'CUSTOM_RAID')
 
-        alloc_cands = self._get_allocation_candidates([
-            placement_lib.RequestGroup(
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources=self.requested_resources,
                 required_traits=set(['HW_CPU_X86_SSE', 'STORAGE_DISK_SSD',
                                      'CUSTOM_RAID'])
-            )]
+            )}
         )
 
         # TODO(efried): Bug #1724633: we'd *like* to get no candidates, because
@@ -1128,7 +1122,10 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             'cn': set([
                 (fields.ResourceClass.VCPU, 24, 0),
                 (fields.ResourceClass.MEMORY_MB, 2048, 0),
-                (fields.ResourceClass.DISK_GB, 1600, 0),
+                # NOTE(efried): We don't (yet) populate provider summaries with
+                # provider resources that aren't part of the result. With
+                # blueprint placement-return-all-requests, uncomment this line:
+                # (fields.ResourceClass.DISK_GB, 1600, 0),
             ]),
             'ss': set([
                 (fields.ResourceClass.DISK_GB, 1600, 0),
@@ -1143,15 +1140,15 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         tb.add_inventory(ss1, fields.ResourceClass.SRIOV_NET_VF, 16)
         tb.add_inventory(ss1, fields.ResourceClass.DISK_GB, 1600)
 
-        alloc_cands = self._get_allocation_candidates([
-            placement_lib.RequestGroup(
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources={
                     'IPV4_ADDRESS': 2,
                     'SRIOV_NET_VF': 1,
                     'DISK_GB': 1500,
                 }
-            )]
+            )}
         )
 
         expected = [
@@ -1179,14 +1176,14 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         tb.set_traits(ss2, "MISC_SHARES_VIA_AGGREGATE")
         tb.add_inventory(ss2, fields.ResourceClass.DISK_GB, 1600)
 
-        alloc_cands = self._get_allocation_candidates([
-            placement_lib.RequestGroup(
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources={
                     'IPV4_ADDRESS': 2,
                     'DISK_GB': 1500,
                 }
-            )]
+            )}
         )
 
         expected = [
@@ -1215,15 +1212,15 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         tb.set_traits(ss2, "MISC_SHARES_VIA_AGGREGATE")
         tb.add_inventory(ss2, fields.ResourceClass.DISK_GB, 1600)
 
-        alloc_cands = self._get_allocation_candidates([
-            placement_lib.RequestGroup(
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources={
                     'IPV4_ADDRESS': 2,
                     'SRIOV_NET_VF': 1,
                     'DISK_GB': 1500,
                 }
-            )]
+            )}
         )
 
         expected = [
@@ -1255,15 +1252,15 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         tb.set_traits(ss2, "MISC_SHARES_VIA_AGGREGATE")
         tb.add_inventory(ss2, fields.ResourceClass.DISK_GB, 1600)
 
-        alloc_cands = self._get_allocation_candidates(requests=[
-            placement_lib.RequestGroup(
+        alloc_cands = self._get_allocation_candidates(requests={
+            '': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources={
                     'IPV4_ADDRESS': 2,
                     'SRIOV_NET_VF': 1,
                     'DISK_GB': 1500,
                 }
-            )]
+            )}
         )
 
         # We expect two candidates: one that gets all the resources from ss1;
@@ -1311,14 +1308,14 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         tb.set_traits(ss1, "MISC_SHARES_VIA_AGGREGATE")
         tb.add_inventory(ss1, fields.ResourceClass.DISK_GB, 1600)
 
-        alloc_cands = self._get_allocation_candidates([
-            placement_lib.RequestGroup(
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources={
                     'VCPU': 2,
                     'DISK_GB': 1500,
                 }
-            )]
+            )}
         )
         expected = [
             [('cn1', fields.ResourceClass.VCPU, 2),
@@ -1370,15 +1367,15 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         tb.set_traits(ss3, "MISC_SHARES_VIA_AGGREGATE")
         tb.add_inventory(ss3, fields.ResourceClass.IPV4_ADDRESS, 24)
 
-        alloc_cands = self._get_allocation_candidates([
-            placement_lib.RequestGroup(
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources={
                     'VCPU': 2,
                     'DISK_GB': 1500,
                     'IPV4_ADDRESS': 2,
                 }
-            )]
+            )}
         )
 
         expected = [
@@ -1613,15 +1610,15 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         tb.add_inventory(pf1, fields.ResourceClass.SRIOV_NET_VF, 8)
         tb.set_traits(pf1, os_traits.HW_NIC_OFFLOAD_GENEVE)
 
-        alloc_cands = self._get_allocation_candidates([
-            placement_lib.RequestGroup(
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources={
                     fields.ResourceClass.VCPU: 2,
                     fields.ResourceClass.MEMORY_MB: 256,
                     fields.ResourceClass.SRIOV_NET_VF: 1,
                 }
-            )]
+            )}
         )
 
         # TODO(jaypipes): This should be the following once nested providers
@@ -1671,8 +1668,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # Now add required traits to the mix and verify we still get the same
         # result (since we haven't yet consumed the second physical function's
         # inventory of SRIOV_NET_VF.
-        alloc_cands = self._get_allocation_candidates([
-            placement_lib.RequestGroup(
+        alloc_cands = self._get_allocation_candidates(
+            {'': placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources={
                     fields.ResourceClass.VCPU: 2,
@@ -1680,7 +1677,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                     fields.ResourceClass.SRIOV_NET_VF: 1,
                 },
                 required_traits=[os_traits.HW_NIC_OFFLOAD_GENEVE],
-            )]
+            )}
         )
 
         # TODO(jaypipes): This should be the following once nested providers
@@ -1730,7 +1727,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # function with the required trait no longer has any inventory.
         tb.allocate_from_provider(pf1, fields.ResourceClass.SRIOV_NET_VF, 8)
 
-        alloc_cands = self._get_allocation_candidates([
+        alloc_cands = self._get_allocation_candidates(
+            {'':
             placement_lib.RequestGroup(
                 use_same_provider=False,
                 resources={
@@ -1739,7 +1737,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
                     fields.ResourceClass.SRIOV_NET_VF: 1,
                 },
                 required_traits=[os_traits.HW_NIC_OFFLOAD_GENEVE],
-            )]
+            )}
         )
 
         self._validate_allocation_requests([], alloc_cands)

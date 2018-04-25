@@ -292,3 +292,34 @@ the resource providers that are associated with BOTH agg1 and agg2. Issuing a
 request for ``GET /resource_providers?member_of=in:agg1,agg2&member_of=agg3``
 means get the resource providers that are associated with agg3 and are also
 associated with *any of* (agg1, agg2).
+
+1.25 Granular resource requests to ``GET /allocation_candidates``
+-----------------------------------------------------------------
+
+``GET /allocation_candidates`` is enhanced to accept numbered groupings of
+resource, required/forbidden trait, and aggregate association requests. A
+``resources`` query parameter key with a positive integer suffix (e.g.
+``resources42``) will be logically associated with ``required`` and/or
+``member_of`` query parameter keys with the same suffix (e.g. ``required42``,
+``member_of42``). The resources, required/forbidden traits, and aggregate
+associations in that group will be satisfied by the same resource provider in
+the response. When more than one numbered grouping is supplied, the
+``group_policy`` query parameter is required to indicate how the groups should
+interact. With ``group_policy=none``, separate groupings - numbered or
+unnumbered - may or may not be satisfied by the same provider. With
+``group_policy=isolate``, numbered groups are guaranteed to be satisfied by
+*different* providers - though there may still be overlap with the unnumbered
+group. In all cases, each ``allocation_request`` will be satisfied by providers
+in a single non-sharing provider tree and/or sharing providers associated via
+aggregate with any of the providers in that tree.
+
+The ``required`` and ``member_of`` query parameters for a given group are
+optional.  That is, you may specify ``resources42=XXX`` without a corresponding
+``required42=YYY`` or ``member_of42=ZZZ``. However, the reverse (specifying
+``required42=YYY`` or ``member_of42=ZZZ`` without ``resources42=XXX``) will
+result in an error.
+
+The semantic of the (unnumbered) ``resources``, ``required``, and ``member_of``
+query parameters is unchanged: the resources, traits, and aggregate
+associations specified thereby may be satisfied by any provider in the same
+non-sharing tree or associated via the specified aggregate(s).

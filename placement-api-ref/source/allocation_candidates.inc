@@ -29,10 +29,14 @@ Request
 
 .. rest_parameters:: parameters.yaml
 
-  - resources: resources_query_required
-  - limit: allocation_candidates_limit
-  - required: allocation_candidates_required
+  - resources: resources_query_ac
+  - required: required_traits_unnumbered
   - member_of: member_of_1_21
+  - resourcesN: resources_query_granular
+  - requiredN: required_traits_granular
+  - member_ofN: member_of_granular
+  - group_policy: allocation_candidates_group_policy
+  - limit: allocation_candidates_limit
 
 Response (microversions 1.12 - )
 --------------------------------

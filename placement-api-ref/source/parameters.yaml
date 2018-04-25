@@ -42,6 +42,19 @@ trait_name:
     The name of a trait.
 
 # variables in query
+allocation_candidates_group_policy:
+  type: string
+  in: query
+  required: false
+  min_version: 1.25
+  description: >
+    When more than one ``resourcesN`` query parameter is supplied,
+    ``group_policy`` is required to indicate how the groups should interact.
+    With ``group_policy=none``, separate groupings - numbered or unnumbered -
+    may or may not be satisfied by the same provider. With
+    ``group_policy=isolate``, numbered groups are guaranteed to be satisfied by
+    *different* providers - though there may still be overlap with the
+    unnumbered group.
 allocation_candidates_limit:
   type: integer
   in: query
@@ -50,18 +63,6 @@ allocation_candidates_limit:
   description: >
     A positive integer used to limit the maximum number of allocation
     candidates returned in the response.
-allocation_candidates_required:
-  type: string
-  in: query
-  required: false
-  min_version: 1.17
-  description: >
-    Accepts a list of comma-separated traits. Allocation requests in the
-    response will be for resource providers that have capacity for all
-    requested resources and the set of those resource providers will
-    *collectively* contain all of the required traits. **Starting from
-    microversion 1.22** traits which are forbidden from any resource provider
-    may be expressed by prefixing a trait with a ``!``.
 member_of: &member_of
   type: string
   in: query
@@ -87,12 +88,70 @@ member_of: &member_of
 member_of_1_21:
   <<: *member_of
   min_version: 1.21
+member_of_granular:
+  type: string
+  in: query
+  required: false
+  description: >
+    A string representing an aggregate uuid; or the prefix ``in:`` followed by
+    a comma-separated list of strings representing aggregate uuids. The
+    returned resource providers must be associated with at least one of the
+    aggregates identified by uuid. The parameter key is ``member_ofN``, where
+    ``N`` represents a positive integer suffix corresponding with a
+    ``resourcesN`` parameter.  The value format is the same as for the
+    (unnumbered) ``member_of`` parameter; but all of the resources and traits
+    specified in a numbered grouping will always be satisfied by the same
+    resource provider. Separate groupings - numbered or unnumbered - may or may
+    not be satisfied by the same provider, depending on the value of the
+    ``group_policy`` parameter.
+
+    It is an error to specify a ``member_ofN`` parameter without a
+    corresponding ``resourcesN`` parameter with the same suffix.
+  min_version: 1.25
 project_id: &project_id
   type: string
   in: query
   required: true
   description: >
     The uuid of a project.
+required_traits_granular:
+  type: string
+  in: query
+  required: false
+  description: |
+    A comma-separated list of traits that a provider must have, or (if prefixed
+    with a ``!``) **not** have::
+
+        required42=HW_CPU_X86_AVX,HW_CPU_X86_SSE,!HW_CPU_X86_AVX2
+
+    The parameter key is ``requiredN``, where ``N`` represents a
+    positive integer suffix corresponding with a ``resourcesN`` parameter.
+    The value format is the same as for the (unnumbered) ``required``
+    parameter; but all of the resources and traits specified in a numbered
+    grouping will always be satisfied by the same resource provider. Separate
+    groupings - numbered or unnumbered - may or may not be satisfied by the
+    same provider, depending on the value of the ``group_policy`` parameter.
+
+    It is an error to specify a ``requiredN`` parameter without a corresponding
+    ``resourcesN`` parameter with the same suffix.
+  min_version: 1.25
+required_traits_unnumbered:
+  type: string
+  in: query
+  required: false
+  min_version: 1.17
+  description: |
+    A comma-separated list of traits that a provider must have::
+
+        required=HW_CPU_X86_AVX,HW_CPU_X86_SSE
+
+    Allocation requests in the response will be for resource providers that
+    have capacity for all requested resources and the set of those resource
+    providers will *collectively* contain all of the required traits. These
+    traits may be satisfied by any provider in the same non-sharing tree or
+    associated via aggregate. **Starting from microversion 1.22** traits which
+    are forbidden from any resource provider may be expressed by prefixing a
+    trait with a ``!``.
 resource_provider_name_query:
   type: string
   in: query
@@ -121,7 +180,7 @@ resource_provider_uuid_query:
   <<: *resource_provider_uuid_path
   in: query
   required: false
-resources_query:
+resources_query_1_4:
   type: string
   in: query
   required: false
@@ -132,16 +191,38 @@ resources_query:
 
         resources=VCPU:4,DISK_GB:64,MEMORY_MB:2048
   min_version: 1.4
-resources_query_required:
+resources_query_ac:
   type: string
   in: query
-  required: true
+  required: false
   description: |
     A comma-separated list of strings indicating an amount of
     resource of a specified class that providers in each allocation request
     must *collectively* have the capacity and availability to serve::
 
         resources=VCPU:4,DISK_GB:64,MEMORY_MB:2048
+
+    These resources may be satisfied by any provider in the same non-sharing
+    tree or associated via aggregate.
+resources_query_granular:
+  type: string
+  in: query
+  required: false
+  description: |
+    A comma-separated list of strings indicating an amount of
+    resource of a specified class that a provider must have the
+    capacity to serve::
+
+        resources42=VCPU:4,DISK_GB:64,MEMORY_MB:2048
+
+    The parameter key is ``resourcesN``, where ``N`` represents a unique
+    positive integer suffix. The value format is the same as for the
+    (unnumbered) ``resources`` parameter, but the resources specified in a
+    ``resourcesN`` parameter will always be satisfied by a single provider.
+    Separate groupings - numbered or unnumbered - may or may not be satisfied
+    by the same provider depending on the value of the ``group_policy``
+    parameter.
+  min_version: 1.25
 trait_associated:
   type: string
   in: query
