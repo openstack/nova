@@ -32,7 +32,7 @@ Request
   - resources: resources_query_required
   - limit: allocation_candidates_limit
   - required: allocation_candidates_required
-  - member_of: member_of
+  - member_of: member_of_1_21
 
 Response (microversions 1.12 - )
 --------------------------------

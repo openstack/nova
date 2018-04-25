@@ -200,22 +200,8 @@ def list_resource_providers(req):
     for attr in qpkeys:
         if attr in req.GET:
             value = req.GET[attr]
-            # special case member_of to always make its value a
-            # list, either by accepting the single value, or if it
-            # starts with 'in:' splitting on ','.
-            # NOTE(cdent): This will all change when we start using
-            # JSONSchema validation of query params.
             if attr == 'member_of':
-                if value.startswith('in:'):
-                    value = value[3:].split(',')
-                else:
-                    value = [value]
-                # Make sure the values are actually UUIDs.
-                for aggr_uuid in value:
-                    if not uuidutils.is_uuid_like(aggr_uuid):
-                        raise webob.exc.HTTPBadRequest(
-                            _('Invalid uuid value: %(uuid)s') %
-                            {'uuid': aggr_uuid})
+                value = util.normalize_member_of_qs_param(value)
             elif attr == 'resources':
                 value = util.normalize_resources_qs_param(value)
             elif attr == 'required':

@@ -1231,7 +1231,9 @@ def _get_all_with_shared(ctx, resources, member_of=None):
     #  AND sharing_disk_gb.resource_provider_id IN ($RPS_SHARING_DISK)
     # INNER JOIN resource_provider_aggregates AS member_aggs
     #  ON rp.id = member_aggs.resource_provider_id
-    #  AND member_aggs.aggregate_id IN ($MEMBER_OF)
+    # INNER JOIN placement_aggregates AS p_aggs
+    #  ON member_aggs.aggregate_id = p_aggs.id
+    #  AND p_aggs.uuid IN ($MEMBER_OF)
     # WHERE (
     #   (
     #     COALESCE(usage_vcpu.used, 0) + $AMOUNT_VCPU <=

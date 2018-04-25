@@ -347,33 +347,36 @@ def normalize_traits_qs_param(val, allow_forbidden=False):
     return ret
 
 
-def normalize_member_of_qs_param(val):
-    """Parse a member_of query string parameter value.
+def normalize_member_of_qs_param(value):
+    """We need to handle member_of as a special case to always make its value a
+    list, either by accepting the single value, or if it starts with 'in:'
+    splitting on ','.
 
-    Valid values are either a single UUID, or the prefix 'in:' followed by two
-    or more comma-separated UUIDs.
+    NOTE(cdent): This will all change when we start using
+    JSONSchema validation of query params.
 
-    :param val: A member_of query parameter of either a single UUID, or a
-                comma-separated string of two or more UUIDs.
-    :return: A list of UUIDs
-    :raises `webob.exc.HTTPBadRequest` if the val parameter is not in the
+    :param value: A member_of query parameter of either a single UUID, or a
+                  comma-separated string of one or more UUIDs, prefixed with
+                  the "in:" operator.
+    :return: A set of UUIDs
+    :raises `webob.exc.HTTPBadRequest` if the value parameter is not in the
             expected format.
     """
-    # Ensure that multiple values are prefixed with "in:"
-    if "," in val and not val.startswith("in:"):
+    if "," in value and not value.startswith("in:"):
         msg = _("Multiple values for 'member_of' must be prefixed with the "
-                "'in:' keyword. Got: %s") % val
+                "'in:' keyword. Got: %s") % value
         raise webob.exc.HTTPBadRequest(msg)
-    if val.startswith("in:"):
-        ret = val[3:].split(",")
+    if value.startswith('in:'):
+        value = set(value[3:].split(','))
     else:
-        ret = [val]
-    # Ensure the UUIDs are valid
-    if not all([uuidutils.is_uuid_like(agg) for agg in ret]):
-        msg = _("Invalid query string parameters: Expected 'member_of' "
-                "parameter to contain valid UUID(s). Got: %s") % val
-        raise webob.exc.HTTPBadRequest(msg)
-    return ret
+        value = set([value])
+    # Make sure the values are actually UUIDs.
+    for aggr_uuid in value:
+        if not uuidutils.is_uuid_like(aggr_uuid):
+            msg = _("Invalid query string parameters: Expected 'member_of' "
+                    "parameter to contain valid UUID(s). Got: %s") % value
+            raise webob.exc.HTTPBadRequest(msg)
+    return value
 
 
 def parse_qs_request_groups(qsdict, allow_forbidden=False):
@@ -383,7 +386,7 @@ def parse_qs_request_groups(qsdict, allow_forbidden=False):
     The input qsdict represents a query string of the form:
 
     ?resources=$RESOURCE_CLASS_NAME:$AMOUNT,$RESOURCE_CLASS_NAME:$AMOUNT
-    &required=$TRAIT_NAME,$TRAIT_NAME&member_of=$AGG_UUID
+    &required=$TRAIT_NAME,$TRAIT_NAME&member_of=in:$AGG1_UUID,$AGG2_UUID
     &resources1=$RESOURCE_CLASS_NAME:$AMOUNT,RESOURCE_CLASS_NAME:$AMOUNT
     &required1=$TRAIT_NAME,$TRAIT_NAME&member_of1=$AGG_UUID
     &resources2=$RESOURCE_CLASS_NAME:$AMOUNT,RESOURCE_CLASS_NAME:$AMOUNT
