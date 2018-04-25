@@ -862,7 +862,7 @@ class API(base.Base):
             max_count, base_options, boot_meta, security_groups,
             block_device_mapping, shutdown_terminate,
             instance_group, check_server_group_quota, filter_properties,
-            key_pair, tags, trusted_certs, supports_multiattach=False,
+            key_pair, tags, trusted_certs, supports_multiattach,
             network_metadata=None):
         # Check quotas
         num_instances = compute_utils.check_num_instances_quota(
