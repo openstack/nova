@@ -23,8 +23,8 @@ import os
 import re
 
 import mock
-from mox3 import mox
 from os_xenapi.client import host_management
+from os_xenapi.client import session
 from os_xenapi.client import XenAPI
 from oslo_concurrency import lockutils
 from oslo_config import fixture as config_fixture
@@ -313,10 +313,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
         stubs.stubout_image_service_download(self.stubs)
         stubs.stubout_stream_disk(self.stubs)
 
-        def fake_inject_instance_metadata(self, instance, vm):
-            pass
-        self.stubs.Set(vmops.VMOps, '_inject_instance_metadata',
-                       fake_inject_instance_metadata)
+        self.stub_out('nova.virt.xenapi.vmops.VMOps._inject_instance_metadata',
+                      lambda self, instance, vm: None)
 
         def fake_safe_copy_vdi(session, sr_ref, instance, vdi_to_copy_ref):
             name_label = "fakenamelabel"
@@ -325,11 +323,12 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
             return vm_utils.create_vdi(
                     session, sr_ref, instance, name_label, disk_type,
                     virtual_size)
-        self.stubs.Set(vm_utils, '_safe_copy_vdi', fake_safe_copy_vdi)
+        self.stub_out('nova.virt.xenapi.vm_utils._safe_copy_vdi',
+                      fake_safe_copy_vdi)
 
         def fake_unpause_and_wait(self, vm_ref, instance, power_on):
             self._update_last_dom_id(vm_ref)
-        self.stubs.Set(vmops.VMOps, '_unpause_and_wait',
+        self.stub_out('nova.virt.xenapi.vmops.VMOps._unpause_and_wait',
                        fake_unpause_and_wait)
 
     def tearDown(self):
@@ -353,16 +352,18 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
         self.conn.init_host(None)
         self.assertEqual(set(xenapi_fake.get_all('VBD')), set([vbd0, vbd2]))
 
+    @mock.patch.object(objects.Instance, 'name',
+                       new_callable=mock.PropertyMock(return_value='foo'))
     @mock.patch.object(vm_utils, 'lookup', return_value=True)
-    def test_instance_exists(self, mock_lookup):
-        self.stubs.Set(objects.Instance, 'name', 'foo')
+    def test_instance_exists(self, mock_lookup, mock_name):
         instance = objects.Instance(uuid=uuids.instance)
         self.assertTrue(self.conn.instance_exists(instance))
         mock_lookup.assert_called_once_with(mock.ANY, 'foo')
 
+    @mock.patch.object(objects.Instance, 'name',
+                       new_callable=mock.PropertyMock(return_value='bar'))
     @mock.patch.object(vm_utils, 'lookup', return_value=None)
-    def test_instance_not_exists(self, mock_lookup):
-        self.stubs.Set(objects.Instance, 'name', 'bar')
+    def test_instance_not_exists(self, mock_lookup, mock_name):
         instance = objects.Instance(uuid=uuids.instance)
         self.assertFalse(self.conn.instance_exists(instance))
         mock_lookup.assert_called_once_with(mock.ANY, 'bar')
@@ -407,12 +408,13 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
         'last_update': '1328795567',
     }
 
-    def test_get_diagnostics(self):
+    @mock.patch.object(vm_utils, '_get_rrd')
+    def test_get_diagnostics(self, mock_get_rrd):
         def fake_get_rrd(host, vm_uuid):
             path = os.path.dirname(os.path.realpath(__file__))
             with open(os.path.join(path, 'vm_rrd.xml')) as f:
                 return re.sub(r'\s', '', f.read())
-        self.stubs.Set(vm_utils, '_get_rrd', fake_get_rrd)
+        mock_get_rrd.side_effect = fake_get_rrd
 
         expected = self.expected_raw_diagnostics
         instance = self._create_instance()
@@ -513,8 +515,9 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
         self.assertRaises(exception.InstanceNotReady,
                           conn.get_vnc_console, self.context, instance)
 
-    def test_instance_snapshot_fails_with_no_primary_vdi(self):
-
+    @mock.patch.object(vm_utils, 'create_vbd')
+    def test_instance_snapshot_fails_with_no_primary_vdi(
+            self, mock_create_vbd):
         def create_bad_vbd(session, vm_ref, vdi_ref, userdevice,
                            vbd_type='disk', read_only=False, bootable=False,
                            osvol=False):
@@ -526,7 +529,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
             xenapi_fake.after_VBD_create(vbd_ref, vbd_rec)
             return vbd_ref
 
-        self.stubs.Set(vm_utils, 'create_vbd', create_bad_vbd)
+        mock_create_vbd.side_effect = create_bad_vbd
         stubs.stubout_instance_snapshot(self.stubs)
         # Stubbing out firewall driver as previous stub sets alters
         # xml rpc result parsing
@@ -538,7 +541,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
                           self.context, instance, image_id,
                           lambda *args, **kwargs: None)
 
-    def test_instance_snapshot(self):
+    @mock.patch.object(glance.GlanceStore, 'upload_image')
+    def test_instance_snapshot(self, mock_upload_image):
         expected_calls = [
             {'args': (),
              'kwargs':
@@ -560,15 +564,14 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
 
         self.fake_upload_called = False
 
-        def fake_image_upload(_self, ctx, session, inst, img_id, vdi_uuids):
+        def fake_image_upload(ctx, session, inst, img_id, vdi_uuids):
             self.fake_upload_called = True
             self.assertEqual(ctx, self.context)
             self.assertEqual(inst, instance)
             self.assertIsInstance(vdi_uuids, list)
             self.assertEqual(img_id, image_id)
 
-        self.stubs.Set(glance.GlanceStore, 'upload_image',
-                       fake_image_upload)
+        mock_upload_image.side_effect = fake_image_upload
 
         self.conn.snapshot(self.context, instance, image_id,
                            func_call_matcher.call)
@@ -716,7 +719,9 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
                 else:
                     self.fail('Found unexpected VDI:%s' % vdi_ref)
 
+    @mock.patch.object(vmops.VMOps, '_inject_instance_metadata')
     def _test_spawn(self, image_ref, kernel_id, ramdisk_id,
+                    mock_inject_instance_metadata,
                     instance_type_id="3", os_type="linux",
                     hostname="test", architecture="x86-64", instance_id=1,
                     injected_files=None, check_injection=False,
@@ -725,12 +730,6 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
                     key_data=None):
         if injected_files is None:
             injected_files = []
-
-        # Fake out inject_instance_metadata
-        def fake_inject_instance_metadata(self, instance, vm):
-            pass
-        self.stubs.Set(vmops.VMOps, '_inject_instance_metadata',
-                       fake_inject_instance_metadata)
 
         if create_record:
             flavor = objects.Flavor.get_by_id(self.context,
@@ -770,67 +769,63 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
         self.assertEqual(instance['os_type'], os_type)
         self.assertEqual(instance['architecture'], architecture)
 
-    def test_spawn_ipxe_iso_success(self):
-        self.mox.StubOutWithMock(vm_utils, 'get_sr_path')
-        vm_utils.get_sr_path(mox.IgnoreArg()).AndReturn('/sr/path')
-
+    @mock.patch.object(session.XenAPISession, 'call_plugin_serialized')
+    @mock.patch.object(vm_utils, 'get_sr_path', return_value='/sr/path')
+    def test_spawn_ipxe_iso_success(self, mock_get_sr_path,
+                                    mock_call_plugin_serialized):
         self.flags(ipxe_network_name='test1',
                    ipxe_boot_menu_url='http://boot.example.com',
                    ipxe_mkisofs_cmd='/root/mkisofs',
                    group='xenserver')
-        self.mox.StubOutWithMock(self.conn._session, 'call_plugin_serialized')
-        self.conn._session.call_plugin_serialized(
-            'ipxe.py', 'inject', '/sr/path', mox.IgnoreArg(),
-            'http://boot.example.com', '192.168.1.100', '255.255.255.0',
-            '192.168.1.1', '192.168.1.3', '/root/mkisofs')
-        self.conn._session.call_plugin_serialized('partition_utils.py',
-                                                  'make_partition',
-                                                  'fakedev', '2048', '-')
 
-        self.mox.ReplayAll()
         self._test_spawn(IMAGE_IPXE_ISO, None, None)
 
-    def test_spawn_ipxe_iso_no_network_name(self):
+        mock_get_sr_path.assert_called_once_with(mock.ANY)
+        mock_call_plugin_serialized.assert_has_calls([
+            mock.call('ipxe.py', 'inject', '/sr/path', mock.ANY,
+                      'http://boot.example.com', '192.168.1.100',
+                      '255.255.255.0', '192.168.1.1', '192.168.1.3',
+                      '/root/mkisofs'),
+            mock.call('partition_utils.py', 'make_partition',
+                      'fakedev', '2048', '-')])
+
+    @mock.patch.object(session.XenAPISession, 'call_plugin_serialized')
+    def test_spawn_ipxe_iso_no_network_name(self, mock_call_plugin_serialized):
         self.flags(ipxe_network_name=None,
                    ipxe_boot_menu_url='http://boot.example.com',
                    group='xenserver')
 
-        # ipxe inject shouldn't be called
-        self.mox.StubOutWithMock(self.conn._session, 'call_plugin_serialized')
-        self.conn._session.call_plugin_serialized('partition_utils.py',
-                                                  'make_partition',
-                                                  'fakedev', '2048', '-')
-
-        self.mox.ReplayAll()
         self._test_spawn(IMAGE_IPXE_ISO, None, None)
 
-    def test_spawn_ipxe_iso_no_boot_menu_url(self):
+        # ipxe inject shouldn't be called
+        mock_call_plugin_serialized.assert_called_once_with(
+            'partition_utils.py', 'make_partition', 'fakedev', '2048', '-')
+
+    @mock.patch.object(session.XenAPISession, 'call_plugin_serialized')
+    def test_spawn_ipxe_iso_no_boot_menu_url(
+            self, mock_call_plugin_serialized):
         self.flags(ipxe_network_name='test1',
                    ipxe_boot_menu_url=None,
                    group='xenserver')
 
-        # ipxe inject shouldn't be called
-        self.mox.StubOutWithMock(self.conn._session, 'call_plugin_serialized')
-        self.conn._session.call_plugin_serialized('partition_utils.py',
-                                                  'make_partition',
-                                                  'fakedev', '2048', '-')
-
-        self.mox.ReplayAll()
         self._test_spawn(IMAGE_IPXE_ISO, None, None)
 
-    def test_spawn_ipxe_iso_unknown_network_name(self):
+        # ipxe inject shouldn't be called
+        mock_call_plugin_serialized.assert_called_once_with(
+            'partition_utils.py', 'make_partition', 'fakedev', '2048', '-')
+
+    @mock.patch.object(session.XenAPISession, 'call_plugin_serialized')
+    def test_spawn_ipxe_iso_unknown_network_name(
+            self, mock_call_plugin_serialized):
         self.flags(ipxe_network_name='test2',
                    ipxe_boot_menu_url='http://boot.example.com',
                    group='xenserver')
 
-        # ipxe inject shouldn't be called
-        self.mox.StubOutWithMock(self.conn._session, 'call_plugin_serialized')
-        self.conn._session.call_plugin_serialized('partition_utils.py',
-                                                  'make_partition',
-                                                  'fakedev', '2048', '-')
-
-        self.mox.ReplayAll()
         self._test_spawn(IMAGE_IPXE_ISO, None, None)
+
+        # ipxe inject shouldn't be called
+        mock_call_plugin_serialized.assert_called_once_with(
+            'partition_utils.py', 'make_partition', 'fakedev', '2048', '-')
 
     def test_spawn_empty_dns(self):
         # Test spawning with an empty dns list.
@@ -842,7 +837,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
     def test_spawn_not_enough_memory(self):
         self.assertRaises(exception.InsufficientFreeMemory, self._test_spawn,
                           IMAGE_MACHINE, IMAGE_KERNEL,
-                          IMAGE_RAMDISK, "4")  # m1.xlarge
+                          IMAGE_RAMDISK, instance_type_id="4")  # m1.xlarge
 
     def test_spawn_fail_cleanup_1(self):
         """Simulates an error while downloading an image.
@@ -916,7 +911,8 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
                          os_type="windows", architecture="i386")
         self.check_vm_params_for_windows()
 
-    def test_spawn_glance(self):
+    @mock.patch.object(vm_utils, '_fetch_disk_image')
+    def test_spawn_glance(self, mock_fetch_disk_image):
 
         def fake_fetch_disk_image(context, session, instance, name_label,
                                   image_id, image_type):
@@ -927,8 +923,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
             vdi_role = vm_utils.ImageType.get_role(image_type)
             vdi_uuid = session.call_xenapi("VDI.get_uuid", vdi_ref)
             return {vdi_role: dict(uuid=vdi_uuid, file=None)}
-        self.stubs.Set(vm_utils, '_fetch_disk_image',
-                       fake_fetch_disk_image)
+        mock_fetch_disk_image.side_effect = fake_fetch_disk_image
 
         self._test_spawn(IMAGE_MACHINE,
                          IMAGE_KERNEL,
@@ -1016,23 +1011,21 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
         # guest agent is detected
         self.assertFalse(self._tee_executed)
 
-    def test_spawn_injects_auto_disk_config_to_xenstore(self):
+    @mock.patch.object(vmops.VMOps, '_inject_auto_disk_config')
+    def test_spawn_injects_auto_disk_config_to_xenstore(
+            self, mock_inject_auto_disk_config):
         instance = self._create_instance(spawn=False, obj=True)
-        self.mox.StubOutWithMock(self.conn._vmops, '_inject_auto_disk_config')
-        self.conn._vmops._inject_auto_disk_config(instance, mox.IgnoreArg())
-        self.mox.ReplayAll()
         image_meta = objects.ImageMeta.from_dict(
             IMAGE_FIXTURES[IMAGE_MACHINE]["image_meta"])
         self.conn.spawn(self.context, instance, image_meta, [], 'herp', {}, '')
 
-    def test_spawn_vlanmanager(self):
+        mock_inject_auto_disk_config.assert_called_once_with(instance,
+                                                             mock.ANY)
+
+    @mock.patch.object(vmops.VMOps, '_create_vifs')
+    def test_spawn_vlanmanager(self, mock_create_vifs):
         self.flags(network_manager='nova.network.manager.VlanManager',
                    vlan_interface='fake0')
-
-        def dummy(*args, **kwargs):
-            pass
-
-        self.stubs.Set(vmops.VMOps, '_create_vifs', dummy)
         # Reset network table
         xenapi_fake.reset_table('network')
         # Instance 2 will use vlan network (see db/fakes.py)
@@ -1068,27 +1061,28 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
             self.assertEqual(vif_rec['qos_algorithm_params']['kbps'],
                              str(3 * 10 * 1024))
 
-    def test_spawn_ssh_key_injection(self):
+    @mock.patch.object(crypto, 'ssh_encrypt_text')
+    @mock.patch.object(stubs.FakeSessionForVMTests,
+                       '_plugin_agent_inject_file')
+    def test_spawn_ssh_key_injection(self, mock_plugin_agent_inject_file,
+                                     mock_ssh_encrypt_text):
         # Test spawning with key_data on an instance.  Should use
         # agent file injection.
         self.flags(use_agent_default=True,
                    group='xenserver')
         actual_injected_files = []
 
-        def fake_inject_file(self, method, args):
+        def fake_inject_file(method, args):
             path = base64.b64decode(args['b64_path'])
             contents = base64.b64decode(args['b64_contents'])
             actual_injected_files.append((path, contents))
             return jsonutils.dumps({'returncode': '0', 'message': 'success'})
-
-        self.stubs.Set(stubs.FakeSessionForVMTests,
-                       '_plugin_agent_inject_file', fake_inject_file)
+        mock_plugin_agent_inject_file.side_effect = fake_inject_file
 
         def fake_encrypt_text(sshkey, new_pass):
             self.assertEqual("ssh-rsa fake_keydata", sshkey)
             return "fake"
-
-        self.stubs.Set(crypto, 'ssh_encrypt_text', fake_encrypt_text)
+        mock_ssh_encrypt_text.side_effect = fake_encrypt_text
 
         expected_data = (b'\n# The following ssh key was injected by '
                          b'Nova\nssh-rsa fake_keydata\n')
@@ -1099,26 +1093,24 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
                          key_data='ssh-rsa fake_keydata')
         self.assertEqual(actual_injected_files, injected_files)
 
-    def test_spawn_ssh_key_injection_non_rsa(self):
+    @mock.patch.object(crypto, 'ssh_encrypt_text',
+                       side_effect=NotImplementedError("Should not be called"))
+    @mock.patch.object(stubs.FakeSessionForVMTests,
+                       '_plugin_agent_inject_file')
+    def test_spawn_ssh_key_injection_non_rsa(
+            self, mock_plugin_agent_inject_file, mock_ssh_encrypt_text):
         # Test spawning with key_data on an instance.  Should use
         # agent file injection.
         self.flags(use_agent_default=True,
                    group='xenserver')
         actual_injected_files = []
 
-        def fake_inject_file(self, method, args):
+        def fake_inject_file(method, args):
             path = base64.b64decode(args['b64_path'])
             contents = base64.b64decode(args['b64_contents'])
             actual_injected_files.append((path, contents))
             return jsonutils.dumps({'returncode': '0', 'message': 'success'})
-
-        self.stubs.Set(stubs.FakeSessionForVMTests,
-                       '_plugin_agent_inject_file', fake_inject_file)
-
-        def fake_encrypt_text(sshkey, new_pass):
-            raise NotImplementedError("Should not be called")
-
-        self.stubs.Set(crypto, 'ssh_encrypt_text', fake_encrypt_text)
+        mock_plugin_agent_inject_file.side_effect = fake_inject_file
 
         expected_data = (b'\n# The following ssh key was injected by '
                          b'Nova\nssh-dsa fake_keydata\n')
@@ -1129,19 +1121,20 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
                          key_data='ssh-dsa fake_keydata')
         self.assertEqual(actual_injected_files, injected_files)
 
-    def test_spawn_injected_files(self):
+    @mock.patch.object(stubs.FakeSessionForVMTests,
+                       '_plugin_agent_inject_file')
+    def test_spawn_injected_files(self, mock_plugin_agent_inject_file):
         # Test spawning with injected_files.
         self.flags(use_agent_default=True,
                    group='xenserver')
         actual_injected_files = []
 
-        def fake_inject_file(self, method, args):
+        def fake_inject_file(method, args):
             path = base64.b64decode(args['b64_path'])
             contents = base64.b64decode(args['b64_contents'])
             actual_injected_files.append((path, contents))
             return jsonutils.dumps({'returncode': '0', 'message': 'success'})
-        self.stubs.Set(stubs.FakeSessionForVMTests,
-                       '_plugin_agent_inject_file', fake_inject_file)
+        mock_plugin_agent_inject_file.side_effect = fake_inject_file
 
         injected_files = [(b'/tmp/foo', b'foobar')]
         self._test_spawn(IMAGE_VHD, None, None,
@@ -1177,51 +1170,45 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
         self._test_spawn_fails_silently_with(exception.AgentError,
                 method="_plugin_agent_agentupdate", failure="fake_error")
 
-    def test_spawn_with_resetnetwork_alternative_returncode(self):
+    @mock.patch.object(stubs.FakeSessionForVMTests,
+                       '_plugin_agent_resetnetwork')
+    def test_spawn_with_resetnetwork_alternative_returncode(
+            self, mock_plugin_agent_resetnetwork):
         self.flags(use_agent_default=True,
                    group='xenserver')
 
-        def fake_resetnetwork(self, method, args):
-            fake_resetnetwork.called = True
+        def fake_resetnetwork(method, args):
             # NOTE(johngarbutt): as returned by FreeBSD and Gentoo
             return jsonutils.dumps({'returncode': '500',
                                     'message': 'success'})
-        self.stubs.Set(stubs.FakeSessionForVMTests,
-                       '_plugin_agent_resetnetwork', fake_resetnetwork)
-        fake_resetnetwork.called = False
+        mock_plugin_agent_resetnetwork.side_effect = fake_resetnetwork
 
         self._test_spawn(IMAGE_VHD, None, None,
                          os_type="linux", architecture="x86-64")
-        self.assertTrue(fake_resetnetwork.called)
+        self.assertTrue(mock_plugin_agent_resetnetwork.called)
 
+    @mock.patch.object(compute_utils, 'add_instance_fault_from_exc')
     def _test_spawn_fails_silently_with(self, expected_exception_cls,
+                                        mock_add_instance_fault_from_exc,
                                         method="_plugin_agent_version",
                                         failure=None, value=None):
         self.flags(use_agent_default=True,
                    agent_version_timeout=0,
                    group='xenserver')
 
-        def fake_agent_call(self, method, args):
+        def fake_agent_call(method, args):
             if failure:
                 raise XenAPI.Failure([failure])
             else:
                 return value
 
-        self.stubs.Set(stubs.FakeSessionForVMTests,
-                       method, fake_agent_call)
-
-        called = {}
-
-        def fake_add_instance_fault(*args, **kwargs):
-            called["fake_add_instance_fault"] = args[2]
-
-        self.stubs.Set(compute_utils, 'add_instance_fault_from_exc',
-                       fake_add_instance_fault)
-
-        self._test_spawn(IMAGE_VHD, None, None,
-                         os_type="linux", architecture="x86-64")
-        actual_exception = called["fake_add_instance_fault"]
-        self.assertIsInstance(actual_exception, expected_exception_cls)
+        with mock.patch.object(stubs.FakeSessionForVMTests, method,
+                               side_effect=fake_agent_call):
+            self._test_spawn(IMAGE_VHD, None, None,
+                             os_type="linux", architecture="x86-64")
+            mock_add_instance_fault_from_exc.assert_called_once_with(
+                mock.ANY, mock.ANY, test.MatchType(expected_exception_cls),
+                exc_info=mock.ANY)
 
     def test_spawn_fails_silently_with_agent_timeout(self):
         self._test_spawn_fails_silently_with(exception.AgentTimeout,
@@ -1303,18 +1290,17 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
 
         # raise an error in the spawn setup process and trigger the
         # undo manager logic:
-        def fake_start(*args, **kwargs):
-            raise test.TestingException('Start Error')
+        with mock.patch.object(
+                self.conn._vmops, '_start',
+                side_effect=test.TestingException('Start Error')):
+            self.assertRaises(test.TestingException, self.conn.rescue,
+                              self.context, instance, [], image_meta, '')
 
-        self.stubs.Set(self.conn._vmops, '_start', fake_start)
-
-        self.assertRaises(test.TestingException, self.conn.rescue,
-                          self.context, instance, [], image_meta, '')
-
-        # confirm original disk still exists:
-        vdi_ref2, vdi_rec2 = vm_utils.get_vdi_for_vm_safely(session, vm_ref)
-        self.assertEqual(vdi_ref, vdi_ref2)
-        self.assertEqual(vdi_rec['uuid'], vdi_rec2['uuid'])
+            # confirm original disk still exists:
+            vdi_ref2, vdi_rec2 = vm_utils.get_vdi_for_vm_safely(session,
+                                                                vm_ref)
+            self.assertEqual(vdi_ref, vdi_ref2)
+            self.assertEqual(vdi_rec['uuid'], vdi_rec2['uuid'])
 
     def test_unrescue(self):
         instance = self._create_instance(obj=True)
@@ -1353,15 +1339,14 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         conn.reboot(self.context, instance, None, "HARD")
 
-    def test_poll_rebooting_instances(self):
-        self.mox.StubOutWithMock(compute_api.API, 'reboot')
-        compute_api.API.reboot(mox.IgnoreArg(), mox.IgnoreArg(),
-                               mox.IgnoreArg())
-        self.mox.ReplayAll()
+    @mock.patch.object(compute_api.API, 'reboot')
+    def test_poll_rebooting_instances(self, mock_reboot):
         instance = self._create_instance()
         instances = [instance]
         conn = xenapi_conn.XenAPIDriver(fake.FakeVirtAPI(), False)
         conn.poll_rebooting_instances(60, instances)
+
+        mock_reboot.assert_called_once_with(mock.ANY, mock.ANY, mock.ANY)
 
     def test_reboot_soft(self):
         instance = self._create_instance()
@@ -1399,15 +1384,15 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
                                                 instance['name'], True)
 
     def test_get_console_output_succeeds(self):
-
         def fake_get_console_output(instance):
             self.assertEqual("instance", instance)
             return "console_log"
-        self.stubs.Set(self.conn._vmops, 'get_console_output',
-                       fake_get_console_output)
 
-        self.assertEqual(self.conn.get_console_output('context', "instance"),
-                         "console_log")
+        with mock.patch.object(self.conn._vmops, 'get_console_output',
+                               side_effect=fake_get_console_output):
+            self.assertEqual(
+                self.conn.get_console_output('context', "instance"),
+                "console_log")
 
     def _test_maintenance_mode(self, find_host, find_aggregate):
         real_call_xenapi = self.conn._session.call_xenapi
@@ -1416,12 +1401,13 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
 
         # Record all the xenapi calls, and return a fake list of hosts
         # for the host.get_all call
-        def fake_call_xenapi(method, *args):
+        def fake_call_xenapi(self, method, *args):
             api_calls[method] = args
             if method == 'host.get_all':
                 return ['foo', 'bar', 'baz']
             return real_call_xenapi(method, *args)
-        self.stubs.Set(self.conn._session, 'call_xenapi', fake_call_xenapi)
+        self.stub_out('os_xenapi.client.session.XenAPISession.call_xenapi',
+                      fake_call_xenapi)
 
         def fake_aggregate_get(context, host, key):
             if find_aggregate:
@@ -1436,7 +1422,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
                 return 'bar'
             else:
                 raise exception.NoValidHost("I saw this one coming...")
-        self.stubs.Set(host, '_host_find', fake_host_find)
+        self.stub_out('nova.virt.xenapi.host._host_find', fake_host_find)
 
         result = self.conn.host_maintenance_mode('bar', 'on_maintenance')
         self.assertEqual(result, 'on_maintenance')
@@ -1463,18 +1449,19 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
         self.assertRaises(exception.NotFound,
                           self._test_maintenance_mode, True, False)
 
-    def test_uuid_find(self):
-        self.mox.StubOutWithMock(db, 'instance_get_all_by_host')
+    @mock.patch.object(db, 'instance_get_all_by_host')
+    def test_uuid_find(self, mock_instance_get_all_by_host):
         fake_inst = fake_instance.fake_db_instance(id=123)
         fake_inst2 = fake_instance.fake_db_instance(id=456)
-        db.instance_get_all_by_host(self.context, fake_inst['host'],
-                                    columns_to_join=None
-                                    ).AndReturn([fake_inst, fake_inst2])
-        self.mox.ReplayAll()
+        mock_instance_get_all_by_host.return_value = [fake_inst, fake_inst2]
         expected_name = CONF.instance_name_template % fake_inst['id']
+
         inst_uuid = host._uuid_find(self.context, fake_inst['host'],
                                     expected_name)
+
         self.assertEqual(inst_uuid, fake_inst['uuid'])
+        mock_instance_get_all_by_host.assert_called_once_with(
+            self.context, fake_inst['host'], columns_to_join=None)
 
     def test_per_instance_usage_running(self):
         instance = self._create_instance(spawn=True)
@@ -1534,22 +1521,16 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
             return instance
         return base.obj_to_primitive(instance)
 
-    def test_destroy_clean_up_kernel_and_ramdisk(self):
-        def fake_lookup_kernel_ramdisk(session, vm_ref):
-            return "kernel", "ramdisk"
-
-        self.stubs.Set(vm_utils, "lookup_kernel_ramdisk",
-                       fake_lookup_kernel_ramdisk)
-
+    @mock.patch.object(vm_utils, 'destroy_kernel_ramdisk')
+    @mock.patch.object(vm_utils, 'lookup_kernel_ramdisk',
+                       return_value=('kernel', 'ramdisk'))
+    def test_destroy_clean_up_kernel_and_ramdisk(
+            self, mock_lookup_kernel_ramdisk, mock_destroy_kernel_ramdisk):
         def fake_destroy_kernel_ramdisk(session, instance, kernel, ramdisk):
-            fake_destroy_kernel_ramdisk.called = True
             self.assertEqual("kernel", kernel)
             self.assertEqual("ramdisk", ramdisk)
 
-        fake_destroy_kernel_ramdisk.called = False
-
-        self.stubs.Set(vm_utils, "destroy_kernel_ramdisk",
-                       fake_destroy_kernel_ramdisk)
+        mock_destroy_kernel_ramdisk.side_effect = fake_destroy_kernel_ramdisk
 
         instance = self._create_instance(spawn=True, obj=True)
         network_info = fake_network.fake_get_instance_nw_info(self)
@@ -1557,7 +1538,7 @@ class XenAPIVMTestCase(stubs.XenAPITestBase,
 
         vm_ref = vm_utils.lookup(self.conn._session, instance['name'])
         self.assertIsNone(vm_ref)
-        self.assertTrue(fake_destroy_kernel_ramdisk.called)
+        self.assertTrue(mock_destroy_kernel_ramdisk.called)
 
 
 class XenAPIDiffieHellmanTestCase(test.NoDBTestCase):
