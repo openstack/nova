@@ -1,22 +1,22 @@
 {
     "instanceActions": [
         {
-            "action": "%(action)s",
+            "action": "stop",
             "instance_uuid": "%(uuid)s",
             "request_id": "%(request_id)s",
-            "user_id": "%(integer_id)s",
-            "project_id": "%(integer_id)s",
+            "user_id": "%(user_id)s",
+            "project_id": "%(project_id)s",
             "start_time": "%(strtime)s",
-            "message": ""
+            "message": null
         },
         {
-            "action": "%(action)s",
+            "action": "create",
             "instance_uuid": "%(uuid)s",
             "request_id": "%(request_id)s",
-            "user_id": "%(integer_id)s",
-            "project_id": "%(integer_id)s",
+            "user_id": "%(user_id)s",
+            "project_id": "%(project_id)s",
             "start_time": "%(strtime)s",
-            "message": ""
+            "message": null
         }
     ]
 }

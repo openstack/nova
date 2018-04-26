@@ -8,7 +8,7 @@
             "project_id": "%(project_id)s",
             "start_time": "%(strtime)s",
             "updated_at": "%(strtime)s",
-            "message": ""
+            "message": null
         },
         {
             "action": "create",
@@ -18,7 +18,7 @@
             "project_id": "%(project_id)s",
             "start_time": "%(strtime)s",
             "updated_at": "%(strtime)s",
-            "message": ""
+            "message": null
         }
     ]
 }
