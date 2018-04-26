@@ -82,6 +82,9 @@ class TestSendInstanceUpdateNotification(test.NoDBTestCase):
 
         mock_get_notifier.return_value.info.assert_called_once_with(
             mock.sentinel.ctxt, 'compute.instance.update', mock.ANY)
+        mock_info.assert_called_once_with(
+            mock.sentinel.ctxt, mock.sentinel.instance, None, None,
+            populate_image_ref_url=True)
 
     @mock.patch('nova.image.api.API.generate_image_url',
                 side_effect=ks_exc.EndpointNotFound)
@@ -97,8 +100,8 @@ class TestSendInstanceUpdateNotification(test.NoDBTestCase):
         instance = fake_instance.fake_instance_obj(ctxt, image_ref=uuids.image)
         instance.system_metadata = {}
         instance.metadata = {}
-        payload = base.info_from_instance(
-            ctxt, instance, network_info=None, system_metadata=None)
+        payload = base.info_from_instance(ctxt, instance, network_info=None,
+            system_metadata=None, populate_image_ref_url=True)
         self.assertEqual(instance.image_ref, payload['image_ref_url'])
         mock_gen_image_url.assert_called_once_with(instance.image_ref, ctxt)
 
@@ -115,8 +118,20 @@ class TestSendInstanceUpdateNotification(test.NoDBTestCase):
         instance = fake_instance.fake_instance_obj(ctxt, image_ref=uuids.image)
         self.assertRaises(ks_exc.EndpointNotFound, base.info_from_instance,
                           ctxt, instance, network_info=None,
-                          system_metadata=None)
+                          system_metadata=None, populate_image_ref_url=True)
         mock_gen_image_url.assert_called_once_with(instance.image_ref, ctxt)
+
+    @mock.patch('nova.image.api.API.generate_image_url')
+    def test_info_from_instance_not_call_generate_image_url(
+            self, mock_gen_image_url):
+        ctxt = nova_context.get_admin_context()
+        instance = fake_instance.fake_instance_obj(ctxt, image_ref=uuids.image)
+        instance.system_metadata = {}
+        instance.metadata = {}
+        base.info_from_instance(ctxt, instance, network_info=None,
+            system_metadata=None, populate_image_ref_url=False)
+
+        mock_gen_image_url.assert_not_called()
 
 
 class TestBandwidthUsage(test.NoDBTestCase):

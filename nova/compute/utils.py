@@ -322,7 +322,8 @@ def notify_about_instance_usage(notifier, context, instance, event_suffix,
         extra_usage_info = {}
 
     usage_info = notifications.info_from_instance(context, instance,
-            network_info, system_metadata, **extra_usage_info)
+            network_info, system_metadata, populate_image_ref_url=True,
+            **extra_usage_info)
 
     if fault:
         # NOTE(johngarbutt) mirrors the format in wrap_exception
