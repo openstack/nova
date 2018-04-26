@@ -4167,6 +4167,18 @@ class _ComputeAPIUnitTestMixIn(object):
         mock_attach_create.assert_called_once_with(
             self.context, volume_id, instance.uuid)
 
+    def test_validate_bdm_missing_boot_index(self):
+        """Tests that _validate_bdm will fail if there is no boot_index=0 entry
+        """
+        bdms = objects.BlockDeviceMappingList(objects=[
+            objects.BlockDeviceMapping(
+                boot_index=None, image_id=uuids.image_id,
+                source_type='image', destination_type='volume')])
+        self.assertRaises(exception.InvalidBDMBootSequence,
+                          self.compute_api._validate_bdm,
+                          self.context, objects.Instance(), objects.Flavor(),
+                          bdms)
+
     def _test_provision_instances_with_cinder_error(self,
                                                     expected_exception):
         @mock.patch('nova.compute.utils.check_num_instances_quota')
