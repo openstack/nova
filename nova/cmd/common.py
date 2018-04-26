@@ -20,7 +20,6 @@
 from __future__ import print_function
 
 import argparse
-import inspect
 import traceback
 
 from oslo_log import log as logging
@@ -30,6 +29,7 @@ import nova.conf
 import nova.db.api
 from nova import exception
 from nova.i18n import _
+from nova import utils
 
 CONF = nova.conf.CONF
 LOG = logging.getLogger(__name__)
@@ -68,7 +68,7 @@ def validate_args(fn, *args, **kwargs):
     :param arg: the positional arguments supplied
     :param kwargs: the keyword arguments supplied
     """
-    argspec = inspect.getargspec(fn)
+    argspec = utils.getargspec(fn)
 
     num_defaults = len(argspec.defaults or [])
     required_args = argspec.args[:len(argspec.args) - num_defaults]

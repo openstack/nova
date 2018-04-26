@@ -14,7 +14,6 @@
 #    under the License.
 
 import functools
-import inspect
 
 from oslo_concurrency import lockutils
 from oslo_log import log as logging
@@ -25,6 +24,7 @@ from nova import hooks
 from nova.i18n import _
 from nova.network import model as network_model
 from nova import objects
+from nova import utils
 
 
 LOG = logging.getLogger(__name__)
@@ -64,7 +64,7 @@ def refresh_cache(f):
 
     Requires context and instance as function args
     """
-    argspec = inspect.getargspec(f)
+    argspec = utils.getargspec(f)
 
     @functools.wraps(f)
     def wrapper(self, context, *args, **kwargs):
