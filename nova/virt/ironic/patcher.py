@@ -110,7 +110,7 @@ class GenericDriverFields(object):
                     # to filter out traits not supported by the node.
                     if val == 'required':
                         traits.append(parsed_key)
-
+        traits.extend(image_meta.properties.get('traits_required', []))
         if capabilities:
             patch.append({'path': '/instance_info/capabilities',
                           'op': 'add', 'value': jsonutils.dumps(capabilities)})
