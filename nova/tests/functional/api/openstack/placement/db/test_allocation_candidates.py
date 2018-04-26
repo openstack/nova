@@ -21,11 +21,6 @@ from nova.tests.functional.api.openstack.placement.db import test_base as tb
 from nova.tests import uuidsentinel as uuids
 
 
-_add_inventory = tb._add_inventory
-_allocate_from_provider = tb._allocate_from_provider
-_set_traits = tb._set_traits
-
-
 class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
 
     def test_get_provider_ids_matching(self):
@@ -37,119 +32,126 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
 
         # Inventory of adequate CPU and memory, no allocations against it.
         excl_big_cm_noalloc = self._create_provider('big_cm_noalloc')
-        _add_inventory(excl_big_cm_noalloc, fields.ResourceClass.VCPU, 15)
-        _add_inventory(excl_big_cm_noalloc, fields.ResourceClass.MEMORY_MB,
-                       4096, max_unit=2048)
+        tb.add_inventory(excl_big_cm_noalloc, fields.ResourceClass.VCPU, 15)
+        tb.add_inventory(excl_big_cm_noalloc, fields.ResourceClass.MEMORY_MB,
+                         4096, max_unit=2048)
 
         # Adequate inventory, no allocations against it.
         incl_biginv_noalloc = self._create_provider('biginv_noalloc')
-        _add_inventory(incl_biginv_noalloc, fields.ResourceClass.VCPU, 15)
-        _add_inventory(incl_biginv_noalloc, fields.ResourceClass.MEMORY_MB,
-                       4096, max_unit=2048)
-        _add_inventory(incl_biginv_noalloc, fields.ResourceClass.DISK_GB, 2000)
+        tb.add_inventory(incl_biginv_noalloc, fields.ResourceClass.VCPU, 15)
+        tb.add_inventory(incl_biginv_noalloc, fields.ResourceClass.MEMORY_MB,
+                         4096, max_unit=2048)
+        tb.add_inventory(incl_biginv_noalloc, fields.ResourceClass.DISK_GB,
+                         2000)
 
         # No allocations, but inventory unusable.  Try to hit all the possible
         # reasons for exclusion.
         # VCPU min_unit too high
         excl_badinv_min_unit = self._create_provider('badinv_min_unit')
-        _add_inventory(excl_badinv_min_unit, fields.ResourceClass.VCPU, 12,
-                       min_unit=6)
-        _add_inventory(excl_badinv_min_unit, fields.ResourceClass.MEMORY_MB,
-                       4096, max_unit=2048)
-        _add_inventory(excl_badinv_min_unit, fields.ResourceClass.DISK_GB,
-                       2000)
+        tb.add_inventory(excl_badinv_min_unit, fields.ResourceClass.VCPU, 12,
+                         min_unit=6)
+        tb.add_inventory(excl_badinv_min_unit, fields.ResourceClass.MEMORY_MB,
+                         4096, max_unit=2048)
+        tb.add_inventory(excl_badinv_min_unit, fields.ResourceClass.DISK_GB,
+                         2000)
         # MEMORY_MB max_unit too low
         excl_badinv_max_unit = self._create_provider('badinv_max_unit')
-        _add_inventory(excl_badinv_max_unit, fields.ResourceClass.VCPU, 15)
-        _add_inventory(excl_badinv_max_unit, fields.ResourceClass.MEMORY_MB,
-                       4096, max_unit=512)
-        _add_inventory(excl_badinv_max_unit, fields.ResourceClass.DISK_GB,
-                       2000)
+        tb.add_inventory(excl_badinv_max_unit, fields.ResourceClass.VCPU, 15)
+        tb.add_inventory(excl_badinv_max_unit, fields.ResourceClass.MEMORY_MB,
+                         4096, max_unit=512)
+        tb.add_inventory(excl_badinv_max_unit, fields.ResourceClass.DISK_GB,
+                         2000)
         # DISK_GB unsuitable step_size
         excl_badinv_step_size = self._create_provider('badinv_step_size')
-        _add_inventory(excl_badinv_step_size, fields.ResourceClass.VCPU, 15)
-        _add_inventory(excl_badinv_step_size, fields.ResourceClass.MEMORY_MB,
-                       4096, max_unit=2048)
-        _add_inventory(excl_badinv_step_size, fields.ResourceClass.DISK_GB,
-                       2000, step_size=7)
+        tb.add_inventory(excl_badinv_step_size, fields.ResourceClass.VCPU, 15)
+        tb.add_inventory(excl_badinv_step_size, fields.ResourceClass.MEMORY_MB,
+                         4096, max_unit=2048)
+        tb.add_inventory(excl_badinv_step_size, fields.ResourceClass.DISK_GB,
+                         2000, step_size=7)
         # Not enough total VCPU
         excl_badinv_total = self._create_provider('badinv_total')
-        _add_inventory(excl_badinv_total, fields.ResourceClass.VCPU, 4)
-        _add_inventory(excl_badinv_total, fields.ResourceClass.MEMORY_MB,
-                       4096, max_unit=2048)
-        _add_inventory(excl_badinv_total, fields.ResourceClass.DISK_GB, 2000)
+        tb.add_inventory(excl_badinv_total, fields.ResourceClass.VCPU, 4)
+        tb.add_inventory(excl_badinv_total, fields.ResourceClass.MEMORY_MB,
+                         4096, max_unit=2048)
+        tb.add_inventory(excl_badinv_total, fields.ResourceClass.DISK_GB, 2000)
         # Too much reserved MEMORY_MB
         excl_badinv_reserved = self._create_provider('badinv_reserved')
-        _add_inventory(excl_badinv_reserved, fields.ResourceClass.VCPU, 15)
-        _add_inventory(excl_badinv_reserved, fields.ResourceClass.MEMORY_MB,
-                       4096, max_unit=2048, reserved=3500)
-        _add_inventory(excl_badinv_reserved, fields.ResourceClass.DISK_GB,
-                       2000)
+        tb.add_inventory(excl_badinv_reserved, fields.ResourceClass.VCPU, 15)
+        tb.add_inventory(excl_badinv_reserved, fields.ResourceClass.MEMORY_MB,
+                         4096, max_unit=2048, reserved=3500)
+        tb.add_inventory(excl_badinv_reserved, fields.ResourceClass.DISK_GB,
+                         2000)
         # DISK_GB allocation ratio blows it up
         excl_badinv_alloc_ratio = self._create_provider('badinv_alloc_ratio')
-        _add_inventory(excl_badinv_alloc_ratio, fields.ResourceClass.VCPU, 15)
-        _add_inventory(excl_badinv_alloc_ratio, fields.ResourceClass.MEMORY_MB,
-                       4096, max_unit=2048)
-        _add_inventory(excl_badinv_alloc_ratio, fields.ResourceClass.DISK_GB,
-                       2000, allocation_ratio=0.5)
+        tb.add_inventory(excl_badinv_alloc_ratio, fields.ResourceClass.VCPU,
+                         15)
+        tb.add_inventory(excl_badinv_alloc_ratio,
+                         fields.ResourceClass.MEMORY_MB, 4096, max_unit=2048)
+        tb.add_inventory(excl_badinv_alloc_ratio, fields.ResourceClass.DISK_GB,
+                         2000, allocation_ratio=0.5)
 
         # Inventory consumed in one RC, but available in the others
         excl_1invunavail = self._create_provider('1invunavail')
-        _add_inventory(excl_1invunavail, fields.ResourceClass.VCPU, 10)
-        _allocate_from_provider(excl_1invunavail, fields.ResourceClass.VCPU, 7)
-        _add_inventory(excl_1invunavail, fields.ResourceClass.MEMORY_MB, 4096)
-        _allocate_from_provider(excl_1invunavail,
-                                fields.ResourceClass.MEMORY_MB, 1024)
-        _add_inventory(excl_1invunavail, fields.ResourceClass.DISK_GB, 2000)
-        _allocate_from_provider(excl_1invunavail,
-                                fields.ResourceClass.DISK_GB, 400)
+        tb.add_inventory(excl_1invunavail, fields.ResourceClass.VCPU, 10)
+        tb.allocate_from_provider(excl_1invunavail, fields.ResourceClass.VCPU,
+                                  7)
+        tb.add_inventory(excl_1invunavail, fields.ResourceClass.MEMORY_MB,
+                         4096)
+        tb.allocate_from_provider(excl_1invunavail,
+                                  fields.ResourceClass.MEMORY_MB, 1024)
+        tb.add_inventory(excl_1invunavail, fields.ResourceClass.DISK_GB, 2000)
+        tb.allocate_from_provider(excl_1invunavail,
+                                  fields.ResourceClass.DISK_GB, 400)
 
         # Inventory all consumed
         excl_allused = self._create_provider('allused')
-        _add_inventory(excl_allused, fields.ResourceClass.VCPU, 10)
-        _allocate_from_provider(excl_allused, fields.ResourceClass.VCPU, 7)
-        _add_inventory(excl_allused, fields.ResourceClass.MEMORY_MB, 4000)
-        _allocate_from_provider(excl_allused,
-                                fields.ResourceClass.MEMORY_MB, 1500)
-        _allocate_from_provider(excl_allused,
-                                fields.ResourceClass.MEMORY_MB, 2000)
-        _add_inventory(excl_allused, fields.ResourceClass.DISK_GB, 1500)
-        _allocate_from_provider(excl_allused, fields.ResourceClass.DISK_GB, 1)
+        tb.add_inventory(excl_allused, fields.ResourceClass.VCPU, 10)
+        tb.allocate_from_provider(excl_allused, fields.ResourceClass.VCPU, 7)
+        tb.add_inventory(excl_allused, fields.ResourceClass.MEMORY_MB, 4000)
+        tb.allocate_from_provider(excl_allused,
+                                  fields.ResourceClass.MEMORY_MB, 1500)
+        tb.allocate_from_provider(excl_allused,
+                                  fields.ResourceClass.MEMORY_MB, 2000)
+        tb.add_inventory(excl_allused, fields.ResourceClass.DISK_GB, 1500)
+        tb.allocate_from_provider(excl_allused, fields.ResourceClass.DISK_GB,
+                                  1)
 
         # Inventory available in requested classes, but unavailable in others
         incl_extra_full = self._create_provider('extra_full')
-        _add_inventory(incl_extra_full, fields.ResourceClass.VCPU, 20)
-        _allocate_from_provider(incl_extra_full, fields.ResourceClass.VCPU, 15)
-        _add_inventory(incl_extra_full, fields.ResourceClass.MEMORY_MB, 4096)
-        _allocate_from_provider(incl_extra_full,
-                                fields.ResourceClass.MEMORY_MB, 1024)
-        _add_inventory(incl_extra_full, fields.ResourceClass.DISK_GB, 2000)
-        _allocate_from_provider(incl_extra_full, fields.ResourceClass.DISK_GB,
-                                400)
-        _add_inventory(incl_extra_full, fields.ResourceClass.PCI_DEVICE, 4)
-        _allocate_from_provider(incl_extra_full,
-                                fields.ResourceClass.PCI_DEVICE, 1)
-        _allocate_from_provider(incl_extra_full,
-                                fields.ResourceClass.PCI_DEVICE, 3)
+        tb.add_inventory(incl_extra_full, fields.ResourceClass.VCPU, 20)
+        tb.allocate_from_provider(incl_extra_full, fields.ResourceClass.VCPU,
+                                  15)
+        tb.add_inventory(incl_extra_full, fields.ResourceClass.MEMORY_MB, 4096)
+        tb.allocate_from_provider(incl_extra_full,
+                                  fields.ResourceClass.MEMORY_MB, 1024)
+        tb.add_inventory(incl_extra_full, fields.ResourceClass.DISK_GB, 2000)
+        tb.allocate_from_provider(incl_extra_full,
+                                  fields.ResourceClass.DISK_GB, 400)
+        tb.add_inventory(incl_extra_full, fields.ResourceClass.PCI_DEVICE, 4)
+        tb.allocate_from_provider(incl_extra_full,
+                                  fields.ResourceClass.PCI_DEVICE, 1)
+        tb.allocate_from_provider(incl_extra_full,
+                                  fields.ResourceClass.PCI_DEVICE, 3)
 
         # Inventory available in a unrequested classes, not in requested ones
         excl_extra_avail = self._create_provider('extra_avail')
         # Incompatible step size
-        _add_inventory(excl_extra_avail, fields.ResourceClass.VCPU, 10,
-                       step_size=3)
+        tb.add_inventory(excl_extra_avail, fields.ResourceClass.VCPU, 10,
+                         step_size=3)
         # Not enough left after reserved + used
-        _add_inventory(excl_extra_avail, fields.ResourceClass.MEMORY_MB, 4096,
-                       max_unit=2048, reserved=2048)
-        _allocate_from_provider(excl_extra_avail,
-                                fields.ResourceClass.MEMORY_MB, 1040)
+        tb.add_inventory(excl_extra_avail, fields.ResourceClass.MEMORY_MB,
+                         4096, max_unit=2048, reserved=2048)
+        tb.allocate_from_provider(excl_extra_avail,
+                                  fields.ResourceClass.MEMORY_MB, 1040)
         # Allocation ratio math
-        _add_inventory(excl_extra_avail, fields.ResourceClass.DISK_GB, 2000,
-                       allocation_ratio=0.5)
-        _add_inventory(excl_extra_avail, fields.ResourceClass.IPV4_ADDRESS, 48)
+        tb.add_inventory(excl_extra_avail, fields.ResourceClass.DISK_GB, 2000,
+                         allocation_ratio=0.5)
+        tb.add_inventory(excl_extra_avail, fields.ResourceClass.IPV4_ADDRESS,
+                         48)
         custom_special = rp_obj.ResourceClass(self.ctx, name='CUSTOM_SPECIAL')
         custom_special.create()
-        _add_inventory(excl_extra_avail, 'CUSTOM_SPECIAL', 100)
-        _allocate_from_provider(excl_extra_avail, 'CUSTOM_SPECIAL', 99)
+        tb.add_inventory(excl_extra_avail, 'CUSTOM_SPECIAL', 100)
+        tb.allocate_from_provider(excl_extra_avail, 'CUSTOM_SPECIAL', 99)
 
         resources = {
             fields.ResourceClass.STANDARD.index(fields.ResourceClass.VCPU): 5,
@@ -202,15 +204,16 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
 
         # One trait
         cn2 = self._create_provider('cn2')
-        _set_traits(cn2, 'HW_CPU_X86_TBM')
+        tb.set_traits(cn2, 'HW_CPU_X86_TBM')
 
         # One the same as cn2
         cn3 = self._create_provider('cn3')
-        _set_traits(cn3, 'HW_CPU_X86_TBM', 'HW_CPU_X86_TSX', 'HW_CPU_X86_SGX')
+        tb.set_traits(cn3, 'HW_CPU_X86_TBM', 'HW_CPU_X86_TSX',
+                      'HW_CPU_X86_SGX')
 
         # Disjoint
         cn4 = self._create_provider('cn4')
-        _set_traits(cn4, 'HW_CPU_X86_SSE2', 'HW_CPU_X86_SSE3', 'CUSTOM_FOO')
+        tb.set_traits(cn4, 'HW_CPU_X86_SSE2', 'HW_CPU_X86_SSE3', 'CUSTOM_FOO')
 
         # Request with no traits not allowed
         self.assertRaises(
@@ -382,9 +385,9 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         allocation_requests and provider_summaries.
         """
         cn1 = self._create_provider('cn1')
-        _add_inventory(cn1, fields.ResourceClass.VCPU, 8)
-        _add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)
-        _add_inventory(cn1, fields.ResourceClass.DISK_GB, 2000)
+        tb.add_inventory(cn1, fields.ResourceClass.VCPU, 8)
+        tb.add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)
+        tb.add_inventory(cn1, fields.ResourceClass.DISK_GB, 2000)
 
         alloc_cands = self._get_allocation_candidates([
             placement_lib.RequestGroup(
@@ -423,14 +426,14 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         cn1, cn2, cn3 = (self._create_provider(name)
                          for name in ('cn1', 'cn2', 'cn3'))
         for cn in (cn1, cn2, cn3):
-            _add_inventory(cn, fields.ResourceClass.VCPU, 24,
-                           allocation_ratio=16.0)
-            _add_inventory(cn, fields.ResourceClass.MEMORY_MB, 32768,
-                           min_unit=64, step_size=64, allocation_ratio=1.5)
+            tb.add_inventory(cn, fields.ResourceClass.VCPU, 24,
+                             allocation_ratio=16.0)
+            tb.add_inventory(cn, fields.ResourceClass.MEMORY_MB, 32768,
+                             min_unit=64, step_size=64, allocation_ratio=1.5)
             total_gb = 1000 if cn.name == 'cn3' else 2000
-            _add_inventory(cn, fields.ResourceClass.DISK_GB, total_gb,
-                           reserved=100, min_unit=10, step_size=10,
-                           allocation_ratio=1.0)
+            tb.add_inventory(cn, fields.ResourceClass.DISK_GB, total_gb,
+                             reserved=100, min_unit=10, step_size=10,
+                             allocation_ratio=1.0)
 
         # Ask for the alternative placement possibilities and verify each
         # provider is returned
@@ -484,7 +487,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         # If we then associate the AVX2 trait to just compute node 2, we should
         # get back just that compute node in the provider summaries
-        _set_traits(cn2, 'HW_CPU_X86_AVX2')
+        tb.set_traits(cn2, 'HW_CPU_X86_AVX2')
 
         alloc_cands = self._get_allocation_candidates([
             placement_lib.RequestGroup(
@@ -542,14 +545,14 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # Create three compute node providers with VCPU, RAM and local disk
         for name in ('cn1', 'cn2', 'cn3'):
             cn = self._create_provider(name)
-            _add_inventory(cn, fields.ResourceClass.VCPU, 24,
-                           allocation_ratio=16.0)
-            _add_inventory(cn, fields.ResourceClass.MEMORY_MB, 32768,
-                           min_unit=64, step_size=64, allocation_ratio=1.5)
+            tb.add_inventory(cn, fields.ResourceClass.VCPU, 24,
+                             allocation_ratio=16.0)
+            tb.add_inventory(cn, fields.ResourceClass.MEMORY_MB, 32768,
+                             min_unit=64, step_size=64, allocation_ratio=1.5)
             total_gb = 1000 if name == 'cn3' else 2000
-            _add_inventory(cn, fields.ResourceClass.DISK_GB, total_gb,
-                           reserved=100, min_unit=10, step_size=10,
-                           allocation_ratio=1.0)
+            tb.add_inventory(cn, fields.ResourceClass.DISK_GB, total_gb,
+                             reserved=100, min_unit=10, step_size=10,
+                             allocation_ratio=1.0)
 
         # Ask for just one candidate.
         limit = 1
@@ -597,21 +600,21 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         cn1, cn2 = (self._create_provider(name, uuids.agg)
                     for name in ('cn1', 'cn2'))
         for cn in (cn1, cn2):
-            _add_inventory(cn, fields.ResourceClass.VCPU, 24,
-                           allocation_ratio=16.0)
-            _add_inventory(cn, fields.ResourceClass.MEMORY_MB, 1024,
-                           min_unit=64, allocation_ratio=1.5)
+            tb.add_inventory(cn, fields.ResourceClass.VCPU, 24,
+                             allocation_ratio=16.0)
+            tb.add_inventory(cn, fields.ResourceClass.MEMORY_MB, 1024,
+                             min_unit=64, allocation_ratio=1.5)
 
         # Create the shared storage pool, asociated with the same aggregate
         ss = self._create_provider('shared storage', uuids.agg)
 
         # Give the shared storage pool some inventory of DISK_GB
-        _add_inventory(ss, fields.ResourceClass.DISK_GB, 2000, reserved=100,
-                       min_unit=10)
+        tb.add_inventory(ss, fields.ResourceClass.DISK_GB, 2000, reserved=100,
+                         min_unit=10)
 
         # Mark the shared storage pool as having inventory shared among any
         # provider associated via aggregate
-        _set_traits(ss, "MISC_SHARES_VIA_AGGREGATE")
+        tb.set_traits(ss, "MISC_SHARES_VIA_AGGREGATE")
 
         # Ask for the alternative placement possibilities and verify each
         # compute node provider is listed in the allocation requests as well as
@@ -759,7 +762,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         # Require the AVX2 trait but forbid CUSTOM_EXTRA_FASTER, which is
         # added to cn2
-        _set_traits(cn2, 'CUSTOM_EXTRA_FASTER')
+        tb.set_traits(cn2, 'CUSTOM_EXTRA_FASTER')
         alloc_cands = self._get_allocation_candidates([
             placement_lib.RequestGroup(
                 use_same_provider=False,
@@ -777,8 +780,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
         # Add disk to cn1, forbid sharing, and require the AVX2 trait.
         # This should result in getting only cn1.
-        _add_inventory(cn1, fields.ResourceClass.DISK_GB, 2048,
-                       allocation_ratio=1.5)
+        tb.add_inventory(cn1, fields.ResourceClass.DISK_GB, 2048,
+                         allocation_ratio=1.5)
         alloc_cands = self._get_allocation_candidates([
             placement_lib.RequestGroup(
                 use_same_provider=False,
@@ -809,10 +812,10 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # CUSTOM_MAGIC resources, associated with the aggregate.
         for name in ('cn1', 'cn2'):
             cn = self._create_provider(name, agg_uuid)
-            _add_inventory(cn, fields.ResourceClass.VCPU, 24,
-                           allocation_ratio=16.0)
-            _add_inventory(cn, fields.ResourceClass.MEMORY_MB, 1024,
-                           min_unit=64, allocation_ratio=1.5)
+            tb.add_inventory(cn, fields.ResourceClass.VCPU, 24,
+                             allocation_ratio=16.0)
+            tb.add_inventory(cn, fields.ResourceClass.MEMORY_MB, 1024,
+                             min_unit=64, allocation_ratio=1.5)
 
         # Create a custom resource called MAGIC
         magic_rc = rp_obj.ResourceClass(
@@ -825,12 +828,12 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # the same aggregate
         magic_p = self._create_provider('shared custom resource provider',
                                         agg_uuid)
-        _add_inventory(magic_p, magic_rc.name, 2048, reserved=1024,
-                       min_unit=10)
+        tb.add_inventory(magic_p, magic_rc.name, 2048, reserved=1024,
+                         min_unit=10)
 
         # Mark the magic provider as having inventory shared among any provider
         # associated via aggregate
-        _set_traits(magic_p, "MISC_SHARES_VIA_AGGREGATE")
+        tb.set_traits(magic_p, "MISC_SHARES_VIA_AGGREGATE")
 
         # The resources we will request
         requested_resources = {
@@ -885,23 +888,23 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # cn3 is not associated with the aggregate
         cn3 = self._create_provider('cn3')
         for cn in (cn1, cn2, cn3):
-            _add_inventory(cn, fields.ResourceClass.VCPU, 24,
-                           allocation_ratio=16.0)
-            _add_inventory(cn, fields.ResourceClass.MEMORY_MB, 1024,
-                           min_unit=64, allocation_ratio=1.5)
+            tb.add_inventory(cn, fields.ResourceClass.VCPU, 24,
+                             allocation_ratio=16.0)
+            tb.add_inventory(cn, fields.ResourceClass.MEMORY_MB, 1024,
+                             min_unit=64, allocation_ratio=1.5)
         # Only cn3 has disk
-        _add_inventory(cn3, fields.ResourceClass.DISK_GB, 2000,
-                       reserved=100, min_unit=10)
+        tb.add_inventory(cn3, fields.ResourceClass.DISK_GB, 2000,
+                         reserved=100, min_unit=10)
 
         # Create the shared storage pool in the same aggregate as the first two
         # compute nodes
         ss = self._create_provider('shared storage', uuids.agg)
 
         # Give the shared storage pool some inventory of DISK_GB
-        _add_inventory(ss, fields.ResourceClass.DISK_GB, 2000, reserved=100,
-                       min_unit=10)
+        tb.add_inventory(ss, fields.ResourceClass.DISK_GB, 2000, reserved=100,
+                         min_unit=10)
 
-        _set_traits(ss, "MISC_SHARES_VIA_AGGREGATE")
+        tb.set_traits(ss, "MISC_SHARES_VIA_AGGREGATE")
 
         alloc_cands = self._get_allocation_candidates()
 
@@ -962,7 +965,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # nodes, we should get back all compute nodes since they all now
         # satisfy the required traits as well as the resource request
         for cn in (cn1, cn2, cn3):
-            _set_traits(cn, os_traits.HW_CPU_X86_AVX2)
+            tb.set_traits(cn, os_traits.HW_CPU_X86_AVX2)
 
         alloc_cands = self._get_allocation_candidates(requests=[
             placement_lib.RequestGroup(
@@ -1009,7 +1012,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # that will ONLY be satisfied by a compute node with local disk that
         # has SSD drives. Set this trait only on the compute node with local
         # disk (cn3)
-        _set_traits(cn3, os_traits.HW_CPU_X86_AVX2, os_traits.STORAGE_DISK_SSD)
+        tb.set_traits(cn3, os_traits.HW_CPU_X86_AVX2,
+                      os_traits.STORAGE_DISK_SSD)
 
         alloc_cands = self._get_allocation_candidates([
             placement_lib.RequestGroup(
@@ -1046,13 +1050,13 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
     def test_common_rc(self):
         """Candidates when cn and shared have inventory in the same class."""
         cn = self._create_provider('cn', uuids.agg1)
-        _add_inventory(cn, fields.ResourceClass.VCPU, 24)
-        _add_inventory(cn, fields.ResourceClass.MEMORY_MB, 2048)
-        _add_inventory(cn, fields.ResourceClass.DISK_GB, 1600)
+        tb.add_inventory(cn, fields.ResourceClass.VCPU, 24)
+        tb.add_inventory(cn, fields.ResourceClass.MEMORY_MB, 2048)
+        tb.add_inventory(cn, fields.ResourceClass.DISK_GB, 1600)
 
         ss = self._create_provider('ss', uuids.agg1)
-        _set_traits(ss, "MISC_SHARES_VIA_AGGREGATE")
-        _add_inventory(ss, fields.ResourceClass.DISK_GB, 1600)
+        tb.set_traits(ss, "MISC_SHARES_VIA_AGGREGATE")
+        tb.add_inventory(ss, fields.ResourceClass.DISK_GB, 1600)
 
         alloc_cands = self._get_allocation_candidates()
 
@@ -1088,16 +1092,16 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # use_same_provider=False
 
         cn = self._create_provider('cn', uuids.agg1)
-        _add_inventory(cn, fields.ResourceClass.VCPU, 24)
-        _add_inventory(cn, fields.ResourceClass.MEMORY_MB, 2048)
-        _add_inventory(cn, fields.ResourceClass.DISK_GB, 1600)
+        tb.add_inventory(cn, fields.ResourceClass.VCPU, 24)
+        tb.add_inventory(cn, fields.ResourceClass.MEMORY_MB, 2048)
+        tb.add_inventory(cn, fields.ResourceClass.DISK_GB, 1600)
         # The compute node's disk is SSD
-        _set_traits(cn, 'HW_CPU_X86_SSE', 'STORAGE_DISK_SSD')
+        tb.set_traits(cn, 'HW_CPU_X86_SSE', 'STORAGE_DISK_SSD')
 
         ss = self._create_provider('ss', uuids.agg1)
-        _add_inventory(ss, fields.ResourceClass.DISK_GB, 1600)
+        tb.add_inventory(ss, fields.ResourceClass.DISK_GB, 1600)
         # The shared storage's disk is RAID
-        _set_traits(ss, 'MISC_SHARES_VIA_AGGREGATE', 'CUSTOM_RAID')
+        tb.set_traits(ss, 'MISC_SHARES_VIA_AGGREGATE', 'CUSTOM_RAID')
 
         alloc_cands = self._get_allocation_candidates([
             placement_lib.RequestGroup(
@@ -1134,10 +1138,10 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
     def test_only_one_sharing_provider(self):
         ss1 = self._create_provider('ss1', uuids.agg1)
-        _set_traits(ss1, "MISC_SHARES_VIA_AGGREGATE")
-        _add_inventory(ss1, fields.ResourceClass.IPV4_ADDRESS, 24)
-        _add_inventory(ss1, fields.ResourceClass.SRIOV_NET_VF, 16)
-        _add_inventory(ss1, fields.ResourceClass.DISK_GB, 1600)
+        tb.set_traits(ss1, "MISC_SHARES_VIA_AGGREGATE")
+        tb.add_inventory(ss1, fields.ResourceClass.IPV4_ADDRESS, 24)
+        tb.add_inventory(ss1, fields.ResourceClass.SRIOV_NET_VF, 16)
+        tb.add_inventory(ss1, fields.ResourceClass.DISK_GB, 1600)
 
         alloc_cands = self._get_allocation_candidates([
             placement_lib.RequestGroup(
@@ -1168,12 +1172,12 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
     def test_all_sharing_providers_no_rc_overlap(self):
         ss1 = self._create_provider('ss1', uuids.agg1)
-        _set_traits(ss1, "MISC_SHARES_VIA_AGGREGATE")
-        _add_inventory(ss1, fields.ResourceClass.IPV4_ADDRESS, 24)
+        tb.set_traits(ss1, "MISC_SHARES_VIA_AGGREGATE")
+        tb.add_inventory(ss1, fields.ResourceClass.IPV4_ADDRESS, 24)
 
         ss2 = self._create_provider('ss2', uuids.agg1)
-        _set_traits(ss2, "MISC_SHARES_VIA_AGGREGATE")
-        _add_inventory(ss2, fields.ResourceClass.DISK_GB, 1600)
+        tb.set_traits(ss2, "MISC_SHARES_VIA_AGGREGATE")
+        tb.add_inventory(ss2, fields.ResourceClass.DISK_GB, 1600)
 
         alloc_cands = self._get_allocation_candidates([
             placement_lib.RequestGroup(
@@ -1203,13 +1207,13 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
     def test_all_sharing_providers_no_rc_overlap_more_classes(self):
         ss1 = self._create_provider('ss1', uuids.agg1)
-        _set_traits(ss1, "MISC_SHARES_VIA_AGGREGATE")
-        _add_inventory(ss1, fields.ResourceClass.IPV4_ADDRESS, 24)
-        _add_inventory(ss1, fields.ResourceClass.SRIOV_NET_VF, 16)
+        tb.set_traits(ss1, "MISC_SHARES_VIA_AGGREGATE")
+        tb.add_inventory(ss1, fields.ResourceClass.IPV4_ADDRESS, 24)
+        tb.add_inventory(ss1, fields.ResourceClass.SRIOV_NET_VF, 16)
 
         ss2 = self._create_provider('ss2', uuids.agg1)
-        _set_traits(ss2, "MISC_SHARES_VIA_AGGREGATE")
-        _add_inventory(ss2, fields.ResourceClass.DISK_GB, 1600)
+        tb.set_traits(ss2, "MISC_SHARES_VIA_AGGREGATE")
+        tb.add_inventory(ss2, fields.ResourceClass.DISK_GB, 1600)
 
         alloc_cands = self._get_allocation_candidates([
             placement_lib.RequestGroup(
@@ -1242,14 +1246,14 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
     def test_all_sharing_providers(self):
         ss1 = self._create_provider('ss1', uuids.agg1)
-        _set_traits(ss1, "MISC_SHARES_VIA_AGGREGATE")
-        _add_inventory(ss1, fields.ResourceClass.IPV4_ADDRESS, 24)
-        _add_inventory(ss1, fields.ResourceClass.SRIOV_NET_VF, 16)
-        _add_inventory(ss1, fields.ResourceClass.DISK_GB, 1600)
+        tb.set_traits(ss1, "MISC_SHARES_VIA_AGGREGATE")
+        tb.add_inventory(ss1, fields.ResourceClass.IPV4_ADDRESS, 24)
+        tb.add_inventory(ss1, fields.ResourceClass.SRIOV_NET_VF, 16)
+        tb.add_inventory(ss1, fields.ResourceClass.DISK_GB, 1600)
 
         ss2 = self._create_provider('ss2', uuids.agg1)
-        _set_traits(ss2, "MISC_SHARES_VIA_AGGREGATE")
-        _add_inventory(ss2, fields.ResourceClass.DISK_GB, 1600)
+        tb.set_traits(ss2, "MISC_SHARES_VIA_AGGREGATE")
+        tb.add_inventory(ss2, fields.ResourceClass.DISK_GB, 1600)
 
         alloc_cands = self._get_allocation_candidates(requests=[
             placement_lib.RequestGroup(
@@ -1296,16 +1300,16 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # It is different from test_mix_local_and_shared as it uses two
         # different aggregates to connect the two CNs to the share RP
         cn1 = self._create_provider('cn1', uuids.agg1)
-        _add_inventory(cn1, fields.ResourceClass.VCPU, 24)
-        _add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)
+        tb.add_inventory(cn1, fields.ResourceClass.VCPU, 24)
+        tb.add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)
 
         cn2 = self._create_provider('cn2', uuids.agg2)
-        _add_inventory(cn2, fields.ResourceClass.VCPU, 24)
-        _add_inventory(cn2, fields.ResourceClass.MEMORY_MB, 2048)
+        tb.add_inventory(cn2, fields.ResourceClass.VCPU, 24)
+        tb.add_inventory(cn2, fields.ResourceClass.MEMORY_MB, 2048)
 
         ss1 = self._create_provider('ss1', uuids.agg1, uuids.agg2)
-        _set_traits(ss1, "MISC_SHARES_VIA_AGGREGATE")
-        _add_inventory(ss1, fields.ResourceClass.DISK_GB, 1600)
+        tb.set_traits(ss1, "MISC_SHARES_VIA_AGGREGATE")
+        tb.add_inventory(ss1, fields.ResourceClass.DISK_GB, 1600)
 
         alloc_cands = self._get_allocation_candidates([
             placement_lib.RequestGroup(
@@ -1344,27 +1348,27 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         #   / agg3   \ agg1     / agg1   \ agg2
         #  SS3 (IPV4)   SS1 (DISK_GB)      SS2 (IPV4)
         cn1 = self._create_provider('cn1', uuids.agg1, uuids.agg3)
-        _add_inventory(cn1, fields.ResourceClass.VCPU, 24)
-        _add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)
+        tb.add_inventory(cn1, fields.ResourceClass.VCPU, 24)
+        tb.add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)
 
         cn2 = self._create_provider('cn2', uuids.agg1, uuids.agg2)
-        _add_inventory(cn2, fields.ResourceClass.VCPU, 24)
-        _add_inventory(cn2, fields.ResourceClass.MEMORY_MB, 2048)
+        tb.add_inventory(cn2, fields.ResourceClass.VCPU, 24)
+        tb.add_inventory(cn2, fields.ResourceClass.MEMORY_MB, 2048)
 
         # ss1 is connected to both cn1 and cn2
         ss1 = self._create_provider('ss1', uuids.agg1)
-        _set_traits(ss1, "MISC_SHARES_VIA_AGGREGATE")
-        _add_inventory(ss1, fields.ResourceClass.DISK_GB, 1600)
+        tb.set_traits(ss1, "MISC_SHARES_VIA_AGGREGATE")
+        tb.add_inventory(ss1, fields.ResourceClass.DISK_GB, 1600)
 
         # ss2 only connected to cn2
         ss2 = self._create_provider('ss2', uuids.agg2)
-        _set_traits(ss2, "MISC_SHARES_VIA_AGGREGATE")
-        _add_inventory(ss2, fields.ResourceClass.IPV4_ADDRESS, 24)
+        tb.set_traits(ss2, "MISC_SHARES_VIA_AGGREGATE")
+        tb.add_inventory(ss2, fields.ResourceClass.IPV4_ADDRESS, 24)
 
         # ss3 only connected to cn1
         ss3 = self._create_provider('ss3', uuids.agg3)
-        _set_traits(ss3, "MISC_SHARES_VIA_AGGREGATE")
-        _add_inventory(ss3, fields.ResourceClass.IPV4_ADDRESS, 24)
+        tb.set_traits(ss3, "MISC_SHARES_VIA_AGGREGATE")
+        tb.add_inventory(ss3, fields.ResourceClass.IPV4_ADDRESS, 24)
 
         alloc_cands = self._get_allocation_candidates([
             placement_lib.RequestGroup(
@@ -1412,12 +1416,12 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         #     ss1(DISK)        a sharing RP that also has some of the resources
         #                      (common-RC split case)
         cn1 = self._create_provider('cn1', uuids.agg1)
-        _add_inventory(cn1, fields.ResourceClass.VCPU, 24)
-        _add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)
-        _add_inventory(cn1, fields.ResourceClass.DISK_GB, 2000)
+        tb.add_inventory(cn1, fields.ResourceClass.VCPU, 24)
+        tb.add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)
+        tb.add_inventory(cn1, fields.ResourceClass.DISK_GB, 2000)
         ss1 = self._create_provider('ss1', uuids.agg1)
-        _add_inventory(ss1, fields.ResourceClass.DISK_GB, 2000)
-        _set_traits(ss1, 'MISC_SHARES_VIA_AGGREGATE')
+        tb.add_inventory(ss1, fields.ResourceClass.DISK_GB, 2000)
+        tb.set_traits(ss1, 'MISC_SHARES_VIA_AGGREGATE')
 
         alloc_cands = self._get_allocation_candidates()
         expected = [
@@ -1454,20 +1458,20 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # ss2_1(MEM)  ss2_2(DISK)   with different resources.
 
         cn1 = self._create_provider('cn1', uuids.agg1)
-        _add_inventory(cn1, fields.ResourceClass.VCPU, 24)
-        _add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)
+        tb.add_inventory(cn1, fields.ResourceClass.VCPU, 24)
+        tb.add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)
         ss1 = self._create_provider('ss1', uuids.agg1)
-        _add_inventory(ss1, fields.ResourceClass.DISK_GB, 2000)
-        _set_traits(ss1, 'MISC_SHARES_VIA_AGGREGATE')
+        tb.add_inventory(ss1, fields.ResourceClass.DISK_GB, 2000)
+        tb.set_traits(ss1, 'MISC_SHARES_VIA_AGGREGATE')
 
         cn2 = self._create_provider('cn2', uuids.agg2)
-        _add_inventory(cn2, fields.ResourceClass.VCPU, 24)
+        tb.add_inventory(cn2, fields.ResourceClass.VCPU, 24)
         ss2_1 = self._create_provider('ss2_1', uuids.agg2)
-        _add_inventory(ss2_1, fields.ResourceClass.MEMORY_MB, 2048)
-        _set_traits(ss2_1, 'MISC_SHARES_VIA_AGGREGATE')
+        tb.add_inventory(ss2_1, fields.ResourceClass.MEMORY_MB, 2048)
+        tb.set_traits(ss2_1, 'MISC_SHARES_VIA_AGGREGATE')
         ss2_2 = self._create_provider('ss2_2', uuids.agg2)
-        _add_inventory(ss2_2, fields.ResourceClass.DISK_GB, 2000)
-        _set_traits(ss2_2, 'MISC_SHARES_VIA_AGGREGATE')
+        tb.add_inventory(ss2_2, fields.ResourceClass.DISK_GB, 2000)
+        tb.set_traits(ss2_2, 'MISC_SHARES_VIA_AGGREGATE')
 
         alloc_cands = self._get_allocation_candidates()
         expected = [
@@ -1511,23 +1515,23 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # ss2_1(MEM)  ss2_2(DISK)   with different resources.
 
         cn1 = self._create_provider('cn1', uuids.agg1)
-        _add_inventory(cn1, fields.ResourceClass.VCPU, 24)
-        _add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)
+        tb.add_inventory(cn1, fields.ResourceClass.VCPU, 24)
+        tb.add_inventory(cn1, fields.ResourceClass.MEMORY_MB, 2048)
         ss1_1 = self._create_provider('ss1_1', uuids.agg1)
-        _add_inventory(ss1_1, fields.ResourceClass.DISK_GB, 2000)
-        _set_traits(ss1_1, 'MISC_SHARES_VIA_AGGREGATE')
+        tb.add_inventory(ss1_1, fields.ResourceClass.DISK_GB, 2000)
+        tb.set_traits(ss1_1, 'MISC_SHARES_VIA_AGGREGATE')
         ss1_2 = self._create_provider('ss1_2', uuids.agg1)
-        _add_inventory(ss1_2, fields.ResourceClass.DISK_GB, 2000)
-        _set_traits(ss1_2, 'MISC_SHARES_VIA_AGGREGATE')
+        tb.add_inventory(ss1_2, fields.ResourceClass.DISK_GB, 2000)
+        tb.set_traits(ss1_2, 'MISC_SHARES_VIA_AGGREGATE')
 
         cn2 = self._create_provider('cn2', uuids.agg2)
-        _add_inventory(cn2, fields.ResourceClass.VCPU, 24)
+        tb.add_inventory(cn2, fields.ResourceClass.VCPU, 24)
         ss2_1 = self._create_provider('ss2_1', uuids.agg2)
-        _add_inventory(ss2_1, fields.ResourceClass.MEMORY_MB, 2048)
-        _set_traits(ss2_1, 'MISC_SHARES_VIA_AGGREGATE')
+        tb.add_inventory(ss2_1, fields.ResourceClass.MEMORY_MB, 2048)
+        tb.set_traits(ss2_1, 'MISC_SHARES_VIA_AGGREGATE')
         ss2_2 = self._create_provider('ss2_2', uuids.agg2)
-        _add_inventory(ss2_2, fields.ResourceClass.DISK_GB, 2000)
-        _set_traits(ss2_2, 'MISC_SHARES_VIA_AGGREGATE')
+        tb.add_inventory(ss2_2, fields.ResourceClass.DISK_GB, 2000)
+        tb.set_traits(ss2_2, 'MISC_SHARES_VIA_AGGREGATE')
 
         alloc_cands = self._get_allocation_candidates()
         expected = [
@@ -1597,17 +1601,17 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # the only PF that has the required trait has no inventory left.
         cn = self._create_provider('cn')
 
-        _add_inventory(cn, fields.ResourceClass.VCPU, 16)
-        _add_inventory(cn, fields.ResourceClass.MEMORY_MB, 32768)
+        tb.add_inventory(cn, fields.ResourceClass.VCPU, 16)
+        tb.add_inventory(cn, fields.ResourceClass.MEMORY_MB, 32768)
 
         numa_cell0 = self._create_provider('cn_numa0', parent=cn.uuid)
         numa_cell1 = self._create_provider('cn_numa1', parent=cn.uuid)
 
         pf0 = self._create_provider('cn_numa0_pf0', parent=numa_cell0.uuid)
-        _add_inventory(pf0, fields.ResourceClass.SRIOV_NET_VF, 8)
+        tb.add_inventory(pf0, fields.ResourceClass.SRIOV_NET_VF, 8)
         pf1 = self._create_provider('cn_numa1_pf1', parent=numa_cell1.uuid)
-        _add_inventory(pf1, fields.ResourceClass.SRIOV_NET_VF, 8)
-        _set_traits(pf1, os_traits.HW_NIC_OFFLOAD_GENEVE)
+        tb.add_inventory(pf1, fields.ResourceClass.SRIOV_NET_VF, 8)
+        tb.set_traits(pf1, os_traits.HW_NIC_OFFLOAD_GENEVE)
 
         alloc_cands = self._get_allocation_candidates([
             placement_lib.RequestGroup(
@@ -1724,7 +1728,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # function (the one with HW_NIC_OFFLOAD_GENEVE associated with it) and
         # verify that the same request still results in 0 results since the
         # function with the required trait no longer has any inventory.
-        _allocate_from_provider(pf1, fields.ResourceClass.SRIOV_NET_VF, 8)
+        tb.allocate_from_provider(pf1, fields.ResourceClass.SRIOV_NET_VF, 8)
 
         alloc_cands = self._get_allocation_candidates([
             placement_lib.RequestGroup(
@@ -1795,8 +1799,8 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
             cn_names.append(cn_name)
             cn = self._create_provider(name)
 
-            _add_inventory(cn, fields.ResourceClass.VCPU, 16)
-            _add_inventory(cn, fields.ResourceClass.MEMORY_MB, 32768)
+            tb.add_inventory(cn, fields.ResourceClass.VCPU, 16)
+            tb.add_inventory(cn, fields.ResourceClass.MEMORY_MB, 32768)
 
             name = 'cn' + x + '_numa0'
             numa_cell0 = self._create_provider(name, parent=cn.uuid)
@@ -1805,19 +1809,19 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
 
             name = 'cn' + x + '_numa0_pf0'
             pf0 = self._create_provider(name, parent=numa_cell0.uuid)
-            _add_inventory(pf0, fields.ResourceClass.SRIOV_NET_VF, 8)
+            tb.add_inventory(pf0, fields.ResourceClass.SRIOV_NET_VF, 8)
             name = 'cn' + x + '_numa1_pf1'
             pf1 = self._create_provider(name, parent=numa_cell1.uuid)
-            _add_inventory(pf1, fields.ResourceClass.SRIOV_NET_VF, 8)
+            tb.add_inventory(pf1, fields.ResourceClass.SRIOV_NET_VF, 8)
             # Mark only the second PF on the third compute node as having
             # GENEVE offload enabled
             if x == '3':
-                _set_traits(pf1, os_traits.HW_NIC_OFFLOAD_GENEVE)
+                tb.set_traits(pf1, os_traits.HW_NIC_OFFLOAD_GENEVE)
                 # Doesn't really make a whole lot of logical sense, but allows
                 # us to test situations where the same trait is associated with
                 # multiple providers in the same tree and one of the providers
                 # has inventory we will use...
-                _set_traits(cn, os_traits.HW_NIC_OFFLOAD_GENEVE)
+                tb.set_traits(cn, os_traits.HW_NIC_OFFLOAD_GENEVE)
 
         trees = rp_obj._get_trees_matching_all(
             self.ctx, resources, req_traits, forbidden_traits, member_of)
@@ -1831,11 +1835,13 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # _get_trees_matching_all()
         cn2_pf0 = rp_obj.ResourceProvider.get_by_uuid(self.ctx,
                                                       uuids.cn2_numa0_pf0)
-        _allocate_from_provider(cn2_pf0, fields.ResourceClass.SRIOV_NET_VF, 8)
+        tb.allocate_from_provider(cn2_pf0, fields.ResourceClass.SRIOV_NET_VF,
+                                  8)
 
         cn2_pf1 = rp_obj.ResourceProvider.get_by_uuid(self.ctx,
                                                       uuids.cn2_numa1_pf1)
-        _allocate_from_provider(cn2_pf1, fields.ResourceClass.SRIOV_NET_VF, 8)
+        tb.allocate_from_provider(cn2_pf1, fields.ResourceClass.SRIOV_NET_VF,
+                                  8)
 
         trees = rp_obj._get_trees_matching_all(
             self.ctx, resources, req_traits, forbidden_traits, member_of)
@@ -1903,18 +1909,22 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # no more providers are returned
         cn1_pf0 = rp_obj.ResourceProvider.get_by_uuid(self.ctx,
                                                       uuids.cn1_numa0_pf0)
-        _allocate_from_provider(cn1_pf0, fields.ResourceClass.SRIOV_NET_VF, 8)
+        tb.allocate_from_provider(
+            cn1_pf0, fields.ResourceClass.SRIOV_NET_VF, 8)
 
         cn1_pf1 = rp_obj.ResourceProvider.get_by_uuid(self.ctx,
                                                       uuids.cn1_numa1_pf1)
-        _allocate_from_provider(cn1_pf1, fields.ResourceClass.SRIOV_NET_VF, 8)
+        tb.allocate_from_provider(
+            cn1_pf1, fields.ResourceClass.SRIOV_NET_VF, 8)
         cn3_pf0 = rp_obj.ResourceProvider.get_by_uuid(self.ctx,
                                                       uuids.cn3_numa0_pf0)
-        _allocate_from_provider(cn3_pf0, fields.ResourceClass.SRIOV_NET_VF, 8)
+        tb.allocate_from_provider(
+            cn3_pf0, fields.ResourceClass.SRIOV_NET_VF, 8)
 
         cn3_pf1 = rp_obj.ResourceProvider.get_by_uuid(self.ctx,
                                                       uuids.cn3_numa1_pf1)
-        _allocate_from_provider(cn3_pf1, fields.ResourceClass.SRIOV_NET_VF, 8)
+        tb.allocate_from_provider(
+            cn3_pf1, fields.ResourceClass.SRIOV_NET_VF, 8)
 
         trees = rp_obj._get_trees_matching_all(
             self.ctx, resources, req_traits, forbidden_traits, member_of)

@@ -22,7 +22,7 @@ from nova.tests import fixtures
 from nova.tests import uuidsentinel as uuids
 
 
-def _add_inventory(rp, rc, total, **kwargs):
+def add_inventory(rp, rc, total, **kwargs):
     kwargs.setdefault('max_unit', total)
     inv = rp_obj.Inventory(rp._context, resource_provider=rp,
                            resource_class=rc, total=total, **kwargs)
@@ -30,7 +30,7 @@ def _add_inventory(rp, rc, total, **kwargs):
     rp.add_inventory(inv)
 
 
-def _set_traits(rp, *traits):
+def set_traits(rp, *traits):
     tlist = []
     for tname in traits:
         try:
@@ -42,7 +42,7 @@ def _set_traits(rp, *traits):
     rp.set_traits(rp_obj.TraitList(objects=tlist))
 
 
-def _allocate_from_provider(rp, rc, used):
+def allocate_from_provider(rp, rc, used):
     # NOTE(efried): Always use a random consumer UUID - we don't want to
     # override any existing allocations from the test case.
     rp_obj.AllocationList(
