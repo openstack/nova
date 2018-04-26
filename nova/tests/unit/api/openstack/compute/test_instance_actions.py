@@ -38,7 +38,8 @@ FAKE_EVENT_ID = fake_server_actions.FAKE_ACTION_ID1
 FAKE_REQUEST_NOTFOUND_ID = 'req-' + uuids.req_not_found
 
 
-def format_action(action, expect_traceback=True):
+def format_action(action, expect_traceback=True, expect_host=False,
+                  expect_hostId=False):
     '''Remove keys that aren't serialized.'''
     to_delete = ('id', 'finish_time', 'created_at', 'updated_at', 'deleted_at',
                  'deleted')
@@ -49,11 +50,14 @@ def format_action(action, expect_traceback=True):
         # NOTE(danms): Without WSGI above us, these will be just stringified
         action['start_time'] = str(action['start_time'].replace(tzinfo=None))
     for event in action.get('events', []):
-        format_event(event, expect_traceback)
+        format_event(event, action.get('project_id'),
+                     expect_traceback=expect_traceback,
+                     expect_host=expect_host, expect_hostId=expect_hostId)
     return action
 
 
-def format_event(event, expect_traceback=True, expect_host=False):
+def format_event(event, project_id, expect_traceback=True, expect_host=False,
+                 expect_hostId=False):
     '''Remove keys that aren't serialized.'''
     to_delete = ['id', 'created_at', 'updated_at', 'deleted_at', 'deleted',
                  'action_id']
@@ -61,6 +65,8 @@ def format_event(event, expect_traceback=True, expect_host=False):
         to_delete.append('traceback')
     if not expect_host:
         to_delete.append('host')
+    if not expect_hostId:
+        to_delete.append('hostId')
     for key in to_delete:
         if key in event:
             del(event[key])
@@ -116,6 +122,8 @@ class InstanceActionsTestV21(test.NoDBTestCase):
     instance_actions = instance_actions_v21
     wsgi_api_version = os_wsgi.DEFAULT_API_VERSION
     expect_events_non_admin = False
+    expect_event_hostId = False
+    expect_event_host = False
 
     def fake_get(self, context, instance_uuid, expected_attrs=None):
         return objects.Instance(uuid=instance_uuid)
@@ -181,8 +189,12 @@ class InstanceActionsTestV21(test.NoDBTestCase):
         fake_action = self.fake_actions[FAKE_UUID][FAKE_REQUEST_ID]
         fake_events = self.fake_events[fake_action['id']]
         fake_action['events'] = fake_events
-        self.assertEqual(format_action(fake_action),
-                         format_action(res_dict['instanceAction']))
+        self.assertEqual(format_action(fake_action,
+                                       expect_host=self.expect_event_host,
+                                       expect_hostId=self.expect_event_hostId),
+                         format_action(res_dict['instanceAction'],
+                                       expect_host=self.expect_event_host,
+                                       expect_hostId=self.expect_event_hostId))
 
     def test_get_action_with_events_not_allowed(self):
         def fake_get_action(context, uuid, request_id):
@@ -201,10 +213,16 @@ class InstanceActionsTestV21(test.NoDBTestCase):
         if self.expect_events_non_admin:
             fake_event = fake_server_actions.FAKE_EVENTS[FAKE_EVENT_ID]
             fake_action['events'] = copy.deepcopy(fake_event)
-        # By default, non-admins are not allowed to see traceback details.
-        self.assertEqual(format_action(fake_action, expect_traceback=False),
+        # By default, non-admins are not allowed to see traceback details
+        # and event host.
+        self.assertEqual(format_action(fake_action,
+                                       expect_traceback=False,
+                                       expect_host=False,
+                                       expect_hostId=self.expect_event_hostId),
                          format_action(res_dict['instanceAction'],
-                                       expect_traceback=False))
+                                       expect_traceback=False,
+                                       expect_host=False,
+                                       expect_hostId=self.expect_event_hostId))
 
     def test_action_not_found(self):
         def fake_no_action(context, uuid, action_id):
@@ -294,3 +312,9 @@ class InstanceActionsTestV258(InstanceActionsTestV251):
                                self.controller.index, req)
         self.assertIn('Invalid input for query parameters marker',
                       six.text_type(ex))
+
+
+class InstanceActionsTestV262(InstanceActionsTestV251):
+    wsgi_api_version = "2.62"
+    expect_event_hostId = True
+    expect_event_host = True

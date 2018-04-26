@@ -780,3 +780,14 @@ Response body of the following APIs:
 * ``GET /flavors/{flavor_id}``
 * ``POST /flavors``
 * ``PUT /flavors/{flavor_id}``
+
+2.62
+----
+
+Adds ``host`` (hostname) and ``hostId`` (an obfuscated hashed host id string)
+fields to the instance action
+``GET /servers/{server_id}/os-instance-actions/{req_id}`` API. The display of
+the newly added ``host`` field will be controlled via policy rule
+``os_compute_api:os-instance-actions:events``, which is the same policy used
+for the ``events.traceback`` field. If the user is prevented by policy, only
+``hostId`` will be displayed.

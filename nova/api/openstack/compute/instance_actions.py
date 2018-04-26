@@ -53,13 +53,20 @@ class InstanceActionsController(wsgi.Controller):
             action[key] = action_raw.get(key)
         return action
 
-    def _format_event(self, event_raw, show_traceback=False):
+    def _format_event(self, event_raw, project_id, show_traceback=False,
+                      show_host=False, show_hostid=False):
         event = {}
         for key in EVENT_KEYS:
             # By default, non-admins are not allowed to see traceback details.
             if key == 'traceback' and not show_traceback:
                 continue
             event[key] = event_raw.get(key)
+        # By default, non-admins are not allowed to see host.
+        if show_host:
+            event['host'] = event_raw['host']
+        if show_hostid:
+            event['hostId'] = utils.generate_hostid(event_raw['host'],
+                                                    project_id)
         return event
 
     @wsgi.Controller.api_version("2.1", "2.20")
@@ -138,18 +145,26 @@ class InstanceActionsController(wsgi.Controller):
         # by default.
         show_events = False
         show_traceback = False
+        show_host = False
         if context.can(ia_policies.POLICY_ROOT % 'events', fatal=False):
             # For all microversions, the user can see all event details
             # including the traceback.
             show_events = show_traceback = True
+            show_host = api_version_request.is_supported(req, '2.62')
         elif api_version_request.is_supported(req, '2.51'):
             # The user is not able to see all event details, but they can at
             # least see the non-traceback event details.
             show_events = True
 
+        # An obfuscated hashed host id is returned since microversion 2.62
+        # for all users.
+        show_hostid = api_version_request.is_supported(req, '2.62')
+
         if show_events:
             events_raw = self.action_api.action_events_get(context, instance,
                                                            action_id)
-            action['events'] = [self._format_event(evt, show_traceback)
-                                for evt in events_raw]
+            action['events'] = [self._format_event(
+                evt, action['project_id'], show_traceback=show_traceback,
+                show_host=show_host, show_hostid=show_hostid
+            ) for evt in events_raw]
         return {'instanceAction': action}
