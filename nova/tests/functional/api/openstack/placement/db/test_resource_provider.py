@@ -19,10 +19,7 @@ import sqlalchemy as sa
 import nova
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
-from nova import context
 from nova import rc_fields as fields
-from nova import test
-from nova.tests import fixtures
 from nova.tests.functional.api.openstack.placement.db import test_base as tb
 from nova.tests import uuidsentinel
 
@@ -86,12 +83,10 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         self.assertIn('parent provider UUID cannot be same as UUID', str(exc))
 
     def test_create_resource_provider(self):
-        created_resource_provider = rp_obj.ResourceProvider(
-            context=self.ctx,
+        created_resource_provider = self._create_provider(
+            uuidsentinel.fake_resource_name,
             uuid=uuidsentinel.fake_resource_provider,
-            name=uuidsentinel.fake_resource_name,
         )
-        created_resource_provider.create()
         self.assertIsInstance(created_resource_provider.id, int)
 
         retrieved_resource_provider = rp_obj.ResourceProvider.get_by_uuid(
@@ -145,23 +140,13 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         that the root provider UUID of the updated provider is automatically
         set to the parent provider's root provider UUID.
         """
-        rp1 = rp_obj.ResourceProvider(
-            context=self.ctx,
-            name='rp1',
-            uuid=uuidsentinel.rp1,
-        )
-        rp1.create()
+        rp1 = self._create_provider('rp1')
 
         # Test the root was auto-set to the create provider's UUID
         self.assertEqual(uuidsentinel.rp1, rp1.root_provider_uuid)
 
         # Create a new provider that we will make the parent of rp1
-        parent_rp = rp_obj.ResourceProvider(
-            context=self.ctx,
-            name='parent',
-            uuid=uuidsentinel.parent,
-        )
-        parent_rp.create()
+        parent_rp = self._create_provider('parent')
         self.assertEqual(uuidsentinel.parent, parent_rp.root_provider_uuid)
 
         # Now change rp1 to be a child of parent and check rp1's root is
@@ -172,39 +157,28 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(uuidsentinel.parent, rp1.root_provider_uuid)
 
     def test_save_root_provider_failed(self):
-        """Test that if we provide a root_provider_uuid value we get an
-        ObjectActionError if we save the object.
+        """Test that if we provide a root_provider_uuid value that points to
+        a resource provider that doesn't exist, we get an ObjectActionError if
+        we save the object.
         """
-        rp = rp_obj.ResourceProvider(
-            context=self.ctx,
-            name='rp1',
-            uuid=uuidsentinel.rp1,
-        )
-        rp.create()
-        rp.root_provider_uuid = uuidsentinel.noexists
-        self.assertRaises(exception.ObjectActionError, rp.save)
+        self.assertRaises(
+            exception.ObjectActionError,
+            self._create_provider, 'rp1', root=uuidsentinel.noexists)
 
     def test_save_unknown_parent_provider(self):
         """Test that if we provide a parent_provider_uuid value that points to
         a resource provider that doesn't exist, that we get an
         ObjectActionError if we save the object.
         """
-        rp = rp_obj.ResourceProvider(
-            context=self.ctx,
-            name='rp1',
-            uuid=uuidsentinel.rp1,
-        )
-        rp.create()
-        rp.parent_provider_uuid = uuidsentinel.noexists
-        self.assertRaises(exception.ObjectActionError, rp.save)
+        self.assertRaises(
+            exception.ObjectActionError,
+            self._create_provider, 'rp1', parent=uuidsentinel.noexists)
 
     def test_save_resource_provider(self):
-        created_resource_provider = rp_obj.ResourceProvider(
-            context=self.ctx,
+        created_resource_provider = self._create_provider(
+            uuidsentinel.fake_resource_name,
             uuid=uuidsentinel.fake_resource_provider,
-            name=uuidsentinel.fake_resource_name,
         )
-        created_resource_provider.create()
         created_resource_provider.name = 'new-name'
         created_resource_provider.save()
         retrieved_resource_provider = rp_obj.ResourceProvider.get_by_uuid(
@@ -217,17 +191,9 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         """Tests that we prevent a resource provider's parent provider UUID
         from being changed from a non-NULL value to another non-NULL value.
         """
-        cn1 = rp_obj.ResourceProvider(
-            context=self.ctx, uuid=uuidsentinel.cn1, name='cn1')
-        cn1.create()
-
-        cn2 = rp_obj.ResourceProvider(
-            context=self.ctx, uuid=uuidsentinel.cn2, name='cn2')
-        cn2.create()
-
-        cn3 = rp_obj.ResourceProvider(
-            context=self.ctx, uuid=uuidsentinel.cn3, name='cn3')
-        cn3.create()
+        cn1 = self._create_provider('cn1')
+        self._create_provider('cn2')
+        self._create_provider('cn3')
 
         # First, make sure we can set the parent for a provider that does not
         # have a parent currently
@@ -249,28 +215,11 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         tests that ensure one cannot delete a resource provider that has no
         direct allocations but its child providers do have allocations.
         """
-        root_rp = rp_obj.ResourceProvider(
-            context=self.ctx,
-            uuid=uuidsentinel.root_rp,
-            name='root-rp',
-        )
-        root_rp.create()
-
-        child_rp = rp_obj.ResourceProvider(
-            context=self.ctx,
-            uuid=uuidsentinel.child_rp,
-            name='child-rp',
-            parent_provider_uuid=uuidsentinel.root_rp,
-        )
-        child_rp.create()
-
-        grandchild_rp = rp_obj.ResourceProvider(
-            context=self.ctx,
-            uuid=uuidsentinel.grandchild_rp,
-            name='grandchild-rp',
-            parent_provider_uuid=uuidsentinel.child_rp,
-        )
-        grandchild_rp.create()
+        root_rp = self._create_provider('root_rp')
+        child_rp = self._create_provider('child_rp',
+                                         parent=uuidsentinel.root_rp)
+        grandchild_rp = self._create_provider('grandchild_rp',
+                                              parent=uuidsentinel.child_rp)
 
         # Verify that the root_provider_uuid of both the child and the
         # grandchild is the UUID of the grandparent
@@ -280,23 +229,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         # Create some inventory in the grandchild, allocate some consumers to
         # the grandchild and then attempt to delete the root provider and child
         # provider, both of which should fail.
-        invs = [
-            rp_obj.Inventory(
-                resource_provider=grandchild_rp,
-                resource_class=fields.ResourceClass.VCPU,
-                total=1,
-                reserved=0,
-                allocation_ratio=1.0,
-                min_unit=1,
-                max_unit=1,
-                step_size=1,
-            ),
-        ]
-        inv_list = rp_obj.InventoryList(
-            resource_provider=grandchild_rp,
-            objects=invs
-        )
-        grandchild_rp.set_inventory(inv_list)
+        tb.add_inventory(grandchild_rp, fields.ResourceClass.VCPU, 1)
 
         # Check all providers returned when getting by root UUID
         rps = rp_obj.ResourceProviderList.get_all_by_filters(
@@ -416,16 +349,8 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(1, len(rps))
         self.assertEqual(uuidsentinel.grandchild_rp, rps[0].uuid)
 
-        allocs = [
-            rp_obj.Allocation(
-                resource_provider=grandchild_rp,
-                resource_class=fields.ResourceClass.VCPU,
-                consumer_id=uuidsentinel.consumer,
-                used=1,
-            ),
-        ]
-        alloc_list = rp_obj.AllocationList(self.ctx, objects=allocs)
-        alloc_list.create_all()
+        alloc_list = tb.allocate_from_provider(
+            grandchild_rp, fields.ResourceClass.VCPU, 1)
 
         self.assertRaises(exception.CannotDeleteParentResourceProvider,
                           root_rp.destroy)
@@ -492,28 +417,21 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         there is a resource provider that is a parent.
         """
         self.assertFalse(rp_obj._has_provider_trees(self.ctx))
-        cn = rp_obj.ResourceProvider(
-            context=self.ctx, uuid=uuidsentinel.cn, name='cn')
-        cn.create()
+        self._create_provider('cn')
 
         # No parents yet. Should still be False.
         self.assertFalse(rp_obj._has_provider_trees(self.ctx))
 
-        numa0 = rp_obj.ResourceProvider(
-            context=self.ctx, uuid=uuidsentinel.numa0, name='numa0',
-            parent_provider_uuid=uuidsentinel.cn)
-        numa0.create()
+        self._create_provider('numa0', parent=uuidsentinel.cn)
 
         # OK, now we've got a parent, so should be True
         self.assertTrue(rp_obj._has_provider_trees(self.ctx))
 
     def test_destroy_resource_provider(self):
-        created_resource_provider = rp_obj.ResourceProvider(
-            context=self.ctx,
+        created_resource_provider = self._create_provider(
+            uuidsentinel.fake_resource_name,
             uuid=uuidsentinel.fake_resource_provider,
-            name=uuidsentinel.fake_resource_name,
         )
-        created_resource_provider.create()
         created_resource_provider.destroy()
         self.assertRaises(exception.NotFound,
                           rp_obj.ResourceProvider.get_by_uuid,
@@ -528,20 +446,12 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
                           rp.destroy)
 
     def test_destroy_resource_provider_destroy_inventory(self):
-        resource_provider = rp_obj.ResourceProvider(
-            context=self.ctx,
+        resource_provider = self._create_provider(
+            uuidsentinel.fake_resource_name,
             uuid=uuidsentinel.fake_resource_provider,
-            name=uuidsentinel.fake_resource_name,
         )
-        resource_provider.create()
-        disk_inventory = rp_obj.Inventory(
-            context=self.ctx,
-            resource_provider=resource_provider,
-            **DISK_INVENTORY
-        )
-        inv_list = rp_obj.InventoryList(context=self.ctx,
-                                        objects=[disk_inventory])
-        resource_provider.set_inventory(inv_list)
+        tb.add_inventory(resource_provider, DISK_INVENTORY['resource_class'],
+                         DISK_INVENTORY['total'])
         inventories = rp_obj.InventoryList.get_all_by_resource_provider(
             self.ctx, resource_provider)
         self.assertEqual(1, len(inventories))
@@ -554,66 +464,23 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         """Test attempting to set inventory to an unknown resource class raises
         an exception.
         """
-        rp = rp_obj.ResourceProvider(
-            context=self.ctx,
-            uuid=uuidsentinel.rp_uuid,
-            name='compute-host',
-        )
-        rp.create()
-
-        inv = rp_obj.Inventory(
-            resource_provider=rp,
-            resource_class='UNKNOWN',
-            total=1024,
-            reserved=15,
-            min_unit=10,
-            max_unit=100,
-            step_size=10,
-            allocation_ratio=1.0,
-        )
-
-        inv_list = rp_obj.InventoryList(objects=[inv])
+        rp = self._create_provider('compute-host')
         self.assertRaises(exception.ResourceClassNotFound,
-                          rp.set_inventory, inv_list)
+                          tb.add_inventory, rp, 'UNKNOWN', 1024,
+                          reserved=15,
+                          min_unit=10,
+                          max_unit=100,
+                          step_size=10,
+                          allocation_ratio=1.0)
 
-    def test_set_inventory_fail_in_used(self):
+    def test_set_inventory_fail_in_use(self):
         """Test attempting to set inventory which would result in removing an
         inventory record for a resource class that still has allocations
         against it.
         """
-        rp = rp_obj.ResourceProvider(
-            context=self.ctx,
-            uuid=uuidsentinel.rp_uuid,
-            name='compute-host',
-        )
-        rp.create()
-
-        inv = rp_obj.Inventory(
-            resource_provider=rp,
-            resource_class='VCPU',
-            total=12,
-            reserved=0,
-            min_unit=1,
-            max_unit=12,
-            step_size=1,
-            allocation_ratio=1.0,
-        )
-
-        inv_list = rp_obj.InventoryList(objects=[inv])
-        rp.set_inventory(inv_list)
-
-        alloc = rp_obj.Allocation(
-            resource_provider=rp,
-            resource_class='VCPU',
-            consumer_id=uuidsentinel.consumer,
-            used=1,
-        )
-
-        alloc_list = rp_obj.AllocationList(
-            self.ctx,
-            objects=[alloc]
-        )
-        alloc_list.create_all()
+        rp = self._create_provider('compute-host')
+        tb.add_inventory(rp, 'VCPU', 12)
+        tb.allocate_from_provider(rp, 'VCPU', 1)
 
         inv = rp_obj.Inventory(
             resource_provider=rp,
@@ -633,85 +500,44 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
 
     @mock.patch('nova.api.openstack.placement.objects.resource_provider.LOG')
     def test_set_inventory_over_capacity(self, mock_log):
-        rp = rp_obj.ResourceProvider(context=self.ctx,
-                                     uuid=uuidsentinel.rp_uuid,
-                                     name=uuidsentinel.rp_name)
-        rp.create()
+        rp = self._create_provider(uuidsentinel.rp_name)
 
-        disk_inv = rp_obj.Inventory(
-                resource_provider=rp,
-                resource_class=fields.ResourceClass.DISK_GB,
-                total=2048,
-                reserved=15,
-                min_unit=10,
-                max_unit=600,
-                step_size=10,
-                allocation_ratio=1.0)
-        vcpu_inv = rp_obj.Inventory(
-                resource_provider=rp,
-                resource_class=fields.ResourceClass.VCPU,
-                total=12,
-                reserved=0,
-                min_unit=1,
-                max_unit=12,
-                step_size=1,
-                allocation_ratio=16.0)
+        disk_inv = tb.add_inventory(rp, fields.ResourceClass.DISK_GB, 2048,
+                                    reserved=15,
+                                    min_unit=10,
+                                    max_unit=600,
+                                    step_size=10)
+        vcpu_inv = tb.add_inventory(rp, fields.ResourceClass.VCPU, 12,
+                                    allocation_ratio=16.0)
 
-        inv_list = rp_obj.InventoryList(objects=[disk_inv, vcpu_inv])
-        rp.set_inventory(inv_list)
         self.assertFalse(mock_log.warning.called)
 
         # Allocate something reasonable for the above inventory
-        alloc = rp_obj.Allocation(
-            context=self.ctx,
-            resource_provider=rp,
-            consumer_id=uuidsentinel.consumer,
-            resource_class='DISK_GB',
-            used=500)
-        alloc_list = rp_obj.AllocationList(self.ctx, objects=[alloc])
-        alloc_list.create_all()
+        tb.allocate_from_provider(rp, 'DISK_GB', 500)
 
         # Update our inventory to over-subscribe us after the above allocation
         disk_inv.total = 400
-        rp.set_inventory(inv_list)
+        rp.set_inventory(rp_obj.InventoryList(objects=[disk_inv, vcpu_inv]))
 
         # We should succeed, but have logged a warning for going over on disk
         mock_log.warning.assert_called_once_with(
             mock.ANY, {'uuid': rp.uuid, 'resource': 'DISK_GB'})
 
     def test_provider_modify_inventory(self):
-        rp = rp_obj.ResourceProvider(context=self.ctx,
-                                     uuid=uuidsentinel.rp_uuid,
-                                     name=uuidsentinel.rp_name)
-        rp.create()
+        rp = self._create_provider(uuidsentinel.rp_name)
         saved_generation = rp.generation
 
-        disk_inv = rp_obj.Inventory(
-                resource_provider=rp,
-                resource_class=fields.ResourceClass.DISK_GB,
-                total=1024,
-                reserved=15,
-                min_unit=10,
-                max_unit=100,
-                step_size=10,
-                allocation_ratio=1.0)
+        disk_inv = tb.add_inventory(rp, fields.ResourceClass.DISK_GB, 1024,
+                                    reserved=15,
+                                    min_unit=10,
+                                    max_unit=100,
+                                    step_size=10)
 
-        vcpu_inv = rp_obj.Inventory(
-                resource_provider=rp,
-                resource_class=fields.ResourceClass.VCPU,
-                total=12,
-                reserved=0,
-                min_unit=1,
-                max_unit=12,
-                step_size=1,
-                allocation_ratio=16.0)
+        vcpu_inv = tb.add_inventory(rp, fields.ResourceClass.VCPU, 12,
+                                    allocation_ratio=16.0)
 
-        # set to new list
-        inv_list = rp_obj.InventoryList(objects=[disk_inv, vcpu_inv])
-        rp.set_inventory(inv_list)
-
-        # generation has bumped
-        self.assertEqual(saved_generation + 1, rp.generation)
+        # generation has bumped once for each add
+        self.assertEqual(saved_generation + 2, rp.generation)
         saved_generation = rp.generation
 
         new_inv_list = rp_obj.InventoryList.get_all_by_resource_provider(
@@ -816,10 +642,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
                           rp.set_inventory, inv_list)
 
     def test_delete_inventory_not_found(self):
-        rp = rp_obj.ResourceProvider(context=self.ctx,
-                                     uuid=uuidsentinel.rp_uuid,
-                                     name=uuidsentinel.rp_name)
-        rp.create()
+        rp = self._create_provider(uuidsentinel.rp_name)
         error = self.assertRaises(exception.NotFound, rp.delete_inventory,
                                   'DISK_GB')
         self.assertIn('No inventory of class DISK_GB found for delete',
@@ -835,10 +658,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
             % rp.uuid, str(error))
 
     def test_update_inventory_not_found(self):
-        rp = rp_obj.ResourceProvider(context=self.ctx,
-                                     uuid=uuidsentinel.rp_uuid,
-                                     name=uuidsentinel.rp_name)
-        rp.create()
+        rp = self._create_provider(uuidsentinel.rp_name)
         disk_inv = rp_obj.Inventory(resource_provider=rp,
                                     resource_class='DISK_GB',
                                     total=2048)
@@ -874,60 +694,34 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
             mock.ANY, {'uuid': rp.uuid, 'resource': 'DISK_GB'})
 
     def test_add_invalid_inventory(self):
-        rp = rp_obj.ResourceProvider(context=self.ctx,
-                                     uuid=uuidsentinel.rp_uuid,
-                                     name=uuidsentinel.rp_name)
-        rp.create()
-        disk_inv = rp_obj.Inventory(
-            resource_provider=rp,
-            resource_class=fields.ResourceClass.DISK_GB,
-            total=1024, reserved=2048)
-        disk_inv.obj_set_defaults()
-        error = self.assertRaises(exception.InvalidInventoryCapacity,
-                                  rp.add_inventory,
-                                  disk_inv)
+        rp = self._create_provider(uuidsentinel.rp_name)
+        error = self.assertRaises(
+            exception.InvalidInventoryCapacity,
+            tb.add_inventory, rp, fields.ResourceClass.DISK_GB, 1024,
+            reserved=2048)
         self.assertIn("Invalid inventory for '%s'"
                       % fields.ResourceClass.DISK_GB, str(error))
         self.assertIn("on resource provider '%s'."
                       % rp.uuid, str(error))
 
     def test_add_allocation_increments_generation(self):
-        rp = rp_obj.ResourceProvider(context=self.ctx,
-                uuid=uuidsentinel.inventory_resource_provider, name='foo')
-        rp.create()
-        inv = rp_obj.Inventory(context=self.ctx, resource_provider=rp,
-                **DISK_INVENTORY)
-        inv_list = rp_obj.InventoryList(context=self.ctx, objects=[inv])
-        rp.set_inventory(inv_list)
+        rp = self._create_provider(name='foo')
+        tb.add_inventory(rp, DISK_INVENTORY['resource_class'],
+                         DISK_INVENTORY['total'])
         expected_gen = rp.generation + 1
-        alloc = rp_obj.Allocation(context=self.ctx, resource_provider=rp,
-                **DISK_ALLOCATION)
-        alloc_list = rp_obj.AllocationList(self.ctx, objects=[alloc])
-        alloc_list.create_all()
+        tb.allocate_from_provider(rp, DISK_ALLOCATION['resource_class'],
+                                  DISK_ALLOCATION['used'])
         self.assertEqual(expected_gen, rp.generation)
 
     def test_get_all_by_resource_provider_multiple_providers(self):
-        rp1 = rp_obj.ResourceProvider(context=self.ctx,
-                uuid=uuidsentinel.cn1, name='cn1')
-        rp1.create()
-        rp2 = rp_obj.ResourceProvider(context=self.ctx,
-                uuid=uuidsentinel.cn2, name='cn2')
-        rp2.create()
+        rp1 = self._create_provider('cn1')
+        rp2 = self._create_provider(name='cn2')
 
         for rp in (rp1, rp2):
-            disk_inv = rp_obj.Inventory(context=self.ctx, resource_provider=rp,
-                **DISK_INVENTORY)
-            ip_inv = rp_obj.Inventory(context=self.ctx, resource_provider=rp,
-                total=10,
-                reserved=0,
-                min_unit=1,
-                max_unit=2,
-                step_size=1,
-                allocation_ratio=1.0,
-                resource_class=fields.ResourceClass.IPV4_ADDRESS)
-            inv_list = rp_obj.InventoryList(context=self.ctx,
-                objects=[disk_inv, ip_inv])
-            rp.set_inventory(inv_list)
+            tb.add_inventory(rp, DISK_INVENTORY['resource_class'],
+                             DISK_INVENTORY['total'])
+            tb.add_inventory(rp, fields.ResourceClass.IPV4_ADDRESS, 10,
+                             max_unit=2)
 
         # Get inventories for the first resource provider and validate
         # the inventory records have a matching resource provider
@@ -938,18 +732,11 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
 
 
 class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
-    def setUp(self):
-        super(ResourceProviderListTestCase, self).setUp()
-        self.useFixture(fixtures.Database())
-        self.useFixture(fixtures.Database(database='api'))
-        self.ctx = context.RequestContext('fake-user', 'fake-project')
-
     def test_get_all_by_filters(self):
         for rp_i in ['1', '2']:
-            uuid = getattr(uuidsentinel, 'rp_uuid_' + rp_i)
-            name = 'rp_name_' + rp_i
-            rp = rp_obj.ResourceProvider(self.ctx, name=name, uuid=uuid)
-            rp.create()
+            self._create_provider(
+                'rp_name_' + rp_i,
+                uuid=getattr(uuidsentinel, 'rp_uuid_' + rp_i))
 
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx)
@@ -958,59 +745,24 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
             self.ctx, filters={'name': u'rp_name_1'})
         self.assertEqual(1, len(resource_providers))
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
-            self.ctx, filters={'uuid': getattr(uuidsentinel, 'rp_uuid_2')})
+            self.ctx, filters={'uuid': uuidsentinel.rp_uuid_2})
         self.assertEqual(1, len(resource_providers))
         self.assertEqual('rp_name_2', resource_providers[0].name)
 
     def test_get_all_by_filters_with_resources(self):
         for rp_i in ['1', '2']:
-            uuid = getattr(uuidsentinel, 'rp_uuid_' + rp_i)
-            name = 'rp_name_' + rp_i
-            rp = rp_obj.ResourceProvider(self.ctx, name=name, uuid=uuid)
-            rp.create()
-            inv = rp_obj.Inventory(
-                resource_provider=rp,
-                resource_class=fields.ResourceClass.VCPU,
-                min_unit=1,
-                max_unit=2,
-                total=2,
-                allocation_ratio=1.0)
-            inv.obj_set_defaults()
-
-            inv2 = rp_obj.Inventory(
-                resource_provider=rp,
-                resource_class=fields.ResourceClass.DISK_GB,
-                total=1024, reserved=2,
-                min_unit=1,
-                max_unit=1024,
-                allocation_ratio=1.0)
-            inv2.obj_set_defaults()
-
-            # Write that specific inventory for testing min/max units and steps
-            inv3 = rp_obj.Inventory(
-                resource_provider=rp,
-                resource_class=fields.ResourceClass.MEMORY_MB,
-                total=1024, reserved=2,
-                min_unit=2,
-                max_unit=4,
-                step_size=2,
-                allocation_ratio=1.0)
-            inv3.obj_set_defaults()
-
-            inv_list = rp_obj.InventoryList(objects=[inv, inv2, inv3])
-            rp.set_inventory(inv_list)
+            rp = self._create_provider('rp_name_' + rp_i)
+            tb.add_inventory(rp, fields.ResourceClass.VCPU, 2)
+            tb.add_inventory(rp, fields.ResourceClass.DISK_GB, 1024,
+                             reserved=2)
+            # Write a specific inventory for testing min/max units and steps
+            tb.add_inventory(rp, fields.ResourceClass.MEMORY_MB, 1024,
+                             reserved=2, min_unit=2, max_unit=4, step_size=2)
 
             # Create the VCPU allocation only for the first RP
             if rp_i != '1':
                 continue
-            allocation_1 = rp_obj.Allocation(
-                resource_provider=rp,
-                consumer_id=uuidsentinel.consumer,
-                resource_class=fields.ResourceClass.VCPU,
-                used=1)
-            allocation_list = rp_obj.AllocationList(
-                self.ctx, objects=[allocation_1])
-            allocation_list.create_all()
+            tb.allocate_from_provider(rp, fields.ResourceClass.VCPU, used=1)
 
         # Both RPs should accept that request given the only current allocation
         # for the first RP is leaving one VCPU
@@ -1040,7 +792,7 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
         # checking the resource usage.
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx, {'name': u'rp_name_1',
-                           'resources': {fields.ResourceClass.VCPU: 1}})
+                       'resources': {fields.ResourceClass.VCPU: 1}})
         self.assertEqual(1, len(resource_providers))
 
         # Let's verify that the min and max units are checked too
@@ -1069,13 +821,10 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
 
     def test_get_all_by_filters_aggregate(self):
         for rp_i in [1, 2, 3, 4]:
-            uuid = getattr(uuidsentinel, 'rp_uuid_' + str(rp_i))
-            name = 'rp_name_' + str(rp_i)
-            rp = rp_obj.ResourceProvider(self.ctx, name=name, uuid=uuid)
-            rp.create()
-            if rp_i % 2:
-                aggregate_uuids = [uuidsentinel.agg_a, uuidsentinel.agg_b]
-                rp.set_aggregates(aggregate_uuids)
+            aggs = [uuidsentinel.agg_a, uuidsentinel.agg_b] if rp_i % 2 else []
+            self._create_provider(
+                'rp_name_' + str(rp_i), *aggs,
+                uuid=getattr(uuidsentinel, 'rp_uuid_' + str(rp_i)))
 
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx, filters={'member_of': [[uuidsentinel.agg_a]]})
@@ -1095,13 +844,13 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx, filters={'member_of':
                                    [[uuidsentinel.agg_a, uuidsentinel.agg_b]],
-                                   'name': u'rp_name_1'})
+                               'name': u'rp_name_1'})
         self.assertEqual(1, len(resource_providers))
 
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
             self.ctx, filters={'member_of':
                                    [[uuidsentinel.agg_a, uuidsentinel.agg_b]],
-                                   'name': u'barnabas'})
+                               'name': u'barnabas'})
         self.assertEqual(0, len(resource_providers))
 
         resource_providers = rp_obj.ResourceProviderList.get_all_by_filters(
@@ -1117,19 +866,13 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
         # rp_name_3: CUSTOM_TRAIT_A, CUSTOM_TRAIT_B, CUSTOM_TRAIT_C
         trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B',
                        'CUSTOM_TRAIT_C']
-        trait_objects = []
-        for trait in trait_names:
-            trait_object = rp_obj.Trait(self.ctx, name=trait)
-            trait_object.create()
-            trait_objects.append(trait_object)
         for rp_i in [0, 1, 2, 3]:
-            uuid = getattr(uuidsentinel, 'rp_uuid_' + str(rp_i))
-            name = 'rp_name_' + str(rp_i)
-            rp = rp_obj.ResourceProvider(self.ctx, name=name, uuid=uuid)
-            rp.create()
+            rp = self._create_provider(
+                'rp_name_' + str(rp_i),
+                uuid=getattr(uuidsentinel, 'rp_uuid_' + str(rp_i)))
             if rp_i:
-                traits = trait_objects[0:rp_i]
-                rp.set_traits(traits)
+                traits = trait_names[0:rp_i]
+                tb.set_traits(rp, *traits)
 
         # Three rps (1, 2, 3) should have CUSTOM_TRAIT_A
         custom_a_rps = rp_obj.ResourceProviderList.get_all_by_filters(
@@ -1153,26 +896,14 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual('CUSTOM_TRAIT_A', traits[0].name)
 
 
-class TestResourceProviderAggregates(test.NoDBTestCase):
-
-    USES_DB_SELF = True
-
-    def setUp(self):
-        super(TestResourceProviderAggregates, self).setUp()
-        self.useFixture(fixtures.Database(database='main'))
-        self.useFixture(fixtures.Database(database='api'))
-        self.ctx = context.RequestContext('fake-user', 'fake-project')
-
+class TestResourceProviderAggregates(tb.PlacementDbBaseTestCase):
     def test_set_and_get_new_aggregates(self):
-        rp = rp_obj.ResourceProvider(
-            context=self.ctx,
-            uuid=uuidsentinel.rp_uuid,
-            name=uuidsentinel.rp_name
-        )
-        rp.create()
-
         aggregate_uuids = [uuidsentinel.agg_a, uuidsentinel.agg_b]
-        rp.set_aggregates(aggregate_uuids)
+        rp = self._create_provider(
+            uuidsentinel.rp_name,
+            *aggregate_uuids,
+            uuid=uuidsentinel.rp_uuid
+        )
 
         read_aggregate_uuids = rp.get_aggregates()
         self.assertItemsEqual(aggregate_uuids, read_aggregate_uuids)
@@ -1185,15 +916,13 @@ class TestResourceProviderAggregates(test.NoDBTestCase):
         self.assertItemsEqual(aggregate_uuids, re_read_aggregate_uuids)
 
     def test_set_aggregates_is_replace(self):
-        rp = rp_obj.ResourceProvider(
-            context=self.ctx,
-            uuid=uuidsentinel.rp_uuid,
-            name=uuidsentinel.rp_name
-        )
-        rp.create()
-
         start_aggregate_uuids = [uuidsentinel.agg_a, uuidsentinel.agg_b]
-        rp.set_aggregates(start_aggregate_uuids)
+        rp = self._create_provider(
+            uuidsentinel.rp_name,
+            *start_aggregate_uuids,
+            uuid=uuidsentinel.rp_uuid
+        )
+
         read_aggregate_uuids = rp.get_aggregates()
         self.assertItemsEqual(start_aggregate_uuids, read_aggregate_uuids)
 
@@ -1208,14 +937,12 @@ class TestResourceProviderAggregates(test.NoDBTestCase):
         self.assertEqual([], read_aggregate_uuids)
 
     def test_delete_rp_clears_aggs(self):
-        rp = rp_obj.ResourceProvider(
-            context=self.ctx,
-            uuid=uuidsentinel.rp_uuid,
-            name=uuidsentinel.rp_name
-        )
-        rp.create()
         start_aggregate_uuids = [uuidsentinel.agg_a, uuidsentinel.agg_b]
-        rp.set_aggregates(start_aggregate_uuids)
+        rp = self._create_provider(
+            uuidsentinel.rp_name,
+            *start_aggregate_uuids,
+            uuid=uuidsentinel.rp_uuid
+        )
         aggs = rp.get_aggregates()
         self.assertEqual(2, len(aggs))
         rp.destroy()
@@ -1248,13 +975,8 @@ class TestResourceProviderAggregates(test.NoDBTestCase):
         shr_trait = rp_obj.Trait.get_by_name(
             self.ctx, "MISC_SHARES_VIA_AGGREGATE")
 
-        def mkrp(name, sharing, *aggs, **kwargs):
-            rp_args = dict(name=name, uuid=getattr(uuidsentinel, name))
-            parent = kwargs.get('parent')
-            if parent is not None:
-                rp_args['parent_provider_uuid'] = parent.uuid
-            rp = rp_obj.ResourceProvider(self.ctx, **rp_args)
-            rp.create()
+        def mkrp(name, sharing, aggs, **kwargs):
+            rp = self._create_provider(name, *aggs, **kwargs)
             if sharing:
                 rp.set_traits(rp_obj.TraitList(objects=[shr_trait]))
             rp.set_aggregates(aggs)
@@ -1263,30 +985,30 @@ class TestResourceProviderAggregates(test.NoDBTestCase):
         # r1 and c1 constitute a tree.  The child is in agg1.  We use this to
         # show that, when we ask for anchors for s1 (a member of agg1), we get
         # the *root* of the tree, not the aggregate member itself (c1).
-        r1 = mkrp('r1', False)
-        mkrp('c1', False, agg1, parent=r1)
+        r1 = mkrp('r1', False, [])
+        mkrp('c1', False, [agg1], parent=r1.uuid)
         # r2 and c2 constitute a tree.  The root is in agg2; the child is in
         # agg3.  We use this to show that, when we ask for anchors for a
         # provider that's in both of those aggregates (s1), we only get r2 once
-        r2 = mkrp('r2', False, agg2)
-        mkrp('c2', False, agg3, parent=r2)
+        r2 = mkrp('r2', False, [agg2])
+        mkrp('c2', False, [agg3], parent=r2.uuid)
         # r3 stands alone, but is a member of two aggregates.  We use this to
         # show that we don't "jump aggregates" - when we ask for anchors for s2
         # we only get r3 (and s2 itself).
-        r3 = mkrp('r3', False, agg3, agg4)
+        r3 = mkrp('r3', False, [agg3, agg4])
         # s* are sharing providers
-        s1 = mkrp('s1', True, agg1, agg2, agg3)
-        s2 = mkrp('s2', True, agg4)
+        s1 = mkrp('s1', True, [agg1, agg2, agg3])
+        s2 = mkrp('s2', True, [agg4])
         # s3 is the only member of agg5.  We use this to show that the provider
         # is still considered its own root, even if the aggregate is only
         # associated with itself.
-        s3 = mkrp('s3', True, agg5)
+        s3 = mkrp('s3', True, [agg5])
         # s4 is a broken semi-sharing provider - has MISC_SHARES_VIA_AGGREGATE,
         # but is not a member of an aggregate.  It has no "anchor".
-        s4 = mkrp('s4', True)
+        s4 = mkrp('s4', True, [])
         # s5 is a sharing provider whose aggregates overlap with those of s1.
         # s5 and s1 will show up as "anchors" for each other.
-        s5 = mkrp('s5', True, agg1, agg2)
+        s5 = mkrp('s5', True, [agg1, agg2])
 
         # s1 gets s1 (self),
         # r1 via agg1 through c1,
@@ -1322,27 +1044,11 @@ class TestResourceProviderAggregates(test.NoDBTestCase):
 class TestAllocation(tb.PlacementDbBaseTestCase):
 
     def test_create_list_and_delete_allocation(self):
-        resource_provider = rp_obj.ResourceProvider(
-            context=self.ctx,
-            uuid=uuidsentinel.allocation_resource_provider,
-            name=uuidsentinel.allocation_resource_name
-        )
-        resource_provider.create()
-        resource_class = fields.ResourceClass.DISK_GB
-        inv = rp_obj.Inventory(context=self.ctx,
-                resource_provider=resource_provider, **DISK_INVENTORY)
-        inv_list = rp_obj.InventoryList(context=self.ctx, objects=[inv])
-        resource_provider.set_inventory(inv_list)
-        disk_allocation = rp_obj.Allocation(
-            context=self.ctx,
-            resource_provider=resource_provider,
-            **DISK_ALLOCATION
-        )
-        alloc_list = rp_obj.AllocationList(self.ctx,
-                objects=[disk_allocation])
-        alloc_list.create_all()
+        resource_provider, disk_allocation = self._make_allocation(
+            DISK_INVENTORY, DISK_ALLOCATION)
 
-        self.assertEqual(resource_class, disk_allocation.resource_class)
+        self.assertEqual(DISK_ALLOCATION['resource_class'],
+                         disk_allocation.resource_class)
         self.assertEqual(resource_provider,
                          disk_allocation.resource_provider)
         self.assertEqual(DISK_ALLOCATION['used'],
@@ -1374,47 +1080,20 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
         operation where the exiting allocation was not being properly
         deleted.
         """
-        cn_source = rp_obj.ResourceProvider(
-            context=self.ctx,
-            uuid=uuidsentinel.cn_source,
-            name=uuidsentinel.cn_source,
-        )
-        cn_source.create()
-
-        cn_dest = rp_obj.ResourceProvider(
-            context=self.ctx,
-            uuid=uuidsentinel.cn_dest,
-            name=uuidsentinel.cn_dest,
-        )
-        cn_dest.create()
+        cn_source = self._create_provider('cn_source')
+        cn_dest = self._create_provider('cn_dest')
 
         # Add same inventory to both source and destination host
         for cn in (cn_source, cn_dest):
-            cpu_inv = rp_obj.Inventory(
-                context=self.ctx,
-                resource_provider=cn,
-                resource_class=fields.ResourceClass.VCPU,
-                total=24,
-                reserved=0,
-                min_unit=1,
-                max_unit=24,
-                step_size=1,
-                allocation_ratio=16.0)
-            ram_inv = rp_obj.Inventory(
-                context=self.ctx,
-                resource_provider=cn,
-                resource_class=fields.ResourceClass.MEMORY_MB,
-                total=1024,
-                reserved=0,
-                min_unit=64,
-                max_unit=1024,
-                step_size=64,
-                allocation_ratio=1.5)
-            inv_list = rp_obj.InventoryList(context=self.ctx,
-                objects=[cpu_inv, ram_inv])
-            cn.set_inventory(inv_list)
+            tb.add_inventory(cn, fields.ResourceClass.VCPU, 24,
+                             allocation_ratio=16.0)
+            tb.add_inventory(cn, fields.ResourceClass.MEMORY_MB, 1024,
+                             min_unit=64,
+                             max_unit=1024,
+                             step_size=64,
+                             allocation_ratio=1.5)
 
-        # Now create an allocation that represents a move operation where the
+        # Now create allocations that represent a move operation where the
         # scheduler has selected cn_dest as the target host and created a
         # "doubled-up" allocation for the duration of the move operation
         alloc_list = rp_obj.AllocationList(context=self.ctx,
@@ -1531,22 +1210,9 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         rp2_class = fields.ResourceClass.IPV4_ADDRESS
         rp2_used = 2
 
-        rp1 = rp_obj.ResourceProvider(
-            self.ctx, name=rp1_name, uuid=rp1_uuid)
-        rp1.create()
-
-        inv = rp_obj.Inventory(resource_provider=rp1,
-                               resource_class=rp1_class,
-                               total=1024, max_unit=max_unit)
-        inv.obj_set_defaults()
-
-        inv2 = rp_obj.Inventory(resource_provider=rp1,
-                                resource_class=rp2_class,
-                                total=255, reserved=2,
-                                max_unit=max_unit)
-        inv2.obj_set_defaults()
-        inv_list = rp_obj.InventoryList(objects=[inv, inv2])
-        rp1.set_inventory(inv_list)
+        rp1 = self._create_provider(rp1_name, uuid=rp1_uuid)
+        tb.add_inventory(rp1, rp1_class, 1024, max_unit=max_unit)
+        tb.add_inventory(rp1, rp2_class, 255, reserved=2, max_unit=max_unit)
 
         # create the allocations for a first consumer
         allocation_1 = rp_obj.Allocation(resource_provider=rp1,
@@ -1593,12 +1259,8 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         rp2_class = fields.ResourceClass.IPV4_ADDRESS
         rp2_used = 2
 
-        rp1 = rp_obj.ResourceProvider(
-            self.ctx, name=rp1_name, uuid=rp1_uuid)
-        rp1.create()
-        rp2 = rp_obj.ResourceProvider(
-            self.ctx, name=rp2_name, uuid=rp2_uuid)
-        rp2.create()
+        rp1 = self._create_provider(rp1_name, uuid=rp1_uuid)
+        rp2 = self._create_provider(rp2_name, uuid=rp2_uuid)
 
         # Two allocations, one for each resource provider.
         allocation_1 = rp_obj.Allocation(resource_provider=rp1,
@@ -1624,22 +1286,12 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
 
         # Add inventory for one of the two resource providers. This should also
         # fail, since rp2 has no inventory.
-        inv = rp_obj.Inventory(resource_provider=rp1,
-                               resource_class=rp1_class,
-                               total=1024)
-        inv.obj_set_defaults()
-        inv_list = rp_obj.InventoryList(objects=[inv])
-        rp1.set_inventory(inv_list)
+        tb.add_inventory(rp1, rp1_class, 1024, max_unit=1)
         self.assertRaises(exception.InvalidInventory,
                           allocation_list.create_all)
 
         # Add inventory for the second resource provider
-        inv = rp_obj.Inventory(resource_provider=rp2,
-                               resource_class=rp2_class,
-                               total=255, reserved=2)
-        inv.obj_set_defaults()
-        inv_list = rp_obj.InventoryList(objects=[inv])
-        rp2.set_inventory(inv_list)
+        tb.add_inventory(rp2, rp2_class, 255, reserved=2, max_unit=1)
 
         # Now the allocations will still fail because max_unit 1
         self.assertRaises(exception.InvalidAllocationConstraintsViolated,
@@ -1672,13 +1324,8 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         # because a new allocataion is created, adding to the total
         # used, not replacing.
         rp1_used += 1
-        allocation_1 = rp_obj.Allocation(resource_provider=rp1,
-                                         consumer_id=consumer_uuid,
-                                         resource_class=rp1_class,
-                                         used=rp1_used)
-        allocation_list = rp_obj.AllocationList(
-            self.ctx, objects=[allocation_1])
-        allocation_list.create_all()
+        tb.allocate_from_provider(rp1, rp1_class, rp1_used,
+                                  consumer_id=consumer_uuid)
 
         rp1_usage = rp_obj.UsageList.get_all_by_resource_provider_uuid(
             self.ctx, rp1_uuid)
@@ -1703,14 +1350,9 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         # Create one resource provider and set some inventory
         rp_name = kwargs.get('rp_name') or uuidsentinel.rp_name
         rp_uuid = kwargs.get('rp_uuid') or uuidsentinel.rp_uuid
-        rp = rp_obj.ResourceProvider(
-            self.ctx, name=rp_name, uuid=rp_uuid)
-        rp.create()
-        inv = rp_obj.Inventory(resource_provider=rp,
-                               total=1024, allocation_ratio=1,
-                               reserved=0, **kwargs)
-        inv.obj_set_defaults()
-        rp.set_inventory(rp_obj.InventoryList(objects=[inv]))
+        rp = self._create_provider(rp_name, uuid=rp_uuid)
+        rc = kwargs.pop('resource_class')
+        tb.add_inventory(rp, rc, 1024, **kwargs)
         return rp
 
     def _validate_usage(self, rp, usage):
@@ -1720,29 +1362,19 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
 
     def _check_create_allocations(self, inventory_kwargs,
                                   bad_used, good_used):
-        consumer_uuid = uuidsentinel.consumer
         rp_class = fields.ResourceClass.DISK_GB
         rp = self._make_rp_and_inventory(resource_class=rp_class,
                                          **inventory_kwargs)
 
         # allocation, bad step_size
-        allocation = rp_obj.Allocation(resource_provider=rp,
-                                       consumer_id=consumer_uuid,
-                                       resource_class=rp_class,
-                                       used=bad_used)
-        allocation_list = rp_obj.AllocationList(self.ctx,
-                                                 objects=[allocation])
         self.assertRaises(exception.InvalidAllocationConstraintsViolated,
-                          allocation_list.create_all)
+                          tb.allocate_from_provider, rp, rp_class, bad_used)
 
         # correct for step size
-        allocation.used = good_used
-        allocation_list = rp_obj.AllocationList(self.ctx,
-                                                 objects=[allocation])
-        allocation_list.create_all()
+        tb.allocate_from_provider(rp, rp_class, good_used)
 
         # check usage
-        self._validate_usage(rp, allocation.used)
+        self._validate_usage(rp, good_used)
 
     def test_create_all_step_size(self):
         bad_used = 4
@@ -1986,44 +1618,16 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         allocations in the list should not be applied.
 
         """
-        empty_rp = rp_obj.ResourceProvider(
-            context=self.ctx,
-            uuid=uuidsentinel.empty_rp,
-            name=uuidsentinel.empty_rp,
-        )
-        empty_rp.create()
-
-        full_rp = rp_obj.ResourceProvider(
-            context=self.ctx,
-            uuid=uuidsentinel.full_rp,
-            name=uuidsentinel.full_rp,
-        )
-        full_rp.create()
+        empty_rp = self._create_provider('empty_rp')
+        full_rp = self._create_provider('full_rp')
 
         for rp in (empty_rp, full_rp):
-            cpu_inv = rp_obj.Inventory(
-                context=self.ctx,
-                resource_provider=rp,
-                resource_class=fields.ResourceClass.VCPU,
-                total=24,
-                reserved=0,
-                min_unit=1,
-                max_unit=24,
-                step_size=1,
-                allocation_ratio=16.0)
-            ram_inv = rp_obj.Inventory(
-                context=self.ctx,
-                resource_provider=rp,
-                resource_class=fields.ResourceClass.MEMORY_MB,
-                total=1024,
-                reserved=0,
-                min_unit=64,
-                max_unit=1024,
-                step_size=64,
-                allocation_ratio=1.0)
-            inv_list = rp_obj.InventoryList(context=self.ctx,
-                objects=[cpu_inv, ram_inv])
-            rp.set_inventory(inv_list)
+            tb.add_inventory(rp, fields.ResourceClass.VCPU, 24,
+                             allocation_ratio=16.0)
+            tb.add_inventory(rp, fields.ResourceClass.MEMORY_MB, 1024,
+                             min_unit=64,
+                             max_unit=1024,
+                             step_size=64)
 
         # First create a allocation to consume full_rp's resource.
         alloc_list = rp_obj.AllocationList(context=self.ctx,
@@ -2043,8 +1647,8 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
             ])
         alloc_list.create_all()
 
-        # Create a allocation list consists of valid requests and a invalid
-        # request exceeds memory full_rp can provide.
+        # Create an allocation list consisting of valid requests and an invalid
+        # request exceeding the memory full_rp can provide.
         alloc_list = rp_obj.AllocationList(context=self.ctx,
             objects=[
                 rp_obj.Allocation(
@@ -2076,7 +1680,7 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         self.assertRaises(exception.InvalidAllocationCapacityExceeded,
                           alloc_list.create_all)
 
-        # Make sure that allocations of both empty_rp and full_rp remains
+        # Make sure that allocations of both empty_rp and full_rp remain
         # unchanged.
         allocations = rp_obj.AllocationList.get_all_by_resource_provider(
             self.ctx, full_rp)
@@ -2091,8 +1695,7 @@ class UsageListTestCase(tb.PlacementDbBaseTestCase):
 
     def test_get_all_null(self):
         for uuid in [uuidsentinel.rp_uuid_1, uuidsentinel.rp_uuid_2]:
-            rp = rp_obj.ResourceProvider(self.ctx, name=uuid, uuid=uuid)
-            rp.create()
+            self._create_provider(uuid, uuid=uuid)
 
         usage_list = rp_obj.UsageList.get_all_by_resource_provider_uuid(
             self.ctx, uuidsentinel.rp_uuid_1)
@@ -2115,16 +1718,8 @@ class UsageListTestCase(tb.PlacementDbBaseTestCase):
                          usage_list[0].resource_class)
 
     def test_get_inventory_no_allocation(self):
-        db_rp = rp_obj.ResourceProvider(self.ctx,
-                                        name=uuidsentinel.rp_no_inv,
-                                        uuid=uuidsentinel.rp_no_inv)
-        db_rp.create()
-        inv = rp_obj.Inventory(resource_provider=db_rp,
-                               resource_class=fields.ResourceClass.DISK_GB,
-                               total=1024)
-        inv.obj_set_defaults()
-        inv_list = rp_obj.InventoryList(objects=[inv])
-        db_rp.set_inventory(inv_list)
+        db_rp = self._create_provider('rp_no_inv')
+        tb.add_inventory(db_rp, fields.ResourceClass.DISK_GB, 1024)
 
         usage_list = rp_obj.UsageList.get_all_by_resource_provider_uuid(
             self.ctx, db_rp.uuid)
@@ -2134,20 +1729,9 @@ class UsageListTestCase(tb.PlacementDbBaseTestCase):
                          usage_list[0].resource_class)
 
     def test_get_all_multiple_inv(self):
-        db_rp = rp_obj.ResourceProvider(self.ctx,
-                                        name=uuidsentinel.rp_no_inv,
-                                        uuid=uuidsentinel.rp_no_inv)
-        db_rp.create()
-        disk_inv = rp_obj.Inventory(
-            resource_provider=db_rp,
-            resource_class=fields.ResourceClass.DISK_GB, total=1024)
-        disk_inv.obj_set_defaults()
-        vcpu_inv = rp_obj.Inventory(
-            resource_provider=db_rp,
-            resource_class=fields.ResourceClass.VCPU, total=24)
-        vcpu_inv.obj_set_defaults()
-        inv_list = rp_obj.InventoryList(objects=[disk_inv, vcpu_inv])
-        db_rp.set_inventory(inv_list)
+        db_rp = self._create_provider('rp_no_inv')
+        tb.add_inventory(db_rp, fields.ResourceClass.DISK_GB, 1024)
+        tb.add_inventory(db_rp, fields.ResourceClass.VCPU, 24)
 
         usage_list = rp_obj.UsageList.get_all_by_resource_provider_uuid(
             self.ctx, db_rp.uuid)
@@ -2413,19 +1997,6 @@ class ResourceClassTestCase(tb.PlacementDbBaseTestCase):
 
 class ResourceProviderTraitTestCase(tb.PlacementDbBaseTestCase):
 
-    def setUp(self):
-        super(ResourceProviderTraitTestCase, self).setUp()
-        # Reset the _TRAITS_SYNCED global before we start and after
-        # we are done since other tests (notably the gabbi tests)
-        # may have caused it to change.
-        self._reset_traits_synced()
-        self.addCleanup(self._reset_traits_synced)
-
-    @staticmethod
-    def _reset_traits_synced():
-        """Reset the _TRAITS_SYNCED boolean to base state."""
-        rp_obj._TRAITS_SYNCED = False
-
     def _assert_traits(self, expected_traits, traits_objs):
         expected_traits.sort()
         traits = []
@@ -2550,24 +2121,12 @@ class ResourceProviderTraitTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(0, len(traits))
 
     def test_set_traits_for_resource_provider(self):
-        rp = rp_obj.ResourceProvider(
-            context=self.ctx,
-            uuid=uuidsentinel.fake_resource_provider,
-            name=uuidsentinel.fake_resource_name,
-        )
-        rp.create()
+        rp = self._create_provider('fake_resource_provider')
         generation = rp.generation
         self.assertIsInstance(rp.id, int)
 
         trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
-        trait_objs = []
-        for name in trait_names:
-            t = rp_obj.Trait(self.ctx)
-            t.name = name
-            t.create()
-            trait_objs.append(t)
-
-        rp.set_traits(trait_objs)
+        tb.set_traits(rp, *trait_names)
 
         rp_traits = rp_obj.TraitList.get_all_by_resource_provider(self.ctx, rp)
         self._assert_traits(trait_names, rp_traits)
@@ -2578,7 +2137,7 @@ class ResourceProviderTraitTestCase(tb.PlacementDbBaseTestCase):
         updated_traits = rp_obj.TraitList.get_all(self.ctx,
             filters={'name_in': trait_names})
         self._assert_traits(trait_names, updated_traits)
-        rp.set_traits(updated_traits)
+        tb.set_traits(rp, *trait_names)
         rp_traits = rp_obj.TraitList.get_all_by_resource_provider(self.ctx, rp)
         self._assert_traits(trait_names, rp_traits)
         self.assertEqual(rp.generation, generation + 1)
@@ -2589,72 +2148,41 @@ class ResourceProviderTraitTestCase(tb.PlacementDbBaseTestCase):
         the trait still associated with another one.
         """
         # Create two ResourceProviders
-        rp1 = rp_obj.ResourceProvider(
-            context=self.ctx,
-            uuid=uuidsentinel.fake_resource_provider1,
-            name=uuidsentinel.fake_resource_name1,
-        )
-        rp1.create()
-        rp2 = rp_obj.ResourceProvider(
-            context=self.ctx,
-            uuid=uuidsentinel.fake_resource_provider2,
-            name=uuidsentinel.fake_resource_name2,
-        )
-        rp2.create()
+        rp1 = self._create_provider('fake_resource_provider1')
+        rp2 = self._create_provider('fake_resource_provider2')
 
-        # Create a trait
-        t = rp_obj.Trait(self.ctx)
-        t.name = 'CUSTOM_TRAIT_A'
-        t.create()
+        tname = 'CUSTOM_TRAIT_A'
 
         # Associate the trait with two ResourceProviders
-        rp1.set_traits([t])
-        rp2.set_traits([t])
+        tb.set_traits(rp1, tname)
+        tb.set_traits(rp2, tname)
 
         # Ensure the association
         rp1_traits = rp_obj.TraitList.get_all_by_resource_provider(
             self.ctx, rp1)
         rp2_traits = rp_obj.TraitList.get_all_by_resource_provider(
             self.ctx, rp2)
-        self._assert_traits(['CUSTOM_TRAIT_A'], rp1_traits)
-        self._assert_traits(['CUSTOM_TRAIT_A'], rp2_traits)
+        self._assert_traits([tname], rp1_traits)
+        self._assert_traits([tname], rp2_traits)
 
         # Detach the trait from one of ResourceProvider, and ensure the
         # trait association with another ResourceProvider still exists.
-        rp1.set_traits([])
+        tb.set_traits(rp1)
         rp1_traits = rp_obj.TraitList.get_all_by_resource_provider(
             self.ctx, rp1)
         rp2_traits = rp_obj.TraitList.get_all_by_resource_provider(
             self.ctx, rp2)
         self._assert_traits([], rp1_traits)
-        self._assert_traits(['CUSTOM_TRAIT_A'], rp2_traits)
+        self._assert_traits([tname], rp2_traits)
 
     def test_trait_delete_in_use(self):
-        rp = rp_obj.ResourceProvider(
-            context=self.ctx,
-            uuid=uuidsentinel.fake_resource_provider,
-            name=uuidsentinel.fake_resource_name,
-        )
-        rp.create()
-        t = rp_obj.Trait(self.ctx)
-        t.name = 'CUSTOM_TRAIT_A'
-        t.create()
-        rp.set_traits([t])
+        rp = self._create_provider('fake_resource_provider')
+        t, = tb.set_traits(rp, 'CUSTOM_TRAIT_A')
         self.assertRaises(exception.TraitInUse, t.destroy)
 
     def test_traits_get_all_with_associated_true(self):
-        rp1 = rp_obj.ResourceProvider(
-            context=self.ctx,
-            uuid=uuidsentinel.fake_resource_provider1,
-            name=uuidsentinel.fake_resource_name1,
-        )
-        rp1.create()
-        rp2 = rp_obj.ResourceProvider(
-            context=self.ctx,
-            uuid=uuidsentinel.fake_resource_provider2,
-            name=uuidsentinel.fake_resource_name2,
-        )
-        rp2.create()
+        rp1 = self._create_provider('fake_resource_provider1')
+        rp2 = self._create_provider('fake_resource_provider2')
         trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
         for name in trait_names:
             t = rp_obj.Trait(self.ctx)
@@ -2670,18 +2198,8 @@ class ResourceProviderTraitTestCase(tb.PlacementDbBaseTestCase):
                 filters={'associated': True}))
 
     def test_traits_get_all_with_associated_false(self):
-        rp1 = rp_obj.ResourceProvider(
-            context=self.ctx,
-            uuid=uuidsentinel.fake_resource_provider1,
-            name=uuidsentinel.fake_resource_name1,
-        )
-        rp1.create()
-        rp2 = rp_obj.ResourceProvider(
-            context=self.ctx,
-            uuid=uuidsentinel.fake_resource_provider2,
-            name=uuidsentinel.fake_resource_name2,
-        )
-        rp2.create()
+        rp1 = self._create_provider('fake_resource_provider1')
+        rp2 = self._create_provider('fake_resource_provider2')
         trait_names = ['CUSTOM_TRAIT_A', 'CUSTOM_TRAIT_B', 'CUSTOM_TRAIT_C']
         for name in trait_names:
             t = rp_obj.Trait(self.ctx)
@@ -2742,91 +2260,38 @@ class SharedProviderTestCase(tb.PlacementDbBaseTestCase):
         function finds that provider and not providers of "local disk".
         """
         # Create the two "local disk" compute node providers
-        cn1_uuid = uuidsentinel.cn1
-        cn1 = rp_obj.ResourceProvider(
-            self.ctx,
-            name='cn1',
-            uuid=cn1_uuid,
-        )
-        cn1.create()
-
-        cn2_uuid = uuidsentinel.cn2
-        cn2 = rp_obj.ResourceProvider(
-            self.ctx,
-            name='cn2',
-            uuid=cn2_uuid,
-        )
-        cn2.create()
+        cn1 = self._create_provider('cn1')
+        cn2 = self._create_provider('cn2')
 
         # Populate the two compute node providers with inventory.  One has
         # DISK_GB.  Both should be excluded from the result (one doesn't have
         # the requested resource; but neither is a sharing provider).
         for cn in (cn1, cn2):
-            vcpu = rp_obj.Inventory(
-                resource_provider=cn,
-                resource_class=fields.ResourceClass.VCPU,
-                total=24,
-                reserved=0,
-                min_unit=1,
-                max_unit=24,
-                step_size=1,
-                allocation_ratio=16.0,
-            )
-            memory_mb = rp_obj.Inventory(
-                resource_provider=cn,
-                resource_class=fields.ResourceClass.MEMORY_MB,
-                total=32768,
-                reserved=0,
-                min_unit=64,
-                max_unit=32768,
-                step_size=64,
-                allocation_ratio=1.5,
-            )
+            tb.add_inventory(cn, fields.ResourceClass.VCPU, 24,
+                             allocation_ratio=16.0)
+            tb.add_inventory(cn, fields.ResourceClass.MEMORY_MB, 32768,
+                             min_unit=64,
+                             max_unit=32768,
+                             step_size=64,
+                             allocation_ratio=1.5)
             if cn is cn1:
-                disk_gb = rp_obj.Inventory(
-                    resource_provider=cn,
-                    resource_class=fields.ResourceClass.DISK_GB,
-                    total=2000,
-                    reserved=0,
-                    min_unit=10,
-                    max_unit=100,
-                    step_size=10,
-                    allocation_ratio=1.0,
-                )
-                inv_list = rp_obj.InventoryList(objects=[vcpu, memory_mb,
-                                                         disk_gb])
-            else:
-                inv_list = rp_obj.InventoryList(objects=[vcpu, memory_mb])
-            cn.set_inventory(inv_list)
+                tb.add_inventory(cn, fields.ResourceClass.DISK_GB, 2000,
+                                 min_unit=10,
+                                 max_unit=100,
+                                 step_size=10)
 
         # Create the shared storage pool
-        ss_uuid = uuidsentinel.ss
-        ss = rp_obj.ResourceProvider(
-            self.ctx,
-            name='shared storage',
-            uuid=ss_uuid,
-        )
-        ss.create()
+        ss = self._create_provider('shared storage')
 
         # Give the shared storage pool some inventory of DISK_GB
-        disk_gb = rp_obj.Inventory(
-            resource_provider=ss,
-            resource_class=fields.ResourceClass.DISK_GB,
-            total=2000,
-            reserved=0,
-            min_unit=10,
-            max_unit=100,
-            step_size=10,
-            allocation_ratio=1.0,
-        )
-        disk_gb.obj_set_defaults()
-        inv_list = rp_obj.InventoryList(objects=[disk_gb])
-        ss.set_inventory(inv_list)
+        tb.add_inventory(ss, fields.ResourceClass.DISK_GB, 2000,
+                         min_unit=10,
+                         max_unit=100,
+                         step_size=10)
 
         # Mark the shared storage pool as having inventory shared among any
         # provider associated via aggregate
-        t = rp_obj.Trait.get_by_name(self.ctx, "MISC_SHARES_VIA_AGGREGATE")
-        ss.set_traits(rp_obj.TraitList(objects=[t]))
+        tb.set_traits(ss, "MISC_SHARES_VIA_AGGREGATE")
 
         # OK, now that has all been set up, let's verify that we get the ID of
         # the shared storage pool when we ask for DISK_GB
@@ -2847,74 +2312,31 @@ class SharedProviderTestCase(tb.PlacementDbBaseTestCase):
         agg_uuid = uuidsentinel.agg
 
         # Create the two compute node providers
-        cn1_uuid = uuidsentinel.cn1
-        cn1 = rp_obj.ResourceProvider(
-            self.ctx,
-            name='cn1',
-            uuid=cn1_uuid,
-        )
-        cn1.create()
-
-        cn2_uuid = uuidsentinel.cn2
-        cn2 = rp_obj.ResourceProvider(
-            self.ctx,
-            name='cn2',
-            uuid=cn2_uuid,
-        )
-        cn2.create()
+        cn1 = self._create_provider('cn1')
+        cn2 = self._create_provider('cn2')
 
         # Populate the two compute node providers with inventory, sans DISK_GB
         for cn in (cn1, cn2):
-            vcpu = rp_obj.Inventory(
-                resource_provider=cn,
-                resource_class=fields.ResourceClass.VCPU,
-                total=24,
-                reserved=0,
-                min_unit=1,
-                max_unit=24,
-                step_size=1,
-                allocation_ratio=16.0,
-            )
-            memory_mb = rp_obj.Inventory(
-                resource_provider=cn,
-                resource_class=fields.ResourceClass.MEMORY_MB,
-                total=1024,
-                reserved=0,
-                min_unit=64,
-                max_unit=1024,
-                step_size=1,
-                allocation_ratio=1.5,
-            )
-            inv_list = rp_obj.InventoryList(objects=[vcpu, memory_mb])
-            cn.set_inventory(inv_list)
+            tb.add_inventory(cn, fields.ResourceClass.VCPU, 24,
+                             allocation_ratio=16.0)
+            tb.add_inventory(cn, fields.ResourceClass.MEMORY_MB, 1024,
+                             min_unit=64,
+                             max_unit=1024,
+                             step_size=1,
+                             allocation_ratio=1.5)
 
         # Create the shared storage pool
-        ss_uuid = uuidsentinel.ss
-        ss = rp_obj.ResourceProvider(
-            self.ctx,
-            name='shared storage',
-            uuid=ss_uuid,
-        )
-        ss.create()
+        ss = self._create_provider('shared storage')
 
         # Give the shared storage pool some inventory of DISK_GB
-        disk_gb = rp_obj.Inventory(
-            resource_provider=ss,
-            resource_class=fields.ResourceClass.DISK_GB,
-            total=2000,
-            reserved=0,
-            min_unit=10,
-            max_unit=100,
-            step_size=1,
-            allocation_ratio=1.0,
-        )
-        inv_list = rp_obj.InventoryList(objects=[disk_gb])
-        ss.set_inventory(inv_list)
+        tb.add_inventory(ss, fields.ResourceClass.DISK_GB, 2000,
+                         min_unit=10,
+                         max_unit=100,
+                         step_size=1)
 
         # Mark the shared storage pool as having inventory shared among any
         # provider associated via aggregate
-        t = rp_obj.Trait.get_by_name(self.ctx, "MISC_SHARES_VIA_AGGREGATE")
-        ss.set_traits(rp_obj.TraitList(objects=[t]))
+        tb.set_traits(ss, "MISC_SHARES_VIA_AGGREGATE")
 
         resources = self._requested_resources()
 
@@ -2948,45 +2370,13 @@ class SharedProviderTestCase(tb.PlacementDbBaseTestCase):
         # that this compute node, because it has all three resources "locally"
         # is also returned by _get_all_with_shared() along with the other
         # compute nodes that are associated with the shared storage pool.
-        cn3_uuid = uuidsentinel.cn3
-        cn3 = rp_obj.ResourceProvider(
-            self.ctx,
-            name='cn3',
-            uuid=cn3_uuid,
-        )
-        cn3.create()
-        vcpu = rp_obj.Inventory(
-            resource_provider=cn3,
-            resource_class=fields.ResourceClass.VCPU,
-            total=24,
-            reserved=0,
-            min_unit=1,
-            max_unit=24,
-            step_size=1,
-            allocation_ratio=1.0,
-        )
-        memory_mb = rp_obj.Inventory(
-            resource_provider=cn3,
-            resource_class=fields.ResourceClass.MEMORY_MB,
-            total=1024,
-            reserved=0,
-            min_unit=64,
-            max_unit=1024,
-            step_size=1,
-            allocation_ratio=1.0,
-        )
-        disk_gb = rp_obj.Inventory(
-            resource_provider=cn3,
-            resource_class=fields.ResourceClass.DISK_GB,
-            total=500,
-            reserved=0,
-            min_unit=10,
-            max_unit=500,
-            step_size=10,
-            allocation_ratio=1.0,
-        )
-        inv_list = rp_obj.InventoryList(objects=[vcpu, memory_mb, disk_gb])
-        cn3.set_inventory(inv_list)
+        cn3 = self._create_provider('cn3')
+        tb.add_inventory(cn3, fields.ResourceClass.VCPU, 24)
+        tb.add_inventory(cn3, fields.ResourceClass.MEMORY_MB, 1024,
+                         min_unit=64)
+        tb.add_inventory(cn3, fields.ResourceClass.DISK_GB, 500,
+                         min_unit=10,
+                         step_size=10)
 
         got_rps = rp_obj._get_all_with_shared(
             self.ctx,
@@ -2997,25 +2387,10 @@ class SharedProviderTestCase(tb.PlacementDbBaseTestCase):
 
         # Consume all vCPU and RAM inventory on the "local disk" compute node
         # and verify it no longer is returned from _get_all_with_shared()
-
-        vcpu_alloc = rp_obj.Allocation(
-            resource_provider=cn3,
-            resource_class=fields.ResourceClass.VCPU,
-            consumer_id=uuidsentinel.consumer,
-            used=24,
-        )
-        memory_mb_alloc = rp_obj.Allocation(
-            resource_provider=cn3,
-            resource_class=fields.ResourceClass.MEMORY_MB,
-            consumer_id=uuidsentinel.consumer,
-            used=1024,
-        )
-
-        alloc_list = rp_obj.AllocationList(
-            self.ctx,
-            objects=[vcpu_alloc, memory_mb_alloc]
-        )
-        alloc_list.create_all()
+        tb.allocate_from_provider(cn3, fields.ResourceClass.VCPU, 24,
+                                  consumer_id=uuidsentinel.consumer)
+        tb.allocate_from_provider(cn3, fields.ResourceClass.MEMORY_MB, 1024,
+                                  consumer_id=uuidsentinel.consumer)
 
         got_rps = rp_obj._get_all_with_shared(
             self.ctx,
@@ -3027,20 +2402,10 @@ class SharedProviderTestCase(tb.PlacementDbBaseTestCase):
         # Now we consume all the memory in the second compute node and verify
         # that it does not get returned from _get_all_with_shared()
 
-        for x in range(3):
+        for _ in range(3):
             # allocation_ratio for MEMORY_MB is 1.5, so we need to make 3
             # 512-MB allocations to fully consume the memory on the node
-            memory_mb_alloc = rp_obj.Allocation(
-                resource_provider=cn2,
-                resource_class=fields.ResourceClass.MEMORY_MB,
-                consumer_id=getattr(uuidsentinel, 'consumer%d' % x),
-                used=512,
-            )
-            alloc_list = rp_obj.AllocationList(
-                self.ctx,
-                objects=[memory_mb_alloc]
-            )
-            alloc_list.create_all()
+            tb.allocate_from_provider(cn2, fields.ResourceClass.MEMORY_MB, 512)
 
         got_rps = rp_obj._get_all_with_shared(
             self.ctx,
@@ -3054,79 +2419,32 @@ class SharedProviderTestCase(tb.PlacementDbBaseTestCase):
         # storage provider but do NOT decorate that provider with the
         # MISC_SHARES_VIA_AGGREGATE trait and verify that neither of the new
         # compute node providers are returned by _get_all_with_shared()
-
-        cn4_uuid = uuidsentinel.cn4
-        cn4 = rp_obj.ResourceProvider(
-            self.ctx,
-            name='cn4',
-            uuid=cn4_uuid,
-        )
-        cn4.create()
-
-        cn5_uuid = uuidsentinel.cn5
-        cn5 = rp_obj.ResourceProvider(
-            self.ctx,
-            name='cn5',
-            uuid=cn5_uuid,
-        )
-        cn5.create()
-
-        # Populate the two compute node providers with inventory, sans DISK_GB
-        for cn in (cn4, cn5):
-            vcpu = rp_obj.Inventory(
-                resource_provider=cn,
-                resource_class=fields.ResourceClass.VCPU,
-                total=24,
-                reserved=0,
-                min_unit=1,
-                max_unit=24,
-                step_size=1,
-                allocation_ratio=16.0,
-            )
-            memory_mb = rp_obj.Inventory(
-                resource_provider=cn,
-                resource_class=fields.ResourceClass.MEMORY_MB,
-                total=1024,
-                reserved=0,
-                min_unit=64,
-                max_unit=1024,
-                step_size=1,
-                allocation_ratio=1.5,
-            )
-            inv_list = rp_obj.InventoryList(objects=[vcpu, memory_mb])
-            cn.set_inventory(inv_list)
-
-        # Create the storage provider but do NOT mark it sharing its inventory
-        # with other providers
-        ns_uuid = uuidsentinel.ns
-        ns = rp_obj.ResourceProvider(
-            self.ctx,
-            name='non_shared storage',
-            uuid=ns_uuid,
-        )
-        ns.create()
-
-        # Give the shared storage pool some inventory of DISK_GB
-        disk_gb = rp_obj.Inventory(
-            resource_provider=ns,
-            resource_class=fields.ResourceClass.DISK_GB,
-            total=2000,
-            reserved=0,
-            min_unit=10,
-            max_unit=100,
-            step_size=1,
-            allocation_ratio=1.0,
-        )
-        inv_list = rp_obj.InventoryList(objects=[disk_gb])
-        ns.set_inventory(inv_list)
-
         # Associate the new no-local-disk compute nodes and the non-shared
         # storage provider with an aggregate that is different from the
         # aggregate associating the shared storage provider with compute nodes
         agg2_uuid = uuidsentinel.agg2
-        cn4.set_aggregates([agg2_uuid])
-        cn5.set_aggregates([agg2_uuid])
-        ns.set_aggregates([agg2_uuid])
+        cn4 = self._create_provider('cn4', agg2_uuid)
+        cn5 = self._create_provider('cn5', agg2_uuid)
+
+        # Populate the two compute node providers with inventory, sans DISK_GB
+        for cn in (cn4, cn5):
+            tb.add_inventory(cn, fields.ResourceClass.VCPU, 24,
+                             allocation_ratio=16.0)
+            tb.add_inventory(cn, fields.ResourceClass.MEMORY_MB, 1024,
+                             min_unit=64,
+                             max_unit=1024,
+                             step_size=1,
+                             allocation_ratio=1.5)
+
+        # Create the storage provider but do NOT mark it sharing its inventory
+        # with other providers
+        ns = self._create_provider('non_shared storage', agg2_uuid)
+
+        # Give the shared storage pool some inventory of DISK_GB
+        tb.add_inventory(ns, fields.ResourceClass.DISK_GB, 2000,
+                         min_unit=10,
+                         max_unit=100,
+                         step_size=1)
 
         # Ensure neither cn4 nor cn5 are in the returned providers list,
         # because neither has DISK_GB inventory and although they are
