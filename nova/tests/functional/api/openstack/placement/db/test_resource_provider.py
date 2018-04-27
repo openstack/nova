@@ -584,22 +584,6 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(1, len(new_inv_list))
         self.assertEqual(2048, new_inv_list[0].total)
 
-        # fail when inventory bad
-        disk_inv = rp_obj.Inventory(
-                resource_provider=rp,
-                resource_class=fields.ResourceClass.DISK_GB,
-                total=2048,
-                reserved=2048)
-        disk_inv.obj_set_defaults()
-        error = self.assertRaises(exception.InvalidInventoryCapacity,
-                                  rp.update_inventory, disk_inv)
-        self.assertIn("Invalid inventory for '%s'"
-                      % fields.ResourceClass.DISK_GB, str(error))
-        self.assertIn("on resource provider '%s'." % rp.uuid, str(error))
-
-        # generation has not bumped
-        self.assertEqual(saved_generation, rp.generation)
-
         # delete inventory
         rp.delete_inventory(fields.ResourceClass.DISK_GB)
 
@@ -692,17 +676,6 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(new_total, inv_list[0].total)
         mock_log.warning.assert_called_once_with(
             mock.ANY, {'uuid': rp.uuid, 'resource': 'DISK_GB'})
-
-    def test_add_invalid_inventory(self):
-        rp = self._create_provider(uuidsentinel.rp_name)
-        error = self.assertRaises(
-            exception.InvalidInventoryCapacity,
-            tb.add_inventory, rp, fields.ResourceClass.DISK_GB, 1024,
-            reserved=2048)
-        self.assertIn("Invalid inventory for '%s'"
-                      % fields.ResourceClass.DISK_GB, str(error))
-        self.assertIn("on resource provider '%s'."
-                      % rp.uuid, str(error))
 
     def test_add_allocation_increments_generation(self):
         rp = self._create_provider(name='foo')

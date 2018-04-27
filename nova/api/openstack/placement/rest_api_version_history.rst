@@ -323,3 +323,9 @@ The semantic of the (unnumbered) ``resources``, ``required``, and ``member_of``
 query parameters is unchanged: the resources, traits, and aggregate
 associations specified thereby may be satisfied by any provider in the same
 non-sharing tree or associated via the specified aggregate(s).
+
+1.26 Allow inventories to have reserved value equal to total
+------------------------------------------------------------
+
+Starting with this version, it is allowed to set the reserved value of the
+resource provider inventory to be equal to total.

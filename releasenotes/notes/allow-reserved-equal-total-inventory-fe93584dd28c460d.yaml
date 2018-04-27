@@ -1,0 +1,6 @@
+---
+features:
+  - |
+    Introduces new placement API version ``1.26``. Starting with this version
+    it is allowed to define resource provider inventories with reserved value
+    equal to total.

@@ -12,6 +12,7 @@
 """Inventory handlers for Placement API."""
 
 import copy
+import operator
 
 from oslo_db import exception as db_exc
 from oslo_serialization import jsonutils
@@ -147,6 +148,31 @@ def _serialize_inventories(inventories, generation):
              'inventories': inventories_dict}, last_modified)
 
 
+def _validate_inventory_capacity(version, inventories):
+    """Validate inventory capacity.
+
+    :param version: request microversion.
+    :param inventories: Inventory or InventoryList to validate capacities of.
+    :raises: exception.InvalidInventoryCapacityReservedCanBeTotal if request
+        microversion is 1.26 or higher and any inventory has capacity < 0.
+    :raises: exception.InvalidInventoryCapacity if request
+        microversion is lower than 1.26 and any inventory has capacity <= 0.
+    """
+    if not version.matches((1, 26)):
+        op = operator.le
+        exc_class = exception.InvalidInventoryCapacity
+    else:
+        op = operator.lt
+        exc_class = exception.InvalidInventoryCapacityReservedCanBeTotal
+    if isinstance(inventories, rp_obj.Inventory):
+        inventories = rp_obj.InventoryList(objects=[inventories])
+    for inventory in inventories:
+        if op(inventory.capacity, 0):
+            raise exc_class(
+                resource_class=inventory.resource_class,
+                resource_provider=inventory.resource_provider.uuid)
+
+
 @wsgi_wrapper.PlacementWsgify
 @util.require_content('application/json')
 def create_inventory(req):
@@ -168,6 +194,8 @@ def create_inventory(req):
                                        **data)
 
     try:
+        _validate_inventory_capacity(
+            req.environ[microversion.MICROVERSION_ENVIRON], inventory)
         resource_provider.add_inventory(inventory)
     except (exception.ConcurrentUpdateDetected,
             db_exc.DBDuplicateEntry) as exc:
@@ -305,6 +333,8 @@ def set_inventories(req):
     inventories = rp_obj.InventoryList(objects=inv_list)
 
     try:
+        _validate_inventory_capacity(
+            req.environ[microversion.MICROVERSION_ENVIRON], inventories)
         resource_provider.set_inventory(inventories)
     except exception.ResourceClassNotFound as exc:
         raise webob.exc.HTTPBadRequest(
@@ -401,6 +431,8 @@ def update_inventory(req):
                                        **data)
 
     try:
+        _validate_inventory_capacity(
+            req.environ[microversion.MICROVERSION_ENVIRON], inventory)
         resource_provider.update_inventory(inventory)
     except (exception.ConcurrentUpdateDetected,
             db_exc.DBDuplicateEntry) as exc:
