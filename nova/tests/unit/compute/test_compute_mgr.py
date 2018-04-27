@@ -156,7 +156,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         specd_compute.instance_events = call_tracker
         specd_compute._notify_about_instance_usage = _mark_notify
         specd_compute._shutdown_instance = _mark_shutdown
-        mock_inst.info_cache = call_tracker
 
         mock_bdms = mock.Mock()
         specd_compute._delete_instance(specd_compute,
@@ -167,7 +166,7 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
         methods_called = [n for n, a, k in call_tracker.mock_calls]
         self.assertEqual(['clear_events_for_instance',
                           '_notify_about_instance_usage',
-                          '_shutdown_instance', 'delete'],
+                          '_shutdown_instance'],
                          methods_called)
         mock_notify.assert_called_once_with(self.context,
                                             mock_inst,
@@ -296,40 +295,6 @@ class ComputeManagerUnitTestCase(test.NoDBTestCase):
             self.context, self.compute.host, use_slave=False)
         self.assertTrue(mock_log.warning.called)
         self.assertFalse(mock_log.error.called)
-
-    @mock.patch('nova.objects.ConsoleAuthToken.'
-                'clean_console_auths_for_instance')
-    @mock.patch('nova.compute.utils.notify_about_instance_action')
-    @mock.patch('nova.compute.manager.ComputeManager.'
-                '_detach_volume')
-    def test_delete_instance_without_info_cache(self, mock_detach,
-                                                mock_notify, mock_clean):
-        instance = fake_instance.fake_instance_obj(
-                self.context,
-                uuid=uuids.instance,
-                vm_state=vm_states.ERROR,
-                host=self.compute.host,
-                expected_attrs=['system_metadata'])
-
-        with test.nested(
-            mock.patch.object(self.compute, '_notify_about_instance_usage'),
-            mock.patch.object(self.compute, '_shutdown_instance'),
-            mock.patch.object(instance, 'obj_load_attr'),
-            mock.patch.object(instance, 'save'),
-            mock.patch.object(instance, 'destroy')
-        ) as (
-            compute_notify_about_instance_usage, compute_shutdown_instance,
-            instance_obj_load_attr, instance_save, instance_destroy
-        ):
-            instance.info_cache = None
-            self.compute._delete_instance(self.context, instance, [])
-
-        mock_notify.assert_has_calls([
-            mock.call(self.context, instance, 'fake-mini',
-                      action='delete', phase='start', bdms=[]),
-            mock.call(self.context, instance, 'fake-mini',
-                      action='delete', phase='end', bdms=[])])
-        mock_clean.assert_called_once_with(self.context, instance.uuid)
 
     def test_check_device_tagging_no_tagging(self):
         bdms = objects.BlockDeviceMappingList(objects=[
