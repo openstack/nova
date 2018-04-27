@@ -180,27 +180,8 @@ Reference Material
 
 * :doc:`Nova CLI Command References </cli/index>`: the complete command reference
   for all the daemons and admin tools that come with nova.
-
-* **Configuration**:
-
-  * :doc:`Configuration Guide </admin/configuration/index>`: detailed
-    configuration guides for various parts of you Nova system. Helpful
-    reference for setting up specific hypervisor backends.
-
-  * :doc:`Config Reference </configuration/config>`: a complete reference of all
-    configuration options available in the nova.conf file.
-
-  * :doc:`Sample Config File </configuration/sample-config>`: a sample config file
-    with inline documentation.
-
-* **Policy**: nova, like most OpenStack projects, uses a policy language to
-  restrict permissions on REST API actions.
-
-  * :doc:`Policy Reference </configuration/policy>`: a complete reference of all
-    policy points in nova and what they impact.
-
-  * :doc:`Sample Policy File </configuration/sample-policy>`: a sample policy file
-    with inline documentation.
+* :doc:`Configuration Guide <configuration/index>`: Information on configuring
+  the system, including role-based access control policy rules.
 
 For Contributors
 ================
@@ -233,10 +214,6 @@ looking parts of our architecture. These are collected below.
    admin/configuration/index
    cli/index
    configuration/index
-   configuration/config
-   configuration/sample-config
-   configuration/policy
-   configuration/sample-policy
    contributor/development-environment
    contributor/api
    contributor/api-2
