@@ -398,12 +398,12 @@ The Filter Scheduler weighs hosts based on the config option
 
 * |RAMWeigher| Compute weight based on available RAM on the compute node.
   Sort with the largest weight winning. If the multiplier,
-  :oslo.config:opt:`filter_scheduler.ram_weight_multiplier`, is negative, the
+  :oslo.config:option:`filter_scheduler.ram_weight_multiplier`, is negative, the
   host with least RAM available will win (useful for stacking hosts, instead
   of spreading).
 * |CPUWeigher| Compute weight based on available vCPUs on the compute node.
   Sort with the largest weight winning. If the multiplier,
-  :oslo.config:opt:`filter_scheduler.cpu_weight_multiplier`, is negative, the
+  :oslo.config:option:`filter_scheduler.cpu_weight_multiplier`, is negative, the
   host with least CPUs available will win (useful for stacking hosts, instead
   of spreading).
 * |DiskWeigher| Hosts are weighted and sorted by free disk space with the largest
