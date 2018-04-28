@@ -3,9 +3,11 @@ features:
   - |
     The libvirt driver now allows specifying individual CPU feature
     flags for guests, via a new configuration attribute
-    ``[libvirt]/cpu_model_extra_flags`` -- only with ``custom`` as the
-    ``[libvirt]/cpu_model``.  Refer to its documentation in
-    ``nova.conf`` for usage details.
+    ``[libvirt]/cpu_model_extra_flags`` -- this is valid in combination
+    with all the three possible values for ``[libvirt]/cpu_mode``:
+    ``custom``, ``host-model``, or ``host-passthrough``.  The
+    ``cpu_model_extra_flags`` also allows specifying multiple CPU flags.
+    Refer to its documentation in ``nova.conf`` for usage details.
 
     One of the motivations for this is to alleviate the performance
     degradation (caused as a result of applying the "Meltdown" CVE

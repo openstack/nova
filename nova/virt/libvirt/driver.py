@@ -3815,25 +3815,6 @@ class LibvirtDriver(driver.ComputeDriver):
             msg = _("A CPU model name should not be set when a "
                     "host CPU model is requested")
             raise exception.Invalid(msg)
-        # FIXME (kchamart): We're intentionally restricting the choices
-        # (in the conf/libvirt.py) for 'extra_flags` to just 'PCID', to
-        # address the immediate guest performance degradation caused by
-        # "Meltdown" CVE fixes on certain Intel CPU models.  In a future
-        # patch, we will:
-        # (a) Remove the restriction of choices for 'extra_flags',
-        #     allowing to add / remove additional CPU flags, as it will
-        #     make way for other useful features.
-        # (b) Remove the below check for "host-model", as it is a
-        #     valid configuration to supply additional CPU flags to it.
-        # (c) Revisit and fix the warnings / exception handling for
-        #     different combinations of CPU modes and 'extra_flags'.
-        elif ((mode == "host-model" or mode == "host-passthrough") and
-              extra_flags):
-            extra_flags = []
-            LOG.warning("Setting extra CPU flags is only valid in "
-                        "combination with a custom CPU model. Refer "
-                        "to the 'nova.conf' documentation for "
-                        "'[libvirt]/cpu_model_extra_flags'")
 
         LOG.debug("CPU mode '%(mode)s' model '%(model)s' was chosen, "
                   "with extra flags: '%(extra_flags)s'",

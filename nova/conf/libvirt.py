@@ -530,28 +530,49 @@ would result in an error and the instance launch will fail.
     cfg.ListOpt(
         'cpu_model_extra_flags',
         item_type=types.String(
-            choices=['pcid'],
             ignore_case=True,
         ),
         default=[],
         help="""
-This allows specifying granular CPU feature flags when specifying CPU
+This allows specifying granular CPU feature flags when configuring CPU
 models.  For example, to explicitly specify the ``pcid``
-(Process-Context ID, an Intel processor feature) flag to the "IvyBridge"
-virtual CPU model::
+(Process-Context ID, an Intel processor feature -- which is now required
+to address the guest performance degradation as a result of applying the
+"Meltdown" CVE fixes to certain Intel CPU models) flag to the
+"IvyBridge" virtual CPU model::
 
     [libvirt]
     cpu_mode = custom
     cpu_model = IvyBridge
     cpu_model_extra_flags = pcid
 
-Currently, the choice is restricted to only one option: ``pcid`` (the
-option is case-insensitive, so ``PCID`` is also valid).  This flag is
-now required to address the guest performance degradation as a result of
-applying the "Meltdown" CVE fixes on certain Intel CPU models.
+To specify multiple CPU flags (e.g. the Intel ``VMX`` to expose the
+virtualization extensions to the guest, or ``pdpe1gb`` to configure 1GB
+huge pages for CPU models that do not provide it):
 
-Note that when using this config attribute to set the 'PCID' CPU flag,
-not all virtual (i.e. libvirt / QEMU) CPU models need it:
+    [libvirt]
+    cpu_mode = custom
+    cpu_model = Haswell-noTSX-IBRS
+    cpu_model_extra_flags = PCID, VMX, pdpe1gb
+
+As it can be noticed from above, the ``cpu_model_extra_flags`` config
+attribute is case insensitive.  And specifying extra flags is valid in
+combination with all the three possible values for ``cpu_mode``:
+``custom`` (this also requires an explicit ``cpu_model`` to be
+specified), ``host-model``, or ``host-passthrough``.  A valid example
+for allowing extra CPU flags even for ``host-passthrough`` mode is that
+sometimes QEMU may disable certain CPU features -- e.g. Intel's
+"invtsc", Invariable Time Stamp Counter, CPU flag.  And if you need to
+expose that CPU flag to the Nova instance, the you need to explicitly
+ask for it.
+
+The possible values for ``cpu_model_extra_flags`` depends on the CPU
+model in use.  Refer to ``/usr/share/libvirt/cpu_map.xml`` possible CPU
+feature flags for a given CPU model.
+
+Note that when using this config attribute to set the 'PCID' CPU flag
+with the ``custom`` CPU mode, not all virtual (i.e. libvirt / QEMU) CPU
+models need it:
 
 * The only virtual CPU models that include the 'PCID' capability are
   Intel "Haswell", "Broadwell", and "Skylake" variants.
@@ -561,18 +582,14 @@ not all virtual (i.e. libvirt / QEMU) CPU models need it:
   even if the host CPUs by the same name include it.  I.e.  'PCID' needs
   to be explicitly specified when using the said virtual CPU models.
 
-For now, the ``cpu_model_extra_flags`` config attribute is valid only in
-combination with ``cpu_mode`` + ``cpu_model`` options.
-
-Besides ``custom``, the libvirt driver has two other CPU modes: The
-default, ``host-model``, tells it to do the right thing with respect to
-handling 'PCID' CPU flag for the guest -- *assuming* you are running
-updated processor microcode, host and guest kernel, libvirt, and QEMU.
-The other mode, ``host-passthrough``, checks if 'PCID' is available in
-the hardware, and if so directly passes it through to the Nova guests.
-Thus, in context of 'PCID', with either of these CPU modes
-(``host-model`` or ``host-passthrough``), there is no need to use the
-``cpu_model_extra_flags``.
+The libvirt driver's default CPU mode, ``host-model``, will do the right
+thing with respect to handling 'PCID' CPU flag for the guest --
+*assuming* you are running updated processor microcode, host and guest
+kernel, libvirt, and QEMU.  The other mode, ``host-passthrough``, checks
+if 'PCID' is available in the hardware, and if so directly passes it
+through to the Nova guests.  Thus, in context of 'PCID', with either of
+these CPU modes (``host-model`` or ``host-passthrough``), there is no
+need to use the ``cpu_model_extra_flags``.
 
 Related options:
 

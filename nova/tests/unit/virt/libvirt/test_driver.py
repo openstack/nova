@@ -6372,14 +6372,15 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         mock_warn.assert_not_called()
 
     @mock.patch.object(libvirt_driver.LOG, 'warning')
-    def test_get_guest_cpu_config_host_model_with_extra_flags(self,
+    def test_get_guest_cpu_config_custom_with_multiple_extra_flags(self,
             mock_warn):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
         instance_ref = objects.Instance(**self.test_instance)
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
-        self.flags(cpu_mode="host-model",
-                   cpu_model_extra_flags="pcid",
+        self.flags(cpu_mode="custom",
+                   cpu_model="IvyBridge",
+                   cpu_model_extra_flags=['pcid', 'vmx'],
                    group='libvirt')
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref,
@@ -6387,14 +6388,45 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         conf = drvr._get_guest_config(instance_ref,
                                       _fake_network_info(self, 1),
                                       image_meta, disk_info)
+        features = [feature.name for feature in conf.cpu.features]
         self.assertIsInstance(conf.cpu,
                               vconfig.LibvirtConfigGuestCPU)
-        self.assertEqual(conf.cpu.mode, "host-model")
-        self.assertEqual(len(conf.cpu.features), 0)
+        self.assertEqual(conf.cpu.mode, "custom")
+        self.assertEqual(conf.cpu.model, "IvyBridge")
+        self.assertIn("pcid", features)
+        self.assertIn("vmx", features)
         self.assertEqual(conf.cpu.sockets, instance_ref.flavor.vcpus)
         self.assertEqual(conf.cpu.cores, 1)
         self.assertEqual(conf.cpu.threads, 1)
-        self.assertTrue(mock_warn.called)
+        mock_warn.assert_not_called()
+
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
+    def test_get_guest_cpu_config_host_model_with_extra_flags(self,
+            mock_warn):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+
+        self.flags(cpu_mode="host-model",
+                   cpu_model_extra_flags="pdpe1gb",
+                   group='libvirt')
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+        conf = drvr._get_guest_config(instance_ref,
+                                      _fake_network_info(self, 1),
+                                      image_meta, disk_info)
+        features = [feature.name for feature in conf.cpu.features]
+        self.assertIsInstance(conf.cpu,
+                              vconfig.LibvirtConfigGuestCPU)
+        self.assertEqual(conf.cpu.mode, "host-model")
+        self.assertIn("pdpe1gb", features)
+        self.assertEqual(conf.cpu.sockets, instance_ref.flavor.vcpus)
+        self.assertEqual(conf.cpu.cores, 1)
+        self.assertEqual(conf.cpu.threads, 1)
+        # For 'host-model', it is now valid to use 'extra_flags';
+        # assert that no warning is thrown
+        mock_warn.assert_not_called()
 
     @mock.patch.object(libvirt_driver.LOG, 'warning')
     def test_get_guest_cpu_config_host_passthrough_with_extra_flags(self,
@@ -6404,7 +6436,7 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
 
         self.flags(cpu_mode="host-passthrough",
-                   cpu_model_extra_flags="pcid",
+                   cpu_model_extra_flags="invtsc",
                    group='libvirt')
         disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
                                             instance_ref,
@@ -6412,14 +6444,17 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         conf = drvr._get_guest_config(instance_ref,
                                       _fake_network_info(self, 1),
                                       image_meta, disk_info)
+        features = [feature.name for feature in conf.cpu.features]
         self.assertIsInstance(conf.cpu,
                               vconfig.LibvirtConfigGuestCPU)
         self.assertEqual(conf.cpu.mode, "host-passthrough")
-        self.assertEqual(len(conf.cpu.features), 0)
+        self.assertIn("invtsc", features)
         self.assertEqual(conf.cpu.sockets, instance_ref.flavor.vcpus)
         self.assertEqual(conf.cpu.cores, 1)
         self.assertEqual(conf.cpu.threads, 1)
-        self.assertTrue(mock_warn.called)
+        # We have lifted the restriction for 'host-passthrough' as well;
+        # so here too, assert that no warning is thrown
+        mock_warn.assert_not_called()
 
     def test_get_guest_cpu_topology(self):
         instance_ref = objects.Instance(**self.test_instance)
