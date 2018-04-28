@@ -6107,6 +6107,35 @@ class LibvirtConnTestCase(test.NoDBTestCase,
         self.assertFalse(mock_warn.called)
 
     @mock.patch.object(libvirt_driver.LOG, 'warning')
+    def test_get_guest_cpu_config_custom_with_extra_flags_upper_case(self,
+            mock_warn):
+        drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)
+        instance_ref = objects.Instance(**self.test_instance)
+        image_meta = objects.ImageMeta.from_dict(self.test_image_meta)
+
+        self.flags(cpu_mode="custom",
+                   cpu_model="IvyBridge",
+                   cpu_model_extra_flags="PCID",
+                   group='libvirt')
+        disk_info = blockinfo.get_disk_info(CONF.libvirt.virt_type,
+                                            instance_ref,
+                                            image_meta)
+        conf = drvr._get_guest_config(instance_ref,
+                                      _fake_network_info(self, 1),
+                                      image_meta, disk_info)
+        self.assertIsInstance(conf.cpu,
+                              vconfig.LibvirtConfigGuestCPU)
+        self.assertEqual("custom", conf.cpu.mode)
+        self.assertEqual("IvyBridge", conf.cpu.model)
+        # At this point the upper case CPU flag is normalized to lower
+        # case, so assert for that
+        self.assertEqual("pcid", conf.cpu.features.pop().name)
+        self.assertEqual(instance_ref.flavor.vcpus, conf.cpu.sockets)
+        self.assertEqual(1, conf.cpu.cores)
+        self.assertEqual(1, conf.cpu.threads)
+        mock_warn.assert_not_called()
+
+    @mock.patch.object(libvirt_driver.LOG, 'warning')
     def test_get_guest_cpu_config_host_model_with_extra_flags(self,
             mock_warn):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), True)

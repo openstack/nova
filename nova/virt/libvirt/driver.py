@@ -3682,7 +3682,8 @@ class LibvirtDriver(driver.ComputeDriver):
     def _get_guest_cpu_model_config(self):
         mode = CONF.libvirt.cpu_mode
         model = CONF.libvirt.cpu_model
-        extra_flags = CONF.libvirt.cpu_model_extra_flags
+        extra_flags = set([flag.lower() for flag in
+            CONF.libvirt.cpu_model_extra_flags])
 
         if (CONF.libvirt.virt_type == "kvm" or
             CONF.libvirt.virt_type == "qemu"):
