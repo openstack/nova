@@ -78,8 +78,9 @@ several key concepts:
    is created it has some disk storage available, but that is considered
    ephemeral, as it is destroyed when the server is destroyed. A volume can be
    attached to a server, then later detached and used by another server.
-   Volumes are created and managed by the Cinder service, though the Nova API
-   can proxy some of these calls.
+   Volumes are created and managed by the Cinder service.
+   For additional info, see
+   :nova-doc:`Block device mapping <user/block-device-mapping.html>`
 
 -  **Quotas**
 
@@ -87,7 +88,8 @@ several key concepts:
    Quotas can be used to limit the number of servers a tenant creates, or the
    amount of disk space consumed, so that no one tenant can overwhelm the
    system and prevent normal operation for others. Changing quotas is an
-   administrator-level action.
+   administrator-level action. For additional info,
+   see :nova-doc:`Quotas <user/quotas.html>`
 
 -  **Rate Limiting**
 
@@ -174,10 +176,6 @@ on compute hosts rather than servers.
      This service handles networking of virtual servers. It is no longer under
      active development, and is being replaced by Neutron.
 
-   - **nova-ec2 (deprecated)**
-
-     This service provides AWS EC2 API compatibility.
-
    - **nova-consoleauth (deprecated)**
 
      This service provides authorization for compute instances consoles.
@@ -195,6 +193,9 @@ on compute hosts rather than servers.
 
    - **forced-down**
 
+     .. note::
+       This action is enabled in microversion 2.11.
+
      This action allows you set the state of service down immediately. Actually
      Nova only provides the health monitor of service status, there isn't any
      guarantee about health status of other parts of infrastructure, like the
@@ -202,7 +203,6 @@ on compute hosts rather than servers.
      more complete health monitor of infrastructure is provided by external
      system normally. An external health monitor system can mark the service
      down for notifying the fault.
-     `(This action is enabled in Microversion 2.11)`
 
 -  **Hosts**
 
@@ -219,6 +219,9 @@ on compute hosts rather than servers.
    servers on the hosts that can best fit them.
 
 -  **Host Actions**
+
+   .. note::
+     These APIs are deprecated in Microversion 2.43.
 
    A *host action* is one that affects the physical host machine, as opposed to
    actions that only affect the virtual servers running on that machine. There
