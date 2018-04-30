@@ -3168,7 +3168,7 @@ class LibvirtDriver(driver.ComputeDriver):
             block_device_info=block_device_info,
             post_xml_callback=gen_confdrive,
             destroy_disks_on_failure=True)
-        LOG.debug("Instance is running", instance=instance)
+        LOG.debug("Guest created on hypervisor", instance=instance)
 
         def _wait_for_boot():
             """Called at an interval until the VM is running."""
