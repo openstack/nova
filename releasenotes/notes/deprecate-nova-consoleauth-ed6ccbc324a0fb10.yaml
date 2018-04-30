@@ -1,0 +1,6 @@
+---
+deprecations:
+  - |
+    The ``nova-consoleauth`` service is deprecated as console token
+    authorization storage has moved from the ``nova-consoleauth`` service
+    backend to the database backend.

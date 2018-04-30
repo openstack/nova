@@ -178,7 +178,7 @@ on compute hosts rather than servers.
 
      This service provides AWS EC2 API compatibility.
 
-   - **nova-consoleauth**
+   - **nova-consoleauth (deprecated)**
 
      This service provides authorization for compute instances consoles.
 

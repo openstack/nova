@@ -269,8 +269,8 @@ Install and configure components
 
    .. code-block:: console
 
-      # apt install nova-api nova-conductor nova-consoleauth \
-        nova-novncproxy nova-scheduler nova-placement-api
+      # apt install nova-api nova-conductor nova-novncproxy nova-scheduler \
+        nova-placement-api
 
 #. Edit the ``/etc/nova/nova.conf`` file and complete the following actions:
 
@@ -467,7 +467,6 @@ Finalize installation
   .. code-block:: console
 
      # service nova-api restart
-     # service nova-consoleauth restart
      # service nova-scheduler restart
      # service nova-conductor restart
      # service nova-novncproxy restart

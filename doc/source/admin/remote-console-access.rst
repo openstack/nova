@@ -20,6 +20,11 @@ Do not confuse the ``nova-consoleauth`` shared service with ``nova-console``,
 which is a XenAPI-specific service that most recent VNC proxy architectures do
 not use.
 
+.. deprecated:: 18.0.0
+
+   ``nova-consoleauth`` is deprecated since 18.0.0 (Rocky) and will be removed
+   in an upcoming release.
+
 SPICE console
 -------------
 
