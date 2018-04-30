@@ -93,44 +93,44 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         # Inventory consumed in one RC, but available in the others
         excl_1invunavail = self._create_provider('1invunavail')
         tb.add_inventory(excl_1invunavail, fields.ResourceClass.VCPU, 10)
-        tb.allocate_from_provider(excl_1invunavail, fields.ResourceClass.VCPU,
-                                  7)
+        self.allocate_from_provider(
+            excl_1invunavail, fields.ResourceClass.VCPU, 7)
         tb.add_inventory(excl_1invunavail, fields.ResourceClass.MEMORY_MB,
                          4096)
-        tb.allocate_from_provider(excl_1invunavail,
+        self.allocate_from_provider(excl_1invunavail,
                                   fields.ResourceClass.MEMORY_MB, 1024)
         tb.add_inventory(excl_1invunavail, fields.ResourceClass.DISK_GB, 2000)
-        tb.allocate_from_provider(excl_1invunavail,
+        self.allocate_from_provider(excl_1invunavail,
                                   fields.ResourceClass.DISK_GB, 400)
 
         # Inventory all consumed
         excl_allused = self._create_provider('allused')
         tb.add_inventory(excl_allused, fields.ResourceClass.VCPU, 10)
-        tb.allocate_from_provider(excl_allused, fields.ResourceClass.VCPU, 7)
+        self.allocate_from_provider(excl_allused, fields.ResourceClass.VCPU, 7)
         tb.add_inventory(excl_allused, fields.ResourceClass.MEMORY_MB, 4000)
-        tb.allocate_from_provider(excl_allused,
+        self.allocate_from_provider(excl_allused,
                                   fields.ResourceClass.MEMORY_MB, 1500)
-        tb.allocate_from_provider(excl_allused,
+        self.allocate_from_provider(excl_allused,
                                   fields.ResourceClass.MEMORY_MB, 2000)
         tb.add_inventory(excl_allused, fields.ResourceClass.DISK_GB, 1500)
-        tb.allocate_from_provider(excl_allused, fields.ResourceClass.DISK_GB,
+        self.allocate_from_provider(excl_allused, fields.ResourceClass.DISK_GB,
                                   1)
 
         # Inventory available in requested classes, but unavailable in others
         incl_extra_full = self._create_provider('extra_full')
         tb.add_inventory(incl_extra_full, fields.ResourceClass.VCPU, 20)
-        tb.allocate_from_provider(incl_extra_full, fields.ResourceClass.VCPU,
+        self.allocate_from_provider(incl_extra_full, fields.ResourceClass.VCPU,
                                   15)
         tb.add_inventory(incl_extra_full, fields.ResourceClass.MEMORY_MB, 4096)
-        tb.allocate_from_provider(incl_extra_full,
+        self.allocate_from_provider(incl_extra_full,
                                   fields.ResourceClass.MEMORY_MB, 1024)
         tb.add_inventory(incl_extra_full, fields.ResourceClass.DISK_GB, 2000)
-        tb.allocate_from_provider(incl_extra_full,
+        self.allocate_from_provider(incl_extra_full,
                                   fields.ResourceClass.DISK_GB, 400)
         tb.add_inventory(incl_extra_full, fields.ResourceClass.PCI_DEVICE, 4)
-        tb.allocate_from_provider(incl_extra_full,
+        self.allocate_from_provider(incl_extra_full,
                                   fields.ResourceClass.PCI_DEVICE, 1)
-        tb.allocate_from_provider(incl_extra_full,
+        self.allocate_from_provider(incl_extra_full,
                                   fields.ResourceClass.PCI_DEVICE, 3)
 
         # Inventory available in a unrequested classes, not in requested ones
@@ -141,7 +141,7 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         # Not enough left after reserved + used
         tb.add_inventory(excl_extra_avail, fields.ResourceClass.MEMORY_MB,
                          4096, max_unit=2048, reserved=2048)
-        tb.allocate_from_provider(excl_extra_avail,
+        self.allocate_from_provider(excl_extra_avail,
                                   fields.ResourceClass.MEMORY_MB, 1040)
         # Allocation ratio math
         tb.add_inventory(excl_extra_avail, fields.ResourceClass.DISK_GB, 2000,
@@ -151,7 +151,7 @@ class ProviderDBHelperTestCase(tb.PlacementDbBaseTestCase):
         custom_special = rp_obj.ResourceClass(self.ctx, name='CUSTOM_SPECIAL')
         custom_special.create()
         tb.add_inventory(excl_extra_avail, 'CUSTOM_SPECIAL', 100)
-        tb.allocate_from_provider(excl_extra_avail, 'CUSTOM_SPECIAL', 99)
+        self.allocate_from_provider(excl_extra_avail, 'CUSTOM_SPECIAL', 99)
 
         resources = {
             fields.ResourceClass.STANDARD.index(fields.ResourceClass.VCPU): 5,
@@ -1928,7 +1928,7 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # function (the one with HW_NIC_OFFLOAD_GENEVE associated with it) and
         # verify that the same request still results in 0 results since the
         # function with the required trait no longer has any inventory.
-        tb.allocate_from_provider(pf1, fields.ResourceClass.SRIOV_NET_VF, 8)
+        self.allocate_from_provider(pf1, fields.ResourceClass.SRIOV_NET_VF, 8)
 
         alloc_cands = self._get_allocation_candidates(
             {'':
@@ -2045,12 +2045,12 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # _get_trees_matching_all()
         cn2_pf0 = rp_obj.ResourceProvider.get_by_uuid(self.ctx,
                                                       uuids.cn2_numa0_pf0)
-        tb.allocate_from_provider(cn2_pf0, fields.ResourceClass.SRIOV_NET_VF,
+        self.allocate_from_provider(cn2_pf0, fields.ResourceClass.SRIOV_NET_VF,
                                   8)
 
         cn2_pf1 = rp_obj.ResourceProvider.get_by_uuid(self.ctx,
                                                       uuids.cn2_numa1_pf1)
-        tb.allocate_from_provider(cn2_pf1, fields.ResourceClass.SRIOV_NET_VF,
+        self.allocate_from_provider(cn2_pf1, fields.ResourceClass.SRIOV_NET_VF,
                                   8)
 
         trees = rp_obj._get_trees_matching_all(self.ctx,
@@ -2152,21 +2152,21 @@ class AllocationCandidatesTestCase(tb.PlacementDbBaseTestCase):
         # no more providers are returned
         cn1_pf0 = rp_obj.ResourceProvider.get_by_uuid(self.ctx,
                                                       uuids.cn1_numa0_pf0)
-        tb.allocate_from_provider(
+        self.allocate_from_provider(
             cn1_pf0, fields.ResourceClass.SRIOV_NET_VF, 8)
 
         cn1_pf1 = rp_obj.ResourceProvider.get_by_uuid(self.ctx,
                                                       uuids.cn1_numa1_pf1)
-        tb.allocate_from_provider(
+        self.allocate_from_provider(
             cn1_pf1, fields.ResourceClass.SRIOV_NET_VF, 8)
         cn3_pf0 = rp_obj.ResourceProvider.get_by_uuid(self.ctx,
                                                       uuids.cn3_numa0_pf0)
-        tb.allocate_from_provider(
+        self.allocate_from_provider(
             cn3_pf0, fields.ResourceClass.SRIOV_NET_VF, 8)
 
         cn3_pf1 = rp_obj.ResourceProvider.get_by_uuid(self.ctx,
                                                       uuids.cn3_numa1_pf1)
-        tb.allocate_from_provider(
+        self.allocate_from_provider(
             cn3_pf1, fields.ResourceClass.SRIOV_NET_VF, 8)
 
         trees = rp_obj._get_trees_matching_all(self.ctx,

@@ -65,8 +65,11 @@ def _allocations_dict(allocations, key_fetcher, resource_provider=None,
         if allocations and want_version and want_version.matches((1, 12)):
             # We're looking at a list of allocations by consumer id so
             # project and user are consistent across the list
-            result['project_id'] = allocations[0].project_id
-            result['user_id'] = allocations[0].user_id
+            project_id = allocations[0].consumer.project.external_id
+            user_id = allocations[0].consumer.user.external_id
+
+            result['project_id'] = project_id
+            result['user_id'] = user_id
 
     last_modified = last_modified or timeutils.utcnow(with_timezone=True)
     return result, last_modified
@@ -122,7 +125,7 @@ def _serialize_allocations_for_resource_provider(allocations,
        }
     }
     """
-    return _allocations_dict(allocations, lambda x: x.consumer_id,
+    return _allocations_dict(allocations, lambda x: x.consumer.uuid,
                              resource_provider=resource_provider)
 
 
@@ -217,14 +220,13 @@ def _new_allocations(context, resource_provider_uuid, consumer_uuid,
             _("Allocation for resource provider '%(rp_uuid)s' "
               "that does not exist.") %
             {'rp_uuid': resource_provider_uuid})
-    util.ensure_consumer(context, consumer_uuid, project_id, user_id)
+    consumer = util.ensure_consumer(
+        context, consumer_uuid, project_id, user_id)
     for resource_class in resources:
         allocation = rp_obj.Allocation(
             resource_provider=resource_provider,
-            consumer_id=consumer_uuid,
+            consumer=consumer,
             resource_class=resource_class,
-            project_id=project_id,
-            user_id=user_id,
             used=resources[resource_class])
         allocations.append(allocation)
     return allocations

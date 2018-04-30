@@ -23,8 +23,9 @@ class ProjectTestCase(tb.PlacementDbBaseTestCase):
             self.ctx, uuids.non_existing_project)
 
     def test_create_and_get(self):
-        p = project_obj.Project(self.ctx, external_id='fake-project')
+        p = project_obj.Project(self.ctx, external_id='another-project')
         p.create()
-        p = project_obj.Project.get_by_external_id(self.ctx, 'fake-project')
-        self.assertEqual(1, p.id)
+        p = project_obj.Project.get_by_external_id(self.ctx, 'another-project')
+        # Project ID == 1 is fake-project created in setup
+        self.assertEqual(2, p.id)
         self.assertRaises(exception.ProjectExists, p.create)

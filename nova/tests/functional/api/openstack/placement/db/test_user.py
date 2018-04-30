@@ -23,8 +23,9 @@ class UserTestCase(tb.PlacementDbBaseTestCase):
             self.ctx, uuids.non_existing_user)
 
     def test_create_and_get(self):
-        u = user_obj.User(self.ctx, external_id='fake-user')
+        u = user_obj.User(self.ctx, external_id='another-user')
         u.create()
-        u = user_obj.User.get_by_external_id(self.ctx, 'fake-user')
-        self.assertEqual(1, u.id)
+        u = user_obj.User.get_by_external_id(self.ctx, 'another-user')
+        # User ID == 1 is fake-user created in setup
+        self.assertEqual(2, u.id)
         self.assertRaises(exception.UserExists, u.create)

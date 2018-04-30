@@ -17,7 +17,10 @@ import testtools
 
 from nova.api.openstack.placement import context
 from nova.api.openstack.placement import exception
+from nova.api.openstack.placement.objects import consumer as consumer_obj
+from nova.api.openstack.placement.objects import project as project_obj
 from nova.api.openstack.placement.objects import resource_provider
+from nova.api.openstack.placement.objects import user as user_obj
 from nova import rc_fields as fields
 from nova.tests import uuidsentinel as uuids
 
@@ -75,10 +78,14 @@ _ALLOCATION_DB = {
     'id': _ALLOCATION_ID,
     'resource_provider_id': _RESOURCE_PROVIDER_ID,
     'resource_class_id': _RESOURCE_CLASS_ID,
-    'consumer_id': uuids.fake_instance,
+    'consumer_uuid': uuids.fake_instance,
+    'consumer_id': 1,
+    'consumer_generation': 0,
     'used': 8,
-    'user_id': None,
-    'project_id': None,
+    'user_id': 1,
+    'user_external_id': uuids.user_id,
+    'project_id': 1,
+    'project_external_id': uuids.project_id,
 }
 
 
@@ -265,11 +272,18 @@ class TestAllocation(_TestCase):
         rp = resource_provider.ResourceProvider(context=self.context,
                                                 uuid=_RESOURCE_PROVIDER_UUID,
                                                 name=_RESOURCE_PROVIDER_NAME)
+        self.project = project_obj.Project(
+            self.context, external_id='fake-project')
+        self.user = user_obj.User(
+            self.context, external_id='fake-user')
+        self.consumer = consumer_obj.Consumer(
+            self.context, uuid=uuids.fake_instance, project=self.project,
+            user=self.user)
         obj = resource_provider.Allocation(context=self.context,
                                            id=99,
                                            resource_provider=rp,
                                            resource_class=_RESOURCE_CLASS_NAME,
-                                           consumer_id=uuids.fake_instance,
+                                           consumer=self.consumer,
                                            used=8)
         alloc_list = resource_provider.AllocationList(self.context,
                                                       objects=[obj])
@@ -279,13 +293,15 @@ class TestAllocation(_TestCase):
 class TestAllocationListNoDB(_TestCase):
 
     @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
+                '_create_incomplete_consumers_for_provider')
+    @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
                 '_ensure_rc_cache',
                 side_effect=_fake_ensure_cache)
     @mock.patch('nova.api.openstack.placement.objects.resource_provider.'
                 '_get_allocations_by_provider_id',
                 return_value=[_ALLOCATION_DB])
     def test_get_allocations(self, mock_get_allocations_from_db,
-            mock_ensure_cache):
+            mock_ensure_cache, mock_create_consumers):
         rp = resource_provider.ResourceProvider(id=_RESOURCE_PROVIDER_ID,
                                                 uuid=uuids.resource_provider)
         rp_alloc_list = resource_provider.AllocationList
@@ -296,6 +312,8 @@ class TestAllocationListNoDB(_TestCase):
         mock_get_allocations_from_db.assert_called_once_with(self.context,
             rp.id)
         self.assertEqual(_ALLOCATION_DB['used'], allocations[0].used)
+        mock_create_consumers.assert_called_once_with(
+            self.context, _RESOURCE_PROVIDER_ID)
 
 
 class TestResourceClass(_TestCase):

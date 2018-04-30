@@ -18,6 +18,7 @@ import sqlalchemy as sa
 
 import nova
 from nova.api.openstack.placement import exception
+from nova.api.openstack.placement.objects import consumer as consumer_obj
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
 from nova.db.sqlalchemy import api_models as models
 from nova import rc_fields as fields
@@ -359,7 +360,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         self.assertEqual(1, len(rps))
         self.assertEqual(uuidsentinel.grandchild_rp, rps[0].uuid)
 
-        alloc_list = tb.allocate_from_provider(
+        alloc_list = self.allocate_from_provider(
             grandchild_rp, fields.ResourceClass.VCPU, 1)
 
         self.assertRaises(exception.CannotDeleteParentResourceProvider,
@@ -533,7 +534,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         """
         rp = self._create_provider('compute-host')
         tb.add_inventory(rp, 'VCPU', 12)
-        tb.allocate_from_provider(rp, 'VCPU', 1)
+        self.allocate_from_provider(rp, 'VCPU', 1)
 
         inv = rp_obj.Inventory(
             resource_provider=rp,
@@ -566,7 +567,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         self.assertFalse(mock_log.warning.called)
 
         # Allocate something reasonable for the above inventory
-        tb.allocate_from_provider(rp, 'DISK_GB', 500)
+        self.allocate_from_provider(rp, 'DISK_GB', 500)
 
         # Update our inventory to over-subscribe us after the above allocation
         disk_inv.total = 400
@@ -735,7 +736,7 @@ class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
         tb.add_inventory(rp, DISK_INVENTORY['resource_class'],
                          DISK_INVENTORY['total'])
         expected_gen = rp.generation + 1
-        tb.allocate_from_provider(rp, DISK_ALLOCATION['resource_class'],
+        self.allocate_from_provider(rp, DISK_ALLOCATION['resource_class'],
                                   DISK_ALLOCATION['used'])
         self.assertEqual(expected_gen, rp.generation)
 
@@ -788,7 +789,7 @@ class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
             # Create the VCPU allocation only for the first RP
             if rp_i != '1':
                 continue
-            tb.allocate_from_provider(rp, fields.ResourceClass.VCPU, used=1)
+            self.allocate_from_provider(rp, fields.ResourceClass.VCPU, used=1)
 
         # Both RPs should accept that request given the only current allocation
         # for the first RP is leaving one VCPU
@@ -1082,20 +1083,10 @@ class TestResourceProviderAggregates(tb.PlacementDbBaseTestCase):
 class TestAllocation(tb.PlacementDbBaseTestCase):
 
     def test_create_list_and_delete_allocation(self):
-        resource_provider, disk_allocation = self._make_allocation(
-            DISK_INVENTORY, DISK_ALLOCATION)
-
-        self.assertEqual(DISK_ALLOCATION['resource_class'],
-                         disk_allocation.resource_class)
-        self.assertEqual(resource_provider,
-                         disk_allocation.resource_provider)
-        self.assertEqual(DISK_ALLOCATION['used'],
-                         disk_allocation.used)
-        self.assertEqual(DISK_ALLOCATION['consumer_id'],
-                         disk_allocation.consumer_id)
+        rp, _ = self._make_allocation(DISK_INVENTORY, DISK_ALLOCATION)
 
         allocations = rp_obj.AllocationList.get_all_by_resource_provider(
-            self.ctx, resource_provider)
+            self.ctx, rp)
 
         self.assertEqual(1, len(allocations))
 
@@ -1105,7 +1096,7 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
         allocations.delete_all()
 
         allocations = rp_obj.AllocationList.get_all_by_resource_provider(
-            self.ctx, resource_provider)
+            self.ctx, rp)
 
         self.assertEqual(0, len(allocations))
 
@@ -1131,32 +1122,38 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
                              step_size=64,
                              allocation_ratio=1.5)
 
-        # Now create allocations that represent a move operation where the
+        # Create a consumer representing the instance
+        inst_consumer = consumer_obj.Consumer(
+            self.ctx, uuid=uuidsentinel.instance, user=self.user_obj,
+            project=self.project_obj)
+        inst_consumer.create()
+
+        # Now create an allocation that represents a move operation where the
         # scheduler has selected cn_dest as the target host and created a
         # "doubled-up" allocation for the duration of the move operation
         alloc_list = rp_obj.AllocationList(context=self.ctx,
             objects=[
                 rp_obj.Allocation(
                     context=self.ctx,
-                    consumer_id=uuidsentinel.instance,
+                    consumer=inst_consumer,
                     resource_provider=cn_source,
                     resource_class=fields.ResourceClass.VCPU,
                     used=1),
                 rp_obj.Allocation(
                     context=self.ctx,
-                    consumer_id=uuidsentinel.instance,
+                    consumer=inst_consumer,
                     resource_provider=cn_source,
                     resource_class=fields.ResourceClass.MEMORY_MB,
                     used=256),
                 rp_obj.Allocation(
                     context=self.ctx,
-                    consumer_id=uuidsentinel.instance,
+                    consumer=inst_consumer,
                     resource_provider=cn_dest,
                     resource_class=fields.ResourceClass.VCPU,
                     used=1),
                 rp_obj.Allocation(
                     context=self.ctx,
-                    consumer_id=uuidsentinel.instance,
+                    consumer=inst_consumer,
                     resource_provider=cn_dest,
                     resource_class=fields.ResourceClass.MEMORY_MB,
                     used=256),
@@ -1188,13 +1185,13 @@ class TestAllocation(tb.PlacementDbBaseTestCase):
             objects=[
                 rp_obj.Allocation(
                     context=self.ctx,
-                    consumer_id=uuidsentinel.instance,
+                    consumer=inst_consumer,
                     resource_provider=cn_dest,
                     resource_class=fields.ResourceClass.VCPU,
                     used=1),
                 rp_obj.Allocation(
                     context=self.ctx,
-                    consumer_id=uuidsentinel.instance,
+                    consumer=inst_consumer,
                     resource_provider=cn_dest,
                     resource_class=fields.ResourceClass.MEMORY_MB,
                     used=256),
@@ -1239,6 +1236,16 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         consumer_uuid = uuidsentinel.consumer
         consumer_uuid2 = uuidsentinel.consumer2
 
+        # Create a consumer representing the two instances
+        consumer = consumer_obj.Consumer(
+            self.ctx, uuid=consumer_uuid, user=self.user_obj,
+            project=self.project_obj)
+        consumer.create()
+        consumer2 = consumer_obj.Consumer(
+            self.ctx, uuid=consumer_uuid2, user=self.user_obj,
+            project=self.project_obj)
+        consumer2.create()
+
         # Create one resource provider with 2 classes
         rp1_name = uuidsentinel.rp1_name
         rp1_uuid = uuidsentinel.rp1_uuid
@@ -1254,11 +1261,11 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
 
         # create the allocations for a first consumer
         allocation_1 = rp_obj.Allocation(resource_provider=rp1,
-                                         consumer_id=consumer_uuid,
+                                         consumer=consumer,
                                          resource_class=rp1_class,
                                          used=rp1_used)
         allocation_2 = rp_obj.Allocation(resource_provider=rp1,
-                                         consumer_id=consumer_uuid,
+                                         consumer=consumer,
                                          resource_class=rp2_class,
                                          used=rp2_used)
         allocation_list = rp_obj.AllocationList(
@@ -1270,11 +1277,11 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         # won't actually be doing real allocation math, which triggers
         # the sql monster.
         allocation_1 = rp_obj.Allocation(resource_provider=rp1,
-                                         consumer_id=consumer_uuid2,
+                                         consumer=consumer2,
                                          resource_class=rp1_class,
                                          used=rp1_used)
         allocation_2 = rp_obj.Allocation(resource_provider=rp1,
-                                         consumer_id=consumer_uuid2,
+                                         consumer=consumer2,
                                          resource_class=rp2_class,
                                          used=rp2_used)
         allocation_list = rp_obj.AllocationList(
@@ -1285,6 +1292,12 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
     def test_allocation_list_create(self):
         max_unit = 10
         consumer_uuid = uuidsentinel.consumer
+
+        # Create a consumer representing the instance
+        inst_consumer = consumer_obj.Consumer(
+            self.ctx, uuid=consumer_uuid, user=self.user_obj,
+            project=self.project_obj)
+        inst_consumer.create()
 
         # Create two resource providers
         rp1_name = uuidsentinel.rp1_name
@@ -1302,11 +1315,11 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
 
         # Two allocations, one for each resource provider.
         allocation_1 = rp_obj.Allocation(resource_provider=rp1,
-                                         consumer_id=consumer_uuid,
+                                         consumer=inst_consumer,
                                          resource_class=rp1_class,
                                          used=rp1_used)
         allocation_2 = rp_obj.Allocation(resource_provider=rp2,
-                                         consumer_id=consumer_uuid,
+                                         consumer=inst_consumer,
                                          resource_class=rp2_class,
                                          used=rp2_used)
         allocation_list = rp_obj.AllocationList(
@@ -1362,8 +1375,8 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         # because a new allocataion is created, adding to the total
         # used, not replacing.
         rp1_used += 1
-        tb.allocate_from_provider(rp1, rp1_class, rp1_used,
-                                  consumer_id=consumer_uuid)
+        self.allocate_from_provider(rp1, rp1_class, rp1_used,
+                                  consumer=inst_consumer)
 
         rp1_usage = rp_obj.UsageList.get_all_by_resource_provider_uuid(
             self.ctx, rp1_uuid)
@@ -1406,10 +1419,10 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
 
         # allocation, bad step_size
         self.assertRaises(exception.InvalidAllocationConstraintsViolated,
-                          tb.allocate_from_provider, rp, rp_class, bad_used)
+                          self.allocate_from_provider, rp, rp_class, bad_used)
 
         # correct for step size
-        tb.allocate_from_provider(rp, rp_class, good_used)
+        self.allocate_from_provider(rp, rp_class, good_used)
 
         # check usage
         self._validate_usage(rp, good_used)
@@ -1438,91 +1451,16 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         self._check_create_allocations(inventory_kwargs,
                                        bad_used, good_used)
 
-    def test_create_all_with_project_user(self):
-        consumer_uuid = uuidsentinel.consumer
-        rp_class = fields.ResourceClass.DISK_GB
-        rp = self._make_rp_and_inventory(resource_class=rp_class,
-                                         max_unit=500)
-        allocation1 = rp_obj.Allocation(resource_provider=rp,
-                                        consumer_id=consumer_uuid,
-                                        resource_class=rp_class,
-                                        project_id=self.ctx.project_id,
-                                        user_id=self.ctx.user_id,
-                                        used=100)
-        allocation2 = rp_obj.Allocation(resource_provider=rp,
-                                        consumer_id=consumer_uuid,
-                                        resource_class=rp_class,
-                                        project_id=self.ctx.project_id,
-                                        user_id=self.ctx.user_id,
-                                        used=200)
-        allocation_list = rp_obj.AllocationList(
-            self.ctx,
-            objects=[allocation1, allocation2],
-        )
-        allocation_list.create_all()
-
-        # Verify that we have records in the consumers, projects, and users
-        # table for the information used in the above allocation creation
-        with self.api_db.get_engine().connect() as conn:
-            tbl = rp_obj._PROJECT_TBL
-            sel = sa.select([tbl.c.id]).where(
-                tbl.c.external_id == self.ctx.project_id,
-            )
-            res = conn.execute(sel).fetchall()
-            self.assertEqual(1, len(res), "project lookup not created.")
-
-            tbl = rp_obj._USER_TBL
-            sel = sa.select([tbl.c.id]).where(
-                tbl.c.external_id == self.ctx.user_id,
-            )
-            res = conn.execute(sel).fetchall()
-            self.assertEqual(1, len(res), "user lookup not created.")
-
-            tbl = rp_obj._CONSUMER_TBL
-            sel = sa.select([tbl.c.id]).where(
-                tbl.c.uuid == consumer_uuid,
-            )
-            res = conn.execute(sel).fetchall()
-            self.assertEqual(1, len(res), "consumer lookup not created.")
-
-        # Create allocation for a different user in the project
-        other_consumer_uuid = uuidsentinel.other_consumer
-        allocation3 = rp_obj.Allocation(resource_provider=rp,
-                                        consumer_id=other_consumer_uuid,
-                                        resource_class=rp_class,
-                                        project_id=self.ctx.project_id,
-                                        user_id=uuidsentinel.other_user,
-                                        used=200)
-        allocation_list = rp_obj.AllocationList(
-            self.ctx,
-            objects=[allocation3],
-        )
-        allocation_list.create_all()
-
-        # Get usages back by project
-        usage_list = rp_obj.UsageList.get_all_by_project_user(
-            self.ctx, self.ctx.project_id)
-        self.assertEqual(1, len(usage_list))
-        self.assertEqual(500, usage_list[0].usage)
-
-        # Get usages back by project and user
-        usage_list = rp_obj.UsageList.get_all_by_project_user(
-            self.ctx, self.ctx.project_id,
-            user_id=uuidsentinel.other_user)
-        self.assertEqual(1, len(usage_list))
-        self.assertEqual(200, usage_list[0].usage)
-
-        # List allocations and confirm project and user
-        allocation_list = rp_obj.AllocationList.get_all_by_consumer_id(
-            self.ctx, other_consumer_uuid)
-        self.assertEqual(1, len(allocation_list))
-        allocation = allocation_list[0]
-        self.assertEqual(self.ctx.project_id, allocation.project_id)
-        self.assertEqual(uuidsentinel.other_user, allocation.user_id)
-
     def test_create_and_clear(self):
         """Test that a used of 0 in an allocation wipes allocations."""
         consumer_uuid = uuidsentinel.consumer
+
+        # Create a consumer representing the instance
+        inst_consumer = consumer_obj.Consumer(
+            self.ctx, uuid=consumer_uuid, user=self.user_obj,
+            project=self.project_obj)
+        inst_consumer.create()
+
         rp_class = fields.ResourceClass.DISK_GB
         target_rp = self._make_rp_and_inventory(resource_class=rp_class,
                                                 max_unit=500)
@@ -1530,16 +1468,12 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         # Create two allocations with values and confirm the resulting
         # usage is as expected.
         allocation1 = rp_obj.Allocation(resource_provider=target_rp,
-                                        consumer_id=consumer_uuid,
+                                        consumer=inst_consumer,
                                         resource_class=rp_class,
-                                        project_id=self.ctx.project_id,
-                                        user_id=self.ctx.user_id,
                                         used=100)
         allocation2 = rp_obj.Allocation(resource_provider=target_rp,
-                                        consumer_id=consumer_uuid,
+                                        consumer=inst_consumer,
                                         resource_class=rp_class,
-                                        project_id=self.ctx.project_id,
-                                        user_id=self.ctx.user_id,
                                         used=200)
         allocation_list = rp_obj.AllocationList(
             self.ctx,
@@ -1556,16 +1490,12 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         # Create two allocations, one with 0 used, to confirm the
         # resulting usage is only of one.
         allocation1 = rp_obj.Allocation(resource_provider=target_rp,
-                                         consumer_id=consumer_uuid,
+                                         consumer=inst_consumer,
                                          resource_class=rp_class,
-                                         project_id=self.ctx.project_id,
-                                         user_id=self.ctx.user_id,
                                          used=0)
         allocation2 = rp_obj.Allocation(resource_provider=target_rp,
-                                         consumer_id=consumer_uuid,
+                                         consumer=inst_consumer,
                                          resource_class=rp_class,
-                                         project_id=self.ctx.project_id,
-                                         user_id=self.ctx.user_id,
                                          used=200)
         allocation_list = rp_obj.AllocationList(
             self.ctx,
@@ -1581,6 +1511,13 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
 
         # add a source rp and a migration consumer
         migration_uuid = uuidsentinel.migration
+
+        # Create a consumer representing the migration
+        mig_consumer = consumer_obj.Consumer(
+            self.ctx, uuid=migration_uuid, user=self.user_obj,
+            project=self.project_obj)
+        mig_consumer.create()
+
         source_rp = self._make_rp_and_inventory(
             rp_name=uuidsentinel.source_name, rp_uuid=uuidsentinel.source_uuid,
             resource_class=rp_class, max_unit=500)
@@ -1588,16 +1525,12 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
         # Create two allocations, one as the consumer, one as the
         # migration.
         allocation1 = rp_obj.Allocation(resource_provider=target_rp,
-                                        consumer_id=consumer_uuid,
+                                        consumer=inst_consumer,
                                         resource_class=rp_class,
-                                        project_id=self.ctx.project_id,
-                                        user_id=self.ctx.user_id,
                                         used=200)
         allocation2 = rp_obj.Allocation(resource_provider=source_rp,
-                                        consumer_id=migration_uuid,
+                                        consumer=mig_consumer,
                                         resource_class=rp_class,
-                                        project_id=self.ctx.project_id,
-                                        user_id=self.ctx.user_id,
                                         used=200)
         allocation_list = rp_obj.AllocationList(
             self.ctx,
@@ -1621,16 +1554,12 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
 
         # Clear the migration and confirm the target.
         allocation1 = rp_obj.Allocation(resource_provider=target_rp,
-                                        consumer_id=consumer_uuid,
+                                        consumer=inst_consumer,
                                         resource_class=rp_class,
-                                        project_id=self.ctx.project_id,
-                                        user_id=self.ctx.user_id,
                                         used=200)
         allocation2 = rp_obj.Allocation(resource_provider=source_rp,
-                                        consumer_id=migration_uuid,
+                                        consumer=mig_consumer,
                                         resource_class=rp_class,
-                                        project_id=self.ctx.project_id,
-                                        user_id=self.ctx.user_id,
                                         used=0)
         allocation_list = rp_obj.AllocationList(
             self.ctx,
@@ -1667,23 +1596,35 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
                              max_unit=1024,
                              step_size=64)
 
+        # Create a consumer representing the instance
+        inst_consumer = consumer_obj.Consumer(
+            self.ctx, uuid=uuidsentinel.instance, user=self.user_obj,
+            project=self.project_obj)
+        inst_consumer.create()
+
         # First create a allocation to consume full_rp's resource.
         alloc_list = rp_obj.AllocationList(context=self.ctx,
             objects=[
                 rp_obj.Allocation(
                     context=self.ctx,
-                    consumer_id=uuidsentinel.instance,
+                    consumer=inst_consumer,
                     resource_provider=full_rp,
                     resource_class=fields.ResourceClass.VCPU,
                     used=12),
                 rp_obj.Allocation(
                     context=self.ctx,
-                    consumer_id=uuidsentinel.instance,
+                    consumer=inst_consumer,
                     resource_provider=full_rp,
                     resource_class=fields.ResourceClass.MEMORY_MB,
                     used=1024)
             ])
         alloc_list.create_all()
+
+        # Create a consumer representing the second instance
+        inst2_consumer = consumer_obj.Consumer(
+            self.ctx, uuid=uuidsentinel.instance2, user=self.user_obj,
+            project=self.project_obj)
+        inst2_consumer.create()
 
         # Create an allocation list consisting of valid requests and an invalid
         # request exceeding the memory full_rp can provide.
@@ -1691,25 +1632,25 @@ class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
             objects=[
                 rp_obj.Allocation(
                     context=self.ctx,
-                    consumer_id=uuidsentinel.instance2,
+                    consumer=inst2_consumer,
                     resource_provider=empty_rp,
                     resource_class=fields.ResourceClass.VCPU,
                     used=12),
                 rp_obj.Allocation(
                     context=self.ctx,
-                    consumer_id=uuidsentinel.instance2,
+                    consumer=inst2_consumer,
                     resource_provider=empty_rp,
                     resource_class=fields.ResourceClass.MEMORY_MB,
                     used=512),
                 rp_obj.Allocation(
                     context=self.ctx,
-                    consumer_id=uuidsentinel.instance2,
+                    consumer=inst2_consumer,
                     resource_provider=full_rp,
                     resource_class=fields.ResourceClass.VCPU,
                     used=12),
                 rp_obj.Allocation(
                     context=self.ctx,
-                    consumer_id=uuidsentinel.instance2,
+                    consumer=inst2_consumer,
                     resource_provider=full_rp,
                     resource_class=fields.ResourceClass.MEMORY_MB,
                     used=512),

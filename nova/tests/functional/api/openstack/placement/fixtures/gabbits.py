@@ -18,7 +18,10 @@ from oslo_utils import uuidutils
 
 from nova.api.openstack.placement import deploy
 from nova.api.openstack.placement import exception
+from nova.api.openstack.placement.objects import consumer as consumer_obj
+from nova.api.openstack.placement.objects import project as project_obj
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
+from nova.api.openstack.placement.objects import user as user_obj
 from nova.api.openstack.placement import policies
 from nova import conf
 from nova import config
@@ -116,6 +119,7 @@ class APIFixture(fixture.GabbiFixture):
 class AllocationFixture(APIFixture):
     """An APIFixture that has some pre-made Allocations."""
 
+    # TODO(jaypipes): Simplify and restructure this fixture
     def start_fixture(self):
         super(AllocationFixture, self).start_fixture()
         self.context = context.get_admin_context()
@@ -126,6 +130,13 @@ class AllocationFixture(APIFixture):
         user_id = os.environ['USER_ID']
         alt_user_id = os.environ['ALT_USER_ID']
 
+        user = user_obj.User(self.context, external_id=user_id)
+        user.create()
+        alt_user = user_obj.User(self.context, external_id=alt_user_id)
+        alt_user.create()
+        project = project_obj.Project(self.context, external_id=project_id)
+        project.create()
+
         # Stealing from the super
         rp_name = os.environ['RP_NAME']
         rp_uuid = os.environ['RP_UUID']
@@ -133,8 +144,13 @@ class AllocationFixture(APIFixture):
             self.context, name=rp_name, uuid=rp_uuid)
         rp.create()
 
-        # Create some DISK_GB inventory and allocations.
+        # Create a first consumer for the DISK_GB
         consumer_id = uuidutils.generate_uuid()
+        consumer = consumer_obj.Consumer(
+            self.context, uuid=consumer_id, user=user, project=project)
+        consumer.create()
+
+        # Create some DISK_GB inventory and allocations.
         inventory = rp_obj.Inventory(
             self.context, resource_provider=rp,
             resource_class='DISK_GB', total=2048,
@@ -144,16 +160,12 @@ class AllocationFixture(APIFixture):
         alloc1 = rp_obj.Allocation(
             self.context, resource_provider=rp,
             resource_class='DISK_GB',
-            consumer_id=consumer_id,
-            project_id=project_id,
-            user_id=user_id,
+            consumer=consumer,
             used=500)
         alloc2 = rp_obj.Allocation(
             self.context, resource_provider=rp,
             resource_class='DISK_GB',
-            consumer_id=consumer_id,
-            project_id=project_id,
-            user_id=user_id,
+            consumer=consumer,
             used=500)
         alloc_list = rp_obj.AllocationList(
             self.context,
@@ -161,9 +173,15 @@ class AllocationFixture(APIFixture):
         )
         alloc_list.create_all()
 
-        # Create some VCPU inventory and allocations.
+        # Create a second consumer for the VCPU
         consumer_id = uuidutils.generate_uuid()
+        consumer = consumer_obj.Consumer(
+            self.context, uuid=consumer_id, user=user, project=project)
+        consumer.create()
+        # This consumer is referenced from the gabbits
         os.environ['CONSUMER_ID'] = consumer_id
+
+        # Create some VCPU inventory and allocations.
         inventory = rp_obj.Inventory(
             self.context, resource_provider=rp,
             resource_class='VCPU', total=10,
@@ -173,37 +191,36 @@ class AllocationFixture(APIFixture):
         alloc1 = rp_obj.Allocation(
             self.context, resource_provider=rp,
             resource_class='VCPU',
-            consumer_id=consumer_id,
-            project_id=project_id,
-            user_id=user_id,
+            consumer=consumer,
             used=2)
         alloc2 = rp_obj.Allocation(
             self.context, resource_provider=rp,
             resource_class='VCPU',
-            consumer_id=consumer_id,
-            project_id=project_id,
-            user_id=user_id,
+            consumer=consumer,
             used=4)
         alloc_list = rp_obj.AllocationList(
                 self.context,
                 objects=[alloc1, alloc2])
         alloc_list.create_all()
 
+        # Create a consumer object for a different user
+        alt_consumer_id = uuidutils.generate_uuid()
+        alt_consumer = consumer_obj.Consumer(
+            self.context, uuid=alt_consumer_id, user=alt_user,
+            project=project)
+        alt_consumer.create()
+        os.environ['ALT_CONSUMER_ID'] = alt_consumer_id
+
         # Create a couple of allocations for a different user.
-        consumer_id = uuidutils.generate_uuid()
         alloc1 = rp_obj.Allocation(
             self.context, resource_provider=rp,
             resource_class='DISK_GB',
-            consumer_id=consumer_id,
-            project_id=project_id,
-            user_id=alt_user_id,
+            consumer=alt_consumer,
             used=20)
         alloc2 = rp_obj.Allocation(
             self.context, resource_provider=rp,
             resource_class='VCPU',
-            consumer_id=consumer_id,
-            project_id=project_id,
-            user_id=alt_user_id,
+            consumer=alt_consumer,
             used=1)
         alloc_list = rp_obj.AllocationList(
                 self.context,

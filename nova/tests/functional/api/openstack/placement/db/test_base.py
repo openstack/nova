@@ -15,7 +15,10 @@
 from oslo_utils import uuidutils
 
 from nova.api.openstack.placement import exception
+from nova.api.openstack.placement.objects import consumer as consumer_obj
+from nova.api.openstack.placement.objects import project as project_obj
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
+from nova.api.openstack.placement.objects import user as user_obj
 from nova import context
 from nova import test
 from nova.tests import fixtures
@@ -44,20 +47,6 @@ def set_traits(rp, *traits):
     return tlist
 
 
-def allocate_from_provider(rp, rc, used, consumer_id=None):
-    # NOTE(efried): If not specified, use a random consumer UUID - we don't
-    # want to override any existing allocations from the test case.
-    consumer_id = consumer_id or uuidutils.generate_uuid()
-    alloc_list = rp_obj.AllocationList(
-        rp._context, objects=[
-            rp_obj.Allocation(
-                rp._context, resource_provider=rp, resource_class=rc,
-                consumer_id=consumer_id, used=used)]
-    )
-    alloc_list.create_all()
-    return alloc_list
-
-
 class PlacementDbBaseTestCase(test.NoDBTestCase):
     USES_DB_SELF = True
 
@@ -71,6 +60,11 @@ class PlacementDbBaseTestCase(test.NoDBTestCase):
         self._reset_traits_synced()
         self.addCleanup(self._reset_traits_synced)
         self.ctx = context.RequestContext('fake-user', 'fake-project')
+        self.user_obj = user_obj.User(self.ctx, external_id='fake-user')
+        self.user_obj.create()
+        self.project_obj = project_obj.Project(
+            self.ctx, external_id='fake-project')
+        self.project_obj.create()
         # For debugging purposes, populated by _create_provider and used by
         # _validate_allocation_requests to make failure results more readable.
         self.rp_uuid_to_name = {}
@@ -95,14 +89,45 @@ class PlacementDbBaseTestCase(test.NoDBTestCase):
         self.rp_uuid_to_name[rp.uuid] = name
         return rp
 
+    def allocate_from_provider(self, rp, rc, used, consumer_id=None,
+                               consumer=None):
+        # NOTE(efried): If not specified, use a random consumer UUID - we don't
+        # want to override any existing allocations from the test case.
+        consumer_id = consumer_id or uuidutils.generate_uuid()
+        if consumer is None:
+            try:
+                consumer = consumer_obj.Consumer.get_by_uuid(
+                    self.ctx, consumer_id)
+            except exception.NotFound:
+                consumer = consumer_obj.Consumer(
+                    self.ctx, uuid=consumer_id, user=self.user_obj,
+                    project=self.project_obj)
+                consumer.create()
+        alloc_list = rp_obj.AllocationList(
+            self.ctx, objects=[
+                rp_obj.Allocation(
+                    self.ctx, resource_provider=rp, resource_class=rc,
+                    consumer=consumer, used=used)]
+        )
+        alloc_list.create_all()
+        return alloc_list
+
     def _make_allocation(self, inv_dict, alloc_dict):
         rp = self._create_provider('allocation_resource_provider')
         disk_inv = rp_obj.Inventory(context=self.ctx,
                 resource_provider=rp, **inv_dict)
         inv_list = rp_obj.InventoryList(objects=[disk_inv])
         rp.set_inventory(inv_list)
+        consumer_id = alloc_dict['consumer_id']
+        try:
+            c = consumer_obj.Consumer.get_by_uuid(self.ctx, consumer_id)
+        except exception.NotFound:
+            c = consumer_obj.Consumer(
+                self.ctx, uuid=consumer_id, user=self.user_obj,
+                project=self.project_obj)
+            c.create()
         alloc = rp_obj.Allocation(self.ctx, resource_provider=rp,
-                **alloc_dict)
+                consumer=c, **alloc_dict)
         alloc_list = rp_obj.AllocationList(self.ctx, objects=[alloc])
         alloc_list.create_all()
         return rp, alloc
