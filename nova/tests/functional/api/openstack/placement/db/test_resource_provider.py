@@ -1249,6 +1249,102 @@ class TestResourceProviderAggregates(test.NoDBTestCase):
         aggs = rp.get_aggregates()
         self.assertEqual(0, len(aggs))
 
+    def test_anchors_for_sharing_provider(self):
+        """Test _anchors_for_sharing_provider with the following setup.
+
+      .............agg2.....
+     :                      :
+     :  +====+               : +====+                ..agg5..
+     :  | r1 |                .| r2 |               : +----+ :
+     :  +=+==+                 +=+==+     +----+    : | s3 | :
+     :    |                      |        | s2 |    : +----+ :
+     :  +=+==+ agg1            +=+==+     +----+     ........
+     :  | c1 |.....            | c2 |       :
+     :  +====+ :   :           +====+     agg4        +----+
+     :        :     :            :          :         | s4 |
+     :    +----+   +----+        :        +====+      +----+
+     :....| s5 |   | s1 |.......agg3......| r3 |
+     :    +----+   +----+                 +====+
+     :.........agg2...:
+        """
+        agg1 = uuidsentinel.agg1
+        agg2 = uuidsentinel.agg2
+        agg3 = uuidsentinel.agg3
+        agg4 = uuidsentinel.agg4
+        agg5 = uuidsentinel.agg5
+        shr_trait = rp_obj.Trait.get_by_name(
+            self.ctx, "MISC_SHARES_VIA_AGGREGATE")
+
+        def mkrp(name, sharing, *aggs, **kwargs):
+            rp_args = dict(name=name, uuid=getattr(uuidsentinel, name))
+            parent = kwargs.get('parent')
+            if parent is not None:
+                rp_args['parent_provider_uuid'] = parent.uuid
+            rp = rp_obj.ResourceProvider(self.ctx, **rp_args)
+            rp.create()
+            if sharing:
+                rp.set_traits(rp_obj.TraitList(objects=[shr_trait]))
+            rp.set_aggregates(aggs)
+            return rp
+
+        # r1 and c1 constitute a tree.  The child is in agg1.  We use this to
+        # show that, when we ask for anchors for s1 (a member of agg1), we get
+        # the *root* of the tree, not the aggregate member itself (c1).
+        r1 = mkrp('r1', False)
+        mkrp('c1', False, agg1, parent=r1)
+        # r2 and c2 constitute a tree.  The root is in agg2; the child is in
+        # agg3.  We use this to show that, when we ask for anchors for a
+        # provider that's in both of those aggregates (s1), we only get r2 once
+        r2 = mkrp('r2', False, agg2)
+        mkrp('c2', False, agg3, parent=r2)
+        # r3 stands alone, but is a member of two aggregates.  We use this to
+        # show that we don't "jump aggregates" - when we ask for anchors for s2
+        # we only get r3 (and s2 itself).
+        r3 = mkrp('r3', False, agg3, agg4)
+        # s* are sharing providers
+        s1 = mkrp('s1', True, agg1, agg2, agg3)
+        s2 = mkrp('s2', True, agg4)
+        # s3 is the only member of agg5.  We use this to show that the provider
+        # is still considered its own root, even if the aggregate is only
+        # associated with itself.
+        s3 = mkrp('s3', True, agg5)
+        # s4 is a broken semi-sharing provider - has MISC_SHARES_VIA_AGGREGATE,
+        # but is not a member of an aggregate.  It has no "anchor".
+        s4 = mkrp('s4', True)
+        # s5 is a sharing provider whose aggregates overlap with those of s1.
+        # s5 and s1 will show up as "anchors" for each other.
+        s5 = mkrp('s5', True, agg1, agg2)
+
+        # s1 gets s1 (self),
+        # r1 via agg1 through c1,
+        # r2 via agg2 AND via agg3 through c2
+        # r3 via agg2 and agg3
+        # s5 via agg1 and agg2
+        expected = [rp.uuid for rp in (s1, r1, r2, r3, s5)]
+        self.assertItemsEqual(
+            expected, rp_obj._anchors_for_sharing_provider(self.ctx, s1.id))
+
+        # s2 gets s2 (self) and r3 via agg4
+        expected = [s2.uuid, r3.uuid]
+        self.assertItemsEqual(
+            expected, rp_obj._anchors_for_sharing_provider(self.ctx, s2.id))
+
+        # s3 gets self
+        self.assertEqual(
+            [s3.uuid], rp_obj._anchors_for_sharing_provider(self.ctx, s3.id))
+
+        # s4 isn't really a sharing provider - gets nothing
+        self.assertEqual(
+            [], rp_obj._anchors_for_sharing_provider(self.ctx, s4.id))
+
+        # s5 gets s5 (self),
+        # r1 via agg1 through c1,
+        # r2 via agg2
+        # s1 via agg1 and agg2
+        expected = [rp.uuid for rp in (s5, r1, r2, s1)]
+        self.assertItemsEqual(
+            expected, rp_obj._anchors_for_sharing_provider(self.ctx, s5.id))
+
 
 class TestAllocation(ResourceProviderBaseCase):
 
