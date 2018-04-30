@@ -87,12 +87,6 @@ api_version:
   type: string
   description: >
     The API version as returned in the links from the ``GET /`` call.
-attachment_id:
-  description: |
-    The UUID of the attachment.
-  in: path
-  required: true
-  type: string
 before_timestamp:
   description: |
     Filters the response by the date and time before which to list usage
@@ -346,6 +340,12 @@ volume_id_attached_path:
 volume_id_path:
   description: |
     The unique ID for a volume.
+  in: path
+  required: true
+  type: string
+volume_id_swap_src:
+  description: |
+    The UUID of the volume being replaced.
   in: path
   required: true
   type: string
@@ -6675,7 +6675,7 @@ volumeAttachment_post:
 volumeAttachment_put:
   description: |
     A dictionary representation of a volume attachment containing the field
-    ``volumeId``.
+    ``volumeId`` which is the UUID of the replacement volume.
   in: body
   required: true
   type: object

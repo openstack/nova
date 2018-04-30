@@ -138,12 +138,16 @@ Response
 Update a volume attachment
 ==========================
 
-.. rest_method:: PUT /servers/{server_id}/os-volume_attachments/{attachment_id}
+.. rest_method:: PUT /servers/{server_id}/os-volume_attachments/{volume_id}
 
 Update a volume attachment.
 
 .. note:: This action only valid when the server is in ACTIVE, PAUSED and RESIZED state,
           or a conflict(409) error will be returned.
+
+Policy defaults enable only users with the administrative role or
+the owner of the server to perform this operation. Cloud providers
+can change these permissions through the ``policy.json`` file.
 
 Normal response codes: 202
 
@@ -155,7 +159,7 @@ Request
 .. rest_parameters:: parameters.yaml
 
   - server_id: server_id_path
-  - attachment_id: attachment_id
+  - volume_id: volume_id_swap_src
   - volumeAttachment: volumeAttachment_put
   - volumeId: volumeId_swap
 
