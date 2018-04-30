@@ -305,6 +305,19 @@ class TestNeutronDriver(test.NoDBTestCase):
         self.assertEqual(sorted([sg1_id, sg2_id]),
             sorted(self.mocked_client.list_security_groups.call_args[1]['id']))
 
+    def test_instances_security_group_bindings_port_not_found(self):
+        server_id = 'c5a20e8d-c4b0-47cf-9dca-ebe4f758acb1'
+        servers = [{'id': server_id}]
+
+        self.mocked_client.list_ports.side_effect = n_exc.PortNotFoundClient()
+
+        sg_api = neutron_driver.SecurityGroupAPI()
+        result = sg_api.get_instances_security_groups_bindings(
+                                  self.context, servers)
+        self.mocked_client.list_ports.assert_called_once_with(
+            device_id=[server_id])
+        self.assertEqual({}, result)
+
     def _test_instances_security_group_bindings_scale(self, num_servers):
         max_query = 150
         sg1_id = '2f7ce969-1a73-4ef9-bbd6-c9a91780ecd4'
