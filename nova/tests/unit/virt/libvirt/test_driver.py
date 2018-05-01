@@ -15006,112 +15006,85 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           _fake_NodeDevXml[name]))
 
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
-        with mock.patch.object(
-            fakelibvirt.Connection, 'getLibVersion') as mock_lib_version:
-            mock_lib_version.return_value = (
-                versionutils.convert_version_to_int(
-                libvirt_driver.MIN_LIBVIRT_PF_WITH_NO_VFS_CAP_VERSION) - 1)
 
-            actualvf = drvr._get_pcidev_info("pci_0000_04_00_3")
-            expect_vf = {
-                "dev_id": "pci_0000_04_00_3",
-                "address": "0000:04:00.3",
-                "product_id": '1521',
-                "numa_node": None,
-                "vendor_id": '8086',
-                "label": 'label_8086_1521',
-                "dev_type": fields.PciDeviceType.SRIOV_PF,
-                }
+        actualvf = drvr._get_pcidev_info("pci_0000_04_00_3")
+        expect_vf = {
+            "dev_id": "pci_0000_04_00_3",
+            "address": "0000:04:00.3",
+            "product_id": '1521',
+            "numa_node": None,
+            "vendor_id": '8086',
+            "label": 'label_8086_1521',
+            "dev_type": fields.PciDeviceType.SRIOV_PF,
+            }
+        self.assertEqual(expect_vf, actualvf)
 
-            self.assertEqual(expect_vf, actualvf)
-            actualvf = drvr._get_pcidev_info("pci_0000_04_10_7")
+        actualvf = drvr._get_pcidev_info("pci_0000_04_10_7")
+        expect_vf = {
+            "dev_id": "pci_0000_04_10_7",
+            "address": "0000:04:10.7",
+            "product_id": '1520',
+            "numa_node": None,
+            "vendor_id": '8086',
+            "label": 'label_8086_1520',
+            "dev_type": fields.PciDeviceType.SRIOV_VF,
+            "parent_addr": '0000:04:00.3',
+            }
+        self.assertEqual(expect_vf, actualvf)
+
+        with mock.patch.object(pci_utils, 'get_net_name_by_vf_pci_address',
+                return_value="net_enp2s2_02_9a_a1_37_be_54"):
+            actualvf = drvr._get_pcidev_info("pci_0000_04_11_7")
             expect_vf = {
-                "dev_id": "pci_0000_04_10_7",
-                "address": "0000:04:10.7",
+                "dev_id": "pci_0000_04_11_7",
+                "address": "0000:04:11.7",
                 "product_id": '1520',
-                "numa_node": None,
                 "vendor_id": '8086',
+                "numa_node": 0,
                 "label": 'label_8086_1520',
                 "dev_type": fields.PciDeviceType.SRIOV_VF,
                 "parent_addr": '0000:04:00.3',
+                "capabilities": {
+                    "network": ["rx", "tx", "sg", "tso", "gso", "gro",
+                                "rxvlan", "txvlan"]},
                 }
             self.assertEqual(expect_vf, actualvf)
 
-            with mock.patch.object(pci_utils, 'get_net_name_by_vf_pci_address',
-                    return_value="net_enp2s2_02_9a_a1_37_be_54"):
-                actualvf = drvr._get_pcidev_info("pci_0000_04_11_7")
-                expect_vf = {
-                    "dev_id": "pci_0000_04_11_7",
-                    "address": "0000:04:11.7",
-                    "product_id": '1520',
-                    "vendor_id": '8086',
-                    "numa_node": 0,
-                    "label": 'label_8086_1520',
-                    "dev_type": fields.PciDeviceType.SRIOV_VF,
-                    "parent_addr": '0000:04:00.3',
-                    "capabilities": {
-                        "network": ["rx", "tx", "sg", "tso", "gso", "gro",
-                                    "rxvlan", "txvlan"]},
-                    }
-                self.assertEqual(expect_vf, actualvf)
+        actualvf = drvr._get_pcidev_info("pci_0000_04_00_1")
+        expect_vf = {
+            "dev_id": "pci_0000_04_00_1",
+            "address": "0000:04:00.1",
+            "product_id": '1013',
+            "numa_node": 0,
+            "vendor_id": '15b3',
+            "label": 'label_15b3_1013',
+            "dev_type": fields.PciDeviceType.STANDARD,
+            }
+        self.assertEqual(expect_vf, actualvf)
 
-            with mock.patch.object(
-                pci_utils, 'is_physical_function', return_value=True):
-                actualvf = drvr._get_pcidev_info("pci_0000_04_00_1")
-                expect_vf = {
-                    "dev_id": "pci_0000_04_00_1",
-                    "address": "0000:04:00.1",
-                    "product_id": '1013',
-                    "numa_node": 0,
-                    "vendor_id": '15b3',
-                    "label": 'label_15b3_1013',
-                    "dev_type": fields.PciDeviceType.SRIOV_PF,
-                    }
-                self.assertEqual(expect_vf, actualvf)
+        actualvf = drvr._get_pcidev_info("pci_0000_03_00_0")
+        expect_vf = {
+            "dev_id": "pci_0000_03_00_0",
+            "address": "0000:03:00.0",
+            "product_id": '1013',
+            "numa_node": 0,
+            "vendor_id": '15b3',
+            "label": 'label_15b3_1013',
+            "dev_type": fields.PciDeviceType.SRIOV_PF,
+            }
+        self.assertEqual(expect_vf, actualvf)
 
-            with mock.patch.object(
-                pci_utils, 'is_physical_function', return_value=False):
-                actualvf = drvr._get_pcidev_info("pci_0000_04_00_1")
-                expect_vf = {
-                    "dev_id": "pci_0000_04_00_1",
-                    "address": "0000:04:00.1",
-                    "product_id": '1013',
-                    "numa_node": 0,
-                    "vendor_id": '15b3',
-                    "label": 'label_15b3_1013',
-                    "dev_type": fields.PciDeviceType.STANDARD,
-                    }
-                self.assertEqual(expect_vf, actualvf)
-
-        with mock.patch.object(
-            fakelibvirt.Connection, 'getLibVersion') as mock_lib_version:
-            mock_lib_version.return_value = (
-                versionutils.convert_version_to_int(
-                libvirt_driver.MIN_LIBVIRT_PF_WITH_NO_VFS_CAP_VERSION))
-            actualvf = drvr._get_pcidev_info("pci_0000_03_00_0")
-            expect_vf = {
-                "dev_id": "pci_0000_03_00_0",
-                "address": "0000:03:00.0",
-                "product_id": '1013',
-                "numa_node": 0,
-                "vendor_id": '15b3',
-                "label": 'label_15b3_1013',
-                "dev_type": fields.PciDeviceType.SRIOV_PF,
-                }
-            self.assertEqual(expect_vf, actualvf)
-
-            actualvf = drvr._get_pcidev_info("pci_0000_03_00_1")
-            expect_vf = {
-                "dev_id": "pci_0000_03_00_1",
-                "address": "0000:03:00.1",
-                "product_id": '1013',
-                "numa_node": 0,
-                "vendor_id": '15b3',
-                "label": 'label_15b3_1013',
-                "dev_type": fields.PciDeviceType.SRIOV_PF,
-                }
-
-            self.assertEqual(expect_vf, actualvf)
+        actualvf = drvr._get_pcidev_info("pci_0000_03_00_1")
+        expect_vf = {
+            "dev_id": "pci_0000_03_00_1",
+            "address": "0000:03:00.1",
+            "product_id": '1013',
+            "numa_node": 0,
+            "vendor_id": '15b3',
+            "label": 'label_15b3_1013',
+            "dev_type": fields.PciDeviceType.SRIOV_PF,
+            }
+        self.assertEqual(expect_vf, actualvf)
 
     def test_list_devices_not_supported(self):
         drvr = libvirt_driver.LibvirtDriver(fake.FakeVirtAPI(), False)
