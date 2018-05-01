@@ -1,0 +1,9 @@
+---
+fixes:
+  - |
+    The nova-compute service now allows specifying the interval for updating
+    nova-compute-side cache of the compute node resource provider's aggregates
+    and traits info via a new config option called
+    ``[compute]/resource_provider_association_refresh`` which defaults to 300.
+    This was previously hard-coded to run every 300 seconds which may be too
+    often in a large deployment.
