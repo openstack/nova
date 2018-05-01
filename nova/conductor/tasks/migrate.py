@@ -219,7 +219,7 @@ class MigrationTask(base.TaskBase):
         # instance record.
         migration = self._preallocate_migration()
 
-        self.request_spec.ensure_project_id(self.instance)
+        self.request_spec.ensure_project_and_user_id(self.instance)
         # On an initial call to migrate, 'self.host_list' will be None, so we
         # have to call the scheduler to get a list of acceptable hosts to
         # migrate to. That list will consist of a selected host, along with
