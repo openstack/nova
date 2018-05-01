@@ -417,34 +417,6 @@ class LibvirtGenericVIFDriver(object):
 
         return conf
 
-    def _get_vhostuser_settings(self, vif):
-        vif_details = vif['details']
-        mode = vif_details.get(network_model.VIF_DETAILS_VHOSTUSER_MODE,
-                               'server')
-        sock_path = vif_details.get(network_model.VIF_DETAILS_VHOSTUSER_SOCKET)
-        if sock_path is None:
-            raise exception.VifDetailsMissingVhostuserSockPath(
-                                                        vif_id=vif['id'])
-        return mode, sock_path
-
-    def get_config_vhostuser(self, instance, vif, image_meta,
-                            inst_type, virt_type, host):
-        conf = self.get_base_config(instance, vif['address'], image_meta,
-                                    inst_type, virt_type, vif['vnic_type'],
-                                    host)
-        # TODO(sahid): We should never configure a driver backend for
-        # vhostuser interface. Specifically override driver to use
-        # None. This can be removed when get_base_config will be fixed
-        # and rewrite to set the correct backend.
-        conf.driver_name = None
-
-        mode, sock_path = self._get_vhostuser_settings(vif)
-        rx_queue_size, tx_queue_size = self._get_virtio_queue_sizes(host)
-        designer.set_vif_host_backend_vhostuser_config(
-            conf, mode, sock_path, rx_queue_size, tx_queue_size)
-
-        return conf
-
     def _get_virtio_queue_sizes(self, host):
         """Returns rx/tx queue sizes configured or (None, None)
 

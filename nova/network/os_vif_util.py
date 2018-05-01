@@ -440,7 +440,11 @@ def _nova_to_osvif_vif_vhostuser(vif):
         _set_vhostuser_settings(vif, obj)
         return obj
     else:
-        raise NotImplementedError()
+        obj = _get_vif_instance(vif, objects.vif.VIFVHostUser,
+                                plugin="noop",
+                                vif_name=_get_vif_name(vif))
+        _set_vhostuser_settings(vif, obj)
+        return obj
 
 
 # VIF_TYPE_IVS = 'ivs'
