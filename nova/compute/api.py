@@ -3588,6 +3588,10 @@ class API(base.Base):
         connect_info = self.compute_rpcapi.get_vnc_console(context,
                 instance=instance, console_type=console_type)
 
+        # TODO(melwitt): In Rocky, the compute manager puts the
+        # console authorization in the database in the above method.
+        # The following will be removed when everything has been
+        # converted to use the database, in Stein.
         self.consoleauth_rpcapi.authorize_console(context,
                 connect_info['token'], console_type,
                 connect_info['host'], connect_info['port'],
@@ -3610,6 +3614,10 @@ class API(base.Base):
         """Get a url to an instance Console."""
         connect_info = self.compute_rpcapi.get_spice_console(context,
                 instance=instance, console_type=console_type)
+        # TODO(melwitt): In Rocky, the compute manager puts the
+        # console authorization in the database in the above method.
+        # The following will be removed when everything has been
+        # converted to use the database, in Stein.
         self.consoleauth_rpcapi.authorize_console(context,
                 connect_info['token'], console_type,
                 connect_info['host'], connect_info['port'],
@@ -3632,6 +3640,10 @@ class API(base.Base):
         """Get a url to an instance Console."""
         connect_info = self.compute_rpcapi.get_rdp_console(context,
                 instance=instance, console_type=console_type)
+        # TODO(melwitt): In Rocky, the compute manager puts the
+        # console authorization in the database in the above method.
+        # The following will be removed when everything has been
+        # converted to use the database, in Stein.
         self.consoleauth_rpcapi.authorize_console(context,
                 connect_info['token'], console_type,
                 connect_info['host'], connect_info['port'],
@@ -3655,6 +3667,10 @@ class API(base.Base):
         connect_info = self.compute_rpcapi.get_serial_console(context,
                 instance=instance, console_type=console_type)
 
+        # TODO(melwitt): In Rocky, the compute manager puts the
+        # console authorization in the database in the above method.
+        # The following will be removed when everything has been
+        # converted to use the database, in Stein.
         self.consoleauth_rpcapi.authorize_console(context,
                 connect_info['token'], console_type,
                 connect_info['host'], connect_info['port'],
@@ -3676,6 +3692,10 @@ class API(base.Base):
         """Get a url to a MKS console."""
         connect_info = self.compute_rpcapi.get_mks_console(context,
                 instance=instance, console_type=console_type)
+        # TODO(melwitt): In Rocky, the compute manager puts the
+        # console authorization in the database in the above method.
+        # The following will be removed when everything has been
+        # converted to use the database, in Stein.
         self.consoleauth_rpcapi.authorize_console(context,
                 connect_info['token'], console_type,
                 connect_info['host'], connect_info['port'],

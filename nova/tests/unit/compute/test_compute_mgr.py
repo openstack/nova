@@ -6753,6 +6753,54 @@ class ComputeManagerMigrationTestCase(test.NoDBTestCase):
             self.assertTrue(self.compute._consoles_enabled())
             self.flags(enabled=False, group=console)
 
+    @mock.patch('nova.context.RequestContext.elevated')
+    @mock.patch('nova.objects.ConsoleAuthToken')
+    def test_get_mks_console(self, mock_console_obj, mock_elevated):
+        self.flags(enabled=True, group='mks')
+
+        instance = objects.Instance(uuid=uuids.instance)
+
+        with mock.patch.object(self.compute.driver,
+                               'get_mks_console') as mock_get_console:
+            console = self.compute.get_mks_console(self.context, 'webmks',
+                                                   instance)
+
+        driver_console = mock_get_console.return_value
+        mock_console_obj.assert_called_once_with(
+            context=mock_elevated.return_value, console_type='webmks',
+            host=driver_console.host, port=driver_console.port,
+            internal_access_path=driver_console.internal_access_path,
+            instance_uuid=instance.uuid,
+            access_url_base=CONF.mks.mksproxy_base_url)
+        mock_console_obj.return_value.authorize.assert_called_once_with(
+            CONF.consoleauth.token_ttl)
+        self.assertEqual(driver_console.get_connection_info.return_value,
+                         console)
+
+    @mock.patch('nova.context.RequestContext.elevated')
+    @mock.patch('nova.objects.ConsoleAuthToken')
+    def test_get_serial_console(self, mock_console_obj, mock_elevated):
+        self.flags(enabled=True, group='serial_console')
+
+        instance = objects.Instance(uuid=uuids.instance)
+
+        with mock.patch.object(self.compute.driver,
+                               'get_serial_console') as mock_get_console:
+            console = self.compute.get_serial_console(self.context, 'serial',
+                                                      instance)
+
+        driver_console = mock_get_console.return_value
+        mock_console_obj.assert_called_once_with(
+            context=mock_elevated.return_value, console_type='serial',
+            host=driver_console.host, port=driver_console.port,
+            internal_access_path=driver_console.internal_access_path,
+            instance_uuid=instance.uuid,
+            access_url_base=CONF.serial_console.base_url)
+        mock_console_obj.return_value.authorize.assert_called_once_with(
+            CONF.consoleauth.token_ttl)
+        self.assertEqual(driver_console.get_connection_info.return_value,
+                         console)
+
     @mock.patch('nova.compute.manager.ComputeManager.'
                 '_do_live_migration')
     def _test_max_concurrent_live(self, mock_lm):
