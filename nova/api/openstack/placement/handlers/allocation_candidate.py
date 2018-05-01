@@ -117,7 +117,8 @@ def _transform_allocation_requests_list(alloc_reqs):
 
 
 def _transform_provider_summaries(p_sums, requests, include_traits=False,
-                                  include_all_resources=False):
+                                  include_all_resources=False,
+                                  enable_nested_providers=False):
     """Turn supplied list of ProviderSummary objects into a dict, keyed by
     resource provider UUID, of dicts of provider and inventory information.
     The traits only show up when `include_traits` is `True`.
@@ -141,6 +142,8 @@ def _transform_provider_summaries(p_sums, requests, include_traits=False,
                 'HW_CPU_X86_AVX512F',
                 'HW_CPU_X86_AVX512CD'
            ]
+           parent_provider_uuid: null,
+           root_provider_uuid: RP_UUID_1
        },
        RP_UUID_2: {
            'resources': {
@@ -156,7 +159,9 @@ def _transform_provider_summaries(p_sums, requests, include_traits=False,
            'traits': [
                 'HW_NIC_OFFLOAD_TSO',
                 'HW_NIC_OFFLOAD_GRO'
-           ]
+           ],
+           parent_provider_uuid: null,
+           root_provider_uuid: RP_UUID_2
        }
     }
     """
@@ -185,7 +190,47 @@ def _transform_provider_summaries(p_sums, requests, include_traits=False,
             ret[ps.resource_provider.uuid]['traits'] = [
                 t.name for t in ps.traits]
 
+        if enable_nested_providers:
+            ret[ps.resource_provider.uuid]['parent_provider_uuid'] = (
+                ps.resource_provider.parent_provider_uuid)
+            ret[ps.resource_provider.uuid]['root_provider_uuid'] = (
+                ps.resource_provider.root_provider_uuid)
+
     return ret
+
+
+def _exclude_nested_providers(alloc_cands):
+    """Exclude allocation requests and provider summaries for old microversions
+    if they involve more than one provider from the same tree.
+    """
+    # Build a temporary dict, keyed by root RP UUID of sets of UUIDs of all RPs
+    # in that tree.
+    tree_rps_by_root = collections.defaultdict(set)
+    for ps in alloc_cands.provider_summaries:
+        rp_uuid = ps.resource_provider.uuid
+        root_uuid = ps.resource_provider.root_provider_uuid
+        tree_rps_by_root[root_uuid].add(rp_uuid)
+    # We use this to get a list of sets of providers in each tree
+    tree_sets = list(tree_rps_by_root.values())
+
+    for a_req in alloc_cands.allocation_requests[:]:
+        alloc_rp_uuids = set([
+            arr.resource_provider.uuid for arr in a_req.resource_requests])
+        # If more than one allocation is provided by the same tree, kill
+        # that allocation request.
+        if any(len(tree_set & alloc_rp_uuids) > 1 for tree_set in tree_sets):
+            alloc_cands.allocation_requests.remove(a_req)
+
+    # Exclude eliminated providers from the provider summaries.
+    all_rp_uuids = set()
+    for a_req in alloc_cands.allocation_requests:
+        all_rp_uuids |= set(
+            arr.resource_provider.uuid for arr in a_req.resource_requests)
+    for ps in alloc_cands.provider_summaries[:]:
+        if ps.resource_provider.uuid not in all_rp_uuids:
+            alloc_cands.provider_summaries.remove(ps)
+
+    return alloc_cands
 
 
 def _transform_allocation_candidates(alloc_cands, requests, want_version):
@@ -197,6 +242,11 @@ def _transform_allocation_candidates(alloc_cands, requests, want_version):
         'provider_summaries': <PROVIDER_SUMMARIES>,
     }
     """
+    # exclude nested providers with old microversions
+    enable_nested_providers = want_version.matches((1, 29))
+    if not enable_nested_providers:
+        alloc_cands = _exclude_nested_providers(alloc_cands)
+
     if want_version.matches((1, 12)):
         a_reqs = _transform_allocation_requests_dict(
             alloc_cands.allocation_requests)
@@ -209,7 +259,9 @@ def _transform_allocation_candidates(alloc_cands, requests, want_version):
     p_sums = _transform_provider_summaries(
         alloc_cands.provider_summaries, requests,
         include_traits=include_traits,
-        include_all_resources=include_all_resources)
+        include_all_resources=include_all_resources,
+        enable_nested_providers=enable_nested_providers)
+
     return {
         'allocation_requests': a_reqs,
         'provider_summaries': p_sums,

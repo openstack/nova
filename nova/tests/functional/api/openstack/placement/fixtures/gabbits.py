@@ -26,7 +26,9 @@ from nova.api.openstack.placement import policies
 from nova import conf
 from nova import config
 from nova import context
+from nova import rc_fields as fields
 from nova.tests import fixtures
+from nova.tests.functional.api.openstack.placement.db import test_base as tb
 from nova.tests.unit import policy_fixture
 from nova.tests import uuidsentinel as uuids
 
@@ -247,99 +249,88 @@ class AllocationFixture(APIFixture):
 
 class SharedStorageFixture(APIFixture):
     """An APIFixture that has some two compute nodes without local storage
-    associated by aggregate to a provider of shared storage.
+    associated by aggregate to a provider of shared storage. Both compute
+    nodes have respectively two numa node resource providers, each of
+    which has a pf resource provider.
+
+                     +-------------------------------------+
+                     |  sharing storage (ss)               |
+                     |   DISK_GB:2000                      |
+                     |   traits: MISC_SHARES_VIA_AGGREGATE |
+                     +-----------------+-------------------+
+                                       | aggregate
+        +--------------------------+   |   +------------------------+
+        | compute node (cn1)       |---+---| compute node (cn2)     |
+        |  CPU: 24                 |       |  CPU: 24               |
+        |  MEMORY_MB: 128*1024     |       |  MEMORY_MB: 128*1024   |
+        |  traits: HW_CPU_X86_SSE, |       |                        |
+        |          HW_CPU_X86_SSE2 |       |                        |
+        +--------------------------+       +------------------------+
+             |               |                 |                |
+        +---------+      +---------+      +---------+      +---------+
+        | numa1_1 |      | numa1_2 |      | numa2_1 |      | numa2_2 |
+        +---------+      +---------+      +---------+      +---------+
+             |                |                |                |
+     +---------------++---------------++---------------++----------------+
+     | pf1_1         || pf1_2         || pf2_1         || pf2_2          |
+     | SRIOV_NET_VF:8|| SRIOV_NET_VF:8|| SRIOV_NET_VF:8|| SRIOV_NET_VF:8 |
+     +---------------++---------------++---------------++----------------+
     """
 
     def start_fixture(self):
         super(SharedStorageFixture, self).start_fixture()
         self.context = context.get_admin_context()
 
-        cn1_uuid = uuidutils.generate_uuid()
-        cn2_uuid = uuidutils.generate_uuid()
-        ss_uuid = uuidutils.generate_uuid()
         agg_uuid = uuidutils.generate_uuid()
-        os.environ['CN1_UUID'] = cn1_uuid
-        os.environ['CN2_UUID'] = cn2_uuid
-        os.environ['SS_UUID'] = ss_uuid
+
+        cn1 = tb.create_provider(self.context, 'cn1', agg_uuid)
+        cn2 = tb.create_provider(self.context, 'cn2', agg_uuid)
+        ss = tb.create_provider(self.context, 'ss', agg_uuid)
+
+        numa1_1 = tb.create_provider(self.context, 'numa1_1', parent=cn1.uuid)
+        numa1_2 = tb.create_provider(self.context, 'numa1_2', parent=cn1.uuid)
+        numa2_1 = tb.create_provider(self.context, 'numa2_1', parent=cn2.uuid)
+        numa2_2 = tb.create_provider(self.context, 'numa2_2', parent=cn2.uuid)
+
+        pf1_1 = tb.create_provider(self.context, 'pf1_1', parent=numa1_1.uuid)
+        pf1_2 = tb.create_provider(self.context, 'pf1_2', parent=numa1_2.uuid)
+        pf2_1 = tb.create_provider(self.context, 'pf2_1', parent=numa2_1.uuid)
+        pf2_2 = tb.create_provider(self.context, 'pf2_2', parent=numa2_2.uuid)
+
         os.environ['AGG_UUID'] = agg_uuid
 
-        cn1 = rp_obj.ResourceProvider(
-            self.context,
-            name='cn1',
-            uuid=cn1_uuid)
-        cn1.create()
+        os.environ['CN1_UUID'] = cn1.uuid
+        os.environ['CN2_UUID'] = cn2.uuid
+        os.environ['SS_UUID'] = ss.uuid
 
-        cn2 = rp_obj.ResourceProvider(
-            self.context,
-            name='cn2',
-            uuid=cn2_uuid)
-        cn2.create()
+        os.environ['NUMA1_1_UUID'] = numa1_1.uuid
+        os.environ['NUMA1_2_UUID'] = numa1_2.uuid
+        os.environ['NUMA2_1_UUID'] = numa2_1.uuid
+        os.environ['NUMA2_2_UUID'] = numa2_2.uuid
 
-        ss = rp_obj.ResourceProvider(
-            self.context,
-            name='ss',
-            uuid=ss_uuid)
-        ss.create()
+        os.environ['PF1_1_UUID'] = pf1_1.uuid
+        os.environ['PF1_2_UUID'] = pf1_2.uuid
+        os.environ['PF2_1_UUID'] = pf2_1.uuid
+        os.environ['PF2_2_UUID'] = pf2_2.uuid
 
         # Populate compute node inventory for VCPU and RAM
         for cn in (cn1, cn2):
-            vcpu_inv = rp_obj.Inventory(
-                self.context,
-                resource_provider=cn,
-                resource_class='VCPU',
-                total=24,
-                reserved=0,
-                max_unit=24,
-                min_unit=1,
-                step_size=1,
-                allocation_ratio=16.0)
-            vcpu_inv.obj_set_defaults()
-            ram_inv = rp_obj.Inventory(
-                self.context,
-                resource_provider=cn,
-                resource_class='MEMORY_MB',
-                total=128 * 1024,
-                reserved=0,
-                max_unit=128 * 1024,
-                min_unit=256,
-                step_size=256,
-                allocation_ratio=1.5)
-            ram_inv.obj_set_defaults()
-            inv_list = rp_obj.InventoryList(objects=[vcpu_inv, ram_inv])
-            cn.set_inventory(inv_list)
+            tb.add_inventory(cn, fields.ResourceClass.VCPU, 24,
+                             allocation_ratio=16.0)
+            tb.add_inventory(cn, fields.ResourceClass.MEMORY_MB, 128 * 1024,
+                             allocation_ratio=1.5)
+        tb.set_traits(cn1, 'HW_CPU_X86_SSE', 'HW_CPU_X86_SSE2')
 
-        t_avx_sse = rp_obj.Trait.get_by_name(self.context, "HW_CPU_X86_SSE")
-        t_avx_sse2 = rp_obj.Trait.get_by_name(self.context, "HW_CPU_X86_SSE2")
-        cn1.set_traits(rp_obj.TraitList(objects=[t_avx_sse, t_avx_sse2]))
+        # Populate shared storage provider with DISK_GB inventory and
+        # mark it shared among any provider associated via aggregate
+        tb.add_inventory(ss, fields.ResourceClass.DISK_GB, 2000,
+                         reserved=100, allocation_ratio=1.0)
+        tb.set_traits(ss, 'MISC_SHARES_VIA_AGGREGATE')
 
-        # Populate shared storage provider with DISK_GB inventory
-        disk_inv = rp_obj.Inventory(
-            self.context,
-            resource_provider=ss,
-            resource_class='DISK_GB',
-            total=2000,
-            reserved=100,
-            max_unit=2000,
-            min_unit=10,
-            step_size=10,
-            allocation_ratio=1.0)
-        disk_inv.obj_set_defaults()
-        inv_list = rp_obj.InventoryList(objects=[disk_inv])
-        ss.set_inventory(inv_list)
-
-        # Mark the shared storage pool as having inventory shared among any
-        # provider associated via aggregate
-        t = rp_obj.Trait.get_by_name(
-            self.context,
-            "MISC_SHARES_VIA_AGGREGATE",
-        )
-        ss.set_traits(rp_obj.TraitList(objects=[t]))
-
-        # Now associate the shared storage pool and both compute nodes with the
-        # same aggregate
-        cn1.set_aggregates([agg_uuid])
-        cn2.set_aggregates([agg_uuid])
-        ss.set_aggregates([agg_uuid])
+        # Populate PF inventory for VF
+        for pf in (pf1_1, pf1_2, pf2_1, pf2_2):
+            tb.add_inventory(pf, fields.ResourceClass.SRIOV_NET_VF,
+                             8, allocation_ratio=1.0)
 
 
 class NonSharedStorageFixture(APIFixture):

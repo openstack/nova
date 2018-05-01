@@ -74,6 +74,7 @@ VERSIONS = [
              # field in response of `GET /allocation_candidates` API even if
              # the resource class is not in the requested resources.
     '1.28',  # Add support for consumer generation
+    '1.29',  # Support nested providers in GET /allocation_candidates API.
 ]
 
 

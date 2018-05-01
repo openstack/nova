@@ -487,3 +487,14 @@ prior to 1.28. The only way to safely modify allocations for a consumer and
 satisfy expectations you have regarding the prior existence (or lack of
 existence) of those allocations is to always use microversion 1.28+ when
 calling allocations API endpoints.
+
+1.29 Support allocation candidates with nested resource providers
+-----------------------------------------------------------------
+
+Add support for nested resource providers with the following two features.
+1) ``GET /allocation_candidates`` is aware of nested providers. Namely, when
+provider trees are present, ``allocation_requests`` in the response of
+``GET /allocation_candidates`` can include allocations on combinations of
+multiple resource providers in the same tree.
+2) ``root_provider_uuid`` and ``parent_provider_uuid`` are added to
+``provider_summaries`` in the response of ``GET /allocation_candidates``.

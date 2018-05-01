@@ -41,13 +41,13 @@ tests:
   response_json_paths:
       $.errors[0].title: Not Acceptable
 
-- name: latest microversion is 1.28
+- name: latest microversion is 1.29
   GET: /
   request_headers:
       openstack-api-version: placement latest
   response_headers:
       vary: /openstack-api-version/
-      openstack-api-version: placement 1.28
+      openstack-api-version: placement 1.29
 
 - name: other accept header bad version
   GET: /
