@@ -19,6 +19,7 @@ import webob
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement import microversion
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
+from nova.api.openstack.placement.policies import resource_class as policies
 from nova.api.openstack.placement.schemas import resource_class as schema
 from nova.api.openstack.placement import util
 from nova.api.openstack.placement import wsgi_wrapper
@@ -62,6 +63,7 @@ def create_resource_class(req):
     header pointing to the newly created resource class.
     """
     context = req.environ['placement.context']
+    context.can(policies.CREATE)
     data = util.extract_json(req.body, schema.POST_RC_SCHEMA_V1_2)
 
     try:
@@ -93,6 +95,7 @@ def delete_resource_class(req):
     """
     name = util.wsgi_path_item(req.environ, 'name')
     context = req.environ['placement.context']
+    context.can(policies.DELETE)
     # The containing application will catch a not found here.
     rc = rp_obj.ResourceClass.get_by_name(context, name)
     try:
@@ -119,6 +122,7 @@ def get_resource_class(req):
     """
     name = util.wsgi_path_item(req.environ, 'name')
     context = req.environ['placement.context']
+    context.can(policies.SHOW)
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     # The containing application will catch a not found here.
     rc = rp_obj.ResourceClass.get_by_name(context, name)
@@ -147,6 +151,7 @@ def list_resource_classes(req):
     a collection of resource classes.
     """
     context = req.environ['placement.context']
+    context.can(policies.LIST)
     want_version = req.environ[microversion.MICROVERSION_ENVIRON]
     rcs = rp_obj.ResourceClassList.get_all(context)
 
@@ -172,6 +177,7 @@ def update_resource_class(req):
     """
     name = util.wsgi_path_item(req.environ, 'name')
     context = req.environ['placement.context']
+    context.can(policies.UPDATE)
 
     data = util.extract_json(req.body, schema.PUT_RC_SCHEMA_V1_2)
 
@@ -210,6 +216,7 @@ def update_resource_class(req):
     """
     name = util.wsgi_path_item(req.environ, 'name')
     context = req.environ['placement.context']
+    context.can(policies.UPDATE)
 
     # Use JSON validation to validation resource class name.
     util.extract_json('{"name": "%s"}' % name, schema.PUT_RC_SCHEMA_V1_2)

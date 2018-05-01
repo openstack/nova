@@ -141,7 +141,10 @@ PER_ROUTE_POLICY = [
     '/$',
     # /resource_providers
     # /resource_providers/{uuid}
-    '/resource_providers(/[A-Za-z0-9-]+)?$'
+    '/resource_providers(/[A-Za-z0-9-]+)?$',
+    # /resource_classes
+    # /resource_classes/{name}
+    '/resource_classes',
 ]
 
 

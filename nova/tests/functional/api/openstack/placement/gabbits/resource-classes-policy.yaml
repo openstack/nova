@@ -1,0 +1,40 @@
+# This tests the individual CRUD operations on /resource_classes
+# using a non-admin user with an open policy configuration. The
+# response validation is intentionally minimal.
+fixtures:
+    - OpenPolicyFixture
+
+defaults:
+    request_headers:
+        x-auth-token: user
+        accept: application/json
+        content-type: application/json
+        openstack-api-version: placement latest
+
+tests:
+
+- name: list resource classes
+  GET: /resource_classes
+  response_json_paths:
+      $.resource_classes.`len`: 12  #  Number of standard resource classes
+
+- name: create resource class
+  POST: /resource_classes
+  data:
+      name: CUSTOM_RES_CLASS_POLICY
+  status: 201
+  response_headers:
+      location: //resource_classes/CUSTOM_RES_CLASS_POLICY/
+
+- name: show resource class
+  GET: /resource_classes/CUSTOM_RES_CLASS_POLICY
+  response_json_paths:
+      $.name: CUSTOM_RES_CLASS_POLICY
+
+- name: update resource class
+  PUT: /resource_classes/CUSTOM_NEW_CLASS_POLICY
+  status: 201
+
+- name: delete resource class
+  DELETE: /resource_classes/CUSTOM_NEW_CLASS_POLICY
+  status: 204
