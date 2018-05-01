@@ -643,6 +643,21 @@ Possible values:
 * Any positive integer representing a build failure count.
 * Zero to never auto-disable.
 """),
+    cfg.IntOpt('resource_provider_association_refresh',
+        default=300,
+        min=1,
+        help="""
+Interval for updating nova-compute-side cache of the compute node resource
+provider's aggregates and traits info.
+
+This option specifies the number of seconds between attempts to update a
+provider's aggregates and traits information in the local cache of the compute
+node.
+
+Possible values:
+
+* Any positive integer in seconds.
+""")
 ]
 
 interval_opts = [

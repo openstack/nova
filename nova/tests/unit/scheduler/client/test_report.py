@@ -2399,14 +2399,16 @@ class TestAssociations(SchedulerReportClientTestCase):
 
         with mock.patch('time.time') as mock_future:
             # Not called a second time because not enough time has passed.
-            mock_future.return_value = now + report.ASSOCIATION_REFRESH / 2
+            mock_future.return_value = (now +
+                CONF.compute.resource_provider_association_refresh / 2)
             self.client._refresh_associations(self.context, uuid)
             mock_agg_get.assert_not_called()
             mock_trait_get.assert_not_called()
             mock_shr_get.assert_not_called()
 
             # Called because time has passed.
-            mock_future.return_value = now + report.ASSOCIATION_REFRESH + 1
+            mock_future.return_value = (now +
+                CONF.compute.resource_provider_association_refresh + 1)
             self.client._refresh_associations(self.context, uuid)
             mock_agg_get.assert_called_once_with(self.context, uuid)
             mock_trait_get.assert_called_once_with(self.context, uuid)
