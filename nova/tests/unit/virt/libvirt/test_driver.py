@@ -2519,19 +2519,6 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                           instance_ref, [],
                           image_meta, disk_info)
 
-    def test_get_guest_config_numa_old_version_libvirt_ppc(self):
-        self.flags(virt_type='kvm', group='libvirt')
-
-        self._test_get_guest_config_numa_unsupported(
-            versionutils.convert_version_to_int(
-                libvirt_driver.MIN_LIBVIRT_NUMA_VERSION_PPC) - 1,
-            versionutils.convert_version_to_int(
-                libvirt_driver.MIN_QEMU_VERSION),
-            host.HV_DRIVER_QEMU,
-            fields.Architecture.PPC64LE,
-            exception.NUMATopologyUnsupported,
-            None)
-
     def test_get_guest_config_numa_bad_version_libvirt(self):
         self.flags(virt_type='kvm', group='libvirt')
 
