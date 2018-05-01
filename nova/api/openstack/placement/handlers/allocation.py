@@ -32,11 +32,9 @@ from nova.i18n import _
 LOG = logging.getLogger(__name__)
 
 
-def _allocations_dict(allocations, key_fetcher, resource_provider=None,
-                      want_version=None):
-    """Turn allocations into a dict of resources keyed by key_fetcher."""
-    allocation_data = collections.defaultdict(dict)
-
+def _last_modified_from_allocations(allocations, want_version):
+    """Given a set of allocation objects, returns the last modified timestamp.
+    """
     # NOTE(cdent): The last_modified for an allocation will always be
     # based off the created_at column because allocations are only
     # ever inserted, never updated.
@@ -47,35 +45,12 @@ def _allocations_dict(allocations, key_fetcher, resource_provider=None,
     for allocation in allocations:
         if get_last_modified:
             last_modified = util.pick_last_modified(last_modified, allocation)
-        key = key_fetcher(allocation)
-        if 'resources' not in allocation_data[key]:
-            allocation_data[key]['resources'] = {}
-
-        resource_class = allocation.resource_class
-        allocation_data[key]['resources'][resource_class] = allocation.used
-
-        if not resource_provider:
-            generation = allocation.resource_provider.generation
-            allocation_data[key]['generation'] = generation
-
-    result = {'allocations': allocation_data}
-    if resource_provider:
-        result['resource_provider_generation'] = resource_provider.generation
-    else:
-        if allocations and want_version and want_version.matches((1, 12)):
-            # We're looking at a list of allocations by consumer id so
-            # project and user are consistent across the list
-            project_id = allocations[0].consumer.project.external_id
-            user_id = allocations[0].consumer.user.external_id
-
-            result['project_id'] = project_id
-            result['user_id'] = user_id
 
     last_modified = last_modified or timeutils.utcnow(with_timezone=True)
-    return result, last_modified
+    return last_modified
 
 
-def _serialize_allocations_for_consumer(allocations, want_version=None):
+def _serialize_allocations_for_consumer(allocations, want_version):
     """Turn a list of allocations into a dict by resource provider uuid.
 
     {
@@ -100,9 +75,28 @@ def _serialize_allocations_for_consumer(allocations, want_version=None):
         'user_id': USER_ID
     }
     """
-    return _allocations_dict(allocations,
-                             lambda x: x.resource_provider.uuid,
-                             want_version=want_version)
+    allocation_data = collections.defaultdict(dict)
+    for allocation in allocations:
+        key = allocation.resource_provider.uuid
+        if 'resources' not in allocation_data[key]:
+            allocation_data[key]['resources'] = {}
+
+        resource_class = allocation.resource_class
+        allocation_data[key]['resources'][resource_class] = allocation.used
+        generation = allocation.resource_provider.generation
+        allocation_data[key]['generation'] = generation
+
+    result = {'allocations': allocation_data}
+    if allocations and want_version.matches((1, 12)):
+        # We're looking at a list of allocations by consumer id so project and
+        # user are consistent across the list
+        project_id = allocations[0].consumer.project.external_id
+        user_id = allocations[0].consumer.user.external_id
+
+        result['project_id'] = project_id
+        result['user_id'] = user_id
+
+    return result
 
 
 def _serialize_allocations_for_resource_provider(allocations,
@@ -125,8 +119,18 @@ def _serialize_allocations_for_resource_provider(allocations,
        }
     }
     """
-    return _allocations_dict(allocations, lambda x: x.consumer.uuid,
-                             resource_provider=resource_provider)
+    allocation_data = collections.defaultdict(dict)
+    for allocation in allocations:
+        key = allocation.consumer.uuid
+        if 'resources' not in allocation_data[key]:
+            allocation_data[key]['resources'] = {}
+
+        resource_class = allocation.resource_class
+        allocation_data[key]['resources'][resource_class] = allocation.used
+
+    result = {'allocations': allocation_data}
+    result['resource_provider_generation'] = resource_provider.generation
+    return result
 
 
 @wsgi_wrapper.PlacementWsgify
@@ -144,8 +148,8 @@ def list_for_consumer(req):
     allocations = rp_obj.AllocationList.get_all_by_consumer_id(
         context, consumer_id)
 
-    output, last_modified = _serialize_allocations_for_consumer(
-        allocations, want_version)
+    output = _serialize_allocations_for_consumer(allocations, want_version)
+    last_modified = _last_modified_from_allocations(allocations, want_version)
     allocations_json = jsonutils.dumps(output)
 
     response = req.response
@@ -183,8 +187,8 @@ def list_for_resource_provider(req):
 
     allocs = rp_obj.AllocationList.get_all_by_resource_provider(context, rp)
 
-    output, last_modified = _serialize_allocations_for_resource_provider(
-        allocs, rp)
+    output = _serialize_allocations_for_resource_provider(allocs, rp)
+    last_modified = _last_modified_from_allocations(allocs, want_version)
     allocations_json = jsonutils.dumps(output)
 
     response = req.response
