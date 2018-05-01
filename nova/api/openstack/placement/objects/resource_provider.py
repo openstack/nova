@@ -1663,6 +1663,12 @@ def _check_capacity_exceeded(ctx, allocs):
     for alloc in allocs:
         rc_id = _RC_CACHE.id_from_string(alloc.resource_class)
         rp_uuid = alloc.resource_provider.uuid
+        if rp_uuid not in res_providers:
+            res_providers[rp_uuid] = alloc.resource_provider
+        amount_needed = alloc.used
+        # No use checking usage if we're not asking for anything
+        if amount_needed == 0:
+            continue
         key = (rp_uuid, rc_id)
         try:
             usage = usage_map[key]
@@ -1671,7 +1677,6 @@ def _check_capacity_exceeded(ctx, allocs):
             raise exception.InvalidInventory(
                     resource_class=alloc.resource_class,
                     resource_provider=rp_uuid)
-        amount_needed = alloc.used
         allocation_ratio = usage['allocation_ratio']
         min_unit = usage['min_unit']
         max_unit = usage['max_unit']
@@ -1710,8 +1715,6 @@ def _check_capacity_exceeded(ctx, allocs):
             raise exception.InvalidAllocationCapacityExceeded(
                 resource_class=alloc.resource_class,
                 resource_provider=rp_uuid)
-        if rp_uuid not in res_providers:
-            res_providers[rp_uuid] = alloc.resource_provider
     return res_providers
 
 
@@ -1885,6 +1888,8 @@ class AllocationList(base.ObjectListBase, base.VersionedObject):
         :raises `InvalidAllocationConstraintsViolated` if any of the
                 `step_size`, `min_unit` or `max_unit` constraints in an
                 inventory will be violated by any one of the allocations.
+        :raises `ConcurrentUpdateDetected` if a generation for a resource
+                provider or consumer failed its increment check.
         """
         _ensure_rc_cache(context)
         # Make sure that all of the allocations are new.
@@ -1919,19 +1924,17 @@ class AllocationList(base.ObjectListBase, base.VersionedObject):
         # removing different allocations in the same request.
         # _check_capacity_exceeded will raise a ResourceClassNotFound # if any
         # allocation is using a resource class that does not exist.
-        visited_rps = _check_capacity_exceeded(context,
-                                               [alloc for alloc in
-                                                allocs if alloc.used > 0])
+        visited_consumers = {}
+        visited_rps = _check_capacity_exceeded(context, allocs)
         for alloc in allocs:
+            if alloc.consumer.id not in visited_consumers:
+                visited_consumers[alloc.consumer.id] = alloc.consumer
+
             # If alloc.used is set to zero that is a signal that we don't want
             # to (re-)create any allocations for this resource class.
-            # _delete_current_allocs has already wiped out allocations so all
-            # that's being done here is adding the resource provider to
-            # visited_rps so its generation will be checked at the end of the
-            # transaction.
+            # _delete_current_allocs has already wiped out allocations so just
+            # continue
             if alloc.used == 0:
-                rp = alloc.resource_provider
-                visited_rps[rp.uuid] = rp
                 continue
             consumer_id = alloc.consumer.uuid
             rp = alloc.resource_provider
@@ -1950,6 +1953,8 @@ class AllocationList(base.ObjectListBase, base.VersionedObject):
         # changes always happen atomically.
         for rp in visited_rps.values():
             rp.generation = _increment_provider_generation(context, rp)
+        for consumer in visited_consumers.values():
+            consumer.increment_generation()
 
     @classmethod
     def get_all_by_resource_provider(cls, context, rp):

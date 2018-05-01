@@ -29,6 +29,7 @@ import six
 from nova.api.openstack.placement import exception
 from nova.api.openstack.placement import lib as pl
 from nova.api.openstack.placement import microversion
+from nova.api.openstack.placement.objects import consumer as consumer_obj
 from nova.api.openstack.placement.objects import project as project_obj
 from nova.api.openstack.placement.objects import resource_provider as rp_obj
 from nova.api.openstack.placement.objects import user as user_obj
@@ -927,14 +928,31 @@ class TestEnsureConsumer(testtools.TestCase):
         self.consumer_id = uuidsentinel.consumer
         self.project_id = uuidsentinel.project
         self.user_id = uuidsentinel.user
+        mv_parsed = microversion_parse.Version(1, 27)
+        mv_parsed.max_version = microversion_parse.parse_version_string(
+            microversion.max_version_string())
+        mv_parsed.min_version = microversion_parse.parse_version_string(
+            microversion.min_version_string())
+        self.before_version = mv_parsed
+        mv_parsed = microversion_parse.Version(1, 28)
+        mv_parsed.max_version = microversion_parse.parse_version_string(
+            microversion.max_version_string())
+        mv_parsed.min_version = microversion_parse.parse_version_string(
+            microversion.min_version_string())
+        self.after_version = mv_parsed
 
-    def test_no_existing_project_user_consumer(self):
+    def test_no_existing_project_user_consumer_before_gen_success(self):
+        """Tests that we don't require a consumer_generation=None before the
+        appropriate microversion.
+        """
         self.mock_project_get.side_effect = exception.NotFound
         self.mock_user_get.side_effect = exception.NotFound
         self.mock_consumer_get.side_effect = exception.NotFound
 
+        consumer_gen = 1  # should be ignored
         util.ensure_consumer(
-            self.ctx, self.consumer_id, self.project_id, self.user_id)
+            self.ctx, self.consumer_id, self.project_id, self.user_id,
+            consumer_gen, self.before_version)
 
         self.mock_project_get.assert_called_once_with(
             self.ctx, self.project_id)
@@ -946,6 +964,44 @@ class TestEnsureConsumer(testtools.TestCase):
         self.mock_user_create.assert_called_once()
         self.mock_consumer_create.assert_called_once()
 
+    def test_no_existing_project_user_consumer_after_gen_success(self):
+        """Tests that we require a consumer_generation=None after the
+        appropriate microversion.
+        """
+        self.mock_project_get.side_effect = exception.NotFound
+        self.mock_user_get.side_effect = exception.NotFound
+        self.mock_consumer_get.side_effect = exception.NotFound
+
+        consumer_gen = None  # should NOT be ignored (and None is expected)
+        util.ensure_consumer(
+            self.ctx, self.consumer_id, self.project_id, self.user_id,
+            consumer_gen, self.after_version)
+
+        self.mock_project_get.assert_called_once_with(
+            self.ctx, self.project_id)
+        self.mock_user_get.assert_called_once_with(
+            self.ctx, self.user_id)
+        self.mock_consumer_get.assert_called_once_with(
+            self.ctx, self.consumer_id)
+        self.mock_project_create.assert_called_once()
+        self.mock_user_create.assert_called_once()
+        self.mock_consumer_create.assert_called_once()
+
+    def test_no_existing_project_user_consumer_after_gen_fail(self):
+        """Tests that we require a consumer_generation=None after the
+        appropriate microversion and that None is the expected value.
+        """
+        self.mock_project_get.side_effect = exception.NotFound
+        self.mock_user_get.side_effect = exception.NotFound
+        self.mock_consumer_get.side_effect = exception.NotFound
+
+        consumer_gen = 1  # should NOT be ignored (and 1 is not expected)
+        self.assertRaises(
+            webob.exc.HTTPConflict,
+            util.ensure_consumer,
+            self.ctx, self.consumer_id, self.project_id, self.user_id,
+            consumer_gen, self.after_version)
+
     def test_no_existing_project_user_consumer_use_incomplete(self):
         """Verify that if the project_id arg is None, that we fall back to the
         CONF options for incomplete project and user ID.
@@ -954,8 +1010,10 @@ class TestEnsureConsumer(testtools.TestCase):
         self.mock_user_get.side_effect = exception.NotFound
         self.mock_consumer_get.side_effect = exception.NotFound
 
+        consumer_gen = None  # should NOT be ignored (and None is expected)
         util.ensure_consumer(
-            self.ctx, self.consumer_id, None, None)
+            self.ctx, self.consumer_id, None, None,
+            consumer_gen, self.before_version)
 
         self.mock_project_get.assert_called_once_with(
             self.ctx, CONF.placement.incomplete_consumer_project_id)
@@ -967,9 +1025,10 @@ class TestEnsureConsumer(testtools.TestCase):
         self.mock_user_create.assert_called_once()
         self.mock_consumer_create.assert_called_once()
 
-    def test_existing_project_user_no_existing_consumer(self):
+    def test_existing_project_no_existing_consumer_before_gen_success(self):
         """Check that if we find an existing project and user, that we use
-        those found objects in creating the consumer.
+        those found objects in creating the consumer. Do not require a consumer
+        generation before the appropriate microversion.
         """
         proj = project_obj.Project(self.ctx, id=1, external_id=self.project_id)
         self.mock_project_get.return_value = proj
@@ -977,9 +1036,54 @@ class TestEnsureConsumer(testtools.TestCase):
         self.mock_user_get.return_value = user
         self.mock_consumer_get.side_effect = exception.NotFound
 
+        consumer_gen = None  # should be ignored
         util.ensure_consumer(
-            self.ctx, self.consumer_id, self.project_id, self.user_id)
+            self.ctx, self.consumer_id, self.project_id, self.user_id,
+            consumer_gen, self.before_version)
 
         self.mock_project_create.assert_not_called()
         self.mock_user_create.assert_not_called()
         self.mock_consumer_create.assert_called_once()
+
+    def test_existing_consumer_after_gen_matches_supplied_gen(self):
+        """Tests that we require a consumer_generation after the
+        appropriate microversion and that when the consumer already exists,
+        then we ensure a matching generation is supplied
+        """
+        proj = project_obj.Project(self.ctx, id=1, external_id=self.project_id)
+        self.mock_project_get.return_value = proj
+        user = user_obj.User(self.ctx, id=1, external_id=self.user_id)
+        self.mock_user_get.return_value = user
+        consumer = consumer_obj.Consumer(
+            self.ctx, id=1, project=proj, user=user, generation=2)
+        self.mock_consumer_get.return_value = consumer
+
+        consumer_gen = 2  # should NOT be ignored (and 2 is expected)
+        util.ensure_consumer(
+            self.ctx, self.consumer_id, self.project_id, self.user_id,
+            consumer_gen, self.after_version)
+
+        self.mock_project_create.assert_not_called()
+        self.mock_user_create.assert_not_called()
+        self.mock_consumer_create.assert_not_called()
+
+    def test_existing_consumer_after_gen_fail(self):
+        """Tests that we require a consumer_generation after the
+        appropriate microversion and that when the consumer already exists,
+        then we raise a 400 when there is a mismatch on the existing
+        generation.
+        """
+        proj = project_obj.Project(self.ctx, id=1, external_id=self.project_id)
+        self.mock_project_get.return_value = proj
+        user = user_obj.User(self.ctx, id=1, external_id=self.user_id)
+        self.mock_user_get.return_value = user
+        consumer = consumer_obj.Consumer(
+            self.ctx, id=1, project=proj, user=user, generation=42)
+        self.mock_consumer_get.return_value = consumer
+
+        consumer_gen = 2  # should NOT be ignored (and 2 is NOT expected)
+        self.assertRaises(
+            webob.exc.HTTPConflict,
+            util.ensure_consumer,
+            self.ctx, self.consumer_id, self.project_id, self.user_id,
+            consumer_gen, self.after_version)

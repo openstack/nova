@@ -286,3 +286,89 @@ tests:
   status: 400
   response_strings:
       - No such resource class CUSTOM_PONY
+
+- name: fail missing consumer generation >= 1.28
+  POST: /allocations
+  request_headers:
+      openstack-api-version: placement 1.28
+  data:
+      $ENVIRON['INSTANCE_UUID']:
+          allocations:
+              $HISTORY['rp compute02'].$RESPONSE['uuid']:
+                  resources:
+                      MEMORY_MB: 1024
+                      VCPU: 2
+              $HISTORY['rp storage01'].$RESPONSE['uuid']:
+                  resources:
+                      DISK_GB: 5
+          project_id: $ENVIRON['PROJECT_ID']
+          user_id: $ENVIRON['USER_ID']
+      $ENVIRON['CONSUMER_UUID']:
+          allocations:
+              $HISTORY['rp compute01'].$RESPONSE['uuid']:
+                  resources:
+                      MEMORY_MB: 2049
+                      VCPU: 2
+          project_id: $ENVIRON['PROJECT_ID_ALT']
+          user_id: $ENVIRON['USER_ID_ALT']
+  status: 400
+  response_strings:
+      - JSON does not validate
+
+- name: fail incorrect consumer generation >= 1.28
+  POST: /allocations
+  request_headers:
+      openstack-api-version: placement 1.28
+  data:
+      $ENVIRON['INSTANCE_UUID']:
+          allocations:
+              $HISTORY['rp compute02'].$RESPONSE['uuid']:
+                  resources:
+                      MEMORY_MB: 1024
+                      VCPU: 1
+              $HISTORY['rp storage01'].$RESPONSE['uuid']:
+                  resources:
+                      DISK_GB: 4
+          consumer_generation: 1
+          project_id: $ENVIRON['PROJECT_ID']
+          user_id: $ENVIRON['USER_ID']
+      $ENVIRON['CONSUMER_UUID']:
+          allocations:
+              $HISTORY['rp compute01'].$RESPONSE['uuid']:
+                  resources:
+                      MEMORY_MB: 1024
+                      VCPU: 1
+          consumer_generation: 1
+          project_id: $ENVIRON['PROJECT_ID_ALT']
+          user_id: $ENVIRON['USER_ID_ALT']
+  status: 409
+  response_strings:
+    - consumer generation conflict - expected 3 but got 1
+
+- name: change allocations for existing providers >= 1.28
+  POST: /allocations
+  request_headers:
+      openstack-api-version: placement 1.28
+  data:
+      $ENVIRON['INSTANCE_UUID']:
+          allocations:
+              $HISTORY['rp compute02'].$RESPONSE['uuid']:
+                  resources:
+                      MEMORY_MB: 1024
+                      VCPU: 1
+              $HISTORY['rp storage01'].$RESPONSE['uuid']:
+                  resources:
+                      DISK_GB: 4
+          consumer_generation: 3
+          project_id: $ENVIRON['PROJECT_ID']
+          user_id: $ENVIRON['USER_ID']
+      $ENVIRON['CONSUMER_UUID']:
+          allocations:
+              $HISTORY['rp compute01'].$RESPONSE['uuid']:
+                  resources:
+                      MEMORY_MB: 1024
+                      VCPU: 1
+          consumer_generation: 1
+          project_id: $ENVIRON['PROJECT_ID_ALT']
+          user_id: $ENVIRON['USER_ID_ALT']
+  status: 204

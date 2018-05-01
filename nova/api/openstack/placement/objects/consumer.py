@@ -86,6 +86,7 @@ def _get_consumer_by_uuid(ctx, uuid):
         projects.c.external_id.label("project_external_id"),
         users.c.id.label("user_id"),
         users.c.external_id.label("user_external_id"),
+        consumers.c.generation,
         consumers.c.updated_at,
         consumers.c.created_at
     ]
@@ -102,6 +103,33 @@ def _get_consumer_by_uuid(ctx, uuid):
     return dict(res)
 
 
+@db_api.placement_context_manager.writer
+def _increment_consumer_generation(ctx, consumer):
+    """Increments the supplied consumer's generation value, supplying the
+    consumer object which contains the currently-known generation. Returns the
+    newly-incremented generation.
+
+    :param ctx: `nova.context.RequestContext` that contains an oslo_db Session
+    :param consumer: `Consumer` whose generation should be updated.
+    :returns: The newly-incremented generation.
+    :raises nova.exception.ConcurrentUpdateDetected: if another thread updated
+            the same consumer's view of its allocations in between the time
+            when this object was originally read and the call which modified
+            the consumer's state (e.g. replacing allocations for a consumer)
+    """
+    consumer_gen = consumer.generation
+    new_generation = consumer_gen + 1
+    upd_stmt = CONSUMER_TBL.update().where(sa.and_(
+            CONSUMER_TBL.c.id == consumer.id,
+            CONSUMER_TBL.c.generation == consumer_gen)).values(
+                    generation=new_generation)
+
+    res = ctx.session.execute(upd_stmt)
+    if res.rowcount != 1:
+        raise exception.ConcurrentUpdateDetected
+    return new_generation
+
+
 @base.VersionedObjectRegistry.register_if(False)
 class Consumer(base.VersionedObject, base.TimestampedObject):
 
@@ -110,12 +138,14 @@ class Consumer(base.VersionedObject, base.TimestampedObject):
         'uuid': fields.UUIDField(nullable=False),
         'project': fields.ObjectField('Project', nullable=False),
         'user': fields.ObjectField('User', nullable=False),
+        'generation': fields.IntegerField(nullable=False),
     }
 
     @staticmethod
     def _from_db_object(ctx, target, source):
         target.id = source['id']
         target.uuid = source['uuid']
+        target.generation = source['generation']
         target.created_at = source['created_at']
         target.updated_at = source['updated_at']
 
@@ -147,7 +177,19 @@ class Consumer(base.VersionedObject, base.TimestampedObject):
                 # thing here because models.Consumer doesn't have a
                 # project_external_id or user_external_id attribute.
                 self.id = db_obj.id
+                self.generation = db_obj.generation
             except db_exc.DBDuplicateEntry:
                 raise exception.ConsumerExists(uuid=self.uuid)
         _create_in_db(self._context)
         self.obj_reset_changes()
+
+    def increment_generation(self):
+        """Increments the consumer's generation.
+
+        :raises nova.exception.ConcurrentUpdateDetected: if another thread
+            updated the same consumer's view of its allocations in between the
+            time when this object was originally read and the call which
+            modified the consumer's state (e.g. replacing allocations for a
+            consumer)
+        """
+        self.generation = _increment_consumer_generation(self._context, self)

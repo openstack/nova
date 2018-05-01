@@ -73,6 +73,7 @@ VERSIONS = [
     '1.27',  # Include all resource class inventories in `provider_summaries`
              # field in response of `GET /allocation_candidates` API even if
              # the resource class is not in the requested resources.
+    '1.28',  # Add support for consumer generation
 ]
 
 

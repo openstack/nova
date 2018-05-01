@@ -38,7 +38,7 @@ tests:
             total: 96
   status: 200
 
-- name: update allocation for consumer
+- name: create allocation for consumer
   PUT: /allocations/a0b15655-273a-4b3d-9792-2e579b7d5ad9
   data:
       allocations:
@@ -46,6 +46,7 @@ tests:
               resources:
                 VCPU: 1
                 DISK_GB: 20
+      consumer_generation: null
       project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
       user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
   status: 204
@@ -60,6 +61,7 @@ tests:
   POST: /allocations
   data:
       a0b15655-273a-4b3d-9792-2e579b7d5ad9:
+          consumer_generation: 1
           project_id: 42a32c07-3eeb-4401-9373-68a8cdca6784
           user_id: 66cb2f29-c86d-47c3-8af5-69ae7b778c70
           allocations:
