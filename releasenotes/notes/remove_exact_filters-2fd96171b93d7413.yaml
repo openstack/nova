@@ -1,0 +1,11 @@
+---
+upgrade:
+  - |
+    ExactCoreFilter, ExactDiskFilter and ExactRamFilter were deprecated for
+    removal in the 16.0.0 Pike release and have now been removed.
+
+    Baremetal scheduling will use the custom resource class defined for
+    each baremetal node to make its selection. Refer to the ironic
+    documentation for more details:
+
+    https://docs.openstack.org/ironic/latest/install/configure-nova-flavors.html#scheduling-resource-classes
