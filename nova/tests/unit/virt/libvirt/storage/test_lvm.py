@@ -118,7 +118,7 @@ class LvmTestCase(test.NoDBTestCase):
         lvm.clear_volume('/dev/foo')
 
     @mock.patch.object(lvm, 'clear_volume')
-    @mock.patch('nova.privsep.fs.lvremove',
+    @mock.patch('os_brick.local_dev.lvm.LVM.delete',
                 side_effect=processutils.ProcessExecutionError('Error'))
     def test_fail_remove_all_logical_volumes(self, mock_clear, mock_lvremove):
         self.assertRaises(exception.VolumesNotRemoved,

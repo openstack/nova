@@ -21,6 +21,7 @@
 
 import os
 
+from os_brick.local_dev import lvm as brick_lvm
 from oslo_concurrency import processutils
 from oslo_log import log as logging
 from oslo_utils import units
@@ -186,7 +187,7 @@ def remove_volumes(paths):
     for path in paths:
         clear_volume(path)
         try:
-            nova.privsep.fs.lvremove(path)
+            brick_lvm.LVM.delete(path)
         except processutils.ProcessExecutionError as exp:
             errors.append(six.text_type(exp))
     if errors:
