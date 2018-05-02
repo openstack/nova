@@ -1416,16 +1416,18 @@ class ProviderUsageBaseTestCase(test.TestCase,
 
         self.computes = {}
 
-    def _start_compute(self, host):
+    def _start_compute(self, host, cell_name=None):
         """Start a nova compute service on the given host
 
         :param host: the name of the host that will be associated to the
                      compute service.
+        :param cell_name: optional name of the cell in which to start the
+                          compute service (defaults to cell1)
         :return: the nova compute service object
         """
         fake.set_nodes([host])
         self.addCleanup(fake.restore_nodes)
-        compute = self.start_service('compute', host=host)
+        compute = self.start_service('compute', host=host, cell=cell_name)
         self.computes[host] = compute
         return compute
 

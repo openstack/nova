@@ -276,6 +276,38 @@ Nova Cells v2
     found, 3 if a host with that name is not in a cell with that uuid, 4 if
     a host with that name has instances (host not empty).
 
+
+Placement
+~~~~~~~~~
+
+``nova-manage placement heal_allocations [--max-count <max_count>] [--verbose]``
+    Iterates over non-cell0 cells looking for instances which do not have
+    allocations in the Placement service and which are not undergoing a task
+    state transition. For each instance found, allocations are created against
+    the compute node resource provider for that instance based on the flavor
+    associated with the instance.
+
+    Specify ``--max-count`` to control the maximum number of instances to
+    process. If not specified, all instances in each cell will be mapped in
+    batches of 50. If you have a large number of instances, consider
+    specifying a custom value and run the command until it exits with 0 or 4.
+
+    Specify ``--verbose`` to get detailed progress output during execution.
+
+    This command requires that the ``[api_database]/connection`` and
+    ``[placement]`` configuration options are set.
+
+    Return codes:
+
+    * 0: Command completed successfully and allocations were created.
+    * 1: --max-count was reached and there are more instances to process.
+    * 2: Unable to find a compute node record for a given instance.
+    * 3: Unable to create allocations for an instance against its
+      compute node resource provider.
+    * 4: Command completed successfully but no allocations were created.
+    * 127: Invalid input.
+
+
 See Also
 ========
 

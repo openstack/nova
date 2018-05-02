@@ -413,7 +413,8 @@ class TestCase(testtools.TestCase):
             # otherwise we'll fail to update the scheduler while running
             # the compute node startup routines below.
             ctxt = context.get_context()
-            cell = self.cell_mappings[kwargs.pop('cell', CELL1_NAME)]
+            cell_name = kwargs.pop('cell', CELL1_NAME) or CELL1_NAME
+            cell = self.cell_mappings[cell_name]
             hm = objects.HostMapping(context=ctxt,
                                      host=host or name,
                                      cell_mapping=cell)

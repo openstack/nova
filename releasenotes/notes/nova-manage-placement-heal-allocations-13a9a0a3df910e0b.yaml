@@ -1,0 +1,18 @@
+---
+other:
+  - |
+    A new ``nova-manage placement heal_allocations`` CLI has been added to
+    help migrate users from the deprecated CachingScheduler. Starting in
+    16.0.0 (Pike), the nova-compute service no longer reports instance
+    allocations to the Placement service because the FilterScheduler does
+    that as part of scheduling. However, the CachingScheduler does not create
+    the allocations in the Placement service, so any instances created using
+    the CachingScheduler after Ocata will not have allocations in Placement.
+    The new CLI allows operators using the CachingScheduler to find all
+    instances in all cells which do not have allocations in Placement and
+    create those allocations. The CLI will skip any instances that are
+    undergoing a task state transition, so ideally this would be run when
+    the API is down but it can be run, if necessary, while the API is up.
+    For more details on CLI usage, see the man page entry:
+
+    https://docs.openstack.org/nova/latest/cli/nova-manage.html#placement
