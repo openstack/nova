@@ -1,0 +1,21 @@
+---
+upgrade:
+  - |
+    The ``[filter_scheduler]/use_baremetal_filters`` and
+    ``[filter_scheduler]/baremetal_enabled_filters`` configuration options
+    were deprecated in the 16.0.0 Pike release since deployments serving
+    baremetal instances should be `scheduling based on resource classes`_.
+    Those options have now been removed.
+
+    Similarly, the ``ironic_host_manager`` choice for the
+    ``[scheduler]/host_manager`` configuration option was deprecated in the
+    17.0.0 Queens release because ``ironic_host_manager`` is only useful when
+    using ``use_baremetal_filters=True`` and ``baremetal_enabled_filters``.
+    Now that those options are gone, the deprecated ``ironic_host_manager``
+    host manager choice has also been removed.
+
+    Remember to run ``nova-status upgrade check`` before upgrading to
+    18.0.0 Rocky to ensure baremetal instances have had their embedded
+    flavor migrated to use the corresponding ironic node custom resource class.
+
+    .. _scheduling based on resource classes: https://docs.openstack.org/ironic/latest/install/configure-nova-flavors.html#scheduling-based-on-resource-classes
