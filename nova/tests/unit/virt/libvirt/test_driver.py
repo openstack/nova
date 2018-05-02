@@ -1199,18 +1199,11 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                          libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC |
                          libvirt_driver.libvirt.VIR_MIGRATE_POSTCOPY))
 
-    @mock.patch.object(host.Host, 'has_min_version')
+    @mock.patch.object(host.Host, 'has_min_version', return_value=False)
     def test_live_migration_auto_converge_and_post_copy_true_old_libvirt(
-            self, mock_host):
+            self, min_ver):
         self.flags(live_migration_permit_auto_converge=True, group='libvirt')
         self.flags(live_migration_permit_post_copy=True, group='libvirt')
-
-        def fake_has_min_version(lv_ver=None, hv_ver=None, hv_type=None):
-            if (lv_ver == libvirt_driver.MIN_LIBVIRT_POSTCOPY_VERSION and
-                    hv_ver == libvirt_driver.MIN_QEMU_POSTCOPY_VERSION):
-                return False
-            return True
-        mock_host.side_effect = fake_has_min_version
 
         self._do_test_parse_migration_flags(
             lm_expected=(libvirt_driver.libvirt.VIR_MIGRATE_UNDEFINE_SOURCE |
@@ -1224,6 +1217,9 @@ class LibvirtConnTestCase(test.NoDBTestCase,
                          libvirt_driver.libvirt.VIR_MIGRATE_LIVE |
                          libvirt_driver.libvirt.VIR_MIGRATE_NON_SHARED_INC |
                          libvirt_driver.libvirt.VIR_MIGRATE_AUTO_CONVERGE))
+
+        min_ver.assert_called_with(
+            lv_ver=libvirt_driver.MIN_LIBVIRT_POSTCOPY_VERSION)
 
     @mock.patch.object(host.Host, 'has_min_version', return_value=False)
     def test_live_migration_permit_postcopy_true_old_libvirt(self, host):
