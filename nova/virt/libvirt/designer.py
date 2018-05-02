@@ -166,7 +166,7 @@ def set_vif_host_backend_vhostuser_config(conf, mode, path, rx_queue_size,
     conf.vhostuser_path = path
     if rx_queue_size:
         conf.vhost_rx_queue_size = rx_queue_size
-    if rx_queue_size:
+    if tx_queue_size:
         conf.vhost_tx_queue_size = tx_queue_size
 
 
