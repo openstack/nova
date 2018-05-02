@@ -12,7 +12,9 @@ upgrade:
     17.0.0 Queens release because ``ironic_host_manager`` is only useful when
     using ``use_baremetal_filters=True`` and ``baremetal_enabled_filters``.
     Now that those options are gone, the deprecated ``ironic_host_manager``
-    host manager choice has also been removed.
+    host manager choice has also been removed. As a result, the
+    ``[scheduler]/host_manager`` configuration option has also been removed
+    since there is only one host manager now and no need for an option.
 
     Remember to run ``nova-status upgrade check`` before upgrading to
     18.0.0 Rocky to ensure baremetal instances have had their embedded
