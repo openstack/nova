@@ -256,9 +256,6 @@ QEMU_MAX_SERIAL_PORTS = 4
 # Qemu supports 4 serial consoles, we remove 1 because of the PTY one defined
 ALLOWED_QEMU_SERIAL_PORTS = QEMU_MAX_SERIAL_PORTS - 1
 
-# realtime support
-MIN_LIBVIRT_REALTIME_VERSION = (1, 2, 13)
-
 # libvirt postcopy support
 MIN_LIBVIRT_POSTCOPY_VERSION = (1, 3, 3)
 
@@ -4396,8 +4393,6 @@ class LibvirtDriver(driver.ComputeDriver):
         vcpus_rt = set([])
         wants_realtime = hardware.is_realtime_enabled(flavor)
         if wants_realtime:
-            if not self._host.has_min_version(MIN_LIBVIRT_REALTIME_VERSION):
-                raise exception.RealtimePolicyNotSupported()
             vcpus_rt = hardware.vcpus_realtime_topology(flavor, image_meta)
             vcpusched = vconfig.LibvirtConfigGuestCPUTuneVCPUSched()
             designer.set_vcpu_realtime_scheduler(
