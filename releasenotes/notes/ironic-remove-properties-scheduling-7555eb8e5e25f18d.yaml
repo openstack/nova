@@ -1,0 +1,10 @@
+---
+upgrade:
+  - |
+    Ironic nodes are now only scheduled using the ``resource_class`` field set
+    on the node. CPUs, RAM, and disks are not reported to the resource tracker.
+    Ironic nodes must have the ``resource_class`` field set before upgrading.
+    Flavors must also be configured to use resource classes instead of node
+    properties. See the `ironic flavor configuration guide
+    <https://docs.openstack.org/ironic/latest/install/configure-nova-flavors.html>`_
+    for more information on doing this.

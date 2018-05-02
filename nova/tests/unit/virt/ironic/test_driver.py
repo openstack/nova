@@ -286,12 +286,12 @@ class IronicDriverTestCase(test.NoDBTestCase):
         gotkeys = sorted(result.keys())
         self.assertEqual(wantkeys, gotkeys)
 
-        self.assertEqual(props['cpus'], result['vcpus'])
-        self.assertEqual(result['vcpus'], result['vcpus_used'])
-        self.assertEqual(props['memory_mb'], result['memory_mb'])
-        self.assertEqual(result['memory_mb'], result['memory_mb_used'])
-        self.assertEqual(props['local_gb'], result['local_gb'])
-        self.assertEqual(result['local_gb'], result['local_gb_used'])
+        self.assertEqual(0, result['vcpus'])
+        self.assertEqual(0, result['vcpus_used'])
+        self.assertEqual(0, result['memory_mb'])
+        self.assertEqual(0, result['memory_mb_used'])
+        self.assertEqual(0, result['local_gb'])
+        self.assertEqual(0, result['local_gb_used'])
         self.assertEqual(node_uuid, result['uuid'])
         self.assertEqual(node_uuid, result['hypervisor_hostname'])
         self.assertEqual(stats, result['stats'])
@@ -354,11 +354,11 @@ class IronicDriverTestCase(test.NoDBTestCase):
             provision_state=ironic_states.AVAILABLE)
 
         result = self.driver._node_resource(node)
-        self.assertEqual(props['cpus'], result['vcpus'])
+        self.assertEqual(0, result['vcpus'])
         self.assertEqual(0, result['vcpus_used'])
-        self.assertEqual(props['memory_mb'], result['memory_mb'])
+        self.assertEqual(0, result['memory_mb'])
         self.assertEqual(0, result['memory_mb_used'])
-        self.assertEqual(props['local_gb'], result['local_gb'])
+        self.assertEqual(0, result['local_gb'])
         self.assertEqual(0, result['local_gb_used'])
         self.assertEqual(node_uuid, result['hypervisor_hostname'])
         self.assertEqual(stats, result['stats'])
@@ -374,12 +374,12 @@ class IronicDriverTestCase(test.NoDBTestCase):
                 uuid=node_uuid, instance_uuid=None, properties=props)
 
         result = self.driver._node_resource(node)
-        self.assertEqual(props['cpus'], result['vcpus'])
-        self.assertEqual(result['vcpus'], result['vcpus_used'])
-        self.assertEqual(props['memory_mb'], result['memory_mb'])
-        self.assertEqual(result['memory_mb'], result['memory_mb_used'])
-        self.assertEqual(props['local_gb'], result['local_gb'])
-        self.assertEqual(result['local_gb'], result['local_gb_used'])
+        self.assertEqual(0, result['vcpus'])
+        self.assertEqual(0, result['vcpus_used'])
+        self.assertEqual(0, result['memory_mb'])
+        self.assertEqual(0, result['memory_mb_used'])
+        self.assertEqual(0, result['local_gb'])
+        self.assertEqual(0, result['local_gb_used'])
         self.assertEqual(node_uuid, result['hypervisor_hostname'])
         self.assertEqual(stats, result['stats'])
 
@@ -399,12 +399,12 @@ class IronicDriverTestCase(test.NoDBTestCase):
             instance_info=instance_info)
 
         result = self.driver._node_resource(node)
-        self.assertEqual(props['cpus'], result['vcpus'])
-        self.assertEqual(result['vcpus'], result['vcpus_used'])
-        self.assertEqual(props['memory_mb'], result['memory_mb'])
-        self.assertEqual(result['memory_mb'], result['memory_mb_used'])
-        self.assertEqual(props['local_gb'], result['local_gb'])
-        self.assertEqual(result['local_gb'], result['local_gb_used'])
+        self.assertEqual(0, result['vcpus'])
+        self.assertEqual(0, result['vcpus_used'])
+        self.assertEqual(0, result['memory_mb'])
+        self.assertEqual(0, result['memory_mb_used'])
+        self.assertEqual(0, result['local_gb'])
+        self.assertEqual(0, result['local_gb_used'])
         self.assertEqual(node_uuid, result['hypervisor_hostname'])
         self.assertEqual(stats, result['stats'])
 
@@ -733,40 +733,14 @@ class IronicDriverTestCase(test.NoDBTestCase):
             'resource_class': None,
         }
 
-        self.driver.update_provider_tree(self.ptree, mock.sentinel.nodename)
+        self.assertRaises(exception.NoResourceClass,
+                          self.driver.update_provider_tree,
+                          self.ptree, mock.sentinel.nodename)
 
-        expected = {
-            fields.ResourceClass.VCPU: {
-                'total': 24,
-                'reserved': 0,
-                'min_unit': 1,
-                'max_unit': 24,
-                'step_size': 1,
-                'allocation_ratio': 1.0,
-            },
-            fields.ResourceClass.MEMORY_MB: {
-                'total': 1024,
-                'reserved': 0,
-                'min_unit': 1,
-                'max_unit': 1024,
-                'step_size': 1,
-                'allocation_ratio': 1.0,
-            },
-            fields.ResourceClass.DISK_GB: {
-                'total': 100,
-                'reserved': 0,
-                'min_unit': 1,
-                'max_unit': 100,
-                'step_size': 1,
-                'allocation_ratio': 1.0,
-            },
-        }
         mock_nfc.assert_called_once_with(mock.sentinel.nodename)
         mock_nr.assert_called_once_with(mock_nfc.return_value)
         mock_res_used.assert_called_once_with(mock_nfc.return_value)
         mock_res_unavail.assert_called_once_with(mock_nfc.return_value)
-        result = self.ptree.data(mock.sentinel.nodename).inventory
-        self.assertEqual(expected, result)
 
     @mock.patch.object(ironic_driver.IronicDriver,
                        '_node_resources_used', return_value=False)
@@ -793,30 +767,6 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.driver.update_provider_tree(self.ptree, mock.sentinel.nodename)
 
         expected = {
-            fields.ResourceClass.VCPU: {
-                'total': 24,
-                'reserved': 0,
-                'min_unit': 1,
-                'max_unit': 24,
-                'step_size': 1,
-                'allocation_ratio': 1.0,
-            },
-            fields.ResourceClass.MEMORY_MB: {
-                'total': 1024,
-                'reserved': 0,
-                'min_unit': 1,
-                'max_unit': 1024,
-                'step_size': 1,
-                'allocation_ratio': 1.0,
-            },
-            fields.ResourceClass.DISK_GB: {
-                'total': 100,
-                'reserved': 0,
-                'min_unit': 1,
-                'max_unit': 100,
-                'step_size': 1,
-                'allocation_ratio': 1.0,
-            },
             'CUSTOM_IRON_NFV': {
                 'total': 1,
                 'reserved': 0,
@@ -899,30 +849,6 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.driver.update_provider_tree(self.ptree, mock.sentinel.nodename)
 
         expected = {
-            fields.ResourceClass.VCPU: {
-                'total': 24,
-                'reserved': 0,
-                'min_unit': 1,
-                'max_unit': 24,
-                'step_size': 1,
-                'allocation_ratio': 1.0,
-            },
-            fields.ResourceClass.MEMORY_MB: {
-                'total': 1024,
-                'reserved': 0,
-                'min_unit': 1,
-                'max_unit': 1024,
-                'step_size': 1,
-                'allocation_ratio': 1.0,
-            },
-            fields.ResourceClass.DISK_GB: {
-                'total': 100,
-                'reserved': 0,
-                'min_unit': 1,
-                'max_unit': 100,
-                'step_size': 1,
-                'allocation_ratio': 1.0,
-            },
             'CUSTOM_IRON_NFV': {
                 'total': 1,
                 'reserved': 0,
@@ -964,30 +890,6 @@ class IronicDriverTestCase(test.NoDBTestCase):
         self.driver.update_provider_tree(self.ptree, mock.sentinel.nodename)
 
         expected = {
-            fields.ResourceClass.VCPU: {
-                'total': 24,
-                'reserved': 24,
-                'min_unit': 1,
-                'max_unit': 24,
-                'step_size': 1,
-                'allocation_ratio': 1.0,
-            },
-            fields.ResourceClass.MEMORY_MB: {
-                'total': 1024,
-                'reserved': 1024,
-                'min_unit': 1,
-                'max_unit': 1024,
-                'step_size': 1,
-                'allocation_ratio': 1.0,
-            },
-            fields.ResourceClass.DISK_GB: {
-                'total': 100,
-                'reserved': 100,
-                'min_unit': 1,
-                'max_unit': 100,
-                'step_size': 1,
-                'allocation_ratio': 1.0,
-            },
             'CUSTOM_IRON_NFV': {
                 'total': 1,
                 'reserved': 1,

@@ -261,9 +261,6 @@ class IronicDriver(virt_driver.ComputeDriver):
         """Helper method to create resource dict from node stats."""
         properties = self._parse_node_properties(node)
 
-        vcpus = properties['cpus']
-        memory_mb = properties['memory_mb']
-        local_gb = properties['local_gb']
         raw_cpu_arch = properties['raw_cpu_arch']
         cpu_arch = properties['cpu_arch']
 
@@ -296,17 +293,9 @@ class IronicDriver(virt_driver.ComputeDriver):
                     LOG.warning("Ignoring malformed capability '%s'. "
                                 "Format should be 'key:val'.", capability)
 
-        vcpus_used = 0
-        memory_mb_used = 0
-        local_gb_used = 0
-
-        if (self._node_resources_used(node)
-                or self._node_resources_unavailable(node)):
-            # Node is deployed, or is in a state when deployment can not start.
-            # Report all of its resources as in use.
-            vcpus_used = vcpus
-            memory_mb_used = memory_mb
-            local_gb_used = local_gb
+        vcpus = vcpus_used = 0
+        memory_mb = memory_mb_used = 0
+        local_gb = local_gb_used = 0
 
         dic = {
             'uuid': str(node.uuid),
@@ -788,10 +777,6 @@ class IronicDriver(virt_driver.ComputeDriver):
         # nodename is the ironic node's UUID.
         node = self._node_from_cache(nodename)
         reserved = False
-        # TODO(jaypipes): Completely remove the reporting of VCPU, MEMORY_MB,
-        # and DISK_GB resource classes in early Queens when Ironic nodes will
-        # *always* return the custom resource class that represents the
-        # baremetal node class in an atomic, singular unit.
         if (not self._node_resources_used(node) and
                 self._node_resources_unavailable(node)):
             LOG.debug('Node %(node)s is not ready for a deployment, '
@@ -804,35 +789,21 @@ class IronicDriver(virt_driver.ComputeDriver):
 
         info = self._node_resource(node)
         result = {}
-        for rc, field in [(rc_fields.ResourceClass.VCPU, 'vcpus'),
-                          (rc_fields.ResourceClass.MEMORY_MB, 'memory_mb'),
-                          (rc_fields.ResourceClass.DISK_GB, 'local_gb')]:
-            # NOTE(dtantsur): any of these fields can be zero starting with
-            # the Pike release.
-            if info[field]:
-                result[rc] = {
-                    'total': info[field],
-                    'reserved': info[field] if reserved else 0,
-                    'min_unit': 1,
-                    'max_unit': info[field],
-                    'step_size': 1,
-                    'allocation_ratio': 1.0,
-                }
 
         rc_name = info.get('resource_class')
-        if rc_name is not None:
-            # TODO(jaypipes): Raise an exception in Queens if Ironic doesn't
-            # report a resource class for the node
-            norm_name = rc_fields.ResourceClass.normalize_name(rc_name)
-            if norm_name is not None:
-                result[norm_name] = {
-                    'total': 1,
-                    'reserved': int(reserved),
-                    'min_unit': 1,
-                    'max_unit': 1,
-                    'step_size': 1,
-                    'allocation_ratio': 1.0,
-                }
+        if rc_name is None:
+            raise exception.NoResourceClass(node=nodename)
+
+        norm_name = rc_fields.ResourceClass.normalize_name(rc_name)
+        if norm_name is not None:
+            result[norm_name] = {
+                'total': 1,
+                'reserved': int(reserved),
+                'min_unit': 1,
+                'max_unit': 1,
+                'step_size': 1,
+                'allocation_ratio': 1.0,
+            }
 
         provider_tree.update_inventory(nodename, result)
         # TODO(efried): *Unset* (remove_traits) if "owned" by ironic virt but
