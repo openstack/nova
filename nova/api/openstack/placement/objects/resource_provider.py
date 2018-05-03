@@ -702,6 +702,84 @@ def _provider_ids_from_uuid(context, uuid):
     return ProviderIds(**dict(res))
 
 
+def _provider_ids_matching_aggregates(context, member_of):
+    """Given a list of lists of aggregate UUIDs, return the internal IDs of all
+    resource providers associated with the aggregates.
+
+    :param member_of: A list containing lists of aggregate UUIDs. Each item in
+        the outer list is to be AND'd together. If that item contains multiple
+        values, they are OR'd together.
+
+        For example, if member_of is::
+
+            [
+                ['agg1'],
+                ['agg2', 'agg3'],
+            ]
+
+        we will return all the resource providers that are
+        associated with agg1 as well as either (agg2 or agg3)
+
+    :returns: A list of internal resource provider IDs having all required
+        aggregate associations
+    """
+    # Given a request for the following:
+    #
+    # member_of = [
+    #   [agg1],
+    #   [agg2],
+    #   [agg3, agg4]
+    # ]
+    #
+    # we need to produce the following SQL expression:
+    #
+    # SELECT
+    #   rp.id
+    # FROM resource_providers AS rp
+    # JOIN resource_provider_aggregates AS rpa1
+    #   ON rp.id = rpa1.resource_provider_id
+    #   AND rpa1.aggregate_id IN ($AGG1_ID)
+    # JOIN resource_provider_aggregates AS rpa2
+    #   ON rp.id = rpa2.resource_provider_id
+    #   AND rpa2.aggregate_id IN ($AGG2_ID)
+    # JOIN resource_provider_aggregates AS rpa3
+    #   ON rp.id = rpa3.resource_provider_id
+    #   AND rpa3.aggregate_id IN ($AGG3_ID, $AGG4_ID)
+
+    # First things first, get a map of all the aggregate UUID to internal
+    # aggregate IDs
+    agg_uuids = set()
+    for members in member_of:
+        for member in members:
+            agg_uuids.add(member)
+    agg_tbl = sa.alias(_AGG_TBL, name='aggs')
+    agg_sel = sa.select([agg_tbl.c.uuid, agg_tbl.c.id])
+    agg_sel = agg_sel.where(agg_tbl.c.uuid.in_(agg_uuids))
+    agg_uuid_map = {
+        r[0]: r[1] for r in context.session.execute(agg_sel).fetchall()
+    }
+
+    rp_tbl = sa.alias(_RP_TBL, name='rp')
+    join_chain = rp_tbl
+
+    for x, members in enumerate(member_of):
+        rpa_tbl = sa.alias(_RP_AGG_TBL, name='rpa%d' % x)
+
+        agg_ids = [agg_uuid_map[member] for member in members
+                   if member in agg_uuid_map]
+        if not agg_ids:
+            # This member_of list contains only non-existent aggregate UUIDs
+            # and therefore we will always return 0 results, so short-circuit
+            return []
+
+        join_cond = sa.and_(
+            rp_tbl.c.id == rpa_tbl.c.resource_provider_id,
+            rpa_tbl.c.aggregate_id.in_(agg_ids))
+        join_chain = sa.join(join_chain, rpa_tbl, join_cond)
+    sel = sa.select([rp_tbl.c.id]).select_from(join_chain)
+    return [r[0] for r in context.session.execute(sel).fetchall()]
+
+
 @db_api.api_context_manager.writer
 def _delete_rp_record(context, _id):
     return context.session.query(models.ResourceProvider).\
@@ -1437,16 +1515,16 @@ def _get_all_with_shared(ctx, resources, member_of=None):
                 ))
             join_chain = sharing_join
 
-    # If 'member_of' has values join with the PlacementAggregates to
-    # get those resource providers that are associated with any of the
-    # list of aggregate uuids provided with 'member_of'.
+    # If 'member_of' has values, do a separate lookup to identify the
+    # resource providers that meet the member_of constraints.
     if member_of:
-        member_join = sa.join(join_chain, _RP_AGG_TBL,
-                _RP_AGG_TBL.c.resource_provider_id == rpt.c.id)
-        agg_join = sa.join(member_join, _AGG_TBL, sa.and_(
-                _AGG_TBL.c.id == _RP_AGG_TBL.c.aggregate_id,
-                _AGG_TBL.c.uuid.in_(member_of)))
-        join_chain = agg_join
+        rps_in_aggs = _provider_ids_matching_aggregates(ctx, member_of)
+        if not rps_in_aggs:
+            # Short-circuit. The user either asked for a non-existing
+            # aggregate or there were no resource providers that matched
+            # the requirements...
+            return []
+        where_conds.append(rpt.c.id.in_(rps_in_aggs))
 
     sel = sel.select_from(join_chain)
     sel = sel.where(sa.and_(*where_conds))
@@ -1546,17 +1624,16 @@ class ResourceProviderList(base.ObjectListBase, base.VersionedObject):
                 rp.c.root_provider_id == root_id)
             query = query.where(where_cond)
 
-        # If 'member_of' has values join with the PlacementAggregates to
-        # get those resource providers that are associated with any of the
-        # list of aggregate uuids provided with 'member_of'.
+        # If 'member_of' has values, do a separate lookup to identify the
+        # resource providers that meet the member_of constraints.
         if member_of:
-            join_statement = sa.join(_AGG_TBL, _RP_AGG_TBL, sa.and_(
-                _AGG_TBL.c.id == _RP_AGG_TBL.c.aggregate_id,
-                _AGG_TBL.c.uuid.in_(member_of)))
-            resource_provider_id = _RP_AGG_TBL.c.resource_provider_id
-            rps_in_aggregates = sa.select(
-                [resource_provider_id]).select_from(join_statement)
-            query = query.where(rp.c.id.in_(rps_in_aggregates))
+            rps_in_aggs = _provider_ids_matching_aggregates(context, member_of)
+            if not rps_in_aggs:
+                # Short-circuit. The user either asked for a non-existing
+                # aggregate or there were no resource providers that matched
+                # the requirements...
+                return []
+            query = query.where(rp.c.id.in_(rps_in_aggs))
 
         # If 'required' has values, add a filter to limit results to providers
         # possessing *all* of the listed traits.
@@ -2982,16 +3059,16 @@ def _get_provider_ids_matching(ctx, resources, required_traits,
         )
         where_conds.append(usage_cond)
 
-    # If 'member_of' has values join with the PlacementAggregates to
-    # get those resource providers that are associated with any of the
-    # list of aggregate uuids provided with 'member_of'.
+    # If 'member_of' has values, do a separate lookup to identify the
+    # resource providers that meet the member_of constraints.
     if member_of:
-        member_join = sa.join(join_chain, _RP_AGG_TBL,
-                _RP_AGG_TBL.c.resource_provider_id == rpt.c.id)
-        agg_join = sa.join(member_join, _AGG_TBL, sa.and_(
-                _AGG_TBL.c.id == _RP_AGG_TBL.c.aggregate_id,
-                _AGG_TBL.c.uuid.in_(member_of)))
-        join_chain = agg_join
+        rps_in_aggs = _provider_ids_matching_aggregates(ctx, member_of)
+        if not rps_in_aggs:
+            # Short-circuit. The user either asked for a non-existing
+            # aggregate or there were no resource providers that matched
+            # the requirements...
+            return []
+        where_conds.append(rpt.c.id.in_(rps_in_aggs))
 
     sel = sel.select_from(join_chain)
     sel = sel.where(sa.and_(*where_conds))

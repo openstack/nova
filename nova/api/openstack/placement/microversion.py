@@ -64,6 +64,8 @@ VERSIONS = [
     '1.22',  # Support forbidden traits in the required parameter of
              # GET /resource_providers and GET /allocation_candidates
     '1.23',  # Add support for error codes in error response JSON
+    '1.24',  # Support multiple ?member_of=<agg UUIDs> queryparams on
+             # GET /resource_providers
 ]
 
 

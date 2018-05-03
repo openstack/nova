@@ -8,7 +8,7 @@ defaults:
         x-auth-token: admin
         content-type: application/json
         accept: application/json
-        openstack-api-version: placement 1.21
+        openstack-api-version: placement 1.24
 
 tests:
 
@@ -108,3 +108,34 @@ tests:
   response_json_paths:
       $.allocation_requests.`len`: 2
   status: 200
+
+- name: verify microversion fail for multiple member_of params
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&member_of=$ENVIRON['AGGA_UUID']&member_of=$ENVIRON['AGGB_UUID']
+  request_headers:
+      openstack-api-version: placement 1.23
+  status: 400
+  response_strings:
+      - 'Multiple member_of parameters are not supported'
+  response_json_paths:
+      $.errors[0].title: Bad Request
+
+- name: verify that no RP is associated with BOTH aggA and aggB
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&member_of=$ENVIRON['AGGA_UUID']&member_of=$ENVIRON['AGGB_UUID']
+  status: 200
+  response_json_paths:
+      $.allocation_requests.`len`: 0
+
+- name: associate the second compute node with aggA and aggB
+  PUT: /resource_providers/$ENVIRON['CN2_UUID']/aggregates
+  data:
+      aggregates:
+        - $ENVIRON['AGGA_UUID']
+        - $ENVIRON['AGGB_UUID']
+      resource_provider_generation: $HISTORY['associate the second compute node with aggB'].$RESPONSE['$.resource_provider_generation']
+  status: 200
+
+- name: verify that second RP is associated with BOTH aggA and aggB
+  GET: /allocation_candidates?resources=VCPU:1,MEMORY_MB:1024,DISK_GB:100&member_of=$ENVIRON['AGGA_UUID']&member_of=$ENVIRON['AGGB_UUID']
+  status: 200
+  response_json_paths:
+      $.allocation_requests.`len`: 1
