@@ -662,6 +662,14 @@ class SchedulerReportClient(object):
             created_rp = self._create_resource_provider(
                 context, uuid, name or uuid,
                 parent_provider_uuid=parent_provider_uuid)
+            # If @safe_connect can't establish a connection to the placement
+            # service, like if placement isn't running or nova-compute is
+            # mis-configured for authentication, we'll get None back and need
+            # to treat it like we couldn't create the provider (because we
+            # couldn't).
+            if created_rp is None:
+                raise exception.ResourceProviderCreationFailed(
+                    name=name or uuid)
             # Don't add the created_rp to rps_to_refresh.  Since we just
             # created it, it has no aggregates or traits.
 
