@@ -631,29 +631,28 @@ class GuestTestCase(test.NoDBTestCase):
         self.guest.pause()
         self.domain.suspend.assert_called_once_with()
 
-    def test_migrate_v1(self):
-        self.guest.migrate('an-uri', flags=1, bandwidth=2)
-        self.domain.migrateToURI.assert_called_once_with(
-            'an-uri', flags=1, bandwidth=2)
-
-    def test_migrate_v2(self):
-        self.guest.migrate('an-uri', domain_xml='</xml>', flags=1, bandwidth=2)
-        self.domain.migrateToURI2.assert_called_once_with(
-            'an-uri', miguri=None, dxml='</xml>', flags=1, bandwidth=2)
-
     def test_migrate_v3(self):
-        self.guest.migrate('an-uri', domain_xml='</xml>',
-                           params={'p1': 'v1'}, flags=1, bandwidth=2)
+        self.guest.migrate('an-uri', flags=1, migrate_uri='dest-uri',
+                           migrate_disks='disk1',
+                           destination_xml='</xml>',
+                           bandwidth=2)
         self.domain.migrateToURI3.assert_called_once_with(
-            'an-uri', flags=1, params={'p1': 'v1', 'bandwidth': 2})
+                'an-uri', flags=1, params={'migrate_uri': 'dest-uri',
+                                           'migrate_disks': 'disk1',
+                                           'destination_xml': '</xml>',
+                                           'bandwidth': 2})
 
     @testtools.skipIf(not six.PY2, 'libvirt python3 bindings accept unicode')
     def test_migrate_v3_unicode(self):
-        self.guest.migrate('an-uri', domain_xml=u'</xml>',
-                           params={'p1': u'v1', 'p2': 'v2', 'p3': 3},
-                           flags=1, bandwidth=2)
+        self.guest.migrate('an-uri', flags=1, migrate_uri='dest-uri',
+                           migrate_disks=[u"disk1", u"disk2"],
+                           destination_xml='</xml>',
+                           bandwidth=2)
         self.domain.migrateToURI3.assert_called_once_with(
-                'an-uri', flags=1, params={'p1': 'v1', 'p2': 'v2', 'p3': 3,
+                'an-uri', flags=1, params={'migrate_uri': 'dest-uri',
+                                           'migrate_disks': ['disk1',
+                                                             'disk2'],
+                                           'destination_xml': '</xml>',
                                            'bandwidth': 2})
 
     def test_abort_job(self):

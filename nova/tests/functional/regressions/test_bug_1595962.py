@@ -78,7 +78,7 @@ class TestSerialConsoleLiveMigrate(test.TestCase):
 
     @mock.patch('nova.virt.libvirt.LibvirtDriver.get_volume_connector')
     @mock.patch('nova.virt.libvirt.guest.Guest.get_job_info')
-    @mock.patch.object(fakelibvirt.Domain, 'migrateToURI2')
+    @mock.patch.object(fakelibvirt.Domain, 'migrateToURI3')
     @mock.patch('nova.virt.libvirt.host.Host.get_connection')
     @mock.patch('nova.virt.disk.api.get_disk_size', return_value=1024)
     @mock.patch('os.path.getsize', return_value=1024)

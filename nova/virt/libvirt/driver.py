@@ -7066,10 +7066,7 @@ class LibvirtDriver(driver.ComputeDriver):
                     # a way to avoid this in future.
                     guest, migrate_data, self._get_volume_config,
                     get_vif_config=get_vif_config)
-            params = {
-               'destination_xml': new_xml_str,
-               'migrate_disks': device_names,
-            }
+
             # NOTE(pkoniszewski): Because of precheck which blocks
             # tunnelled block live migration with mapped volumes we
             # can safely remove migrate_disks when tunnelling is on.
@@ -7079,8 +7076,10 @@ class LibvirtDriver(driver.ComputeDriver):
             # supported in tunnelled block live migration. Also we
             # cannot fallback to migrateToURI2 in this case because of
             # bug #1398999
+            #
+            # TODO(kchamart) Move the following bit to guest.migrate()
             if (migration_flags & libvirt.VIR_MIGRATE_TUNNELLED != 0):
-                params.pop('migrate_disks')
+                device_names = []
 
             # TODO(sahid): This should be in
             # post_live_migration_at_source but no way to retrieve
@@ -7096,8 +7095,8 @@ class LibvirtDriver(driver.ComputeDriver):
             guest.migrate(self._live_migration_uri(dest),
                           migrate_uri=migrate_uri,
                           flags=migration_flags,
-                          params=params,
-                          domain_xml=new_xml_str,
+                          migrate_disks=device_names,
+                          destination_xml=new_xml_str,
                           bandwidth=bandwidth)
             LOG.debug("Migrate API has completed", instance=instance)
 

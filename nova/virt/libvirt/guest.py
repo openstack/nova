@@ -601,14 +601,14 @@ class Guest(object):
         """
         self._domain.suspend()
 
-    def migrate(self, destination, migrate_uri=None, params=None, flags=0,
-                domain_xml=None, bandwidth=0):
+    def migrate(self, destination, migrate_uri=None, migrate_disks=None,
+                destination_xml=None, flags=0, bandwidth=0):
         """Migrate guest object from its current host to the destination
 
         :param destination: URI of host destination where guest will be migrate
         :param migrate_uri: URI for invoking the migration
-        :param params: optional dict containing migration parameters such as
-           "destination_xml" and "migrate_disks"
+        :param migrate_disks: List of disks to be migrated
+        :param destination_xml: The guest XML to be used on the target host
         :param flags: May be one of more of the following:
            VIR_MIGRATE_LIVE Do not pause the VM during migration
            VIR_MIGRATE_PEER2PEER Direct connection between source &
@@ -636,45 +636,41 @@ class Guest(object):
            VIR_MIGRATE_UNSAFE Force migration even if it is considered
                               unsafe.
            VIR_MIGRATE_OFFLINE Migrate offline
-        :param domain_xml: Changing guest configuration during migration
-        :param bandwidth: The maximun bandwidth in MiB/s
+        :param bandwidth: The maximum bandwidth in MiB/s
         """
-        if domain_xml is None:
-            self._domain.migrateToURI(
-                destination, flags=flags, bandwidth=bandwidth)
-        else:
-            if params:
-                # Due to a quirk in the libvirt python bindings,
-                # VIR_MIGRATE_NON_SHARED_INC with an empty migrate_disks is
-                # interpreted as "block migrate all writable disks" rather than
-                # "don't block migrate any disks". This includes attached
-                # volumes, which will potentially corrupt data on those
-                # volumes. Consequently we need to explicitly unset
-                # VIR_MIGRATE_NON_SHARED_INC if there are no disks to be block
-                # migrated.
-                if (flags & libvirt.VIR_MIGRATE_NON_SHARED_INC != 0 and
-                        not params.get('migrate_disks')):
-                    flags &= ~libvirt.VIR_MIGRATE_NON_SHARED_INC
+        params = {}
+        # In migrateToURI3 these parameters are extracted from the
+        # `params` dict
+        params['bandwidth'] = bandwidth
 
-                # In migrateToURI3 these parameters are extracted from the
-                # `params` dict
-                if migrate_uri:
-                    params['migrate_uri'] = migrate_uri
-                params['bandwidth'] = bandwidth
+        if destination_xml:
+            params['destination_xml'] = destination_xml
+        if migrate_disks:
+            params['migrate_disks'] = migrate_disks
+        if migrate_uri:
+            params['migrate_uri'] = migrate_uri
 
-                # In the python2 libvirt bindings, strings passed to
-                # migrateToURI3 via params must not be unicode.
-                if six.PY2:
-                    params = {key: str(value) if isinstance(value, unicode)  # noqa
-                                              else value
-                              for key, value in params.items()}
+        # Due to a quirk in the libvirt python bindings,
+        # VIR_MIGRATE_NON_SHARED_INC with an empty migrate_disks is
+        # interpreted as "block migrate all writable disks" rather than
+        # "don't block migrate any disks". This includes attached
+        # volumes, which will potentially corrupt data on those
+        # volumes. Consequently we need to explicitly unset
+        # VIR_MIGRATE_NON_SHARED_INC if there are no disks to be block
+        # migrated.
+        if (flags & libvirt.VIR_MIGRATE_NON_SHARED_INC != 0 and
+                not params.get('migrate_disks')):
+            flags &= ~libvirt.VIR_MIGRATE_NON_SHARED_INC
 
-                self._domain.migrateToURI3(
-                    destination, params=params, flags=flags)
-            else:
-                self._domain.migrateToURI2(
-                    destination, miguri=migrate_uri, dxml=domain_xml,
-                    flags=flags, bandwidth=bandwidth)
+        # In the Python2 libvirt bindings, strings passed to
+        # migrateToURI3 via params must not be unicode.
+        if six.PY2:
+            params = {key: str(value) if isinstance(value, unicode)  # noqa
+                                      else value
+                      for key, value in params.items()}
+
+        self._domain.migrateToURI3(
+            destination, params=params, flags=flags)
 
     def abort_job(self):
         """Requests to abort current background job"""
