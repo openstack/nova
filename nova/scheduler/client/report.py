@@ -514,6 +514,14 @@ class SchedulerReportClient(object):
         rp = self._get_resource_provider(uuid)
         if rp is None:
             rp = self._create_resource_provider(uuid, name or uuid)
+            # If @safe_connect can't establish a connection to the placement
+            # service, like if placement isn't running or nova-compute is
+            # mis-configured for authentication, we'll get None back and need
+            # to treat it like we couldn't create the provider (because we
+            # couldn't).
+            if rp is None:
+                raise exception.ResourceProviderCreationFailed(
+                    name=name or uuid)
 
         msg = "Grabbing aggregate associations for resource provider %s"
         LOG.debug(msg, uuid)

@@ -1041,6 +1041,31 @@ class TestProviderOperations(SchedulerReportClientTestCase):
         self.assertEqual({}, self.client._provider_aggregate_map)
 
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_create_resource_provider', return_value=None)
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_provider_aggregates')
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
+                '_get_resource_provider')
+    def test_ensure_resource_provider_create_no_placement(self, get_rp_mock,
+            get_agg_mock, create_rp_mock):
+        # No resource provider exists in the client's cache, and
+        # @safe_connect on _create_resource_provider returns None because
+        # Placement isn't running yet. Ensure we don't populate the resource
+        # provider cache.
+        get_rp_mock.return_value = None
+
+        self.assertRaises(
+            exception.ResourceProviderCreationFailed,
+            self.client._ensure_resource_provider, uuids.compute_node)
+
+        get_rp_mock.assert_called_once_with(uuids.compute_node)
+        create_rp_mock.assert_called_once_with(uuids.compute_node,
+                                               uuids.compute_node)
+        self.assertFalse(get_agg_mock.called)
+        self.assertEqual({}, self.client._resource_providers)
+        self.assertEqual({}, self.client._provider_aggregate_map)
+
+    @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_create_resource_provider')
     @mock.patch('nova.scheduler.client.report.SchedulerReportClient.'
                 '_get_provider_aggregates')
