@@ -433,6 +433,55 @@ def _get_aggregates_by_provider_id(context, rp_id):
     return [r[0] for r in context.session.execute(sel).fetchall()]
 
 
+@db_api.api_context_manager.reader
+def _anchors_for_sharing_provider(context, rp_id):
+    """Given the internal ID of a sharing provider, return the UUIDs of all the
+    unique root providers of trees associated with the same aggregate as the
+    sharing provider. (These are the providers that can "anchor" a single
+    AllocationRequest.)
+
+    The sharing provider may or may not itself be part of a tree; in either
+    case, its root provider UUID is included in the result.
+
+    If the sharing provider is not part of any aggregate, the empty list is
+    returned.
+    """
+    # SELECT COALESCE(rps.uuid, shr_with_sps.uuid)
+    # FROM resource_providers AS sps
+    # INNER JOIN resource_provider_aggregates AS shr_aggs
+    #   ON sps.id = shr_aggs.resource_provider_id
+    # INNER JOIN resource_provider_aggregates AS shr_with_sps_aggs
+    #   ON shr_aggs.aggregate_id = shr_with_sps_aggs.aggregate_id
+    # INNER JOIN resource_providers AS shr_with_sps
+    #   ON shr_with_sps_aggs.resource_provider_id = shr_with_sps.id
+    # LEFT JOIN resource_providers AS rps
+    #   ON shr_with_sps.root_provider_id = rps.id
+    # WHERE sps.id = $RP_ID
+    # GROUP by shr_with_sps.root_provider_id
+    rps = sa.alias(_RP_TBL, name='rps')
+    sps = sa.alias(_RP_TBL, name='sps')
+    shr_aggs = sa.alias(_RP_AGG_TBL, name='shr_aggs')
+    shr_with_sps_aggs = sa.alias(_RP_AGG_TBL, name='shr_with_sps_aggs')
+    shr_with_sps = sa.alias(_RP_TBL, name='shr_with_sps')
+    join_chain = sa.join(
+        sps, shr_aggs, sps.c.id == shr_aggs.c.resource_provider_id)
+    join_chain = sa.join(
+        join_chain, shr_with_sps_aggs,
+        shr_aggs.c.aggregate_id == shr_with_sps_aggs.c.aggregate_id)
+    join_chain = sa.join(
+        join_chain, shr_with_sps,
+        shr_with_sps_aggs.c.resource_provider_id == shr_with_sps.c.id)
+    # TODO(efried): Change this to an inner join when we are sure all
+    # root_provider_id values are NOT NULL
+    join_chain = sa.outerjoin(
+        join_chain, rps, shr_with_sps.c.root_provider_id == rps.c.id)
+    sel = sa.select([func.coalesce(rps.c.uuid, shr_with_sps.c.uuid)])
+    sel = sel.select_from(join_chain)
+    sel = sel.where(sps.c.id == rp_id)
+    sel = sel.group_by(shr_with_sps.c.root_provider_id)
+    return [r[0] for r in context.session.execute(sel).fetchall()]
+
+
 @db_api.api_context_manager.writer
 def _set_aggregates(context, resource_provider, provided_aggregates,
                     increment_generation=False):
