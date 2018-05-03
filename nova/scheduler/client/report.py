@@ -45,9 +45,6 @@ _RE_INV_IN_USE = re.compile("Inventory for (.+) on resource provider "
                             "(.+) in use")
 WARN_EVERY = 10
 PLACEMENT_CLIENT_SEMAPHORE = 'placement_client'
-# Number of seconds between attempts to update a provider's aggregates and
-# traits
-ASSOCIATION_REFRESH = 300
 POST_RPS_RETURNS_PAYLOAD_API_VERSION = '1.20'
 NESTED_PROVIDER_API_VERSION = '1.14'
 POST_ALLOCATIONS_API_VERSION = '1.13'
@@ -778,8 +775,8 @@ class SchedulerReportClient(object):
         sharing providers for the specified resource provider uuid.
 
         Only refresh if there has been no refresh during the lifetime of
-        this process, ASSOCIATION_REFRESH seconds have passed, or the force arg
-        has been set to True.
+        this process, CONF.compute.resource_provider_association_refresh
+        seconds have passed, or the force arg has been set to True.
 
         Note that we do *not* refresh inventories.  The reason is largely
         historical: all code paths that get us here are doing inventory refresh
@@ -848,10 +845,12 @@ class SchedulerReportClient(object):
         "recently".
 
         Associations are stale if association_refresh_time for this uuid is not
-        set or is more than ASSOCIATION_REFRESH seconds ago.
+        set or is more than CONF.compute.resource_provider_association_refresh
+        seconds ago.
         """
         refresh_time = self._association_refresh_time.get(uuid, 0)
-        return (time.time() - refresh_time) > ASSOCIATION_REFRESH
+        return ((time.time() - refresh_time) >
+                CONF.compute.resource_provider_association_refresh)
 
     def _update_inventory_attempt(self, context, rp_uuid, inv_data):
         """Update the inventory for this resource provider if needed.
