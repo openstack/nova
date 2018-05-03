@@ -26,32 +26,34 @@ def get_test_validation(**kw):
                 'storage': kw.get('storage', {'result': True})})()
 
 
-def get_test_node(**kw):
-    return type('node', (object,),
-               {'uuid': kw.get('uuid', 'eeeeeeee-dddd-cccc-bbbb-aaaaaaaaaaaa'),
-                'chassis_uuid': kw.get('chassis_uuid'),
-                'power_state': kw.get('power_state',
+def get_test_node(fields=None, **kw):
+    node = {'uuid': kw.get('uuid', 'eeeeeeee-dddd-cccc-bbbb-aaaaaaaaaaaa'),
+            'chassis_uuid': kw.get('chassis_uuid'),
+            'power_state': kw.get('power_state',
+                                  ironic_states.NOSTATE),
+            'target_power_state': kw.get('target_power_state',
+                                         ironic_states.NOSTATE),
+            'provision_state': kw.get('provision_state',
                                       ironic_states.NOSTATE),
-                'target_power_state': kw.get('target_power_state',
+            'target_provision_state': kw.get('target_provision_state',
                                              ironic_states.NOSTATE),
-                'provision_state': kw.get('provision_state',
-                                          ironic_states.NOSTATE),
-                'target_provision_state': kw.get('target_provision_state',
-                                                 ironic_states.NOSTATE),
-                'last_error': kw.get('last_error'),
-                'instance_uuid': kw.get('instance_uuid'),
-                'instance_info': kw.get('instance_info'),
-                'driver': kw.get('driver', 'fake'),
-                'driver_info': kw.get('driver_info', {}),
-                'properties': kw.get('properties', {}),
-                'reservation': kw.get('reservation'),
-                'maintenance': kw.get('maintenance', False),
-                'network_interface': kw.get('network_interface'),
-                'resource_class': kw.get('resource_class'),
-                'traits': kw.get('traits', []),
-                'extra': kw.get('extra', {}),
-                'updated_at': kw.get('created_at'),
-                'created_at': kw.get('updated_at')})()
+            'last_error': kw.get('last_error'),
+            'instance_uuid': kw.get('instance_uuid'),
+            'instance_info': kw.get('instance_info'),
+            'driver': kw.get('driver', 'fake'),
+            'driver_info': kw.get('driver_info', {}),
+            'properties': kw.get('properties', {}),
+            'reservation': kw.get('reservation'),
+            'maintenance': kw.get('maintenance', False),
+            'network_interface': kw.get('network_interface'),
+            'resource_class': kw.get('resource_class'),
+            'traits': kw.get('traits', []),
+            'extra': kw.get('extra', {}),
+            'updated_at': kw.get('created_at'),
+            'created_at': kw.get('updated_at')}
+    if fields is not None:
+        node = {key: value for key, value in node.items() if key in fields}
+    return type('node', (object,), node)()
 
 
 def get_test_port(**kw):
