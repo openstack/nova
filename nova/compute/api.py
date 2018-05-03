@@ -2963,15 +2963,7 @@ class API(base.Base):
                           task_state=task_states.ALLOW_REBOOT)
     def _hard_reboot(self, context, instance):
         instance.task_state = task_states.REBOOTING_HARD
-        expected_task_state = [None,
-                               task_states.REBOOTING,
-                               task_states.REBOOT_PENDING,
-                               task_states.REBOOT_STARTED,
-                               task_states.REBOOTING_HARD,
-                               task_states.RESUMING,
-                               task_states.UNPAUSING,
-                               task_states.SUSPENDING]
-        instance.save(expected_task_state = expected_task_state)
+        instance.save(expected_task_state=task_states.ALLOW_REBOOT)
 
         self._record_action_start(context, instance, instance_actions.REBOOT)
 

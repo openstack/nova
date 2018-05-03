@@ -3239,6 +3239,18 @@ class ComputeTestCase(BaseTestCase,
     def test_reboot_fail_running(self):
         self._test_reboot(False, fail_reboot=True, fail_running=True)
 
+    def test_reboot_hard_pausing(self):
+        # We need an actual instance in the database for this test to make
+        # sure that expected_task_state works OK with Instance.save().
+        instance = self._create_fake_instance_obj(
+            params={'task_state': task_states.PAUSING})
+        with mock.patch.object(self.compute_api.compute_rpcapi,
+                               'reboot_instance') as rpc_reboot:
+            self.compute_api.reboot(self.context, instance, 'HARD')
+        rpc_reboot.assert_called_once_with(
+            self.context, instance=instance, block_device_info=None,
+            reboot_type='HARD')
+
     def test_get_instance_block_device_info_source_image(self):
         bdms = block_device_obj.block_device_make_list(self.context,
                 [fake_block_device.FakeDbBlockDeviceDict({

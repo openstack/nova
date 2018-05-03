@@ -423,6 +423,29 @@ Reboots a server.
 
 Specify the ``reboot`` action in the request body.
 
+**Preconditions**
+
+The preconditions for rebooting a server depend on the type of reboot.
+
+You can only *SOFT* reboot a server when its status is ``ACTIVE``.
+
+You can only *HARD* reboot a server when its status is one of:
+
+* ``ACTIVE``
+* ``ERROR``
+* ``HARD_REBOOT``
+* ``PAUSED``
+* ``REBOOT``
+* ``SHUTOFF``
+* ``SUSPENDED``
+
+If the server is locked, you must have administrator privileges
+to reboot the server.
+
+**Asynchronous Postconditions**
+
+After you successfully reboot a server, its status changes to ``ACTIVE``.
+
 Normal response codes: 202
 
 Error response codes: unauthorized(401), forbidden(403), itemNotFound(404),
