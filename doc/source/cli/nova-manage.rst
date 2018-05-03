@@ -194,13 +194,17 @@ Nova Cells v2
     transport url. If a database_connection is not specified, it will use the
     one defined by ``[database]/connection`` in the configuration file passed
     to nova-manage. If a transport_url is not specified, it will use the one
-    defined by ``[DEFAULT]/transport_url`` in the configuration file.  The
-    verbose option will print out the resulting cell mapping uuid.  Returns 0
-    if the cell mapping was successfully created, 1 if the transport url or
-    database connection was missing, and 2 if a cell is already using that
-    transport url and database connection combination. All the cells created are
-    by default enabled. However passing the disabled option can create a pre-disabled
-    cell, meaning no scheduling will happen to this cell.
+    defined by ``[DEFAULT]/transport_url`` in the configuration file. The
+    verbose option will print out the resulting cell mapping uuid. All the
+    cells created are by default enabled. However passing the ``--disabled`` option
+    can create a pre-disabled cell, meaning no scheduling will happen to this
+    cell. The meaning of the various exit codes returned by this command are
+    explained below:
+
+    * Returns 0 if the cell mapping was successfully created.
+    * Returns 1 if the transport url or database connection was missing.
+    * Returns 2 if another cell is already using that transport url and/or
+      database connection combination.
 
 ``nova-manage cell_v2 discover_hosts [--cell_uuid <cell_uuid>] [--verbose] [--strict] [--by-service]``
     Searches cells, or a single cell, and maps found hosts. This command will
@@ -242,16 +246,19 @@ Nova Cells v2
 ``nova-manage cell_v2 update_cell --cell_uuid <cell_uuid> [--name <cell_name>] [--transport-url <transport_url>] [--database_connection <database_connection>] [--disable] [--enable]``
     Updates the properties of a cell by the given uuid. If a
     database_connection is not specified, it will attempt to use the one
-    defined by ``[database]/connection`` in the configuration file.  If a
+    defined by ``[database]/connection`` in the configuration file. If a
     transport_url is not specified, it will attempt to use the one defined by
-    ``[DEFAULT]/transport_url`` in the configuration file. If the cell is not
-    found by uuid, this command will return an exit code of 1. If the provided
-    transport_url or/and database_connection is/are same as another cell,
-    this command will return an exit code of 3. If the properties cannot be set,
-    this will return 2. If an attempt is made to disable and enable a cell at the
-    same time, this command will return an exit code of 4. If an attempt is made
-    to disable or enable cell0 this command will return an exit code of 5.
-    Otherwise, the exit code will be 0.
+    ``[DEFAULT]/transport_url`` in the configuration file. The meaning of the
+    various exit codes returned by this command are explained below:
+
+    * If successful, it will return 0.
+    * If the cell is not found by the provided uuid, it will return 1.
+    * If the properties cannot be set, it will return 2.
+    * If the provided transport_url or/and database_connection is/are same as
+      another cell, it will return 3.
+    * If an attempt is made to disable and enable a cell at the same time, it
+      will return 4.
+    * If an attempt is made to disable or enable cell0 it will return 5.
 
     .. note::
 
