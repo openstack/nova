@@ -2077,10 +2077,6 @@ class LibguestfsCannotReadKernel(Invalid):
     msg_fmt = _("Libguestfs does not have permission to read host kernel.")
 
 
-class RealtimePolicyNotSupported(Invalid):
-    msg_fmt = _("Realtime policy not supported by hypervisor")
-
-
 class RealtimeMaskNotFoundOrInvalid(Invalid):
     msg_fmt = _("Realtime policy needs vCPU(s) mask configured with at least "
                 "1 RT vCPU and 1 ordinary vCPU. See hw:cpu_realtime_mask "
