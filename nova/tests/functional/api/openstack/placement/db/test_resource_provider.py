@@ -23,7 +23,9 @@ from nova import context
 from nova import rc_fields as fields
 from nova import test
 from nova.tests import fixtures
+from nova.tests.functional.api.openstack.placement.db import test_base as tb
 from nova.tests import uuidsentinel
+
 
 DISK_INVENTORY = dict(
     total=200,
@@ -42,36 +44,7 @@ DISK_ALLOCATION = dict(
 )
 
 
-class ResourceProviderBaseCase(test.NoDBTestCase):
-
-    USES_DB_SELF = True
-
-    def setUp(self):
-        super(ResourceProviderBaseCase, self).setUp()
-        self.useFixture(fixtures.Database())
-        self.api_db = self.useFixture(fixtures.Database(database='api'))
-        self.ctx = context.RequestContext('fake-user', 'fake-project')
-
-    def _make_allocation(self, rp_uuid=None, inv_dict=None):
-        rp_uuid = rp_uuid or uuidsentinel.allocation_resource_provider
-        rp = rp_obj.ResourceProvider(
-            context=self.ctx,
-            uuid=rp_uuid,
-            name=rp_uuid)
-        rp.create()
-        inv_dict = inv_dict or DISK_INVENTORY
-        disk_inv = rp_obj.Inventory(context=self.ctx,
-                resource_provider=rp, **inv_dict)
-        inv_list = rp_obj.InventoryList(objects=[disk_inv])
-        rp.set_inventory(inv_list)
-        alloc = rp_obj.Allocation(self.ctx, resource_provider=rp,
-                **DISK_ALLOCATION)
-        alloc_list = rp_obj.AllocationList(self.ctx, objects=[alloc])
-        alloc_list.create_all()
-        return rp, alloc
-
-
-class ResourceProviderTestCase(ResourceProviderBaseCase):
+class ResourceProviderTestCase(tb.PlacementDbBaseTestCase):
     """Test resource-provider objects' lifecycles."""
 
     def test_provider_traits_empty_param(self):
@@ -550,7 +523,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
                           created_resource_provider.destroy)
 
     def test_destroy_allocated_resource_provider_fails(self):
-        rp, allocation = self._make_allocation()
+        rp, allocation = self._make_allocation(DISK_INVENTORY, DISK_ALLOCATION)
         self.assertRaises(exception.ResourceProviderInUse,
                           rp.destroy)
 
@@ -853,7 +826,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
                       str(error))
 
     def test_delete_inventory_with_allocation(self):
-        rp, allocation = self._make_allocation(inv_dict=DISK_INVENTORY)
+        rp, allocation = self._make_allocation(DISK_INVENTORY, DISK_ALLOCATION)
         error = self.assertRaises(exception.InventoryInUse,
                                   rp.delete_inventory,
                                   'DISK_GB')
@@ -880,7 +853,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
         # Compute nodes that are reconfigured have to be able to set
         # their inventory to something that violates allocations so
         # we need to make that possible.
-        rp, allocation = self._make_allocation()
+        rp, allocation = self._make_allocation(DISK_INVENTORY, DISK_ALLOCATION)
         # attempt to set inventory to less than currently allocated
         # amounts
         new_total = 1
@@ -964,7 +937,7 @@ class ResourceProviderTestCase(ResourceProviderBaseCase):
             self.assertEqual(rp1.id, inv.resource_provider.id)
 
 
-class ResourceProviderListTestCase(ResourceProviderBaseCase):
+class ResourceProviderListTestCase(tb.PlacementDbBaseTestCase):
     def setUp(self):
         super(ResourceProviderListTestCase, self).setUp()
         self.useFixture(fixtures.Database())
@@ -1346,7 +1319,7 @@ class TestResourceProviderAggregates(test.NoDBTestCase):
             expected, rp_obj._anchors_for_sharing_provider(self.ctx, s5.id))
 
 
-class TestAllocation(ResourceProviderBaseCase):
+class TestAllocation(tb.PlacementDbBaseTestCase):
 
     def test_create_list_and_delete_allocation(self):
         resource_provider = rp_obj.ResourceProvider(
@@ -1527,7 +1500,7 @@ class TestAllocation(ResourceProviderBaseCase):
         self.assertEqual(2, len(consumer_allocs))
 
     def test_get_all_by_resource_provider(self):
-        rp, allocation = self._make_allocation()
+        rp, allocation = self._make_allocation(DISK_INVENTORY, DISK_ALLOCATION)
         allocations = rp_obj.AllocationList.get_all_by_resource_provider(
             self.ctx, rp)
         self.assertEqual(1, len(allocations))
@@ -1536,7 +1509,7 @@ class TestAllocation(ResourceProviderBaseCase):
                          allocations[0].resource_provider.id)
 
 
-class TestAllocationListCreateDelete(ResourceProviderBaseCase):
+class TestAllocationListCreateDelete(tb.PlacementDbBaseTestCase):
 
     def test_allocation_checking(self):
         """Test that allocation check logic works with 2 resource classes on
@@ -2114,7 +2087,7 @@ class TestAllocationListCreateDelete(ResourceProviderBaseCase):
         self.assertEqual(0, len(allocations))
 
 
-class UsageListTestCase(ResourceProviderBaseCase):
+class UsageListTestCase(tb.PlacementDbBaseTestCase):
 
     def test_get_all_null(self):
         for uuid in [uuidsentinel.rp_uuid_1, uuidsentinel.rp_uuid_2]:
@@ -2126,7 +2099,7 @@ class UsageListTestCase(ResourceProviderBaseCase):
         self.assertEqual(0, len(usage_list))
 
     def test_get_all_one_allocation(self):
-        db_rp, _ = self._make_allocation(rp_uuid=uuidsentinel.rp_uuid)
+        db_rp, _ = self._make_allocation(DISK_INVENTORY, DISK_ALLOCATION)
         inv = rp_obj.Inventory(resource_provider=db_rp,
                                resource_class=fields.ResourceClass.DISK_GB,
                                total=1024)
@@ -2181,7 +2154,7 @@ class UsageListTestCase(ResourceProviderBaseCase):
         self.assertEqual(2, len(usage_list))
 
 
-class ResourceClassListTestCase(ResourceProviderBaseCase):
+class ResourceClassListTestCase(tb.PlacementDbBaseTestCase):
 
     def test_get_all_no_custom(self):
         """Test that if we haven't yet added any custom resource classes, that
@@ -2211,7 +2184,7 @@ class ResourceClassListTestCase(ResourceProviderBaseCase):
         self.assertEqual(expected_count, len(rcs))
 
 
-class ResourceClassTestCase(ResourceProviderBaseCase):
+class ResourceClassTestCase(tb.PlacementDbBaseTestCase):
 
     def test_get_by_name(self):
         rc = rp_obj.ResourceClass.get_by_name(
@@ -2438,7 +2411,7 @@ class ResourceClassTestCase(ResourceProviderBaseCase):
                           'CUSTOM_IRON_NFV')
 
 
-class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
+class ResourceProviderTraitTestCase(tb.PlacementDbBaseTestCase):
 
     def setUp(self):
         super(ResourceProviderTraitTestCase, self).setUp()
@@ -2743,7 +2716,7 @@ class ResourceProviderTraitTestCase(ResourceProviderBaseCase):
         self.assertEqual(set(std_traits), set(_db_traits(conn)))
 
 
-class SharedProviderTestCase(ResourceProviderBaseCase):
+class SharedProviderTestCase(tb.PlacementDbBaseTestCase):
     """Tests that the queries used to determine placement in deployments with
     shared resource providers such as a shared disk pool result in accurate
     reporting of inventory and usage.
