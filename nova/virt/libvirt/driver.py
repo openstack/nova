@@ -262,9 +262,6 @@ MIN_LIBVIRT_REALTIME_VERSION = (1, 2, 13)
 # libvirt postcopy support
 MIN_LIBVIRT_POSTCOPY_VERSION = (1, 3, 3)
 
-# qemu postcopy support
-MIN_QEMU_POSTCOPY_VERSION = (2, 5, 0)
-
 MIN_LIBVIRT_OTHER_ARCH = {
     fields.Architecture.AARCH64: MIN_LIBVIRT_KVM_AARCH64_VERSION,
 }
@@ -616,10 +613,7 @@ class LibvirtDriver(driver.ComputeDriver):
         return migration_flags
 
     def _is_post_copy_available(self):
-        if self._host.has_min_version(lv_ver=MIN_LIBVIRT_POSTCOPY_VERSION,
-                                      hv_ver=MIN_QEMU_POSTCOPY_VERSION):
-            return True
-        return False
+        return self._host.has_min_version(lv_ver=MIN_LIBVIRT_POSTCOPY_VERSION)
 
     def _is_virtlogd_available(self):
         return self._host.has_min_version(MIN_LIBVIRT_VIRTLOGD,
