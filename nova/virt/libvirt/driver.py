@@ -226,11 +226,6 @@ MIN_QEMU_VERSION = (2, 5, 0)
 NEXT_MIN_LIBVIRT_VERSION = (3, 0, 0)
 NEXT_MIN_QEMU_VERSION = (2, 8, 0)
 
-# Versions of libvirt with broken cpu pinning support. This excludes
-# versions of libvirt with broken NUMA support since pinning needs
-# NUMA
-# See bug #1438226
-BAD_LIBVIRT_CPU_POLICY_VERSIONS = [(1, 2, 10)]
 
 # Virtuozzo driver support
 MIN_VIRTUOZZO_VERSION = (7, 0, 0)
@@ -4249,14 +4244,6 @@ class LibvirtDriver(driver.ComputeDriver):
                 guest_cpu_numa.cells.append(guest_cell)
             return guest_cpu_numa
 
-    def _has_cpu_policy_support(self):
-        for ver in BAD_LIBVIRT_CPU_POLICY_VERSIONS:
-            if self._host.has_version(ver):
-                ver_ = libvirt_utils.version_to_string(ver)
-                raise exception.CPUPinningNotSupported(reason=_(
-                    'Invalid libvirt version %(version)s') % {'version': ver_})
-        return True
-
     def _wants_hugepages(self, host_topology, instance_topology):
         """Determine if the guest / host topology implies the
            use of huge pages for guest RAM backing
@@ -4302,7 +4289,7 @@ class LibvirtDriver(driver.ComputeDriver):
         pin_cpuset = vconfig.LibvirtConfigGuestCPUTuneVCPUPin()
         pin_cpuset.id = vcpu
 
-        if object_numa_cell.cpu_pinning and self._has_cpu_policy_support():
+        if object_numa_cell.cpu_pinning:
             pin_cpuset.cpuset = set([object_numa_cell.cpu_pinning[vcpu]])
         else:
             pin_cpuset.cpuset = host_cell.cpuset
