@@ -8558,6 +8558,7 @@ class LibvirtDriver(driver.ComputeDriver):
 
         network_info = instance.info_cache.network_info
         vlans_by_mac = netutils.get_cached_vifs_with_vlan(network_info)
+        trusted_by_mac = netutils.get_cached_vifs_with_trusted(network_info)
         vifs = objects.VirtualInterfaceList.get_by_instance_uuid(context,
                                                                  instance.uuid)
         vifs_to_expose = {vif.address: vif for vif in vifs
@@ -8592,6 +8593,7 @@ class LibvirtDriver(driver.ComputeDriver):
                 vlan = vlans_by_mac.get(vif.address)
                 if vlan:
                     device.vlan = int(vlan)
+                device.vf_trusted = trusted_by_mac.get(vif.address, False)
                 devices.append(device)
 
             # Build disks related metadata
