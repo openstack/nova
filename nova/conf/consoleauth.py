@@ -32,6 +32,10 @@ The lifetime of a console auth token (in seconds).
 A console auth token is used in authorizing console access for a user.
 Once the auth token time to live count has elapsed, the token is
 considered expired.  Expired tokens are then deleted.
+
+Related options:
+
+* ``[workarounds]/enable_consoleauth``
 """)
 ]
 
